@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { AssignmentsView, Gradebook, DEFAULT_ASSIGNMENTS } from "./Grades.jsx";
-import { QuizAdmin, StudentQuizView } from "./QuizSystem.jsx";
+import { GameAdmin, StudentAnswerView, Accolades } from "./GameSystem.jsx";
 
 const STORAGE_KEY = "comm118-game-v14";
 
@@ -133,8 +133,10 @@ function Nav({ view, setView, isAdmin, userName, onLogout }) {
     { id: "assignments", label: "Assignments", admin: false },
     { id: "grades", label: "Grades", admin: false },
     { id: "pti", label: "PTI", admin: true },
-    { id: "quizadmin", label: "Quiz Setup", admin: true },
+    { id: "gameadmin", label: "Game Setup", admin: true },
+    { id: "fishbowl", label: "Fishbowl", admin: true },
     { id: "answer", label: "Answer", admin: false },
+    { id: "accolades", label: "Accolades", admin: false },
     { id: "builder", label: "Draft", admin: true },
     { id: "admin", label: "Admin", admin: true },
   ];
@@ -368,7 +370,7 @@ function ScheduleView({ data, setData, isAdmin }) {
 }
 
 /* ─── LEADERBOARD ─── */
-function Leaderboard({ students, log, teams, isAdmin, userName }) {
+function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
   const ranked = rs(students, log);
   const mx = ranked.length > 0 ? Math.max(ranked[0].points, 1) : 1;
   const [showAll, setShowAll] = useState(false);
@@ -376,6 +378,9 @@ function Leaderboard({ students, log, teams, isAdmin, userName }) {
   const myRank = ranked.findIndex(s => s.name === userName);
   const meInVisible = myRank >= 0 && myRank < visible.length;
   const meData = myRank >= 0 ? ranked[myRank] : null;
+  const stars = data?.fishbowlStars || {};
+  const starCounts = {};
+  Object.values(stars).forEach(sid => { if (sid) starCounts[sid] = (starCounts[sid] || 0) + 1; });
 
   const renderRow = (s, i, isMe, isGhost) => {
     const team = teams.find(t => t.id === s.teamId);
@@ -399,6 +404,7 @@ function Leaderboard({ students, log, teams, isAdmin, userName }) {
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: tc.accent, flexShrink: 0 }} />
               <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", fontFamily: F }}>{s.name}</span>
+              {starCounts[s.id] > 0 && <span style={{ fontSize: 11, color: "#d97706" }}>{Array(starCounts[s.id]).fill("\u2733").join("")}</span>}
               {isMe && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#dbeafe", color: "#1d4ed8", fontWeight: 700 }}>YOU</span>}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
@@ -542,25 +548,15 @@ function TeamBuilder({ data, setData }) {
 
 /* ─── ADMIN ─── */
 function AdminPanel({ data, setData }) {
-  const [mode, setMode] = useState("points");
-  const [selected, setSelected] = useState([]);
-  const [selTeam, setSelTeam] = useState("");
-  const [amount, setAmount] = useState("");
-  const [source, setSource] = useState(POINT_SOURCES[0]);
-  const [customSrc, setCustomSrc] = useState("");
+  const [mode, setMode] = useState("roster");
   const [msg, setMsg] = useState("");
   const [newName, setNewName] = useState("");
   const [newTeamId, setNewTeamId] = useState("");
   const [newTeamName, setNewTeamName] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2500); };
 
-  const award = async (sids, p, src) => { const entries = sids.map(sid => ({ id: genId(), studentId: sid, amount: p, source: src, ts: Date.now() })); const updated = { ...data, log: [...data.log, ...entries] }; await saveData(updated); setData(updated); };
-  const awardInd = async () => { if (!selected.length || !amount) return; const p = parseInt(amount); if (isNaN(p)) return; const src = source === "Other" ? customSrc || "Other" : source; await award(selected, p, src); showMsg((p > 0 ? "+" : "") + p + " to " + selected.length + " student(s)"); setSelected([]); setAmount(""); };
-  const awardTeam = async () => { if (!selTeam || !amount) return; const p = parseInt(amount); if (isNaN(p)) return; const src = source === "Other" ? customSrc || "Other" : source; const ids = data.students.filter(s => s.teamId === selTeam).map(s => s.id); await award(ids, p, src); showMsg((p > 0 ? "+" : "") + p + " to whole team"); setSelTeam(""); setAmount(""); };
   const undo = async () => { if (!data.log.length) return; const lastTs = data.log[data.log.length - 1].ts; const updated = { ...data, log: data.log.filter(e => e.ts !== lastTs) }; await saveData(updated); setData(updated); showMsg("Undone"); };
   const resetAll = async () => { const updated = { ...data, log: [] }; await saveData(updated); setData(updated); showMsg("Reset"); };
-  const toggle = id => setSelected(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
-  const toggleTeamSel = tid => { const ids = data.students.filter(s => s.teamId === tid).map(s => s.id); const all = ids.every(id => selected.includes(id)); setSelected(p => all ? p.filter(id => !ids.includes(id)) : [...new Set([...p, ...ids])]); };
   const addStudent = async () => { if (!newName.trim() || !newTeamId) return; const updated = { ...data, students: [...data.students, { id: genId(), name: newName.trim(), teamId: newTeamId }] }; await saveData(updated); setData(updated); setNewName(""); setNewTeamId(""); showMsg("Added"); };
   const removeStudent = async id => { const updated = { ...data, students: data.students.filter(s => s.id !== id), log: data.log.filter(e => e.studentId !== id) }; await saveData(updated); setData(updated); showMsg("Removed"); };
   const addTeam = async () => { if (!newTeamName.trim()) return; const updated = { ...data, teams: [...data.teams, { id: genId(), name: newTeamName.trim(), colorIdx: data.teams.length % TEAM_COLORS.length }] }; await saveData(updated); setData(updated); setNewTeamName(""); showMsg("Team added"); };
@@ -573,32 +569,13 @@ function AdminPanel({ data, setData }) {
       <Toast message={msg} />
       <div style={{ ...sectionLabel, marginBottom: 12 }}>Admin</div>
       <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
-        {["points", "roster", "log"].map(m => (
-          <button key={m} onClick={() => setMode(m)} style={mode === m ? pillActive : pillInactive}>{m === "points" ? "Award Points" : m === "roster" ? "Roster" : "Log"}</button>
+        {["roster", "log"].map(m => (
+          <button key={m} onClick={() => setMode(m)} style={mode === m ? pillActive : pillInactive}>{m === "roster" ? "Roster" : "Log"}</button>
         ))}
         <div style={{ flex: 1 }} />
         <button onClick={undo} style={pillInactive}>Undo</button>
         <button onClick={() => { if (window.confirm("Reset ALL points?")) resetAll(); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Reset</button>
       </div>
-
-      {mode === "points" && (
-        <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
-          <div style={{ ...crd, padding: 16 }}>
-            <div style={{ ...sectionLabel, marginBottom: 14 }}>Individual</div>
-            {data.teams.map(team => { const tc = TEAM_COLORS[team.colorIdx]; const members = data.students.filter(s => s.teamId === team.id); return (<div key={team.id} style={{ marginBottom: 10 }}><button onClick={() => toggleTeamSel(team.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: tc.accent, marginBottom: 4, display: "block", fontFamily: F }}>{team.name}</button><div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{members.map(s => (<button key={s.id} onClick={() => toggle(s.id)} style={{ ...bt, fontSize: 12, padding: "4px 10px", background: selected.includes(s.id) ? tc.accent : "transparent", color: selected.includes(s.id) ? "#000" : TEXT_SECONDARY, border: "1px solid " + (selected.includes(s.id) ? tc.accent : BORDER) }}>{s.name.split(" ")[0]}</button>))}</div></div>); })}
-            <div style={{ display: "flex", gap: 8, marginTop: 12, marginBottom: 8 }}><input type="number" placeholder="Pts" value={amount} onChange={e => setAmount(e.target.value)} style={{ ...inp, flex: 1 }} /><select value={source} onChange={e => setSource(e.target.value)} style={{ ...sel, flex: 1 }}>{POINT_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-            {source === "Other" && <input placeholder="Custom" value={customSrc} onChange={e => setCustomSrc(e.target.value)} style={{ ...inp, marginBottom: 8 }} />}
-            <button onClick={awardInd} style={{ ...bt, background: "#111827", color: "#fff", width: "100%" }}>Award</button>
-          </div>
-          <div style={{ ...crd, padding: 16 }}>
-            <div style={{ ...sectionLabel, marginBottom: 14 }}>Team</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>{data.teams.map(team => { const tc = TEAM_COLORS[team.colorIdx]; return <button key={team.id} onClick={() => setSelTeam(team.id)} style={{ ...bt, fontSize: 13, padding: "8px 14px", textAlign: "left", background: selTeam === team.id ? tc.accent + "20" : "transparent", color: selTeam === team.id ? tc.accent : TEXT_SECONDARY, border: "1px solid " + (selTeam === team.id ? tc.accent : BORDER) }}>{team.name}</button>; })}</div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}><input type="number" placeholder="Pts" value={amount} onChange={e => setAmount(e.target.value)} style={{ ...inp, flex: 1 }} /><select value={source} onChange={e => setSource(e.target.value)} style={{ ...sel, flex: 1 }}>{POINT_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-            {source === "Other" && <input placeholder="Custom" value={customSrc} onChange={e => setCustomSrc(e.target.value)} style={{ ...inp, marginBottom: 8 }} />}
-            <button onClick={awardTeam} style={{ ...bt, background: "#111827", color: "#fff", width: "100%" }}>Award Whole Team</button>
-          </div>
-        </div>
-      )}
 
       {mode === "roster" && (
         <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
@@ -707,8 +684,8 @@ function PTIMode({ data, setData }) {
                   cursor: "pointer", textAlign: "center", transition: "all 0.1s",
                 }}>
                   <div style={{ width: 36, height: 36, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px", fontSize: 12, fontWeight: 900, color: "#fff" }}>{initials}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", lineHeight: 1.2 }}>{s.name.split(" ")[0]}</div>
-                  <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 1 }}>{s.name.split(" ").slice(1).join(" ")}</div>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", lineHeight: 1.2 }}>{s.name.split(" ")[0]}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#6b7280", marginTop: 1 }}>{s.name.split(" ").slice(1).join(" ")}</div>
                   <div style={{ fontSize: 16, fontWeight: 900, color: tc.accent, marginTop: 4, fontVariantNumeric: "tabular-nums" }}>{pts}</div>
                 </button>
                 {isOpen && (
@@ -1182,8 +1159,11 @@ export default function Comm118() {
         if (d && !d.grades) { d.grades = {}; await saveData(d); }
         if (d && !d.participation) { d.participation = {}; await saveData(d); }
         if (d && !d.assignments) { d.assignments = JSON.parse(JSON.stringify(DEFAULT_ASSIGNMENTS)); await saveData(d); }
-        if (d && !d.weeklyQuizzes) { d.weeklyQuizzes = {}; await saveData(d); }
+        if (d && !d.weeklyQuizzes) { d.weeklyGames = d.weeklyQuizzes || {}; delete d.weeklyQuizzes; await saveData(d); }
+        if (d && !d.weeklyGames) { d.weeklyGames = {}; await saveData(d); }
         if (d && !d.weeklyToT) { d.weeklyToT = {}; await saveData(d); }
+        if (d && !d.weeklyFishbowl) { d.weeklyFishbowl = {}; await saveData(d); }
+        if (d && !d.fishbowlStars) { d.fishbowlStars = {}; await saveData(d); }
         setData(d);
       } catch(e) { console.error("Storage load failed:", e); setData(null); }
       setLoading(false);
@@ -1199,18 +1179,20 @@ export default function Comm118() {
     <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F, fontSize: 15 }}>
       <Nav view={view} setView={setView} isAdmin={isAdmin} userName={displayName} onLogout={() => setUserName(null)} />
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={isAdmin} />}
-      {view === "leaderboard" && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={isAdmin} userName={userName} />}
+      {view === "leaderboard" && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={isAdmin} userName={userName} data={data} />}
       {view === "teams" && <TeamsView teams={data.teams} students={data.students} log={data.log} />}
       {view === "roster" && <RosterView data={data} setData={setData} userName={userName} />}
       {view === "assignments" && <AssignmentsView data={data} setData={setData} isAdmin={isAdmin} />}
       {view === "grades" && <Gradebook data={data} setData={setData} userName={userName} isAdmin={isAdmin} />}
       {view === "builder" && isAdmin && <TeamBuilder data={data} setData={setData} />}
       {view === "pti" && isAdmin && <PTIMode data={data} setData={setData} />}
-      {view === "quizadmin" && isAdmin && <QuizAdmin data={data} setData={setData} />}
-      {view === "answer" && !isGuest && <StudentQuizView data={data} setData={setData} userName={userName} />}
-      {view === "answer" && isGuest && <div style={{ padding: 40, textAlign: "center", fontFamily: F }}><div style={{ ...sectionLabel, marginBottom: 8 }}>Quiz</div><div style={{ fontSize: 14, color: TEXT_SECONDARY }}>Sign in as a student to answer quizzes.</div></div>}
+      {view === "gameadmin" && isAdmin && <GameAdmin data={data} setData={setData} />}
+      {view === "fishbowl" && isAdmin && <GameAdmin data={data} setData={setData} />}
+      {view === "answer" && !isGuest && <StudentAnswerView data={data} setData={setData} userName={userName} />}
+      {view === "answer" && isGuest && <div style={{ padding: 40, textAlign: "center", fontFamily: F }}><div style={{ ...sectionLabel, marginBottom: 8 }}>Answer</div><div style={{ fontSize: 14, color: TEXT_SECONDARY }}>Sign in as a student to answer.</div></div>}
+      {view === "accolades" && <Accolades data={data} />}
       {view === "admin" && isAdmin && <AdminPanel data={data} setData={setData} />}
-      {(view === "builder" || view === "admin" || view === "quizadmin" || view === "pti") && !isAdmin && <Leaderboard students={data.students} log={data.log} teams={data.teams} />}
+      {(view === "builder" || view === "admin" || view === "gameadmin" || view === "fishbowl" || view === "pti") && !isAdmin && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={isAdmin} userName={userName} data={data} />}
     </div>
   );
 }
