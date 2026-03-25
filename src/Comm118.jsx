@@ -412,7 +412,7 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
   // Animation: track previous order
   const prevOrderRef = useRef([]);
   const [animOffsets, setAnimOffsets] = useState({});
-  const ROW_HEIGHT = 82; // approximate row height in px
+  const ROW_HEIGHT = 108;
 
   useEffect(() => {
     const prevOrder = prevOrderRef.current;
@@ -452,7 +452,6 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
   const getMotto = (sid) => {
     const bio = bios[sid];
     if (bio?.motto) return bio.motto;
-    // Deterministic random motto based on student id
     let hash = 0;
     for (let i = 0; i < sid.length; i++) hash = ((hash << 5) - hash) + sid.charCodeAt(i);
     return DEFAULT_MOTTOS[Math.abs(hash) % DEFAULT_MOTTOS.length];
@@ -469,51 +468,54 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
     const wp = weekPoints[s.id] || 0;
     const lastRank = lastWeekRankMap[s.id];
     const movement = lastRank !== undefined ? lastRank - i : 0;
-
     const offset = animOffsets[s.id] || 0;
 
     return (
       <div key={s.id + (isGhost ? "-ghost" : "")} style={{
-        borderRadius: 12, overflow: "hidden", marginBottom: 6, background: "#fff",
+        borderRadius: 14, overflow: "hidden", marginBottom: 8, background: "#fff",
         border: isGhost ? "2px dashed #93c5fd" : inA ? "2px solid #fecdd3" : "1px solid #f3f4f6",
         transform: offset ? "translateY(" + offset + "px)" : "none",
         transition: offset ? "none" : "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+        position: "relative",
+        zIndex: offset > 0 ? 10 : offset < 0 ? 0 : 1,
+        boxShadow: offset > 0 ? "0 4px 16px rgba(0,0,0,0.12)" : "none",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px" }}>
           <div style={{
-            width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            fontSize: 12, fontWeight: 900, fontFamily: F,
+            width: 32, height: 32, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            fontSize: 14, fontWeight: 900, fontFamily: F,
             background: isTop3 ? "#111827" : inA ? ACCENT : "#f3f4f6",
             color: isTop3 || inA ? "#fff" : "#6b7280",
           }}>{i + 1}</div>
           {bio.photo ? (
-            <img src={bio.photo} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+            <img src={bio.photo} alt="" style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "3px solid " + (inA ? ACCENT + "33" : "#f3f4f6") }} />
           ) : (
-            <div style={{ width: 36, height: 36, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#fff", flexShrink: 0 }}>{initials}</div>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "#fff", flexShrink: 0, border: "3px solid " + (inA ? ACCENT + "33" : "#f3f4f6") }}>{initials}</div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", fontFamily: F }}>{s.name}</span>
-              {starCounts[s.id] > 0 && <span style={{ fontSize: 11, color: "#d97706" }}>{Array(starCounts[s.id]).fill("\u2733").join("")}</span>}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: F }}>{s.name}</span>
+              {starCounts[s.id] > 0 && <span style={{ fontSize: 13, color: "#d97706" }}>{Array(starCounts[s.id]).fill("\u2733").join("")}</span>}
               {isMe && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#dbeafe", color: "#1d4ed8", fontWeight: 700 }}>YOU</span>}
             </div>
-            <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 1, fontStyle: "italic", lineHeight: 1.2 }}>"{getMotto(s.id)}"</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
-              {bio.hometown && <span style={{ fontSize: 10, color: "#9ca3af" }}>{bio.hometown}</span>}
-              {bio.hometown && team && <span style={{ fontSize: 10, color: "#d1d5db" }}>/</span>}
-              {team && <span style={{ fontSize: 10, color: "#9ca3af" }}>{team.name}</span>}
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
+              {team && <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600 }}>{team.name}</span>}
+              <span style={{ fontSize: 11, color: "#d1d5db" }}>/</span>
+              <span style={{ fontSize: 11, color: "#b0b0b0", fontStyle: "italic" }}>{getMotto(s.id)}</span>
             </div>
+            {bio.hometown && <div style={{ fontSize: 10, color: "#d1d5db", marginTop: 2 }}>{bio.hometown}</div>}
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 18, fontWeight: 900, color: inA ? ACCENT : "#111827", fontFamily: F, fontVariantNumeric: "tabular-nums" }}>{s.points}</div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 2 }}>
+            <div style={{ fontSize: 30, fontWeight: 900, color: inA ? ACCENT : "#111827", fontFamily: F, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{s.points}</div>
+            <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 1 }}>pts</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 3 }}>
               {wp > 0 && <span style={{ fontSize: 10, color: GREEN, fontWeight: 700 }}>+{wp} this wk</span>}
               {movement > 0 && <span style={{ fontSize: 10, color: GREEN, fontWeight: 700 }}>&#9650;{movement}</span>}
               {movement < 0 && <span style={{ fontSize: 10, color: RED, fontWeight: 700 }}>&#9660;{Math.abs(movement)}</span>}
             </div>
           </div>
         </div>
-        <div style={{ height: 3, background: "#f3f4f6" }}>
+        <div style={{ height: 4, background: "#f3f4f6" }}>
           <div style={{ height: "100%", width: bw + "%", background: inA ? ACCENT : tc.accent, transition: "width 0.5s", borderRadius: "0 2px 2px 0" }} />
         </div>
       </div>
