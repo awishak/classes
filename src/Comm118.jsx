@@ -147,8 +147,9 @@ function Toast({ message }) { if (!message) return null; return <div style={{ po
 /* ─── NAV ─── */
 function Nav({ view, setView, isAdmin, userName, onLogout }) {
   const tabs = [
-    { id: "schedule", label: "Schedule", admin: false },
     { id: "leaderboard", label: "Leaderboard", admin: false },
+    { id: "todo", label: "To-Do", admin: false },
+    { id: "schedule", label: "Schedule", admin: false },
     { id: "teams", label: "Teams", admin: false },
     { id: "roster", label: "Roster", admin: false },
     { id: "assignments", label: "Assignments", admin: false },
@@ -1299,11 +1300,205 @@ function BioView({ student, data, setData, userName, onBack }) {
   );
 }
 
+/* ─── TO-DO ─── */
+function getWeekMonday() {
+  const now = new Date();
+  const day = now.getDay();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+  return mon.getFullYear() + "-" + String(mon.getMonth() + 1).padStart(2, "0") + "-" + String(mon.getDate()).padStart(2, "0");
+}
+
+const WEEKLY_ITEMS = [
+  { id: "reading", label: "Do the reading" },
+  { id: "quiz_prep", label: "Prep for quiz" },
+  { id: "sports_news", label: "Read ESPN, The Athletic, and other sports sites" },
+];
+
+function ToDoView({ data, setData, userName, isAdmin }) {
+  const isGuest = userName === GUEST_NAME;
+  const student = data.students.find(s => s.name === userName);
+  const sid = student?.id;
+  const assignments = (data.assignments || []).filter(a => a.id !== "participation");
+  const bios = data.bios || {};
+  const checks = data.todoChecks || {};
+  const weekKey = getWeekMonday();
+
+  const getCheck = (studentId, key) => {
+    const sc = checks[studentId];
+    if (!sc) return false;
+    return !!sc[key];
+  };
+  const getWeeklyCheck = (studentId, itemId) => {
+    const sc = checks[studentId];
+    if (!sc || !sc.weekly) return false;
+    const wk = sc.weekly[weekKey];
+    if (!wk) return false;
+    return !!wk[itemId];
+  };
+  const hasPhoto = (studentId) => !!(bios[studentId]?.photo);
+  const hasBio = (studentId) => {
+    const b = bios[studentId];
+    if (!b) return false;
+    return !!(b.about || b.major || b.year || b.hometown || b.favTeam || b.motto || b.funFact);
+  };
+
+  const toggleCheck = async (key) => {
+    if (!sid) return;
+    const sc = { ...(checks[sid] || {}) };
+    sc[key] = !sc[key];
+    const updated = { ...data, todoChecks: { ...checks, [sid]: sc } };
+    await saveData(updated); setData(updated);
+  };
+  const toggleWeekly = async (itemId) => {
+    if (!sid) return;
+    const sc = { ...(checks[sid] || {}) };
+    const weekly = { ...(sc.weekly || {}) };
+    const wk = { ...(weekly[weekKey] || {}) };
+    wk[itemId] = !wk[itemId];
+    weekly[weekKey] = wk;
+    sc.weekly = weekly;
+    const updated = { ...data, todoChecks: { ...checks, [sid]: sc } };
+    await saveData(updated); setData(updated);
+  };
+
+  if (isGuest) {
+    return <div style={{ padding: 40, textAlign: "center", fontFamily: F }}><div style={{ ...sectionLabel, marginBottom: 8 }}>To-Do</div><div style={{ fontSize: 14, color: TEXT_SECONDARY }}>Sign in as a student to view your to-do list.</div></div>;
+  }
+
+  if (isAdmin) {
+    const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME).sort(lastSortObj);
+    return (
+      <div style={{ padding: "20px 16px 40px", fontFamily: F }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ ...sectionLabel, marginBottom: 12 }}>To-Do Overview</div>
+          <div style={{ ...crd, overflow: "auto" }}>
+            <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", fontFamily: F, minWidth: 700 }}>
+              <thead>
+                <tr style={{ borderBottom: "2px solid #f3f4f6" }}>
+                  <th style={{ textAlign: "left", padding: "10px 12px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", position: "sticky", left: 0, background: "#fff", zIndex: 2 }}>Student</th>
+                  <th style={{ textAlign: "center", padding: "10px 6px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>Photo</th>
+                  <th style={{ textAlign: "center", padding: "10px 6px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>Bio</th>
+                  {assignments.map(a => (
+                    <th key={a.id} style={{ textAlign: "center", padding: "10px 6px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase", maxWidth: 80 }}>{a.name.split(" ").slice(0, 2).join(" ")}</th>
+                  ))}
+                  {WEEKLY_ITEMS.map(w => (
+                    <th key={w.id} style={{ textAlign: "center", padding: "10px 6px", color: PURPLE, fontWeight: 600, fontSize: 10, textTransform: "uppercase", maxWidth: 70 }}>{w.label.split(" ").slice(0, 2).join(" ")}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map(s => {
+                  const photo = hasPhoto(s.id);
+                  const bio = hasBio(s.id);
+                  return (
+                    <tr key={s.id} style={{ borderBottom: "1px solid #f9fafb" }}>
+                      <td style={{ padding: "8px 12px", fontWeight: 600, color: "#111827", fontSize: 13, whiteSpace: "nowrap", position: "sticky", left: 0, background: "#fff", zIndex: 1 }}>{s.name}</td>
+                      <td style={{ textAlign: "center", padding: "6px" }}>{photo ? <span style={{ color: GREEN, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e5e7eb", fontSize: 14 }}>-</span>}</td>
+                      <td style={{ textAlign: "center", padding: "6px" }}>{bio ? <span style={{ color: GREEN, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e5e7eb", fontSize: 14 }}>-</span>}</td>
+                      {assignments.map(a => {
+                        const done = getCheck(s.id, "assign-" + a.id);
+                        return <td key={a.id} style={{ textAlign: "center", padding: "6px" }}>{done ? <span style={{ color: GREEN, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e5e7eb", fontSize: 14 }}>-</span>}</td>;
+                      })}
+                      {WEEKLY_ITEMS.map(w => {
+                        const done = getWeeklyCheck(s.id, w.id);
+                        return <td key={w.id} style={{ textAlign: "center", padding: "6px" }}>{done ? <span style={{ color: PURPLE, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e5e7eb", fontSize: 14 }}>-</span>}</td>;
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Student view
+  const Checkbox = ({ checked, onChange, accent }) => (
+    <button onClick={onChange} style={{
+      width: 22, height: 22, borderRadius: 6, border: "2px solid " + (checked ? (accent || GREEN) : "#d1d5db"),
+      background: checked ? (accent || GREEN) : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s", padding: 0,
+    }}>
+      {checked && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>}
+    </button>
+  );
+
+  return (
+    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <div style={{ maxWidth: 560, margin: "0 auto" }}>
+        <div style={{ ...sectionLabel, marginBottom: 12 }}>To-Do</div>
+
+        {/* Setup */}
+        <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Get Started</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Checkbox checked={hasPhoto(sid)} onChange={() => {}} />
+              <span style={{ fontSize: 14, color: hasPhoto(sid) ? "#9ca3af" : "#111827", textDecoration: hasPhoto(sid) ? "line-through" : "none" }}>Add your picture</span>
+              {hasPhoto(sid) && <span style={{ fontSize: 11, color: GREEN, fontWeight: 600, marginLeft: "auto" }}>Done</span>}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Checkbox checked={hasBio(sid)} onChange={() => {}} />
+              <span style={{ fontSize: 14, color: hasBio(sid) ? "#9ca3af" : "#111827", textDecoration: hasBio(sid) ? "line-through" : "none" }}>Update your bio</span>
+              {hasBio(sid) && <span style={{ fontSize: 11, color: GREEN, fontWeight: 600, marginLeft: "auto" }}>Done</span>}
+            </div>
+          </div>
+        </div>
+
+        {/* Assignments */}
+        <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Assignments</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {assignments.map(a => {
+              const done = getCheck(sid, "assign-" + a.id);
+              return (
+                <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <Checkbox checked={done} onChange={() => toggleCheck("assign-" + a.id)} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontSize: 14, color: done ? "#9ca3af" : "#111827", textDecoration: done ? "line-through" : "none" }}>{a.name}</span>
+                    {a.due && <span style={{ fontSize: 11, color: "#9ca3af", marginLeft: 6 }}>Due {a.due}</span>}
+                  </div>
+                  {a.link && (
+                    <a href={a.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: "flex", alignItems: "center", padding: "4px 8px", borderRadius: 6, background: "#f3f4f6", color: "#6b7280", textDecoration: "none" }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Weekly */}
+        <div style={{ ...crd, padding: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Every Week</div>
+            <span style={{ fontSize: 10, color: PURPLE, fontWeight: 600 }}>Resets Monday</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {WEEKLY_ITEMS.map(w => {
+              const done = getWeeklyCheck(sid, w.id);
+              return (
+                <div key={w.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <Checkbox checked={done} onChange={() => toggleWeekly(w.id)} accent={PURPLE} />
+                  <span style={{ fontSize: 14, color: done ? "#9ca3af" : "#111827", textDecoration: done ? "line-through" : "none" }}>{w.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── APP ─── */
 export default function Comm118() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState("schedule");
+  const [view, setView] = useState("todo");
   const [userName, setUserName] = useState(null);
 
   const isAdmin = userName === ADMIN_NAME;
@@ -1332,6 +1527,7 @@ export default function Comm118() {
         if (d && !d.weeklyFishbowl) { d.weeklyFishbowl = {}; await saveData(d); }
         if (d && !d.fishbowlStars) { d.fishbowlStars = {}; await saveData(d); }
         if (d && !d.weeklyTeamWins) { d.weeklyTeamWins = {}; await saveData(d); }
+        if (d && !d.todoChecks) { d.todoChecks = {}; await saveData(d); }
         setData(d);
       } catch(e) { console.error("Storage load failed:", e); setData(null); }
       setLoading(false);
@@ -1350,12 +1546,13 @@ export default function Comm118() {
 
   if (loading) return <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ fontSize: 14, fontWeight: 700, color: "#94a3b8" }}>Loading...</div></div>;
 
-  if (!userName) return <NamePicker data={data} onSelect={name => { setUserName(name); setView("schedule"); }} />;
+  if (!userName) return <NamePicker data={data} onSelect={name => { setUserName(name); setView("todo"); }} />;
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F, fontSize: 15 }}>
       <Nav view={view} setView={setView} isAdmin={isAdmin} userName={displayName} onLogout={() => setUserName(null)} />
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={isAdmin} />}
+      {view === "todo" && <ToDoView data={data} setData={setData} userName={userName} isAdmin={isAdmin} />}
       {view === "leaderboard" && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={isAdmin} userName={userName} data={data} />}
       {view === "teams" && <TeamsView teams={data.teams} students={data.students} log={data.log} data={data} />}
       {view === "roster" && <RosterView data={data} setData={setData} userName={userName} />}

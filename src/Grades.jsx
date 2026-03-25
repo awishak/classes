@@ -190,6 +190,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
   const grades = data.grades || {};
   const participation = data.participation || {};
   const [selStudent, setSelStudent] = useState(null);
+  const [editingCell, setEditingCell] = useState(null);
   const isGuest = userName === GUEST_NAME;
 
   const student = isAdmin ? (selStudent ? data.students.find(s => s.id === selStudent) : null) : data.students.find(s => s.name === userName);
@@ -372,19 +373,66 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
   }
 
   if (isAdmin) {
-    const sorted = [...data.students].sort(lastSortObj);
+    const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME).sort(lastSortObj);
+    const gradeAssignments = assignments.filter(a => a.id !== "participation");
+
     return (
-      <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
-        <div style={{ maxWidth: 700, margin: "0 auto" }}>
+      <div style={{ padding: "20px 16px 40px", fontFamily: F }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ ...sectionLabel, marginBottom: 12 }}>Gradebook</div>
-          <div style={{ marginBottom: 16 }}>
-            <select value={selStudent || ""} onChange={e => setSelStudent(e.target.value || null)} style={{ ...sel, width: "100%", fontSize: 14, padding: "10px 12px" }}>
-              <option value="">Select a student...</option>
-              {sorted.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+          <div style={{ ...crd, overflow: "auto", marginBottom: 20 }}>
+            <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", fontFamily: F, minWidth: 600 }}>
+              <thead>
+                <tr style={{ borderBottom: "2px solid #f3f4f6" }}>
+                  <th style={{ textAlign: "left", padding: "10px 12px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", position: "sticky", left: 0, background: "#fff", zIndex: 2 }}>Student</th>
+                  {gradeAssignments.map(a => (
+                    <th key={a.id} style={{ textAlign: "center", padding: "10px 8px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase", maxWidth: 100 }}>
+                      <div>{a.name.split(" ").slice(0, 2).join(" ")}</div>
+                      <div style={{ fontSize: 9, color: "#d1d5db", fontWeight: 500 }}>{a.weight}%</div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map(s => (
+                  <tr key={s.id} style={{ borderBottom: "1px solid #f9fafb" }}>
+                    <td style={{ padding: "8px 12px", fontWeight: 600, color: "#111827", fontSize: 13, whiteSpace: "nowrap", position: "sticky", left: 0, background: "#fff", zIndex: 1, cursor: "pointer" }} onClick={() => setSelStudent(selStudent === s.id ? null : s.id)}>
+                      <span style={{ borderBottom: selStudent === s.id ? "2px solid " + ACCENT : "none", paddingBottom: 1 }}>{s.name}</span>
+                    </td>
+                    {gradeAssignments.map(a => {
+                      const cellKey = s.id + "-" + a.id;
+                      const g = grades[cellKey] || {};
+                      const isEditing = editingCell === cellKey;
+                      const score = g.score;
+                      const outOf = g.outOf || 100;
+                      return (
+                        <td key={a.id} style={{ textAlign: "center", padding: "4px 6px" }}>
+                          {isEditing ? (
+                            <div style={{ display: "flex", gap: 2, alignItems: "center", justifyContent: "center" }} onClick={e => e.stopPropagation()}>
+                              <input autoFocus type="number" value={score ?? ""} onChange={e => updateGrade(s.id, a.id, "score", e.target.value)} onBlur={() => setEditingCell(null)} onKeyDown={e => e.key === "Enter" && setEditingCell(null)} style={{ ...inp, width: 48, padding: "4px 4px", fontSize: 12, textAlign: "center" }} />
+                            </div>
+                          ) : (
+                            <button onClick={() => setEditingCell(cellKey)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 13, fontWeight: 700, padding: "4px 8px", borderRadius: 6, color: score !== undefined && score !== "" ? "#111827" : "#d1d5db", minWidth: 40 }}>
+                              {score !== undefined && score !== "" ? score + "/" + outOf : "-"}
+                            </button>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          {studentId && renderStudentGrades(studentId)}
-          {!studentId && <div style={{ textAlign: "center", color: "#d1d5db", fontSize: 14, padding: 40 }}>Pick a student above to view and edit grades.</div>}
+          {selStudent && (
+            <div style={{ ...crd, padding: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>{data.students.find(s => s.id === selStudent)?.name}</div>
+                <button onClick={() => setSelStudent(null)} style={pillInactive}>Close</button>
+              </div>
+              {renderStudentGrades(selStudent)}
+            </div>
+          )}
         </div>
       </div>
     );
