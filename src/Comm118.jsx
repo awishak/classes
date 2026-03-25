@@ -1046,6 +1046,8 @@ function RosterView({ data, setData, userName }) {
 
 function BioView({ student, data, setData, userName, onBack }) {
   const isOwn = student.name === userName;
+  const isAdmin = userName === ADMIN_NAME;
+  const canEdit = isOwn || isAdmin;
   const bio = (data.bios || {})[student.id] || {};
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...bio });
@@ -1092,7 +1094,7 @@ function BioView({ student, data, setData, userName, onBack }) {
             ) : (
               <div style={{ width: 64, height: 64, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 900, color: "#fff", border: "3px solid rgba(255,255,255,0.2)" }}>{initials}</div>
             )}
-            {isOwn && (
+            {canEdit && (
               <label style={{ position: "absolute", bottom: -2, right: -2, width: 22, height: 22, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 <input type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
@@ -1137,10 +1139,10 @@ function BioView({ student, data, setData, userName, onBack }) {
               </>
             ) : (
               <div style={{ textAlign: "center", padding: "20px 0", color: "#9ca3af", fontSize: 13 }}>
-                {isOwn ? "You haven't filled out your bio yet." : "This person hasn't filled out their bio yet."}
+                {canEdit ? "No bio yet. Click edit to add one." : "This person hasn't filled out their bio yet."}
               </div>
             )}
-            {isOwn && <button onClick={() => { setForm({ ...bio }); setEditing(true); }} style={{ ...pillInactive, width: "100%", marginTop: 12, padding: "10px 0" }}>Edit Bio</button>}
+            {canEdit && <button onClick={() => { setForm({ ...bio }); setEditing(true); }} style={{ ...pillInactive, width: "100%", marginTop: 12, padding: "10px 0" }}>Edit Bio</button>}
           </div>
         )}
       </div>
