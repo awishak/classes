@@ -370,10 +370,36 @@ function ScheduleView({ data, setData, isAdmin }) {
 }
 
 /* ─── LEADERBOARD ─── */
+const DEFAULT_MOTTOS = [
+  "Ball is life.", "No days off.", "Stay hungry.", "Trust the process.", "Built different.",
+  "Pressure makes diamonds.", "Leave it on the field.", "One play at a time.", "Outwork everyone.",
+  "Why not us?", "Heart of a champion.", "Earned, not given.", "Rise and grind.", "Fear no one.",
+  "All gas, no brakes.", "Be the storm.", "Play to win.", "Next play mentality.", "Refuse to lose.",
+  "Make it happen.", "Bet on yourself.", "Talk is cheap.", "Work in silence.", "Stay dangerous.",
+  "Go big or go home.", "Every rep counts.", "Relentless.", "Play like nobody's watching.",
+  "Dream bigger.", "Stay locked in.", "No shortcuts.", "Prove them wrong.", "Run your race.",
+  "The grind never stops.", "Champions adjust.", "Win the moment.", "Play with purpose.",
+  "Control what you can.", "Finish strong.", "Leave no doubt.", "Keep pushing.", "Own the day.",
+  "Find a way.", "Zero excuses.", "Do it anyway.", "Level up.", "Make them remember.",
+  "Energy is everything.", "Show up every day.", "Write your story.", "Be undeniable.",
+];
+
+function getWeekBounds() {
+  const now = new Date();
+  const day = now.getDay();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+  mon.setHours(0, 0, 0, 0);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 7);
+  return { start: mon.getTime(), end: sun.getTime() };
+}
+
 function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
   const ranked = rs(students, log);
   const mx = ranked.length > 0 ? Math.max(ranked[0].points, 1) : 1;
   const [showAll, setShowAll] = useState(false);
+  const [showExplain, setShowExplain] = useState(false);
   const visible = showAll ? ranked : ranked.slice(0, 10);
   const myRank = ranked.findIndex(s => s.name === userName);
   const meInVisible = myRank >= 0 && myRank < visible.length;
@@ -381,6 +407,28 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
   const stars = data?.fishbowlStars || {};
   const starCounts = {};
   Object.values(stars).forEach(sid => { if (sid) starCounts[sid] = (starCounts[sid] || 0) + 1; });
+  const bios = data?.bios || {};
+
+  // Weekly stats
+  const { start: weekStart, end: weekEnd } = getWeekBounds();
+  const weekLog = log.filter(e => e.ts >= weekStart && e.ts < weekEnd);
+  const weekPoints = {};
+  weekLog.forEach(e => { weekPoints[e.studentId] = (weekPoints[e.studentId] || 0) + e.amount; });
+
+  // Last week's rankings for movement
+  const lastWeekLog = log.filter(e => e.ts < weekStart);
+  const lastWeekRanked = students.map(s => ({ ...s, points: lastWeekLog.filter(e => e.studentId === s.id).reduce((t, e) => t + e.amount, 0) })).sort((a, b) => b.points - a.points);
+  const lastWeekRankMap = {};
+  lastWeekRanked.forEach((s, i) => { lastWeekRankMap[s.id] = i; });
+
+  const getMotto = (sid) => {
+    const bio = bios[sid];
+    if (bio?.motto) return bio.motto;
+    // Deterministic random motto based on student id
+    let hash = 0;
+    for (let i = 0; i < sid.length; i++) hash = ((hash << 5) - hash) + sid.charCodeAt(i);
+    return DEFAULT_MOTTOS[Math.abs(hash) % DEFAULT_MOTTOS.length];
+  };
 
   const renderRow = (s, i, isMe, isGhost) => {
     const team = teams.find(t => t.id === s.teamId);
@@ -388,6 +436,12 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
     const inA = i < 5;
     const isTop3 = i < 3;
     const bw = mx > 0 ? Math.max((s.points / mx) * 100, 2) : 2;
+    const bio = bios[s.id] || {};
+    const initials = s.name.split(" ").map(n => n[0]).join("");
+    const wp = weekPoints[s.id] || 0;
+    const lastRank = lastWeekRankMap[s.id];
+    const movement = lastRank !== undefined ? lastRank - i : 0;
+
     return (
       <div key={s.id + (isGhost ? "-ghost" : "")} style={{
         borderRadius: 12, overflow: "hidden", marginBottom: 6, background: "#fff",
@@ -400,19 +454,32 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
             background: isTop3 ? "#111827" : inA ? ACCENT : "#f3f4f6",
             color: isTop3 || inA ? "#fff" : "#6b7280",
           }}>{i + 1}</div>
+          {bio.photo ? (
+            <img src={bio.photo} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+          ) : (
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#fff", flexShrink: 0 }}>{initials}</div>
+          )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: tc.accent, flexShrink: 0 }} />
               <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", fontFamily: F }}>{s.name}</span>
               {starCounts[s.id] > 0 && <span style={{ fontSize: 11, color: "#d97706" }}>{Array(starCounts[s.id]).fill("\u2733").join("")}</span>}
               {isMe && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#dbeafe", color: "#1d4ed8", fontWeight: 700 }}>YOU</span>}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-              {team && <span style={{ fontSize: 11, color: "#9ca3af" }}>{team.name}</span>}
-              <span style={{ fontSize: 11, color: "#9ca3af" }}>{s.points} pts</span>
+            <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 1, fontStyle: "italic", lineHeight: 1.2 }}>"{getMotto(s.id)}"</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
+              {bio.hometown && <span style={{ fontSize: 10, color: "#9ca3af" }}>{bio.hometown}</span>}
+              {bio.hometown && team && <span style={{ fontSize: 10, color: "#d1d5db" }}>/</span>}
+              {team && <span style={{ fontSize: 10, color: "#9ca3af" }}>{team.name}</span>}
             </div>
           </div>
-          <div style={{ fontSize: 18, fontWeight: 900, color: inA ? ACCENT : "#111827", fontFamily: F, fontVariantNumeric: "tabular-nums" }}>{s.points}</div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ fontSize: 18, fontWeight: 900, color: inA ? ACCENT : "#111827", fontFamily: F, fontVariantNumeric: "tabular-nums" }}>{s.points}</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 2 }}>
+              {wp > 0 && <span style={{ fontSize: 10, color: GREEN, fontWeight: 700 }}>+{wp} this wk</span>}
+              {movement > 0 && <span style={{ fontSize: 10, color: GREEN, fontWeight: 700 }}>&#9650;{movement}</span>}
+              {movement < 0 && <span style={{ fontSize: 10, color: RED, fontWeight: 700 }}>&#9660;{Math.abs(movement)}</span>}
+            </div>
+          </div>
         </div>
         <div style={{ height: 3, background: "#f3f4f6" }}>
           <div style={{ height: "100%", width: bw + "%", background: inA ? ACCENT : tc.accent, transition: "width 0.5s", borderRadius: "0 2px 2px 0" }} />
@@ -425,10 +492,23 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <div style={{ marginBottom: 16 }}>
-          <div style={{ ...sectionLabel, marginBottom: 8 }}>Leaderboard</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ ...sectionLabel, marginBottom: 8 }}>Class Leaderboard</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
             <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: ACCENT }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: ACCENT }}>A Zone — Top 5</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: ACCENT }}>A Zone: Top 5 earn automatic A's</span>
+          </div>
+          <div style={{ ...crd, padding: "10px 14px" }}>
+            <button onClick={() => setShowExplain(!showExplain)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, width: "100%", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 13, color: "#6b7280" }}>Earn points through the weekly game, This or That, PTI, and Rotating Fishbowl.</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" style={{ transform: showExplain ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0, marginLeft: 8 }}><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            {showExplain && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6", fontSize: 13, color: "#6b7280", lineHeight: 1.6 }}>
+                <p>The leaderboard tracks your game points. You earn them four ways: the weekly game (up to 100 pts), This or That (up to 20 pts), PTI culture points (awarded in class), and Rotating Fishbowl (up to 20 pts).</p>
+                <p style={{ marginTop: 8 }}>The top 5 on the leaderboard at the end of the quarter earn automatic A's in the class. That's real.</p>
+                <p style={{ marginTop: 8 }}>This is not your full grade. The leaderboard is 25% of your grade (the participation bucket). The other 75% comes from your assignments. Check the Grades tab for the full picture.</p>
+              </div>
+            )}
           </div>
         </div>
         {visible.map((s, i) => renderRow(s, i, s.name === userName, false))}
@@ -952,6 +1032,7 @@ const BIO_FIELDS = [
   { key: "year", label: "Year", type: "text", placeholder: "e.g. Junior" },
   { key: "hometown", label: "Hometown", type: "text", placeholder: "e.g. San Jose, CA" },
   { key: "favTeam", label: "Favorite Sports Team", type: "text", placeholder: "e.g. Warriors" },
+  { key: "motto", label: "Player Motto", type: "text", placeholder: "Your personal motto..." },
   { key: "funFact", label: "Fun Fact", type: "text", placeholder: "Something unexpected..." },
 ];
 
@@ -1107,7 +1188,7 @@ function BioView({ student, data, setData, userName, onBack }) {
           </div>
         ) : (
           <div style={{ ...crd, padding: 16, marginTop: 12 }}>
-            {bio.about || bio.major || bio.year || bio.hometown || bio.favTeam || bio.funFact ? (
+            {bio.about || bio.major || bio.year || bio.hometown || bio.favTeam || bio.motto || bio.funFact ? (
               <>
                 {bio.about && <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.5, marginBottom: 12 }}>{bio.about}</div>}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -1115,6 +1196,7 @@ function BioView({ student, data, setData, userName, onBack }) {
                   {bio.year && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Year</div><div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{bio.year}</div></div>}
                   {bio.hometown && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Hometown</div><div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{bio.hometown}</div></div>}
                   {bio.favTeam && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Fav Team</div><div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{bio.favTeam}</div></div>}
+                  {bio.motto && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Motto</div><div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{bio.motto}</div></div>}
                 </div>
                 {bio.funFact && <div style={{ marginTop: 10 }}><div style={{ ...sectionLabel, marginBottom: 2 }}>Fun Fact</div><div style={{ fontSize: 13, color: "#374151" }}>{bio.funFact}</div></div>}
               </>
