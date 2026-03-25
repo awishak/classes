@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { AssignmentsView, Gradebook, DEFAULT_ASSIGNMENTS } from "./Grades.jsx";
+import { QuizAdmin, StudentQuizView } from "./QuizSystem.jsx";
 
 const STORAGE_KEY = "comm118-game-v14";
 
@@ -132,7 +133,7 @@ function Nav({ view, setView, isAdmin, userName, onLogout }) {
     { id: "assignments", label: "Assignments", admin: false },
     { id: "grades", label: "Grades", admin: false },
     { id: "pti", label: "PTI", admin: true },
-    { id: "livequiz", label: "Live Quiz", admin: true },
+    { id: "quizadmin", label: "Quiz Setup", admin: true },
     { id: "answer", label: "Answer", admin: false },
     { id: "builder", label: "Draft", admin: true },
     { id: "admin", label: "Admin", admin: true },
@@ -1181,6 +1182,8 @@ export default function Comm118() {
         if (d && !d.grades) { d.grades = {}; await saveData(d); }
         if (d && !d.participation) { d.participation = {}; await saveData(d); }
         if (d && !d.assignments) { d.assignments = JSON.parse(JSON.stringify(DEFAULT_ASSIGNMENTS)); await saveData(d); }
+        if (d && !d.weeklyQuizzes) { d.weeklyQuizzes = {}; await saveData(d); }
+        if (d && !d.weeklyToT) { d.weeklyToT = {}; await saveData(d); }
         setData(d);
       } catch(e) { console.error("Storage load failed:", e); setData(null); }
       setLoading(false);
@@ -1203,12 +1206,11 @@ export default function Comm118() {
       {view === "grades" && <Gradebook data={data} setData={setData} userName={userName} isAdmin={isAdmin} />}
       {view === "builder" && isAdmin && <TeamBuilder data={data} setData={setData} />}
       {view === "pti" && isAdmin && <PTIMode data={data} setData={setData} />}
-      {view === "livequiz" && isAdmin && <LiveQuizAdmin data={data} setData={setData} />}
-      {view === "answer" && !isGuest && <StudentAnswer data={data} setData={setData} userName={userName} />}
+      {view === "quizadmin" && isAdmin && <QuizAdmin data={data} setData={setData} />}
+      {view === "answer" && !isGuest && <StudentQuizView data={data} setData={setData} userName={userName} />}
       {view === "answer" && isGuest && <div style={{ padding: 40, textAlign: "center", fontFamily: F }}><div style={{ ...sectionLabel, marginBottom: 8 }}>Quiz</div><div style={{ fontSize: 14, color: TEXT_SECONDARY }}>Sign in as a student to answer quizzes.</div></div>}
       {view === "admin" && isAdmin && <AdminPanel data={data} setData={setData} />}
-      {view === "quiz" && isAdmin && <QuizMode data={data} setData={setData} />}
-      {(view === "builder" || view === "admin" || view === "quiz" || view === "pti" || view === "livequiz") && !isAdmin && <Leaderboard students={data.students} log={data.log} teams={data.teams} />}
+      {(view === "builder" || view === "admin" || view === "quizadmin" || view === "pti") && !isAdmin && <Leaderboard students={data.students} log={data.log} teams={data.teams} />}
     </div>
   );
 }
