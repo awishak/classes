@@ -974,19 +974,25 @@ const BIO_FIELDS = [
   { key: "funFact", label: "Fun Fact", type: "text", placeholder: "Something unexpected..." },
 ];
 
-// Placeholder: replace SUPABASE_URL and SUPABASE_KEY with real values
-const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";
-const SUPABASE_KEY = "YOUR_ANON_KEY";
+const SUPABASE_URL = "https://ybuchgebudixbyrcxpik.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlidWNoZ2VidWRpeGJ5cmN4cGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0Nzg3OTIsImV4cCI6MjA4ODA1NDc5Mn0.aF2M_fj6bVYKw-Tz1XxI9SiQB7lAtWzuhBRZbsai8QY";
+const SUPABASE_BUCKET = "class-photos";
 
 async function uploadPhoto(file, studentId) {
-  // Placeholder for Supabase storage upload
-  // When ready: POST to SUPABASE_URL/storage/v1/object/photos/{studentId}
-  // For now, convert to base64 data URL and store in shared storage
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(file);
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `comm118/${studentId}.${ext}`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + SUPABASE_KEY,
+      "apikey": SUPABASE_KEY,
+      "Content-Type": file.type,
+      "x-upsert": "true",
+    },
+    body: file,
   });
+  if (!res.ok) throw new Error("Upload failed: " + res.status);
+  return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${path}?t=${Date.now()}`;
 }
 
 function RosterView({ data, setData, userName }) {
