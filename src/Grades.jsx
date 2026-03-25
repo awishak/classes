@@ -147,7 +147,7 @@ export function AssignmentsView({ data, setData, isAdmin }) {
           <div style={{ ...sectionLabel, marginBottom: 10 }}>Participation Breakdown (25%)</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {[
-              { label: "Weekly Quiz", detail: "100 pts/week, dual weighted", icon: "Q" },
+              { label: "Weekly Game", detail: "100 pts/week, dual weighted", icon: "Q" },
               { label: "This or That", detail: "20 pts/week, game only", icon: "TT" },
               { label: "PTI", detail: "Variable, game + grade", icon: "P" },
               { label: "Rotating Fishbowl", detail: "20 pts/time, game + grade", icon: "FB" },
@@ -162,7 +162,7 @@ export function AssignmentsView({ data, setData, isAdmin }) {
             ))}
           </div>
           <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 10, background: "#f8fafc", border: "1px solid #f3f4f6" }}>
-            <div style={{ ...sectionLabel, marginBottom: 6 }}>Quiz Dual Weighting</div>
+            <div style={{ ...sectionLabel, marginBottom: 6 }}>Game Dual Weighting</div>
             <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 1fr 1fr", gap: "4px 12px", fontSize: 12 }}>
               <div style={{ fontWeight: 700, color: "#9ca3af" }}></div>
               <div style={{ fontWeight: 700, color: "#9ca3af" }}>Qs</div>
@@ -294,12 +294,12 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
         <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
             <div style={{ padding: 10, borderRadius: 8, background: "#f8fafc" }}>
-              <div style={{ ...sectionLabel, marginBottom: 2 }}>Quiz (Game)</div>
+              <div style={{ ...sectionLabel, marginBottom: 2 }}>Game (Game)</div>
               <span style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>{quizData.totalGame}</span>
               <span style={{ fontSize: 12, color: "#9ca3af" }}> / {quizData.totalGamePossible}</span>
             </div>
             <div style={{ padding: 10, borderRadius: 8, background: "#f8fafc" }}>
-              <div style={{ ...sectionLabel, marginBottom: 2 }}>Quiz (Grade)</div>
+              <div style={{ ...sectionLabel, marginBottom: 2 }}>Game (Grade)</div>
               <span style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>{quizData.totalGrade}</span>
               <span style={{ fontSize: 12, color: "#9ca3af" }}> / {quizData.totalGradePossible}</span>
             </div>
