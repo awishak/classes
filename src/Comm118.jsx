@@ -1497,7 +1497,7 @@ function Gradebook({ data, setData, userName, isAdmin }) {
 }
 
 /* ─── APP ─── */
-export default function App() {
+export default function Comm118() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("schedule");
