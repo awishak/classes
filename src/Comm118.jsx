@@ -3,7 +3,7 @@ import { AssignmentsView, Gradebook, DEFAULT_ASSIGNMENTS } from "./Grades.jsx";
 
 const STORAGE_KEY = "comm118-game-v14";
 
-const POINT_SOURCES = ["Weekly Team Quiz","Real or Fake","Assignment","Friday Response","Channel Switch","Participation","Bonus","Other"];
+const POINT_SOURCES = ["Weekly Team Quiz","This or That","Assignment","Friday Response","Channel Switch","Participation","Bonus","Other"];
 
 const TEAM_COLORS = [
   { accent: "#2563eb", bg: "#eff6ff" },
@@ -679,7 +679,7 @@ function PTIMode({ data, setData }) {
 
   const awardPTI = async (sid, amount) => {
     const student = data.students.find(s => s.id === sid);
-    const entry = { id: genId(), studentId: sid, amount, source: "Culture Points", ts: Date.now() };
+    const entry = { id: genId(), studentId: sid, amount, source: "PTI", ts: Date.now() };
     const updated = { ...data, log: [...data.log, entry] };
     await saveData(updated); setData(updated);
     setPopup(null);
@@ -690,7 +690,7 @@ function PTIMode({ data, setData }) {
     <div style={{ padding: "20px 16px 40px", fontFamily: F }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <div style={{ ...sectionLabel, marginBottom: 12 }}>Culture Points</div>
+        <div style={{ ...sectionLabel, marginBottom: 12 }}>PTI</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 8 }}>
           {[...data.students].sort(lastSortObj).map(s => {
             const team = data.teams.find(t => t.id === s.teamId);

@@ -19,13 +19,13 @@ export const DEFAULT_ASSIGNMENTS = [
   { id: "woc_submission", name: "Web of Connections Submission", weight: 20, due: "May 6", link: "", notes: "" },
   { id: "leadership_guide", name: "Leadership Guide", weight: 20, due: "May 20", link: "", notes: "" },
   { id: "final_project", name: "Final Project: Teach Me Something New", weight: 30, due: "Jun 8", link: "", notes: "" },
-  { id: "participation", name: "Participation", weight: 25, due: "", link: "", notes: "Quizzes, Real or Fake, PTI, Rotating Fishbowl" },
+  { id: "participation", name: "Participation", weight: 25, due: "", link: "", notes: "Quizzes, This or That, PTI, Rotating Fishbowl" },
 ];
 
 export const QUIZ_BREAKDOWN = [
-  { id: "on_topic", label: "On Topic", count: 3, gamePts: 10, gradePts: 40/3 },
-  { id: "reading", label: "From Reading", count: 3, gamePts: 10, gradePts: 50/3 },
-  { id: "sports_world", label: "Sports World", count: 4, gamePts: 10, gradePts: 10/4 },
+  { id: "on_topic", label: "On Topic", count: 3, gamePts: 10, gradePts: 13 },
+  { id: "reading", label: "From Reading", count: 3, gamePts: 10, gradePts: 17 },
+  { id: "sports_world", label: "Sports World", count: 4, gamePts: 10, gradePts: 2.5 },
 ];
 
 function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#1e293b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 13, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
@@ -44,6 +44,26 @@ export function AssignmentsView({ data, setData, isAdmin }) {
 
   const updateAssignment = async (id, field, value) => {
     const updated = { ...data, assignments: (data.assignments || DEFAULT_ASSIGNMENTS).map(a => a.id === id ? { ...a, [field]: value } : a) };
+    // If due date changed, port it to the schedule
+    if (field === "due" && value && data.schedule) {
+      const assignment = (data.assignments || DEFAULT_ASSIGNMENTS).find(a => a.id === id);
+      if (assignment) {
+        const newSchedule = data.schedule.map(week => ({
+          ...week,
+          dates: week.dates.map(d => {
+            // Remove old assignment reference for this assignment
+            const cleanedAssignment = (d.assignment || "").split(", ").filter(a => a !== assignment.name && a !== assignment.name + " due").join(", ");
+            // Add if this date matches the new due date
+            if (d.date === value) {
+              const newAssignment = cleanedAssignment ? cleanedAssignment + ", " + assignment.name + " due" : assignment.name + " due";
+              return { ...d, assignment: newAssignment };
+            }
+            return { ...d, assignment: cleanedAssignment };
+          })
+        }));
+        updated.schedule = newSchedule;
+      }
+    }
     await saveData(updated); setData(updated);
   };
 
@@ -53,7 +73,26 @@ export function AssignmentsView({ data, setData, isAdmin }) {
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
-        <div style={{ ...sectionLabel, marginBottom: 12 }}>Assignments & Weights</div>
+        <div style={{ ...sectionLabel, marginBottom: 8 }}>Assignments & Weights</div>
+        <div style={{ marginBottom: 16 }}>
+          <a href="https://camino.instructure.com/courses/117721/assignments" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+            For detailed info, see Camino
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+        </div>
+
+        <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+          <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6 }}>
+            Here's how your grade works. There are four major assignments worth 75% of your grade, and a participation bucket worth the other 25%. The participation bucket is where quizzes, This or That, PTI, and Rotating Fishbowl all live.
+          </div>
+          <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, marginTop: 10 }}>
+            The game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. Quizzes are the biggest example: the game weights all question types equally, but your grade weights On Topic and From Reading questions much more heavily than Sports World questions. So if you want to climb the leaderboard, be good at everything. If you want a good grade, make sure you're doing the reading.
+          </div>
+          <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, marginTop: 10 }}>
+            The top 5 on the leaderboard at the end of the quarter get automatic A's. That's real. Everything else, just do the work, show up, and engage.
+          </div>
+        </div>
+
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {assignments.map(a => {
             const isEdit = isAdmin && editId === a.id;
@@ -109,8 +148,8 @@ export function AssignmentsView({ data, setData, isAdmin }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {[
               { label: "Weekly Quiz", detail: "100 pts/week, dual weighted", icon: "Q" },
-              { label: "Real or Fake", detail: "10 pts/week, game only", icon: "RF" },
-              { label: "PTI (Culture Points)", detail: "Variable, game + grade", icon: "P" },
+              { label: "This or That", detail: "20 pts/week, game only", icon: "TT" },
+              { label: "PTI", detail: "Variable, game + grade", icon: "P" },
               { label: "Rotating Fishbowl", detail: "20 pts/time, game + grade", icon: "FB" },
             ].map(p => (
               <div key={p.label} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 8 }}>
@@ -134,7 +173,7 @@ export function AssignmentsView({ data, setData, isAdmin }) {
                   <div style={{ fontWeight: 600, color: "#374151" }}>{q.label}</div>
                   <div style={{ color: "#6b7280" }}>{q.count}</div>
                   <div style={{ color: "#6b7280" }}>{q.gamePts} pts ea</div>
-                  <div style={{ color: "#6b7280" }}>{Math.round(q.gradePts * 100) / 100} pts ea</div>
+                  <div style={{ color: "#6b7280" }}>{q.gradePts} pts ea</div>
                 </React.Fragment>
               ))}
             </div>
@@ -151,8 +190,6 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
   const grades = data.grades || {};
   const participation = data.participation || {};
   const [selStudent, setSelStudent] = useState(null);
-  const [msg, setMsg] = useState("");
-  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const isGuest = userName === GUEST_NAME;
 
   const student = isAdmin ? (selStudent ? data.students.find(s => s.id === selStudent) : null) : data.students.find(s => s.name === userName);
@@ -210,9 +247,9 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     return { total, count };
   };
 
-  const renderStudentGrades = (sid, sName) => {
+  const renderStudentGrades = (sid) => {
     const quizData = calcQuizScores(sid);
-    const rofData = calcCategoryTotal(sid, "rof");
+    const totData = calcCategoryTotal(sid, "tot");
     const ptiData = calcCategoryTotal(sid, "pti");
     const fbData = calcCategoryTotal(sid, "fishbowl");
 
@@ -269,9 +306,9 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
             <div style={{ padding: 10, borderRadius: 8, background: "#f8fafc" }}>
-              <div style={{ ...sectionLabel, marginBottom: 2 }}>Real or Fake</div>
-              <span style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>{rofData.total}</span>
-              <span style={{ fontSize: 11, color: "#9ca3af" }}> ({rofData.count} wks)</span>
+              <div style={{ ...sectionLabel, marginBottom: 2 }}>This or That</div>
+              <span style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>{totData.total}</span>
+              <span style={{ fontSize: 11, color: "#9ca3af" }}> ({totData.count} wks)</span>
               <div style={{ fontSize: 10, color: "#d1d5db" }}>Game only</div>
             </div>
             <div style={{ padding: 10, borderRadius: 8, background: "#f8fafc" }}>
@@ -299,7 +336,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                     <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>On Topic</th>
                     <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>Reading</th>
                     <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>Sports W.</th>
-                    <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>RoF</th>
+                    <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>ToT</th>
                     <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>PTI</th>
                     <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>FB</th>
                   </tr>
@@ -315,7 +352,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                         <td style={{ padding: "4px" }}><input type="number" min="0" max="3" value={quizScores.on_topic ?? ""} onChange={e => { const v = { ...quizScores, on_topic: parseInt(e.target.value) || 0 }; updateParticipation(sid, w, "quiz", v); }} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
                         <td style={{ padding: "4px" }}><input type="number" min="0" max="3" value={quizScores.reading ?? ""} onChange={e => { const v = { ...quizScores, reading: parseInt(e.target.value) || 0 }; updateParticipation(sid, w, "quiz", v); }} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
                         <td style={{ padding: "4px" }}><input type="number" min="0" max="4" value={quizScores.sports_world ?? ""} onChange={e => { const v = { ...quizScores, sports_world: parseInt(e.target.value) || 0 }; updateParticipation(sid, w, "quiz", v); }} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
-                        <td style={{ padding: "4px" }}><input type="number" value={getParticipation(sid, w, "rof") ?? ""} onChange={e => updateParticipation(sid, w, "rof", e.target.value)} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
+                        <td style={{ padding: "4px" }}><input type="number" value={getParticipation(sid, w, "tot") ?? ""} onChange={e => updateParticipation(sid, w, "tot", e.target.value)} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
                         <td style={{ padding: "4px" }}><input type="number" value={getParticipation(sid, w, "pti") ?? ""} onChange={e => updateParticipation(sid, w, "pti", e.target.value)} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
                         <td style={{ padding: "4px" }}><input type="number" value={getParticipation(sid, w, "fishbowl") ?? ""} onChange={e => updateParticipation(sid, w, "fishbowl", e.target.value)} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
                       </tr>
@@ -346,7 +383,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
               {sorted.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
-          {studentId && renderStudentGrades(studentId, student.name)}
+          {studentId && renderStudentGrades(studentId)}
           {!studentId && <div style={{ textAlign: "center", color: "#d1d5db", fontSize: 14, padding: 40 }}>Pick a student above to view and edit grades.</div>}
         </div>
       </div>
@@ -359,7 +396,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 12 }}>My Grades</div>
-        {renderStudentGrades(studentId, student.name)}
+        {renderStudentGrades(studentId)}
       </div>
     </div>
   );
