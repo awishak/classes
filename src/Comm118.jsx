@@ -1241,7 +1241,6 @@ export default function Comm118() {
         if (d && !d.grades) { d.grades = {}; await saveData(d); }
         if (d && !d.participation) { d.participation = {}; await saveData(d); }
         if (d && !d.assignments) { d.assignments = JSON.parse(JSON.stringify(DEFAULT_ASSIGNMENTS)); await saveData(d); }
-        if (d && !d.weeklyQuizzes) { d.weeklyGames = d.weeklyQuizzes || {}; delete d.weeklyQuizzes; await saveData(d); }
         if (d && !d.weeklyGames) { d.weeklyGames = {}; await saveData(d); }
         if (d && !d.weeklyToT) { d.weeklyToT = {}; await saveData(d); }
         if (d && !d.weeklyFishbowl) { d.weeklyFishbowl = {}; await saveData(d); }
@@ -1250,7 +1249,16 @@ export default function Comm118() {
       } catch(e) { console.error("Storage load failed:", e); setData(null); }
       setLoading(false);
     })();
-    const iv = setInterval(refresh, 5000); return () => clearInterval(iv);
+    // Real-time subscription
+    let unsub = null;
+    if (window.storage?.onUpdate) {
+      unsub = window.storage.onUpdate(STORAGE_KEY, (value) => {
+        try { const d = JSON.parse(value); if (d) setData(d); } catch(e) { console.error("Realtime parse error:", e); }
+      });
+    }
+    // Backup polling every 30s (in case realtime drops)
+    const iv = setInterval(refresh, 30000);
+    return () => { clearInterval(iv); if (unsub) unsub(); };
   }, [refresh]);
 
   if (loading) return <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ fontSize: 14, fontWeight: 700, color: "#94a3b8" }}>Loading...</div></div>;
