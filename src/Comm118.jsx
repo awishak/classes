@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { AssignmentsView, Gradebook, DEFAULT_ASSIGNMENTS } from "./Grades.jsx";
 import { GameAdmin, StudentAnswerView, Accolades } from "./GameSystem.jsx";
 
@@ -409,6 +409,34 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
   Object.values(stars).forEach(sid => { if (sid) starCounts[sid] = (starCounts[sid] || 0) + 1; });
   const bios = data?.bios || {};
 
+  // Animation: track previous order
+  const prevOrderRef = useRef([]);
+  const [animOffsets, setAnimOffsets] = useState({});
+  const ROW_HEIGHT = 82; // approximate row height in px
+
+  useEffect(() => {
+    const prevOrder = prevOrderRef.current;
+    const currOrder = ranked.map(s => s.id);
+    if (prevOrder.length > 0 && prevOrder.length === currOrder.length) {
+      const offsets = {};
+      let hasChange = false;
+      currOrder.forEach((id, newIdx) => {
+        const oldIdx = prevOrder.indexOf(id);
+        if (oldIdx !== -1 && oldIdx !== newIdx) {
+          offsets[id] = (oldIdx - newIdx) * ROW_HEIGHT;
+          hasChange = true;
+        }
+      });
+      if (hasChange) {
+        setAnimOffsets(offsets);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => { setAnimOffsets({}); });
+        });
+      }
+    }
+    prevOrderRef.current = currOrder;
+  }, [ranked.map(s => s.id + s.points).join(",")]); // eslint-disable-line
+
   // Weekly stats
   const { start: weekStart, end: weekEnd } = getWeekBounds();
   const weekLog = log.filter(e => e.ts >= weekStart && e.ts < weekEnd);
@@ -442,10 +470,14 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
     const lastRank = lastWeekRankMap[s.id];
     const movement = lastRank !== undefined ? lastRank - i : 0;
 
+    const offset = animOffsets[s.id] || 0;
+
     return (
       <div key={s.id + (isGhost ? "-ghost" : "")} style={{
         borderRadius: 12, overflow: "hidden", marginBottom: 6, background: "#fff",
         border: isGhost ? "2px dashed #93c5fd" : inA ? "2px solid #fecdd3" : "1px solid #f3f4f6",
+        transform: offset ? "translateY(" + offset + "px)" : "none",
+        transition: offset ? "none" : "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px" }}>
           <div style={{
@@ -740,7 +772,6 @@ function PTIMode({ data, setData }) {
     const entry = { id: genId(), studentId: sid, amount, source: "PTI", ts: Date.now() };
     const updated = { ...data, log: [...data.log, entry] };
     await saveData(updated); setData(updated);
-    setPopup(null);
     showMsg((amount > 0 ? "+" : "") + amount + " " + (student?.name?.split(" ")[0] || ""));
   };
 
