@@ -32,6 +32,25 @@ function genId() { return Date.now().toString(36) + Math.random().toString(36).s
 function lastName(name) { if (name === "Alexander Watanabe Eriksson") return "Watanabe Eriksson"; return name.split(" ").slice(-1)[0]; }
 function lastSortObj(a, b) { return lastName(a.name).localeCompare(lastName(b.name)); }
 async function saveData(data) { try { await window.storage.set("comm118-game-v14", JSON.stringify(data), true); return true; } catch { return false; } }
+function gp(log, sid) { return log.filter(e => e.studentId === sid).reduce((s, e) => s + e.amount, 0); }
+function rs(students, log) { return students.map(s => ({ ...s, points: gp(log, s.id) })).sort((a, b) => b.points - a.points); }
+function shuffleTeams(students, log, teams) {
+  const ranked = rs(students, log);
+  const numTeams = teams.length;
+  const assignments = {};
+  teams.forEach(t => { assignments[t.id] = []; });
+  const teamOrder = teams.map(t => t.id);
+  ranked.forEach((s, idx) => {
+    const round = Math.floor(idx / numTeams);
+    const pos = idx % numTeams;
+    const teamIdx = round === 0 ? pos : (numTeams - 1 - pos);
+    assignments[teamOrder[teamIdx]].push(s.id);
+  });
+  return students.map(s => {
+    const tid = Object.keys(assignments).find(tid => assignments[tid].includes(s.id));
+    return { ...s, teamId: tid || s.teamId };
+  });
+}
 
 function emptyGame() {
   return Array.from({ length: 10 }).map((_, i) => ({
@@ -59,16 +78,42 @@ export function GameAdmin({ data, setData }) {
   const scoreGame = async (w) => {
     const game = games[w]; if (!game) return;
     const entries = [];
+    const playerScores = {};
     data.students.forEach(s => {
       let pts = 0;
       for (let q = 0; q < 10; q++) {
         const ans = game.responses?.[s.id + "-" + q];
         if (ans === game.questions[q].correct) pts += GAME_PTS;
       }
+      playerScores[s.id] = pts;
       if (pts > 0) entries.push({ id: genId(), studentId: s.id, amount: pts, source: "Game Wk" + w, ts: Date.now() });
     });
-    const updated = { ...data, weeklyGames: { ...games, [w]: { ...game, scored: true, active: false } }, log: [...data.log, ...entries] };
-    await saveData(updated); setData(updated); showMsg("Scored! " + entries.length + " students earned points.");
+
+    // Calculate winning team (top 3 scores per team)
+    const shuffled = shuffleTeams(data.students, data.log, data.teams);
+    const teamScores = {};
+    data.teams.forEach(t => {
+      const members = shuffled.filter(s => s.teamId === t.id);
+      const scores = members.map(m => playerScores[m.id] || 0).sort((a, b) => b - a);
+      teamScores[t.id] = scores.slice(0, 3).reduce((sum, s) => sum + s, 0);
+    });
+    const maxTeamScore = Math.max(...Object.values(teamScores));
+    const winningTeamId = maxTeamScore > 0 ? Object.keys(teamScores).find(tid => teamScores[tid] === maxTeamScore) : null;
+
+    // Award 10 bonus to winning team members
+    if (winningTeamId) {
+      const winMembers = shuffled.filter(s => s.teamId === winningTeamId);
+      const winTeam = data.teams.find(t => t.id === winningTeamId);
+      winMembers.forEach(m => {
+        entries.push({ id: genId(), studentId: m.id, amount: 10, source: "Team Win Wk" + w, ts: Date.now() });
+      });
+    }
+
+    const weeklyWins = { ...(data.weeklyTeamWins || {}), [w]: winningTeamId };
+    const updated = { ...data, weeklyGames: { ...games, [w]: { ...game, scored: true, active: false } }, log: [...data.log, ...entries], weeklyTeamWins: weeklyWins };
+    await saveData(updated); setData(updated);
+    const winName = winningTeamId ? data.teams.find(t => t.id === winningTeamId)?.name : "None";
+    showMsg("Scored! Winning team: " + winName + " (+10 bonus each)");
   };
 
   const deleteGame = async (w) => {

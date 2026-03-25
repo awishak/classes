@@ -17,7 +17,7 @@ const TEAM_COLORS = [
   { accent: "#65a30d", bg: "#f7fee7" },
 ];
 
-const MISMATCHED_NAMES = ["New York Cowboys","Dallas Sharks","Miami Penguins","Phoenix Mariners","Detroit Flamingos","Las Vegas Moose","Boston Gators","Seattle Cactus"];
+const MISMATCHED_NAMES = ["New York Cowboys","Dallas Sharks","Miami Penguins","Phoenix Mariners","Detroit Flamingos","Las Vegas Moose","Oakland Sports Team"];
 
 const ALL_STUDENTS = [
   "William Anderson","Luke Baird","Maxwell Bayles","Koen Carston",
@@ -120,6 +120,27 @@ function lastSortObj(a, b) { return lastName(a.name).localeCompare(lastName(b.na
 function tp(team, students, log) { const ids = students.filter(s => s.teamId === team.id).map(s => s.id); return log.filter(e => ids.includes(e.studentId)).reduce((s, e) => s + e.amount, 0); }
 function rs(students, log) { return students.map(s => ({ ...s, points: gp(log, s.id) })).sort((a, b) => b.points - a.points); }
 function rt(teams, students, log) { return teams.map(t => ({ ...t, points: tp(t, students, log) })).sort((a, b) => b.points - a.points); }
+
+// Weekly snake draft: round 1 forward, rounds 2+ reverse
+function shuffleTeams(students, log, teams) {
+  const ranked = rs(students, log);
+  const numTeams = teams.length;
+  const assignments = {};
+  teams.forEach(t => { assignments[t.id] = []; });
+  const teamOrder = teams.map(t => t.id);
+
+  ranked.forEach((s, idx) => {
+    const round = Math.floor(idx / numTeams);
+    const pos = idx % numTeams;
+    const teamIdx = round === 0 ? pos : (numTeams - 1 - pos);
+    assignments[teamOrder[teamIdx]].push(s.id);
+  });
+
+  return students.map(s => {
+    const tid = Object.keys(assignments).find(tid => assignments[tid].includes(s.id));
+    return { ...s, teamId: tid || s.teamId };
+  });
+}
 
 function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#1e293b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 13, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
 
@@ -400,6 +421,8 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
   const mx = ranked.length > 0 ? Math.max(ranked[0].points, 1) : 1;
   const [showAll, setShowAll] = useState(false);
   const [showExplain, setShowExplain] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
+  const shuffledStudents = shuffleTeams(students, log, teams);
   const visible = showAll ? ranked : ranked.slice(0, 10);
   const myRank = ranked.findIndex(s => s.name === userName);
   const meInVisible = myRank >= 0 && myRank < visible.length;
@@ -458,10 +481,10 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
   };
 
   const renderRow = (s, i, isMe, isGhost) => {
-    const team = teams.find(t => t.id === s.teamId);
+    const shuffled = shuffledStudents.find(st => st.id === s.id);
+    const team = teams.find(t => t.id === (shuffled?.teamId || s.teamId));
     const tc = team ? TEAM_COLORS[team.colorIdx] : TEAM_COLORS[0];
     const inA = i < 5;
-    const isTop3 = i < 3;
     const bw = mx > 0 ? Math.max((s.points / mx) * 100, 2) : 2;
     const bio = bios[s.id] || {};
     const initials = s.name.split(" ").map(n => n[0]).join("");
@@ -469,28 +492,37 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
     const lastRank = lastWeekRankMap[s.id];
     const movement = lastRank !== undefined ? lastRank - i : 0;
     const offset = animOffsets[s.id] || 0;
+    const isExpanded = expandedId === s.id;
+
+    // Point breakdown by source
+    const breakdown = {};
+    log.filter(e => e.studentId === s.id).forEach(e => {
+      const src = e.source || "Other";
+      breakdown[src] = (breakdown[src] || 0) + e.amount;
+    });
+    const breakdownEntries = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
 
     return (
       <div key={s.id + (isGhost ? "-ghost" : "")} style={{
         borderRadius: 14, overflow: "hidden", marginBottom: 8, background: "#fff",
-        border: isGhost ? "2px dashed #93c5fd" : inA ? "2px solid #fecdd3" : "1px solid #f3f4f6",
+        border: isGhost ? "2px dashed #93c5fd" : inA ? "2px solid #d4a017" : "1px solid #f3f4f6",
         transform: offset ? "translateY(" + offset + "px)" : "none",
         transition: offset ? "none" : "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
         position: "relative",
         zIndex: offset > 0 ? 10 : offset < 0 ? 0 : 1,
         boxShadow: offset > 0 ? "0 4px 16px rgba(0,0,0,0.12)" : "none",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px" }}>
+        <div onClick={() => setExpandedId(isExpanded ? null : s.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", cursor: "pointer" }}>
           <div style={{
             width: 32, height: 32, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
             fontSize: 14, fontWeight: 900, fontFamily: F,
-            background: isTop3 ? "#111827" : inA ? ACCENT : "#f3f4f6",
-            color: isTop3 || inA ? "#fff" : "#6b7280",
+            background: inA ? "#d4a017" : "#f3f4f6",
+            color: inA ? "#fff" : "#6b7280",
           }}>{i + 1}</div>
           {bio.photo ? (
-            <img src={bio.photo} alt="" style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "3px solid " + (inA ? ACCENT + "33" : "#f3f4f6") }} />
+            <img src={bio.photo} alt="" style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "3px solid " + (inA ? "#d4a01744" : "#f3f4f6") }} />
           ) : (
-            <div style={{ width: 52, height: 52, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "#fff", flexShrink: 0, border: "3px solid " + (inA ? ACCENT + "33" : "#f3f4f6") }}>{initials}</div>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "#fff", flexShrink: 0, border: "3px solid " + (inA ? "#d4a01744" : "#f3f4f6") }}>{initials}</div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -499,14 +531,14 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
               {isMe && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#dbeafe", color: "#1d4ed8", fontWeight: 700 }}>YOU</span>}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
-              {team && <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600 }}>{team.name}</span>}
+              {team && <span style={{ fontSize: 11, color: tc.accent, fontWeight: 600 }}>{team.name}</span>}
               <span style={{ fontSize: 11, color: "#d1d5db" }}>/</span>
               <span style={{ fontSize: 11, color: "#b0b0b0", fontStyle: "italic" }}>{getMotto(s.id)}</span>
             </div>
             {bio.hometown && <div style={{ fontSize: 10, color: "#d1d5db", marginTop: 2 }}>{bio.hometown}</div>}
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 30, fontWeight: 900, color: inA ? ACCENT : "#111827", fontFamily: F, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{s.points}</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: inA ? "#b8860b" : "#111827", fontFamily: F, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{s.points}</div>
             <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 1 }}>pts</div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 3 }}>
               {wp > 0 && <span style={{ fontSize: 10, color: GREEN, fontWeight: 700 }}>+{wp} this wk</span>}
@@ -515,8 +547,20 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
             </div>
           </div>
         </div>
+        {isExpanded && (
+          <div style={{ padding: "0 16px 14px", borderTop: "1px solid #f3f4f6" }}>
+            <div style={{ ...sectionLabel, marginTop: 10, marginBottom: 6 }}>Point Breakdown</div>
+            {breakdownEntries.length === 0 && <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic" }}>No points yet.</div>}
+            {breakdownEntries.map(([src, pts]) => (
+              <div key={src} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", fontSize: 13 }}>
+                <span style={{ color: "#6b7280" }}>{src}</span>
+                <span style={{ fontWeight: 700, color: pts > 0 ? "#111827" : RED }}>{pts > 0 ? "+" : ""}{pts}</span>
+              </div>
+            ))}
+          </div>
+        )}
         <div style={{ height: 4, background: "#f3f4f6" }}>
-          <div style={{ height: "100%", width: bw + "%", background: inA ? ACCENT : tc.accent, transition: "width 0.5s", borderRadius: "0 2px 2px 0" }} />
+          <div style={{ height: "100%", width: bw + "%", background: inA ? "#d4a017" : tc.accent, transition: "width 0.5s", borderRadius: "0 2px 2px 0" }} />
         </div>
       </div>
     );
@@ -527,10 +571,6 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <div style={{ marginBottom: 16 }}>
           <div style={{ ...sectionLabel, marginBottom: 8 }}>Class Leaderboard</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-            <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: ACCENT }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: ACCENT }}>A Zone: Top 5 earn automatic A's</span>
-          </div>
           <div style={{ ...crd, padding: "10px 14px" }}>
             <button onClick={() => setShowExplain(!showExplain)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, width: "100%", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={{ fontSize: 13, color: "#6b7280" }}>Earn points through the weekly game, This or That, PTI, and Rotating Fishbowl.</span>
@@ -540,11 +580,12 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6", fontSize: 13, color: "#6b7280", lineHeight: 1.6 }}>
                 <p>The leaderboard tracks your game points. You earn them four ways: the weekly game (up to 100 pts), This or That (up to 20 pts), PTI culture points (awarded in class), and Rotating Fishbowl (up to 20 pts).</p>
                 <p style={{ marginTop: 8 }}>The top 5 on the leaderboard at the end of the quarter earn automatic A's in the class. That's real.</p>
-                <p style={{ marginTop: 8 }}>This is not your full grade. The leaderboard is 25% of your grade (the participation bucket). The other 75% comes from your assignments. Check the Grades tab for the full picture.</p>
+                <p style={{ marginTop: 8 }}>This is not your full grade. The leaderboard contributes to 25% of your grade (the participation bucket), but in different weights. The other 75% comes from your assignments. Check the Grades tab for the full picture.</p>
               </div>
             )}
           </div>
         </div>
+        <div style={{ fontSize: 13, fontWeight: 900, color: "#d4a017", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, paddingLeft: 2 }}>A Zone</div>
         {visible.map((s, i) => renderRow(s, i, s.name === userName, false))}
         {!meInVisible && meData && !showAll && (
           <div style={{ marginTop: 12 }}>
@@ -565,28 +606,40 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
 }
 
 /* ─── TEAMS ─── */
-function TeamsView({ teams, students, log }) {
-  const ranked = rt(teams, students, log);
+function TeamsView({ teams, students, log, data }) {
+  const shuffled = shuffleTeams(students, log, teams);
+  const teamTotals = teams.map(t => {
+    const members = shuffled.filter(s => s.teamId === t.id);
+    const total = members.reduce((sum, m) => sum + gp(log, m.id), 0);
+    return { ...t, total, members };
+  }).sort((a, b) => b.total - a.total);
+
+  const weeklyWins = data?.weeklyTeamWins || {};
+  const winCounts = {};
+  Object.values(weeklyWins).forEach(tid => { if (tid) winCounts[tid] = (winCounts[tid] || 0) + 1; });
+
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <div style={{ ...sectionLabel, marginBottom: 12 }}>Team Standings</div>
+        <div style={{ ...sectionLabel, marginBottom: 4 }}>This Week's Teams</div>
+        <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 12, lineHeight: 1.5 }}>Teams shuffle weekly based on leaderboard rank. The team whose top 3 players score highest on the weekly game earns 10 bonus points each.</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
-          {ranked.map((team, i) => {
+          {teamTotals.map((team, i) => {
             const tc = TEAM_COLORS[team.colorIdx];
-            const members = students.filter(s => s.teamId === team.id).map(m => ({ ...m, points: gp(log, m.id) })).sort((a, b) => b.points - a.points);
+            const memberData = team.members.map(m => ({ ...m, points: gp(log, m.id) })).sort((a, b) => b.points - a.points);
+            const wins = winCounts[team.id] || 0;
             return (
               <div key={team.id} style={{ borderRadius: 16, border: "1px solid #f3f4f6", overflow: "hidden", background: "#fff" }}>
                 <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 40, height: 40, borderRadius: 12, background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 900, flexShrink: 0 }}>#{i + 1}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{team.name}</div>
-                    <div style={{ fontSize: 11, color: "#9ca3af" }}>{members.length} players</div>
+                    <div style={{ fontSize: 11, color: "#9ca3af" }}>{memberData.length} players{wins > 0 ? " / " + wins + " win" + (wins !== 1 ? "s" : "") : ""}</div>
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{team.points}</div>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{team.total}</div>
                 </div>
                 <div style={{ padding: "0 16px 12px" }}>
-                  {members.map(m => (
+                  {memberData.map(m => (
                     <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderTop: "1px solid #f9fafb" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: tc.accent, flexShrink: 0 }} />
@@ -1264,7 +1317,7 @@ export default function Comm118() {
         let d = await loadData();
         if (!d) {
           const shuffled = shuffle(ALL_STUDENTS);
-          const teams = MISMATCHED_NAMES.slice(0, 6).map((name, i) => ({ id: genId(), name, colorIdx: i }));
+          const teams = MISMATCHED_NAMES.slice(0, 7).map((name, i) => ({ id: genId(), name, colorIdx: i }));
           const students = shuffled.map((name, i) => ({ id: genId(), name, teamId: teams[i % 6].id }));
           d = { teams, students, log: [], schedule: JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)), bios: {} };
           await saveData(d);
@@ -1278,6 +1331,7 @@ export default function Comm118() {
         if (d && !d.weeklyToT) { d.weeklyToT = {}; await saveData(d); }
         if (d && !d.weeklyFishbowl) { d.weeklyFishbowl = {}; await saveData(d); }
         if (d && !d.fishbowlStars) { d.fishbowlStars = {}; await saveData(d); }
+        if (d && !d.weeklyTeamWins) { d.weeklyTeamWins = {}; await saveData(d); }
         setData(d);
       } catch(e) { console.error("Storage load failed:", e); setData(null); }
       setLoading(false);
@@ -1303,7 +1357,7 @@ export default function Comm118() {
       <Nav view={view} setView={setView} isAdmin={isAdmin} userName={displayName} onLogout={() => setUserName(null)} />
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={isAdmin} />}
       {view === "leaderboard" && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={isAdmin} userName={userName} data={data} />}
-      {view === "teams" && <TeamsView teams={data.teams} students={data.students} log={data.log} />}
+      {view === "teams" && <TeamsView teams={data.teams} students={data.students} log={data.log} data={data} />}
       {view === "roster" && <RosterView data={data} setData={setData} userName={userName} />}
       {view === "assignments" && <AssignmentsView data={data} setData={setData} isAdmin={isAdmin} />}
       {view === "grades" && <Gradebook data={data} setData={setData} userName={userName} isAdmin={isAdmin} />}
