@@ -4,7 +4,7 @@ import { GameAdmin, StudentAnswerView, Accolades } from "./GameSystem.jsx";
 
 const STORAGE_KEY = "comm118-game-v14";
 
-const POINT_SOURCES = ["Weekly Team Quiz","This or That","Assignment","Friday Response","Channel Switch","Participation","Bonus","Other"];
+const POINT_SOURCES = ["Weekly Team Game","This or That","Assignment","Friday Response","Channel Switch","Participation","Bonus","Other"];
 
 const TEAM_COLORS = [
   { accent: "#2563eb", bg: "#eff6ff" },
@@ -203,7 +203,7 @@ function NamePicker({ data, onSelect }) {
           <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: 500, marginTop: 4 }}>COMM 118 - Ishak / Santa Clara University</div>
         </div>
         <div style={{ ...crd, padding: "12px 16px", marginBottom: 12 }}>
-          <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, textAlign: "center" }}>This app is our class hub: schedule, leaderboard, quizzes, and team standings. Select your name to get started.</div>
+          <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, textAlign: "center" }}>This app is our class hub: schedule, leaderboard, games, and team standings. Select your name to get started.</div>
         </div>
         <div style={{ ...crd, padding: 4 }}>
           {names.map(name => (
@@ -248,6 +248,110 @@ const TOPIC_COLORS = {
   "Final Project": ACCENT,
   "Finals": TEXT_MUTED,
 };
+
+function WeekHeaderEditor({ week, wi, updateWeek, onDone }) {
+  const [local, setLocal] = useState({ label: week.label || "", theme: week.theme || "", question: week.question || "" });
+  const set = (field, value) => setLocal(prev => ({ ...prev, [field]: value }));
+  const flush = async () => {
+    await updateWeek(wi, "label", local.label);
+    await updateWeek(wi, "theme", local.theme);
+    await updateWeek(wi, "question", local.question);
+  };
+  const handleDone = async () => { await flush(); onDone(); };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
+      <div style={{ display: "flex", gap: 6 }}>
+        <input value={local.label} onChange={e => set("label", e.target.value)} placeholder="Label" style={{ ...inp, padding: "4px 8px", fontSize: 12, width: 90 }} />
+        <input value={local.theme} onChange={e => set("theme", e.target.value)} placeholder="Theme" style={{ ...inp, padding: "4px 8px", fontSize: 12, flex: 1 }} />
+      </div>
+      <div style={{ display: "flex", gap: 4 }}>
+        <input value={local.question} onChange={e => set("question", e.target.value)} placeholder="Driving question" style={{ ...inp, padding: "4px 8px", fontSize: 12, flex: 1 }} />
+        <button onClick={handleDone} style={{ ...bt, fontSize: 10, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Done</button>
+      </div>
+    </div>
+  );
+}
+
+function ScheduleCardEditor({ d, wi, realDi, data, updateDate, removeDate, onDone }) {
+  const [local, setLocal] = useState({
+    date: d.date, day: d.day, topic: d.topic || "", holiday: !!d.holiday,
+    activities: (d.activities || []).join(", "), assignment: d.assignment || "",
+    notes: d.notes || "", adminNotes: d.adminNotes || "",
+  });
+  const set = (field, value) => setLocal(prev => ({ ...prev, [field]: value }));
+
+  const flush = async () => {
+    await updateDate(wi, realDi, "date", local.date);
+    await updateDate(wi, realDi, "day", local.day);
+    await updateDate(wi, realDi, "topic", local.topic);
+    await updateDate(wi, realDi, "holiday", local.holiday);
+    await updateDate(wi, realDi, "activities", local.activities.split(",").map(s => s.trim()).filter(Boolean));
+    await updateDate(wi, realDi, "assignment", local.assignment);
+    await updateDate(wi, realDi, "notes", local.notes);
+    await updateDate(wi, realDi, "adminNotes", local.adminNotes);
+  };
+
+  const handleDone = async () => { await flush(); onDone(); };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }} onClick={e => e.stopPropagation()}>
+      <div style={{ display: "flex", gap: 4 }}>
+        <input value={local.date} onChange={e => set("date", e.target.value)} style={{ ...inp, padding: "3px 6px", fontSize: 11, width: 60 }} />
+        <input value={local.day} onChange={e => set("day", e.target.value)} style={{ ...inp, padding: "3px 6px", fontSize: 11, width: 40 }} />
+        <label style={{ fontSize: 10, color: TEXT_MUTED, display: "flex", alignItems: "center", gap: 2 }}><input type="checkbox" checked={local.holiday} onChange={e => set("holiday", e.target.checked)} />Off</label>
+      </div>
+      <textarea value={local.topic} onChange={e => set("topic", e.target.value)} placeholder="Topic" rows={2} style={{ ...inp, padding: "4px 6px", fontSize: 12, resize: "vertical" }} />
+      <input value={local.activities} onChange={e => set("activities", e.target.value)} placeholder="Activities (comma-separated: Game, Fishbowl, etc.)" style={{ ...inp, padding: "3px 6px", fontSize: 11, fontWeight: 700 }} />
+      <select value={local.assignment} onChange={e => set("assignment", e.target.value)} style={{ ...sel, width: "100%", fontSize: 11, padding: "3px 6px" }}>
+        <option value="">No assignment due</option>
+        {(data.assignments || []).filter(a => a.id !== "participation").map(a => (
+          <option key={a.id} value={a.name + " due"}>{a.name}</option>
+        ))}
+      </select>
+      <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>Readings</div>
+      {(d.readings || []).map((r, ri) => {
+        const rdg = (data.readings || []).find(x => x.id === r.readingId);
+        return (
+          <div key={ri} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, padding: "3px 6px", background: r.type === "required" ? "#fef2f2" : "#f0fdf4", borderRadius: 6 }}>
+            <span style={{ flex: 1, color: "#374151", fontWeight: 500 }}>{rdg?.title || "Unknown"}</span>
+            <select value={r.type} onChange={e => {
+              const upd = [...(d.readings || [])]; upd[ri] = { ...upd[ri], type: e.target.value };
+              updateDate(wi, realDi, "readings", upd);
+            }} style={{ fontSize: 10, border: "none", background: "transparent", color: r.type === "required" ? RED : GREEN, fontWeight: 700, cursor: "pointer" }}>
+              <option value="required">Required</option>
+              <option value="recommended">Recommended</option>
+            </select>
+            <button onClick={() => {
+              const upd = (d.readings || []).filter((_, i) => i !== ri);
+              updateDate(wi, realDi, "readings", upd);
+            }} style={{ background: "none", border: "none", cursor: "pointer", color: RED, fontSize: 12, padding: "0 2px" }}>x</button>
+          </div>
+        );
+      })}
+      {(data.readings || []).length > 0 ? (
+        <select value="" onChange={e => {
+          if (!e.target.value) return;
+          const existing = d.readings || [];
+          if (existing.some(r => r.readingId === e.target.value)) return;
+          updateDate(wi, realDi, "readings", [...existing, { readingId: e.target.value, type: "required" }]);
+        }} style={{ ...sel, width: "100%", fontSize: 11, padding: "3px 6px" }}>
+          <option value="">+ Add reading...</option>
+          {(data.readings || []).filter(r => !(d.readings || []).some(dr => dr.readingId === r.id)).map(r => (
+            <option key={r.id} value={r.id}>{r.title}</option>
+          ))}
+        </select>
+      ) : (
+        <div style={{ fontSize: 10, color: TEXT_MUTED, fontStyle: "italic" }}>No readings in repository yet</div>
+      )}
+      <textarea value={local.notes} onChange={e => set("notes", e.target.value)} placeholder="Notes (students see this)" rows={2} style={{ ...inp, padding: "3px 6px", fontSize: 11, resize: "vertical" }} />
+      <textarea value={local.adminNotes} onChange={e => set("adminNotes", e.target.value)} placeholder="Admin notes (students can't see)" rows={2} style={{ ...inp, padding: "3px 6px", fontSize: 11, resize: "vertical", borderColor: "#f59e0b", background: "#fffbeb" }} />
+      <div style={{ display: "flex", gap: 4 }}>
+        <button onClick={handleDone} style={{ ...bt, fontSize: 10, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Done</button>
+        <button onClick={() => { removeDate(wi, realDi); onDone(); }} style={{ ...bt, fontSize: 10, padding: "3px 10px", background: "transparent", color: RED, border: "1px solid " + RED + "33" }}>X</button>
+      </div>
+    </div>
+  );
+}
 
 function ScheduleView({ data, setData, isAdmin }) {
   const schedule = data.schedule || DEFAULT_SCHEDULE;
@@ -314,13 +418,7 @@ function ScheduleView({ data, setData, isAdmin }) {
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
                 {week.week <= 10 && <div style={{ width: 32, height: 32, borderRadius: 8, background: "#111827", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 900, fontFamily: F, flexShrink: 0 }}>{week.week}</div>}
                 {isAdmin && isEditing ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <input value={week.label} onChange={e => updateWeek(wi, "label", e.target.value)} placeholder="Label" style={{ ...inp, padding: "4px 8px", fontSize: 12, width: 90 }} />
-                      <input value={week.theme} onChange={e => updateWeek(wi, "theme", e.target.value)} placeholder="Theme" style={{ ...inp, padding: "4px 8px", fontSize: 12, flex: 1 }} />
-                    </div>
-                    <input value={week.question || ""} onChange={e => updateWeek(wi, "question", e.target.value)} placeholder="Driving question" style={{ ...inp, padding: "4px 8px", fontSize: 12 }} onBlur={() => setEditWeek(null)} />
-                  </div>
+                  <WeekHeaderEditor week={week} wi={wi} updateWeek={updateWeek} onDone={() => setEditWeek(null)} />
                 ) : (
                   <div style={{ flex: 1, cursor: isAdmin ? "pointer" : "default" }} onClick={() => isAdmin && setEditWeek(wi)}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: "#111827", lineHeight: 1.2 }}>{week.label}{week.theme ? " — " + week.theme : ""}</div>
@@ -351,62 +449,7 @@ function ScheduleView({ data, setData, isAdmin }) {
                       </div>
 
                       {isEdit && isAdmin ? (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }} onClick={e => e.stopPropagation()}>
-                          <div style={{ display: "flex", gap: 4 }}>
-                            <input value={d.date} onChange={e => updateDate(wi, realDi, "date", e.target.value)} style={{ ...inp, padding: "3px 6px", fontSize: 11, width: 60 }} />
-                            <input value={d.day} onChange={e => updateDate(wi, realDi, "day", e.target.value)} style={{ ...inp, padding: "3px 6px", fontSize: 11, width: 40 }} />
-                            <label style={{ fontSize: 10, color: TEXT_MUTED, display: "flex", alignItems: "center", gap: 2 }}><input type="checkbox" checked={!!d.holiday} onChange={e => updateDate(wi, realDi, "holiday", e.target.checked)} />Off</label>
-                          </div>
-                          <textarea value={d.topic} onChange={e => updateDate(wi, realDi, "topic", e.target.value)} placeholder="Topic" rows={2} style={{ ...inp, padding: "4px 6px", fontSize: 12, resize: "vertical" }} />
-                          <input value={(d.activities || []).join(", ")} onChange={e => updateDate(wi, realDi, "activities", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} placeholder="Activities (comma-separated: Quiz, Fishbowl, etc.)" style={{ ...inp, padding: "3px 6px", fontSize: 11, fontWeight: 700 }} />
-                          <select value={d.assignment || ""} onChange={e => updateDate(wi, realDi, "assignment", e.target.value)} style={{ ...sel, width: "100%", fontSize: 11, padding: "3px 6px" }}>
-                            <option value="">No assignment due</option>
-                            {(data.assignments || []).filter(a => a.id !== "participation").map(a => (
-                              <option key={a.id} value={a.name + " due"}>{a.name}</option>
-                            ))}
-                          </select>
-                          <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>Readings</div>
-                          {(d.readings || []).map((r, ri) => {
-                            const rdg = (data.readings || []).find(x => x.id === r.readingId);
-                            return (
-                              <div key={ri} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, padding: "3px 6px", background: r.type === "required" ? "#fef2f2" : "#f0fdf4", borderRadius: 6 }}>
-                                <span style={{ flex: 1, color: "#374151", fontWeight: 500 }}>{rdg?.title || "Unknown"}</span>
-                                <select value={r.type} onChange={e => {
-                                  const upd = [...(d.readings || [])]; upd[ri] = { ...upd[ri], type: e.target.value };
-                                  updateDate(wi, realDi, "readings", upd);
-                                }} style={{ fontSize: 10, border: "none", background: "transparent", color: r.type === "required" ? RED : GREEN, fontWeight: 700, cursor: "pointer" }}>
-                                  <option value="required">Required</option>
-                                  <option value="recommended">Recommended</option>
-                                </select>
-                                <button onClick={() => {
-                                  const upd = (d.readings || []).filter((_, i) => i !== ri);
-                                  updateDate(wi, realDi, "readings", upd);
-                                }} style={{ background: "none", border: "none", cursor: "pointer", color: RED, fontSize: 12, padding: "0 2px" }}>x</button>
-                              </div>
-                            );
-                          })}
-                          {(data.readings || []).length > 0 ? (
-                            <select value="" onChange={e => {
-                              if (!e.target.value) return;
-                              const existing = d.readings || [];
-                              if (existing.some(r => r.readingId === e.target.value)) return;
-                              updateDate(wi, realDi, "readings", [...existing, { readingId: e.target.value, type: "required" }]);
-                            }} style={{ ...sel, width: "100%", fontSize: 11, padding: "3px 6px" }}>
-                              <option value="">+ Add reading...</option>
-                              {(data.readings || []).filter(r => !(d.readings || []).some(dr => dr.readingId === r.id)).map(r => (
-                                <option key={r.id} value={r.id}>{r.title}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <div style={{ fontSize: 10, color: TEXT_MUTED, fontStyle: "italic" }}>No readings in repository yet</div>
-                          )}
-                          <textarea value={d.notes || ""} onChange={e => updateDate(wi, realDi, "notes", e.target.value)} placeholder="Notes (students see this)" rows={2} style={{ ...inp, padding: "3px 6px", fontSize: 11, resize: "vertical" }} />
-                          <textarea value={d.adminNotes || ""} onChange={e => updateDate(wi, realDi, "adminNotes", e.target.value)} placeholder="Admin notes (students can't see)" rows={2} style={{ ...inp, padding: "3px 6px", fontSize: 11, resize: "vertical", borderColor: "#f59e0b", background: "#fffbeb" }} />
-                          <div style={{ display: "flex", gap: 4 }}>
-                            <button onClick={() => setEditCell(null)} style={{ ...bt, fontSize: 10, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Done</button>
-                            <button onClick={() => { removeDate(wi, realDi); setEditCell(null); }} style={{ ...bt, fontSize: 10, padding: "3px 10px", background: "transparent", color: RED, border: "1px solid " + RED + "33" }}>X</button>
-                          </div>
-                        </div>
+                        <ScheduleCardEditor d={d} wi={wi} realDi={realDi} data={data} updateDate={updateDate} removeDate={removeDate} onDone={() => setEditCell(null)} />
                       ) : (
                         <div>
                           {isHoliday ? (
@@ -2036,7 +2079,7 @@ function getWeekMonday() {
 
 const WEEKLY_ITEMS = [
   { id: "reading", label: "Do the reading" },
-  { id: "quiz_prep", label: "Prep for quiz" },
+  { id: "quiz_prep", label: "Prep for game" },
   { id: "sports_news", label: "Read ESPN, The Athletic, and other sports sites" },
 ];
 
@@ -2365,24 +2408,24 @@ export default function Comm118() {
         if (d && d.schedule && !d._scheduleMigV2) {
           const patchMap = {
             "Mar 30": { activities: ["Practice This or That"] },
-            "Apr 1": { activities: ["Quiz", "Practice Fishbowl"] },
-            "Apr 8": { activities: ["Quiz", "Fishbowl"] },
+            "Apr 1": { activities: ["Game", "Practice Fishbowl"] },
+            "Apr 8": { activities: ["Game", "Fishbowl"] },
             "Apr 13": { activities: ["This or That", "Fishbowl", "Headlines"] },
-            "Apr 15": { activities: ["Quiz"] },
+            "Apr 15": { activities: ["Game"] },
             "Apr 17": { assignment: "Interview Assignment due" },
             "Apr 20": { activities: ["This or That", "Fishbowl", "Headlines"], assignment: "" },
-            "Apr 22": { activities: ["Quiz"] },
+            "Apr 22": { activities: ["Game"] },
             "Apr 24": { assignment: "Web of Connections Proposal due" },
             "Apr 27": { activities: ["This or That", "Fishbowl", "Headlines"] },
-            "Apr 29": { activities: ["Quiz"] },
+            "Apr 29": { activities: ["Game"] },
             "May 4": { activities: ["This or That", "Fishbowl", "Headlines"] },
-            "May 6": { activities: ["Quiz"], assignment: "", notes: "" },
+            "May 6": { activities: ["Game"], assignment: "", notes: "" },
             "May 8": { assignment: "Web of Connections Submission due" },
             "May 11": { activities: ["This or That", "Fishbowl", "Headlines"] },
-            "May 13": { activities: ["Quiz"] },
+            "May 13": { activities: ["Game"] },
             "May 18": { activities: ["This or That", "Fishbowl", "Headlines"] },
-            "May 20": { activities: ["Quiz"] },
-            "May 27": { activities: ["Quiz"] },
+            "May 20": { activities: ["Game"] },
+            "May 27": { activities: ["Game"] },
           };
           d.schedule = d.schedule.map(w => ({
             ...w,
