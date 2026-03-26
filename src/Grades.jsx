@@ -208,22 +208,93 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
         </div>
         <div style={{ ...crd, padding: 16, marginTop: 16 }}>
           <div style={{ ...sectionLabel, marginBottom: 10 }}>Participation Breakdown (25%)</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            {[
-              { label: "Weekly Game", detail: "100 pts/week, dual weighted", icon: "Q" },
-              { label: "This or That", detail: "20 pts/week, game only", icon: "TT" },
-              { label: "PTI", detail: "Variable, game + grade", icon: "P" },
-              { label: "Rotating Fishbowl", detail: "20 pts/time, game + grade", icon: "FB" },
-            ].map(p => (
-              <div key={p.label} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 900, color: "#6b7280", flexShrink: 0 }}>{p.icon}</div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{p.label}</div>
-                  <div style={{ fontSize: 11, color: "#9ca3af" }}>{p.detail}</div>
+          {studentId ? (() => {
+            const log = data.log || [];
+            const participation = data.participation || {};
+            const getPart = (w, cat) => { const k = studentId + "-w" + w + "-" + cat; return participation[k]; };
+            // Game log totals by source type
+            const gamePts = {};
+            log.filter(e => e.studentId === studentId).forEach(e => {
+              const src = e.source || "Other";
+              let bucket = "Other";
+              if (src.startsWith("Game Wk")) bucket = "Weekly Game";
+              else if (src.startsWith("ToT")) bucket = "This or That";
+              else if (src === "PTI") bucket = "PTI";
+              else if (src.startsWith("Fishbowl")) bucket = "Fishbowl";
+              else if (src.startsWith("Team Win")) bucket = "Team Win";
+              else bucket = src;
+              gamePts[bucket] = (gamePts[bucket] || 0) + e.amount;
+            });
+            // Grade-side participation totals
+            let gradeQuizTotal = 0, gradeTotTotal = 0, gradePtiTotal = 0, gradeFbTotal = 0;
+            let quizWeeks = 0, totWeeks = 0, ptiWeeks = 0, fbWeeks = 0;
+            for (let w = 1; w <= 10; w++) {
+              const qv = getPart(w, "quiz");
+              if (qv !== undefined && qv !== null && qv !== "") {
+                const scores = typeof qv === "object" ? qv : {};
+                QUIZ_BREAKDOWN.forEach(q => { gradeQuizTotal += (scores[q.id] || 0) * q.gradePts; });
+                quizWeeks++;
+              }
+              const tv = getPart(w, "tot"); if (tv !== undefined && tv !== null && tv !== "") { gradeTotTotal += parseFloat(tv) || 0; totWeeks++; }
+              const pv = getPart(w, "pti"); if (pv !== undefined && pv !== null && pv !== "") { gradePtiTotal += parseFloat(pv) || 0; ptiWeeks++; }
+              const fv = getPart(w, "fishbowl"); if (fv !== undefined && fv !== null && fv !== "") { gradeFbTotal += parseFloat(fv) || 0; fbWeeks++; }
+            }
+            return (
+              <div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+                  {[
+                    { label: "Weekly Game", game: gamePts["Weekly Game"] || 0, grade: Math.round(gradeQuizTotal * 10) / 10, weeks: quizWeeks, icon: "Q" },
+                    { label: "This or That", game: gamePts["This or That"] || 0, grade: gradeTotTotal, weeks: totWeeks, icon: "TT" },
+                    { label: "PTI", game: gamePts["PTI"] || 0, grade: gradePtiTotal, weeks: ptiWeeks, icon: "P" },
+                    { label: "Fishbowl", game: gamePts["Fishbowl"] || 0, grade: gradeFbTotal, weeks: fbWeeks, icon: "FB" },
+                  ].map(p => (
+                    <div key={p.label} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #f3f4f6" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                        <div style={{ width: 24, height: 24, borderRadius: 6, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 900, color: "#6b7280", flexShrink: 0 }}>{p.icon}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{p.label}</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <div>
+                          <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" }}>Game</div>
+                          <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>{p.game}</div>
+                        </div>
+                        {p.grade > 0 && (
+                          <div>
+                            <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" }}>Grade</div>
+                            <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>{Math.round(p.grade * 10) / 10}</div>
+                          </div>
+                        )}
+                      </div>
+                      {p.weeks > 0 && <div style={{ fontSize: 10, color: "#d1d5db", marginTop: 4 }}>{p.weeks} week{p.weeks !== 1 ? "s" : ""} recorded</div>}
+                    </div>
+                  ))}
                 </div>
+                {(gamePts["Team Win"] || 0) > 0 && (
+                  <div style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #f3f4f6", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Team Win Bonuses</span>
+                    <span style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>{gamePts["Team Win"]}</span>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            );
+          })() : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {[
+                { label: "Weekly Game", detail: "100 pts/week, dual weighted", icon: "Q" },
+                { label: "This or That", detail: "20 pts/week, game only", icon: "TT" },
+                { label: "PTI", detail: "Variable, game + grade", icon: "P" },
+                { label: "Rotating Fishbowl", detail: "20 pts/time, game + grade", icon: "FB" },
+              ].map(p => (
+                <div key={p.label} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 8, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 900, color: "#6b7280", flexShrink: 0 }}>{p.icon}</div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{p.label}</div>
+                    <div style={{ fontSize: 11, color: "#9ca3af" }}>{p.detail}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 10, background: "#f8fafc", border: "1px solid #f3f4f6" }}>
             <div style={{ ...sectionLabel, marginBottom: 6 }}>Game Dual Weighting</div>
             <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 1fr 1fr", gap: "4px 12px", fontSize: 12 }}>
