@@ -153,6 +153,7 @@ function Nav({ view, setView, isAdmin, userName, onLogout }) {
     { id: "teams", label: "Teams", admin: false },
     { id: "roster", label: "Roster", admin: false },
     { id: "assignments", label: "Assignments", admin: false },
+    { id: "readings", label: "Readings", admin: false },
     { id: "grades", label: "Grades", admin: false },
     { id: "pti", label: "PTI", admin: true },
     { id: "gameadmin", label: "Game Setup", admin: true },
@@ -356,11 +357,50 @@ function ScheduleView({ data, setData, isAdmin }) {
                             <input value={d.day} onChange={e => updateDate(wi, realDi, "day", e.target.value)} style={{ ...inp, padding: "3px 6px", fontSize: 11, width: 40 }} />
                             <label style={{ fontSize: 10, color: TEXT_MUTED, display: "flex", alignItems: "center", gap: 2 }}><input type="checkbox" checked={!!d.holiday} onChange={e => updateDate(wi, realDi, "holiday", e.target.checked)} />Off</label>
                           </div>
-                          <input value={d.topic} onChange={e => updateDate(wi, realDi, "topic", e.target.value)} placeholder="Topic" style={{ ...inp, padding: "4px 6px", fontSize: 12 }} />
-                          <input value={d.assignment || ""} onChange={e => updateDate(wi, realDi, "assignment", e.target.value)} placeholder="Due" style={{ ...inp, padding: "3px 6px", fontSize: 11 }} />
-                          <input value={d.link || ""} onChange={e => updateDate(wi, realDi, "link", e.target.value)} placeholder="Reading link (URL)" style={{ ...inp, padding: "3px 6px", fontSize: 11 }} />
-                          <input value={d.notes || ""} onChange={e => updateDate(wi, realDi, "notes", e.target.value)} placeholder="Notes" style={{ ...inp, padding: "3px 6px", fontSize: 11 }} />
-                          <input value={d.adminNotes || ""} onChange={e => updateDate(wi, realDi, "adminNotes", e.target.value)} placeholder="Admin notes (students can't see)" style={{ ...inp, padding: "3px 6px", fontSize: 11, borderColor: "#f59e0b", background: "#fffbeb" }} />
+                          <textarea value={d.topic} onChange={e => updateDate(wi, realDi, "topic", e.target.value)} placeholder="Topic" rows={2} style={{ ...inp, padding: "4px 6px", fontSize: 12, resize: "vertical" }} />
+                          <select value={d.assignment || ""} onChange={e => updateDate(wi, realDi, "assignment", e.target.value)} style={{ ...sel, width: "100%", fontSize: 11, padding: "3px 6px" }}>
+                            <option value="">No assignment due</option>
+                            {(data.assignments || []).filter(a => a.id !== "participation").map(a => (
+                              <option key={a.id} value={a.name + " due"}>{a.name}</option>
+                            ))}
+                          </select>
+                          <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>Readings</div>
+                          {(d.readings || []).map((r, ri) => {
+                            const rdg = (data.readings || []).find(x => x.id === r.readingId);
+                            return (
+                              <div key={ri} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, padding: "3px 6px", background: r.type === "required" ? "#fef2f2" : "#f0fdf4", borderRadius: 6 }}>
+                                <span style={{ flex: 1, color: "#374151", fontWeight: 500 }}>{rdg?.title || "Unknown"}</span>
+                                <select value={r.type} onChange={e => {
+                                  const upd = [...(d.readings || [])]; upd[ri] = { ...upd[ri], type: e.target.value };
+                                  updateDate(wi, realDi, "readings", upd);
+                                }} style={{ fontSize: 10, border: "none", background: "transparent", color: r.type === "required" ? RED : GREEN, fontWeight: 700, cursor: "pointer" }}>
+                                  <option value="required">Required</option>
+                                  <option value="recommended">Recommended</option>
+                                </select>
+                                <button onClick={() => {
+                                  const upd = (d.readings || []).filter((_, i) => i !== ri);
+                                  updateDate(wi, realDi, "readings", upd);
+                                }} style={{ background: "none", border: "none", cursor: "pointer", color: RED, fontSize: 12, padding: "0 2px" }}>x</button>
+                              </div>
+                            );
+                          })}
+                          {(data.readings || []).length > 0 ? (
+                            <select value="" onChange={e => {
+                              if (!e.target.value) return;
+                              const existing = d.readings || [];
+                              if (existing.some(r => r.readingId === e.target.value)) return;
+                              updateDate(wi, realDi, "readings", [...existing, { readingId: e.target.value, type: "required" }]);
+                            }} style={{ ...sel, width: "100%", fontSize: 11, padding: "3px 6px" }}>
+                              <option value="">+ Add reading...</option>
+                              {(data.readings || []).filter(r => !(d.readings || []).some(dr => dr.readingId === r.id)).map(r => (
+                                <option key={r.id} value={r.id}>{r.title}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <div style={{ fontSize: 10, color: TEXT_MUTED, fontStyle: "italic" }}>No readings in repository yet</div>
+                          )}
+                          <textarea value={d.notes || ""} onChange={e => updateDate(wi, realDi, "notes", e.target.value)} placeholder="Notes (students see this)" rows={2} style={{ ...inp, padding: "3px 6px", fontSize: 11, resize: "vertical" }} />
+                          <textarea value={d.adminNotes || ""} onChange={e => updateDate(wi, realDi, "adminNotes", e.target.value)} placeholder="Admin notes (students can't see)" rows={2} style={{ ...inp, padding: "3px 6px", fontSize: 11, resize: "vertical", borderColor: "#f59e0b", background: "#fffbeb" }} />
                           <div style={{ display: "flex", gap: 4 }}>
                             <button onClick={() => setEditCell(null)} style={{ ...bt, fontSize: 10, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Done</button>
                             <button onClick={() => { removeDate(wi, realDi); setEditCell(null); }} style={{ ...bt, fontSize: 10, padding: "3px 10px", background: "transparent", color: RED, border: "1px solid " + RED + "33" }}>X</button>
@@ -372,13 +412,28 @@ function ScheduleView({ data, setData, isAdmin }) {
                             <div style={{ fontSize: 13, fontWeight: 600, color: "#db2777" }}>{d.notes || "No class"}</div>
                           ) : (
                             <>
-                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                <div style={{ fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.35, flex: 1 }}>{d.topic || <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}>—</span>}</div>
-                                {d.link && <a href={d.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: "flex", alignItems: "center", padding: "2px 5px", borderRadius: 4, background: "#eff6ff", color: "#2563eb" }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>}
-                              </div>
+                              <div style={{ fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.35 }}>{d.topic || <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}>—</span>}</div>
                               {d.assignment && <div style={{ fontSize: 11, color: "#ea580c", marginTop: 3, fontWeight: 600 }}>{d.assignment}</div>}
-                              {d.notes && !isHoliday && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>{d.notes}</div>}
-                              {isAdmin && d.adminNotes && <div style={{ fontSize: 10, color: AMBER, marginTop: 3, padding: "3px 6px", background: "#fffbeb", borderRadius: 4, border: "1px solid #fef3c7" }}>{d.adminNotes}</div>}
+                              {(d.readings || []).length > 0 && (
+                                <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+                                  {(d.readings || []).map((r, ri) => {
+                                    const rdg = (data.readings || []).find(x => x.id === r.readingId);
+                                    if (!rdg) return null;
+                                    return (
+                                      <div key={ri} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11 }}>
+                                        <span style={{ fontSize: 9, fontWeight: 700, color: r.type === "required" ? RED : GREEN, textTransform: "uppercase" }}>{r.type === "required" ? "Req" : "Rec"}</span>
+                                        {rdg.url ? (
+                                          <a href={rdg.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{rdg.title}</a>
+                                        ) : (
+                                          <span style={{ color: "#374151", fontWeight: 500 }}>{rdg.title}</span>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              {d.notes && !isHoliday && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2, whiteSpace: "pre-wrap" }}>{d.notes}</div>}
+                              {isAdmin && d.adminNotes && <div style={{ fontSize: 10, color: AMBER, marginTop: 3, padding: "3px 6px", background: "#fffbeb", borderRadius: 4, border: "1px solid #fef3c7", whiteSpace: "pre-wrap" }}>{d.adminNotes}</div>}
                             </>
                           )}
                         </div>
@@ -1306,6 +1361,156 @@ function BioView({ student, data, setData, userName, onBack }) {
   );
 }
 
+/* ─── READINGS & MEDIA ─── */
+function ReadingsView({ data, setData, isAdmin }) {
+  const readings = data.readings || [];
+  const schedule = data.schedule || [];
+  const [editId, setEditId] = useState(null);
+  const [newReading, setNewReading] = useState({ title: "", url: "", category: "", notes: "" });
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  const categories = [...new Set(readings.map(r => r.category).filter(Boolean))].sort();
+
+  const addReading = async () => {
+    if (!newReading.title.trim()) return;
+    const r = { id: genId(), title: newReading.title.trim(), url: newReading.url.trim(), category: newReading.category.trim(), notes: newReading.notes.trim() };
+    const updated = { ...data, readings: [...readings, r] };
+    await saveData(updated); setData(updated);
+    setNewReading({ title: "", url: "", category: "", notes: "" });
+    showMsg("Added");
+  };
+  const updateReading = async (id, field, value) => {
+    const updated = { ...data, readings: readings.map(r => r.id === id ? { ...r, [field]: value } : r) };
+    await saveData(updated); setData(updated);
+  };
+  const deleteReading = async (id) => {
+    // Also remove from any schedule dates
+    const newSchedule = schedule.map(w => ({
+      ...w, dates: w.dates.map(d => ({
+        ...d, readings: (d.readings || []).filter(r => r.readingId !== id)
+      }))
+    }));
+    const updated = { ...data, readings: readings.filter(r => r.id !== id), schedule: newSchedule };
+    await saveData(updated); setData(updated); showMsg("Deleted");
+  };
+
+  // Build week-grouped view for students
+  const weekReadings = [];
+  schedule.forEach(w => {
+    const weekItems = [];
+    (w.dates || []).forEach(d => {
+      (d.readings || []).forEach(dr => {
+        const rdg = readings.find(r => r.id === dr.readingId);
+        if (rdg) weekItems.push({ ...rdg, type: dr.type, date: d.date, day: d.day });
+      });
+    });
+    if (weekItems.length > 0) {
+      weekReadings.push({ week: w.week, label: w.label, theme: w.theme, items: weekItems });
+    }
+  });
+
+  return (
+    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <Toast message={msg} />
+      <div style={{ maxWidth: 700, margin: "0 auto" }}>
+        <div style={{ ...sectionLabel, marginBottom: 12 }}>Readings and Media</div>
+
+        {/* Admin: add new reading */}
+        {isAdmin && (
+          <div style={{ ...crd, padding: 16, marginBottom: 20 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Add to Repository</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <input value={newReading.title} onChange={e => setNewReading({ ...newReading, title: e.target.value })} placeholder="Title" style={inp} />
+              <input value={newReading.url} onChange={e => setNewReading({ ...newReading, url: e.target.value })} placeholder="URL (optional)" style={inp} />
+              <div style={{ display: "flex", gap: 6 }}>
+                <input value={newReading.category} onChange={e => setNewReading({ ...newReading, category: e.target.value })} placeholder="Category (e.g. Article, Video)" list="cat-list" style={{ ...inp, flex: 1 }} />
+                <datalist id="cat-list">{categories.map(c => <option key={c} value={c} />)}</datalist>
+              </div>
+              <textarea value={newReading.notes} onChange={e => setNewReading({ ...newReading, notes: e.target.value })} placeholder="Notes (optional)" rows={2} style={{ ...inp, resize: "vertical" }} />
+              <button onClick={addReading} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 0", width: "100%" }}>Add Reading</button>
+            </div>
+          </div>
+        )}
+
+        {/* Weekly view */}
+        {weekReadings.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 10 }}>By Week</div>
+            {weekReadings.map(w => (
+              <div key={w.week} style={{ ...crd, padding: 14, marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 8, background: "#111827", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 900, flexShrink: 0 }}>{w.week}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{w.label}{w.theme ? " \u2014 " + w.theme : ""}</div>
+                </div>
+                {w.items.map((item, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: i > 0 ? "1px solid #f9fafb" : "none" }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: item.type === "required" ? RED : GREEN, textTransform: "uppercase", width: 24, flexShrink: 0 }}>{item.type === "required" ? "Req" : "Rec"}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {item.url ? (
+                        <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>{item.title}</a>
+                      ) : (
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{item.title}</span>
+                      )}
+                      {item.category && <span style={{ fontSize: 10, color: "#9ca3af", marginLeft: 6 }}>{item.category}</span>}
+                      {item.notes && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>{item.notes}</div>}
+                    </div>
+                    <span style={{ fontSize: 10, color: "#d1d5db", flexShrink: 0 }}>{item.day} {item.date}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Full repository by category */}
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Full Repository</div>
+        {readings.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: "#d1d5db", fontSize: 13 }}>No readings added yet.</div>}
+        {(categories.length > 0 ? categories : [""]).map(cat => {
+          const catReadings = readings.filter(r => (r.category || "") === cat);
+          if (catReadings.length === 0) return null;
+          return (
+            <div key={cat || "__none"} style={{ marginBottom: 16 }}>
+              {cat && <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{cat}</div>}
+              {catReadings.map(r => {
+                const isEditing = editId === r.id;
+                return (
+                  <div key={r.id} style={{ ...crd, padding: 12, marginBottom: 4 }}>
+                    {isAdmin && isEditing ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <input value={r.title} onChange={e => updateReading(r.id, "title", e.target.value)} style={{ ...inp, fontSize: 13, padding: "4px 8px" }} />
+                        <input value={r.url || ""} onChange={e => updateReading(r.id, "url", e.target.value)} placeholder="URL" style={{ ...inp, fontSize: 12, padding: "4px 8px" }} />
+                        <input value={r.category || ""} onChange={e => updateReading(r.id, "category", e.target.value)} placeholder="Category" list="cat-list" style={{ ...inp, fontSize: 12, padding: "4px 8px" }} />
+                        <textarea value={r.notes || ""} onChange={e => updateReading(r.id, "notes", e.target.value)} placeholder="Notes" rows={2} style={{ ...inp, fontSize: 12, padding: "4px 8px", resize: "vertical" }} />
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button onClick={() => setEditId(null)} style={{ ...pill, background: "#111827", color: "#fff", flex: 1 }}>Done</button>
+                          <button onClick={() => { if (window.confirm("Delete this reading?")) deleteReading(r.id); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: isAdmin ? "pointer" : "default" }} onClick={() => isAdmin && setEditId(r.id)}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {r.url ? (
+                            <a href={r.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 14, color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>{r.title}</a>
+                          ) : (
+                            <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{r.title}</span>
+                          )}
+                          {r.notes && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{r.notes}</div>}
+                        </div>
+                        {isAdmin && <span style={{ fontSize: 11, color: "#d1d5db", flexShrink: 0 }}>Click to edit</span>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ─── TO-DO ─── */
 function getWeekMonday() {
   const now = new Date();
@@ -1534,6 +1739,7 @@ export default function Comm118() {
         if (d && !d.fishbowlStars) { d.fishbowlStars = {}; await saveData(d); }
         if (d && !d.weeklyTeamWins) { d.weeklyTeamWins = {}; await saveData(d); }
         if (d && !d.todoChecks) { d.todoChecks = {}; await saveData(d); }
+        if (d && !d.readings) { d.readings = []; await saveData(d); }
         setData(d);
       } catch(e) { console.error("Storage load failed:", e); setData(null); }
       setLoading(false);
@@ -1563,6 +1769,7 @@ export default function Comm118() {
       {view === "teams" && <TeamsView teams={data.teams} students={data.students} log={data.log} data={data} />}
       {view === "roster" && <RosterView data={data} setData={setData} userName={userName} />}
       {view === "assignments" && <AssignmentsView data={data} setData={setData} isAdmin={isAdmin} />}
+      {view === "readings" && <ReadingsView data={data} setData={setData} isAdmin={isAdmin} />}
       {view === "grades" && <Gradebook data={data} setData={setData} userName={userName} isAdmin={isAdmin} />}
       {view === "builder" && isAdmin && <TeamBuilder data={data} setData={setData} />}
       {view === "pti" && isAdmin && <PTIMode data={data} setData={setData} />}
