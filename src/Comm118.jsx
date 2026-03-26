@@ -1738,27 +1738,50 @@ function ReadingsView({ data, setData, isAdmin }) {
 
 /* ─── CLASS TOOLS: HEADLINE EXERCISE ─── */
 const DEFAULT_HEADLINE_CATS = [
-  // Ordered loosely by class arc
-  "Gambling / betting",
-  "Unreal performances",
-  "Record-breaking / milestones",
-  "Celebs being bad",
-  "Doping / cheating / scandals",
-  "New business deals",
-  "Trades / free agency",
-  "Coaching hires / firings",
-  "Dealing with media",
-  "Identity",
-  "Social justice / activism",
-  "Fan behavior",
-  "Stadium / arena deals",
-  "Youth / college pipeline",
-  "Team drama",
-  "Rivalry / beef",
-  "Injuries / comebacks",
-  "Labor disputes",
-  "International / global",
-  "Legacy / Hall of Fame / retirement",
+  "Gambling / betting", "Unreal performances", "Record-breaking / milestones",
+  "Celebs being bad", "Doping / cheating / scandals", "New business deals",
+  "Trades / free agency", "Coaching hires / firings", "Dealing with media",
+  "Identity", "Social justice / activism", "Fan behavior", "Stadium / arena deals",
+  "Youth / college pipeline", "Team drama", "Rivalry / beef", "Injuries / comebacks",
+  "Labor disputes", "International / global", "Legacy / Hall of Fame / retirement",
+];
+
+const COMM_CONCEPTS = [
+  { id: "mythmaking", name: "Mythmaking / Hero Narrative",
+    desc: "How we construct larger-than-life stories around people and moments. We pick who becomes a legend and why.",
+    whyItMatters: "Narratives shape public memory. The stories we tell about athletes determine who gets celebrated and who gets forgotten. This is rhetorical power in action.",
+    whoItAffects: "Athletes whose legacies are simplified or distorted. Fans who internalize these narratives. Communities that build identity around hero figures.",
+    exampleAngles: "GOAT debates that ignore context. Retirement tributes that rewrite flawed careers. Comeback stories that erase the people who were hurt along the way." },
+  { id: "crisis", name: "Crisis Communication / Accountability",
+    desc: "What happens when things go wrong publicly. Who speaks, what they say, how they try to recover.",
+    whyItMatters: "Public apologies and crisis responses reveal power dynamics. Who gets second chances and who doesn't is never random.",
+    whoItAffects: "The person in crisis, their organization, victims or affected parties, the public audience judging the response.",
+    exampleAngles: "Notes app apologies. Organizations distancing from individuals. The difference between accountability and PR strategy." },
+  { id: "media", name: "Media Framing / Agenda Setting",
+    desc: "The media doesn't tell you what to think, it tells you what to think about. Who controls the story and how it gets shaped.",
+    whyItMatters: "Media framing determines which stories get oxygen and which get buried. Billions of dollars flow based on what gets covered and how.",
+    whoItAffects: "Athletes who lose control of their narrative. Audiences who only see what's selected for them. Communities whose stories are told by outsiders.",
+    exampleAngles: "How the same play gets framed differently for different quarterbacks. Streaming deals that reshape what sports you can even watch. Social media breaking the traditional media monopoly." },
+  { id: "organizational", name: "Organizational Communication",
+    desc: "How institutions make decisions, manage conflict, and communicate with stakeholders. The business and structural side of sports.",
+    whyItMatters: "Organizations are communication systems. Every trade, contract, and policy change is a message about values and priorities.",
+    whoItAffects: "Players as labor. Fans as consumers. Cities as stakeholders. The people inside the organization who have to execute decisions they may not agree with.",
+    exampleAngles: "Franchise relocations and what they communicate to a city. CBA negotiations as organizational power struggles. How front offices communicate (or don't) with players about their futures." },
+  { id: "identity", name: "Identity / Representation",
+    desc: "How sports shape and reflect who we think we are, who gets seen, and who gets left out.",
+    whyItMatters: "Sports are one of the most visible arenas for identity. Who plays, who coaches, who owns, who commentates, all of it communicates something about who belongs.",
+    whoItAffects: "Athletes navigating identity in public. Young people who see (or don't see) themselves represented. Communities whose identities are tied to teams.",
+    exampleAngles: "First openly gay/trans athletes and the discourse around them. Racial dynamics in coaching hires. National identity in international competition." },
+  { id: "interpersonal", name: "Interpersonal Communication, Leadership, and Culture",
+    desc: "How people communicate within sports organizations. Coach-to-player, player-to-player, locker room culture, team rituals, pregame traditions. The human side of how teams function or fall apart.",
+    whyItMatters: "Culture is built through daily communication. What a coach says in the huddle, what teammates say behind closed doors, what rituals a team keeps, all of it creates or destroys trust.",
+    whoItAffects: "Players whose development depends on coaching relationships. Teams whose culture determines their ceiling. Leaders who set the tone through what they say and don't say.",
+    exampleAngles: "A coach's postgame comments about a player that change the relationship. Team traditions that build belonging vs hazing that destroys it. What gets said in the locker room that leaks to the press." },
+  { id: "community", name: "Community, Belonging, and the Fabric of Society",
+    desc: "How sports are woven into the structure of our society. Civic identity, NIL and who gets paid, stadium deals that reshape cities, youth pipelines, fandom as community.",
+    whyItMatters: "Sports are not separate from society, they are society. The way we fund stadiums, compensate athletes, organize youth sports, and define fandom tells us what we value.",
+    whoItAffects: "Taxpayers funding stadiums. College athletes navigating NIL. Youth athletes and their families investing time and money. Communities that gain or lose teams.",
+    exampleAngles: "A city voting on a stadium deal. NIL changing who benefits from college sports. Youth travel sports pricing out lower-income families. What it means when your team leaves your city." },
 ];
 
 function ClassTools({ data, setData, isAdmin, userName }) {
@@ -1772,109 +1795,151 @@ function ClassTools({ data, setData, isAdmin, userName }) {
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
-  // Admin state
   const [activeSession, setActiveSession] = useState(null);
   const [newHeadline, setNewHeadline] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const [newCat, setNewCat] = useState("");
   const [realPicks, setRealPicks] = useState([]);
-
-  // Student state
+  const [conceptPicks, setConceptPicks] = useState([]);
+  const [adminNotes, setAdminNotes] = useState("");
   const [myPicks, setMyPicks] = useState([]);
+  const [myConceptPicks, setMyConceptPicks] = useState([]);
 
-  const saveHL = async (updated) => {
-    const d = { ...data, headlines: updated };
-    await saveData(d); setData(d);
-  };
+  const saveHL = async (updated) => { const d = { ...data, headlines: updated }; await saveData(d); setData(d); };
+  const ensureCats = () => hl.categories && hl.categories.length > 0 ? hl.categories : DEFAULT_HEADLINE_CATS;
 
-  // Ensure categories are persisted (first time or after reset)
-  const ensureCats = () => {
-    if (!hl.categories || hl.categories.length === 0) {
-      return DEFAULT_HEADLINE_CATS;
-    }
-    return hl.categories;
-  };
-
-  // Add category
   const addCategory = async () => {
     if (!newCat.trim() || cats.includes(newCat.trim())) return;
-    const updatedCats = [...cats, newCat.trim()];
-    await saveHL({ ...hl, categories: updatedCats });
+    await saveHL({ ...hl, categories: [...cats, newCat.trim()] });
     setNewCat(""); showMsg("Category added");
   };
-
-  // Submit headline (admin or student)
   const submitHeadline = async (sessionId) => {
     if (!newHeadline.trim()) return;
     const item = { id: genId(), text: newHeadline.trim(), url: newUrl.trim() || null, submittedBy: userName, sessionId, ts: Date.now() };
-    // Also persist categories if they haven't been yet
-    const updatedCats = ensureCats();
-    await saveHL({ ...hl, categories: updatedCats, items: [...items, item] });
+    await saveHL({ ...hl, categories: ensureCats(), items: [...items, item] });
     setNewHeadline(""); setNewUrl(""); showMsg("Headline added");
   };
-
-  // Create session
   const createSession = async () => {
-    const s = { id: genId(), name: "Session " + (sessions.length + 1), ts: Date.now(), activeHeadlineId: null, revealed: false, realCategories: [], votes: {} };
-    const updatedCats = ensureCats();
-    await saveHL({ ...hl, categories: updatedCats, sessions: [...sessions, s] });
-    setActiveSession(s.id);
-    showMsg("Session created");
+    const s = { id: genId(), name: "Session " + (sessions.length + 1), ts: Date.now(), activeHeadlineId: null, phase: "surface", realCategories: [], realConcepts: [], votes: {}, conceptVotes: {} };
+    await saveHL({ ...hl, categories: ensureCats(), sessions: [...sessions, s] });
+    setActiveSession(s.id); showMsg("Session created");
   };
-
-  // Activate a headline in session
   const activateHeadline = async (sessionId, headlineId) => {
-    const updated = { ...hl, sessions: sessions.map(s => s.id === sessionId ? { ...s, activeHeadlineId: headlineId, revealed: false, realCategories: [], votes: {} } : s) };
-    await saveHL(updated);
-    setRealPicks([]);
-    setMyPicks([]);
+    await saveHL({ ...hl, sessions: sessions.map(s => s.id === sessionId ? { ...s, activeHeadlineId: headlineId, phase: "surface", realCategories: [], realConcepts: [], votes: {}, conceptVotes: {} } : s) });
+    setRealPicks([]); setConceptPicks([]); setMyPicks([]); setMyConceptPicks([]); setAdminNotes("");
   };
 
-  // Student vote (multi-select, then lock in)
-  const togglePick = (cat) => {
-    setMyPicks(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
-  };
-  const lockIn = async (sessionId) => {
+  // Student votes
+  const togglePick = (cat) => setMyPicks(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  const toggleConceptPick = (id) => setMyConceptPicks(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  const lockInSurface = async (sessionId) => {
     if (!sid || myPicks.length === 0) return;
-    const updated = { ...hl, sessions: sessions.map(s => s.id === sessionId ? { ...s, votes: { ...s.votes, [sid]: myPicks } } : s) };
-    await saveHL(updated);
+    await saveHL({ ...hl, sessions: sessions.map(s => s.id === sessionId ? { ...s, votes: { ...s.votes, [sid]: myPicks } } : s) });
+    showMsg("Locked in");
+  };
+  const lockInConcept = async (sessionId) => {
+    if (!sid || myConceptPicks.length === 0) return;
+    await saveHL({ ...hl, sessions: sessions.map(s => s.id === sessionId ? { ...s, conceptVotes: { ...(s.conceptVotes || {}), [sid]: myConceptPicks } } : s) });
     showMsg("Locked in");
   };
 
-  // Admin toggle real category
-  const toggleReal = (cat) => {
-    setRealPicks(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
-  };
-
-  // Reveal real answers
-  const reveal = async (sessionId) => {
+  // Admin reveals
+  const toggleReal = (cat) => setRealPicks(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  const toggleConceptReal = (id) => setConceptPicks(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  const revealSurface = async (sessionId) => {
     if (realPicks.length === 0) return;
+    await saveHL({ ...hl, sessions: sessions.map(s => s.id === sessionId ? { ...s, phase: "concept", realCategories: realPicks } : s) });
+    setMyConceptPicks([]);
+  };
+  const revealConcept = async (sessionId) => {
+    if (conceptPicks.length === 0) return;
     const session = sessions.find(s => s.id === sessionId);
     if (!session) return;
-    const headlineId = session.activeHeadlineId;
-    const updatedItems = items.map(it => it.id === headlineId ? { ...it, surfaceCategories: session.votes, realCategories: realPicks } : it);
-    const updated = { ...hl, items: updatedItems, sessions: sessions.map(s => s.id === sessionId ? { ...s, revealed: true, realCategories: realPicks } : s) };
-    await saveHL(updated);
+    const hid = session.activeHeadlineId;
+    const updatedItems = items.map(it => it.id === hid ? { ...it, realCategories: session.realCategories, realConcepts: conceptPicks, surfaceVotes: session.votes, conceptVotesData: session.conceptVotes, adminNotes: adminNotes.trim() || it.adminNotes } : it);
+    await saveHL({ ...hl, items: updatedItems, sessions: sessions.map(s => s.id === sessionId ? { ...s, phase: "done", realConcepts: conceptPicks } : s) });
+  };
+  const saveHeadlineNotes = async (headlineId, notes) => {
+    await saveHL({ ...hl, items: items.map(it => it.id === headlineId ? { ...it, adminNotes: notes } : it) });
+    showMsg("Notes saved");
   };
 
-  // Get active session
   const session = activeSession ? sessions.find(s => s.id === activeSession) : null;
   const sessionHeadlines = session ? items.filter(it => it.sessionId === session.id) : [];
   const activeHeadline = session ? items.find(it => it.id === session.activeHeadlineId) : null;
+  const phase = session?.phase || "surface";
 
-  // Vote tally (multi-select: each student's picks are an array)
-  const voteTally = {};
-  let voterCount = 0;
-  if (session) {
-    const votes = session.votes || {};
-    voterCount = Object.keys(votes).length;
-    Object.values(votes).forEach(picks => {
-      const arr = Array.isArray(picks) ? picks : [picks];
-      arr.forEach(cat => { voteTally[cat] = (voteTally[cat] || 0) + 1; });
+  // Tallies
+  const buildTally = (votesObj) => {
+    const tally = {}; let count = 0;
+    Object.values(votesObj || {}).forEach(picks => {
+      count++;
+      (Array.isArray(picks) ? picks : [picks]).forEach(c => { tally[c] = (tally[c] || 0) + 1; });
     });
-  }
-  const myVote = sid && session?.votes?.[sid];
-  const myVoteArr = myVote ? (Array.isArray(myVote) ? myVote : [myVote]) : null;
+    return { tally, count };
+  };
+  const { tally: surfaceTally, count: surfaceVoterCount } = buildTally(session?.votes);
+  const { tally: conceptTally, count: conceptVoterCount } = buildTally(session?.conceptVotes);
+
+  const myVoteArr = sid && session?.votes?.[sid] ? (Array.isArray(session.votes[sid]) ? session.votes[sid] : [session.votes[sid]]) : null;
+  const myConceptVoteArr = sid && session?.conceptVotes?.[sid] ? (Array.isArray(session.conceptVotes[sid]) ? session.conceptVotes[sid] : [session.conceptVotes[sid]]) : null;
+
+  // Render vote results bar
+  const VoteBar = ({ items: voteItems, tally: t, total, realItems, label }) => (
+    <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
+      <div style={{ ...sectionLabel, marginBottom: 8 }}>{label} ({total} students)</div>
+      {voteItems.filter(c => t[c]).sort((a, b) => (t[b] || 0) - (t[a] || 0)).map(cat => {
+        const count = t[cat] || 0;
+        const pct = total > 0 ? Math.round(count / total * 100) : 0;
+        const isReal = (realItems || []).includes(cat);
+        return (
+          <div key={cat} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: isReal ? 900 : 500, color: isReal ? GREEN : "#111827" }}>{cat}{isReal ? " \u2713" : ""}</div>
+              <div style={{ height: 3, background: "#f3f4f6", borderRadius: 2, marginTop: 2 }}>
+                <div style={{ height: "100%", width: pct + "%", background: isReal ? GREEN : "#9ca3af", borderRadius: 2 }} />
+              </div>
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#111827", width: 30, textAlign: "right" }}>{count}</span>
+          </div>
+        );
+      })}
+      {total === 0 && <div style={{ fontSize: 13, color: "#d1d5db", textAlign: "center", padding: 12 }}>Waiting for responses...</div>}
+    </div>
+  );
+
+  // Talking points panel (admin only, after concept reveal)
+  const TalkingPoints = ({ conceptIds, headline }) => {
+    const concepts = COMM_CONCEPTS.filter(c => conceptIds.includes(c.id));
+    return (
+      <div style={{ marginTop: 16 }}>
+        <div style={{ ...sectionLabel, marginBottom: 8 }}>Talking Points (admin only)</div>
+        {concepts.map(c => (
+          <div key={c.id} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: "4px solid " + ACCENT }}>
+            <div style={{ fontSize: 14, fontWeight: 900, color: "#111827", marginBottom: 6 }}>{c.name}</div>
+            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8, lineHeight: 1.4 }}>{c.desc}</div>
+            <div style={{ marginBottom: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: ACCENT, textTransform: "uppercase", marginBottom: 2 }}>Why it matters</div>
+              <div style={{ fontSize: 12, color: "#374151", lineHeight: 1.4 }}>{c.whyItMatters}</div>
+            </div>
+            <div style={{ marginBottom: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: ACCENT, textTransform: "uppercase", marginBottom: 2 }}>Who it affects</div>
+              <div style={{ fontSize: 12, color: "#374151", lineHeight: 1.4 }}>{c.whoItAffects}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: ACCENT, textTransform: "uppercase", marginBottom: 2 }}>Example angles</div>
+              <div style={{ fontSize: 12, color: "#374151", lineHeight: 1.4 }}>{c.exampleAngles}</div>
+            </div>
+          </div>
+        ))}
+        <div style={{ ...crd, padding: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", marginBottom: 4 }}>Your notes for this headline</div>
+          <textarea value={adminNotes || headline?.adminNotes || ""} onChange={e => setAdminNotes(e.target.value)} placeholder="Add your own talking points, examples, discussion questions..." rows={3} style={{ ...inp, fontSize: 12, resize: "vertical" }} />
+          <button onClick={() => saveHeadlineNotes(headline.id, adminNotes)} style={{ ...pill, background: "#111827", color: "#fff", padding: "8px 0", width: "100%", marginTop: 6 }}>Save Notes</button>
+        </div>
+      </div>
+    );
+  };
 
   if (isGuest) {
     return <div style={{ padding: 40, textAlign: "center", fontFamily: F }}><div style={{ ...sectionLabel, marginBottom: 8 }}>Class Tools</div><div style={{ fontSize: 14, color: TEXT_SECONDARY }}>Sign in to participate.</div></div>;
@@ -1893,7 +1958,6 @@ function ClassTools({ data, setData, isAdmin, userName }) {
               <div style={{ width: 60 }} />
             </div>
 
-            {/* Add headline */}
             <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <input value={newHeadline} onChange={e => setNewHeadline(e.target.value)} placeholder="Headline text..." style={inp} />
@@ -1904,84 +1968,94 @@ function ClassTools({ data, setData, isAdmin, userName }) {
               </div>
             </div>
 
-            {/* Headline list */}
             <div style={{ ...sectionLabel, marginBottom: 8 }}>Headlines ({sessionHeadlines.length})</div>
             {sessionHeadlines.map(h => {
               const isActive = session.activeHeadlineId === h.id;
-              const realCats = h.realCategories || (h.realCategory ? [h.realCategory] : []);
+              const rc = h.realCategories || []; const rco = h.realConcepts || [];
               return (
                 <div key={h.id} style={{ ...crd, padding: 12, marginBottom: 4, borderColor: isActive ? ACCENT : "#f3f4f6", borderWidth: isActive ? 2 : 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: isActive ? 700 : 500, color: "#111827" }}>{h.text}</div>
                       {h.url && <a href={h.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 10, color: "#2563eb", textDecoration: "none" }}>Source</a>}
+                      {rc.length > 0 && <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{rc.join(", ")}</div>}
+                      {rco.length > 0 && <div style={{ fontSize: 10, color: ACCENT, fontWeight: 600 }}>{rco.map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>}
                     </div>
-                    {realCats.length > 0 && <span style={{ fontSize: 10, color: ACCENT, fontWeight: 600, flexShrink: 0 }}>{realCats.join(", ")}</span>}
-                    {h.submittedBy && h.submittedBy !== ADMIN_NAME && <span style={{ fontSize: 10, color: "#d1d5db", flexShrink: 0 }}>{h.submittedBy.split(" ")[0]}</span>}
                     {!isActive && <button onClick={() => activateHeadline(session.id, h.id)} style={{ ...pill, background: "#f3f4f6", color: "#4b5563", fontSize: 10, padding: "4px 10px" }}>Activate</button>}
                   </div>
                 </div>
               );
             })}
 
-            {/* Active headline view */}
             {activeHeadline && (
               <div style={{ marginTop: 20 }}>
-                <div style={{ ...sectionLabel, marginBottom: 8 }}>Active Headline</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <div style={{ ...sectionLabel }}>Active Headline</div>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: phase === "surface" ? "#2563eb" : phase === "concept" ? PURPLE : GREEN, background: phase === "surface" ? "#eff6ff" : phase === "concept" ? "#f5f3ff" : "#f0fdf4", padding: "2px 8px", borderRadius: 4 }}>
+                    {phase === "surface" ? "Step 1: Surface" : phase === "concept" ? "Step 2: Concept" : "Complete"}
+                  </span>
+                </div>
                 <div style={{ ...crd, padding: 20, textAlign: "center", marginBottom: 16, background: "#111827", borderColor: "#111827" }}>
                   <div style={{ fontSize: 20, fontWeight: 900, color: "#fff", lineHeight: 1.3 }}>{activeHeadline.text}</div>
                   {activeHeadline.url && <a href={activeHeadline.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", textDecoration: "none", marginTop: 6, display: "inline-block" }}>View source</a>}
                 </div>
 
-                {/* Vote results */}
-                <div style={{ ...sectionLabel, marginBottom: 8 }}>Responses ({voterCount} students)</div>
-                <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
-                  {cats.filter(c => voteTally[c]).sort((a, b) => (voteTally[b] || 0) - (voteTally[a] || 0)).map(cat => {
-                    const count = voteTally[cat] || 0;
-                    const pct = voterCount > 0 ? Math.round(count / voterCount * 100) : 0;
-                    const isReal = session.revealed && (session.realCategories || []).includes(cat);
-                    return (
-                      <div key={cat} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #f9fafb" }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: isReal ? 900 : 500, color: isReal ? GREEN : "#111827" }}>{cat}{isReal ? " \u2713" : ""}</div>
-                          <div style={{ height: 4, background: "#f3f4f6", borderRadius: 2, marginTop: 3 }}>
-                            <div style={{ height: "100%", width: pct + "%", background: isReal ? GREEN : "#111827", borderRadius: 2, transition: "width 0.3s" }} />
-                          </div>
-                        </div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: "#111827", width: 40, textAlign: "right" }}>{count}</span>
-                      </div>
-                    );
-                  })}
-                  {voterCount === 0 && <div style={{ fontSize: 13, color: "#d1d5db", textAlign: "center", padding: 12 }}>Waiting for responses...</div>}
-                </div>
-
-                {/* Reveal */}
-                {!session.revealed ? (
+                {phase === "surface" && (
                   <div>
-                    <div style={{ ...sectionLabel, marginBottom: 8 }}>What is this headline REALLY about? (select all that apply)</div>
+                    <VoteBar items={cats} tally={surfaceTally} total={surfaceVoterCount} realItems={[]} label="Surface Category Responses" />
+                    <div style={{ ...sectionLabel, marginBottom: 8 }}>What surface categories fit? (select all that apply)</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10 }}>
                       {cats.map(cat => (
-                        <button key={cat} onClick={() => toggleReal(cat)} style={{
-                          ...pill, fontSize: 11, padding: "6px 10px",
-                          background: realPicks.includes(cat) ? GREEN : "#f3f4f6",
-                          color: realPicks.includes(cat) ? "#fff" : "#374151",
-                        }}>{cat}</button>
+                        <button key={cat} onClick={() => toggleReal(cat)} style={{ ...pill, fontSize: 11, padding: "6px 10px", background: realPicks.includes(cat) ? GREEN : "#f3f4f6", color: realPicks.includes(cat) ? "#fff" : "#374151" }}>{cat}</button>
                       ))}
                     </div>
-                    {realPicks.length > 0 && (
-                      <button onClick={() => reveal(session.id)} style={{ ...pill, background: ACCENT, color: "#fff", padding: "10px 20px", fontSize: 13 }}>Reveal ({realPicks.length} selected)</button>
+                    {realPicks.length > 0 && <button onClick={() => revealSurface(session.id)} style={{ ...pill, background: ACCENT, color: "#fff", padding: "10px 20px", fontSize: 13 }}>Reveal Surface ({realPicks.length})</button>}
+                  </div>
+                )}
+
+                {phase === "concept" && (
+                  <div>
+                    <div style={{ ...crd, padding: 14, background: "#f0fdf4", borderColor: GREEN, textAlign: "center", marginBottom: 12 }}>
+                      <div style={{ fontSize: 10, color: GREEN, fontWeight: 600, textTransform: "uppercase" }}>Surface categories</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: "#111827", marginTop: 2 }}>{(session.realCategories || []).join(", ")}</div>
+                    </div>
+                    <VoteBar items={COMM_CONCEPTS.map(c => c.id)} tally={conceptTally} total={conceptVoterCount} realItems={[]} label="Communication Concept Responses" />
+                    <div style={{ ...sectionLabel, marginBottom: 8 }}>What communication concept is this really about?</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
+                      {COMM_CONCEPTS.map(c => (
+                        <button key={c.id} onClick={() => toggleConceptReal(c.id)} style={{ ...crd, padding: "10px 14px", textAlign: "left", cursor: "pointer", borderColor: conceptPicks.includes(c.id) ? PURPLE : "#f3f4f6", borderWidth: conceptPicks.includes(c.id) ? 2 : 1, background: conceptPicks.includes(c.id) ? "#f5f3ff" : "#fff" }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: conceptPicks.includes(c.id) ? PURPLE : "#111827" }}>{c.name}</div>
+                          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{c.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                    {conceptPicks.length > 0 && (
+                      <div>
+                        <textarea value={adminNotes} onChange={e => setAdminNotes(e.target.value)} placeholder="Your notes for this headline (saved with reveal)..." rows={2} style={{ ...inp, fontSize: 12, marginBottom: 8, resize: "vertical" }} />
+                        <button onClick={() => revealConcept(session.id)} style={{ ...pill, background: PURPLE, color: "#fff", padding: "10px 20px", fontSize: 13 }}>Reveal Concept ({conceptPicks.length})</button>
+                      </div>
                     )}
                   </div>
-                ) : (
-                  <div style={{ ...crd, padding: 16, background: "#f0fdf4", borderColor: GREEN, textAlign: "center" }}>
-                    <div style={{ fontSize: 11, color: GREEN, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Really about</div>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>{(session.realCategories || []).join(", ")}</div>
+                )}
+
+                {phase === "done" && (
+                  <div>
+                    <div style={{ ...crd, padding: 14, background: "#f0fdf4", borderColor: GREEN, textAlign: "center", marginBottom: 8 }}>
+                      <div style={{ fontSize: 10, color: GREEN, fontWeight: 600, textTransform: "uppercase" }}>Surface</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>{(session.realCategories || []).join(", ")}</div>
+                    </div>
+                    <div style={{ ...crd, padding: 14, background: "#f5f3ff", borderColor: PURPLE, textAlign: "center", marginBottom: 8 }}>
+                      <div style={{ fontSize: 10, color: PURPLE, fontWeight: 600, textTransform: "uppercase" }}>Communication Concept</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>{(session.realConcepts || []).map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>
+                    </div>
+                    <VoteBar items={cats} tally={surfaceTally} total={surfaceVoterCount} realItems={session.realCategories} label="Surface Results" />
+                    <VoteBar items={COMM_CONCEPTS.map(c => c.id)} tally={conceptTally} total={conceptVoterCount} realItems={session.realConcepts} label="Concept Results" />
+                    <TalkingPoints conceptIds={session.realConcepts || []} headline={activeHeadline} />
                   </div>
                 )}
               </div>
             )}
 
-            {/* Add category */}
             <div style={{ marginTop: 20 }}>
               <div style={{ ...sectionLabel, marginBottom: 6 }}>Categories ({cats.length})</div>
               <div style={{ display: "flex", gap: 6 }}>
@@ -2000,13 +2074,12 @@ function ClassTools({ data, setData, isAdmin, userName }) {
         <Toast message={msg} />
         <div style={{ maxWidth: 700, margin: "0 auto" }}>
           <div style={{ ...sectionLabel, marginBottom: 12 }}>Class Tools</div>
-
           <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>Headline Exercise</div>
               <button onClick={createSession} style={{ ...pill, background: "#111827", color: "#fff" }}>New Session</button>
             </div>
-            <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5, marginBottom: 12 }}>Show a headline. Students categorize it. Then reveal what it's really about.</div>
+            <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5, marginBottom: 12 }}>Show a headline. Students categorize the surface topic, then identify the communication concept underneath.</div>
             {sessions.length === 0 && <div style={{ fontSize: 13, color: "#d1d5db", textAlign: "center", padding: 12 }}>No sessions yet.</div>}
             {[...sessions].reverse().map(s => {
               const count = items.filter(it => it.sessionId === s.id).length;
@@ -2021,23 +2094,19 @@ function ClassTools({ data, setData, isAdmin, userName }) {
               );
             })}
           </div>
-
-          {/* All headlines ever */}
-          {items.filter(it => it.realCategories?.length > 0 || it.realCategory).length > 0 && (
+          {items.filter(it => it.realConcepts?.length > 0).length > 0 && (
             <div style={{ ...crd, padding: 16 }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Headline Archive</div>
-              {items.filter(it => it.realCategories?.length > 0 || it.realCategory).map(h => {
-                const realCats = h.realCategories || (h.realCategory ? [h.realCategory] : []);
-                return (
-                  <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #f9fafb" }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, color: "#111827" }}>{h.text}</div>
-                      {h.url && <a href={h.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: "#2563eb", textDecoration: "none" }}>Source</a>}
-                    </div>
-                    <span style={{ fontSize: 10, color: ACCENT, fontWeight: 600, flexShrink: 0 }}>{realCats.join(", ")}</span>
+              {items.filter(it => it.realConcepts?.length > 0).map(h => (
+                <div key={h.id} style={{ padding: "8px 0", borderBottom: "1px solid #f9fafb" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ flex: 1, fontSize: 13, color: "#111827" }}>{h.text}</div>
+                    {h.url && <a href={h.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: "#2563eb", textDecoration: "none" }}>Source</a>}
                   </div>
-                );
-              })}
+                  <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{(h.realCategories || []).join(", ")}</div>
+                  <div style={{ fontSize: 10, color: ACCENT, fontWeight: 600 }}>{(h.realConcepts || []).map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -2046,31 +2115,21 @@ function ClassTools({ data, setData, isAdmin, userName }) {
   }
 
   // ── STUDENT VIEW ──
-  const liveSession = sessions.find(s => s.activeHeadlineId && !s.revealed);
-  const revealedSession = sessions.find(s => s.activeHeadlineId && s.revealed);
-  const currentSession = liveSession || revealedSession;
+  const liveSession = sessions.find(s => s.activeHeadlineId && s.phase !== "done");
+  const doneSession = sessions.find(s => s.activeHeadlineId && s.phase === "done");
+  const currentSession = liveSession || doneSession;
   const currentHeadline = currentSession ? items.find(it => it.id === currentSession.activeHeadlineId) : null;
-  const studentVoteRaw = sid && currentSession?.votes?.[sid];
-  const studentVoteArr = studentVoteRaw ? (Array.isArray(studentVoteRaw) ? studentVoteRaw : [studentVoteRaw]) : null;
-
-  // Student vote tallies
-  const studentTally = {};
-  let studentVoterCount = 0;
-  if (currentSession) {
-    const votes = currentSession.votes || {};
-    studentVoterCount = Object.keys(votes).length;
-    Object.values(votes).forEach(picks => {
-      const arr = Array.isArray(picks) ? picks : [picks];
-      arr.forEach(cat => { studentTally[cat] = (studentTally[cat] || 0) + 1; });
-    });
-  }
+  const curPhase = currentSession?.phase || "surface";
+  const studentSurfaceVote = sid && currentSession?.votes?.[sid] ? (Array.isArray(currentSession.votes[sid]) ? currentSession.votes[sid] : [currentSession.votes[sid]]) : null;
+  const studentConceptVote = sid && currentSession?.conceptVotes?.[sid] ? (Array.isArray(currentSession.conceptVotes[sid]) ? currentSession.conceptVotes[sid] : [currentSession.conceptVotes[sid]]) : null;
+  const { tally: stSurfaceTally, count: stSurfaceCount } = buildTally(currentSession?.votes);
+  const { tally: stConceptTally, count: stConceptCount } = buildTally(currentSession?.conceptVotes);
 
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 500, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 12 }}>Class Tools</div>
-
         {currentHeadline ? (
           <div>
             <div style={{ ...crd, padding: 20, textAlign: "center", marginBottom: 16, background: "#111827", borderColor: "#111827" }}>
@@ -2079,62 +2138,73 @@ function ClassTools({ data, setData, isAdmin, userName }) {
               {currentHeadline.url && <a href={currentHeadline.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", textDecoration: "none", marginTop: 6, display: "inline-block" }}>Read article</a>}
             </div>
 
-            {currentSession.revealed ? (
+            {/* Surface phase */}
+            {curPhase === "surface" && (
+              studentSurfaceVote ? (
+                <div style={{ ...crd, padding: 20, textAlign: "center" }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>You picked: {studentSurfaceVote.join(", ")}</div>
+                  <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Waiting for surface reveal...</div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ ...sectionLabel, marginBottom: 8 }}>Step 1: What surface categories fit? (select all that apply)</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
+                    {cats.map(cat => (
+                      <button key={cat} onClick={() => togglePick(cat)} style={{ ...pill, fontSize: 12, padding: "8px 12px", background: myPicks.includes(cat) ? "#111827" : "#f3f4f6", color: myPicks.includes(cat) ? "#fff" : "#374151" }}>{cat}</button>
+                    ))}
+                  </div>
+                  {myPicks.length > 0 && <button onClick={() => lockInSurface(currentSession.id)} style={{ ...pill, background: ACCENT, color: "#fff", padding: "10px 20px", fontSize: 13, width: "100%" }}>Lock in ({myPicks.length})</button>}
+                </div>
+              )
+            )}
+
+            {/* Concept phase */}
+            {curPhase === "concept" && (
               <div>
-                <div style={{ ...crd, padding: 16, background: "#f0fdf4", borderColor: GREEN, textAlign: "center", marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, color: GREEN, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Really about</div>
-                  <div style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>{(currentSession.realCategories || []).join(", ")}</div>
-                  {studentVoteArr && (
-                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
-                      You picked: {studentVoteArr.join(", ")}
-                      {studentVoteArr.some(v => (currentSession.realCategories || []).includes(v)) && <span style={{ color: GREEN, fontWeight: 700, marginLeft: 6 }}>Match!</span>}
+                <div style={{ ...crd, padding: 14, background: "#f0fdf4", borderColor: GREEN, textAlign: "center", marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, color: GREEN, fontWeight: 600, textTransform: "uppercase" }}>Surface categories</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: "#111827", marginTop: 2 }}>{(currentSession.realCategories || []).join(", ")}</div>
+                  {studentSurfaceVote && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>You picked: {studentSurfaceVote.join(", ")}{studentSurfaceVote.some(v => (currentSession.realCategories || []).includes(v)) ? " \u2713" : ""}</div>}
+                </div>
+                {studentConceptVote ? (
+                  <div style={{ ...crd, padding: 20, textAlign: "center" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>You picked: {studentConceptVote.map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>
+                    <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Waiting for concept reveal...</div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ ...sectionLabel, marginBottom: 8 }}>Step 2: What communication concept is this really about?</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
+                      {COMM_CONCEPTS.map(c => (
+                        <button key={c.id} onClick={() => toggleConceptPick(c.id)} style={{ ...crd, padding: "10px 14px", textAlign: "left", cursor: "pointer", borderColor: myConceptPicks.includes(c.id) ? PURPLE : "#f3f4f6", borderWidth: myConceptPicks.includes(c.id) ? 2 : 1, background: myConceptPicks.includes(c.id) ? "#f5f3ff" : "#fff" }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: myConceptPicks.includes(c.id) ? PURPLE : "#111827" }}>{c.name}</div>
+                          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{c.desc}</div>
+                        </button>
+                      ))}
                     </div>
-                  )}
-                </div>
-                <div style={{ ...crd, padding: 14 }}>
-                  <div style={{ ...sectionLabel, marginBottom: 8 }}>Class Results</div>
-                  {cats.filter(c => studentTally[c]).sort((a, b) => (studentTally[b] || 0) - (studentTally[a] || 0)).map(cat => {
-                    const count = studentTally[cat] || 0;
-                    const pct = studentVoterCount > 0 ? Math.round(count / studentVoterCount * 100) : 0;
-                    const isReal = (currentSession.realCategories || []).includes(cat);
-                    return (
-                      <div key={cat} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 12, fontWeight: isReal ? 900 : 500, color: isReal ? GREEN : "#111827" }}>{cat}</div>
-                          <div style={{ height: 3, background: "#f3f4f6", borderRadius: 2, marginTop: 2 }}>
-                            <div style={{ height: "100%", width: pct + "%", background: isReal ? GREEN : "#9ca3af", borderRadius: 2 }} />
-                          </div>
-                        </div>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#111827", width: 30, textAlign: "right" }}>{pct}%</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : studentVoteArr ? (
-              <div style={{ ...crd, padding: 20, textAlign: "center" }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>You picked: {studentVoteArr.join(", ")}</div>
-                <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Waiting for reveal...</div>
-              </div>
-            ) : (
-              <div>
-                <div style={{ ...sectionLabel, marginBottom: 8 }}>What categories fit this headline? (select all that apply)</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
-                  {cats.map(cat => (
-                    <button key={cat} onClick={() => togglePick(cat)} style={{
-                      ...pill, fontSize: 12, padding: "8px 12px",
-                      background: myPicks.includes(cat) ? "#111827" : "#f3f4f6",
-                      color: myPicks.includes(cat) ? "#fff" : "#374151",
-                    }}>{cat}</button>
-                  ))}
-                </div>
-                {myPicks.length > 0 && (
-                  <button onClick={() => lockIn(currentSession.id)} style={{ ...pill, background: ACCENT, color: "#fff", padding: "10px 20px", fontSize: 13, width: "100%" }}>Lock in ({myPicks.length} selected)</button>
+                    {myConceptPicks.length > 0 && <button onClick={() => lockInConcept(currentSession.id)} style={{ ...pill, background: PURPLE, color: "#fff", padding: "10px 20px", fontSize: 13, width: "100%" }}>Lock in ({myConceptPicks.length})</button>}
+                  </div>
                 )}
               </div>
             )}
 
-            {/* Student can submit headlines too */}
+            {/* Done phase */}
+            {curPhase === "done" && (
+              <div>
+                <div style={{ ...crd, padding: 14, background: "#f0fdf4", borderColor: GREEN, textAlign: "center", marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, color: GREEN, fontWeight: 600, textTransform: "uppercase" }}>Surface</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>{(currentSession.realCategories || []).join(", ")}</div>
+                </div>
+                <div style={{ ...crd, padding: 14, background: "#f5f3ff", borderColor: PURPLE, textAlign: "center", marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, color: PURPLE, fontWeight: 600, textTransform: "uppercase" }}>Communication Concept</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>{(currentSession.realConcepts || []).map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>
+                  {studentConceptVote && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>You picked: {studentConceptVote.map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}{studentConceptVote.some(v => (currentSession.realConcepts || []).includes(v)) ? " \u2713" : ""}</div>}
+                </div>
+                <VoteBar items={cats} tally={stSurfaceTally} total={stSurfaceCount} realItems={currentSession.realCategories} label="Surface Results" />
+                <VoteBar items={COMM_CONCEPTS.map(c => c.id)} tally={stConceptTally} total={stConceptCount} realItems={currentSession.realConcepts} label="Concept Results" />
+              </div>
+            )}
+
             <div style={{ marginTop: 20 }}>
               <div style={{ ...sectionLabel, marginBottom: 6 }}>Submit a headline</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
