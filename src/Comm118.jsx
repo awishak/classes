@@ -358,6 +358,7 @@ function ScheduleView({ data, setData, isAdmin }) {
                             <label style={{ fontSize: 10, color: TEXT_MUTED, display: "flex", alignItems: "center", gap: 2 }}><input type="checkbox" checked={!!d.holiday} onChange={e => updateDate(wi, realDi, "holiday", e.target.checked)} />Off</label>
                           </div>
                           <textarea value={d.topic} onChange={e => updateDate(wi, realDi, "topic", e.target.value)} placeholder="Topic" rows={2} style={{ ...inp, padding: "4px 6px", fontSize: 12, resize: "vertical" }} />
+                          <input value={(d.activities || []).join(", ")} onChange={e => updateDate(wi, realDi, "activities", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} placeholder="Activities (comma-separated: Quiz, Fishbowl, etc.)" style={{ ...inp, padding: "3px 6px", fontSize: 11, fontWeight: 700 }} />
                           <select value={d.assignment || ""} onChange={e => updateDate(wi, realDi, "assignment", e.target.value)} style={{ ...sel, width: "100%", fontSize: 11, padding: "3px 6px" }}>
                             <option value="">No assignment due</option>
                             {(data.assignments || []).filter(a => a.id !== "participation").map(a => (
@@ -413,6 +414,13 @@ function ScheduleView({ data, setData, isAdmin }) {
                           ) : (
                             <>
                               <div style={{ fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.35 }}>{d.topic || <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}>—</span>}</div>
+                              {(d.activities || []).length > 0 && (
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginTop: 4 }}>
+                                  {(d.activities || []).map((act, ai) => (
+                                    <span key={ai} style={{ fontSize: 10, fontWeight: 900, color: "#111827", background: "#f3f4f6", padding: "2px 6px", borderRadius: 4 }}>{act}</span>
+                                  ))}
+                                </div>
+                              )}
                               {d.assignment && <div style={{ fontSize: 11, color: "#ea580c", marginTop: 3, fontWeight: 600 }}>{d.assignment}</div>}
                               {(d.readings || []).length > 0 && (
                                 <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
@@ -2346,10 +2354,45 @@ export default function Comm118() {
             { id: "interview", name: "Interview Assignment", weight: 5, due: "Apr 17", link: "", notes: "Interview someone who works in sports in a job you're interested in" },
             ...d.assignments.map(a => {
               if (a.id === "woc_proposal") return { ...a, due: "Apr 24" };
+              if (a.id === "woc_submission") return { ...a, due: "May 8" };
               if (a.id === "leadership_guide") return { ...a, weight: 15 };
               return a;
             })
           ];
+          await saveData(d);
+        }
+        // Migration: patch schedule with activities and assignment changes
+        if (d && d.schedule && !d._scheduleMigV2) {
+          const patchMap = {
+            "Mar 30": { activities: ["Practice This or That"] },
+            "Apr 1": { activities: ["Quiz", "Practice Fishbowl"] },
+            "Apr 8": { activities: ["Quiz", "Fishbowl"] },
+            "Apr 13": { activities: ["This or That", "Fishbowl", "Headlines"] },
+            "Apr 15": { activities: ["Quiz"] },
+            "Apr 17": { assignment: "Interview Assignment due" },
+            "Apr 20": { activities: ["This or That", "Fishbowl", "Headlines"], assignment: "" },
+            "Apr 22": { activities: ["Quiz"] },
+            "Apr 24": { assignment: "Web of Connections Proposal due" },
+            "Apr 27": { activities: ["This or That", "Fishbowl", "Headlines"] },
+            "Apr 29": { activities: ["Quiz"] },
+            "May 4": { activities: ["This or That", "Fishbowl", "Headlines"] },
+            "May 6": { activities: ["Quiz"], assignment: "", notes: "" },
+            "May 8": { assignment: "Web of Connections Submission due" },
+            "May 11": { activities: ["This or That", "Fishbowl", "Headlines"] },
+            "May 13": { activities: ["Quiz"] },
+            "May 18": { activities: ["This or That", "Fishbowl", "Headlines"] },
+            "May 20": { activities: ["Quiz"] },
+            "May 27": { activities: ["Quiz"] },
+          };
+          d.schedule = d.schedule.map(w => ({
+            ...w,
+            dates: w.dates.map(dt => {
+              const patch = patchMap[dt.date];
+              if (patch) return { ...dt, ...patch };
+              return dt;
+            })
+          }));
+          d._scheduleMigV2 = true;
           await saveData(d);
         }
         setData(d);
