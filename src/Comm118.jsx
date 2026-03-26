@@ -228,7 +228,7 @@ function NamePicker({ data, onSelect }) {
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 4 }}>Enter your PIN</div>
           </div>
           <div style={{ ...crd, padding: 20 }}>
-            <input autoFocus type="tel" inputMode="numeric" maxLength={6} value={pin} onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setError(""); }} onKeyDown={e => e.key === "Enter" && tryLogin()} placeholder="6-digit PIN" style={{ ...inp, textAlign: "center", fontSize: 24, fontWeight: 900, letterSpacing: "0.3em" }} />
+            <input autoFocus type="password" inputMode="numeric" maxLength={6} value={pin} onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setError(""); }} onKeyDown={e => e.key === "Enter" && tryLogin()} placeholder="6-digit PIN" style={{ ...inp, textAlign: "center", fontSize: 24, fontWeight: 900, letterSpacing: "0.3em" }} />
             {error && <div style={{ fontSize: 12, color: RED, textAlign: "center", marginTop: 8, fontWeight: 600 }}>{error}</div>}
             <button onClick={tryLogin} style={{ ...pill, background: "#111827", color: "#fff", padding: "12px 0", width: "100%", marginTop: 12, fontSize: 14 }}>Sign In</button>
             <button onClick={() => { setSelected(null); setPin(""); setError(""); }} style={{ ...pillInactive, width: "100%", marginTop: 8, padding: "10px 0" }}>Back</button>
