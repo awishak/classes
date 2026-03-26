@@ -37,24 +37,30 @@ function lastSortObj(a, b) { return lastName(a.name).localeCompare(lastName(b.na
 async function saveData(data) { try { const STORAGE_KEY = "comm118-game-v14"; await window.storage.set(STORAGE_KEY, JSON.stringify(data), true); return true; } catch { return false; } }
 
 /* ─── ASSIGNMENTS TAB ─── */
-export function AssignmentsView({ data, setData, isAdmin }) {
+export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
+  const grades = data.grades || {};
   const [editId, setEditId] = useState(null);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+  const isGuest = userName === GUEST_NAME;
+  const student = !isAdmin && !isGuest ? data.students.find(s => s.name === userName) : null;
+  const studentId = student?.id;
+
+  // Leaderboard points for current student
+  const studentPts = studentId ? data.log.filter(e => e.studentId === studentId).reduce((s, e) => s + e.amount, 0) : 0;
+  const ranked = data.students.map(s => ({ ...s, points: data.log.filter(e => e.studentId === s.id).reduce((t, e) => t + e.amount, 0) })).sort((a, b) => b.points - a.points);
+  const studentRank = studentId ? ranked.findIndex(s => s.id === studentId) + 1 : null;
 
   const updateAssignment = async (id, field, value) => {
     const updated = { ...data, assignments: (data.assignments || DEFAULT_ASSIGNMENTS).map(a => a.id === id ? { ...a, [field]: value } : a) };
-    // If due date changed, port it to the schedule
     if (field === "due" && value && data.schedule) {
       const assignment = (data.assignments || DEFAULT_ASSIGNMENTS).find(a => a.id === id);
       if (assignment) {
         const newSchedule = data.schedule.map(week => ({
           ...week,
           dates: week.dates.map(d => {
-            // Remove old assignment reference for this assignment
             const cleanedAssignment = (d.assignment || "").split(", ").filter(a => a !== assignment.name && a !== assignment.name + " due").join(", ");
-            // Add if this date matches the new due date
             if (d.date === value) {
               const newAssignment = cleanedAssignment ? cleanedAssignment + ", " + assignment.name + " due" : assignment.name + " due";
               return { ...d, assignment: newAssignment };
@@ -74,13 +80,31 @@ export function AssignmentsView({ data, setData, isAdmin }) {
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
-        <div style={{ ...sectionLabel, marginBottom: 8 }}>Assignments & Weights</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <div style={{ ...sectionLabel }}>Assignments & Weights</div>
+          {isAdmin && setView && <button onClick={() => setView("grades")} style={{ ...pillInactive, fontSize: 11 }}>Gradebook</button>}
+        </div>
         <div style={{ marginBottom: 16 }}>
           <a href="https://camino.instructure.com/courses/117721/assignments" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
             For detailed info, see Camino
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           </a>
         </div>
+
+        {/* Student: current points summary */}
+        {studentId && (
+          <div style={{ ...crd, padding: 14, marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ textAlign: "center", flex: 1 }}>
+              <div style={{ ...sectionLabel, marginBottom: 2 }}>Rank</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: studentRank <= 5 ? "#d4a017" : "#111827" }}>#{studentRank}</div>
+            </div>
+            <div style={{ width: 1, height: 36, background: "#f3f4f6" }} />
+            <div style={{ textAlign: "center", flex: 1 }}>
+              <div style={{ ...sectionLabel, marginBottom: 2 }}>Game Points</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>{studentPts}</div>
+            </div>
+          </div>
+        )}
 
         <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
           <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6 }}>
@@ -97,6 +121,7 @@ export function AssignmentsView({ data, setData, isAdmin }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {assignments.map(a => {
             const isEdit = isAdmin && editId === a.id;
+            const g = studentId ? (grades[studentId + "-" + a.id] || {}) : null;
             return (
               <div key={a.id} style={{ ...crd, padding: 16, cursor: isAdmin && !isEdit ? "pointer" : "default" }} onClick={() => isAdmin && !isEdit && setEditId(a.id)}>
                 {isEdit ? (
@@ -123,21 +148,37 @@ export function AssignmentsView({ data, setData, isAdmin }) {
                     <button onClick={save} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 0", width: "100%" }}>Done</button>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: a.id === "participation" ? "#f3f4f6" : ACCENT + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: a.id === "participation" ? "#6b7280" : ACCENT, flexShrink: 0 }}>{a.weight}%</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{a.name}</div>
-                      <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
-                        {a.due && <span>Due {a.due}</span>}
-                        {a.notes && <span>{a.due ? " / " : ""}{a.notes}</span>}
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: a.id === "participation" ? "#f3f4f6" : ACCENT + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: a.id === "participation" ? "#6b7280" : ACCENT, flexShrink: 0 }}>{a.weight}%</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{a.name}</div>
+                        <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
+                          {a.due && <span>Due {a.due}</span>}
+                          {a.notes && <span>{a.due ? " / " : ""}{a.notes}</span>}
+                        </div>
                       </div>
+                      {a.link && (
+                        <a href={a.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ ...pillInactive, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                          Details <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        </a>
+                      )}
+                      {isAdmin && !a.link && <span style={{ fontSize: 11, color: "#d1d5db", fontStyle: "italic" }}>Click to edit</span>}
                     </div>
-                    {a.link && (
-                      <a href={a.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ ...pillInactive, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                        Details <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                      </a>
+                    {/* Student grade inline */}
+                    {studentId && a.id !== "participation" && g && (
+                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
+                        {g.score !== undefined && g.score !== "" ? (
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                            <span style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>{g.score}</span>
+                            <span style={{ fontSize: 12, color: "#9ca3af" }}>/ {g.outOf || 100}</span>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic" }}>Not graded yet</div>
+                        )}
+                        {g.comment && <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4, padding: "6px 8px", background: "#f8fafc", borderRadius: 6, lineHeight: 1.4 }}>{g.comment}</div>}
+                      </div>
                     )}
-                    {isAdmin && !a.link && <span style={{ fontSize: 11, color: "#d1d5db", fontStyle: "italic" }}>Click to edit</span>}
                   </div>
                 )}
               </div>
