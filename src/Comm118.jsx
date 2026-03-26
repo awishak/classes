@@ -385,12 +385,46 @@ function ScheduleView({ data, setData, isAdmin }) {
     await saveData(updated); setData(updated); showMsg("Reset");
   };
 
+  const [editLinks, setEditLinks] = useState(false);
+  const [docUrl, setDocUrl] = useState(data.scheduleDocUrl || "");
+  const [canvaUrl, setCanvaUrl] = useState(data.scheduleCanvaUrl || "");
+  const saveLinks = async () => {
+    const updated = { ...data, scheduleDocUrl: docUrl.trim(), scheduleCanvaUrl: canvaUrl.trim() };
+    await saveData(updated); setData(updated); setEditLinks(false); showMsg("Saved");
+  };
+
   return (
     <div style={{ padding: "20px 16px 40px", fontFamily: F }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
         <div style={{ marginBottom: 16 }}>
-          <div style={{ ...sectionLabel, marginBottom: 8 }}>Schedule</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ ...sectionLabel, marginBottom: 8 }}>Schedule</div>
+            {isAdmin && (
+              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                {data.scheduleDocUrl && !editLinks && (
+                  <a href={data.scheduleDocUrl} target="_blank" rel="noopener noreferrer" style={{ ...pillInactive, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Doc
+                  </a>
+                )}
+                {data.scheduleCanvaUrl && !editLinks && (
+                  <a href={data.scheduleCanvaUrl} target="_blank" rel="noopener noreferrer" style={{ ...pillInactive, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    Canva
+                  </a>
+                )}
+                <button onClick={() => setEditLinks(!editLinks)} style={{ ...pillInactive, fontSize: 11 }}>{editLinks ? "Cancel" : "Links"}</button>
+              </div>
+            )}
+          </div>
+          {isAdmin && editLinks && (
+            <div style={{ ...crd, padding: 12, marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+              <input value={docUrl} onChange={e => setDocUrl(e.target.value)} placeholder="Google Doc URL" style={{ ...inp, fontSize: 12, padding: "6px 8px" }} />
+              <input value={canvaUrl} onChange={e => setCanvaUrl(e.target.value)} placeholder="Canva URL" style={{ ...inp, fontSize: 12, padding: "6px 8px" }} />
+              <button onClick={saveLinks} style={{ ...pill, background: "#111827", color: "#fff", padding: "8px 0", width: "100%" }}>Save</button>
+            </div>
+          )}
           {isAdmin && (
             <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
               <button onClick={addWeek} style={pillInactive}>+ Week</button>
