@@ -358,7 +358,9 @@ function ScheduleView({ data, setData, isAdmin }) {
                           </div>
                           <input value={d.topic} onChange={e => updateDate(wi, realDi, "topic", e.target.value)} placeholder="Topic" style={{ ...inp, padding: "4px 6px", fontSize: 12 }} />
                           <input value={d.assignment || ""} onChange={e => updateDate(wi, realDi, "assignment", e.target.value)} placeholder="Due" style={{ ...inp, padding: "3px 6px", fontSize: 11 }} />
+                          <input value={d.link || ""} onChange={e => updateDate(wi, realDi, "link", e.target.value)} placeholder="Reading link (URL)" style={{ ...inp, padding: "3px 6px", fontSize: 11 }} />
                           <input value={d.notes || ""} onChange={e => updateDate(wi, realDi, "notes", e.target.value)} placeholder="Notes" style={{ ...inp, padding: "3px 6px", fontSize: 11 }} />
+                          <input value={d.adminNotes || ""} onChange={e => updateDate(wi, realDi, "adminNotes", e.target.value)} placeholder="Admin notes (students can't see)" style={{ ...inp, padding: "3px 6px", fontSize: 11, borderColor: "#f59e0b", background: "#fffbeb" }} />
                           <div style={{ display: "flex", gap: 4 }}>
                             <button onClick={() => setEditCell(null)} style={{ ...bt, fontSize: 10, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Done</button>
                             <button onClick={() => { removeDate(wi, realDi); setEditCell(null); }} style={{ ...bt, fontSize: 10, padding: "3px 10px", background: "transparent", color: RED, border: "1px solid " + RED + "33" }}>X</button>
@@ -370,9 +372,13 @@ function ScheduleView({ data, setData, isAdmin }) {
                             <div style={{ fontSize: 13, fontWeight: 600, color: "#db2777" }}>{d.notes || "No class"}</div>
                           ) : (
                             <>
-                              <div style={{ fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.35 }}>{d.topic || <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}>—</span>}</div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <div style={{ fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.35, flex: 1 }}>{d.topic || <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}>—</span>}</div>
+                                {d.link && <a href={d.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: "flex", alignItems: "center", padding: "2px 5px", borderRadius: 4, background: "#eff6ff", color: "#2563eb" }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>}
+                              </div>
                               {d.assignment && <div style={{ fontSize: 11, color: "#ea580c", marginTop: 3, fontWeight: 600 }}>{d.assignment}</div>}
                               {d.notes && !isHoliday && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>{d.notes}</div>}
+                              {isAdmin && d.adminNotes && <div style={{ fontSize: 10, color: AMBER, marginTop: 3, padding: "3px 6px", background: "#fffbeb", borderRadius: 4, border: "1px solid #fef3c7" }}>{d.adminNotes}</div>}
                             </>
                           )}
                         </div>
