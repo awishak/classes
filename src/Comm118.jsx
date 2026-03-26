@@ -1154,7 +1154,7 @@ function StudentAnswer({ data, setData, userName }) {
   if (slot === null) {
     return (
       <div style={{ padding: 20, maxWidth: 500, margin: "0 auto" }}>
-        <div style={{ ...sectionLabel, textAlign: "center", marginBottom: 16 }}>Quiz</div>
+        <div style={{ ...sectionLabel, textAlign: "center", marginBottom: 16 }}>Game</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 1fr)", gap: 4 }}>
           {Array.from({ length: 100 }).map((_, i) => {
             const n = i + 1;
@@ -2437,6 +2437,14 @@ export default function Comm118() {
           }));
           d._scheduleMigV2 = true;
           await saveData(d);
+        }
+        // Migration: fix "Quizzes" to "Weekly Game" in participation assignment notes
+        if (d && d.assignments) {
+          const partA = d.assignments.find(a => a.id === "participation");
+          if (partA && partA.notes && partA.notes.includes("Quizzes")) {
+            partA.notes = "Weekly Game, This or That, PTI, Rotating Fishbowl";
+            await saveData(d);
+          }
         }
         setData(d);
       } catch(e) { console.error("Storage load failed:", e); setData(null); }

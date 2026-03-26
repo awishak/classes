@@ -20,7 +20,7 @@ export const DEFAULT_ASSIGNMENTS = [
   { id: "woc_submission", name: "Web of Connections Submission", weight: 20, due: "May 8", link: "", notes: "" },
   { id: "leadership_guide", name: "Leadership Guide", weight: 15, due: "May 20", link: "", notes: "" },
   { id: "final_project", name: "Final Project: Teach Me Something New", weight: 30, due: "Jun 8", link: "", notes: "" },
-  { id: "participation", name: "Participation", weight: 25, due: "", link: "", notes: "Quizzes, This or That, PTI, Rotating Fishbowl" },
+  { id: "participation", name: "Participation", weight: 25, due: "", link: "", notes: "Weekly Game, This or That, PTI, Rotating Fishbowl" },
 ];
 
 export const QUIZ_BREAKDOWN = [
@@ -126,10 +126,10 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
 
         <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
           <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6 }}>
-            Here's how your grade works. There are four major assignments worth 75% of your grade, and a participation bucket worth the other 25%. The participation bucket is where quizzes, This or That, PTI, and Rotating Fishbowl all live.
+            Here's how your grade works. There are four major assignments worth 75% of your grade, and a participation bucket worth the other 25%. The participation bucket is where the weekly game, This or That, PTI, and Rotating Fishbowl all live.
           </div>
           <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, marginTop: 10 }}>
-            The game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. Quizzes are the biggest example: the game weights all question types equally, but your grade weights On Topic and From Reading questions much more heavily than Sports World questions. So if you want to climb the leaderboard, be good at everything. If you want a good grade, make sure you're doing the reading.
+            The game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. The weekly game is the biggest example: the game weights all question types equally, but your grade weights On Topic and From Reading questions much more heavily than Sports World questions. So if you want to climb the leaderboard, be good at everything. If you want a good grade, make sure you're doing the reading.
           </div>
           <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, marginTop: 10 }}>
             The top 5 on the leaderboard at the end of the quarter get automatic A's. That's real. Everything else, just do the work, show up, and engage.
