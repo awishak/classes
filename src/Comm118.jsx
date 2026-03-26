@@ -249,15 +249,13 @@ const TOPIC_COLORS = {
   "Finals": TEXT_MUTED,
 };
 
-function WeekHeaderEditor({ week, wi, updateWeek, onDone }) {
+function WeekHeaderEditor({ week, wi, data, setData, onDone }) {
   const [local, setLocal] = useState({ label: week.label || "", theme: week.theme || "", question: week.question || "" });
   const set = (field, value) => setLocal(prev => ({ ...prev, [field]: value }));
-  const flush = async () => {
-    await updateWeek(wi, "label", local.label);
-    await updateWeek(wi, "theme", local.theme);
-    await updateWeek(wi, "question", local.question);
+  const handleDone = async () => {
+    const updated = { ...data, schedule: data.schedule.map((w, i) => i === wi ? { ...w, label: local.label, theme: local.theme, question: local.question } : w) };
+    await saveData(updated); setData(updated); onDone();
   };
-  const handleDone = async () => { await flush(); onDone(); };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
       <div style={{ display: "flex", gap: 6 }}>
@@ -272,7 +270,7 @@ function WeekHeaderEditor({ week, wi, updateWeek, onDone }) {
   );
 }
 
-function ScheduleCardEditor({ d, wi, realDi, data, updateDate, removeDate, onDone }) {
+function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDate, onDone }) {
   const [local, setLocal] = useState({
     date: d.date, day: d.day, topic: d.topic || "", holiday: !!d.holiday,
     activities: (d.activities || []).join(", "), assignment: d.assignment || "",
@@ -280,18 +278,15 @@ function ScheduleCardEditor({ d, wi, realDi, data, updateDate, removeDate, onDon
   });
   const set = (field, value) => setLocal(prev => ({ ...prev, [field]: value }));
 
-  const flush = async () => {
-    await updateDate(wi, realDi, "date", local.date);
-    await updateDate(wi, realDi, "day", local.day);
-    await updateDate(wi, realDi, "topic", local.topic);
-    await updateDate(wi, realDi, "holiday", local.holiday);
-    await updateDate(wi, realDi, "activities", local.activities.split(",").map(s => s.trim()).filter(Boolean));
-    await updateDate(wi, realDi, "assignment", local.assignment);
-    await updateDate(wi, realDi, "notes", local.notes);
-    await updateDate(wi, realDi, "adminNotes", local.adminNotes);
+  const handleDone = async () => {
+    const patch = {
+      date: local.date, day: local.day, topic: local.topic, holiday: local.holiday,
+      activities: local.activities.split(",").map(s => s.trim()).filter(Boolean),
+      assignment: local.assignment, notes: local.notes, adminNotes: local.adminNotes,
+    };
+    const updated = { ...data, schedule: data.schedule.map((w, i) => i === wi ? { ...w, dates: w.dates.map((dt, di) => di === realDi ? { ...dt, ...patch } : dt) } : w) };
+    await saveData(updated); setData(updated); onDone();
   };
-
-  const handleDone = async () => { await flush(); onDone(); };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }} onClick={e => e.stopPropagation()}>
@@ -418,7 +413,7 @@ function ScheduleView({ data, setData, isAdmin }) {
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
                 {week.week <= 10 && <div style={{ width: 32, height: 32, borderRadius: 8, background: "#111827", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 900, fontFamily: F, flexShrink: 0 }}>{week.week}</div>}
                 {isAdmin && isEditing ? (
-                  <WeekHeaderEditor week={week} wi={wi} updateWeek={updateWeek} onDone={() => setEditWeek(null)} />
+                  <WeekHeaderEditor week={week} wi={wi} data={data} setData={setData} onDone={() => setEditWeek(null)} />
                 ) : (
                   <div style={{ flex: 1, cursor: isAdmin ? "pointer" : "default" }} onClick={() => isAdmin && setEditWeek(wi)}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: "#111827", lineHeight: 1.2 }}>{week.label}{week.theme ? " — " + week.theme : ""}</div>
@@ -449,7 +444,7 @@ function ScheduleView({ data, setData, isAdmin }) {
                       </div>
 
                       {isEdit && isAdmin ? (
-                        <ScheduleCardEditor d={d} wi={wi} realDi={realDi} data={data} updateDate={updateDate} removeDate={removeDate} onDone={() => setEditCell(null)} />
+                        <ScheduleCardEditor d={d} wi={wi} realDi={realDi} data={data} setData={setData} updateDate={updateDate} removeDate={removeDate} onDone={() => setEditCell(null)} />
                       ) : (
                         <div>
                           {isHoliday ? (
