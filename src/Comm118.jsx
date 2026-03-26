@@ -154,6 +154,7 @@ function Nav({ view, setView, isAdmin, userName, onLogout }) {
     { id: "roster", label: "Roster", admin: false },
     { id: "assignments", label: "Assignments", admin: false },
     { id: "readings", label: "Readings", admin: false },
+    { id: "classtools", label: "Class Tools", admin: false },
     { id: "grades", label: "Grades", admin: false },
     { id: "pti", label: "PTI", admin: true },
     { id: "gameadmin", label: "Game Setup", admin: true },
@@ -419,14 +420,16 @@ function ScheduleView({ data, setData, isAdmin }) {
                                   {(d.readings || []).map((r, ri) => {
                                     const rdg = (data.readings || []).find(x => x.id === r.readingId);
                                     if (!rdg) return null;
+                                    const link = rdg.pdfUrl || rdg.url;
                                     return (
                                       <div key={ri} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11 }}>
                                         <span style={{ fontSize: 9, fontWeight: 700, color: r.type === "required" ? RED : GREEN, textTransform: "uppercase" }}>{r.type === "required" ? "Req" : "Rec"}</span>
-                                        {rdg.url ? (
-                                          <a href={rdg.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{rdg.title}</a>
+                                        {link ? (
+                                          <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{rdg.title}</a>
                                         ) : (
                                           <span style={{ color: "#374151", fontWeight: 500 }}>{rdg.title}</span>
                                         )}
+                                        {rdg.pdfUrl && <span style={{ fontSize: 8, fontWeight: 700, color: RED, background: "#fef2f2", padding: "0 3px", borderRadius: 3 }}>PDF</span>}
                                       </div>
                                     );
                                   })}
@@ -1205,6 +1208,22 @@ async function uploadPhoto(file, studentId) {
   return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${path}?t=${Date.now()}`;
 }
 
+async function uploadPdf(file, readingId) {
+  const path = `comm118/readings/${readingId}.pdf`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + SUPABASE_KEY,
+      "apikey": SUPABASE_KEY,
+      "Content-Type": file.type,
+      "x-upsert": "true",
+    },
+    body: file,
+  });
+  if (!res.ok) throw new Error("Upload failed: " + res.status);
+  return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${path}?t=${Date.now()}`;
+}
+
 function RosterView({ data, setData, userName }) {
   const [selectedId, setSelectedId] = useState(null);
   const sorted = [...data.students].sort(lastSortObj);
@@ -1367,6 +1386,7 @@ function ReadingsView({ data, setData, isAdmin }) {
   const schedule = data.schedule || [];
   const [editId, setEditId] = useState(null);
   const [newReading, setNewReading] = useState({ title: "", url: "", category: "", notes: "" });
+  const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
@@ -1385,7 +1405,6 @@ function ReadingsView({ data, setData, isAdmin }) {
     await saveData(updated); setData(updated);
   };
   const deleteReading = async (id) => {
-    // Also remove from any schedule dates
     const newSchedule = schedule.map(w => ({
       ...w, dates: w.dates.map(d => ({
         ...d, readings: (d.readings || []).filter(r => r.readingId !== id)
@@ -1394,8 +1413,42 @@ function ReadingsView({ data, setData, isAdmin }) {
     const updated = { ...data, readings: readings.filter(r => r.id !== id), schedule: newSchedule };
     await saveData(updated); setData(updated); showMsg("Deleted");
   };
+  const handlePdfUpload = async (file, readingId) => {
+    if (!file || !readingId) return;
+    if (file.size > 10 * 1024 * 1024) { showMsg("Max 10MB"); return; }
+    setUploading(true);
+    try {
+      const pdfUrl = await uploadPdf(file, readingId);
+      await updateReading(readingId, "pdfUrl", pdfUrl);
+      showMsg("PDF uploaded");
+    } catch (err) { showMsg("Upload failed"); }
+    setUploading(false);
+  };
+  const handleNewPdfUpload = async (file) => {
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { showMsg("Max 10MB"); return; }
+    const title = newReading.title.trim() || file.name.replace(/\.pdf$/i, "");
+    const id = genId();
+    setUploading(true);
+    try {
+      const pdfUrl = await uploadPdf(file, id);
+      const r = { id, title, url: newReading.url.trim(), pdfUrl, category: newReading.category.trim(), notes: newReading.notes.trim() };
+      const updated = { ...data, readings: [...readings, r] };
+      await saveData(updated); setData(updated);
+      setNewReading({ title: "", url: "", category: "", notes: "" });
+      showMsg("Added with PDF");
+    } catch (err) { showMsg("Upload failed"); }
+    setUploading(false);
+  };
 
-  // Build week-grouped view for students
+  const getReadingLink = (r) => r.pdfUrl || r.url;
+  const getReadingLabel = (r) => {
+    if (r.pdfUrl && r.url) return "PDF + Link";
+    if (r.pdfUrl) return "PDF";
+    return null;
+  };
+
+  // Build week-grouped view
   const weekReadings = [];
   schedule.forEach(w => {
     const weekItems = [];
@@ -1409,6 +1462,12 @@ function ReadingsView({ data, setData, isAdmin }) {
       weekReadings.push({ week: w.week, label: w.label, theme: w.theme, items: weekItems });
     }
   });
+
+  const ReadingLink = ({ r, children }) => {
+    const link = getReadingLink(r);
+    if (link) return <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>{children}</a>;
+    return <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{children}</span>;
+  };
 
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
@@ -1428,7 +1487,14 @@ function ReadingsView({ data, setData, isAdmin }) {
                 <datalist id="cat-list">{categories.map(c => <option key={c} value={c} />)}</datalist>
               </div>
               <textarea value={newReading.notes} onChange={e => setNewReading({ ...newReading, notes: e.target.value })} placeholder="Notes (optional)" rows={2} style={{ ...inp, resize: "vertical" }} />
-              <button onClick={addReading} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 0", width: "100%" }}>Add Reading</button>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={addReading} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 0", flex: 1 }}>Add Reading</button>
+                <label style={{ ...pill, background: "#eff6ff", color: "#2563eb", padding: "10px 16px", display: "flex", alignItems: "center", gap: 4 }}>
+                  {uploading ? "Uploading..." : "Add with PDF"}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <input type="file" accept=".pdf" onChange={e => { if (e.target.files?.[0]) handleNewPdfUpload(e.target.files[0]); e.target.value = ""; }} style={{ display: "none" }} disabled={uploading} />
+                </label>
+              </div>
             </div>
           </div>
         )}
@@ -1447,11 +1513,8 @@ function ReadingsView({ data, setData, isAdmin }) {
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: i > 0 ? "1px solid #f9fafb" : "none" }}>
                     <span style={{ fontSize: 9, fontWeight: 700, color: item.type === "required" ? RED : GREEN, textTransform: "uppercase", width: 24, flexShrink: 0 }}>{item.type === "required" ? "Req" : "Rec"}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      {item.url ? (
-                        <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>{item.title}</a>
-                      ) : (
-                        <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{item.title}</span>
-                      )}
+                      <ReadingLink r={item}>{item.title}</ReadingLink>
+                      {getReadingLabel(item) && <span style={{ fontSize: 9, color: "#9ca3af", marginLeft: 4, fontWeight: 600 }}>{getReadingLabel(item)}</span>}
                       {item.category && <span style={{ fontSize: 10, color: "#9ca3af", marginLeft: 6 }}>{item.category}</span>}
                       {item.notes && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>{item.notes}</div>}
                     </div>
@@ -1482,6 +1545,20 @@ function ReadingsView({ data, setData, isAdmin }) {
                         <input value={r.url || ""} onChange={e => updateReading(r.id, "url", e.target.value)} placeholder="URL" style={{ ...inp, fontSize: 12, padding: "4px 8px" }} />
                         <input value={r.category || ""} onChange={e => updateReading(r.id, "category", e.target.value)} placeholder="Category" list="cat-list" style={{ ...inp, fontSize: 12, padding: "4px 8px" }} />
                         <textarea value={r.notes || ""} onChange={e => updateReading(r.id, "notes", e.target.value)} placeholder="Notes" rows={2} style={{ ...inp, fontSize: 12, padding: "4px 8px", resize: "vertical" }} />
+                        {r.pdfUrl ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", background: "#f0fdf4", borderRadius: 6 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span style={{ fontSize: 11, color: GREEN, fontWeight: 600, flex: 1 }}>PDF attached</span>
+                            <a href={r.pdfUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#2563eb" }}>View</a>
+                            <button onClick={() => updateReading(r.id, "pdfUrl", "")} style={{ background: "none", border: "none", cursor: "pointer", color: RED, fontSize: 11, fontWeight: 600 }}>Remove</button>
+                          </div>
+                        ) : (
+                          <label style={{ ...pillInactive, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "8px 0", cursor: "pointer" }}>
+                            {uploading ? "Uploading..." : "Upload PDF"}
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <input type="file" accept=".pdf" onChange={e => { if (e.target.files?.[0]) handlePdfUpload(e.target.files[0], r.id); e.target.value = ""; }} style={{ display: "none" }} disabled={uploading} />
+                          </label>
+                        )}
                         <div style={{ display: "flex", gap: 4 }}>
                           <button onClick={() => setEditId(null)} style={{ ...pill, background: "#111827", color: "#fff", flex: 1 }}>Done</button>
                           <button onClick={() => { if (window.confirm("Delete this reading?")) deleteReading(r.id); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
@@ -1490,11 +1567,11 @@ function ReadingsView({ data, setData, isAdmin }) {
                     ) : (
                       <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: isAdmin ? "pointer" : "default" }} onClick={() => isAdmin && setEditId(r.id)}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          {r.url ? (
-                            <a href={r.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 14, color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>{r.title}</a>
-                          ) : (
-                            <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{r.title}</span>
-                          )}
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <ReadingLink r={r}>{r.title}</ReadingLink>
+                            {r.pdfUrl && <span style={{ fontSize: 9, fontWeight: 700, color: RED, background: "#fef2f2", padding: "1px 5px", borderRadius: 4 }}>PDF</span>}
+                            {r.url && r.pdfUrl && <a href={r.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 9, fontWeight: 700, color: "#2563eb", background: "#eff6ff", padding: "1px 5px", borderRadius: 4, textDecoration: "none" }}>Link</a>}
+                          </div>
                           {r.notes && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{r.notes}</div>}
                         </div>
                         {isAdmin && <span style={{ fontSize: 11, color: "#d1d5db", flexShrink: 0 }}>Click to edit</span>}
@@ -1506,6 +1583,360 @@ function ReadingsView({ data, setData, isAdmin }) {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── CLASS TOOLS: HEADLINE EXERCISE ─── */
+const DEFAULT_HEADLINE_CATS = [
+  "Unreal performances", "Celebs being bad", "Team drama", "Dealing with media",
+  "New business deals", "Identity", "Injuries / comebacks", "Trades / free agency",
+  "Coaching hires / firings", "Fan behavior", "Stadium / arena deals",
+  "Gambling / betting", "Youth / college pipeline", "Social justice / activism",
+  "Labor disputes", "Doping / cheating / scandals", "Record-breaking / milestones",
+  "Rivalry / beef", "International / global", "Legacy / Hall of Fame / retirement",
+];
+
+function ClassTools({ data, setData, isAdmin, userName }) {
+  const isGuest = userName === GUEST_NAME;
+  const student = data.students.find(s => s.name === userName);
+  const sid = student?.id;
+  const hl = data.headlines || { categories: [], items: [], sessions: [] };
+  const cats = hl.categories && hl.categories.length > 0 ? hl.categories : DEFAULT_HEADLINE_CATS;
+  const items = hl.items || [];
+  const sessions = hl.sessions || [];
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  // Admin state
+  const [activeSession, setActiveSession] = useState(null);
+  const [newHeadline, setNewHeadline] = useState("");
+  const [newCat, setNewCat] = useState("");
+  const [activeIdx, setActiveIdx] = useState(null);
+  const [showResults, setShowResults] = useState(false);
+  const [realAnswer, setRealAnswer] = useState(null);
+
+  // Student state
+  const [myPick, setMyPick] = useState(null);
+
+  const saveHL = async (updated) => {
+    const d = { ...data, headlines: updated };
+    await saveData(d); setData(d);
+  };
+
+  // Add category
+  const addCategory = async () => {
+    if (!newCat.trim() || cats.includes(newCat.trim())) return;
+    await saveHL({ ...hl, categories: [...cats, newCat.trim()] });
+    setNewCat(""); showMsg("Category added");
+  };
+
+  // Submit headline (admin or student)
+  const submitHeadline = async (sessionId) => {
+    if (!newHeadline.trim()) return;
+    const item = { id: genId(), text: newHeadline.trim(), submittedBy: userName, sessionId, ts: Date.now() };
+    await saveHL({ ...hl, items: [...items, item] });
+    setNewHeadline(""); showMsg("Headline added");
+  };
+
+  // Create session
+  const createSession = async () => {
+    const s = { id: genId(), name: "Session " + (sessions.length + 1), ts: Date.now(), activeHeadlineId: null, revealed: false, realCategory: null, votes: {} };
+    await saveHL({ ...hl, sessions: [...sessions, s] });
+    setActiveSession(s.id);
+    showMsg("Session created");
+  };
+
+  // Activate a headline in session
+  const activateHeadline = async (sessionId, headlineId) => {
+    const updated = { ...hl, sessions: sessions.map(s => s.id === sessionId ? { ...s, activeHeadlineId: headlineId, revealed: false, realCategory: null, votes: {} } : s) };
+    await saveHL(updated);
+    setActiveIdx(headlineId);
+    setShowResults(false);
+    setRealAnswer(null);
+    setMyPick(null);
+  };
+
+  // Student vote
+  const vote = async (sessionId, category) => {
+    if (!sid) return;
+    const updated = { ...hl, sessions: sessions.map(s => s.id === sessionId ? { ...s, votes: { ...s.votes, [sid]: category } } : s) };
+    await saveHL(updated);
+    setMyPick(category);
+    showMsg("Locked in");
+  };
+
+  // Reveal real answer
+  const reveal = async (sessionId, category) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+    // Store the real category on the headline item for persistent record
+    const headlineId = session.activeHeadlineId;
+    const updatedItems = items.map(it => it.id === headlineId ? { ...it, surfaceCategories: session.votes, realCategory: category } : it);
+    const updated = { ...hl, items: updatedItems, sessions: sessions.map(s => s.id === sessionId ? { ...s, revealed: true, realCategory: category } : s) };
+    await saveHL(updated);
+    setRealAnswer(category);
+    setShowResults(true);
+  };
+
+  // Get active session
+  const session = activeSession ? sessions.find(s => s.id === activeSession) : null;
+  const sessionHeadlines = session ? items.filter(it => it.sessionId === session.id) : [];
+  const activeHeadline = session ? items.find(it => it.id === session.activeHeadlineId) : null;
+
+  // Vote tally
+  const voteTally = {};
+  if (session) {
+    Object.values(session.votes || {}).forEach(cat => { voteTally[cat] = (voteTally[cat] || 0) + 1; });
+  }
+  const totalVotes = Object.values(voteTally).reduce((s, v) => s + v, 0);
+  const myVote = sid && session?.votes?.[sid];
+
+  if (isGuest) {
+    return <div style={{ padding: 40, textAlign: "center", fontFamily: F }}><div style={{ ...sectionLabel, marginBottom: 8 }}>Class Tools</div><div style={{ fontSize: 14, color: TEXT_SECONDARY }}>Sign in to participate.</div></div>;
+  }
+
+  // ── ADMIN VIEW ──
+  if (isAdmin) {
+    // Inside a session
+    if (session) {
+      return (
+        <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+          <Toast message={msg} />
+          <div style={{ maxWidth: 700, margin: "0 auto" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <button onClick={() => setActiveSession(null)} style={pillInactive}>Back</button>
+              <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>Headlines</div>
+              <div style={{ width: 60 }} />
+            </div>
+
+            {/* Add headline */}
+            <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input value={newHeadline} onChange={e => setNewHeadline(e.target.value)} placeholder="Add a headline..." onKeyDown={e => e.key === "Enter" && submitHeadline(session.id)} style={{ ...inp, flex: 1 }} />
+                <button onClick={() => submitHeadline(session.id)} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 16px" }}>Add</button>
+              </div>
+            </div>
+
+            {/* Headline list */}
+            <div style={{ ...sectionLabel, marginBottom: 8 }}>Headlines ({sessionHeadlines.length})</div>
+            {sessionHeadlines.map(h => {
+              const isActive = session.activeHeadlineId === h.id;
+              return (
+                <div key={h.id} style={{ ...crd, padding: 12, marginBottom: 4, borderColor: isActive ? ACCENT : "#f3f4f6", borderWidth: isActive ? 2 : 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ flex: 1, fontSize: 14, fontWeight: isActive ? 700 : 500, color: "#111827" }}>{h.text}</div>
+                    {h.realCategory && <span style={{ fontSize: 10, color: ACCENT, fontWeight: 600, flexShrink: 0 }}>{h.realCategory}</span>}
+                    {h.submittedBy && h.submittedBy !== ADMIN_NAME && <span style={{ fontSize: 10, color: "#d1d5db", flexShrink: 0 }}>{h.submittedBy.split(" ")[0]}</span>}
+                    {!isActive && <button onClick={() => activateHeadline(session.id, h.id)} style={{ ...pill, background: "#f3f4f6", color: "#4b5563", fontSize: 10, padding: "4px 10px" }}>Activate</button>}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Active headline view */}
+            {activeHeadline && (
+              <div style={{ marginTop: 20 }}>
+                <div style={{ ...sectionLabel, marginBottom: 8 }}>Active Headline</div>
+                <div style={{ ...crd, padding: 20, textAlign: "center", marginBottom: 16, background: "#111827", borderColor: "#111827" }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: "#fff", lineHeight: 1.3 }}>{activeHeadline.text}</div>
+                </div>
+
+                {/* Vote results */}
+                <div style={{ ...sectionLabel, marginBottom: 8 }}>Responses ({totalVotes})</div>
+                <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
+                  {cats.filter(c => voteTally[c]).sort((a, b) => (voteTally[b] || 0) - (voteTally[a] || 0)).map(cat => {
+                    const count = voteTally[cat] || 0;
+                    const pct = totalVotes > 0 ? Math.round(count / totalVotes * 100) : 0;
+                    const isReal = session.revealed && session.realCategory === cat;
+                    return (
+                      <div key={cat} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #f9fafb" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: isReal ? 900 : 500, color: isReal ? GREEN : "#111827" }}>{cat}{isReal ? " \u2713" : ""}</div>
+                          <div style={{ height: 4, background: "#f3f4f6", borderRadius: 2, marginTop: 3 }}>
+                            <div style={{ height: "100%", width: pct + "%", background: isReal ? GREEN : "#111827", borderRadius: 2, transition: "width 0.3s" }} />
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "#111827", width: 40, textAlign: "right" }}>{count}</span>
+                      </div>
+                    );
+                  })}
+                  {totalVotes === 0 && <div style={{ fontSize: 13, color: "#d1d5db", textAlign: "center", padding: 12 }}>Waiting for responses...</div>}
+                </div>
+
+                {/* Reveal */}
+                {!session.revealed ? (
+                  <div>
+                    <div style={{ ...sectionLabel, marginBottom: 8 }}>What is this headline REALLY about?</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {cats.map(cat => (
+                        <button key={cat} onClick={() => reveal(session.id, cat)} style={{ ...pill, background: "#f3f4f6", color: "#374151", fontSize: 11, padding: "6px 10px" }}>{cat}</button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ ...crd, padding: 16, background: "#f0fdf4", borderColor: GREEN, textAlign: "center" }}>
+                    <div style={{ fontSize: 11, color: GREEN, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Really about</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>{session.realCategory}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Add category */}
+            <div style={{ marginTop: 20 }}>
+              <div style={{ ...sectionLabel, marginBottom: 6 }}>Categories ({cats.length})</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="New category" onKeyDown={e => e.key === "Enter" && addCategory()} style={{ ...inp, flex: 1 }} />
+                <button onClick={addCategory} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 16px" }}>Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Session list
+    return (
+      <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+        <Toast message={msg} />
+        <div style={{ maxWidth: 700, margin: "0 auto" }}>
+          <div style={{ ...sectionLabel, marginBottom: 12 }}>Class Tools</div>
+
+          <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>Headline Exercise</div>
+              <button onClick={createSession} style={{ ...pill, background: "#111827", color: "#fff" }}>New Session</button>
+            </div>
+            <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5, marginBottom: 12 }}>Show a headline. Students categorize it. Then reveal what it's really about.</div>
+            {sessions.length === 0 && <div style={{ fontSize: 13, color: "#d1d5db", textAlign: "center", padding: 12 }}>No sessions yet.</div>}
+            {[...sessions].reverse().map(s => {
+              const count = items.filter(it => it.sessionId === s.id).length;
+              return (
+                <button key={s.id} onClick={() => setActiveSession(s.id)} style={{ ...crd, padding: 14, marginBottom: 4, width: "100%", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{s.name}</div>
+                    <div style={{ fontSize: 11, color: "#9ca3af" }}>{count} headline{count !== 1 ? "s" : ""} / {new Date(s.ts).toLocaleDateString()}</div>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* All headlines ever */}
+          {items.filter(it => it.realCategory).length > 0 && (
+            <div style={{ ...crd, padding: 16 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Headline Archive</div>
+              {items.filter(it => it.realCategory).map(h => (
+                <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #f9fafb" }}>
+                  <div style={{ flex: 1, fontSize: 13, color: "#111827" }}>{h.text}</div>
+                  <span style={{ fontSize: 10, color: ACCENT, fontWeight: 600, flexShrink: 0 }}>{h.realCategory}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── STUDENT VIEW ──
+  // Find any session with an active headline
+  const liveSession = sessions.find(s => s.activeHeadlineId && !s.revealed);
+  const revealedSession = sessions.find(s => s.activeHeadlineId && s.revealed);
+  const currentSession = liveSession || revealedSession;
+  const currentHeadline = currentSession ? items.find(it => it.id === currentSession.activeHeadlineId) : null;
+  const studentVote = sid && currentSession?.votes?.[sid];
+
+  // Student vote tallies
+  const studentTally = {};
+  if (currentSession) {
+    Object.values(currentSession.votes || {}).forEach(cat => { studentTally[cat] = (studentTally[cat] || 0) + 1; });
+  }
+  const studentTotalVotes = Object.values(studentTally).reduce((s, v) => s + v, 0);
+
+  return (
+    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <Toast message={msg} />
+      <div style={{ maxWidth: 500, margin: "0 auto" }}>
+        <div style={{ ...sectionLabel, marginBottom: 12 }}>Class Tools</div>
+
+        {currentHeadline ? (
+          <div>
+            <div style={{ ...crd, padding: 20, textAlign: "center", marginBottom: 16, background: "#111827", borderColor: "#111827" }}>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Headline</div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: "#fff", lineHeight: 1.3 }}>{currentHeadline.text}</div>
+            </div>
+
+            {currentSession.revealed ? (
+              <div>
+                <div style={{ ...crd, padding: 16, background: "#f0fdf4", borderColor: GREEN, textAlign: "center", marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, color: GREEN, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Really about</div>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>{currentSession.realCategory}</div>
+                  {studentVote && studentVote !== currentSession.realCategory && (
+                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>You picked: {studentVote}</div>
+                  )}
+                  {studentVote && studentVote === currentSession.realCategory && (
+                    <div style={{ fontSize: 12, color: GREEN, fontWeight: 700, marginTop: 6 }}>You got it!</div>
+                  )}
+                </div>
+                {/* Show results */}
+                <div style={{ ...crd, padding: 14 }}>
+                  <div style={{ ...sectionLabel, marginBottom: 8 }}>Class Results</div>
+                  {cats.filter(c => studentTally[c]).sort((a, b) => (studentTally[b] || 0) - (studentTally[a] || 0)).map(cat => {
+                    const count = studentTally[cat] || 0;
+                    const pct = studentTotalVotes > 0 ? Math.round(count / studentTotalVotes * 100) : 0;
+                    const isReal = currentSession.realCategory === cat;
+                    return (
+                      <div key={cat} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 12, fontWeight: isReal ? 900 : 500, color: isReal ? GREEN : "#111827" }}>{cat}</div>
+                          <div style={{ height: 3, background: "#f3f4f6", borderRadius: 2, marginTop: 2 }}>
+                            <div style={{ height: "100%", width: pct + "%", background: isReal ? GREEN : "#9ca3af", borderRadius: 2 }} />
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#111827", width: 30, textAlign: "right" }}>{pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : studentVote ? (
+              <div style={{ ...crd, padding: 20, textAlign: "center" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>You picked: {studentVote}</div>
+                <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Waiting for reveal...</div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ ...sectionLabel, marginBottom: 8 }}>What category is this headline?</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                  {cats.map(cat => (
+                    <button key={cat} onClick={() => vote(currentSession.id, cat)} style={{
+                      ...pill, fontSize: 12, padding: "8px 12px",
+                      background: myPick === cat ? "#111827" : "#f3f4f6",
+                      color: myPick === cat ? "#fff" : "#374151",
+                    }}>{cat}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Student can submit headlines too */}
+            <div style={{ marginTop: 20 }}>
+              <div style={{ ...sectionLabel, marginBottom: 6 }}>Submit a headline</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input value={newHeadline} onChange={e => setNewHeadline(e.target.value)} placeholder="Paste a headline..." onKeyDown={e => e.key === "Enter" && submitHeadline(currentSession.id)} style={{ ...inp, flex: 1 }} />
+                <button onClick={() => submitHeadline(currentSession.id)} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 16px" }}>Submit</button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ ...crd, padding: 24, textAlign: "center" }}>
+            <div style={{ fontSize: 14, color: "#9ca3af" }}>No active headline right now. Check back during class.</div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1724,7 +2155,7 @@ export default function Comm118() {
         if (!d) {
           const shuffled = shuffle(ALL_STUDENTS);
           const teams = MISMATCHED_NAMES.slice(0, 7).map((name, i) => ({ id: genId(), name, colorIdx: i }));
-          const students = shuffled.map((name, i) => ({ id: genId(), name, teamId: teams[i % 6].id }));
+          const students = shuffled.map((name, i) => ({ id: genId(), name, teamId: teams[i % 7].id }));
           d = { teams, students, log: [], schedule: JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)), bios: {} };
           await saveData(d);
         }
@@ -1740,6 +2171,7 @@ export default function Comm118() {
         if (d && !d.weeklyTeamWins) { d.weeklyTeamWins = {}; await saveData(d); }
         if (d && !d.todoChecks) { d.todoChecks = {}; await saveData(d); }
         if (d && !d.readings) { d.readings = []; await saveData(d); }
+        if (d && !d.headlines) { d.headlines = { categories: [], items: [], sessions: [] }; await saveData(d); }
         setData(d);
       } catch(e) { console.error("Storage load failed:", e); setData(null); }
       setLoading(false);
@@ -1770,6 +2202,7 @@ export default function Comm118() {
       {view === "roster" && <RosterView data={data} setData={setData} userName={userName} />}
       {view === "assignments" && <AssignmentsView data={data} setData={setData} isAdmin={isAdmin} />}
       {view === "readings" && <ReadingsView data={data} setData={setData} isAdmin={isAdmin} />}
+      {view === "classtools" && <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />}
       {view === "grades" && <Gradebook data={data} setData={setData} userName={userName} isAdmin={isAdmin} />}
       {view === "builder" && isAdmin && <TeamBuilder data={data} setData={setData} />}
       {view === "pti" && isAdmin && <PTIMode data={data} setData={setData} />}
