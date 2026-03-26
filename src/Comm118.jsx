@@ -2340,6 +2340,18 @@ export default function Comm118() {
         if (d && !d.readings) { d.readings = []; await saveData(d); }
         if (d && !d.headlines) { d.headlines = { categories: [], items: [], sessions: [] }; await saveData(d); }
         if (d && !d.customTodos) { d.customTodos = []; await saveData(d); }
+        // Migration: add interview assignment and fix weights if needed
+        if (d && d.assignments && !d.assignments.find(a => a.id === "interview")) {
+          d.assignments = [
+            { id: "interview", name: "Interview Assignment", weight: 5, due: "Apr 17", link: "", notes: "Interview someone who works in sports in a job you're interested in" },
+            ...d.assignments.map(a => {
+              if (a.id === "woc_proposal") return { ...a, due: "Apr 24" };
+              if (a.id === "leadership_guide") return { ...a, weight: 15 };
+              return a;
+            })
+          ];
+          await saveData(d);
+        }
         setData(d);
       } catch(e) { console.error("Storage load failed:", e); setData(null); }
       setLoading(false);

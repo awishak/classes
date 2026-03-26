@@ -37,6 +37,8 @@ function lastSortObj(a, b) { return lastName(a.name).localeCompare(lastName(b.na
 async function saveData(data) { try { const STORAGE_KEY = "comm118-game-v14"; await window.storage.set(STORAGE_KEY, JSON.stringify(data), true); return true; } catch { return false; } }
 
 /* ─── ASSIGNMENTS TAB ─── */
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
 export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
@@ -76,13 +78,29 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
 
   const save = () => { setEditId(null); showMsg("Saved"); };
 
+  const addAssignment = async () => {
+    const newA = { id: genId(), name: "New Assignment", weight: 0, due: "", link: "", notes: "" };
+    const updated = { ...data, assignments: [...assignments, newA] };
+    await saveData(updated); setData(updated);
+    setEditId(newA.id); showMsg("Added");
+  };
+
+  const removeAssignment = async (id) => {
+    if (id === "participation") return;
+    const updated = { ...data, assignments: assignments.filter(a => a.id !== id) };
+    await saveData(updated); setData(updated); showMsg("Removed");
+  };
+
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <div style={{ ...sectionLabel }}>Assignments & Weights</div>
-          {isAdmin && setView && <button onClick={() => setView("grades")} style={{ ...pillInactive, fontSize: 11 }}>Gradebook</button>}
+          <div style={{ display: "flex", gap: 6 }}>
+            {isAdmin && <button onClick={addAssignment} style={{ ...pillInactive, fontSize: 11 }}>+ Add</button>}
+            {isAdmin && setView && <button onClick={() => setView("grades")} style={{ ...pillInactive, fontSize: 11 }}>Gradebook</button>}
+          </div>
         </div>
         <div style={{ marginBottom: 16 }}>
           <a href="https://camino.instructure.com/courses/117721/assignments" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
@@ -145,7 +163,10 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                       <div style={{ ...sectionLabel, marginBottom: 4 }}>Notes</div>
                       <input value={a.notes || ""} onChange={e => updateAssignment(a.id, "notes", e.target.value)} placeholder="Optional notes" style={{ ...inp }} />
                     </div>
-                    <button onClick={save} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 0", width: "100%" }}>Done</button>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={save} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 0", flex: 1 }}>Done</button>
+                      {a.id !== "participation" && <button onClick={() => { if (window.confirm("Remove " + a.name + "?")) removeAssignment(a.id); }} style={{ ...pill, background: "#fef2f2", color: "#ef4444", padding: "10px 16px" }}>Delete</button>}
+                    </div>
                   </div>
                 ) : (
                   <div>
