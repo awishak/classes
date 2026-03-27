@@ -627,6 +627,7 @@ function ScheduleView({ data, setData, isAdmin }) {
                               {isAdmin && d.adminNotes && <div style={{ fontSize: 12, color: AMBER, marginTop: 6, padding: "6px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fef3c7", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.adminNotes}</div>}
                             </>
                           )}
+                          {isHoliday && d.assignment && <div style={{ fontSize: 13, color: "#c2410c", marginTop: 6, fontWeight: 600 }}>{d.assignment}</div>}
                           {isHoliday && hasReadings && (
                                 <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER, display: "flex", flexDirection: "column", gap: 4 }}>
                                   {(d.readings || []).filter(r => r.type === "fishbowl" || r.type === "required" || r.type === "recommended").map((r, ri) => {
