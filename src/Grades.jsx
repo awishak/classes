@@ -16,8 +16,8 @@ const GUEST_NAME = "__guest__";
 
 export const DEFAULT_ASSIGNMENTS = [
   { id: "interview", name: "Interview Assignment", weight: 5, due: "Apr 17", link: "", notes: "Interview someone who works in sports in a job you're interested in" },
-  { id: "woc_proposal", name: "Web of Connections Proposal", weight: 5, due: "Apr 24", link: "", notes: "" },
-  { id: "woc_submission", name: "Web of Connections Submission", weight: 20, due: "May 8", link: "", notes: "" },
+  { id: "woc_proposal", name: "Intersections Proposal", weight: 5, due: "Apr 24", link: "", notes: "" },
+  { id: "woc_submission", name: "Intersections Submission", weight: 20, due: "May 8", link: "", notes: "" },
   { id: "leadership_guide", name: "Leadership Guide", weight: 15, due: "May 20", link: "", notes: "" },
   { id: "final_project", name: "Final Project: Teach Me Something New", weight: 30, due: "Jun 8", link: "", notes: "" },
   { id: "participation", name: "Participation", weight: 25, due: "", link: "", notes: "Weekly Game, This or That, PTI, Rotating Fishbowl" },
