@@ -2047,9 +2047,9 @@ function ReadingsView({ data, setData, isAdmin }) {
 function SurveyView({ data, setData, isAdmin, userName }) {
   const surveys = data.surveys || [];
   const [creating, setCreating] = useState(false);
-  const [newQ, setNewQ] = useState("");
-  const [newType, setNewType] = useState("multiple_choice");
-  const [newOptions, setNewOptions] = useState(["", "", "", ""]);
+  const [viewingResults, setViewingResults] = useState(null);
+  const [questions, setQuestions] = useState([{ text: "", type: "multiple_choice", options: ["", "", "", ""] }]);
+  const [surveyTitle, setSurveyTitle] = useState("");
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
@@ -2061,131 +2061,145 @@ function SurveyView({ data, setData, isAdmin, userName }) {
     { id: "likert", label: "Likert Scale (1-5)" },
   ];
 
+  const addQuestion = () => { if (questions.length >= 10) return; setQuestions([...questions, { text: "", type: "multiple_choice", options: ["", "", "", ""] }]); };
+  const removeQuestion = (idx) => { if (questions.length <= 1) return; setQuestions(questions.filter((_, i) => i !== idx)); };
+  const updateQuestion = (idx, field, value) => { setQuestions(questions.map((q, i) => i === idx ? { ...q, [field]: value } : q)); };
+  const updateOption = (qIdx, oIdx, value) => { setQuestions(questions.map((q, i) => i === qIdx ? { ...q, options: q.options.map((o, j) => j === oIdx ? value : o) } : q)); };
+  const addOption = (qIdx) => { setQuestions(questions.map((q, i) => i === qIdx ? { ...q, options: [...q.options, ""] } : q)); };
+
   const createSurvey = async () => {
-    if (!newQ.trim()) return;
-    const s = { id: genId(), question: newQ.trim(), type: newType, options: newType === "multiple_choice" ? newOptions.filter(o => o.trim()) : [], responses: [], active: true, showResults: false, ts: Date.now() };
+    const validQs = questions.filter(q => q.text.trim());
+    if (validQs.length === 0) return;
+    const s = { id: genId(), title: surveyTitle.trim() || "Survey", questions: validQs.map(q => ({ id: genId(), text: q.text.trim(), type: q.type, options: q.type === "multiple_choice" ? q.options.filter(o => o.trim()) : [] })), responses: {}, active: true, showResults: false, ts: Date.now() };
     const updated = { ...data, surveys: [...surveys, s] };
     await saveData(updated); setData(updated);
-    setNewQ(""); setNewOptions(["", "", "", ""]); setCreating(false); showMsg("Survey created");
+    setSurveyTitle(""); setQuestions([{ text: "", type: "multiple_choice", options: ["", "", "", ""] }]); setCreating(false); showMsg("Survey created");
   };
 
-  const respond = async (surveyId, answer) => {
-    const already = surveys.find(s => s.id === surveyId)?.responses?.find(r => r.user === userName);
-    if (already) return;
-    const updated = { ...data, surveys: surveys.map(s => s.id === surveyId ? { ...s, responses: [...(s.responses || []), { user: userName, answer, ts: Date.now() }] } : s) };
-    await saveData(updated); setData(updated); showMsg("Response recorded");
+  const respond = async (surveyId, questionId, answer) => {
+    const survey = surveys.find(s => s.id === surveyId);
+    if (!survey) return;
+    const responses = { ...(survey.responses || {}) };
+    if (!responses[userName]) responses[userName] = {};
+    responses[userName][questionId] = answer;
+    const updated = { ...data, surveys: surveys.map(s => s.id === surveyId ? { ...s, responses } : s) };
+    await saveData(updated); setData(updated);
   };
 
   const toggleResults = async (surveyId) => {
     const updated = { ...data, surveys: surveys.map(s => s.id === surveyId ? { ...s, showResults: !s.showResults } : s) };
     await saveData(updated); setData(updated);
   };
-
   const closeSurvey = async (surveyId) => {
     const updated = { ...data, surveys: surveys.map(s => s.id === surveyId ? { ...s, active: false } : s) };
     await saveData(updated); setData(updated); showMsg("Survey closed");
   };
-
   const deleteSurvey = async (surveyId) => {
     const updated = { ...data, surveys: surveys.filter(s => s.id !== surveyId) };
-    await saveData(updated); setData(updated); showMsg("Deleted");
+    await saveData(updated); setData(updated); showMsg("Deleted"); if (viewingResults === surveyId) setViewingResults(null);
   };
 
-  const renderResults = (survey) => {
-    const responses = survey.responses || [];
-    if (responses.length === 0) return <div style={{ fontSize: 13, color: TEXT_MUTED, padding: "8px 0" }}>No responses yet</div>;
+  const getResponses = (survey, questionId) => {
+    const all = [];
+    Object.values(survey.responses || {}).forEach(ua => { if (ua[questionId] !== undefined) all.push(ua[questionId]); });
+    return all;
+  };
 
-    if (survey.type === "multiple_choice") {
-      const counts = {};
-      survey.options.forEach(o => { counts[o] = 0; });
-      responses.forEach(r => { counts[r.answer] = (counts[r.answer] || 0) + 1; });
+  const renderResults = (question, answers) => {
+    if (answers.length === 0) return <div style={{ fontSize: 13, color: TEXT_MUTED, padding: "4px 0" }}>No responses yet</div>;
+    if (question.type === "multiple_choice") {
+      const counts = {}; question.options.forEach(o => { counts[o] = 0; }); answers.forEach(a => { counts[a] = (counts[a] || 0) + 1; });
       const max = Math.max(...Object.values(counts), 1);
-      return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {survey.options.map(o => (
-            <div key={o} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 13, color: TEXT_PRIMARY, width: 120, flexShrink: 0, fontWeight: 500 }}>{o}</span>
-              <div style={{ flex: 1, background: "#f4f4f5", borderRadius: 6, height: 24, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: (counts[o] / max * 100) + "%", background: ACCENT, borderRadius: 6, transition: "width 0.3s" }} />
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, width: 28, textAlign: "right" }}>{counts[o]}</span>
-            </div>
-          ))}
-        </div>
-      );
+      return (<div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{question.options.map(o => (
+        <div key={o} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 13, color: TEXT_PRIMARY, width: 120, flexShrink: 0, fontWeight: 500 }}>{o}</span>
+          <div style={{ flex: 1, background: "#f4f4f5", borderRadius: 6, height: 24, overflow: "hidden" }}><div style={{ height: "100%", width: (counts[o] / max * 100) + "%", background: ACCENT, borderRadius: 6, transition: "width 0.3s" }} /></div>
+          <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, width: 28, textAlign: "right" }}>{counts[o]}</span>
+        </div>))}</div>);
     }
-
-    if (survey.type === "true_false") {
-      const t = responses.filter(r => r.answer === "True").length;
-      const f = responses.filter(r => r.answer === "False").length;
-      const total = t + f || 1;
-      return (
-        <div style={{ display: "flex", gap: 12 }}>
-          <div style={{ flex: 1, ...crd, padding: 16, textAlign: "center" }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: GREEN }}>{Math.round(t / total * 100)}%</div>
-            <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4 }}>True ({t})</div>
-          </div>
-          <div style={{ flex: 1, ...crd, padding: 16, textAlign: "center" }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: RED }}>{Math.round(f / total * 100)}%</div>
-            <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4 }}>False ({f})</div>
-          </div>
-        </div>
-      );
+    if (question.type === "true_false") {
+      const t = answers.filter(a => a === "True").length, f = answers.filter(a => a === "False").length, total = t + f || 1;
+      return (<div style={{ display: "flex", gap: 12 }}>
+        <div style={{ flex: 1, ...crd, padding: 14, textAlign: "center" }}><div style={{ fontSize: 24, fontWeight: 800, color: GREEN }}>{Math.round(t / total * 100)}%</div><div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>True ({t})</div></div>
+        <div style={{ flex: 1, ...crd, padding: 14, textAlign: "center" }}><div style={{ fontSize: 24, fontWeight: 800, color: RED }}>{Math.round(f / total * 100)}%</div><div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>False ({f})</div></div>
+      </div>);
     }
-
-    if (survey.type === "likert") {
-      const counts = [0, 0, 0, 0, 0];
-      responses.forEach(r => { const v = parseInt(r.answer); if (v >= 1 && v <= 5) counts[v - 1]++; });
+    if (question.type === "likert") {
+      const counts = [0, 0, 0, 0, 0]; answers.forEach(a => { const v = parseInt(a); if (v >= 1 && v <= 5) counts[v - 1]++; });
       const max = Math.max(...counts, 1);
-      const labels = ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"];
-      const avg = responses.length > 0 ? (responses.reduce((s, r) => s + (parseInt(r.answer) || 0), 0) / responses.length).toFixed(1) : "0";
-      return (
-        <div>
-          <div style={{ textAlign: "center", marginBottom: 12 }}>
-            <span style={{ fontSize: 28, fontWeight: 800, color: ACCENT }}>{avg}</span>
-            <span style={{ fontSize: 14, color: TEXT_MUTED, marginLeft: 4 }}>/ 5 avg</span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {labels.map((l, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 12, color: TEXT_SECONDARY, width: 36, textAlign: "center", flexShrink: 0, fontWeight: 700 }}>{i + 1}</span>
-                <div style={{ flex: 1, background: "#f4f4f5", borderRadius: 4, height: 20, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: (counts[i] / max * 100) + "%", background: ACCENT, borderRadius: 4, transition: "width 0.3s" }} />
-                </div>
-                <span style={{ fontSize: 12, fontWeight: 600, color: TEXT_PRIMARY, width: 24, textAlign: "right" }}>{counts[i]}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
+      const avg = answers.length > 0 ? (answers.reduce((s, a) => s + (parseInt(a) || 0), 0) / answers.length).toFixed(1) : "0";
+      return (<div><div style={{ textAlign: "center", marginBottom: 10 }}><span style={{ fontSize: 24, fontWeight: 800, color: ACCENT }}>{avg}</span><span style={{ fontSize: 13, color: TEXT_MUTED, marginLeft: 4 }}>/ 5 avg</span></div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{[1,2,3,4,5].map(n => (
+          <div key={n} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 12, color: TEXT_SECONDARY, width: 20, textAlign: "center", flexShrink: 0, fontWeight: 700 }}>{n}</span>
+            <div style={{ flex: 1, background: "#f4f4f5", borderRadius: 4, height: 18, overflow: "hidden" }}><div style={{ height: "100%", width: (counts[n-1] / max * 100) + "%", background: ACCENT, borderRadius: 4, transition: "width 0.3s" }} /></div>
+            <span style={{ fontSize: 12, fontWeight: 600, color: TEXT_PRIMARY, width: 20, textAlign: "right" }}>{counts[n-1]}</span>
+          </div>))}</div></div>);
     }
-
-    if (survey.type === "number") {
-      const nums = responses.map(r => parseFloat(r.answer)).filter(n => !isNaN(n));
+    if (question.type === "number") {
+      const nums = answers.map(a => parseFloat(a)).filter(n => !isNaN(n));
       const avg = nums.length > 0 ? (nums.reduce((s, n) => s + n, 0) / nums.length).toFixed(1) : "0";
-      const min = nums.length > 0 ? Math.min(...nums) : 0;
-      const max = nums.length > 0 ? Math.max(...nums) : 0;
-      return (
-        <div style={{ display: "flex", gap: 12 }}>
-          <div style={{ flex: 1, ...crd, padding: 12, textAlign: "center" }}><div style={{ fontSize: 22, fontWeight: 800, color: ACCENT }}>{avg}</div><div style={{ fontSize: 11, color: TEXT_MUTED }}>Average</div></div>
-          <div style={{ flex: 1, ...crd, padding: 12, textAlign: "center" }}><div style={{ fontSize: 22, fontWeight: 800, color: TEXT_PRIMARY }}>{min}</div><div style={{ fontSize: 11, color: TEXT_MUTED }}>Min</div></div>
-          <div style={{ flex: 1, ...crd, padding: 12, textAlign: "center" }}><div style={{ fontSize: 22, fontWeight: 800, color: TEXT_PRIMARY }}>{max}</div><div style={{ fontSize: 11, color: TEXT_MUTED }}>Max</div></div>
-        </div>
-      );
+      const mn = nums.length > 0 ? Math.min(...nums) : 0, mx = nums.length > 0 ? Math.max(...nums) : 0;
+      return (<div style={{ display: "flex", gap: 12 }}>
+        <div style={{ flex: 1, ...crd, padding: 10, textAlign: "center" }}><div style={{ fontSize: 20, fontWeight: 800, color: ACCENT }}>{avg}</div><div style={{ fontSize: 11, color: TEXT_MUTED }}>Avg</div></div>
+        <div style={{ flex: 1, ...crd, padding: 10, textAlign: "center" }}><div style={{ fontSize: 20, fontWeight: 800, color: TEXT_PRIMARY }}>{mn}</div><div style={{ fontSize: 11, color: TEXT_MUTED }}>Min</div></div>
+        <div style={{ flex: 1, ...crd, padding: 10, textAlign: "center" }}><div style={{ fontSize: 20, fontWeight: 800, color: TEXT_PRIMARY }}>{mx}</div><div style={{ fontSize: 11, color: TEXT_MUTED }}>Max</div></div>
+      </div>);
     }
-
-    if (survey.type === "short_answer") {
-      return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {responses.map((r, i) => (
-            <div key={i} style={{ fontSize: 14, color: TEXT_PRIMARY, padding: "6px 10px", background: "#f4f4f5", borderRadius: 8, lineHeight: 1.4 }}>{r.answer}</div>
-          ))}
-        </div>
-      );
+    if (question.type === "short_answer") {
+      return (<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{answers.map((a, i) => (
+        <div key={i} style={{ fontSize: 14, color: TEXT_PRIMARY, padding: "6px 10px", background: "#f4f4f5", borderRadius: 8, lineHeight: 1.4 }}>{a}</div>
+      ))}</div>);
     }
-
     return null;
   };
+
+  const renderAnswerInput = (survey, question) => {
+    const userAnswers = (survey.responses || {})[userName] || {};
+    const answered = userAnswers[question.id] !== undefined;
+    if (answered) return <div style={{ fontSize: 13, color: GREEN, fontWeight: 600, padding: "4px 0" }}>Answered</div>;
+    if (question.type === "multiple_choice") return (<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{question.options.map(o => (<button key={o} onClick={() => respond(survey.id, question.id, o)} style={{ ...crd, padding: "10px 14px", cursor: "pointer", textAlign: "left", fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, border: "1px solid " + BORDER }}>{o}</button>))}</div>);
+    if (question.type === "true_false") return (<div style={{ display: "flex", gap: 8 }}><button onClick={() => respond(survey.id, question.id, "True")} style={{ ...pill, background: "#ecfdf5", color: GREEN, flex: 1, padding: "12px 0", fontSize: 15, fontWeight: 700 }}>True</button><button onClick={() => respond(survey.id, question.id, "False")} style={{ ...pill, background: "#fef2f2", color: RED, flex: 1, padding: "12px 0", fontSize: 15, fontWeight: 700 }}>False</button></div>);
+    if (question.type === "likert") return (<div style={{ display: "flex", gap: 6, justifyContent: "center" }}>{[1,2,3,4,5].map(n => (<button key={n} onClick={() => respond(survey.id, question.id, String(n))} style={{ ...crd, width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, border: "1px solid " + BORDER }}>{n}</button>))}</div>);
+    if (question.type === "number") return (<div style={{ display: "flex", gap: 8 }}><input id={"num-" + question.id} type="number" placeholder="Enter a number" style={{ ...inp, flex: 1 }} /><button onClick={() => { const el = document.getElementById("num-" + question.id); if (el?.value) { respond(survey.id, question.id, el.value); el.value = ""; } }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Submit</button></div>);
+    if (question.type === "short_answer") return (<div style={{ display: "flex", gap: 8 }}><input id={"sa-" + question.id} placeholder="Your answer" style={{ ...inp, flex: 1 }} /><button onClick={() => { const el = document.getElementById("sa-" + question.id); if (el?.value?.trim()) { respond(survey.id, question.id, el.value.trim()); el.value = ""; } }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Submit</button></div>);
+    return null;
+  };
+
+  // Results view
+  if (viewingResults) {
+    const survey = surveys.find(s => s.id === viewingResults);
+    if (!survey) { setViewingResults(null); return null; }
+    const responderCount = Object.keys(survey.responses || {}).length;
+    return (
+      <div style={{ padding: "24px 20px 40px", fontFamily: F }}>
+        <Toast message={msg} />
+        <div style={{ maxWidth: 640, margin: "0 auto" }}>
+          <button onClick={() => setViewingResults(null)} style={{ ...pillInactive, marginBottom: 16 }}>Back to Surveys</button>
+          <div style={{ ...crd, padding: 20, marginBottom: 16 }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 4 }}>{survey.title}</div>
+            <div style={{ fontSize: 13, color: TEXT_MUTED }}>{responderCount} respondent{responderCount !== 1 ? "s" : ""}</div>
+            {isAdmin && (
+              <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+                <button onClick={() => toggleResults(survey.id)} style={survey.showResults ? pillActive : pillInactive}>{survey.showResults ? "Hide from Students" : "Show to Students"}</button>
+                <button onClick={() => closeSurvey(survey.id)} style={pillInactive}>Close Survey</button>
+              </div>
+            )}
+          </div>
+          {(survey.questions || []).map((q, qi) => {
+            const answers = getResponses(survey, q.id);
+            return (
+              <div key={q.id} style={{ ...crd, padding: 18, marginBottom: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Question {qi + 1}</div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 12, lineHeight: 1.35 }}>{q.text}</div>
+                {renderResults(q, answers)}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   const activeSurveys = surveys.filter(s => s.active);
   const closedSurveys = surveys.filter(s => !s.active);
@@ -2199,91 +2213,64 @@ function SurveyView({ data, setData, isAdmin, userName }) {
           {isAdmin && <button onClick={() => setCreating(!creating)} style={creating ? pillActive : pillInactive}>{creating ? "Cancel" : "+ New Survey"}</button>}
         </div>
 
-        {/* Admin: create survey */}
         {isAdmin && creating && (
           <div style={{ ...crd, padding: 18, marginBottom: 20 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <textarea value={newQ} onChange={e => setNewQ(e.target.value)} placeholder="Question" rows={2} style={{ ...inp, resize: "vertical" }} />
-              <select value={newType} onChange={e => setNewType(e.target.value)} style={{ ...sel, width: "100%", fontSize: 14 }}>
-                {TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-              </select>
-              {newType === "multiple_choice" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {newOptions.map((o, i) => (
-                    <input key={i} value={o} onChange={e => { const u = [...newOptions]; u[i] = e.target.value; setNewOptions(u); }} placeholder={"Option " + (i + 1)} style={inp} />
-                  ))}
-                  <button onClick={() => setNewOptions([...newOptions, ""])} style={{ ...pillInactive, fontSize: 12 }}>+ Option</button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <input value={surveyTitle} onChange={e => setSurveyTitle(e.target.value)} placeholder="Survey title" style={{ ...inp, fontWeight: 700, fontSize: 16 }} />
+              {questions.map((q, qi) => (
+                <div key={qi} style={{ padding: 14, background: "#f4f4f5", borderRadius: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>Q{qi + 1}</span>
+                    {questions.length > 1 && <button onClick={() => removeQuestion(qi)} style={{ background: "none", border: "none", cursor: "pointer", color: RED, fontSize: 12, fontWeight: 600 }}>Remove</button>}
+                  </div>
+                  <textarea value={q.text} onChange={e => updateQuestion(qi, "text", e.target.value)} placeholder="Question text" rows={2} style={{ ...inp, resize: "vertical", marginBottom: 8 }} />
+                  <select value={q.type} onChange={e => updateQuestion(qi, "type", e.target.value)} style={{ ...sel, width: "100%", fontSize: 14, marginBottom: 8 }}>
+                    {TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                  </select>
+                  {q.type === "multiple_choice" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {q.options.map((o, oi) => (<input key={oi} value={o} onChange={e => updateOption(qi, oi, e.target.value)} placeholder={"Option " + (oi + 1)} style={{ ...inp, fontSize: 13 }} />))}
+                      <button onClick={() => addOption(qi)} style={{ ...pillInactive, fontSize: 11, marginTop: 2 }}>+ Option</button>
+                    </div>
+                  )}
                 </div>
-              )}
-              <button onClick={createSurvey} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "11px 0" }}>Create Survey</button>
+              ))}
+              {questions.length < 10 && <button onClick={addQuestion} style={{ ...pillInactive, width: "100%" }}>+ Add Question ({questions.length}/10)</button>}
+              <button onClick={createSurvey} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "12px 0" }}>Create Survey</button>
             </div>
           </div>
         )}
 
-        {/* Active surveys */}
         {activeSurveys.length === 0 && !creating && <div style={{ ...crd, padding: 24, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No active surveys</div>}
         {activeSurveys.map(survey => {
-          const hasResponded = survey.responses?.some(r => r.user === userName);
-          const respCount = (survey.responses || []).length;
+          const responderCount = Object.keys(survey.responses || {}).length;
+          const userAnswers = (survey.responses || {})[userName] || {};
+          const totalQs = (survey.questions || []).length;
+          const answeredQs = Object.keys(userAnswers).length;
+          const allAnswered = answeredQs >= totalQs;
           return (
             <div key={survey.id} style={{ ...crd, padding: 18, marginBottom: 12 }}>
-              <div style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.35, marginBottom: 10 }}>{survey.question}</div>
-              <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>{respCount} response{respCount !== 1 ? "s" : ""}</div>
-
-              {/* Student answer UI */}
-              {!isAdmin && !hasResponded && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                 <div>
-                  {survey.type === "multiple_choice" && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {survey.options.map(o => (
-                        <button key={o} onClick={() => respond(survey.id, o)} style={{ ...crd, padding: "12px 16px", cursor: "pointer", textAlign: "left", fontSize: 15, fontWeight: 500, color: TEXT_PRIMARY, border: "1px solid " + BORDER }}>{o}</button>
-                      ))}
+                  <div style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.3 }}>{survey.title}</div>
+                  <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{totalQs} question{totalQs !== 1 ? "s" : ""} / {responderCount} respondent{responderCount !== 1 ? "s" : ""}</div>
+                </div>
+                {(isAdmin || survey.showResults) && <button onClick={() => setViewingResults(survey.id)} style={pillInactive}>Results</button>}
+              </div>
+              {!isAdmin && !allAnswered && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {(survey.questions || []).map((q, qi) => (
+                    <div key={q.id}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 6, lineHeight: 1.35 }}>{qi + 1}. {q.text}</div>
+                      {renderAnswerInput(survey, q)}
                     </div>
-                  )}
-                  {survey.type === "true_false" && (
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => respond(survey.id, "True")} style={{ ...pill, background: "#ecfdf5", color: GREEN, flex: 1, padding: "14px 0", fontSize: 16, fontWeight: 700 }}>True</button>
-                      <button onClick={() => respond(survey.id, "False")} style={{ ...pill, background: "#fef2f2", color: RED, flex: 1, padding: "14px 0", fontSize: 16, fontWeight: 700 }}>False</button>
-                    </div>
-                  )}
-                  {survey.type === "likert" && (
-                    <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
-                      {[1, 2, 3, 4, 5].map(n => (
-                        <button key={n} onClick={() => respond(survey.id, String(n))} style={{ ...crd, width: 52, height: 52, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 18, fontWeight: 700, color: TEXT_PRIMARY, border: "1px solid " + BORDER }}>{n}</button>
-                      ))}
-                    </div>
-                  )}
-                  {survey.type === "number" && (
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input id={"num-" + survey.id} type="number" placeholder="Enter a number" style={{ ...inp, flex: 1 }} />
-                      <button onClick={() => { const el = document.getElementById("num-" + survey.id); if (el?.value) { respond(survey.id, el.value); el.value = ""; } }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Submit</button>
-                    </div>
-                  )}
-                  {survey.type === "short_answer" && (
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input id={"sa-" + survey.id} placeholder="Your answer" style={{ ...inp, flex: 1 }} />
-                      <button onClick={() => { const el = document.getElementById("sa-" + survey.id); if (el?.value?.trim()) { respond(survey.id, el.value.trim()); el.value = ""; } }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Submit</button>
-                    </div>
-                  )}
+                  ))}
                 </div>
               )}
-
-              {!isAdmin && hasResponded && !survey.showResults && (
-                <div style={{ fontSize: 14, color: GREEN, fontWeight: 600 }}>Response recorded. Waiting for results.</div>
-              )}
-
-              {/* Results */}
-              {(survey.showResults || isAdmin) && (
-                <div style={{ marginTop: isAdmin && !hasResponded ? 0 : 8 }}>
-                  {isAdmin && !survey.showResults && <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 6, fontStyle: "italic" }}>Results hidden from students</div>}
-                  {renderResults(survey)}
-                </div>
-              )}
-
-              {/* Admin controls */}
+              {!isAdmin && allAnswered && !survey.showResults && <div style={{ fontSize: 14, color: GREEN, fontWeight: 600 }}>All questions answered. Waiting for results.</div>}
               {isAdmin && (
-                <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
-                  <button onClick={() => toggleResults(survey.id)} style={survey.showResults ? pillActive : pillInactive}>{survey.showResults ? "Hide Results" : "Show Results"}</button>
+                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                  <button onClick={() => toggleResults(survey.id)} style={survey.showResults ? pillActive : pillInactive}>{survey.showResults ? "Hide from Students" : "Show to Students"}</button>
                   <button onClick={() => closeSurvey(survey.id)} style={pillInactive}>Close</button>
                   <button onClick={() => { if (window.confirm("Delete?")) deleteSurvey(survey.id); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
                 </div>
@@ -2292,18 +2279,17 @@ function SurveyView({ data, setData, isAdmin, userName }) {
           );
         })}
 
-        {/* Closed surveys (admin only) */}
-        {isAdmin && closedSurveys.length > 0 && (
+        {closedSurveys.length > 0 && (
           <div style={{ marginTop: 24 }}>
             <div style={{ ...sectionLabel, marginBottom: 10 }}>Closed Surveys</div>
             {closedSurveys.map(survey => (
               <div key={survey.id} style={{ ...crd, padding: 14, marginBottom: 8, opacity: 0.7 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{survey.question}</div>
-                    <div style={{ fontSize: 12, color: TEXT_MUTED }}>{(survey.responses || []).length} responses</div>
+                  <div><div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{survey.title}</div><div style={{ fontSize: 12, color: TEXT_MUTED }}>{Object.keys(survey.responses || {}).length} respondents</div></div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => setViewingResults(survey.id)} style={{ ...pillInactive, fontSize: 11 }}>Results</button>
+                    {isAdmin && <button onClick={() => { if (window.confirm("Delete?")) deleteSurvey(survey.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Delete</button>}
                   </div>
-                  <button onClick={() => { if (window.confirm("Delete?")) deleteSurvey(survey.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Delete</button>
                 </div>
               </div>
             ))}
