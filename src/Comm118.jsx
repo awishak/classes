@@ -1587,6 +1587,7 @@ function ReadingsView({ data, setData, isAdmin }) {
   const readings = data.readings || [];
   const schedule = data.schedule || [];
   const [editId, setEditId] = useState(null);
+  const [editLocal, setEditLocal] = useState(null);
   const [newReading, setNewReading] = useState({ title: "", url: "", category: "", notes: "", readingType: "recommended" });
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState("");
@@ -1660,6 +1661,20 @@ function ReadingsView({ data, setData, isAdmin }) {
 
   const getReadingLink = (r) => r.pdfUrl || r.url;
 
+  const startReadingEdit = (r) => {
+    setEditId(r.id);
+    setEditLocal({ title: r.title || "", url: r.url || "", category: r.category || "", notes: r.notes || "", readingType: r.readingType || "recommended" });
+  };
+
+  const saveReadingEdit = async () => {
+    if (!editId || !editLocal) return;
+    const updated = { ...data, readings: readings.map(r => r.id === editId ? { ...r, ...editLocal } : r) };
+    await saveData(updated); setData(updated);
+    setEditId(null); setEditLocal(null); showMsg("Saved");
+  };
+
+  const cancelEdit = () => { setEditId(null); setEditLocal(null); };
+
   // Build week-grouped view from schedule attachments
   const weekReadings = [];
   schedule.forEach(w => {
@@ -1726,10 +1741,10 @@ function ReadingsView({ data, setData, isAdmin }) {
             const isReq = sectionType === "required";
             return (
               <div key={item.id + "-" + i} style={{ padding: "10px 12px", borderTop: i > 0 ? "1px solid " + BORDER : "none", background: isReq ? "#fffbeb" : "transparent", borderRadius: isReq && i === 0 ? "8px 8px 0 0" : isReq ? 0 : 0, marginLeft: -12, marginRight: -12, paddingLeft: 12, paddingRight: 12 }}>
-                {isAdmin && isEdit ? (
+                {isAdmin && isEdit && editLocal ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <input value={item.title} onChange={e => updateReading(item.id, "title", e.target.value)} style={{ ...inp, fontSize: 14, padding: "6px 10px" }} />
-                    <input value={item.url || ""} onChange={e => updateReading(item.id, "url", e.target.value)} placeholder="URL" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
+                    <input value={editLocal.title} onChange={e => setEditLocal({ ...editLocal, title: e.target.value })} style={{ ...inp, fontSize: 14, padding: "6px 10px" }} />
+                    <input value={editLocal.url} onChange={e => setEditLocal({ ...editLocal, url: e.target.value })} placeholder="URL" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
                     <div style={{ display: "flex", gap: 6 }}>
                       <select value={item.type} onChange={e => updateScheduleReadingType(item.date, item.id, e.target.value)} style={{ ...sel, fontSize: 13, padding: "6px 10px" }}>
                         <option value="fishbowl">Fishbowl</option>
@@ -1737,14 +1752,14 @@ function ReadingsView({ data, setData, isAdmin }) {
                         <option value="recommended">Recommended</option>
                         <option value="additional">Additional</option>
                       </select>
-                      <select value={item.readingType || "recommended"} onChange={e => updateReading(item.id, "readingType", e.target.value)} style={{ ...sel, fontSize: 13, padding: "6px 10px" }}>
+                      <select value={editLocal.readingType} onChange={e => setEditLocal({ ...editLocal, readingType: e.target.value })} style={{ ...sel, fontSize: 13, padding: "6px 10px" }}>
                         <option value="fishbowl">Repo: Fishbowl</option>
                         <option value="required">Repo: Required</option>
                         <option value="recommended">Repo: Recommended</option>
                         <option value="additional">Repo: Additional</option>
                       </select>
                     </div>
-                    <textarea value={item.notes || ""} onChange={e => updateReading(item.id, "notes", e.target.value)} placeholder="Notes" rows={2} style={{ ...inp, fontSize: 13, padding: "6px 10px", resize: "vertical" }} />
+                    <textarea value={editLocal.notes} onChange={e => setEditLocal({ ...editLocal, notes: e.target.value })} placeholder="Notes" rows={2} style={{ ...inp, fontSize: 13, padding: "6px 10px", resize: "vertical" }} />
                     {!item.pdfUrl && (
                       <label style={{ ...pillInactive, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "8px 0", cursor: "pointer", fontSize: 12 }}>
                         {uploading ? "Uploading..." : "Upload PDF"}
@@ -1752,12 +1767,12 @@ function ReadingsView({ data, setData, isAdmin }) {
                       </label>
                     )}
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => setEditId(null)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Done</button>
-                      <button onClick={() => { if (window.confirm("Delete?")) deleteReading(item.id); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
+                      <button onClick={saveReadingEdit} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Done</button>
+                      <button onClick={() => { if (window.confirm("Delete?")) { deleteReading(item.id); cancelEdit(); } }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
                     </div>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: isAdmin ? "pointer" : "default" }} onClick={() => isAdmin && setEditId(item.id)}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: isAdmin ? "pointer" : "default" }} onClick={() => isAdmin && startReadingEdit(item)}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       {link ? (
                         <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 15, color: "#2563eb", textDecoration: "none", fontWeight: 500, lineHeight: 1.4, display: "block" }}>{isFish ? "\uD83D\uDC1F " : ""}{item.title}</a>
@@ -1854,20 +1869,20 @@ function ReadingsView({ data, setData, isAdmin }) {
 
                         return (
                           <div key={r.id} style={{ ...crd, padding: 12, marginBottom: 4 }}>
-                            {isEdit ? (
+                            {isEdit && editLocal ? (
                               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                                <input value={r.title} onChange={e => updateReading(r.id, "title", e.target.value)} style={{ ...inp, fontSize: 14, padding: "6px 10px" }} />
-                                <input value={r.url || ""} onChange={e => updateReading(r.id, "url", e.target.value)} placeholder="URL" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
+                                <input value={editLocal.title} onChange={e => setEditLocal({ ...editLocal, title: e.target.value })} style={{ ...inp, fontSize: 14, padding: "6px 10px" }} />
+                                <input value={editLocal.url} onChange={e => setEditLocal({ ...editLocal, url: e.target.value })} placeholder="URL" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
                                 <div style={{ display: "flex", gap: 6 }}>
-                                  <input value={r.category || ""} onChange={e => updateReading(r.id, "category", e.target.value)} placeholder="Category" list="cat-list" style={{ ...inp, fontSize: 13, padding: "6px 10px", flex: 1 }} />
-                                  <select value={r.readingType || "recommended"} onChange={e => updateReading(r.id, "readingType", e.target.value)} style={{ ...sel, fontSize: 13, padding: "6px 10px" }}>
+                                  <input value={editLocal.category} onChange={e => setEditLocal({ ...editLocal, category: e.target.value })} placeholder="Category" list="cat-list" style={{ ...inp, fontSize: 13, padding: "6px 10px", flex: 1 }} />
+                                  <select value={editLocal.readingType} onChange={e => setEditLocal({ ...editLocal, readingType: e.target.value })} style={{ ...sel, fontSize: 13, padding: "6px 10px" }}>
                                     <option value="fishbowl">Fishbowl</option>
                                     <option value="required">Required</option>
                                     <option value="recommended">Recommended</option>
                                     <option value="additional">Additional</option>
                                   </select>
                                 </div>
-                                <textarea value={r.notes || ""} onChange={e => updateReading(r.id, "notes", e.target.value)} placeholder="Notes" rows={2} style={{ ...inp, fontSize: 13, padding: "6px 10px", resize: "vertical" }} />
+                                <textarea value={editLocal.notes} onChange={e => setEditLocal({ ...editLocal, notes: e.target.value })} placeholder="Notes" rows={2} style={{ ...inp, fontSize: 13, padding: "6px 10px", resize: "vertical" }} />
                                 {/* Attached dates */}
                                 {attachedDates.length > 0 && (
                                   <div style={{ padding: "8px 10px", background: "#f4f4f5", borderRadius: 8 }}>
@@ -1932,12 +1947,12 @@ function ReadingsView({ data, setData, isAdmin }) {
                                   </div>
                                 )}
                                 <div style={{ display: "flex", gap: 6 }}>
-                                  <button onClick={() => setEditId(null)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Done</button>
-                                  <button onClick={() => { if (window.confirm("Delete this reading?")) { deleteReading(r.id); setEditId(null); } }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
+                                  <button onClick={saveReadingEdit} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Done</button>
+                                  <button onClick={() => { if (window.confirm("Delete this reading?")) { deleteReading(r.id); cancelEdit(); } }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
                                 </div>
                               </div>
                             ) : (
-                              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => setEditId(r.id)}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => startReadingEdit(r)}>
                                 <span style={{ fontSize: 10, fontWeight: 700, color: typeColor(r.readingType), textTransform: "uppercase", width: 36, flexShrink: 0 }}>{typeShort(r.readingType)}</span>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

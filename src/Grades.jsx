@@ -42,6 +42,9 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
   const [editId, setEditId] = useState(null);
+  const [editLocal, setEditLocal] = useState(null);
+  const [editBlurb, setEditBlurb] = useState(false);
+  const [blurbLocal, setBlurbLocal] = useState("");
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const isGuest = userName === GUEST_NAME;
@@ -53,17 +56,24 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const ranked = data.students.map(s => ({ ...s, points: data.log.filter(e => e.studentId === s.id).reduce((t, e) => t + e.amount, 0) })).sort((a, b) => b.points - a.points);
   const studentRank = studentId ? ranked.findIndex(s => s.id === studentId) + 1 : null;
 
-  const updateAssignment = async (id, field, value) => {
-    const updated = { ...data, assignments: (data.assignments || DEFAULT_ASSIGNMENTS).map(a => a.id === id ? { ...a, [field]: value } : a) };
-    if (field === "due" && value && data.schedule) {
-      const assignment = (data.assignments || DEFAULT_ASSIGNMENTS).find(a => a.id === id);
+  const startEdit = (a) => {
+    setEditId(a.id);
+    setEditLocal({ name: a.name, weight: a.weight, due: a.due || "", link: a.link || "", notes: a.notes || "" });
+  };
+
+  const saveEdit = async () => {
+    if (!editId || !editLocal) return;
+    let updated = { ...data, assignments: (data.assignments || DEFAULT_ASSIGNMENTS).map(a => a.id === editId ? { ...a, ...editLocal, weight: parseInt(editLocal.weight) || 0 } : a) };
+    // Sync due date to schedule
+    if (editLocal.due && data.schedule) {
+      const assignment = (data.assignments || DEFAULT_ASSIGNMENTS).find(a => a.id === editId);
       if (assignment) {
         const newSchedule = data.schedule.map(week => ({
           ...week,
           dates: week.dates.map(d => {
             const cleanedAssignment = (d.assignment || "").split(", ").filter(a => a !== assignment.name && a !== assignment.name + " due").join(", ");
-            if (d.date === value) {
-              const newAssignment = cleanedAssignment ? cleanedAssignment + ", " + assignment.name + " due" : assignment.name + " due";
+            if (d.date === editLocal.due) {
+              const newAssignment = cleanedAssignment ? cleanedAssignment + ", " + editLocal.name + " due" : editLocal.name + " due";
               return { ...d, assignment: newAssignment };
             }
             return { ...d, assignment: cleanedAssignment };
@@ -73,21 +83,29 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
       }
     }
     await saveData(updated); setData(updated);
+    setEditId(null); setEditLocal(null); showMsg("Saved");
   };
-
-  const save = () => { setEditId(null); showMsg("Saved"); };
 
   const addAssignment = async () => {
     const newA = { id: genId(), name: "New Assignment", weight: 0, due: "", link: "", notes: "" };
     const updated = { ...data, assignments: [...assignments, newA] };
     await saveData(updated); setData(updated);
-    setEditId(newA.id); showMsg("Added");
+    startEdit(newA); showMsg("Added");
   };
 
   const removeAssignment = async (id) => {
     if (id === "participation") return;
     const updated = { ...data, assignments: assignments.filter(a => a.id !== id) };
-    await saveData(updated); setData(updated); showMsg("Removed");
+    await saveData(updated); setData(updated); setEditId(null); setEditLocal(null); showMsg("Removed");
+  };
+
+  const defaultBlurb = "Here's how your grade works. There are four major assignments worth 75% of your grade, and a participation bucket worth the other 25%. The participation bucket is where the weekly game, This or That, PTI, and Rotating Fishbowl all live.\n\nThe game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. The weekly game is the biggest example: the game weights all question types equally (10 pts each), but your grade weights On Topic questions much more heavily (15 pts each) than Sports World questions (2.5 pts each). So if you want to climb the leaderboard, be good at everything. If you want a good grade, focus on the course material.\n\nThe top 5 on the leaderboard at the end of the quarter get automatic A's. That's real. Everything else, just do the work, show up, and engage.";
+  const blurbText = data.assignmentsBlurb || defaultBlurb;
+
+  const saveBlurb = async () => {
+    const updated = { ...data, assignmentsBlurb: blurbLocal };
+    await saveData(updated); setData(updated);
+    setEditBlurb(false); showMsg("Saved");
   };
 
   return (
@@ -123,16 +141,21 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           </div>
         )}
 
-        <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
-          <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6 }}>
-            Here's how your grade works. There are four major assignments worth 75% of your grade, and a participation bucket worth the other 25%. The participation bucket is where the weekly game, This or That, PTI, and Rotating Fishbowl all live.
-          </div>
-          <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, marginTop: 10 }}>
-            The game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. The weekly game is the biggest example: the game weights all question types equally (10 pts each), but your grade weights On Topic questions much more heavily (15 pts each) than Sports World questions (2.5 pts each). So if you want to climb the leaderboard, be good at everything. If you want a good grade, focus on the course material.
-          </div>
-          <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, marginTop: 10 }}>
-            The top 5 on the leaderboard at the end of the quarter get automatic A's. That's real. Everything else, just do the work, show up, and engage.
-          </div>
+        <div style={{ ...crd, padding: 16, marginBottom: 16, cursor: isAdmin ? "pointer" : "default" }} onClick={() => { if (isAdmin && !editBlurb) { setBlurbLocal(blurbText); setEditBlurb(true); } }}>
+          {isAdmin && editBlurb ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }} onClick={e => e.stopPropagation()}>
+              <textarea value={blurbLocal} onChange={e => setBlurbLocal(e.target.value)} rows={8} style={{ ...inp, fontSize: 14, lineHeight: 1.6, resize: "vertical" }} />
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={saveBlurb} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 0", flex: 1 }}>Done</button>
+                <button onClick={() => setEditBlurb(false)} style={{ ...pillInactive, padding: "10px 16px" }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+              {blurbText}
+              {isAdmin && <div style={{ fontSize: 11, color: "#d1d5db", marginTop: 6, fontStyle: "italic" }}>Click to edit</div>}
+            </div>
+          )}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -140,30 +163,30 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
             const isEdit = isAdmin && editId === a.id;
             const g = studentId ? (grades[studentId + "-" + a.id] || {}) : null;
             return (
-              <div key={a.id} style={{ ...crd, padding: 16, cursor: isAdmin && !isEdit ? "pointer" : "default" }} onClick={() => isAdmin && !isEdit && setEditId(a.id)}>
-                {isEdit ? (
+              <div key={a.id} style={{ ...crd, padding: 16, cursor: isAdmin && !isEdit ? "pointer" : "default" }} onClick={() => isAdmin && !isEdit && startEdit(a)}>
+                {isEdit && editLocal ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }} onClick={e => e.stopPropagation()}>
-                    <input value={a.name} onChange={e => updateAssignment(a.id, "name", e.target.value)} style={{ ...inp, fontWeight: 700, fontSize: 15 }} />
+                    <input value={editLocal.name} onChange={e => setEditLocal({ ...editLocal, name: e.target.value })} style={{ ...inp, fontWeight: 700, fontSize: 15 }} />
                     <div style={{ display: "flex", gap: 8 }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ ...sectionLabel, marginBottom: 4 }}>Weight (%)</div>
-                        <input type="number" value={a.weight} onChange={e => updateAssignment(a.id, "weight", parseInt(e.target.value) || 0)} style={{ ...inp }} />
+                        <input type="number" value={editLocal.weight} onChange={e => setEditLocal({ ...editLocal, weight: e.target.value })} style={{ ...inp }} />
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ ...sectionLabel, marginBottom: 4 }}>Due Date</div>
-                        <input value={a.due} onChange={e => updateAssignment(a.id, "due", e.target.value)} placeholder="e.g. Apr 20" style={{ ...inp }} />
+                        <input value={editLocal.due} onChange={e => setEditLocal({ ...editLocal, due: e.target.value })} placeholder="e.g. Apr 20" style={{ ...inp }} />
                       </div>
                     </div>
                     <div>
                       <div style={{ ...sectionLabel, marginBottom: 4 }}>Google Doc Link</div>
-                      <input value={a.link || ""} onChange={e => updateAssignment(a.id, "link", e.target.value)} placeholder="https://docs.google.com/..." style={{ ...inp }} />
+                      <input value={editLocal.link} onChange={e => setEditLocal({ ...editLocal, link: e.target.value })} placeholder="https://docs.google.com/..." style={{ ...inp }} />
                     </div>
                     <div>
                       <div style={{ ...sectionLabel, marginBottom: 4 }}>Notes</div>
-                      <input value={a.notes || ""} onChange={e => updateAssignment(a.id, "notes", e.target.value)} placeholder="Optional notes" style={{ ...inp }} />
+                      <input value={editLocal.notes} onChange={e => setEditLocal({ ...editLocal, notes: e.target.value })} placeholder="Optional notes" style={{ ...inp }} />
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={save} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 0", flex: 1 }}>Done</button>
+                      <button onClick={saveEdit} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 0", flex: 1 }}>Done</button>
                       {a.id !== "participation" && <button onClick={() => { if (window.confirm("Remove " + a.name + "?")) removeAssignment(a.id); }} style={{ ...pill, background: "#fef2f2", color: "#ef4444", padding: "10px 16px" }}>Delete</button>}
                     </div>
                   </div>
