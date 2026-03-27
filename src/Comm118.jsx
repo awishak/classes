@@ -786,7 +786,7 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
           <div style={{ ...crd, padding: "10px 14px" }}>
             <button onClick={() => setShowExplain(!showExplain)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, width: "100%", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={{ fontSize: 13, color: TEXT_SECONDARY }}>Earn points through the weekly game, This or That, PTI, and Rotating Fishbowl.</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke=TEXT_MUTED strokeWidth="2" style={{ transform: showExplain ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0, marginLeft: 8 }}><path d="M6 9l6 6 6-6"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" style={{ transform: showExplain ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0, marginLeft: 8 }}><path d="M6 9l6 6 6-6"/></svg>
             </button>
             {showExplain && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6", fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>
@@ -1436,7 +1436,7 @@ function RosterView({ data, setData, userName }) {
                     {bio.major ? " / " + bio.major : ""}
                   </div>
                 </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke=TEXT_MUTED strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
               </button>
             );
           })}
@@ -1498,7 +1498,7 @@ function BioView({ student, data, setData, userName, onBack }) {
             )}
             {canEdit && (
               <label style={{ position: "absolute", bottom: -2, right: -2, width: 22, height: 22, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke=TEXT_SECONDARY strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_SECONDARY} strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 <input type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
               </label>
             )}
@@ -2125,7 +2125,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
                     <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</div>
                     <div style={{ fontSize: 11, color: TEXT_MUTED }}>{count} headline{count !== 1 ? "s" : ""} / {new Date(s.ts).toLocaleDateString()}</div>
                   </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke=TEXT_MUTED strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
               );
             })}
