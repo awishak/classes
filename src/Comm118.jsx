@@ -355,8 +355,9 @@ function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDa
             <select value={r.type} onChange={e => {
               const upd = [...(d.readings || [])]; upd[ri] = { ...upd[ri], type: e.target.value };
               updateDate(wi, realDi, "readings", upd);
-            }} style={{ fontSize: 10, border: "none", background: "transparent", color: r.type === "required" ? RED : GREEN, fontWeight: 700, cursor: "pointer" }}>
+            }} style={{ fontSize: 10, border: "none", background: "transparent", color: r.type === "required" ? RED : r.type === "highly_recommended" ? AMBER : GREEN, fontWeight: 700, cursor: "pointer" }}>
               <option value="required">Required</option>
+              <option value="highly_recommended">Highly Rec</option>
               <option value="recommended">Recommended</option>
             </select>
             <button onClick={() => {
@@ -545,7 +546,7 @@ function ScheduleView({ data, setData, isAdmin }) {
                                     const link = rdg.pdfUrl || rdg.url;
                                     return (
                                       <div key={ri} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11 }}>
-                                        <span style={{ fontSize: 9, fontWeight: 700, color: r.type === "required" ? RED : GREEN, textTransform: "uppercase" }}>{r.type === "required" ? "Req" : "Rec"}</span>
+                                        <span style={{ fontSize: 9, fontWeight: 700, color: r.type === "required" ? RED : r.type === "highly_recommended" ? AMBER : GREEN, textTransform: "uppercase" }}>{r.type === "required" ? "Req" : r.type === "highly_recommended" ? "H.Rec" : "Rec"}</span>
                                         {link ? (
                                           <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{rdg.title}</a>
                                         ) : (
@@ -1533,7 +1534,7 @@ function ReadingsView({ data, setData, isAdmin }) {
   const readings = data.readings || [];
   const schedule = data.schedule || [];
   const [editId, setEditId] = useState(null);
-  const [newReading, setNewReading] = useState({ title: "", url: "", category: "", notes: "" });
+  const [newReading, setNewReading] = useState({ title: "", url: "", category: "", notes: "", readingType: "recommended" });
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
@@ -1542,10 +1543,10 @@ function ReadingsView({ data, setData, isAdmin }) {
 
   const addReading = async () => {
     if (!newReading.title.trim()) return;
-    const r = { id: genId(), title: newReading.title.trim(), url: newReading.url.trim(), category: newReading.category.trim(), notes: newReading.notes.trim() };
+    const r = { id: genId(), title: newReading.title.trim(), url: newReading.url.trim(), category: newReading.category.trim(), notes: newReading.notes.trim(), readingType: newReading.readingType || "recommended" };
     const updated = { ...data, readings: [...readings, r] };
     await saveData(updated); setData(updated);
-    setNewReading({ title: "", url: "", category: "", notes: "" });
+    setNewReading({ title: "", url: "", category: "", notes: "", readingType: "recommended" });
     showMsg("Added");
   };
   const updateReading = async (id, field, value) => {
@@ -1633,6 +1634,11 @@ function ReadingsView({ data, setData, isAdmin }) {
               <div style={{ display: "flex", gap: 6 }}>
                 <input value={newReading.category} onChange={e => setNewReading({ ...newReading, category: e.target.value })} placeholder="Category (e.g. Article, Video)" list="cat-list" style={{ ...inp, flex: 1 }} />
                 <datalist id="cat-list">{categories.map(c => <option key={c} value={c} />)}</datalist>
+                <select value={newReading.readingType} onChange={e => setNewReading({ ...newReading, readingType: e.target.value })} style={{ ...sel, width: 140, fontSize: 12, padding: "6px 8px" }}>
+                  <option value="required">Required</option>
+                  <option value="highly_recommended">Highly Recommended</option>
+                  <option value="recommended">Recommended</option>
+                </select>
               </div>
               <textarea value={newReading.notes} onChange={e => setNewReading({ ...newReading, notes: e.target.value })} placeholder="Notes (optional)" rows={2} style={{ ...inp, resize: "vertical" }} />
               <div style={{ display: "flex", gap: 6 }}>
@@ -1659,7 +1665,7 @@ function ReadingsView({ data, setData, isAdmin }) {
                 </div>
                 {w.items.map((item, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: i > 0 ? "1px solid #f9fafb" : "none" }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: item.type === "required" ? RED : GREEN, textTransform: "uppercase", width: 24, flexShrink: 0 }}>{item.type === "required" ? "Req" : "Rec"}</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: (item.type || item.readingType) === "required" ? RED : (item.type || item.readingType) === "highly_recommended" ? AMBER : GREEN, textTransform: "uppercase", width: 40, flexShrink: 0 }}>{(item.type || item.readingType) === "required" ? "Req" : (item.type || item.readingType) === "highly_recommended" ? "H.Rec" : "Rec"}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <ReadingLink r={item}>{item.title}</ReadingLink>
                       {getReadingLabel(item) && <span style={{ fontSize: 9, color: "#9ca3af", marginLeft: 4, fontWeight: 600 }}>{getReadingLabel(item)}</span>}
@@ -1692,6 +1698,11 @@ function ReadingsView({ data, setData, isAdmin }) {
                         <input value={r.title} onChange={e => updateReading(r.id, "title", e.target.value)} style={{ ...inp, fontSize: 13, padding: "4px 8px" }} />
                         <input value={r.url || ""} onChange={e => updateReading(r.id, "url", e.target.value)} placeholder="URL" style={{ ...inp, fontSize: 12, padding: "4px 8px" }} />
                         <input value={r.category || ""} onChange={e => updateReading(r.id, "category", e.target.value)} placeholder="Category" list="cat-list" style={{ ...inp, fontSize: 12, padding: "4px 8px" }} />
+                        <select value={r.readingType || "recommended"} onChange={e => updateReading(r.id, "readingType", e.target.value)} style={{ ...sel, width: "100%", fontSize: 12, padding: "4px 8px" }}>
+                          <option value="required">Required</option>
+                          <option value="highly_recommended">Highly Recommended</option>
+                          <option value="recommended">Recommended</option>
+                        </select>
                         <textarea value={r.notes || ""} onChange={e => updateReading(r.id, "notes", e.target.value)} placeholder="Notes" rows={2} style={{ ...inp, fontSize: 12, padding: "4px 8px", resize: "vertical" }} />
                         {r.pdfUrl ? (
                           <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", background: "#f0fdf4", borderRadius: 6 }}>
@@ -1714,6 +1725,7 @@ function ReadingsView({ data, setData, isAdmin }) {
                       </div>
                     ) : (
                       <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: isAdmin ? "pointer" : "default" }} onClick={() => isAdmin && setEditId(r.id)}>
+                        <span style={{ fontSize: 9, fontWeight: 700, color: r.readingType === "required" ? RED : r.readingType === "highly_recommended" ? AMBER : GREEN, textTransform: "uppercase", width: 50, flexShrink: 0 }}>{r.readingType === "required" ? "Req" : r.readingType === "highly_recommended" ? "High Rec" : "Rec"}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <ReadingLink r={r}>{r.title}</ReadingLink>
@@ -2615,6 +2627,130 @@ export default function Comm118() {
             }
           });
           d.pins = pins;
+          await saveData(d);
+        }
+        // Migration: add readings repository and attach to schedule
+        if (d && !d._readingsMigV1) {
+          const R = [
+            // Week 1: Required
+            { id: "r_w1_klosterman", title: "Are You Not Entertained?", url: "https://grantland.com/features/chuck-klosterman-gregg-popovich-entertainment-sports/", category: "Article", readingType: "required", notes: "Klosterman on Popovich, entertainment vs winning" },
+            { id: "r_w1_ncaa_props", title: "NCAA Urges Gambling Commissions to Eliminate Prop Bets", url: "https://www.ncaa.org/news/2026/1/15/media-center-ncaa-urges-gambling-commissions-to-eliminate-prop-bets.aspx", category: "Article", readingType: "required", notes: "" },
+            // Week 1: Highly Recommended
+            { id: "r_w1_coppins", title: "My Year as a Degenerate Sports Gambler", url: "https://www.theatlantic.com/magazine/2026/04/online-sports-betting-app-addiction/686061/", category: "Article", readingType: "highly_recommended", notes: "McKay Coppins, The Atlantic 2026" },
+            // Week 1: Recommended - Purpose
+            { id: "r_w1_truth", title: "Sports Has an Agreed-Upon Truth", url: "https://www.si.com/sports-illustrated/2021/01/07/sports-shared-truth-us-capitol-riot-donald-trump", category: "Article", readingType: "recommended", notes: "Post-Jan 6, sports as shared reality" },
+            { id: "r_w1_olympics", title: "Why Are the Olympics Still Happening?", url: "https://www.nytimes.com/2021/06/21/sports/olympics/tokyo-olympics-happening-why.html", category: "Article", readingType: "recommended", notes: "" },
+            { id: "r_w1_jenkins", title: "Athlete Activists Control Their Strength", url: "https://www.washingtonpost.com/sports/2021/01/08/athlete-activisits-capitol-trump-mob/", category: "Article", readingType: "recommended", notes: "Sally Jenkins, WaPo, Jan 2021" },
+            { id: "r_w1_busch", title: "Cardinals-Cubs: Michael Busch Nearly Hits for the Cycle", url: "https://www.nytimes.com/athletic/6668845/2025/09/27/cardinals-cubs-michael-busch-cycle/", category: "Article", readingType: "recommended", notes: "Marmol: I'm not here for anybody's amusement" },
+            { id: "r_w1_escape", title: "Sports Are Usually a Great Escape. Not This Time.", url: "https://nymag.com/intelligencer/2020/03/coronavirus-means-that-sports-arent-a-great-escape-anymore.html", category: "Article", readingType: "recommended", notes: "COVID and the absence of sports" },
+            { id: "r_w1_triples", title: "MLB Opening Day Triples", url: "https://www.wsj.com/sports/baseball/mlb-baseball-opening-day-triples-a5c30f00", category: "Article", readingType: "recommended", notes: "WSJ 2026" },
+            // Week 1: Recommended - Gambling
+            { id: "r_w1_dfs", title: "How the Daily Fantasy Sports Industry Turns Fans into Suckers", url: "https://www.nytimes.com/2016/01/06/magazine/how-the-daily-fantasy-sports-industry-turns-fans-into-suckers.html", category: "Article", readingType: "recommended", notes: "" },
+            { id: "r_w1_mistake", title: "Legalizing Sports Gambling Was a Huge Mistake", url: "https://www.theatlantic.com/ideas/archive/2024/09/legal-sports-gambling-was-mistake/679925/", category: "Article", readingType: "recommended", notes: "The Atlantic 2024, research on financial harm" },
+            { id: "r_w1_wiki_bet", title: "Sports Betting (Wikipedia)", url: "https://en.wikipedia.org/wiki/Sports_betting", category: "Reference", readingType: "recommended", notes: "" },
+            { id: "r_w1_ft_gamble", title: "Sports Gambling (Financial Times)", url: "https://www.ft.com/content/a8fbf1ac-7fc7-4015-b2ad-929df645e79b", category: "Article", readingType: "recommended", notes: "" },
+            // Week 2: Book chapters (no URL)
+            { id: "r_w2_ch1", title: "Communication and Sport, Chapter 1", url: "", category: "Book Chapter", readingType: "required", notes: "Billings, Butterworth, and Lewis" },
+            { id: "r_w2_ch2", title: "Communication and Sport, Chapter 2", url: "", category: "Book Chapter", readingType: "required", notes: "Billings, Butterworth, and Lewis" },
+            // Week 3: Required
+            { id: "r_w3_ch8", title: "Communication and Sport, Chapter 8: Sport and Mythology", url: "", category: "Book Chapter", readingType: "required", notes: "Billings, Butterworth, and Lewis" },
+            { id: "r_w3_ch13", title: "Communication and Sport, Chapter 13: Commercialism in Sport", url: "", category: "Book Chapter", readingType: "required", notes: "Billings, Butterworth, and Lewis" },
+            { id: "r_w3_dunne", title: "Olivia 'Livvy' Dunne, LSU Gymnastics, NCAA, NIL", url: "https://www.espn.com/college-sports/story/_/id/43938472/olivia-livvy-dunne-lsu-gymnastics-ncaa-nil", category: "Article", readingType: "required", notes: "ESPN" },
+            // Week 4: Fishbowl readings
+            { id: "r_w4_ch5", title: "Communication and Sport, Chapter 5: Legacy Media Interactions", url: "", category: "Book Chapter", readingType: "required", notes: "Fishbowl reading" },
+            { id: "r_w4_ch6", title: "Communication and Sport, Chapter 6: Social and User-Generated Media Interactions", url: "", category: "Book Chapter", readingType: "required", notes: "Fishbowl reading" },
+            { id: "r_w4_ch7", title: "Communication and Sport, Chapter 7: Sport and Mythology", url: "", category: "Book Chapter", readingType: "required", notes: "Fishbowl reading" },
+            // Week 4: To be sorted
+            { id: "r_w4_cfb_sba", title: "College Football Schedule and the Sports Broadcasting Act", url: "https://www.nytimes.com/athletic/6360298/2025/05/16/college-football-schedule-sports-broadcasting-act/", category: "Article", readingType: "recommended", notes: "The Athletic 2025" },
+            { id: "r_w4_pitaro", title: "Jimmy Pitaro, ESPN Streaming App Launch", url: "https://www.nytimes.com/athletic/6560777/2025/08/19/jimmy-pitaro-espn-streaming-app-launch-netflix/", category: "Article", readingType: "recommended", notes: "The Athletic 2025" },
+            { id: "r_w4_streaming", title: "Sports TV: Netflix, Amazon, ESPN", url: "https://nymag.com/intelligencer/article/sports-tv-netflix-amazon-espn.html", category: "Article", readingType: "recommended", notes: "NY Mag" },
+            { id: "r_w4_netflix_mlb", title: "Yankees-Giants MLB Opening Night on Netflix/YouTube/NBC", url: "https://www.nytimes.com/athletic/7144726/2026/03/25/yankees-giants-mlb-opening-night-netflix-youtube-nbc/", category: "Article", readingType: "recommended", notes: "The Athletic 2026" },
+            { id: "r_w4_cfb_cable", title: "CFB Coverage Has Turned Into Cable News", url: "https://awfulannouncing.com/college-football/cfb-coverage-has-turned-into-cable-news.html", category: "Article", readingType: "recommended", notes: "Awful Announcing" },
+            { id: "r_w4_helmets", title: "How TV and Roy Rogers Helped Put Logos on NFL Helmets", url: "https://www.toddradom.com/blog/fl-helmet-logos-licensing-giants-rams-eagles-cowboys", category: "Article", readingType: "recommended", notes: "Todd Radom" },
+            { id: "r_w4_fox_theme", title: "Batman on Steroids: How the NFL on Fox Theme Song Was Born", url: "https://deadspin.com/batman-on-steroids-how-the-nfl-on-fox-theme-song-was-b-1481367234/", category: "Article", readingType: "recommended", notes: "Deadspin" },
+            { id: "r_w4_athletes_great", title: "How Athletes Get Great", url: "https://www.outsideonline.com/culture/books-media/how-athletes-get-great/", category: "Article", readingType: "recommended", notes: "Outside" },
+            { id: "r_w4_espn_future", title: "ESPN's Uncertain Future Is Already Here", url: "https://deadspin.com/espns-uncertain-future-is-already-here-1753901086/", category: "Article", readingType: "recommended", notes: "Deadspin" },
+            { id: "r_w4_sba_wiki", title: "Sports Broadcasting Act of 1961", url: "https://en.wikipedia.org/wiki/Sports_Broadcasting_Act_of_1961", category: "Reference", readingType: "recommended", notes: "Wikipedia" },
+            { id: "r_w4_cuban", title: "Mark Cuban: Hogs Get Slaughtered", url: "https://sports.yahoo.com/is-mark-cubans-hogs-get-slaughtered-comment-about-nfl-becoming-true-215057982.html", category: "Article", readingType: "recommended", notes: "Yahoo Sports" },
+            { id: "r_w4_pwc", title: "PwC Sports Outlook North America", url: "https://www.pwc.com/us/en/industries/tmt/library/sports-outlook-north-america.html", category: "Reference", readingType: "recommended", notes: "" },
+            { id: "r_w4_nielsen", title: "Nielsen Tops 2024 Sports", url: "https://www.nielsen.com/insights/2024/tops-2024-sports/", category: "Reference", readingType: "recommended", notes: "" },
+            { id: "r_w4_rating", title: "What is Rating/Share", url: "https://www.frankwbaker.com/mlc/math-media-what-is-rating-share/", category: "Reference", readingType: "recommended", notes: "Frank W. Baker" },
+            { id: "r_w4_immersive", title: "Game-Changing Generational Trends: Era of Immersive Sports", url: "https://www.prnewswire.com/news-releases/game-changing-generational-trends-and-shifts-in-tech-lead-to-the-era-of-immersive-sports-301863219.html", category: "Article", readingType: "recommended", notes: "PR Newswire" },
+            { id: "r_w4_videogames", title: "Video Games, NFL, Gamers, Gen Z", url: "https://www.nytimes.com/2022/01/12/sports/video-games-nfl-gamers-gen-z.html", category: "Article", readingType: "recommended", notes: "NYT 2022" },
+            // Week 5: Required Monday Fishbowl
+            { id: "r_w5_softball", title: "Is Softball Sexist?", url: "https://www.nytimes.com/2014/06/07/opinion/is-softball-sexist.html", category: "Article", readingType: "required", notes: "Fishbowl reading, Monday" },
+            { id: "r_w5_winter", title: "Why Some Winter Olympic Sports Are Faster, Higher, Stronger", url: "https://deadspin.com/why-some-winter-olympic-sports-are-faster-higher-str-1823153425/", category: "Article", readingType: "required", notes: "Fishbowl reading, Monday, gender angle" },
+            { id: "r_w5_ugly", title: "When the Beautiful Game Turns Ugly", url: "https://www.espn.com/espn/feature/story/_/id/9338962/when-beautiful-game-turns-ugly", category: "Article", readingType: "required", notes: "Fishbowl reading, Monday, racism in Italian soccer" },
+            // Week 5: Required Wednesday
+            { id: "r_w5_whiteman", title: "The White Man in That Photo", url: "https://www.filmsforaction.org/articles/the-white-man-in-that-photo/", category: "Article", readingType: "required", notes: "Very important" },
+            { id: "r_w5_ch11", title: "Communication and Sport, Chapter 11: Sports and Politics", url: "", category: "Book Chapter", readingType: "required", notes: "Billings, Butterworth, and Lewis" },
+            // Week 5: To be sorted
+            { id: "r_w5_gu", title: "Eileen Gu: Winter Olympics, China Controversy", url: "https://www.nytimes.com/athletic/7049798/2026/02/17/eileen-gu-winter-olympics-freestyle-skiing-china-controversy/", category: "Article", readingType: "recommended", notes: "The Athletic 2026" },
+            { id: "r_w5_handshake", title: "Sabalenka's Opponent Refuses to Shake Her Hand", url: "https://www.sportbible.com/tennis/aryna-sabalenka-elina-svitolina-handshake-australian-open-835064-20260129", category: "Article", readingType: "recommended", notes: "Svitolina/Ukraine, SportBible 2026" },
+            { id: "r_w5_trump_tennis", title: "Australian Open Star Refuses to Answer Trump Question", url: "https://www.sportbible.com/tennis/australian-open-donald-trump-question-learner-tien-890506-20260127", category: "Article", readingType: "recommended", notes: "Learner Tien, SportBible 2026" },
+            { id: "r_w5_skijump", title: "Ski Jump Penis Enhancement and WADA", url: "https://www.nytimes.com/athletic/7024688/2026/02/05/ski-jump-penis-enhancement-wada/", category: "Article", readingType: "recommended", notes: "The Athletic 2026" },
+            { id: "r_w5_norway", title: "Norway Women's Beach Handball Team Fined for Not Wearing Bikini Bottoms", url: "https://www.npr.org/2021/07/21/1018768633/a-womens-beach-handball-team-is-fined-for-not-wanting-to-wear-bikini-bottoms", category: "Article", readingType: "recommended", notes: "NPR 2021" },
+            { id: "r_w5_unitards", title: "German Gymnasts Wore Unitards at Tokyo Olympics", url: "https://www.bbc.com/sport/olympics/articles/cdj7dgvlj0no", category: "Article", readingType: "recommended", notes: "BBC" },
+            { id: "r_w5_semenya1", title: "Caster Semenya: Sex Eligibility Battle", url: "https://www.nbcnews.com/sports/track-field/caster-semenya-sex-eligibility-battle-confounded-sports-16-years-still-rcna218122", category: "Article", readingType: "recommended", notes: "NBC News" },
+            { id: "r_w5_semenya2", title: "Caster Semenya Swiss Court Testosterone Win", url: "https://frontofficesports.com/caster-semenya-swiss-court-testosterone-win/", category: "Article", readingType: "recommended", notes: "Front Office Sports" },
+            { id: "r_w5_throw", title: "Why Do Girls Throw Like a Girl?", url: "https://www.popsci.com/science/article/2012-09/fyi-do-men-and-women-throw-ball-differently/", category: "Article", readingType: "recommended", notes: "Popular Science" },
+            { id: "r_w5_coed", title: "Why Co-Ed Sports Leagues Are Never Really Co-Ed", url: "https://deadspin.com/why-co-ed-sports-leagues-are-never-really-co-ed-1827699592/", category: "Article", readingType: "recommended", notes: "Deadspin" },
+            { id: "r_w5_women_mlb", title: "Women in MLB Media: The Circus", url: "https://www.si.com/mlb/2016/03/23/women-mlb-baseball-players-media-circus-deitsch", category: "Article", readingType: "recommended", notes: "SI" },
+            { id: "r_w5_kaep", title: "Kaepernick's Anthem Protest", url: "https://www.nytimes.com/2016/08/31/sports/football/colin-kaepernicks-anthem-protest-underlines-union-of-sports-and-patriotism.html", category: "Article", readingType: "recommended", notes: "NYT" },
+            { id: "r_w5_military", title: "The Military and Sports Connection", url: "https://www.wbur.org/onlyagame/2018/07/20/military-sports-astore-francona", category: "Article", readingType: "recommended", notes: "WBUR, pairs with Kaepernick" },
+            { id: "r_w5_fans", title: "What Does Success Mean for Long-Suffering Sports Fans?", url: "https://www.scientificamerican.com/blog/mind-guest-blog/what-does-success-mean-for-long-suffering-sports-fans-an-identity-crisis-say-researchers/", category: "Article", readingType: "recommended", notes: "Scientific American" },
+            { id: "r_w5_cuban_anthem", title: "Mark Cuban, National Anthem, Mavericks", url: "https://www.sbnation.com/2021/2/10/22276282/mark-cuban-national-anthem-mavericks-sports", category: "Article", readingType: "recommended", notes: "SB Nation 2021" },
+            { id: "r_w5_nba_anthem", title: "NBA Orders National Anthem Be Played", url: "https://www.nbcnews.com/think/opinion/nba-orders-national-anthem-be-played-games-here-s-why-ncna1257563", category: "Article", readingType: "recommended", notes: "NBC News 2021" },
+            { id: "r_w5_stick", title: "What Does 'Stick to Sports' Even Mean Anymore?", url: "https://thecomeback.com/general/what-stick-sports-even-mean-anymore.html", category: "Article", readingType: "recommended", notes: "The Comeback" },
+          ];
+          // Merge with existing readings
+          const existingIds = new Set((d.readings || []).map(r => r.id));
+          const newReadings = R.filter(r => !existingIds.has(r.id));
+          d.readings = [...(d.readings || []), ...newReadings];
+          // Attach readings to schedule dates
+          const attachMap = {
+            "Apr 1": [ // Week 1 Wed
+              { readingId: "r_w1_klosterman", type: "required" },
+              { readingId: "r_w1_ncaa_props", type: "required" },
+              { readingId: "r_w1_coppins", type: "highly_recommended" },
+            ],
+            "Apr 8": [ // Week 2 Wed
+              { readingId: "r_w2_ch1", type: "required" },
+              { readingId: "r_w2_ch2", type: "required" },
+            ],
+            "Apr 15": [ // Week 3 Wed
+              { readingId: "r_w3_ch8", type: "required" },
+              { readingId: "r_w3_ch13", type: "required" },
+              { readingId: "r_w3_dunne", type: "required" },
+            ],
+            "Apr 20": [ // Week 4 Mon (Fishbowl)
+              { readingId: "r_w4_ch5", type: "required" },
+              { readingId: "r_w4_ch6", type: "required" },
+              { readingId: "r_w4_ch7", type: "required" },
+            ],
+            "Apr 27": [ // Week 5 Mon (Fishbowl - gender/race)
+              { readingId: "r_w5_softball", type: "required" },
+              { readingId: "r_w5_winter", type: "required" },
+              { readingId: "r_w5_ugly", type: "required" },
+            ],
+            "Apr 29": [ // Week 5 Wed
+              { readingId: "r_w5_whiteman", type: "required" },
+              { readingId: "r_w5_ch11", type: "required" },
+            ],
+          };
+          d.schedule = d.schedule.map(w => ({
+            ...w,
+            dates: w.dates.map(dt => {
+              const attach = attachMap[dt.date];
+              if (attach) {
+                const existing = dt.readings || [];
+                const newAttach = attach.filter(a => !existing.some(e => e.readingId === a.readingId));
+                return { ...dt, readings: [...existing, ...newAttach] };
+              }
+              return dt;
+            })
+          }));
+          d._readingsMigV1 = true;
           await saveData(d);
         }
         setData(d);
