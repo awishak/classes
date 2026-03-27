@@ -112,6 +112,7 @@ if (typeof document !== "undefined" && !document.getElementById("comm118-respons
     .schedule-days { grid-template-columns: 1fr !important; }
     @media (min-width: 700px) { .schedule-days { grid-template-columns: repeat(3, 1fr) !important; } }
     @media (min-width: 700px) { .schedule-days[data-cols="2"] { grid-template-columns: repeat(2, 1fr) !important; } }
+    @keyframes tickerPulse { 0% { transform: scale(1.15); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
   `;
   document.head.appendChild(style);
 }
@@ -173,7 +174,8 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
     { id: "classtools", label: "Headlines", admin: false, guest: false },
     { id: "answer", label: "Answer", admin: false, guest: false },
     { id: "accolades", label: "Accolades", admin: false, guest: false },
-    { id: "pti", label: "PTI", admin: true, guest: false },
+    { id: "survey", label: "Survey", admin: false, guest: false },
+    { id: "pti", label: "Around the Horn", admin: true, guest: false },
     { id: "activities", label: "Activities", admin: true, guest: false },
     { id: "roster", label: "Roster", admin: false, guest: false },
     { id: "admin", label: "Admin", admin: true, guest: false },
@@ -653,11 +655,36 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
   const [showAll, setShowAll] = useState(false);
   const [showExplain, setShowExplain] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+  const [flashIds, setFlashIds] = useState(new Set());
+  const prevLogLenRef = useRef(log.length);
   const shuffledStudents = shuffleTeams(students, log, teams);
   const visible = showAll ? ranked : ranked.slice(0, 10);
   const myRank = ranked.findIndex(s => s.name === userName);
   const meInVisible = myRank >= 0 && myRank < visible.length;
   const meData = myRank >= 0 ? ranked[myRank] : null;
+
+  // Today's transactions
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const todayLog = log.filter(e => e.ts >= todayStart.getTime()).sort((a, b) => b.ts - a.ts);
+
+  // Flash new entries for 5 seconds
+  useEffect(() => {
+    if (log.length > prevLogLenRef.current) {
+      const newEntries = log.slice(prevLogLenRef.current);
+      const newIds = new Set(newEntries.map(e => e.id));
+      setFlashIds(prev => new Set([...prev, ...newIds]));
+      const timer = setTimeout(() => {
+        setFlashIds(prev => {
+          const next = new Set(prev);
+          newIds.forEach(id => next.delete(id));
+          return next;
+        });
+      }, 5000);
+      prevLogLenRef.current = log.length;
+      return () => clearTimeout(timer);
+    }
+    prevLogLenRef.current = log.length;
+  }, [log.length]);
   const stars = data?.fishbowlStars || {};
   const starCounts = {};
   Object.values(stars).forEach(sid => { if (sid) starCounts[sid] = (starCounts[sid] || 0) + 1; });
@@ -804,18 +831,44 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
           <div style={{ ...sectionLabel, marginBottom: 8 }}>Class Leaderboard</div>
           <div style={{ ...crd, padding: "10px 14px" }}>
             <button onClick={() => setShowExplain(!showExplain)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, width: "100%", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 13, color: TEXT_SECONDARY }}>Earn points through the weekly game, This or That, PTI, and Rotating Fishbowl.</span>
+              <span style={{ fontSize: 13, color: TEXT_SECONDARY }}>Earn points through the weekly game, This or That, Around the Horn, and Rotating Fishbowl.</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" style={{ transform: showExplain ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0, marginLeft: 8 }}><path d="M6 9l6 6 6-6"/></svg>
             </button>
             {showExplain && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6", fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>
-                <p>The leaderboard tracks your game points. You earn them four ways: the weekly game (up to 100 pts), This or That (up to 20 pts), PTI culture points (awarded in class), and Rotating Fishbowl (up to 20 pts).</p>
+                <p>The leaderboard tracks your game points. You earn them four ways: the weekly game (up to 100 pts), This or That (up to 20 pts), Around the Horn culture points (awarded in class), and Rotating Fishbowl (up to 20 pts).</p>
                 <p style={{ marginTop: 8 }}>The top 5 on the leaderboard at the end of the quarter earn automatic A's in the class. That's real.</p>
                 <p style={{ marginTop: 8 }}>This is not your full grade. The leaderboard contributes to 25% of your grade (the participation bucket), but in different weights. The other 75% comes from your assignments. Check the Assignments tab for the full picture.</p>
               </div>
             )}
           </div>
         </div>
+
+        {/* Transaction ticker */}
+        {todayLog.length > 0 && (
+          <div style={{ ...crd, padding: "8px 14px", marginBottom: 12, maxHeight: 120, overflowY: "auto" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+              {todayLog.slice(0, 30).map(e => {
+                const s = students.find(x => x.id === e.studentId);
+                const firstName = s ? s.name.split(" ")[0] : "?";
+                const lastName = s ? s.name.split(" ").slice(-1)[0] : "";
+                const isFlash = flashIds.has(e.id);
+                return (
+                  <span key={e.id} style={{
+                    fontSize: 12, fontWeight: 600, padding: "3px 8px", borderRadius: 6,
+                    background: isFlash ? (e.amount >= 0 ? "#ecfdf5" : "#fef2f2") : "#f4f4f5",
+                    color: isFlash ? (e.amount >= 0 ? GREEN : RED) : TEXT_SECONDARY,
+                    transition: "all 0.5s",
+                    animation: isFlash ? "tickerPulse 0.5s ease-out" : "none",
+                  }}>
+                    {firstName} {lastName} {e.amount > 0 ? "+" : ""}{e.amount}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div style={{ fontSize: 13, fontWeight: 900, color: "#d4a017", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, paddingLeft: 2 }}>A Zone</div>
         {visible.map((s, i) => renderRow(s, i, s.name === userName, false))}
         {!meInVisible && meData && !showAll && (
@@ -954,7 +1007,7 @@ function AdminPanel({ data, setData }) {
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2500); };
 
   const undo = async () => { if (!data.log.length) return; const lastTs = data.log[data.log.length - 1].ts; const updated = { ...data, log: data.log.filter(e => e.ts !== lastTs) }; await saveData(updated); setData(updated); showMsg("Undone"); };
-  const resetAll = async () => { const updated = { ...data, log: [] }; await saveData(updated); setData(updated); showMsg("Reset"); };
+  const resetAll = async () => { const updated = { ...data, log: [], participation: {}, grades: {}, weeklyGames: {}, weeklyToT: {}, weeklyFishbowl: {}, fishbowlStars: {}, weeklyTeamWins: {}, todoChecks: {} }; await saveData(updated); setData(updated); showMsg("Everything reset"); };
   const addStudent = async () => { if (!newName.trim() || !newTeamId) return; const updated = { ...data, students: [...data.students, { id: genId(), name: newName.trim(), teamId: newTeamId }] }; await saveData(updated); setData(updated); setNewName(""); setNewTeamId(""); showMsg("Added"); };
   const removeStudent = async id => { const updated = { ...data, students: data.students.filter(s => s.id !== id), log: data.log.filter(e => e.studentId !== id) }; await saveData(updated); setData(updated); showMsg("Removed"); };
   const addTeam = async () => { if (!newTeamName.trim()) return; const updated = { ...data, teams: [...data.teams, { id: genId(), name: newTeamName.trim(), colorIdx: data.teams.length % TEAM_COLORS.length }] }; await saveData(updated); setData(updated); setNewTeamName(""); showMsg("Team added"); };
@@ -972,7 +1025,7 @@ function AdminPanel({ data, setData }) {
         ))}
         <div style={{ flex: 1 }} />
         <button onClick={undo} style={pillInactive}>Undo</button>
-        <button onClick={() => { if (window.confirm("Reset ALL points?")) resetAll(); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Reset</button>
+        <button onClick={() => { if (window.confirm("FULL RESET: This will zero out ALL points, participation, grades, game data, and to-do progress. Are you sure?")) resetAll(); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Full Reset</button>
       </div>
 
       {mode === "roster" && (
@@ -1075,7 +1128,7 @@ function PTIMode({ data, setData }) {
 
   const awardPTI = async (sid, amount) => {
     const student = data.students.find(s => s.id === sid);
-    const entry = { id: genId(), studentId: sid, amount, source: "PTI", ts: Date.now() };
+    const entry = { id: genId(), studentId: sid, amount, source: "Around the Horn", ts: Date.now() };
     const updated = { ...data, log: [...data.log, entry] };
     await saveData(updated); setData(updated);
     showMsg((amount > 0 ? "+" : "") + amount + " " + (student?.name?.split(" ")[0] || ""));
@@ -1085,13 +1138,13 @@ function PTIMode({ data, setData }) {
     <div style={{ padding: "20px 16px 40px", fontFamily: F }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <div style={{ ...sectionLabel, marginBottom: 12 }}>PTI</div>
+        <div style={{ ...sectionLabel, marginBottom: 12 }}>Around the Horn</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 8 }}>
           {[...data.students].sort(lastSortObj).map(s => {
             const team = data.teams.find(t => t.id === s.teamId);
             const tc = team ? TEAM_COLORS[team.colorIdx] : TEAM_COLORS[0];
             const pts = gp(data.log, s.id);
-            const ptiPts = data.log.filter(e => e.studentId === s.id && e.source === "PTI").reduce((sum, e) => sum + e.amount, 0);
+            const ptiPts = data.log.filter(e => e.studentId === s.id && (e.source === "Around the Horn" || e.source === "PTI")).reduce((sum, e) => sum + e.amount, 0);
             const rank = rankMap[s.id] || "-";
             const isOpen = popup === s.id;
             const initials = s.name.split(" ").map(n => n[0]).join("");
@@ -1104,7 +1157,7 @@ function PTIMode({ data, setData }) {
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, padding: "0 2px" }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: rank <= 5 ? "#d4a017" : "#d4d4d8" }}>#{rank}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: ptiPts > 0 ? GREEN : "#d4d4d8" }}>PTI: {ptiPts}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: ptiPts > 0 ? GREEN : "#d4d4d8" }}>ATH: {ptiPts}</span>
                   </div>
                   <div style={{ width: 36, height: 36, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px", fontSize: 12, fontWeight: 900, color: "#fff" }}>{initials}</div>
                   <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY, lineHeight: 1.2 }}>{s.name.split(" ")[0]}</div>
@@ -1990,6 +2043,277 @@ function ReadingsView({ data, setData, isAdmin }) {
   );
 }
 
+/* ─── SURVEY ─── */
+function SurveyView({ data, setData, isAdmin, userName }) {
+  const surveys = data.surveys || [];
+  const [creating, setCreating] = useState(false);
+  const [newQ, setNewQ] = useState("");
+  const [newType, setNewType] = useState("multiple_choice");
+  const [newOptions, setNewOptions] = useState(["", "", "", ""]);
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  const TYPES = [
+    { id: "multiple_choice", label: "Multiple Choice" },
+    { id: "number", label: "Number" },
+    { id: "true_false", label: "True or False" },
+    { id: "short_answer", label: "Short Answer" },
+    { id: "likert", label: "Likert Scale (1-5)" },
+  ];
+
+  const createSurvey = async () => {
+    if (!newQ.trim()) return;
+    const s = { id: genId(), question: newQ.trim(), type: newType, options: newType === "multiple_choice" ? newOptions.filter(o => o.trim()) : [], responses: [], active: true, showResults: false, ts: Date.now() };
+    const updated = { ...data, surveys: [...surveys, s] };
+    await saveData(updated); setData(updated);
+    setNewQ(""); setNewOptions(["", "", "", ""]); setCreating(false); showMsg("Survey created");
+  };
+
+  const respond = async (surveyId, answer) => {
+    const already = surveys.find(s => s.id === surveyId)?.responses?.find(r => r.user === userName);
+    if (already) return;
+    const updated = { ...data, surveys: surveys.map(s => s.id === surveyId ? { ...s, responses: [...(s.responses || []), { user: userName, answer, ts: Date.now() }] } : s) };
+    await saveData(updated); setData(updated); showMsg("Response recorded");
+  };
+
+  const toggleResults = async (surveyId) => {
+    const updated = { ...data, surveys: surveys.map(s => s.id === surveyId ? { ...s, showResults: !s.showResults } : s) };
+    await saveData(updated); setData(updated);
+  };
+
+  const closeSurvey = async (surveyId) => {
+    const updated = { ...data, surveys: surveys.map(s => s.id === surveyId ? { ...s, active: false } : s) };
+    await saveData(updated); setData(updated); showMsg("Survey closed");
+  };
+
+  const deleteSurvey = async (surveyId) => {
+    const updated = { ...data, surveys: surveys.filter(s => s.id !== surveyId) };
+    await saveData(updated); setData(updated); showMsg("Deleted");
+  };
+
+  const renderResults = (survey) => {
+    const responses = survey.responses || [];
+    if (responses.length === 0) return <div style={{ fontSize: 13, color: TEXT_MUTED, padding: "8px 0" }}>No responses yet</div>;
+
+    if (survey.type === "multiple_choice") {
+      const counts = {};
+      survey.options.forEach(o => { counts[o] = 0; });
+      responses.forEach(r => { counts[r.answer] = (counts[r.answer] || 0) + 1; });
+      const max = Math.max(...Object.values(counts), 1);
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {survey.options.map(o => (
+            <div key={o} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 13, color: TEXT_PRIMARY, width: 120, flexShrink: 0, fontWeight: 500 }}>{o}</span>
+              <div style={{ flex: 1, background: "#f4f4f5", borderRadius: 6, height: 24, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: (counts[o] / max * 100) + "%", background: ACCENT, borderRadius: 6, transition: "width 0.3s" }} />
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, width: 28, textAlign: "right" }}>{counts[o]}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (survey.type === "true_false") {
+      const t = responses.filter(r => r.answer === "True").length;
+      const f = responses.filter(r => r.answer === "False").length;
+      const total = t + f || 1;
+      return (
+        <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ flex: 1, ...crd, padding: 16, textAlign: "center" }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: GREEN }}>{Math.round(t / total * 100)}%</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4 }}>True ({t})</div>
+          </div>
+          <div style={{ flex: 1, ...crd, padding: 16, textAlign: "center" }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: RED }}>{Math.round(f / total * 100)}%</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4 }}>False ({f})</div>
+          </div>
+        </div>
+      );
+    }
+
+    if (survey.type === "likert") {
+      const counts = [0, 0, 0, 0, 0];
+      responses.forEach(r => { const v = parseInt(r.answer); if (v >= 1 && v <= 5) counts[v - 1]++; });
+      const max = Math.max(...counts, 1);
+      const labels = ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"];
+      const avg = responses.length > 0 ? (responses.reduce((s, r) => s + (parseInt(r.answer) || 0), 0) / responses.length).toFixed(1) : "0";
+      return (
+        <div>
+          <div style={{ textAlign: "center", marginBottom: 12 }}>
+            <span style={{ fontSize: 28, fontWeight: 800, color: ACCENT }}>{avg}</span>
+            <span style={{ fontSize: 14, color: TEXT_MUTED, marginLeft: 4 }}>/ 5 avg</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {labels.map((l, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 12, color: TEXT_SECONDARY, width: 36, textAlign: "center", flexShrink: 0, fontWeight: 700 }}>{i + 1}</span>
+                <div style={{ flex: 1, background: "#f4f4f5", borderRadius: 4, height: 20, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: (counts[i] / max * 100) + "%", background: ACCENT, borderRadius: 4, transition: "width 0.3s" }} />
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 600, color: TEXT_PRIMARY, width: 24, textAlign: "right" }}>{counts[i]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (survey.type === "number") {
+      const nums = responses.map(r => parseFloat(r.answer)).filter(n => !isNaN(n));
+      const avg = nums.length > 0 ? (nums.reduce((s, n) => s + n, 0) / nums.length).toFixed(1) : "0";
+      const min = nums.length > 0 ? Math.min(...nums) : 0;
+      const max = nums.length > 0 ? Math.max(...nums) : 0;
+      return (
+        <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ flex: 1, ...crd, padding: 12, textAlign: "center" }}><div style={{ fontSize: 22, fontWeight: 800, color: ACCENT }}>{avg}</div><div style={{ fontSize: 11, color: TEXT_MUTED }}>Average</div></div>
+          <div style={{ flex: 1, ...crd, padding: 12, textAlign: "center" }}><div style={{ fontSize: 22, fontWeight: 800, color: TEXT_PRIMARY }}>{min}</div><div style={{ fontSize: 11, color: TEXT_MUTED }}>Min</div></div>
+          <div style={{ flex: 1, ...crd, padding: 12, textAlign: "center" }}><div style={{ fontSize: 22, fontWeight: 800, color: TEXT_PRIMARY }}>{max}</div><div style={{ fontSize: 11, color: TEXT_MUTED }}>Max</div></div>
+        </div>
+      );
+    }
+
+    if (survey.type === "short_answer") {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {responses.map((r, i) => (
+            <div key={i} style={{ fontSize: 14, color: TEXT_PRIMARY, padding: "6px 10px", background: "#f4f4f5", borderRadius: 8, lineHeight: 1.4 }}>{r.answer}</div>
+          ))}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const activeSurveys = surveys.filter(s => s.active);
+  const closedSurveys = surveys.filter(s => !s.active);
+
+  return (
+    <div style={{ padding: "24px 20px 40px", fontFamily: F }}>
+      <Toast message={msg} />
+      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div style={{ ...sectionLabel }}>Survey</div>
+          {isAdmin && <button onClick={() => setCreating(!creating)} style={creating ? pillActive : pillInactive}>{creating ? "Cancel" : "+ New Survey"}</button>}
+        </div>
+
+        {/* Admin: create survey */}
+        {isAdmin && creating && (
+          <div style={{ ...crd, padding: 18, marginBottom: 20 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <textarea value={newQ} onChange={e => setNewQ(e.target.value)} placeholder="Question" rows={2} style={{ ...inp, resize: "vertical" }} />
+              <select value={newType} onChange={e => setNewType(e.target.value)} style={{ ...sel, width: "100%", fontSize: 14 }}>
+                {TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+              {newType === "multiple_choice" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {newOptions.map((o, i) => (
+                    <input key={i} value={o} onChange={e => { const u = [...newOptions]; u[i] = e.target.value; setNewOptions(u); }} placeholder={"Option " + (i + 1)} style={inp} />
+                  ))}
+                  <button onClick={() => setNewOptions([...newOptions, ""])} style={{ ...pillInactive, fontSize: 12 }}>+ Option</button>
+                </div>
+              )}
+              <button onClick={createSurvey} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "11px 0" }}>Create Survey</button>
+            </div>
+          </div>
+        )}
+
+        {/* Active surveys */}
+        {activeSurveys.length === 0 && !creating && <div style={{ ...crd, padding: 24, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No active surveys</div>}
+        {activeSurveys.map(survey => {
+          const hasResponded = survey.responses?.some(r => r.user === userName);
+          const respCount = (survey.responses || []).length;
+          return (
+            <div key={survey.id} style={{ ...crd, padding: 18, marginBottom: 12 }}>
+              <div style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.35, marginBottom: 10 }}>{survey.question}</div>
+              <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>{respCount} response{respCount !== 1 ? "s" : ""}</div>
+
+              {/* Student answer UI */}
+              {!isAdmin && !hasResponded && (
+                <div>
+                  {survey.type === "multiple_choice" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {survey.options.map(o => (
+                        <button key={o} onClick={() => respond(survey.id, o)} style={{ ...crd, padding: "12px 16px", cursor: "pointer", textAlign: "left", fontSize: 15, fontWeight: 500, color: TEXT_PRIMARY, border: "1px solid " + BORDER }}>{o}</button>
+                      ))}
+                    </div>
+                  )}
+                  {survey.type === "true_false" && (
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => respond(survey.id, "True")} style={{ ...pill, background: "#ecfdf5", color: GREEN, flex: 1, padding: "14px 0", fontSize: 16, fontWeight: 700 }}>True</button>
+                      <button onClick={() => respond(survey.id, "False")} style={{ ...pill, background: "#fef2f2", color: RED, flex: 1, padding: "14px 0", fontSize: 16, fontWeight: 700 }}>False</button>
+                    </div>
+                  )}
+                  {survey.type === "likert" && (
+                    <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                      {[1, 2, 3, 4, 5].map(n => (
+                        <button key={n} onClick={() => respond(survey.id, String(n))} style={{ ...crd, width: 52, height: 52, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 18, fontWeight: 700, color: TEXT_PRIMARY, border: "1px solid " + BORDER }}>{n}</button>
+                      ))}
+                    </div>
+                  )}
+                  {survey.type === "number" && (
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input id={"num-" + survey.id} type="number" placeholder="Enter a number" style={{ ...inp, flex: 1 }} />
+                      <button onClick={() => { const el = document.getElementById("num-" + survey.id); if (el?.value) { respond(survey.id, el.value); el.value = ""; } }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Submit</button>
+                    </div>
+                  )}
+                  {survey.type === "short_answer" && (
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input id={"sa-" + survey.id} placeholder="Your answer" style={{ ...inp, flex: 1 }} />
+                      <button onClick={() => { const el = document.getElementById("sa-" + survey.id); if (el?.value?.trim()) { respond(survey.id, el.value.trim()); el.value = ""; } }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Submit</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!isAdmin && hasResponded && !survey.showResults && (
+                <div style={{ fontSize: 14, color: GREEN, fontWeight: 600 }}>Response recorded. Waiting for results.</div>
+              )}
+
+              {/* Results */}
+              {(survey.showResults || isAdmin) && (
+                <div style={{ marginTop: isAdmin && !hasResponded ? 0 : 8 }}>
+                  {isAdmin && !survey.showResults && <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 6, fontStyle: "italic" }}>Results hidden from students</div>}
+                  {renderResults(survey)}
+                </div>
+              )}
+
+              {/* Admin controls */}
+              {isAdmin && (
+                <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+                  <button onClick={() => toggleResults(survey.id)} style={survey.showResults ? pillActive : pillInactive}>{survey.showResults ? "Hide Results" : "Show Results"}</button>
+                  <button onClick={() => closeSurvey(survey.id)} style={pillInactive}>Close</button>
+                  <button onClick={() => { if (window.confirm("Delete?")) deleteSurvey(survey.id); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Closed surveys (admin only) */}
+        {isAdmin && closedSurveys.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            <div style={{ ...sectionLabel, marginBottom: 10 }}>Closed Surveys</div>
+            {closedSurveys.map(survey => (
+              <div key={survey.id} style={{ ...crd, padding: 14, marginBottom: 8, opacity: 0.7 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{survey.question}</div>
+                    <div style={{ fontSize: 12, color: TEXT_MUTED }}>{(survey.responses || []).length} responses</div>
+                  </div>
+                  <button onClick={() => { if (window.confirm("Delete?")) deleteSurvey(survey.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── CLASS TOOLS: HEADLINE EXERCISE ─── */
 const DEFAULT_HEADLINE_CATS = [
   "Gambling / betting", "Unreal performances", "Record-breaking / milestones",
@@ -2804,6 +3128,7 @@ export default function Comm118() {
         if (d && !d.todoChecks) { d.todoChecks = {}; await saveData(d); }
         if (d && !d.readings) { d.readings = []; await saveData(d); }
         if (d && !d.headlines) { d.headlines = { categories: [], items: [], sessions: [] }; await saveData(d); }
+        if (d && !d.surveys) { d.surveys = []; await saveData(d); }
         if (d && !d.customTodos) { d.customTodos = []; await saveData(d); }
         // Migration: add interview assignment and fix weights if needed
         if (d && d.assignments && !d.assignments.find(a => a.id === "interview")) {
@@ -3100,6 +3425,7 @@ export default function Comm118() {
       {view === "grades" && isAdmin && !studentView && <Gradebook data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
       {view === "pti" && isAdmin && !studentView && <PTIMode data={data} setData={setData} />}
       {view === "activities" && isAdmin && !studentView && <GameAdmin data={data} setData={setData} />}
+      {view === "survey" && !isGuest && <SurveyView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
       {view === "roster" && !isGuest && <RosterCombined data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
       {view === "answer" && !isGuest && <StudentAnswerView data={data} setData={setData} userName={userName} />}
       {view === "accolades" && !isGuest && <Accolades data={data} />}
