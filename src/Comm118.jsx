@@ -163,7 +163,7 @@ function shuffleTeams(students, log, teams) {
 function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#18181b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 14, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
 
 /* ─── NAV ─── */
-function Nav({ view, setView, isAdmin, isGuest, userName, onLogout }) {
+function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView }) {
   const tabs = [
     { id: "leaderboard", label: "Leaderboard", admin: false, guest: true },
     { id: "todo", label: "To-Do", admin: false, guest: false },
@@ -187,21 +187,29 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout }) {
     return true;
   });
   return (
-    <div style={{ background: ACCENT, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, position: "sticky", top: 0, zIndex: 50 }}>
+    <div style={{ background: studentView ? "#334155" : ACCENT, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, position: "sticky", top: 0, zIndex: 50 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", fontFamily: F, letterSpacing: "-0.01em" }}>Comm and Sport</div>
+        {studentView && <span style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.05em" }}>Student View</span>}
       </div>
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
         {visibleTabs.map(t => (
           <button key={t.id} onClick={() => setView(t.id)} style={view === t.id
-            ? { ...pill, background: "#fff", color: ACCENT, fontWeight: 700, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
+            ? { ...pill, background: "#fff", color: studentView ? "#334155" : ACCENT, fontWeight: 700, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
             : { ...pill, background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.85)" }
           }>{t.label}</button>
         ))}
         <a href="https://camino.instructure.com/courses/117721" target="_blank" rel="noopener noreferrer" style={{ ...pill, background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
           Camino <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
         </a>
-        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginLeft: 8 }}>{userName}</span>
+        {setStudentView && (
+          <button onClick={() => setStudentView(!studentView)} style={{
+            padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+            fontFamily: F, border: studentView ? "1px solid #fbbf24" : "1px solid rgba(255,255,255,0.2)",
+            background: studentView ? "#fbbf24" : "transparent", color: studentView ? "#18181b" : "rgba(255,255,255,0.6)", transition: "all 0.15s",
+          }}>{studentView ? "Exit Student View" : "Student View"}</button>
+        )}
+        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginLeft: 4 }}>{userName}</span>
         <button onClick={onLogout} style={{
           padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
           fontFamily: F, border: "1px solid rgba(255,255,255,0.2)",
@@ -532,13 +540,13 @@ function ScheduleView({ data, setData, isAdmin }) {
                   return (
                     <div key={di} onClick={() => isAdmin && !isEdit && setEditCell({ w: wi, d: realDi })} style={{
                       padding: "14px 16px", borderRadius: 14, minHeight: 60,
-                      background: isHoliday ? "#fef7f0" : "#fff",
-                      border: isFri && !isHoliday ? "2px solid #c4b5fd" : "1px solid " + BORDER,
+                      background: isHoliday ? "#f4f4f5" : "#fff",
+                      border: isFri ? "2px solid #c4b5fd" : "1px solid " + BORDER,
                       cursor: isAdmin && !isEdit ? "pointer" : "default",
                       boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
                     }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: isHoliday ? "#c2410c" : isFri ? PURPLE : TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>{d.day}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: isHoliday ? TEXT_MUTED : isFri ? PURPLE : TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>{d.day}</span>
                         <span style={{ fontSize: 12, fontWeight: 500, color: TEXT_MUTED }}>{d.date}</span>
                       </div>
 
@@ -546,11 +554,11 @@ function ScheduleView({ data, setData, isAdmin }) {
                         <ScheduleCardEditor d={d} wi={wi} realDi={realDi} data={data} setData={setData} updateDate={updateDate} removeDate={removeDate} onDone={() => setEditCell(null)} />
                       ) : (
                         <div>
-                          {isHoliday ? (
-                            <div style={{ fontSize: 15, fontWeight: 600, color: "#c2410c" }}>{d.notes || "No class"}</div>
-                          ) : (
+                          {d.topic && <div style={{ fontSize: 15, color: isHoliday ? TEXT_SECONDARY : TEXT_PRIMARY, lineHeight: 1.45, fontWeight: 400 }}>{d.topic}</div>}
+                          {isHoliday && <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: d.topic ? 4 : 0 }}>{d.notes || "No class"}</div>}
+                          {!isHoliday && (
                             <>
-                              <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, fontWeight: 400 }}>{d.topic || <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}>—</span>}</div>
+                              {!d.topic && <div style={{ fontSize: 15, color: TEXT_MUTED, fontStyle: "italic" }}>—</div>}
                               {(d.activities || []).length > 0 && (
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
                                   {(d.activities || []).map((act, ai) => (
@@ -2729,6 +2737,8 @@ export default function Comm118() {
   const isAdmin = userName === ADMIN_NAME;
   const isGuest = userName === GUEST_NAME;
   const displayName = isGuest ? "Guest" : userName;
+  const [studentView, setStudentView] = useState(false);
+  const effectiveAdmin = isAdmin && !studentView;
 
   const refresh = useCallback(async () => { try { const d = await loadData(); if (d) setData(d); } catch(e) { console.error(e); } }, []);
   useEffect(() => {
@@ -3015,25 +3025,25 @@ export default function Comm118() {
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F, fontSize: 15 }}>
-      <Nav view={view} setView={setView} isAdmin={isAdmin} isGuest={isGuest} userName={displayName} onLogout={() => setUserName(null)} />
-      {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={isAdmin} />}
-      {view === "todo" && !isGuest && <ToDoView data={data} setData={setData} userName={userName} isAdmin={isAdmin} />}
-      {view === "leaderboard" && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={isAdmin} userName={userName} data={data} />}
+      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={displayName} onLogout={() => setUserName(null)} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} />
+      {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
+      {view === "todo" && !isGuest && <ToDoView data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
+      {view === "leaderboard" && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={userName} data={data} />}
       {view === "teams" && !isGuest && <TeamsView teams={data.teams} students={data.students} log={data.log} data={data} />}
       {view === "roster" && !isGuest && <RosterView data={data} setData={setData} userName={userName} />}
-      {view === "assignments" && !isGuest && <AssignmentsView data={data} setData={setData} isAdmin={isAdmin} userName={userName} setView={setView} />}
-      {view === "readings" && !isGuest && <ReadingsView data={data} setData={setData} isAdmin={isAdmin} />}
-      {view === "classtools" && !isGuest && <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />}
-      {view === "grades" && isAdmin && <Gradebook data={data} setData={setData} userName={userName} isAdmin={isAdmin} />}
-      {view === "builder" && isAdmin && <TeamBuilder data={data} setData={setData} />}
-      {view === "pti" && isAdmin && <PTIMode data={data} setData={setData} />}
-      {view === "gameadmin" && isAdmin && <GameAdmin data={data} setData={setData} />}
-      {view === "fishbowl" && isAdmin && <GameAdmin data={data} setData={setData} />}
+      {view === "assignments" && !isGuest && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} setView={setView} />}
+      {view === "readings" && !isGuest && <ReadingsView data={data} setData={setData} isAdmin={effectiveAdmin} />}
+      {view === "classtools" && !isGuest && <ClassTools data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
+      {view === "grades" && isAdmin && !studentView && <Gradebook data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
+      {view === "builder" && isAdmin && !studentView && <TeamBuilder data={data} setData={setData} />}
+      {view === "pti" && isAdmin && !studentView && <PTIMode data={data} setData={setData} />}
+      {view === "gameadmin" && isAdmin && !studentView && <GameAdmin data={data} setData={setData} />}
+      {view === "fishbowl" && isAdmin && !studentView && <GameAdmin data={data} setData={setData} />}
       {view === "answer" && !isGuest && <StudentAnswerView data={data} setData={setData} userName={userName} />}
       {view === "accolades" && !isGuest && <Accolades data={data} />}
-      {view === "admin" && isAdmin && <AdminPanel data={data} setData={setData} />}
+      {view === "admin" && isAdmin && !studentView && <AdminPanel data={data} setData={setData} />}
       {isGuest && view !== "leaderboard" && view !== "schedule" && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={false} userName={userName} data={data} />}
-      {(view === "builder" || view === "admin" || view === "gameadmin" || view === "fishbowl" || view === "pti") && !isAdmin && !isGuest && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={isAdmin} userName={userName} data={data} />}
+      {(view === "builder" || view === "admin" || view === "gameadmin" || view === "fishbowl" || view === "pti") && !isAdmin && !isGuest && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={userName} data={data} />}
     </div>
   );
 }
