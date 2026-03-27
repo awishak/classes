@@ -1806,25 +1806,130 @@ function ReadingsView({ data, setData, isAdmin }) {
                   return (
                     <div key={cat || "__none"} style={{ marginBottom: 16 }}>
                       {cat && <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{cat}</div>}
-                      {catReadings.map(r => (
-                        <div key={r.id} style={{ ...crd, padding: 12, marginBottom: 4 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => setEditId(r.id)}>
-                            <span style={{ fontSize: 10, fontWeight: 700, color: typeColor(r.readingType), textTransform: "uppercase", width: 36, flexShrink: 0 }}>{typeShort(r.readingType)}</span>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                {(r.pdfUrl || r.url) ? (
-                                  <a href={r.pdfUrl || r.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 14, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{r.title}</a>
-                                ) : (
-                                  <span style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY }}>{r.title}</span>
+                      {catReadings.map(r => {
+                        const isEdit = editId === r.id;
+                        // Find which dates this reading is attached to
+                        const attachedDates = [];
+                        schedule.forEach(w => {
+                          (w.dates || []).forEach(d => {
+                            (d.readings || []).forEach(dr => {
+                              if (dr.readingId === r.id) attachedDates.push({ week: w.week, date: d.date, day: d.day, type: dr.type });
+                            });
+                          });
+                        });
+                        // Build all available dates for attaching
+                        const allDates = [];
+                        schedule.forEach(w => {
+                          (w.dates || []).forEach(d => {
+                            if (!d.holiday) allDates.push({ week: w.week, label: w.label, date: d.date, day: d.day });
+                          });
+                        });
+
+                        return (
+                          <div key={r.id} style={{ ...crd, padding: 12, marginBottom: 4 }}>
+                            {isEdit ? (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                <input value={r.title} onChange={e => updateReading(r.id, "title", e.target.value)} style={{ ...inp, fontSize: 14, padding: "6px 10px" }} />
+                                <input value={r.url || ""} onChange={e => updateReading(r.id, "url", e.target.value)} placeholder="URL" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
+                                <div style={{ display: "flex", gap: 6 }}>
+                                  <input value={r.category || ""} onChange={e => updateReading(r.id, "category", e.target.value)} placeholder="Category" list="cat-list" style={{ ...inp, fontSize: 13, padding: "6px 10px", flex: 1 }} />
+                                  <select value={r.readingType || "recommended"} onChange={e => updateReading(r.id, "readingType", e.target.value)} style={{ ...sel, fontSize: 13, padding: "6px 10px" }}>
+                                    <option value="fishbowl">Fishbowl</option>
+                                    <option value="required">Required</option>
+                                    <option value="recommended">Recommended</option>
+                                    <option value="additional">Additional</option>
+                                  </select>
+                                </div>
+                                <textarea value={r.notes || ""} onChange={e => updateReading(r.id, "notes", e.target.value)} placeholder="Notes" rows={2} style={{ ...inp, fontSize: 13, padding: "6px 10px", resize: "vertical" }} />
+                                {/* Attached dates */}
+                                {attachedDates.length > 0 && (
+                                  <div style={{ padding: "8px 10px", background: "#f4f4f5", borderRadius: 8 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Attached to</div>
+                                    {attachedDates.map((ad, adi) => (
+                                      <div key={adi} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "3px 0" }}>
+                                        <span style={{ color: TEXT_PRIMARY }}>Week {ad.week} / {ad.day} {ad.date}</span>
+                                        <span style={{ fontSize: 10, fontWeight: 700, color: typeColor(ad.type) }}>{typeShort(ad.type)}</span>
+                                        <button onClick={async () => {
+                                          const newSchedule = schedule.map(w => ({
+                                            ...w, dates: w.dates.map(d => d.date === ad.date ? { ...d, readings: (d.readings || []).filter(dr => dr.readingId !== r.id) } : d)
+                                          }));
+                                          const updated = { ...data, schedule: newSchedule };
+                                          await saveData(updated); setData(updated);
+                                        }} style={{ background: "none", border: "none", cursor: "pointer", color: RED, fontSize: 11, fontWeight: 600 }}>Remove</button>
+                                      </div>
+                                    ))}
+                                  </div>
                                 )}
-                                {r.pdfUrl && <span style={{ fontSize: 9, fontWeight: 700, color: RED, background: "#fef2f2", padding: "1px 5px", borderRadius: 4 }}>PDF</span>}
+                                {/* Attach to date */}
+                                <div style={{ display: "flex", gap: 6 }}>
+                                  <select id={"attach-date-" + r.id} style={{ ...sel, flex: 1, fontSize: 13, padding: "6px 10px" }}>
+                                    <option value="">Attach to date...</option>
+                                    {allDates.filter(ad => !attachedDates.some(x => x.date === ad.date)).map(ad => (
+                                      <option key={ad.date} value={ad.date}>Wk {ad.week} {ad.day} {ad.date}</option>
+                                    ))}
+                                  </select>
+                                  <select id={"attach-type-" + r.id} style={{ ...sel, fontSize: 13, padding: "6px 10px", width: 130 }}>
+                                    <option value="fishbowl">Fishbowl</option>
+                                    <option value="required">Required</option>
+                                    <option value="recommended">Recommended</option>
+                                    <option value="additional">Additional</option>
+                                  </select>
+                                  <button onClick={async () => {
+                                    const dateEl = document.getElementById("attach-date-" + r.id);
+                                    const typeEl = document.getElementById("attach-type-" + r.id);
+                                    if (!dateEl?.value) return;
+                                    const newSchedule = schedule.map(w => ({
+                                      ...w, dates: w.dates.map(d => {
+                                        if (d.date !== dateEl.value) return d;
+                                        const existing = d.readings || [];
+                                        if (existing.some(dr => dr.readingId === r.id)) return d;
+                                        return { ...d, readings: [...existing, { readingId: r.id, type: typeEl.value }] };
+                                      })
+                                    }));
+                                    const updated = { ...data, schedule: newSchedule };
+                                    await saveData(updated); setData(updated);
+                                    dateEl.value = "";
+                                  }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Attach</button>
+                                </div>
+                                {!r.pdfUrl && (
+                                  <label style={{ ...pillInactive, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "8px 0", cursor: "pointer", fontSize: 12 }}>
+                                    {uploading ? "Uploading..." : "Upload PDF"}
+                                    <input type="file" accept=".pdf" onChange={e => { if (e.target.files?.[0]) handlePdfUpload(e.target.files[0], r.id); e.target.value = ""; }} style={{ display: "none" }} disabled={uploading} />
+                                  </label>
+                                )}
+                                {r.pdfUrl && (
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", background: "#f0fdf4", borderRadius: 6 }}>
+                                    <span style={{ fontSize: 11, color: GREEN, fontWeight: 600, flex: 1 }}>PDF attached</span>
+                                    <a href={r.pdfUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#2563eb" }}>View</a>
+                                    <button onClick={() => updateReading(r.id, "pdfUrl", "")} style={{ background: "none", border: "none", cursor: "pointer", color: RED, fontSize: 11, fontWeight: 600 }}>Remove</button>
+                                  </div>
+                                )}
+                                <div style={{ display: "flex", gap: 6 }}>
+                                  <button onClick={() => setEditId(null)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Done</button>
+                                  <button onClick={() => { if (window.confirm("Delete this reading?")) { deleteReading(r.id); setEditId(null); } }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
+                                </div>
                               </div>
-                              {r.notes && <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>{r.notes}</div>}
-                            </div>
-                            <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0 }}>Edit</span>
+                            ) : (
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => setEditId(r.id)}>
+                                <span style={{ fontSize: 10, fontWeight: 700, color: typeColor(r.readingType), textTransform: "uppercase", width: 36, flexShrink: 0 }}>{typeShort(r.readingType)}</span>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    {(r.pdfUrl || r.url) ? (
+                                      <a href={r.pdfUrl || r.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 14, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{r.title}</a>
+                                    ) : (
+                                      <span style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY }}>{r.title}</span>
+                                    )}
+                                    {r.pdfUrl && <span style={{ fontSize: 9, fontWeight: 700, color: RED, background: "#fef2f2", padding: "1px 5px", borderRadius: 4 }}>PDF</span>}
+                                  </div>
+                                  {r.notes && <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>{r.notes}</div>}
+                                  {attachedDates.length > 0 && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>Wk {attachedDates.map(a => a.week).filter((v,i,a) => a.indexOf(v) === i).join(", ")}</div>}
+                                </div>
+                                <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0 }}>Edit</span>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   );
                 })}
@@ -2719,7 +2824,7 @@ export default function Comm118() {
           await saveData(d);
         }
         // Migration: add readings repository and attach to schedule
-        if (d && !d._readingsMigV1) {
+        if (d && !d._readingsMigV2) {
           const R = [
             // Week 1: Required
             { id: "r_w1_klosterman", title: "Are You Not Entertained?", url: "https://grantland.com/features/chuck-klosterman-gregg-popovich-entertainment-sports/", category: "Article", readingType: "required", notes: "Klosterman on Popovich, entertainment vs winning" },
@@ -2884,7 +2989,7 @@ export default function Comm118() {
               return dt;
             })
           }));
-          d._readingsMigV1 = true;
+          d._readingsMigV2 = true;
           await saveData(d);
         }
         setData(d);
