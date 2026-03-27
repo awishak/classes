@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Comm118 from "./Comm118.jsx";
 
-const F = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+const F = "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif";
 
 const CLASSES = [
   {
@@ -10,27 +10,27 @@ const CLASSES = [
     name: "Communication and Sport",
     code: "COMM 118",
     quarter: "Spring 2026",
-    desc: "Sports touch everything. Follow the money, the media, the identity, and the community.",
+    desc: "MWF 8:00 to 9:05 am / Vari 134",
     color: "#9f1239",
     ready: true,
   },
   {
-    id: "public-speaking",
-    path: "/public-speaking",
+    id: "comm2",
+    path: "/comm2",
     name: "Public Speaking",
-    code: "COMM 20",
+    code: "COMM 2",
     quarter: "Spring 2026",
-    desc: "Do the reps. 15 deliverables. Find your voice.",
+    desc: "MWF 9:15 to 10:20 am / Vari 128",
     color: "#2563eb",
     ready: false,
   },
   {
-    id: "comm-research",
-    path: "/comm-research",
+    id: "comm4",
+    path: "/comm4",
     name: "Approaches to Communication Research",
-    code: "COMM 110",
+    code: "COMM 4",
     quarter: "Spring 2026",
-    desc: "How do we study communication? Methods, frameworks, and practice.",
+    desc: "MWF 11:45 am to 12:50 pm / Vari 134",
     color: "#059669",
     ready: false,
   },
@@ -38,10 +38,10 @@ const CLASSES = [
 
 function LandingPage() {
   return (
-    <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: F }}>
-      <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", padding: "48px 24px 52px", textAlign: "center" }}>
+    <div style={{ minHeight: "100vh", background: "#f7f7f8", fontFamily: F }}>
+      <div style={{ background: "#9f1239", padding: "48px 24px 52px", textAlign: "center" }}>
         <div style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.4)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>Santa Clara University</div>
-        <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", letterSpacing: "-0.02em" }}>Andrew Ishak</div>
+        <div style={{ fontSize: 32, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>Andrew Ishak</div>
         <div style={{ fontSize: 15, color: "rgba(255,255,255,0.5)", marginTop: 6 }}>Department of Communication</div>
       </div>
 
@@ -52,48 +52,48 @@ function LandingPage() {
               {c.ready ? (
                 <a href={c.path} style={{
                   display: "block", textDecoration: "none", color: "inherit",
-                  background: "#fff", borderRadius: 16, border: "1px solid #f3f4f6",
+                  background: "#fff", borderRadius: 16, border: "1px solid #e8e8ec",
                   overflow: "hidden", transition: "box-shadow 0.15s, border-color 0.15s",
-                  cursor: "pointer",
+                  cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                 }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.06)"; e.currentTarget.style.borderColor = "#e5e7eb"; }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "#f3f4f6"; }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.06)"; e.currentTarget.style.borderColor = "#d4d4d8"; }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)"; e.currentTarget.style.borderColor = "#e8e8ec"; }}
                 >
                   <div style={{ padding: "18px 20px", display: "flex", alignItems: "center", gap: 14 }}>
                     <div style={{
                       width: 48, height: 48, borderRadius: 14, background: c.color,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 16, fontWeight: 900, color: "#fff", flexShrink: 0,
+                      fontSize: 16, fontWeight: 800, color: "#fff", flexShrink: 0,
                     }}>
                       {c.code.split(" ")[1]}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{c.name}</div>
-                      <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{c.code} / {c.quarter}</div>
-                      <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4, lineHeight: 1.4 }}>{c.desc}</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: "#18181b" }}>{c.name}</div>
+                      <div style={{ fontSize: 12, color: "#a1a1aa", marginTop: 2 }}>{c.code} / {c.quarter}</div>
+                      <div style={{ fontSize: 13, color: "#52525b", marginTop: 4, lineHeight: 1.4 }}>{c.desc}</div>
                     </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" style={{ flexShrink: 0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2" style={{ flexShrink: 0 }}>
                       <path d="M9 18l6-6-6-6"/>
                     </svg>
                   </div>
                 </a>
               ) : (
                 <div style={{
-                  background: "#fff", borderRadius: 16, border: "1px solid #f3f4f6",
-                  overflow: "hidden", cursor: "default",
+                  background: "#fff", borderRadius: 16, border: "1px solid #e8e8ec",
+                  overflow: "hidden", cursor: "default", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                 }}>
                   <div style={{ padding: "18px 20px", display: "flex", alignItems: "center", gap: 14 }}>
                     <div style={{
-                      width: 48, height: 48, borderRadius: 14, background: "#e5e7eb",
+                      width: 48, height: 48, borderRadius: 14, background: "#e4e4e7",
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 16, fontWeight: 900, color: "#9ca3af", flexShrink: 0,
+                      fontSize: 16, fontWeight: 800, color: "#a1a1aa", flexShrink: 0,
                     }}>
                       {c.code.split(" ")[1]}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: "#9ca3af" }}>{c.name}</div>
-                      <div style={{ fontSize: 12, color: "#d1d5db", marginTop: 2 }}>{c.code} / {c.quarter}</div>
-                      <div style={{ fontSize: 12, color: "#d1d5db", marginTop: 4, fontStyle: "italic" }}>Coming soon</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: "#a1a1aa" }}>{c.name}</div>
+                      <div style={{ fontSize: 12, color: "#d4d4d8", marginTop: 2 }}>{c.code} / {c.quarter}</div>
+                      <div style={{ fontSize: 12, color: "#d4d4d8", marginTop: 4, fontStyle: "italic" }}>Coming soon</div>
                     </div>
                   </div>
                 </div>
@@ -102,7 +102,7 @@ function LandingPage() {
           ))}
         </div>
 
-        <div style={{ textAlign: "center", marginTop: 32, fontSize: 11, color: "#9ca3af" }}>
+        <div style={{ textAlign: "center", marginTop: 32, fontSize: 11, color: "#a1a1aa" }}>
           aishak@scu.edu
         </div>
       </div>
