@@ -615,6 +615,32 @@ function ScheduleView({ data, setData, isAdmin }) {
                               {isAdmin && d.adminNotes && <div style={{ fontSize: 12, color: AMBER, marginTop: 6, padding: "6px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fef3c7", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.adminNotes}</div>}
                             </>
                           )}
+                          {isHoliday && hasReadings && (
+                                <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER, display: "flex", flexDirection: "column", gap: 4 }}>
+                                  {(d.readings || []).filter(r => r.type === "fishbowl" || r.type === "required" || r.type === "recommended").map((r, ri) => {
+                                    const rdg = (data.readings || []).find(x => x.id === r.readingId);
+                                    if (!rdg) return null;
+                                    const link = rdg.pdfUrl || rdg.url;
+                                    const tColor = r.type === "fishbowl" ? "#7c3aed" : r.type === "required" ? "#b45309" : GREEN;
+                                    const tLabel = r.type === "fishbowl" ? "Fish" : r.type === "required" ? "Req" : "Rec";
+                                    const isFish = r.type === "fishbowl";
+                                    const isReq = r.type === "required";
+                                    return (
+                                      <div key={ri} style={{ display: "flex", alignItems: "flex-start", gap: 6, background: isReq ? "#fffbeb" : "transparent", padding: isReq ? "4px 8px" : "2px 0", borderRadius: isReq ? 6 : 0, margin: isReq ? "0 -8px" : 0 }}>
+                                        <span style={{ fontSize: 11, fontWeight: 700, color: tColor, textTransform: "uppercase", marginTop: 2, flexShrink: 0, width: 30 }}>{tLabel}</span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          {link ? (
+                                            <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500, lineHeight: 1.35 }}>{isFish ? "\uD83D\uDC1F " : ""}{rdg.title}</a>
+                                          ) : (
+                                            <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500, lineHeight: 1.35 }}>{isFish ? "\uD83D\uDC1F " : ""}{rdg.title}</span>
+                                          )}
+                                          {rdg.pdfUrl && <span style={{ fontSize: 9, fontWeight: 700, color: RED, background: "#fef2f2", padding: "1px 4px", borderRadius: 3, marginLeft: 4 }}>PDF</span>}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                          )}
                           {isHoliday && d.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.notes}</div>}
                           {isHoliday && isAdmin && d.adminNotes && <div style={{ fontSize: 12, color: AMBER, marginTop: 6, padding: "6px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fef3c7", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.adminNotes}</div>}
                         </div>
