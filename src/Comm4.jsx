@@ -44,7 +44,7 @@ const DEFAULT_SCHEDULE = [
   { week: 1, label: "What Do You Know?", theme: "Introduction to Research", question: "How do we know what we know?", dates: [
     { date: "Mar 30", day: "Mon", topic: "Introduction. In-class survey activity.", assignment: "", notes: "" },
     { date: "Apr 1", day: "Wed", topic: "What is research? How do we know what we know?", assignment: "", notes: "" },
-    { date: "Apr 3", day: "Fri", topic: "Conduct your own mini-studies", assignment: "Mini-studies due Tue Apr 7", notes: "ASYNC", fri: true },
+    { date: "Apr 3", day: "Fri", topic: "Conduct your own mini-studies", assignment: "", notes: "ASYNC", fri: true },
   ]},
   { week: 2, label: "Epistemology", theme: "Practices & Foundations", question: "What is truth?", dates: [
     { date: "Apr 6", day: "Mon", topic: "Epistemology, what is truth", assignment: "", notes: "Read: Chapter 1" },
@@ -59,12 +59,12 @@ const DEFAULT_SCHEDULE = [
   { week: 4, label: "Finding Research", theme: "Library & APA Style", question: "How do you find and evaluate research?", dates: [
     { date: "Apr 20", day: "Mon", topic: "Library workshop. Finding and evaluating articles.", assignment: "", notes: "" },
     { date: "Apr 22", day: "Wed", topic: "Exploring different types of articles. APA style.", assignment: "", notes: "", activities: ["Game"] },
-    { date: "Apr 24", day: "Fri", topic: "", assignment: "Group Project #1 (Idea Generation) due 11:59pm", notes: "ASYNC", fri: true },
+    { date: "Apr 24", day: "Fri", topic: "", assignment: "Group Project #1: Idea Generation due", notes: "ASYNC", fri: true },
   ]},
   { week: 5, label: "Critical Methods", theme: "Rhetorical Analysis", question: "How do we analyze messages and meaning?", dates: [
     { date: "Apr 27", day: "Mon", topic: "How to read a critical/rhetorical article", assignment: "", notes: "Read: Chapter 6 (part 1)" },
     { date: "Apr 29", day: "Wed", topic: "Discuss: Neugarten, Ted Lasso article", assignment: "", notes: "", activities: ["Game"] },
-    { date: "May 1", day: "Fri", topic: "Workshop / activity", assignment: "Group Project #2 (References) due 11:59pm", notes: "IN PERSON" },
+    { date: "May 1", day: "Fri", topic: "Workshop / activity", assignment: "Group Project #2: References due", notes: "IN PERSON" },
   ]},
   { week: 6, label: "Connecting", theme: "Methods & Synthesis", question: "How do different methods connect?", dates: [
     { date: "May 4", day: "Mon", topic: "Research synthesis, argument building, triangulation", assignment: "", notes: "Read: Boylorn article" },
@@ -79,7 +79,7 @@ const DEFAULT_SCHEDULE = [
   { week: 8, label: "Ethics", theme: "Ethics in Research", question: "What are our responsibilities as researchers?", dates: [
     { date: "May 18", day: "Mon", topic: "Ethics, studying humans", assignment: "", notes: "Read: Chapter 3" },
     { date: "May 20", day: "Wed", topic: "APA style and plagiarism", assignment: "", notes: "", activities: ["Game"] },
-    { date: "May 22", day: "Fri", topic: "", assignment: "Group Project #3 (Article Synthesis) due 11:59pm", notes: "ASYNC. Long weekend, no Friday assignment.", fri: true },
+    { date: "May 22", day: "Fri", topic: "", assignment: "Group Project #3: Article Synthesis due", notes: "ASYNC. Long weekend, no Friday assignment.", fri: true },
   ]},
   { week: 9, label: "Communicating", theme: "About Research", question: "How do you present findings?", dates: [
     { date: "May 25", day: "Mon", topic: "", assignment: "", notes: "MEMORIAL DAY", holiday: true },
@@ -92,7 +92,7 @@ const DEFAULT_SCHEDULE = [
     { date: "Jun 5", day: "Fri", topic: "Final presentations or wrap-up", assignment: "", notes: "IN PERSON" },
   ]},
   { week: 11, label: "Finals", theme: "", question: "", dates: [
-    { date: "Jun 8+", day: "Finals", topic: "Peer Evaluations and Final Reflection due", assignment: "Peer Evaluations due / Final Reflection due", notes: "" },
+    { date: "Jun 8+", day: "Finals", topic: "Peer Evaluations and Final Reflection due", assignment: "Peer Evaluation due, Final Reflection due", notes: "" },
   ]},
 ];
 
@@ -3162,6 +3162,19 @@ export default function Comm4() {
         if (d && !d.headlines) { d.headlines = { categories: [], items: [], sessions: [] }; await saveData(d); }
         if (d && !d.surveys) { d.surveys = []; await saveData(d); }
         if (d && !d.customTodos) { d.customTodos = []; await saveData(d); }
+        // Generate PINs
+        if (d && !d.pins) {
+          const pins = {};
+          d.students.forEach(s => {
+            if (s.name === ADMIN_NAME) {
+              pins[s.id] = "118711";
+            } else {
+              pins[s.id] = String(Math.floor(100000 + Math.random() * 900000));
+            }
+          });
+          d.pins = pins;
+          await saveData(d);
+        }
         setData(d);
       } catch(e) { console.error("Storage load failed:", e); setData(null); }
       setLoading(false);
