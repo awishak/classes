@@ -373,7 +373,8 @@ function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDa
             <select value={r.type} onChange={e => {
               const upd = [...(d.readings || [])]; upd[ri] = { ...upd[ri], type: e.target.value };
               updateDate(wi, realDi, "readings", upd);
-            }} style={{ fontSize: 11, border: "none", background: "transparent", color: r.type === "required" ? RED : r.type === "additional" ? TEXT_MUTED : GREEN, fontWeight: 700, cursor: "pointer" }}>
+            }} style={{ fontSize: 11, border: "none", background: "transparent", color: r.type === "fishbowl" ? "#7c3aed" : r.type === "required" ? "#b45309" : r.type === "additional" ? TEXT_MUTED : GREEN, fontWeight: 700, cursor: "pointer" }}>
+              <option value="fishbowl">Fishbowl</option>
               <option value="required">Required</option>
               <option value="recommended">Recommended</option>
               <option value="additional">Additional</option>
@@ -560,20 +561,21 @@ function ScheduleView({ data, setData, isAdmin }) {
                               {d.assignment && <div style={{ fontSize: 13, color: "#c2410c", marginTop: 6, fontWeight: 600 }}>{d.assignment}</div>}
                               {hasReadings && (
                                 <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER, display: "flex", flexDirection: "column", gap: 4 }}>
-                                  {(d.readings || []).filter(r => r.type === "required" || r.type === "recommended").map((r, ri) => {
+                                  {(d.readings || []).filter(r => r.type === "fishbowl" || r.type === "required" || r.type === "recommended").map((r, ri) => {
                                     const rdg = (data.readings || []).find(x => x.id === r.readingId);
                                     if (!rdg) return null;
                                     const link = rdg.pdfUrl || rdg.url;
-                                    const tColor = r.type === "required" ? RED : GREEN;
-                                    const tLabel = r.type === "required" ? "Req" : "Rec";
+                                    const tColor = r.type === "fishbowl" ? "#7c3aed" : r.type === "required" ? "#b45309" : GREEN;
+                                    const tLabel = r.type === "fishbowl" ? "Fish" : r.type === "required" ? "Req" : "Rec";
+                                    const isFish = r.type === "fishbowl";
                                     return (
                                       <div key={ri} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-                                        <span style={{ fontSize: 11, fontWeight: 700, color: tColor, textTransform: "uppercase", marginTop: 2, flexShrink: 0, width: 28 }}>{tLabel}</span>
+                                        <span style={{ fontSize: 11, fontWeight: 700, color: tColor, textTransform: "uppercase", marginTop: 2, flexShrink: 0, width: 30 }}>{tLabel}</span>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                           {link ? (
-                                            <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500, lineHeight: 1.35 }}>{rdg.title}</a>
+                                            <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500, lineHeight: 1.35 }}>{isFish ? "\uD83D\uDC1F " : ""}{rdg.title}</a>
                                           ) : (
-                                            <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500, lineHeight: 1.35 }}>{rdg.title}</span>
+                                            <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500, lineHeight: 1.35 }}>{isFish ? "\uD83D\uDC1F " : ""}{rdg.title}</span>
                                           )}
                                           {rdg.pdfUrl && <span style={{ fontSize: 9, fontWeight: 700, color: RED, background: "#fef2f2", padding: "1px 4px", borderRadius: 3, marginLeft: 4 }}>PDF</span>}
                                         </div>
@@ -1566,9 +1568,9 @@ function ReadingsView({ data, setData, isAdmin }) {
 
   const categories = [...new Set(readings.map(r => r.category).filter(Boolean))].sort();
 
-  const typeColor = (t) => t === "required" ? RED : t === "additional" ? TEXT_MUTED : GREEN;
-  const typeLabel = (t) => t === "required" ? "Required" : t === "additional" ? "Additional" : "Recommended";
-  const typeShort = (t) => t === "required" ? "Req" : t === "additional" ? "Add" : "Rec";
+  const typeColor = (t) => t === "fishbowl" ? "#7c3aed" : t === "required" ? "#b45309" : t === "additional" ? TEXT_MUTED : GREEN;
+  const typeLabel = (t) => t === "fishbowl" ? "Fishbowl" : t === "required" ? "Required" : t === "additional" ? "Additional" : "Recommended";
+  const typeShort = (t) => t === "fishbowl" ? "Fish" : t === "required" ? "Req" : t === "additional" ? "Add" : "Rec";
 
   const addReading = async () => {
     if (!newReading.title.trim()) return;
@@ -1663,6 +1665,7 @@ function ReadingsView({ data, setData, isAdmin }) {
                 <input value={newReading.category} onChange={e => setNewReading({ ...newReading, category: e.target.value })} placeholder="Category" list="cat-list" style={{ ...inp, flex: 1 }} />
                 <datalist id="cat-list">{categories.map(c => <option key={c} value={c} />)}</datalist>
                 <select value={newReading.readingType} onChange={e => setNewReading({ ...newReading, readingType: e.target.value })} style={{ ...sel, width: 150, fontSize: 14 }}>
+                  <option value="fishbowl">Fishbowl</option>
                   <option value="required">Required</option>
                   <option value="recommended">Recommended</option>
                   <option value="additional">Additional</option>
@@ -1684,26 +1687,31 @@ function ReadingsView({ data, setData, isAdmin }) {
         {/* Week-by-week readings */}
         {weekReadings.length === 0 && <div style={{ ...crd, padding: 24, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No readings added yet.</div>}
         {weekReadings.map(w => {
+          const fishbowl = w.items.filter(i => i.type === "fishbowl");
           const required = w.items.filter(i => i.type === "required");
           const recommended = w.items.filter(i => i.type === "recommended");
           const additional = w.items.filter(i => i.type === "additional" || i.type === "highly_recommended");
 
-          const renderItem = (item, i) => {
+          const renderItem = (item, i, sectionType) => {
             const link = getReadingLink(item);
             const isEdit = editId === item.id;
+            const isFish = sectionType === "fishbowl";
+            const isReq = sectionType === "required";
             return (
-              <div key={item.id + "-" + i} style={{ padding: "10px 0", borderTop: i > 0 ? "1px solid " + BORDER : "none" }}>
+              <div key={item.id + "-" + i} style={{ padding: "10px 12px", borderTop: i > 0 ? "1px solid " + BORDER : "none", background: isReq ? "#fffbeb" : "transparent", borderRadius: isReq && i === 0 ? "8px 8px 0 0" : isReq ? 0 : 0, marginLeft: -12, marginRight: -12, paddingLeft: 12, paddingRight: 12 }}>
                 {isAdmin && isEdit ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     <input value={item.title} onChange={e => updateReading(item.id, "title", e.target.value)} style={{ ...inp, fontSize: 14, padding: "6px 10px" }} />
                     <input value={item.url || ""} onChange={e => updateReading(item.id, "url", e.target.value)} placeholder="URL" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
                     <div style={{ display: "flex", gap: 6 }}>
                       <select value={item.type} onChange={e => updateScheduleReadingType(item.date, item.id, e.target.value)} style={{ ...sel, fontSize: 13, padding: "6px 10px" }}>
+                        <option value="fishbowl">Fishbowl</option>
                         <option value="required">Required</option>
                         <option value="recommended">Recommended</option>
                         <option value="additional">Additional</option>
                       </select>
                       <select value={item.readingType || "recommended"} onChange={e => updateReading(item.id, "readingType", e.target.value)} style={{ ...sel, fontSize: 13, padding: "6px 10px" }}>
+                        <option value="fishbowl">Repo: Fishbowl</option>
                         <option value="required">Repo: Required</option>
                         <option value="recommended">Repo: Recommended</option>
                         <option value="additional">Repo: Additional</option>
@@ -1725,9 +1733,9 @@ function ReadingsView({ data, setData, isAdmin }) {
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: isAdmin ? "pointer" : "default" }} onClick={() => isAdmin && setEditId(item.id)}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       {link ? (
-                        <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 15, color: "#2563eb", textDecoration: "none", fontWeight: 500, lineHeight: 1.4, display: "block" }}>{item.title}</a>
+                        <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 15, color: "#2563eb", textDecoration: "none", fontWeight: 500, lineHeight: 1.4, display: "block" }}>{isFish ? "\uD83D\uDC1F " : ""}{item.title}</a>
                       ) : (
-                        <span style={{ fontSize: 15, color: TEXT_PRIMARY, fontWeight: 500, lineHeight: 1.4, display: "block" }}>{item.title}</span>
+                        <span style={{ fontSize: 15, color: TEXT_PRIMARY, fontWeight: 500, lineHeight: 1.4, display: "block" }}>{isFish ? "\uD83D\uDC1F " : ""}{item.title}</span>
                       )}
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
                         {item.category && <span style={{ fontSize: 12, color: TEXT_MUTED }}>{item.category}</span>}
@@ -1753,24 +1761,31 @@ function ReadingsView({ data, setData, isAdmin }) {
                 </div>
               </div>
 
+              {fishbowl.length > 0 && (
+                <div style={{ marginBottom: (required.length > 0 || recommended.length > 0 || additional.length > 0) ? 16 : 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Fishbowl</div>
+                  {fishbowl.map((item, i) => renderItem(item, i, "fishbowl"))}
+                </div>
+              )}
+
               {required.length > 0 && (
-                <div style={{ marginBottom: required.length > 0 && (recommended.length > 0 || additional.length > 0) ? 16 : 0 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: RED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Required</div>
-                  {required.map((item, i) => renderItem(item, i))}
+                <div style={{ marginBottom: (recommended.length > 0 || additional.length > 0) ? 16 : 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#b45309", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Required</div>
+                  {required.map((item, i) => renderItem(item, i, "required"))}
                 </div>
               )}
 
               {recommended.length > 0 && (
-                <div style={{ marginBottom: recommended.length > 0 && additional.length > 0 ? 16 : 0 }}>
+                <div style={{ marginBottom: additional.length > 0 ? 16 : 0 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: GREEN, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Recommended</div>
-                  {recommended.map((item, i) => renderItem(item, i))}
+                  {recommended.map((item, i) => renderItem(item, i, "recommended"))}
                 </div>
               )}
 
               {additional.length > 0 && (
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Additional</div>
-                  {additional.map((item, i) => renderItem(item, i))}
+                  {additional.map((item, i) => renderItem(item, i, "additional"))}
                 </div>
               )}
             </div>
@@ -2731,9 +2746,9 @@ export default function Comm118() {
             { id: "r_w3_ch13", title: "Communication and Sport, Chapter 13: Commercialism in Sport", url: "", category: "Book Chapter", readingType: "required", notes: "Billings, Butterworth, and Lewis" },
             { id: "r_w3_dunne", title: "Olivia 'Livvy' Dunne, LSU Gymnastics, NCAA, NIL", url: "https://www.espn.com/college-sports/story/_/id/43938472/olivia-livvy-dunne-lsu-gymnastics-ncaa-nil", category: "Article", readingType: "required", notes: "ESPN" },
             // Week 4: Fishbowl readings
-            { id: "r_w4_ch5", title: "Communication and Sport, Chapter 5: Legacy Media Interactions", url: "", category: "Book Chapter", readingType: "required", notes: "Fishbowl reading" },
-            { id: "r_w4_ch6", title: "Communication and Sport, Chapter 6: Social and User-Generated Media Interactions", url: "", category: "Book Chapter", readingType: "required", notes: "Fishbowl reading" },
-            { id: "r_w4_ch7", title: "Communication and Sport, Chapter 7: Sport and Mythology", url: "", category: "Book Chapter", readingType: "required", notes: "Fishbowl reading" },
+            { id: "r_w4_ch5", title: "Communication and Sport, Chapter 5: Legacy Media Interactions", url: "", category: "Book Chapter", readingType: "fishbowl", notes: "Fishbowl reading" },
+            { id: "r_w4_ch6", title: "Communication and Sport, Chapter 6: Social and User-Generated Media Interactions", url: "", category: "Book Chapter", readingType: "fishbowl", notes: "Fishbowl reading" },
+            { id: "r_w4_ch7", title: "Communication and Sport, Chapter 7: Sport and Mythology", url: "", category: "Book Chapter", readingType: "fishbowl", notes: "Fishbowl reading" },
             // Week 4: To be sorted
             { id: "r_w4_cfb_sba", title: "College Football Schedule and the Sports Broadcasting Act", url: "https://www.nytimes.com/athletic/6360298/2025/05/16/college-football-schedule-sports-broadcasting-act/", category: "Article", readingType: "recommended", notes: "The Athletic 2025" },
             { id: "r_w4_pitaro", title: "Jimmy Pitaro, ESPN Streaming App Launch", url: "https://www.nytimes.com/athletic/6560777/2025/08/19/jimmy-pitaro-espn-streaming-app-launch-netflix/", category: "Article", readingType: "recommended", notes: "The Athletic 2025" },
@@ -2752,9 +2767,9 @@ export default function Comm118() {
             { id: "r_w4_immersive", title: "Game-Changing Generational Trends: Era of Immersive Sports", url: "https://www.prnewswire.com/news-releases/game-changing-generational-trends-and-shifts-in-tech-lead-to-the-era-of-immersive-sports-301863219.html", category: "Article", readingType: "recommended", notes: "PR Newswire" },
             { id: "r_w4_videogames", title: "Video Games, NFL, Gamers, Gen Z", url: "https://www.nytimes.com/2022/01/12/sports/video-games-nfl-gamers-gen-z.html", category: "Article", readingType: "recommended", notes: "NYT 2022" },
             // Week 5: Required Monday Fishbowl
-            { id: "r_w5_softball", title: "Is Softball Sexist?", url: "https://www.nytimes.com/2014/06/07/opinion/is-softball-sexist.html", category: "Article", readingType: "required", notes: "Fishbowl reading, Monday" },
-            { id: "r_w5_winter", title: "Why Some Winter Olympic Sports Are Faster, Higher, Stronger", url: "https://deadspin.com/why-some-winter-olympic-sports-are-faster-higher-str-1823153425/", category: "Article", readingType: "required", notes: "Fishbowl reading, Monday, gender angle" },
-            { id: "r_w5_ugly", title: "When the Beautiful Game Turns Ugly", url: "https://www.espn.com/espn/feature/story/_/id/9338962/when-beautiful-game-turns-ugly", category: "Article", readingType: "required", notes: "Fishbowl reading, Monday, racism in Italian soccer" },
+            { id: "r_w5_softball", title: "Is Softball Sexist?", url: "https://www.nytimes.com/2014/06/07/opinion/is-softball-sexist.html", category: "Article", readingType: "fishbowl", notes: "Fishbowl reading, Monday" },
+            { id: "r_w5_winter", title: "Why Some Winter Olympic Sports Are Faster, Higher, Stronger", url: "https://deadspin.com/why-some-winter-olympic-sports-are-faster-higher-str-1823153425/", category: "Article", readingType: "fishbowl", notes: "Fishbowl reading, Monday, gender angle" },
+            { id: "r_w5_ugly", title: "When the Beautiful Game Turns Ugly", url: "https://www.espn.com/espn/feature/story/_/id/9338962/when-beautiful-game-turns-ugly", category: "Article", readingType: "fishbowl", notes: "Fishbowl reading, Monday, racism in Italian soccer" },
             // Week 5: Required Wednesday
             { id: "r_w5_whiteman", title: "The White Man in That Photo", url: "https://www.filmsforaction.org/articles/the-white-man-in-that-photo/", category: "Article", readingType: "required", notes: "Very important" },
             { id: "r_w5_ch11", title: "Communication and Sport, Chapter 11: Sports and Politics", url: "", category: "Book Chapter", readingType: "required", notes: "Billings, Butterworth, and Lewis" },
@@ -2808,9 +2823,9 @@ export default function Comm118() {
               { readingId: "r_w3_dunne", type: "required" },
             ],
             "Apr 20": [ // Week 4 Mon (Fishbowl)
-              { readingId: "r_w4_ch5", type: "required" },
-              { readingId: "r_w4_ch6", type: "required" },
-              { readingId: "r_w4_ch7", type: "required" },
+              { readingId: "r_w4_ch5", type: "fishbowl" },
+              { readingId: "r_w4_ch6", type: "fishbowl" },
+              { readingId: "r_w4_ch7", type: "fishbowl" },
             ],
             "Apr 22": [ // Week 4 Wed (recommended media articles)
               { readingId: "r_w4_cfb_sba", type: "recommended" },
@@ -2831,9 +2846,9 @@ export default function Comm118() {
               { readingId: "r_w4_videogames", type: "recommended" },
             ],
             "Apr 27": [ // Week 5 Mon (Fishbowl - gender/race)
-              { readingId: "r_w5_softball", type: "required" },
-              { readingId: "r_w5_winter", type: "required" },
-              { readingId: "r_w5_ugly", type: "required" },
+              { readingId: "r_w5_softball", type: "fishbowl" },
+              { readingId: "r_w5_winter", type: "fishbowl" },
+              { readingId: "r_w5_ugly", type: "fishbowl" },
               { readingId: "r_w5_norway", type: "recommended" },
               { readingId: "r_w5_unitards", type: "recommended" },
               { readingId: "r_w5_semenya1", type: "recommended" },
