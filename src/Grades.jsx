@@ -24,8 +24,7 @@ export const DEFAULT_ASSIGNMENTS = [
 ];
 
 export const QUIZ_BREAKDOWN = [
-  { id: "on_topic", label: "On Topic", count: 3, gamePts: 10, gradePts: 13 },
-  { id: "reading", label: "From Reading", count: 3, gamePts: 10, gradePts: 17 },
+  { id: "on_topic", label: "On Topic", count: 6, gamePts: 10, gradePts: 15 },
   { id: "sports_world", label: "Sports World", count: 4, gamePts: 10, gradePts: 2.5 },
 ];
 
@@ -129,7 +128,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
             Here's how your grade works. There are four major assignments worth 75% of your grade, and a participation bucket worth the other 25%. The participation bucket is where the weekly game, This or That, PTI, and Rotating Fishbowl all live.
           </div>
           <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, marginTop: 10 }}>
-            The game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. The weekly game is the biggest example: the game weights all question types equally, but your grade weights On Topic and From Reading questions much more heavily than Sports World questions. So if you want to climb the leaderboard, be good at everything. If you want a good grade, make sure you're doing the reading.
+            The game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. The weekly game is the biggest example: the game weights all question types equally (10 pts each), but your grade weights On Topic questions much more heavily (15 pts each) than Sports World questions (2.5 pts each). So if you want to climb the leaderboard, be good at everything. If you want a good grade, focus on the course material.
           </div>
           <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, marginTop: 10 }}>
             The top 5 on the leaderboard at the end of the quarter get automatic A's. That's real. Everything else, just do the work, show up, and engage.
@@ -354,7 +353,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     for (let w = 1; w <= 10; w++) {
       const val = getParticipation(sid, w, "quiz");
       if (val === undefined || val === null || val === "") continue;
-      const scores = typeof val === "object" ? val : { on_topic: 0, reading: 0, sports_world: 0 };
+      const scores = typeof val === "object" ? val : { on_topic: 0, sports_world: 0 };
       let weekGame = 0, weekGrade = 0;
       QUIZ_BREAKDOWN.forEach(q => {
         const correct = scores[q.id] || 0;
@@ -469,7 +468,6 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                   <tr style={{ borderBottom: "1px solid #f3f4f6" }}>
                     <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>Wk</th>
                     <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>On Topic</th>
-                    <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>Reading</th>
                     <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>Sports W.</th>
                     <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>ToT</th>
                     <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>PTI</th>
@@ -484,8 +482,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                     return (
                       <tr key={w} style={{ borderBottom: "1px solid #f9fafb" }}>
                         <td style={{ padding: "4px", fontWeight: 900, color: "#111827" }}>{w}</td>
-                        <td style={{ padding: "4px" }}><input type="number" min="0" max="3" value={quizScores.on_topic ?? ""} onChange={e => { const v = { ...quizScores, on_topic: parseInt(e.target.value) || 0 }; updateParticipation(sid, w, "quiz", v); }} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
-                        <td style={{ padding: "4px" }}><input type="number" min="0" max="3" value={quizScores.reading ?? ""} onChange={e => { const v = { ...quizScores, reading: parseInt(e.target.value) || 0 }; updateParticipation(sid, w, "quiz", v); }} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
+                        <td style={{ padding: "4px" }}><input type="number" min="0" max="6" value={quizScores.on_topic ?? ""} onChange={e => { const v = { ...quizScores, on_topic: parseInt(e.target.value) || 0 }; updateParticipation(sid, w, "quiz", v); }} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
                         <td style={{ padding: "4px" }}><input type="number" min="0" max="4" value={quizScores.sports_world ?? ""} onChange={e => { const v = { ...quizScores, sports_world: parseInt(e.target.value) || 0 }; updateParticipation(sid, w, "quiz", v); }} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
                         <td style={{ padding: "4px" }}><input type="number" value={getParticipation(sid, w, "tot") ?? ""} onChange={e => updateParticipation(sid, w, "tot", e.target.value)} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
                         <td style={{ padding: "4px" }}><input type="number" value={getParticipation(sid, w, "pti") ?? ""} onChange={e => updateParticipation(sid, w, "pti", e.target.value)} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>

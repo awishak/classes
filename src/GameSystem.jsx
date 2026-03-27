@@ -15,10 +15,9 @@ const sel = { ...inp, width: "auto" };
 
 const GAME_CATS = [
   { id: "on_topic", label: "On Topic" },
-  { id: "reading", label: "From Reading" },
   { id: "sports_world", label: "Sports World" },
 ];
-const GAME_GRADE_PTS = { on_topic: 13, reading: 17, sports_world: 2.5 };
+const GAME_GRADE_PTS = { on_topic: 15, sports_world: 2.5 };
 const GAME_PTS = 10;
 const OPT_COLORS = [
   { bg: "#dc2626", light: "#fef2f2" },
@@ -55,7 +54,7 @@ function shuffleTeams(students, log, teams) {
 function emptyGame() {
   return Array.from({ length: 10 }).map((_, i) => ({
     text: "", options: ["", "", "", ""], correct: 0,
-    category: i < 3 ? "on_topic" : i < 6 ? "reading" : "sports_world",
+    category: i < 6 ? "on_topic" : "sports_world",
   }));
 }
 

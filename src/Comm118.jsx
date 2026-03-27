@@ -168,17 +168,14 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
     { id: "leaderboard", label: "Leaderboard", admin: false, guest: true },
     { id: "todo", label: "To-Do", admin: false, guest: false },
     { id: "schedule", label: "Schedule", admin: false, guest: true },
-    { id: "teams", label: "Teams", admin: false, guest: false },
-    { id: "roster", label: "Roster", admin: false, guest: false },
     { id: "assignments", label: "Assignments", admin: false, guest: false },
     { id: "readings", label: "Readings", admin: false, guest: false },
-    { id: "classtools", label: "Class Tools", admin: false, guest: false },
-    { id: "pti", label: "PTI", admin: true, guest: false },
-    { id: "gameadmin", label: "Game Setup", admin: true, guest: false },
-    { id: "fishbowl", label: "Fishbowl", admin: true, guest: false },
+    { id: "classtools", label: "Headlines", admin: false, guest: false },
     { id: "answer", label: "Answer", admin: false, guest: false },
     { id: "accolades", label: "Accolades", admin: false, guest: false },
-    { id: "builder", label: "Draft", admin: true, guest: false },
+    { id: "pti", label: "PTI", admin: true, guest: false },
+    { id: "activities", label: "Activities", admin: true, guest: false },
+    { id: "roster", label: "Roster", admin: false, guest: false },
     { id: "admin", label: "Admin", admin: true, guest: false },
   ];
   const visibleTabs = tabs.filter(t => {
@@ -435,7 +432,10 @@ function ScheduleView({ data, setData, isAdmin }) {
     await saveData(updated); setData(updated);
   };
   const addDate = async (weekIdx) => {
-    const updated = { ...data, schedule: data.schedule.map((w, wi) => wi === weekIdx ? { ...w, dates: [...w.dates, { date: "TBD", day: "", topic: "", assignment: "", notes: "" }] } : w) };
+    const w = data.schedule[weekIdx];
+    const existingDays = (w?.dates || []).map(d => d.day);
+    const defaultDay = !existingDays.includes("Mon") ? "Mon" : !existingDays.includes("Wed") ? "Wed" : !existingDays.includes("Fri") ? "Fri" : "Fri";
+    const updated = { ...data, schedule: data.schedule.map((w, wi) => wi === weekIdx ? { ...w, dates: [...w.dates, { date: "TBD", day: defaultDay, topic: "", assignment: "", notes: "" }] } : w) };
     await saveData(updated); setData(updated); showMsg("Added");
   };
   const removeDate = async (weekIdx, dateIdx) => {
@@ -540,13 +540,13 @@ function ScheduleView({ data, setData, isAdmin }) {
                   return (
                     <div key={di} onClick={() => isAdmin && !isEdit && setEditCell({ w: wi, d: realDi })} style={{
                       padding: "14px 16px", borderRadius: 14, minHeight: 60,
-                      background: isHoliday ? "#f4f4f5" : "#fff",
+                      background: "#fff",
                       border: isFri ? "2px solid #c4b5fd" : "1px solid " + BORDER,
                       cursor: isAdmin && !isEdit ? "pointer" : "default",
                       boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
                     }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: isHoliday ? TEXT_MUTED : isFri ? PURPLE : TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>{d.day}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: isFri ? PURPLE : TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>{d.day}</span>
                         <span style={{ fontSize: 12, fontWeight: 500, color: TEXT_MUTED }}>{d.date}</span>
                       </div>
 
@@ -554,11 +554,11 @@ function ScheduleView({ data, setData, isAdmin }) {
                         <ScheduleCardEditor d={d} wi={wi} realDi={realDi} data={data} setData={setData} updateDate={updateDate} removeDate={removeDate} onDone={() => setEditCell(null)} />
                       ) : (
                         <div>
-                          {d.topic && <div style={{ fontSize: 15, color: isHoliday ? TEXT_SECONDARY : TEXT_PRIMARY, lineHeight: 1.45, fontWeight: 400 }}>{d.topic}</div>}
-                          {isHoliday && <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: d.topic ? 4 : 0 }}>{d.notes || "No class"}</div>}
+                          {isHoliday && <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, color: "#dc2626", background: "#fef2f2", padding: "3px 8px", borderRadius: 6, marginBottom: d.topic ? 6 : 0 }}>No in-person class</div>}
+                          {d.topic && <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, fontWeight: 400 }}>{d.topic}</div>}
+                          {!isHoliday && !d.topic && <div style={{ fontSize: 15, color: TEXT_MUTED, fontStyle: "italic" }}>—</div>}
                           {!isHoliday && (
                             <>
-                              {!d.topic && <div style={{ fontSize: 15, color: TEXT_MUTED, fontStyle: "italic" }}>—</div>}
                               {(d.activities || []).length > 0 && (
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
                                   {(d.activities || []).map((act, ai) => (
@@ -597,6 +597,8 @@ function ScheduleView({ data, setData, isAdmin }) {
                               {isAdmin && d.adminNotes && <div style={{ fontSize: 12, color: AMBER, marginTop: 6, padding: "6px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fef3c7", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.adminNotes}</div>}
                             </>
                           )}
+                          {isHoliday && d.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.notes}</div>}
+                          {isHoliday && isAdmin && d.adminNotes && <div style={{ fontSize: 12, color: AMBER, marginTop: 6, padding: "6px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fef3c7", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.adminNotes}</div>}
                         </div>
                       )}
                     </div>
@@ -1453,6 +1455,22 @@ function RosterView({ data, setData, userName }) {
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+function RosterCombined({ data, setData, userName, isAdmin }) {
+  const [sub, setSub] = useState("roster");
+  return (
+    <div style={{ fontFamily: F }}>
+      <div style={{ display: "flex", gap: 6, padding: "16px 20px 0", justifyContent: "center" }}>
+        <button onClick={() => setSub("roster")} style={sub === "roster" ? pillActive : pillInactive}>Roster</button>
+        <button onClick={() => setSub("teams")} style={sub === "teams" ? pillActive : pillInactive}>Teams</button>
+        {isAdmin && <button onClick={() => setSub("draft")} style={sub === "draft" ? pillActive : pillInactive}>Draft</button>}
+      </div>
+      {sub === "roster" && <RosterView data={data} setData={setData} userName={userName} />}
+      {sub === "teams" && <TeamsView teams={data.teams} students={data.students} log={data.log} data={data} />}
+      {sub === "draft" && isAdmin && <TeamBuilder data={data} setData={setData} />}
     </div>
   );
 }
@@ -2790,12 +2808,12 @@ export default function Comm118() {
             "Apr 17": { assignment: "Interview Assignment due" },
             "Apr 20": { activities: ["This or That", "Fishbowl", "Headlines"], assignment: "" },
             "Apr 22": { activities: ["Game"] },
-            "Apr 24": { assignment: "Web of Connections Proposal due" },
+            "Apr 24": { assignment: "Intersections Proposal due" },
             "Apr 27": { activities: ["This or That", "Fishbowl", "Headlines"] },
             "Apr 29": { activities: ["Game"] },
             "May 4": { activities: ["This or That", "Fishbowl", "Headlines"] },
             "May 6": { activities: ["Game"], assignment: "", notes: "" },
-            "May 8": { assignment: "Web of Connections Submission due" },
+            "May 8": { assignment: "Intersections Submission due" },
             "May 11": { activities: ["This or That", "Fishbowl", "Headlines"] },
             "May 13": { activities: ["Game"] },
             "May 18": { activities: ["This or That", "Fishbowl", "Headlines"] },
@@ -3003,6 +3021,32 @@ export default function Comm118() {
           d._readingsMigV2 = true;
           await saveData(d);
         }
+        // Migration: rename Web of Connections to Intersections
+        if (d && !d._renameMigV1) {
+          let changed = false;
+          if (d.assignments) {
+            d.assignments = d.assignments.map(a => {
+              if (a.name && a.name.includes("Web of Connections")) {
+                changed = true;
+                return { ...a, name: a.name.replace(/Web of Connections/g, "Intersections") };
+              }
+              return a;
+            });
+          }
+          if (d.schedule) {
+            d.schedule = d.schedule.map(w => ({
+              ...w, dates: w.dates.map(dt => {
+                if (dt.assignment && dt.assignment.includes("Web of Connections")) {
+                  changed = true;
+                  return { ...dt, assignment: dt.assignment.replace(/Web of Connections/g, "Intersections") };
+                }
+                return dt;
+              })
+            }));
+          }
+          d._renameMigV1 = true;
+          await saveData(d);
+        }
         setData(d);
       } catch(e) { console.error("Storage load failed:", e); setData(null); }
       setLoading(false);
@@ -3029,21 +3073,18 @@ export default function Comm118() {
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "todo" && !isGuest && <ToDoView data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
       {view === "leaderboard" && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={userName} data={data} />}
-      {view === "teams" && !isGuest && <TeamsView teams={data.teams} students={data.students} log={data.log} data={data} />}
-      {view === "roster" && !isGuest && <RosterView data={data} setData={setData} userName={userName} />}
       {view === "assignments" && !isGuest && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} setView={setView} />}
       {view === "readings" && !isGuest && <ReadingsView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "classtools" && !isGuest && <ClassTools data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
       {view === "grades" && isAdmin && !studentView && <Gradebook data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
-      {view === "builder" && isAdmin && !studentView && <TeamBuilder data={data} setData={setData} />}
       {view === "pti" && isAdmin && !studentView && <PTIMode data={data} setData={setData} />}
-      {view === "gameadmin" && isAdmin && !studentView && <GameAdmin data={data} setData={setData} />}
-      {view === "fishbowl" && isAdmin && !studentView && <GameAdmin data={data} setData={setData} />}
+      {view === "activities" && isAdmin && !studentView && <GameAdmin data={data} setData={setData} />}
+      {view === "roster" && !isGuest && <RosterCombined data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
       {view === "answer" && !isGuest && <StudentAnswerView data={data} setData={setData} userName={userName} />}
       {view === "accolades" && !isGuest && <Accolades data={data} />}
       {view === "admin" && isAdmin && !studentView && <AdminPanel data={data} setData={setData} />}
       {isGuest && view !== "leaderboard" && view !== "schedule" && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={false} userName={userName} data={data} />}
-      {(view === "builder" || view === "admin" || view === "gameadmin" || view === "fishbowl" || view === "pti") && !isAdmin && !isGuest && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={userName} data={data} />}
+      {(view === "activities" || view === "admin" || view === "pti") && !isAdmin && !isGuest && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={userName} data={data} />}
     </div>
   );
 }
