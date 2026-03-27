@@ -228,11 +228,17 @@ function NamePicker({ data, onSelect }) {
   const pins = data?.pins || {};
 
   const names = data ? data.students.map(s => s.name).sort(lastSort) : [...ALL_STUDENTS].sort(lastSort);
-  // Put admin at top
+  // Put admin at top, even if not in students list
   const sorted = [ADMIN_NAME, ...names.filter(n => n !== ADMIN_NAME)];
 
   const tryLogin = () => {
     if (!selected) return;
+    // Admin login: check hardcoded PIN, doesn't need to be in students list
+    if (selected === ADMIN_NAME) {
+      if (pin !== "118711") { setError("Wrong PIN"); setPin(""); return; }
+      onSelect(selected);
+      return;
+    }
     const student = data.students.find(s => s.name === selected);
     if (!student) return;
     const correctPin = pins[student.id];
