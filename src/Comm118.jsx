@@ -568,8 +568,9 @@ function ScheduleView({ data, setData, isAdmin }) {
                                     const tColor = r.type === "fishbowl" ? "#7c3aed" : r.type === "required" ? "#b45309" : GREEN;
                                     const tLabel = r.type === "fishbowl" ? "Fish" : r.type === "required" ? "Req" : "Rec";
                                     const isFish = r.type === "fishbowl";
+                                    const isReq = r.type === "required";
                                     return (
-                                      <div key={ri} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                                      <div key={ri} style={{ display: "flex", alignItems: "flex-start", gap: 6, background: isReq ? "#fffbeb" : "transparent", padding: isReq ? "4px 8px" : "2px 0", borderRadius: isReq ? 6 : 0, margin: isReq ? "0 -8px" : 0 }}>
                                         <span style={{ fontSize: 11, fontWeight: 700, color: tColor, textTransform: "uppercase", marginTop: 2, flexShrink: 0, width: 30 }}>{tLabel}</span>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                           {link ? (
