@@ -85,26 +85,44 @@ const DEFAULT_SCHEDULE = [
 ];
 
 const ACCENT = "#9f1239";
-// (removed ACCENT_LIGHT)
-const BG = "#f8fafc";
-// (removed "#fff")
-const BORDER = "#f3f4f6";
-const TEXT_PRIMARY = "#111827";
-const TEXT_SECONDARY = "#6b7280";
-const TEXT_MUTED = "#9ca3af";
-const GREEN = "#10b981";
-const RED = "#ef4444";
-const AMBER = "#f59e0b";
-const PURPLE = "#8b5cf6";
-const F = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+const BG = "#f7f7f8";
+const BORDER = "#e8e8ec";
+const TEXT_PRIMARY = "#18181b";
+const TEXT_SECONDARY = "#52525b";
+const TEXT_MUTED = "#a1a1aa";
+const GREEN = "#059669";
+const RED = "#dc2626";
+const AMBER = "#d97706";
+const PURPLE = "#7c3aed";
+const F = "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif";
 
-const crd = { background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", overflow: "hidden" };
-const pill = { padding: "6px 12px", borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s" };
-const pillActive = { ...pill, background: "#111827", color: "#fff" };
-const pillInactive = { ...pill, background: "#f3f4f6", color: "#4b5563" };
-const bt = { padding: "8px 16px", borderRadius: 10, border: "1px solid #e5e7eb", cursor: "pointer", fontFamily: F, fontWeight: 600, fontSize: 13, transition: "all 0.15s", background: "#fff", color: "#6b7280" };
-const sectionLabel = { fontSize: 10, fontWeight: 500, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: F };
-const inp = { background: "#fff", border: "2px solid #e5e7eb", borderRadius: 12, padding: "10px 12px", color: TEXT_PRIMARY, fontFamily: F, fontSize: 14, fontWeight: 500, outline: "none", width: "100%", boxSizing: "border-box" };
+// Load DM Sans
+if (typeof document !== "undefined" && !document.getElementById("dm-sans-font")) {
+  const link = document.createElement("link");
+  link.id = "dm-sans-font";
+  link.href = "https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&display=swap";
+  link.rel = "stylesheet";
+  document.head.appendChild(link);
+}
+// Responsive schedule grid
+if (typeof document !== "undefined" && !document.getElementById("comm118-responsive")) {
+  const style = document.createElement("style");
+  style.id = "comm118-responsive";
+  style.textContent = `
+    .schedule-days { grid-template-columns: 1fr !important; }
+    @media (min-width: 700px) { .schedule-days { grid-template-columns: repeat(3, 1fr) !important; } }
+    @media (min-width: 700px) { .schedule-days[data-cols="2"] { grid-template-columns: repeat(2, 1fr) !important; } }
+  `;
+  document.head.appendChild(style);
+}
+
+const crd = { background: "#fff", borderRadius: 14, border: "1px solid " + BORDER, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" };
+const pill = { padding: "7px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s" };
+const pillActive = { ...pill, background: "#18181b", color: "#fff" };
+const pillInactive = { ...pill, background: "#f4f4f5", color: "#52525b" };
+const bt = { padding: "9px 18px", borderRadius: 10, border: "1px solid " + BORDER, cursor: "pointer", fontFamily: F, fontWeight: 600, fontSize: 13, transition: "all 0.15s", background: "#fff", color: "#52525b" };
+const sectionLabel = { fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: F };
+const inp = { background: "#fff", border: "1.5px solid " + BORDER, borderRadius: 10, padding: "10px 14px", color: TEXT_PRIMARY, fontFamily: F, fontSize: 15, fontWeight: 400, outline: "none", width: "100%", boxSizing: "border-box" };
 const sel = { ...inp, width: "auto" };
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -142,7 +160,7 @@ function shuffleTeams(students, log, teams) {
   });
 }
 
-function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#1e293b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 13, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
+function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#18181b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 14, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
 
 /* ─── NAV ─── */
 function Nav({ view, setView, isAdmin, isGuest, userName, onLogout }) {
@@ -169,15 +187,15 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout }) {
     return true;
   });
   return (
-    <div style={{ background: "linear-gradient(to right, #1e293b, #334155)", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, position: "sticky", top: 0, zIndex: 50 }}>
+    <div style={{ background: ACCENT, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, position: "sticky", top: 0, zIndex: 50 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ fontSize: 16, fontWeight: 900, color: "#fff", fontFamily: F }}>Comm and Sport</div>
+        <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", fontFamily: F, letterSpacing: "-0.01em" }}>Comm and Sport</div>
       </div>
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
         {visibleTabs.map(t => (
           <button key={t.id} onClick={() => setView(t.id)} style={view === t.id
-            ? { ...pill, background: "#fff", color: "#1e293b", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
-            : { ...pill, background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }
+            ? { ...pill, background: "#fff", color: ACCENT, fontWeight: 700, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
+            : { ...pill, background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.85)" }
           }>{t.label}</button>
         ))}
         <a href="https://camino.instructure.com/courses/117721" target="_blank" rel="noopener noreferrer" style={{ ...pill, background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
@@ -223,14 +241,14 @@ function NamePicker({ data, onSelect }) {
     return (
       <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div style={{ maxWidth: 360, width: "100%" }}>
-          <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", borderRadius: 16, padding: "32px 24px", marginBottom: 16, textAlign: "center" }}>
-            <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>{selected}</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 4 }}>Enter your PIN</div>
+          <div style={{ background: ACCENT, borderRadius: 16, padding: "32px 24px", marginBottom: 16, textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>{selected}</div>
+            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>Enter your PIN</div>
           </div>
           <div style={{ ...crd, padding: 20 }}>
-            <input autoFocus type="password" inputMode="numeric" maxLength={6} value={pin} onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setError(""); }} onKeyDown={e => e.key === "Enter" && tryLogin()} placeholder="6-digit PIN" style={{ ...inp, textAlign: "center", fontSize: 24, fontWeight: 900, letterSpacing: "0.3em" }} />
-            {error && <div style={{ fontSize: 12, color: RED, textAlign: "center", marginTop: 8, fontWeight: 600 }}>{error}</div>}
-            <button onClick={tryLogin} style={{ ...pill, background: "#111827", color: "#fff", padding: "12px 0", width: "100%", marginTop: 12, fontSize: 14 }}>Sign In</button>
+            <input autoFocus type="password" inputMode="numeric" maxLength={6} value={pin} onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setError(""); }} onKeyDown={e => e.key === "Enter" && tryLogin()} placeholder="6-digit PIN" style={{ ...inp, textAlign: "center", fontSize: 24, fontWeight: 800, letterSpacing: "0.3em" }} />
+            {error && <div style={{ fontSize: 13, color: RED, textAlign: "center", marginTop: 8, fontWeight: 600 }}>{error}</div>}
+            <button onClick={tryLogin} style={{ ...pill, background: ACCENT, color: "#fff", padding: "12px 0", width: "100%", marginTop: 12, fontSize: 15 }}>Sign In</button>
             <button onClick={() => { setSelected(null); setPin(""); setError(""); }} style={{ ...pillInactive, width: "100%", marginTop: 8, padding: "10px 0" }}>Back</button>
           </div>
         </div>
@@ -241,23 +259,23 @@ function NamePicker({ data, onSelect }) {
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ maxWidth: 420, width: "100%" }}>
-        <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", borderRadius: 16, padding: "32px 24px", marginBottom: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 24, fontWeight: 900, color: "#fff", letterSpacing: "-0.01em" }}>Communication and Sport</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: 500, marginTop: 4 }}>COMM 118 - Ishak / Santa Clara University</div>
+        <div style={{ background: ACCENT, borderRadius: 16, padding: "36px 24px", marginBottom: 16, textAlign: "center" }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>Communication and Sport</div>
+          <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", fontWeight: 500, marginTop: 6 }}>COMM 118 / Ishak / Santa Clara University</div>
         </div>
-        <div style={{ ...crd, padding: "12px 16px", marginBottom: 12 }}>
-          <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, textAlign: "center" }}>This app is our class hub: schedule, leaderboard, games, and team standings. Select your name to get started.</div>
+        <div style={{ ...crd, padding: "14px 18px", marginBottom: 12 }}>
+          <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.6, textAlign: "center" }}>This app is our class hub: schedule, leaderboard, games, and team standings. Select your name to get started.</div>
         </div>
         <div style={{ ...crd, padding: 4 }}>
           {sorted.map(name => (
             <button key={name} onClick={() => setSelected(name)} style={{
-              display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 12px", textAlign: "left",
-              fontFamily: F, fontSize: 14, fontWeight: name === ADMIN_NAME ? 700 : 500,
+              display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 14px", textAlign: "left",
+              fontFamily: F, fontSize: 15, fontWeight: name === ADMIN_NAME ? 700 : 400,
               background: name === ADMIN_NAME ? "#fef2f2" : "transparent",
               color: name === ADMIN_NAME ? ACCENT : TEXT_PRIMARY,
               border: "none", borderRadius: 10, cursor: "pointer", transition: "background 0.1s",
             }}>
-              <span style={{ width: 32, height: 32, borderRadius: "50%", background: name === ADMIN_NAME ? ACCENT : "#e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: name === ADMIN_NAME ? "#fff" : "#6b7280", flexShrink: 0 }}>
+              <span style={{ width: 32, height: 32, borderRadius: "50%", background: name === ADMIN_NAME ? ACCENT : "#e4e4e7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: name === ADMIN_NAME ? "#fff" : TEXT_SECONDARY, flexShrink: 0 }}>
                 {name.split(" ").map(n => n[0]).join("")}
               </span>
               {name}
@@ -307,7 +325,7 @@ function WeekHeaderEditor({ week, wi, data, setData, onDone }) {
       </div>
       <div style={{ display: "flex", gap: 4 }}>
         <input value={local.question} onChange={e => set("question", e.target.value)} placeholder="Driving question" style={{ ...inp, padding: "4px 8px", fontSize: 12, flex: 1 }} />
-        <button onClick={handleDone} style={{ ...bt, fontSize: 10, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Done</button>
+        <button onClick={handleDone} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Done</button>
       </div>
     </div>
   );
@@ -336,7 +354,7 @@ function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDa
       <div style={{ display: "flex", gap: 4 }}>
         <input value={local.date} onChange={e => set("date", e.target.value)} style={{ ...inp, padding: "3px 6px", fontSize: 11, width: 60 }} />
         <input value={local.day} onChange={e => set("day", e.target.value)} style={{ ...inp, padding: "3px 6px", fontSize: 11, width: 40 }} />
-        <label style={{ fontSize: 10, color: TEXT_MUTED, display: "flex", alignItems: "center", gap: 2 }}><input type="checkbox" checked={local.holiday} onChange={e => set("holiday", e.target.checked)} />Off</label>
+        <label style={{ fontSize: 11, color: TEXT_MUTED, display: "flex", alignItems: "center", gap: 2 }}><input type="checkbox" checked={local.holiday} onChange={e => set("holiday", e.target.checked)} />Off</label>
       </div>
       <textarea value={local.topic} onChange={e => set("topic", e.target.value)} placeholder="Topic" rows={2} style={{ ...inp, padding: "4px 6px", fontSize: 12, resize: "vertical" }} />
       <input value={local.activities} onChange={e => set("activities", e.target.value)} placeholder="Activities (comma-separated: Game, Fishbowl, etc.)" style={{ ...inp, padding: "3px 6px", fontSize: 11, fontWeight: 700 }} />
@@ -346,7 +364,7 @@ function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDa
           <option key={a.id} value={a.name + " due"}>{a.name}</option>
         ))}
       </select>
-      <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>Readings</div>
+      <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>Readings</div>
       {(d.readings || []).map((r, ri) => {
         const rdg = (data.readings || []).find(x => x.id === r.readingId);
         return (
@@ -355,7 +373,7 @@ function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDa
             <select value={r.type} onChange={e => {
               const upd = [...(d.readings || [])]; upd[ri] = { ...upd[ri], type: e.target.value };
               updateDate(wi, realDi, "readings", upd);
-            }} style={{ fontSize: 10, border: "none", background: "transparent", color: r.type === "required" ? RED : r.type === "highly_recommended" ? AMBER : GREEN, fontWeight: 700, cursor: "pointer" }}>
+            }} style={{ fontSize: 11, border: "none", background: "transparent", color: r.type === "required" ? RED : r.type === "highly_recommended" ? AMBER : GREEN, fontWeight: 700, cursor: "pointer" }}>
               <option value="required">Required</option>
               <option value="highly_recommended">Highly Rec</option>
               <option value="recommended">Recommended</option>
@@ -380,13 +398,13 @@ function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDa
           ))}
         </select>
       ) : (
-        <div style={{ fontSize: 10, color: TEXT_MUTED, fontStyle: "italic" }}>No readings in repository yet</div>
+        <div style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>No readings in repository yet</div>
       )}
       <textarea value={local.notes} onChange={e => set("notes", e.target.value)} placeholder="Notes (students see this)" rows={2} style={{ ...inp, padding: "3px 6px", fontSize: 11, resize: "vertical" }} />
       <textarea value={local.adminNotes} onChange={e => set("adminNotes", e.target.value)} placeholder="Admin notes (students can't see)" rows={2} style={{ ...inp, padding: "3px 6px", fontSize: 11, resize: "vertical", borderColor: "#f59e0b", background: "#fffbeb" }} />
       <div style={{ display: "flex", gap: 4 }}>
-        <button onClick={handleDone} style={{ ...bt, fontSize: 10, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Done</button>
-        <button onClick={() => { removeDate(wi, realDi); onDone(); }} style={{ ...bt, fontSize: 10, padding: "3px 10px", background: "transparent", color: RED, border: "1px solid " + RED + "33" }}>X</button>
+        <button onClick={handleDone} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Done</button>
+        <button onClick={() => { removeDate(wi, realDi); onDone(); }} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: "transparent", color: RED, border: "1px solid " + RED + "33" }}>X</button>
       </div>
     </div>
   );
@@ -466,7 +484,7 @@ function ScheduleView({ data, setData, isAdmin }) {
             <div style={{ ...crd, padding: 12, marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
               <input value={docUrl} onChange={e => setDocUrl(e.target.value)} placeholder="Google Doc URL" style={{ ...inp, fontSize: 12, padding: "6px 8px" }} />
               <input value={canvaUrl} onChange={e => setCanvaUrl(e.target.value)} placeholder="Canva URL" style={{ ...inp, fontSize: 12, padding: "6px 8px" }} />
-              <button onClick={saveLinks} style={{ ...pill, background: "#111827", color: "#fff", padding: "8px 0", width: "100%" }}>Save</button>
+              <button onClick={saveLinks} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "8px 0", width: "100%" }}>Save</button>
             </div>
           )}
           {isAdmin && (
@@ -488,37 +506,39 @@ function ScheduleView({ data, setData, isAdmin }) {
 
           return (
             <div key={wi}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                {week.week <= 10 && <div style={{ width: 32, height: 32, borderRadius: 8, background: "#111827", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 900, fontFamily: F, flexShrink: 0 }}>{week.week}</div>}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                {week.week <= 10 && <div style={{ width: 36, height: 36, borderRadius: 10, background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 15, fontWeight: 800, fontFamily: F, flexShrink: 0 }}>{week.week}</div>}
                 {isAdmin && isEditing ? (
                   <WeekHeaderEditor week={week} wi={wi} data={data} setData={setData} onDone={() => setEditWeek(null)} />
                 ) : (
                   <div style={{ flex: 1, cursor: isAdmin ? "pointer" : "default" }} onClick={() => isAdmin && setEditWeek(wi)}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#111827", lineHeight: 1.2 }}>{week.label}{week.theme ? " — " + week.theme : ""}</div>
-                    <div style={{ fontSize: 10, color: "#9ca3af" }}>{days.map(d => d.date).join(" / ")}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.25 }}>{week.label}{week.theme ? " — " + week.theme : ""}</div>
+                    <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{days.map(d => d.date).join("  /  ")}</div>
                   </div>
                 )}
-                {isAdmin && <button onClick={() => removeWeek(wi)} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 14, padding: 4 }}>x</button>}
+                {isAdmin && <button onClick={() => removeWeek(wi)} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 16, padding: 4 }}>x</button>}
               </div>
-              {week.question && !isEditing && <div style={{ fontSize: 13, fontStyle: "italic", color: "#6b7280", marginBottom: 8, marginLeft: 42, lineHeight: 1.3 }}>"{week.question}"</div>}
+              {week.question && !isEditing && <div style={{ fontSize: 14, fontStyle: "italic", color: TEXT_SECONDARY, marginBottom: 10, marginLeft: 48, lineHeight: 1.4 }}>"{week.question}"</div>}
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(" + days.length + ", 1fr)", gap: 6, marginLeft: 1 }}>
+              <div className="schedule-days" style={{ display: "grid", gap: 8 }}>
                 {days.map((d, di) => {
                   const realDi = week.dates.indexOf(d);
                   const isHoliday = d.holiday;
                   const isFri = d.fri || d.day === "Fri";
                   const isEdit = editCell && editCell.w === wi && editCell.d === realDi;
+                  const hasReadings = (d.readings || []).length > 0;
 
                   return (
                     <div key={di} onClick={() => isAdmin && !isEdit && setEditCell({ w: wi, d: realDi })} style={{
-                      padding: "10px 12px", borderRadius: 12, minHeight: 70,
-                      background: isHoliday ? "#fdf2f8" : "#fff",
-                      border: isFri && !isHoliday ? "2px solid #c4b5fd" : "1px solid #f3f4f6",
+                      padding: "14px 16px", borderRadius: 14, minHeight: 60,
+                      background: isHoliday ? "#fef7f0" : "#fff",
+                      border: isFri && !isHoliday ? "2px solid #c4b5fd" : "1px solid " + BORDER,
                       cursor: isAdmin && !isEdit ? "pointer" : "default",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
                     }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: isHoliday ? "#db2777" : isFri ? PURPLE : "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em" }}>{d.day}</span>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af" }}>{d.date}</span>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: isHoliday ? "#c2410c" : isFri ? PURPLE : TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>{d.day}</span>
+                        <span style={{ fontSize: 12, fontWeight: 500, color: TEXT_MUTED }}>{d.date}</span>
                       </div>
 
                       {isEdit && isAdmin ? (
@@ -526,40 +546,44 @@ function ScheduleView({ data, setData, isAdmin }) {
                       ) : (
                         <div>
                           {isHoliday ? (
-                            <div style={{ fontSize: 13, fontWeight: 600, color: "#db2777" }}>{d.notes || "No class"}</div>
+                            <div style={{ fontSize: 15, fontWeight: 600, color: "#c2410c" }}>{d.notes || "No class"}</div>
                           ) : (
                             <>
-                              <div style={{ fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.35 }}>{d.topic || <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}>—</span>}</div>
+                              <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, fontWeight: 400 }}>{d.topic || <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}>—</span>}</div>
                               {(d.activities || []).length > 0 && (
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginTop: 4 }}>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
                                   {(d.activities || []).map((act, ai) => (
-                                    <span key={ai} style={{ fontSize: 10, fontWeight: 900, color: "#111827", background: "#f3f4f6", padding: "2px 6px", borderRadius: 4 }}>{act}</span>
+                                    <span key={ai} style={{ fontSize: 11, fontWeight: 700, color: TEXT_PRIMARY, background: "#f4f4f5", padding: "3px 8px", borderRadius: 6 }}>{act}</span>
                                   ))}
                                 </div>
                               )}
-                              {d.assignment && <div style={{ fontSize: 11, color: "#ea580c", marginTop: 3, fontWeight: 600 }}>{d.assignment}</div>}
-                              {(d.readings || []).length > 0 && (
-                                <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+                              {d.assignment && <div style={{ fontSize: 13, color: "#c2410c", marginTop: 6, fontWeight: 600 }}>{d.assignment}</div>}
+                              {hasReadings && (
+                                <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER, display: "flex", flexDirection: "column", gap: 4 }}>
                                   {(d.readings || []).map((r, ri) => {
                                     const rdg = (data.readings || []).find(x => x.id === r.readingId);
                                     if (!rdg) return null;
                                     const link = rdg.pdfUrl || rdg.url;
+                                    const typeColor = r.type === "required" ? RED : r.type === "highly_recommended" ? AMBER : GREEN;
+                                    const typeLabel = r.type === "required" ? "Req" : r.type === "highly_recommended" ? "H.Rec" : "Rec";
                                     return (
-                                      <div key={ri} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11 }}>
-                                        <span style={{ fontSize: 9, fontWeight: 700, color: r.type === "required" ? RED : r.type === "highly_recommended" ? AMBER : GREEN, textTransform: "uppercase" }}>{r.type === "required" ? "Req" : r.type === "highly_recommended" ? "H.Rec" : "Rec"}</span>
-                                        {link ? (
-                                          <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{rdg.title}</a>
-                                        ) : (
-                                          <span style={{ color: "#374151", fontWeight: 500 }}>{rdg.title}</span>
-                                        )}
-                                        {rdg.pdfUrl && <span style={{ fontSize: 8, fontWeight: 700, color: RED, background: "#fef2f2", padding: "0 3px", borderRadius: 3 }}>PDF</span>}
+                                      <div key={ri} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                                        <span style={{ fontSize: 11, fontWeight: 700, color: typeColor, textTransform: "uppercase", marginTop: 2, flexShrink: 0, width: 34 }}>{typeLabel}</span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          {link ? (
+                                            <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500, lineHeight: 1.35 }}>{rdg.title}</a>
+                                          ) : (
+                                            <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500, lineHeight: 1.35 }}>{rdg.title}</span>
+                                          )}
+                                          {rdg.pdfUrl && <span style={{ fontSize: 9, fontWeight: 700, color: RED, background: "#fef2f2", padding: "1px 4px", borderRadius: 3, marginLeft: 4 }}>PDF</span>}
+                                        </div>
                                       </div>
                                     );
                                   })}
                                 </div>
                               )}
-                              {d.notes && !isHoliday && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2, whiteSpace: "pre-wrap" }}>{d.notes}</div>}
-                              {isAdmin && d.adminNotes && <div style={{ fontSize: 10, color: AMBER, marginTop: 3, padding: "3px 6px", background: "#fffbeb", borderRadius: 4, border: "1px solid #fef3c7", whiteSpace: "pre-wrap" }}>{d.adminNotes}</div>}
+                              {d.notes && !isHoliday && <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.notes}</div>}
+                              {isAdmin && d.adminNotes && <div style={{ fontSize: 12, color: AMBER, marginTop: 6, padding: "6px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fef3c7", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.adminNotes}</div>}
                             </>
                           )}
                         </div>
@@ -568,7 +592,7 @@ function ScheduleView({ data, setData, isAdmin }) {
                   );
                 })}
               </div>
-              {isAdmin && <button onClick={() => addDate(wi)} style={{ ...pill, background: "transparent", border: "1px dashed #d1d5db", color: "#9ca3af", width: "100%", marginTop: 6, fontSize: 11 }}>+</button>}
+              {isAdmin && <button onClick={() => addDate(wi)} style={{ ...pill, background: "transparent", border: "1px dashed " + BORDER, color: TEXT_MUTED, width: "100%", marginTop: 8, fontSize: 12 }}>+</button>}
             </div>
           );
         })}
@@ -704,50 +728,50 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
           <div style={{
             width: 32, height: 32, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
             fontSize: 14, fontWeight: 900, fontFamily: F,
-            background: inA ? "#d4a017" : "#f3f4f6",
-            color: inA ? "#fff" : "#6b7280",
+            background: inA ? "#d4a017" : "#f4f4f5",
+            color: inA ? "#fff" : TEXT_SECONDARY,
           }}>{i + 1}</div>
           {bio.photo ? (
-            <img src={bio.photo} alt="" style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "3px solid " + (inA ? "#d4a01744" : "#f3f4f6") }} />
+            <img src={bio.photo} alt="" style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "3px solid " + (inA ? "#d4a01744" : "#f4f4f5") }} />
           ) : (
-            <div style={{ width: 52, height: 52, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "#fff", flexShrink: 0, border: "3px solid " + (inA ? "#d4a01744" : "#f3f4f6") }}>{initials}</div>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "#fff", flexShrink: 0, border: "3px solid " + (inA ? "#d4a01744" : "#f4f4f5") }}>{initials}</div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: F }}>{s.name}</span>
+              <span style={{ fontSize: 18, fontWeight: 900, color: TEXT_PRIMARY, fontFamily: F }}>{s.name}</span>
               {starCounts[s.id] > 0 && <span style={{ fontSize: 13, color: "#d97706" }}>{Array(starCounts[s.id]).fill("\u2733").join("")}</span>}
               {isMe && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#dbeafe", color: "#1d4ed8", fontWeight: 700 }}>YOU</span>}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
               {team && <span style={{ fontSize: 11, color: tc.accent, fontWeight: 600 }}>{team.name}</span>}
-              <span style={{ fontSize: 11, color: "#d1d5db" }}>/</span>
+              <span style={{ fontSize: 11, color: "#d4d4d8" }}>/</span>
               <span style={{ fontSize: 11, color: "#b0b0b0", fontStyle: "italic" }}>{getMotto(s.id)}</span>
             </div>
-            {bio.hometown && <div style={{ fontSize: 10, color: "#d1d5db", marginTop: 2 }}>{bio.hometown}</div>}
+            {bio.hometown && <div style={{ fontSize: 11, color: "#d4d4d8", marginTop: 2 }}>{bio.hometown}</div>}
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 30, fontWeight: 900, color: inA ? "#b8860b" : "#111827", fontFamily: F, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{s.points}</div>
-            <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 1 }}>pts</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: inA ? "#b8860b" : TEXT_PRIMARY, fontFamily: F, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{s.points}</div>
+            <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 1 }}>pts</div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 3 }}>
-              {wp > 0 && <span style={{ fontSize: 10, color: GREEN, fontWeight: 700 }}>+{wp} this wk</span>}
-              {movement > 0 && <span style={{ fontSize: 10, color: GREEN, fontWeight: 700 }}>&#9650;{movement}</span>}
-              {movement < 0 && <span style={{ fontSize: 10, color: RED, fontWeight: 700 }}>&#9660;{Math.abs(movement)}</span>}
+              {wp > 0 && <span style={{ fontSize: 11, color: GREEN, fontWeight: 700 }}>+{wp} this wk</span>}
+              {movement > 0 && <span style={{ fontSize: 11, color: GREEN, fontWeight: 700 }}>&#9650;{movement}</span>}
+              {movement < 0 && <span style={{ fontSize: 11, color: RED, fontWeight: 700 }}>&#9660;{Math.abs(movement)}</span>}
             </div>
           </div>
         </div>
         {isExpanded && (
           <div style={{ padding: "0 16px 14px", borderTop: "1px solid #f3f4f6" }}>
             <div style={{ ...sectionLabel, marginTop: 10, marginBottom: 6 }}>Point Breakdown</div>
-            {breakdownEntries.length === 0 && <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic" }}>No points yet.</div>}
+            {breakdownEntries.length === 0 && <div style={{ fontSize: 12, color: "#d4d4d8", fontStyle: "italic" }}>No points yet.</div>}
             {breakdownEntries.map(([src, pts]) => (
               <div key={src} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", fontSize: 13 }}>
-                <span style={{ color: "#6b7280" }}>{src}</span>
-                <span style={{ fontWeight: 700, color: pts > 0 ? "#111827" : RED }}>{pts > 0 ? "+" : ""}{pts}</span>
+                <span style={{ color: TEXT_SECONDARY }}>{src}</span>
+                <span style={{ fontWeight: 700, color: pts > 0 ? TEXT_PRIMARY : RED }}>{pts > 0 ? "+" : ""}{pts}</span>
               </div>
             ))}
           </div>
         )}
-        <div style={{ height: 4, background: "#f3f4f6" }}>
+        <div style={{ height: 4, background: "#f4f4f5" }}>
           <div style={{ height: "100%", width: bw + "%", background: inA ? "#d4a017" : tc.accent, transition: "width 0.5s", borderRadius: "0 2px 2px 0" }} />
         </div>
       </div>
@@ -761,11 +785,11 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
           <div style={{ ...sectionLabel, marginBottom: 8 }}>Class Leaderboard</div>
           <div style={{ ...crd, padding: "10px 14px" }}>
             <button onClick={() => setShowExplain(!showExplain)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, width: "100%", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 13, color: "#6b7280" }}>Earn points through the weekly game, This or That, PTI, and Rotating Fishbowl.</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" style={{ transform: showExplain ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0, marginLeft: 8 }}><path d="M6 9l6 6 6-6"/></svg>
+              <span style={{ fontSize: 13, color: TEXT_SECONDARY }}>Earn points through the weekly game, This or That, PTI, and Rotating Fishbowl.</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke=TEXT_MUTED strokeWidth="2" style={{ transform: showExplain ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0, marginLeft: 8 }}><path d="M6 9l6 6 6-6"/></svg>
             </button>
             {showExplain && (
-              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6", fontSize: 13, color: "#6b7280", lineHeight: 1.6 }}>
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6", fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>
                 <p>The leaderboard tracks your game points. You earn them four ways: the weekly game (up to 100 pts), This or That (up to 20 pts), PTI culture points (awarded in class), and Rotating Fishbowl (up to 20 pts).</p>
                 <p style={{ marginTop: 8 }}>The top 5 on the leaderboard at the end of the quarter earn automatic A's in the class. That's real.</p>
                 <p style={{ marginTop: 8 }}>This is not your full grade. The leaderboard contributes to 25% of your grade (the participation bucket), but in different weights. The other 75% comes from your assignments. Check the Assignments tab for the full picture.</p>
@@ -810,7 +834,7 @@ function TeamsView({ teams, students, log, data }) {
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 4 }}>This Week's Teams</div>
-        <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 12, lineHeight: 1.5 }}>Teams shuffle weekly based on leaderboard rank. The team whose top 3 players score highest on the weekly game earns 10 bonus points each.</div>
+        <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12, lineHeight: 1.5 }}>Teams shuffle weekly based on leaderboard rank. The team whose top 3 players score highest on the weekly game earns 10 bonus points each.</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
           {teamTotals.map((team, i) => {
             const tc = TEAM_COLORS[team.colorIdx];
@@ -821,19 +845,19 @@ function TeamsView({ teams, students, log, data }) {
                 <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 40, height: 40, borderRadius: 12, background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 900, flexShrink: 0 }}>#{i + 1}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{team.name}</div>
-                    <div style={{ fontSize: 11, color: "#9ca3af" }}>{memberData.length} players{wins > 0 ? " / " + wins + " win" + (wins !== 1 ? "s" : "") : ""}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{team.name}</div>
+                    <div style={{ fontSize: 11, color: TEXT_MUTED }}>{memberData.length} players{wins > 0 ? " / " + wins + " win" + (wins !== 1 ? "s" : "") : ""}</div>
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{team.total}</div>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{team.total}</div>
                 </div>
                 <div style={{ padding: "0 16px 12px" }}>
                   {memberData.map(m => (
                     <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderTop: "1px solid #f9fafb" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: tc.accent, flexShrink: 0 }} />
-                        <span style={{ fontSize: 13, color: "#4b5563" }}>{m.name}</span>
+                        <span style={{ fontSize: 13, color: "#52525b" }}>{m.name}</span>
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{m.points}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{m.points}</span>
                     </div>
                   ))}
                 </div>
@@ -881,7 +905,7 @@ function TeamBuilder({ data, setData }) {
                 ) : (
                   <div onClick={() => { setEditing(team.id); setEditVal(team.name); }} style={{ fontSize: 15, fontWeight: 700, color: tc.accent, fontFamily: F, cursor: "pointer" }}>{team.name}</div>
                 )}
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", marginLeft: 8 }}>{members.length}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, marginLeft: 8 }}>{members.length}</div>
               </div>
               <div style={{ padding: "8px 12px 16px" }}>
                 {members.map(m => (
@@ -937,12 +961,12 @@ function AdminPanel({ data, setData }) {
           <div style={{ ...crd, padding: 16 }}>
             <div style={{ ...sectionLabel, marginBottom: 14 }}>Teams</div>
             {data.teams.map(t => { const tc = TEAM_COLORS[t.colorIdx]; return (<div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid " + BORDER }}><span style={{ color: tc.accent, fontWeight: 600 }}>{t.name}</span><button onClick={() => removeTeam(t.id)} style={{ ...bt, fontSize: 11, padding: "2px 8px", background: "transparent", color: RED, border: "1px solid " + RED + "33" }}>X</button></div>); })}
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}><input placeholder="New team" value={newTeamName} onChange={e => setNewTeamName(e.target.value)} style={{ ...inp, flex: 1 }} /><button onClick={addTeam} style={{ ...bt, background: "#111827", color: "#fff", fontSize: 12 }}>Add</button></div>
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}><input placeholder="New team" value={newTeamName} onChange={e => setNewTeamName(e.target.value)} style={{ ...inp, flex: 1 }} /><button onClick={addTeam} style={{ ...bt, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Add</button></div>
           </div>
           <div style={{ ...crd, padding: 16 }}>
             <div style={{ ...sectionLabel, marginBottom: 14 }}>Students</div>
             {[...data.students].sort(lastSortObj).map(s => { const team = data.teams.find(t => t.id === s.teamId); return (<div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid " + BORDER, fontSize: 13 }}><div><span style={{ color: TEXT_PRIMARY }}>{s.name}</span>{team && <span style={{ color: TEXT_MUTED, marginLeft: 8, fontSize: 11 }}>{team.name}</span>}</div><button onClick={() => removeStudent(s.id)} style={{ ...bt, fontSize: 11, padding: "2px 8px", background: "transparent", color: RED, border: "1px solid " + RED + "33" }}>X</button></div>); })}
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}><input placeholder="Name" value={newName} onChange={e => setNewName(e.target.value)} style={{ ...inp, flex: 1 }} /><select value={newTeamId} onChange={e => setNewTeamId(e.target.value)} style={{ ...sel, minWidth: 90 }}><option value="">Team</option>{data.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select><button onClick={addStudent} style={{ ...bt, background: "#111827", color: "#fff", fontSize: 12 }}>Add</button></div>
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}><input placeholder="Name" value={newName} onChange={e => setNewName(e.target.value)} style={{ ...inp, flex: 1 }} /><select value={newTeamId} onChange={e => setNewTeamId(e.target.value)} style={{ ...sel, minWidth: 90 }}><option value="">Team</option>{data.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select><button onClick={addStudent} style={{ ...bt, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Add</button></div>
           </div>
         </div>
       )}
@@ -956,7 +980,7 @@ function AdminPanel({ data, setData }) {
             return (
               <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid " + BORDER }}>
                 <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: s.name === ADMIN_NAME ? 700 : 500 }}>{s.name}</span>
-                <span style={{ fontSize: 15, fontWeight: 900, color: "#111827", fontVariantNumeric: "tabular-nums", letterSpacing: "0.15em", fontFamily: F }}>{studentPin}</span>
+                <span style={{ fontSize: 15, fontWeight: 900, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums", letterSpacing: "0.15em", fontFamily: F }}>{studentPin}</span>
               </div>
             );
           })}
@@ -992,18 +1016,18 @@ function QuizMode({ data, setData }) {
     if (currentQ < valid.length - 1) setCurrentQ(currentQ + 1); else setPhase("done");
   };
 
-  if (phase === "done") return (<div style={{ padding: 40, textAlign: "center" }}><div style={{ fontSize: 20, fontWeight: 900, color: "#111827", marginBottom: 16 }}>Quiz Complete</div><div style={{ color: TEXT_SECONDARY, marginBottom: 24 }}>Points awarded.</div><button onClick={() => { setPhase("setup"); setQuestions(["", "", "", "", ""]); }} style={{ ...bt, background: "#111827", color: "#fff", border: "1px solid #111827" }}>New Quiz</button></div>);
+  if (phase === "done") return (<div style={{ padding: 40, textAlign: "center" }}><div style={{ fontSize: 20, fontWeight: 900, color: TEXT_PRIMARY, marginBottom: 16 }}>Quiz Complete</div><div style={{ color: TEXT_SECONDARY, marginBottom: 24 }}>Points awarded.</div><button onClick={() => { setPhase("setup"); setQuestions(["", "", "", "", ""]); }} style={{ ...bt, background: TEXT_PRIMARY, color: "#fff", border: "1px solid " + TEXT_PRIMARY }}>New Quiz</button></div>);
 
   if (phase === "live") {
     const valid = questions.filter(q => q.trim());
     return (
       <div style={{ padding: 20, maxWidth: 800, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 8 }}><div style={{ ...sectionLabel }}>Question {currentQ + 1} / {valid.length}</div></div>
-        <div style={{ ...crd, textAlign: "center", padding: 40, marginBottom: 20 }}><div style={{ fontSize: 20, fontWeight: 900, color: "#111827", lineHeight: 1.3 }}>{valid[currentQ]}</div></div>
+        <div style={{ ...crd, textAlign: "center", padding: 40, marginBottom: 20 }}><div style={{ fontSize: 20, fontWeight: 900, color: TEXT_PRIMARY, lineHeight: 1.3 }}>{valid[currentQ]}</div></div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12, marginBottom: 24 }}>
-          {data.teams.map(team => { const tc = TEAM_COLORS[team.colorIdx]; const correct = teamAnswers[currentQ + "-" + team.id]; return (<button key={team.id} onClick={() => toggleCorrect(team.id)} style={{ ...crd, cursor: "pointer", textAlign: "center", padding: 20, background: correct ? GREEN + "15" : "#fff", borderColor: correct ? GREEN : BORDER }}><div style={{ fontSize: 14, fontWeight: 700, color: correct ? GREEN : tc.accent }}>{team.name}</div><div style={{ fontSize: 10, fontWeight: 700, color: correct ? GREEN : "#9ca3af", marginTop: 4 }}>{correct ? "CORRECT" : "\u2014"}</div></button>); })}
+          {data.teams.map(team => { const tc = TEAM_COLORS[team.colorIdx]; const correct = teamAnswers[currentQ + "-" + team.id]; return (<button key={team.id} onClick={() => toggleCorrect(team.id)} style={{ ...crd, cursor: "pointer", textAlign: "center", padding: 20, background: correct ? GREEN + "15" : "#fff", borderColor: correct ? GREEN : BORDER }}><div style={{ fontSize: 14, fontWeight: 700, color: correct ? GREEN : tc.accent }}>{team.name}</div><div style={{ fontSize: 11, fontWeight: 700, color: correct ? GREEN : TEXT_MUTED, marginTop: 4 }}>{correct ? "CORRECT" : "\u2014"}</div></button>); })}
         </div>
-        <div style={{ display: "flex", justifyContent: "center" }}><button onClick={next} style={{ ...bt, background: "#111827", color: "#fff", fontSize: 14, padding: "12px 36px", border: "1px solid #111827", fontWeight: 700 }}>{currentQ < valid.length - 1 ? "Next" : "Finish"}</button></div>
+        <div style={{ display: "flex", justifyContent: "center" }}><button onClick={next} style={{ ...bt, background: TEXT_PRIMARY, color: "#fff", fontSize: 14, padding: "12px 36px", border: "1px solid " + TEXT_PRIMARY, fontWeight: 700 }}>{currentQ < valid.length - 1 ? "Next" : "Finish"}</button></div>
       </div>
     );
   }
@@ -1012,9 +1036,9 @@ function QuizMode({ data, setData }) {
     <div style={{ padding: 20, maxWidth: 560, margin: "0 auto" }}>
       <div style={{ ...sectionLabel, textAlign: "center", marginBottom: 20 }}>Weekly Quiz</div>
       <div style={{ ...crd, padding: 16 }}>
-        {questions.map((q, i) => (<div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}><span style={{ fontSize: 13, fontWeight: 900, color: "#9ca3af", width: 24 }}>{i + 1}</span><input placeholder={"Question " + (i + 1)} value={q} onChange={e => { const u = [...questions]; u[i] = e.target.value; setQuestions(u); }} style={inp} /></div>))}
+        {questions.map((q, i) => (<div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}><span style={{ fontSize: 13, fontWeight: 900, color: TEXT_MUTED, width: 24 }}>{i + 1}</span><input placeholder={"Question " + (i + 1)} value={q} onChange={e => { const u = [...questions]; u[i] = e.target.value; setQuestions(u); }} style={inp} /></div>))}
         <div style={{ display: "flex", gap: 8, alignItems: "center", margin: "16px 0" }}><span style={{ color: TEXT_SECONDARY, fontSize: 13 }}>Points per correct:</span><input type="number" value={ptsPerQ} onChange={e => setPtsPerQ(e.target.value)} style={{ ...inp, width: 60 }} /></div>
-        <button onClick={start} style={{ ...bt, background: "#111827", color: "#fff", width: "100%", fontSize: 14, padding: 12, border: "1px solid #111827", fontWeight: 700 }}>Start</button>
+        <button onClick={start} style={{ ...bt, background: TEXT_PRIMARY, color: "#fff", width: "100%", fontSize: 14, padding: 12, border: "1px solid " + TEXT_PRIMARY, fontWeight: 700 }}>Start</button>
       </div>
     </div>
   );
@@ -1060,12 +1084,12 @@ function PTIMode({ data, setData }) {
                   cursor: "pointer", textAlign: "center", transition: "all 0.1s",
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, padding: "0 2px" }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: rank <= 5 ? "#d4a017" : "#d1d5db" }}>#{rank}</span>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: ptiPts > 0 ? GREEN : "#d1d5db" }}>PTI: {ptiPts}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: rank <= 5 ? "#d4a017" : "#d4d4d8" }}>#{rank}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: ptiPts > 0 ? GREEN : "#d4d4d8" }}>PTI: {ptiPts}</span>
                   </div>
                   <div style={{ width: 36, height: 36, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px", fontSize: 12, fontWeight: 900, color: "#fff" }}>{initials}</div>
-                  <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", lineHeight: 1.2 }}>{s.name.split(" ")[0]}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#6b7280", marginTop: 1 }}>{s.name.split(" ").slice(1).join(" ")}</div>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY, lineHeight: 1.2 }}>{s.name.split(" ")[0]}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_SECONDARY, marginTop: 1 }}>{s.name.split(" ").slice(1).join(" ")}</div>
                   <div style={{ fontSize: 16, fontWeight: 900, color: tc.accent, marginTop: 4, fontVariantNumeric: "tabular-nums" }}>{pts}</div>
                 </button>
                 {isOpen && (
@@ -1165,7 +1189,7 @@ function LiveQuizAdmin({ data, setData }) {
           <div style={{ ...sectionLabel, marginBottom: 8 }}>Answer key</div>
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} style={{ display: "flex", gap: 6, marginBottom: 6, alignItems: "center" }}>
-              <span style={{ fontSize: 12, fontWeight: 900, color: "#9ca3af", width: 22 }}>{i + 1}</span>
+              <span style={{ fontSize: 12, fontWeight: 900, color: TEXT_MUTED, width: 22 }}>{i + 1}</span>
               <div style={{ display: "flex", gap: 3 }}>
                 {["A", "B", "C", "D"].map(opt => (
                   <button key={opt} onClick={() => { const u = [...answers]; u[i] = opt; setAnswers(u); }}
@@ -1182,7 +1206,7 @@ function LiveQuizAdmin({ data, setData }) {
             </div>
           ))}
           <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-            <button onClick={saveSlot} style={{ ...bt, background: "#111827", color: "#fff", flex: 1, border: "1px solid #111827" }}>Save</button>
+            <button onClick={saveSlot} style={{ ...bt, background: TEXT_PRIMARY, color: "#fff", flex: 1, border: "1px solid " + TEXT_PRIMARY }}>Save</button>
             {quiz && !quiz.scored && <button onClick={scoreSlot} style={{ ...bt, background: GREEN, color: "#fff", flex: 1, border: "1px solid " + GREEN }}>Score</button>}
             <button onClick={() => { if (window.confirm("Delete quiz " + slot + "?")) deleteSlot(); }} style={{ ...bt, background: "#fff", color: RED, border: "1px solid #fecaca" }}>Delete</button>
           </div>
@@ -1250,7 +1274,7 @@ function StudentAnswer({ data, setData, userName }) {
             return (
               <button key={n} onClick={() => { setSlot(n); setCurrentQ(0); setSelected(null); }} style={{
                 fontSize: 13, padding: "10px 0", fontFamily: F, fontWeight: 700, cursor: "pointer", borderRadius: 8,
-                background: "#f3f4f6", color: "#9ca3af", border: "1px solid #f3f4f6",
+                background: "#f4f4f5", color: TEXT_MUTED, border: "1px solid #f3f4f6",
               }}>{n}</button>
             );
           })}
@@ -1283,14 +1307,14 @@ function StudentAnswer({ data, setData, userName }) {
           return (
             <button key={i} onClick={() => { setCurrentQ(i); setSelected(null); }} style={{
               width: 28, height: 28, borderRadius: 6, fontSize: 11, fontWeight: 600, border: "none", cursor: "pointer",
-              background: i === currentQ ? "#111827" : answered ? GREEN + "20" : "#f5f5f4",
-              color: i === currentQ ? "#fff" : answered ? GREEN : "#9ca3af",
+              background: i === currentQ ? TEXT_PRIMARY : answered ? GREEN + "20" : "#f5f5f4",
+              color: i === currentQ ? "#fff" : answered ? GREEN : TEXT_MUTED,
             }}>{i + 1}</button>
           );
         })}
       </div>
 
-      <div style={{ fontSize: 48, fontWeight: 900, color: "#111827", marginBottom: 24 }}>Q{currentQ + 1}</div>
+      <div style={{ fontSize: 48, fontWeight: 900, color: TEXT_PRIMARY, marginBottom: 24 }}>Q{currentQ + 1}</div>
 
       {myAnswer ? (
         <div style={{ padding: 24 }}>
@@ -1316,7 +1340,7 @@ function StudentAnswer({ data, setData, userName }) {
           </div>
           {selected && (
             <button onClick={submitAnswer} style={{
-              ...bt, fontSize: 14, padding: "12px 40px", background: "#111827", color: "#fff", borderRadius: 12, border: "1px solid #111827", fontWeight: 700,
+              ...bt, fontSize: 14, padding: "12px 40px", background: TEXT_PRIMARY, color: "#fff", borderRadius: 12, border: "1px solid " + TEXT_PRIMARY, fontWeight: 700,
             }}>Lock in answer</button>
           )}
         </>
@@ -1406,13 +1430,13 @@ function RosterView({ data, setData, userName }) {
                   <div style={{ width: 36, height: 36, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#fff", flexShrink: 0 }}>{initials}</div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{s.name}</div>
-                  <div style={{ fontSize: 11, color: "#9ca3af" }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</div>
+                  <div style={{ fontSize: 11, color: TEXT_MUTED }}>
                     {team ? team.name : "Unassigned"}
                     {bio.major ? " / " + bio.major : ""}
                   </div>
                 </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke=TEXT_MUTED strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
               </button>
             );
           })}
@@ -1474,7 +1498,7 @@ function BioView({ student, data, setData, userName, onBack }) {
             )}
             {canEdit && (
               <label style={{ position: "absolute", bottom: -2, right: -2, width: 22, height: 22, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke=TEXT_SECONDARY strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 <input type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
               </label>
             )}
@@ -1498,7 +1522,7 @@ function BioView({ student, data, setData, userName, onBack }) {
               </div>
             ))}
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={saveBio} style={{ ...pill, background: "#111827", color: "#fff", flex: 1, padding: "10px 0" }}>Save</button>
+              <button onClick={saveBio} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1, padding: "10px 0" }}>Save</button>
               <button onClick={() => { setForm({ ...bio }); setEditing(false); }} style={{ ...pillInactive, flex: 1, padding: "10px 0" }}>Cancel</button>
             </div>
           </div>
@@ -1508,16 +1532,16 @@ function BioView({ student, data, setData, userName, onBack }) {
               <>
                 {bio.about && <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.5, marginBottom: 12 }}>{bio.about}</div>}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {bio.major && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Major</div><div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{bio.major}</div></div>}
-                  {bio.year && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Year</div><div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{bio.year}</div></div>}
-                  {bio.hometown && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Hometown</div><div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{bio.hometown}</div></div>}
-                  {bio.favTeam && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Fav Team</div><div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{bio.favTeam}</div></div>}
-                  {bio.motto && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Motto</div><div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{bio.motto}</div></div>}
+                  {bio.major && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Major</div><div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{bio.major}</div></div>}
+                  {bio.year && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Year</div><div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{bio.year}</div></div>}
+                  {bio.hometown && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Hometown</div><div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{bio.hometown}</div></div>}
+                  {bio.favTeam && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Fav Team</div><div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{bio.favTeam}</div></div>}
+                  {bio.motto && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Motto</div><div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{bio.motto}</div></div>}
                 </div>
                 {bio.funFact && <div style={{ marginTop: 10 }}><div style={{ ...sectionLabel, marginBottom: 2 }}>Fun Fact</div><div style={{ fontSize: 13, color: "#374151" }}>{bio.funFact}</div></div>}
               </>
             ) : (
-              <div style={{ textAlign: "center", padding: "20px 0", color: "#9ca3af", fontSize: 13 }}>
+              <div style={{ textAlign: "center", padding: "20px 0", color: TEXT_MUTED, fontSize: 13 }}>
                 {canEdit ? "No bio yet. Click edit to add one." : "This person hasn't filled out their bio yet."}
               </div>
             )}
@@ -1615,7 +1639,7 @@ function ReadingsView({ data, setData, isAdmin }) {
   const ReadingLink = ({ r, children }) => {
     const link = getReadingLink(r);
     if (link) return <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>{children}</a>;
-    return <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{children}</span>;
+    return <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{children}</span>;
   };
 
   return (
@@ -1627,7 +1651,7 @@ function ReadingsView({ data, setData, isAdmin }) {
         {/* Admin: add new reading */}
         {isAdmin && (
           <div style={{ ...crd, padding: 16, marginBottom: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Add to Repository</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 10 }}>Add to Repository</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <input value={newReading.title} onChange={e => setNewReading({ ...newReading, title: e.target.value })} placeholder="Title" style={inp} />
               <input value={newReading.url} onChange={e => setNewReading({ ...newReading, url: e.target.value })} placeholder="URL (optional)" style={inp} />
@@ -1642,7 +1666,7 @@ function ReadingsView({ data, setData, isAdmin }) {
               </div>
               <textarea value={newReading.notes} onChange={e => setNewReading({ ...newReading, notes: e.target.value })} placeholder="Notes (optional)" rows={2} style={{ ...inp, resize: "vertical" }} />
               <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={addReading} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 0", flex: 1 }}>Add Reading</button>
+                <button onClick={addReading} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "10px 0", flex: 1 }}>Add Reading</button>
                 <label style={{ ...pill, background: "#eff6ff", color: "#2563eb", padding: "10px 16px", display: "flex", alignItems: "center", gap: 4 }}>
                   {uploading ? "Uploading..." : "Add with PDF"}
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -1656,23 +1680,23 @@ function ReadingsView({ data, setData, isAdmin }) {
         {/* Weekly view */}
         {weekReadings.length > 0 && (
           <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 10 }}>By Week</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 10 }}>By Week</div>
             {weekReadings.map(w => (
               <div key={w.week} style={{ ...crd, padding: 14, marginBottom: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: "#111827", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 900, flexShrink: 0 }}>{w.week}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{w.label}{w.theme ? " \u2014 " + w.theme : ""}</div>
+                  <div style={{ width: 28, height: 28, borderRadius: 8, background: TEXT_PRIMARY, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 900, flexShrink: 0 }}>{w.week}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{w.label}{w.theme ? " \u2014 " + w.theme : ""}</div>
                 </div>
                 {w.items.map((item, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: i > 0 ? "1px solid #f9fafb" : "none" }}>
                     <span style={{ fontSize: 9, fontWeight: 700, color: (item.type || item.readingType) === "required" ? RED : (item.type || item.readingType) === "highly_recommended" ? AMBER : GREEN, textTransform: "uppercase", width: 40, flexShrink: 0 }}>{(item.type || item.readingType) === "required" ? "Req" : (item.type || item.readingType) === "highly_recommended" ? "H.Rec" : "Rec"}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <ReadingLink r={item}>{item.title}</ReadingLink>
-                      {getReadingLabel(item) && <span style={{ fontSize: 9, color: "#9ca3af", marginLeft: 4, fontWeight: 600 }}>{getReadingLabel(item)}</span>}
-                      {item.category && <span style={{ fontSize: 10, color: "#9ca3af", marginLeft: 6 }}>{item.category}</span>}
-                      {item.notes && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>{item.notes}</div>}
+                      {getReadingLabel(item) && <span style={{ fontSize: 9, color: TEXT_MUTED, marginLeft: 4, fontWeight: 600 }}>{getReadingLabel(item)}</span>}
+                      {item.category && <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>{item.category}</span>}
+                      {item.notes && <div style={{ fontSize: 11, color: TEXT_SECONDARY, marginTop: 1 }}>{item.notes}</div>}
                     </div>
-                    <span style={{ fontSize: 10, color: "#d1d5db", flexShrink: 0 }}>{item.day} {item.date}</span>
+                    <span style={{ fontSize: 11, color: "#d4d4d8", flexShrink: 0 }}>{item.day} {item.date}</span>
                   </div>
                 ))}
               </div>
@@ -1681,14 +1705,14 @@ function ReadingsView({ data, setData, isAdmin }) {
         )}
 
         {/* Full repository by category */}
-        <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Full Repository</div>
-        {readings.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: "#d1d5db", fontSize: 13 }}>No readings added yet.</div>}
+        <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 10 }}>Full Repository</div>
+        {readings.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: "#d4d4d8", fontSize: 13 }}>No readings added yet.</div>}
         {(categories.length > 0 ? categories : [""]).map(cat => {
           const catReadings = readings.filter(r => (r.category || "") === cat);
           if (catReadings.length === 0) return null;
           return (
             <div key={cat || "__none"} style={{ marginBottom: 16 }}>
-              {cat && <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{cat}</div>}
+              {cat && <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{cat}</div>}
               {catReadings.map(r => {
                 const isEditing = editId === r.id;
                 return (
@@ -1719,7 +1743,7 @@ function ReadingsView({ data, setData, isAdmin }) {
                           </label>
                         )}
                         <div style={{ display: "flex", gap: 4 }}>
-                          <button onClick={() => setEditId(null)} style={{ ...pill, background: "#111827", color: "#fff", flex: 1 }}>Done</button>
+                          <button onClick={() => setEditId(null)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Done</button>
                           <button onClick={() => { if (window.confirm("Delete this reading?")) deleteReading(r.id); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
                         </div>
                       </div>
@@ -1732,9 +1756,9 @@ function ReadingsView({ data, setData, isAdmin }) {
                             {r.pdfUrl && <span style={{ fontSize: 9, fontWeight: 700, color: RED, background: "#fef2f2", padding: "1px 5px", borderRadius: 4 }}>PDF</span>}
                             {r.url && r.pdfUrl && <a href={r.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 9, fontWeight: 700, color: "#2563eb", background: "#eff6ff", padding: "1px 5px", borderRadius: 4, textDecoration: "none" }}>Link</a>}
                           </div>
-                          {r.notes && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{r.notes}</div>}
+                          {r.notes && <div style={{ fontSize: 11, color: TEXT_SECONDARY, marginTop: 2 }}>{r.notes}</div>}
                         </div>
-                        {isAdmin && <span style={{ fontSize: 11, color: "#d1d5db", flexShrink: 0 }}>Click to edit</span>}
+                        {isAdmin && <span style={{ fontSize: 11, color: "#d4d4d8", flexShrink: 0 }}>Click to edit</span>}
                       </div>
                     )}
                   </div>
@@ -1907,16 +1931,16 @@ function ClassTools({ data, setData, isAdmin, userName }) {
         return (
           <div key={cat} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: isReal ? 900 : 500, color: isReal ? GREEN : "#111827" }}>{cat}{isReal ? " \u2713" : ""}</div>
-              <div style={{ height: 3, background: "#f3f4f6", borderRadius: 2, marginTop: 2 }}>
-                <div style={{ height: "100%", width: pct + "%", background: isReal ? GREEN : "#9ca3af", borderRadius: 2 }} />
+              <div style={{ fontSize: 12, fontWeight: isReal ? 900 : 500, color: isReal ? GREEN : TEXT_PRIMARY }}>{cat}{isReal ? " \u2713" : ""}</div>
+              <div style={{ height: 3, background: "#f4f4f5", borderRadius: 2, marginTop: 2 }}>
+                <div style={{ height: "100%", width: pct + "%", background: isReal ? GREEN : TEXT_MUTED, borderRadius: 2 }} />
               </div>
             </div>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#111827", width: 30, textAlign: "right" }}>{count}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_PRIMARY, width: 30, textAlign: "right" }}>{count}</span>
           </div>
         );
       })}
-      {total === 0 && <div style={{ fontSize: 13, color: "#d1d5db", textAlign: "center", padding: 12 }}>Waiting for responses...</div>}
+      {total === 0 && <div style={{ fontSize: 13, color: "#d4d4d8", textAlign: "center", padding: 12 }}>Waiting for responses...</div>}
     </div>
   );
 
@@ -1928,26 +1952,26 @@ function ClassTools({ data, setData, isAdmin, userName }) {
         <div style={{ ...sectionLabel, marginBottom: 8 }}>Talking Points (admin only)</div>
         {concepts.map(c => (
           <div key={c.id} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: "4px solid " + ACCENT }}>
-            <div style={{ fontSize: 14, fontWeight: 900, color: "#111827", marginBottom: 6 }}>{c.name}</div>
-            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8, lineHeight: 1.4 }}>{c.desc}</div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: TEXT_PRIMARY, marginBottom: 6 }}>{c.name}</div>
+            <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginBottom: 8, lineHeight: 1.4 }}>{c.desc}</div>
             <div style={{ marginBottom: 6 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: ACCENT, textTransform: "uppercase", marginBottom: 2 }}>Why it matters</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: ACCENT, textTransform: "uppercase", marginBottom: 2 }}>Why it matters</div>
               <div style={{ fontSize: 12, color: "#374151", lineHeight: 1.4 }}>{c.whyItMatters}</div>
             </div>
             <div style={{ marginBottom: 6 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: ACCENT, textTransform: "uppercase", marginBottom: 2 }}>Who it affects</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: ACCENT, textTransform: "uppercase", marginBottom: 2 }}>Who it affects</div>
               <div style={{ fontSize: 12, color: "#374151", lineHeight: 1.4 }}>{c.whoItAffects}</div>
             </div>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: ACCENT, textTransform: "uppercase", marginBottom: 2 }}>Example angles</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: ACCENT, textTransform: "uppercase", marginBottom: 2 }}>Example angles</div>
               <div style={{ fontSize: 12, color: "#374151", lineHeight: 1.4 }}>{c.exampleAngles}</div>
             </div>
           </div>
         ))}
         <div style={{ ...crd, padding: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", marginBottom: 4 }}>Your notes for this headline</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Your notes for this headline</div>
           <textarea value={adminNotes || headline?.adminNotes || ""} onChange={e => setAdminNotes(e.target.value)} placeholder="Add your own talking points, examples, discussion questions..." rows={3} style={{ ...inp, fontSize: 12, resize: "vertical" }} />
-          <button onClick={() => saveHeadlineNotes(headline.id, adminNotes)} style={{ ...pill, background: "#111827", color: "#fff", padding: "8px 0", width: "100%", marginTop: 6 }}>Save Notes</button>
+          <button onClick={() => saveHeadlineNotes(headline.id, adminNotes)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "8px 0", width: "100%", marginTop: 6 }}>Save Notes</button>
         </div>
       </div>
     );
@@ -1966,7 +1990,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
           <div style={{ maxWidth: 700, margin: "0 auto" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <button onClick={() => setActiveSession(null)} style={pillInactive}>Back</button>
-              <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>Headlines</div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY }}>Headlines</div>
               <div style={{ width: 60 }} />
             </div>
 
@@ -1975,7 +1999,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
                 <input value={newHeadline} onChange={e => setNewHeadline(e.target.value)} placeholder="Headline text..." style={inp} />
                 <div style={{ display: "flex", gap: 6 }}>
                   <input value={newUrl} onChange={e => setNewUrl(e.target.value)} placeholder="URL (optional)" style={{ ...inp, flex: 1 }} />
-                  <button onClick={() => submitHeadline(session.id)} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 16px" }}>Add</button>
+                  <button onClick={() => submitHeadline(session.id)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "10px 16px" }}>Add</button>
                 </div>
               </div>
             </div>
@@ -1985,15 +2009,15 @@ function ClassTools({ data, setData, isAdmin, userName }) {
               const isActive = session.activeHeadlineId === h.id;
               const rc = h.realCategories || []; const rco = h.realConcepts || [];
               return (
-                <div key={h.id} style={{ ...crd, padding: 12, marginBottom: 4, borderColor: isActive ? ACCENT : "#f3f4f6", borderWidth: isActive ? 2 : 1 }}>
+                <div key={h.id} style={{ ...crd, padding: 12, marginBottom: 4, borderColor: isActive ? ACCENT : "#f4f4f5", borderWidth: isActive ? 2 : 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: isActive ? 700 : 500, color: "#111827" }}>{h.text}</div>
-                      {h.url && <a href={h.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 10, color: "#2563eb", textDecoration: "none" }}>Source</a>}
-                      {rc.length > 0 && <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{rc.join(", ")}</div>}
-                      {rco.length > 0 && <div style={{ fontSize: 10, color: ACCENT, fontWeight: 600 }}>{rco.map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>}
+                      <div style={{ fontSize: 14, fontWeight: isActive ? 700 : 500, color: TEXT_PRIMARY }}>{h.text}</div>
+                      {h.url && <a href={h.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: "#2563eb", textDecoration: "none" }}>Source</a>}
+                      {rc.length > 0 && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>{rc.join(", ")}</div>}
+                      {rco.length > 0 && <div style={{ fontSize: 11, color: ACCENT, fontWeight: 600 }}>{rco.map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>}
                     </div>
-                    {!isActive && <button onClick={() => activateHeadline(session.id, h.id)} style={{ ...pill, background: "#f3f4f6", color: "#4b5563", fontSize: 10, padding: "4px 10px" }}>Activate</button>}
+                    {!isActive && <button onClick={() => activateHeadline(session.id, h.id)} style={{ ...pill, background: "#f4f4f5", color: "#52525b", fontSize: 11, padding: "4px 10px" }}>Activate</button>}
                   </div>
                 </div>
               );
@@ -2003,11 +2027,11 @@ function ClassTools({ data, setData, isAdmin, userName }) {
               <div style={{ marginTop: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                   <div style={{ ...sectionLabel }}>Active Headline</div>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: phase === "surface" ? "#2563eb" : phase === "concept" ? PURPLE : GREEN, background: phase === "surface" ? "#eff6ff" : phase === "concept" ? "#f5f3ff" : "#f0fdf4", padding: "2px 8px", borderRadius: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: phase === "surface" ? "#2563eb" : phase === "concept" ? PURPLE : GREEN, background: phase === "surface" ? "#eff6ff" : phase === "concept" ? "#f5f3ff" : "#f0fdf4", padding: "2px 8px", borderRadius: 4 }}>
                     {phase === "surface" ? "Step 1: Surface" : phase === "concept" ? "Step 2: Concept" : "Complete"}
                   </span>
                 </div>
-                <div style={{ ...crd, padding: 20, textAlign: "center", marginBottom: 16, background: "#111827", borderColor: "#111827" }}>
+                <div style={{ ...crd, padding: 20, textAlign: "center", marginBottom: 16, background: TEXT_PRIMARY, borderColor: TEXT_PRIMARY }}>
                   <div style={{ fontSize: 20, fontWeight: 900, color: "#fff", lineHeight: 1.3 }}>{activeHeadline.text}</div>
                   {activeHeadline.url && <a href={activeHeadline.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", textDecoration: "none", marginTop: 6, display: "inline-block" }}>View source</a>}
                 </div>
@@ -2018,7 +2042,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
                     <div style={{ ...sectionLabel, marginBottom: 8 }}>What surface categories fit? (select all that apply)</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10 }}>
                       {cats.map(cat => (
-                        <button key={cat} onClick={() => toggleReal(cat)} style={{ ...pill, fontSize: 11, padding: "6px 10px", background: realPicks.includes(cat) ? GREEN : "#f3f4f6", color: realPicks.includes(cat) ? "#fff" : "#374151" }}>{cat}</button>
+                        <button key={cat} onClick={() => toggleReal(cat)} style={{ ...pill, fontSize: 11, padding: "6px 10px", background: realPicks.includes(cat) ? GREEN : "#f4f4f5", color: realPicks.includes(cat) ? "#fff" : "#374151" }}>{cat}</button>
                       ))}
                     </div>
                     {realPicks.length > 0 && <button onClick={() => revealSurface(session.id)} style={{ ...pill, background: ACCENT, color: "#fff", padding: "10px 20px", fontSize: 13 }}>Reveal Surface ({realPicks.length})</button>}
@@ -2028,16 +2052,16 @@ function ClassTools({ data, setData, isAdmin, userName }) {
                 {phase === "concept" && (
                   <div>
                     <div style={{ ...crd, padding: 14, background: "#f0fdf4", borderColor: GREEN, textAlign: "center", marginBottom: 12 }}>
-                      <div style={{ fontSize: 10, color: GREEN, fontWeight: 600, textTransform: "uppercase" }}>Surface categories</div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: "#111827", marginTop: 2 }}>{(session.realCategories || []).join(", ")}</div>
+                      <div style={{ fontSize: 11, color: GREEN, fontWeight: 600, textTransform: "uppercase" }}>Surface categories</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: TEXT_PRIMARY, marginTop: 2 }}>{(session.realCategories || []).join(", ")}</div>
                     </div>
                     <VoteBar items={COMM_CONCEPTS.map(c => c.id)} tally={conceptTally} total={conceptVoterCount} realItems={[]} label="Communication Concept Responses" />
                     <div style={{ ...sectionLabel, marginBottom: 8 }}>What communication concept is this really about?</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
                       {COMM_CONCEPTS.map(c => (
-                        <button key={c.id} onClick={() => toggleConceptReal(c.id)} style={{ ...crd, padding: "10px 14px", textAlign: "left", cursor: "pointer", borderColor: conceptPicks.includes(c.id) ? PURPLE : "#f3f4f6", borderWidth: conceptPicks.includes(c.id) ? 2 : 1, background: conceptPicks.includes(c.id) ? "#f5f3ff" : "#fff" }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: conceptPicks.includes(c.id) ? PURPLE : "#111827" }}>{c.name}</div>
-                          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{c.desc}</div>
+                        <button key={c.id} onClick={() => toggleConceptReal(c.id)} style={{ ...crd, padding: "10px 14px", textAlign: "left", cursor: "pointer", borderColor: conceptPicks.includes(c.id) ? PURPLE : "#f4f4f5", borderWidth: conceptPicks.includes(c.id) ? 2 : 1, background: conceptPicks.includes(c.id) ? "#f5f3ff" : "#fff" }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: conceptPicks.includes(c.id) ? PURPLE : TEXT_PRIMARY }}>{c.name}</div>
+                          <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>{c.desc}</div>
                         </button>
                       ))}
                     </div>
@@ -2053,12 +2077,12 @@ function ClassTools({ data, setData, isAdmin, userName }) {
                 {phase === "done" && (
                   <div>
                     <div style={{ ...crd, padding: 14, background: "#f0fdf4", borderColor: GREEN, textAlign: "center", marginBottom: 8 }}>
-                      <div style={{ fontSize: 10, color: GREEN, fontWeight: 600, textTransform: "uppercase" }}>Surface</div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>{(session.realCategories || []).join(", ")}</div>
+                      <div style={{ fontSize: 11, color: GREEN, fontWeight: 600, textTransform: "uppercase" }}>Surface</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: TEXT_PRIMARY }}>{(session.realCategories || []).join(", ")}</div>
                     </div>
                     <div style={{ ...crd, padding: 14, background: "#f5f3ff", borderColor: PURPLE, textAlign: "center", marginBottom: 8 }}>
-                      <div style={{ fontSize: 10, color: PURPLE, fontWeight: 600, textTransform: "uppercase" }}>Communication Concept</div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>{(session.realConcepts || []).map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>
+                      <div style={{ fontSize: 11, color: PURPLE, fontWeight: 600, textTransform: "uppercase" }}>Communication Concept</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: TEXT_PRIMARY }}>{(session.realConcepts || []).map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>
                     </div>
                     <VoteBar items={cats} tally={surfaceTally} total={surfaceVoterCount} realItems={session.realCategories} label="Surface Results" />
                     <VoteBar items={COMM_CONCEPTS.map(c => c.id)} tally={conceptTally} total={conceptVoterCount} realItems={session.realConcepts} label="Concept Results" />
@@ -2072,7 +2096,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
               <div style={{ ...sectionLabel, marginBottom: 6 }}>Categories ({cats.length})</div>
               <div style={{ display: "flex", gap: 6 }}>
                 <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="New category" onKeyDown={e => e.key === "Enter" && addCategory()} style={{ ...inp, flex: 1 }} />
-                <button onClick={addCategory} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 16px" }}>Add</button>
+                <button onClick={addCategory} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "10px 16px" }}>Add</button>
               </div>
             </div>
           </div>
@@ -2088,35 +2112,35 @@ function ClassTools({ data, setData, isAdmin, userName }) {
           <div style={{ ...sectionLabel, marginBottom: 12 }}>Class Tools</div>
           <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>Headline Exercise</div>
-              <button onClick={createSession} style={{ ...pill, background: "#111827", color: "#fff" }}>New Session</button>
+              <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>Headline Exercise</div>
+              <button onClick={createSession} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>New Session</button>
             </div>
-            <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5, marginBottom: 12 }}>Show a headline. Students categorize the surface topic, then identify the communication concept underneath.</div>
-            {sessions.length === 0 && <div style={{ fontSize: 13, color: "#d1d5db", textAlign: "center", padding: 12 }}>No sessions yet.</div>}
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.5, marginBottom: 12 }}>Show a headline. Students categorize the surface topic, then identify the communication concept underneath.</div>
+            {sessions.length === 0 && <div style={{ fontSize: 13, color: "#d4d4d8", textAlign: "center", padding: 12 }}>No sessions yet.</div>}
             {[...sessions].reverse().map(s => {
               const count = items.filter(it => it.sessionId === s.id).length;
               return (
                 <button key={s.id} onClick={() => setActiveSession(s.id)} style={{ ...crd, padding: 14, marginBottom: 4, width: "100%", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{s.name}</div>
-                    <div style={{ fontSize: 11, color: "#9ca3af" }}>{count} headline{count !== 1 ? "s" : ""} / {new Date(s.ts).toLocaleDateString()}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</div>
+                    <div style={{ fontSize: 11, color: TEXT_MUTED }}>{count} headline{count !== 1 ? "s" : ""} / {new Date(s.ts).toLocaleDateString()}</div>
                   </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke=TEXT_MUTED strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
               );
             })}
           </div>
           {items.filter(it => it.realConcepts?.length > 0).length > 0 && (
             <div style={{ ...crd, padding: 16 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Headline Archive</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 10 }}>Headline Archive</div>
               {items.filter(it => it.realConcepts?.length > 0).map(h => (
                 <div key={h.id} style={{ padding: "8px 0", borderBottom: "1px solid #f9fafb" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ flex: 1, fontSize: 13, color: "#111827" }}>{h.text}</div>
-                    {h.url && <a href={h.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: "#2563eb", textDecoration: "none" }}>Source</a>}
+                    <div style={{ flex: 1, fontSize: 13, color: TEXT_PRIMARY }}>{h.text}</div>
+                    {h.url && <a href={h.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#2563eb", textDecoration: "none" }}>Source</a>}
                   </div>
-                  <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{(h.realCategories || []).join(", ")}</div>
-                  <div style={{ fontSize: 10, color: ACCENT, fontWeight: 600 }}>{(h.realConcepts || []).map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>
+                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>{(h.realCategories || []).join(", ")}</div>
+                  <div style={{ fontSize: 11, color: ACCENT, fontWeight: 600 }}>{(h.realConcepts || []).map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>
                 </div>
               ))}
             </div>
@@ -2144,7 +2168,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
         <div style={{ ...sectionLabel, marginBottom: 12 }}>Class Tools</div>
         {currentHeadline ? (
           <div>
-            <div style={{ ...crd, padding: 20, textAlign: "center", marginBottom: 16, background: "#111827", borderColor: "#111827" }}>
+            <div style={{ ...crd, padding: 20, textAlign: "center", marginBottom: 16, background: TEXT_PRIMARY, borderColor: TEXT_PRIMARY }}>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Headline</div>
               <div style={{ fontSize: 20, fontWeight: 900, color: "#fff", lineHeight: 1.3 }}>{currentHeadline.text}</div>
               {currentHeadline.url && <a href={currentHeadline.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", textDecoration: "none", marginTop: 6, display: "inline-block" }}>Read article</a>}
@@ -2154,15 +2178,15 @@ function ClassTools({ data, setData, isAdmin, userName }) {
             {curPhase === "surface" && (
               studentSurfaceVote ? (
                 <div style={{ ...crd, padding: 20, textAlign: "center" }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>You picked: {studentSurfaceVote.join(", ")}</div>
-                  <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Waiting for surface reveal...</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>You picked: {studentSurfaceVote.join(", ")}</div>
+                  <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>Waiting for surface reveal...</div>
                 </div>
               ) : (
                 <div>
                   <div style={{ ...sectionLabel, marginBottom: 8 }}>Step 1: What surface categories fit? (select all that apply)</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
                     {cats.map(cat => (
-                      <button key={cat} onClick={() => togglePick(cat)} style={{ ...pill, fontSize: 12, padding: "8px 12px", background: myPicks.includes(cat) ? "#111827" : "#f3f4f6", color: myPicks.includes(cat) ? "#fff" : "#374151" }}>{cat}</button>
+                      <button key={cat} onClick={() => togglePick(cat)} style={{ ...pill, fontSize: 12, padding: "8px 12px", background: myPicks.includes(cat) ? TEXT_PRIMARY : "#f4f4f5", color: myPicks.includes(cat) ? "#fff" : "#374151" }}>{cat}</button>
                     ))}
                   </div>
                   {myPicks.length > 0 && <button onClick={() => lockInSurface(currentSession.id)} style={{ ...pill, background: ACCENT, color: "#fff", padding: "10px 20px", fontSize: 13, width: "100%" }}>Lock in ({myPicks.length})</button>}
@@ -2174,23 +2198,23 @@ function ClassTools({ data, setData, isAdmin, userName }) {
             {curPhase === "concept" && (
               <div>
                 <div style={{ ...crd, padding: 14, background: "#f0fdf4", borderColor: GREEN, textAlign: "center", marginBottom: 12 }}>
-                  <div style={{ fontSize: 10, color: GREEN, fontWeight: 600, textTransform: "uppercase" }}>Surface categories</div>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: "#111827", marginTop: 2 }}>{(currentSession.realCategories || []).join(", ")}</div>
-                  {studentSurfaceVote && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>You picked: {studentSurfaceVote.join(", ")}{studentSurfaceVote.some(v => (currentSession.realCategories || []).includes(v)) ? " \u2713" : ""}</div>}
+                  <div style={{ fontSize: 11, color: GREEN, fontWeight: 600, textTransform: "uppercase" }}>Surface categories</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: TEXT_PRIMARY, marginTop: 2 }}>{(currentSession.realCategories || []).join(", ")}</div>
+                  {studentSurfaceVote && <div style={{ fontSize: 11, color: TEXT_SECONDARY, marginTop: 4 }}>You picked: {studentSurfaceVote.join(", ")}{studentSurfaceVote.some(v => (currentSession.realCategories || []).includes(v)) ? " \u2713" : ""}</div>}
                 </div>
                 {studentConceptVote ? (
                   <div style={{ ...crd, padding: 20, textAlign: "center" }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>You picked: {studentConceptVote.map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>
-                    <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Waiting for concept reveal...</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>You picked: {studentConceptVote.map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>
+                    <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>Waiting for concept reveal...</div>
                   </div>
                 ) : (
                   <div>
                     <div style={{ ...sectionLabel, marginBottom: 8 }}>Step 2: What communication concept is this really about?</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
                       {COMM_CONCEPTS.map(c => (
-                        <button key={c.id} onClick={() => toggleConceptPick(c.id)} style={{ ...crd, padding: "10px 14px", textAlign: "left", cursor: "pointer", borderColor: myConceptPicks.includes(c.id) ? PURPLE : "#f3f4f6", borderWidth: myConceptPicks.includes(c.id) ? 2 : 1, background: myConceptPicks.includes(c.id) ? "#f5f3ff" : "#fff" }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: myConceptPicks.includes(c.id) ? PURPLE : "#111827" }}>{c.name}</div>
-                          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{c.desc}</div>
+                        <button key={c.id} onClick={() => toggleConceptPick(c.id)} style={{ ...crd, padding: "10px 14px", textAlign: "left", cursor: "pointer", borderColor: myConceptPicks.includes(c.id) ? PURPLE : "#f4f4f5", borderWidth: myConceptPicks.includes(c.id) ? 2 : 1, background: myConceptPicks.includes(c.id) ? "#f5f3ff" : "#fff" }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: myConceptPicks.includes(c.id) ? PURPLE : TEXT_PRIMARY }}>{c.name}</div>
+                          <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>{c.desc}</div>
                         </button>
                       ))}
                     </div>
@@ -2204,13 +2228,13 @@ function ClassTools({ data, setData, isAdmin, userName }) {
             {curPhase === "done" && (
               <div>
                 <div style={{ ...crd, padding: 14, background: "#f0fdf4", borderColor: GREEN, textAlign: "center", marginBottom: 8 }}>
-                  <div style={{ fontSize: 10, color: GREEN, fontWeight: 600, textTransform: "uppercase" }}>Surface</div>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>{(currentSession.realCategories || []).join(", ")}</div>
+                  <div style={{ fontSize: 11, color: GREEN, fontWeight: 600, textTransform: "uppercase" }}>Surface</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: TEXT_PRIMARY }}>{(currentSession.realCategories || []).join(", ")}</div>
                 </div>
                 <div style={{ ...crd, padding: 14, background: "#f5f3ff", borderColor: PURPLE, textAlign: "center", marginBottom: 12 }}>
-                  <div style={{ fontSize: 10, color: PURPLE, fontWeight: 600, textTransform: "uppercase" }}>Communication Concept</div>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>{(currentSession.realConcepts || []).map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>
-                  {studentConceptVote && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>You picked: {studentConceptVote.map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}{studentConceptVote.some(v => (currentSession.realConcepts || []).includes(v)) ? " \u2713" : ""}</div>}
+                  <div style={{ fontSize: 11, color: PURPLE, fontWeight: 600, textTransform: "uppercase" }}>Communication Concept</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: TEXT_PRIMARY }}>{(currentSession.realConcepts || []).map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}</div>
+                  {studentConceptVote && <div style={{ fontSize: 11, color: TEXT_SECONDARY, marginTop: 4 }}>You picked: {studentConceptVote.map(id => COMM_CONCEPTS.find(c => c.id === id)?.name || id).join(", ")}{studentConceptVote.some(v => (currentSession.realConcepts || []).includes(v)) ? " \u2713" : ""}</div>}
                 </div>
                 <VoteBar items={cats} tally={stSurfaceTally} total={stSurfaceCount} realItems={currentSession.realCategories} label="Surface Results" />
                 <VoteBar items={COMM_CONCEPTS.map(c => c.id)} tally={stConceptTally} total={stConceptCount} realItems={currentSession.realConcepts} label="Concept Results" />
@@ -2223,14 +2247,14 @@ function ClassTools({ data, setData, isAdmin, userName }) {
                 <input value={newHeadline} onChange={e => setNewHeadline(e.target.value)} placeholder="Headline text..." style={inp} />
                 <div style={{ display: "flex", gap: 6 }}>
                   <input value={newUrl} onChange={e => setNewUrl(e.target.value)} placeholder="URL (optional)" style={{ ...inp, flex: 1 }} />
-                  <button onClick={() => submitHeadline(currentSession.id)} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 16px" }}>Submit</button>
+                  <button onClick={() => submitHeadline(currentSession.id)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "10px 16px" }}>Submit</button>
                 </div>
               </div>
             </div>
           </div>
         ) : (
           <div style={{ ...crd, padding: 24, textAlign: "center" }}>
-            <div style={{ fontSize: 14, color: "#9ca3af" }}>No active headline right now. Check back during class.</div>
+            <div style={{ fontSize: 14, color: TEXT_MUTED }}>No active headline right now. Check back during class.</div>
           </div>
         )}
       </div>
@@ -2338,7 +2362,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
 
           {/* Add custom to-do */}
           <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8 }}>Add To-Do</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 8 }}>Add To-Do</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <input value={newTodoText} onChange={e => setNewTodoText(e.target.value)} placeholder="To-do item..." style={inp} />
               <div style={{ display: "flex", gap: 6 }}>
@@ -2351,7 +2375,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
                   <option value="assignments">Assignments</option>
                   <option value="weekly">Every Week</option>
                 </select>
-                <button onClick={addCustomTodo} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 16px" }}>Add</button>
+                <button onClick={addCustomTodo} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "10px 16px" }}>Add</button>
               </div>
             </div>
             {customTodos.length > 0 && (
@@ -2362,7 +2386,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
                   return (
                     <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 0", fontSize: 12 }}>
                       <span style={{ flex: 1, color: "#374151" }}>{t.text}</span>
-                      <span style={{ color: "#9ca3af", fontSize: 10 }}>{targetName} / {t.section}</span>
+                      <span style={{ color: TEXT_MUTED, fontSize: 10 }}>{targetName} / {t.section}</span>
                       <button onClick={() => removeCustomTodo(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: RED, fontSize: 11, fontWeight: 600 }}>x</button>
                     </div>
                   );
@@ -2375,14 +2399,14 @@ function ToDoView({ data, setData, userName, isAdmin }) {
             <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", fontFamily: F, minWidth: 700 }}>
               <thead>
                 <tr style={{ borderBottom: "2px solid #f3f4f6" }}>
-                  <th style={{ textAlign: "left", padding: "10px 12px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", position: "sticky", left: 0, background: "#fff", zIndex: 2 }}>Student</th>
-                  <th style={{ textAlign: "center", padding: "10px 6px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>Photo</th>
-                  <th style={{ textAlign: "center", padding: "10px 6px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>Bio</th>
+                  <th style={{ textAlign: "left", padding: "10px 12px", color: TEXT_MUTED, fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", position: "sticky", left: 0, background: "#fff", zIndex: 2 }}>Student</th>
+                  <th style={{ textAlign: "center", padding: "10px 6px", color: TEXT_MUTED, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Photo</th>
+                  <th style={{ textAlign: "center", padding: "10px 6px", color: TEXT_MUTED, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Bio</th>
                   {assignments.map(a => (
-                    <th key={a.id} style={{ textAlign: "center", padding: "10px 6px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase", maxWidth: 80 }}>{a.name.split(" ").slice(0, 2).join(" ")}</th>
+                    <th key={a.id} style={{ textAlign: "center", padding: "10px 6px", color: TEXT_MUTED, fontWeight: 600, fontSize: 11, textTransform: "uppercase", maxWidth: 80 }}>{a.name.split(" ").slice(0, 2).join(" ")}</th>
                   ))}
                   {WEEKLY_ITEMS.map(w => (
-                    <th key={w.id} style={{ textAlign: "center", padding: "10px 6px", color: PURPLE, fontWeight: 600, fontSize: 10, textTransform: "uppercase", maxWidth: 70 }}>{w.label.split(" ").slice(0, 2).join(" ")}</th>
+                    <th key={w.id} style={{ textAlign: "center", padding: "10px 6px", color: PURPLE, fontWeight: 600, fontSize: 11, textTransform: "uppercase", maxWidth: 70 }}>{w.label.split(" ").slice(0, 2).join(" ")}</th>
                   ))}
                 </tr>
               </thead>
@@ -2392,16 +2416,16 @@ function ToDoView({ data, setData, userName, isAdmin }) {
                   const bio = hasBio(s.id);
                   return (
                     <tr key={s.id} style={{ borderBottom: "1px solid #f9fafb" }}>
-                      <td style={{ padding: "8px 12px", fontWeight: 600, color: "#111827", fontSize: 13, whiteSpace: "nowrap", position: "sticky", left: 0, background: "#fff", zIndex: 1 }}>{s.name}</td>
-                      <td style={{ textAlign: "center", padding: "6px" }}>{photo ? <span style={{ color: GREEN, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e5e7eb", fontSize: 14 }}>-</span>}</td>
-                      <td style={{ textAlign: "center", padding: "6px" }}>{bio ? <span style={{ color: GREEN, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e5e7eb", fontSize: 14 }}>-</span>}</td>
+                      <td style={{ padding: "8px 12px", fontWeight: 600, color: TEXT_PRIMARY, fontSize: 13, whiteSpace: "nowrap", position: "sticky", left: 0, background: "#fff", zIndex: 1 }}>{s.name}</td>
+                      <td style={{ textAlign: "center", padding: "6px" }}>{photo ? <span style={{ color: GREEN, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e4e4e7", fontSize: 14 }}>-</span>}</td>
+                      <td style={{ textAlign: "center", padding: "6px" }}>{bio ? <span style={{ color: GREEN, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e4e4e7", fontSize: 14 }}>-</span>}</td>
                       {assignments.map(a => {
                         const done = getCheck(s.id, "assign-" + a.id);
-                        return <td key={a.id} style={{ textAlign: "center", padding: "6px" }}>{done ? <span style={{ color: GREEN, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e5e7eb", fontSize: 14 }}>-</span>}</td>;
+                        return <td key={a.id} style={{ textAlign: "center", padding: "6px" }}>{done ? <span style={{ color: GREEN, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e4e4e7", fontSize: 14 }}>-</span>}</td>;
                       })}
                       {WEEKLY_ITEMS.map(w => {
                         const done = getWeeklyCheck(s.id, w.id);
-                        return <td key={w.id} style={{ textAlign: "center", padding: "6px" }}>{done ? <span style={{ color: PURPLE, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e5e7eb", fontSize: 14 }}>-</span>}</td>;
+                        return <td key={w.id} style={{ textAlign: "center", padding: "6px" }}>{done ? <span style={{ color: PURPLE, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e4e4e7", fontSize: 14 }}>-</span>}</td>;
                       })}
                     </tr>
                   );
@@ -2417,7 +2441,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
   // Student view
   const Checkbox = ({ checked, onChange, accent }) => (
     <button onClick={onChange} style={{
-      width: 22, height: 22, borderRadius: 6, border: "2px solid " + (checked ? (accent || GREEN) : "#d1d5db"),
+      width: 22, height: 22, borderRadius: 6, border: "2px solid " + (checked ? (accent || GREEN) : "#d4d4d8"),
       background: checked ? (accent || GREEN) : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s", padding: 0,
     }}>
       {checked && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>}
@@ -2435,16 +2459,16 @@ function ToDoView({ data, setData, userName, isAdmin }) {
 
         {/* Setup */}
         <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Get Started</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 10 }}>Get Started</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Checkbox checked={hasPhoto(sid)} onChange={() => {}} />
-              <span style={{ fontSize: 14, color: hasPhoto(sid) ? "#9ca3af" : "#111827", textDecoration: hasPhoto(sid) ? "line-through" : "none" }}>Add your picture</span>
+              <span style={{ fontSize: 14, color: hasPhoto(sid) ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: hasPhoto(sid) ? "line-through" : "none" }}>Add your picture</span>
               {hasPhoto(sid) && <span style={{ fontSize: 11, color: GREEN, fontWeight: 600, marginLeft: "auto" }}>Done</span>}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Checkbox checked={hasBio(sid)} onChange={() => {}} />
-              <span style={{ fontSize: 14, color: hasBio(sid) ? "#9ca3af" : "#111827", textDecoration: hasBio(sid) ? "line-through" : "none" }}>Update your bio</span>
+              <span style={{ fontSize: 14, color: hasBio(sid) ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: hasBio(sid) ? "line-through" : "none" }}>Update your bio</span>
               {hasBio(sid) && <span style={{ fontSize: 11, color: GREEN, fontWeight: 600, marginLeft: "auto" }}>Done</span>}
             </div>
             {setupCustom.map(t => {
@@ -2452,7 +2476,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
               return (
                 <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <Checkbox checked={done} onChange={() => toggleCheck("custom-" + t.id)} />
-                  <span style={{ fontSize: 14, color: done ? "#9ca3af" : "#111827", textDecoration: done ? "line-through" : "none" }}>{t.text}</span>
+                  <span style={{ fontSize: 14, color: done ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: done ? "line-through" : "none" }}>{t.text}</span>
                 </div>
               );
             })}
@@ -2461,7 +2485,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
 
         {/* Assignments */}
         <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Assignments</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 10 }}>Assignments</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {assignments.map(a => {
               const done = getCheck(sid, "assign-" + a.id);
@@ -2469,11 +2493,11 @@ function ToDoView({ data, setData, userName, isAdmin }) {
                 <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <Checkbox checked={done} onChange={() => toggleCheck("assign-" + a.id)} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: 14, color: done ? "#9ca3af" : "#111827", textDecoration: done ? "line-through" : "none" }}>{a.name}</span>
-                    {a.due && <span style={{ fontSize: 11, color: "#9ca3af", marginLeft: 6 }}>Due {a.due}</span>}
+                    <span style={{ fontSize: 14, color: done ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: done ? "line-through" : "none" }}>{a.name}</span>
+                    {a.due && <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>Due {a.due}</span>}
                   </div>
                   {a.link && (
-                    <a href={a.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: "flex", alignItems: "center", padding: "4px 8px", borderRadius: 6, background: "#f3f4f6", color: "#6b7280", textDecoration: "none" }}>
+                    <a href={a.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: "flex", alignItems: "center", padding: "4px 8px", borderRadius: 6, background: "#f4f4f5", color: TEXT_SECONDARY, textDecoration: "none" }}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </a>
                   )}
@@ -2485,7 +2509,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
               return (
                 <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <Checkbox checked={done} onChange={() => toggleCheck("custom-" + t.id)} />
-                  <span style={{ fontSize: 14, color: done ? "#9ca3af" : "#111827", textDecoration: done ? "line-through" : "none" }}>{t.text}</span>
+                  <span style={{ fontSize: 14, color: done ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: done ? "line-through" : "none" }}>{t.text}</span>
                 </div>
               );
             })}
@@ -2495,8 +2519,8 @@ function ToDoView({ data, setData, userName, isAdmin }) {
         {/* Weekly */}
         <div style={{ ...crd, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Every Week</div>
-            <span style={{ fontSize: 10, color: PURPLE, fontWeight: 600 }}>Resets Monday</span>
+            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>Every Week</div>
+            <span style={{ fontSize: 11, color: PURPLE, fontWeight: 600 }}>Resets Monday</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {WEEKLY_ITEMS.map(w => {
@@ -2504,7 +2528,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
               return (
                 <div key={w.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <Checkbox checked={done} onChange={() => toggleWeekly(w.id)} accent={PURPLE} />
-                  <span style={{ fontSize: 14, color: done ? "#9ca3af" : "#111827", textDecoration: done ? "line-through" : "none" }}>{w.label}</span>
+                  <span style={{ fontSize: 14, color: done ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: done ? "line-through" : "none" }}>{w.label}</span>
                 </div>
               );
             })}
@@ -2513,7 +2537,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
               return (
                 <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <Checkbox checked={done} onChange={() => toggleWeekly("custom-" + t.id)} accent={PURPLE} />
-                  <span style={{ fontSize: 14, color: done ? "#9ca3af" : "#111827", textDecoration: done ? "line-through" : "none" }}>{t.text}</span>
+                  <span style={{ fontSize: 14, color: done ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: done ? "line-through" : "none" }}>{t.text}</span>
                 </div>
               );
             })}
