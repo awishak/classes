@@ -373,10 +373,10 @@ function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDa
             <select value={r.type} onChange={e => {
               const upd = [...(d.readings || [])]; upd[ri] = { ...upd[ri], type: e.target.value };
               updateDate(wi, realDi, "readings", upd);
-            }} style={{ fontSize: 11, border: "none", background: "transparent", color: r.type === "required" ? RED : r.type === "highly_recommended" ? AMBER : GREEN, fontWeight: 700, cursor: "pointer" }}>
+            }} style={{ fontSize: 11, border: "none", background: "transparent", color: r.type === "required" ? RED : r.type === "additional" ? TEXT_MUTED : GREEN, fontWeight: 700, cursor: "pointer" }}>
               <option value="required">Required</option>
-              <option value="highly_recommended">Highly Rec</option>
               <option value="recommended">Recommended</option>
+              <option value="additional">Additional</option>
             </select>
             <button onClick={() => {
               const upd = (d.readings || []).filter((_, i) => i !== ri);
@@ -560,15 +560,15 @@ function ScheduleView({ data, setData, isAdmin }) {
                               {d.assignment && <div style={{ fontSize: 13, color: "#c2410c", marginTop: 6, fontWeight: 600 }}>{d.assignment}</div>}
                               {hasReadings && (
                                 <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER, display: "flex", flexDirection: "column", gap: 4 }}>
-                                  {(d.readings || []).map((r, ri) => {
+                                  {(d.readings || []).filter(r => r.type === "required" || r.type === "recommended").map((r, ri) => {
                                     const rdg = (data.readings || []).find(x => x.id === r.readingId);
                                     if (!rdg) return null;
                                     const link = rdg.pdfUrl || rdg.url;
-                                    const typeColor = r.type === "required" ? RED : r.type === "highly_recommended" ? AMBER : GREEN;
-                                    const typeLabel = r.type === "required" ? "Req" : r.type === "highly_recommended" ? "H.Rec" : "Rec";
+                                    const tColor = r.type === "required" ? RED : GREEN;
+                                    const tLabel = r.type === "required" ? "Req" : "Rec";
                                     return (
                                       <div key={ri} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-                                        <span style={{ fontSize: 11, fontWeight: 700, color: typeColor, textTransform: "uppercase", marginTop: 2, flexShrink: 0, width: 34 }}>{typeLabel}</span>
+                                        <span style={{ fontSize: 11, fontWeight: 700, color: tColor, textTransform: "uppercase", marginTop: 2, flexShrink: 0, width: 28 }}>{tLabel}</span>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                           {link ? (
                                             <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500, lineHeight: 1.35 }}>{rdg.title}</a>
@@ -1561,9 +1561,14 @@ function ReadingsView({ data, setData, isAdmin }) {
   const [newReading, setNewReading] = useState({ title: "", url: "", category: "", notes: "", readingType: "recommended" });
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [showRepo, setShowRepo] = useState(false);
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
   const categories = [...new Set(readings.map(r => r.category).filter(Boolean))].sort();
+
+  const typeColor = (t) => t === "required" ? RED : t === "additional" ? TEXT_MUTED : GREEN;
+  const typeLabel = (t) => t === "required" ? "Required" : t === "additional" ? "Additional" : "Recommended";
+  const typeShort = (t) => t === "required" ? "Req" : t === "additional" ? "Add" : "Rec";
 
   const addReading = async () => {
     if (!newReading.title.trim()) return;
@@ -1575,6 +1580,16 @@ function ReadingsView({ data, setData, isAdmin }) {
   };
   const updateReading = async (id, field, value) => {
     const updated = { ...data, readings: readings.map(r => r.id === id ? { ...r, [field]: value } : r) };
+    await saveData(updated); setData(updated);
+  };
+  const updateScheduleReadingType = async (date, readingId, newType) => {
+    const newSchedule = schedule.map(w => ({
+      ...w, dates: w.dates.map(d => {
+        if (d.date !== date) return d;
+        return { ...d, readings: (d.readings || []).map(r => r.readingId === readingId ? { ...r, type: newType } : r) };
+      })
+    }));
+    const updated = { ...data, schedule: newSchedule };
     await saveData(updated); setData(updated);
   };
   const deleteReading = async (id) => {
@@ -1605,23 +1620,18 @@ function ReadingsView({ data, setData, isAdmin }) {
     setUploading(true);
     try {
       const pdfUrl = await uploadPdf(file, id);
-      const r = { id, title, url: newReading.url.trim(), pdfUrl, category: newReading.category.trim(), notes: newReading.notes.trim() };
+      const r = { id, title, url: newReading.url.trim(), pdfUrl, category: newReading.category.trim(), notes: newReading.notes.trim(), readingType: newReading.readingType || "recommended" };
       const updated = { ...data, readings: [...readings, r] };
       await saveData(updated); setData(updated);
-      setNewReading({ title: "", url: "", category: "", notes: "" });
+      setNewReading({ title: "", url: "", category: "", notes: "", readingType: "recommended" });
       showMsg("Added with PDF");
     } catch (err) { showMsg("Upload failed"); }
     setUploading(false);
   };
 
   const getReadingLink = (r) => r.pdfUrl || r.url;
-  const getReadingLabel = (r) => {
-    if (r.pdfUrl && r.url) return "PDF + Link";
-    if (r.pdfUrl) return "PDF";
-    return null;
-  };
 
-  // Build week-grouped view
+  // Build week-grouped view from schedule attachments
   const weekReadings = [];
   schedule.forEach(w => {
     const weekItems = [];
@@ -1636,38 +1646,32 @@ function ReadingsView({ data, setData, isAdmin }) {
     }
   });
 
-  const ReadingLink = ({ r, children }) => {
-    const link = getReadingLink(r);
-    if (link) return <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>{children}</a>;
-    return <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{children}</span>;
-  };
-
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "24px 20px 40px", fontFamily: F }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 700, margin: "0 auto" }}>
-        <div style={{ ...sectionLabel, marginBottom: 12 }}>Readings and Media</div>
+        <div style={{ ...sectionLabel, marginBottom: 16 }}>Readings and Media</div>
 
         {/* Admin: add new reading */}
         {isAdmin && (
-          <div style={{ ...crd, padding: 16, marginBottom: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 10 }}>Add to Repository</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ ...crd, padding: 18, marginBottom: 20 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 12 }}>Add to Repository</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <input value={newReading.title} onChange={e => setNewReading({ ...newReading, title: e.target.value })} placeholder="Title" style={inp} />
               <input value={newReading.url} onChange={e => setNewReading({ ...newReading, url: e.target.value })} placeholder="URL (optional)" style={inp} />
-              <div style={{ display: "flex", gap: 6 }}>
-                <input value={newReading.category} onChange={e => setNewReading({ ...newReading, category: e.target.value })} placeholder="Category (e.g. Article, Video)" list="cat-list" style={{ ...inp, flex: 1 }} />
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={newReading.category} onChange={e => setNewReading({ ...newReading, category: e.target.value })} placeholder="Category" list="cat-list" style={{ ...inp, flex: 1 }} />
                 <datalist id="cat-list">{categories.map(c => <option key={c} value={c} />)}</datalist>
-                <select value={newReading.readingType} onChange={e => setNewReading({ ...newReading, readingType: e.target.value })} style={{ ...sel, width: 140, fontSize: 12, padding: "6px 8px" }}>
+                <select value={newReading.readingType} onChange={e => setNewReading({ ...newReading, readingType: e.target.value })} style={{ ...sel, width: 150, fontSize: 14 }}>
                   <option value="required">Required</option>
-                  <option value="highly_recommended">Highly Recommended</option>
                   <option value="recommended">Recommended</option>
+                  <option value="additional">Additional</option>
                 </select>
               </div>
               <textarea value={newReading.notes} onChange={e => setNewReading({ ...newReading, notes: e.target.value })} placeholder="Notes (optional)" rows={2} style={{ ...inp, resize: "vertical" }} />
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={addReading} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "10px 0", flex: 1 }}>Add Reading</button>
-                <label style={{ ...pill, background: "#eff6ff", color: "#2563eb", padding: "10px 16px", display: "flex", alignItems: "center", gap: 4 }}>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={addReading} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "11px 0", flex: 1 }}>Add Reading</button>
+                <label style={{ ...pill, background: "#eff6ff", color: "#2563eb", padding: "11px 16px", display: "flex", alignItems: "center", gap: 4, fontSize: 13 }}>
                   {uploading ? "Uploading..." : "Add with PDF"}
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                   <input type="file" accept=".pdf" onChange={e => { if (e.target.files?.[0]) handleNewPdfUpload(e.target.files[0]); e.target.value = ""; }} style={{ display: "none" }} disabled={uploading} />
@@ -1677,96 +1681,142 @@ function ReadingsView({ data, setData, isAdmin }) {
           </div>
         )}
 
-        {/* Weekly view */}
-        {weekReadings.length > 0 && (
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 10 }}>By Week</div>
-            {weekReadings.map(w => (
-              <div key={w.week} style={{ ...crd, padding: 14, marginBottom: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: TEXT_PRIMARY, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 900, flexShrink: 0 }}>{w.week}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{w.label}{w.theme ? " \u2014 " + w.theme : ""}</div>
-                </div>
-                {w.items.map((item, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: i > 0 ? "1px solid #f9fafb" : "none" }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: (item.type || item.readingType) === "required" ? RED : (item.type || item.readingType) === "highly_recommended" ? AMBER : GREEN, textTransform: "uppercase", width: 40, flexShrink: 0 }}>{(item.type || item.readingType) === "required" ? "Req" : (item.type || item.readingType) === "highly_recommended" ? "H.Rec" : "Rec"}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <ReadingLink r={item}>{item.title}</ReadingLink>
-                      {getReadingLabel(item) && <span style={{ fontSize: 9, color: TEXT_MUTED, marginLeft: 4, fontWeight: 600 }}>{getReadingLabel(item)}</span>}
-                      {item.category && <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>{item.category}</span>}
-                      {item.notes && <div style={{ fontSize: 11, color: TEXT_SECONDARY, marginTop: 1 }}>{item.notes}</div>}
-                    </div>
-                    <span style={{ fontSize: 11, color: "#d4d4d8", flexShrink: 0 }}>{item.day} {item.date}</span>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Week-by-week readings */}
+        {weekReadings.length === 0 && <div style={{ ...crd, padding: 24, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No readings added yet.</div>}
+        {weekReadings.map(w => {
+          const required = w.items.filter(i => i.type === "required");
+          const recommended = w.items.filter(i => i.type === "recommended");
+          const additional = w.items.filter(i => i.type === "additional" || i.type === "highly_recommended");
 
-        {/* Full repository by category */}
-        <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 10 }}>Full Repository</div>
-        {readings.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: "#d4d4d8", fontSize: 13 }}>No readings added yet.</div>}
-        {(categories.length > 0 ? categories : [""]).map(cat => {
-          const catReadings = readings.filter(r => (r.category || "") === cat);
-          if (catReadings.length === 0) return null;
-          return (
-            <div key={cat || "__none"} style={{ marginBottom: 16 }}>
-              {cat && <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{cat}</div>}
-              {catReadings.map(r => {
-                const isEditing = editId === r.id;
-                return (
-                  <div key={r.id} style={{ ...crd, padding: 12, marginBottom: 4 }}>
-                    {isAdmin && isEditing ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <input value={r.title} onChange={e => updateReading(r.id, "title", e.target.value)} style={{ ...inp, fontSize: 13, padding: "4px 8px" }} />
-                        <input value={r.url || ""} onChange={e => updateReading(r.id, "url", e.target.value)} placeholder="URL" style={{ ...inp, fontSize: 12, padding: "4px 8px" }} />
-                        <input value={r.category || ""} onChange={e => updateReading(r.id, "category", e.target.value)} placeholder="Category" list="cat-list" style={{ ...inp, fontSize: 12, padding: "4px 8px" }} />
-                        <select value={r.readingType || "recommended"} onChange={e => updateReading(r.id, "readingType", e.target.value)} style={{ ...sel, width: "100%", fontSize: 12, padding: "4px 8px" }}>
-                          <option value="required">Required</option>
-                          <option value="highly_recommended">Highly Recommended</option>
-                          <option value="recommended">Recommended</option>
-                        </select>
-                        <textarea value={r.notes || ""} onChange={e => updateReading(r.id, "notes", e.target.value)} placeholder="Notes" rows={2} style={{ ...inp, fontSize: 12, padding: "4px 8px", resize: "vertical" }} />
-                        {r.pdfUrl ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", background: "#f0fdf4", borderRadius: 6 }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <span style={{ fontSize: 11, color: GREEN, fontWeight: 600, flex: 1 }}>PDF attached</span>
-                            <a href={r.pdfUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#2563eb" }}>View</a>
-                            <button onClick={() => updateReading(r.id, "pdfUrl", "")} style={{ background: "none", border: "none", cursor: "pointer", color: RED, fontSize: 11, fontWeight: 600 }}>Remove</button>
-                          </div>
-                        ) : (
-                          <label style={{ ...pillInactive, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "8px 0", cursor: "pointer" }}>
-                            {uploading ? "Uploading..." : "Upload PDF"}
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            <input type="file" accept=".pdf" onChange={e => { if (e.target.files?.[0]) handlePdfUpload(e.target.files[0], r.id); e.target.value = ""; }} style={{ display: "none" }} disabled={uploading} />
-                          </label>
-                        )}
-                        <div style={{ display: "flex", gap: 4 }}>
-                          <button onClick={() => setEditId(null)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Done</button>
-                          <button onClick={() => { if (window.confirm("Delete this reading?")) deleteReading(r.id); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: isAdmin ? "pointer" : "default" }} onClick={() => isAdmin && setEditId(r.id)}>
-                        <span style={{ fontSize: 9, fontWeight: 700, color: r.readingType === "required" ? RED : r.readingType === "highly_recommended" ? AMBER : GREEN, textTransform: "uppercase", width: 50, flexShrink: 0 }}>{r.readingType === "required" ? "Req" : r.readingType === "highly_recommended" ? "High Rec" : "Rec"}</span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <ReadingLink r={r}>{r.title}</ReadingLink>
-                            {r.pdfUrl && <span style={{ fontSize: 9, fontWeight: 700, color: RED, background: "#fef2f2", padding: "1px 5px", borderRadius: 4 }}>PDF</span>}
-                            {r.url && r.pdfUrl && <a href={r.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 9, fontWeight: 700, color: "#2563eb", background: "#eff6ff", padding: "1px 5px", borderRadius: 4, textDecoration: "none" }}>Link</a>}
-                          </div>
-                          {r.notes && <div style={{ fontSize: 11, color: TEXT_SECONDARY, marginTop: 2 }}>{r.notes}</div>}
-                        </div>
-                        {isAdmin && <span style={{ fontSize: 11, color: "#d4d4d8", flexShrink: 0 }}>Click to edit</span>}
-                      </div>
+          const renderItem = (item, i) => {
+            const link = getReadingLink(item);
+            const isEdit = editId === item.id;
+            return (
+              <div key={item.id + "-" + i} style={{ padding: "10px 0", borderTop: i > 0 ? "1px solid " + BORDER : "none" }}>
+                {isAdmin && isEdit ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <input value={item.title} onChange={e => updateReading(item.id, "title", e.target.value)} style={{ ...inp, fontSize: 14, padding: "6px 10px" }} />
+                    <input value={item.url || ""} onChange={e => updateReading(item.id, "url", e.target.value)} placeholder="URL" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <select value={item.type} onChange={e => updateScheduleReadingType(item.date, item.id, e.target.value)} style={{ ...sel, fontSize: 13, padding: "6px 10px" }}>
+                        <option value="required">Required</option>
+                        <option value="recommended">Recommended</option>
+                        <option value="additional">Additional</option>
+                      </select>
+                      <select value={item.readingType || "recommended"} onChange={e => updateReading(item.id, "readingType", e.target.value)} style={{ ...sel, fontSize: 13, padding: "6px 10px" }}>
+                        <option value="required">Repo: Required</option>
+                        <option value="recommended">Repo: Recommended</option>
+                        <option value="additional">Repo: Additional</option>
+                      </select>
+                    </div>
+                    <textarea value={item.notes || ""} onChange={e => updateReading(item.id, "notes", e.target.value)} placeholder="Notes" rows={2} style={{ ...inp, fontSize: 13, padding: "6px 10px", resize: "vertical" }} />
+                    {!item.pdfUrl && (
+                      <label style={{ ...pillInactive, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "8px 0", cursor: "pointer", fontSize: 12 }}>
+                        {uploading ? "Uploading..." : "Upload PDF"}
+                        <input type="file" accept=".pdf" onChange={e => { if (e.target.files?.[0]) handlePdfUpload(e.target.files[0], item.id); e.target.value = ""; }} style={{ display: "none" }} disabled={uploading} />
+                      </label>
                     )}
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => setEditId(null)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Done</button>
+                      <button onClick={() => { if (window.confirm("Delete?")) deleteReading(item.id); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
+                    </div>
                   </div>
-                );
-              })}
+                ) : (
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: isAdmin ? "pointer" : "default" }} onClick={() => isAdmin && setEditId(item.id)}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {link ? (
+                        <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 15, color: "#2563eb", textDecoration: "none", fontWeight: 500, lineHeight: 1.4, display: "block" }}>{item.title}</a>
+                      ) : (
+                        <span style={{ fontSize: 15, color: TEXT_PRIMARY, fontWeight: 500, lineHeight: 1.4, display: "block" }}>{item.title}</span>
+                      )}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                        {item.category && <span style={{ fontSize: 12, color: TEXT_MUTED }}>{item.category}</span>}
+                        {item.pdfUrl && <span style={{ fontSize: 10, fontWeight: 700, color: RED, background: "#fef2f2", padding: "1px 5px", borderRadius: 4 }}>PDF</span>}
+                        {item.day && item.date && <span style={{ fontSize: 12, color: TEXT_MUTED }}>{item.day} {item.date}</span>}
+                      </div>
+                      {item.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 3, lineHeight: 1.4 }}>{item.notes}</div>}
+                    </div>
+                    {isAdmin && <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0, marginTop: 2 }}>Edit</span>}
+                  </div>
+                )}
+              </div>
+            );
+          };
+
+          return (
+            <div key={w.week} style={{ ...crd, padding: 18, marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{w.week}</div>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.2 }}>{w.label}</div>
+                  {w.theme && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 1 }}>{w.theme}</div>}
+                </div>
+              </div>
+
+              {required.length > 0 && (
+                <div style={{ marginBottom: required.length > 0 && (recommended.length > 0 || additional.length > 0) ? 16 : 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: RED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Required</div>
+                  {required.map((item, i) => renderItem(item, i))}
+                </div>
+              )}
+
+              {recommended.length > 0 && (
+                <div style={{ marginBottom: recommended.length > 0 && additional.length > 0 ? 16 : 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: GREEN, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Recommended</div>
+                  {recommended.map((item, i) => renderItem(item, i))}
+                </div>
+              )}
+
+              {additional.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Additional</div>
+                  {additional.map((item, i) => renderItem(item, i))}
+                </div>
+              )}
             </div>
           );
         })}
+
+        {/* Full repository toggle (admin only) */}
+        {isAdmin && readings.length > 0 && (
+          <div style={{ marginTop: 20 }}>
+            <button onClick={() => setShowRepo(!showRepo)} style={{ ...pillInactive, width: "100%", padding: "10px 0", fontSize: 13 }}>
+              {showRepo ? "Hide" : "Show"} Full Repository ({readings.length} items)
+            </button>
+            {showRepo && (
+              <div style={{ marginTop: 12 }}>
+                {(categories.length > 0 ? categories : [""]).map(cat => {
+                  const catReadings = readings.filter(r => (r.category || "") === cat);
+                  if (catReadings.length === 0) return null;
+                  return (
+                    <div key={cat || "__none"} style={{ marginBottom: 16 }}>
+                      {cat && <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{cat}</div>}
+                      {catReadings.map(r => (
+                        <div key={r.id} style={{ ...crd, padding: 12, marginBottom: 4 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => setEditId(r.id)}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: typeColor(r.readingType), textTransform: "uppercase", width: 36, flexShrink: 0 }}>{typeShort(r.readingType)}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                {(r.pdfUrl || r.url) ? (
+                                  <a href={r.pdfUrl || r.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 14, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{r.title}</a>
+                                ) : (
+                                  <span style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY }}>{r.title}</span>
+                                )}
+                                {r.pdfUrl && <span style={{ fontSize: 9, fontWeight: 700, color: RED, background: "#fef2f2", padding: "1px 5px", borderRadius: 4 }}>PDF</span>}
+                              </div>
+                              {r.notes && <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>{r.notes}</div>}
+                            </div>
+                            <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0 }}>Edit</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2660,7 +2710,7 @@ export default function Comm118() {
             { id: "r_w1_klosterman", title: "Are You Not Entertained?", url: "https://grantland.com/features/chuck-klosterman-gregg-popovich-entertainment-sports/", category: "Article", readingType: "required", notes: "Klosterman on Popovich, entertainment vs winning" },
             { id: "r_w1_ncaa_props", title: "NCAA Urges Gambling Commissions to Eliminate Prop Bets", url: "https://www.ncaa.org/news/2026/1/15/media-center-ncaa-urges-gambling-commissions-to-eliminate-prop-bets.aspx", category: "Article", readingType: "required", notes: "" },
             // Week 1: Highly Recommended
-            { id: "r_w1_coppins", title: "My Year as a Degenerate Sports Gambler", url: "https://www.theatlantic.com/magazine/2026/04/online-sports-betting-app-addiction/686061/", category: "Article", readingType: "highly_recommended", notes: "McKay Coppins, The Atlantic 2026" },
+            { id: "r_w1_coppins", title: "My Year as a Degenerate Sports Gambler", url: "https://www.theatlantic.com/magazine/2026/04/online-sports-betting-app-addiction/686061/", category: "Article", readingType: "additional", notes: "McKay Coppins, The Atlantic 2026" },
             // Week 1: Recommended - Purpose
             { id: "r_w1_truth", title: "Sports Has an Agreed-Upon Truth", url: "https://www.si.com/sports-illustrated/2021/01/07/sports-shared-truth-us-capitol-riot-donald-trump", category: "Article", readingType: "recommended", notes: "Post-Jan 6, sports as shared reality" },
             { id: "r_w1_olympics", title: "Why Are the Olympics Still Happening?", url: "https://www.nytimes.com/2021/06/21/sports/olympics/tokyo-olympics-happening-why.html", category: "Article", readingType: "recommended", notes: "" },
@@ -2736,7 +2786,7 @@ export default function Comm118() {
             "Apr 1": [ // Week 1 Wed
               { readingId: "r_w1_klosterman", type: "required" },
               { readingId: "r_w1_ncaa_props", type: "required" },
-              { readingId: "r_w1_coppins", type: "highly_recommended" },
+              { readingId: "r_w1_coppins", type: "additional" },
               { readingId: "r_w1_truth", type: "recommended" },
               { readingId: "r_w1_olympics", type: "recommended" },
               { readingId: "r_w1_jenkins", type: "recommended" },
