@@ -186,6 +186,7 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
     { id: "readings", label: "Readings", admin: false, guest: false },
     { id: "answer", label: "Answer", admin: false, guest: false },
     { id: "accolades", label: "Accolades", admin: false, guest: false },
+    { id: "boards", label: "Boards", admin: false, guest: false },
     { id: "survey", label: "Survey", admin: false, guest: false },
     { id: "pti", label: "Around the Horn", admin: true, guest: false },
     { id: "activities", label: "Activities", admin: true, guest: false },
@@ -287,7 +288,7 @@ function NamePicker({ data, onSelect }) {
         <div style={{ background: ACCENT, borderRadius: 16, padding: "36px 24px", marginBottom: 16, textAlign: "center" }}>
           <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>Approaches to Communication Research</div>
           <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", fontWeight: 500, marginTop: 6 }}>COMM 4 / Ishak / Santa Clara University</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 4 }}>MWF 11:45 am to 12:50 pm / Vari 134</div>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 4 }}>MWF 11:45 am to 12:50 pm / Lucas 207</div>
         </div>
         <div style={{ ...crd, padding: "14px 18px", marginBottom: 12 }}>
           <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.6, textAlign: "center" }}>This app is our class hub: schedule, leaderboard, and more. Please see Camino for official grades. Select your name.</div>
@@ -1065,10 +1066,76 @@ function AdminPanel({ data, setData }) {
 
   const recent = [...data.log].reverse().slice(0, 30);
 
+  // Weekly dashboard
+  const weekStart = new Date();
+  const wd = weekStart.getDay();
+  weekStart.setDate(weekStart.getDate() - (wd === 0 ? 6 : wd - 1));
+  weekStart.setHours(0, 0, 0, 0);
+  const weekLog = data.log.filter(e => e.ts >= weekStart.getTime());
+  const weekBySource = {};
+  weekLog.forEach(e => {
+    const src = e.source || "Other";
+    if (!weekBySource[src]) weekBySource[src] = { count: 0, total: 0 };
+    weekBySource[src].count++;
+    weekBySource[src].total += e.amount;
+  });
+  const sourceEntries = Object.entries(weekBySource).sort((a, b) => b[1].total - a[1].total);
+
+  const allBySource = {};
+  data.log.forEach(e => {
+    const src = e.source || "Other";
+    if (!allBySource[src]) allBySource[src] = { count: 0, total: 0 };
+    allBySource[src].count++;
+    allBySource[src].total += e.amount;
+  });
+  const allSourceEntries = Object.entries(allBySource).sort((a, b) => b[1].total - a[1].total);
+
   return (
     <div style={{ padding: 20, maxWidth: 900, margin: "0 auto", fontFamily: F }}>
       <Toast message={msg} />
       <div style={{ ...sectionLabel, marginBottom: 12 }}>Admin</div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+        <div style={{ ...crd, padding: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>This Week</div>
+          {sourceEntries.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED }}>No points this week</div>}
+          {sourceEntries.map(([src, d]) => (
+            <div key={src} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", fontSize: 13 }}>
+              <span style={{ color: TEXT_PRIMARY, fontWeight: 500 }}>{src}</span>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ fontSize: 11, color: TEXT_MUTED }}>{d.count} entries</span>
+                <span style={{ fontWeight: 700, color: d.total >= 0 ? GREEN : RED, minWidth: 36, textAlign: "right" }}>{d.total > 0 ? "+" : ""}{d.total}</span>
+              </div>
+            </div>
+          ))}
+          {sourceEntries.length > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0 0", marginTop: 4, borderTop: "1px solid " + BORDER, fontSize: 13, fontWeight: 700 }}>
+              <span style={{ color: TEXT_PRIMARY }}>Total</span>
+              <span style={{ color: TEXT_PRIMARY }}>{weekLog.reduce((s, e) => s + e.amount, 0)} pts / {weekLog.length} entries</span>
+            </div>
+          )}
+        </div>
+        <div style={{ ...crd, padding: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>All Time</div>
+          {allSourceEntries.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED }}>No points yet</div>}
+          {allSourceEntries.map(([src, d]) => (
+            <div key={src} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", fontSize: 13 }}>
+              <span style={{ color: TEXT_PRIMARY, fontWeight: 500 }}>{src}</span>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ fontSize: 11, color: TEXT_MUTED }}>{d.count}</span>
+                <span style={{ fontWeight: 700, color: d.total >= 0 ? GREEN : RED, minWidth: 36, textAlign: "right" }}>{d.total > 0 ? "+" : ""}{d.total}</span>
+              </div>
+            </div>
+          ))}
+          {allSourceEntries.length > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0 0", marginTop: 4, borderTop: "1px solid " + BORDER, fontSize: 13, fontWeight: 700 }}>
+              <span style={{ color: TEXT_PRIMARY }}>Total</span>
+              <span style={{ color: TEXT_PRIMARY }}>{data.log.reduce((s, e) => s + e.amount, 0)} pts / {data.log.length} entries</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
         {["roster", "pins", "log"].map(m => (
           <button key={m} onClick={() => setMode(m)} style={mode === m ? pillActive : pillInactive}>{m === "roster" ? "Roster" : m === "pins" ? "PINs" : "Log"}</button>
@@ -2092,6 +2159,189 @@ function ReadingsView({ data, setData, isAdmin }) {
     </div>
   );
 }
+
+
+/* ─── DISCUSSION BOARDS ─── */
+function BoardsView({ data, setData, isAdmin, userName }) {
+  const boards = data.boards || [];
+  const [creating, setCreating] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newPrompt, setNewPrompt] = useState("");
+  const [editingPost, setEditingPost] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [viewingBoard, setViewingBoard] = useState(null);
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  const createBoard = async () => {
+    if (!newTitle.trim() || !newPrompt.trim()) return;
+    const board = { id: genId(), title: newTitle.trim(), prompt: newPrompt.trim(), posts: {}, active: true, ts: Date.now() };
+    const updated = { ...data, boards: [...boards, board] };
+    await saveData(updated); setData(updated);
+    setNewTitle(""); setNewPrompt(""); setCreating(false); showMsg("Board created");
+  };
+
+  const submitPost = async (boardId, text) => {
+    if (!text.trim()) return;
+    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...b.posts, [userName]: { text: text.trim(), ts: Date.now() } } } : b) };
+    await saveData(updated); setData(updated); showMsg("Posted");
+  };
+
+  const closeBoard = async (boardId) => {
+    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, active: false } : b) };
+    await saveData(updated); setData(updated); showMsg("Board closed");
+  };
+
+  const deleteBoard = async (boardId) => {
+    const updated = { ...data, boards: boards.filter(b => b.id !== boardId) };
+    await saveData(updated); setData(updated); showMsg("Deleted"); if (viewingBoard === boardId) setViewingBoard(null);
+  };
+
+  const linkify = (text) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    return parts.map((part, i) => urlRegex.test(part)
+      ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#2563eb", textDecoration: "none", wordBreak: "break-all" }}>{part}</a>
+      : part
+    );
+  };
+
+  // Board detail view
+  if (viewingBoard) {
+    const board = boards.find(b => b.id === viewingBoard);
+    if (!board) { setViewingBoard(null); return null; }
+    const posts = board.posts || {};
+    const postList = Object.entries(posts).sort((a, b) => a[1].ts - b[1].ts);
+    const myPost = posts[userName];
+    const isEditing = editingPost === board.id;
+
+    return (
+      <div style={{ padding: "24px 20px 40px", fontFamily: F }}>
+        <Toast message={msg} />
+        <div style={{ maxWidth: 640, margin: "0 auto" }}>
+          <button onClick={() => { setViewingBoard(null); setEditingPost(null); }} style={{ ...pillInactive, marginBottom: 16 }}>Back to Boards</button>
+          <div style={{ ...crd, padding: 20, marginBottom: 16 }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 6 }}>{board.title}</div>
+            <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5 }}>{board.prompt}</div>
+            <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 8 }}>{postList.length} response{postList.length !== 1 ? "s" : ""}</div>
+            {isAdmin && (
+              <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+                <button onClick={() => closeBoard(board.id)} style={pillInactive}>{board.active ? "Close" : "Closed"}</button>
+                <button onClick={() => { if (window.confirm("Delete this board and all responses?")) deleteBoard(board.id); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
+              </div>
+            )}
+          </div>
+
+          {/* Write / edit response */}
+          {board.active && !isAdmin && (
+            <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+              {isEditing || !myPost ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>{myPost ? "Edit Your Response" : "Your Response"}</div>
+                  <textarea value={editText} onChange={e => setEditText(e.target.value)} placeholder="Write your response..." rows={4} style={{ ...inp, resize: "vertical", fontSize: 14, lineHeight: 1.6 }} />
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => { submitPost(board.id, editText); setEditingPost(null); }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>
+                      {myPost ? "Save Changes" : "Post"}
+                    </button>
+                    {myPost && <button onClick={() => { setEditingPost(null); setEditText(""); }} style={pillInactive}>Cancel</button>}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 6 }}>Your Response</div>
+                  <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{linkify(myPost.text)}</div>
+                  <button onClick={() => { setEditingPost(board.id); setEditText(myPost.text); }} style={{ ...pillInactive, marginTop: 8, fontSize: 12 }}>Edit</button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* All responses */}
+          {postList.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No responses yet</div>}
+          {postList.map(([name, post]) => (
+            <div key={name} style={{ ...crd, padding: 14, marginBottom: 8, border: name === userName ? "2px solid " + ACCENT : "1px solid " + BORDER }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{name}{name === userName ? " (you)" : ""}</span>
+                <span style={{ fontSize: 11, color: TEXT_MUTED }}>{new Date(post.ts).toLocaleDateString()}</span>
+              </div>
+              <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{linkify(post.text)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const activeBoards = boards.filter(b => b.active);
+  const closedBoards = boards.filter(b => !b.active);
+
+  return (
+    <div style={{ padding: "24px 20px 40px", fontFamily: F }}>
+      <Toast message={msg} />
+      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div style={{ ...sectionLabel }}>Discussion Boards</div>
+          {isAdmin && <button onClick={() => setCreating(!creating)} style={creating ? pillActive : pillInactive}>{creating ? "Cancel" : "+ New Board"}</button>}
+        </div>
+
+        {isAdmin && creating && (
+          <div style={{ ...crd, padding: 18, marginBottom: 20 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Board title (e.g. Week 1 Discussion)" style={{ ...inp, fontWeight: 700, fontSize: 16 }} />
+              <textarea value={newPrompt} onChange={e => setNewPrompt(e.target.value)} placeholder="Prompt or question for students" rows={3} style={{ ...inp, resize: "vertical", fontSize: 14 }} />
+              <button onClick={createBoard} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "12px 0" }}>Create Board</button>
+            </div>
+          </div>
+        )}
+
+        {activeBoards.length === 0 && !creating && <div style={{ ...crd, padding: 24, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No active boards</div>}
+        {activeBoards.map(board => {
+          const postCount = Object.keys(board.posts || {}).length;
+          const myPost = (board.posts || {})[userName];
+          return (
+            <div key={board.id} onClick={() => { setViewingBoard(board.id); if (!myPost) setEditText(""); }} style={{ ...crd, padding: 16, marginBottom: 10, cursor: "pointer" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.3 }}>{board.title}</div>
+                  <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, lineHeight: 1.4 }}>{board.prompt.length > 100 ? board.prompt.slice(0, 100) + "..." : board.prompt}</div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 6, fontSize: 12, color: TEXT_MUTED }}>
+                    <span>{postCount} response{postCount !== 1 ? "s" : ""}</span>
+                    {myPost && <span style={{ color: GREEN, fontWeight: 600 }}>You responded</span>}
+                    {!myPost && <span style={{ color: ACCENT, fontWeight: 600 }}>Not yet responded</span>}
+                  </div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" style={{ flexShrink: 0, marginTop: 4 }}><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+          );
+        })}
+
+        {closedBoards.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            <div style={{ ...sectionLabel, marginBottom: 10 }}>Closed Boards</div>
+            {closedBoards.map(board => {
+              const postCount = Object.keys(board.posts || {}).length;
+              return (
+                <div key={board.id} style={{ ...crd, padding: 14, marginBottom: 8, opacity: 0.7, cursor: "pointer" }} onClick={() => setViewingBoard(board.id)}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{board.title}</div>
+                      <div style={{ fontSize: 12, color: TEXT_MUTED }}>{postCount} responses</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {isAdmin && <button onClick={e => { e.stopPropagation(); if (window.confirm("Delete?")) deleteBoard(board.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Delete</button>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 /* ─── SURVEY ─── */
 function SurveyView({ data, setData, isAdmin, userName }) {
@@ -3163,6 +3413,7 @@ export default function Comm4() {
         if (d && !d.readings) { d.readings = []; await saveData(d); }
         if (d && !d.headlines) { d.headlines = { categories: [], items: [], sessions: [] }; await saveData(d); }
         if (d && !d.surveys) { d.surveys = []; await saveData(d); }
+        if (d && !d.boards) { d.boards = []; await saveData(d); }
         if (d && !d.customTodos) { d.customTodos = []; await saveData(d); }
         // Generate PINs
         if (d && !d.pins) {
@@ -3208,6 +3459,7 @@ export default function Comm4() {
       {view === "grades" && isAdmin && !studentView && <Gradebook data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
       {view === "pti" && isAdmin && !studentView && <PTIMode data={data} setData={setData} />}
       {view === "activities" && isAdmin && !studentView && <GameAdmin data={data} setData={setData} />}
+      {view === "boards" && !isGuest && <BoardsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
       {view === "survey" && !isGuest && <SurveyView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
       {view === "roster" && !isGuest && <RosterCombined data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
       {view === "answer" && !isGuest && <StudentAnswerView data={data} setData={setData} userName={userName} />}
