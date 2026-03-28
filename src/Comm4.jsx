@@ -154,6 +154,7 @@ function rt(teams, students, log) { return teams.map(t => ({ ...t, points: tp(t,
 
 // Weekly snake draft: round 1 forward, rounds 2+ reverse
 function shuffleTeams(students, log, teams) {
+  if (!teams || teams.length === 0) return students;
   const ranked = rs(students, log);
   const numTeams = teams.length;
   const assignments = {};
