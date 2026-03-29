@@ -179,8 +179,8 @@ function Toast({ message }) { if (!message) return null; return <div style={{ po
 /* ─── NAV ─── */
 function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView }) {
   const tabs = [
+    { id: "home", label: "Home", admin: false, guest: false },
     { id: "leaderboard", label: "Leaderboard", admin: false, guest: true },
-    { id: "todo", label: "To-Do", admin: false, guest: false },
     { id: "schedule", label: "Schedule", admin: false, guest: true },
     { id: "assignments", label: "Assignments", admin: false, guest: false },
     { id: "readings", label: "Readings", admin: false, guest: false },
@@ -333,6 +333,296 @@ function NamePicker({ data, onSelect }) {
 }
 
 /* ─── SCHEDULE ─── */
+
+/* ─── HOME DASHBOARD ─── */
+function HomeView({ data, setData, userName, isAdmin, setView }) {
+  const [newNewsText, setNewNewsText] = useState("");
+  const [newNewsType, setNewNewsType] = useState("info");
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  const news = data.news || [];
+  const boards = data.boards || [];
+  const schedule = data.schedule || [];
+  const assignments = data.assignments || [];
+  const grades = data.grades || {};
+  const todoChecks = data.todoChecks || {};
+  const student = data.students.find(s => s.name === userName);
+  const studentId = student?.id;
+
+  // Add news
+  const addNews = async () => {
+    if (!newNewsText.trim()) return;
+    const item = { id: genId(), text: newNewsText.trim(), type: newNewsType, ts: Date.now() };
+    const updated = { ...data, news: [item, ...news] };
+    await saveData(updated); setData(updated);
+    setNewNewsText(""); showMsg("Posted");
+  };
+  const removeNews = async (id) => {
+    const updated = { ...data, news: news.filter(n => n.id !== id) };
+    await saveData(updated); setData(updated); showMsg("Removed");
+  };
+
+  // Featured posts from boards
+  const featuredPosts = [];
+  boards.forEach(board => {
+    Object.entries(board.posts || {}).forEach(([author, post]) => {
+      if (post.featured) featuredPosts.push({ author, text: post.text, boardTitle: board.title, ts: post.ts });
+    });
+  });
+  featuredPosts.sort((a, b) => b.ts - a.ts);
+
+  // Mini leaderboard
+  const ranked = data.students.map(s => ({ ...s, points: data.log.filter(e => e.studentId === s.id).reduce((t, e) => t + e.amount, 0) })).sort((a, b) => b.points - a.points);
+  const top5 = ranked.slice(0, 5);
+  const mx = top5.length > 0 ? Math.max(top5[0].points, 1) : 1;
+  const myRank = ranked.findIndex(s => s.name === userName);
+  const meData = myRank >= 0 ? ranked[myRank] : null;
+
+  // Next 3 upcoming classes
+  const today = new Date();
+  const todayStr = today.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const upcomingDates = [];
+  schedule.forEach(week => {
+    (week.dates || []).forEach(d => {
+      if (d.day === "Finals") return;
+      const dateStr = d.date;
+      const year = today.getFullYear();
+      const parsed = new Date(dateStr + ", " + year);
+      if (!isNaN(parsed) && parsed >= new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+        upcomingDates.push({ ...d, weekLabel: week.label, weekNum: week.week, parsedDate: parsed });
+      }
+    });
+  });
+  upcomingDates.sort((a, b) => a.parsedDate - b.parsedDate);
+  const next3 = upcomingDates.slice(0, 3);
+
+  // To-Do: assignments due soon
+  const todoDue = assignments.filter(a => a.due && a.id !== "participation").map(a => {
+    const g = studentId ? grades[studentId + "-" + a.id] : null;
+    const completed = g && g.score !== undefined && g.score !== "";
+    const todoKey = userName + "-assignment-" + a.id;
+    const checked = todoChecks[todoKey];
+    return { ...a, completed: completed || checked };
+  });
+
+  const checkTodo = async (assignmentId) => {
+    const key = userName + "-assignment-" + assignmentId;
+    const updated = { ...data, todoChecks: { ...todoChecks, [key]: !todoChecks[key] } };
+    await saveData(updated); setData(updated);
+  };
+
+  // News type config
+  const newsColors = { info: { bg: "#eff6ff", color: "#2563eb", label: "Info" }, assignment: { bg: "#fffbeb", color: "#d97706", label: "Assignment" }, alert: { bg: "#fef2f2", color: "#dc2626", label: "Alert" } };
+
+  return (
+    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <Toast message={msg} />
+      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+
+        {/* Admin: post news */}
+        {isAdmin && (
+          <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              <select value={newNewsType} onChange={e => setNewNewsType(e.target.value)} style={{ ...sel, width: 110, fontSize: 13 }}>
+                <option value="info">Info</option>
+                <option value="assignment">Assignment</option>
+                <option value="alert">Alert</option>
+              </select>
+              <input value={newNewsText} onChange={e => setNewNewsText(e.target.value)} placeholder="Post an update..." style={{ ...inp, flex: 1 }} onKeyDown={e => e.key === "Enter" && addNews()} />
+              <button onClick={addNews} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Post</button>
+            </div>
+          </div>
+        )}
+
+        {/* News feed */}
+        {news.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            {news.slice(0, 5).map(item => {
+              const nc = newsColors[item.type] || newsColors.info;
+              const isAssignment = item.type === "assignment";
+              const matchedAssignment = isAssignment ? todoDue.find(a => item.text.toLowerCase().includes(a.name.toLowerCase())) : null;
+              return (
+                <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 0", borderBottom: "1px solid " + BORDER }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: nc.color, background: nc.bg, padding: "3px 8px", borderRadius: 6, flexShrink: 0, marginTop: 2, textTransform: "uppercase" }}>{nc.label}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.45 }}>{item.text}</div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 2 }}>
+                      <span style={{ fontSize: 11, color: TEXT_MUTED }}>{new Date(item.ts).toLocaleDateString()}</span>
+                      {matchedAssignment && matchedAssignment.completed && <span style={{ fontSize: 11, fontWeight: 700, color: GREEN }}>You've completed this</span>}
+                    </div>
+                  </div>
+                  {isAdmin && <button onClick={() => removeNews(item.id)} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 14 }}>x</button>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+          {/* Mini leaderboard */}
+          <div style={{ ...crd, padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Leaderboard</div>
+              <button onClick={() => setView("leaderboard")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>See all</button>
+            </div>
+            {top5.map((s, i) => (
+              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
+                <span style={{ fontSize: 12, fontWeight: 900, color: i < 5 ? "#d4a017" : TEXT_MUTED, width: 18 }}>{i + 1}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: s.name === userName ? 700 : 500, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name.split(" ")[0]} {lastName(s.name)}{s.name === userName ? " (you)" : ""}</div>
+                </div>
+                <div style={{ width: 60, height: 6, borderRadius: 3, background: "#f4f4f5", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: (s.points / mx * 100) + "%", background: i < 5 ? "#d4a017" : ACCENT, borderRadius: 3 }} />
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_PRIMARY, width: 28, textAlign: "right" }}>{s.points}</span>
+              </div>
+            ))}
+            {meData && myRank >= 5 && (
+              <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px dashed " + BORDER, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 900, color: TEXT_MUTED, width: 18 }}>{myRank + 1}</span>
+                <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{meData.name.split(" ")[0]} (you)</div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_PRIMARY }}>{meData.points}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Upcoming classes */}
+          <div style={{ ...crd, padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Coming Up</div>
+              <button onClick={() => setView("schedule")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>Full schedule</button>
+            </div>
+            {next3.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED }}>No upcoming classes</div>}
+            {next3.map((d, i) => (
+              <div key={i} style={{ padding: "8px 0", borderBottom: i < next3.length - 1 ? "1px solid " + BORDER : "none" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: d.holiday ? RED : ACCENT }}>{d.day} {d.date}</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED }}>{d.weekLabel}</span>
+                </div>
+                {d.topic && <div style={{ fontSize: 13, color: TEXT_PRIMARY, marginTop: 2, lineHeight: 1.35 }}>{d.topic}</div>}
+                {d.holiday && <div style={{ fontSize: 12, color: RED, marginTop: 2 }}>No in-person class</div>}
+                {d.assignment && <div style={{ fontSize: 12, color: "#c2410c", marginTop: 2, fontWeight: 600 }}>{d.assignment}</div>}
+                {d.notes && !d.holiday && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 1 }}>{d.notes}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* To-Do: assignments */}
+        <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Assignments</div>
+            <button onClick={() => setView("assignments")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>Details</button>
+          </div>
+          {todoDue.map(a => (
+            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid " + BORDER }}>
+              <button onClick={() => checkTodo(a.id)} style={{ width: 22, height: 22, borderRadius: 6, border: "2px solid " + (a.completed ? GREEN : "#d4d4d8"), background: a.completed ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, padding: 0 }}>
+                {a.completed && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
+              </button>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: a.completed ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: a.completed ? "line-through" : "none" }}>{a.name}</div>
+                {a.due && <div style={{ fontSize: 11, color: TEXT_MUTED }}>{a.due}</div>}
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>{a.weight}%</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Featured posts */}
+        {featuredPosts.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Featured Posts</div>
+            {featuredPosts.slice(0, 3).map((fp, i) => (
+              <div key={i} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: "3px solid #d97706" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#d97706", marginBottom: 4 }}>{fp.boardTitle}</div>
+                <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.5 }}>{fp.text.length > 200 ? fp.text.slice(0, 200) + "..." : fp.text}</div>
+                <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>{fp.author}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Admin section */}
+        {isAdmin && (
+          <div style={{ marginTop: 8 }}>
+            {(() => {
+              const currentWeek = schedule.find(w => {
+                return (w.dates || []).some(d => {
+                  if (d.day === "Finals") return false;
+                  const year = today.getFullYear();
+                  const parsed = new Date(d.date + ", " + year);
+                  const dayDiff = (parsed - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / (1000 * 60 * 60 * 24);
+                  return dayDiff >= -3 && dayDiff <= 4;
+                });
+              });
+              if (!currentWeek) return null;
+              const weekReadings = [];
+              (currentWeek.dates || []).forEach(d => {
+                (d.readings || []).forEach(r => {
+                  const rdg = (data.readings || []).find(x => x.id === r.readingId);
+                  if (rdg) weekReadings.push({ ...rdg, day: d.day, date: d.date, type: r.type });
+                });
+              });
+              if (weekReadings.length === 0) return null;
+              return (
+                <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Week {currentWeek.week} Readings</div>
+                  {weekReadings.map((r, i) => {
+                    const link = r.pdfUrl || r.url;
+                    const tColor = r.type === "fishbowl" ? "#7c3aed" : r.type === "required" ? "#b45309" : GREEN;
+                    const tLabel = r.type === "fishbowl" ? "Fish" : r.type === "required" ? "Req" : "Rec";
+                    return (
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6, padding: "4px 0" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: tColor, textTransform: "uppercase", width: 28, flexShrink: 0, marginTop: 2 }}>{tLabel}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {link ? (
+                            <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{r.title}</a>
+                          ) : (
+                            <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500 }}>{r.title}</span>
+                          )}
+                          <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>{r.day} {r.date}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            <div style={{ ...crd, padding: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Quick Links</div>
+              {(data.adminLinks || []).map((link, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: "1px solid " + BORDER }}>
+                  <a href={link.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500, flex: 1 }}>{link.label}</a>
+                  <button onClick={async () => { const updated = { ...data, adminLinks: (data.adminLinks || []).filter((_, j) => j !== i) }; await saveData(updated); setData(updated); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 12 }}>x</button>
+                </div>
+              ))}
+              {(!data.adminLinks || data.adminLinks.length === 0) && <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 6 }}>No links yet</div>}
+              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                <input id="admin-link-label" placeholder="Label" style={{ ...inp, flex: 1, fontSize: 12 }} />
+                <input id="admin-link-url" placeholder="URL" style={{ ...inp, flex: 2, fontSize: 12 }} />
+                <button onClick={async () => {
+                  const label = document.getElementById("admin-link-label").value.trim();
+                  const url = document.getElementById("admin-link-url").value.trim();
+                  if (!label || !url) return;
+                  const updated = { ...data, adminLinks: [...(data.adminLinks || []), { label, url }] };
+                  await saveData(updated); setData(updated);
+                  document.getElementById("admin-link-label").value = "";
+                  document.getElementById("admin-link-url").value = "";
+                  showMsg("Link added");
+                }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Add</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+
 const TOPIC_COLORS = {
   "What Do You Know?": "#16a34a",
   "Epistemology": "#2563eb",
@@ -1142,6 +1432,14 @@ function AdminPanel({ data, setData }) {
         ))}
         <div style={{ flex: 1 }} />
         <button onClick={undo} style={pillInactive}>Undo</button>
+        <button onClick={() => {
+          const emails = data.students.map(s => {
+            const bio = (data.bios || {})[s.id];
+            return bio?.email;
+          }).filter(Boolean);
+          if (emails.length === 0) { showMsg("No emails found"); return; }
+          navigator.clipboard.writeText(emails.join(", ")).then(() => showMsg(emails.length + " emails copied"));
+        }} style={pillInactive}>Copy Emails</button>
         <button onClick={() => { if (window.confirm("FULL RESET: This will zero out ALL points, participation, grades, game data, and to-do progress. Are you sure?")) resetAll(); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Full Reset</button>
       </div>
 
@@ -1726,6 +2024,20 @@ function BioView({ student, data, setData, userName, onBack }) {
                 )}
               </div>
             ))}
+            {isAdmin && (
+              <div style={{ marginBottom: 12, padding: "10px 12px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fef3c7" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: AMBER, textTransform: "uppercase", marginBottom: 4 }}>Admin Only</div>
+                <div style={{ ...sectionLabel, marginBottom: 2 }}>Student Email</div>
+                <div style={{ fontSize: 13, color: TEXT_PRIMARY }}>{form.email || "Not provided"}</div>
+              </div>
+            )}
+            {(isOwn || isAdmin) && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ ...sectionLabel, marginBottom: 4 }}>Email</div>
+                <input value={form.email || ""} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="your.email@scu.edu" style={inp} />
+                {isOwn && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>Only visible to your instructor</div>}
+              </div>
+            )}
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={saveBio} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1, padding: "10px 0" }}>Save</button>
               <button onClick={() => { setForm({ ...bio }); setEditing(false); }} style={{ ...pillInactive, flex: 1, padding: "10px 0" }}>Cancel</button>
@@ -1744,6 +2056,7 @@ function BioView({ student, data, setData, userName, onBack }) {
                   {bio.motto && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Motto</div><div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{bio.motto}</div></div>}
                 </div>
                 {bio.funFact && <div style={{ marginTop: 10 }}><div style={{ ...sectionLabel, marginBottom: 2 }}>Fun Fact</div><div style={{ fontSize: 13, color: "#374151" }}>{bio.funFact}</div></div>}
+                {isAdmin && bio.email && <div style={{ marginTop: 10, padding: "6px 10px", background: "#fffbeb", borderRadius: 6, border: "1px solid #fef3c7" }}><div style={{ fontSize: 10, fontWeight: 700, color: AMBER, textTransform: "uppercase", marginBottom: 2 }}>Admin Only</div><div style={{ fontSize: 13, color: TEXT_PRIMARY }}>{bio.email}</div></div>}
               </>
             ) : (
               <div style={{ textAlign: "center", padding: "20px 0", color: TEXT_MUTED, fontSize: 13 }}>
@@ -2206,13 +2519,77 @@ function BoardsView({ data, setData, isAdmin, userName }) {
     );
   };
 
+  const snap = async (boardId, postAuthor) => {
+    const board = boards.find(b => b.id === boardId);
+    if (!board) return;
+    const post = (board.posts || {})[postAuthor];
+    if (!post) return;
+    const snaps = post.snaps || [];
+    if (snaps.includes(userName)) return;
+    const updatedPost = { ...post, snaps: [...snaps, userName] };
+    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...b.posts, [postAuthor]: updatedPost } } : b) };
+    await saveData(updated); setData(updated);
+  };
+
+  const featurePost = async (boardId, postAuthor) => {
+    const board = boards.find(b => b.id === boardId);
+    if (!board) return;
+    const post = (board.posts || {})[postAuthor];
+    if (!post || post.featured) return;
+    const updatedPost = { ...post, featured: true };
+    const student = data.students.find(s => s.name === postAuthor);
+    let updatedData = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...b.posts, [postAuthor]: updatedPost } } : b) };
+    if (student) {
+      const entry = { id: genId(), studentId: student.id, amount: 5, source: "Featured Post", ts: Date.now() };
+      updatedData = { ...updatedData, log: [...updatedData.log, entry] };
+    }
+    await saveData(updatedData); setData(updatedData); showMsg("Featured! +5 pts to " + postAuthor);
+  };
+
+  const deletePost = async (boardId, postAuthor) => {
+    const board = boards.find(b => b.id === boardId);
+    if (!board) return;
+    const newPosts = { ...board.posts };
+    delete newPosts[postAuthor];
+    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: newPosts } : b) };
+    await saveData(updated); setData(updated); showMsg("Post deleted");
+  };
+
+  const archivePost = async (boardId, postAuthor) => {
+    const board = boards.find(b => b.id === boardId);
+    if (!board) return;
+    const post = (board.posts || {})[postAuthor];
+    if (!post) return;
+    const updatedPost = { ...post, archived: true };
+    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...b.posts, [postAuthor]: updatedPost } } : b) };
+    await saveData(updated); setData(updated); showMsg("Post archived");
+  };
+
+  const unarchivePost = async (boardId, postAuthor) => {
+    const board = boards.find(b => b.id === boardId);
+    if (!board) return;
+    const post = (board.posts || {})[postAuthor];
+    if (!post) return;
+    const updatedPost = { ...post, archived: false };
+    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...b.posts, [postAuthor]: updatedPost } } : b) };
+    await saveData(updated); setData(updated); showMsg("Post restored");
+  };
+
+  const archiveBoard = async (boardId) => {
+    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, active: false, archived: true } : b) };
+    await saveData(updated); setData(updated); showMsg("Board archived");
+  };
+
   // Board detail view
   if (viewingBoard) {
     const board = boards.find(b => b.id === viewingBoard);
     if (!board) { setViewingBoard(null); return null; }
     const posts = board.posts || {};
-    const postList = Object.entries(posts).sort((a, b) => a[1].ts - b[1].ts);
+    const allPostList = Object.entries(posts).sort((a, b) => a[1].ts - b[1].ts);
+    const postList = allPostList.filter(([_, p]) => !p.archived);
+    const archivedPostList = allPostList.filter(([_, p]) => p.archived);
     const myPost = posts[userName];
+    const myPostVisible = myPost && !myPost.archived;
     const isEditing = editingPost === board.id;
 
     return (
@@ -2227,23 +2604,24 @@ function BoardsView({ data, setData, isAdmin, userName }) {
             {isAdmin && (
               <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
                 <button onClick={() => closeBoard(board.id)} style={pillInactive}>{board.active ? "Close" : "Closed"}</button>
+                <button onClick={() => archiveBoard(board.id)} style={pillInactive}>Archive</button>
                 <button onClick={() => { if (window.confirm("Delete this board and all responses?")) deleteBoard(board.id); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
               </div>
             )}
           </div>
 
           {/* Write / edit response */}
-          {board.active && !isAdmin && (
+          {board.active && (
             <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
-              {isEditing || !myPost ? (
+              {isEditing || !myPostVisible ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>{myPost ? "Edit Your Response" : "Your Response"}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>{myPostVisible ? "Edit Your Response" : "Your Response"}</div>
                   <textarea value={editText} onChange={e => setEditText(e.target.value)} placeholder="Write your response..." rows={4} style={{ ...inp, resize: "vertical", fontSize: 14, lineHeight: 1.6 }} />
                   <div style={{ display: "flex", gap: 6 }}>
                     <button onClick={() => { submitPost(board.id, editText); setEditingPost(null); }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>
-                      {myPost ? "Save Changes" : "Post"}
+                      {myPostVisible ? "Save Changes" : "Post"}
                     </button>
-                    {myPost && <button onClick={() => { setEditingPost(null); setEditText(""); }} style={pillInactive}>Cancel</button>}
+                    {myPostVisible && <button onClick={() => { setEditingPost(null); setEditText(""); }} style={pillInactive}>Cancel</button>}
                   </div>
                 </div>
               ) : (
@@ -2258,22 +2636,68 @@ function BoardsView({ data, setData, isAdmin, userName }) {
 
           {/* All responses */}
           {postList.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No responses yet</div>}
-          {postList.map(([name, post]) => (
+          {postList.map(([name, post]) => {
+            const snaps = post.snaps || [];
+            const hasSnapped = snaps.includes(userName);
+            const snapCount = snaps.length;
+            return (
             <div key={name} style={{ ...crd, padding: 14, marginBottom: 8, border: name === userName ? "2px solid " + ACCENT : "1px solid " + BORDER }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{name}{name === userName ? " (you)" : ""}</span>
                 <span style={{ fontSize: 11, color: TEXT_MUTED }}>{new Date(post.ts).toLocaleDateString()}</span>
               </div>
               <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{linkify(post.text)}</div>
+              {post.featured && <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, color: "#d97706", background: "#fffbeb", padding: "2px 8px", borderRadius: 6, marginTop: 6 }}>Featured</div>}
+              <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                {name !== userName && (
+                  <button onClick={() => snap(board.id, name)} disabled={hasSnapped} style={{ background: hasSnapped ? "#f4f4f5" : "transparent", border: "1px solid " + (hasSnapped ? "#e4e4e7" : BORDER), borderRadius: 8, padding: "4px 10px", cursor: hasSnapped ? "default" : "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: hasSnapped ? TEXT_MUTED : TEXT_PRIMARY, fontFamily: F, fontWeight: 600, transition: "all 0.15s" }}>
+                    <span style={{ fontSize: 15 }}>&#x1F44F;</span>
+                    {snapCount > 0 && <span>{snapCount}</span>}
+                  </button>
+                )}
+                {isAdmin && !post.featured && (
+                  <button onClick={() => featurePost(board.id, name)} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Feature (+5 pts)</button>
+                )}
+                {isAdmin && (
+                  <button onClick={() => archivePost(board.id, name)} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Archive</button>
+                )}
+                {isAdmin && (
+                  <button onClick={() => { if (window.confirm("Delete " + name + "'s post?")) deletePost(board.id, name); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "4px 10px" }}>Delete</button>
+                )}
+                {name === userName && snapCount > 0 && (
+                  <span style={{ fontSize: 12, color: TEXT_MUTED }}>{snapCount} snap{snapCount !== 1 ? "s" : ""}</span>
+                )}
+              </div>
             </div>
-          ))}
+            );
+          })}
+
+          {/* Archived posts (admin only) */}
+          {isAdmin && archivedPostList.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Archived Posts ({archivedPostList.length})</div>
+              {archivedPostList.map(([name, post]) => (
+                <div key={name} style={{ ...crd, padding: 12, marginBottom: 6, opacity: 0.6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{name}</span>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => unarchivePost(board.id, name)} style={{ ...pillInactive, fontSize: 11, padding: "3px 8px" }}>Restore</button>
+                      <button onClick={() => { if (window.confirm("Permanently delete?")) deletePost(board.id, name); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "3px 8px" }}>Delete</button>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.4 }}>{post.text.length > 100 ? post.text.slice(0, 100) + "..." : post.text}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
-  const activeBoards = boards.filter(b => b.active);
-  const closedBoards = boards.filter(b => !b.active);
+  const activeBoards = boards.filter(b => b.active && !b.archived);
+  const archivedBoards = boards.filter(b => b.archived);
+  const closedBoards = boards.filter(b => !b.active && !b.archived);
 
   return (
     <div style={{ padding: "24px 20px 40px", fontFamily: F }}>
@@ -2329,7 +2753,31 @@ function BoardsView({ data, setData, isAdmin, userName }) {
                       <div style={{ fontSize: 12, color: TEXT_MUTED }}>{postCount} responses</div>
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
+                      {isAdmin && <button onClick={e => { e.stopPropagation(); archiveBoard(board.id); }} style={{ ...pillInactive, fontSize: 11 }}>Archive</button>}
                       {isAdmin && <button onClick={e => { e.stopPropagation(); if (window.confirm("Delete?")) deleteBoard(board.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Delete</button>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {isAdmin && archivedBoards.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            <div style={{ ...sectionLabel, marginBottom: 10 }}>Archived Boards</div>
+            {archivedBoards.map(board => {
+              const postCount = Object.keys(board.posts || {}).length;
+              return (
+                <div key={board.id} style={{ ...crd, padding: 14, marginBottom: 8, opacity: 0.5 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{board.title}</div>
+                      <div style={{ fontSize: 12, color: TEXT_MUTED }}>{postCount} responses</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => setViewingBoard(board.id)} style={{ ...pillInactive, fontSize: 11 }}>View</button>
+                      <button onClick={() => { if (window.confirm("Permanently delete?")) deleteBoard(board.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Delete</button>
                     </div>
                   </div>
                 </div>
@@ -2341,7 +2789,6 @@ function BoardsView({ data, setData, isAdmin, userName }) {
     </div>
   );
 }
-
 
 /* ─── SURVEY ─── */
 function SurveyView({ data, setData, isAdmin, userName }) {
@@ -3380,7 +3827,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
 export default function Comm4() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState("todo");
+  const [view, setView] = useState("home");
   const [userName, setUserName] = useState(null);
 
   const isAdmin = userName === ADMIN_NAME;
@@ -3414,6 +3861,7 @@ export default function Comm4() {
         if (d && !d.headlines) { d.headlines = { categories: [], items: [], sessions: [] }; await saveData(d); }
         if (d && !d.surveys) { d.surveys = []; await saveData(d); }
         if (d && !d.boards) { d.boards = []; await saveData(d); }
+        if (d && !d.news) { d.news = []; await saveData(d); }
         if (d && !d.customTodos) { d.customTodos = []; await saveData(d); }
         // Generate PINs
         if (d && !d.pins) {
@@ -3446,7 +3894,7 @@ export default function Comm4() {
 
   if (loading) return <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ fontSize: 14, fontWeight: 700, color: "#94a3b8" }}>Loading...</div></div>;
 
-  if (!userName) return <NamePicker data={data} onSelect={name => { setUserName(name); setView(name === GUEST_NAME ? "leaderboard" : "todo"); }} />;
+  if (!userName) return <NamePicker data={data} onSelect={name => { setUserName(name); setView(name === GUEST_NAME ? "leaderboard" : "home"); }} />;
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F, fontSize: 15 }}>
@@ -3459,6 +3907,7 @@ export default function Comm4() {
       {view === "grades" && isAdmin && !studentView && <Gradebook data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
       {view === "pti" && isAdmin && !studentView && <PTIMode data={data} setData={setData} />}
       {view === "activities" && isAdmin && !studentView && <GameAdmin data={data} setData={setData} />}
+      {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} setView={setView} />
       {view === "boards" && !isGuest && <BoardsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
       {view === "survey" && !isGuest && <SurveyView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
       {view === "roster" && !isGuest && <RosterCombined data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
