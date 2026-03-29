@@ -110,8 +110,10 @@ if (typeof document !== "undefined" && !document.getElementById("comm118-respons
   style.id = "comm118-responsive";
   style.textContent = `
     .schedule-days { grid-template-columns: 1fr !important; }
+    .home-grid { grid-template-columns: 1fr !important; }
     @media (min-width: 700px) { .schedule-days { grid-template-columns: repeat(3, 1fr) !important; } }
     @media (min-width: 700px) { .schedule-days[data-cols="2"] { grid-template-columns: repeat(2, 1fr) !important; } }
+    @media (min-width: 700px) { .home-grid { grid-template-columns: 1fr 1fr !important; } }
     @keyframes tickerPulse { 0% { transform: scale(1.15); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
   `;
   document.head.appendChild(style);
@@ -446,7 +448,28 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           </div>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+        <div className="home-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+          {/* Upcoming classes */}
+          <div style={{ ...crd, padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Coming Up</div>
+              <button onClick={() => setView("schedule")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>Full schedule</button>
+            </div>
+            {next3.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED }}>No upcoming classes</div>}
+            {next3.map((d, i) => (
+              <div key={i} style={{ padding: "8px 0", borderBottom: i < next3.length - 1 ? "1px solid " + BORDER : "none" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: d.holiday ? RED : ACCENT }}>{d.day} {d.date}</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED }}>{d.weekLabel}</span>
+                </div>
+                {d.topic && <div style={{ fontSize: 13, color: TEXT_PRIMARY, marginTop: 2, lineHeight: 1.35 }}>{d.topic}</div>}
+                {d.holiday && <div style={{ fontSize: 12, color: RED, marginTop: 2 }}>No in-person class</div>}
+                {d.assignment && <div style={{ fontSize: 12, color: "#c2410c", marginTop: 2, fontWeight: 600 }}>{d.assignment}</div>}
+                {d.notes && !d.holiday && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 1 }}>{d.notes}</div>}
+              </div>
+            ))}
+          </div>
+
           {/* Mini leaderboard */}
           <div style={{ ...crd, padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -473,30 +496,57 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
               </div>
             )}
           </div>
-
-          {/* Upcoming classes */}
-          <div style={{ ...crd, padding: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Coming Up</div>
-              <button onClick={() => setView("schedule")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>Full schedule</button>
-            </div>
-            {next3.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED }}>No upcoming classes</div>}
-            {next3.map((d, i) => (
-              <div key={i} style={{ padding: "8px 0", borderBottom: i < next3.length - 1 ? "1px solid " + BORDER : "none" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: d.holiday ? RED : ACCENT }}>{d.day} {d.date}</span>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED }}>{d.weekLabel}</span>
-                </div>
-                {d.topic && <div style={{ fontSize: 13, color: TEXT_PRIMARY, marginTop: 2, lineHeight: 1.35 }}>{d.topic}</div>}
-                {d.holiday && <div style={{ fontSize: 12, color: RED, marginTop: 2 }}>No in-person class</div>}
-                {d.assignment && <div style={{ fontSize: 12, color: "#c2410c", marginTop: 2, fontWeight: 600 }}>{d.assignment}</div>}
-                {d.notes && !d.holiday && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 1 }}>{d.notes}</div>}
-              </div>
-            ))}
-          </div>
         </div>
 
-        {/* To-Do: assignments */}
+        {/* This week's readings (everyone) */}
+        {(() => {
+          const currentWeek = schedule.find(w => {
+            return (w.dates || []).some(d => {
+              if (d.day === "Finals") return false;
+              const year = today.getFullYear();
+              const parsed = new Date(d.date + ", " + year);
+              const dayDiff = (parsed - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / (1000 * 60 * 60 * 24);
+              return dayDiff >= -3 && dayDiff <= 4;
+            });
+          });
+          if (!currentWeek) return null;
+          const weekReadings = [];
+          (currentWeek.dates || []).forEach(d => {
+            (d.readings || []).forEach(r => {
+              const rdg = (data.readings || []).find(x => x.id === r.readingId);
+              if (rdg) weekReadings.push({ ...rdg, day: d.day, date: d.date, type: r.type });
+            });
+          });
+          if (weekReadings.length === 0) return null;
+          return (
+            <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Week {currentWeek.week} Readings</div>
+                <button onClick={() => setView("readings")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>All readings</button>
+              </div>
+              {weekReadings.map((r, i) => {
+                const link = r.pdfUrl || r.url;
+                const tColor = r.type === "fishbowl" ? "#7c3aed" : r.type === "required" ? "#b45309" : GREEN;
+                const tLabel = r.type === "fishbowl" ? "Fish" : r.type === "required" ? "Req" : "Rec";
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6, padding: "4px 0" }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: tColor, textTransform: "uppercase", width: 28, flexShrink: 0, marginTop: 2 }}>{tLabel}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {link ? (
+                        <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{r.title}</a>
+                      ) : (
+                        <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500 }}>{r.title}</span>
+                      )}
+                      <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>{r.day} {r.date}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+
+        {/* Assignments & To-Do */}
         <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Assignments</div>
@@ -533,51 +583,6 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         {/* Admin section */}
         {isAdmin && (
           <div style={{ marginTop: 8 }}>
-            {/* This week's readings */}
-            {(() => {
-              const currentWeek = schedule.find(w => {
-                return (w.dates || []).some(d => {
-                  if (d.day === "Finals") return false;
-                  const year = today.getFullYear();
-                  const parsed = new Date(d.date + ", " + year);
-                  const dayDiff = (parsed - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / (1000 * 60 * 60 * 24);
-                  return dayDiff >= -3 && dayDiff <= 4;
-                });
-              });
-              if (!currentWeek) return null;
-              const weekReadings = [];
-              (currentWeek.dates || []).forEach(d => {
-                (d.readings || []).forEach(r => {
-                  const rdg = (data.readings || []).find(x => x.id === r.readingId);
-                  if (rdg) weekReadings.push({ ...rdg, day: d.day, date: d.date, type: r.type });
-                });
-              });
-              if (weekReadings.length === 0) return null;
-              return (
-                <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Week {currentWeek.week} Readings</div>
-                  {weekReadings.map((r, i) => {
-                    const link = r.pdfUrl || r.url;
-                    const tColor = r.type === "fishbowl" ? "#7c3aed" : r.type === "required" ? "#b45309" : GREEN;
-                    const tLabel = r.type === "fishbowl" ? "Fish" : r.type === "required" ? "Req" : "Rec";
-                    return (
-                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6, padding: "4px 0" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: tColor, textTransform: "uppercase", width: 28, flexShrink: 0, marginTop: 2 }}>{tLabel}</span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          {link ? (
-                            <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{r.title}</a>
-                          ) : (
-                            <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500 }}>{r.title}</span>
-                          )}
-                          <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>{r.day} {r.date}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-
             {/* Quick links */}
             <div style={{ ...crd, padding: 14 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Quick Links</div>
