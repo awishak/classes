@@ -4342,7 +4342,17 @@ export default function Comm118() {
           }
           d._comm118RosterFixV1 = true;
           d._comm118RosterFixV2 = true;
+          // Force readings migration to re-run since schedule was reset
+          delete d._readingsMigV2;
           // Bypass write-lock: write directly to storage
+          await window.storage.set(STORAGE_KEY, JSON.stringify(d), true);
+        }
+        // Also force readings re-run if roster fix already ran but readings are missing
+        if (d && d._comm118RosterFixV2 && !d._readingsReattachV1) {
+          delete d._readingsMigV2;
+          delete d._scheduleMigV2;
+          delete d._emailMigV1;
+          d._readingsReattachV1 = true;
           await window.storage.set(STORAGE_KEY, JSON.stringify(d), true);
         }
         if (d && !d.schedule) { d.schedule = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)); await saveData(d); }
