@@ -17,16 +17,6 @@ const CLASSES = [
     ready: true,
   },
   {
-    id: "comm4",
-    path: "/comm4",
-    name: "Approaches to Communication Research",
-    code: "COMM 4",
-    quarter: "Spring 2026",
-    desc: "MWF 11:45 am to 12:50 pm / Lucas 207",
-    color: "#059669",
-    ready: true,
-  },
-  {
     id: "comm2",
     path: "/comm2",
     name: "Public Speaking",
@@ -34,6 +24,16 @@ const CLASSES = [
     quarter: "Spring 2026",
     desc: "MWF 9:15 to 10:20 am / Vari 128",
     color: "#2563eb",
+    ready: true,
+  },
+  {
+    id: "comm4",
+    path: "/comm4",
+    name: "Approaches to Communication Research",
+    code: "COMM 4",
+    quarter: "Spring 2026",
+    desc: "MWF 11:45 am to 12:50 pm / Lucas 207",
+    color: "#059669",
     ready: true,
   },
 ];
