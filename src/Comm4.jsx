@@ -2181,10 +2181,14 @@ function BioView({ student, data, setData, userName, onBack }) {
 
   const team = data.teams.find(t => t.id === student.teamId);
   const tc = team ? TEAM_COLORS[team.colorIdx] : TEAM_COLORS[0];
+  const [editName, setEditName] = useState(student.name);
   const initials = student.name.split(" ").map(n => n[0]).join("");
 
   const saveBio = async () => {
-    const updated = { ...data, bios: { ...(data.bios || {}), [student.id]: form } };
+    let updated = { ...data, bios: { ...(data.bios || {}), [student.id]: form } };
+    if (editName.trim() && editName.trim() !== student.name) {
+      updated = { ...updated, students: updated.students.map(s => s.id === student.id ? { ...s, name: editName.trim() } : s) };
+    }
     await saveData(updated); setData(updated);
     setEditing(false); showMsg("Saved");
   };
@@ -2233,6 +2237,10 @@ function BioView({ student, data, setData, userName, onBack }) {
 
         {editing ? (
           <div style={{ ...crd, padding: 16, marginTop: 12 }}>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ ...sectionLabel, marginBottom: 4 }}>Name</div>
+              <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Your name" style={inp} />
+            </div>
             {BIO_FIELDS.map(f => (
               <div key={f.key} style={{ marginBottom: 12 }}>
                 <div style={{ ...sectionLabel, marginBottom: 4 }}>{f.label}</div>
