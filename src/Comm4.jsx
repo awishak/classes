@@ -1280,7 +1280,7 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
 
   const getMotto = (sid) => {
     const bio = bios[sid];
-    if (bio?.motto) return bio.motto;
+    if (bio?.favTeam) return bio.favTeam;
     let hash = 0;
     for (let i = 0; i < sid.length; i++) hash = ((hash << 5) - hash) + sid.charCodeAt(i);
     return DEFAULT_MOTTOS[Math.abs(hash) % DEFAULT_MOTTOS.length];
@@ -2139,7 +2139,7 @@ function RosterView({ data, setData, userName }) {
                   <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</div>
                   <div style={{ fontSize: 11, color: TEXT_MUTED }}>
                     {team ? team.name : "Unassigned"}
-                    {bio.major ? " / " + bio.major : ""}
+                    {bio.hometown ? " / " + bio.hometown : ""}
                   </div>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
