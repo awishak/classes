@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Comm118 from "./Comm118.jsx";
 import Comm4 from "./Comm4.jsx";
+import Comm2 from "./Comm2.jsx";
 
 const F = "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif";
 
@@ -11,7 +12,7 @@ const CLASSES = [
     name: "Communication and Sport",
     code: "COMM 118",
     quarter: "Spring 2026",
-    desc: "MWF 8:00 to 9:05 am / Vari 128",
+    desc: "MWF 8:00 to 9:05 am / Vari 134",
     color: "#9f1239",
     ready: true,
   },
@@ -21,7 +22,7 @@ const CLASSES = [
     name: "Approaches to Communication Research",
     code: "COMM 4",
     quarter: "Spring 2026",
-    desc: "MWF 11:45 am to 12:50 pm / Lucas 207",
+    desc: "MWF 11:45 am to 12:50 pm / Vari 134",
     color: "#059669",
     ready: true,
   },
@@ -33,7 +34,7 @@ const CLASSES = [
     quarter: "Spring 2026",
     desc: "MWF 9:15 to 10:20 am / Vari 128",
     color: "#2563eb",
-    ready: false,
+    ready: true,
   },
 ];
 
@@ -126,6 +127,10 @@ export default function App() {
 
   if (path === "/comm4" || path === "/comm4/") {
     return <Comm4 />;
+  }
+
+  if (path === "/comm2" || path === "/comm2/") {
+    return <Comm2 />;
   }
 
   return <LandingPage />;
