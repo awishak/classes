@@ -490,10 +490,11 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
               <button onClick={() => setView("leaderboard")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>See all</button>
             </div>
             {top5.map((s, i) => (
-              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
+              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", background: s.name === userName ? ACCENT + "08" : "transparent", borderRadius: 6, margin: s.name === userName ? "0 -6px" : 0, padding: s.name === userName ? "4px 6px" : "4px 0" }}>
                 <span style={{ fontSize: 12, fontWeight: 900, color: i < 5 ? "#d4a017" : TEXT_MUTED, width: 18 }}>{i + 1}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: s.name === userName ? 700 : 500, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name.split(" ")[0]} {lastName(s.name)}{s.name === userName ? " (you)" : ""}</div>
+                <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                  <div style={{ fontSize: 13, fontWeight: s.name === userName ? 700 : 500, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name.split(" ")[0]} {lastName(s.name)}</div>
+                  {s.name === userName && <span style={{ fontSize: 9, fontWeight: 800, color: ACCENT, background: ACCENT + "15", padding: "1px 5px", borderRadius: 4, flexShrink: 0 }}>YOU</span>}
                 </div>
                 <div style={{ width: 60, height: 6, borderRadius: 3, background: "#f4f4f5", overflow: "hidden" }}>
                   <div style={{ height: "100%", width: (s.points / mx * 100) + "%", background: i < 5 ? "#d4a017" : ACCENT, borderRadius: 3 }} />
@@ -531,30 +532,51 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
             });
           });
           if (weekReadings.length === 0) return null;
+          const required = weekReadings.filter(r => r.type === "required" || r.type === "fishbowl");
+          const recommended = weekReadings.filter(r => r.type === "recommended");
           return (
             <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Week {currentWeek.week} Readings</div>
                 <button onClick={() => setView("readings")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>All readings</button>
               </div>
-              {weekReadings.map((r, i) => {
-                const link = r.pdfUrl || r.url;
-                const tColor = r.type === "fishbowl" ? "#7c3aed" : r.type === "required" ? "#b45309" : GREEN;
-                const tLabel = r.type === "fishbowl" ? "Fish" : r.type === "required" ? "Req" : "Rec";
-                return (
-                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6, padding: "4px 0" }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: tColor, textTransform: "uppercase", width: 28, flexShrink: 0, marginTop: 2 }}>{tLabel}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      {link ? (
-                        <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{r.title}</a>
-                      ) : (
-                        <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500 }}>{r.title}</span>
-                      )}
-                      <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>{r.day} {r.date}</span>
-                    </div>
-                  </div>
-                );
-              })}
+              {required.length > 0 && (
+                <div style={{ marginBottom: recommended.length > 0 ? 12 : 0 }}>
+                  <div style={{ fontSize: 12, color: "#b45309", fontWeight: 600, marginBottom: 6 }}>These readings are required for this week.</div>
+                  {required.map((r, i) => {
+                    const link = r.pdfUrl || r.url;
+                    const isFish = r.type === "fishbowl";
+                    return (
+                      <div key={i} style={{ padding: "4px 0" }}>
+                        {link ? (
+                          <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{isFish ? "Fishbowl: " : ""}{r.title}</a>
+                        ) : (
+                          <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500 }}>{isFish ? "Fishbowl: " : ""}{r.title}</span>
+                        )}
+                        <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>{r.day} {r.date}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {recommended.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginBottom: 6 }}>These readings are recommended for further understanding of course material.</div>
+                  {recommended.map((r, i) => {
+                    const link = r.pdfUrl || r.url;
+                    return (
+                      <div key={i} style={{ padding: "4px 0" }}>
+                        {link ? (
+                          <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{r.title}</a>
+                        ) : (
+                          <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500 }}>{r.title}</span>
+                        )}
+                        <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>{r.day} {r.date}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })()}
@@ -577,6 +599,32 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
               <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>{a.weight}%</span>
             </div>
           ))}
+        </div>
+
+        {/* Active Discussion Boards */}
+        {boards.filter(b => b.active).length > 0 && (
+          <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Active Discussion Boards</div>
+              <button onClick={() => setView("boards")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>All boards</button>
+            </div>
+            {boards.filter(b => b.active).map(board => {
+              const postCount = Object.keys(board.posts || {}).filter(k => !(board.posts[k].archived)).length;
+              const myPost = (board.posts || {})[userName];
+              return (
+                <div key={board.id} onClick={() => setView("boards")} style={{ padding: "8px 0", borderBottom: "1px solid " + BORDER, cursor: "pointer" }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{board.title}</div>
+                  <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2, lineHeight: 1.35 }}>{board.prompt.length > 80 ? board.prompt.slice(0, 80) + "..." : board.prompt}</div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 4, fontSize: 11 }}>
+                    <span style={{ color: TEXT_MUTED }}>{postCount} response{postCount !== 1 ? "s" : ""}</span>
+                    {myPost && !myPost.archived ? <span style={{ color: GREEN, fontWeight: 600 }}>You responded</span> : <span style={{ color: ACCENT, fontWeight: 600 }}>Respond now</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         </div>
 
         {/* Featured posts */}
