@@ -2218,10 +2218,14 @@ function BioView({ student, data, setData, userName, onBack }) {
 
   const team = data.teams.find(t => t.id === student.teamId);
   const tc = team ? TEAM_COLORS[team.colorIdx] : TEAM_COLORS[0];
+  const [editName, setEditName] = useState(student.name);
   const initials = student.name.split(" ").map(n => n[0]).join("");
 
   const saveBio = async () => {
-    const updated = { ...data, bios: { ...(data.bios || {}), [student.id]: form } };
+    let updated = { ...data, bios: { ...(data.bios || {}), [student.id]: form } };
+    if (editName.trim() && editName.trim() !== student.name) {
+      updated = { ...updated, students: updated.students.map(s => s.id === student.id ? { ...s, name: editName.trim() } : s) };
+    }
     await saveData(updated); setData(updated);
     setEditing(false); showMsg("Saved");
   };
@@ -2270,6 +2274,10 @@ function BioView({ student, data, setData, userName, onBack }) {
 
         {editing ? (
           <div style={{ ...crd, padding: 16, marginTop: 12 }}>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ ...sectionLabel, marginBottom: 4 }}>Name</div>
+              <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Your name" style={inp} />
+            </div>
             {BIO_FIELDS.map(f => (
               <div key={f.key} style={{ marginBottom: 12 }}>
                 <div style={{ ...sectionLabel, marginBottom: 4 }}>{f.label}</div>
@@ -4236,6 +4244,30 @@ export default function Comm118() {
           console.error("loadData returned null. Refusing to create fresh data to protect existing data. If this is truly a first install, clear storage manually.");
           setLoading(false);
           return;
+        }
+        // One-time fix: if Comm118 data got overwritten with Comm4 students, rebuild roster
+        if (d && !d._comm118RosterFixV1) {
+          const hasComm118Student = d.students.some(s => ALL_STUDENTS.includes(s.name));
+          if (!hasComm118Student) {
+            console.log("Comm118 roster corrupted (no matching students). Rebuilding from ALL_STUDENTS.");
+            const shuffled = shuffle(ALL_STUDENTS);
+            const teams = MISMATCHED_NAMES.slice(0, 7).map((name, i) => ({ id: genId(), name, colorIdx: i }));
+            const students = shuffled.map((name, i) => ({ id: genId(), name, teamId: teams[i % 7].id }));
+            const pins = {};
+            students.forEach(s => {
+              if (s.name === ADMIN_NAME) { pins[s.id] = "118711"; }
+              else { pins[s.id] = String(Math.floor(100000 + Math.random() * 900000)); }
+            });
+            d.teams = teams;
+            d.students = students;
+            d.pins = pins;
+            d.log = [];
+            d.bios = {};
+            d.grades = {};
+            d.participation = {};
+          }
+          d._comm118RosterFixV1 = true;
+          await saveData(d);
         }
         if (d && !d.schedule) { d.schedule = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)); await saveData(d); }
         if (d && !d.bios) { d.bios = {}; await saveData(d); }
