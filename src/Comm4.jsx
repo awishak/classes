@@ -625,8 +625,6 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           </div>
         )}
 
-        </div>
-
         {/* Featured posts */}
         {featuredPosts.length > 0 && (
           <div style={{ marginBottom: 16 }}>
