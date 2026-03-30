@@ -121,6 +121,13 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
+  useEffect(() => {
+    if (path === "/comm118" || path === "/comm118/") document.title = "COMM 118 Hub - Spring 2026";
+    else if (path === "/comm4" || path === "/comm4/") document.title = "COMM 4 Hub - Spring 2026";
+    else if (path === "/comm2" || path === "/comm2/") document.title = "COMM 2 Hub - Spring 2026";
+    else document.title = "Ishak Classes";
+  }, [path]);
+
   if (path === "/comm118" || path === "/comm118/") {
     return <Comm118 />;
   }
