@@ -132,7 +132,7 @@ function genId() { return Date.now().toString(36) + Math.random().toString(36).s
 function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
 async function loadData() { try { const r = await window.storage.get(STORAGE_KEY, true); return r ? JSON.parse(r.value) : null; } catch { return null; } }
-async function saveData(data) { try { await window.storage.set(STORAGE_KEY, JSON.stringify(data), true); return true; } catch { return false; } }
+async function saveData(data) { try { const r = await window.storage.set(STORAGE_KEY, JSON.stringify(data), true); if (!r) console.error("saveData: storage.set returned null"); return !!r; } catch(e) { console.error("saveData failed:", e); return false; } }
 
 function gp(log, sid) { return log.filter(e => e.studentId === sid).reduce((s, e) => s + e.amount, 0); }
 function lastName(name) { if (name === "Alexander Watanabe Eriksson") return "Watanabe Eriksson"; return name.split(" ").slice(-1)[0]; }
@@ -1589,7 +1589,7 @@ function AdminPanel({ data, setData }) {
 
   const undo = async () => { if (!data.log.length) return; const lastTs = data.log[data.log.length - 1].ts; const updated = { ...data, log: data.log.filter(e => e.ts !== lastTs) }; await saveData(updated); setData(updated); showMsg("Undone"); };
   const resetAll = async () => { const updated = { ...data, log: [], participation: {}, grades: {}, weeklyGames: {}, weeklyToT: {}, weeklyFishbowl: {}, fishbowlStars: {}, weeklyTeamWins: {}, todoChecks: {} }; await saveData(updated); setData(updated); showMsg("Everything reset"); };
-  const addStudent = async () => { if (!newName.trim()) return; const sid = genId(); const pin = String(Math.floor(100000 + Math.random() * 900000)); const updated = { ...data, students: [...data.students, { id: sid, name: newName.trim(), teamId: newTeamId || "" }], pins: { ...(data.pins || {}), [sid]: pin } }; await saveData(updated); setData(updated); setNewName(""); setNewTeamId(""); showMsg("Added (PIN: " + pin + ")"); };
+  const addStudent = async () => { if (!newName.trim()) return; const sid = genId(); const pin = String(Math.floor(100000 + Math.random() * 900000)); const updated = { ...data, students: [...data.students, { id: sid, name: newName.trim(), teamId: newTeamId || "" }], pins: { ...(data.pins || {}), [sid]: pin } }; const ok = await saveData(updated); if (ok) { setData(updated); setNewName(""); setNewTeamId(""); showMsg("Added (PIN: " + pin + ")"); } else { showMsg("Save failed, try again"); } };
   const removeStudent = async id => { const updated = { ...data, students: data.students.filter(s => s.id !== id), log: data.log.filter(e => e.studentId !== id) }; await saveData(updated); setData(updated); showMsg("Removed"); };
   const addTeam = async () => { if (!newTeamName.trim()) return; const updated = { ...data, teams: [...data.teams, { id: genId(), name: newTeamName.trim(), colorIdx: data.teams.length % TEAM_COLORS.length }] }; await saveData(updated); setData(updated); setNewTeamName(""); showMsg("Team added"); };
   const removeTeam = async id => { const updated = { ...data, teams: data.teams.filter(t => t.id !== id), students: data.students.map(s => s.teamId === id ? { ...s, teamId: "" } : s) }; await saveData(updated); setData(updated); showMsg("Team removed"); };
@@ -4225,11 +4225,15 @@ export default function Comm118() {
       try {
         let d = await loadData();
         if (!d) {
-          const shuffled = shuffle(ALL_STUDENTS);
-          const teams = MISMATCHED_NAMES.slice(0, 7).map((name, i) => ({ id: genId(), name, colorIdx: i }));
-          const students = shuffled.map((name, i) => ({ id: genId(), name, teamId: teams[i % 7].id }));
-          d = { teams, students, log: [], schedule: JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)), bios: {} };
-          await saveData(d);
+          // Try loading one more time before giving up
+          await new Promise(r => setTimeout(r, 2000));
+          d = await loadData();
+        }
+        if (!d) {
+          // Check if this is truly first-ever load by trying a second method
+          console.error("loadData returned null. Refusing to create fresh data to protect existing data. If this is truly a first install, clear storage manually.");
+          setLoading(false);
+          return;
         }
         if (d && !d.schedule) { d.schedule = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)); await saveData(d); }
         if (d && !d.bios) { d.bios = {}; await saveData(d); }

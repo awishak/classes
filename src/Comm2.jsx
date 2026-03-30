@@ -155,7 +155,7 @@ function genId() { return Date.now().toString(36) + Math.random().toString(36).s
 function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
 async function loadData() { try { const r = await window.storage.get(STORAGE_KEY, true); return r ? JSON.parse(r.value) : null; } catch { return null; } }
-async function saveData(data) { try { await window.storage.set(STORAGE_KEY, JSON.stringify(data), true); return true; } catch { return false; } }
+async function saveData(data) { try { const r = await window.storage.set(STORAGE_KEY, JSON.stringify(data), true); if (!r) console.error("saveData: storage.set returned null"); return !!r; } catch(e) { console.error("saveData failed:", e); return false; } }
 
 function gp(log, sid) { return log.filter(e => e.studentId === sid).reduce((s, e) => s + e.amount, 0); }
 function lastName(name) { if (name === "Anne Sephora Pohan") return "Pohan"; return name.split(" ").slice(-1)[0]; }
@@ -1105,9 +1105,9 @@ function AdminPanel({ data, setData }) {
               const sid = genId();
               const pin = String(Math.floor(100000 + Math.random() * 900000));
               const updated = { ...data, students: [...data.students, { id: sid, name }], pins: { ...(data.pins || {}), [sid]: pin } };
-              await saveData(updated); setData(updated);
-              document.getElementById("comm2-add-name").value = "";
-              showMsg("Added (PIN: " + pin + ")");
+              const ok = await saveData(updated);
+              if (ok) { setData(updated); document.getElementById("comm2-add-name").value = ""; showMsg("Added (PIN: " + pin + ")"); }
+              else { showMsg("Save failed, try again"); }
             }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Add</button>
           </div>
         </div>
@@ -2082,20 +2082,13 @@ export default function Comm2() {
       try {
         let d = await loadData();
         if (!d) {
-          const students = ALL_STUDENTS.map(name => ({ id: genId(), name }));
-          const pins = {};
-          students.forEach(s => { pins[s.id] = String(Math.floor(100000 + Math.random() * 900000)); });
-          d = {
-            students, log: [], pins,
-            schedule: JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)),
-            assignments: JSON.parse(JSON.stringify(DEFAULT_ASSIGNMENTS)),
-            grades: {}, participation: {}, bios: {},
-            weeklyGames: {}, weeklyToT: {}, weeklyFishbowl: {}, fishbowlStars: {},
-            todoChecks: {}, videoSubmissions: {},
-            media: [], surveys: [], customTodos: [],
-            boards: [], news: [], adminLinks: [],
-          };
-          await saveData(d);
+          await new Promise(r => setTimeout(r, 2000));
+          d = await loadData();
+        }
+        if (!d) {
+          console.error("loadData returned null. Refusing to create fresh data to protect existing data.");
+          setLoading(false);
+          return;
         }
         // Migrations
         if (d && !d.schedule) { d.schedule = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)); await saveData(d); }
