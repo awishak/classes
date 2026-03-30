@@ -20,7 +20,7 @@ export const DEFAULT_ASSIGNMENTS = [
   { id: "woc_submission", name: "Intersections Submission", weight: 20, due: "May 8", link: "", notes: "" },
   { id: "leadership_guide", name: "Leadership Guide", weight: 15, due: "May 20", link: "", notes: "" },
   { id: "final_project", name: "Final Project: Teach Me Something New", weight: 30, due: "Jun 8", link: "", notes: "" },
-  { id: "participation", name: "Participation", weight: 25, due: "", link: "", notes: "Weekly Game, This or That, PTI, Rotating Fishbowl" },
+  { id: "participation", name: "Participation", weight: 25, due: "", link: "", notes: "Weekly Game, This or That, Around the Horn, Rotating Fishbowl" },
 ];
 
 export const QUIZ_BREAKDOWN = [
@@ -99,7 +99,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
     await saveData(updated); setData(updated); setEditId(null); setEditLocal(null); showMsg("Removed");
   };
 
-  const defaultBlurb = "Here's how your grade works. There are four major assignments worth 75% of your grade, and a participation bucket worth the other 25%. The participation bucket is where the weekly game, This or That, PTI, and Rotating Fishbowl all live.\n\nThe game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. The weekly game is the biggest example: the game weights all question types equally (10 pts each), but your grade weights On Topic questions much more heavily (15 pts each) than Sports World questions (2.5 pts each). So if you want to climb the leaderboard, be good at everything. If you want a good grade, focus on the course material.\n\nThe top 5 on the leaderboard at the end of the quarter get automatic A's. That's real. Everything else, just do the work, show up, and engage.";
+  const defaultBlurb = "Here's how your grade works. There are four major assignments worth 75% of your grade, and a participation bucket worth the other 25%. The participation bucket is where the weekly game, This or That, Around the Horn, and Rotating Fishbowl all live.\n\nThe game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. The weekly game is the biggest example: the game weights all question types equally (10 pts each), but your grade weights On Topic questions much more heavily (15 pts each) than Sports World questions (2.5 pts each). So if you want to climb the leaderboard, be good at everything. If you want a good grade, focus on the course material.\n\nThe top 5 on the leaderboard at the end of the quarter get automatic A's. That's real. Everything else, just do the work, show up, and engage.";
   const blurbText = data.assignmentsBlurb || defaultBlurb;
 
   const saveBlurb = async () => {
@@ -241,7 +241,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
               let bucket = "Other";
               if (src.startsWith("Game Wk")) bucket = "Weekly Game";
               else if (src.startsWith("ToT")) bucket = "This or That";
-              else if (src === "PTI") bucket = "PTI";
+              else if (src === "PTI" || src === "Around the Horn") bucket = "PTI";
               else if (src.startsWith("Fishbowl")) bucket = "Fishbowl";
               else if (src.startsWith("Team Win")) bucket = "Team Win";
               else bucket = src;
@@ -267,7 +267,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                   {[
                     { label: "Weekly Game", game: gamePts["Weekly Game"] || 0, grade: Math.round(gradeQuizTotal * 10) / 10, weeks: quizWeeks, icon: "Q" },
                     { label: "This or That", game: gamePts["This or That"] || 0, grade: gradeTotTotal, weeks: totWeeks, icon: "TT" },
-                    { label: "PTI", game: gamePts["PTI"] || 0, grade: gradePtiTotal, weeks: ptiWeeks, icon: "P" },
+                    { label: "Around the Horn", game: gamePts["PTI"] || 0, grade: gradePtiTotal, weeks: ptiWeeks, icon: "P" },
                     { label: "Fishbowl", game: gamePts["Fishbowl"] || 0, grade: gradeFbTotal, weeks: fbWeeks, icon: "FB" },
                   ].map(p => (
                     <div key={p.label} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #f3f4f6" }}>
@@ -304,7 +304,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
               {[
                 { label: "Weekly Game", detail: "100 pts/week, dual weighted", icon: "Q" },
                 { label: "This or That", detail: "20 pts/week, game only", icon: "TT" },
-                { label: "PTI", detail: "Variable, game + grade", icon: "P" },
+                { label: "Around the Horn", detail: "Variable, game + grade", icon: "P" },
                 { label: "Rotating Fishbowl", detail: "20 pts/time, game + grade", icon: "FB" },
               ].map(p => (
                 <div key={p.label} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 8 }}>
@@ -469,7 +469,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
               <div style={{ fontSize: 10, color: "#d1d5db" }}>Game only</div>
             </div>
             <div style={{ padding: 10, borderRadius: 8, background: "#f8fafc" }}>
-              <div style={{ ...sectionLabel, marginBottom: 2 }}>PTI</div>
+              <div style={{ ...sectionLabel, marginBottom: 2 }}>Around the Horn</div>
               <span style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>{ptiData.total}</span>
               <div style={{ fontSize: 10, color: "#9ca3af" }}>Game + Grade</div>
             </div>
@@ -493,7 +493,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                     <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>On Topic</th>
                     <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>Sports W.</th>
                     <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>ToT</th>
-                    <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>PTI</th>
+                    <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>ATH</th>
                     <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>FB</th>
                   </tr>
                 </thead>
