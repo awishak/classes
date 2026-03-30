@@ -1101,11 +1101,19 @@ function ScheduleView({ data, setData, isAdmin }) {
           const fri = week.dates.find(d => d.day === "Fri" || d.day === "Finals");
           const days = [mon, wed, fri].filter(Boolean);
           const isEditing = editWeek === wi;
+          const hiddenWeeks = data.hiddenWeeks || [];
+          const isHidden = hiddenWeeks.includes(week.week);
+
+          const toggleHidden = async () => {
+            const newHidden = isHidden ? hiddenWeeks.filter(w => w !== week.week) : [...hiddenWeeks, week.week];
+            const updated = { ...data, hiddenWeeks: newHidden };
+            await saveData(updated); setData(updated);
+          };
 
           return (
             <div key={wi}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                {week.week <= 10 && <div style={{ width: 36, height: 36, borderRadius: 10, background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 15, fontWeight: 800, fontFamily: F, flexShrink: 0 }}>{week.week}</div>}
+                {week.week <= 10 && <div style={{ width: 36, height: 36, borderRadius: 10, background: isHidden && !isAdmin ? TEXT_MUTED : ACCENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 15, fontWeight: 800, fontFamily: F, flexShrink: 0 }}>{week.week}</div>}
                 {isAdmin && isEditing ? (
                   <WeekHeaderEditor week={week} wi={wi} data={data} setData={setData} onDone={() => setEditWeek(null)} />
                 ) : (
@@ -1114,8 +1122,20 @@ function ScheduleView({ data, setData, isAdmin }) {
                     <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{days.map(d => d.date).join("  /  ")}</div>
                   </div>
                 )}
+                {isAdmin && <button onClick={toggleHidden} style={{ ...pill, background: isHidden ? "#fef2f2" : "#ecfdf5", color: isHidden ? RED : GREEN, fontSize: 11, padding: "4px 10px" }}>{isHidden ? "Hidden" : "Visible"}</button>}
                 {isAdmin && <button onClick={() => removeWeek(wi)} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 16, padding: 4 }}>x</button>}
               </div>
+
+              {/* Hidden week: students only see topic and no-class days */}
+              {isHidden && !isAdmin ? (
+                <div style={{ marginBottom: 16, marginLeft: 48 }}>
+                  {days.filter(d => d.holiday).map((d, di) => (
+                    <div key={di} style={{ fontSize: 13, color: RED, fontWeight: 600 }}>{d.day} {d.date} — No in-person class</div>
+                  ))}
+                  {days.filter(d => d.holiday).length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>Details coming soon</div>}
+                </div>
+              ) : (
+                <>
               {week.question && !isEditing && <div style={{ fontSize: 14, fontStyle: "italic", color: TEXT_SECONDARY, marginBottom: 10, marginLeft: 48, lineHeight: 1.4 }}>"{week.question}"</div>}
 
               <div className="schedule-days" style={{ display: "grid", gap: 8 }}>
@@ -1222,6 +1242,8 @@ function ScheduleView({ data, setData, isAdmin }) {
                 })}
               </div>
               {isAdmin && <button onClick={() => addDate(wi)} style={{ ...pill, background: "transparent", border: "1px dashed " + BORDER, color: TEXT_MUTED, width: "100%", marginTop: 8, fontSize: 12 }}>+</button>}
+                </>
+              )}
             </div>
           );
         })}
