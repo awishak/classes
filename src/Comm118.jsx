@@ -1589,7 +1589,7 @@ function AdminPanel({ data, setData }) {
 
   const undo = async () => { if (!data.log.length) return; const lastTs = data.log[data.log.length - 1].ts; const updated = { ...data, log: data.log.filter(e => e.ts !== lastTs) }; await saveData(updated); setData(updated); showMsg("Undone"); };
   const resetAll = async () => { const updated = { ...data, log: [], participation: {}, grades: {}, weeklyGames: {}, weeklyToT: {}, weeklyFishbowl: {}, fishbowlStars: {}, weeklyTeamWins: {}, todoChecks: {} }; await saveData(updated); setData(updated); showMsg("Everything reset"); };
-  const addStudent = async () => { if (!newName.trim()) return; const updated = { ...data, students: [...data.students, { id: genId(), name: newName.trim(), teamId: newTeamId || "" }] }; await saveData(updated); setData(updated); setNewName(""); setNewTeamId(""); showMsg("Added"); };
+  const addStudent = async () => { if (!newName.trim()) return; const sid = genId(); const pin = String(Math.floor(100000 + Math.random() * 900000)); const updated = { ...data, students: [...data.students, { id: sid, name: newName.trim(), teamId: newTeamId || "" }], pins: { ...(data.pins || {}), [sid]: pin } }; await saveData(updated); setData(updated); setNewName(""); setNewTeamId(""); showMsg("Added (PIN: " + pin + ")"); };
   const removeStudent = async id => { const updated = { ...data, students: data.students.filter(s => s.id !== id), log: data.log.filter(e => e.studentId !== id) }; await saveData(updated); setData(updated); showMsg("Removed"); };
   const addTeam = async () => { if (!newTeamName.trim()) return; const updated = { ...data, teams: [...data.teams, { id: genId(), name: newTeamName.trim(), colorIdx: data.teams.length % TEAM_COLORS.length }] }; await saveData(updated); setData(updated); setNewTeamName(""); showMsg("Team added"); };
   const removeTeam = async id => { const updated = { ...data, teams: data.teams.filter(t => t.id !== id), students: data.students.map(s => s.teamId === id ? { ...s, teamId: "" } : s) }; await saveData(updated); setData(updated); showMsg("Team removed"); };
@@ -1703,13 +1703,25 @@ function AdminPanel({ data, setData }) {
       {mode === "pins" && (
         <div style={{ ...crd, padding: 16 }}>
           <div style={{ ...sectionLabel, marginBottom: 14 }}>Student PINs</div>
-          <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>Share these with students so they can log in. PINs are generated automatically.</div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>Share these with students so they can log in. Click a PIN to edit it.</div>
           {[...data.students].sort(lastSortObj).map(s => {
             const studentPin = (data.pins || {})[s.id] || "------";
             return (
               <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid " + BORDER }}>
                 <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: s.name === ADMIN_NAME ? 700 : 500 }}>{s.name}</span>
-                <span style={{ fontSize: 15, fontWeight: 900, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums", letterSpacing: "0.15em", fontFamily: F }}>{studentPin}</span>
+                <input
+                  defaultValue={studentPin}
+                  onBlur={async (e) => {
+                    const val = e.target.value.trim();
+                    if (val && val !== studentPin) {
+                      const updated = { ...data, pins: { ...(data.pins || {}), [s.id]: val } };
+                      await saveData(updated); setData(updated); showMsg("PIN updated");
+                    }
+                  }}
+                  onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
+                  style={{ fontSize: 15, fontWeight: 900, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums", letterSpacing: "0.15em", fontFamily: F, background: "transparent", border: "1px solid transparent", borderRadius: 6, padding: "2px 6px", textAlign: "right", width: 100 }}
+                  onFocus={e => { e.target.style.borderColor = BORDER; e.target.style.background = "#fff"; }}
+                />
               </div>
             );
           })}
