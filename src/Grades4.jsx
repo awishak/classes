@@ -40,7 +40,7 @@ function Toast({ message }) { if (!message) return null; return <div style={{ po
 function lastName(name) { if (name === "Ava da Cunha") return "da Cunha"; if (name === "Nogbou Chris Junior Tadjo") return "Tadjo"; if (name === "Anne Sephora Pohan") return "Pohan"; if (name === "Santino Rafael Diaz") return "Diaz"; return name.split(" ").slice(-1)[0]; }
 function lastSortObj(a, b) { return lastName(a.name).localeCompare(lastName(b.name)); }
 
-async function saveData(data) { try { const STORAGE_KEY = "comm118-game-v14"; await window.storage.set(STORAGE_KEY, JSON.stringify(data), true); return true; } catch { return false; } }
+async function saveData(data) { try { const STORAGE_KEY = "comm4-v1"; await window.storage.set(STORAGE_KEY, JSON.stringify(data), true); return true; } catch { return false; } }
 
 /* ─── ASSIGNMENTS TAB ─── */
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
