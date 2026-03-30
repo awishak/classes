@@ -334,6 +334,8 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   const [composeText, setComposeText] = useState("");
   const [composeRecipients, setComposeRecipients] = useState("all");
   const [selectedStudents, setSelectedStudents] = useState([]);
+  const [editingMsg, setEditingMsg] = useState(null);
+  const [editMsgText, setEditMsgText] = useState("");
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
@@ -506,6 +508,149 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           </div>
         </div>
 
+        {/* Messages / Notes */}
+        {(() => {
+          const messages = data.messages || [];
+          const myMessages = isAdmin ? messages : messages.filter(m => m.to === "all" || (Array.isArray(m.to) && m.to.includes(userName)) || m.to === userName);
+          if (myMessages.length === 0 && !isAdmin) return null;
+
+          const sendReply = async (msgId) => {
+            if (!replyText.trim()) return;
+            const updated = { ...data, messages: messages.map(m => m.id === msgId ? { ...m, replies: [...(m.replies || []), { from: userName, text: replyText.trim(), ts: Date.now() }] } : m) };
+            await saveData(updated); setData(updated);
+            setReplyingTo(null); setReplyText(""); showMsg("Reply sent");
+          };
+
+          const sendMessage = async () => {
+            if (!composeText.trim()) return;
+            const to = composeRecipients === "all" ? "all" : selectedStudents;
+            if (composeRecipients !== "all" && selectedStudents.length === 0) return;
+            const m = { id: genId(), from: userName, to, text: composeText.trim(), ts: Date.now(), replies: [] };
+            const updated = { ...data, messages: [m, ...(data.messages || [])] };
+            await saveData(updated); setData(updated);
+            setComposeText(""); setSelectedStudents([]); setComposing(false); showMsg("Message sent");
+          };
+
+          const deleteMessage = async (msgId) => {
+            const updated = { ...data, messages: messages.filter(m => m.id !== msgId) };
+            await saveData(updated); setData(updated); showMsg("Deleted");
+          };
+
+          const editMessage = async (msgId) => {
+            if (!editMsgText.trim()) return;
+            const updated = { ...data, messages: messages.map(m => m.id === msgId ? { ...m, text: editMsgText.trim(), edited: true } : m) };
+            await saveData(updated); setData(updated);
+            setEditingMsg(null); setEditMsgText(""); showMsg("Edited");
+          };
+
+          const deleteReply = async (msgId, replyIdx) => {
+            const updated = { ...data, messages: messages.map(m => m.id === msgId ? { ...m, replies: (m.replies || []).filter((_, i) => i !== replyIdx) } : m) };
+            await saveData(updated); setData(updated); showMsg("Reply deleted");
+          };
+
+          const toggleStudent = (name) => {
+            setSelectedStudents(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
+          };
+
+          return (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Messages</div>
+                {isAdmin && <button onClick={() => setComposing(!composing)} style={composing ? pillActive : pillInactive}>{composing ? "Cancel" : "New Message"}</button>}
+              </div>
+
+              {isAdmin && composing && (
+                <div style={{ ...crd, padding: 14, marginBottom: 10 }}>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                    <button onClick={() => { setComposeRecipients("all"); setSelectedStudents([]); }} style={composeRecipients === "all" ? pillActive : pillInactive}>All Students</button>
+                    <button onClick={() => setComposeRecipients("select")} style={composeRecipients === "select" ? pillActive : pillInactive}>Select Students</button>
+                  </div>
+                  {composeRecipients === "select" && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8, maxHeight: 120, overflowY: "auto", padding: 4 }}>
+                      {[...data.students].sort(lastSortObj).map(s => (
+                        <button key={s.id} onClick={() => toggleStudent(s.name)} style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, cursor: "pointer", fontFamily: F, border: "1px solid " + (selectedStudents.includes(s.name) ? ACCENT : BORDER), background: selectedStudents.includes(s.name) ? ACCENT + "15" : "transparent", color: selectedStudents.includes(s.name) ? ACCENT : TEXT_PRIMARY }}>{s.name.split(" ")[0]}</button>
+                      ))}
+                    </div>
+                  )}
+                  <textarea value={composeText} onChange={e => setComposeText(e.target.value)} placeholder="Write your message..." rows={3} style={{ ...inp, resize: "vertical", fontSize: 14, marginBottom: 8 }} />
+                  <button onClick={sendMessage} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%" }}>
+                    Send{composeRecipients === "all" ? " to All" : selectedStudents.length > 0 ? " to " + selectedStudents.length + " student" + (selectedStudents.length !== 1 ? "s" : "") : ""}
+                  </button>
+                </div>
+              )}
+
+              {myMessages.slice(0, 10).map(msgItem => {
+                const isFromAdmin = msgItem.from === ADMIN_NAME;
+                const isOwn = msgItem.from === userName;
+                const recipientLabel = msgItem.to === "all" ? "All students" : Array.isArray(msgItem.to) ? msgItem.to.map(n => n.split(" ")[0]).join(", ") : msgItem.to;
+                const isReplying = replyingTo === msgItem.id;
+                const isEditingThis = editingMsg === msgItem.id;
+                return (
+                  <div key={msgItem.id} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: isFromAdmin ? "3px solid " + ACCENT : "3px solid " + GREEN }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                      <div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{msgItem.from}</span>
+                        {isAdmin && <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>to {recipientLabel}</span>}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 11, color: TEXT_MUTED }}>{new Date(msgItem.ts).toLocaleDateString()}</span>
+                        {msgItem.edited && <span style={{ fontSize: 10, color: TEXT_MUTED, fontStyle: "italic" }}>edited</span>}
+                      </div>
+                    </div>
+
+                    {isEditingThis ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                        <textarea value={editMsgText} onChange={e => setEditMsgText(e.target.value)} rows={3} style={{ ...inp, resize: "vertical", fontSize: 14 }} />
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button onClick={() => editMessage(msgItem.id)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Save</button>
+                          <button onClick={() => { setEditingMsg(null); setEditMsgText(""); }} style={pillInactive}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{msgItem.text}</div>
+                    )}
+
+                    {(msgItem.replies || []).length > 0 && (
+                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER }}>
+                        {msgItem.replies.map((r, ri) => (
+                          <div key={ri} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "4px 0", fontSize: 13 }}>
+                            <div>
+                              <span style={{ fontWeight: 700, color: r.from === ADMIN_NAME ? ACCENT : TEXT_PRIMARY }}>{r.from.split(" ")[0]}:</span>
+                              <span style={{ color: TEXT_PRIMARY, marginLeft: 4 }}>{r.text}</span>
+                              <span style={{ fontSize: 10, color: TEXT_MUTED, marginLeft: 6 }}>{new Date(r.ts).toLocaleDateString()}</span>
+                            </div>
+                            {(isAdmin || r.from === userName) && <button onClick={() => deleteReply(msgItem.id, ri)} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 11, flexShrink: 0 }}>x</button>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {!isEditingThis && (
+                        <button onClick={() => { setReplyingTo(replyingTo === msgItem.id ? null : msgItem.id); setReplyText(""); }} style={{ ...pillInactive, fontSize: 11 }}>{isReplying ? "Cancel" : "Reply"}</button>
+                      )}
+                      {(isOwn || isAdmin) && !isEditingThis && (
+                        <button onClick={() => { setEditingMsg(msgItem.id); setEditMsgText(msgItem.text); }} style={{ ...pillInactive, fontSize: 11 }}>Edit</button>
+                      )}
+                      {(isOwn || isAdmin) && (
+                        <button onClick={() => { if (window.confirm("Delete this message?")) deleteMessage(msgItem.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Delete</button>
+                      )}
+                    </div>
+
+                    {isReplying && !isEditingThis && (
+                      <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                        <input value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Your reply..." style={{ ...inp, flex: 1, fontSize: 13 }} onKeyDown={e => e.key === "Enter" && sendReply(msgItem.id)} />
+                        <button onClick={() => sendReply(msgItem.id)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Send</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {myMessages.length === 0 && isAdmin && !composing && <div style={{ ...crd, padding: 16, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>No messages yet</div>}
+            </div>
+          );
+        })()}
+
         {/* This week's readings (everyone) */}
         {(() => {
           const currentWeek = schedule.find(w => {
@@ -668,133 +813,6 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           );
         })()}
 
-        {/* Messages / Notes */}
-        {(() => {
-          const messages = data.messages || [];
-          const myMessages = isAdmin ? messages : messages.filter(m => m.to === "all" || (Array.isArray(m.to) && m.to.includes(userName)) || m.to === userName);
-          if (myMessages.length === 0 && !isAdmin) return null;
-
-          const sendReply = async (msgId) => {
-            if (!replyText.trim()) return;
-            const updated = { ...data, messages: messages.map(m => m.id === msgId ? { ...m, replies: [...(m.replies || []), { from: userName, text: replyText.trim(), ts: Date.now() }] } : m) };
-            await saveData(updated); setData(updated);
-            setReplyingTo(null); setReplyText(""); showMsg("Reply sent");
-          };
-
-          const sendMessage = async () => {
-            if (!composeText.trim()) return;
-            const to = composeRecipients === "all" ? "all" : selectedStudents;
-            if (composeRecipients !== "all" && selectedStudents.length === 0) return;
-            const msg = { id: genId(), from: userName, to, text: composeText.trim(), ts: Date.now(), replies: [] };
-            const updated = { ...data, messages: [msg, ...(data.messages || [])] };
-            await saveData(updated); setData(updated);
-            setComposeText(""); setSelectedStudents([]); setComposing(false); showMsg("Message sent");
-          };
-
-          const deleteMessage = async (msgId) => {
-            const updated = { ...data, messages: messages.filter(m => m.id !== msgId) };
-            await saveData(updated); setData(updated); showMsg("Deleted");
-          };
-
-          const toggleStudent = (name) => {
-            setSelectedStudents(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
-          };
-
-          return (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Messages</div>
-                {isAdmin && <button onClick={() => setComposing(!composing)} style={composing ? pillActive : pillInactive}>{composing ? "Cancel" : "New Message"}</button>}
-              </div>
-
-              {/* Admin compose */}
-              {isAdmin && composing && (
-                <div style={{ ...crd, padding: 14, marginBottom: 10 }}>
-                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                    <button onClick={() => { setComposeRecipients("all"); setSelectedStudents([]); }} style={composeRecipients === "all" ? pillActive : pillInactive}>All Students</button>
-                    <button onClick={() => setComposeRecipients("select")} style={composeRecipients === "select" ? pillActive : pillInactive}>Select Students</button>
-                  </div>
-                  {composeRecipients === "select" && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8, maxHeight: 120, overflowY: "auto", padding: 4 }}>
-                      {[...data.students].sort(lastSortObj).map(s => (
-                        <button key={s.id} onClick={() => toggleStudent(s.name)} style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, cursor: "pointer", fontFamily: F, border: "1px solid " + (selectedStudents.includes(s.name) ? ACCENT : BORDER), background: selectedStudents.includes(s.name) ? ACCENT + "15" : "transparent", color: selectedStudents.includes(s.name) ? ACCENT : TEXT_PRIMARY }}>{s.name.split(" ")[0]}</button>
-                      ))}
-                    </div>
-                  )}
-                  <textarea value={composeText} onChange={e => setComposeText(e.target.value)} placeholder="Write your message..." rows={3} style={{ ...inp, resize: "vertical", fontSize: 14, marginBottom: 8 }} />
-                  <button onClick={sendMessage} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%" }}>
-                    Send{composeRecipients === "all" ? " to All" : selectedStudents.length > 0 ? " to " + selectedStudents.length + " student" + (selectedStudents.length !== 1 ? "s" : "") : ""}
-                  </button>
-                </div>
-              )}
-
-              {myMessages.slice(0, 10).map(msg => {
-                const isFromAdmin = msg.from === ADMIN_NAME;
-                const recipientLabel = msg.to === "all" ? "All students" : Array.isArray(msg.to) ? msg.to.map(n => n.split(" ")[0]).join(", ") : msg.to;
-                const isReplying = replyingTo === msg.id;
-                return (
-                  <div key={msg.id} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: isFromAdmin ? "3px solid " + ACCENT : "3px solid " + GREEN }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                      <div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{msg.from}</span>
-                        {isAdmin && <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>to {recipientLabel}</span>}
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 11, color: TEXT_MUTED }}>{new Date(msg.ts).toLocaleDateString()}</span>
-                        {isAdmin && <button onClick={() => { if (window.confirm("Delete this message?")) deleteMessage(msg.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 12 }}>x</button>}
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{msg.text}</div>
-
-                    {/* Replies */}
-                    {(msg.replies || []).length > 0 && (
-                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER }}>
-                        {msg.replies.map((r, ri) => (
-                          <div key={ri} style={{ padding: "4px 0", fontSize: 13 }}>
-                            <span style={{ fontWeight: 700, color: r.from === ADMIN_NAME ? ACCENT : TEXT_PRIMARY }}>{r.from.split(" ")[0]}:</span>
-                            <span style={{ color: TEXT_PRIMARY, marginLeft: 4 }}>{r.text}</span>
-                            <span style={{ fontSize: 10, color: TEXT_MUTED, marginLeft: 6 }}>{new Date(r.ts).toLocaleDateString()}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Reply button */}
-                    {!isAdmin && isFromAdmin && (
-                      <div style={{ marginTop: 8 }}>
-                        {isReplying ? (
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <input value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Your reply..." style={{ ...inp, flex: 1, fontSize: 13 }} onKeyDown={e => e.key === "Enter" && sendReply(msg.id)} />
-                            <button onClick={() => sendReply(msg.id)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Send</button>
-                            <button onClick={() => { setReplyingTo(null); setReplyText(""); }} style={{ ...pillInactive, fontSize: 12 }}>Cancel</button>
-                          </div>
-                        ) : (
-                          <button onClick={() => { setReplyingTo(msg.id); setReplyText(""); }} style={{ ...pillInactive, fontSize: 11 }}>Reply</button>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Admin can reply too */}
-                    {isAdmin && !isFromAdmin && (
-                      <div style={{ marginTop: 8 }}>
-                        {isReplying ? (
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <input value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Your reply..." style={{ ...inp, flex: 1, fontSize: 13 }} onKeyDown={e => e.key === "Enter" && sendReply(msg.id)} />
-                            <button onClick={() => sendReply(msg.id)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Send</button>
-                            <button onClick={() => { setReplyingTo(null); setReplyText(""); }} style={{ ...pillInactive, fontSize: 12 }}>Cancel</button>
-                          </div>
-                        ) : (
-                          <button onClick={() => { setReplyingTo(msg.id); setReplyText(""); }} style={{ ...pillInactive, fontSize: 11 }}>Reply</button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {myMessages.length === 0 && isAdmin && !composing && <div style={{ ...crd, padding: 16, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>No messages yet</div>}
-            </div>
-          );
-        })()}
 
         {/* Featured posts */}
         {featuredPosts.length > 0 && (
