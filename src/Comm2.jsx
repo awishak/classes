@@ -947,13 +947,50 @@ function AdminPanel({ data, setData }) {
           <button onClick={undoLast} style={{ ...pill, background: "#fef2f2", color: RED, flex: 1 }}>Undo Last</button>
         </div>
 
+        {/* Add / Remove Students */}
+        <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 8 }}>Students</div>
+          {sorted.map(s => (
+            <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", fontSize: 13, borderBottom: "1px solid #f4f4f5" }}>
+              <span style={{ color: TEXT_PRIMARY }}>{s.name}</span>
+              <button onClick={async () => { const updated = { ...data, students: data.students.filter(st => st.id !== s.id), log: data.log.filter(e => e.studentId !== s.id) }; await saveData(updated); setData(updated); showMsg("Removed"); }} style={{ background: "none", border: "1px solid #fecaca", borderRadius: 4, color: RED, fontSize: 11, padding: "1px 6px", cursor: "pointer" }}>X</button>
+            </div>
+          ))}
+          <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+            <input id="comm2-add-name" placeholder="New student name" style={{ ...inp, flex: 1 }} />
+            <button onClick={async () => {
+              const name = document.getElementById("comm2-add-name").value.trim();
+              if (!name) return;
+              const sid = genId();
+              const pin = String(Math.floor(100000 + Math.random() * 900000));
+              const updated = { ...data, students: [...data.students, { id: sid, name }], pins: { ...(data.pins || {}), [sid]: pin } };
+              await saveData(updated); setData(updated);
+              document.getElementById("comm2-add-name").value = "";
+              showMsg("Added (PIN: " + pin + ")");
+            }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Add</button>
+          </div>
+        </div>
+
         {/* PINs */}
         <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 8 }}>Student PINs</div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 8 }}>Click a PIN to edit it.</div>
           {sorted.map(s => (
-            <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid #f4f4f5" }}>
+            <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", fontSize: 13, borderBottom: "1px solid #f4f4f5" }}>
               <span style={{ color: TEXT_PRIMARY }}>{s.name}</span>
-              <span style={{ fontFamily: "monospace", color: TEXT_MUTED }}>{pins[s.id] || "none"}</span>
+              <input
+                defaultValue={pins[s.id] || "none"}
+                onBlur={async (e) => {
+                  const val = e.target.value.trim();
+                  if (val && val !== (pins[s.id] || "none")) {
+                    const updated = { ...data, pins: { ...(data.pins || {}), [s.id]: val } };
+                    await saveData(updated); setData(updated); showMsg("PIN updated");
+                  }
+                }}
+                onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
+                style={{ fontFamily: "monospace", color: TEXT_MUTED, background: "transparent", border: "1px solid transparent", borderRadius: 4, padding: "1px 4px", textAlign: "right", width: 80, fontSize: 13 }}
+                onFocus={e => { e.target.style.borderColor = BORDER; e.target.style.background = "#fff"; }}
+              />
             </div>
           ))}
         </div>
