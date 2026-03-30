@@ -4315,10 +4315,13 @@ export default function Comm118() {
           return;
         }
         // One-time fix: if Comm118 data got overwritten with Comm4 students, rebuild roster
-        if (d && !d._comm118RosterFixV1) {
-          const hasComm118Student = d.students.some(s => ALL_STUDENTS.includes(s.name));
-          if (!hasComm118Student) {
-            console.log("Comm118 roster corrupted (no matching students). Rebuilding from ALL_STUDENTS.");
+        // Migration: force rebuild roster if corrupted (V2 - bypasses write-lock)
+        if (d && !d._comm118RosterFixV2) {
+          const comm118Names = new Set(ALL_STUDENTS);
+          const matchCount = d.students.filter(s => comm118Names.has(s.name)).length;
+          // If less than 70% of students match, roster is corrupted
+          if (matchCount < ALL_STUDENTS.length * 0.7) {
+            console.log("Comm118 roster corrupted. Matched " + matchCount + "/" + ALL_STUDENTS.length + ". Rebuilding.");
             const shuffled = shuffle(ALL_STUDENTS);
             const teams = MISMATCHED_NAMES.slice(0, 7).map((name, i) => ({ id: genId(), name, colorIdx: i }));
             const students = shuffled.map((name, i) => ({ id: genId(), name, teamId: teams[i % 7].id }));
@@ -4334,9 +4337,13 @@ export default function Comm118() {
             d.bios = {};
             d.grades = {};
             d.participation = {};
+            d.schedule = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+            d.assignments = JSON.parse(JSON.stringify(DEFAULT_ASSIGNMENTS));
           }
           d._comm118RosterFixV1 = true;
-          await saveData(d);
+          d._comm118RosterFixV2 = true;
+          // Bypass write-lock: write directly to storage
+          await window.storage.set(STORAGE_KEY, JSON.stringify(d), true);
         }
         if (d && !d.schedule) { d.schedule = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)); await saveData(d); }
         if (d && !d.bios) { d.bios = {}; await saveData(d); }
