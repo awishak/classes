@@ -20,12 +20,14 @@ const TEAM_COLORS = [
 const MISMATCHED_NAMES = ["New York Cowboys","Dallas Sharks","Miami Penguins","Phoenix Mariners","Detroit Flamingos","Las Vegas Moose","Oakland Sports Team"];
 
 const ALL_STUDENTS = [
-  "William Anderson","Luke Baird","Maxwell Bayles","Koen Carston",
-  "Benjamin Cleary","Isabelle De Buyl","Sophia DeFonzo","Russell Filter",
-  "Amaris Franco","Jace Gillmore","Charlotte Halk","Christian Hammond",
-  "Danica RaeAnne Ibus","Andrew Ishak","Hannah Kamins","Payton Lambert",
-  "Jack Lazark","Oliver Maldonado","Emil Nielsen","Caroline Shah",
-  "Ethan Silva","Reagan Viens","Alexander Watanabe Eriksson",
+  "William Anderson","Luke Baird","Maxwell Bayles","Alec Berger",
+  "Samuel Canales","Koen Carston","Benjamin Cleary","Isabelle De Buyl",
+  "Sophia DeFonzo","Russell Filter","Amaris Franco","Jace Gillmore",
+  "Charlotte Halk","Christian Hammond","Danica RaeAnne Ibus","Andrew Ishak",
+  "Hannah Kamins","Juliette Krumholz","Payton Lambert","Jack Lazark",
+  "Oliver Maldonado","Gianna Malnati","Emil Nielsen","Annesley Potchatek",
+  "Kalia Schempp","Caroline Shah","Ethan Silva","Francisco Soldavini",
+  "Reagan Viens","Alexander Watanabe Eriksson",
 ];
 
 const DEFAULT_SCHEDULE = [
@@ -4515,6 +4517,51 @@ export default function Comm118() {
             }));
           }
           d._renameMigV1 = true;
+          await saveData(d);
+        }
+        // Migration: pre-populate student emails
+        if (d && !d._emailMigV1) {
+          const emailMap = {
+            "William Anderson": "wanderson@scu.edu",
+            "Luke Baird": "lbaird@scu.edu",
+            "Maxwell Bayles": "mbayles@scu.edu",
+            "Alec Berger": "aberger@scu.edu",
+            "Samuel Canales": "scanales@scu.edu",
+            "Koen Carston": "kcarston@scu.edu",
+            "Benjamin Cleary": "bcleary@scu.edu",
+            "Isabelle De Buyl": "idebuyl@scu.edu",
+            "Sophia DeFonzo": "sdefonzo@scu.edu",
+            "Russell Filter": "rdfilter@scu.edu",
+            "Amaris Franco": "agfranco@scu.edu",
+            "Jace Gillmore": "jgillmore@scu.edu",
+            "Charlotte Halk": "chalk@scu.edu",
+            "Christian Hammond": "chammond@scu.edu",
+            "Danica RaeAnne Ibus": "dibus@scu.edu",
+            "Hannah Kamins": "hkamins@scu.edu",
+            "Juliette Krumholz": "jkrumholz@scu.edu",
+            "Payton Lambert": "plambert@scu.edu",
+            "Jack Lazark": "jlazark@scu.edu",
+            "Oliver Maldonado": "omaldonado@scu.edu",
+            "Gianna Malnati": "gmalnati2@scu.edu",
+            "Emil Nielsen": "enielsen@scu.edu",
+            "Annesley Potchatek": "apotchatek@scu.edu",
+            "Kalia Schempp": "kschempp@scu.edu",
+            "Caroline Shah": "cshah@scu.edu",
+            "Ethan Silva": "esilva@scu.edu",
+            "Reagan Viens": "rviens@scu.edu",
+            "Alexander Watanabe Eriksson": "awatanabeeriksson@scu.edu",
+            "Anders Alexander Watanabe Eriksson": "awatanabeeriksson@scu.edu",
+            "Francisco Soldavini": "jsoldavininores@scu.edu",
+          };
+          const bios = d.bios || {};
+          d.students.forEach(s => {
+            const email = emailMap[s.name];
+            if (email) {
+              bios[s.id] = { ...(bios[s.id] || {}), email };
+            }
+          });
+          d.bios = bios;
+          d._emailMigV1 = true;
           await saveData(d);
         }
         setData(d);
