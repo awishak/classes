@@ -177,6 +177,7 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
     { id: "answer", label: "Answer", admin: false, guest: false },
     { id: "accolades", label: "Accolades", admin: false, guest: false },
     { id: "boards", label: "Boards", admin: false, guest: false },
+    { id: "mynotes", label: "My Notes", admin: false, guest: false },
     { id: "survey", label: "Survey", admin: false, guest: false },
     { id: "pti", label: "Around the Horn", admin: true, guest: false },
     { id: "activities", label: "Activities", admin: true, guest: false },
@@ -327,6 +328,12 @@ function NamePicker({ data, onSelect }) {
 function HomeView({ data, setData, userName, isAdmin, setView }) {
   const [newNewsText, setNewNewsText] = useState("");
   const [newNewsType, setNewNewsType] = useState("info");
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyText, setReplyText] = useState("");
+  const [composing, setComposing] = useState(false);
+  const [composeText, setComposeText] = useState("");
+  const [composeRecipients, setComposeRecipients] = useState("all");
+  const [selectedStudents, setSelectedStudents] = useState([]);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
@@ -657,6 +664,134 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
                   </div>
                 );
               })}
+            </div>
+          );
+        })()}
+
+        {/* Messages / Notes */}
+        {(() => {
+          const messages = data.messages || [];
+          const myMessages = isAdmin ? messages : messages.filter(m => m.to === "all" || (Array.isArray(m.to) && m.to.includes(userName)) || m.to === userName);
+          if (myMessages.length === 0 && !isAdmin) return null;
+
+          const sendReply = async (msgId) => {
+            if (!replyText.trim()) return;
+            const updated = { ...data, messages: messages.map(m => m.id === msgId ? { ...m, replies: [...(m.replies || []), { from: userName, text: replyText.trim(), ts: Date.now() }] } : m) };
+            await saveData(updated); setData(updated);
+            setReplyingTo(null); setReplyText(""); showMsg("Reply sent");
+          };
+
+          const sendMessage = async () => {
+            if (!composeText.trim()) return;
+            const to = composeRecipients === "all" ? "all" : selectedStudents;
+            if (composeRecipients !== "all" && selectedStudents.length === 0) return;
+            const msg = { id: genId(), from: userName, to, text: composeText.trim(), ts: Date.now(), replies: [] };
+            const updated = { ...data, messages: [msg, ...(data.messages || [])] };
+            await saveData(updated); setData(updated);
+            setComposeText(""); setSelectedStudents([]); setComposing(false); showMsg("Message sent");
+          };
+
+          const deleteMessage = async (msgId) => {
+            const updated = { ...data, messages: messages.filter(m => m.id !== msgId) };
+            await saveData(updated); setData(updated); showMsg("Deleted");
+          };
+
+          const toggleStudent = (name) => {
+            setSelectedStudents(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
+          };
+
+          return (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Messages</div>
+                {isAdmin && <button onClick={() => setComposing(!composing)} style={composing ? pillActive : pillInactive}>{composing ? "Cancel" : "New Message"}</button>}
+              </div>
+
+              {/* Admin compose */}
+              {isAdmin && composing && (
+                <div style={{ ...crd, padding: 14, marginBottom: 10 }}>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                    <button onClick={() => { setComposeRecipients("all"); setSelectedStudents([]); }} style={composeRecipients === "all" ? pillActive : pillInactive}>All Students</button>
+                    <button onClick={() => setComposeRecipients("select")} style={composeRecipients === "select" ? pillActive : pillInactive}>Select Students</button>
+                  </div>
+                  {composeRecipients === "select" && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8, maxHeight: 120, overflowY: "auto", padding: 4 }}>
+                      {[...data.students].sort(lastSortObj).map(s => (
+                        <button key={s.id} onClick={() => toggleStudent(s.name)} style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, cursor: "pointer", fontFamily: F, border: "1px solid " + (selectedStudents.includes(s.name) ? ACCENT : BORDER), background: selectedStudents.includes(s.name) ? ACCENT + "15" : "transparent", color: selectedStudents.includes(s.name) ? ACCENT : TEXT_PRIMARY }}>{s.name.split(" ")[0]}</button>
+                      ))}
+                    </div>
+                  )}
+                  <textarea value={composeText} onChange={e => setComposeText(e.target.value)} placeholder="Write your message..." rows={3} style={{ ...inp, resize: "vertical", fontSize: 14, marginBottom: 8 }} />
+                  <button onClick={sendMessage} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%" }}>
+                    Send{composeRecipients === "all" ? " to All" : selectedStudents.length > 0 ? " to " + selectedStudents.length + " student" + (selectedStudents.length !== 1 ? "s" : "") : ""}
+                  </button>
+                </div>
+              )}
+
+              {myMessages.slice(0, 10).map(msg => {
+                const isFromAdmin = msg.from === ADMIN_NAME;
+                const recipientLabel = msg.to === "all" ? "All students" : Array.isArray(msg.to) ? msg.to.map(n => n.split(" ")[0]).join(", ") : msg.to;
+                const isReplying = replyingTo === msg.id;
+                return (
+                  <div key={msg.id} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: isFromAdmin ? "3px solid " + ACCENT : "3px solid " + GREEN }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                      <div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{msg.from}</span>
+                        {isAdmin && <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>to {recipientLabel}</span>}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 11, color: TEXT_MUTED }}>{new Date(msg.ts).toLocaleDateString()}</span>
+                        {isAdmin && <button onClick={() => { if (window.confirm("Delete this message?")) deleteMessage(msg.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 12 }}>x</button>}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{msg.text}</div>
+
+                    {/* Replies */}
+                    {(msg.replies || []).length > 0 && (
+                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER }}>
+                        {msg.replies.map((r, ri) => (
+                          <div key={ri} style={{ padding: "4px 0", fontSize: 13 }}>
+                            <span style={{ fontWeight: 700, color: r.from === ADMIN_NAME ? ACCENT : TEXT_PRIMARY }}>{r.from.split(" ")[0]}:</span>
+                            <span style={{ color: TEXT_PRIMARY, marginLeft: 4 }}>{r.text}</span>
+                            <span style={{ fontSize: 10, color: TEXT_MUTED, marginLeft: 6 }}>{new Date(r.ts).toLocaleDateString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Reply button */}
+                    {!isAdmin && isFromAdmin && (
+                      <div style={{ marginTop: 8 }}>
+                        {isReplying ? (
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <input value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Your reply..." style={{ ...inp, flex: 1, fontSize: 13 }} onKeyDown={e => e.key === "Enter" && sendReply(msg.id)} />
+                            <button onClick={() => sendReply(msg.id)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Send</button>
+                            <button onClick={() => { setReplyingTo(null); setReplyText(""); }} style={{ ...pillInactive, fontSize: 12 }}>Cancel</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => { setReplyingTo(msg.id); setReplyText(""); }} style={{ ...pillInactive, fontSize: 11 }}>Reply</button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Admin can reply too */}
+                    {isAdmin && !isFromAdmin && (
+                      <div style={{ marginTop: 8 }}>
+                        {isReplying ? (
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <input value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Your reply..." style={{ ...inp, flex: 1, fontSize: 13 }} onKeyDown={e => e.key === "Enter" && sendReply(msg.id)} />
+                            <button onClick={() => sendReply(msg.id)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Send</button>
+                            <button onClick={() => { setReplyingTo(null); setReplyText(""); }} style={{ ...pillInactive, fontSize: 12 }}>Cancel</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => { setReplyingTo(msg.id); setReplyText(""); }} style={{ ...pillInactive, fontSize: 11 }}>Reply</button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {myMessages.length === 0 && isAdmin && !composing && <div style={{ ...crd, padding: 16, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>No messages yet</div>}
             </div>
           );
         })()}
@@ -2562,6 +2697,136 @@ function ReadingsView({ data, setData, isAdmin }) {
   );
 }
 
+/* ─── MY NOTES ─── */
+function MyNotesView({ data, setData, isAdmin, userName }) {
+  const studentNotes = data.studentNotes || {};
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+  const [viewingStudent, setViewingStudent] = useState(null);
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  const saveNote = async (studentName, text) => {
+    const existing = studentNotes[studentName] || { entries: [] };
+    const newEntry = { id: genId(), text: text.trim(), ts: Date.now() };
+    const updated = { ...data, studentNotes: { ...studentNotes, [studentName]: { ...existing, entries: [newEntry, ...existing.entries] } } };
+    await saveData(updated); setData(updated);
+    setEditing(false); setEditText(""); showMsg("Note saved");
+  };
+
+  const deleteNote = async (studentName, noteId) => {
+    const existing = studentNotes[studentName] || { entries: [] };
+    const updated = { ...data, studentNotes: { ...studentNotes, [studentName]: { ...existing, entries: existing.entries.filter(e => e.id !== noteId) } } };
+    await saveData(updated); setData(updated); showMsg("Deleted");
+  };
+
+  // Admin: view all students' notes
+  if (isAdmin && !viewingStudent) {
+    const studentsWithNotes = data.students.filter(s => {
+      const notes = studentNotes[s.name];
+      return notes && notes.entries && notes.entries.length > 0;
+    }).sort(lastSortObj);
+
+    const studentsWithout = data.students.filter(s => {
+      const notes = studentNotes[s.name];
+      return !notes || !notes.entries || notes.entries.length === 0;
+    }).sort(lastSortObj);
+
+    return (
+      <div style={{ padding: "24px 20px 40px", fontFamily: F }}>
+        <Toast message={msg} />
+        <div style={{ maxWidth: 640, margin: "0 auto" }}>
+          <div style={{ ...sectionLabel, marginBottom: 16 }}>Student Notes</div>
+
+          {studentsWithNotes.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No students have written notes yet</div>}
+
+          {studentsWithNotes.map(s => {
+            const notes = studentNotes[s.name];
+            const latest = notes.entries[0];
+            return (
+              <div key={s.id} onClick={() => setViewingStudent(s.name)} style={{ ...crd, padding: 14, marginBottom: 8, cursor: "pointer" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</span>
+                  <span style={{ fontSize: 11, color: TEXT_MUTED }}>{notes.entries.length} note{notes.entries.length !== 1 ? "s" : ""}</span>
+                </div>
+                <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.4 }}>{latest.text.length > 100 ? latest.text.slice(0, 100) + "..." : latest.text}</div>
+                <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>Last updated {new Date(latest.ts).toLocaleDateString()}</div>
+              </div>
+            );
+          })}
+
+          {studentsWithout.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 6 }}>No notes yet:</div>
+              <div style={{ fontSize: 12, color: TEXT_MUTED, lineHeight: 1.6 }}>{studentsWithout.map(s => s.name.split(" ")[0]).join(", ")}</div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Admin viewing a specific student's notes
+  if (isAdmin && viewingStudent) {
+    const notes = studentNotes[viewingStudent] || { entries: [] };
+    return (
+      <div style={{ padding: "24px 20px 40px", fontFamily: F }}>
+        <Toast message={msg} />
+        <div style={{ maxWidth: 640, margin: "0 auto" }}>
+          <button onClick={() => setViewingStudent(null)} style={{ ...pillInactive, marginBottom: 16 }}>Back to All Notes</button>
+          <div style={{ ...sectionLabel, marginBottom: 16 }}>{viewingStudent}'s Notes</div>
+          {notes.entries.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No notes yet</div>}
+          {notes.entries.map(entry => (
+            <div key={entry.id} style={{ ...crd, padding: 14, marginBottom: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <span style={{ fontSize: 11, color: TEXT_MUTED }}>{new Date(entry.ts).toLocaleDateString()}</span>
+                <button onClick={() => { if (window.confirm("Delete this note?")) deleteNote(viewingStudent, entry.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 12 }}>x</button>
+              </div>
+              <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{entry.text}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Student view: their own notes
+  const myNotes = studentNotes[userName] || { entries: [] };
+
+  return (
+    <div style={{ padding: "24px 20px 40px", fontFamily: F }}>
+      <Toast message={msg} />
+      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ ...sectionLabel }}>My Notes</div>
+          <button onClick={() => { setEditing(!editing); setEditText(""); }} style={editing ? pillActive : pillInactive}>{editing ? "Cancel" : "+ New Note"}</button>
+        </div>
+
+        <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>Your notes are private, visible only to you and your instructor.</div>
+
+        {editing && (
+          <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
+            <textarea value={editText} onChange={e => setEditText(e.target.value)} placeholder="Write a note..." rows={4} style={{ ...inp, resize: "vertical", fontSize: 14, lineHeight: 1.6, marginBottom: 8 }} />
+            <button onClick={() => { if (editText.trim()) saveNote(userName, editText); }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%" }}>Save Note</button>
+          </div>
+        )}
+
+        {myNotes.entries.length === 0 && !editing && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No notes yet. Click "+ New Note" to start.</div>}
+
+        {myNotes.entries.map(entry => (
+          <div key={entry.id} style={{ ...crd, padding: 14, marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <span style={{ fontSize: 11, color: TEXT_MUTED }}>{new Date(entry.ts).toLocaleDateString()}</span>
+              <button onClick={() => { if (window.confirm("Delete this note?")) deleteNote(userName, entry.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 12 }}>x</button>
+            </div>
+            <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{entry.text}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ─── DISCUSSION BOARDS ─── */
 function BoardsView({ data, setData, isAdmin, userName }) {
   const boards = data.boards || [];
@@ -3952,6 +4217,8 @@ export default function Comm118() {
         if (d && !d.surveys) { d.surveys = []; await saveData(d); }
         if (d && !d.boards) { d.boards = []; await saveData(d); }
         if (d && !d.news) { d.news = []; await saveData(d); }
+        if (d && !d.messages) { d.messages = []; await saveData(d); }
+        if (d && !d.studentNotes) { d.studentNotes = {}; await saveData(d); }
         if (d && !d.customTodos) { d.customTodos = []; await saveData(d); }
         // Migration: add interview assignment and fix weights if needed
         if (d && d.assignments && !d.assignments.find(a => a.id === "interview")) {
@@ -4250,6 +4517,7 @@ export default function Comm118() {
       {view === "pti" && isAdmin && !studentView && <PTIMode data={data} setData={setData} />}
       {view === "activities" && isAdmin && !studentView && <GameAdmin data={data} setData={setData} />}
       {view === "boards" && !isGuest && <BoardsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
+      {view === "mynotes" && !isGuest && <MyNotesView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
       {view === "survey" && !isGuest && <SurveyView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
       {view === "roster" && !isGuest && <RosterCombined data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
       {view === "answer" && !isGuest && <StudentAnswerView data={data} setData={setData} userName={userName} />}
