@@ -300,7 +300,7 @@ function NamePicker({ data, onSelect }) {
           {sorted.map(name => {
             const student = data?.students?.find(s => s.name === name);
             const bio = student ? (data?.bios || {})[student.id] : null;
-            const photoUrl = bio?.photoUrl;
+            const photoUrl = bio?.photo;
             return (
             <button key={name} onClick={() => setSelected(name)} style={{
               display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 14px", textAlign: "left",

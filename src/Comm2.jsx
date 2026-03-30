@@ -278,7 +278,11 @@ function NamePicker({ data, onSelect }) {
           <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.6, textAlign: "center" }}>This app is our class hub: schedule, leaderboard, and more. Please see Camino for official grades. Select your name.</div>
         </div>
         <div style={{ ...crd, padding: 4 }}>
-          {sorted.map(name => (
+          {sorted.map(name => {
+            const student = data?.students?.find(s => s.name === name);
+            const bio = student ? (data?.bios || {})[student.id] : null;
+            const photoUrl = bio?.photo;
+            return (
             <button key={name} onClick={() => setSelected(name)} style={{
               display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 14px", textAlign: "left",
               fontFamily: F, fontSize: 15, fontWeight: name === ADMIN_NAME ? 700 : 400,
@@ -286,12 +290,17 @@ function NamePicker({ data, onSelect }) {
               color: name === ADMIN_NAME ? ACCENT : TEXT_PRIMARY,
               border: "none", borderRadius: 10, cursor: "pointer", transition: "background 0.1s",
             }}>
-              <span style={{ width: 36, height: 36, borderRadius: "50%", background: name === ADMIN_NAME ? ACCENT : "#e4e4e7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: name === ADMIN_NAME ? "#fff" : TEXT_SECONDARY, flexShrink: 0 }}>
-                {name.split(" ").map(n => n[0]).join("")}
-              </span>
+              {photoUrl ? (
+                <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+              ) : (
+                <span style={{ width: 36, height: 36, borderRadius: "50%", background: name === ADMIN_NAME ? ACCENT : "#e4e4e7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: name === ADMIN_NAME ? "#fff" : TEXT_SECONDARY, flexShrink: 0 }}>
+                  {name.split(" ").map(n => n[0]).join("")}
+                </span>
+              )}
               {name}
             </button>
-          ))}
+            );
+          })}
         </div>
         <button onClick={() => onSelect(GUEST_NAME)} style={{
           display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", padding: "12px 16px",
