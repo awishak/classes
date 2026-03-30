@@ -155,7 +155,28 @@ function genId() { return Date.now().toString(36) + Math.random().toString(36).s
 function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
 async function loadData() { try { const r = await window.storage.get(STORAGE_KEY, true); return r ? JSON.parse(r.value) : null; } catch { return null; } }
-async function saveData(data) { try { const r = await window.storage.set(STORAGE_KEY, JSON.stringify(data), true); if (!r) console.error("saveData: storage.set returned null"); return !!r; } catch(e) { console.error("saveData failed:", e); return false; } }
+
+async function saveData(newData) {
+  try {
+    const current = await loadData();
+    if (current && current.students && current.students.length > 0) {
+      const curIds = new Set(current.students.map(s => s.id));
+      const newIds = new Set((newData.students || []).map(s => s.id));
+      const overlap = [...curIds].filter(id => newIds.has(id)).length;
+      if (curIds.size > 5 && overlap < curIds.size * 0.5) {
+        console.error("WRITE-LOCK: Blocked save. " + (curIds.size - overlap) + " of " + curIds.size + " students would be lost. Save rejected.");
+        return false;
+      }
+      if ((current.log || []).length > 10 && (newData.log || []).length === 0) {
+        console.error("WRITE-LOCK: Blocked save. Log went from " + current.log.length + " entries to 0. Save rejected.");
+        return false;
+      }
+    }
+    const r = await window.storage.set(STORAGE_KEY, JSON.stringify(newData), true);
+    if (!r) console.error("saveData: storage.set returned null");
+    return !!r;
+  } catch(e) { console.error("saveData failed:", e); return false; }
+}
 
 function gp(log, sid) { return log.filter(e => e.studentId === sid).reduce((s, e) => s + e.amount, 0); }
 function lastName(name) { if (name === "Anne Sephora Pohan") return "Pohan"; return name.split(" ").slice(-1)[0]; }
@@ -1052,8 +1073,31 @@ function AdminPanel({ data, setData }) {
   const [source, setSource] = useState(POINT_SOURCES[0]);
   const [awardSid, setAwardSid] = useState("");
   const [awardAmt, setAwardAmt] = useState("");
+  const [backups, setBackups] = useState([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
   const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME).sort(lastSortObj);
   const pins = data.pins || {};
+
+  const loadBackups = async () => {
+    setLoadingBackups(true);
+    try {
+      const r = await window.storage.list(STORAGE_KEY + "-bak-", true);
+      setBackups((r?.keys || []).sort().reverse());
+    } catch(e) { console.error(e); }
+    setLoadingBackups(false);
+  };
+
+  const restoreBackup = async (backupKey) => {
+    if (!window.confirm("Restore from " + backupKey.replace(STORAGE_KEY + "-bak-", "") + "? This will replace ALL current data with the backup.")) return;
+    try {
+      const r = await window.storage.get(backupKey, true);
+      if (!r) { showMsg("Backup not found"); return; }
+      const backupData = JSON.parse(r.value);
+      await window.storage.set(STORAGE_KEY, JSON.stringify(backupData), true);
+      setData(backupData);
+      showMsg("Restored from " + backupKey.replace(STORAGE_KEY + "-bak-", ""));
+    } catch(e) { console.error(e); showMsg("Restore failed"); }
+  };
 
   const awardPoints = async () => {
     if (!awardSid || !awardAmt) return;
@@ -1182,12 +1226,30 @@ function AdminPanel({ data, setData }) {
             );
           })}
         </div>
+
+        {/* Backups */}
+        <div style={{ ...crd, padding: 16, marginTop: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>Daily Backups</div>
+            <button onClick={loadBackups} style={{ ...pill, background: "transparent", color: ACCENT, border: "1px solid " + ACCENT, fontSize: 11 }}>Load Backups</button>
+          </div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 8 }}>Backups are created automatically once per day. Click Restore to roll back.</div>
+          {loadingBackups && <div style={{ color: TEXT_MUTED, textAlign: "center", padding: 12 }}>Loading...</div>}
+          {!loadingBackups && backups.length === 0 && <div style={{ color: TEXT_MUTED, fontSize: 12 }}>Click "Load Backups" to check for available backups.</div>}
+          {backups.map(bk => {
+            const dateStr = bk.replace(STORAGE_KEY + "-bak-", "");
+            return (
+              <div key={bk} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #f4f4f5" }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{dateStr}</span>
+                <button onClick={() => restoreBackup(bk)} style={{ ...pill, background: "#fffbeb", color: "#d97706", fontSize: 11 }}>Restore</button>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
-
-/* --- HOME VIEW --- */
 function HomeView({ data, setData, userName, isAdmin, setView }) {
   const [newNewsText, setNewNewsText] = useState("");
   const [newNewsType, setNewNewsType] = useState("info");

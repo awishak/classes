@@ -144,7 +144,28 @@ function genId() { return Date.now().toString(36) + Math.random().toString(36).s
 function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
 async function loadData() { try { const r = await window.storage.get(STORAGE_KEY, true); return r ? JSON.parse(r.value) : null; } catch { return null; } }
-async function saveData(data) { try { const r = await window.storage.set(STORAGE_KEY, JSON.stringify(data), true); if (!r) console.error("saveData: storage.set returned null"); return !!r; } catch(e) { console.error("saveData failed:", e); return false; } }
+
+async function saveData(newData) {
+  try {
+    const current = await loadData();
+    if (current && current.students && current.students.length > 0) {
+      const curIds = new Set(current.students.map(s => s.id));
+      const newIds = new Set((newData.students || []).map(s => s.id));
+      const overlap = [...curIds].filter(id => newIds.has(id)).length;
+      if (curIds.size > 5 && overlap < curIds.size * 0.5) {
+        console.error("WRITE-LOCK: Blocked save. " + (curIds.size - overlap) + " of " + curIds.size + " students would be lost. Save rejected.");
+        return false;
+      }
+      if ((current.log || []).length > 10 && (newData.log || []).length === 0) {
+        console.error("WRITE-LOCK: Blocked save. Log went from " + current.log.length + " entries to 0. Save rejected.");
+        return false;
+      }
+    }
+    const r = await window.storage.set(STORAGE_KEY, JSON.stringify(newData), true);
+    if (!r) console.error("saveData: storage.set returned null");
+    return !!r;
+  } catch(e) { console.error("saveData failed:", e); return false; }
+}
 
 function gp(log, sid) { return log.filter(e => e.studentId === sid).reduce((s, e) => s + e.amount, 0); }
 function lastName(name) { if (name === "Ava da Cunha") return "da Cunha"; if (name === "Nogbou Chris Junior Tadjo") return "Tadjo"; if (name === "Anne Sephora Pohan") return "Pohan"; if (name === "Santino Rafael Diaz") return "Diaz"; return name.split(" ").slice(-1)[0]; }
@@ -1552,7 +1573,30 @@ function AdminPanel({ data, setData }) {
   const [newName, setNewName] = useState("");
   const [newTeamId, setNewTeamId] = useState("");
   const [newTeamName, setNewTeamName] = useState("");
+  const [backups, setBackups] = useState([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2500); };
+
+  const loadBackups = async () => {
+    setLoadingBackups(true);
+    try {
+      const r = await window.storage.list(STORAGE_KEY + "-bak-", true);
+      setBackups((r?.keys || []).sort().reverse());
+    } catch(e) { console.error(e); }
+    setLoadingBackups(false);
+  };
+
+  const restoreBackup = async (backupKey) => {
+    if (!window.confirm("Restore from " + backupKey.replace(STORAGE_KEY + "-bak-", "") + "? This will replace ALL current data with the backup.")) return;
+    try {
+      const r = await window.storage.get(backupKey, true);
+      if (!r) { showMsg("Backup not found"); return; }
+      const backupData = JSON.parse(r.value);
+      await window.storage.set(STORAGE_KEY, JSON.stringify(backupData), true);
+      setData(backupData);
+      showMsg("Restored from " + backupKey.replace(STORAGE_KEY + "-bak-", ""));
+    } catch(e) { console.error(e); showMsg("Restore failed"); }
+  };
 
   const undo = async () => { if (!data.log.length) return; const lastTs = data.log[data.log.length - 1].ts; const updated = { ...data, log: data.log.filter(e => e.ts !== lastTs) }; await saveData(updated); setData(updated); showMsg("Undone"); };
   const resetAll = async () => { const updated = { ...data, log: [], participation: {}, grades: {}, weeklyGames: {}, weeklyToT: {}, weeklyFishbowl: {}, fishbowlStars: {}, weeklyTeamWins: {}, todoChecks: {} }; await saveData(updated); setData(updated); showMsg("Everything reset"); };
@@ -1637,6 +1681,7 @@ function AdminPanel({ data, setData }) {
         {["roster", "pins", "log"].map(m => (
           <button key={m} onClick={() => setMode(m)} style={mode === m ? pillActive : pillInactive}>{m === "roster" ? "Roster" : m === "pins" ? "PINs" : "Log"}</button>
         ))}
+        <button onClick={() => { setMode("backups"); loadBackups(); }} style={mode === "backups" ? pillActive : pillInactive}>Backups</button>
         <div style={{ flex: 1 }} />
         <button onClick={undo} style={pillInactive}>Undo</button>
         <button onClick={() => {
@@ -1698,6 +1743,25 @@ function AdminPanel({ data, setData }) {
           <div style={{ ...sectionLabel, marginBottom: 14 }}>Recent</div>
           {recent.length === 0 && <div style={{ color: TEXT_MUTED, textAlign: "center", padding: 20 }}>No points yet</div>}
           {recent.map(e => { const s = data.students.find(x => x.id === e.studentId); return (<div key={e.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid " + BORDER, fontSize: 13 }}><div><span style={{ color: TEXT_PRIMARY, fontWeight: 500 }}>{s?.name || "?"}</span><span style={{ color: TEXT_MUTED, marginLeft: 8 }}>{e.source}</span></div><div style={{ display: "flex", gap: 12, alignItems: "center" }}><span style={{ color: e.amount >= 0 ? GREEN : RED, fontWeight: 600 }}>{e.amount > 0 ? "+" : ""}{e.amount}</span><span style={{ color: TEXT_MUTED, fontSize: 11 }}>{new Date(e.ts).toLocaleDateString()}</span></div></div>); })}
+        </div>
+      )}
+
+      {mode === "backups" && (
+        <div style={{ ...crd, padding: 16 }}>
+          <div style={{ ...sectionLabel, marginBottom: 14 }}>Daily Backups</div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>Backups are created automatically once per day. Click Restore to roll back to that day's data.</div>
+          {loadingBackups && <div style={{ color: TEXT_MUTED, textAlign: "center", padding: 20 }}>Loading...</div>}
+          {!loadingBackups && backups.length === 0 && <div style={{ color: TEXT_MUTED, textAlign: "center", padding: 20 }}>No backups found yet. A backup is created the first time data is saved each day.</div>}
+          {backups.map(bk => {
+            const dateStr = bk.replace(STORAGE_KEY + "-bak-", "");
+            return (
+              <div key={bk} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid " + BORDER }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{dateStr}</span>
+                <button onClick={() => restoreBackup(bk)} style={{ ...pill, background: "#fffbeb", color: AMBER, fontSize: 12 }}>Restore</button>
+              </div>
+            );
+          })}
+          <button onClick={loadBackups} style={{ ...pillInactive, width: "100%", marginTop: 12 }}>Refresh</button>
         </div>
       )}
     </div>

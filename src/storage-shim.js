@@ -97,8 +97,59 @@ window.storage = {
     }
   },
 
+  // Track which keys have been backed up today
+  _backedUpToday: {},
+
+  async _ensureBackup(key) {
+    const today = new Date().toISOString().slice(0, 10);
+    const backupFlag = key + "-" + today;
+    if (this._backedUpToday[backupFlag]) return;
+    try {
+      const backupKey = key + "-bak-" + today;
+      // Check if backup already exists
+      const checkUrl = SUPABASE_URL + "/rest/v1/app_data?id=eq." + encodeURIComponent(backupKey) + "&select=id";
+      const checkRes = await fetch(checkUrl, { headers });
+      const checkRows = await checkRes.json();
+      if (checkRows && checkRows.length > 0) {
+        this._backedUpToday[backupFlag] = true;
+        return;
+      }
+      // Read current data
+      const getUrl = SUPABASE_URL + "/rest/v1/app_data?id=eq." + encodeURIComponent(key) + "&select=data";
+      const getRes = await fetch(getUrl, { headers });
+      if (!getRes.ok) return;
+      const rows = await getRes.json();
+      if (!rows || rows.length === 0) return;
+      // Save backup
+      const backupBody = JSON.stringify({ id: backupKey, data: rows[0].data, updated_at: new Date().toISOString() });
+      await fetch(SUPABASE_URL + "/rest/v1/app_data?on_conflict=id", {
+        method: "POST",
+        headers: { ...headers, "Prefer": "return=representation,resolution=merge-duplicates" },
+        body: backupBody,
+      });
+      this._backedUpToday[backupFlag] = true;
+      console.log("Daily backup created:", backupKey);
+      // Clean up old backups (keep last 7 days)
+      const listUrl = SUPABASE_URL + "/rest/v1/app_data?id=like." + encodeURIComponent(key + "-bak-%") + "&select=id&order=id.desc";
+      const listRes = await fetch(listUrl, { headers });
+      const allBackups = await listRes.json();
+      if (allBackups && allBackups.length > 7) {
+        for (let i = 7; i < allBackups.length; i++) {
+          await fetch(SUPABASE_URL + "/rest/v1/app_data?id=eq." + encodeURIComponent(allBackups[i].id), { method: "DELETE", headers });
+        }
+      }
+    } catch (e) {
+      console.error("Backup error:", e);
+    }
+  },
+
   async set(key, value, shared) {
     try {
+      // Daily backup before writing (skip backup keys themselves)
+      if (!key.includes("-bak-")) {
+        await this._ensureBackup(key);
+      }
+
       const data = JSON.parse(value);
       const body = JSON.stringify({ id: key, data, updated_at: new Date().toISOString() });
 
