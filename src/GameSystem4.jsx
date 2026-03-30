@@ -431,13 +431,14 @@ export function StudentAnswerView({ data, setData, userName }) {
   };
 
   const submitToTAnswer = async (w, qIdx, answerIdx) => {
-    const tot = tots[w]; if (!tot || !sid) return;
+    const tot = tots[w] || tots[String(w)]; if (!tot || !sid) return;
     const key = sid + "-" + qIdx;
     const responses = { ...(tot.responses || {}), [key]: answerIdx };
-    const updated = { ...data, weeklyToT: { ...tots, [w]: { ...tot, responses } } };
+    const wKey = tots[w] ? w : String(w);
+    const updated = { ...data, weeklyToT: { ...tots, [wKey]: { ...tot, responses } } };
     await saveData(updated); setData(updated);
     showMsg("Locked in"); setSelected(null);
-    if (qIdx < tot.questions.length - 1) setCurrentQ(qIdx + 1);
+    if (qIdx < tot.questions.length - 1) setTimeout(() => setCurrentQ(qIdx + 1), 100);
   };
 
   // Week selector
@@ -592,9 +593,10 @@ export function StudentAnswerView({ data, setData, userName }) {
 
   // Active ToT answering
   if (mode === "tot") {
-    const tot = tots[week];
+    const tot = tots[week] || tots[String(week)];
     if (!tot?.active) return <div style={{ padding: 40, textAlign: "center", fontFamily: F, color: "#9ca3af" }}>Not open yet.<br /><button onClick={() => setWeek(null)} style={{ ...pillInactive, marginTop: 12 }}>Back</button></div>;
     const q = tot.questions[currentQ];
+    const wKey = tots[week] ? week : String(week);
     const myAnswer = sid ? tot.responses?.[sid + "-" + currentQ] : undefined;
     const allDone = sid && tot.questions.every((_, i) => tot.responses?.[sid + "-" + i] !== undefined);
     if (allDone) return <div style={{ padding: 40, textAlign: "center", fontFamily: F }}><div style={{ fontSize: 20, fontWeight: 900, marginBottom: 8 }}>All done</div><div style={{ fontSize: 14, color: "#9ca3af", marginBottom: 16 }}>Results after scoring.</div><button onClick={() => setWeek(null)} style={pillInactive}>Back</button></div>;
@@ -608,7 +610,7 @@ export function StudentAnswerView({ data, setData, userName }) {
             <span style={{ fontSize: 14, fontWeight: 700, color: ACCENT }}>Wk {week}</span>
             <span style={{ fontSize: 12, color: "#9ca3af" }}>{currentQ + 1}/{tot.questions.length}</span>
           </div>
-          {q.prompt && <div style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 20, lineHeight: 1.4 }}>{q.prompt}</div>}
+          <div style={{ fontSize: 48, fontWeight: 900, color: "#111827", marginBottom: 24 }}>Question {currentQ + 1}</div>
           {myAnswer !== undefined ? (
             <div style={{ padding: 24 }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: GREEN }}>Locked in: {q.options[myAnswer]}</div>
