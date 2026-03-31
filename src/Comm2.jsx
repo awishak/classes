@@ -363,7 +363,7 @@ function InstructorCard({ data, setData, isAdmin }) {
   }, [data?.favicon]);
 
   const startEdit = () => {
-    setEditIC({ name: ic.name || "Andrew Ishak", title: ic.title || "Teaching Professor, Communication", officeHours: ic.officeHours || "", bookingLabel: ic.bookingLabel || "Book a Meeting", bookingUrl: ic.bookingUrl || "", caminoUrl: ic.caminoUrl || "", syllabusUrl: ic.syllabusUrl || "", photo: ic.photo || "" });
+    setEditIC({ name: ic.name || "Andrew Ishak", title: ic.title || "Teaching Professor, Communication", motto: ic.motto || "", description: ic.description || "", officeHours: ic.officeHours || "", bookingLabel: ic.bookingLabel || "Book a Meeting", bookingUrl: ic.bookingUrl || "", caminoUrl: ic.caminoUrl || "", syllabusUrl: ic.syllabusUrl || "", photo: ic.photo || "" });
     setEditRM(JSON.parse(JSON.stringify(rm)));
     setEditCourseTitle(data.courseTitle || "Public Speaking");
     setEditing(true);
@@ -410,6 +410,8 @@ function InstructorCard({ data, setData, isAdmin }) {
   const photo = editing ? editIC?.photo : ic.photo;
   const name = editing ? editIC?.name : (ic.name || "Andrew Ishak");
   const titleText = editing ? editIC?.title : (ic.title || "Teaching Professor, Communication");
+  const motto = editing ? editIC?.motto : ic.motto;
+  const description = editing ? editIC?.description : ic.description;
   const officeHours = editing ? editIC?.officeHours : ic.officeHours;
   const bookingLabel = editing ? editIC?.bookingLabel : (ic.bookingLabel || "Book a Meeting");
   const bookingUrl = editing ? editIC?.bookingUrl : ic.bookingUrl;
@@ -451,6 +453,21 @@ function InstructorCard({ data, setData, isAdmin }) {
           {uploading ? "Uploading..." : "Upload Photo"}
           <input type="file" accept="image/*" onChange={e => { if (e.target.files?.[0]) handlePhotoUpload(e.target.files[0]); e.target.value = ""; }} style={{ display: "none" }} disabled={uploading} />
         </label>
+      )}
+
+      {/* Motto and description */}
+      {editing ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>Motto</div>
+          <input value={editIC.motto} onChange={e => setEditIC({ ...editIC, motto: e.target.value })} placeholder="e.g. Stay curious" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginTop: 4 }}>Description (links auto-detected)</div>
+          <textarea value={editIC.description} onChange={e => setEditIC({ ...editIC, description: e.target.value })} placeholder="What you're watching, reading, thinking about..." rows={3} style={{ ...inp, fontSize: 13, padding: "6px 10px", resize: "vertical" }} />
+        </div>
+      ) : (
+        <div style={{ marginBottom: (motto || description) ? 12 : 0 }}>
+          {motto && <div style={{ fontSize: 14, fontStyle: "italic", color: TEXT_SECONDARY, marginBottom: description ? 6 : 0 }}>"{motto}"</div>}
+          {description && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{description.split(/(https?:\/\/[^\s]+)/g).map((part, i) => part.match(/^https?:\/\//) ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{part}</a> : part)}</div>}
+        </div>
       )}
 
       {editing ? (
@@ -1671,8 +1688,11 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           {/* Messages / Notes */}
           {(() => {
             const messages = data.messages || [];
-            const myMessages = isAdmin ? messages : messages.filter(m => m.to === "all" || (Array.isArray(m.to) && m.to.includes(userName)) || m.to === userName);
-            if (myMessages.length === 0 && !isAdmin) return <div />;
+            const archived = data.archivedMessages || [];
+            const myMessages = isAdmin
+              ? messages.filter(m => !archived.includes(m.id))
+              : messages.filter(m => m.to === "all" || (Array.isArray(m.to) && m.to.includes(userName)) || m.to === userName || m.from === userName);
+            if (myMessages.length === 0 && !isAdmin && !composing) return <div />;
 
           const sendReply = async (msgId) => {
             if (!replyText.trim()) return;
@@ -1683,12 +1703,22 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
 
           const sendMessage = async () => {
             if (!composeText.trim()) return;
-            const to = composeRecipients === "all" ? "all" : selectedStudents;
-            if (composeRecipients !== "all" && selectedStudents.length === 0) return;
+            let to;
+            if (isAdmin) {
+              to = composeRecipients === "all" ? "all" : selectedStudents;
+              if (composeRecipients !== "all" && selectedStudents.length === 0) return;
+            } else {
+              to = ADMIN_NAME;
+            }
             const m = { id: genId(), from: userName, to, text: composeText.trim(), ts: Date.now(), replies: [] };
             const updated = { ...data, messages: [m, ...(data.messages || [])] };
             await saveData(updated); setData(updated);
             setComposeText(""); setSelectedStudents([]); setComposing(false); showMsg("Message sent");
+          };
+
+          const archiveMessage = async (msgId) => {
+            const updated = { ...data, archivedMessages: [...archived, msgId] };
+            await saveData(updated); setData(updated); showMsg("Archived");
           };
 
           const deleteMessage = async (msgId) => {
@@ -1716,10 +1746,10 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Messages</div>
-                {isAdmin && <button onClick={() => setComposing(!composing)} style={composing ? pillActive : pillInactive}>{composing ? "Cancel" : "New Message"}</button>}
+                <button onClick={() => setComposing(!composing)} style={composing ? pillActive : pillInactive}>{composing ? "Cancel" : isAdmin ? "New Message" : "Message Instructor"}</button>
               </div>
 
-              {isAdmin && composing && (
+              {composing && isAdmin && (
                 <div style={{ ...crd, padding: 14, marginBottom: 10 }}>
                   <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
                     <button onClick={() => { setComposeRecipients("all"); setSelectedStudents([]); }} style={composeRecipients === "all" ? pillActive : pillInactive}>All Students</button>
@@ -1736,6 +1766,14 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
                   <button onClick={sendMessage} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%" }}>
                     Send{composeRecipients === "all" ? " to All" : selectedStudents.length > 0 ? " to " + selectedStudents.length + " student" + (selectedStudents.length !== 1 ? "s" : "") : ""}
                   </button>
+                </div>
+              )}
+
+              {composing && !isAdmin && (
+                <div style={{ ...crd, padding: 14, marginBottom: 10 }}>
+                  <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginBottom: 8 }}>Send a message to your instructor</div>
+                  <textarea value={composeText} onChange={e => setComposeText(e.target.value)} placeholder="Write your message..." rows={3} style={{ ...inp, resize: "vertical", fontSize: 14, marginBottom: 8 }} />
+                  <button onClick={sendMessage} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%" }}>Send to Instructor</button>
                 </div>
               )}
 
@@ -1794,6 +1832,9 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
                       )}
                       {(isOwn || isAdmin) && (
                         <button onClick={() => { if (window.confirm("Delete this message?")) deleteMessage(msgItem.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Delete</button>
+                      )}
+                      {isAdmin && !isOwn && (
+                        <button onClick={() => archiveMessage(msgItem.id)} style={{ ...pillInactive, fontSize: 11 }}>Archive</button>
                       )}
                     </div>
 
@@ -2413,6 +2454,13 @@ export default function Comm2() {
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F }}>
+      {isAdmin && (
+        <div style={{ background: "#111", display: "flex", justifyContent: "center", gap: 4, padding: "5px 12px" }}>
+          <a href="/comm118" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: "#9ca3af", background: "transparent" }}>118</a>
+          <a href="/comm2" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: STORAGE_KEY === "comm2-v1" ? "#fff" : "#9ca3af", background: STORAGE_KEY === "comm2-v1" ? "#333" : "transparent" }}>COMM 2</a>
+          <a href="/comm4" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: "#9ca3af", background: "transparent" }}>COMM 4</a>
+        </div>
+      )}
       <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={displayName} onLogout={() => { try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); setView("home"); setStudentView(false); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} />
 
       {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} setView={setView} />}
