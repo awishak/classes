@@ -329,6 +329,7 @@ function ToTEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack, 
 }
 
 /* ─── LIVE ACTIVITY ADMIN (question control + live monitor) ─── */
+function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, msg, showMsg }) {
   const [countdownActive, setCountdownActive] = useState(false);
   const [countdownSecs, setCountdownSecs] = useState(0);
   const activities = type === "game" ? (data.weeklyGames || {}) : (data.weeklyToT || {});
@@ -449,6 +450,7 @@ function ToTEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack, 
             )}
             {isAllLocked && !activity.scored && (
               <button onClick={onScore} style={{ ...pill, background: GREEN, color: "#fff", padding: "10px 20px", fontSize: 14 }}>Score and Post Points</button>
+            )}
             {isLocked(currentQ) && <span style={{ fontSize: 13, fontWeight: 700, color: GREEN, display: "flex", alignItems: "center" }}>Q{currentQ + 1} Locked</span>}
           </div>
         </div>

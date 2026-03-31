@@ -316,7 +316,7 @@ function NamePicker({ data, onSelect }) {
     <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ maxWidth: 420, width: "100%" }}>
         <div style={{ background: ACCENT, borderRadius: 16, padding: "36px 24px", marginBottom: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>{courseTitle || "Approaches to Communication Research"}</div>
+          <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>{data?.courseTitle || "Approaches to Communication Research"}</div>
           <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", fontWeight: 500, marginTop: 6 }}>COMM 4 / Ishak / Santa Clara University</div>
           <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 4 }}>MWF 11:45 am to 12:50 pm / Lucas 207</div>
         </div>
