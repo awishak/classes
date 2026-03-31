@@ -699,7 +699,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
               <button onClick={() => setView("leaderboard")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>See all</button>
             </div>
             {top5.map((s, i) => (
-              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", background: s.name === userName ? ACCENT + "08" : "transparent", borderRadius: 6, margin: s.name === userName ? "0 -6px" : 0, padding: s.name === userName ? "4px 6px" : "4px 0" }}>
+              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, background: s.name === userName ? ACCENT + "08" : "transparent", borderRadius: 6, margin: s.name === userName ? "0 -6px" : 0, padding: s.name === userName ? "4px 6px" : "4px 0" }}>
                 <span style={{ fontSize: 12, fontWeight: 900, color: i < 5 ? "#d4a017" : TEXT_MUTED, width: 18 }}>{i + 1}</span>
                 <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 4 }}>
                   <div style={{ fontSize: 13, fontWeight: s.name === userName ? 700 : 500, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name.split(" ")[0]} {lastName(s.name)}</div>
