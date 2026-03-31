@@ -193,7 +193,7 @@ function shuffleTeams(students, log, teams) {
 function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#18181b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 14, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
 
 /* ─── NAV ─── */
-function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView }) {
+function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle }) {
   const tabs = [
     { id: "home", label: "Home", admin: false, guest: false },
     { id: "leaderboard", label: "Leaderboard", admin: false, guest: true },
@@ -219,7 +219,7 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
   return (
     <div style={{ background: studentView ? "#334155" : ACCENT, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, position: "sticky", top: 0, zIndex: 50 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", fontFamily: F, letterSpacing: "-0.01em" }}>Comm and Sport</div>
+        <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", fontFamily: F, letterSpacing: "-0.01em" }}>{courseTitle || "Comm and Sport"}</div>
         {studentView && <span style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.05em" }}>Student View</span>}
       </div>
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
@@ -364,18 +364,29 @@ function InstructorCard({ data, setData, isAdmin }) {
   const [editing, setEditing] = useState(false);
   const [editIC, setEditIC] = useState(null);
   const [editRM, setEditRM] = useState(null);
+  const [editCourseTitle, setEditCourseTitle] = useState("");
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
+  // Set favicon on mount and when data changes
+  React.useEffect(() => {
+    if (data?.favicon) {
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) { link = document.createElement("link"); link.rel = "icon"; document.head.appendChild(link); }
+      link.href = data.favicon;
+    }
+  }, [data?.favicon]);
+
   const startEdit = () => {
     setEditIC({ name: ic.name || "Andrew Ishak", title: ic.title || "Teaching Professor, Communication", officeHours: ic.officeHours || "", bookingLabel: ic.bookingLabel || "Book a Meeting", bookingUrl: ic.bookingUrl || "", caminoUrl: ic.caminoUrl || "", syllabusUrl: ic.syllabusUrl || "", photo: ic.photo || "" });
     setEditRM(JSON.parse(JSON.stringify(rm)));
+    setEditCourseTitle(data.courseTitle || "Comm and Sport");
     setEditing(true);
   };
 
   const saveEdit = async () => {
-    const updated = { ...data, instructorCard: editIC, requiredMedia: editRM };
+    const updated = { ...data, instructorCard: editIC, requiredMedia: editRM, courseTitle: editCourseTitle };
     await saveData(updated); setData(updated);
     setEditing(false); showMsg("Saved");
   };
@@ -390,6 +401,20 @@ function InstructorCard({ data, setData, isAdmin }) {
       await fetch(SUPABASE_URL + "/storage/v1/object/class-photos/" + path, { method: "POST", headers: { "Authorization": "Bearer " + SUPABASE_KEY, "x-upsert": "true" }, body: formData });
       const url = SUPABASE_URL + "/storage/v1/object/public/class-photos/" + path + "?t=" + Date.now();
       setEditIC({ ...editIC, photo: url });
+    } catch(e) { console.error(e); }
+    setUploading(false);
+  };
+
+  const handleFaviconUpload = async (file) => {
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = "favicon-" + STORAGE_KEY + "." + ext;
+      const formData = new FormData(); formData.append("", file);
+      await fetch(SUPABASE_URL + "/storage/v1/object/class-photos/" + path, { method: "POST", headers: { "Authorization": "Bearer " + SUPABASE_KEY, "x-upsert": "true" }, body: formData });
+      const url = SUPABASE_URL + "/storage/v1/object/public/class-photos/" + path + "?t=" + Date.now();
+      const updated = { ...data, favicon: url };
+      await saveData(updated); setData(updated); showMsg("Favicon updated");
     } catch(e) { console.error(e); }
     setUploading(false);
   };
@@ -438,7 +463,7 @@ function InstructorCard({ data, setData, isAdmin }) {
       </div>
 
       {editing && (
-        <label style={{ ...pillInactive, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "8px 0", cursor: "pointer", fontSize: 12, marginBottom: 12, width: "100%" }}>
+        <label style={{ ...pillInactive, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "8px 0", cursor: "pointer", fontSize: 12, marginBottom: 6, width: "100%" }}>
           {uploading ? "Uploading..." : "Upload Photo"}
           <input type="file" accept="image/*" onChange={e => { if (e.target.files?.[0]) handlePhotoUpload(e.target.files[0]); e.target.value = ""; }} style={{ display: "none" }} disabled={uploading} />
         </label>
@@ -446,7 +471,17 @@ function InstructorCard({ data, setData, isAdmin }) {
 
       {editing ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>Office Hours</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>Course Title (nav bar)</div>
+          <input value={editCourseTitle} onChange={e => setEditCourseTitle(e.target.value)} placeholder="e.g. Comm and Sport" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginTop: 4 }}>Favicon</div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            {data.favicon && <img src={data.favicon} alt="" style={{ width: 24, height: 24, borderRadius: 4 }} />}
+            <label style={{ ...pillInactive, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "6px 12px", cursor: "pointer", fontSize: 12, flex: 1 }}>
+              {uploading ? "Uploading..." : "Upload Favicon"}
+              <input type="file" accept="image/*" onChange={e => { if (e.target.files?.[0]) handleFaviconUpload(e.target.files[0]); e.target.value = ""; }} style={{ display: "none" }} disabled={uploading} />
+            </label>
+          </div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginTop: 4 }}>Office Hours</div>
           <input value={editIC.officeHours} onChange={e => setEditIC({ ...editIC, officeHours: e.target.value })} placeholder="e.g. Tue/Thu 2-4pm, St. Joseph's 215" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
           <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginTop: 4 }}>Links</div>
           <div style={{ display: "flex", gap: 6 }}>
@@ -686,11 +721,13 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           </div>
         </div>
 
-        {/* Messages / Notes */}
-        {(() => {
-          const messages = data.messages || [];
-          const myMessages = isAdmin ? messages : messages.filter(m => m.to === "all" || (Array.isArray(m.to) && m.to.includes(userName)) || m.to === userName);
-          if (myMessages.length === 0 && !isAdmin) return null;
+        {/* Messages + Instructor Card side by side */}
+        <div className="home-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16, alignItems: "start" }}>
+          {/* Messages / Notes */}
+          {(() => {
+            const messages = data.messages || [];
+            const myMessages = isAdmin ? messages : messages.filter(m => m.to === "all" || (Array.isArray(m.to) && m.to.includes(userName)) || m.to === userName);
+          if (myMessages.length === 0 && !isAdmin) return <div />;
 
           const sendReply = async (msgId) => {
             if (!replyText.trim()) return;
@@ -831,6 +868,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
 
         {/* Instructor Card */}
         <InstructorCard data={data} setData={setData} isAdmin={isAdmin} />
+        </div>
 
         {/* This week's readings (everyone) */}
         {(() => {
@@ -4889,7 +4927,7 @@ export default function Comm118() {
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F, fontSize: 15 }}>
-      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={displayName} onLogout={() => { try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} />
+      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={displayName} onLogout={() => { try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} />
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} setView={setView} />}
       {view === "todo" && !isGuest && <ToDoView data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}

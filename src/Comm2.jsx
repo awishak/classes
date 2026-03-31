@@ -190,7 +190,7 @@ function Toast({ message }) { if (!message) return null; return <div style={{ po
 const ADMIN_NAME = "Andrew Ishak";
 const GUEST_NAME = "__guest__";
 
-function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView }) {
+function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle }) {
   const tabs = [
     { id: "home", label: "Home", admin: false, guest: false },
     { id: "leaderboard", label: "Leaderboard", admin: false, guest: true },
@@ -217,7 +217,7 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
   return (
     <div style={{ background: studentView ? "#334155" : ACCENT, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, position: "sticky", top: 0, zIndex: 50 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", fontFamily: F, letterSpacing: "-0.01em" }}>Public Speaking</div>
+        <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", fontFamily: F, letterSpacing: "-0.01em" }}>{courseTitle || "Public Speaking"}</div>
         {studentView && <span style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.05em" }}>Student View</span>}
       </div>
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
@@ -348,18 +348,29 @@ function InstructorCard({ data, setData, isAdmin }) {
   const [editing, setEditing] = useState(false);
   const [editIC, setEditIC] = useState(null);
   const [editRM, setEditRM] = useState(null);
+  const [editCourseTitle, setEditCourseTitle] = useState("");
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
+  // Set favicon on mount and when data changes
+  React.useEffect(() => {
+    if (data?.favicon) {
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) { link = document.createElement("link"); link.rel = "icon"; document.head.appendChild(link); }
+      link.href = data.favicon;
+    }
+  }, [data?.favicon]);
+
   const startEdit = () => {
     setEditIC({ name: ic.name || "Andrew Ishak", title: ic.title || "Teaching Professor, Communication", officeHours: ic.officeHours || "", bookingLabel: ic.bookingLabel || "Book a Meeting", bookingUrl: ic.bookingUrl || "", caminoUrl: ic.caminoUrl || "", syllabusUrl: ic.syllabusUrl || "", photo: ic.photo || "" });
     setEditRM(JSON.parse(JSON.stringify(rm)));
+    setEditCourseTitle(data.courseTitle || "Public Speaking");
     setEditing(true);
   };
 
   const saveEdit = async () => {
-    const updated = { ...data, instructorCard: editIC, requiredMedia: editRM };
+    const updated = { ...data, instructorCard: editIC, requiredMedia: editRM, courseTitle: editCourseTitle };
     await saveData(updated); setData(updated);
     setEditing(false); showMsg("Saved");
   };
@@ -369,10 +380,25 @@ function InstructorCard({ data, setData, isAdmin }) {
     try {
       const ext = file.name.split(".").pop();
       const path = "instructor-" + STORAGE_KEY + "." + ext;
-      const formData = new FormData(); formData.append("", file);
+      const formData = new FormData();
+      formData.append("", file);
       await fetch(SUPABASE_URL + "/storage/v1/object/class-photos/" + path, { method: "POST", headers: { "Authorization": "Bearer " + SUPABASE_KEY, "x-upsert": "true" }, body: formData });
       const url = SUPABASE_URL + "/storage/v1/object/public/class-photos/" + path + "?t=" + Date.now();
       setEditIC({ ...editIC, photo: url });
+    } catch(e) { console.error(e); }
+    setUploading(false);
+  };
+
+  const handleFaviconUpload = async (file) => {
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = "favicon-" + STORAGE_KEY + "." + ext;
+      const formData = new FormData(); formData.append("", file);
+      await fetch(SUPABASE_URL + "/storage/v1/object/class-photos/" + path, { method: "POST", headers: { "Authorization": "Bearer " + SUPABASE_KEY, "x-upsert": "true" }, body: formData });
+      const url = SUPABASE_URL + "/storage/v1/object/public/class-photos/" + path + "?t=" + Date.now();
+      const updated = { ...data, favicon: url };
+      await saveData(updated); setData(updated); showMsg("Favicon updated");
     } catch(e) { console.error(e); }
     setUploading(false);
   };
@@ -398,6 +424,7 @@ function InstructorCard({ data, setData, isAdmin }) {
         <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Your Instructor</div>
         {isAdmin && !editing && <button onClick={startEdit} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Edit</button>}
       </div>
+
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
         {photo ? (
           <img src={photo} alt="" style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
@@ -405,16 +432,46 @@ function InstructorCard({ data, setData, isAdmin }) {
           <div style={{ width: 64, height: 64, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 900, color: "#fff", flexShrink: 0 }}>AI</div>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          {editing ? (<><input value={editIC.name} onChange={e => setEditIC({ ...editIC, name: e.target.value })} style={{ ...inp, fontSize: 15, fontWeight: 700, padding: "4px 8px", marginBottom: 4 }} /><input value={editIC.title} onChange={e => setEditIC({ ...editIC, title: e.target.value })} style={{ ...inp, fontSize: 13, padding: "4px 8px" }} /></>) : (<><div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{name}</div><div style={{ fontSize: 13, color: TEXT_SECONDARY }}>{titleText}</div></>)}
+          {editing ? (
+            <>
+              <input value={editIC.name} onChange={e => setEditIC({ ...editIC, name: e.target.value })} style={{ ...inp, fontSize: 15, fontWeight: 700, padding: "4px 8px", marginBottom: 4 }} />
+              <input value={editIC.title} onChange={e => setEditIC({ ...editIC, title: e.target.value })} style={{ ...inp, fontSize: 13, padding: "4px 8px" }} />
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{name}</div>
+              <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>{titleText}</div>
+            </>
+          )}
         </div>
       </div>
-      {editing && <label style={{ ...pillInactive, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "8px 0", cursor: "pointer", fontSize: 12, marginBottom: 12, width: "100%" }}>{uploading ? "Uploading..." : "Upload Photo"}<input type="file" accept="image/*" onChange={e => { if (e.target.files?.[0]) handlePhotoUpload(e.target.files[0]); e.target.value = ""; }} style={{ display: "none" }} disabled={uploading} /></label>}
+
+      {editing && (
+        <label style={{ ...pillInactive, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "8px 0", cursor: "pointer", fontSize: 12, marginBottom: 6, width: "100%" }}>
+          {uploading ? "Uploading..." : "Upload Photo"}
+          <input type="file" accept="image/*" onChange={e => { if (e.target.files?.[0]) handlePhotoUpload(e.target.files[0]); e.target.value = ""; }} style={{ display: "none" }} disabled={uploading} />
+        </label>
+      )}
+
       {editing ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>Office Hours</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>Course Title (nav bar)</div>
+          <input value={editCourseTitle} onChange={e => setEditCourseTitle(e.target.value)} placeholder="e.g. Comm and Sport" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginTop: 4 }}>Favicon</div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            {data.favicon && <img src={data.favicon} alt="" style={{ width: 24, height: 24, borderRadius: 4 }} />}
+            <label style={{ ...pillInactive, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "6px 12px", cursor: "pointer", fontSize: 12, flex: 1 }}>
+              {uploading ? "Uploading..." : "Upload Favicon"}
+              <input type="file" accept="image/*" onChange={e => { if (e.target.files?.[0]) handleFaviconUpload(e.target.files[0]); e.target.value = ""; }} style={{ display: "none" }} disabled={uploading} />
+            </label>
+          </div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginTop: 4 }}>Office Hours</div>
           <input value={editIC.officeHours} onChange={e => setEditIC({ ...editIC, officeHours: e.target.value })} placeholder="e.g. Tue/Thu 2-4pm, St. Joseph's 215" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
           <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginTop: 4 }}>Links</div>
-          <div style={{ display: "flex", gap: 6 }}><input value={editIC.bookingLabel} onChange={e => setEditIC({ ...editIC, bookingLabel: e.target.value })} placeholder="Booking label" style={{ ...inp, fontSize: 13, padding: "6px 10px", flex: 1 }} /><input value={editIC.bookingUrl} onChange={e => setEditIC({ ...editIC, bookingUrl: e.target.value })} placeholder="Booking URL" style={{ ...inp, fontSize: 13, padding: "6px 10px", flex: 2 }} /></div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <input value={editIC.bookingLabel} onChange={e => setEditIC({ ...editIC, bookingLabel: e.target.value })} placeholder="Booking label" style={{ ...inp, fontSize: 13, padding: "6px 10px", flex: 1 }} />
+            <input value={editIC.bookingUrl} onChange={e => setEditIC({ ...editIC, bookingUrl: e.target.value })} placeholder="Booking URL" style={{ ...inp, fontSize: 13, padding: "6px 10px", flex: 2 }} />
+          </div>
           <input value={editIC.caminoUrl} onChange={e => setEditIC({ ...editIC, caminoUrl: e.target.value })} placeholder="Camino URL" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
           <input value={editIC.syllabusUrl} onChange={e => setEditIC({ ...editIC, syllabusUrl: e.target.value })} placeholder="Syllabus URL" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
         </div>
@@ -428,6 +485,7 @@ function InstructorCard({ data, setData, isAdmin }) {
           </div>
         </div>
       )}
+
       {(mediaList.length > 0 || editing) && (
         <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 10 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Required Media</div>
@@ -440,14 +498,24 @@ function InstructorCard({ data, setData, isAdmin }) {
             </div>
           ) : (
             <div key={m.id} style={{ marginBottom: 6 }}>
-              {m.url ? <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>{m.title}</a> : <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{m.title}</div>}
+              {m.url ? (
+                <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>{m.title}</a>
+              ) : (
+                <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{m.title}</div>
+              )}
               {m.description && <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>{m.description}</div>}
             </div>
           ))}
           {editing && <button onClick={addMedia} style={{ ...pillInactive, fontSize: 12, width: "100%" }}>+ Add Item</button>}
         </div>
       )}
-      {editing && <div style={{ display: "flex", gap: 6, marginTop: 12 }}><button onClick={saveEdit} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Save</button><button onClick={() => setEditing(false)} style={{ ...pillInactive, flex: 1 }}>Cancel</button></div>}
+
+      {editing && (
+        <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+          <button onClick={saveEdit} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Save</button>
+          <button onClick={() => setEditing(false)} style={{ ...pillInactive, flex: 1 }}>Cancel</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1598,11 +1666,13 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           );
         })()}
 
-        {/* Messages / Notes */}
-        {(() => {
-          const messages = data.messages || [];
-          const myMessages = isAdmin ? messages : messages.filter(m => m.to === "all" || (Array.isArray(m.to) && m.to.includes(userName)) || m.to === userName);
-          if (myMessages.length === 0 && !isAdmin) return null;
+        {/* Messages + Instructor Card side by side */}
+        <div className="home-grid-c2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16, alignItems: "start" }}>
+          {/* Messages / Notes */}
+          {(() => {
+            const messages = data.messages || [];
+            const myMessages = isAdmin ? messages : messages.filter(m => m.to === "all" || (Array.isArray(m.to) && m.to.includes(userName)) || m.to === userName);
+            if (myMessages.length === 0 && !isAdmin) return <div />;
 
           const sendReply = async (msgId) => {
             if (!replyText.trim()) return;
@@ -1743,6 +1813,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
 
         {/* Instructor Card */}
         <InstructorCard data={data} setData={setData} isAdmin={isAdmin} />
+        </div>
 
         {/* Active Discussion Boards */}
         {boards.filter(b => b.active).length > 0 && (
@@ -2342,7 +2413,7 @@ export default function Comm2() {
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F }}>
-      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={displayName} onLogout={() => { try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); setView("home"); setStudentView(false); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} />
+      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={displayName} onLogout={() => { try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); setView("home"); setStudentView(false); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} />
 
       {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} setView={setView} />}
 
