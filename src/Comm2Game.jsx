@@ -6,6 +6,9 @@ const GREEN = "#059669";
 const RED = "#dc2626";
 const BORDER = "#e8e8ec";
 const TEXT_MUTED = "#a1a1aa";
+const TEXT_PRIMARY = "#18181b";
+const TEXT_SECONDARY = "#52525b";
+const AMBER = "#d97706";
 
 const crd = { background: "#fff", borderRadius: 14, border: "1px solid " + BORDER, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" };
 const pill = { padding: "7px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s" };
@@ -109,12 +112,22 @@ export function GameAdmin({ data, setData }) {
 
   if (week !== null && mode === "game") {
     const existing = games[week];
-    return <GameEditor week={week} initial={existing?.questions || emptyGame()} scored={existing?.scored} responses={existing?.responses || {}} students={data.students} onSave={qs => saveGame(week, qs)} onScore={() => scoreGame(week)} onDelete={() => { if (window.confirm("Delete game week " + week + "?")) deleteGame(week); }} onBack={() => setWeek(null)} msg={msg} />;
+    return (
+      <div>
+        <GameEditor week={week} initial={existing?.questions || emptyGame()} scored={existing?.scored} responses={existing?.responses || {}} students={data.students} onSave={qs => saveGame(week, qs)} onScore={() => scoreGame(week)} onDelete={() => { if (window.confirm("Delete game week " + week + "?")) deleteGame(week); }} onBack={() => setWeek(null)} msg={msg} />
+        {existing?.scored && <div style={{ padding: "0 20px 40px" }}><div style={{ maxWidth: 600, margin: "0 auto" }}><ReboundPanel data={data} setData={setData} activityType="game" week={week} isAdmin={true} userName="Andrew Ishak" /></div></div>}
+      </div>
+    );
   }
 
   if (week !== null && mode === "tot") {
     const existing = tots[week];
-    return <ToTEditor week={week} initial={existing?.questions || [{ prompt: "", options: ["", ""], correct: 0 }]} scored={existing?.scored} responses={existing?.responses || {}} students={data.students} onSave={qs => saveToT(week, qs)} onScore={() => scoreToT(week)} onDelete={() => { if (window.confirm("Delete This or That week " + week + "?")) deleteToT(week); }} onBack={() => setWeek(null)} msg={msg} />;
+    return (
+      <div>
+        <ToTEditor week={week} initial={existing?.questions || [{ prompt: "", options: ["", ""], correct: 0 }]} scored={existing?.scored} responses={existing?.responses || {}} students={data.students} onSave={qs => saveToT(week, qs)} onScore={() => scoreToT(week)} onDelete={() => { if (window.confirm("Delete This or That week " + week + "?")) deleteToT(week); }} onBack={() => setWeek(null)} msg={msg} />
+        {existing?.scored && <div style={{ padding: "0 20px 40px" }}><div style={{ maxWidth: 600, margin: "0 auto" }}><ReboundPanel data={data} setData={setData} activityType="tot" week={week} isAdmin={true} userName="Andrew Ishak" /></div></div>}
+      </div>
+    );
   }
 
   return (
@@ -351,6 +364,8 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
           {!isConfirmed && <button onClick={confirm} style={{ ...pill, background: GREEN, color: "#fff", flex: 1, padding: "12px 0" }}>Confirm and Post Points</button>}
           <button onClick={() => { if (window.confirm("Delete fishbowl week " + week + "?")) deleteFishbowl(); }} style={{ ...pill, background: "#fef2f2", color: RED, padding: "12px 16px" }}>Delete</button>
         </div>
+
+        {isConfirmed && <ReboundPanel data={data} setData={setData} activityType="fishbowl" week={week} isAdmin={true} userName="Andrew Ishak" />}
       </div>
     </div>
   );
@@ -451,6 +466,7 @@ export function StudentAnswerView({ data, setData, userName }) {
             <div style={{ ...sectionLabel, marginBottom: 2 }}>Game Points</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: "#18181b" }}>{total}<span style={{ fontSize: 13, color: TEXT_MUTED }}> / 100</span></div>
           </div>
+          <ReboundPanel data={data} setData={setData} activityType="game" week={week} isAdmin={false} userName={userName} />
         </div>
       </div>
     );
@@ -482,6 +498,7 @@ export function StudentAnswerView({ data, setData, userName }) {
           <div style={{ ...crd, padding: 14, marginTop: 12, textAlign: "center" }}>
             <div style={{ fontSize: 20, fontWeight: 800, color: "#18181b" }}>{Math.round(total * 10) / 10}<span style={{ fontSize: 13, color: TEXT_MUTED }}> / 20</span></div>
           </div>
+          <ReboundPanel data={data} setData={setData} activityType="tot" week={week} isAdmin={false} userName={userName} />
         </div>
       </div>
     );
@@ -644,6 +661,264 @@ export function Accolades({ data }) {
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+/* ─── REBOUND SYSTEM ─── */
+export function ReboundPanel({ data, setData, activityType, week, isAdmin, userName }) {
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+  const [reboundLink, setReboundLink] = useState("");
+
+  const rebounds = data.rebounds || {};
+  const reboundKey = activityType + "-" + week;
+  const reboundData = rebounds[reboundKey] || {};
+  const students = data.students.filter(s => s.name !== "Andrew Ishak");
+  const sorted = [...students].sort(lastSortObj);
+  const student = data.students.find(s => s.name === userName);
+  const sid = student?.id;
+
+  // Calculate scores based on activity type
+  const getStudentScore = (s) => {
+    if (activityType === "game") {
+      const game = (data.weeklyGames || {})[week];
+      if (!game?.scored) return null;
+      let pts = 0;
+      for (let q = 0; q < 10; q++) {
+        if (game.responses?.[s.id + "-" + q] === game.questions[q].correct) pts += GAME_PTS;
+      }
+      return { score: pts, max: 100, responded: Object.keys(game.responses || {}).some(k => k.startsWith(s.id)) };
+    }
+    if (activityType === "tot") {
+      const tot = (data.weeklyToT || {})[week] || (data.weeklyToT || {})[String(week)];
+      if (!tot?.scored) return null;
+      const ptsEach = tot.questions.length > 0 ? 20 / tot.questions.length : 20;
+      let pts = 0;
+      tot.questions.forEach((q, qi) => {
+        if (tot.responses?.[s.id + "-" + qi] === q.correct) pts += ptsEach;
+      });
+      return { score: Math.round(pts * 10) / 10, max: 20, responded: Object.keys(tot.responses || {}).some(k => k.startsWith(s.id)) };
+    }
+    if (activityType === "fishbowl") {
+      const fb = (data.weeklyFishbowl || {})[week];
+      if (!fb?.confirmed) return null;
+      const pts = fb.scores?.[s.id] ?? 0;
+      return { score: pts, max: 20, responded: true };
+    }
+    return null;
+  };
+
+  // Calculate class average (including zeros)
+  const allScores = sorted.map(s => {
+    const result = getStudentScore(s);
+    return result ? result.score : 0;
+  });
+  const classAvg = allScores.length > 0 ? Math.round((allScores.reduce((a, b) => a + b, 0) / allScores.length) * 10) / 10 : 0;
+  const maxPts = activityType === "game" ? 100 : 20;
+
+  // Check if scored
+  const isScored = activityType === "game" ? (data.weeklyGames || {})[week]?.scored
+    : activityType === "tot" ? ((data.weeklyToT || {})[week] || (data.weeklyToT || {})[String(week)])?.scored
+    : (data.weeklyFishbowl || {})[week]?.confirmed;
+
+  if (!isScored) return null;
+
+  // Score timestamp (when it was scored)
+  const scoredTs = reboundData.scoredTs || Date.now();
+  const reboundDeadline = scoredTs + 48 * 60 * 60 * 1000;
+  const reboundOpen = Date.now() < reboundDeadline;
+  const hoursLeft = Math.max(0, Math.round((reboundDeadline - Date.now()) / (1000 * 60 * 60)));
+
+  // Save scored timestamp if not set
+  const ensureScoredTs = async () => {
+    if (!reboundData.scoredTs) {
+      const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, scoredTs: Date.now() } } };
+      await saveData(updated); setData(updated);
+    }
+  };
+  if (!reboundData.scoredTs && isScored) ensureScoredTs();
+
+  // Admin: set absence type
+  const setAbsenceType = async (studentId, type) => {
+    const subs = { ...(reboundData.submissions || {}), [studentId]: { ...(reboundData.submissions?.[studentId] || {}), absenceType: type } };
+    const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, submissions: subs } } };
+    await saveData(updated); setData(updated); showMsg("Set to " + type);
+  };
+
+  // Admin: approve rebound
+  const approveRebound = async (studentId) => {
+    const result = getStudentScore(data.students.find(s => s.id === studentId));
+    if (!result) return;
+    const sub = reboundData.submissions?.[studentId] || {};
+    const cap = maxPts * 0.8;
+    const reboundTarget = Math.min(classAvg, cap);
+    let reboundPts;
+    if (activityType === "fishbowl") {
+      reboundPts = Math.min(10, cap - result.score);
+    } else if (sub.absenceType === "unannounced") {
+      reboundPts = Math.round(Math.min(reboundTarget / 2, cap - result.score) * 10) / 10;
+    } else {
+      reboundPts = Math.round(Math.max(0, Math.min(reboundTarget, cap) - result.score) * 10) / 10;
+    }
+    if (sub.customPts !== undefined) reboundPts = sub.customPts;
+    if (reboundPts <= 0) { showMsg("No points to rebound"); return; }
+
+    const source = "Rebound " + (activityType === "game" ? "Game" : activityType === "tot" ? "ToT" : "Fishbowl") + " Wk" + week;
+    const entry = { id: genId(), studentId, amount: reboundPts, source, ts: Date.now() };
+    const subs = { ...(reboundData.submissions || {}), [studentId]: { ...sub, approved: true, reboundPts } };
+    const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, submissions: subs } }, log: [...data.log, entry] };
+    await saveData(updated); setData(updated); showMsg("Rebounded +" + reboundPts);
+  };
+
+  // Admin: set custom rebound points
+  const setCustomPts = async (studentId, pts) => {
+    const subs = { ...(reboundData.submissions || {}), [studentId]: { ...(reboundData.submissions?.[studentId] || {}), customPts: parseFloat(pts) || 0 } };
+    const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, submissions: subs } } };
+    await saveData(updated); setData(updated);
+  };
+
+  // Student: submit rebound link
+  const submitRebound = async () => {
+    if (!reboundLink.trim() || !sid) return;
+    const subs = { ...(reboundData.submissions || {}), [sid]: { ...(reboundData.submissions?.[sid] || {}), link: reboundLink.trim(), ts: Date.now() } };
+    const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, submissions: subs } } };
+    await saveData(updated); setData(updated);
+    setReboundLink(""); showMsg("Submitted! Your instructor will review.");
+  };
+
+  const actLabel = activityType === "game" ? "Weekly Game" : activityType === "tot" ? "This or That" : "Fishbowl";
+
+  // ─── ADMIN VIEW ───
+  if (isAdmin) {
+    return (
+      <div style={{ marginTop: 16 }}>
+        <Toast message={msg} />
+        <div style={{ ...crd, padding: 16 }}>
+          <div style={{ ...sectionLabel, marginBottom: 4 }}>Results and Rebounds</div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>
+            Class average: <strong>{classAvg}</strong> / {maxPts} | Cap: <strong>{maxPts * 0.8}</strong> (80%) | Rebound: {reboundOpen ? hoursLeft + "h left" : "Closed"}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
+            {sorted.map(s => {
+              const result = getStudentScore(s);
+              const score = result ? result.score : 0;
+              const responded = result ? result.responded : false;
+              const missed = !responded && activityType !== "fishbowl";
+              const belowAvg = score < classAvg;
+              const sub = reboundData.submissions?.[s.id] || {};
+              const cap = maxPts * 0.8;
+              const reboundTarget = Math.min(classAvg, cap);
+              const eligible = activityType === "fishbowl" ? score < 20 : (belowAvg || missed) && score < cap;
+              const defaultRebound = activityType === "fishbowl" ? Math.min(10, cap - score)
+                : sub.absenceType === "unannounced" ? Math.round(Math.min(reboundTarget / 2, cap - score) * 10) / 10
+                : Math.round(Math.max(0, reboundTarget - score) * 10) / 10;
+              const reboundPts = sub.customPts !== undefined ? sub.customPts : defaultRebound;
+
+              return (
+                <div key={s.id} style={{ padding: "10px 12px", borderRadius: 10, background: sub.approved ? "#ecfdf5" : missed ? "#fef2f2" : "#fff", border: "1px solid " + (sub.approved ? GREEN + "30" : missed ? RED + "30" : BORDER) }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</span>
+                      {missed && <span style={{ fontSize: 11, fontWeight: 600, color: RED, marginLeft: 6 }}>MISSED</span>}
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: score >= classAvg ? GREEN : score === 0 ? RED : "#d97706" }}>{score}<span style={{ fontSize: 12, color: TEXT_MUTED }}>/{maxPts}</span></div>
+                  </div>
+
+                  {eligible && !sub.approved && (
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER }}>
+                      {missed && !sub.absenceType && (
+                        <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                          <button onClick={() => setAbsenceType(s.id, "announced")} style={{ ...pill, background: "#eff6ff", color: "#2563eb", fontSize: 11 }}>Announced Absence</button>
+                          <button onClick={() => setAbsenceType(s.id, "unannounced")} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Unannounced Absence</button>
+                        </div>
+                      )}
+                      {sub.absenceType && <div style={{ fontSize: 11, color: sub.absenceType === "announced" ? "#2563eb" : RED, fontWeight: 600, marginBottom: 4 }}>{sub.absenceType === "announced" ? "Announced" : "Unannounced"} absence</div>}
+                      {sub.link && (
+                        <div style={{ marginBottom: 6 }}>
+                          <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 2 }}>Rebound video:</div>
+                          <a href={sub.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", wordBreak: "break-all" }}>{sub.link}</a>
+                          <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Submitted {new Date(sub.ts).toLocaleString()}</div>
+                        </div>
+                      )}
+                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                        <span style={{ fontSize: 12, color: TEXT_MUTED }}>Rebound:</span>
+                        <input type="number" defaultValue={reboundPts} onBlur={e => setCustomPts(s.id, e.target.value)} style={{ ...inp, width: 60, fontSize: 13, textAlign: "center", padding: "4px" }} />
+                        <span style={{ fontSize: 12, color: TEXT_MUTED }}>pts</span>
+                        {sub.link && <button onClick={() => approveRebound(s.id)} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12, marginLeft: "auto" }}>Approve</button>}
+                      </div>
+                    </div>
+                  )}
+                  {sub.approved && <div style={{ fontSize: 12, fontWeight: 600, color: GREEN, marginTop: 4 }}>Rebounded +{sub.reboundPts} pts</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── STUDENT VIEW ───
+  if (!sid) return null;
+  const myResult = getStudentScore(student);
+  const myScore = myResult ? myResult.score : 0;
+  const cap = maxPts * 0.8;
+  const belowAvg = myScore < classAvg;
+  const mySub = reboundData.submissions?.[sid] || {};
+  const eligible = activityType === "fishbowl" ? myScore < 20 : belowAvg && myScore < cap;
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <Toast message={msg} />
+      <div style={{ ...crd, padding: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ ...sectionLabel }}>Class Results</div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED }}>Average: <strong>{classAvg}</strong> / {maxPts}</div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, textAlign: "center", marginBottom: 12 }}>
+          <div style={{ padding: 12, borderRadius: 10, background: myScore >= classAvg ? "#ecfdf5" : "#fef2f2" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>Your Score</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: myScore >= classAvg ? GREEN : "#d97706" }}>{myScore}<span style={{ fontSize: 13, color: TEXT_MUTED }}>/{maxPts}</span></div>
+          </div>
+          <div style={{ padding: 12, borderRadius: 10, background: "#f4f4f5" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>Class Average</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: TEXT_PRIMARY }}>{classAvg}<span style={{ fontSize: 13, color: TEXT_MUTED }}>/{maxPts}</span></div>
+          </div>
+        </div>
+
+        {mySub.approved && (
+          <div style={{ padding: 12, borderRadius: 10, background: "#ecfdf5", textAlign: "center", marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: GREEN }}>Rebound approved: +{mySub.reboundPts} pts</div>
+          </div>
+        )}
+
+        {eligible && !mySub.approved && reboundOpen && (
+          <div style={{ padding: 12, borderRadius: 10, background: "#fffbeb", border: "1px solid #fef3c7", marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#92400e", marginBottom: 6 }}>Rebound Available</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.5, marginBottom: 8 }}>
+              {activityType === "fishbowl"
+                ? "Submit a video of you reviewing all the fishbowl articles with a friend or family member to earn up to 10 points back. Rebounds are capped at 80% of the total points for this activity."
+                : "If your score is below the class average, you can earn rebound points by submitting a video of you explaining the material you missed with a friend or family member. You can earn up to the class average, capped at 80% of the total points for this activity."
+              }
+              {" "}You have <strong>{hoursLeft} hours</strong> left to submit.
+            </div>
+            {mySub.link ? (
+              <div style={{ fontSize: 13, color: GREEN, fontWeight: 600 }}>Submitted! Waiting for instructor review.</div>
+            ) : (
+              <div style={{ display: "flex", gap: 6 }}>
+                <input value={reboundLink} onChange={e => setReboundLink(e.target.value)} placeholder="Paste your video link here..." style={{ ...inp, flex: 1, fontSize: 13 }} />
+                <button onClick={submitRebound} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Submit</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {eligible && !mySub.approved && !reboundOpen && !mySub.link && (
+          <div style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 12 }}>Rebound window has closed.</div>
+        )}
       </div>
     </div>
   );

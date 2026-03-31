@@ -4290,6 +4290,7 @@ export default function Comm4() {
         if (d && !d.news) { d.news = []; await saveData(d); }
         if (d && !d.messages) { d.messages = []; await saveData(d); }
         if (d && !d.studentNotes) { d.studentNotes = {}; await saveData(d); }
+        if (d && !d.rebounds) { d.rebounds = {}; await saveData(d); }
         if (d && !d.customTodos) { d.customTodos = []; await saveData(d); }
         // Generate PINs
         if (d && !d.pins) {

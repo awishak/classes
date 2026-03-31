@@ -2178,6 +2178,7 @@ export default function Comm2() {
         if (d && !d.news) { d.news = []; await saveData(d); }
         if (d && !d.messages) { d.messages = []; await saveData(d); }
         if (d && !d.studentNotes) { d.studentNotes = {}; await saveData(d); }
+        if (d && !d.rebounds) { d.rebounds = {}; await saveData(d); }
         if (d && !d.bios) { d.bios = {}; await saveData(d); }
         if (d && !d.adminLinks) { d.adminLinks = []; await saveData(d); }
         if (d && !d.pins) { const pins = {}; d.students.forEach(s => { pins[s.id] = String(Math.floor(100000 + Math.random() * 900000)); }); d.pins = pins; await saveData(d); }
