@@ -1347,9 +1347,9 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
             color: inA ? "#fff" : TEXT_SECONDARY,
           }}>{i + 1}</div>
           {bio.photo ? (
-            <img src={bio.photo} alt="" style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "3px solid " + (inA ? "#d4a01744" : "#f4f4f5") }} />
+            <img src={bio.photo} alt="" style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "3px solid " + (inA ? "#d4a01744" : "#f4f4f5") }} />
           ) : (
-            <div style={{ width: 52, height: 52, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "#fff", flexShrink: 0, border: "3px solid " + (inA ? "#d4a01744" : "#f4f4f5") }}>{initials}</div>
+            <div style={{ width: 80, height: 80, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 900, color: "#fff", flexShrink: 0, border: "3px solid " + (inA ? "#d4a01744" : "#f4f4f5") }}>{initials}</div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -1358,11 +1358,11 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
               {isMe && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#dbeafe", color: "#1d4ed8", fontWeight: 700 }}>YOU</span>}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
-              {team && <span style={{ fontSize: 11, color: tc.accent, fontWeight: 600 }}>{team.name}</span>}
-              <span style={{ fontSize: 11, color: "#d4d4d8" }}>/</span>
-              <span style={{ fontSize: 11, color: "#b0b0b0", fontStyle: "italic" }}>{getMotto(s.id)}</span>
+              {team && <span style={{ fontSize: 13, color: tc.accent, fontWeight: 600 }}>{team.name}</span>}
+              {team && <span style={{ fontSize: 13, color: "#d4d4d8" }}>/</span>}
+              <span style={{ fontSize: 13, color: "#b0b0b0", fontStyle: "italic" }}>{getMotto(s.id)}</span>
             </div>
-            {bio.hometown && <div style={{ fontSize: 11, color: "#d4d4d8", marginTop: 2 }}>{bio.hometown}</div>}
+            {bio.hometown && <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 2 }}>{bio.hometown}</div>}
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
             <div style={{ fontSize: 30, fontWeight: 900, color: inA ? "#b8860b" : TEXT_PRIMARY, fontFamily: F, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{s.points}</div>
@@ -2190,20 +2190,23 @@ function RosterView({ data, setData, userName }) {
             const hasPhoto = !!bio.photo;
             return (
               <button key={s.id} onClick={() => setSelectedId(s.id)} style={{
-                display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
+                display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
                 background: "#fff", border: "1px solid #f3f4f6", borderRadius: 12,
                 cursor: "pointer", textAlign: "left", fontFamily: F, width: "100%", transition: "all 0.1s",
               }}>
                 {hasPhoto ? (
-                  <img src={bio.photo} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                  <img src={bio.photo} alt="" style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
                 ) : (
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#fff", flexShrink: 0 }}>{initials}</div>
+                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 900, color: "#fff", flexShrink: 0 }}>{initials}</div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</div>
-                  <div style={{ fontSize: 11, color: TEXT_MUTED }}>
-                    {team ? team.name : "Unassigned"}
-                    {bio.hometown ? " / " + bio.hometown : ""}
+                  <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2, flexWrap: "wrap", fontSize: 13 }}>
+                    {team && <span style={{ color: tc.accent, fontWeight: 600 }}>{team.name}</span>}
+                    {team && (bio.year || bio.hometown) && <span style={{ color: "#d4d4d8" }}>/</span>}
+                    {bio.year && <span style={{ color: TEXT_SECONDARY, fontWeight: 600 }}>{bio.year}</span>}
+                    {bio.year && bio.hometown && <span style={{ color: "#d4d4d8" }}>/</span>}
+                    {bio.hometown && <span style={{ color: TEXT_SECONDARY }}>{bio.hometown}</span>}
                   </div>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>

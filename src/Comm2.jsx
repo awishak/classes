@@ -495,8 +495,9 @@ function WeekHeaderInline({ week, onSave, onCancel }) {
 }
 
 /* --- LEADERBOARD --- */
-function Leaderboard({ students, log, isAdmin, userName }) {
+function Leaderboard({ students, log, isAdmin, userName, data }) {
   const ranked = rs(students, log);
+  const bios = data?.bios || {};
   const mx = ranked.length > 0 ? Math.max(ranked[0].points, 1) : 1;
   const [showAll, setShowAll] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
@@ -517,6 +518,8 @@ function Leaderboard({ students, log, isAdmin, userName }) {
             const isMe = s.name === userName;
             const isAZone = i < 5;
             const isExpanded = expandedId === s.id;
+            const bio = bios[s.id] || {};
+            const initials = s.name.split(" ").map(n => n[0]).join("");
             const entries = log.filter(e => e.studentId === s.id);
             const bySrc = {};
             entries.forEach(e => { bySrc[e.source] = (bySrc[e.source] || 0) + e.amount; });
@@ -524,16 +527,26 @@ function Leaderboard({ students, log, isAdmin, userName }) {
             return (
               <div key={s.id}>
                 <div onClick={() => setExpandedId(isExpanded ? null : s.id)} style={{
-                  display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
+                  display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
                   borderBottom: "1px solid #f4f4f5", cursor: "pointer",
                   background: isMe ? "#eff6ff" : "transparent",
                 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 10, background: isAZone ? GREEN : "#e4e4e7", display: "flex", alignItems: "center", justifyContent: "center", color: isAZone ? "#fff" : TEXT_SECONDARY, fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
+                  {bio.photo ? (
+                    <img src={bio.photo} alt="" style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "3px solid " + (isAZone ? GREEN + "44" : "#f4f4f5") }} />
+                  ) : (
+                    <div style={{ width: 80, height: 80, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 900, color: "#fff", flexShrink: 0, border: "3px solid " + (isAZone ? GREEN + "44" : "#f4f4f5") }}>{initials}</div>
+                  )}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}{isMe && <span style={{ fontSize: 11, color: ACCENT, marginLeft: 6, fontWeight: 600 }}>You</span>}</div>
-                    {isAZone && <div style={{ fontSize: 11, color: GREEN, fontWeight: 600 }}>A Zone</div>}
+                    <div style={{ fontSize: 18, fontWeight: 800, color: TEXT_PRIMARY }}>{s.name}{isMe && <span style={{ fontSize: 11, color: ACCENT, marginLeft: 6, fontWeight: 600 }}>You</span>}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
+                      {bio.major && <span style={{ fontSize: 13, color: TEXT_SECONDARY, fontWeight: 600 }}>{bio.major}</span>}
+                      {bio.major && bio.hometown && <span style={{ fontSize: 13, color: "#d4d4d8" }}>/</span>}
+                      {bio.hometown && <span style={{ fontSize: 13, color: TEXT_SECONDARY }}>{bio.hometown}</span>}
+                    </div>
+                    {isAZone && <div style={{ fontSize: 13, color: GREEN, fontWeight: 600, marginTop: 2 }}>A Zone</div>}
                   </div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{s.points}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{s.points}</div>
                 </div>
                 {isExpanded && (
                   <div style={{ padding: "8px 16px 12px 60px", background: "#fafafa", borderBottom: "1px solid #f4f4f5" }}>
@@ -947,18 +960,22 @@ function RosterView({ data, setData, userName }) {
             const initials = s.name.split(" ").map(n => n[0]).join("");
             return (
               <button key={s.id} onClick={() => setSelectedId(s.id)} style={{
-                display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
+                display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
                 background: "#fff", border: "1px solid #f3f4f6", borderRadius: 12,
                 cursor: "pointer", textAlign: "left", fontFamily: F, width: "100%", transition: "all 0.1s",
               }}>
                 {bio.photo ? (
-                  <img src={bio.photo} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                  <img src={bio.photo} alt="" style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
                 ) : (
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#fff", flexShrink: 0 }}>{initials}</div>
+                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 900, color: "#fff", flexShrink: 0 }}>{initials}</div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</div>
-                  {bio.major && <div style={{ fontSize: 11, color: TEXT_MUTED }}>{bio.major}</div>}
+                  <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2, flexWrap: "wrap", fontSize: 13 }}>
+                    {bio.major && <span style={{ color: TEXT_SECONDARY, fontWeight: 600 }}>{bio.major}</span>}
+                    {bio.major && bio.hometown && <span style={{ color: "#d4d4d8" }}>/</span>}
+                    {bio.hometown && <span style={{ color: TEXT_SECONDARY }}>{bio.hometown}</span>}
+                  </div>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
               </button>
@@ -2207,7 +2224,7 @@ export default function Comm2() {
 
       {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} setView={setView} />}
 
-      {view === "leaderboard" && <Leaderboard students={students} log={log} isAdmin={effectiveAdmin} userName={userName} />}
+      {view === "leaderboard" && <Leaderboard students={students} log={log} isAdmin={effectiveAdmin} userName={userName} data={data} />}
       {view === "todo" && <TodoView data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "assignments" && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
