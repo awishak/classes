@@ -742,10 +742,9 @@ export function StudentAnswerView({ data, setData, userName }) {
               </div>
             );
           })}
-          <div style={{ ...crd, padding: 14, marginTop: 12 }}>
-              <div style={{ ...sectionLabel, marginBottom: 2 }}>Game Points</div><div style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>{gameTotal}<span style={{ fontSize: 13, color: "#9ca3af" }}> / 100</span></div>
-              <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Grade Points</div><div style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>{Math.round(gradeTotal * 10) / 10}<span style={{ fontSize: 13, color: "#9ca3af" }}> / 100</span></div></div>
-            </div>
+          <div style={{ ...crd, padding: 14, marginTop: 12, textAlign: "center" }}>
+            <div style={{ ...sectionLabel, marginBottom: 2 }}>Game Points</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>{gameTotal}<span style={{ fontSize: 13, color: "#9ca3af" }}> / 100</span></div>
           </div>
           <ReboundPanel data={data} setData={setData} activityType="game" week={week} isAdmin={false} userName={userName} />
         </div>
