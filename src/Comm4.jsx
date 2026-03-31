@@ -264,6 +264,7 @@ function NamePicker({ data, onSelect }) {
   const [selected, setSelected] = useState(null);
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
+  const [remember, setRemember] = useState(true);
   const pins = data?.pins || {};
 
   const names = data ? data.students.map(s => s.name).sort(lastSort) : [...ALL_STUDENTS].sort(lastSort);
@@ -272,9 +273,9 @@ function NamePicker({ data, onSelect }) {
 
   const tryLogin = () => {
     if (!selected) return;
-    // Admin login: check hardcoded PIN, doesn't need to be in students list
     if (selected === ADMIN_NAME) {
       if (pin !== "118711") { setError("Wrong PIN"); setPin(""); return; }
+      if (remember) { try { localStorage.setItem(STORAGE_KEY + "-user", selected); } catch(e) {} }
       onSelect(selected);
       return;
     }
@@ -284,6 +285,7 @@ function NamePicker({ data, onSelect }) {
     if (correctPin && pin !== String(correctPin)) {
       setError("Wrong PIN"); setPin(""); return;
     }
+    if (remember) { try { localStorage.setItem(STORAGE_KEY + "-user", selected); } catch(e) {} }
     onSelect(selected);
   };
 
@@ -298,6 +300,10 @@ function NamePicker({ data, onSelect }) {
           <div style={{ ...crd, padding: 20 }}>
             <input autoFocus type="password" inputMode="numeric" maxLength={6} value={pin} onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setError(""); }} onKeyDown={e => e.key === "Enter" && tryLogin()} placeholder="6-digit PIN" style={{ ...inp, textAlign: "center", fontSize: 24, fontWeight: 800, letterSpacing: "0.3em" }} />
             {error && <div style={{ fontSize: 13, color: RED, textAlign: "center", marginTop: 8, fontWeight: 600 }}>{error}</div>}
+            <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, cursor: "pointer", fontSize: 13, color: TEXT_SECONDARY }}>
+              <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} style={{ width: 16, height: 16 }} />
+              Remember me on this device
+            </label>
             <button onClick={tryLogin} style={{ ...pill, background: ACCENT, color: "#fff", padding: "12px 0", width: "100%", marginTop: 12, fontSize: 15 }}>Sign In</button>
             <button onClick={() => { setSelected(null); setPin(""); setError(""); }} style={{ ...pillInactive, width: "100%", marginTop: 8, padding: "10px 0" }}>Back</button>
           </div>
@@ -4253,7 +4259,9 @@ export default function Comm4() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("home");
-  const [userName, setUserName] = useState(null);
+  const [userName, setUserName] = useState(() => {
+    try { return localStorage.getItem(STORAGE_KEY + "-user"); } catch(e) { return null; }
+  });
 
   const isAdmin = userName === ADMIN_NAME;
   const isGuest = userName === GUEST_NAME;
@@ -4330,7 +4338,7 @@ export default function Comm4() {
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F, fontSize: 15 }}>
-      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={displayName} onLogout={() => setUserName(null)} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} />
+      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={displayName} onLogout={() => { try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} />
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "todo" && !isGuest && <ToDoView data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
       {view === "leaderboard" && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={userName} data={data} />}
