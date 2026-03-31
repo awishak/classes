@@ -341,6 +341,117 @@ function NamePicker({ data, onSelect }) {
   );
 }
 
+/* ─── INSTRUCTOR CARD ─── */
+function InstructorCard({ data, setData, isAdmin }) {
+  const ic = data.instructorCard || {};
+  const rm = data.requiredMedia || [];
+  const [editing, setEditing] = useState(false);
+  const [editIC, setEditIC] = useState(null);
+  const [editRM, setEditRM] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  const startEdit = () => {
+    setEditIC({ name: ic.name || "Andrew Ishak", title: ic.title || "Teaching Professor, Communication", officeHours: ic.officeHours || "", bookingLabel: ic.bookingLabel || "Book a Meeting", bookingUrl: ic.bookingUrl || "", caminoUrl: ic.caminoUrl || "", syllabusUrl: ic.syllabusUrl || "", photo: ic.photo || "" });
+    setEditRM(JSON.parse(JSON.stringify(rm)));
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    const updated = { ...data, instructorCard: editIC, requiredMedia: editRM };
+    await saveData(updated); setData(updated);
+    setEditing(false); showMsg("Saved");
+  };
+
+  const handlePhotoUpload = async (file) => {
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = "instructor-" + STORAGE_KEY + "." + ext;
+      const formData = new FormData(); formData.append("", file);
+      await fetch(SUPABASE_URL + "/storage/v1/object/class-photos/" + path, { method: "POST", headers: { "Authorization": "Bearer " + SUPABASE_KEY, "x-upsert": "true" }, body: formData });
+      const url = SUPABASE_URL + "/storage/v1/object/public/class-photos/" + path + "?t=" + Date.now();
+      setEditIC({ ...editIC, photo: url });
+    } catch(e) { console.error(e); }
+    setUploading(false);
+  };
+
+  const addMedia = () => setEditRM([...editRM, { id: genId(), title: "", description: "", url: "" }]);
+  const removeMedia = (id) => setEditRM(editRM.filter(m => m.id !== id));
+  const updateMedia = (id, field, value) => setEditRM(editRM.map(m => m.id === id ? { ...m, [field]: value } : m));
+
+  const photo = editing ? editIC?.photo : ic.photo;
+  const name = editing ? editIC?.name : (ic.name || "Andrew Ishak");
+  const titleText = editing ? editIC?.title : (ic.title || "Teaching Professor, Communication");
+  const officeHours = editing ? editIC?.officeHours : ic.officeHours;
+  const bookingLabel = editing ? editIC?.bookingLabel : (ic.bookingLabel || "Book a Meeting");
+  const bookingUrl = editing ? editIC?.bookingUrl : ic.bookingUrl;
+  const caminoUrl = editing ? editIC?.caminoUrl : ic.caminoUrl;
+  const syllabusUrl = editing ? editIC?.syllabusUrl : ic.syllabusUrl;
+  const mediaList = editing ? editRM : rm;
+
+  return (
+    <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+      {msg && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "#111", color: "#fff", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, zIndex: 999 }}>{msg}</div>}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Your Instructor</div>
+        {isAdmin && !editing && <button onClick={startEdit} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Edit</button>}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+        {photo ? (
+          <img src={photo} alt="" style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 900, color: "#fff", flexShrink: 0 }}>AI</div>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {editing ? (<><input value={editIC.name} onChange={e => setEditIC({ ...editIC, name: e.target.value })} style={{ ...inp, fontSize: 15, fontWeight: 700, padding: "4px 8px", marginBottom: 4 }} /><input value={editIC.title} onChange={e => setEditIC({ ...editIC, title: e.target.value })} style={{ ...inp, fontSize: 13, padding: "4px 8px" }} /></>) : (<><div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{name}</div><div style={{ fontSize: 13, color: TEXT_SECONDARY }}>{titleText}</div></>)}
+        </div>
+      </div>
+      {editing && <label style={{ ...pillInactive, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "8px 0", cursor: "pointer", fontSize: 12, marginBottom: 12, width: "100%" }}>{uploading ? "Uploading..." : "Upload Photo"}<input type="file" accept="image/*" onChange={e => { if (e.target.files?.[0]) handlePhotoUpload(e.target.files[0]); e.target.value = ""; }} style={{ display: "none" }} disabled={uploading} /></label>}
+      {editing ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>Office Hours</div>
+          <input value={editIC.officeHours} onChange={e => setEditIC({ ...editIC, officeHours: e.target.value })} placeholder="e.g. Tue/Thu 2-4pm, St. Joseph's 215" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginTop: 4 }}>Links</div>
+          <div style={{ display: "flex", gap: 6 }}><input value={editIC.bookingLabel} onChange={e => setEditIC({ ...editIC, bookingLabel: e.target.value })} placeholder="Booking label" style={{ ...inp, fontSize: 13, padding: "6px 10px", flex: 1 }} /><input value={editIC.bookingUrl} onChange={e => setEditIC({ ...editIC, bookingUrl: e.target.value })} placeholder="Booking URL" style={{ ...inp, fontSize: 13, padding: "6px 10px", flex: 2 }} /></div>
+          <input value={editIC.caminoUrl} onChange={e => setEditIC({ ...editIC, caminoUrl: e.target.value })} placeholder="Camino URL" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
+          <input value={editIC.syllabusUrl} onChange={e => setEditIC({ ...editIC, syllabusUrl: e.target.value })} placeholder="Syllabus URL" style={{ ...inp, fontSize: 13, padding: "6px 10px" }} />
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: officeHours || caminoUrl || syllabusUrl || bookingUrl ? 12 : 0 }}>
+          {officeHours && <div style={{ fontSize: 13, color: TEXT_SECONDARY }}><span style={{ fontWeight: 600, color: TEXT_PRIMARY }}>Office Hours:</span> {officeHours}</div>}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {caminoUrl && <a href={caminoUrl} target="_blank" rel="noopener noreferrer" style={{ ...pillInactive, fontSize: 12, textDecoration: "none", color: ACCENT }}>Camino</a>}
+            {syllabusUrl && <a href={syllabusUrl} target="_blank" rel="noopener noreferrer" style={{ ...pillInactive, fontSize: 12, textDecoration: "none", color: ACCENT }}>Syllabus</a>}
+            {bookingUrl && <a href={bookingUrl} target="_blank" rel="noopener noreferrer" style={{ ...pillInactive, fontSize: 12, textDecoration: "none", color: ACCENT }}>{bookingLabel}</a>}
+          </div>
+        </div>
+      )}
+      {(mediaList.length > 0 || editing) && (
+        <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Required Media</div>
+          {mediaList.map(m => editing ? (
+            <div key={m.id} style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8, padding: 8, background: "#f9fafb", borderRadius: 8 }}>
+              <input value={m.title} onChange={e => updateMedia(m.id, "title", e.target.value)} placeholder="Title" style={{ ...inp, fontSize: 13, padding: "4px 8px" }} />
+              <input value={m.description} onChange={e => updateMedia(m.id, "description", e.target.value)} placeholder="Description" style={{ ...inp, fontSize: 13, padding: "4px 8px" }} />
+              <input value={m.url} onChange={e => updateMedia(m.id, "url", e.target.value)} placeholder="URL (optional)" style={{ ...inp, fontSize: 13, padding: "4px 8px" }} />
+              <button onClick={() => removeMedia(m.id)} style={{ ...pillInactive, fontSize: 11, color: RED, alignSelf: "flex-start" }}>Remove</button>
+            </div>
+          ) : (
+            <div key={m.id} style={{ marginBottom: 6 }}>
+              {m.url ? <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>{m.title}</a> : <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{m.title}</div>}
+              {m.description && <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>{m.description}</div>}
+            </div>
+          ))}
+          {editing && <button onClick={addMedia} style={{ ...pillInactive, fontSize: 12, width: "100%" }}>+ Add Item</button>}
+        </div>
+      )}
+      {editing && <div style={{ display: "flex", gap: 6, marginTop: 12 }}><button onClick={saveEdit} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Save</button><button onClick={() => setEditing(false)} style={{ ...pillInactive, flex: 1 }}>Cancel</button></div>}
+    </div>
+  );
+}
+
 /* --- SCHEDULE --- */
 function ScheduleCardEditor({ d, wi, realDi, data, setData, onDone }) {
   const [local, setLocal] = useState({
@@ -1630,6 +1741,8 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           );
         })()}
 
+        {/* Instructor Card */}
+        <InstructorCard data={data} setData={setData} isAdmin={isAdmin} />
 
         {/* Active Discussion Boards */}
         {boards.filter(b => b.active).length > 0 && (
