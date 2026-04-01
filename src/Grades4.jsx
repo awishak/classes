@@ -45,6 +45,16 @@ async function saveData(data) { try { const STORAGE_KEY = "comm4-v1"; await wind
 /* ─── ASSIGNMENTS TAB ─── */
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
+function TogglePanel({ label, count, children }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{ marginTop: 10 }}>
+      <button onClick={() => setShow(!show)} style={{ ...pillInactive, fontSize: 12, width: "100%" }}>{show ? "Hide Submissions" : label + " (" + count + ")"}</button>
+      {show && children}
+    </div>
+  );
+}
+
 export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
@@ -181,7 +191,6 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
             const submissions = data.submissions || {};
             const mySubKey = studentId ? studentId + "-" + a.id : null;
             const mySub = mySubKey ? submissions[mySubKey] : null;
-            const [showSubs, setShowSubs] = React.useState(false);
             const isNext = a.id === nextDueId;
             return (
               <div key={a.id} style={{ ...crd, padding: 16, cursor: isAdmin && !isEdit ? "pointer" : "default", border: isNext ? "2px solid " + ACCENT : crd.border }} onClick={() => isAdmin && !isEdit && startEdit(a)}>
@@ -248,12 +257,10 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                       <StudentSubmission assignmentId={a.id} data={data} setData={setData} studentId={studentId} existing={mySub} />
                     )}
                     {isAdmin && a.id !== "participation" && (
-                      <div style={{ marginTop: 10 }} onClick={e => e.stopPropagation()}>
-                        {(() => {
-                          const subCount = data.students.filter(s => s.name !== ADMIN_NAME && submissions[s.id + "-" + a.id]).length;
-                          return <button onClick={() => setShowSubs(!showSubs)} style={{ ...pillInactive, fontSize: 12, width: "100%" }}>{showSubs ? "Hide Submissions" : "View Submissions (" + subCount + ")"}</button>;
-                        })()}
-                        {showSubs && <AdminSubmissions assignmentId={a.id} data={data} setData={setData} />}
+                      <div onClick={e => e.stopPropagation()}>
+                        <TogglePanel label="View Submissions" count={data.students.filter(s => s.name !== ADMIN_NAME && submissions[s.id + "-" + a.id]).length}>
+                          <AdminSubmissions assignmentId={a.id} data={data} setData={setData} />
+                        </TogglePanel>
                       </div>
                     )}
                   </div>

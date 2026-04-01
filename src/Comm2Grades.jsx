@@ -45,6 +45,16 @@ function lastSortObj(a, b) { return lastName(a.name).localeCompare(lastName(b.na
 async function saveData(data) { try { await window.storage.set("comm2-v1", JSON.stringify(data), true); return true; } catch { return false; } }
 
 /* --- ASSIGNMENTS TAB --- */
+function TogglePanel({ label, count, children }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{ marginTop: 10 }}>
+      <button onClick={() => setShow(!show)} style={{ ...pillInactive, fontSize: 12, width: "100%" }}>{show ? "Hide Submissions" : label + " (" + count + ")"}</button>
+      {show && children}
+    </div>
+  );
+}
+
 export function AssignmentsView({ data, setData, isAdmin, userName }) {
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
@@ -156,7 +166,6 @@ export function AssignmentsView({ data, setData, isAdmin, userName }) {
           const submissions = data.submissions || {};
           const mySubKey = studentId ? studentId + "-" + a.id : null;
           const mySub = mySubKey ? submissions[mySubKey] : null;
-          const [showSubs, setShowSubs] = React.useState(false);
           const isNext = a.id === nextDueId;
 
           return (
@@ -206,19 +215,9 @@ export function AssignmentsView({ data, setData, isAdmin, userName }) {
 
                   {/* Admin: view submissions */}
                   {isAdmin && (
-                    <div style={{ marginTop: 10 }}>
-                      {(() => {
-                        const subCount = data.students.filter(s => s.name !== "Andrew Ishak" && submissions[s.id + "-" + a.id]).length;
-                        return (
-                          <button onClick={() => setShowSubs(!showSubs)} style={{ ...pillInactive, fontSize: 12, width: "100%" }}>
-                            {showSubs ? "Hide Submissions" : "View Submissions (" + subCount + ")"}
-                          </button>
-                        );
-                      })()}
-                      {showSubs && (
-                        <AdminSubmissions assignmentId={a.id} data={data} setData={setData} />
-                      )}
-                    </div>
+                    <TogglePanel label="View Submissions" count={data.students.filter(s => s.name !== "Andrew Ishak" && submissions[s.id + "-" + a.id]).length}>
+                      <AdminSubmissions assignmentId={a.id} data={data} setData={setData} />
+                    </TogglePanel>
                   )}
                 </div>
               )}
