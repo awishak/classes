@@ -166,11 +166,25 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {assignments.map(a => {
+          {(() => {
+            const today = new Date();
+            const year = today.getFullYear();
+            const nextDueId = assignments.reduce((found, a) => {
+              if (found || !a.due) return found;
+              const parsed = new Date(a.due + ", " + year);
+              if (parsed >= new Date(year, today.getMonth(), today.getDate())) return a.id;
+              return found;
+            }, null);
+            return assignments.map(a => {
             const isEdit = isAdmin && editId === a.id;
             const g = studentId ? (grades[studentId + "-" + a.id] || {}) : null;
+            const submissions = data.submissions || {};
+            const mySubKey = studentId ? studentId + "-" + a.id : null;
+            const mySub = mySubKey ? submissions[mySubKey] : null;
+            const [showSubs, setShowSubs] = React.useState(false);
+            const isNext = a.id === nextDueId;
             return (
-              <div key={a.id} style={{ ...crd, padding: 16, cursor: isAdmin && !isEdit ? "pointer" : "default" }} onClick={() => isAdmin && !isEdit && startEdit(a)}>
+              <div key={a.id} style={{ ...crd, padding: 16, cursor: isAdmin && !isEdit ? "pointer" : "default", border: isNext ? "2px solid " + ACCENT : crd.border }} onClick={() => isAdmin && !isEdit && startEdit(a)}>
                 {isEdit && editLocal ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }} onClick={e => e.stopPropagation()}>
                     <input value={editLocal.name} onChange={e => setEditLocal({ ...editLocal, name: e.target.value })} style={{ ...inp, fontWeight: 700, fontSize: 15 }} />
@@ -198,24 +212,25 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                     </div>
                   </div>
                 ) : (
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: a.id === "participation" ? "#f3f4f6" : ACCENT + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: a.id === "participation" ? "#6b7280" : ACCENT, flexShrink: 0 }}>{a.weight}%</div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{a.name}</div>
-                        <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
-                          {a.due && <span>Due {a.due}</span>}
-                          {a.notes && <span>{a.due ? " / " : ""}{a.notes}</span>}
+                  <div onClick={e => e.stopPropagation()}>
+                    <div onClick={() => isAdmin && startEdit(a)} style={{ cursor: isAdmin ? "pointer" : "default" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 10, background: a.id === "participation" ? "#f3f4f6" : ACCENT + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: a.id === "participation" ? "#6b7280" : ACCENT, flexShrink: 0 }}>{a.weight}%</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{a.name}</div>
+                          <div style={{ fontSize: 12, color: isNext ? ACCENT : TEXT_SECONDARY, fontWeight: isNext ? 700 : 400, marginTop: 2 }}>
+                            {a.due && <span>{isNext ? "Due next: " : "Due "}{a.due}</span>}
+                            {a.notes && <span>{a.due ? " / " : ""}{a.notes}</span>}
+                          </div>
                         </div>
+                        {a.link && (
+                          <a href={a.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ ...pillInactive, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                            Details <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                          </a>
+                        )}
+                        {isAdmin && !a.link && <span style={{ fontSize: 11, color: "#d1d5db", fontStyle: "italic" }}>Click to edit</span>}
                       </div>
-                      {a.link && (
-                        <a href={a.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ ...pillInactive, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                          Details <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                        </a>
-                      )}
-                      {isAdmin && !a.link && <span style={{ fontSize: 11, color: "#d1d5db", fontStyle: "italic" }}>Click to edit</span>}
                     </div>
-                    {/* Student grade inline */}
                     {studentId && a.id !== "participation" && g && (
                       <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
                         {g.score !== undefined && g.score !== "" ? (
@@ -229,11 +244,24 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                         {g.comment && <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4, padding: "6px 8px", background: "#f8fafc", borderRadius: 6, lineHeight: 1.4 }}>{g.comment}</div>}
                       </div>
                     )}
+                    {studentId && !isAdmin && a.id !== "participation" && (
+                      <StudentSubmission assignmentId={a.id} data={data} setData={setData} studentId={studentId} existing={mySub} />
+                    )}
+                    {isAdmin && a.id !== "participation" && (
+                      <div style={{ marginTop: 10 }} onClick={e => e.stopPropagation()}>
+                        {(() => {
+                          const subCount = data.students.filter(s => s.name !== ADMIN_NAME && submissions[s.id + "-" + a.id]).length;
+                          return <button onClick={() => setShowSubs(!showSubs)} style={{ ...pillInactive, fontSize: 12, width: "100%" }}>{showSubs ? "Hide Submissions" : "View Submissions (" + subCount + ")"}</button>;
+                        })()}
+                        {showSubs && <AdminSubmissions assignmentId={a.id} data={data} setData={setData} />}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             );
-          })}
+          });
+          })()}
         </div>
         <div style={{ ...crd, padding: 16, marginTop: 16 }}>
           <div style={{ ...sectionLabel, marginBottom: 10 }}>Participation Breakdown (25%)</div>
@@ -348,6 +376,125 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
 }
 
 /* ─── GRADEBOOK ─── */
+/* --- STUDENT SUBMISSION (doc link only) --- */
+function StudentSubmission({ assignmentId, data, setData, studentId, existing }) {
+  const [docUrl, setDocUrl] = useState(existing?.docUrl || "");
+  const [notes, setNotes] = useState(existing?.notes || "");
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  React.useEffect(() => {
+    setDocUrl(existing?.docUrl || "");
+    setNotes(existing?.notes || "");
+  }, [existing?.docUrl, existing?.notes]);
+
+  const submit = async () => {
+    if (!docUrl.trim()) return;
+    const key = studentId + "-" + assignmentId;
+    const submissions = data.submissions || {};
+    const updated = { ...data, submissions: { ...submissions, [key]: { docUrl: docUrl.trim(), notes: notes.trim(), ts: Date.now() } } };
+    await saveData(updated); setData(updated); showMsg("Submitted");
+  };
+
+  return (
+    <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6" }}>
+      {msg && <div style={{ fontSize: 12, color: "#10b981", fontWeight: 600, marginBottom: 4 }}>{msg}</div>}
+      <div style={{ fontSize: 10, fontWeight: 500, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Your Submission</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <input value={docUrl} onChange={e => setDocUrl(e.target.value)} placeholder="Google Doc link" style={{ ...inp, fontSize: 13, padding: "8px 10px" }} />
+        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes for your instructor (optional)" rows={2} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical" }} />
+        <button onClick={submit} style={{ ...pill, background: "#111827", color: "#fff", width: "100%" }}>{existing?.ts ? "Resubmit" : "Submit"}</button>
+      </div>
+      {existing?.ts && <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 6 }}>Submitted {new Date(existing.ts).toLocaleString()}</div>}
+    </div>
+  );
+}
+
+/* --- ADMIN SUBMISSIONS VIEW --- */
+function AdminSubmissions({ assignmentId, data, setData }) {
+  const submissions = data.submissions || {};
+  const grades = data.grades || {};
+  const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME).sort(lastSortObj);
+  const [editGrades, setEditGrades] = useState({});
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  const saveGrade = async (studentId) => {
+    const eg = editGrades[studentId] || {};
+    const key = studentId + "-" + assignmentId;
+    const existing = grades[key] || {};
+    const updated = {
+      ...data,
+      grades: {
+        ...grades,
+        [key]: {
+          ...existing,
+          score: eg.score !== undefined ? (eg.score === "" ? undefined : parseFloat(eg.score)) : existing.score,
+          outOf: eg.outOf !== undefined ? (parseFloat(eg.outOf) || 100) : (existing.outOf || 100),
+          comment: eg.comment !== undefined ? eg.comment : (existing.comment || ""),
+        }
+      }
+    };
+    await saveData(updated); setData(updated);
+    setEditGrades(prev => { const n = { ...prev }; delete n[studentId]; return n; });
+    showMsg("Saved");
+  };
+
+  const startGradeEdit = (studentId) => {
+    const key = studentId + "-" + assignmentId;
+    const g = grades[key] || {};
+    setEditGrades(prev => ({ ...prev, [studentId]: { score: g.score !== undefined ? String(g.score) : "", outOf: String(g.outOf || 100), comment: g.comment || "" } }));
+  };
+
+  return (
+    <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+      {msg && <div style={{ fontSize: 12, color: "#10b981", fontWeight: 600 }}>{msg}</div>}
+      {sorted.map(s => {
+        const sub = submissions[s.id + "-" + assignmentId];
+        const grade = grades[s.id + "-" + assignmentId] || {};
+        const isEditing = editGrades[s.id] !== undefined;
+        const eg = editGrades[s.id] || {};
+
+        return (
+          <div key={s.id} style={{ padding: 12, borderRadius: 10, background: sub ? "#f9fafb" : "transparent", border: "1px solid " + (sub ? "#e5e7eb" : "#f3f4f6") }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: sub ? 6 : 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{s.name}</div>
+              {grade.score !== undefined && !isEditing && (
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{grade.score}<span style={{ fontSize: 12, color: "#9ca3af" }}>/{grade.outOf || 100}</span></div>
+              )}
+              {!sub && !isEditing && <span style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic" }}>No submission</span>}
+            </div>
+            {sub && (
+              <div style={{ marginBottom: 8 }}>
+                {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 2 }}>Google Doc</a>}
+                {sub.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, lineHeight: 1.4 }}>"{sub.notes}"</div>}
+                <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>Submitted {new Date(sub.ts).toLocaleString()}</div>
+              </div>
+            )}
+            {grade.comment && !isEditing && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, padding: "6px 8px", background: "#eff6ff", borderRadius: 6, lineHeight: 1.4 }}>{grade.comment}</div>}
+            {isEditing ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input value={eg.score} onChange={e => setEditGrades(prev => ({ ...prev, [s.id]: { ...eg, score: e.target.value } }))} placeholder="Score" style={{ ...inp, fontSize: 13, padding: "6px 8px", width: 70 }} type="number" />
+                  <span style={{ fontSize: 13, color: "#9ca3af", display: "flex", alignItems: "center" }}>/</span>
+                  <input value={eg.outOf} onChange={e => setEditGrades(prev => ({ ...prev, [s.id]: { ...eg, outOf: e.target.value } }))} placeholder="Out of" style={{ ...inp, fontSize: 13, padding: "6px 8px", width: 70 }} type="number" />
+                </div>
+                <textarea value={eg.comment} onChange={e => setEditGrades(prev => ({ ...prev, [s.id]: { ...eg, comment: e.target.value } }))} placeholder="Comment for student..." rows={2} style={{ ...inp, fontSize: 13, padding: "6px 8px", resize: "vertical" }} />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => saveGrade(s.id)} style={{ ...pill, background: "#111827", color: "#fff", flex: 1 }}>Save</button>
+                  <button onClick={() => setEditGrades(prev => { const n = { ...prev }; delete n[s.id]; return n; })} style={pillInactive}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => startGradeEdit(s.id)} style={{ ...pillInactive, fontSize: 12, marginTop: 6, width: "100%" }}>Grade</button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Gradebook({ data, setData, userName, isAdmin }) {
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};

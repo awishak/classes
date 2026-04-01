@@ -4637,6 +4637,7 @@ export default function Comm118() {
         if (d && !d.messages) { d.messages = []; await saveData(d); }
         if (d && !d.studentNotes) { d.studentNotes = {}; await saveData(d); }
         if (d && !d.rebounds) { d.rebounds = {}; await saveData(d); }
+        if (d && !d.submissions) { d.submissions = {}; await saveData(d); }
         if (d && !d.customTodos) { d.customTodos = []; await saveData(d); }
         // Migration: add interview assignment and fix weights if needed
         if (d && d.assignments && !d.assignments.find(a => a.id === "interview")) {
