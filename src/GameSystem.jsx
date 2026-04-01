@@ -393,13 +393,12 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
   // Countdown effect
   React.useEffect(() => {
     if (!activity.countdown) { setCountdownActive(false); setCountdownSecs(0); return; }
-    const endTime = activity.countdown + 5000;
+    const deadline = activity.countdown;
     const tick = () => {
-      const left = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
       setCountdownSecs(left);
       if (left <= 0) {
         setCountdownActive(false);
-        // Auto-lock the question
         lockQuestion();
       }
     };
@@ -422,7 +421,8 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
 
   const startCountdown = async () => {
     const key = type === "game" ? "weeklyGames" : "weeklyToT";
-    const updated = { ...data, [key]: { ...activities, [wKey]: { ...activity, countdown: Date.now() } } };
+    const deadline = Date.now() + 5000;
+    const updated = { ...data, [key]: { ...activities, [wKey]: { ...activity, countdown: deadline } } };
     await saveData(updated); setData(updated);
   };
 
@@ -676,6 +676,7 @@ export function StudentAnswerView({ data, setData, userName }) {
   const [selected, setSelected] = useState(null);
   const [msg, setMsg] = useState("");
   const [countdown, setCountdown] = useState(0);
+  const lastSubmitRef = React.useRef(0);
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 1500); };
 
   const student = data.students.find(s => s.name === userName);
@@ -689,6 +690,7 @@ export function StudentAnswerView({ data, setData, userName }) {
     const activity = mode === "game" ? games[week] : (tots[week] || tots[String(week)]);
     if (!activity || activity.phase !== "live") return;
     const iv = setInterval(async () => {
+      if (Date.now() - lastSubmitRef.current < 3000) return;
       try {
         const raw = await window.storage.get("comm118-game-v14", true);
         if (raw?.value) { const d = JSON.parse(raw.value); setData(d); }
@@ -702,9 +704,9 @@ export function StudentAnswerView({ data, setData, userName }) {
     if (week === null) return;
     const activity = mode === "game" ? games[week] : (tots[week] || tots[String(week)]);
     if (!activity?.countdown) { setCountdown(0); return; }
-    const endTime = activity.countdown + 5000;
+    const deadline = activity.countdown;
     const tick = () => {
-      const left = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
       setCountdown(left);
     };
     tick();
@@ -722,6 +724,7 @@ export function StudentAnswerView({ data, setData, userName }) {
     const dataKey = actType === "game" ? "weeklyGames" : "weeklyToT";
     const updated = { ...data, [dataKey]: { ...activities, [wKey]: { ...activity, responses } } };
     await saveData(updated); setData(updated);
+    lastSubmitRef.current = Date.now();
     showMsg("Locked in"); setSelected(null);
   };
 
