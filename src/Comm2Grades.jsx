@@ -141,16 +141,26 @@ export function AssignmentsView({ data, setData, isAdmin, userName }) {
         <div style={{ fontSize: 12, color: totalWeight === 100 ? GREEN : RED, fontWeight: 700, marginBottom: 12 }}>Total weight: {totalWeight}%</div>
 
         {/* Assignment cards */}
-        {assignments.map(a => {
+        {(() => {
+          const today = new Date();
+          const year = today.getFullYear();
+          const nextDueId = assignments.reduce((found, a) => {
+            if (found || !a.due) return found;
+            const parsed = new Date(a.due + ", " + year);
+            if (parsed >= new Date(year, today.getMonth(), today.getDate())) return a.id;
+            return found;
+          }, null);
+          return assignments.map(a => {
           const isEditing = editId === a.id;
           const grade = studentId ? grades[studentId + "-" + a.id] : null;
           const submissions = data.submissions || {};
           const mySubKey = studentId ? studentId + "-" + a.id : null;
           const mySub = mySubKey ? submissions[mySubKey] : null;
           const [showSubs, setShowSubs] = React.useState(false);
+          const isNext = a.id === nextDueId;
 
           return (
-            <div key={a.id} style={{ ...crd, padding: 16, marginBottom: 8 }}>
+            <div key={a.id} style={{ ...crd, padding: 16, marginBottom: 8, border: isNext ? "2px solid " + ACCENT : crd.border }}>
               {isEditing && isAdmin ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <input value={editLocal.name} onChange={e => setEditLocal({ ...editLocal, name: e.target.value })} placeholder="Name" style={{ ...inp, fontSize: 13 }} />
@@ -173,7 +183,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName }) {
                       <div style={{ fontSize: 15, fontWeight: 700, color: "#18181b" }}>{a.name}</div>
                       <div style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>{a.weight}%</div>
                     </div>
-                    {a.due && <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 4 }}>Due: {a.due}</div>}
+                    {a.due && <div style={{ fontSize: 13, color: isNext ? ACCENT : TEXT_SECONDARY, fontWeight: isNext ? 700 : 500, marginTop: 4 }}>{isNext ? "Due next: " : "Due: "}{a.due}</div>}
                     {a.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, lineHeight: 1.4 }}>{a.notes}</div>}
                     {a.link && <a href={a.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: ACCENT, marginTop: 4, display: "block", textDecoration: "none", fontWeight: 600 }}>Open assignment link</a>}
                   </div>
@@ -214,7 +224,8 @@ export function AssignmentsView({ data, setData, isAdmin, userName }) {
               )}
             </div>
           );
-        })}
+        });
+        })()}
       </div>
     </div>
   );
@@ -384,7 +395,7 @@ export function Gradebook({ data, setData, isAdmin, userName }) {
             <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f4f4f5" }}>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#18181b" }}>{a.name}</div>
-                <div style={{ fontSize: 12, color: TEXT_MUTED }}>{a.weight}%{a.due ? " / Due: " + a.due : ""}</div>
+                <div style={{ fontSize: 12, color: TEXT_SECONDARY }}>{a.weight}%{a.due ? " / Due: " + a.due : ""}</div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <input type="number" value={g.score ?? ""} onChange={e => updateGrade(sid, a.id, "score", e.target.value)} style={{ ...inp, width: 56, padding: "4px 6px", fontSize: 13, textAlign: "center" }} placeholder="-" />
