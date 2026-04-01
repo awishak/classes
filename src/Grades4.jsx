@@ -185,7 +185,13 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
               if (parsed >= new Date(year, today.getMonth(), today.getDate())) return a.id;
               return found;
             }, null);
-            return assignments.map(a => {
+            const sorted = [...assignments].sort((a, b) => {
+              if (!a.due && !b.due) return 0;
+              if (!a.due) return 1;
+              if (!b.due) return -1;
+              return new Date(a.due + ", " + year) - new Date(b.due + ", " + year);
+            });
+            return sorted.map(a => {
             const isEdit = isAdmin && editId === a.id;
             const g = studentId ? (grades[studentId + "-" + a.id] || {}) : null;
             const submissions = data.submissions || {};
