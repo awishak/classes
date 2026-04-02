@@ -563,6 +563,137 @@ function InstructorCard({ data, setData, isAdmin }) {
 
 /* ─── SCHEDULE ─── */
 /* ─── HOME DASHBOARD ─── */
+const REBOUND_POLICY = `Rebound: You were present but scored below 80% on the grade scale. Submit a video within 48 hours explaining the material with a friend or family member. Points count for your grade only, not the in-class leaderboard.
+  Under 50% -> can earn back to 60%
+  50-65% -> can earn back to 70%
+  66-79% -> can earn back to 80%
+
+Planned Makeup: You had an excused absence. Retake the activity live during office hours within one week. Full points available for both leaderboard and grade.
+
+Unannounced Absence: You missed without notice. By default, no makeup is available. Contact your instructor if you believe this is an error.`;
+
+const HOME_GRADE_PTS = { on_topic: 15, sports_world: 2.5 };
+
+function HomeReboundBox({ data, setData, studentId }) {
+  const [links, setLinks] = useState({});
+  const [showPolicy, setShowPolicy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  const rebounds = data.rebounds || {};
+  const pendingItems = [];
+  const activityTypes = [
+    { type: "game", store: "weeklyGames", label: "Weekly Game", max: 100 },
+    { type: "tot", store: "weeklyToT", label: "This or That", max: 20 },
+    { type: "fishbowl", store: "weeklyFishbowl", label: "Fishbowl", max: 20 },
+  ];
+
+  activityTypes.forEach(({ type, store, label, max }) => {
+    const activities = data[store] || {};
+    Object.keys(activities).forEach(w => {
+      const act = activities[w];
+      const scored = type === "fishbowl" ? act?.confirmed : act?.scored;
+      if (!scored) return;
+      const rKey = type + "-" + w;
+      const rd = rebounds[rKey] || {};
+      const ss = (rd.studentStatuses || {})[studentId] || {};
+      if (ss.approved) return;
+      const status = ss.status || "";
+      if (!status || status === "present") return;
+      const scoredTs = rd.scoredTs || 0;
+      const reboundDeadline = scoredTs + 48 * 60 * 60 * 1000;
+      const makeupDeadline = scoredTs + 7 * 24 * 60 * 60 * 1000;
+
+      let gradePercent = 0;
+      if (type === "game") {
+        const game = act;
+        let gp = 0;
+        for (let q = 0; q < (game.questions || []).length; q++) {
+          if (game.responses?.[studentId + "-" + q] === game.questions[q].correct) gp += (HOME_GRADE_PTS[game.questions[q].category] || 0);
+        }
+        gradePercent = Math.round(gp / max * 100);
+      } else if (type === "tot") {
+        const ptsEach = act.questions?.length > 0 ? max / act.questions.length : max;
+        let pts = 0;
+        (act.questions || []).forEach((q, qi) => { if (act.responses?.[studentId + "-" + qi] === q.correct) pts += ptsEach; });
+        gradePercent = Math.round(pts / max * 100);
+      } else {
+        gradePercent = Math.round((act.scores?.[studentId] ?? 0) / max * 100);
+      }
+
+      const targetPercent = gradePercent < 50 ? 60 : gradePercent <= 65 ? 70 : gradePercent <= 79 ? 80 : null;
+
+      if (status === "planned_makeup" && Date.now() < makeupDeadline) {
+        pendingItems.push({ rKey, status, label: label + " Wk " + w, daysLeft: Math.max(0, Math.round((makeupDeadline - Date.now()) / (1000 * 60 * 60 * 24))) });
+      }
+      if ((status === "rebound" || status === "unannounced_override") && Date.now() < reboundDeadline && !ss.link) {
+        pendingItems.push({ rKey, status, label: label + " Wk " + w, gradePercent, targetPercent, hoursLeft: Math.max(0, Math.round((reboundDeadline - Date.now()) / (1000 * 60 * 60))) });
+      }
+      if ((status === "rebound" || status === "unannounced_override") && ss.link && !ss.approved) {
+        pendingItems.push({ rKey, status: "submitted", label: label + " Wk " + w });
+      }
+      if (status === "unannounced") {
+        pendingItems.push({ rKey, status, label: label + " Wk " + w });
+      }
+    });
+  });
+
+  if (pendingItems.length === 0) return null;
+
+  const submitLink = async (rKey) => {
+    const link = (links[rKey] || "").trim();
+    if (!link) return;
+    const rd = rebounds[rKey] || {};
+    const ss = { ...(rd.studentStatuses || {}), [studentId]: { ...((rd.studentStatuses || {})[studentId] || {}), link, linkTs: Date.now() } };
+    const updated = { ...data, rebounds: { ...rebounds, [rKey]: { ...rd, studentStatuses: ss } } };
+    await saveData(updated); setData(updated);
+    setLinks(prev => ({ ...prev, [rKey]: "" }));
+    showMsg("Submitted! Your instructor will review.");
+  };
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      {msg && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "#111", color: "#fff", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, zIndex: 999 }}>{msg}</div>}
+      {pendingItems.map((item, i) => {
+        const isRebound = item.status === "rebound" || item.status === "unannounced_override";
+        const sc = item.status === "planned_makeup" ? { bg: "#ecfdf5", border: "#10b981", color: "#065f46" }
+          : item.status === "unannounced" ? { bg: "#fef2f2", border: "#ef4444", color: "#991b1b" }
+          : item.status === "submitted" ? { bg: "#ecfdf5", border: "#10b981", color: "#065f46" }
+          : { bg: "#fffbeb", border: "#f59e0b", color: "#92400e" };
+        return (
+          <div key={i} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: "4px solid " + sc.border, background: sc.bg }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: sc.color, marginBottom: 4 }}>
+              {item.status === "planned_makeup" ? "Planned Makeup" : item.status === "unannounced" ? "Makeup Unavailable" : item.status === "submitted" ? "Rebound Submitted" : "Rebound Available"}
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 4 }}>{item.label}</div>
+
+            {isRebound && (
+              <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, marginBottom: 8 }}>
+                Your grade was <strong>{item.gradePercent}%</strong>. You can earn back to <strong>{item.targetPercent}%</strong> by submitting a video of you explaining the material with a friend or family member.
+                These points count for <strong>your grade only</strong>, not the in-class leaderboard.
+                {" "}You have <strong>{item.hoursLeft} hours</strong> left to submit.
+              </div>
+            )}
+            {isRebound && (
+              <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                <input value={links[item.rKey] || ""} onChange={e => setLinks(prev => ({ ...prev, [item.rKey]: e.target.value }))} placeholder="Paste your video link here..." style={{ ...inp, flex: 1, fontSize: 13 }} />
+                <button onClick={() => submitLink(item.rKey)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Submit</button>
+              </div>
+            )}
+
+            {item.status === "submitted" && <div style={{ fontSize: 13, color: GREEN, fontWeight: 600 }}>Your rebound video has been submitted. Waiting for instructor review.</div>}
+            {item.status === "planned_makeup" && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>Come to office hours to retake this activity. You have <strong>{item.daysLeft} days</strong> remaining. Full points available for both leaderboard and grade.</div>}
+            {item.status === "unannounced" && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>Your absence was unannounced. Contact your instructor if you believe this is an error.</div>}
+
+            <button onClick={() => setShowPolicy(!showPolicy)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600, padding: 0, marginTop: 6 }}>{showPolicy ? "Hide Policy" : "View Rebound Policy"}</button>
+            {showPolicy && <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap", padding: 10, background: "rgba(255,255,255,0.7)", borderRadius: 8, marginTop: 6, border: "1px solid " + BORDER }}>{REBOUND_POLICY}</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function HomeView({ data, setData, userName, isAdmin, setView }) {
   const [newNewsText, setNewNewsText] = useState("");
   const [newNewsType, setNewNewsType] = useState("info");
@@ -657,62 +788,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
 
         {/* Pending rebounds/makeups for student */}
-        {studentId && !isAdmin && (() => {
-          const rebounds = data.rebounds || {};
-          const pendingItems = [];
-          const activityTypes = [
-            { type: "game", store: "weeklyGames", label: "Weekly Game", max: 100 },
-            { type: "tot", store: "weeklyToT", label: "This or That", max: 20 },
-            { type: "fishbowl", store: "weeklyFishbowl", label: "Fishbowl", max: 20 },
-          ];
-          activityTypes.forEach(({ type, store, label, max }) => {
-            const activities = data[store] || {};
-            Object.keys(activities).forEach(w => {
-              const act = activities[w];
-              const scored = type === "fishbowl" ? act?.confirmed : act?.scored;
-              if (!scored) return;
-              const rKey = type + "-" + w;
-              const rd = rebounds[rKey] || {};
-              const ss = (rd.studentStatuses || {})[studentId] || {};
-              if (ss.approved) return;
-              const status = ss.status || "";
-              if (!status || status === "present") return;
-              const scoredTs = rd.scoredTs || 0;
-              const reboundDeadline = scoredTs + 48 * 60 * 60 * 1000;
-              const makeupDeadline = scoredTs + 7 * 24 * 60 * 60 * 1000;
-              if (status === "approved_makeup" && Date.now() < makeupDeadline) {
-                pendingItems.push({ type, week: w, label: label + " Wk " + w, status, daysLeft: Math.max(0, Math.round((makeupDeadline - Date.now()) / (1000 * 60 * 60 * 24))) });
-              }
-              if ((status === "rebound" || status === "unannounced_override") && Date.now() < reboundDeadline && !ss.link) {
-                pendingItems.push({ type, week: w, label: label + " Wk " + w, status, hoursLeft: Math.max(0, Math.round((reboundDeadline - Date.now()) / (1000 * 60 * 60))) });
-              }
-              if (status === "unannounced") {
-                pendingItems.push({ type, week: w, label: label + " Wk " + w, status });
-              }
-            });
-          });
-          if (pendingItems.length === 0) return null;
-          return (
-            <div style={{ marginBottom: 16 }}>
-              {pendingItems.map((item, i) => {
-                const sc = item.status === "approved_makeup" ? { bg: "#ecfdf5", border: "#10b981", color: "#065f46" }
-                  : item.status === "unannounced" ? { bg: "#fef2f2", border: "#ef4444", color: "#991b1b" }
-                  : { bg: "#fffbeb", border: "#f59e0b", color: "#92400e" };
-                return (
-                  <div key={i} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: "4px solid " + sc.border, background: sc.bg }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: sc.color, marginBottom: 4 }}>
-                      {item.status === "approved_makeup" ? "Makeup Available" : item.status === "unannounced" ? "Makeup Unavailable" : "Rebound Available"}
-                    </div>
-                    <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>{item.label}</div>
-                    {item.status === "approved_makeup" && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4 }}>Visit office hours to retake. <strong>{item.daysLeft} days</strong> remaining.</div>}
-                    {(item.status === "rebound" || item.status === "unannounced_override") && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4 }}>Submit rebound video in Activities. <strong>{item.hoursLeft} hours</strong> remaining.</div>}
-                    {item.status === "unannounced" && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4 }}>Your absence was unannounced. Contact your instructor if you believe this is an error.</div>}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })()}
+        {studentId && !isAdmin && <HomeReboundBox data={data} setData={setData} studentId={studentId} />}
 
         {/* Admin: post news */}
         {isAdmin && (

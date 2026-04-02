@@ -1049,7 +1049,7 @@ function getReboundTarget(gradePercent) {
 const STATUS_COLORS = {
   present: { bg: "#fff", border: "#e5e5e4", label: "Present", color: TEXT_PRIMARY },
   rebound: { bg: "#fffbeb", border: "#f59e0b", label: "Rebound", color: "#92400e" },
-  approved_makeup: { bg: "#ecfdf5", border: "#10b981", label: "Approved Makeup", color: "#065f46" },
+  planned_makeup: { bg: "#ecfdf5", border: "#10b981", label: "Planned Makeup", color: "#065f46" },
   unannounced: { bg: "#fef2f2", border: "#ef4444", label: "Unannounced Absence", color: "#991b1b" },
   unannounced_override: { bg: "#fff7ed", border: "#f97316", label: "Unannounced (Override)", color: "#9a3412" },
 };
@@ -1142,9 +1142,14 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
     const status = ss.status || "present";
     const gradeOnly = status === "rebound" || status === "unannounced_override";
 
-    const targetPercent = getReboundTarget(result.gradePercent);
-    if (!targetPercent) { showMsg("Not eligible"); return; }
-    const targetPts = Math.round(maxPts * targetPercent / 100 * 10) / 10;
+    let targetPts;
+    if (status === "planned_makeup") {
+      targetPts = maxPts;
+    } else {
+      const targetPercent = getReboundTarget(result.gradePercent);
+      if (!targetPercent) { showMsg("Not eligible"); return; }
+      targetPts = Math.round(maxPts * targetPercent / 100 * 10) / 10;
+    }
     let reboundPts = Math.round(Math.max(0, targetPts - result.gamePts) * 10) / 10;
     if (ss.customPts !== undefined) reboundPts = ss.customPts;
     if (reboundPts <= 0) { showMsg("No points to award"); return; }
@@ -1172,7 +1177,7 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
 
   const actLabel = activityType === "game" ? "Weekly Game" : activityType === "tot" ? "This or That" : "Fishbowl";
 
-  const policyText = `Approved Makeup: You had an excused absence. Retake the activity live during office hours within one week. Full points available for both leaderboard and grade.
+  const policyText = `Planned Makeup: You had an excused absence. Retake the activity live during office hours within one week. Full points available for both leaderboard and grade.
 
 Unannounced Absence: You missed without notice. By default, no makeup available. Your instructor may grant an override, in which case you can submit a rebound video. Points count for grade only, not leaderboard.
 
@@ -1198,6 +1203,7 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
             {sorted.map(s => {
               const result = getStudentScore(s);
               const score = result ? result.gamePts : 0;
+              const gradePts = result ? result.gradePts : 0;
               const gradePercent = result ? result.gradePercent : 0;
               const responded = result ? result.responded : false;
               const missed = !responded && activityType !== "fishbowl";
@@ -1206,10 +1212,16 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
               const sc = STATUS_COLORS[status] || STATUS_COLORS.present;
 
               const targetPercent = getReboundTarget(gradePercent);
-              const targetPts = targetPercent ? Math.round(maxPts * targetPercent / 100 * 10) / 10 : 0;
-              const defaultRebound = Math.round(Math.max(0, targetPts - score) * 10) / 10;
+              let targetPts, defaultRebound;
+              if (status === "planned_makeup") {
+                targetPts = maxPts;
+                defaultRebound = Math.round(Math.max(0, maxPts - score) * 10) / 10;
+              } else {
+                targetPts = targetPercent ? Math.round(maxPts * targetPercent / 100 * 10) / 10 : 0;
+                defaultRebound = Math.round(Math.max(0, targetPts - score) * 10) / 10;
+              }
               const reboundPts = ss.customPts !== undefined ? ss.customPts : defaultRebound;
-              const eligible = targetPercent !== null && !ss.approved;
+              const eligible = (status === "planned_makeup" || targetPercent !== null) && !ss.approved;
 
               return (
                 <div key={s.id} style={{ padding: "10px 12px", borderRadius: 10, background: ss.approved ? "#ecfdf5" : sc.bg, borderLeft: "4px solid " + (ss.approved ? GREEN : sc.border) }}>
@@ -1220,8 +1232,8 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
                       {status && <span style={{ fontSize: 11, fontWeight: 600, color: sc.color, marginLeft: 6 }}>{sc.label}</span>}
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 18, fontWeight: 900, color: score >= classAvg ? GREEN : score === 0 ? RED : "#d97706" }}>{score}<span style={{ fontSize: 12, color: TEXT_MUTED }}>/{maxPts}</span></div>
-                      <div style={{ fontSize: 10, color: TEXT_MUTED }}>Grade: {gradePercent}%</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: gradePercent >= 80 ? GREEN : gradePercent === 0 ? RED : "#d97706" }}>{gradePercent}%<span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 500 }}> grade</span></div>
+                      <div style={{ fontSize: 11, color: TEXT_MUTED }}>{score}/{maxPts} game</div>
                     </div>
                   </div>
 
@@ -1249,12 +1261,12 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
                       )}
 
                       {/* Points + approve */}
-                      {eligible && (status === "rebound" || status === "unannounced_override" || status === "approved_makeup") && (
+                      {eligible && (status === "rebound" || status === "unannounced_override" || status === "planned_makeup") && (
                         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                          <span style={{ fontSize: 12, color: TEXT_MUTED }}>{status === "approved_makeup" ? "Makeup" : "Rebound"}:</span>
+                          <span style={{ fontSize: 12, color: TEXT_MUTED }}>{status === "planned_makeup" ? "Makeup" : "Rebound"}:</span>
                           <input type="number" defaultValue={reboundPts} onBlur={e => setCustomPts(s.id, e.target.value)} style={{ ...inp, width: 60, fontSize: 13, textAlign: "center", padding: "4px" }} />
-                          <span style={{ fontSize: 12, color: TEXT_MUTED }}>pts{targetPercent ? " (to " + targetPercent + "%)" : ""}</span>
-                          {(ss.link || status === "approved_makeup") && (
+                          <span style={{ fontSize: 12, color: TEXT_MUTED }}>pts{status !== "planned_makeup" && targetPercent ? " (to " + targetPercent + "%)" : ""}</span>
+                          {(ss.link || status === "planned_makeup") && (
                             <button onClick={() => approveRebound(s.id)} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12, marginLeft: "auto" }}>Apply Points</button>
                           )}
                         </div>
@@ -1292,7 +1304,7 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
   const eligible = myTargetPercent !== null && !mySS.approved;
 
   const canSubmitRebound = (myStatus === "rebound" || myStatus === "unannounced_override") && reboundOpen && !mySS.link && eligible;
-  const waitingMakeup = myStatus === "approved_makeup" && makeupOpen && !mySS.approved;
+  const waitingMakeup = myStatus === "planned_makeup" && makeupOpen && !mySS.approved;
   const showReboundSubmitted = (myStatus === "rebound" || myStatus === "unannounced_override") && mySS.link && !mySS.approved;
 
   return (
@@ -1332,7 +1344,7 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
         {/* Approved makeup waiting */}
         {waitingMakeup && (
           <div style={{ padding: 12, borderRadius: 10, background: "#ecfdf5", border: "1px solid #a7f3d0", marginBottom: 12 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#065f46", marginBottom: 4 }}>Approved Makeup</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#065f46", marginBottom: 4 }}>Planned Makeup</div>
             <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.5 }}>Come to office hours to retake this activity. You have <strong>{makeupDaysLeft} days</strong> left. Full points available.</div>
           </div>
         )}
