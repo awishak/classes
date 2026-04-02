@@ -3753,6 +3753,7 @@ function SurveyView({ data, setData, isAdmin, userName }) {
   const [creating, setCreating] = useState(false);
   const [editingSurvey, setEditingSurvey] = useState(null);
   const [viewingResults, setViewingResults] = useState(null);
+  const [changing, setChanging] = useState({});
   const [questions, setQuestions] = useState([{ text: "", type: "multiple_choice", options: ["", "", "", ""] }]);
   const [surveyTitle, setSurveyTitle] = useState("");
   const [msg, setMsg] = useState("");
@@ -3804,6 +3805,7 @@ function SurveyView({ data, setData, isAdmin, userName }) {
     responses[userName][questionId] = answer;
     const updated = { ...data, surveys: surveys.map(s => s.id === surveyId ? { ...s, responses } : s) };
     await saveData(updated); setData(updated);
+    setChanging(prev => { const n = { ...prev }; delete n[questionId]; return n; });
   };
 
   const toggleResults = async (surveyId) => {
@@ -3877,10 +3879,17 @@ function SurveyView({ data, setData, isAdmin, userName }) {
   const renderAnswerInput = (survey, question) => {
     const userAnswers = (survey.responses || {})[userName] || {};
     const answered = userAnswers[question.id] !== undefined;
-    if (answered) return <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ fontSize: 13, color: GREEN, fontWeight: 600, padding: "4px 0" }}>Answered{question.type === "short_answer" ? ": " + userAnswers[question.id] : question.type === "likert" ? ": " + userAnswers[question.id] + "/5" : ": " + userAnswers[question.id]}</div><button onClick={async () => { const responses = { ...(survey.responses || {}) }; const ua = { ...(responses[userName] || {}) }; delete ua[question.id]; responses[userName] = ua; const updated = { ...data, surveys: (data.surveys || []).map(s => s.id === survey.id ? { ...s, responses } : s) }; await saveData(updated); setData(updated); }} style={{ fontSize: 12, color: TEXT_MUTED, background: "none", border: "1px solid " + BORDER, borderRadius: 6, padding: "2px 8px", cursor: "pointer" }}>Change</button></div>);
+    const currentAnswer = userAnswers[question.id];
+    const showCurrent = answered && !changing[question.id];
+    if (showCurrent) return (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
+        <span style={{ fontSize: 13, color: GREEN, fontWeight: 600 }}>Your answer: {String(currentAnswer)}</span>
+        <button onClick={() => setChanging(prev => ({ ...prev, [question.id]: true }))} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600 }}>Change</button>
+      </div>
+    );
     if (question.type === "multiple_choice") return (<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{question.options.map(o => (<button key={o} onClick={() => respond(survey.id, question.id, o)} style={{ ...crd, padding: "10px 14px", cursor: "pointer", textAlign: "left", fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, border: "1px solid " + BORDER }}>{o}</button>))}</div>);
     if (question.type === "true_false") return (<div style={{ display: "flex", gap: 8 }}><button onClick={() => respond(survey.id, question.id, "True")} style={{ ...pill, background: "#ecfdf5", color: GREEN, flex: 1, padding: "12px 0", fontSize: 15, fontWeight: 700 }}>True</button><button onClick={() => respond(survey.id, question.id, "False")} style={{ ...pill, background: "#fef2f2", color: RED, flex: 1, padding: "12px 0", fontSize: 15, fontWeight: 700 }}>False</button></div>);
-    if (question.type === "likert") { const likertLabels = ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]; return (<div style={{ display: "flex", gap: 6, justifyContent: "center" }}>{[1,2,3,4,5].map(n => (<button key={n} onClick={() => respond(survey.id, question.id, String(n))} style={{ ...crd, width: 56, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: "8px 4px", border: "1px solid " + BORDER }}><span style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY }}>{n}</span><span style={{ fontSize: 9, color: TEXT_SECONDARY, lineHeight: 1.1, textAlign: "center", marginTop: 2 }}>{likertLabels[n-1]}</span></button>))}</div>); }
+    if (question.type === "likert") return (<div style={{ display: "flex", gap: 6, justifyContent: "center" }}>{[1,2,3,4,5].map(n => (<button key={n} onClick={() => respond(survey.id, question.id, String(n))} style={{ ...crd, width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, border: "1px solid " + BORDER }}>{n}</button>))}</div>);
     if (question.type === "number") return (<div style={{ display: "flex", gap: 8 }}><input id={"num-" + question.id} type="number" placeholder="Enter a number" style={{ ...inp, flex: 1 }} /><button onClick={() => { const el = document.getElementById("num-" + question.id); if (el?.value) { respond(survey.id, question.id, el.value); el.value = ""; } }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Submit</button></div>);
     if (question.type === "short_answer") return (<div style={{ display: "flex", gap: 8 }}><input id={"sa-" + question.id} placeholder="Your answer" style={{ ...inp, flex: 1 }} /><button onClick={() => { const el = document.getElementById("sa-" + question.id); if (el?.value?.trim()) { respond(survey.id, question.id, el.value.trim()); el.value = ""; } }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Submit</button></div>);
     return null;
@@ -3977,7 +3986,7 @@ function SurveyView({ data, setData, isAdmin, userName }) {
                 </div>
                 {(isAdmin || survey.showResults) && <button onClick={() => setViewingResults(survey.id)} style={pillInactive}>Results</button>}
               </div>
-              {!isAdmin && !allAnswered && (
+              {!isAdmin && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   {(survey.questions || []).map((q, qi) => (
                     <div key={q.id}>
@@ -3987,7 +3996,7 @@ function SurveyView({ data, setData, isAdmin, userName }) {
                   ))}
                 </div>
               )}
-              {!isAdmin && allAnswered && !survey.showResults && <div style={{ fontSize: 14, color: GREEN, fontWeight: 600 }}>All questions answered. Waiting for results.</div>}
+              
               {isAdmin && (
                 <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                   <button onClick={() => startEditSurvey(survey)} style={pillInactive}>Edit</button>

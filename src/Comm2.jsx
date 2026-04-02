@@ -1234,6 +1234,8 @@ function SurveyView({ data, setData, isAdmin, userName }) {
 
   if (isAdmin) {
     const [newQ, setNewQ] = useState("");
+    const [editingId, setEditingId] = useState(null);
+    const [editText, setEditText] = useState("");
     const addSurvey = async () => {
       if (!newQ.trim()) return;
       const updated = { ...data, surveys: [...surveys, { id: genId(), question: newQ.trim(), responses: {}, active: true }] };
@@ -1247,6 +1249,11 @@ function SurveyView({ data, setData, isAdmin, userName }) {
       const updated = { ...data, surveys: surveys.filter(s => s.id !== id) };
       await saveData(updated); setData(updated); showMsg("Deleted");
     };
+    const saveEdit = async (id) => {
+      if (!editText.trim()) return;
+      const updated = { ...data, surveys: surveys.map(s => s.id === id ? { ...s, question: editText.trim() } : s) };
+      await saveData(updated); setData(updated); setEditingId(null); setEditText(""); showMsg("Updated");
+    };
     return (
       <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
         <Toast message={msg} />
@@ -1259,10 +1266,19 @@ function SurveyView({ data, setData, isAdmin, userName }) {
           {surveys.map(s => (
             <div key={s.id} style={{ ...crd, padding: 14, marginBottom: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.question}</div>
-                <div style={{ display: "flex", gap: 4 }}>
+                {editingId === s.id ? (
+                  <div style={{ display: "flex", gap: 6, flex: 1, marginRight: 8 }}>
+                    <input value={editText} onChange={e => setEditText(e.target.value)} style={{ ...inp, flex: 1, fontSize: 13 }} />
+                    <button onClick={() => saveEdit(s.id)} style={{ ...pill, background: ACCENT, color: "#fff", fontSize: 11 }}>Save</button>
+                    <button onClick={() => { setEditingId(null); setEditText(""); }} style={pillInactive}>Cancel</button>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.question}</div>
+                )}
+                <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                  {editingId !== s.id && <button onClick={() => { setEditingId(s.id); setEditText(s.question); }} style={{ ...pillInactive, fontSize: 11 }}>Edit</button>}
                   <button onClick={() => toggleActive(s.id)} style={{ ...pill, fontSize: 11, padding: "3px 8px", background: s.active ? "#ecfdf5" : "#f4f4f5", color: s.active ? GREEN : TEXT_MUTED }}>{s.active ? "Open" : "Closed"}</button>
-                  <button onClick={() => deleteSurvey(s.id)} style={{ ...pill, fontSize: 11, padding: "3px 8px", background: "#fef2f2", color: RED }}>X</button>
+                  <button onClick={() => { if (window.confirm("Delete this survey?")) deleteSurvey(s.id); }} style={{ ...pill, fontSize: 11, padding: "3px 8px", background: "#fef2f2", color: RED }}>X</button>
                 </div>
               </div>
               <div style={{ fontSize: 12, color: TEXT_MUTED }}>{Object.keys(s.responses || {}).length} responses</div>
@@ -1301,7 +1317,13 @@ function SurveyView({ data, setData, isAdmin, userName }) {
             <div key={s.id} style={{ ...crd, padding: 16, marginBottom: 12 }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 8 }}>{s.question}</div>
               {myResp ? (
-                <div style={{ fontSize: 14, color: GREEN, fontWeight: 600 }}>Submitted: {myResp}</div>
+                <div>
+                  <div style={{ fontSize: 14, color: GREEN, fontWeight: 600, marginBottom: 6 }}>Your answer: {myResp}</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input value={answers[s.id] || ""} onChange={e => setAnswers({ ...answers, [s.id]: e.target.value })} onKeyDown={e => e.key === "Enter" && submitSurvey(s.id)} placeholder="Change your answer" style={{ ...inp, flex: 1, fontSize: 13 }} />
+                    <button onClick={() => submitSurvey(s.id)} style={{ ...pill, background: ACCENT, color: "#fff" }}>Update</button>
+                  </div>
+                </div>
               ) : (
                 <div style={{ display: "flex", gap: 6 }}>
                   <input value={answers[s.id] || ""} onChange={e => setAnswers({ ...answers, [s.id]: e.target.value })} onKeyDown={e => e.key === "Enter" && submitSurvey(s.id)} placeholder="Your answer" style={{ ...inp, flex: 1, fontSize: 13 }} />
@@ -2755,7 +2777,7 @@ function BoardsView({ data, setData, isAdmin, userName }) {
           {isAdmin && <button onClick={() => setCreating(!creating)} style={creating ? pillActive : pillInactive}>{creating ? "Cancel" : "+ New Board"}</button>}
         </div>
 
-        {isAdmin && creating && (
+        {isAdmin && (creating || editingSurvey) && (
           <div style={{ ...crd, padding: 18, marginBottom: 20 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Board title (e.g. Week 1 Discussion)" style={{ ...inp, fontWeight: 700, fontSize: 16 }} />
