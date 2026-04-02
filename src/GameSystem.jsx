@@ -187,6 +187,7 @@ export function GameAdmin({ data, setData }) {
     return (
       <div>
         <GameEditor week={week} initial={existing?.questions || emptyGame()} scored={isDone} onSave={qs => saveGame(week, qs)} onGoLive={() => goLiveGame(week)} onDelete={() => { if (window.confirm("Delete game week " + week + "?")) deleteGame(week); }} onBack={() => setWeek(null)} msg={msg} />
+        {isDone && <ReviewAnswers type="game" week={week} data={data} setData={setData} />}
         {isDone && <div style={{ padding: "0 20px 40px" }}><div style={{ maxWidth: 600, margin: "0 auto" }}><ReboundPanel data={data} setData={setData} activityType="game" week={week} isAdmin={true} userName="Andrew Ishak" /></div></div>}
       </div>
     );
@@ -202,6 +203,7 @@ export function GameAdmin({ data, setData }) {
     return (
       <div>
         <ToTEditor week={week} initial={existing?.questions || [{ prompt: "", options: ["", ""], correct: 0 }]} scored={isDone} onSave={qs => saveToT(week, qs)} onGoLive={() => goLiveToT(week)} onDelete={() => { if (window.confirm("Delete This or That week " + week + "?")) deleteToT(week); }} onBack={() => setWeek(null)} msg={msg} />
+        {isDone && <ReviewAnswers type="tot" week={week} data={data} setData={setData} />}
         {isDone && <div style={{ padding: "0 20px 40px" }}><div style={{ maxWidth: 600, margin: "0 auto" }}><ReboundPanel data={data} setData={setData} activityType="tot" week={week} isAdmin={true} userName="Andrew Ishak" /></div></div>}
       </div>
     );
@@ -241,6 +243,103 @@ export function GameAdmin({ data, setData }) {
 }
 
 /* ─── GAME EDITOR (setup phase, with drag reorder) ─── */
+/* ─── REVIEW / OVERRIDE ANSWERS ─── */
+function ReviewAnswers({ type, week, data, setData }) {
+  const [show, setShow] = useState(false);
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  const activities = type === "game" ? (data.weeklyGames || {}) : (data.weeklyToT || {});
+  const activity = activities[week] || activities[String(week)];
+  const wKey = activities[week] ? week : String(week);
+  if (!activity || !activity.scored) return null;
+
+  const qs = activity.questions || [];
+  const students = data.students.filter(s => s.name !== "Andrew Ishak");
+  const sorted = [...students].sort((a, b) => a.name.split(" ").slice(-1)[0].localeCompare(b.name.split(" ").slice(-1)[0]));
+
+  const changeAnswer = async (studentId, qIdx, newAnswer) => {
+    const key = studentId + "-" + qIdx;
+    const responses = { ...(activity.responses || {}), [key]: newAnswer };
+    const dataKey = type === "game" ? "weeklyGames" : "weeklyToT";
+    const updated = { ...data, [dataKey]: { ...activities, [wKey]: { ...activity, responses } } };
+
+    // Auto-rescore: remove old log entries for this activity and recalculate
+    const sourcePrefix = type === "game" ? "Game Wk" + week : "ToT Wk" + week;
+    const oldLog = (data.log || []).filter(e => e.source !== sourcePrefix);
+    const newEntries = [];
+    const updatedActivity = { ...activity, responses };
+
+    data.students.forEach(s => {
+      let pts = 0;
+      if (type === "game") {
+        for (let q = 0; q < qs.length; q++) {
+          const ans = responses[s.id + "-" + q];
+          if (ans === qs[q].correct) pts += GAME_PTS;
+        }
+      } else {
+        const ptsEach = qs.length > 0 ? 20 / qs.length : 20;
+        qs.forEach((q, qi) => {
+          if (responses[s.id + "-" + qi] === q.correct) pts += ptsEach;
+        });
+        pts = Math.round(pts * 10) / 10;
+      }
+      if (pts > 0) newEntries.push({ id: genId(), studentId: s.id, amount: pts, source: sourcePrefix, ts: Date.now() });
+    });
+
+    updated.log = [...oldLog, ...newEntries];
+    await saveData(updated); setData(updated); showMsg("Answer changed and rescored");
+  };
+
+  const letters = ["A", "B", "C", "D", "E", "F"];
+
+  return (
+    <div style={{ padding: "0 20px 20px" }}>
+      <div style={{ maxWidth: 600, margin: "0 auto" }}>
+        {msg && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "#111", color: "#fff", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, zIndex: 999 }}>{msg}</div>}
+        <button onClick={() => setShow(!show)} style={{ ...pillInactive, width: "100%", marginBottom: show ? 12 : 0 }}>{show ? "Hide Answer Review" : "Review / Override Answers"}</button>
+        {show && (
+          <div>
+            {qs.map((q, qi) => (
+              <div key={qi} style={{ ...crd, padding: 14, marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 7, background: ACCENT + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: ACCENT }}>{qi + 1}</div>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{q.text || q.prompt || "(no text)"}</div>
+                </div>
+                <div style={{ fontSize: 11, color: GREEN, fontWeight: 600, marginBottom: 8 }}>
+                  Correct: {type === "game" ? (q.options?.[q.correct] || letters[q.correct]) : (q.options?.[q.correct] || "Option " + (q.correct + 1))}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {sorted.map(s => {
+                    const ansKey = s.id + "-" + qi;
+                    const ans = activity.responses?.[ansKey];
+                    const correct = ans === q.correct;
+                    const noAnswer = ans === undefined || ans === null;
+                    return (
+                      <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", borderRadius: 6, background: noAnswer ? "#f9fafb" : correct ? "#ecfdf5" : "#fef2f2" }}>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY, flex: 1, minWidth: 0 }}>{s.name.split(" ")[0]}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: noAnswer ? TEXT_MUTED : correct ? GREEN : RED, marginRight: 4 }}>
+                          {noAnswer ? "No answer" : type === "game" ? (q.options?.[ans] || letters[ans] || "?") : (q.options?.[ans] || "Option " + (ans + 1))}
+                        </span>
+                        <select value={ans !== undefined && ans !== null ? ans : ""} onChange={e => { const v = e.target.value; changeAnswer(s.id, qi, v === "" ? undefined : parseInt(v)); }} style={{ fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid " + BORDER, fontFamily: F, background: "#fff" }}>
+                          <option value="">No answer</option>
+                          {(q.options || []).map((o, oi) => (
+                            <option key={oi} value={oi}>{type === "game" ? (letters[oi] + ") " + (o || "Option " + (oi + 1))) : (o || "Option " + (oi + 1))}</option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function GameEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack, msg }) {
   const [questions, setQuestions] = useState(JSON.parse(JSON.stringify(initial)));
   const [dragIdx, setDragIdx] = useState(null);
