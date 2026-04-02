@@ -3869,8 +3869,7 @@ function SurveyView({ data, setData, isAdmin, userName }) {
     const survey = surveys.find(s => s.id === surveyId);
     if (!survey) return;
     const responses = { ...(survey.responses || {}) };
-    if (!responses[userName]) responses[userName] = {};
-    responses[userName][questionId] = answer;
+    responses[userName] = { ...(responses[userName] || {}), [questionId]: answer };
     const updated = { ...data, surveys: surveys.map(s => s.id === surveyId ? { ...s, responses } : s) };
     await saveData(updated); setData(updated);
     setChanging(prev => { const n = { ...prev }; delete n[questionId]; return n; });
