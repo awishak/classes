@@ -196,6 +196,7 @@ function Toast({ message }) { if (!message) return null; return <div style={{ po
 function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent }) {
   const tabs = [
     { id: "home", label: "Home", admin: false, guest: false },
+    { id: "todo", label: "To-Do", admin: false, guest: false },
     { id: "leaderboard", label: "Leaderboard", admin: false, guest: true },
     { id: "schedule", label: "Schedule", admin: false, guest: true },
     { id: "assignments", label: "Assignments", admin: false, guest: false },
