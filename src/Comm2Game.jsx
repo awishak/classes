@@ -67,7 +67,7 @@ export function GameAdmin({ data, setData }) {
 
   const goLiveGame = async (w) => {
     const game = games[w]; if (!game) return;
-    const updated = { ...data, weeklyGames: { ...games, [w]: { ...game, phase: "live", currentQ: 0, lockedQs: [], countdown: null, active: true } } };
+    const updated = { ...data, weeklyGames: { ...games, [w]: { ...game, phase: "live", currentQ: 0, lockedQs: [], countdown: null, active: true, scored: false } } };
     await saveData(updated); setData(updated); showMsg("Game is LIVE");
   };
 
@@ -82,9 +82,19 @@ export function GameAdmin({ data, setData }) {
         if (ans === game.questions[q].correct) pts += GAME_PTS;
       }
       playerScores[s.id] = pts;
-      if (pts > 0) entries.push({ id: genId(), studentId: s.id, amount: pts, source: "Game Wk" + w, ts: Date.now() });
     });
-    const updated = { ...data, weeklyGames: { ...games, [w]: { ...game, scored: true, active: false, phase: "done" } }, log: [...data.log, ...entries] };
+    // Only add log entries for students who don't already have one for this source, or whose score changed
+    const source = "Game Wk" + w;
+    const existingEntries = data.log.filter(e => e.source === source);
+    data.students.forEach(s => {
+      const pts = playerScores[s.id] || 0;
+      const existing = existingEntries.find(e => e.studentId === s.id);
+      if (existing && existing.amount === pts) return; // no change
+      if (existing) { /* remove old entry, will add new */ }
+      if (pts > 0) entries.push({ id: genId(), studentId: s.id, amount: pts, source, ts: Date.now() });
+    });
+    const cleanLog = data.log.filter(e => !(e.source === source && entries.find(n => n.studentId === e.studentId)));
+    const updated = { ...data, weeklyGames: { ...games, [w]: { ...game, scored: true, active: false, phase: "done" } }, log: [...cleanLog, ...entries] };
     await saveData(updated); setData(updated); showMsg("Scored!");
   };
 
@@ -103,7 +113,7 @@ export function GameAdmin({ data, setData }) {
 
   const goLiveToT = async (w) => {
     const tot = tots[w]; if (!tot) return;
-    const updated = { ...data, weeklyToT: { ...tots, [w]: { ...tot, phase: "live", currentQ: 0, lockedQs: [], countdown: null, active: true } } };
+    const updated = { ...data, weeklyToT: { ...tots, [w]: { ...tot, phase: "live", currentQ: 0, lockedQs: [], countdown: null, active: true, scored: false } } };
     await saveData(updated); setData(updated); showMsg("This or That is LIVE");
   };
 
@@ -111,14 +121,25 @@ export function GameAdmin({ data, setData }) {
     const tot = tots[w]; if (!tot) return;
     const ptsEach = tot.questions.length > 0 ? 20 / tot.questions.length : 20;
     const entries = [];
+    const playerScores = {};
     data.students.forEach(s => {
       let pts = 0;
       tot.questions.forEach((q, qi) => {
         if (tot.responses?.[s.id + "-" + qi] === q.correct) pts += ptsEach;
       });
-      if (pts > 0) entries.push({ id: genId(), studentId: s.id, amount: Math.round(pts * 10) / 10, source: "ToT Wk" + w, ts: Date.now() });
+      const rounded = Math.round(pts * 10) / 10;
+      playerScores[s.id] = rounded;
     });
-    const updated = { ...data, weeklyToT: { ...tots, [w]: { ...tot, scored: true, active: false, phase: "done" } }, log: [...data.log, ...entries] };
+    const source = "ToT Wk" + w;
+    const existingEntries = data.log.filter(e => e.source === source);
+    data.students.forEach(s => {
+      const pts = playerScores[s.id] || 0;
+      const existing = existingEntries.find(e => e.studentId === s.id);
+      if (existing && existing.amount === pts) return;
+      if (pts > 0) entries.push({ id: genId(), studentId: s.id, amount: pts, source, ts: Date.now() });
+    });
+    const cleanLog = data.log.filter(e => !(e.source === source && entries.find(n => n.studentId === e.studentId)));
+    const updated = { ...data, weeklyToT: { ...tots, [w]: { ...tot, scored: true, active: false, phase: "done" } }, log: [...cleanLog, ...entries] };
     await saveData(updated); setData(updated); showMsg("Scored!");
   };
 
@@ -354,7 +375,7 @@ function GameEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack,
         ))}
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
           <button onClick={() => onSave(questions)} style={{ ...pill, background: "#111827", color: "#fff", flex: 1, padding: "12px 0" }}>Save</button>
-          {!scored && <button onClick={() => { onSave(questions); setTimeout(onGoLive, 300); }} style={{ ...pill, background: "#d97706", color: "#fff", flex: 1, padding: "12px 0" }}>Go Live</button>}
+          <button onClick={() => { onSave(questions); setTimeout(onGoLive, 300); }} style={{ ...pill, background: "#d97706", color: "#fff", flex: 1, padding: "12px 0" }}>{scored ? "Re-Open Live" : "Go Live"}</button>
           <button onClick={onDelete} style={{ ...pill, background: "#fef2f2", color: RED, padding: "12px 16px" }}>Delete</button>
         </div>
       </div>
@@ -420,7 +441,7 @@ function ToTEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack, 
         {questions.length < 4 && <button onClick={addQ} style={{ ...pillInactive, width: "100%", marginBottom: 12 }}>+ Add Question</button>}
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => onSave(questions)} style={{ ...pill, background: "#111827", color: "#fff", flex: 1, padding: "12px 0" }}>Save</button>
-          {!scored && <button onClick={() => { onSave(questions); setTimeout(onGoLive, 300); }} style={{ ...pill, background: "#d97706", color: "#fff", flex: 1, padding: "12px 0" }}>Go Live</button>}
+          <button onClick={() => { onSave(questions); setTimeout(onGoLive, 300); }} style={{ ...pill, background: "#d97706", color: "#fff", flex: 1, padding: "12px 0" }}>{scored ? "Re-Open Live" : "Go Live"}</button>
           <button onClick={onDelete} style={{ ...pill, background: "#fef2f2", color: RED, padding: "12px 16px" }}>Delete</button>
         </div>
       </div>
