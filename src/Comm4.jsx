@@ -2706,7 +2706,7 @@ function RosterView({ data, setData, userName }) {
   if (selectedId) {
     const student = data.students.find(s => s.id === selectedId);
     if (!student) { setSelectedId(null); return null; }
-    return <BioView student={student} data={data} setData={setData} userName={effectiveUserName} onBack={() => setSelectedId(null)} />;
+    return <BioView student={student} data={data} setData={setData} userName={userName} onBack={() => setSelectedId(null)} />;
   }
 
   return (
