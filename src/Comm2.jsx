@@ -189,8 +189,9 @@ function Toast({ message }) { if (!message) return null; return <div style={{ po
 /* --- NAV --- */
 const ADMIN_NAME = "Andrew Ishak";
 const GUEST_NAME = "__guest__";
+const TEST_STUDENT = "Bruce Willis";
 
-function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle }) {
+function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent }) {
   const tabs = [
     { id: "home", label: "Home", admin: false, guest: false },
     { id: "leaderboard", label: "Leaderboard", admin: false, guest: true },
@@ -227,12 +228,19 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
             : { ...pill, background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.85)" }
           }>{t.label}</button>
         ))}
-        {setStudentView && (
+        {setStudentView && !testStudent && (
           <button onClick={() => setStudentView(!studentView)} style={{
             padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
             fontFamily: F, border: studentView ? "1px solid #fbbf24" : "1px solid rgba(255,255,255,0.2)",
             background: studentView ? "#fbbf24" : "transparent", color: studentView ? "#18181b" : "rgba(255,255,255,0.6)", transition: "all 0.15s",
           }}>{studentView ? "Exit Student View" : "Student View"}</button>
+        )}
+        {setTestStudent && (
+          <button onClick={() => setTestStudent(!testStudent)} style={{
+            padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+            fontFamily: F, border: testStudent ? "1px solid #f87171" : "1px solid rgba(255,255,255,0.2)",
+            background: testStudent ? "#f87171" : "transparent", color: testStudent ? "#fff" : "rgba(255,255,255,0.6)", transition: "all 0.15s",
+          }}>{testStudent ? "Exit Test Mode" : "Test as Bruce"}</button>
         )}
         <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginLeft: 4 }}>{userName}</span>
         <button onClick={onLogout} style={{
@@ -254,7 +262,7 @@ function NamePicker({ data, onSelect }) {
   const pins = data?.pins || {};
 
   const names = data ? data.students.map(s => s.name).sort(lastSort) : [...ALL_STUDENTS].sort(lastSort);
-  const sorted = [ADMIN_NAME, ...names.filter(n => n !== ADMIN_NAME)];
+  const sorted = [ADMIN_NAME, ...names.filter(n => n !== ADMIN_NAME && n !== TEST_STUDENT)];
 
   const tryLogin = () => {
     if (!selected) return;
@@ -1150,7 +1158,7 @@ function RosterView({ data, setData, userName }) {
   if (selectedId) {
     const student = data.students.find(s => s.id === selectedId);
     if (!student) { setSelectedId(null); return null; }
-    return <BioView student={student} data={data} setData={setData} userName={userName} onBack={() => setSelectedId(null)} />;
+    return <BioView student={student} data={data} setData={setData} userName={effectiveUserName} onBack={() => setSelectedId(null)} />;
   }
 
   return (
@@ -2395,7 +2403,10 @@ export default function Comm2() {
   const isGuest = userName === GUEST_NAME;
   const displayName = isGuest ? "Guest" : userName;
   const [studentView, setStudentView] = useState(false);
-  const effectiveAdmin = isAdmin && !studentView;
+  const [testStudent, setTestStudent] = useState(false);
+  const effectiveUserName = testStudent ? TEST_STUDENT : userName;
+  const effectiveAdmin = isAdmin && !studentView && !testStudent;
+  const visibleStudents = data ? data.students.filter(s => effectiveAdmin || testStudent || s.name !== TEST_STUDENT) : [];
 
   const refresh = useCallback(async () => { try { const d = await loadData(); if (d) setData(d); } catch(e) { console.error(e); } }, []);
 
@@ -2431,6 +2442,12 @@ export default function Comm2() {
         if (d && !d.studentNotes) { d.studentNotes = {}; await saveData(d); }
         if (d && !d.rebounds) { d.rebounds = {}; await saveData(d); }
         if (d && !d.submissions) { d.submissions = {}; await saveData(d); }
+        if (d && !d.students.find(s => s.name === TEST_STUDENT)) {
+          const tsId = genId();
+          d.students.push({ id: tsId, name: TEST_STUDENT, teamId: d.teams?.[0]?.id || "" });
+          d.pins[tsId] = "118711";
+          await saveData(d);
+        }
         if (d && !d.bios) { d.bios = {}; await saveData(d); }
         if (d && !d.adminLinks) { d.adminLinks = []; await saveData(d); }
         if (d && !d.pins) { const pins = {}; d.students.forEach(s => { pins[s.id] = String(Math.floor(100000 + Math.random() * 900000)); }); d.pins = pins; await saveData(d); }
@@ -2462,26 +2479,26 @@ export default function Comm2() {
           <a href="/comm4" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: "#9ca3af", background: "transparent" }}>COMM 4</a>
         </div>
       )}
-      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={displayName} onLogout={() => { try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); setView("home"); setStudentView(false); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} />
+      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={testStudent ? TEST_STUDENT : displayName} onLogout={() => { if (testStudent) { setTestStudent(false); return; } try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); setView("home"); setStudentView(false); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} testStudent={testStudent} setTestStudent={isAdmin ? setTestStudent : null} />
 
-      {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} setView={setView} />}
+      {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} setView={setView} />}
 
       {view === "leaderboard" && <Leaderboard students={students} log={log} isAdmin={effectiveAdmin} userName={userName} data={data} />}
-      {view === "todo" && <TodoView data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
+      {view === "todo" && <TodoView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
-      {view === "assignments" && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
+      {view === "assignments" && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "media" && <MediaView data={data} setData={setData} isAdmin={effectiveAdmin} />}
-      {view === "submit" && <SubmitView data={data} setData={setData} userName={userName} />}
-      {view === "answer" && <StudentAnswerView data={data} setData={setData} userName={userName} />}
+      {view === "submit" && <SubmitView data={data} setData={setData} userName={effectiveUserName} />}
+      {view === "answer" && <StudentAnswerView data={data} setData={setData} userName={effectiveUserName} />}
       {view === "accolades" && <Accolades data={data} />}
-      {view === "survey" && <SurveyView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
-      {view === "mynotes" && <MyNotesView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
-      {view === "boards" && <BoardsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
+      {view === "survey" && <SurveyView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
+      {view === "mynotes" && <MyNotesView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
+      {view === "boards" && <BoardsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "pti" && effectiveAdmin && <PTIView data={data} setData={setData} />}
       {view === "activities" && effectiveAdmin && <GameAdmin data={data} setData={setData} />}
-      {view === "roster" && <RosterView data={data} setData={setData} userName={userName} />}
+      {view === "roster" && <RosterView data={data} setData={setData} userName={effectiveUserName} />}
       {view === "admin" && effectiveAdmin && <AdminPanel data={data} setData={setData} />}
-      {view === "gradebook" && effectiveAdmin && <Gradebook data={data} setData={setData} isAdmin={true} userName={userName} />}
+      {view === "gradebook" && effectiveAdmin && <Gradebook data={data} setData={setData} isAdmin={true} userName={effectiveUserName} />}
     </div>
   );
 }

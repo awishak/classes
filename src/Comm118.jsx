@@ -193,7 +193,7 @@ function shuffleTeams(students, log, teams) {
 function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#18181b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 14, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
 
 /* ─── NAV ─── */
-function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle }) {
+function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent }) {
   const tabs = [
     { id: "home", label: "Home", admin: false, guest: false },
     { id: "leaderboard", label: "Leaderboard", admin: false, guest: true },
@@ -232,12 +232,19 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
         <a href="https://camino.instructure.com/courses/117721" target="_blank" rel="noopener noreferrer" style={{ ...pill, background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
           Camino <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
         </a>
-        {setStudentView && (
+        {setStudentView && !testStudent && (
           <button onClick={() => setStudentView(!studentView)} style={{
             padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
             fontFamily: F, border: studentView ? "1px solid #fbbf24" : "1px solid rgba(255,255,255,0.2)",
             background: studentView ? "#fbbf24" : "transparent", color: studentView ? "#18181b" : "rgba(255,255,255,0.6)", transition: "all 0.15s",
           }}>{studentView ? "Exit Student View" : "Student View"}</button>
+        )}
+        {setTestStudent && (
+          <button onClick={() => setTestStudent(!testStudent)} style={{
+            padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+            fontFamily: F, border: testStudent ? "1px solid #f87171" : "1px solid rgba(255,255,255,0.2)",
+            background: testStudent ? "#f87171" : "transparent", color: testStudent ? "#fff" : "rgba(255,255,255,0.6)", transition: "all 0.15s",
+          }}>{testStudent ? "Exit Test Mode" : "Test as Bruce"}</button>
         )}
         <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginLeft: 4 }}>{userName}</span>
         <button onClick={onLogout} style={{
@@ -253,6 +260,7 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
 /* ─── NAME PICKER (front page) ─── */
 const ADMIN_NAME = "Andrew Ishak";
 const GUEST_NAME = "__guest__";
+const TEST_STUDENT = "Bruce Willis";
 
 function NamePicker({ data, onSelect }) {
   const [selected, setSelected] = useState(null);
@@ -263,7 +271,7 @@ function NamePicker({ data, onSelect }) {
 
   const names = data ? data.students.map(s => s.name).sort(lastSort) : [...ALL_STUDENTS].sort(lastSort);
   // Put admin at top, even if not in students list
-  const sorted = [ADMIN_NAME, ...names.filter(n => n !== ADMIN_NAME)];
+  const sorted = [ADMIN_NAME, ...names.filter(n => n !== ADMIN_NAME && n !== TEST_STUDENT)];
 
   const tryLogin = () => {
     if (!selected) return;
@@ -4559,7 +4567,10 @@ export default function Comm118() {
   const isGuest = userName === GUEST_NAME;
   const displayName = isGuest ? "Guest" : userName;
   const [studentView, setStudentView] = useState(false);
-  const effectiveAdmin = isAdmin && !studentView;
+  const [testStudent, setTestStudent] = useState(false);
+  const effectiveUserName = testStudent ? TEST_STUDENT : userName;
+  const effectiveAdmin = isAdmin && !studentView && !testStudent;
+  const visibleStudents = data ? data.students.filter(s => effectiveAdmin || testStudent || s.name !== TEST_STUDENT) : [];
 
   const refresh = useCallback(async () => { try { const d = await loadData(); if (d) setData(d); } catch(e) { console.error(e); } }, []);
   useEffect(() => {
@@ -4638,6 +4649,12 @@ export default function Comm118() {
         if (d && !d.studentNotes) { d.studentNotes = {}; await saveData(d); }
         if (d && !d.rebounds) { d.rebounds = {}; await saveData(d); }
         if (d && !d.submissions) { d.submissions = {}; await saveData(d); }
+        if (d && !d.students.find(s => s.name === TEST_STUDENT)) {
+          const tsId = genId();
+          d.students.push({ id: tsId, name: TEST_STUDENT, teamId: d.teams?.[0]?.id || "" });
+          d.pins[tsId] = "118711";
+          await saveData(d);
+        }
         if (d && !d.customTodos) { d.customTodos = []; await saveData(d); }
         // Migration: add interview assignment and fix weights if needed
         if (d && d.assignments && !d.assignments.find(a => a.id === "interview")) {
@@ -4976,26 +4993,26 @@ export default function Comm118() {
           <a href="/comm4" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: "#9ca3af", background: "transparent" }}>COMM 4</a>
         </div>
       )}
-      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={displayName} onLogout={() => { try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} />
+      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={testStudent ? TEST_STUDENT : displayName} onLogout={() => { if (testStudent) { setTestStudent(false); return; } try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} testStudent={testStudent} setTestStudent={isAdmin ? setTestStudent : null} />
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
-      {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} setView={setView} />}
-      {view === "todo" && !isGuest && <ToDoView data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
-      {view === "leaderboard" && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={userName} data={data} />}
-      {view === "assignments" && !isGuest && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} setView={setView} />}
+      {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} setView={setView} />}
+      {view === "todo" && !isGuest && <ToDoView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
+      {view === "leaderboard" && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={effectiveUserName} data={data} />}
+      {view === "assignments" && !isGuest && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} setView={setView} />}
       {view === "readings" && !isGuest && <ReadingsView data={data} setData={setData} isAdmin={effectiveAdmin} />}
-      {view === "classtools" && !isGuest && <ClassTools data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
-      {view === "grades" && isAdmin && !studentView && <Gradebook data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
-      {view === "pti" && isAdmin && !studentView && <PTIMode data={data} setData={setData} />}
-      {view === "activities" && isAdmin && !studentView && <GameAdmin data={data} setData={setData} />}
-      {view === "boards" && !isGuest && <BoardsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
-      {view === "mynotes" && !isGuest && <MyNotesView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
-      {view === "survey" && !isGuest && <SurveyView data={data} setData={setData} isAdmin={effectiveAdmin} userName={userName} />}
-      {view === "roster" && !isGuest && <RosterCombined data={data} setData={setData} userName={userName} isAdmin={effectiveAdmin} />}
-      {view === "answer" && !isGuest && <StudentAnswerView data={data} setData={setData} userName={userName} />}
+      {view === "classtools" && !isGuest && <ClassTools data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
+      {view === "grades" && isAdmin && !studentView && !testStudent && <Gradebook data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
+      {view === "pti" && isAdmin && !studentView && !testStudent && <PTIMode data={data} setData={setData} />}
+      {view === "activities" && isAdmin && !studentView && !testStudent && <GameAdmin data={data} setData={setData} />}
+      {view === "boards" && !isGuest && <BoardsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
+      {view === "mynotes" && !isGuest && <MyNotesView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
+      {view === "survey" && !isGuest && <SurveyView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
+      {view === "roster" && !isGuest && <RosterCombined data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
+      {view === "answer" && !isGuest && <StudentAnswerView data={data} setData={setData} userName={effectiveUserName} />}
       {view === "accolades" && !isGuest && <Accolades data={data} />}
-      {view === "admin" && isAdmin && !studentView && <AdminPanel data={data} setData={setData} />}
-      {isGuest && view !== "leaderboard" && view !== "schedule" && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={false} userName={userName} data={data} />}
-      {(view === "activities" || view === "admin" || view === "pti") && !isAdmin && !isGuest && <Leaderboard students={data.students} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={userName} data={data} />}
+      {view === "admin" && isAdmin && !studentView && !testStudent && <AdminPanel data={data} setData={setData} />}
+      {isGuest && view !== "leaderboard" && view !== "schedule" && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={false} userName={effectiveUserName} data={data} />}
+      {(view === "activities" || view === "admin" || view === "pti") && !isAdmin && !isGuest && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={effectiveUserName} data={data} />}
     </div>
   );
 }

@@ -639,14 +639,30 @@ export function StudentAnswerView({ data, setData, userName }) {
     const activity = mode === "game" ? games[week] : (tots[week] || tots[String(week)]);
     if (!activity || activity.phase !== "live") return;
     const iv = setInterval(async () => {
-      if (Date.now() - lastSubmitRef.current < 3000) return;
       try {
         const raw = await window.storage.get("comm2-v1", true);
-        if (raw?.value) { const d = JSON.parse(raw.value); setData(d); }
+        if (raw?.value) {
+          const d = JSON.parse(raw.value);
+          // Merge: preserve student's own responses so they don't get overwritten
+          if (sid) {
+            const dataKey = mode === "game" ? "weeklyGames" : "weeklyToT";
+            const localAct = mode === "game" ? games[week] : (tots[week] || tots[String(week)]);
+            const wKey = (d[dataKey] || {})[week] ? week : String(week);
+            const remoteAct = (d[dataKey] || {})[wKey];
+            if (localAct && remoteAct) {
+              const merged = { ...(remoteAct.responses || {}) };
+              Object.keys(localAct.responses || {}).forEach(k => {
+                if (k.startsWith(sid)) merged[k] = localAct.responses[k];
+              });
+              d[dataKey] = { ...d[dataKey], [wKey]: { ...remoteAct, responses: merged } };
+            }
+          }
+          setData(d);
+        }
       } catch(e) {}
     }, 2000);
     return () => clearInterval(iv);
-  }, [week, mode]);
+  }, [week, mode, sid, games, tots]);
 
   // Countdown effect
   React.useEffect(() => {
