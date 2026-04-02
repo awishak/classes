@@ -200,14 +200,11 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
     { id: "schedule", label: "Schedule", admin: false, guest: true },
     { id: "assignments", label: "Assignments", admin: false, guest: false },
     { id: "readings", label: "Readings", admin: false, guest: false },
-    { id: "classtools", label: "Headlines", admin: false, guest: false },
-    { id: "answer", label: "Answer", admin: false, guest: false },
+    { id: "inclass", label: "In-Class", admin: false, guest: false },
     { id: "accolades", label: "Accolades", admin: false, guest: false },
     { id: "boards", label: "Boards", admin: false, guest: false },
     { id: "mynotes", label: "My Notes", admin: false, guest: false },
-    { id: "survey", label: "Survey", admin: false, guest: false },
     { id: "pti", label: "Around the Horn", admin: true, guest: false },
-    { id: "activities", label: "Activities", admin: true, guest: false },
     { id: "roster", label: "Roster", admin: false, guest: false },
     { id: "admin", label: "Admin", admin: true, guest: false },
   ];
@@ -563,16 +560,122 @@ function InstructorCard({ data, setData, isAdmin }) {
 
 /* ─── SCHEDULE ─── */
 /* ─── HOME DASHBOARD ─── */
-const REBOUND_POLICY = `Rebound: You were present but scored below 80% on the grade scale. Submit a video within 48 hours explaining the material with a friend or family member. Points count for your grade only, not the in-class leaderboard.
+const REBOUND_POLICY = `You can earn additional points after a low (or missing) score in some cases. Here are three different situations that might apply to you.
+
+Rebound: You were present but scored below 80% on the grade scale. Submit a video within 48 hours explaining the material with a friend or family member. Points count for your grade only, not the in-class leaderboard.
   Under 50% -> can earn back to 60%
   50-65% -> can earn back to 70%
   66-79% -> can earn back to 80%
 
-Planned Makeup: You had an excused absence. Retake the activity live during office hours within one week. Full points available for both leaderboard and grade.
+Planned Makeup: You told me about your absence ahead of time and I asked you to come to office hours for a makeup. Retake the activity live during office hours within one week. Full points available for both leaderboard and grade.
 
-Unannounced Absence: You missed without notice. By default, no makeup is available. Contact your instructor if you believe this is an error.`;
+Unannounced Absence: You missed without notice. By default, no makeup is available.`;
 
 const HOME_GRADE_PTS = { on_topic: 15, sports_world: 2.5 };
+
+function InClassView({ data, setData, isAdmin, userName }) {
+  const [sub, setSub] = useState("answer");
+  const studentSubs = [
+    { id: "answer", label: "Answer" },
+    { id: "classtools", label: "Headlines" },
+    { id: "survey", label: "Survey" },
+  ];
+  const adminSubs = [
+    { id: "answer", label: "Answer" },
+    { id: "classtools", label: "Headlines" },
+    { id: "survey", label: "Survey" },
+    { id: "activities", label: "Activities" },
+  ];
+  const subs = isAdmin ? adminSubs : studentSubs;
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 4, padding: "12px 20px", background: "#f4f4f5", borderBottom: "1px solid " + BORDER, overflowX: "auto" }}>
+        {subs.map(s => (
+          <button key={s.id} onClick={() => setSub(s.id)} style={{
+            ...pill, fontSize: 13,
+            background: sub === s.id ? TEXT_PRIMARY : "transparent",
+            color: sub === s.id ? "#fff" : TEXT_SECONDARY,
+            border: sub === s.id ? "none" : "1px solid " + BORDER,
+          }}>{s.label}</button>
+        ))}
+      </div>
+      {sub === "answer" && <StudentAnswerView data={data} setData={setData} userName={userName} />}
+      {sub === "classtools" && <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />}
+      {sub === "survey" && <SurveyView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />}
+      {sub === "activities" && isAdmin && <GameAdmin data={data} setData={setData} />}
+    </div>
+  );
+}
+
+function HomeTodoSummary({ data, setData, studentId, setView }) {
+  const todos = data.todos || [];
+  const todoChecks = data.todoChecks || {};
+  const rebounds = data.rebounds || {};
+
+  // Build auto rebound to-dos
+  const reboundTodos = [];
+  const activityTypes = [
+    { type: "game", store: "weeklyGames", label: "Weekly Game" },
+    { type: "tot", store: "weeklyToT", label: "This or That" },
+    { type: "fishbowl", store: "weeklyFishbowl", label: "Fishbowl" },
+  ];
+  activityTypes.forEach(({ type, store, label }) => {
+    const activities = data[store] || {};
+    Object.keys(activities).forEach(w => {
+      const act = activities[w];
+      const scored = type === "fishbowl" ? act?.confirmed : act?.scored;
+      if (!scored) return;
+      const rKey = type + "-" + w;
+      const rd = rebounds[rKey] || {};
+      const scoredTs = rd.scoredTs || 0;
+      const deadline = scoredTs + 48 * 60 * 60 * 1000;
+      const ss = (rd.studentStatuses || {})[studentId] || {};
+      if (ss.approved || ss.link) return;
+      const status = ss.status || "";
+      if ((status === "rebound" || status === "unannounced_override") && Date.now() < deadline) {
+        reboundTodos.push({ id: "rebound-" + rKey, title: "Submit rebound: " + label + " Wk " + w, due: Math.max(0, Math.round((deadline - Date.now()) / (1000 * 60 * 60))) + "h left", linkTab: "inclass", auto: true, autoKey: rKey });
+      }
+      if (status === "planned_makeup") {
+        const mDeadline = scoredTs + 7 * 24 * 60 * 60 * 1000;
+        if (Date.now() < mDeadline) {
+          reboundTodos.push({ id: "makeup-" + rKey, title: "Office hours makeup: " + label + " Wk " + w, due: Math.max(0, Math.round((mDeadline - Date.now()) / (1000 * 60 * 60 * 24))) + "d left", auto: true, autoKey: rKey });
+        }
+      }
+    });
+  });
+
+  // Filter manual todos for this student
+  const myManualTodos = todos.filter(t => !t.targetStudents || t.targetStudents.includes(studentId));
+  const allTodos = [...reboundTodos, ...myManualTodos];
+
+  // Filter out checked
+  const unchecked = allTodos.filter(t => {
+    if (t.auto) return true; // auto todos managed by rebound status
+    return !todoChecks[studentId + "-" + t.id];
+  });
+
+  if (unchecked.length === 0) return null;
+
+  return (
+    <div style={{ ...crd, padding: 14, marginBottom: 12, borderLeft: "3px solid " + ACCENT }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>To-Do ({unchecked.length})</div>
+        <button onClick={() => setView("todo")} style={{ ...pillInactive, fontSize: 11 }}>View All</button>
+      </div>
+      {unchecked.slice(0, 5).map(t => (
+        <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 13, color: TEXT_PRIMARY }}>
+          <div style={{ width: 6, height: 6, borderRadius: 3, background: t.auto ? "#f59e0b" : ACCENT, flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ fontWeight: 500 }}>{t.title}</span>
+            {t.due && <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>{t.due}</span>}
+          </div>
+          {t.linkTab && <button onClick={() => setView(t.linkTab)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600 }}>Go</button>}
+        </div>
+      ))}
+      {unchecked.length > 5 && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>+{unchecked.length - 5} more</div>}
+    </div>
+  );
+}
 
 function HomeReboundBox({ data, setData, studentId }) {
   const [links, setLinks] = useState({});
@@ -611,14 +714,14 @@ function HomeReboundBox({ data, setData, studentId }) {
         for (let q = 0; q < (game.questions || []).length; q++) {
           if (game.responses?.[studentId + "-" + q] === game.questions[q].correct) gp += (HOME_GRADE_PTS[game.questions[q].category] || 0);
         }
-        gradePercent = Math.round(gp / max * 100);
+        gradePercent = Math.round(gp / max * 1000) / 10;
       } else if (type === "tot") {
         const ptsEach = act.questions?.length > 0 ? max / act.questions.length : max;
         let pts = 0;
         (act.questions || []).forEach((q, qi) => { if (act.responses?.[studentId + "-" + qi] === q.correct) pts += ptsEach; });
-        gradePercent = Math.round(pts / max * 100);
+        gradePercent = Math.round(pts / max * 1000) / 10;
       } else {
-        gradePercent = Math.round((act.scores?.[studentId] ?? 0) / max * 100);
+        gradePercent = Math.round((act.scores?.[studentId] ?? 0) / max * 1000) / 10;
       }
 
       const targetPercent = gradePercent < 50 ? 60 : gradePercent <= 65 ? 70 : gradePercent <= 79 ? 80 : null;
@@ -669,9 +772,8 @@ function HomeReboundBox({ data, setData, studentId }) {
 
             {isRebound && (
               <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, marginBottom: 8 }}>
-                Your grade was <strong>{item.gradePercent}%</strong>. You can earn back to <strong>{item.targetPercent}%</strong> by submitting a video of you explaining the material with a friend or family member.
-                These points count for <strong>your grade only</strong>, not the in-class leaderboard.
-                {" "}You have <strong>{item.hoursLeft} hours</strong> left to submit.
+                You earned a <strong>{item.gradePercent}%</strong>. I want you to get a strong grade in this class, so for this assignment, you can earn up to <strong>{item.targetPercent}%</strong> by submitting a video of you explaining the material with a friend or family member. Look at the questions you got incorrect, understand them better, and then explain the concept or situation to a friend. Please do this for all the incorrect questions.
+                {"\n\n"}These points count for <strong>your grade only</strong>, not the in-class leaderboard. You have <strong>{item.hoursLeft} hours</strong> left to submit.
               </div>
             )}
             {isRebound && (
@@ -786,6 +888,9 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
+
+        {/* Compact to-do list on home page */}
+        {studentId && !isAdmin && <HomeTodoSummary data={data} setData={setData} studentId={studentId} setView={(v) => { const ev = new CustomEvent("nav", { detail: v }); window.dispatchEvent(ev); }} />}
 
         {/* Pending rebounds/makeups for student */}
         {studentId && !isAdmin && <HomeReboundBox data={data} setData={setData} studentId={studentId} />}
@@ -4418,271 +4523,234 @@ const WEEKLY_ITEMS = [
 ];
 
 function ToDoView({ data, setData, userName, isAdmin }) {
-  const isGuest = userName === GUEST_NAME;
-  const student = data.students.find(s => s.name === userName);
-  const sid = student?.id;
-  const assignments = (data.assignments || []).filter(a => a.id !== "participation");
-  const bios = data.bios || {};
-  const checks = data.todoChecks || {};
-  const customTodos = data.customTodos || [];
-  const weekKey = getWeekMonday();
-
-  const [newTodoText, setNewTodoText] = useState("");
-  const [newTodoTarget, setNewTodoTarget] = useState("all");
-  const [newTodoSection, setNewTodoSection] = useState("assignments");
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+  const [adding, setAdding] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDue, setNewDue] = useState("");
+  const [newLink, setNewLink] = useState("");
+  const [newTarget, setNewTarget] = useState("all");
+  const [selectedStudents, setSelectedStudents] = useState([]);
 
-  const getCheck = (studentId, key) => {
-    const sc = checks[studentId];
-    if (!sc) return false;
-    return !!sc[key];
-  };
-  const getWeeklyCheck = (studentId, itemId) => {
-    const sc = checks[studentId];
-    if (!sc || !sc.weekly) return false;
-    const wk = sc.weekly[weekKey];
-    if (!wk) return false;
-    return !!wk[itemId];
-  };
-  const hasPhoto = (studentId) => !!(bios[studentId]?.photo);
-  const hasBio = (studentId) => {
-    const b = bios[studentId];
-    if (!b) return false;
-    return !!(b.about || b.major || b.year || b.hometown || b.favTeam || b.motto || b.funFact);
+  const student = data.students.find(s => s.name === userName);
+  const studentId = student?.id;
+  const todos = data.todos || [];
+  const todoChecks = data.todoChecks || {};
+
+  const tabLinks = [
+    { id: "", label: "None" },
+    { id: "home", label: "Home" },
+    { id: "assignments", label: "Assignments" },
+    { id: "readings", label: "Readings" },
+    { id: "inclass", label: "In-Class Activities" },
+    { id: "leaderboard", label: "Leaderboard" },
+    { id: "schedule", label: "Schedule" },
+    { id: "boards", label: "Boards" },
+    { id: "roster", label: "Roster" },
+  ];
+
+  // Build auto rebound to-dos from data.rebounds
+  const reboundTodos = [];
+  const activityTypes = [
+    { type: "game", store: "weeklyGames", label: "Weekly Game", max: 100 },
+    { type: "tot", store: "weeklyToT", label: "This or That", max: 20 },
+    { type: "fishbowl", store: "weeklyFishbowl", label: "Fishbowl", max: 20 },
+  ];
+  activityTypes.forEach(({ type, store, label }) => {
+    const activities = data[store] || {};
+    Object.keys(activities).forEach(w => {
+      const act = activities[w];
+      const scored = type === "fishbowl" ? act?.confirmed : act?.scored;
+      if (!scored) return;
+      const rKey = type + "-" + w;
+      const rd = (data.rebounds || {})[rKey] || {};
+      const scoredTs = rd.scoredTs || 0;
+      const reboundDeadline = scoredTs + 48 * 60 * 60 * 1000;
+      const makeupDeadline = scoredTs + 7 * 24 * 60 * 60 * 1000;
+      const allStatuses = rd.studentStatuses || {};
+
+      Object.entries(allStatuses).forEach(([sid, ss]) => {
+        if (ss.approved) return;
+        const status = ss.status || "";
+        if (status === "rebound" || status === "unannounced_override") {
+          if (Date.now() > reboundDeadline) return;
+          if (ss.link) return; // already submitted
+          reboundTodos.push({
+            id: "rebound-" + rKey + "-" + sid,
+            title: "Submit rebound video: " + label + " Wk " + w,
+            due: new Date(reboundDeadline).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+            dueTs: reboundDeadline,
+            targetStudents: [sid],
+            linkTab: "inclass",
+            auto: true,
+            autoType: "rebound",
+            autoKey: rKey,
+          });
+        }
+        if (status === "planned_makeup") {
+          if (Date.now() > makeupDeadline) return;
+          reboundTodos.push({
+            id: "makeup-" + rKey + "-" + sid,
+            title: "Retake at office hours: " + label + " Wk " + w,
+            due: new Date(makeupDeadline).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+            dueTs: makeupDeadline,
+            targetStudents: [sid],
+            linkTab: "",
+            auto: true,
+            autoType: "makeup",
+            autoKey: rKey,
+          });
+        }
+      });
+    });
+  });
+
+  // Combine manual + auto todos
+  const allTodos = [...todos, ...reboundTodos];
+
+  // Filter for current student
+  const myTodos = isAdmin ? allTodos : allTodos.filter(t => {
+    if (t.targetStudents && !t.targetStudents.includes(studentId)) return false;
+    if (!t.targetStudents) return true; // "all" target
+    return true;
+  });
+
+  // Check if a todo is completed
+  const isChecked = (todoId) => todoChecks[studentId + "-" + todoId] || false;
+  const isCheckedAdmin = (todoId, sid) => todoChecks[sid + "-" + todoId] || false;
+
+  // Auto-complete: check if rebound was submitted
+  const autoComplete = (todo) => {
+    if (!todo.auto || !studentId) return false;
+    const rd = (data.rebounds || {})[todo.autoKey] || {};
+    const ss = (rd.studentStatuses || {})[studentId] || {};
+    if (todo.autoType === "rebound" && ss.link) return true;
+    if (todo.autoType === "makeup" && ss.approved) return true;
+    return false;
   };
 
-  const toggleCheck = async (key) => {
-    if (!sid) return;
-    const sc = { ...(checks[sid] || {}) };
-    sc[key] = !sc[key];
-    const updated = { ...data, todoChecks: { ...checks, [sid]: sc } };
+  const toggleCheck = async (todoId) => {
+    const key = studentId + "-" + todoId;
+    const updated = { ...data, todoChecks: { ...(data.todoChecks || {}), [key]: !todoChecks[key] } };
     await saveData(updated); setData(updated);
   };
-  const toggleWeekly = async (itemId) => {
-    if (!sid) return;
-    const sc = { ...(checks[sid] || {}) };
-    const weekly = { ...(sc.weekly || {}) };
-    const wk = { ...(weekly[weekKey] || {}) };
-    wk[itemId] = !wk[itemId];
-    weekly[weekKey] = wk;
-    sc.weekly = weekly;
-    const updated = { ...data, todoChecks: { ...checks, [sid]: sc } };
+
+  const addTodo = async () => {
+    if (!newTitle.trim()) return;
+    const target = newTarget === "all" ? null : selectedStudents;
+    if (newTarget === "select" && selectedStudents.length === 0) return;
+    const todo = {
+      id: genId(),
+      title: newTitle.trim(),
+      due: newDue.trim() || "",
+      linkTab: newLink,
+      targetStudents: target,
+      ts: Date.now(),
+    };
+    const updated = { ...data, todos: [...todos, todo] };
     await saveData(updated); setData(updated);
+    setNewTitle(""); setNewDue(""); setNewLink(""); setNewTarget("all"); setSelectedStudents([]);
+    setAdding(false); showMsg("Added");
   };
 
-  // Custom todos
-  const addCustomTodo = async () => {
-    if (!newTodoText.trim()) return;
-    const todo = { id: genId(), text: newTodoText.trim(), target: newTodoTarget, section: newTodoSection, ts: Date.now() };
-    const updated = { ...data, customTodos: [...customTodos, todo] };
-    await saveData(updated); setData(updated);
-    setNewTodoText(""); showMsg("To-do added");
-  };
-  const removeCustomTodo = async (id) => {
-    const updated = { ...data, customTodos: customTodos.filter(t => t.id !== id) };
+  const removeTodo = async (todoId) => {
+    const updated = { ...data, todos: todos.filter(t => t.id !== todoId) };
     await saveData(updated); setData(updated); showMsg("Removed");
   };
 
-  const getStudentCustomTodos = (studentId, section) => {
-    return customTodos.filter(t => t.section === section && (t.target === "all" || t.target === studentId));
-  };
-
-  if (isGuest) {
-    return <div style={{ padding: 40, textAlign: "center", fontFamily: F }}><div style={{ ...sectionLabel, marginBottom: 8 }}>To-Do</div><div style={{ fontSize: 14, color: TEXT_SECONDARY }}>Sign in as a student to view your to-do list.</div></div>;
-  }
-
-  if (isAdmin) {
-    const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME).sort(lastSortObj);
-    return (
-      <div style={{ padding: "20px 16px 40px", fontFamily: F }}>
-        <Toast message={msg} />
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ ...sectionLabel, marginBottom: 12 }}>To-Do Overview</div>
-
-          {/* Add custom to-do */}
-          <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 8 }}>Add To-Do</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <input value={newTodoText} onChange={e => setNewTodoText(e.target.value)} placeholder="To-do item..." style={inp} />
-              <div style={{ display: "flex", gap: 6 }}>
-                <select value={newTodoTarget} onChange={e => setNewTodoTarget(e.target.value)} style={{ ...sel, flex: 1 }}>
-                  <option value="all">All students</option>
-                  {sorted.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-                <select value={newTodoSection} onChange={e => setNewTodoSection(e.target.value)} style={{ ...sel }}>
-                  <option value="setup">Get Started</option>
-                  <option value="assignments">Assignments</option>
-                  <option value="weekly">Every Week</option>
-                </select>
-                <button onClick={addCustomTodo} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "10px 16px" }}>Add</button>
-              </div>
-            </div>
-            {customTodos.length > 0 && (
-              <div style={{ marginTop: 10, borderTop: "1px solid #f3f4f6", paddingTop: 8 }}>
-                <div style={{ ...sectionLabel, marginBottom: 6 }}>Active Custom To-Dos</div>
-                {customTodos.map(t => {
-                  const targetName = t.target === "all" ? "All" : data.students.find(s => s.id === t.target)?.name?.split(" ")[0] || "?";
-                  return (
-                    <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 0", fontSize: 12 }}>
-                      <span style={{ flex: 1, color: "#374151" }}>{t.text}</span>
-                      <span style={{ color: TEXT_MUTED, fontSize: 10 }}>{targetName} / {t.section}</span>
-                      <button onClick={() => removeCustomTodo(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: RED, fontSize: 11, fontWeight: 600 }}>x</button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div style={{ ...crd, overflow: "auto" }}>
-            <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", fontFamily: F, minWidth: 700 }}>
-              <thead>
-                <tr style={{ borderBottom: "2px solid #f3f4f6" }}>
-                  <th style={{ textAlign: "left", padding: "10px 12px", color: TEXT_MUTED, fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", position: "sticky", left: 0, background: "#fff", zIndex: 2 }}>Student</th>
-                  <th style={{ textAlign: "center", padding: "10px 6px", color: TEXT_MUTED, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Photo</th>
-                  <th style={{ textAlign: "center", padding: "10px 6px", color: TEXT_MUTED, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Bio</th>
-                  {assignments.map(a => (
-                    <th key={a.id} style={{ textAlign: "center", padding: "10px 6px", color: TEXT_MUTED, fontWeight: 600, fontSize: 11, textTransform: "uppercase", maxWidth: 80 }}>{a.name.split(" ").slice(0, 2).join(" ")}</th>
-                  ))}
-                  {WEEKLY_ITEMS.map(w => (
-                    <th key={w.id} style={{ textAlign: "center", padding: "10px 6px", color: PURPLE, fontWeight: 600, fontSize: 11, textTransform: "uppercase", maxWidth: 70 }}>{w.label.split(" ").slice(0, 2).join(" ")}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map(s => {
-                  const photo = hasPhoto(s.id);
-                  const bio = hasBio(s.id);
-                  return (
-                    <tr key={s.id} style={{ borderBottom: "1px solid #f9fafb" }}>
-                      <td style={{ padding: "8px 12px", fontWeight: 600, color: TEXT_PRIMARY, fontSize: 13, whiteSpace: "nowrap", position: "sticky", left: 0, background: "#fff", zIndex: 1 }}>{s.name}</td>
-                      <td style={{ textAlign: "center", padding: "6px" }}>{photo ? <span style={{ color: GREEN, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e4e4e7", fontSize: 14 }}>-</span>}</td>
-                      <td style={{ textAlign: "center", padding: "6px" }}>{bio ? <span style={{ color: GREEN, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e4e4e7", fontSize: 14 }}>-</span>}</td>
-                      {assignments.map(a => {
-                        const done = getCheck(s.id, "assign-" + a.id);
-                        return <td key={a.id} style={{ textAlign: "center", padding: "6px" }}>{done ? <span style={{ color: GREEN, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e4e4e7", fontSize: 14 }}>-</span>}</td>;
-                      })}
-                      {WEEKLY_ITEMS.map(w => {
-                        const done = getWeeklyCheck(s.id, w.id);
-                        return <td key={w.id} style={{ textAlign: "center", padding: "6px" }}>{done ? <span style={{ color: PURPLE, fontSize: 16 }}>&#10003;</span> : <span style={{ color: "#e4e4e7", fontSize: 14 }}>-</span>}</td>;
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Student view
-  const Checkbox = ({ checked, onChange, accent }) => (
-    <button onClick={onChange} style={{
-      width: 22, height: 22, borderRadius: 6, border: "2px solid " + (checked ? (accent || GREEN) : "#d4d4d8"),
-      background: checked ? (accent || GREEN) : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s", padding: 0,
-    }}>
-      {checked && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>}
-    </button>
-  );
-
-  const setupCustom = getStudentCustomTodos(sid, "setup");
-  const assignCustom = getStudentCustomTodos(sid, "assignments");
-  const weeklyCustom = getStudentCustomTodos(sid, "weekly");
+  // Sort: unchecked first, then by due date
+  const sortedTodos = [...myTodos].sort((a, b) => {
+    const aChecked = isAdmin ? false : (isChecked(a.id) || autoComplete(a));
+    const bChecked = isAdmin ? false : (isChecked(b.id) || autoComplete(b));
+    if (aChecked !== bChecked) return aChecked ? 1 : -1;
+    if (a.dueTs && b.dueTs) return a.dueTs - b.dueTs;
+    if (a.due && b.due) return new Date(a.due + ", 2026") - new Date(b.due + ", 2026");
+    if (a.due && !b.due) return -1;
+    if (!a.due && b.due) return 1;
+    return 0;
+  });
 
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
-      <div style={{ maxWidth: 560, margin: "0 auto" }}>
-        <div style={{ ...sectionLabel, marginBottom: 12 }}>To-Do</div>
-
-        {/* Setup */}
-        <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 10 }}>Get Started</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Checkbox checked={hasPhoto(sid)} onChange={() => {}} />
-              <span style={{ fontSize: 14, color: hasPhoto(sid) ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: hasPhoto(sid) ? "line-through" : "none" }}>Add your picture</span>
-              {hasPhoto(sid) && <span style={{ fontSize: 11, color: GREEN, fontWeight: 600, marginLeft: "auto" }}>Done</span>}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Checkbox checked={hasBio(sid)} onChange={() => {}} />
-              <span style={{ fontSize: 14, color: hasBio(sid) ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: hasBio(sid) ? "line-through" : "none" }}>Update your bio</span>
-              {hasBio(sid) && <span style={{ fontSize: 11, color: GREEN, fontWeight: 600, marginLeft: "auto" }}>Done</span>}
-            </div>
-            {setupCustom.map(t => {
-              const done = getCheck(sid, "custom-" + t.id);
-              return (
-                <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Checkbox checked={done} onChange={() => toggleCheck("custom-" + t.id)} />
-                  <span style={{ fontSize: 14, color: done ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: done ? "line-through" : "none" }}>{t.text}</span>
-                </div>
-              );
-            })}
-          </div>
+      <Toast message={msg} />
+      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ ...sectionLabel }}>To-Do List</div>
+          {isAdmin && <button onClick={() => setAdding(!adding)} style={adding ? pillActive : pillInactive}>{adding ? "Cancel" : "+ Add To-Do"}</button>}
         </div>
 
-        {/* Assignments */}
-        <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 10 }}>Assignments</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {assignments.map(a => {
-              const done = getCheck(sid, "assign-" + a.id);
-              return (
-                <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Checkbox checked={done} onChange={() => toggleCheck("assign-" + a.id)} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: 14, color: done ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: done ? "line-through" : "none" }}>{a.name}</span>
-                    {a.due && <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>Due {a.due}</span>}
+        {/* Admin add to-do form */}
+        {isAdmin && adding && (
+          <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="What needs to be done?" style={{ ...inp, fontSize: 14, fontWeight: 600 }} />
+              <div style={{ display: "flex", gap: 6 }}>
+                <input value={newDue} onChange={e => setNewDue(e.target.value)} placeholder="Due date (e.g. Apr 10)" style={{ ...inp, fontSize: 13, flex: 1 }} />
+                <select value={newLink} onChange={e => setNewLink(e.target.value)} style={{ ...sel, fontSize: 13, flex: 1 }}>
+                  {tabLinks.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                <button onClick={() => { setNewTarget("all"); setSelectedStudents([]); }} style={newTarget === "all" ? pillActive : pillInactive}>All Students</button>
+                <button onClick={() => setNewTarget("select")} style={newTarget === "select" ? pillActive : pillInactive}>Select Students</button>
+              </div>
+              {newTarget === "select" && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, maxHeight: 120, overflowY: "auto", padding: 4 }}>
+                  {[...data.students].filter(s => s.name !== ADMIN_NAME && s.name !== TEST_STUDENT).sort(lastSortObj).map(s => (
+                    <button key={s.id} onClick={() => setSelectedStudents(prev => prev.includes(s.id) ? prev.filter(x => x !== s.id) : [...prev, s.id])} style={{
+                      fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, cursor: "pointer", fontFamily: F,
+                      border: "1px solid " + (selectedStudents.includes(s.id) ? ACCENT : BORDER),
+                      background: selectedStudents.includes(s.id) ? ACCENT + "15" : "transparent",
+                      color: selectedStudents.includes(s.id) ? ACCENT : TEXT_PRIMARY,
+                    }}>{s.name.split(" ")[0]}</button>
+                  ))}
+                </div>
+              )}
+              <button onClick={addTodo} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%", marginTop: 4 }}>Add To-Do</button>
+            </div>
+          </div>
+        )}
+
+        {sortedTodos.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No to-dos right now.</div>}
+
+        {sortedTodos.map(todo => {
+          const checked = !isAdmin && (isChecked(todo.id) || autoComplete(todo));
+          const isExpired = todo.dueTs && Date.now() > todo.dueTs;
+          const targetLabel = todo.targetStudents
+            ? (todo.targetStudents.length === 1 ? (data.students.find(s => s.id === todo.targetStudents[0])?.name || "1 student") : todo.targetStudents.length + " students")
+            : "All students";
+
+          return (
+            <div key={todo.id} style={{ ...crd, padding: 14, marginBottom: 6, opacity: checked ? 0.5 : 1, borderLeft: todo.auto ? "3px solid #f59e0b" : "3px solid " + ACCENT }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                {!isAdmin && (
+                  <button onClick={() => !todo.auto && toggleCheck(todo.id)} style={{
+                    width: 22, height: 22, borderRadius: 6, border: "2px solid " + (checked ? GREEN : BORDER), background: checked ? GREEN : "#fff",
+                    display: "flex", alignItems: "center", justifyContent: "center", cursor: todo.auto ? "default" : "pointer", flexShrink: 0, marginTop: 1,
+                  }}>
+                    {checked && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>}
+                  </button>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: checked ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: checked ? "line-through" : "none" }}>{todo.title}</div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+                    {todo.due && <span style={{ fontSize: 12, color: isExpired && !checked ? RED : TEXT_MUTED }}>{isExpired && !checked ? "Expired: " : "Due: "}{todo.due}</span>}
+                    {isAdmin && <span style={{ fontSize: 12, color: TEXT_MUTED }}>{targetLabel}</span>}
+                    {todo.auto && <span style={{ fontSize: 11, fontWeight: 600, color: "#d97706" }}>Auto</span>}
                   </div>
-                  {a.link && (
-                    <a href={a.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: "flex", alignItems: "center", padding: "4px 8px", borderRadius: 6, background: "#f4f4f5", color: TEXT_SECONDARY, textDecoration: "none" }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    </a>
+                </div>
+                <div style={{ display: "flex", gap: 4, alignItems: "center", flexShrink: 0 }}>
+                  {todo.linkTab && (
+                    <button onClick={() => { const ev = new CustomEvent("nav", { detail: todo.linkTab }); window.dispatchEvent(ev); }} style={{ ...pillInactive, fontSize: 11 }}>Go</button>
+                  )}
+                  {isAdmin && !todo.auto && (
+                    <button onClick={() => { if (window.confirm("Remove this to-do?")) removeTodo(todo.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>X</button>
                   )}
                 </div>
-              );
-            })}
-            {assignCustom.map(t => {
-              const done = getCheck(sid, "custom-" + t.id);
-              return (
-                <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Checkbox checked={done} onChange={() => toggleCheck("custom-" + t.id)} />
-                  <span style={{ fontSize: 14, color: done ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: done ? "line-through" : "none" }}>{t.text}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Weekly */}
-        <div style={{ ...crd, padding: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>Every Week</div>
-            <span style={{ fontSize: 11, color: PURPLE, fontWeight: 600 }}>Resets Monday</span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {WEEKLY_ITEMS.map(w => {
-              const done = getWeeklyCheck(sid, w.id);
-              return (
-                <div key={w.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Checkbox checked={done} onChange={() => toggleWeekly(w.id)} accent={PURPLE} />
-                  <span style={{ fontSize: 14, color: done ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: done ? "line-through" : "none" }}>{w.label}</span>
-                </div>
-              );
-            })}
-            {weeklyCustom.map(t => {
-              const done = getWeeklyCheck(sid, "custom-" + t.id);
-              return (
-                <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Checkbox checked={done} onChange={() => toggleWeekly("custom-" + t.id)} accent={PURPLE} />
-                  <span style={{ fontSize: 14, color: done ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: done ? "line-through" : "none" }}>{t.text}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -4693,6 +4761,13 @@ export default function Comm118() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("home");
+
+  // Listen for nav events from ToDoView "Go" buttons
+  useEffect(() => {
+    const handler = (e) => setView(e.detail);
+    window.addEventListener("nav", handler);
+    return () => window.removeEventListener("nav", handler);
+  }, []);
   const [userName, setUserName] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY + "-user"); } catch(e) { return null; }
   });
@@ -5134,19 +5209,16 @@ export default function Comm118() {
       {view === "leaderboard" && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={effectiveUserName} data={data} />}
       {view === "assignments" && !isGuest && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} setView={setView} />}
       {view === "readings" && !isGuest && <ReadingsView data={data} setData={setData} isAdmin={effectiveAdmin} />}
-      {view === "classtools" && !isGuest && <ClassTools data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
+      {view === "inclass" && !isGuest && <InClassView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "grades" && isAdmin && !studentView && !testStudent && <Gradebook data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
       {view === "pti" && isAdmin && !studentView && !testStudent && <PTIMode data={data} setData={setData} />}
-      {view === "activities" && isAdmin && !studentView && !testStudent && <GameAdmin data={data} setData={setData} />}
       {view === "boards" && !isGuest && <BoardsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "mynotes" && !isGuest && <MyNotesView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
-      {view === "survey" && !isGuest && <SurveyView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "roster" && !isGuest && <RosterCombined data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
-      {view === "answer" && !isGuest && <StudentAnswerView data={data} setData={setData} userName={effectiveUserName} />}
       {view === "accolades" && !isGuest && <Accolades data={data} />}
       {view === "admin" && isAdmin && !studentView && !testStudent && <AdminPanel data={data} setData={setData} />}
       {isGuest && view !== "leaderboard" && view !== "schedule" && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={false} userName={effectiveUserName} data={data} />}
-      {(view === "activities" || view === "admin" || view === "pti") && !isAdmin && !isGuest && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={effectiveUserName} data={data} />}
+      {(view === "admin" || view === "pti") && !isAdmin && !isGuest && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={effectiveUserName} data={data} />}
     </div>
   );
 }
