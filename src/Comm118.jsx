@@ -196,7 +196,7 @@ function Toast({ message }) { if (!message) return null; return <div style={{ po
 function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent }) {
   const tabs = [
     { id: "home", label: "Home", admin: false, guest: false },
-    { id: "todo", label: "To-Do", admin: false, guest: false },
+    { id: "todo", label: "To-Do", admin: true, guest: false },
     { id: "leaderboard", label: "Leaderboard", admin: false, guest: true },
     { id: "schedule", label: "Schedule", admin: false, guest: true },
     { id: "assignments", label: "Assignments", admin: false, guest: false },
@@ -613,6 +613,12 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
   const todoChecks = data.todoChecks || {};
   const rebounds = data.rebounds || {};
 
+  const toggleCheck = async (todoId) => {
+    const key = studentId + "-" + todoId;
+    const updated = { ...data, todoChecks: { ...(data.todoChecks || {}), [key]: !todoChecks[key] } };
+    await saveData(updated); setData(updated);
+  };
+
   // Build auto rebound to-dos
   const reboundTodos = [];
   const activityTypes = [
@@ -634,12 +640,16 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
       if (ss.approved || ss.link) return;
       const status = ss.status || "";
       if ((status === "rebound" || status === "unannounced_override") && Date.now() < deadline) {
-        reboundTodos.push({ id: "rebound-" + rKey, title: "Submit rebound: " + label + " Wk " + w, due: Math.max(0, Math.round((deadline - Date.now()) / (1000 * 60 * 60))) + "h left", linkTab: "inclass", auto: true, autoKey: rKey });
+        // Only show if student opted in
+        const optedIn = todoChecks["optin-" + rKey + "-" + studentId];
+        if (optedIn) {
+          reboundTodos.push({ id: "rebound-" + rKey, title: "Submit rebound: " + label + " Wk " + w, due: Math.max(0, Math.round((deadline - Date.now()) / (1000 * 60 * 60))) + "h left", linkTab: "inclass", auto: true });
+        }
       }
       if (status === "planned_makeup") {
         const mDeadline = scoredTs + 7 * 24 * 60 * 60 * 1000;
         if (Date.now() < mDeadline) {
-          reboundTodos.push({ id: "makeup-" + rKey, title: "Office hours makeup: " + label + " Wk " + w, due: Math.max(0, Math.round((mDeadline - Date.now()) / (1000 * 60 * 60 * 24))) + "d left", auto: true, autoKey: rKey });
+          reboundTodos.push({ id: "makeup-" + rKey, title: "Office hours makeup: " + label + " Wk " + w, due: Math.max(0, Math.round((mDeadline - Date.now()) / (1000 * 60 * 60 * 24))) + "d left", auto: true });
         }
       }
     });
@@ -651,29 +661,54 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
 
   // Filter out checked
   const unchecked = allTodos.filter(t => {
-    if (t.auto) return true; // auto todos managed by rebound status
+    if (t.auto) return true;
     return !todoChecks[studentId + "-" + t.id];
   });
+  const checked = allTodos.filter(t => !t.auto && todoChecks[studentId + "-" + t.id]);
 
-  if (unchecked.length === 0) return null;
+  if (unchecked.length === 0 && checked.length === 0) return null;
 
   return (
     <div style={{ ...crd, padding: 14, marginBottom: 12, borderLeft: "3px solid " + ACCENT }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>To-Do ({unchecked.length})</div>
-        <button onClick={() => setView("todo")} style={{ ...pillInactive, fontSize: 11 }}>View All</button>
-      </div>
-      {unchecked.slice(0, 5).map(t => (
-        <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 13, color: TEXT_PRIMARY }}>
-          <div style={{ width: 6, height: 6, borderRadius: 3, background: t.auto ? "#f59e0b" : ACCENT, flexShrink: 0 }} />
+      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>To-Do ({unchecked.length})</div>
+      {unchecked.map(t => (
+        <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #f4f4f5" }}>
+          {!t.auto && (
+            <button onClick={() => toggleCheck(t.id)} style={{
+              display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, cursor: "pointer",
+              border: "1px solid " + BORDER, background: "#fff", fontFamily: F, fontSize: 11, fontWeight: 600, color: TEXT_MUTED, flexShrink: 0,
+            }}>
+              <div style={{ width: 14, height: 14, borderRadius: 3, border: "2px solid " + BORDER, background: "#fff" }} />
+              Mark done
+            </button>
+          )}
+          {t.auto && <div style={{ width: 6, height: 6, borderRadius: 3, background: "#f59e0b", flexShrink: 0 }} />}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontWeight: 500 }}>{t.title}</span>
-            {t.due && <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>{t.due}</span>}
+            <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY }}>{t.title}</span>
+            {t.due && <span style={{ fontSize: 11, color: TEXT_SECONDARY, fontWeight: 500, marginLeft: 6 }}>{t.due}</span>}
           </div>
           {t.linkTab && <button onClick={() => setView(t.linkTab)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600 }}>Go</button>}
         </div>
       ))}
-      {unchecked.length > 5 && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>+{unchecked.length - 5} more</div>}
+      {checked.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>Completed</div>
+          {checked.map(t => (
+            <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", opacity: 0.5 }}>
+              <button onClick={() => toggleCheck(t.id)} style={{
+                display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, cursor: "pointer",
+                border: "1px solid " + GREEN, background: GREEN + "10", fontFamily: F, fontSize: 11, fontWeight: 600, color: GREEN, flexShrink: 0,
+              }}>
+                <div style={{ width: 14, height: 14, borderRadius: 3, border: "2px solid " + GREEN, background: GREEN, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+                </div>
+                Done
+              </button>
+              <span style={{ fontSize: 13, color: TEXT_MUTED, textDecoration: "line-through" }}>{t.title}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -685,6 +720,7 @@ function HomeReboundBox({ data, setData, studentId }) {
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
   const rebounds = data.rebounds || {};
+  const todoChecks = data.todoChecks || {};
   const pendingItems = [];
   const activityTypes = [
     { type: "game", store: "weeklyGames", label: "Weekly Game", max: 100 },
@@ -726,18 +762,19 @@ function HomeReboundBox({ data, setData, studentId }) {
       }
 
       const targetPercent = gradePercent < 50 ? 60 : gradePercent <= 65 ? 70 : gradePercent <= 79 ? 80 : null;
+      const optedIn = todoChecks["optin-" + rKey + "-" + studentId];
 
       if (status === "planned_makeup" && Date.now() < makeupDeadline) {
-        pendingItems.push({ rKey, status, label: label + " Wk " + w, daysLeft: Math.max(0, Math.round((makeupDeadline - Date.now()) / (1000 * 60 * 60 * 24))) });
+        pendingItems.push({ rKey, status, label: label + " Wk " + w, daysLeft: Math.max(0, Math.round((makeupDeadline - Date.now()) / (1000 * 60 * 60 * 24))), type, week: w });
       }
       if ((status === "rebound" || status === "unannounced_override") && Date.now() < reboundDeadline && !ss.link) {
-        pendingItems.push({ rKey, status, label: label + " Wk " + w, gradePercent, targetPercent, hoursLeft: Math.max(0, Math.round((reboundDeadline - Date.now()) / (1000 * 60 * 60))) });
+        pendingItems.push({ rKey, status, label: label + " Wk " + w, gradePercent, targetPercent, hoursLeft: Math.max(0, Math.round((reboundDeadline - Date.now()) / (1000 * 60 * 60))), optedIn, type, week: w });
       }
       if ((status === "rebound" || status === "unannounced_override") && ss.link && !ss.approved) {
-        pendingItems.push({ rKey, status: "submitted", label: label + " Wk " + w });
+        pendingItems.push({ rKey, status: "submitted", label: label + " Wk " + w, type, week: w });
       }
       if (status === "unannounced") {
-        pendingItems.push({ rKey, status, label: label + " Wk " + w });
+        pendingItems.push({ rKey, status, label: label + " Wk " + w, type, week: w });
       }
     });
   });
@@ -755,6 +792,12 @@ function HomeReboundBox({ data, setData, studentId }) {
     showMsg("Submitted! Your instructor will review.");
   };
 
+  const optIn = async (rKey) => {
+    const key = "optin-" + rKey + "-" + studentId;
+    const updated = { ...data, todoChecks: { ...todoChecks, [key]: true } };
+    await saveData(updated); setData(updated);
+  };
+
   return (
     <div style={{ marginBottom: 16 }}>
       {msg && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "#111", color: "#fff", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, zIndex: 999 }}>{msg}</div>}
@@ -766,27 +809,38 @@ function HomeReboundBox({ data, setData, studentId }) {
           : { bg: "#fffbeb", border: "#f59e0b", color: "#92400e" };
         return (
           <div key={i} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: "4px solid " + sc.border, background: sc.bg }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: sc.color, marginBottom: 4 }}>
-              {item.status === "planned_makeup" ? "Planned Makeup" : item.status === "unannounced" ? "Makeup Unavailable" : item.status === "submitted" ? "Rebound Submitted" : "Rebound Available"}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: sc.color }}>
+                  {item.status === "planned_makeup" ? "Planned Makeup" : item.status === "unannounced" ? "Makeup Unavailable" : item.status === "submitted" ? "Rebound Submitted" : "Rebound Available"}
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, marginTop: 2 }}>{item.label}</div>
+              </div>
+              {isRebound && !item.optedIn && (
+                <button onClick={() => optIn(item.rKey)} style={{ ...pill, background: "#f59e0b", color: "#fff", fontSize: 11, flexShrink: 0 }}>Add to my to-do list</button>
+              )}
             </div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 4 }}>{item.label}</div>
 
             {isRebound && (
-              <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, marginBottom: 8 }}>
+              <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, marginTop: 6, marginBottom: 8 }}>
                 You earned a <strong>{item.gradePercent}%</strong>. I want you to get a strong grade in this class, so for this assignment, you can earn up to <strong>{item.targetPercent}%</strong> by submitting a video of you explaining the material with a friend or family member. Look at the questions you got incorrect, understand them better, and then explain the concept or situation to a friend. Please do this for all the incorrect questions.
                 {"\n\n"}These points count for <strong>your grade only</strong>, not the in-class leaderboard. You have <strong>{item.hoursLeft} hours</strong> left to submit.
               </div>
             )}
+
             {isRebound && (
-              <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-                <input value={links[item.rKey] || ""} onChange={e => setLinks(prev => ({ ...prev, [item.rKey]: e.target.value }))} placeholder="Paste your video link here..." style={{ ...inp, flex: 1, fontSize: 13 }} />
-                <button onClick={() => submitLink(item.rKey)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Submit</button>
+              <div style={{ marginBottom: 6 }}>
+                <button onClick={() => { const ev = new CustomEvent("nav", { detail: "inclass" }); window.dispatchEvent(ev); }} style={{ fontSize: 12, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600, padding: 0, marginBottom: 8, display: "block" }}>View your answers and the correct answers</button>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input value={links[item.rKey] || ""} onChange={e => setLinks(prev => ({ ...prev, [item.rKey]: e.target.value }))} placeholder="Paste your video link here..." style={{ ...inp, flex: 1, fontSize: 13 }} />
+                  <button onClick={() => submitLink(item.rKey)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Submit</button>
+                </div>
               </div>
             )}
 
             {item.status === "submitted" && <div style={{ fontSize: 13, color: GREEN, fontWeight: 600 }}>Your rebound video has been submitted. Waiting for instructor review.</div>}
-            {item.status === "planned_makeup" && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>Come to office hours to retake this activity. You have <strong>{item.daysLeft} days</strong> remaining. Full points available for both leaderboard and grade.</div>}
-            {item.status === "unannounced" && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>Your absence was unannounced. Contact your instructor if you believe this is an error.</div>}
+            {item.status === "planned_makeup" && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, marginTop: 4 }}>Come to office hours to retake this activity. You have <strong>{item.daysLeft} days</strong> remaining. Full points available for both leaderboard and grade.</div>}
+            {item.status === "unannounced" && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, marginTop: 4 }}>Your absence was unannounced. Contact your instructor if you believe this is an error.</div>}
 
             <button onClick={() => setShowPolicy(!showPolicy)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600, padding: 0, marginTop: 6 }}>{showPolicy ? "Hide Policy" : "View Rebound Policy"}</button>
             {showPolicy && <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap", padding: 10, background: "rgba(255,255,255,0.7)", borderRadius: 8, marginTop: 6, border: "1px solid " + BORDER }}>{REBOUND_POLICY}</div>}
@@ -924,7 +978,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.45 }}>{item.text}</div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 2 }}>
-                      <span style={{ fontSize: 11, color: TEXT_MUTED }}>{new Date(item.ts).toLocaleDateString()}</span>
+                      <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{new Date(item.ts).toLocaleDateString()}</span>
                       {matchedAssignment && matchedAssignment.completed && <span style={{ fontSize: 11, fontWeight: 700, color: GREEN }}>You've completed this</span>}
                     </div>
                   </div>
@@ -1094,7 +1148,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
                         {isAdmin && <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>to {recipientLabel}</span>}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 11, color: TEXT_MUTED }}>{new Date(msgItem.ts).toLocaleDateString()}</span>
+                        <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{new Date(msgItem.ts).toLocaleDateString()}</span>
                         {msgItem.edited && <span style={{ fontSize: 10, color: TEXT_MUTED, fontStyle: "italic" }}>edited</span>}
                       </div>
                     </div>
@@ -1118,7 +1172,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
                             <div>
                               <span style={{ fontWeight: 700, color: r.from === ADMIN_NAME ? ACCENT : TEXT_PRIMARY }}>{r.from.split(" ")[0]}:</span>
                               <span style={{ color: TEXT_PRIMARY, marginLeft: 4 }}>{r.text}</span>
-                              <span style={{ fontSize: 10, color: TEXT_MUTED, marginLeft: 6 }}>{new Date(r.ts).toLocaleDateString()}</span>
+                              <span style={{ fontSize: 10, color: TEXT_SECONDARY, marginLeft: 6 }}>{new Date(r.ts).toLocaleDateString()}</span>
                             </div>
                             {(isAdmin || r.from === userName) && <button onClick={() => deleteReply(msgItem.id, ri)} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 11, flexShrink: 0 }}>x</button>}
                           </div>
@@ -1271,7 +1325,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
               </button>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 500, color: a.completed ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: a.completed ? "line-through" : "none" }}>{a.name}</div>
-                {a.due && <div style={{ fontSize: 11, color: TEXT_MUTED }}>{a.due}</div>}
+                {a.due && <div style={{ fontSize: 11, color: TEXT_SECONDARY, fontWeight: 500 }}>{a.due}</div>}
               </div>
               <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>{a.weight}%</span>
             </div>
@@ -1600,7 +1654,7 @@ function ScheduleView({ data, setData, isAdmin }) {
                 ) : (
                   <div style={{ flex: 1, cursor: isAdmin ? "pointer" : "default" }} onClick={() => isAdmin && setEditWeek(wi)}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.25 }}>{week.label}{week.theme ? " — " + week.theme : ""}</div>
-                    <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{days.map(d => d.date).join("  /  ")}</div>
+                    <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>{days.map(d => d.date).join("  /  ")}</div>
                   </div>
                 )}
                 {isAdmin && <button onClick={toggleHidden} style={{ ...pill, background: isHidden ? "#fef2f2" : "#ecfdf5", color: isHidden ? RED : GREEN, fontSize: 11, padding: "4px 10px" }}>{isHidden ? "Hidden" : "Visible"}</button>}
@@ -2289,7 +2343,7 @@ function AdminPanel({ data, setData }) {
         <div style={{ ...crd, padding: 16 }}>
           <div style={{ ...sectionLabel, marginBottom: 14 }}>Recent</div>
           {recent.length === 0 && <div style={{ color: TEXT_MUTED, textAlign: "center", padding: 20 }}>No points yet</div>}
-          {recent.map(e => { const s = data.students.find(x => x.id === e.studentId); return (<div key={e.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid " + BORDER, fontSize: 13 }}><div><span style={{ color: TEXT_PRIMARY, fontWeight: 500 }}>{s?.name || "?"}</span><span style={{ color: TEXT_MUTED, marginLeft: 8 }}>{e.source}</span></div><div style={{ display: "flex", gap: 12, alignItems: "center" }}><span style={{ color: e.amount >= 0 ? GREEN : RED, fontWeight: 600 }}>{e.amount > 0 ? "+" : ""}{e.amount}</span><span style={{ color: TEXT_MUTED, fontSize: 11 }}>{new Date(e.ts).toLocaleDateString()}</span></div></div>); })}
+          {recent.map(e => { const s = data.students.find(x => x.id === e.studentId); return (<div key={e.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid " + BORDER, fontSize: 13 }}><div><span style={{ color: TEXT_PRIMARY, fontWeight: 500 }}>{s?.name || "?"}</span><span style={{ color: TEXT_MUTED, marginLeft: 8 }}>{e.source}</span></div><div style={{ display: "flex", gap: 12, alignItems: "center" }}><span style={{ color: e.amount >= 0 ? GREEN : RED, fontWeight: 600 }}>{e.amount > 0 ? "+" : ""}{e.amount}</span><span style={{ color: TEXT_SECONDARY, fontSize: 11 }}>{new Date(e.ts).toLocaleDateString()}</span></div></div>); })}
         </div>
       )}
 
@@ -3397,7 +3451,7 @@ function MyNotesView({ data, setData, isAdmin, userName }) {
           {notes.entries.map(entry => (
             <div key={entry.id} style={{ ...crd, padding: 14, marginBottom: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <span style={{ fontSize: 11, color: TEXT_MUTED }}>{new Date(entry.ts).toLocaleDateString()}</span>
+                <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{new Date(entry.ts).toLocaleDateString()}</span>
                 <button onClick={() => { if (window.confirm("Delete this note?")) deleteNote(viewingStudent, entry.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 12 }}>x</button>
               </div>
               <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{entry.text}</div>
@@ -3434,7 +3488,7 @@ function MyNotesView({ data, setData, isAdmin, userName }) {
         {myNotes.entries.map(entry => (
           <div key={entry.id} style={{ ...crd, padding: 14, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <span style={{ fontSize: 11, color: TEXT_MUTED }}>{new Date(entry.ts).toLocaleDateString()}</span>
+              <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{new Date(entry.ts).toLocaleDateString()}</span>
               <button onClick={() => { if (window.confirm("Delete this note?")) deleteNote(userName, entry.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 12 }}>x</button>
             </div>
             <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{entry.text}</div>
@@ -3615,7 +3669,7 @@ function BoardsView({ data, setData, isAdmin, userName }) {
             <div key={name} style={{ ...crd, padding: 14, marginBottom: 8, border: name === userName ? "2px solid " + ACCENT : "1px solid " + BORDER }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{name}{name === userName ? " (you)" : ""}</span>
-                <span style={{ fontSize: 11, color: TEXT_MUTED }}>{new Date(post.ts).toLocaleDateString()}</span>
+                <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{new Date(post.ts).toLocaleDateString()}</span>
               </div>
               <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{linkify(post.text)}</div>
               {post.featured && <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, color: "#d97706", background: "#fffbeb", padding: "2px 8px", borderRadius: 6, marginTop: 6 }}>Featured</div>}
@@ -4527,19 +4581,16 @@ function ToDoView({ data, setData, userName, isAdmin }) {
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const [adding, setAdding] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newDue, setNewDue] = useState("");
-  const [newLink, setNewLink] = useState("");
-  const [newTarget, setNewTarget] = useState("all");
+  const [editId, setEditId] = useState(null);
+  const [form, setForm] = useState({ title: "", due: "", linkTab: "", target: "all" });
   const [selectedStudents, setSelectedStudents] = useState([]);
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
 
-  const student = data.students.find(s => s.name === userName);
-  const studentId = student?.id;
   const todos = data.todos || [];
-  const todoChecks = data.todoChecks || {};
 
   const tabLinks = [
-    { id: "", label: "None" },
+    { id: "", label: "No link" },
     { id: "home", label: "Home" },
     { id: "assignments", label: "Assignments" },
     { id: "readings", label: "Readings" },
@@ -4550,12 +4601,93 @@ function ToDoView({ data, setData, userName, isAdmin }) {
     { id: "roster", label: "Roster" },
   ];
 
-  // Build auto rebound to-dos from data.rebounds
+  const startAdd = () => {
+    setForm({ title: "", due: "", linkTab: "", target: "all" });
+    setSelectedStudents([]);
+    setAdding(true); setEditId(null);
+  };
+
+  const startEdit = (todo) => {
+    setForm({ title: todo.title, due: todo.due || "", linkTab: todo.linkTab || "", target: todo.targetStudents ? "select" : "all" });
+    setSelectedStudents(todo.targetStudents || []);
+    setEditId(todo.id); setAdding(false);
+  };
+
+  const saveTodo = async () => {
+    if (!form.title.trim()) return;
+    const target = form.target === "all" ? null : selectedStudents;
+    if (form.target === "select" && selectedStudents.length === 0) return;
+
+    if (editId) {
+      const updated = { ...data, todos: todos.map(t => t.id === editId ? { ...t, title: form.title.trim(), due: form.due.trim(), linkTab: form.linkTab, targetStudents: target } : t) };
+      await saveData(updated); setData(updated);
+      setEditId(null); showMsg("Updated");
+    } else {
+      const todo = { id: genId(), title: form.title.trim(), due: form.due.trim(), linkTab: form.linkTab, targetStudents: target, ts: Date.now() };
+      const updated = { ...data, todos: [...todos, todo] };
+      await saveData(updated); setData(updated);
+      setAdding(false); showMsg("Added");
+    }
+    setForm({ title: "", due: "", linkTab: "", target: "all" }); setSelectedStudents([]);
+  };
+
+  const removeTodo = async (todoId) => {
+    const updated = { ...data, todos: todos.filter(t => t.id !== todoId) };
+    await saveData(updated); setData(updated); showMsg("Removed");
+  };
+
+  const handleDragStart = (idx) => setDragIdx(idx);
+  const handleDragOver = (e, idx) => { e.preventDefault(); setDragOverIdx(idx); };
+  const handleDrop = async (idx) => {
+    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setDragOverIdx(null); return; }
+    const newTodos = [...todos];
+    const [moved] = newTodos.splice(dragIdx, 1);
+    newTodos.splice(idx, 0, moved);
+    const updated = { ...data, todos: newTodos };
+    await saveData(updated); setData(updated);
+    setDragIdx(null); setDragOverIdx(null);
+  };
+
+  const renderForm = () => (
+    <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="What needs to be done?" style={{ ...inp, fontSize: 14, fontWeight: 600 }} />
+        <div style={{ display: "flex", gap: 6 }}>
+          <input value={form.due} onChange={e => setForm({ ...form, due: e.target.value })} placeholder="Due date (e.g. Apr 10)" style={{ ...inp, fontSize: 13, flex: 1 }} />
+          <select value={form.linkTab} onChange={e => setForm({ ...form, linkTab: e.target.value })} style={{ ...sel, fontSize: 13, flex: 1 }}>
+            {tabLinks.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+          </select>
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          <button onClick={() => setForm({ ...form, target: "all" })} style={form.target === "all" ? pillActive : pillInactive}>All Students</button>
+          <button onClick={() => setForm({ ...form, target: "select" })} style={form.target === "select" ? pillActive : pillInactive}>Select Students</button>
+        </div>
+        {form.target === "select" && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, maxHeight: 120, overflowY: "auto", padding: 4 }}>
+            {[...data.students].filter(s => s.name !== ADMIN_NAME && s.name !== TEST_STUDENT).sort(lastSortObj).map(s => (
+              <button key={s.id} onClick={() => setSelectedStudents(prev => prev.includes(s.id) ? prev.filter(x => x !== s.id) : [...prev, s.id])} style={{
+                fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, cursor: "pointer", fontFamily: F,
+                border: "1px solid " + (selectedStudents.includes(s.id) ? ACCENT : BORDER),
+                background: selectedStudents.includes(s.id) ? ACCENT + "15" : "transparent",
+                color: selectedStudents.includes(s.id) ? ACCENT : TEXT_PRIMARY,
+              }}>{s.name.split(" ")[0]}</button>
+            ))}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={saveTodo} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>{editId ? "Save Changes" : "Add To-Do"}</button>
+          <button onClick={() => { setAdding(false); setEditId(null); setForm({ title: "", due: "", linkTab: "", target: "all" }); }} style={pillInactive}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Auto rebound/makeup todos for admin view
   const reboundTodos = [];
   const activityTypes = [
-    { type: "game", store: "weeklyGames", label: "Weekly Game", max: 100 },
-    { type: "tot", store: "weeklyToT", label: "This or That", max: 20 },
-    { type: "fishbowl", store: "weeklyFishbowl", label: "Fishbowl", max: 20 },
+    { type: "game", store: "weeklyGames", label: "Weekly Game" },
+    { type: "tot", store: "weeklyToT", label: "This or That" },
+    { type: "fishbowl", store: "weeklyFishbowl", label: "Fishbowl" },
   ];
   activityTypes.forEach(({ type, store, label }) => {
     const activities = data[store] || {};
@@ -4566,109 +4698,23 @@ function ToDoView({ data, setData, userName, isAdmin }) {
       const rKey = type + "-" + w;
       const rd = (data.rebounds || {})[rKey] || {};
       const scoredTs = rd.scoredTs || 0;
-      const reboundDeadline = scoredTs + 48 * 60 * 60 * 1000;
-      const makeupDeadline = scoredTs + 7 * 24 * 60 * 60 * 1000;
-      const allStatuses = rd.studentStatuses || {};
-
-      Object.entries(allStatuses).forEach(([sid, ss]) => {
+      Object.entries(rd.studentStatuses || {}).forEach(([sid, ss]) => {
         if (ss.approved) return;
         const status = ss.status || "";
         if (status === "rebound" || status === "unannounced_override") {
-          if (Date.now() > reboundDeadline) return;
-          if (ss.link) return; // already submitted
-          reboundTodos.push({
-            id: "rebound-" + rKey + "-" + sid,
-            title: "Submit rebound video: " + label + " Wk " + w,
-            due: new Date(reboundDeadline).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-            dueTs: reboundDeadline,
-            targetStudents: [sid],
-            linkTab: "inclass",
-            auto: true,
-            autoType: "rebound",
-            autoKey: rKey,
-          });
+          const deadline = scoredTs + 48 * 60 * 60 * 1000;
+          if (Date.now() > deadline) return;
+          const sName = data.students.find(s => s.id === sid)?.name || sid;
+          reboundTodos.push({ id: "r-" + rKey + "-" + sid, title: "Rebound: " + label + " Wk " + w + " (" + sName.split(" ")[0] + ")", due: Math.max(0, Math.round((deadline - Date.now()) / (1000 * 60 * 60))) + "h left", submitted: !!ss.link });
         }
         if (status === "planned_makeup") {
-          if (Date.now() > makeupDeadline) return;
-          reboundTodos.push({
-            id: "makeup-" + rKey + "-" + sid,
-            title: "Retake at office hours: " + label + " Wk " + w,
-            due: new Date(makeupDeadline).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-            dueTs: makeupDeadline,
-            targetStudents: [sid],
-            linkTab: "",
-            auto: true,
-            autoType: "makeup",
-            autoKey: rKey,
-          });
+          const mDeadline = scoredTs + 7 * 24 * 60 * 60 * 1000;
+          if (Date.now() > mDeadline) return;
+          const sName = data.students.find(s => s.id === sid)?.name || sid;
+          reboundTodos.push({ id: "m-" + rKey + "-" + sid, title: "Makeup: " + label + " Wk " + w + " (" + sName.split(" ")[0] + ")", due: Math.max(0, Math.round((mDeadline - Date.now()) / (1000 * 60 * 60 * 24))) + "d left" });
         }
       });
     });
-  });
-
-  // Combine manual + auto todos
-  const allTodos = [...todos, ...reboundTodos];
-
-  // Filter for current student
-  const myTodos = isAdmin ? allTodos : allTodos.filter(t => {
-    if (t.targetStudents && !t.targetStudents.includes(studentId)) return false;
-    if (!t.targetStudents) return true; // "all" target
-    return true;
-  });
-
-  // Check if a todo is completed
-  const isChecked = (todoId) => todoChecks[studentId + "-" + todoId] || false;
-  const isCheckedAdmin = (todoId, sid) => todoChecks[sid + "-" + todoId] || false;
-
-  // Auto-complete: check if rebound was submitted
-  const autoComplete = (todo) => {
-    if (!todo.auto || !studentId) return false;
-    const rd = (data.rebounds || {})[todo.autoKey] || {};
-    const ss = (rd.studentStatuses || {})[studentId] || {};
-    if (todo.autoType === "rebound" && ss.link) return true;
-    if (todo.autoType === "makeup" && ss.approved) return true;
-    return false;
-  };
-
-  const toggleCheck = async (todoId) => {
-    const key = studentId + "-" + todoId;
-    const updated = { ...data, todoChecks: { ...(data.todoChecks || {}), [key]: !todoChecks[key] } };
-    await saveData(updated); setData(updated);
-  };
-
-  const addTodo = async () => {
-    if (!newTitle.trim()) return;
-    const target = newTarget === "all" ? null : selectedStudents;
-    if (newTarget === "select" && selectedStudents.length === 0) return;
-    const todo = {
-      id: genId(),
-      title: newTitle.trim(),
-      due: newDue.trim() || "",
-      linkTab: newLink,
-      targetStudents: target,
-      ts: Date.now(),
-    };
-    const updated = { ...data, todos: [...todos, todo] };
-    await saveData(updated); setData(updated);
-    setNewTitle(""); setNewDue(""); setNewLink(""); setNewTarget("all"); setSelectedStudents([]);
-    setAdding(false); showMsg("Added");
-  };
-
-  const removeTodo = async (todoId) => {
-    const updated = { ...data, todos: todos.filter(t => t.id !== todoId) };
-    await saveData(updated); setData(updated); showMsg("Removed");
-  };
-
-  // Sort: unchecked first, then by due date
-  const sortedTodos = [...myTodos].sort((a, b) => {
-    const aChecked = isAdmin ? false : (isChecked(a.id) || autoComplete(a));
-    const bChecked = isAdmin ? false : (isChecked(b.id) || autoComplete(b));
-    if (aChecked !== bChecked) return aChecked ? 1 : -1;
-    if (a.dueTs && b.dueTs) return a.dueTs - b.dueTs;
-    if (a.due && b.due) return new Date(a.due + ", 2026") - new Date(b.due + ", 2026");
-    if (a.due && !b.due) return -1;
-    if (!a.due && b.due) return 1;
-    return 0;
   });
 
   return (
@@ -4676,82 +4722,73 @@ function ToDoView({ data, setData, userName, isAdmin }) {
       <Toast message={msg} />
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div style={{ ...sectionLabel }}>To-Do List</div>
-          {isAdmin && <button onClick={() => setAdding(!adding)} style={adding ? pillActive : pillInactive}>{adding ? "Cancel" : "+ Add To-Do"}</button>}
+          <div style={{ ...sectionLabel }}>To-Do Manager</div>
+          <button onClick={startAdd} style={adding ? pillActive : pillInactive}>{adding ? "Cancel" : "+ Add To-Do"}</button>
         </div>
 
-        {/* Admin add to-do form */}
-        {isAdmin && adding && (
-          <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="What needs to be done?" style={{ ...inp, fontSize: 14, fontWeight: 600 }} />
-              <div style={{ display: "flex", gap: 6 }}>
-                <input value={newDue} onChange={e => setNewDue(e.target.value)} placeholder="Due date (e.g. Apr 10)" style={{ ...inp, fontSize: 13, flex: 1 }} />
-                <select value={newLink} onChange={e => setNewLink(e.target.value)} style={{ ...sel, fontSize: 13, flex: 1 }}>
-                  {tabLinks.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-                </select>
-              </div>
-              <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-                <button onClick={() => { setNewTarget("all"); setSelectedStudents([]); }} style={newTarget === "all" ? pillActive : pillInactive}>All Students</button>
-                <button onClick={() => setNewTarget("select")} style={newTarget === "select" ? pillActive : pillInactive}>Select Students</button>
-              </div>
-              {newTarget === "select" && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, maxHeight: 120, overflowY: "auto", padding: 4 }}>
-                  {[...data.students].filter(s => s.name !== ADMIN_NAME && s.name !== TEST_STUDENT).sort(lastSortObj).map(s => (
-                    <button key={s.id} onClick={() => setSelectedStudents(prev => prev.includes(s.id) ? prev.filter(x => x !== s.id) : [...prev, s.id])} style={{
-                      fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, cursor: "pointer", fontFamily: F,
-                      border: "1px solid " + (selectedStudents.includes(s.id) ? ACCENT : BORDER),
-                      background: selectedStudents.includes(s.id) ? ACCENT + "15" : "transparent",
-                      color: selectedStudents.includes(s.id) ? ACCENT : TEXT_PRIMARY,
-                    }}>{s.name.split(" ")[0]}</button>
-                  ))}
+        {(adding || editId) && renderForm()}
+
+        {reboundTodos.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#d97706", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Auto-generated</div>
+            {reboundTodos.map(t => (
+              <div key={t.id} style={{ ...crd, padding: 12, marginBottom: 4, borderLeft: "3px solid #f59e0b", opacity: t.submitted ? 0.5 : 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY }}>{t.title}</span>
+                    {t.submitted && <span style={{ fontSize: 11, color: GREEN, fontWeight: 600, marginLeft: 6 }}>Submitted</span>}
+                  </div>
+                  <span style={{ fontSize: 12, color: TEXT_SECONDARY, fontWeight: 500 }}>{t.due}</span>
                 </div>
-              )}
-              <button onClick={addTodo} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%", marginTop: 4 }}>Add To-Do</button>
-            </div>
+              </div>
+            ))}
           </div>
         )}
 
-        {sortedTodos.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No to-dos right now.</div>}
-
-        {sortedTodos.map(todo => {
-          const checked = !isAdmin && (isChecked(todo.id) || autoComplete(todo));
-          const isExpired = todo.dueTs && Date.now() > todo.dueTs;
-          const targetLabel = todo.targetStudents
-            ? (todo.targetStudents.length === 1 ? (data.students.find(s => s.id === todo.targetStudents[0])?.name || "1 student") : todo.targetStudents.length + " students")
-            : "All students";
-
-          return (
-            <div key={todo.id} style={{ ...crd, padding: 14, marginBottom: 6, opacity: checked ? 0.5 : 1, borderLeft: todo.auto ? "3px solid #f59e0b" : "3px solid " + ACCENT }}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                {!isAdmin && (
-                  <button onClick={() => !todo.auto && toggleCheck(todo.id)} style={{
-                    width: 22, height: 22, borderRadius: 6, border: "2px solid " + (checked ? GREEN : BORDER), background: checked ? GREEN : "#fff",
-                    display: "flex", alignItems: "center", justifyContent: "center", cursor: todo.auto ? "default" : "pointer", flexShrink: 0, marginTop: 1,
-                  }}>
-                    {checked && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>}
-                  </button>
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: checked ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: checked ? "line-through" : "none" }}>{todo.title}</div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-                    {todo.due && <span style={{ fontSize: 12, color: isExpired && !checked ? RED : TEXT_MUTED }}>{isExpired && !checked ? "Expired: " : "Due: "}{todo.due}</span>}
-                    {isAdmin && <span style={{ fontSize: 12, color: TEXT_MUTED }}>{targetLabel}</span>}
-                    {todo.auto && <span style={{ fontSize: 11, fontWeight: 600, color: "#d97706" }}>Auto</span>}
+        {todos.length > 0 && (
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Your To-Dos (drag to reorder)</div>
+            {todos.map((todo, idx) => {
+              const targetLabel = todo.targetStudents
+                ? (todo.targetStudents.length === 1 ? (data.students.find(s => s.id === todo.targetStudents[0])?.name || "1 student") : todo.targetStudents.length + " students")
+                : "All students";
+              const isDragOver = dragOverIdx === idx;
+              return (
+                <div key={todo.id}
+                  draggable
+                  onDragStart={() => handleDragStart(idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDrop={() => handleDrop(idx)}
+                  onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
+                  style={{
+                    ...crd, padding: 12, marginBottom: 4, borderLeft: "3px solid " + ACCENT, cursor: "grab",
+                    borderTop: isDragOver ? "2px solid " + ACCENT : undefined,
+                    opacity: dragIdx === idx ? 0.4 : 1,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{todo.title}</div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+                        {todo.due && <span style={{ fontSize: 12, color: TEXT_SECONDARY, fontWeight: 500 }}>Due: {todo.due}</span>}
+                        <span style={{ fontSize: 12, color: TEXT_MUTED }}>{targetLabel}</span>
+                        {todo.linkTab && <span style={{ fontSize: 11, color: ACCENT, fontWeight: 500 }}>{tabLinks.find(t => t.id === todo.linkTab)?.label || todo.linkTab}</span>}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                      <button onClick={() => startEdit(todo)} style={{ ...pillInactive, fontSize: 11 }}>Edit</button>
+                      <button onClick={() => { if (window.confirm("Remove?")) removeTodo(todo.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>X</button>
+                    </div>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 4, alignItems: "center", flexShrink: 0 }}>
-                  {todo.linkTab && (
-                    <button onClick={() => { const ev = new CustomEvent("nav", { detail: todo.linkTab }); window.dispatchEvent(ev); }} style={{ ...pillInactive, fontSize: 11 }}>Go</button>
-                  )}
-                  {isAdmin && !todo.auto && (
-                    <button onClick={() => { if (window.confirm("Remove this to-do?")) removeTodo(todo.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>X</button>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        )}
+
+        {todos.length === 0 && reboundTodos.length === 0 && !adding && (
+          <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No to-dos yet. Click "+ Add To-Do" to create one.</div>
+        )}
       </div>
     </div>
   );

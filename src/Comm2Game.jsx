@@ -23,6 +23,7 @@ const GAME_CATS = [
   { id: "general", label: "General" },
 ];
 const GAME_PTS = 10;
+const GAME_GRADE_PTS = { on_topic: 10, general: 10 };
 const OPT_COLORS = [
   { bg: "#dc2626", light: "#fef2f2" },
   { bg: "#2563eb", light: "#eff6ff" },
@@ -974,30 +975,58 @@ export function Accolades({ data }) {
     </div>
   );
 }
-/* ─── REBOUND SYSTEM ─── */
+/* ─── REBOUND / MAKEUP SYSTEM ─── */
+
+const REBOUND_TIERS = [
+  { max: 50, target: 60, label: "Under 50% -> can reach 60%" },
+  { max: 65, target: 70, label: "50-65% -> can reach 70%" },
+  { max: 79, target: 80, label: "66-79% -> can reach 80%" },
+];
+
+function getReboundTarget(gradePercent) {
+  if (gradePercent < 50) return 60;
+  if (gradePercent <= 65) return 70;
+  if (gradePercent <= 79) return 80;
+  return null;
+}
+
+const STATUS_COLORS = {
+  present: { bg: "#fff", border: "#e5e5e4", label: "Present", color: TEXT_PRIMARY },
+  rebound: { bg: "#fffbeb", border: "#f59e0b", label: "Rebound", color: "#92400e" },
+  planned_makeup: { bg: "#ecfdf5", border: "#10b981", label: "Planned Makeup", color: "#065f46" },
+  unannounced: { bg: "#fef2f2", border: "#ef4444", label: "Unannounced Absence", color: "#991b1b" },
+  unannounced_override: { bg: "#fff7ed", border: "#f97316", label: "Unannounced (Override)", color: "#9a3412" },
+};
+
 export function ReboundPanel({ data, setData, activityType, week, isAdmin, userName }) {
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const [reboundLink, setReboundLink] = useState("");
+  const [showPolicy, setShowPolicy] = useState(false);
 
   const rebounds = data.rebounds || {};
   const reboundKey = activityType + "-" + week;
   const reboundData = rebounds[reboundKey] || {};
-  const students = data.students.filter(s => s.name !== "Andrew Ishak");
+  const statuses = reboundData.studentStatuses || {};
+  const students = data.students.filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis");
   const sorted = [...students].sort(lastSortObj);
   const student = data.students.find(s => s.name === userName);
   const sid = student?.id;
 
-  // Calculate scores based on activity type
+  const maxPts = activityType === "game" ? 100 : 20;
+
   const getStudentScore = (s) => {
     if (activityType === "game") {
       const game = (data.weeklyGames || {})[week];
       if (!game?.scored) return null;
-      let pts = 0;
-      for (let q = 0; q < 10; q++) {
-        if (game.responses?.[s.id + "-" + q] === game.questions[q].correct) pts += GAME_PTS;
+      let gamePts = 0, gradePts = 0;
+      for (let q = 0; q < (game.questions || []).length; q++) {
+        if (game.responses?.[s.id + "-" + q] === game.questions[q].correct) {
+          gamePts += GAME_PTS;
+          gradePts += GAME_GRADE_PTS[game.questions[q].category] || 0;
+        }
       }
-      return { score: pts, max: 100, responded: Object.keys(game.responses || {}).some(k => k.startsWith(s.id)) };
+      return { gamePts, gradePts, gradePercent: Math.round(gradePts / 100 * 100), responded: Object.keys(game.responses || {}).some(k => k.startsWith(s.id)) };
     }
     if (activityType === "tot") {
       const tot = (data.weeklyToT || {})[week] || (data.weeklyToT || {})[String(week)];
@@ -1007,39 +1036,35 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
       tot.questions.forEach((q, qi) => {
         if (tot.responses?.[s.id + "-" + qi] === q.correct) pts += ptsEach;
       });
-      return { score: Math.round(pts * 10) / 10, max: 20, responded: Object.keys(tot.responses || {}).some(k => k.startsWith(s.id)) };
+      const score = Math.round(pts * 10) / 10;
+      return { gamePts: score, gradePts: score, gradePercent: Math.round(score / 20 * 100), responded: Object.keys(tot.responses || {}).some(k => k.startsWith(s.id)) };
     }
     if (activityType === "fishbowl") {
       const fb = (data.weeklyFishbowl || {})[week];
       if (!fb?.confirmed) return null;
       const pts = fb.scores?.[s.id] ?? 0;
-      return { score: pts, max: 20, responded: true };
+      return { gamePts: pts, gradePts: pts, gradePercent: Math.round(pts / 20 * 100), responded: true };
     }
     return null;
   };
 
-  // Calculate class average (including zeros)
-  const allScores = sorted.map(s => {
-    const result = getStudentScore(s);
-    return result ? result.score : 0;
-  });
+  const allScores = sorted.map(s => { const r = getStudentScore(s); return r ? r.gamePts : 0; });
   const classAvg = allScores.length > 0 ? Math.round((allScores.reduce((a, b) => a + b, 0) / allScores.length) * 10) / 10 : 0;
-  const maxPts = activityType === "game" ? 100 : 20;
 
-  // Check if scored
   const isScored = activityType === "game" ? (data.weeklyGames || {})[week]?.scored
     : activityType === "tot" ? ((data.weeklyToT || {})[week] || (data.weeklyToT || {})[String(week)])?.scored
     : (data.weeklyFishbowl || {})[week]?.confirmed;
 
   if (!isScored) return null;
 
-  // Score timestamp (when it was scored)
   const scoredTs = reboundData.scoredTs || Date.now();
   const reboundDeadline = scoredTs + 48 * 60 * 60 * 1000;
+  const makeupDeadline = scoredTs + 7 * 24 * 60 * 60 * 1000;
   const reboundOpen = Date.now() < reboundDeadline;
-  const hoursLeft = Math.max(0, Math.round((reboundDeadline - Date.now()) / (1000 * 60 * 60)));
+  const makeupOpen = Date.now() < makeupDeadline;
+  const reboundHoursLeft = Math.max(0, Math.round((reboundDeadline - Date.now()) / (1000 * 60 * 60)));
+  const makeupDaysLeft = Math.max(0, Math.round((makeupDeadline - Date.now()) / (1000 * 60 * 60 * 24)));
 
-  // Save scored timestamp if not set
   const ensureScoredTs = async () => {
     if (!reboundData.scoredTs) {
       const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, scoredTs: Date.now() } } };
@@ -1048,55 +1073,62 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
   };
   if (!reboundData.scoredTs && isScored) ensureScoredTs();
 
-  // Admin: set absence type
-  const setAbsenceType = async (studentId, type) => {
-    const subs = { ...(reboundData.submissions || {}), [studentId]: { ...(reboundData.submissions?.[studentId] || {}), absenceType: type } };
-    const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, submissions: subs } } };
-    await saveData(updated); setData(updated); showMsg("Set to " + type);
+  const setStudentStatus = async (studentId, status) => {
+    const ss = { ...statuses, [studentId]: { ...(statuses[studentId] || {}), status } };
+    const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: ss } } };
+    await saveData(updated); setData(updated); showMsg("Set: " + STATUS_COLORS[status].label);
   };
 
-  // Admin: approve rebound
   const approveRebound = async (studentId) => {
     const result = getStudentScore(data.students.find(s => s.id === studentId));
     if (!result) return;
-    const sub = reboundData.submissions?.[studentId] || {};
-    const cap = maxPts * 0.8;
-    const reboundTarget = Math.min(classAvg, cap);
-    let reboundPts;
-    if (activityType === "fishbowl") {
-      reboundPts = Math.min(10, cap - result.score);
-    } else if (sub.absenceType === "unannounced") {
-      reboundPts = Math.round(Math.min(reboundTarget / 2, cap - result.score) * 10) / 10;
-    } else {
-      reboundPts = Math.round(Math.max(0, Math.min(reboundTarget, cap) - result.score) * 10) / 10;
-    }
-    if (sub.customPts !== undefined) reboundPts = sub.customPts;
-    if (reboundPts <= 0) { showMsg("No points to rebound"); return; }
+    const ss = statuses[studentId] || {};
+    const status = ss.status || "present";
+    const gradeOnly = status === "rebound" || status === "unannounced_override";
 
-    const source = "Rebound " + (activityType === "game" ? "Game" : activityType === "tot" ? "ToT" : "Fishbowl") + " Wk" + week;
-    const entry = { id: genId(), studentId, amount: reboundPts, source, ts: Date.now() };
-    const subs = { ...(reboundData.submissions || {}), [studentId]: { ...sub, approved: true, reboundPts } };
-    const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, submissions: subs } }, log: [...data.log, entry] };
-    await saveData(updated); setData(updated); showMsg("Rebounded +" + reboundPts);
+    let targetPts;
+    if (status === "planned_makeup") {
+      targetPts = maxPts;
+    } else {
+      const targetPercent = getReboundTarget(result.gradePercent);
+      if (!targetPercent) { showMsg("Not eligible"); return; }
+      targetPts = Math.round(maxPts * targetPercent / 100 * 10) / 10;
+    }
+    let reboundPts = Math.round(Math.max(0, targetPts - result.gamePts) * 10) / 10;
+    if (ss.customPts !== undefined) reboundPts = ss.customPts;
+    if (reboundPts <= 0) { showMsg("No points to award"); return; }
+
+    const source = (gradeOnly ? "Rebound " : "Makeup ") + (activityType === "game" ? "Game" : activityType === "tot" ? "ToT" : "Fishbowl") + " Wk" + week;
+    const entry = { id: genId(), studentId, amount: reboundPts, source, ts: Date.now(), gradeOnly: gradeOnly || undefined };
+    const newSS = { ...statuses, [studentId]: { ...ss, approved: true, reboundPts, gradeOnly } };
+    const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: newSS } }, log: [...data.log, entry] };
+    await saveData(updated); setData(updated); showMsg((gradeOnly ? "Rebound" : "Makeup") + " +" + reboundPts);
   };
 
-  // Admin: set custom rebound points
   const setCustomPts = async (studentId, pts) => {
-    const subs = { ...(reboundData.submissions || {}), [studentId]: { ...(reboundData.submissions?.[studentId] || {}), customPts: parseFloat(pts) || 0 } };
-    const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, submissions: subs } } };
+    const ss = { ...statuses, [studentId]: { ...(statuses[studentId] || {}), customPts: parseFloat(pts) || 0 } };
+    const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: ss } } };
     await saveData(updated); setData(updated);
   };
 
-  // Student: submit rebound link
   const submitRebound = async () => {
     if (!reboundLink.trim() || !sid) return;
-    const subs = { ...(reboundData.submissions || {}), [sid]: { ...(reboundData.submissions?.[sid] || {}), link: reboundLink.trim(), ts: Date.now() } };
-    const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, submissions: subs } } };
+    const ss = { ...statuses, [sid]: { ...(statuses[sid] || {}), link: reboundLink.trim(), linkTs: Date.now() } };
+    const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: ss } } };
     await saveData(updated); setData(updated);
     setReboundLink(""); showMsg("Submitted! Your instructor will review.");
   };
 
   const actLabel = activityType === "game" ? "Weekly Game" : activityType === "tot" ? "This or That" : "Fishbowl";
+
+  const policyText = `Planned Makeup: You had an excused absence. Retake the activity live during office hours within one week. Full points available for both leaderboard and grade.
+
+Unannounced Absence: You missed without notice. By default, no makeup available. Your instructor may grant an override, in which case you can submit a rebound video. Points count for grade only, not leaderboard.
+
+Rebound: You were present but scored below 80%. Submit a video of you explaining the material with a friend or family member within 48 hours. Points count for grade only, not leaderboard.
+  Under 50% -> can earn back to 60%
+  50-65% -> can earn back to 70%
+  66-79% -> can earn back to 80%`;
 
   // ─── ADMIN VIEW ───
   if (isAdmin) {
@@ -1104,62 +1136,98 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
       <div style={{ marginTop: 16 }}>
         <Toast message={msg} />
         <div style={{ ...crd, padding: 16 }}>
-          <div style={{ ...sectionLabel, marginBottom: 4 }}>Results and Rebounds</div>
-          <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>
-            Class average: <strong>{classAvg}</strong> / {maxPts} | Cap: <strong>{maxPts * 0.8}</strong> (80%) | Rebound: {reboundOpen ? hoursLeft + "h left" : "Closed"}
+          <div style={{ ...sectionLabel, marginBottom: 4 }}>Results and Makeups</div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 4 }}>
+            Class average: <strong>{classAvg}</strong> / {maxPts} | Rebound: {reboundOpen ? reboundHoursLeft + "h left" : "Closed"} | Makeup: {makeupOpen ? makeupDaysLeft + "d left" : "Closed"}
           </div>
+          <button onClick={() => setShowPolicy(!showPolicy)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600, padding: 0, marginBottom: 10 }}>{showPolicy ? "Hide Policy" : "View Policy"}</button>
+          {showPolicy && <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap", padding: 12, background: "#f9fafb", borderRadius: 8, marginBottom: 12, border: "1px solid " + BORDER }}>{policyText}</div>}
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
             {sorted.map(s => {
               const result = getStudentScore(s);
-              const score = result ? result.score : 0;
+              const score = result ? result.gamePts : 0;
+              const gradePts = result ? result.gradePts : 0;
+              const gradePercent = result ? result.gradePercent : 0;
               const responded = result ? result.responded : false;
               const missed = !responded && activityType !== "fishbowl";
-              const belowAvg = score < classAvg;
-              const sub = reboundData.submissions?.[s.id] || {};
-              const cap = maxPts * 0.8;
-              const reboundTarget = Math.min(classAvg, cap);
-              const eligible = activityType === "fishbowl" ? score < 20 : (belowAvg || missed) && score < cap;
-              const defaultRebound = activityType === "fishbowl" ? Math.min(10, cap - score)
-                : sub.absenceType === "unannounced" ? Math.round(Math.min(reboundTarget / 2, cap - score) * 10) / 10
-                : Math.round(Math.max(0, reboundTarget - score) * 10) / 10;
-              const reboundPts = sub.customPts !== undefined ? sub.customPts : defaultRebound;
+              const ss = statuses[s.id] || {};
+              const status = ss.status || (missed ? "" : gradePercent < 80 ? "" : "present");
+              const sc = STATUS_COLORS[status] || STATUS_COLORS.present;
+
+              const targetPercent = getReboundTarget(gradePercent);
+              let targetPts, defaultRebound;
+              if (status === "planned_makeup") {
+                targetPts = maxPts;
+                defaultRebound = Math.round(Math.max(0, maxPts - score) * 10) / 10;
+              } else {
+                targetPts = targetPercent ? Math.round(maxPts * targetPercent / 100 * 10) / 10 : 0;
+                defaultRebound = Math.round(Math.max(0, targetPts - score) * 10) / 10;
+              }
+              const reboundPts = ss.customPts !== undefined ? ss.customPts : defaultRebound;
+              const eligible = (status === "planned_makeup" || targetPercent !== null) && !ss.approved;
 
               return (
-                <div key={s.id} style={{ padding: "10px 12px", borderRadius: 10, background: sub.approved ? "#ecfdf5" : missed ? "#fef2f2" : "#fff", border: "1px solid " + (sub.approved ? GREEN + "30" : missed ? RED + "30" : BORDER) }}>
+                <div key={s.id} style={{ padding: "10px 12px", borderRadius: 10, background: ss.approved ? "#ecfdf5" : sc.bg, borderLeft: "4px solid " + (ss.approved ? GREEN : sc.border) }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
                       <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</span>
-                      {missed && <span style={{ fontSize: 11, fontWeight: 600, color: RED, marginLeft: 6 }}>MISSED</span>}
+                      {missed && !status && <span style={{ fontSize: 11, fontWeight: 600, color: RED, marginLeft: 6 }}>MISSED</span>}
+                      {status && <span style={{ fontSize: 11, fontWeight: 600, color: sc.color, marginLeft: 6 }}>{sc.label}</span>}
                     </div>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: score >= classAvg ? GREEN : score === 0 ? RED : "#d97706" }}>{score}<span style={{ fontSize: 12, color: TEXT_MUTED }}>/{maxPts}</span></div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: gradePercent >= 80 ? GREEN : gradePercent === 0 ? RED : "#d97706" }}>{gradePercent}%<span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 500 }}> grade</span></div>
+                      <div style={{ fontSize: 11, color: TEXT_MUTED }}>{score}/{maxPts} game</div>
+                    </div>
                   </div>
 
-                  {eligible && !sub.approved && (
+                  {/* Status selector */}
+                  {!ss.approved && (
                     <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER }}>
-                      {missed && !sub.absenceType && (
-                        <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
-                          <button onClick={() => setAbsenceType(s.id, "announced")} style={{ ...pill, background: "#eff6ff", color: "#2563eb", fontSize: 11 }}>Announced Absence</button>
-                          <button onClick={() => setAbsenceType(s.id, "unannounced")} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Unannounced Absence</button>
-                        </div>
-                      )}
-                      {sub.absenceType && <div style={{ fontSize: 11, color: sub.absenceType === "announced" ? "#2563eb" : RED, fontWeight: 600, marginBottom: 4 }}>{sub.absenceType === "announced" ? "Announced" : "Unannounced"} absence</div>}
-                      {sub.link && (
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
+                        {Object.entries(STATUS_COLORS).map(([key, val]) => (
+                          <button key={key} onClick={() => setStudentStatus(s.id, key)} style={{
+                            ...pill, fontSize: 10, padding: "3px 8px",
+                            background: status === key ? val.border : "transparent",
+                            color: status === key ? "#fff" : val.color,
+                            border: "1px solid " + val.border,
+                          }}>{val.label}</button>
+                        ))}
+                      </div>
+
+                      {/* Rebound video link */}
+                      {ss.link && (
                         <div style={{ marginBottom: 6 }}>
                           <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 2 }}>Rebound video:</div>
-                          <a href={sub.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", wordBreak: "break-all" }}>{sub.link}</a>
-                          <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Submitted {new Date(sub.ts).toLocaleString()}</div>
+                          <a href={ss.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", wordBreak: "break-all" }}>{ss.link}</a>
+                          <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Submitted {new Date(ss.linkTs).toLocaleString()}</div>
                         </div>
                       )}
-                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                        <span style={{ fontSize: 12, color: TEXT_MUTED }}>Rebound:</span>
-                        <input type="number" defaultValue={reboundPts} onBlur={e => setCustomPts(s.id, e.target.value)} style={{ ...inp, width: 60, fontSize: 13, textAlign: "center", padding: "4px" }} />
-                        <span style={{ fontSize: 12, color: TEXT_MUTED }}>pts</span>
-                        {sub.link && <button onClick={() => approveRebound(s.id)} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12, marginLeft: "auto" }}>Approve</button>}
-                      </div>
+
+                      {/* Points + approve */}
+                      {eligible && (status === "rebound" || status === "unannounced_override" || status === "planned_makeup") && (
+                        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                          <span style={{ fontSize: 12, color: TEXT_MUTED }}>{status === "planned_makeup" ? "Makeup" : "Rebound"}:</span>
+                          <input type="number" defaultValue={reboundPts} onBlur={e => setCustomPts(s.id, e.target.value)} style={{ ...inp, width: 60, fontSize: 13, textAlign: "center", padding: "4px" }} />
+                          <span style={{ fontSize: 12, color: TEXT_MUTED }}>pts{status !== "planned_makeup" && targetPercent ? " (to " + targetPercent + "%)" : ""}</span>
+                          {(ss.link || status === "planned_makeup") && (
+                            <button onClick={() => approveRebound(s.id)} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12, marginLeft: "auto" }}>Apply Points</button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Unannounced: no override yet */}
+                      {status === "unannounced" && (
+                        <div style={{ fontSize: 12, color: RED, fontStyle: "italic" }}>Makeup unavailable. Set to "Override" to allow rebound.</div>
+                      )}
                     </div>
                   )}
-                  {sub.approved && <div style={{ fontSize: 12, fontWeight: 600, color: GREEN, marginTop: 4 }}>Rebounded +{sub.reboundPts} pts</div>}
+
+                  {ss.approved && (
+                    <div style={{ fontSize: 12, fontWeight: 600, color: GREEN, marginTop: 4 }}>
+                      {ss.gradeOnly ? "Rebound" : "Makeup"} applied: +{ss.reboundPts} pts {ss.gradeOnly ? "(grade only)" : "(leaderboard + grade)"}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -1172,11 +1240,16 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
   // ─── STUDENT VIEW ───
   if (!sid) return null;
   const myResult = getStudentScore(student);
-  const myScore = myResult ? myResult.score : 0;
-  const cap = maxPts * 0.8;
-  const belowAvg = myScore < classAvg;
-  const mySub = reboundData.submissions?.[sid] || {};
-  const eligible = activityType === "fishbowl" ? myScore < 20 : belowAvg && myScore < cap;
+  const myScore = myResult ? myResult.gamePts : 0;
+  const myGradePercent = myResult ? myResult.gradePercent : 0;
+  const mySS = statuses[sid] || {};
+  const myStatus = mySS.status || "";
+  const myTargetPercent = getReboundTarget(myGradePercent);
+  const eligible = myTargetPercent !== null && !mySS.approved;
+
+  const canSubmitRebound = (myStatus === "rebound" || myStatus === "unannounced_override") && reboundOpen && !mySS.link && eligible;
+  const waitingMakeup = myStatus === "planned_makeup" && makeupOpen && !mySS.approved;
+  const showReboundSubmitted = (myStatus === "rebound" || myStatus === "unannounced_override") && mySS.link && !mySS.approved;
 
   return (
     <div style={{ marginTop: 16 }}>
@@ -1198,34 +1271,52 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
           </div>
         </div>
 
-        {mySub.approved && (
+        {mySS.approved && (
           <div style={{ padding: 12, borderRadius: 10, background: "#ecfdf5", textAlign: "center", marginBottom: 12 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: GREEN }}>Rebound approved: +{mySub.reboundPts} pts</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: GREEN }}>{mySS.gradeOnly ? "Rebound" : "Makeup"} approved: +{mySS.reboundPts} pts</div>
           </div>
         )}
 
-        {eligible && !mySub.approved && reboundOpen && (
+        {/* Unannounced, no override */}
+        {myStatus === "unannounced" && !mySS.approved && (
+          <div style={{ padding: 12, borderRadius: 10, background: "#fef2f2", border: "1px solid #fecaca", marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#991b1b", marginBottom: 4 }}>Makeup Unavailable</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.5 }}>Your absence was unannounced. Contact your instructor if you believe this is an error.</div>
+          </div>
+        )}
+
+        {/* Approved makeup waiting */}
+        {waitingMakeup && (
+          <div style={{ padding: 12, borderRadius: 10, background: "#ecfdf5", border: "1px solid #a7f3d0", marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#065f46", marginBottom: 4 }}>Planned Makeup</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.5 }}>Come to office hours to retake this activity. You have <strong>{makeupDaysLeft} days</strong> left. Full points available.</div>
+          </div>
+        )}
+
+        {/* Rebound available */}
+        {canSubmitRebound && (
           <div style={{ padding: 12, borderRadius: 10, background: "#fffbeb", border: "1px solid #fef3c7", marginBottom: 12 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "#92400e", marginBottom: 6 }}>Rebound Available</div>
-            <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.5, marginBottom: 8 }}>
-              {activityType === "fishbowl"
-                ? "Submit a video of you reviewing all the fishbowl articles with a friend or family member to earn up to 10 points back. Rebounds are capped at 80% of the total points for this activity."
-                : "If your score is below the class average, you can earn rebound points by submitting a video of you explaining the material you missed with a friend or family member. You can earn up to the class average, capped at 80% of the total points for this activity."
-              }
-              {" "}You have <strong>{hoursLeft} hours</strong> left to submit.
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.5, marginBottom: 6 }}>
+              Your grade was {myGradePercent}%. You can earn back to {myTargetPercent}% by submitting a video of you explaining the material with a friend or family member.
+              {" "}You have <strong>{reboundHoursLeft} hours</strong> left to submit. Points count for your grade only.
             </div>
-            {mySub.link ? (
-              <div style={{ fontSize: 13, color: GREEN, fontWeight: 600 }}>Submitted! Waiting for instructor review.</div>
-            ) : (
-              <div style={{ display: "flex", gap: 6 }}>
-                <input value={reboundLink} onChange={e => setReboundLink(e.target.value)} placeholder="Paste your video link here..." style={{ ...inp, flex: 1, fontSize: 13 }} />
-                <button onClick={submitRebound} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Submit</button>
-              </div>
-            )}
+            <button onClick={() => setShowPolicy(!showPolicy)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600, padding: 0, marginBottom: 6 }}>{showPolicy ? "Hide Policy" : "View Full Policy"}</button>
+            {showPolicy && <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap", padding: 10, background: "#f9fafb", borderRadius: 8, marginBottom: 8, border: "1px solid " + BORDER }}>{policyText}</div>}
+            <div style={{ display: "flex", gap: 6 }}>
+              <input value={reboundLink} onChange={e => setReboundLink(e.target.value)} placeholder="Paste your video link here..." style={{ ...inp, flex: 1, fontSize: 13 }} />
+              <button onClick={submitRebound} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Submit</button>
+            </div>
           </div>
         )}
 
-        {eligible && !mySub.approved && !reboundOpen && !mySub.link && (
+        {showReboundSubmitted && (
+          <div style={{ padding: 12, borderRadius: 10, background: "#ecfdf5", textAlign: "center", marginBottom: 12 }}>
+            <div style={{ fontSize: 13, color: GREEN, fontWeight: 600 }}>Rebound submitted! Waiting for instructor review.</div>
+          </div>
+        )}
+
+        {eligible && (myStatus === "rebound" || myStatus === "unannounced_override") && !reboundOpen && !mySS.link && (
           <div style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 12 }}>Rebound window has closed.</div>
         )}
       </div>
