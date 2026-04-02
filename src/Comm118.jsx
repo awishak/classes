@@ -656,6 +656,64 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       <Toast message={msg} />
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
 
+        {/* Pending rebounds/makeups for student */}
+        {studentId && !isAdmin && (() => {
+          const rebounds = data.rebounds || {};
+          const pendingItems = [];
+          const activityTypes = [
+            { type: "game", store: "weeklyGames", label: "Weekly Game", max: 100 },
+            { type: "tot", store: "weeklyToT", label: "This or That", max: 20 },
+            { type: "fishbowl", store: "weeklyFishbowl", label: "Fishbowl", max: 20 },
+          ];
+          activityTypes.forEach(({ type, store, label, max }) => {
+            const activities = data[store] || {};
+            Object.keys(activities).forEach(w => {
+              const act = activities[w];
+              const scored = type === "fishbowl" ? act?.confirmed : act?.scored;
+              if (!scored) return;
+              const rKey = type + "-" + w;
+              const rd = rebounds[rKey] || {};
+              const ss = (rd.studentStatuses || {})[studentId] || {};
+              if (ss.approved) return;
+              const status = ss.status || "";
+              if (!status || status === "present") return;
+              const scoredTs = rd.scoredTs || 0;
+              const reboundDeadline = scoredTs + 48 * 60 * 60 * 1000;
+              const makeupDeadline = scoredTs + 7 * 24 * 60 * 60 * 1000;
+              if (status === "approved_makeup" && Date.now() < makeupDeadline) {
+                pendingItems.push({ type, week: w, label: label + " Wk " + w, status, daysLeft: Math.max(0, Math.round((makeupDeadline - Date.now()) / (1000 * 60 * 60 * 24))) });
+              }
+              if ((status === "rebound" || status === "unannounced_override") && Date.now() < reboundDeadline && !ss.link) {
+                pendingItems.push({ type, week: w, label: label + " Wk " + w, status, hoursLeft: Math.max(0, Math.round((reboundDeadline - Date.now()) / (1000 * 60 * 60))) });
+              }
+              if (status === "unannounced") {
+                pendingItems.push({ type, week: w, label: label + " Wk " + w, status });
+              }
+            });
+          });
+          if (pendingItems.length === 0) return null;
+          return (
+            <div style={{ marginBottom: 16 }}>
+              {pendingItems.map((item, i) => {
+                const sc = item.status === "approved_makeup" ? { bg: "#ecfdf5", border: "#10b981", color: "#065f46" }
+                  : item.status === "unannounced" ? { bg: "#fef2f2", border: "#ef4444", color: "#991b1b" }
+                  : { bg: "#fffbeb", border: "#f59e0b", color: "#92400e" };
+                return (
+                  <div key={i} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: "4px solid " + sc.border, background: sc.bg }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: sc.color, marginBottom: 4 }}>
+                      {item.status === "approved_makeup" ? "Makeup Available" : item.status === "unannounced" ? "Makeup Unavailable" : "Rebound Available"}
+                    </div>
+                    <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>{item.label}</div>
+                    {item.status === "approved_makeup" && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4 }}>Visit office hours to retake. <strong>{item.daysLeft} days</strong> remaining.</div>}
+                    {(item.status === "rebound" || item.status === "unannounced_override") && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4 }}>Submit rebound video in Activities. <strong>{item.hoursLeft} hours</strong> remaining.</div>}
+                    {item.status === "unannounced" && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4 }}>Your absence was unannounced. Contact your instructor if you believe this is an error.</div>}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+
         {/* Admin: post news */}
         {isAdmin && (
           <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
