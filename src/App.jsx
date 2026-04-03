@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Comm118 from "./Comm118.jsx";
 import Comm4 from "./Comm4.jsx";
 import Comm2 from "./Comm2.jsx";
+import AdminDash from "./AdminDash.jsx";
 
 const F = "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif";
 
@@ -125,6 +126,7 @@ export default function App() {
     if (path === "/comm118" || path === "/comm118/") document.title = "COMM 118 Hub - Spring 2026";
     else if (path === "/comm4" || path === "/comm4/") document.title = "COMM 4 Hub - Spring 2026";
     else if (path === "/comm2" || path === "/comm2/") document.title = "COMM 2 Hub - Spring 2026";
+    else if (path === "/dashboard" || path === "/dashboard/") document.title = "Admin Dashboard - Spring 2026";
     else document.title = "Ishak Classes";
   }, [path]);
 
@@ -138,6 +140,10 @@ export default function App() {
 
   if (path === "/comm2" || path === "/comm2/") {
     return <Comm2 />;
+  }
+
+  if (path === "/dashboard" || path === "/dashboard/") {
+    return <AdminDash />;
   }
 
   return <LandingPage />;
