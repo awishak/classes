@@ -3866,11 +3866,13 @@ function SurveyView({ data, setData, isAdmin, userName }) {
   };
 
   const respond = async (surveyId, questionId, answer) => {
-    const survey = surveys.find(s => s.id === surveyId);
+    const latestRaw = await window.storage.get("comm118-game-v14", true);
+    const latest = latestRaw?.value ? JSON.parse(latestRaw.value) : data;
+    const survey = (latest.surveys || []).find(s => s.id === surveyId);
     if (!survey) return;
     const responses = { ...(survey.responses || {}) };
     responses[userName] = { ...(responses[userName] || {}), [questionId]: answer };
-    const updated = { ...data, surveys: surveys.map(s => s.id === surveyId ? { ...s, responses } : s) };
+    const updated = { ...latest, surveys: (latest.surveys || []).map(s => s.id === surveyId ? { ...s, responses } : s) };
     await saveData(updated); setData(updated);
     setChanging(prev => { const n = { ...prev }; delete n[questionId]; return n; });
   };

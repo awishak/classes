@@ -3750,12 +3750,22 @@ function BoardsView({ data, setData, isAdmin, userName }) {
 /* ─── SURVEY ─── */
 function SurveyView({ data, setData, isAdmin, userName }) {
   const surveys = data.surveys || [];
+
+  // Auto-close surveys past their closeAt time
+  React.useEffect(() => {
+    const toClose = surveys.filter(s => s.active && s.closeAt && Date.now() > s.closeAt);
+    if (toClose.length > 0) {
+      const updated = { ...data, surveys: surveys.map(s => toClose.find(tc => tc.id === s.id) ? { ...s, active: false } : s) };
+      saveData(updated); setData(updated);
+    }
+  }, [surveys.length]);
   const [creating, setCreating] = useState(false);
   const [editingSurvey, setEditingSurvey] = useState(null);
   const [viewingResults, setViewingResults] = useState(null);
   const [changing, setChanging] = useState({});
   const [questions, setQuestions] = useState([{ text: "", type: "multiple_choice", options: ["", "", "", ""] }]);
   const [surveyTitle, setSurveyTitle] = useState("");
+  const [surveyCloseAt, setSurveyCloseAt] = useState("");
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
@@ -3776,14 +3786,15 @@ function SurveyView({ data, setData, isAdmin, userName }) {
   const createSurvey = async () => {
     const validQs = questions.filter(q => q.text.trim());
     if (validQs.length === 0) return;
-    const s = { id: genId(), title: surveyTitle.trim() || "Survey", questions: validQs.map(q => ({ id: genId(), text: q.text.trim(), type: q.type, options: q.type === "multiple_choice" ? q.options.filter(o => o.trim()) : [] })), responses: {}, active: true, showResults: false, ts: Date.now() };
+    const s = { id: genId(), title: surveyTitle.trim() || "Survey", questions: validQs.map(q => ({ id: genId(), text: q.text.trim(), type: q.type, options: q.type === "multiple_choice" ? q.options.filter(o => o.trim()) : [] })), responses: {}, active: true, showResults: false, ts: Date.now(), closeAt: surveyCloseAt ? new Date(surveyCloseAt).getTime() : null };
     const updated = { ...data, surveys: [...surveys, s] };
     await saveData(updated); setData(updated);
-    setSurveyTitle(""); setQuestions([{ text: "", type: "multiple_choice", options: ["", "", "", ""] }]); setCreating(false); showMsg("Survey created");
+    setSurveyTitle(""); setSurveyCloseAt(""); setQuestions([{ text: "", type: "multiple_choice", options: ["", "", "", ""] }]); setCreating(false); showMsg("Survey created");
   };
 
   const startEditSurvey = (survey) => {
     setSurveyTitle(survey.title);
+    setSurveyCloseAt(survey.closeAt ? new Date(survey.closeAt).toISOString().slice(0, 16) : "");
     setQuestions((survey.questions || []).map(q => ({ text: q.text, type: q.type, options: q.type === "multiple_choice" ? [...q.options] : ["", "", "", ""], id: q.id })));
     setEditingSurvey(survey.id);
     setCreating(false);
@@ -3792,17 +3803,19 @@ function SurveyView({ data, setData, isAdmin, userName }) {
   const saveSurveyEdit = async () => {
     const validQs = questions.filter(q => q.text.trim());
     if (validQs.length === 0) return;
-    const updated = { ...data, surveys: surveys.map(s => s.id === editingSurvey ? { ...s, title: surveyTitle.trim() || s.title, questions: validQs.map(q => ({ id: q.id || genId(), text: q.text.trim(), type: q.type, options: q.type === "multiple_choice" ? q.options.filter(o => o.trim()) : [] })) } : s) };
+    const updated = { ...data, surveys: surveys.map(s => s.id === editingSurvey ? { ...s, title: surveyTitle.trim() || s.title, closeAt: surveyCloseAt ? new Date(surveyCloseAt).getTime() : null, questions: validQs.map(q => ({ id: q.id || genId(), text: q.text.trim(), type: q.type, options: q.type === "multiple_choice" ? q.options.filter(o => o.trim()) : [] })) } : s) };
     await saveData(updated); setData(updated);
-    setSurveyTitle(""); setQuestions([{ text: "", type: "multiple_choice", options: ["", "", "", ""] }]); setEditingSurvey(null); showMsg("Survey updated");
+    setSurveyTitle(""); setSurveyCloseAt(""); setQuestions([{ text: "", type: "multiple_choice", options: ["", "", "", ""] }]); setEditingSurvey(null); showMsg("Survey updated");
   };
 
   const respond = async (surveyId, questionId, answer) => {
-    const survey = surveys.find(s => s.id === surveyId);
+    const latestRaw = await window.storage.get("comm4-v1", true);
+    const latest = latestRaw?.value ? JSON.parse(latestRaw.value) : data;
+    const survey = (latest.surveys || []).find(s => s.id === surveyId);
     if (!survey) return;
     const responses = { ...(survey.responses || {}) };
     responses[userName] = { ...(responses[userName] || {}), [questionId]: answer };
-    const updated = { ...data, surveys: surveys.map(s => s.id === surveyId ? { ...s, responses } : s) };
+    const updated = { ...latest, surveys: (latest.surveys || []).map(s => s.id === surveyId ? { ...s, responses } : s) };
     await saveData(updated); setData(updated);
     setChanging(prev => { const n = { ...prev }; delete n[questionId]; return n; });
   };
@@ -3945,6 +3958,10 @@ function SurveyView({ data, setData, isAdmin, userName }) {
           <div style={{ ...crd, padding: 18, marginBottom: 20 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <input value={surveyTitle} onChange={e => setSurveyTitle(e.target.value)} placeholder="Survey title" style={{ ...inp, fontWeight: 700, fontSize: 16 }} />
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Auto-close (optional)</div>
+                <input type="datetime-local" value={surveyCloseAt} onChange={e => setSurveyCloseAt(e.target.value)} style={{ ...inp, fontSize: 13 }} />
+              </div>
               {questions.map((q, qi) => (
                 <div key={qi} style={{ padding: 14, background: "#f4f4f5", borderRadius: 10 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
@@ -3982,6 +3999,7 @@ function SurveyView({ data, setData, isAdmin, userName }) {
                 <div>
                   <div style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.3 }}>{survey.title}</div>
                   <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{totalQs} question{totalQs !== 1 ? "s" : ""} / {responderCount} respondent{responderCount !== 1 ? "s" : ""}</div>
+                  {survey.closeAt && <div style={{ fontSize: 12, color: Date.now() > survey.closeAt * 0.95 ? AMBER : TEXT_SECONDARY, fontWeight: 500, marginTop: 2 }}>Closes: {new Date(survey.closeAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>}
                 </div>
                 {(isAdmin || survey.showResults) && <button onClick={() => setViewingResults(survey.id)} style={pillInactive}>Results</button>}
               </div>
