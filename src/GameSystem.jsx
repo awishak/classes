@@ -633,6 +633,14 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
           <button onClick={() => setPresenterMode(true)} style={{ ...pill, background: "#0f172a", color: "#fff", fontSize: 13 }}>Presenter</button>
         </div>
 
+        {/* Close game controls */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          {!activity.scored && (
+            <button onClick={() => { if (window.confirm("Close the game and score it now? Points will be posted to the leaderboard.")) onScore(); }} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 13 }}>Close and Score</button>
+          )}
+          <button onClick={() => { if (window.confirm("Close the game WITHOUT scoring? No points will be awarded.")) endGame(); }} style={{ ...pill, background: "#fff", color: RED, border: "1px solid " + RED + "44", fontSize: 13 }}>Close without Scoring</button>
+        </div>
+
         {/* Question controls */}
         <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
