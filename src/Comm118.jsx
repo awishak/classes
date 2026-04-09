@@ -1832,14 +1832,7 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
   const meInVisible = myRank >= 0 && myRank < visible.length;
   const meData = myRank >= 0 ? ranked[myRank] : null;
 
-  // This week (Mon-Sun)
-  const now = new Date();
-  const day = now.getDay(); // 0=Sun, 1=Mon
-  const daysFromMon = day === 0 ? 6 : day - 1;
-  const weekStart = new Date(now); weekStart.setDate(now.getDate() - daysFromMon); weekStart.setHours(0, 0, 0, 0);
-  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 7);
-  const weekLog = log.filter(e => e.ts >= weekStart.getTime() && e.ts < weekEnd.getTime());
-  const weekRanked = students.map(s => ({ ...s, points: weekLog.filter(e => e.studentId === s.id).reduce((t, e) => t + e.amount, 0) })).filter(s => s.points > 0).sort((a, b) => b.points - a.points).slice(0, 10);
+  // This week's leaderboard data computed below from existing weekPoints
 
   const customExplain = data?.leaderboardExplain;
   const defaultExplain = "The leaderboard tracks your game points. You earn them four ways: the weekly game (up to 100 pts), This or That (up to 20 pts), Around the Horn culture points (awarded in class), and Rotating Fishbowl (up to 20 pts).\n\nThe top 5 on the leaderboard at the end of the quarter earn automatic A's in the class. That's real.\n\nThis is not your full grade. The leaderboard contributes to 25% of your grade (the participation bucket), but in different weights. The other 75% comes from your assignments. Check the Assignments tab for the full picture.";
@@ -1889,6 +1882,7 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
   const weekLog = log.filter(e => e.ts >= weekStart && e.ts < weekEnd);
   const weekPoints = {};
   weekLog.forEach(e => { weekPoints[e.studentId] = (weekPoints[e.studentId] || 0) + e.amount; });
+  const weekRanked = students.map(s => ({ ...s, points: weekPoints[s.id] || 0 })).filter(s => s.points > 0).sort((a, b) => b.points - a.points).slice(0, 10);
 
   // Last week's rankings for movement
   const lastWeekLog = log.filter(e => e.ts < weekStart);
@@ -2054,7 +2048,7 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
           {/* This Week */}
           <div>
             <div style={{ ...sectionLabel, marginBottom: 8 }}>This Week</div>
-            <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>{weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} to {new Date(weekEnd.getTime() - 1).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
+            <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>{new Date(weekStart).toLocaleDateString("en-US", { month: "short", day: "numeric" })} to {new Date(weekEnd - 1).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
             {weekRanked.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>No points yet this week</div>}
             {weekRanked.map((s, i) => {
               const isMe = s.name === userName;
