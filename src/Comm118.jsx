@@ -202,6 +202,7 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
     { id: "assignments", label: "Assignments", admin: false, guest: false },
     { id: "readings", label: "Readings", admin: false, guest: false },
     { id: "inclass", label: "In-Class", admin: false, guest: false },
+    { id: "inclassadmin", label: "In-Class Admin", admin: true, guest: false },
     { id: "accolades", label: "Accolades", admin: false, guest: false },
     { id: "boards", label: "Boards", admin: false, guest: false },
     { id: "mynotes", label: "My Notes", admin: false, guest: false },
@@ -578,36 +579,163 @@ Unannounced Absence: You missed without notice. By default, no makeup is availab
 
 const HOME_GRADE_PTS = { on_topic: 15, sports_world: 2.5 };
 
-function InClassView({ data, setData, isAdmin, userName }) {
-  const [sub, setSub] = useState("answer");
-  const studentSubs = [
-    { id: "answer", label: "Answer" },
-    { id: "classtools", label: "Headlines" },
-    { id: "survey", label: "Survey" },
-  ];
-  const adminSubs = [
-    { id: "answer", label: "Answer" },
-    { id: "classtools", label: "Headlines" },
-    { id: "survey", label: "Survey" },
-    { id: "activities", label: "Activities" },
-  ];
-  const subs = isAdmin ? adminSubs : studentSubs;
+function GameReviewDetail({ activity, type, week, data, studentId, onBack }) {
+  const qs = activity.questions || [];
+  const responses = activity.responses || {};
+  const allStudents = (data.students || []).filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis");
+  const playedStudents = allStudents.filter(s => {
+    return qs.some((_, qi) => responses[s.id + "-" + qi] !== undefined);
+  });
+  const totalPlayers = playedStudents.length;
+  const letters = ["A", "B", "C", "D", "E", "F"];
+
+  return (
+    <div style={{ ...crd, padding: 16, marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>{type === "game" ? "Weekly Game" : "This or That"}</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: TEXT_PRIMARY }}>Week {week}</div>
+        </div>
+        <button onClick={onBack} style={pillInactive}>Close</button>
+      </div>
+      {qs.map((q, qi) => {
+        const myAnswer = responses[studentId + "-" + qi];
+        const correctIdx = q.correct;
+        // Compute % per option
+        const counts = (q.options || []).map(() => 0);
+        let totalAnswered = 0;
+        playedStudents.forEach(s => {
+          const ans = responses[s.id + "-" + qi];
+          if (ans !== undefined && ans !== null && counts[ans] !== undefined) {
+            counts[ans]++;
+            totalAnswered++;
+          }
+        });
+        return (
+          <div key={qi} style={{ padding: 14, marginBottom: 10, background: "#fafafa", borderRadius: 10, border: "1px solid " + BORDER }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 7, background: ACCENT + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: ACCENT, flexShrink: 0 }}>{qi + 1}</div>
+              <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, lineHeight: 1.4 }}>{q.text || q.prompt || "(no text)"}</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {(q.options || []).map((opt, oi) => {
+                const isCorrect = oi === correctIdx;
+                const isMine = oi === myAnswer;
+                const pct = totalAnswered > 0 ? Math.round(counts[oi] / totalAnswered * 100) : 0;
+                let bg = "#fff";
+                let borderColor = BORDER;
+                let textColor = TEXT_PRIMARY;
+                if (isCorrect) { bg = "#ecfdf5"; borderColor = GREEN; textColor = "#065f46"; }
+                if (isMine && !isCorrect) { bg = "#fef2f2"; borderColor = RED; textColor = "#991b1b"; }
+                return (
+                  <div key={oi} style={{ position: "relative", padding: "10px 14px", borderRadius: 8, background: bg, border: "2px solid " + borderColor, overflow: "hidden" }}>
+                    <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: pct + "%", background: isCorrect ? "rgba(16,185,129,0.1)" : isMine && !isCorrect ? "rgba(220,38,38,0.1)" : "rgba(0,0,0,0.04)", transition: "width 0.3s" }} />
+                    <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: textColor, minWidth: 16 }}>{letters[oi]}.</span>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: textColor, flex: 1 }}>{opt}</span>
+                      {isMine && <span style={{ fontSize: 10, fontWeight: 700, color: textColor, padding: "2px 6px", borderRadius: 4, background: "rgba(0,0,0,0.05)" }}>YOU</span>}
+                      {isCorrect && <span style={{ fontSize: 10, fontWeight: 700, color: "#065f46", padding: "2px 6px", borderRadius: 4, background: GREEN + "30" }}>CORRECT</span>}
+                      <span style={{ fontSize: 12, fontWeight: 700, color: textColor }}>{pct}%</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {myAnswer === undefined && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 6, fontStyle: "italic" }}>You did not answer this question</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PastGamesReview({ data, studentId }) {
+  const [openKey, setOpenKey] = useState(null);
+  const games = data.weeklyGames || {};
+  const tots = data.weeklyToT || {};
+
+  const items = [];
+  Object.keys(games).forEach(w => {
+    const g = games[w];
+    if (!g?.scored) return;
+    const responses = g.responses || {};
+    const played = (g.questions || []).some((_, qi) => responses[studentId + "-" + qi] !== undefined);
+    items.push({ type: "game", week: w, label: "Weekly Game / Week " + w, activity: g, played });
+  });
+  Object.keys(tots).forEach(w => {
+    const t = tots[w];
+    if (!t?.scored) return;
+    const responses = t.responses || {};
+    const played = (t.questions || []).some((_, qi) => responses[studentId + "-" + qi] !== undefined);
+    items.push({ type: "tot", week: w, label: "This or That / Week " + w, activity: t, played });
+  });
+
+  // Sort by week descending
+  items.sort((a, b) => parseInt(b.week) - parseInt(a.week));
+
+  if (items.length === 0) return <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No past games yet</div>;
+
   return (
     <div>
-      <div style={{ display: "flex", gap: 4, padding: "12px 20px", background: "#f4f4f5", borderBottom: "1px solid " + BORDER, overflowX: "auto" }}>
-        {subs.map(s => (
-          <button key={s.id} onClick={() => setSub(s.id)} style={{
-            ...pill, fontSize: 13,
-            background: sub === s.id ? TEXT_PRIMARY : "transparent",
-            color: sub === s.id ? "#fff" : TEXT_SECONDARY,
-            border: sub === s.id ? "none" : "1px solid " + BORDER,
-          }}>{s.label}</button>
-        ))}
+      {items.map((item) => {
+        const key = item.type + "-" + item.week;
+        const isOpen = openKey === key;
+        if (isOpen) {
+          return <GameReviewDetail key={key} activity={item.activity} type={item.type} week={item.week} data={data} studentId={studentId} onBack={() => setOpenKey(null)} />;
+        }
+        return (
+          <button key={key} onClick={() => item.played && setOpenKey(key)} disabled={!item.played} style={{
+            ...crd, padding: 14, marginBottom: 8, width: "100%", textAlign: "left", fontFamily: F,
+            cursor: item.played ? "pointer" : "not-allowed", opacity: item.played ? 1 : 0.5,
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+          }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>{item.type === "game" ? "Weekly Game" : "This or That"}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>Week {item.week}</div>
+            </div>
+            {item.played ? (
+              <span style={{ fontSize: 12, color: ACCENT, fontWeight: 600 }}>Review &rarr;</span>
+            ) : (
+              <span style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>You did not play</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function InClassView({ data, setData, isAdmin, userName }) {
+  const student = data.students.find(s => s.name === userName);
+  const studentId = student?.id;
+  return (
+    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+
+        {/* Weekly Game section */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>Weekly Game</div>
+          <StudentAnswerView data={data} setData={setData} userName={userName} />
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 8 }}>Past Games</div>
+            <PastGamesReview data={data} studentId={studentId} />
+          </div>
+        </div>
+
+        {/* Headlines section */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>Headlines</div>
+          <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+        </div>
+
+        {/* This or That section is part of Past Games above for review purposes; live ToT happens through StudentAnswerView */}
+
+        {/* Survey section */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>Survey</div>
+          <SurveyView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+        </div>
       </div>
-      {sub === "answer" && <StudentAnswerView data={data} setData={setData} userName={userName} />}
-      {sub === "classtools" && <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />}
-      {sub === "survey" && <SurveyView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />}
-      {sub === "activities" && isAdmin && <GameAdmin data={data} setData={setData} />}
     </div>
   );
 }
@@ -5393,6 +5521,7 @@ export default function Comm118() {
       {view === "assignments" && !isGuest && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} setView={setView} />}
       {view === "readings" && !isGuest && <ReadingsView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "inclass" && !isGuest && <InClassView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
+      {view === "inclassadmin" && isAdmin && !studentView && !testStudent && <GameAdmin data={data} setData={setData} />}
       {view === "grades" && isAdmin && !studentView && !testStudent && <Gradebook data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
       {view === "pti" && isAdmin && !studentView && !testStudent && <PTIMode data={data} setData={setData} />}
       {view === "boards" && !isGuest && <BoardsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
