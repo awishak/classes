@@ -581,6 +581,44 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
   const label = type === "game" ? "Weekly Game" : "This or That";
   const isLocked = (qi) => lockedQs.includes(qi);
 
+  const [presenterMode, setPresenterMode] = useState(false);
+  if (presenterMode) {
+    const q = qs[currentQ];
+    const totalStudents = sorted.length;
+    const lockedCount = sorted.filter(s => activity.responses?.[s.id + "-" + currentQ] !== undefined).length;
+    const letters = ["A", "B", "C", "D", "E", "F"];
+    return (
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#0f172a", color: "#fff", fontFamily: F, padding: 40, overflowY: "auto", zIndex: 9999 }}>
+        <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 30 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em" }}>{label} / Week {week} / Q{currentQ + 1} of {qs.length}</div>
+            <button onClick={() => setPresenterMode(false)} style={{ background: "#1e293b", color: "#fff", border: "1px solid #334155", padding: "10px 20px", borderRadius: 10, fontFamily: F, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Exit Presenter</button>
+          </div>
+          {q ? (
+            <>
+              <div style={{ fontSize: 56, fontWeight: 900, color: "#fff", lineHeight: 1.2, marginBottom: 50, textAlign: "center" }}>{q.text || q.prompt || "(no text)"}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 50 }}>
+                {(q.options || []).map((opt, oi) => (
+                  <div key={oi} style={{ background: "#1e293b", border: "3px solid #334155", borderRadius: 20, padding: "30px 40px", display: "flex", alignItems: "center", gap: 24 }}>
+                    <div style={{ width: 70, height: 70, borderRadius: 16, background: "#334155", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, fontWeight: 900, color: "#fff", flexShrink: 0 }}>{letters[oi]}</div>
+                    <div style={{ fontSize: 36, fontWeight: 700, color: "#fff", flex: 1, lineHeight: 1.3 }}>{opt}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 32, color: "#94a3b8", textAlign: "center" }}>No question</div>
+          )}
+          <div style={{ position: "fixed", bottom: 40, left: "50%", transform: "translateX(-50%)", background: "#1e293b", border: "3px solid #334155", borderRadius: 20, padding: "20px 40px", display: "flex", alignItems: "center", gap: 20 }}>
+            <div style={{ fontSize: 18, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Locked In</div>
+            <div style={{ fontSize: 56, fontWeight: 900, color: "#10b981", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{lockedCount}<span style={{ color: "#94a3b8", fontSize: 36 }}> / {totalStudents}</span></div>
+            {countdownActive && <div style={{ fontSize: 56, fontWeight: 900, color: "#ef4444", marginLeft: 20, fontVariantNumeric: "tabular-nums" }}>{countdownSecs}</div>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <Toast message={msg} />
@@ -588,7 +626,7 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <button onClick={onBack} style={pillInactive}>Back</button>
           <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>Week {week} {label} <span style={{ color: "#d97706" }}>LIVE</span></div>
-          <div style={{ width: 60 }} />
+          <button onClick={() => setPresenterMode(true)} style={{ ...pill, background: "#0f172a", color: "#fff", fontSize: 13 }}>Presenter</button>
         </div>
 
         {/* Question controls */}
@@ -915,24 +953,62 @@ export function StudentAnswerView({ data, setData, userName }) {
   // Game results (scored)
   if (actType === "game" && activity.scored) {
     let gameTotal = 0, gradeTotal = 0;
+    const responses = activity.responses || {};
+    const allStudents = (data.students || []).filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis");
+    const playedStudents = allStudents.filter(s => qs.some((_, qi) => responses[s.id + "-" + qi] !== undefined));
+    const letters = ["A", "B", "C", "D", "E", "F"];
     return (
       <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
-        <div style={{ maxWidth: 500, margin: "0 auto" }}>
+        <div style={{ maxWidth: 640, margin: "0 auto" }}>
           <button onClick={() => setWeek(null)} style={{ ...pillInactive, marginBottom: 12 }}>Back</button>
           <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", marginBottom: 12 }}>Week {week} Results</div>
-          {qs.map((q, i) => {
-            const my = sid ? activity.responses?.[sid + "-" + i] : undefined;
-            const correct = my === q.correct;
-            if (correct) { gameTotal += GAME_PTS; gradeTotal += GAME_GRADE_PTS[q.category]; }
+          {qs.map((q, qi) => {
+            const my = sid ? responses[sid + "-" + qi] : undefined;
+            const isCorrect = my === q.correct;
+            if (isCorrect) { gameTotal += GAME_PTS; gradeTotal += GAME_GRADE_PTS[q.category] || 0; }
+            const counts = (q.options || []).map(() => 0);
+            let totalAnswered = 0;
+            playedStudents.forEach(s => {
+              const ans = responses[s.id + "-" + qi];
+              if (ans !== undefined && ans !== null && counts[ans] !== undefined) {
+                counts[ans]++;
+                totalAnswered++;
+              }
+            });
             return (
-              <div key={i} style={{ ...crd, padding: 12, marginBottom: 6, borderColor: correct ? "#bbf7d0" : "#fecaca" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <div style={{ width: 24, height: 24, borderRadius: 6, background: correct ? GREEN : RED, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 900, flexShrink: 0 }}>{i + 1}</div>
-                  <div style={{ fontSize: 10, color: "#9ca3af" }}>{GAME_CATS.find(c => c.id === q.category)?.label}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: correct ? GREEN : RED, marginLeft: "auto" }}>{correct ? "Correct" : "Incorrect"}</div>
+              <div key={qi} style={{ padding: 14, marginBottom: 10, background: "#fafafa", borderRadius: 10, border: "1px solid #e5e5e4" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 7, background: "#9f123915", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: "#9f1239", flexShrink: 0 }}>{qi + 1}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: "#9ca3af", textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>{GAME_CATS.find(c => c.id === q.category)?.label}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "#111827", lineHeight: 1.4 }}>{q.text || q.prompt || "(no text)"}</div>
+                  </div>
                 </div>
-                {!correct && my !== undefined && <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>You picked <strong style={{ color: RED }}>{q.options[my]}</strong>, but the answer was <strong style={{ color: GREEN }}>{q.options[q.correct]}</strong>.</div>}
-                {!correct && my === undefined && <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic", marginTop: 4 }}>No answer. Correct: <strong>{q.options[q.correct]}</strong></div>}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {(q.options || []).map((opt, oi) => {
+                    const isCorrectOpt = oi === q.correct;
+                    const isMine = oi === my;
+                    const pct = totalAnswered > 0 ? Math.round(counts[oi] / totalAnswered * 100) : 0;
+                    let bg = "#fff";
+                    let borderColor = "#e5e5e4";
+                    let textColor = "#111827";
+                    if (isCorrectOpt) { bg = "#ecfdf5"; borderColor = GREEN; textColor = "#065f46"; }
+                    if (isMine && !isCorrectOpt) { bg = "#fef2f2"; borderColor = RED; textColor = "#991b1b"; }
+                    return (
+                      <div key={oi} style={{ position: "relative", padding: "10px 14px", borderRadius: 8, background: bg, border: "2px solid " + borderColor, overflow: "hidden" }}>
+                        <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: pct + "%", background: isCorrectOpt ? "rgba(16,185,129,0.1)" : isMine && !isCorrectOpt ? "rgba(220,38,38,0.1)" : "rgba(0,0,0,0.04)", transition: "width 0.3s" }} />
+                        <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: textColor, minWidth: 16 }}>{letters[oi]}.</span>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: textColor, flex: 1 }}>{opt}</span>
+                          {isMine && <span style={{ fontSize: 10, fontWeight: 700, color: textColor, padding: "2px 6px", borderRadius: 4, background: "rgba(0,0,0,0.05)" }}>YOU</span>}
+                          {isCorrectOpt && <span style={{ fontSize: 10, fontWeight: 700, color: "#065f46", padding: "2px 6px", borderRadius: 4, background: GREEN + "30" }}>CORRECT</span>}
+                          <span style={{ fontSize: 12, fontWeight: 700, color: textColor }}>{pct}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {my === undefined && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 6, fontStyle: "italic" }}>You did not answer this question</div>}
               </div>
             );
           })}
@@ -952,21 +1028,59 @@ export function StudentAnswerView({ data, setData, userName }) {
   if (actType === "tot" && activity.scored) {
     const ptsEach = qs.length > 0 ? 20 / qs.length : 20;
     let total = 0;
+    const responses = activity.responses || {};
+    const allStudents = (data.students || []).filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis");
+    const playedStudents = allStudents.filter(s => qs.some((_, qi) => responses[s.id + "-" + qi] !== undefined));
+    const letters = ["A", "B", "C", "D", "E", "F"];
     return (
       <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
-        <div style={{ maxWidth: 500, margin: "0 auto" }}>
+        <div style={{ maxWidth: 640, margin: "0 auto" }}>
           <button onClick={() => setWeek(null)} style={{ ...pillInactive, marginBottom: 12 }}>Back</button>
           <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", marginBottom: 12 }}>Week {week} This or That Results</div>
-          {qs.map((q, i) => {
-            const my = sid ? activity.responses?.[sid + "-" + i] : undefined;
-            const correct = my === q.correct;
-            if (correct) total += ptsEach;
+          {qs.map((q, qi) => {
+            const my = sid ? responses[sid + "-" + qi] : undefined;
+            const isCorrect = my === q.correct;
+            if (isCorrect) total += ptsEach;
+            const counts = (q.options || []).map(() => 0);
+            let totalAnswered = 0;
+            playedStudents.forEach(s => {
+              const ans = responses[s.id + "-" + qi];
+              if (ans !== undefined && ans !== null && counts[ans] !== undefined) {
+                counts[ans]++;
+                totalAnswered++;
+              }
+            });
             return (
-              <div key={i} style={{ ...crd, padding: 12, marginBottom: 6, borderColor: correct ? "#bbf7d0" : "#fecaca" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 4 }}>Question {i + 1}</div>
-                {correct && <div style={{ fontSize: 13, color: GREEN, fontWeight: 700 }}>Correct: {q.options[q.correct]}</div>}
-                {!correct && my !== undefined && <div style={{ fontSize: 13, color: "#6b7280" }}>You picked <strong style={{ color: RED }}>{q.options[my]}</strong>, but the answer was <strong style={{ color: GREEN }}>{q.options[q.correct]}</strong>.</div>}
-                {my === undefined && <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>No answer. Correct: <strong>{q.options[q.correct]}</strong></div>}
+              <div key={qi} style={{ padding: 14, marginBottom: 10, background: "#fafafa", borderRadius: 10, border: "1px solid #e5e5e4" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 7, background: "#9f123915", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: "#9f1239", flexShrink: 0 }}>{qi + 1}</div>
+                  <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#111827", lineHeight: 1.4 }}>{q.text || q.prompt || "(no text)"}</div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {(q.options || []).map((opt, oi) => {
+                    const isCorrectOpt = oi === q.correct;
+                    const isMine = oi === my;
+                    const pct = totalAnswered > 0 ? Math.round(counts[oi] / totalAnswered * 100) : 0;
+                    let bg = "#fff";
+                    let borderColor = "#e5e5e4";
+                    let textColor = "#111827";
+                    if (isCorrectOpt) { bg = "#ecfdf5"; borderColor = GREEN; textColor = "#065f46"; }
+                    if (isMine && !isCorrectOpt) { bg = "#fef2f2"; borderColor = RED; textColor = "#991b1b"; }
+                    return (
+                      <div key={oi} style={{ position: "relative", padding: "10px 14px", borderRadius: 8, background: bg, border: "2px solid " + borderColor, overflow: "hidden" }}>
+                        <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: pct + "%", background: isCorrectOpt ? "rgba(16,185,129,0.1)" : isMine && !isCorrectOpt ? "rgba(220,38,38,0.1)" : "rgba(0,0,0,0.04)", transition: "width 0.3s" }} />
+                        <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: textColor, minWidth: 16 }}>{letters[oi]}.</span>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: textColor, flex: 1 }}>{opt}</span>
+                          {isMine && <span style={{ fontSize: 10, fontWeight: 700, color: textColor, padding: "2px 6px", borderRadius: 4, background: "rgba(0,0,0,0.05)" }}>YOU</span>}
+                          {isCorrectOpt && <span style={{ fontSize: 10, fontWeight: 700, color: "#065f46", padding: "2px 6px", borderRadius: 4, background: GREEN + "30" }}>CORRECT</span>}
+                          <span style={{ fontSize: 12, fontWeight: 700, color: textColor }}>{pct}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {my === undefined && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 6, fontStyle: "italic" }}>You did not answer this question</div>}
               </div>
             );
           })}
