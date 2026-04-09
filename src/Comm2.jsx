@@ -191,7 +191,7 @@ const ADMIN_NAME = "Andrew Ishak";
 const GUEST_NAME = "__guest__";
 const TEST_STUDENT = "Bruce Willis";
 
-function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent }) {
+function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent, allStudents }) {
   const tabs = [
     { id: "home", label: "Home", admin: false, guest: false },
     { id: "leaderboard", label: "Leaderboard", admin: false, guest: true },
@@ -232,12 +232,16 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
             background: studentView ? "#fbbf24" : "transparent", color: studentView ? "#18181b" : "rgba(255,255,255,0.6)", transition: "all 0.15s",
           }}>{studentView ? "Exit Student View" : "Student View"}</button>
         )}
-        {setTestStudent && (
-          <button onClick={() => setTestStudent(!testStudent)} style={{
-            padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+        {setTestStudent && allStudents && (
+          <select value={testStudent || ""} onChange={e => setTestStudent(e.target.value || null)} style={{
+            padding: "5px 10px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
             fontFamily: F, border: testStudent ? "1px solid #f87171" : "1px solid rgba(255,255,255,0.2)",
-            background: testStudent ? "#f87171" : "transparent", color: testStudent ? "#fff" : "rgba(255,255,255,0.6)", transition: "all 0.15s",
-          }}>{testStudent ? "Exit Test Mode" : "Test as Bruce"}</button>
+            background: testStudent ? "#f87171" : "transparent", color: testStudent ? "#fff" : "rgba(255,255,255,0.6)",
+            outline: "none", maxWidth: 160,
+          }}>
+            <option value="" style={{ color: "#000" }}>Test as student...</option>
+            {allStudents.map(s => <option key={s.id} value={s.name} style={{ color: "#000" }}>{s.name}</option>)}
+          </select>
         )}
         <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginLeft: 4 }}>{userName}</span>
         <button onClick={onLogout} style={{
@@ -716,84 +720,156 @@ function WeekHeaderInline({ week, onSave, onCancel }) {
 }
 
 /* --- LEADERBOARD --- */
-function Leaderboard({ students, log, isAdmin, userName, data }) {
+function Leaderboard({ students, log, isAdmin, userName, data, setData }) {
   const ranked = rs(students, log);
   const bios = data?.bios || {};
   const mx = ranked.length > 0 ? Math.max(ranked[0].points, 1) : 1;
   const [showAll, setShowAll] = useState(false);
+  const [showExplain, setShowExplain] = useState(false);
+  const [editingExplain, setEditingExplain] = useState(false);
+  const [explainText, setExplainText] = useState("");
   const [expandedId, setExpandedId] = useState(null);
   const visible = showAll ? ranked : ranked.slice(0, 10);
   const myRank = ranked.findIndex(s => s.name === userName);
   const meInVisible = myRank >= 0 && myRank < visible.length;
   const meData = myRank >= 0 ? ranked[myRank] : null;
 
+  // This week (Mon-Sun)
+  const now = new Date();
+  const day = now.getDay();
+  const daysFromMon = day === 0 ? 6 : day - 1;
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - daysFromMon); weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 7);
+  const weekLog = log.filter(e => e.ts >= weekStart.getTime() && e.ts < weekEnd.getTime());
+  const weekRanked = students.map(s => ({ ...s, points: weekLog.filter(e => e.studentId === s.id).reduce((t, e) => t + e.amount, 0) })).filter(s => s.points > 0).sort((a, b) => b.points - a.points).slice(0, 10);
+
+  const customExplain = data?.leaderboardExplain;
+  const defaultExplain = "Earn points through speeches, in-class participation, and bonus activities.";
+  const explainContent = customExplain || defaultExplain;
+
+  const saveExplain = async () => {
+    const updated = { ...data, leaderboardExplain: explainText };
+    await saveData(updated); if (setData) setData(updated);
+    setEditingExplain(false);
+  };
+
   return (
     <div style={{ padding: "20px 16px 40px", fontFamily: F }}>
-      <div style={{ maxWidth: 600, margin: "0 auto" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <div style={{ ...sectionLabel }}>Leaderboard</div>
-          {isAdmin && <button onClick={() => setShowAll(!showAll)} style={pillInactive}>{showAll ? "Top 10" : "Show All"}</button>}
-        </div>
-        <div style={{ ...crd, padding: 0 }}>
-          {visible.map((s, i) => {
-            const isMe = s.name === userName;
-            const isAZone = i < 5;
-            const isExpanded = expandedId === s.id;
-            const bio = bios[s.id] || {};
-            const initials = s.name.split(" ").map(n => n[0]).join("");
-            const entries = log.filter(e => e.studentId === s.id);
-            const bySrc = {};
-            entries.forEach(e => { bySrc[e.source] = (bySrc[e.source] || 0) + e.amount; });
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
 
-            return (
-              <div key={s.id}>
-                <div onClick={() => setExpandedId(isExpanded ? null : s.id)} style={{
-                  display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
-                  borderBottom: "1px solid #f4f4f5", cursor: "pointer",
-                  background: isMe ? "#eff6ff" : "transparent",
-                }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 10, background: isAZone ? GREEN : "#e4e4e7", display: "flex", alignItems: "center", justifyContent: "center", color: isAZone ? "#fff" : TEXT_SECONDARY, fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
-                  {bio.photo ? (
-                    <img src={bio.photo} alt="" style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "3px solid " + (isAZone ? GREEN + "44" : "#f4f4f5") }} />
-                  ) : (
-                    <div style={{ width: 80, height: 80, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 900, color: "#fff", flexShrink: 0, border: "3px solid " + (isAZone ? GREEN + "44" : "#f4f4f5") }}>{initials}</div>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: TEXT_PRIMARY }}>{s.name}{isMe && <span style={{ fontSize: 11, color: ACCENT, marginLeft: 6, fontWeight: 600 }}>You</span>}</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
-                      {bio.major && <span style={{ fontSize: 13, color: TEXT_SECONDARY, fontWeight: 600 }}>{bio.major}</span>}
-                      {bio.major && bio.hometown && <span style={{ fontSize: 13, color: "#d4d4d8" }}>/</span>}
-                      {bio.hometown && <span style={{ fontSize: 13, color: TEXT_SECONDARY }}>{bio.hometown}</span>}
-                    </div>
-                    {isAZone && <div style={{ fontSize: 13, color: GREEN, fontWeight: 600, marginTop: 2 }}>A Zone</div>}
-                  </div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{s.points}</div>
+        {/* Explanation */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ ...crd, padding: "10px 14px" }}>
+            {editingExplain ? (
+              <div>
+                <textarea value={explainText} onChange={e => setExplainText(e.target.value)} rows={8} style={{ ...inp, fontSize: 13, resize: "vertical", lineHeight: 1.6 }} />
+                <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                  <button onClick={saveExplain} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Save</button>
+                  <button onClick={() => setEditingExplain(false)} style={pillInactive}>Cancel</button>
                 </div>
-                {isExpanded && (
-                  <div style={{ padding: "8px 16px 12px 60px", background: "#fafafa", borderBottom: "1px solid #f4f4f5" }}>
-                    {Object.entries(bySrc).sort((a, b) => b[1] - a[1]).map(([src, pts]) => (
-                      <div key={src} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: TEXT_SECONDARY, padding: "2px 0" }}>
-                        <span>{src}</span><span style={{ fontWeight: 700 }}>{pts}</span>
+              </div>
+            ) : (
+              <>
+                <button onClick={() => setShowExplain(!showExplain)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, width: "100%", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 13, color: TEXT_SECONDARY }}>{explainContent.split("\n")[0]}</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" style={{ transform: showExplain ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0, marginLeft: 8 }}><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                {showExplain && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6", fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                    {explainContent}
+                    {isAdmin && (
+                      <div style={{ marginTop: 10 }}>
+                        <button onClick={() => { setExplainText(explainContent); setEditingExplain(true); }} style={{ ...pillInactive, fontSize: 11 }}>Edit Explanation</button>
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
-              </div>
-            );
-          })}
-        </div>
-        {!meInVisible && meData && myRank >= 0 && (
-          <div style={{ ...crd, marginTop: 12, padding: "12px 16px", background: "#eff6ff" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 10, background: "#e4e4e7", display: "flex", alignItems: "center", justifyContent: "center", color: TEXT_SECONDARY, fontSize: 14, fontWeight: 800 }}>{myRank + 1}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{meData.name} <span style={{ fontSize: 11, color: ACCENT, fontWeight: 600 }}>You</span></div>
-                <div style={{ fontSize: 11, color: TEXT_MUTED }}>Only visible to you</div>
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: TEXT_PRIMARY }}>{meData.points}</div>
-            </div>
+              </>
+            )}
           </div>
-        )}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 16 }}>
+
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ ...sectionLabel }}>Class Leaderboard</div>
+              {isAdmin && <button onClick={() => setShowAll(!showAll)} style={pillInactive}>{showAll ? "Top 10" : "Show All"}</button>}
+            </div>
+            <div style={{ ...crd, padding: 0 }}>
+              {visible.map((s, i) => {
+                const isMe = s.name === userName;
+                const isAZone = i < 5;
+                const isExpanded = expandedId === s.id;
+                const bio = bios[s.id] || {};
+                const initials = s.name.split(" ").map(n => n[0]).join("");
+                const entries = log.filter(e => e.studentId === s.id);
+                const bySrc = {};
+                entries.forEach(e => { bySrc[e.source] = (bySrc[e.source] || 0) + e.amount; });
+
+                return (
+                  <div key={s.id}>
+                    <div onClick={() => setExpandedId(isExpanded ? null : s.id)} style={{
+                      display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
+                      borderBottom: "1px solid #f4f4f5", cursor: "pointer",
+                      background: isMe ? "#eff6ff" : "transparent",
+                    }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: isAZone ? GREEN : "#e4e4e7", display: "flex", alignItems: "center", justifyContent: "center", color: isAZone ? "#fff" : TEXT_SECONDARY, fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
+                      {bio.photo ? (
+                        <img src={bio.photo} alt="" style={{ width: 60, height: 60, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "3px solid " + (isAZone ? GREEN + "44" : "#f4f4f5") }} />
+                      ) : (
+                        <div style={{ width: 60, height: 60, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "#fff", flexShrink: 0, border: "3px solid " + (isAZone ? GREEN + "44" : "#f4f4f5") }}>{initials}</div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: TEXT_PRIMARY }}>{s.name}{isMe && <span style={{ fontSize: 11, color: ACCENT, marginLeft: 6, fontWeight: 600 }}>You</span>}</div>
+                        {isAZone && <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginTop: 2 }}>A Zone</div>}
+                      </div>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{s.points}</div>
+                    </div>
+                    {isExpanded && (
+                      <div style={{ padding: "8px 16px 12px 60px", background: "#fafafa", borderBottom: "1px solid #f4f4f5" }}>
+                        {Object.entries(bySrc).sort((a, b) => b[1] - a[1]).map(([src, pts]) => (
+                          <div key={src} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: TEXT_SECONDARY, padding: "2px 0" }}>
+                            <span>{src}</span><span style={{ fontWeight: 700 }}>{pts}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {!meInVisible && meData && myRank >= 0 && (
+              <div style={{ ...crd, marginTop: 12, padding: "12px 16px", background: "#eff6ff" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: "#e4e4e7", display: "flex", alignItems: "center", justifyContent: "center", color: TEXT_SECONDARY, fontSize: 14, fontWeight: 800 }}>{myRank + 1}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{meData.name} <span style={{ fontSize: 11, color: ACCENT, fontWeight: 600 }}>You</span></div>
+                    <div style={{ fontSize: 11, color: TEXT_MUTED }}>Only visible to you</div>
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: TEXT_PRIMARY }}>{meData.points}</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div style={{ ...sectionLabel, marginBottom: 8 }}>This Week</div>
+            <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>{weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} to {new Date(weekEnd.getTime() - 1).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
+            {weekRanked.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>No points yet this week</div>}
+            {weekRanked.map((s, i) => {
+              const isMe = s.name === userName;
+              return (
+                <div key={s.id} style={{ ...crd, padding: "10px 14px", marginBottom: 6, display: "flex", alignItems: "center", gap: 10, border: isMe ? "2px solid " + ACCENT : "1px solid " + BORDER }}>
+                  <div style={{ width: 24, textAlign: "center", fontSize: 14, fontWeight: 800, color: i < 3 ? "#d4a017" : TEXT_MUTED }}>{i + 1}</div>
+                  <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}{isMe && <span style={{ fontSize: 10, color: ACCENT, marginLeft: 6, fontWeight: 700 }}>YOU</span>}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: TEXT_PRIMARY }}>{s.points}</div>
+                </div>
+              );
+            })}
+          </div>
+
+        </div>
       </div>
     </div>
   );
@@ -2878,8 +2954,8 @@ export default function Comm2() {
   const isGuest = userName === GUEST_NAME;
   const displayName = isGuest ? "Guest" : userName;
   const [studentView, setStudentView] = useState(false);
-  const [testStudent, setTestStudent] = useState(false);
-  const effectiveUserName = testStudent ? TEST_STUDENT : userName;
+  const [testStudent, setTestStudent] = useState(null);
+  const effectiveUserName = testStudent || userName;
   const effectiveAdmin = isAdmin && !studentView && !testStudent;
   const visibleStudents = data ? data.students.filter(s => effectiveAdmin || testStudent || s.name !== TEST_STUDENT) : [];
 
@@ -2955,11 +3031,11 @@ export default function Comm2() {
           <a href="/dashboard" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: "#9ca3af", background: "transparent" }}>Dash</a>
         </div>
       )}
-      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={testStudent ? TEST_STUDENT : displayName} onLogout={() => { if (testStudent) { setTestStudent(false); return; } try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); setView("home"); setStudentView(false); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} testStudent={testStudent} setTestStudent={isAdmin ? setTestStudent : null} />
+      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={testStudent || displayName} onLogout={() => { if (testStudent) { setTestStudent(null); return; } try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); setView("home"); setStudentView(false); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} testStudent={testStudent} setTestStudent={isAdmin ? setTestStudent : null} allStudents={data ? data.students.filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis").sort((a, b) => { const al = a.name.split(" ").slice(-1)[0]; const bl = b.name.split(" ").slice(-1)[0]; return al.localeCompare(bl); }) : []} />
 
       {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} setView={setView} />}
 
-      {view === "leaderboard" && <Leaderboard students={students} log={log} isAdmin={effectiveAdmin} userName={userName} data={data} />}
+      {view === "leaderboard" && <Leaderboard students={students} log={log} isAdmin={effectiveAdmin} userName={userName} data={data} setData={setData} />}
       {view === "todo" && !isGuest && <ToDoView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "assignments" && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}

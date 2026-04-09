@@ -200,7 +200,7 @@ function shuffleTeams(students, log, teams) {
 function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#18181b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 14, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
 
 /* ─── NAV ─── */
-function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent }) {
+function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent, allStudents }) {
   const tabs = [
     { id: "home", label: "Home", admin: false, guest: false },
     { id: "todo", label: "To-Do", admin: true, guest: false },
@@ -244,12 +244,16 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
             background: studentView ? "#fbbf24" : "transparent", color: studentView ? "#18181b" : "rgba(255,255,255,0.6)", transition: "all 0.15s",
           }}>{studentView ? "Exit Student View" : "Student View"}</button>
         )}
-        {setTestStudent && (
-          <button onClick={() => setTestStudent(!testStudent)} style={{
-            padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+        {setTestStudent && allStudents && (
+          <select value={testStudent || ""} onChange={e => setTestStudent(e.target.value || null)} style={{
+            padding: "5px 10px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
             fontFamily: F, border: testStudent ? "1px solid #f87171" : "1px solid rgba(255,255,255,0.2)",
-            background: testStudent ? "#f87171" : "transparent", color: testStudent ? "#fff" : "rgba(255,255,255,0.6)", transition: "all 0.15s",
-          }}>{testStudent ? "Exit Test Mode" : "Test as Bruce"}</button>
+            background: testStudent ? "#f87171" : "transparent", color: testStudent ? "#fff" : "rgba(255,255,255,0.6)",
+            outline: "none", maxWidth: 160,
+          }}>
+            <option value="" style={{ color: "#000" }}>Test as student...</option>
+            {allStudents.map(s => <option key={s.id} value={s.name} style={{ color: "#000" }}>{s.name}</option>)}
+          </select>
         )}
         <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginLeft: 4 }}>{userName}</span>
         <button onClick={onLogout} style={{
@@ -1750,42 +1754,39 @@ function getWeekBounds() {
   return { start: mon.getTime(), end: sun.getTime() };
 }
 
-function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
+function Leaderboard({ students, log, teams, isAdmin, userName, data, setData }) {
   const ranked = rs(students, log);
   const mx = ranked.length > 0 ? Math.max(ranked[0].points, 1) : 1;
   const [showAll, setShowAll] = useState(false);
   const [showExplain, setShowExplain] = useState(false);
+  const [editingExplain, setEditingExplain] = useState(false);
+  const [explainText, setExplainText] = useState("");
   const [expandedId, setExpandedId] = useState(null);
-  const [flashIds, setFlashIds] = useState(new Set());
-  const prevLogLenRef = useRef(log.length);
   const shuffledStudents = shuffleTeams(students, log, teams);
   const visible = showAll ? ranked : ranked.slice(0, 10);
   const myRank = ranked.findIndex(s => s.name === userName);
   const meInVisible = myRank >= 0 && myRank < visible.length;
   const meData = myRank >= 0 ? ranked[myRank] : null;
 
-  // Today's transactions
-  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-  const todayLog = log.filter(e => e.ts >= todayStart.getTime()).sort((a, b) => b.ts - a.ts);
+  // This week (Mon-Sun)
+  const now = new Date();
+  const day = now.getDay();
+  const daysFromMon = day === 0 ? 6 : day - 1;
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - daysFromMon); weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 7);
+  const weekLog = log.filter(e => e.ts >= weekStart.getTime() && e.ts < weekEnd.getTime());
+  const weekRanked = students.map(s => ({ ...s, points: weekLog.filter(e => e.studentId === s.id).reduce((t, e) => t + e.amount, 0) })).filter(s => s.points > 0).sort((a, b) => b.points - a.points).slice(0, 10);
 
-  // Flash new entries for 5 seconds
-  useEffect(() => {
-    if (log.length > prevLogLenRef.current) {
-      const newEntries = log.slice(prevLogLenRef.current);
-      const newIds = new Set(newEntries.map(e => e.id));
-      setFlashIds(prev => new Set([...prev, ...newIds]));
-      const timer = setTimeout(() => {
-        setFlashIds(prev => {
-          const next = new Set(prev);
-          newIds.forEach(id => next.delete(id));
-          return next;
-        });
-      }, 5000);
-      prevLogLenRef.current = log.length;
-      return () => clearTimeout(timer);
-    }
-    prevLogLenRef.current = log.length;
-  }, [log.length]);
+  const customExplain = data?.leaderboardExplain;
+  const defaultExplain = "Earn points through the weekly game, Around the Horn, and Rotating Fishbowl.";
+  const explainContent = customExplain || defaultExplain;
+
+  const saveExplain = async () => {
+    const updated = { ...data, leaderboardExplain: explainText };
+    await saveData(updated); if (setData) setData(updated);
+    setEditingExplain(false);
+  };
+
   const stars = data?.fishbowlStars || {};
   const starCounts = {};
   Object.values(stars).forEach(sid => { if (sid) starCounts[sid] = (starCounts[sid] || 0) + 1; });
@@ -1927,64 +1928,79 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
 
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
-      <div style={{ maxWidth: 600, margin: "0 auto" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+
+        {/* Explanation */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ ...sectionLabel, marginBottom: 8 }}>Class Leaderboard</div>
           <div style={{ ...crd, padding: "10px 14px" }}>
-            <button onClick={() => setShowExplain(!showExplain)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, width: "100%", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 13, color: TEXT_SECONDARY }}>Earn points through the weekly game, Around the Horn, and Rotating Fishbowl.</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" style={{ transform: showExplain ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0, marginLeft: 8 }}><path d="M6 9l6 6 6-6"/></svg>
-            </button>
-            {showExplain && (
-              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6", fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>
-                <p>The leaderboard tracks your game points. You earn them three ways: the weekly game (up to 100 pts), Around the Horn culture points (awarded in class), and Rotating Fishbowl (up to 20 pts).</p>
-                <p style={{ marginTop: 8 }}>The top 5 on the leaderboard at the end of the quarter earn automatic A's in the class. That's real.</p>
-                <p style={{ marginTop: 8 }}>This is not your full grade. The leaderboard contributes to 25% of your grade (the participation bucket), but in different weights. The other 75% comes from your assignments. Check the Assignments tab for the full picture.</p>
+            {editingExplain ? (
+              <div>
+                <textarea value={explainText} onChange={e => setExplainText(e.target.value)} rows={8} style={{ ...inp, fontSize: 13, resize: "vertical", lineHeight: 1.6 }} />
+                <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                  <button onClick={saveExplain} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Save</button>
+                  <button onClick={() => setEditingExplain(false)} style={pillInactive}>Cancel</button>
+                </div>
               </div>
+            ) : (
+              <>
+                <button onClick={() => setShowExplain(!showExplain)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, width: "100%", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 13, color: TEXT_SECONDARY }}>{explainContent.split("\n")[0]}</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" style={{ transform: showExplain ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0, marginLeft: 8 }}><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                {showExplain && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6", fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                    {explainContent}
+                    {isAdmin && (
+                      <div style={{ marginTop: 10 }}>
+                        <button onClick={() => { setExplainText(explainContent); setEditingExplain(true); }} style={{ ...pillInactive, fontSize: 11 }}>Edit Explanation</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
 
-        {/* Transaction ticker */}
-        {todayLog.length > 0 && (
-          <div style={{ ...crd, padding: "8px 14px", marginBottom: 12, maxHeight: 120, overflowY: "auto" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-              {todayLog.slice(0, 30).map(e => {
-                const s = students.find(x => x.id === e.studentId);
-                const firstName = s ? s.name.split(" ")[0] : "?";
-                const lastName = s ? s.name.split(" ").slice(-1)[0] : "";
-                const isFlash = flashIds.has(e.id);
-                return (
-                  <span key={e.id} style={{
-                    fontSize: 12, fontWeight: 600, padding: "3px 8px", borderRadius: 6,
-                    background: isFlash ? (e.amount >= 0 ? "#ecfdf5" : "#fef2f2") : "#f4f4f5",
-                    color: isFlash ? (e.amount >= 0 ? GREEN : RED) : TEXT_SECONDARY,
-                    transition: "all 0.5s",
-                    animation: isFlash ? "tickerPulse 0.5s ease-out" : "none",
-                  }}>
-                    {firstName} {lastName} {e.amount > 0 ? "+" : ""}{e.amount}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* Side-by-side leaderboards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 16 }}>
 
-        <div style={{ fontSize: 13, fontWeight: 900, color: "#d4a017", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, paddingLeft: 2 }}>A Zone</div>
-        {visible.map((s, i) => renderRow(s, i, s.name === userName, false))}
-        {!meInVisible && meData && !showAll && (
-          <div style={{ marginTop: 12 }}>
-            <div style={{ ...sectionLabel, textAlign: "center", marginBottom: 6 }}>Only visible to you</div>
-            {renderRow(meData, myRank, true, true)}
+          <div>
+            <div style={{ ...sectionLabel, marginBottom: 8 }}>Class Leaderboard</div>
+            <div style={{ fontSize: 13, fontWeight: 900, color: "#d4a017", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, paddingLeft: 2 }}>A Zone</div>
+            {visible.map((s, i) => renderRow(s, i, s.name === userName, false))}
+            {!meInVisible && meData && !showAll && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ ...sectionLabel, textAlign: "center", marginBottom: 6 }}>Only visible to you</div>
+                {renderRow(meData, myRank, true, true)}
+              </div>
+            )}
+            {isAdmin && ranked.length > 10 && (
+              <div style={{ textAlign: "center", marginTop: 12 }}>
+                <button onClick={() => setShowAll(!showAll)} style={showAll ? pillActive : pillInactive}>
+                  {showAll ? "Show Top 10" : "Show All (" + ranked.length + ")"}
+                </button>
+              </div>
+            )}
           </div>
-        )}
-        {isAdmin && ranked.length > 10 && (
-          <div style={{ textAlign: "center", marginTop: 12 }}>
-            <button onClick={() => setShowAll(!showAll)} style={showAll ? pillActive : pillInactive}>
-              {showAll ? "Show Top 10" : "Show All (" + ranked.length + ")"}
-            </button>
+
+          <div>
+            <div style={{ ...sectionLabel, marginBottom: 8 }}>This Week</div>
+            <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>{weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} to {new Date(weekEnd.getTime() - 1).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
+            {weekRanked.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>No points yet this week</div>}
+            {weekRanked.map((s, i) => {
+              const isMe = s.name === userName;
+              return (
+                <div key={s.id} style={{ ...crd, padding: "10px 14px", marginBottom: 6, display: "flex", alignItems: "center", gap: 10, border: isMe ? "2px solid " + ACCENT : "1px solid " + BORDER }}>
+                  <div style={{ width: 24, textAlign: "center", fontSize: 14, fontWeight: 800, color: i < 3 ? "#d4a017" : TEXT_MUTED }}>{i + 1}</div>
+                  <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}{isMe && <span style={{ fontSize: 10, color: ACCENT, marginLeft: 6, fontWeight: 700 }}>YOU</span>}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: TEXT_PRIMARY }}>{s.points}</div>
+                </div>
+              );
+            })}
           </div>
-        )}
+
+        </div>
       </div>
     </div>
   );
@@ -1992,6 +2008,19 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data }) {
 
 /* ─── TEAMS ─── */
 function TeamsView({ teams, students, log, data }) {
+  if (data?.teamsHidden) {
+    return (
+      <div style={{ padding: "60px 20px", fontFamily: F, textAlign: "center" }}>
+        <div style={{ maxWidth: 480, margin: "0 auto" }}>
+          <div style={{ ...sectionLabel, marginBottom: 8 }}>Teams</div>
+          <div style={{ ...crd, padding: 32 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 6 }}>No teams this week</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>Team play is paused. Check back next week.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const shuffled = shuffleTeams(students, log, teams);
   const teamTotals = teams.map(t => {
     const members = shuffled.filter(s => s.teamId === t.id);
@@ -2062,7 +2091,11 @@ function TeamBuilder({ data, setData }) {
       <div style={{ textAlign: "center", marginBottom: 8 }}>
         <div style={{ ...sectionLabel }}>Team Draft</div>
         <div style={{ color: TEXT_SECONDARY, fontSize: 13, marginTop: 4 }}>Drag players. Click team name to rename.</div>
-        <button onClick={reshuffleTeams} style={{ ...pillInactive, marginTop: 10 }}>Reshuffle</button>
+        <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 10 }}>
+          <button onClick={reshuffleTeams} style={pillInactive}>Reshuffle</button>
+          <button onClick={async () => { const updated = { ...data, teamsHidden: !data.teamsHidden }; await saveData(updated); setData(updated); showMsg(data.teamsHidden ? "Teams enabled" : "Teams hidden this week"); }} style={data.teamsHidden ? { ...pill, background: "#f59e0b", color: "#fff" } : pillInactive}>{data.teamsHidden ? "Re-enable Teams" : "Hide Teams This Week"}</button>
+        </div>
+        {data.teamsHidden && <div style={{ marginTop: 10, padding: "8px 14px", background: "#fffbeb", borderRadius: 8, fontSize: 12, color: "#92400e", fontWeight: 600 }}>Teams are currently hidden from students.</div>}
       </div>
       <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16, paddingTop: 12 }}>
         {data.teams.map(team => {
@@ -4789,8 +4822,8 @@ export default function Comm4() {
   const isGuest = userName === GUEST_NAME;
   const displayName = isGuest ? "Guest" : userName;
   const [studentView, setStudentView] = useState(false);
-  const [testStudent, setTestStudent] = useState(false);
-  const effectiveUserName = testStudent ? TEST_STUDENT : userName;
+  const [testStudent, setTestStudent] = useState(null);
+  const effectiveUserName = testStudent || userName;
   const effectiveAdmin = isAdmin && !studentView && !testStudent;
   const visibleStudents = data ? data.students.filter(s => effectiveAdmin || testStudent || s.name !== TEST_STUDENT) : [];
 
@@ -4878,10 +4911,10 @@ export default function Comm4() {
           <a href="/dashboard" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: "#9ca3af", background: "transparent" }}>Dash</a>
         </div>
       )}
-      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={testStudent ? TEST_STUDENT : displayName} onLogout={() => { if (testStudent) { setTestStudent(false); return; } try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} testStudent={testStudent} setTestStudent={isAdmin ? setTestStudent : null} />
+      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={testStudent || displayName} onLogout={() => { if (testStudent) { setTestStudent(null); return; } try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} testStudent={testStudent} setTestStudent={isAdmin ? setTestStudent : null} allStudents={data ? data.students.filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis").sort((a, b) => { const al = a.name.split(" ").slice(-1)[0]; const bl = b.name.split(" ").slice(-1)[0]; return al.localeCompare(bl); }) : []} />
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "todo" && !isGuest && <ToDoView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
-      {view === "leaderboard" && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={userName} data={data} />}
+      {view === "leaderboard" && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={userName} data={data} setData={setData} />}
       {view === "assignments" && !isGuest && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} setView={setView} />}
       {view === "readings" && !isGuest && <ReadingsView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "inclass" && !isGuest && <InClassView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
@@ -4895,7 +4928,7 @@ export default function Comm4() {
       {view === "accolades" && !isGuest && <Accolades data={data} />}
       {view === "admin" && isAdmin && !studentView && <AdminPanel data={data} setData={setData} />}
       {isGuest && view !== "leaderboard" && view !== "schedule" && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={false} userName={userName} data={data} />}
-      {(view === "admin" || view === "pti") && !isAdmin && !isGuest && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={userName} data={data} />}
+      {(view === "admin" || view === "pti") && !isAdmin && !isGuest && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={userName} data={data} setData={setData} />}
     </div>
   );
 }
