@@ -584,35 +584,41 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
     const q = qs[currentQ];
     const totalStudents = sorted.length;
     const lockedCount = sorted.filter(s => activity.responses?.[s.id + "-" + currentQ] !== undefined).length;
-    const letters = ["A", "B", "C", "D", "E", "F"];
     return (
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#0f172a", color: "#fff", fontFamily: F, padding: 40, overflowY: "auto", zIndex: 9999 }}>
-        <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 30 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em" }}>{label} / Week {week} / Q{currentQ + 1} of {qs.length}</div>
-            <button onClick={() => setPresenterMode(false)} style={{ background: "#1e293b", color: "#fff", border: "1px solid #334155", padding: "10px 20px", borderRadius: 10, fontFamily: F, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Exit Presenter</button>
-          </div>
-          {q ? (
-            <>
-              <div style={{ fontSize: 56, fontWeight: 900, color: "#fff", lineHeight: 1.2, marginBottom: 50, textAlign: "center" }}>{q.text || q.prompt || "(no text)"}</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 50 }}>
-                {(q.options || []).map((opt, oi) => (
-                  <div key={oi} style={{ background: "#1e293b", border: "3px solid #334155", borderRadius: 20, padding: "30px 40px", display: "flex", alignItems: "center", gap: 24 }}>
-                    <div style={{ width: 70, height: 70, borderRadius: 16, background: "#334155", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, fontWeight: 900, color: "#fff", flexShrink: 0 }}>{letters[oi]}</div>
-                    <div style={{ fontSize: 36, fontWeight: 700, color: "#fff", flex: 1, lineHeight: 1.3 }}>{opt}</div>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div style={{ fontSize: 32, color: "#94a3b8", textAlign: "center" }}>No question</div>
-          )}
-          <div style={{ position: "fixed", bottom: 40, left: "50%", transform: "translateX(-50%)", background: "#1e293b", border: "3px solid #334155", borderRadius: 20, padding: "20px 40px", display: "flex", alignItems: "center", gap: 20 }}>
-            <div style={{ fontSize: 18, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Locked In</div>
-            <div style={{ fontSize: 56, fontWeight: 900, color: "#10b981", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{lockedCount}<span style={{ color: "#94a3b8", fontSize: 36 }}> / {totalStudents}</span></div>
-            {countdownActive && <div style={{ fontSize: 56, fontWeight: 900, color: "#ef4444", marginLeft: 20, fontVariantNumeric: "tabular-nums" }}>{countdownSecs}</div>}
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#fafaf9", color: "#111827", fontFamily: F, padding: "24px 32px", zIndex: 9999, display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexShrink: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>{label} / Week {week} / Q{currentQ + 1} of {qs.length}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            {countdownActive && <div style={{ fontSize: 32, fontWeight: 900, color: RED, fontVariantNumeric: "tabular-nums" }}>{countdownSecs}</div>}
+            <div style={{ background: "#fff", border: "2px solid " + BORDER, borderRadius: 12, padding: "8px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase" }}>Locked</span>
+              <span style={{ fontSize: 24, fontWeight: 900, color: GREEN, fontVariantNumeric: "tabular-nums" }}>{lockedCount}<span style={{ color: TEXT_MUTED, fontSize: 16 }}> / {totalStudents}</span></span>
+            </div>
+            <button onClick={() => setPresenterMode(false)} style={{ background: "#fff", color: TEXT_PRIMARY, border: "1px solid " + BORDER, padding: "8px 16px", borderRadius: 10, fontFamily: F, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Exit</button>
           </div>
         </div>
+        {q ? (
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 0 }}>
+            <div style={{ fontSize: "clamp(28px, 4vw, 48px)", fontWeight: 900, color: "#111827", lineHeight: 1.2, marginBottom: 32, textAlign: "center", padding: "0 20px" }}>{q.text || q.prompt || "(no text)"}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, maxWidth: 1200, width: "100%", margin: "0 auto" }}>
+              {(q.options || []).map((opt, oi) => {
+                if (!opt && type === "game") return null;
+                const c = OPT_COLORS[oi] || OPT_COLORS[0];
+                return (
+                  <div key={oi} style={{
+                    background: c.light, border: "3px solid " + c.bg, borderRadius: 16,
+                    padding: "20px 24px", display: "flex", alignItems: "center", gap: 16, minHeight: 80,
+                  }}>
+                    <div style={{ width: 56, height: 56, borderRadius: 12, background: c.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 900, color: "#fff", flexShrink: 0 }}>{String.fromCharCode(65 + oi)}</div>
+                    <div style={{ fontSize: "clamp(18px, 2vw, 28px)", fontWeight: 700, color: c.bg, flex: 1, lineHeight: 1.3, wordBreak: "break-word" }}>{opt}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: TEXT_MUTED }}>No question</div>
+        )}
       </div>
     );
   }
@@ -842,11 +848,12 @@ export function StudentAnswerView({ data, setData, userName }) {
   const games = data.weeklyGames || {};
   const tots = data.weeklyToT || {};
 
-  // Auto-refresh data every 2 seconds for live sync
+  // Auto-refresh data every 5 seconds for live sync; pauses when student has a pending selection
   React.useEffect(() => {
     if (week === null) return;
     const activity = mode === "game" ? games[week] : (tots[week] || tots[String(week)]);
     if (!activity || activity.phase !== "live") return;
+    if (selected !== null) return; // Pause refresh while student is mid-selection
     const iv = setInterval(async () => {
       try {
         const raw = await window.storage.get("comm118-game-v14", true);
@@ -869,9 +876,9 @@ export function StudentAnswerView({ data, setData, userName }) {
           setData(d);
         }
       } catch(e) {}
-    }, 2000);
+    }, 5000);
     return () => clearInterval(iv);
-  }, [week, mode, sid, games, tots]);
+  }, [week, mode, sid, selected]);
 
   // Countdown effect
   React.useEffect(() => {
@@ -1166,7 +1173,7 @@ export function StudentAnswerView({ data, setData, userName }) {
 
         {myAnswer !== undefined ? (
           <div style={{ padding: 24 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: GREEN }}>Locked in: {q.options[myAnswer]}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: GREEN, wordBreak: "break-word", lineHeight: 1.35 }}>Locked in: {q.options[myAnswer]}</div>
             <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 8 }}>Waiting for results...</div>
           </div>
         ) : (
@@ -1181,6 +1188,7 @@ export function StudentAnswerView({ data, setData, userName }) {
                     fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: F, transition: "all 0.15s",
                     background: isSel ? c.bg : c.light, color: isSel ? "#fff" : c.bg,
                     border: "2px solid " + c.bg, transform: isSel ? "scale(1.02)" : "scale(1)",
+                    whiteSpace: "normal", wordBreak: "break-word", lineHeight: 1.35,
                   }}><span style={{ fontWeight: 900, marginRight: 8 }}>{String.fromCharCode(65 + oi)}.</span>{opt}</button>
                 );
               })}
