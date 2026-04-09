@@ -656,31 +656,35 @@ function GameReviewDetail({ activity, type, week, data, studentId, onBack }) {
   );
 }
 
-function PastGamesReview({ data, studentId }) {
+function PastGamesReview({ data, studentId, filter }) {
   const [openKey, setOpenKey] = useState(null);
   const games = data.weeklyGames || {};
   const tots = data.weeklyToT || {};
 
   const items = [];
-  Object.keys(games).forEach(w => {
-    const g = games[w];
-    if (!g?.scored) return;
-    const responses = g.responses || {};
-    const played = (g.questions || []).some((_, qi) => responses[studentId + "-" + qi] !== undefined);
-    items.push({ type: "game", week: w, label: "Weekly Game / Week " + w, activity: g, played });
-  });
-  Object.keys(tots).forEach(w => {
-    const t = tots[w];
-    if (!t?.scored) return;
-    const responses = t.responses || {};
-    const played = (t.questions || []).some((_, qi) => responses[studentId + "-" + qi] !== undefined);
-    items.push({ type: "tot", week: w, label: "This or That / Week " + w, activity: t, played });
-  });
+  if (filter !== "tot") {
+    Object.keys(games).forEach(w => {
+      const g = games[w];
+      if (!g?.scored) return;
+      const responses = g.responses || {};
+      const played = (g.questions || []).some((_, qi) => responses[studentId + "-" + qi] !== undefined);
+      items.push({ type: "game", week: w, label: "Weekly Game / Week " + w, activity: g, played });
+    });
+  }
+  if (filter !== "game") {
+    Object.keys(tots).forEach(w => {
+      const t = tots[w];
+      if (!t?.scored) return;
+      const responses = t.responses || {};
+      const played = (t.questions || []).some((_, qi) => responses[studentId + "-" + qi] !== undefined);
+      items.push({ type: "tot", week: w, label: "This or That / Week " + w, activity: t, played });
+    });
+  }
 
   // Sort by week descending
   items.sort((a, b) => parseInt(b.week) - parseInt(a.week));
 
-  if (items.length === 0) return <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No past games yet</div>;
+  if (items.length === 0) return <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No past {filter === "tot" ? "This or That activities" : filter === "game" ? "weekly games" : "games"} yet</div>;
 
   return (
     <div>
@@ -719,34 +723,34 @@ function InClassView({ data, setData, isAdmin, userName }) {
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
-        {/* Weekly Game section */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ ...sectionLabel, marginBottom: 10 }}>Weekly Game</div>
+        {/* Weekly Game (live + past games) */}
+        <div style={{ marginBottom: 32 }}>
           <StudentAnswerView data={data} setData={setData} userName={userName} />
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 8 }}>Past Games</div>
-            <PastGamesReview data={data} studentId={studentId} />
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 8 }}>Past Weekly Games</div>
+            <PastGamesReview data={data} studentId={studentId} filter="game" />
           </div>
         </div>
 
-        {/* Headlines section */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ ...sectionLabel, marginBottom: 10 }}>Headlines</div>
+        {/* Headlines */}
+        <div style={{ marginBottom: 32 }}>
           <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
         </div>
 
-        {/* This or That section is part of Past Games above for review purposes; live ToT happens through StudentAnswerView */}
-
-        {/* Survey section */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ ...sectionLabel, marginBottom: 10 }}>Survey</div>
+        {/* Survey */}
+        <div style={{ marginBottom: 32 }}>
           <SurveyView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+        </div>
+
+        {/* This or That - past activities only */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>This or That</div>
+          <PastGamesReview data={data} studentId={studentId} filter="tot" />
         </div>
       </div>
     </div>
   );
 }
-
 
 function HomeTodoSummary({ data, setData, studentId, setView }) {
   const todos = data.todos || [];
@@ -4152,40 +4156,6 @@ function SurveyView({ data, setData, isAdmin, userName }) {
   };
 
   // Results view
-  if (viewingResults) {
-    const survey = surveys.find(s => s.id === viewingResults);
-    if (!survey) { setViewingResults(null); return null; }
-    const responderCount = Object.keys(survey.responses || {}).length;
-    return (
-      <div style={{ padding: "24px 20px 40px", fontFamily: F }}>
-        <Toast message={msg} />
-        <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          <button onClick={() => setViewingResults(null)} style={{ ...pillInactive, marginBottom: 16 }}>Back to Surveys</button>
-          <div style={{ ...crd, padding: 20, marginBottom: 16 }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 4 }}>{survey.title}</div>
-            <div style={{ fontSize: 13, color: TEXT_MUTED }}>{responderCount} respondent{responderCount !== 1 ? "s" : ""}</div>
-            {isAdmin && (
-              <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
-                <button onClick={() => toggleResults(survey.id)} style={survey.showResults ? pillActive : pillInactive}>{survey.showResults ? "Hide from Students" : "Show to Students"}</button>
-                <button onClick={() => closeSurvey(survey.id)} style={pillInactive}>Close Survey</button>
-              </div>
-            )}
-          </div>
-          {(survey.questions || []).map((q, qi) => {
-            const answers = getResponses(survey, q.id);
-            return (
-              <div key={q.id} style={{ ...crd, padding: 18, marginBottom: 12 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Question {qi + 1}</div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 12, lineHeight: 1.35 }}>{q.text}</div>
-                {renderResults(q, answers)}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
   const activeSurveys = surveys.filter(s => s.active);
   const closedSurveys = surveys.filter(s => !s.active);
 
@@ -4245,7 +4215,7 @@ function SurveyView({ data, setData, isAdmin, userName }) {
                   <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{totalQs} question{totalQs !== 1 ? "s" : ""} / {responderCount} respondent{responderCount !== 1 ? "s" : ""}</div>
                   {survey.closeAt && <div style={{ fontSize: 12, color: Date.now() > survey.closeAt * 0.95 ? AMBER : TEXT_SECONDARY, fontWeight: 500, marginTop: 2 }}>Closes: {new Date(survey.closeAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>}
                 </div>
-                {(isAdmin || survey.showResults) && <button onClick={() => setViewingResults(survey.id)} style={pillInactive}>Results</button>}
+                {(isAdmin || survey.showResults) && <button onClick={() => setViewingResults(viewingResults === survey.id ? null : survey.id)} style={viewingResults === survey.id ? pillActive : pillInactive}>{viewingResults === survey.id ? "Hide Results" : "Results"}</button>}
               </div>
               {!isAdmin && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -4266,6 +4236,21 @@ function SurveyView({ data, setData, isAdmin, userName }) {
                   <button onClick={() => { if (window.confirm("Delete?")) deleteSurvey(survey.id); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
                 </div>
               )}
+
+              {viewingResults === survey.id && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
+                  {(survey.questions || []).map((q, qi) => {
+                    const answers = getResponses(survey, q.id);
+                    return (
+                      <div key={q.id} style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Question {qi + 1}</div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 8, lineHeight: 1.35 }}>{q.text}</div>
+                        {renderResults(q, answers)}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
@@ -4278,10 +4263,24 @@ function SurveyView({ data, setData, isAdmin, userName }) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div><div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{survey.title}</div><div style={{ fontSize: 12, color: TEXT_MUTED }}>{Object.keys(survey.responses || {}).length} respondents</div></div>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={() => setViewingResults(survey.id)} style={{ ...pillInactive, fontSize: 11 }}>Results</button>
+                    <button onClick={() => setViewingResults(viewingResults === survey.id ? null : survey.id)} style={{ ...(viewingResults === survey.id ? pillActive : pillInactive), fontSize: 11 }}>{viewingResults === survey.id ? "Hide" : "Results"}</button>
                     {isAdmin && <button onClick={() => { if (window.confirm("Delete?")) deleteSurvey(survey.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Delete</button>}
                   </div>
                 </div>
+                {viewingResults === survey.id && (
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
+                    {(survey.questions || []).map((q, qi) => {
+                      const answers = getResponses(survey, q.id);
+                      return (
+                        <div key={q.id} style={{ marginBottom: 14 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Question {qi + 1}</div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 8, lineHeight: 1.35 }}>{q.text}</div>
+                          {renderResults(q, answers)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ))}
           </div>
