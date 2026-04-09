@@ -376,7 +376,7 @@ function NamePicker({ data, onSelect }) {
 /* ─── INSTRUCTOR CARD ─── */
 const REBOUND_POLICY = `You can earn additional points after a low (or missing) score in some cases. Here are three different situations that might apply to you.
 
-Rebound: You were present but scored below 80% on the grade scale. Submit a video within 48 hours explaining the material with a friend or family member. Points count for your grade only, not the in-class leaderboard.
+Rebound: You were present but scored below 80% on the grade scale. Submit a video within 72 hours explaining the material with a friend or family member. Points count for your grade only, not the in-class leaderboard.
   Under 50% -> can earn back to 60%
   50-65% -> can earn back to 70%
   66-79% -> can earn back to 80%
@@ -623,10 +623,17 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
   const todos = data.todos || [];
   const todoChecks = data.todoChecks || {};
   const rebounds = data.rebounds || {};
+  const hiddenTodos = data.hiddenTodos || {};
 
   const toggleCheck = async (todoId) => {
     const key = studentId + "-" + todoId;
     const updated = { ...data, todoChecks: { ...(data.todoChecks || {}), [key]: !todoChecks[key] } };
+    await saveData(updated); setData(updated);
+  };
+
+  const hideTodo = async (todoId) => {
+    const key = studentId + "-" + todoId;
+    const updated = { ...data, hiddenTodos: { ...hiddenTodos, [key]: true } };
     await saveData(updated); setData(updated);
   };
 
@@ -644,30 +651,45 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
       const scored = type === "fishbowl" ? act?.confirmed : act?.scored;
       if (!scored) return;
       const rKey = type + "-" + w;
+      // Skip if student hid this rebound box
+      if ((data.hiddenRebounds || {})[studentId + "-" + rKey]) return;
       const rd = rebounds[rKey] || {};
       const scoredTs = rd.scoredTs || 0;
-      const deadline = scoredTs + 48 * 60 * 60 * 1000;
+      const deadline = scoredTs + 72 * 60 * 60 * 1000;
       const ss = (rd.studentStatuses || {})[studentId] || {};
       if (ss.approved || ss.link) return;
       const status = ss.status || "";
       if ((status === "rebound" || status === "unannounced_override") && Date.now() < deadline) {
-        // Only show if student opted in
         const optedIn = todoChecks["optin-" + rKey + "-" + studentId];
         if (optedIn) {
-          reboundTodos.push({ id: "rebound-" + rKey, title: "Submit rebound: " + label + " Wk " + w, due: Math.max(0, Math.round((deadline - Date.now()) / (1000 * 60 * 60))) + "h left", linkTab: "inclass", auto: true });
+          const hoursLeft = Math.max(0, Math.round((deadline - Date.now()) / (1000 * 60 * 60)));
+          reboundTodos.push({ id: "rebound-" + rKey, title: "Submit rebound: " + label + " Wk " + w, due: hoursLeft + "h left", dueTs: deadline, linkTab: "inclass", auto: true });
         }
       }
       if (status === "planned_makeup") {
         const mDeadline = scoredTs + 7 * 24 * 60 * 60 * 1000;
         if (Date.now() < mDeadline) {
-          reboundTodos.push({ id: "makeup-" + rKey, title: "Office hours makeup: " + label + " Wk " + w, due: Math.max(0, Math.round((mDeadline - Date.now()) / (1000 * 60 * 60 * 24))) + "d left", auto: true });
+          const optedIn = todoChecks["optin-" + rKey + "-" + studentId];
+          if (optedIn) {
+            const daysLeft = Math.max(0, Math.round((mDeadline - Date.now()) / (1000 * 60 * 60 * 24)));
+            reboundTodos.push({ id: "makeup-" + rKey, title: "Office hours makeup: " + label + " Wk " + w, due: daysLeft + "d left", dueTs: mDeadline, auto: true });
+          }
         }
       }
     });
   });
 
-  // Filter manual todos for this student
-  const myManualTodos = todos.filter(t => !t.targetStudents || t.targetStudents.includes(studentId));
+  // Filter manual todos for this student, parse dueTs from due string
+  const myManualTodos = todos.filter(t => !t.targetStudents || t.targetStudents.includes(studentId)).filter(t => !hiddenTodos[studentId + "-" + t.id]).map(t => {
+    let dueTs = null;
+    if (t.due) {
+      try {
+        const parsed = new Date(t.due + ", 2026");
+        if (!isNaN(parsed.getTime())) dueTs = parsed.getTime();
+      } catch {}
+    }
+    return { ...t, dueTs };
+  });
   const allTodos = [...reboundTodos, ...myManualTodos];
 
   // Filter out checked
@@ -679,28 +701,41 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
 
   if (unchecked.length === 0 && checked.length === 0) return null;
 
+  const isPastDue = (t) => t.dueTs && Date.now() > t.dueTs + (t.auto ? 0 : 24 * 60 * 60 * 1000);
+
   return (
     <div style={{ ...crd, padding: 14, marginBottom: 12, borderLeft: "3px solid " + ACCENT }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>To-Do ({unchecked.length})</div>
-      {unchecked.map(t => (
-        <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #f4f4f5" }}>
-          {!t.auto && (
-            <button onClick={() => toggleCheck(t.id)} style={{
-              display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, cursor: "pointer",
-              border: "1px solid " + BORDER, background: "#fff", fontFamily: F, fontSize: 11, fontWeight: 600, color: TEXT_MUTED, flexShrink: 0,
-            }}>
-              <div style={{ width: 14, height: 14, borderRadius: 3, border: "2px solid " + BORDER, background: "#fff" }} />
-              Mark done
-            </button>
-          )}
-          {t.auto && <div style={{ width: 6, height: 6, borderRadius: 3, background: "#f59e0b", flexShrink: 0 }} />}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY }}>{t.title}</span>
-            {t.due && <span style={{ fontSize: 11, color: TEXT_SECONDARY, fontWeight: 500, marginLeft: 6 }}>{t.due}</span>}
+      {unchecked.map(t => {
+        const pastDue = isPastDue(t);
+        return (
+          <div key={t.id} style={{ padding: "6px 0", borderBottom: "1px solid #f4f4f5" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {!t.auto && (
+                <button onClick={() => toggleCheck(t.id)} style={{
+                  display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, cursor: "pointer",
+                  border: "1px solid " + BORDER, background: "#fff", fontFamily: F, fontSize: 11, fontWeight: 600, color: TEXT_MUTED, flexShrink: 0,
+                }}>
+                  <div style={{ width: 14, height: 14, borderRadius: 3, border: "2px solid " + BORDER, background: "#fff" }} />
+                  Mark done
+                </button>
+              )}
+              {t.auto && <div style={{ width: 6, height: 6, borderRadius: 3, background: "#f59e0b", flexShrink: 0 }} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY }}>{t.title}</span>
+                {t.due && <span style={{ fontSize: 11, color: pastDue ? RED : TEXT_SECONDARY, fontWeight: pastDue ? 700 : 500, marginLeft: 6 }}>{pastDue ? "Past due" : t.due}</span>}
+              </div>
+              {t.linkTab && <button onClick={() => setView(t.linkTab)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600 }}>Go</button>}
+            </div>
+            {pastDue && !t.auto && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, paddingLeft: 22 }}>
+                <span style={{ fontSize: 11, color: RED }}>Remove from to-do list?</span>
+                <button onClick={() => hideTodo(t.id)} style={{ fontSize: 11, color: RED, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 700, padding: 0 }}>Remove</button>
+              </div>
+            )}
           </div>
-          {t.linkTab && <button onClick={() => setView(t.linkTab)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600 }}>Go</button>}
-        </div>
-      ))}
+        );
+      })}
       {checked.length > 0 && (
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>Completed</div>
@@ -749,10 +784,10 @@ function HomeReboundBox({ data, setData, studentId }) {
       const rd = rebounds[rKey] || {};
       const ss = (rd.studentStatuses || {})[studentId] || {};
       if (ss.approved) return;
-      const status = ss.status || "";
-      if (!status || status === "present") return;
+      // Skip if student has hidden this rebound
+      if ((data.hiddenRebounds || {})[studentId + "-" + rKey]) return;
       const scoredTs = rd.scoredTs || 0;
-      const reboundDeadline = scoredTs + 48 * 60 * 60 * 1000;
+      const reboundDeadline = scoredTs + 72 * 60 * 60 * 1000;
       const makeupDeadline = scoredTs + 7 * 24 * 60 * 60 * 1000;
 
       let gradePercent = 0;
@@ -771,6 +806,13 @@ function HomeReboundBox({ data, setData, studentId }) {
       } else {
         gradePercent = Math.round((act.scores?.[studentId] ?? 0) / max * 1000) / 10;
       }
+
+      // Determine effective status: explicit status wins, otherwise auto-rebound for weekly games where student played and scored below 80%
+      let status = ss.status || "";
+      if (!status && type === "game" && gradePercent > 0 && gradePercent < 80) {
+        status = "rebound";
+      }
+      if (!status || status === "present") return;
 
       const targetPercent = gradePercent < 50 ? 60 : gradePercent <= 65 ? 70 : gradePercent <= 79 ? 80 : null;
       const optedIn = todoChecks["optin-" + rKey + "-" + studentId];
@@ -807,6 +849,18 @@ function HomeReboundBox({ data, setData, studentId }) {
     const key = "optin-" + rKey + "-" + studentId;
     const updated = { ...data, todoChecks: { ...todoChecks, [key]: true } };
     await saveData(updated); setData(updated);
+    showMsg("Added to your to-do list");
+  };
+
+  const hideBox = async (rKey) => {
+    const hKey = studentId + "-" + rKey;
+    const newHidden = { ...(data.hiddenRebounds || {}), [hKey]: true };
+    // Also remove the opt-in todo if it exists
+    const newChecks = { ...todoChecks };
+    delete newChecks["optin-" + rKey + "-" + studentId];
+    const updated = { ...data, hiddenRebounds: newHidden, todoChecks: newChecks };
+    await saveData(updated); setData(updated);
+    showMsg("Removed");
   };
 
   return (
@@ -820,27 +874,39 @@ function HomeReboundBox({ data, setData, studentId }) {
           : { bg: "#fffbeb", border: "#f59e0b", color: "#92400e" };
         return (
           <div key={i} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: "4px solid " + sc.border, background: sc.bg }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-              <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 8 }}>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: sc.color }}>
                   {item.status === "planned_makeup" ? "Planned Makeup" : item.status === "unannounced" ? "Makeup Unavailable" : item.status === "submitted" ? "Rebound Submitted" : "Rebound Available"}
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, marginTop: 2 }}>{item.label}</div>
               </div>
-              {isRebound && !item.optedIn && (
-                <button onClick={() => optIn(item.rKey)} style={{ ...pill, background: "#f59e0b", color: "#fff", fontSize: 11, flexShrink: 0 }}>Add to my to-do list</button>
+              {/* Prominent time badge */}
+              {isRebound && (
+                <div style={{ background: sc.border, color: "#fff", padding: "8px 14px", borderRadius: 10, textAlign: "center", flexShrink: 0, minWidth: 80 }}>
+                  <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1 }}>{item.hoursLeft}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>hours left</div>
+                </div>
+              )}
+              {item.status === "planned_makeup" && (
+                <div style={{ background: sc.border, color: "#fff", padding: "8px 14px", borderRadius: 10, textAlign: "center", flexShrink: 0, minWidth: 80 }}>
+                  <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1 }}>{item.daysLeft}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>days left</div>
+                </div>
               )}
             </div>
 
             {isRebound && (
               <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, marginTop: 6, marginBottom: 8 }}>
-                You earned a <strong>{item.gradePercent}%</strong>. I want you to get a strong grade in this class, so for this assignment, you can earn up to <strong>{item.targetPercent}%</strong> by submitting a video of you explaining the material with a friend or family member. Look at the questions you got incorrect, understand them better, and then explain the concept or situation to a friend. Please do this for all the incorrect questions.
-                {"\n\n"}These points count for <strong>your grade only</strong>, not the in-class leaderboard. You have <strong>{item.hoursLeft} hours</strong> left to submit.
+                <p style={{ margin: 0, marginBottom: 8, fontWeight: 600, color: TEXT_PRIMARY }}>You have an opportunity to earn back some of the points that you did not earn during this week's game.</p>
+                <p style={{ margin: 0, marginBottom: 8 }}>You earned a <strong>{item.gradePercent}%</strong>. I want you to get a strong grade in this class, so for this assignment, you can earn up to <strong>{item.targetPercent}%</strong> by submitting a video of you explaining material.</p>
+                <p style={{ margin: 0, marginBottom: 8 }}>Here are the instructions: find the On Topic or Reading questions that you did not answer correctly. Go back and make sure you understand them, and then record yourself teaching the material behind these questions to a friend, roommate, teacher, or family member. Your video should show that you have good understanding of this material. Then, submit your url at the link below.</p>
+                <p style={{ margin: 0 }}>These points count for <strong>your grade only</strong>, not the in-class leaderboard. You have <strong>{item.hoursLeft} hours</strong> left to submit.</p>
               </div>
             )}
 
             {isRebound && (
-              <div style={{ marginBottom: 6 }}>
+              <div style={{ marginBottom: 8 }}>
                 <button onClick={() => { const ev = new CustomEvent("nav", { detail: "inclass" }); window.dispatchEvent(ev); }} style={{ fontSize: 12, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600, padding: 0, marginBottom: 8, display: "block" }}>View your answers and the correct answers</button>
                 <div style={{ display: "flex", gap: 6 }}>
                   <input value={links[item.rKey] || ""} onChange={e => setLinks(prev => ({ ...prev, [item.rKey]: e.target.value }))} placeholder="Paste your video link here..." style={{ ...inp, flex: 1, fontSize: 13 }} />
@@ -849,8 +915,30 @@ function HomeReboundBox({ data, setData, studentId }) {
               </div>
             )}
 
+            {/* Action buttons: rebound */}
+            {isRebound && (
+              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                {!item.optedIn && (
+                  <button onClick={() => optIn(item.rKey)} style={{ ...pill, background: "#f59e0b", color: "#fff", fontSize: 12, flex: 1 }}>Add to my to-do list</button>
+                )}
+                <button onClick={() => { if (window.confirm("Decline this rebound opportunity? The box will be removed.")) hideBox(item.rKey); }} style={{ ...pill, background: "#fff", color: TEXT_SECONDARY, border: "1px solid " + BORDER, fontSize: 12, flex: 1 }}>Decline opportunity</button>
+              </div>
+            )}
+
+            {/* Action buttons: planned makeup */}
+            {item.status === "planned_makeup" && (
+              <div>
+                <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, marginTop: 4, marginBottom: 8 }}>Come to office hours to retake this activity. Full points available for both leaderboard and grade.</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {!item.optedIn && (
+                    <button onClick={() => optIn(item.rKey)} style={{ ...pill, background: "#10b981", color: "#fff", fontSize: 12, flex: 1 }}>Add to my to-do list</button>
+                  )}
+                  <button onClick={() => { if (window.confirm("Mark this makeup as completed? The box will be removed.")) hideBox(item.rKey); }} style={{ ...pill, background: "#fff", color: TEXT_SECONDARY, border: "1px solid " + BORDER, fontSize: 12, flex: 1 }}>Completed</button>
+                </div>
+              </div>
+            )}
+
             {item.status === "submitted" && <div style={{ fontSize: 13, color: GREEN, fontWeight: 600 }}>Your rebound video has been submitted. Waiting for instructor review.</div>}
-            {item.status === "planned_makeup" && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, marginTop: 4 }}>Come to office hours to retake this activity. You have <strong>{item.daysLeft} days</strong> remaining. Full points available for both leaderboard and grade.</div>}
             {item.status === "unannounced" && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, marginTop: 4 }}>Your absence was unannounced. Contact your instructor if you believe this is an error.</div>}
 
             <button onClick={() => setShowPolicy(!showPolicy)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600, padding: 0, marginTop: 6 }}>{showPolicy ? "Hide Policy" : "View Rebound Policy"}</button>
@@ -4704,7 +4792,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
         if (ss.approved) return;
         const status = ss.status || "";
         if (status === "rebound" || status === "unannounced_override") {
-          const deadline = scoredTs + 48 * 60 * 60 * 1000;
+          const deadline = scoredTs + 72 * 60 * 60 * 1000;
           if (Date.now() > deadline) return;
           const sName = data.students.find(s => s.id === sid)?.name || sid;
           reboundTodos.push({ id: "r-" + rKey + "-" + sid, title: "Rebound: " + label + " Wk " + w + " (" + sName.split(" ")[0] + ")", due: Math.max(0, Math.round((deadline - Date.now()) / (1000 * 60 * 60))) + "h left", submitted: !!ss.link });

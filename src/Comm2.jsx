@@ -1780,10 +1780,17 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
   const todos = data.todos || [];
   const todoChecks = data.todoChecks || {};
   const rebounds = data.rebounds || {};
+  const hiddenTodos = data.hiddenTodos || {};
 
   const toggleCheck = async (todoId) => {
     const key = studentId + "-" + todoId;
     const updated = { ...data, todoChecks: { ...(data.todoChecks || {}), [key]: !todoChecks[key] } };
+    await saveData(updated); setData(updated);
+  };
+
+  const hideTodo = async (todoId) => {
+    const key = studentId + "-" + todoId;
+    const updated = { ...data, hiddenTodos: { ...hiddenTodos, [key]: true } };
     await saveData(updated); setData(updated);
   };
 
@@ -1801,30 +1808,45 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
       const scored = type === "fishbowl" ? act?.confirmed : act?.scored;
       if (!scored) return;
       const rKey = type + "-" + w;
+      // Skip if student hid this rebound box
+      if ((data.hiddenRebounds || {})[studentId + "-" + rKey]) return;
       const rd = rebounds[rKey] || {};
       const scoredTs = rd.scoredTs || 0;
-      const deadline = scoredTs + 48 * 60 * 60 * 1000;
+      const deadline = scoredTs + 72 * 60 * 60 * 1000;
       const ss = (rd.studentStatuses || {})[studentId] || {};
       if (ss.approved || ss.link) return;
       const status = ss.status || "";
       if ((status === "rebound" || status === "unannounced_override") && Date.now() < deadline) {
-        // Only show if student opted in
         const optedIn = todoChecks["optin-" + rKey + "-" + studentId];
         if (optedIn) {
-          reboundTodos.push({ id: "rebound-" + rKey, title: "Submit rebound: " + label + " Wk " + w, due: Math.max(0, Math.round((deadline - Date.now()) / (1000 * 60 * 60))) + "h left", linkTab: "inclass", auto: true });
+          const hoursLeft = Math.max(0, Math.round((deadline - Date.now()) / (1000 * 60 * 60)));
+          reboundTodos.push({ id: "rebound-" + rKey, title: "Submit rebound: " + label + " Wk " + w, due: hoursLeft + "h left", dueTs: deadline, linkTab: "inclass", auto: true });
         }
       }
       if (status === "planned_makeup") {
         const mDeadline = scoredTs + 7 * 24 * 60 * 60 * 1000;
         if (Date.now() < mDeadline) {
-          reboundTodos.push({ id: "makeup-" + rKey, title: "Office hours makeup: " + label + " Wk " + w, due: Math.max(0, Math.round((mDeadline - Date.now()) / (1000 * 60 * 60 * 24))) + "d left", auto: true });
+          const optedIn = todoChecks["optin-" + rKey + "-" + studentId];
+          if (optedIn) {
+            const daysLeft = Math.max(0, Math.round((mDeadline - Date.now()) / (1000 * 60 * 60 * 24)));
+            reboundTodos.push({ id: "makeup-" + rKey, title: "Office hours makeup: " + label + " Wk " + w, due: daysLeft + "d left", dueTs: mDeadline, auto: true });
+          }
         }
       }
     });
   });
 
-  // Filter manual todos for this student
-  const myManualTodos = todos.filter(t => !t.targetStudents || t.targetStudents.includes(studentId));
+  // Filter manual todos for this student, parse dueTs from due string
+  const myManualTodos = todos.filter(t => !t.targetStudents || t.targetStudents.includes(studentId)).filter(t => !hiddenTodos[studentId + "-" + t.id]).map(t => {
+    let dueTs = null;
+    if (t.due) {
+      try {
+        const parsed = new Date(t.due + ", 2026");
+        if (!isNaN(parsed.getTime())) dueTs = parsed.getTime();
+      } catch {}
+    }
+    return { ...t, dueTs };
+  });
   const allTodos = [...reboundTodos, ...myManualTodos];
 
   // Filter out checked
@@ -1836,28 +1858,41 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
 
   if (unchecked.length === 0 && checked.length === 0) return null;
 
+  const isPastDue = (t) => t.dueTs && Date.now() > t.dueTs + (t.auto ? 0 : 24 * 60 * 60 * 1000);
+
   return (
     <div style={{ ...crd, padding: 14, marginBottom: 12, borderLeft: "3px solid " + ACCENT }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>To-Do ({unchecked.length})</div>
-      {unchecked.map(t => (
-        <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #f4f4f5" }}>
-          {!t.auto && (
-            <button onClick={() => toggleCheck(t.id)} style={{
-              display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, cursor: "pointer",
-              border: "1px solid " + BORDER, background: "#fff", fontFamily: F, fontSize: 11, fontWeight: 600, color: TEXT_MUTED, flexShrink: 0,
-            }}>
-              <div style={{ width: 14, height: 14, borderRadius: 3, border: "2px solid " + BORDER, background: "#fff" }} />
-              Mark done
-            </button>
-          )}
-          {t.auto && <div style={{ width: 6, height: 6, borderRadius: 3, background: "#f59e0b", flexShrink: 0 }} />}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY }}>{t.title}</span>
-            {t.due && <span style={{ fontSize: 11, color: TEXT_SECONDARY, fontWeight: 500, marginLeft: 6 }}>{t.due}</span>}
+      {unchecked.map(t => {
+        const pastDue = isPastDue(t);
+        return (
+          <div key={t.id} style={{ padding: "6px 0", borderBottom: "1px solid #f4f4f5" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {!t.auto && (
+                <button onClick={() => toggleCheck(t.id)} style={{
+                  display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, cursor: "pointer",
+                  border: "1px solid " + BORDER, background: "#fff", fontFamily: F, fontSize: 11, fontWeight: 600, color: TEXT_MUTED, flexShrink: 0,
+                }}>
+                  <div style={{ width: 14, height: 14, borderRadius: 3, border: "2px solid " + BORDER, background: "#fff" }} />
+                  Mark done
+                </button>
+              )}
+              {t.auto && <div style={{ width: 6, height: 6, borderRadius: 3, background: "#f59e0b", flexShrink: 0 }} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY }}>{t.title}</span>
+                {t.due && <span style={{ fontSize: 11, color: pastDue ? RED : TEXT_SECONDARY, fontWeight: pastDue ? 700 : 500, marginLeft: 6 }}>{pastDue ? "Past due" : t.due}</span>}
+              </div>
+              {t.linkTab && <button onClick={() => setView(t.linkTab)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600 }}>Go</button>}
+            </div>
+            {pastDue && !t.auto && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, paddingLeft: 22 }}>
+                <span style={{ fontSize: 11, color: RED }}>Remove from to-do list?</span>
+                <button onClick={() => hideTodo(t.id)} style={{ fontSize: 11, color: RED, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 700, padding: 0 }}>Remove</button>
+              </div>
+            )}
           </div>
-          {t.linkTab && <button onClick={() => setView(t.linkTab)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600 }}>Go</button>}
-        </div>
-      ))}
+        );
+      })}
       {checked.length > 0 && (
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>Completed</div>
