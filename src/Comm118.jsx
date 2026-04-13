@@ -2677,26 +2677,47 @@ function PTIMode({ data, setData }) {
   const rankMap = {};
   ranked.forEach((s, i) => { rankMap[s.id] = i + 1; });
   const bios = data.bios || {};
-  const seats = data.athSeats || {}; // { studentId: positionIndex }
 
   const ROWS = 5;
   const COLS = 8;
   const TOTAL = ROWS * COLS;
 
-  // Build position -> student map
+  // Get all real students (excluding Andrew Ishak and test student)
+  const allStudents = [...data.students].filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis").sort(lastSortObj);
+
+  // Initialize seats on first load: assign every student an explicit seat
+  React.useEffect(() => {
+    const seats = data.athSeats || {};
+    const needsInit = allStudents.some(s => seats[s.id] === undefined);
+    if (!needsInit) return;
+    const newSeats = { ...seats };
+    const usedPositions = new Set(Object.values(seats));
+    let nextPos = 0;
+    allStudents.forEach(s => {
+      if (newSeats[s.id] === undefined) {
+        while (usedPositions.has(nextPos) && nextPos < TOTAL) nextPos++;
+        if (nextPos < TOTAL) {
+          newSeats[s.id] = nextPos;
+          usedPositions.add(nextPos);
+          nextPos++;
+        }
+      }
+    });
+    (async () => {
+      const updated = { ...data, athSeats: newSeats };
+      await saveData(updated); setData(updated);
+    })();
+    // eslint-disable-next-line
+  }, [allStudents.length]);
+
+  const seats = data.athSeats || {};
+
+  // Build position -> student from the saved seats (no auto-fill)
   const posToStudent = {};
-  Object.keys(seats).forEach(sid => {
-    const stu = data.students.find(s => s.id === sid);
-    if (stu) posToStudent[seats[sid]] = stu;
-  });
-  // Place unseated students in first available positions
-  const sortedStudents = [...data.students].filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis").sort(lastSortObj);
-  const unseated = sortedStudents.filter(s => seats[s.id] === undefined);
-  let nextPos = 0;
-  unseated.forEach(s => {
-    while (posToStudent[nextPos] && nextPos < TOTAL) nextPos++;
-    if (nextPos < TOTAL) {
-      posToStudent[nextPos] = s;
+  allStudents.forEach(s => {
+    const p = seats[s.id];
+    if (p !== undefined && p < TOTAL) {
+      posToStudent[p] = s;
     }
   });
 
@@ -2711,30 +2732,20 @@ function PTIMode({ data, setData }) {
 
   const handleDrop = async (targetPos) => {
     if (draggingId === null) return;
-    if (draggingId === (posToStudent[targetPos]?.id)) {
+    const targetStudent = posToStudent[targetPos];
+    if (targetStudent && targetStudent.id === draggingId) {
       setDraggingId(null);
       setDragOverPos(null);
       return;
     }
-    // Build the complete seat map from current visible state, ensuring everyone visible has an entry
-    const completeSeats = {};
-    Object.keys(posToStudent).forEach(p => {
-      const stu = posToStudent[p];
-      if (stu) completeSeats[stu.id] = Number(p);
-    });
-    // Find dragged student's current position
-    const draggedFromPos = completeSeats[draggingId];
-    // Find target student (if any)
-    const targetStudent = posToStudent[targetPos];
-    if (targetStudent && targetStudent.id !== draggingId) {
-      // Swap: target moves to dragged's old position
-      completeSeats[targetStudent.id] = draggedFromPos;
-      completeSeats[draggingId] = Number(targetPos);
-    } else {
-      // Empty target: just move
-      completeSeats[draggingId] = Number(targetPos);
+    const draggedFromPos = seats[draggingId];
+    const newSeats = { ...seats };
+    if (targetStudent) {
+      // Swap
+      newSeats[targetStudent.id] = draggedFromPos;
     }
-    const updated = { ...data, athSeats: completeSeats };
+    newSeats[draggingId] = targetPos;
+    const updated = { ...data, athSeats: newSeats };
     await saveData(updated); setData(updated);
     setDraggingId(null);
     setDragOverPos(null);
@@ -2742,7 +2753,9 @@ function PTIMode({ data, setData }) {
 
   const resetSeats = async () => {
     if (!window.confirm("Reset all seats to alphabetical?")) return;
-    const updated = { ...data, athSeats: {} };
+    const newSeats = {};
+    allStudents.forEach((s, i) => { if (i < TOTAL) newSeats[s.id] = i; });
+    const updated = { ...data, athSeats: newSeats };
     await saveData(updated); setData(updated);
   };
 
@@ -2764,8 +2777,7 @@ function PTIMode({ data, setData }) {
             if (!s) {
               return (
                 <div key={pos}
-                  onDragOver={e => { e.preventDefault(); setDragOverPos(pos); }}
-                  onDragLeave={() => setDragOverPos(null)}
+                  onDragOver={e => { e.preventDefault(); if (dragOverPos !== pos) setDragOverPos(pos); }}
                   onDrop={e => { e.preventDefault(); handleDrop(pos); }}
                   style={{
                     minHeight: 160, borderRadius: 12, border: isDragOver ? "2px dashed " + ACCENT : "2px dashed #e5e5e4",
@@ -2784,8 +2796,7 @@ function PTIMode({ data, setData }) {
             const photo = bios[s.id]?.photo;
             return (
               <div key={pos} style={{ position: "relative" }}
-                onDragOver={e => { e.preventDefault(); setDragOverPos(pos); }}
-                onDragLeave={() => setDragOverPos(null)}
+                onDragOver={e => { e.preventDefault(); if (dragOverPos !== pos) setDragOverPos(pos); }}
                 onDrop={e => { e.preventDefault(); handleDrop(pos); }}
               >
                 <div
