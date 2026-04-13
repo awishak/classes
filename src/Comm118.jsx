@@ -2669,8 +2669,10 @@ function QuizMode({ data, setData }) {
 function PTIMode({ data, setData }) {
   const [msg, setMsg] = useState("");
   const [popup, setPopup] = useState(null);
-  const [draggingId, setDraggingId] = useState(null);
+  const draggingIdRef = React.useRef(null);
   const [dragOverPos, setDragOverPos] = useState(null);
+  const [hideScores, setHideScores] = useState(false);
+  const [, forceRender] = useState(0);
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 1500); };
 
   const ranked = rs(data.students, data.log);
@@ -2731,24 +2733,23 @@ function PTIMode({ data, setData }) {
   };
 
   const handleDrop = async (targetPos) => {
+    const draggingId = draggingIdRef.current;
     if (draggingId === null) return;
+    draggingIdRef.current = null;
+    setDragOverPos(null);
     const targetStudent = posToStudent[targetPos];
     if (targetStudent && targetStudent.id === draggingId) {
-      setDraggingId(null);
-      setDragOverPos(null);
+      forceRender(n => n + 1);
       return;
     }
     const draggedFromPos = seats[draggingId];
     const newSeats = { ...seats };
     if (targetStudent) {
-      // Swap
       newSeats[targetStudent.id] = draggedFromPos;
     }
     newSeats[draggingId] = targetPos;
     const updated = { ...data, athSeats: newSeats };
     await saveData(updated); setData(updated);
-    setDraggingId(null);
-    setDragOverPos(null);
   };
 
   const resetSeats = async () => {
@@ -2767,6 +2768,7 @@ function PTIMode({ data, setData }) {
           <div style={{ ...sectionLabel }}>Around the Horn</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <span style={{ fontSize: 11, color: TEXT_MUTED }}>Drag to rearrange seats</span>
+            <button onClick={() => setHideScores(!hideScores)} style={hideScores ? pillActive : pillInactive}>{hideScores ? "Show Scores" : "Hide Scores"}</button>
             <button onClick={resetSeats} style={pillInactive}>Reset Seats</button>
           </div>
         </div>
@@ -2801,19 +2803,20 @@ function PTIMode({ data, setData }) {
               >
                 <div
                   draggable
-                  onDragStart={() => setDraggingId(s.id)}
-                  onDragEnd={() => { setDraggingId(null); setDragOverPos(null); }}
+                  onDragStart={e => { draggingIdRef.current = s.id; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", s.id); }}
+                  onDragEnd={() => { draggingIdRef.current = null; setDragOverPos(null); }}
                   onClick={() => setPopup(isOpen ? null : s.id)}
                   style={{
                     width: "100%", padding: "10px 8px", borderRadius: 12, background: "#fff",
                     border: isOpen ? "2px solid " + tc.accent : isDragOver ? "2px solid " + ACCENT : "1px solid " + BORDER,
-                    cursor: draggingId === s.id ? "grabbing" : "grab", textAlign: "center", transition: "all 0.1s",
-                    opacity: draggingId === s.id ? 0.4 : 1,
+                    cursor: "grab", textAlign: "center", transition: "all 0.1s",
                   }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, padding: "0 4px" }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: rank <= 5 ? "#d4a017" : TEXT_MUTED }}>#{rank}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: ptiPts > 0 ? GREEN : TEXT_MUTED }}>ATH: {ptiPts}</span>
-                  </div>
+                  {!hideScores && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, padding: "0 4px" }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: rank <= 5 ? "#d4a017" : TEXT_MUTED }}>#{rank}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: ptiPts > 0 ? GREEN : TEXT_MUTED }}>ATH: {ptiPts}</span>
+                    </div>
+                  )}
                   {photo ? (
                     <img src={photo} alt={s.name} draggable={false} style={{ width: 88, height: 88, borderRadius: "50%", objectFit: "cover", display: "block", margin: "0 auto 6px", border: "3px solid " + tc.accent }} />
                   ) : (
@@ -2821,7 +2824,7 @@ function PTIMode({ data, setData }) {
                   )}
                   <div style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY, lineHeight: 1.2 }}>{s.name.split(" ")[0]}</div>
                   <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_SECONDARY, marginTop: 1 }}>{s.name.split(" ").slice(1).join(" ")}</div>
-                  <div style={{ fontSize: 16, fontWeight: 900, color: tc.accent, marginTop: 4, fontVariantNumeric: "tabular-nums" }}>{pts}</div>
+                  {!hideScores && <div style={{ fontSize: 16, fontWeight: 900, color: tc.accent, marginTop: 4, fontVariantNumeric: "tabular-nums" }}>{pts}</div>}
                 </div>
                 {isOpen && (
                   <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", zIndex: 20, marginTop: 4, display: "flex", gap: 4, background: "#fff", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", border: "1px solid " + BORDER, padding: 6, borderRadius: 12 }}>
