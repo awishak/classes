@@ -2670,7 +2670,6 @@ function PTIMode({ data, setData }) {
   const [msg, setMsg] = useState("");
   const [popup, setPopup] = useState(null);
   const draggingIdRef = React.useRef(null);
-  const [dragOverPos, setDragOverPos] = useState(null);
   const [hideScores, setHideScores] = useState(false);
   const [, forceRender] = useState(0);
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 1500); };
@@ -2736,7 +2735,6 @@ function PTIMode({ data, setData }) {
     const draggingId = draggingIdRef.current;
     if (draggingId === null) return;
     draggingIdRef.current = null;
-    setDragOverPos(null);
     const targetStudent = posToStudent[targetPos];
     if (targetStudent && targetStudent.id === draggingId) {
       forceRender(n => n + 1);
@@ -2775,17 +2773,18 @@ function PTIMode({ data, setData }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(" + COLS + ", 1fr)", gap: 10 }}>
           {Array.from({ length: TOTAL }).map((_, pos) => {
             const s = posToStudent[pos];
-            const isDragOver = dragOverPos === pos;
             if (!s) {
               return (
                 <div key={pos}
-                  onDragOver={e => { e.preventDefault(); if (dragOverPos !== pos) setDragOverPos(pos); }}
-                  onDrop={e => { e.preventDefault(); handleDrop(pos); }}
+                  onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+                  onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDrop(pos); }}
                   style={{
-                    minHeight: 160, borderRadius: 12, border: isDragOver ? "2px dashed " + ACCENT : "2px dashed #e5e5e4",
-                    background: isDragOver ? ACCENT_LIGHT : "transparent",
+                    minHeight: 160, borderRadius: 12, border: "2px dashed #e5e5e4",
+                    background: "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#d4d4d8", fontSize: 11,
                   }}
-                />
+                >drop here</div>
               );
             }
             const team = data.teams.find(t => t.id === s.teamId);
@@ -2798,17 +2797,17 @@ function PTIMode({ data, setData }) {
             const photo = bios[s.id]?.photo;
             return (
               <div key={pos} style={{ position: "relative" }}
-                onDragOver={e => { e.preventDefault(); if (dragOverPos !== pos) setDragOverPos(pos); }}
-                onDrop={e => { e.preventDefault(); handleDrop(pos); }}
+                onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+                onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDrop(pos); }}
               >
                 <div
                   draggable
                   onDragStart={e => { draggingIdRef.current = s.id; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", s.id); }}
-                  onDragEnd={() => { draggingIdRef.current = null; setDragOverPos(null); }}
+                  onDragEnd={() => { draggingIdRef.current = null; }}
                   onClick={() => setPopup(isOpen ? null : s.id)}
                   style={{
                     width: "100%", padding: "10px 8px", borderRadius: 12, background: "#fff",
-                    border: isOpen ? "2px solid " + tc.accent : isDragOver ? "2px solid " + ACCENT : "1px solid " + BORDER,
+                    border: isOpen ? "2px solid " + tc.accent : "1px solid " + BORDER,
                     cursor: "grab", textAlign: "center", transition: "all 0.1s",
                   }}>
                   {!hideScores && (
