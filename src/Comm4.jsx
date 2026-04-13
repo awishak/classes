@@ -2598,11 +2598,58 @@ function QuizMode({ data, setData }) {
 function PTIMode({ data, setData }) {
   const [msg, setMsg] = useState("");
   const [popup, setPopup] = useState(null);
+  const draggingIdRef = React.useRef(null);
+  const [hideScores, setHideScores] = useState(false);
+  const [, forceRender] = useState(0);
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 1500); };
 
   const ranked = rs(data.students, data.log);
   const rankMap = {};
   ranked.forEach((s, i) => { rankMap[s.id] = i + 1; });
+  const bios = data.bios || {};
+
+  const ROWS = 5;
+  const COLS = 8;
+  const TOTAL = ROWS * COLS;
+
+  // Get all real students (excluding Andrew Ishak and test student)
+  const allStudents = [...data.students].filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis").sort(lastSortObj);
+
+  // Initialize seats on first load: assign every student an explicit seat
+  React.useEffect(() => {
+    const seats = data.athSeats || {};
+    const needsInit = allStudents.some(s => seats[s.id] === undefined);
+    if (!needsInit) return;
+    const newSeats = { ...seats };
+    const usedPositions = new Set(Object.values(seats));
+    let nextPos = 0;
+    allStudents.forEach(s => {
+      if (newSeats[s.id] === undefined) {
+        while (usedPositions.has(nextPos) && nextPos < TOTAL) nextPos++;
+        if (nextPos < TOTAL) {
+          newSeats[s.id] = nextPos;
+          usedPositions.add(nextPos);
+          nextPos++;
+        }
+      }
+    });
+    (async () => {
+      const updated = { ...data, athSeats: newSeats };
+      await saveData(updated); setData(updated);
+    })();
+    // eslint-disable-next-line
+  }, [allStudents.length]);
+
+  const seats = data.athSeats || {};
+
+  // Build position -> student from the saved seats (no auto-fill)
+  const posToStudent = {};
+  allStudents.forEach(s => {
+    const p = seats[s.id];
+    if (p !== undefined && p < TOTAL) {
+      posToStudent[p] = s;
+    }
+  });
 
   const awardPTI = async (sid, amount) => {
     const student = data.students.find(s => s.id === sid);
@@ -2610,15 +2657,65 @@ function PTIMode({ data, setData }) {
     const updated = { ...data, log: [...data.log, entry] };
     await saveData(updated); setData(updated);
     showMsg((amount > 0 ? "+" : "") + amount + " " + (student?.name?.split(" ")[0] || ""));
+    setPopup(null);
+  };
+
+  const handleDrop = async (targetPos) => {
+    const draggingId = draggingIdRef.current;
+    if (draggingId === null) return;
+    draggingIdRef.current = null;
+    const targetStudent = posToStudent[targetPos];
+    if (targetStudent && targetStudent.id === draggingId) {
+      forceRender(n => n + 1);
+      return;
+    }
+    const draggedFromPos = seats[draggingId];
+    const newSeats = { ...seats };
+    if (targetStudent) {
+      newSeats[targetStudent.id] = draggedFromPos;
+    }
+    newSeats[draggingId] = targetPos;
+    const updated = { ...data, athSeats: newSeats };
+    await saveData(updated); setData(updated);
+  };
+
+  const resetSeats = async () => {
+    if (!window.confirm("Reset all seats to alphabetical?")) return;
+    const newSeats = {};
+    allStudents.forEach((s, i) => { if (i < TOTAL) newSeats[s.id] = i; });
+    const updated = { ...data, athSeats: newSeats };
+    await saveData(updated); setData(updated);
   };
 
   return (
     <div style={{ padding: "20px 16px 40px", fontFamily: F }}>
       <Toast message={msg} />
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <div style={{ ...sectionLabel, marginBottom: 12 }}>Around the Horn</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 8 }}>
-          {[...data.students].sort(lastSortObj).map(s => {
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div style={{ ...sectionLabel }}>Around the Horn</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <span style={{ fontSize: 11, color: TEXT_MUTED }}>Drag to rearrange seats</span>
+            <button onClick={() => setHideScores(!hideScores)} style={hideScores ? pillActive : pillInactive}>{hideScores ? "Show Scores" : "Hide Scores"}</button>
+            <button onClick={resetSeats} style={pillInactive}>Reset Seats</button>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(" + COLS + ", 1fr)", gap: 6 }}>
+          {Array.from({ length: TOTAL }).map((_, pos) => {
+            const s = posToStudent[pos];
+            if (!s) {
+              return (
+                <div key={pos}
+                  onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+                  onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDrop(pos); }}
+                  style={{
+                    minHeight: 110, borderRadius: 10, border: "2px dashed #e5e5e4",
+                    background: "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#d4d4d8", fontSize: 10,
+                  }}
+                >drop here</div>
+              );
+            }
             const team = data.teams.find(t => t.id === s.teamId);
             const tc = team ? TEAM_COLORS[team.colorIdx] : TEAM_COLORS[0];
             const pts = gp(data.log, s.id);
@@ -2626,27 +2723,42 @@ function PTIMode({ data, setData }) {
             const rank = rankMap[s.id] || "-";
             const isOpen = popup === s.id;
             const initials = s.name.split(" ").map(n => n[0]).join("");
+            const photo = bios[s.id]?.photo;
             return (
-              <div key={s.id} style={{ position: "relative" }}>
-                <button onClick={() => setPopup(isOpen ? null : s.id)} style={{
-                  width: "100%", padding: "12px 8px", borderRadius: 12, background: "#fff",
-                  border: isOpen ? "2px solid " + tc.accent : "1px solid #f3f4f6",
-                  cursor: "pointer", textAlign: "center", transition: "all 0.1s",
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, padding: "0 2px" }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: rank <= 5 ? "#d4a017" : "#d4d4d8" }}>#{rank}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: ptiPts > 0 ? GREEN : "#d4d4d8" }}>ATH: {ptiPts}</span>
-                  </div>
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px", fontSize: 12, fontWeight: 900, color: "#fff" }}>{initials}</div>
-                  <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY, lineHeight: 1.2 }}>{s.name.split(" ")[0]}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_SECONDARY, marginTop: 1 }}>{s.name.split(" ").slice(1).join(" ")}</div>
-                  <div style={{ fontSize: 16, fontWeight: 900, color: tc.accent, marginTop: 4, fontVariantNumeric: "tabular-nums" }}>{pts}</div>
-                </button>
+              <div key={pos} style={{ position: "relative" }}
+                onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+                onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDrop(pos); }}
+              >
+                <div
+                  draggable
+                  onDragStart={e => { draggingIdRef.current = s.id; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", s.id); }}
+                  onDragEnd={() => { draggingIdRef.current = null; }}
+                  onClick={() => setPopup(isOpen ? null : s.id)}
+                  style={{
+                    width: "100%", padding: "6px 4px", borderRadius: 10, background: "#fff",
+                    border: isOpen ? "2px solid " + tc.accent : "1px solid " + BORDER,
+                    cursor: "grab", textAlign: "center", transition: "all 0.1s",
+                  }}>
+                  {!hideScores && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3, padding: "0 2px" }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: rank <= 5 ? "#d4a017" : TEXT_MUTED }}>#{rank}</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: ptiPts > 0 ? GREEN : TEXT_MUTED }}>ATH: {ptiPts}</span>
+                    </div>
+                  )}
+                  {photo ? (
+                    <img src={photo} alt={s.name} draggable={false} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", display: "block", margin: "0 auto 4px", border: "2px solid " + tc.accent }} />
+                  ) : (
+                    <div style={{ width: 64, height: 64, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 4px", fontSize: 20, fontWeight: 900, color: "#fff", border: "2px solid " + tc.accent }}>{initials}</div>
+                  )}
+                  <div style={{ fontSize: 12, fontWeight: 800, color: TEXT_PRIMARY, lineHeight: 1.15 }}>{s.name.split(" ")[0]}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_SECONDARY, lineHeight: 1.15 }}>{s.name.split(" ").slice(1).join(" ")}</div>
+                  {!hideScores && <div style={{ fontSize: 13, fontWeight: 900, color: tc.accent, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{pts}</div>}
+                </div>
                 {isOpen && (
-                  <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", zIndex: 20, marginTop: 4, display: "flex", gap: 4, background: "#fff", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", border: "1px solid #e5e7eb", padding: 6, borderRadius: 12 }}>
-                    <button onClick={() => awardPTI(s.id, -1)} style={{ ...pill, background: "#fef2f2", color: RED, minWidth: 44, fontSize: 14, fontWeight: 900 }}>-1</button>
-                    <button onClick={() => awardPTI(s.id, 1)} style={{ ...pill, background: "#ecfdf5", color: GREEN, minWidth: 44, fontSize: 14, fontWeight: 900 }}>+1</button>
-                    <button onClick={() => awardPTI(s.id, 5)} style={{ ...pill, background: "#fef2f2", color: ACCENT, minWidth: 44, fontSize: 14, fontWeight: 900 }}>+5</button>
+                  <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", zIndex: 20, marginTop: 4, display: "flex", gap: 4, background: "#fff", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", border: "1px solid " + BORDER, padding: 6, borderRadius: 12 }}>
+                    <button onClick={(e) => { e.stopPropagation(); awardPTI(s.id, -1); }} style={{ ...pill, background: "#fef2f2", color: RED, minWidth: 44, fontSize: 14, fontWeight: 900 }}>-1</button>
+                    <button onClick={(e) => { e.stopPropagation(); awardPTI(s.id, 1); }} style={{ ...pill, background: "#ecfdf5", color: GREEN, minWidth: 44, fontSize: 14, fontWeight: 900 }}>+1</button>
+                    <button onClick={(e) => { e.stopPropagation(); awardPTI(s.id, 5); }} style={{ ...pill, background: "#fef2f2", color: ACCENT, minWidth: 44, fontSize: 14, fontWeight: 900 }}>+5</button>
                   </div>
                 )}
               </div>
