@@ -2711,19 +2711,29 @@ function PTIMode({ data, setData }) {
 
   const handleDrop = async (targetPos) => {
     if (draggingId === null) return;
-    const newSeats = { ...seats };
-    // Find current pos of dragged student
-    const draggedCurrentPos = Object.keys(posToStudent).find(p => posToStudent[p].id === draggingId);
-    // Find student currently at target
-    const targetStudent = posToStudent[targetPos];
-    // Build complete seat map first
-    const completeSeats = {};
-    Object.keys(posToStudent).forEach(p => { completeSeats[posToStudent[p].id] = parseInt(p); });
-    // Swap or move
-    if (targetStudent && targetStudent.id !== draggingId) {
-      completeSeats[targetStudent.id] = parseInt(draggedCurrentPos);
+    if (draggingId === (posToStudent[targetPos]?.id)) {
+      setDraggingId(null);
+      setDragOverPos(null);
+      return;
     }
-    completeSeats[draggingId] = targetPos;
+    // Build the complete seat map from current visible state, ensuring everyone visible has an entry
+    const completeSeats = {};
+    Object.keys(posToStudent).forEach(p => {
+      const stu = posToStudent[p];
+      if (stu) completeSeats[stu.id] = Number(p);
+    });
+    // Find dragged student's current position
+    const draggedFromPos = completeSeats[draggingId];
+    // Find target student (if any)
+    const targetStudent = posToStudent[targetPos];
+    if (targetStudent && targetStudent.id !== draggingId) {
+      // Swap: target moves to dragged's old position
+      completeSeats[targetStudent.id] = draggedFromPos;
+      completeSeats[draggingId] = Number(targetPos);
+    } else {
+      // Empty target: just move
+      completeSeats[draggingId] = Number(targetPos);
+    }
     const updated = { ...data, athSeats: completeSeats };
     await saveData(updated); setData(updated);
     setDraggingId(null);
