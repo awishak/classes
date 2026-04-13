@@ -2770,7 +2770,7 @@ function PTIMode({ data, setData }) {
             <button onClick={resetSeats} style={pillInactive}>Reset Seats</button>
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(" + COLS + ", 1fr)", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(" + COLS + ", 1fr)", gap: 6 }}>
           {Array.from({ length: TOTAL }).map((_, pos) => {
             const s = posToStudent[pos];
             if (!s) {
@@ -2779,10 +2779,10 @@ function PTIMode({ data, setData }) {
                   onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
                   onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDrop(pos); }}
                   style={{
-                    minHeight: 160, borderRadius: 12, border: "2px dashed #e5e5e4",
+                    minHeight: 110, borderRadius: 10, border: "2px dashed #e5e5e4",
                     background: "transparent",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    color: "#d4d4d8", fontSize: 11,
+                    color: "#d4d4d8", fontSize: 10,
                   }}
                 >drop here</div>
               );
@@ -2806,24 +2806,24 @@ function PTIMode({ data, setData }) {
                   onDragEnd={() => { draggingIdRef.current = null; }}
                   onClick={() => setPopup(isOpen ? null : s.id)}
                   style={{
-                    width: "100%", padding: "10px 8px", borderRadius: 12, background: "#fff",
+                    width: "100%", padding: "6px 4px", borderRadius: 10, background: "#fff",
                     border: isOpen ? "2px solid " + tc.accent : "1px solid " + BORDER,
                     cursor: "grab", textAlign: "center", transition: "all 0.1s",
                   }}>
                   {!hideScores && (
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, padding: "0 4px" }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: rank <= 5 ? "#d4a017" : TEXT_MUTED }}>#{rank}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: ptiPts > 0 ? GREEN : TEXT_MUTED }}>ATH: {ptiPts}</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3, padding: "0 2px" }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: rank <= 5 ? "#d4a017" : TEXT_MUTED }}>#{rank}</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: ptiPts > 0 ? GREEN : TEXT_MUTED }}>ATH: {ptiPts}</span>
                     </div>
                   )}
                   {photo ? (
-                    <img src={photo} alt={s.name} draggable={false} style={{ width: 88, height: 88, borderRadius: "50%", objectFit: "cover", display: "block", margin: "0 auto 6px", border: "3px solid " + tc.accent }} />
+                    <img src={photo} alt={s.name} draggable={false} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", display: "block", margin: "0 auto 4px", border: "2px solid " + tc.accent }} />
                   ) : (
-                    <div style={{ width: 88, height: 88, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px", fontSize: 28, fontWeight: 900, color: "#fff", border: "3px solid " + tc.accent }}>{initials}</div>
+                    <div style={{ width: 64, height: 64, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 4px", fontSize: 20, fontWeight: 900, color: "#fff", border: "2px solid " + tc.accent }}>{initials}</div>
                   )}
-                  <div style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY, lineHeight: 1.2 }}>{s.name.split(" ")[0]}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_SECONDARY, marginTop: 1 }}>{s.name.split(" ").slice(1).join(" ")}</div>
-                  {!hideScores && <div style={{ fontSize: 16, fontWeight: 900, color: tc.accent, marginTop: 4, fontVariantNumeric: "tabular-nums" }}>{pts}</div>}
+                  <div style={{ fontSize: 12, fontWeight: 800, color: TEXT_PRIMARY, lineHeight: 1.15 }}>{s.name.split(" ")[0]}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_SECONDARY, lineHeight: 1.15 }}>{s.name.split(" ").slice(1).join(" ")}</div>
+                  {!hideScores && <div style={{ fontSize: 13, fontWeight: 900, color: tc.accent, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{pts}</div>}
                 </div>
                 {isOpen && (
                   <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", zIndex: 20, marginTop: 4, display: "flex", gap: 4, background: "#fff", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", border: "1px solid " + BORDER, padding: 6, borderRadius: 12 }}>
