@@ -1252,49 +1252,168 @@ function MediaView({ data, setData, isAdmin }) {
 
 /* --- PTI (Culture Points) --- */
 function PTIView({ data, setData }) {
-  const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME).sort(lastSortObj);
-  const [selected, setSelected] = useState(null);
   const [msg, setMsg] = useState("");
-  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+  const [popup, setPopup] = useState(null);
+  const draggingIdRef = React.useRef(null);
+  const [hideScores, setHideScores] = useState(false);
+  const [, forceRender] = useState(0);
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 1500); };
+
+  const ranked = rs(data.students, data.log);
+  const rankMap = {};
+  ranked.forEach((s, i) => { rankMap[s.id] = i + 1; });
+  const bios = data.bios || {};
+
+  const ROWS = 5;
+  const COLS = 8;
+  const TOTAL = ROWS * COLS;
+
+  const allStudents = [...data.students].filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis").sort(lastSortObj);
+
+  // Initialize seats on first load
+  React.useEffect(() => {
+    const seats = data.athSeats || {};
+    const needsInit = allStudents.some(s => seats[s.id] === undefined);
+    if (!needsInit) return;
+    const newSeats = { ...seats };
+    const usedPositions = new Set(Object.values(seats));
+    let nextPos = 0;
+    allStudents.forEach(s => {
+      if (newSeats[s.id] === undefined) {
+        while (usedPositions.has(nextPos) && nextPos < TOTAL) nextPos++;
+        if (nextPos < TOTAL) {
+          newSeats[s.id] = nextPos;
+          usedPositions.add(nextPos);
+          nextPos++;
+        }
+      }
+    });
+    (async () => {
+      const updated = { ...data, athSeats: newSeats };
+      await saveData(updated); setData(updated);
+    })();
+    // eslint-disable-next-line
+  }, [allStudents.length]);
+
+  const seats = data.athSeats || {};
+  const posToStudent = {};
+  allStudents.forEach(s => {
+    const p = seats[s.id];
+    if (p !== undefined && p < TOTAL) posToStudent[p] = s;
+  });
 
   const award = async (sid, amount) => {
+    const student = data.students.find(s => s.id === sid);
     const entry = { id: genId(), studentId: sid, amount, source: "Participation", ts: Date.now() };
     const updated = { ...data, log: [...data.log, entry] };
-    await saveData(updated); setData(updated); showMsg((amount > 0 ? "+" : "") + amount);
+    await saveData(updated); setData(updated);
+    showMsg((amount > 0 ? "+" : "") + amount + " " + (student?.name?.split(" ")[0] || ""));
+    setPopup(null);
+  };
+
+  const handleDrop = async (targetPos) => {
+    const draggingId = draggingIdRef.current;
+    if (draggingId === null) return;
+    draggingIdRef.current = null;
+    const targetStudent = posToStudent[targetPos];
+    if (targetStudent && targetStudent.id === draggingId) {
+      forceRender(n => n + 1);
+      return;
+    }
+    const draggedFromPos = seats[draggingId];
+    const newSeats = { ...seats };
+    if (targetStudent) {
+      newSeats[targetStudent.id] = draggedFromPos;
+    }
+    newSeats[draggingId] = targetPos;
+    const updated = { ...data, athSeats: newSeats };
+    await saveData(updated); setData(updated);
+  };
+
+  const resetSeats = async () => {
+    if (!window.confirm("Reset all seats to alphabetical?")) return;
+    const newSeats = {};
+    allStudents.forEach((s, i) => { if (i < TOTAL) newSeats[s.id] = i; });
+    const updated = { ...data, athSeats: newSeats };
+    await saveData(updated); setData(updated);
   };
 
   return (
     <div style={{ padding: "20px 16px 40px", fontFamily: F }}>
       <Toast message={msg} />
-      <div style={{ maxWidth: 700, margin: "0 auto" }}>
-        <div style={{ ...sectionLabel, marginBottom: 12 }}>PTI - Culture Points</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 8 }}>
-          {sorted.map(s => {
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div style={{ ...sectionLabel }}>PTI - Culture Points</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <span style={{ fontSize: 11, color: TEXT_MUTED }}>Drag to rearrange seats</span>
+            <button onClick={() => setHideScores(!hideScores)} style={hideScores ? pillActive : pillInactive}>{hideScores ? "Show Scores" : "Hide Scores"}</button>
+            <button onClick={resetSeats} style={pillInactive}>Reset Seats</button>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(" + COLS + ", 1fr)", gap: 6 }}>
+          {Array.from({ length: TOTAL }).map((_, pos) => {
+            const s = posToStudent[pos];
+            if (!s) {
+              return (
+                <div key={pos}
+                  onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+                  onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDrop(pos); }}
+                  style={{
+                    minHeight: 110, borderRadius: 10, border: "2px dashed #e5e5e4",
+                    background: "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#d4d4d8", fontSize: 10,
+                  }}
+                >drop here</div>
+              );
+            }
             const pts = gp(data.log, s.id);
             const ptiPts = data.log.filter(e => e.studentId === s.id && e.source === "Participation").reduce((sum, e) => sum + e.amount, 0);
-            const ranked = rs(data.students, data.log);
-            const rank = ranked.findIndex(r => r.id === s.id) + 1;
+            const rank = rankMap[s.id] || "-";
+            const isOpen = popup === s.id;
+            const initials = s.name.split(" ").map(n => n[0]).join("");
+            const photo = bios[s.id]?.photo;
             return (
-              <button key={s.id} onClick={() => setSelected(selected === s.id ? null : s.id)} style={{
-                ...crd, padding: "12px 10px", cursor: "pointer", textAlign: "center",
-                border: selected === s.id ? "2px solid " + ACCENT : "1px solid " + BORDER,
-              }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: TEXT_PRIMARY }}>{s.name.split(" ")[0]}</div>
-                <div style={{ fontSize: 11, color: TEXT_MUTED }}>#{rank} / PTI: {ptiPts}</div>
-              </button>
+              <div key={pos} style={{ position: "relative" }}
+                onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+                onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDrop(pos); }}
+              >
+                <div
+                  draggable
+                  onDragStart={e => { draggingIdRef.current = s.id; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", s.id); }}
+                  onDragEnd={() => { draggingIdRef.current = null; }}
+                  onClick={() => setPopup(isOpen ? null : s.id)}
+                  style={{
+                    width: "100%", padding: "6px 4px", borderRadius: 10, background: "#fff",
+                    border: isOpen ? "2px solid " + ACCENT : "1px solid " + BORDER,
+                    cursor: "grab", textAlign: "center", transition: "all 0.1s",
+                  }}>
+                  {!hideScores && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3, padding: "0 2px" }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: rank <= 5 ? "#d4a017" : TEXT_MUTED }}>#{rank}</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: ptiPts > 0 ? GREEN : TEXT_MUTED }}>PTI: {ptiPts}</span>
+                    </div>
+                  )}
+                  {photo ? (
+                    <img src={photo} alt={s.name} draggable={false} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", display: "block", margin: "0 auto 4px", border: "2px solid " + ACCENT }} />
+                  ) : (
+                    <div style={{ width: 64, height: 64, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 4px", fontSize: 20, fontWeight: 900, color: "#fff", border: "2px solid " + ACCENT }}>{initials}</div>
+                  )}
+                  <div style={{ fontSize: 12, fontWeight: 800, color: TEXT_PRIMARY, lineHeight: 1.15 }}>{s.name.split(" ")[0]}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_SECONDARY, lineHeight: 1.15 }}>{s.name.split(" ").slice(1).join(" ")}</div>
+                  {!hideScores && <div style={{ fontSize: 13, fontWeight: 900, color: ACCENT, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{pts}</div>}
+                </div>
+                {isOpen && (
+                  <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", zIndex: 20, marginTop: 4, display: "flex", gap: 4, background: "#fff", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", border: "1px solid " + BORDER, padding: 6, borderRadius: 12 }}>
+                    <button onClick={(e) => { e.stopPropagation(); award(s.id, -1); }} style={{ ...pill, background: "#fef2f2", color: RED, minWidth: 44, fontSize: 14, fontWeight: 900 }}>-1</button>
+                    <button onClick={(e) => { e.stopPropagation(); award(s.id, 1); }} style={{ ...pill, background: "#ecfdf5", color: GREEN, minWidth: 44, fontSize: 14, fontWeight: 900 }}>+1</button>
+                    <button onClick={(e) => { e.stopPropagation(); award(s.id, 5); }} style={{ ...pill, background: "#ecfdf5", color: GREEN, minWidth: 44, fontSize: 14, fontWeight: 900 }}>+5</button>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
-        {selected && (
-          <div style={{ ...crd, padding: 16, marginTop: 12, textAlign: "center" }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: TEXT_PRIMARY, marginBottom: 12 }}>{data.students.find(s => s.id === selected)?.name}</div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-              <button onClick={() => award(selected, -1)} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 16, padding: "10px 20px" }}>-1</button>
-              <button onClick={() => award(selected, 1)} style={{ ...pill, background: "#ecfdf5", color: GREEN, fontSize: 16, padding: "10px 20px" }}>+1</button>
-              <button onClick={() => award(selected, 5)} style={{ ...pill, background: "#ecfdf5", color: GREEN, fontSize: 16, padding: "10px 20px" }}>+5</button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
