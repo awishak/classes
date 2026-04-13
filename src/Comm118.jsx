@@ -2679,8 +2679,8 @@ function PTIMode({ data, setData }) {
   const bios = data.bios || {};
   const seats = data.athSeats || {}; // { studentId: positionIndex }
 
-  const ROWS = 8;
-  const COLS = 5;
+  const ROWS = 5;
+  const COLS = 8;
   const TOTAL = ROWS * COLS;
 
   // Build position -> student map
