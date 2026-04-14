@@ -98,6 +98,10 @@ export function GameAdmin({ data, setData }) {
       }
       playerScores[s.id] = pts;
     });
+    // Use the original scored timestamp so makeup entries don't count toward "this week" leaderboard
+    const rebounds = data.rebounds || {};
+    const rKey = "game-" + w;
+    const originalTs = rebounds[rKey]?.scoredTs || Date.now();
     // Only add log entries for students who don't already have one for this source, or whose score changed
     const source = "Game Wk" + w;
     const existingEntries = data.log.filter(e => e.source === source);
@@ -106,10 +110,12 @@ export function GameAdmin({ data, setData }) {
       const existing = existingEntries.find(e => e.studentId === s.id);
       if (existing && existing.amount === pts) return; // no change
       if (existing) { /* remove old entry, will add new */ }
-      if (pts > 0) entries.push({ id: genId(), studentId: s.id, amount: pts, source, ts: Date.now() });
+      if (pts > 0) entries.push({ id: genId(), studentId: s.id, amount: pts, source, ts: originalTs });
     });
     const cleanLog = data.log.filter(e => !(e.source === source && entries.find(n => n.studentId === e.studentId)));
-    const updated = { ...data, weeklyGames: { ...games, [w]: { ...game, scored: true, active: false, phase: "done" } }, log: [...cleanLog, ...entries] };
+    // Ensure rebound scoredTs is set on first scoring
+    const newRebounds = { ...rebounds, [rKey]: { ...(rebounds[rKey] || {}), scoredTs: originalTs } };
+    const updated = { ...data, weeklyGames: { ...games, [w]: { ...game, scored: true, active: false, phase: "done" } }, log: [...cleanLog, ...entries], rebounds: newRebounds };
     await saveData(updated); setData(updated); showMsg("Scored!");
   };
 
@@ -174,16 +180,20 @@ export function GameAdmin({ data, setData }) {
       const rounded = Math.round(pts * 10) / 10;
       playerScores[s.id] = rounded;
     });
+    const rebounds = data.rebounds || {};
+    const rKey = "tot-" + w;
+    const originalTs = rebounds[rKey]?.scoredTs || Date.now();
     const source = "ToT Wk" + w;
     const existingEntries = data.log.filter(e => e.source === source);
     data.students.forEach(s => {
       const pts = playerScores[s.id] || 0;
       const existing = existingEntries.find(e => e.studentId === s.id);
       if (existing && existing.amount === pts) return;
-      if (pts > 0) entries.push({ id: genId(), studentId: s.id, amount: pts, source, ts: Date.now() });
+      if (pts > 0) entries.push({ id: genId(), studentId: s.id, amount: pts, source, ts: originalTs });
     });
     const cleanLog = data.log.filter(e => !(e.source === source && entries.find(n => n.studentId === e.studentId)));
-    const updated = { ...data, weeklyToT: { ...tots, [w]: { ...tot, scored: true, active: false, phase: "done" } }, log: [...cleanLog, ...entries] };
+    const newRebounds = { ...rebounds, [rKey]: { ...(rebounds[rKey] || {}), scoredTs: originalTs } };
+    const updated = { ...data, weeklyToT: { ...tots, [w]: { ...tot, scored: true, active: false, phase: "done" } }, log: [...cleanLog, ...entries], rebounds: newRebounds };
     await saveData(updated); setData(updated); showMsg("Scored!");
   };
 
