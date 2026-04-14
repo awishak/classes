@@ -743,19 +743,41 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
   const fishbowls = data.weeklyFishbowl || {};
   const existing = fishbowls[week] || {};
   const isConfirmed = existing.confirmed;
-  const sorted = [...data.students].sort(lastSortObj);
+  const sorted = [...data.students].filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis").sort(lastSortObj);
 
   const initScores = () => {
     const s = {};
     sorted.forEach(st => { s[st.id] = existing.scores?.[st.id] ?? 20; });
     return s;
   };
+  const initGroups = () => {
+    const g = {};
+    sorted.forEach(st => { g[st.id] = existing.groups?.[st.id] || null; });
+    return g;
+  };
   const [scores, setScores] = useState(initScores);
+  const [groups, setGroups] = useState(initGroups);
   const [star, setStar] = useState(existing.star || null);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
   const adjust = (sid, amount) => { setScores(prev => ({ ...prev, [sid]: Math.max(0, (prev[sid] || 0) + amount) })); };
+
+  const setGroup = (sid, g) => { setGroups(prev => ({ ...prev, [sid]: g })); };
+
+  const randomizeGroups = () => {
+    const shuffled = [...sorted].sort(() => Math.random() - 0.5);
+    const newGroups = {};
+    shuffled.forEach((s, i) => { newGroups[s.id] = (i % 3) + 1; });
+    setGroups(newGroups);
+    showMsg("Groups randomized");
+  };
+
+  const clearGroups = () => {
+    const newGroups = {};
+    sorted.forEach(s => { newGroups[s.id] = null; });
+    setGroups(newGroups);
+  };
 
   const confirm = async () => {
     const entries = [];
@@ -770,11 +792,19 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
     const stars = { ...(data.fishbowlStars || {}), [week]: star };
     const updated = {
       ...data,
-      weeklyFishbowl: { ...fishbowls, [week]: { scores, star, confirmed: true } },
+      weeklyFishbowl: { ...fishbowls, [week]: { scores, groups, star, confirmed: true } },
       fishbowlStars: stars,
       log: [...data.log, ...entries],
     };
     await saveData(updated); setData(updated); showMsg("Confirmed! Points posted.");
+  };
+
+  const saveDraft = async () => {
+    const updated = {
+      ...data,
+      weeklyFishbowl: { ...fishbowls, [week]: { ...existing, scores, groups, star } },
+    };
+    await saveData(updated); setData(updated); showMsg("Draft saved");
   };
 
   const deleteFishbowl = async () => {
@@ -783,16 +813,33 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
     await saveData(updated); setData(updated); onBack();
   };
 
+  const GROUP_COLORS = {
+    1: { bg: "#eff6ff", text: "#2563eb", border: "#2563eb" },
+    2: { bg: "#fffbeb", text: "#d97706", border: "#d97706" },
+    3: { bg: "#ecfdf5", text: "#059669", border: "#059669" },
+  };
+
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <Toast message={msg} />
-      <div style={{ maxWidth: 600, margin: "0 auto" }}>
+      <div style={{ maxWidth: 700, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <button onClick={onBack} style={pillInactive}>Back</button>
           <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>Week {week} Fishbowl</div>
           <div style={{ width: 60 }} />
         </div>
         {isConfirmed && <div style={{ textAlign: "center", fontSize: 13, color: GREEN, fontWeight: 700, marginBottom: 12, padding: 8, background: "#ecfdf5", borderRadius: 8 }}>Confirmed and posted</div>}
+
+        <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ ...sectionLabel }}>Groups</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={randomizeGroups} style={pillInactive}>Randomize</button>
+              <button onClick={clearGroups} style={pillInactive}>Clear</button>
+            </div>
+          </div>
+          <div style={{ fontSize: 11, color: TEXT_MUTED }}>Click a number (1, 2, 3) next to each student to assign, or use Randomize to split evenly.</div>
+        </div>
 
         <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
           <div style={{ ...sectionLabel, marginBottom: 8 }}>Fishbowl Star of the Week</div>
@@ -810,8 +857,22 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
           {sorted.map(s => {
             const pts = scores[s.id] ?? 20;
             const isStar = star === s.id;
+            const myGroup = groups[s.id];
             return (
               <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderBottom: "1px solid #f9fafb" }}>
+                <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+                  {[1, 2, 3].map(g => {
+                    const gc = GROUP_COLORS[g];
+                    const active = myGroup === g;
+                    return (
+                      <button key={g} onClick={() => setGroup(s.id, active ? null : g)} style={{
+                        width: 22, height: 22, borderRadius: 6, fontFamily: F, fontWeight: 800, fontSize: 11, cursor: "pointer",
+                        background: active ? gc.border : gc.bg, color: active ? "#fff" : gc.text,
+                        border: "1px solid " + gc.border,
+                      }}>{g}</button>
+                    );
+                  })}
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>
                     {s.name}
@@ -820,7 +881,6 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
                 </div>
                 <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
                   <button onClick={() => adjust(s.id, -20)} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "4px 6px", minWidth: 32 }}>-20</button>
-                  <button onClick={() => adjust(s.id, -5)} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "4px 6px", minWidth: 28 }}>-5</button>
                   <button onClick={() => adjust(s.id, -1)} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "4px 6px", minWidth: 28 }}>-1</button>
                   <div style={{ fontSize: 18, fontWeight: 900, color: pts === 20 ? "#111827" : pts === 0 ? RED : "#d97706", width: 36, textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{pts}</div>
                   <button onClick={() => adjust(s.id, 1)} style={{ ...pill, background: "#ecfdf5", color: GREEN, fontSize: 11, padding: "4px 6px", minWidth: 28 }}>+1</button>
@@ -832,6 +892,7 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
 
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
           {!isConfirmed && <button onClick={confirm} style={{ ...pill, background: GREEN, color: "#fff", flex: 1, padding: "12px 0" }}>Confirm and Post Points</button>}
+          {!isConfirmed && <button onClick={saveDraft} style={{ ...pillInactive, padding: "12px 16px" }}>Save Draft</button>}
           <button onClick={() => { if (window.confirm("Delete fishbowl week " + week + "?")) deleteFishbowl(); }} style={{ ...pill, background: "#fef2f2", color: RED, padding: "12px 16px" }}>Delete</button>
         </div>
 
