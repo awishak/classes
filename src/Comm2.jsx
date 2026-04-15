@@ -799,7 +799,6 @@ function Leaderboard({ students, log, isAdmin, userName, data, setData }) {
             <div style={{ ...crd, padding: 0 }}>
               {visible.map((s, i) => {
                 const isMe = s.name === userName;
-                const isAZone = i < 5;
                 const isExpanded = expandedId === s.id;
                 const bio = bios[s.id] || {};
                 const initials = s.name.split(" ").map(n => n[0]).join("");
@@ -814,15 +813,14 @@ function Leaderboard({ students, log, isAdmin, userName, data, setData }) {
                       borderBottom: "1px solid #f4f4f5", cursor: "pointer",
                       background: isMe ? "#eff6ff" : "transparent",
                     }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 10, background: isAZone ? GREEN : "#e4e4e7", display: "flex", alignItems: "center", justifyContent: "center", color: isAZone ? "#fff" : TEXT_SECONDARY, fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: "#e4e4e7", display: "flex", alignItems: "center", justifyContent: "center", color: TEXT_SECONDARY, fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
                       {bio.photo ? (
-                        <img src={bio.photo} alt="" style={{ width: 60, height: 60, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "3px solid " + (isAZone ? GREEN + "44" : "#f4f4f5") }} />
+                        <img src={bio.photo} alt="" style={{ width: 60, height: 60, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "3px solid #f4f4f5" }} />
                       ) : (
-                        <div style={{ width: 60, height: 60, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "#fff", flexShrink: 0, border: "3px solid " + (isAZone ? GREEN + "44" : "#f4f4f5") }}>{initials}</div>
+                        <div style={{ width: 60, height: 60, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "#fff", flexShrink: 0, border: "3px solid #f4f4f5" }}>{initials}</div>
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 15, fontWeight: 800, color: TEXT_PRIMARY }}>{s.name}{isMe && <span style={{ fontSize: 11, color: ACCENT, marginLeft: 6, fontWeight: 600 }}>You</span>}</div>
-                        {isAZone && <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginTop: 2 }}>A Zone</div>}
                       </div>
                       <div style={{ fontSize: 20, fontWeight: 800, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{s.points}</div>
                     </div>
