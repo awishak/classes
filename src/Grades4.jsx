@@ -574,6 +574,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
   const computeAutoParticipation = (sid) => {
     const log = data.log || [];
     const weeklyGames = data.weeklyGames || {};
+    const reboundGrades = data.reboundGrades || {};
 
     let gameGradeEarned = 0;
     let gameGradePossible = 0;
@@ -581,14 +582,28 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     scoredGames.forEach(w => {
       const game = weeklyGames[w];
       gameGradePossible += 100;
+      let original = 0;
       (game.questions || []).forEach((q, qi) => {
         const ans = game.responses?.[sid + "-" + qi];
         if (ans === q.correct) {
           const cat = q.category || "on_topic";
           const catPts = cat === "on_topic" ? 15 : 2.5;
-          gameGradeEarned += catPts;
+          original += catPts;
         }
       });
+      const rg = reboundGrades[sid + "-game-" + w];
+      let earned = original;
+      if (rg && typeof rg.gradePoints === "number") {
+        let cap;
+        if (rg.type === "absence_override") cap = 60;
+        else if (original < 50) cap = 60;
+        else if (original <= 65) cap = 70;
+        else if (original <= 79) cap = 80;
+        else cap = 100;
+        const capped = Math.min(rg.gradePoints, cap);
+        earned = Math.max(original, capped);
+      }
+      gameGradeEarned += earned;
     });
 
     const totEntries = log.filter(e => e.studentId === sid && (e.source || "").startsWith("ToT Wk"));

@@ -780,6 +780,8 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
       const rKey = type + "-" + w;
       // Skip if student hid this rebound box
       if ((data.hiddenRebounds || {})[studentId + "-" + rKey]) return;
+      // Skip if a rebound grade has already been entered for this student/week
+      if (type === "game" && (data.reboundGrades || {})[studentId + "-game-" + w]) return;
       const rd = rebounds[rKey] || {};
       const scoredTs = rd.scoredTs || 0;
       const deadline = scoredTs + 72 * 60 * 60 * 1000;
@@ -911,6 +913,8 @@ function HomeReboundBox({ data, setData, studentId }) {
       const rd = rebounds[rKey] || {};
       const ss = (rd.studentStatuses || {})[studentId] || {};
       if (ss.approved) return;
+      // Hide if a rebound grade has already been entered for this student/week
+      if (type === "game" && (data.reboundGrades || {})[studentId + "-game-" + w]) return;
       // Skip if student has hidden this rebound
       if ((data.hiddenRebounds || {})[studentId + "-" + rKey]) return;
       const scoredTs = rd.scoredTs || 0;
@@ -5085,6 +5089,8 @@ function ToDoView({ data, setData, userName, isAdmin }) {
       const scoredTs = rd.scoredTs || 0;
       Object.entries(rd.studentStatuses || {}).forEach(([sid, ss]) => {
         if (ss.approved) return;
+        // Hide if a rebound grade has already been entered for this student/week
+        if (type === "game" && (data.reboundGrades || {})[sid + "-game-" + w]) return;
         const status = ss.status || "";
         if (status === "rebound" || status === "unannounced_override") {
           const deadline = scoredTs + 72 * 60 * 60 * 1000;
@@ -5280,6 +5286,17 @@ export default function Comm118() {
         if (d && !d.messages) { d.messages = []; await saveData(d); }
         if (d && !d.studentNotes) { d.studentNotes = {}; await saveData(d); }
         if (d && !d.rebounds) { d.rebounds = {}; await saveData(d); }
+        if (d && !d.reboundGrades) { d.reboundGrades = {}; await saveData(d); }
+        // Rebound system V2 migration: strip leftover gradeOnly log entries from old system
+        // (they were rebound points that leaked into the leaderboard; new system stores them in reboundGrades only)
+        if (d && !d._reboundSystemV2) {
+          const beforeCount = (d.log || []).length;
+          d.log = (d.log || []).filter(e => !e.gradeOnly);
+          const stripped = beforeCount - d.log.length;
+          if (stripped > 0) console.log("Rebound V2 migration: stripped " + stripped + " gradeOnly log entries");
+          d._reboundSystemV2 = true;
+          await saveData(d);
+        }
         if (d && !d.submissions) { d.submissions = {}; await saveData(d); }
         if (d && !d.students.find(s => s.name === TEST_STUDENT)) {
           const tsId = genId();

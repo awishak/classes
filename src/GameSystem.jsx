@@ -1464,6 +1464,32 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
     const status = ss.status || "present";
     const gradeOnly = status === "rebound" || status === "unannounced_override";
 
+    // Grade-only path for weekly games: write to data.reboundGrades (does NOT touch log or leaderboard)
+    if (gradeOnly && activityType === "game") {
+      const originalGradePts = result.gradePts || 0;
+      let cap;
+      if (status === "unannounced_override") cap = 60;
+      else if (originalGradePts < 50) cap = 60;
+      else if (originalGradePts <= 65) cap = 70;
+      else if (originalGradePts <= 79) cap = 80;
+      else { showMsg("Not eligible (already 80%+)"); return; }
+
+      const inputPts = ss.customPts !== undefined ? ss.customPts : cap;
+      if (inputPts <= originalGradePts) { showMsg("Must exceed original grade of " + originalGradePts); return; }
+      const cappedPts = Math.min(inputPts, cap);
+
+      const rgKey = studentId + "-game-" + week;
+      const rgType = status === "unannounced_override" ? "absence_override" : "rebound";
+      const reboundGrades = { ...(data.reboundGrades || {}), [rgKey]: {
+        gradePoints: cappedPts, type: rgType, enteredTs: Date.now(), enteredBy: userName || "Admin",
+      }};
+      const newSS = { ...statuses, [studentId]: { ...ss, approved: true, reboundGradePts: cappedPts, gradeOnly: true } };
+      const updated = { ...data, reboundGrades, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: newSS } } };
+      await saveData(updated); setData(updated); showMsg("Rebound grade set: " + cappedPts + " / 100");
+      return;
+    }
+
+    // Legacy game-points path: used for planned_makeup (all activity types) and for ToT/Fishbowl rebounds (not scoped in this rework)
     let targetPts;
     if (status === "planned_makeup") {
       targetPts = maxPts;
@@ -1545,6 +1571,17 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
               const reboundPts = ss.customPts !== undefined ? ss.customPts : defaultRebound;
               const eligible = (status === "planned_makeup" || targetPercent !== null) && !ss.approved;
 
+              // Grade-points path (only applies to weekly game rebound/override)
+              const isGameGradePath = activityType === "game" && (status === "rebound" || status === "unannounced_override");
+              const origGradePts = gradePts;
+              let gradeCap;
+              if (status === "unannounced_override") gradeCap = 60;
+              else if (origGradePts < 50) gradeCap = 60;
+              else if (origGradePts <= 65) gradeCap = 70;
+              else if (origGradePts <= 79) gradeCap = 80;
+              else gradeCap = 100;
+              const defaultGradeInput = ss.customPts !== undefined ? ss.customPts : gradeCap;
+
               return (
                 <div key={s.id} style={{ padding: "10px 12px", borderRadius: 10, background: ss.approved ? "#ecfdf5" : sc.bg, borderLeft: "4px solid " + (ss.approved ? GREEN : sc.border) }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1582,8 +1619,25 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
                         </div>
                       )}
 
-                      {/* Points + approve */}
-                      {eligible && (status === "rebound" || status === "unannounced_override" || status === "planned_makeup") && (
+                      {/* Points + approve: grade-points path for game rebound/override */}
+                      {eligible && isGameGradePath && (
+                        <div>
+                          <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>
+                            Original grade: <strong>{origGradePts}</strong> / 100 | Cap: <strong>{gradeCap}</strong> / 100 {status === "unannounced_override" ? "(absence override: lowest tier)" : ""}
+                          </div>
+                          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                            <span style={{ fontSize: 12, color: TEXT_MUTED }}>Rebound grade:</span>
+                            <input type="number" defaultValue={defaultGradeInput} onBlur={e => setCustomPts(s.id, e.target.value)} style={{ ...inp, width: 60, fontSize: 13, textAlign: "center", padding: "4px" }} />
+                            <span style={{ fontSize: 12, color: TEXT_MUTED }}>/ 100 grade pts</span>
+                            {ss.link && (
+                              <button onClick={() => approveRebound(s.id)} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12, marginLeft: "auto" }}>Apply Grade</button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Points + approve: legacy game-points path (planned_makeup, or ToT/Fishbowl) */}
+                      {eligible && !isGameGradePath && (status === "rebound" || status === "unannounced_override" || status === "planned_makeup") && (
                         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                           <span style={{ fontSize: 12, color: TEXT_MUTED }}>{status === "planned_makeup" ? "Makeup" : "Rebound"}:</span>
                           <input type="number" defaultValue={reboundPts} onBlur={e => setCustomPts(s.id, e.target.value)} style={{ ...inp, width: 60, fontSize: 13, textAlign: "center", padding: "4px" }} />
@@ -1603,7 +1657,9 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
 
                   {ss.approved && (
                     <div style={{ fontSize: 12, fontWeight: 600, color: GREEN, marginTop: 4 }}>
-                      {ss.gradeOnly ? "Rebound" : "Makeup"} applied: +{ss.reboundPts} pts {ss.gradeOnly ? "(grade only)" : "(leaderboard + grade)"}
+                      {ss.reboundGradePts !== undefined
+                        ? "Rebound grade applied: " + ss.reboundGradePts + " / 100 (grade only)"
+                        : (ss.gradeOnly ? "Rebound" : "Makeup") + " applied: +" + ss.reboundPts + " pts " + (ss.gradeOnly ? "(grade only)" : "(leaderboard + grade)")}
                     </div>
                   )}
                 </div>
