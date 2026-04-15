@@ -533,10 +533,16 @@ export function Gradebook({ data, setData, isAdmin, userName }) {
                       <div style={{ fontSize: 9, color: "#d4d4d8", fontWeight: 500 }}>{a.weight}%</div>
                     </th>
                   ))}
+                  <th style={{ textAlign: "center", padding: "10px 8px", color: TEXT_MUTED, fontWeight: 600, fontSize: 10, textTransform: "uppercase", maxWidth: 100 }}>
+                    <div>Participation</div>
+                    <div style={{ fontSize: 9, color: "#d4d4d8", fontWeight: 500 }}>25%</div>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {sorted.map(s => (
+                {sorted.map(s => {
+                  const pCalc = computeAutoParticipation(s.id);
+                  return (
                   <tr key={s.id} style={{ borderBottom: "1px solid #f9fafb" }}>
                     <td style={{ padding: "8px 12px", fontWeight: 600, color: "#18181b", fontSize: 13, whiteSpace: "nowrap", position: "sticky", left: 0, background: "#fff", zIndex: 1, cursor: "pointer" }} onClick={() => setSelStudent(selStudent === s.id ? null : s.id)}>
                       <span style={{ borderBottom: selStudent === s.id ? "2px solid " + ACCENT : "none", paddingBottom: 1 }}>{s.name}</span>
@@ -561,8 +567,12 @@ export function Gradebook({ data, setData, isAdmin, userName }) {
                         </td>
                       );
                     })}
+                    <td style={{ textAlign: "center", padding: "4px 6px" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>{pCalc.participationGrade}/25</span>
+                    </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
