@@ -571,11 +571,61 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     return { total, count };
   };
 
+  const computeAutoParticipation = (sid) => {
+    const log = data.log || [];
+    const weeklyGames = data.weeklyGames || {};
+
+    let gameGradeEarned = 0;
+    let gameGradePossible = 0;
+    const scoredGames = Object.keys(weeklyGames).filter(w => weeklyGames[w]?.scored);
+    scoredGames.forEach(w => {
+      const game = weeklyGames[w];
+      gameGradePossible += 100;
+      (game.questions || []).forEach((q, qi) => {
+        const ans = game.responses?.[sid + "-" + qi];
+        if (ans === q.correct) {
+          const cat = q.category || "on_topic";
+          const catPts = cat === "on_topic" ? 15 : 2.5;
+          gameGradeEarned += catPts;
+        }
+      });
+    });
+
+    const totEntries = log.filter(e => e.studentId === sid && (e.source || "").startsWith("ToT Wk"));
+    const totEarned = totEntries.reduce((s, e) => s + e.amount, 0);
+    const scoredToTs = Object.keys(data.weeklyToT || {}).filter(w => (data.weeklyToT[w] || {}).scored).length;
+    const totPossible = scoredToTs * 20;
+
+    const fbEntries = log.filter(e => e.studentId === sid && (e.source || "").startsWith("Fishbowl Wk"));
+    const fbEarned = fbEntries.reduce((s, e) => s + e.amount, 0);
+    const confirmedFishbowls = Object.keys(data.weeklyFishbowl || {}).filter(w => (data.weeklyFishbowl[w] || {}).confirmed).length;
+    const fbPossible = confirmedFishbowls * 20;
+
+    const athEntries = log.filter(e => e.studentId === sid && ((e.source || "") === "Around the Horn" || (e.source || "") === "PTI"));
+    const athEarned = athEntries.reduce((s, e) => s + e.amount, 0);
+
+    const totalEarned = gameGradeEarned + totEarned + fbEarned + athEarned;
+    const totalPossible = gameGradePossible + totPossible + fbPossible;
+    const participationPct = totalPossible > 0 ? (totalEarned / totalPossible) : 0;
+    const participationGrade = participationPct * 25;
+
+    return {
+      gameGradeEarned: Math.round(gameGradeEarned * 10) / 10,
+      gameGradePossible,
+      totEarned: Math.round(totEarned * 10) / 10,
+      totPossible,
+      fbEarned: Math.round(fbEarned * 10) / 10,
+      fbPossible,
+      athEarned: Math.round(athEarned * 10) / 10,
+      totalEarned: Math.round(totalEarned * 10) / 10,
+      totalPossible,
+      participationPct,
+      participationGrade: Math.round(participationGrade * 10) / 10,
+    };
+  };
+
   const renderStudentGrades = (sid) => {
-    const quizData = calcQuizScores(sid);
-    const totData = calcCategoryTotal(sid, "tot");
-    const ptiData = calcCategoryTotal(sid, "pti");
-    const fbData = calcCategoryTotal(sid, "fishbowl");
+    const p = computeAutoParticipation(sid);
 
     return (
       <div>
@@ -614,77 +664,47 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
           })}
         </div>
 
-        <div style={{ ...sectionLabel, marginBottom: 8 }}>Participation (25%)</div>
+        <div style={{ ...sectionLabel, marginBottom: 8 }}>Participation (25%) - auto-calculated</div>
         <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-            <div style={{ padding: 10, borderRadius: 8, background: "#f8fafc" }}>
-              <div style={{ ...sectionLabel, marginBottom: 2 }}>Game (Game)</div>
-              <span style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>{quizData.totalGame}</span>
-              <span style={{ fontSize: 12, color: "#9ca3af" }}> / {quizData.totalGamePossible}</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, borderBottom: "1px solid #f3f4f6" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Weekly Game (Grade pts)</div>
+                <div style={{ fontSize: 11, color: "#9ca3af" }}>Recomputed from responses / On Reading 15pts, Extra 2.5pts</div>
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{p.gameGradeEarned}<span style={{ fontSize: 12, color: "#9ca3af" }}> / {p.gameGradePossible}</span></div>
             </div>
-            <div style={{ padding: 10, borderRadius: 8, background: "#f8fafc" }}>
-              <div style={{ ...sectionLabel, marginBottom: 2 }}>Game (Grade)</div>
-              <span style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>{quizData.totalGrade}</span>
-              <span style={{ fontSize: 12, color: "#9ca3af" }}> / {quizData.totalGradePossible}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, borderBottom: "1px solid #f3f4f6" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>This or That</div>
+                <div style={{ fontSize: 11, color: "#9ca3af" }}>20 pts each</div>
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{p.totEarned}<span style={{ fontSize: 12, color: "#9ca3af" }}> / {p.totPossible}</span></div>
             </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
-            <div style={{ padding: 10, borderRadius: 8, background: "#f8fafc" }}>
-              <div style={{ ...sectionLabel, marginBottom: 2 }}>This or That</div>
-              <span style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>{totData.total}</span>
-              <span style={{ fontSize: 11, color: "#9ca3af" }}> ({totData.count} wks)</span>
-              <div style={{ fontSize: 10, color: "#d1d5db" }}>Game only</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, borderBottom: "1px solid #f3f4f6" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Fishbowl</div>
+                <div style={{ fontSize: 11, color: "#9ca3af" }}>20 pts each</div>
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{p.fbEarned}<span style={{ fontSize: 12, color: "#9ca3af" }}> / {p.fbPossible}</span></div>
             </div>
-            <div style={{ padding: 10, borderRadius: 8, background: "#f8fafc" }}>
-              <div style={{ ...sectionLabel, marginBottom: 2 }}>Around the Horn</div>
-              <span style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>{ptiData.total}</span>
-              <div style={{ fontSize: 10, color: "#9ca3af" }}>Game + Grade</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, borderBottom: "1px solid #f3f4f6" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Around the Horn</div>
+                <div style={{ fontSize: 11, color: "#9ca3af" }}>Bonus, not in denominator</div>
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontVariantNumeric: "tabular-nums" }}>+{p.athEarned}</div>
             </div>
-            <div style={{ padding: 10, borderRadius: 8, background: "#f8fafc" }}>
-              <div style={{ ...sectionLabel, marginBottom: 2 }}>Fishbowl</div>
-              <span style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>{fbData.total}</span>
-              <span style={{ fontSize: 11, color: "#9ca3af" }}> ({fbData.count}x)</span>
-              <div style={{ fontSize: 10, color: "#9ca3af" }}>Game + Grade</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 4 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#6b7280" }}>Total earned / possible</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{p.totalEarned} / {p.totalPossible}</div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: ACCENT + "10", borderRadius: 8, marginTop: 4 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: ACCENT }}>Participation grade</div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: ACCENT, fontVariantNumeric: "tabular-nums" }}>{p.participationGrade} / 25 <span style={{ fontSize: 13, fontWeight: 700 }}>({Math.round(p.participationPct * 1000) / 10}%)</span></div>
             </div>
           </div>
         </div>
-
-        {isAdmin && (
-          <div style={{ ...crd, padding: 14 }}>
-            <div style={{ ...sectionLabel, marginBottom: 8 }}>Weekly Participation Entry</div>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", fontFamily: F }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid #f3f4f6" }}>
-                    <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>Wk</th>
-                    <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>On Topic</th>
-                    <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>Sports W.</th>
-                    <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>ToT</th>
-                    <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>ATH</th>
-                    <th style={{ textAlign: "left", padding: "6px 4px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase" }}>FB</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Array.from({ length: 10 }).map((_, wi) => {
-                    const w = wi + 1;
-                    const quizVal = getParticipation(sid, w, "quiz") || {};
-                    const quizScores = typeof quizVal === "object" ? quizVal : {};
-                    return (
-                      <tr key={w} style={{ borderBottom: "1px solid #f9fafb" }}>
-                        <td style={{ padding: "4px", fontWeight: 900, color: "#111827" }}>{w}</td>
-                        <td style={{ padding: "4px" }}><input type="number" min="0" max="6" value={quizScores.on_topic ?? ""} onChange={e => { const v = { ...quizScores, on_topic: parseInt(e.target.value) || 0 }; updateParticipation(sid, w, "quiz", v); }} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
-                        <td style={{ padding: "4px" }}><input type="number" min="0" max="4" value={quizScores.sports_world ?? ""} onChange={e => { const v = { ...quizScores, sports_world: parseInt(e.target.value) || 0 }; updateParticipation(sid, w, "quiz", v); }} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
-                        <td style={{ padding: "4px" }}><input type="number" value={getParticipation(sid, w, "tot") ?? ""} onChange={e => updateParticipation(sid, w, "tot", e.target.value)} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
-                        <td style={{ padding: "4px" }}><input type="number" value={getParticipation(sid, w, "pti") ?? ""} onChange={e => updateParticipation(sid, w, "pti", e.target.value)} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
-                        <td style={{ padding: "4px" }}><input type="number" value={getParticipation(sid, w, "fishbowl") ?? ""} onChange={e => updateParticipation(sid, w, "fishbowl", e.target.value)} style={{ ...inp, width: 36, padding: "3px 4px", fontSize: 12, textAlign: "center" }} placeholder="-" /></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
       </div>
     );
   };
