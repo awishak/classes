@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { ReboundPanel } from "./GameSystem";
 
 const F = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const TEXT_SECONDARY = "#6b7280";
@@ -510,6 +511,9 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
   const participation = data.participation || {};
   const [selStudent, setSelStudent] = useState(null);
   const [editingCell, setEditingCell] = useState(null);
+  const [reorderOpen, setReorderOpen] = useState(false);
+  const [reboundModal, setReboundModal] = useState(null); // { type, week } or null
+  const [activityFilter, setActivityFilter] = useState("all"); // "all" | "game" | "tot" | "fb"
   const isGuest = userName === GUEST_NAME;
 
   const student = isAdmin ? (selStudent ? data.students.find(s => s.id === selStudent) : null) : data.students.find(s => s.name === userName);
@@ -641,8 +645,144 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     };
   };
 
+  // ─── HELPERS FOR NEW GRADEBOOK ───
+
+  // Returns array of week numbers (sorted) where any activity of given type was scored
+  const getScoredWeeks = (type) => {
+    const store = type === "game" ? data.weeklyGames : type === "tot" ? data.weeklyToT : data.weeklyFishbowl;
+    const weeks = Object.keys(store || {})
+      .filter(w => type === "fishbowl" ? store[w]?.confirmed : store[w]?.scored)
+      .map(w => parseInt(w))
+      .filter(w => !isNaN(w))
+      .sort((a, b) => a - b);
+    return weeks;
+  };
+
+  // Per-week game breakdown for one student
+  const getWeeklyGameBreakdown = (sid) => {
+    const weeklyGames = data.weeklyGames || {};
+    const reboundGrades = data.reboundGrades || {};
+    const weeks = getScoredWeeks("game");
+    return weeks.map(w => {
+      const game = weeklyGames[w];
+      let original = 0;
+      let correctCount = 0;
+      let answered = false;
+      (game.questions || []).forEach((q, qi) => {
+        const ans = game.responses?.[sid + "-" + qi];
+        if (ans !== undefined) answered = true;
+        if (ans === q.correct) {
+          const cat = q.category || "on_topic";
+          original += cat === "on_topic" ? 15 : 2.5;
+          correctCount++;
+        }
+      });
+      const rg = reboundGrades[sid + "-game-" + w];
+      let cap = null, applied = null;
+      if (rg && typeof rg.gradePoints === "number") {
+        if (rg.type === "absence_override") cap = 60;
+        else if (original < 50) cap = 60;
+        else if (original <= 65) cap = 70;
+        else if (original <= 79) cap = 80;
+        else cap = 100;
+        applied = Math.max(original, Math.min(rg.gradePoints, cap));
+      }
+      return {
+        week: w,
+        original: Math.round(original * 10) / 10,
+        applied: applied !== null ? Math.round(applied * 10) / 10 : null,
+        cap,
+        rebound: rg || null,
+        correctCount,
+        totalQs: (game.questions || []).length,
+        answered,
+      };
+    });
+  };
+
+  // Per-week ToT breakdown
+  const getWeeklyToTBreakdown = (sid) => {
+    const tots = data.weeklyToT || {};
+    const weeks = getScoredWeeks("tot");
+    return weeks.map(w => {
+      const tot = tots[w];
+      const ptsEach = tot.questions?.length > 0 ? 20 / tot.questions.length : 20;
+      let pts = 0, answered = false;
+      (tot.questions || []).forEach((q, qi) => {
+        const ans = tot.responses?.[sid + "-" + qi];
+        if (ans !== undefined) answered = true;
+        if (ans === q.correct) pts += ptsEach;
+      });
+      return { week: w, score: Math.round(pts * 10) / 10, max: 20, answered };
+    });
+  };
+
+  // Per-week Fishbowl breakdown
+  const getWeeklyFishbowlBreakdown = (sid) => {
+    const fbs = data.weeklyFishbowl || {};
+    const weeks = getScoredWeeks("fishbowl");
+    return weeks.map(w => {
+      const fb = fbs[w];
+      const score = fb.scores?.[sid] ?? 0;
+      return { week: w, score, max: 20 };
+    });
+  };
+
+  // Counters for one student: planned absences, unannounced absences, rebounds completed
+  const getCounters = (sid) => {
+    const rebounds = data.rebounds || {};
+    const reboundGrades = data.reboundGrades || {};
+    let planned = 0, unannounced = 0;
+    Object.values(rebounds).forEach(rd => {
+      const ss = (rd.studentStatuses || {})[sid];
+      if (!ss) return;
+      if (ss.status === "planned_makeup") planned++;
+      else if (ss.status === "unannounced") unannounced++;
+    });
+    const reboundCount = Object.keys(reboundGrades).filter(k => k.startsWith(sid + "-game-")).length;
+    return { planned, unannounced, rebounds: reboundCount };
+  };
+
+  // ATH/PTI total for one student
+  const getATHTotal = (sid) => {
+    return (data.log || [])
+      .filter(e => e.studentId === sid && (e.source === "Around the Horn" || e.source === "PTI"))
+      .reduce((s, e) => s + e.amount, 0);
+  };
+
+  // Top 5 student IDs by leaderboard (game points), excluding admin and test student
+  const getAZone = () => {
+    const ranked = data.students
+      .filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis")
+      .map(s => ({ id: s.id, points: (data.log || []).filter(e => e.studentId === s.id).reduce((t, e) => t + e.amount, 0) }))
+      .sort((a, b) => b.points - a.points);
+    return new Set(ranked.slice(0, 5).map(s => s.id));
+  };
+
+  // Game leaderboard rank for one student (1-indexed)
+  const getRank = (sid) => {
+    const ranked = data.students
+      .filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis")
+      .map(s => ({ id: s.id, points: (data.log || []).filter(e => e.studentId === s.id).reduce((t, e) => t + e.amount, 0) }))
+      .sort((a, b) => b.points - a.points);
+    const idx = ranked.findIndex(s => s.id === sid);
+    return idx === -1 ? null : idx + 1;
+  };
+
+  // Color logic for weekly cells
+  const cellColor = (pct, hasRebound) => {
+    if (hasRebound) return { bg: "#dbeafe", color: "#1e40af" }; // blue
+    if (pct === null || pct === 0) return { bg: "#f3f4f6", color: "#9ca3af" }; // gray
+    if (pct >= 80) return { bg: "#dcfce7", color: "#166534" }; // green
+    return { bg: "#fef3c7", color: "#92400e" }; // yellow
+  };
+
+
   const renderStudentGrades = (sid) => {
     const p = computeAutoParticipation(sid);
+    const gameWeeks = getWeeklyGameBreakdown(sid);
+    const totWeeks = getWeeklyToTBreakdown(sid);
+    const fbWeeks = getWeeklyFishbowlBreakdown(sid);
 
     return (
       <div>
@@ -679,6 +819,75 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
               </div>
             );
           })}
+        </div>
+
+        <div style={{ ...sectionLabel, marginBottom: 8 }}>Weekly Game Breakdown</div>
+        <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
+          {gameWeeks.length === 0 ? (
+            <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>No games scored yet.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {gameWeeks.map(g => {
+                const final = g.applied !== null ? g.applied : g.original;
+                const status = !g.answered ? "absent" : g.applied !== null ? "rebound" : final >= 80 ? "ok" : "low";
+                return (
+                  <div key={g.week} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 8, background: status === "rebound" ? "#dbeafe" : status === "ok" ? "#f0fdf4" : status === "absent" ? "#fef2f2" : "#fffbeb" }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Week {g.week}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>
+                      {!g.answered ? (
+                        <span style={{ color: "#dc2626", fontStyle: "italic" }}>Absent</span>
+                      ) : (
+                        <span style={{ color: "#6b7280" }}>{g.correctCount}/{g.totalQs} correct</span>
+                      )}
+                      {g.applied !== null ? (
+                        <span style={{ fontWeight: 700 }}>
+                          <span style={{ color: "#9ca3af", textDecoration: "line-through", fontWeight: 500, marginRight: 6 }}>{g.original}</span>
+                          <span style={{ color: "#1e40af" }}>{g.applied}/100</span>
+                          <span style={{ fontSize: 11, color: "#6b7280", marginLeft: 6, fontWeight: 500 }}>({g.rebound.type === "absence_override" ? "Override" : "Rebound"})</span>
+                        </span>
+                      ) : (
+                        <span style={{ fontWeight: 700, color: status === "ok" ? "#166534" : status === "absent" ? "#9ca3af" : "#92400e" }}>{g.original}/100</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div style={{ ...sectionLabel, marginBottom: 8 }}>This or That Breakdown</div>
+        <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
+          {totWeeks.length === 0 ? (
+            <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>None yet.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {totWeeks.map(t => (
+                <div key={t.week} style={{ display: "flex", justifyContent: "space-between", padding: "6px 10px", borderRadius: 8, background: !t.answered ? "#fef2f2" : t.score >= 16 ? "#f0fdf4" : "#fffbeb" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Week {t.week}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: !t.answered ? "#dc2626" : t.score >= 16 ? "#166534" : "#92400e" }}>
+                    {!t.answered ? "Absent" : t.score + "/" + t.max}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ ...sectionLabel, marginBottom: 8 }}>Fishbowl Breakdown</div>
+        <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
+          {fbWeeks.length === 0 ? (
+            <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>None yet.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {fbWeeks.map(f => (
+                <div key={f.week} style={{ display: "flex", justifyContent: "space-between", padding: "6px 10px", borderRadius: 8, background: f.score === 0 ? "#f3f4f6" : f.score >= 16 ? "#f0fdf4" : "#fffbeb" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Week {f.week}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: f.score === 0 ? "#9ca3af" : f.score >= 16 ? "#166534" : "#92400e" }}>{f.score}/{f.max}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={{ ...sectionLabel, marginBottom: 8 }}>Participation (25%) - auto-calculated</div>
@@ -728,67 +937,239 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
   }
 
   if (isAdmin) {
-    const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME).sort(lastSortObj);
+    const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis").sort(lastSortObj);
     const gradeAssignments = assignments.filter(a => a.id !== "participation");
+
+    // Build column order. data.assignmentOrder is an array of column ids covering named assignments + meta columns.
+    const META_COLS = [
+      { id: "__inclass", label: "In-Class", sublabel: "25%" },
+      { id: "__ath", label: "ATH", sublabel: "Bonus" },
+      { id: "__absences", label: "Absences", sublabel: "P / U" },
+      { id: "__rebounds", label: "Rebounds", sublabel: "Count" },
+    ];
+    const allOrderableIds = [...gradeAssignments.map(a => a.id), ...META_COLS.map(m => m.id)];
+    const savedOrder = (data.assignmentOrder || []).filter(id => allOrderableIds.includes(id));
+    const missingIds = allOrderableIds.filter(id => !savedOrder.includes(id));
+    const colOrder = [...savedOrder, ...missingIds];
+
+    const moveCol = async (id, direction) => {
+      const idx = colOrder.indexOf(id);
+      if (idx === -1) return;
+      const newIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= colOrder.length) return;
+      const next = [...colOrder];
+      [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+      const updated = { ...data, assignmentOrder: next };
+      await saveData(updated); setData(updated);
+    };
+
+    const colLabel = (id) => {
+      const meta = META_COLS.find(m => m.id === id);
+      if (meta) return meta;
+      const a = gradeAssignments.find(x => x.id === id);
+      return a ? { id, label: a.name, sublabel: a.weight + "%" } : null;
+    };
+
+    const aZone = getAZone();
+    const gameWeeksAll = getScoredWeeks("game");
+    const totWeeksAll = getScoredWeeks("tot");
+    const fbWeeksAll = getScoredWeeks("fishbowl");
 
     return (
       <div style={{ padding: "20px 16px 40px", fontFamily: F }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ ...sectionLabel, marginBottom: 12 }}>Gradebook</div>
+        <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <div style={{ ...sectionLabel }}>Gradebook</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => setActivityFilter("all")} style={{ ...pill, background: activityFilter === "all" ? ACCENT : "#f3f4f6", color: activityFilter === "all" ? "#fff" : "#4b5563", fontSize: 11, padding: "4px 10px" }}>All</button>
+              <button onClick={() => setActivityFilter("game")} style={{ ...pill, background: activityFilter === "game" ? ACCENT : "#f3f4f6", color: activityFilter === "game" ? "#fff" : "#4b5563", fontSize: 11, padding: "4px 10px" }}>Game</button>
+              <button onClick={() => setActivityFilter("tot")} style={{ ...pill, background: activityFilter === "tot" ? ACCENT : "#f3f4f6", color: activityFilter === "tot" ? "#fff" : "#4b5563", fontSize: 11, padding: "4px 10px" }}>ToT</button>
+              <button onClick={() => setActivityFilter("fb")} style={{ ...pill, background: activityFilter === "fb" ? ACCENT : "#f3f4f6", color: activityFilter === "fb" ? "#fff" : "#4b5563", fontSize: 11, padding: "4px 10px" }}>FB</button>
+              <button onClick={() => setReorderOpen(!reorderOpen)} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>{reorderOpen ? "Done" : "Reorder columns"}</button>
+            </div>
+          </div>
+
+          {reorderOpen && (
+            <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>Use up/down to reorder. Per-week columns are fixed at the right.</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {colOrder.map((id, i) => {
+                  const c = colLabel(id);
+                  if (!c) return null;
+                  return (
+                    <div key={id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "#f9fafb", borderRadius: 6 }}>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#111827" }}>{c.label} <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 400 }}>({c.sublabel})</span></span>
+                      <button onClick={() => moveCol(id, "up")} disabled={i === 0} style={{ ...pillInactive, fontSize: 11, padding: "2px 8px", opacity: i === 0 ? 0.3 : 1 }}>up</button>
+                      <button onClick={() => moveCol(id, "down")} disabled={i === colOrder.length - 1} style={{ ...pillInactive, fontSize: 11, padding: "2px 8px", opacity: i === colOrder.length - 1 ? 0.3 : 1 }}>down</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div style={{ ...crd, overflow: "auto", marginBottom: 20 }}>
-            <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", fontFamily: F, minWidth: 600 }}>
+            <table style={{ fontSize: 12, borderCollapse: "collapse", fontFamily: F }}>
               <thead>
                 <tr style={{ borderBottom: "2px solid #f3f4f6" }}>
-                  <th style={{ textAlign: "left", padding: "10px 12px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", position: "sticky", left: 0, background: "#fff", zIndex: 2 }}>Student</th>
-                  {gradeAssignments.map(a => (
-                    <th key={a.id} style={{ textAlign: "center", padding: "10px 8px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase", maxWidth: 100 }}>
-                      <div>{a.name.split(" ").slice(0, 2).join(" ")}</div>
-                      <div style={{ fontSize: 9, color: "#d1d5db", fontWeight: 500 }}>{a.weight}%</div>
+                  <th style={{ textAlign: "left", padding: "10px 12px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", position: "sticky", left: 0, background: "#fff", zIndex: 2, minWidth: 200 }}>Student</th>
+                  {colOrder.map(id => {
+                    const c = colLabel(id);
+                    if (!c) return null;
+                    const short = c.label.split(" ").slice(0, 2).join(" ");
+                    return (
+                      <th key={id} style={{ textAlign: "center", padding: "10px 8px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase", minWidth: 70 }}>
+                        <div>{short}</div>
+                        <div style={{ fontSize: 9, color: "#d1d5db", fontWeight: 500 }}>{c.sublabel}</div>
+                      </th>
+                    );
+                  })}
+                  {(activityFilter === "all" || activityFilter === "game") && gameWeeksAll.map(w => (
+                    <th key={"gh-" + w} style={{ textAlign: "center", padding: "10px 6px", color: "#1e40af", fontWeight: 700, fontSize: 10, textTransform: "uppercase", minWidth: 50, background: "#eff6ff" }}>
+                      <div>W{w}</div>
+                      <div style={{ fontSize: 9, color: "#60a5fa", fontWeight: 500 }}>Game</div>
                     </th>
                   ))}
-                  <th style={{ textAlign: "center", padding: "10px 8px", color: "#9ca3af", fontWeight: 600, fontSize: 10, textTransform: "uppercase", maxWidth: 100 }}>
-                    <div>Participation</div>
-                    <div style={{ fontSize: 9, color: "#d1d5db", fontWeight: 500 }}>25%</div>
-                  </th>
+                  {(activityFilter === "all" || activityFilter === "tot") && totWeeksAll.map(w => (
+                    <th key={"th-" + w} style={{ textAlign: "center", padding: "10px 6px", color: "#7c3aed", fontWeight: 700, fontSize: 10, textTransform: "uppercase", minWidth: 50, background: "#f5f3ff" }}>
+                      <div>W{w}</div>
+                      <div style={{ fontSize: 9, color: "#a78bfa", fontWeight: 500 }}>ToT</div>
+                    </th>
+                  ))}
+                  {(activityFilter === "all" || activityFilter === "fb") && fbWeeksAll.map(w => (
+                    <th key={"fh-" + w} style={{ textAlign: "center", padding: "10px 6px", color: "#059669", fontWeight: 700, fontSize: 10, textTransform: "uppercase", minWidth: 50, background: "#ecfdf5" }}>
+                      <div>W{w}</div>
+                      <div style={{ fontSize: 9, color: "#34d399", fontWeight: 500 }}>FB</div>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {sorted.map(s => {
                   const pCalc = computeAutoParticipation(s.id);
+                  const counters = getCounters(s.id);
+                  const ath = getATHTotal(s.id);
+                  const inAZone = aZone.has(s.id);
+                  const rank = getRank(s.id);
+                  const photo = (data.bios || {})[s.id]?.photo;
+                  const gameBd = (activityFilter === "all" || activityFilter === "game") ? getWeeklyGameBreakdown(s.id) : [];
+                  const totBd = (activityFilter === "all" || activityFilter === "tot") ? getWeeklyToTBreakdown(s.id) : [];
+                  const fbBd = (activityFilter === "all" || activityFilter === "fb") ? getWeeklyFishbowlBreakdown(s.id) : [];
                   return (
-                  <tr key={s.id} style={{ borderBottom: "1px solid #f9fafb" }}>
-                    <td style={{ padding: "8px 12px", fontWeight: 600, color: "#111827", fontSize: 13, whiteSpace: "nowrap", position: "sticky", left: 0, background: "#fff", zIndex: 1, cursor: "pointer" }} onClick={() => setSelStudent(selStudent === s.id ? null : s.id)}>
-                      <span style={{ borderBottom: selStudent === s.id ? "2px solid " + ACCENT : "none", paddingBottom: 1 }}>{s.name}</span>
-                    </td>
-                    {gradeAssignments.map(a => {
-                      const cellKey = s.id + "-" + a.id;
-                      const g = grades[cellKey] || {};
-                      const isEditing = editingCell === cellKey;
-                      const score = g.score;
-                      const outOf = g.outOf || 100;
-                      return (
-                        <td key={a.id} style={{ textAlign: "center", padding: "4px 6px" }}>
-                          {isEditing ? (
-                            <div style={{ display: "flex", gap: 2, alignItems: "center", justifyContent: "center" }} onClick={e => e.stopPropagation()}>
-                              <input autoFocus type="number" value={score ?? ""} onChange={e => updateGrade(s.id, a.id, "score", e.target.value)} onBlur={() => setEditingCell(null)} onKeyDown={e => e.key === "Enter" && setEditingCell(null)} style={{ ...inp, width: 48, padding: "4px 4px", fontSize: 12, textAlign: "center" }} />
-                            </div>
+                    <tr key={s.id} style={{ borderBottom: "1px solid #f9fafb" }}>
+                      <td style={{ padding: "8px 12px", whiteSpace: "nowrap", position: "sticky", left: 0, background: "#fff", zIndex: 1, cursor: "pointer" }} onClick={() => setSelStudent(selStudent === s.id ? null : s.id)}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          {photo ? (
+                            <img src={photo} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
                           ) : (
-                            <button onClick={() => setEditingCell(cellKey)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 13, fontWeight: 700, padding: "4px 8px", borderRadius: 6, color: score !== undefined && score !== "" ? "#111827" : "#d1d5db", minWidth: 40 }}>
-                              {score !== undefined && score !== "" ? score + "/" + outOf : "-"}
-                            </button>
+                            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#9ca3af", flexShrink: 0 }}>{s.name[0]}</div>
                           )}
-                        </td>
-                      );
-                    })}
-                    <td style={{ textAlign: "center", padding: "4px 6px" }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>{pCalc.totalEarned}/{pCalc.totalPossible}</span>
-                    </td>
-                  </tr>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", borderBottom: selStudent === s.id ? "2px solid " + ACCENT : "none", paddingBottom: 1, lineHeight: 1.2 }}>{s.name}</div>
+                            <div style={{ fontSize: 10, fontWeight: 600, color: inAZone ? "#16a34a" : "#9ca3af", marginTop: 2 }}>
+                              {inAZone ? "A ZONE" : rank ? "#" + rank : ""}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      {colOrder.map(id => {
+                        // Meta cells
+                        if (id === "__inclass") {
+                          return (
+                            <td key={id} style={{ textAlign: "center", padding: "4px 6px" }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: ACCENT, fontVariantNumeric: "tabular-nums" }}>{pCalc.totalEarned}/{pCalc.totalPossible}</span>
+                              <div style={{ fontSize: 10, color: "#9ca3af" }}>({Math.round(pCalc.participationPct * 1000) / 10}%)</div>
+                            </td>
+                          );
+                        }
+                        if (id === "__ath") {
+                          return (
+                            <td key={id} style={{ textAlign: "center", padding: "4px 6px" }}>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: ath > 0 ? "#059669" : "#d1d5db", fontVariantNumeric: "tabular-nums" }}>{ath > 0 ? "+" + ath : "0"}</span>
+                            </td>
+                          );
+                        }
+                        if (id === "__absences") {
+                          return (
+                            <td key={id} style={{ textAlign: "center", padding: "4px 6px" }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#111827", fontVariantNumeric: "tabular-nums" }}>
+                                <span style={{ color: "#10b981" }}>{counters.planned}P</span>
+                                <span style={{ color: "#9ca3af", margin: "0 3px" }}>/</span>
+                                <span style={{ color: "#dc2626" }}>{counters.unannounced}U</span>
+                              </span>
+                            </td>
+                          );
+                        }
+                        if (id === "__rebounds") {
+                          return (
+                            <td key={id} style={{ textAlign: "center", padding: "4px 6px" }}>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: counters.rebounds > 0 ? "#1e40af" : "#d1d5db", fontVariantNumeric: "tabular-nums" }}>{counters.rebounds}</span>
+                            </td>
+                          );
+                        }
+                        // Named assignment cell (editable)
+                        const cellKey = s.id + "-" + id;
+                        const g = grades[cellKey] || {};
+                        const isEditing = editingCell === cellKey;
+                        const score = g.score;
+                        const outOf = g.outOf || 100;
+                        return (
+                          <td key={id} style={{ textAlign: "center", padding: "4px 6px" }}>
+                            {isEditing ? (
+                              <input autoFocus type="number" value={score ?? ""} onChange={e => updateGrade(s.id, id, "score", e.target.value)} onBlur={() => setEditingCell(null)} onKeyDown={e => e.key === "Enter" && setEditingCell(null)} style={{ ...inp, width: 48, padding: "4px 4px", fontSize: 12, textAlign: "center" }} />
+                            ) : (
+                              <button onClick={(e) => { e.stopPropagation(); setEditingCell(cellKey); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 13, fontWeight: 700, padding: "4px 8px", borderRadius: 6, color: score !== undefined && score !== "" ? "#111827" : "#d1d5db", minWidth: 40 }}>
+                                {score !== undefined && score !== "" ? score + "/" + outOf : "-"}
+                              </button>
+                            )}
+                          </td>
+                        );
+                      })}
+                      {/* Per-week game cells */}
+                      {(activityFilter === "all" || activityFilter === "game") && gameBd.map(b => {
+                        const final = b.applied !== null ? b.applied : b.original;
+                        const pct = b.answered ? final : null;
+                        const c = cellColor(pct, b.applied !== null);
+                        return (
+                          <td key={"g-" + b.week} style={{ textAlign: "center", padding: "2px 4px" }}>
+                            <button onClick={(e) => { e.stopPropagation(); setReboundModal({ type: "game", week: b.week }); }} style={{ background: c.bg, color: c.color, border: "none", borderRadius: 6, padding: "6px 4px", fontSize: 12, fontWeight: 700, fontFamily: F, cursor: "pointer", fontVariantNumeric: "tabular-nums", minWidth: 42 }}>
+                              {!b.answered ? "abs" : final}
+                              {b.applied !== null && <sup style={{ fontSize: 9, marginLeft: 2 }}>R</sup>}
+                            </button>
+                          </td>
+                        );
+                      })}
+                      {/* Per-week ToT cells */}
+                      {(activityFilter === "all" || activityFilter === "tot") && totBd.map(b => {
+                        const pct = b.answered ? Math.round(b.score / b.max * 100) : null;
+                        const c = cellColor(pct, false);
+                        return (
+                          <td key={"t-" + b.week} style={{ textAlign: "center", padding: "2px 4px" }}>
+                            <button onClick={(e) => { e.stopPropagation(); setReboundModal({ type: "tot", week: b.week }); }} style={{ background: c.bg, color: c.color, border: "none", borderRadius: 6, padding: "6px 4px", fontSize: 12, fontWeight: 700, fontFamily: F, cursor: "pointer", fontVariantNumeric: "tabular-nums", minWidth: 42 }}>
+                              {!b.answered ? "abs" : b.score}
+                            </button>
+                          </td>
+                        );
+                      })}
+                      {/* Per-week FB cells */}
+                      {(activityFilter === "all" || activityFilter === "fb") && fbBd.map(b => {
+                        const pct = b.score === 0 ? null : Math.round(b.score / b.max * 100);
+                        const c = cellColor(pct, false);
+                        return (
+                          <td key={"f-" + b.week} style={{ textAlign: "center", padding: "2px 4px" }}>
+                            <button onClick={(e) => { e.stopPropagation(); setReboundModal({ type: "fishbowl", week: b.week }); }} style={{ background: c.bg, color: c.color, border: "none", borderRadius: 6, padding: "6px 4px", fontSize: 12, fontWeight: 700, fontFamily: F, cursor: "pointer", fontVariantNumeric: "tabular-nums", minWidth: 42 }}>
+                              {b.score}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
+
           {selStudent && (
             <div style={{ ...crd, padding: 20 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
@@ -796,6 +1177,20 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                 <button onClick={() => setSelStudent(null)} style={pillInactive}>Close</button>
               </div>
               {renderStudentGrades(selStudent)}
+            </div>
+          )}
+
+          {reboundModal && (
+            <div onClick={() => setReboundModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 16px", overflowY: "auto" }}>
+              <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 24, maxWidth: 700, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>
+                    {reboundModal.type === "game" ? "Weekly Game" : reboundModal.type === "tot" ? "This or That" : "Fishbowl"} - Week {reboundModal.week}
+                  </div>
+                  <button onClick={() => setReboundModal(null)} style={pillInactive}>Close</button>
+                </div>
+                <ReboundPanel data={data} setData={setData} activityType={reboundModal.type} week={reboundModal.week} isAdmin={true} userName="Andrew Ishak" />
+              </div>
             </div>
           )}
         </div>
