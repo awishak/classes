@@ -568,7 +568,7 @@ export function Gradebook({ data, setData, isAdmin, userName }) {
                       );
                     })}
                     <td style={{ textAlign: "center", padding: "4px 6px" }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>{pCalc.participationGrade}/25</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>{pCalc.totalEarned}/{pCalc.totalPossible}</span>
                     </td>
                   </tr>
                   );

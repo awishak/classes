@@ -695,13 +695,10 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
               </div>
               <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontVariantNumeric: "tabular-nums" }}>+{p.athEarned}</div>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 4 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#6b7280" }}>Total earned / possible</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{p.totalEarned} / {p.totalPossible}</div>
-            </div>
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: ACCENT + "10", borderRadius: 8, marginTop: 4 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: ACCENT }}>Participation grade</div>
-              <div style={{ fontSize: 20, fontWeight: 900, color: ACCENT, fontVariantNumeric: "tabular-nums" }}>{p.participationGrade} / 25 <span style={{ fontSize: 13, fontWeight: 700 }}>({Math.round(p.participationPct * 1000) / 10}%)</span></div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: ACCENT }}>Total</div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: ACCENT, fontVariantNumeric: "tabular-nums" }}>{p.totalEarned} / {p.totalPossible} <span style={{ fontSize: 13, fontWeight: 700 }}>({Math.round(p.participationPct * 1000) / 10}%)</span></div>
             </div>
           </div>
         </div>
@@ -767,7 +764,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                       );
                     })}
                     <td style={{ textAlign: "center", padding: "4px 6px" }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>{pCalc.participationGrade}/25</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>{pCalc.totalEarned}/{pCalc.totalPossible}</span>
                     </td>
                   </tr>
                   );
