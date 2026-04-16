@@ -1489,7 +1489,23 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
       return;
     }
 
-    // Legacy game-points path: used for planned_makeup (all activity types) and for ToT/Fishbowl rebounds (not scoped in this rework)
+    // Planned makeup on weekly games: separate game pts (leaderboard) and grade pts
+    if (status === "planned_makeup" && activityType === "game") {
+      const gamePts = Math.min(ss.customGamePts !== undefined ? ss.customGamePts : maxPts, maxPts);
+      const gradePts2 = Math.min(ss.customGradePts !== undefined ? ss.customGradePts : 100, 100);
+      const rgKey = studentId + "-game-" + week;
+      const reboundGrades = { ...(data.reboundGrades || {}), [rgKey]: {
+        gradePoints: gradePts2, type: "makeup", enteredTs: Date.now(), enteredBy: userName || "Admin",
+      }};
+      const source = "Makeup Game Wk" + week;
+      const entry = { id: genId(), studentId, amount: gamePts, source, ts: reboundData.scoredTs || Date.now() };
+      const newSS = { ...statuses, [studentId]: { ...ss, approved: true, makeupGamePts: gamePts, makeupGradePts: gradePts2 } };
+      const updated = { ...data, reboundGrades, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: newSS } }, log: [...data.log, entry] };
+      await saveData(updated); setData(updated); showMsg("Makeup applied: " + gamePts + " game / " + gradePts2 + " grade");
+      return;
+    }
+
+    // Legacy game-points path: used for planned_makeup (non-game activities) and for ToT/Fishbowl rebounds
     let targetPts;
     if (status === "planned_makeup") {
       targetPts = maxPts;
@@ -1511,6 +1527,12 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
 
   const setCustomPts = async (studentId, pts) => {
     const ss = { ...statuses, [studentId]: { ...(statuses[studentId] || {}), customPts: parseFloat(pts) || 0 } };
+    const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: ss } } };
+    await saveData(updated); setData(updated);
+  };
+
+  const setCustomMakeupPts = async (studentId, field, pts) => {
+    const ss = { ...statuses, [studentId]: { ...(statuses[studentId] || {}), [field]: parseFloat(pts) || 0 } };
     const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: ss } } };
     await saveData(updated); setData(updated);
   };
@@ -1637,7 +1659,7 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
                       )}
 
                       {/* Points + approve: legacy game-points path (planned_makeup, or ToT/Fishbowl) */}
-                      {eligible && !isGameGradePath && (status === "rebound" || status === "unannounced_override" || status === "planned_makeup") && (
+                      {eligible && !isGameGradePath && (status === "rebound" || status === "unannounced_override" || (status === "planned_makeup" && activityType !== "game")) && (
                         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                           <span style={{ fontSize: 12, color: TEXT_MUTED }}>{status === "planned_makeup" ? "Makeup" : "Rebound"}:</span>
                           <input type="number" defaultValue={reboundPts} onBlur={e => setCustomPts(s.id, e.target.value)} style={{ ...inp, width: 60, fontSize: 13, textAlign: "center", padding: "4px" }} />
@@ -1645,6 +1667,23 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
                           {(ss.link || status === "planned_makeup") && (
                             <button onClick={() => approveRebound(s.id)} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12, marginLeft: "auto" }}>Apply Points</button>
                           )}
+                        </div>
+                      )}
+
+                      {/* Planned makeup on weekly games: separate game + grade inputs */}
+                      {eligible && status === "planned_makeup" && activityType === "game" && (
+                        <div>
+                          <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 4 }}>
+                            <span style={{ fontSize: 12, color: TEXT_MUTED }}>Game:</span>
+                            <input type="number" defaultValue={ss.customGamePts !== undefined ? ss.customGamePts : maxPts} onBlur={e => setCustomMakeupPts(s.id, "customGamePts", e.target.value)} style={{ ...inp, width: 60, fontSize: 13, textAlign: "center", padding: "4px" }} />
+                            <span style={{ fontSize: 12, color: TEXT_MUTED }}>/ {maxPts} pts (leaderboard)</span>
+                          </div>
+                          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                            <span style={{ fontSize: 12, color: TEXT_MUTED }}>Grade:</span>
+                            <input type="number" defaultValue={ss.customGradePts !== undefined ? ss.customGradePts : 100} onBlur={e => setCustomMakeupPts(s.id, "customGradePts", e.target.value)} style={{ ...inp, width: 60, fontSize: 13, textAlign: "center", padding: "4px" }} />
+                            <span style={{ fontSize: 12, color: TEXT_MUTED }}>/ 100 pts (grade)</span>
+                            <button onClick={() => approveRebound(s.id)} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12, marginLeft: "auto" }}>Apply Makeup</button>
+                          </div>
                         </div>
                       )}
 
@@ -1657,7 +1696,9 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
 
                   {ss.approved && (
                     <div style={{ fontSize: 12, fontWeight: 600, color: GREEN, marginTop: 4 }}>
-                      {ss.reboundGradePts !== undefined
+                      {ss.makeupGamePts !== undefined
+                        ? "Makeup applied: " + ss.makeupGamePts + " game pts + " + ss.makeupGradePts + " / 100 grade pts"
+                        : ss.reboundGradePts !== undefined
                         ? "Rebound grade applied: " + ss.reboundGradePts + " / 100 (grade only)"
                         : (ss.gradeOnly ? "Rebound" : "Makeup") + " applied: +" + ss.reboundPts + " pts " + (ss.gradeOnly ? "(grade only)" : "(leaderboard + grade)")}
                     </div>
@@ -1707,7 +1748,11 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
 
         {mySS.approved && (
           <div style={{ padding: 12, borderRadius: 10, background: "#ecfdf5", textAlign: "center", marginBottom: 12 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: GREEN }}>{mySS.gradeOnly ? "Rebound" : "Makeup"} approved: +{mySS.reboundPts} pts</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: GREEN }}>
+              {mySS.makeupGamePts !== undefined
+                ? "Makeup completed: " + mySS.makeupGamePts + " game pts, " + mySS.makeupGradePts + " / 100 grade pts"
+                : (mySS.gradeOnly ? "Rebound" : "Makeup") + " approved: +" + mySS.reboundPts + " pts"}
+            </div>
           </div>
         )}
 

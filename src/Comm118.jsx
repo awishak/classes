@@ -948,7 +948,11 @@ function HomeReboundBox({ data, setData, studentId }) {
       const targetPercent = gradePercent < 50 ? 60 : gradePercent <= 65 ? 70 : gradePercent <= 79 ? 80 : null;
       const optedIn = todoChecks["optin-" + rKey + "-" + studentId];
 
-      if (status === "planned_makeup" && Date.now() < makeupDeadline) {
+      if (status === "planned_makeup" && ss.approved && ss.makeupGamePts !== undefined && !(data.hiddenRebounds || {})[studentId + "-" + rKey]) {
+        pendingItems.push({ rKey, status: "makeup_completed", label: label + " Wk " + w, makeupGamePts: ss.makeupGamePts, makeupGradePts: ss.makeupGradePts, type, week: w });
+        return;
+      }
+      if (status === "planned_makeup" && !ss.approved && Date.now() < makeupDeadline) {
         pendingItems.push({ rKey, status, label: label + " Wk " + w, daysLeft: Math.max(0, Math.round((makeupDeadline - Date.now()) / (1000 * 60 * 60 * 24))), type, week: w });
       }
       if ((status === "rebound" || status === "unannounced_override") && Date.now() < reboundDeadline && !ss.link) {
@@ -1000,6 +1004,7 @@ function HomeReboundBox({ data, setData, studentId }) {
       {pendingItems.map((item, i) => {
         const isRebound = item.status === "rebound" || item.status === "unannounced_override";
         const sc = item.status === "planned_makeup" ? { bg: "#ecfdf5", border: "#10b981", color: "#065f46" }
+          : item.status === "makeup_completed" ? { bg: "#ecfdf5", border: "#10b981", color: "#065f46" }
           : item.status === "unannounced" ? { bg: "#fef2f2", border: "#ef4444", color: "#991b1b" }
           : item.status === "submitted" ? { bg: "#ecfdf5", border: "#10b981", color: "#065f46" }
           : { bg: "#fffbeb", border: "#f59e0b", color: "#92400e" };
@@ -1008,7 +1013,7 @@ function HomeReboundBox({ data, setData, studentId }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 8 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: sc.color }}>
-                  {item.status === "planned_makeup" ? "Planned Makeup" : item.status === "unannounced" ? "Makeup Unavailable" : item.status === "submitted" ? "Rebound Submitted" : "Rebound Available"}
+                  {item.status === "makeup_completed" ? "Makeup Completed" : item.status === "planned_makeup" ? "Planned Makeup" : item.status === "unannounced" ? "Makeup Unavailable" : item.status === "submitted" ? "Rebound Submitted" : "Rebound Available"}
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, marginTop: 2 }}>{item.label}</div>
               </div>
@@ -1071,6 +1076,16 @@ function HomeReboundBox({ data, setData, studentId }) {
 
             {item.status === "submitted" && <div style={{ fontSize: 13, color: GREEN, fontWeight: 600 }}>Your rebound video has been submitted. Waiting for instructor review.</div>}
             {item.status === "unannounced" && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6, marginTop: 4 }}>Your absence was unannounced. Contact your instructor if you believe this is an error.</div>}
+
+            {/* Makeup completed: show scores + dismiss */}
+            {item.status === "makeup_completed" && (
+              <div>
+                <div style={{ fontSize: 13, color: "#065f46", lineHeight: 1.6, marginTop: 4, marginBottom: 8 }}>
+                  Game: <strong>{item.makeupGamePts}</strong> pts (leaderboard) / Grade: <strong>{item.makeupGradePts}</strong> / 100 pts
+                </div>
+                <button onClick={() => hideBox(item.rKey)} style={{ ...pill, background: "#fff", color: TEXT_SECONDARY, border: "1px solid " + BORDER, fontSize: 12 }}>Dismiss</button>
+              </div>
+            )}
 
             <button onClick={() => setShowPolicy(!showPolicy)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600, padding: 0, marginTop: 6 }}>{showPolicy ? "Hide Policy" : "View Rebound Policy"}</button>
             {showPolicy && <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap", padding: 10, background: "rgba(255,255,255,0.7)", borderRadius: 8, marginTop: 6, border: "1px solid " + BORDER }}>{REBOUND_POLICY}</div>}
