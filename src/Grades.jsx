@@ -838,21 +838,22 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {gameWeeks.map(g => {
                 const final = g.applied !== null ? g.applied : g.original;
-                const status = !g.answered ? "absent" : g.applied !== null ? "rebound" : final >= 80 ? "ok" : "low";
+                const hasMakeup = g.rebound?.type === "makeup";
+                const status = (!g.answered && !hasMakeup) ? "absent" : g.applied !== null ? "rebound" : final >= 80 ? "ok" : "low";
                 return (
                   <div key={g.week} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 8, background: status === "rebound" ? "#dbeafe" : status === "ok" ? "#f0fdf4" : status === "absent" ? "#fef2f2" : "#fffbeb" }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Week {g.week}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>
-                      {!g.answered ? (
+                      {!g.answered && !hasMakeup ? (
                         <span style={{ color: "#dc2626", fontStyle: "italic" }}>Absent</span>
-                      ) : (
+                      ) : !hasMakeup ? (
                         <span style={{ color: "#6b7280" }}>{g.correctCount}/{g.totalQs} correct</span>
-                      )}
+                      ) : null}
                       {g.applied !== null ? (
                         <span style={{ fontWeight: 700 }}>
-                          <span style={{ color: "#9ca3af", textDecoration: "line-through", fontWeight: 500, marginRight: 6 }}>{g.original}</span>
+                          {!hasMakeup && <span style={{ color: "#9ca3af", textDecoration: "line-through", fontWeight: 500, marginRight: 6 }}>{g.original}</span>}
                           <span style={{ color: "#1e40af" }}>{g.applied}/100</span>
-                          <span style={{ fontSize: 11, color: "#6b7280", marginLeft: 6, fontWeight: 500 }}>({g.rebound.type === "absence_override" ? "Override" : "Rebound"})</span>
+                          <span style={{ fontSize: 11, color: "#6b7280", marginLeft: 6, fontWeight: 500 }}>({g.rebound.type === "makeup" ? "Makeup" : g.rebound.type === "absence_override" ? "Override" : "Rebound"})</span>
                         </span>
                       ) : (
                         <span style={{ fontWeight: 700, color: status === "ok" ? "#166534" : status === "absent" ? "#9ca3af" : "#92400e" }}>{g.original}/100</span>
@@ -1137,13 +1138,14 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                       {/* Per-week game cells */}
                       {(activityFilter === "all" || activityFilter === "game") && gameBd.map(b => {
                         const final = b.applied !== null ? b.applied : b.original;
-                        const pct = b.answered ? final : null;
+                        const hasMakeup = b.rebound?.type === "makeup";
+                        const pct = (b.answered || hasMakeup) ? final : null;
                         const c = cellColor(pct, b.applied !== null);
                         return (
                           <td key={"g-" + b.week} style={{ textAlign: "center", padding: "2px 4px" }}>
                             <button onClick={(e) => { e.stopPropagation(); setReboundModal({ type: "game", week: b.week }); }} style={{ background: c.bg, color: c.color, border: "none", borderRadius: 6, padding: "6px 4px", fontSize: 12, fontWeight: 700, fontFamily: F, cursor: "pointer", fontVariantNumeric: "tabular-nums", minWidth: 42 }}>
-                              {!b.answered ? "abs" : final}
-                              {b.applied !== null && <sup style={{ fontSize: 9, marginLeft: 2 }}>R</sup>}
+                              {!b.answered && !hasMakeup ? "abs" : final}
+                              {b.applied !== null && <sup style={{ fontSize: 9, marginLeft: 2 }}>{hasMakeup ? "M" : "R"}</sup>}
                             </button>
                           </td>
                         );
