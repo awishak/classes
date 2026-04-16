@@ -596,15 +596,19 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
       const rg = reboundGrades[sid + "-game-" + w];
       let earned = original;
       if (rg && typeof rg.gradePoints === "number") {
-        // Cap based on original grade percentage (or lowest tier for absence override)
-        let cap;
-        if (rg.type === "absence_override") cap = 60;
-        else if (original < 50) cap = 60;
-        else if (original <= 65) cap = 70;
-        else if (original <= 79) cap = 80;
-        else cap = 100;
-        const capped = Math.min(rg.gradePoints, cap);
-        earned = Math.max(original, capped);
+        if (rg.type === "makeup") {
+          earned = Math.max(original, rg.gradePoints);
+        } else {
+          // Cap based on original grade percentage (or lowest tier for absence override)
+          let cap;
+          if (rg.type === "absence_override") cap = 60;
+          else if (original < 50) cap = 60;
+          else if (original <= 65) cap = 70;
+          else if (original <= 79) cap = 80;
+          else cap = 100;
+          const capped = Math.min(rg.gradePoints, cap);
+          earned = Math.max(original, capped);
+        }
       }
       gameGradeEarned += earned;
     });
@@ -680,12 +684,17 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
       const rg = reboundGrades[sid + "-game-" + w];
       let cap = null, applied = null;
       if (rg && typeof rg.gradePoints === "number") {
-        if (rg.type === "absence_override") cap = 60;
-        else if (original < 50) cap = 60;
-        else if (original <= 65) cap = 70;
-        else if (original <= 79) cap = 80;
-        else cap = 100;
-        applied = Math.max(original, Math.min(rg.gradePoints, cap));
+        if (rg.type === "makeup") {
+          cap = 100;
+          applied = Math.max(original, rg.gradePoints);
+        } else {
+          if (rg.type === "absence_override") cap = 60;
+          else if (original < 50) cap = 60;
+          else if (original <= 65) cap = 70;
+          else if (original <= 79) cap = 80;
+          else cap = 100;
+          applied = Math.max(original, Math.min(rg.gradePoints, cap));
+        }
       }
       return {
         week: w,
