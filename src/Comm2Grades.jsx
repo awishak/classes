@@ -8,6 +8,7 @@ const TEXT_MUTED = "#a1a1aa";
 const BORDER = "#e8e8ec";
 const GREEN = "#059669";
 const RED = "#dc2626";
+const AMBER = "#d97706";
 
 const crd = { background: "#fff", borderRadius: 14, border: "1px solid " + BORDER, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" };
 const pill = { padding: "7px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s" };
@@ -18,6 +19,15 @@ const sel = { ...inp, width: "auto" };
 
 const ADMIN_NAME = "Andrew Ishak";
 const GUEST_NAME = "__guest__";
+
+function parseDueDate(dueStr) {
+  if (!dueStr) return null;
+  const year = new Date().getFullYear();
+  const parsed = new Date(dueStr + ", " + year);
+  if (isNaN(parsed.getTime())) return null;
+  parsed.setHours(23, 59, 59, 999);
+  return parsed;
+}
 
 export const DEFAULT_ASSIGNMENTS = [
   { id: "speech_college", name: "Why I Chose to Go to College", weight: 3, due: "Apr 6", link: "", notes: "Position speech, ~60 seconds, pass/fail" },
@@ -288,17 +298,21 @@ function AdminSubmissions({ assignmentId, data, setData }) {
     const eg = editGrades[studentId] || {};
     const key = studentId + "-" + assignmentId;
     const existing = grades[key] || {};
+    const newGrade = {
+      ...existing,
+      score: eg.score !== undefined ? (eg.score === "" ? undefined : parseFloat(eg.score)) : existing.score,
+      outOf: eg.outOf !== undefined ? (parseFloat(eg.outOf) || 100) : (existing.outOf || 100),
+      comment: eg.comment !== undefined ? eg.comment : (existing.comment || ""),
+      gradedTs: Date.now(),
+    };
+    const regradeRequests = { ...(data.regradeRequests || {}) };
+    delete regradeRequests[key];
+    const gradeNotifications = { ...(data.gradeNotifications || {}), [key]: { ts: Date.now() } };
     const updated = {
       ...data,
-      grades: {
-        ...grades,
-        [key]: {
-          ...existing,
-          score: eg.score !== undefined ? (eg.score === "" ? undefined : parseFloat(eg.score)) : existing.score,
-          outOf: eg.outOf !== undefined ? (parseFloat(eg.outOf) || 100) : (existing.outOf || 100),
-          comment: eg.comment !== undefined ? eg.comment : (existing.comment || ""),
-        }
-      }
+      grades: { ...grades, [key]: newGrade },
+      regradeRequests,
+      gradeNotifications,
     };
     await saveData(updated); setData(updated);
     setEditGrades(prev => { const n = { ...prev }; delete n[studentId]; return n; });
@@ -340,6 +354,18 @@ function AdminSubmissions({ assignmentId, data, setData }) {
             )}
 
             {grade.comment && !isEditing && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, padding: "6px 8px", background: "#eff6ff", borderRadius: 6, lineHeight: 1.4 }}>{grade.comment}</div>}
+            {/* Regrade request */}
+            {(() => {
+              const rr = (data.regradeRequests || {})[s.id + "-" + assignmentId];
+              if (!rr || isEditing) return null;
+              return (
+                <div style={{ marginTop: 6, padding: "6px 8px", background: "#fffbeb", borderRadius: 6, border: "1px solid #fde68a" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: AMBER, marginBottom: 2 }}>Regrade Request</div>
+                  <div style={{ fontSize: 12, color: "#92400e", lineHeight: 1.4 }}>{rr.note}</div>
+                  <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{new Date(rr.ts).toLocaleString()}</div>
+                </div>
+              );
+            })()}
 
             {isEditing ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
@@ -371,6 +397,7 @@ export function Gradebook({ data, setData, isAdmin, userName }) {
   const [selStudent, setSelStudent] = useState(null);
   const [reorderOpen, setReorderOpen] = useState(false);
   const [reboundModal, setReboundModal] = useState(null);
+  const [highlight, setHighlight] = useState(null);
   const [activityFilter, setActivityFilter] = useState("all");
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
@@ -762,6 +789,34 @@ export function Gradebook({ data, setData, isAdmin, userName }) {
       return a ? { id, label: a.name, sublabel: a.weight + "%" } : null;
     };
 
+    const submissions = data.submissions || {};
+    const regradeRequests = data.regradeRequests || {};
+
+    let zeroCount = 0, missingCount = 0, regradeCount = 0, lateUngradedCount = 0;
+    const zeroCells = new Set();
+    const missingCells = new Set();
+    const regradeCells = new Set();
+    const lateCells = new Set();
+
+    sorted.forEach(s => {
+      gradeAssignments.forEach(a => {
+        const key = s.id + "-" + a.id;
+        const g = grades[key] || {};
+        const sub = submissions[key];
+        const dueDate = parseDueDate(a.due);
+        const isPastDue = dueDate && Date.now() > dueDate.getTime();
+        const hasGrade = g.score !== undefined && g.score !== "";
+        const isZero = hasGrade && parseFloat(g.score) === 0;
+        const isLate = sub && dueDate && sub.ts > dueDate.getTime();
+        const hasRegrade = !!regradeRequests[key];
+
+        if (isZero) { zeroCount++; zeroCells.add(key); }
+        if (isPastDue && !sub && !hasGrade) { missingCount++; missingCells.add(key); }
+        if (hasRegrade) { regradeCount++; regradeCells.add(key); }
+        if (isLate && !hasGrade) { lateUngradedCount++; lateCells.add(key); }
+      });
+    });
+
     const aZone = getAZone();
     const gameWeeksAll = getScoredWeeks("game");
     const totWeeksAll = getScoredWeeks("tot");
@@ -781,6 +836,34 @@ export function Gradebook({ data, setData, isAdmin, userName }) {
               <button onClick={() => setReorderOpen(!reorderOpen)} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>{reorderOpen ? "Done" : "Reorder columns"}</button>
             </div>
           </div>
+
+          {(zeroCount > 0 || missingCount > 0 || regradeCount > 0 || lateUngradedCount > 0) && (
+            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+              {regradeCount > 0 && (
+                <button onClick={() => setHighlight(h => h === "regrade" ? null : "regrade")} style={{ ...pill, padding: "8px 16px", background: highlight === "regrade" ? AMBER : "#fffbeb", color: highlight === "regrade" ? "#fff" : "#92400e", border: "1px solid #fde68a" }}>
+                  {regradeCount} Regrade Request{regradeCount !== 1 ? "s" : ""}
+                </button>
+              )}
+              {zeroCount > 0 && (
+                <button onClick={() => setHighlight(h => h === "zero" ? null : "zero")} style={{ ...pill, padding: "8px 16px", background: highlight === "zero" ? RED : "#fef2f2", color: highlight === "zero" ? "#fff" : RED, border: "1px solid #fecaca" }}>
+                  {zeroCount} Zero{zeroCount !== 1 ? "s" : ""}
+                </button>
+              )}
+              {missingCount > 0 && (
+                <button onClick={() => setHighlight(h => h === "missing" ? null : "missing")} style={{ ...pill, padding: "8px 16px", background: highlight === "missing" ? "#7c3aed" : "#f5f3ff", color: highlight === "missing" ? "#fff" : "#7c3aed", border: "1px solid #c4b5fd" }}>
+                  {missingCount} Missing
+                </button>
+              )}
+              {lateUngradedCount > 0 && (
+                <button onClick={() => setHighlight(h => h === "late" ? null : "late")} style={{ ...pill, padding: "8px 16px", background: highlight === "late" ? AMBER : "#fffbeb", color: highlight === "late" ? "#fff" : AMBER, border: "1px solid #fde68a" }}>
+                  {lateUngradedCount} Late (ungraded)
+                </button>
+              )}
+              {highlight && (
+                <button onClick={() => setHighlight(null)} style={{ ...pillInactive, padding: "8px 12px", fontSize: 11 }}>Clear</button>
+              )}
+            </div>
+          )}
 
           {reorderOpen && (
             <div style={{ ...crd, padding: 14, marginBottom: 12 }}>

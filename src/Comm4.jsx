@@ -1088,6 +1088,79 @@ function HomeReboundBox({ data, setData, studentId }) {
   );
 }
 
+function HomeGradedNotifications({ data, setData, studentId }) {
+  const assignments = data.assignments || [];
+  const grades = data.grades || {};
+  const notifications = data.gradeNotifications || {};
+
+  const items = [];
+  assignments.forEach(a => {
+    if (a.id === "participation") return;
+    const key = studentId + "-" + a.id;
+    const notif = notifications[key];
+    if (!notif) return;
+    const g = grades[key] || {};
+    if (g.score === undefined || g.score === "") return;
+    items.push({ key, assignment: a, grade: g, ts: notif.ts });
+  });
+
+  if (items.length === 0) return null;
+  items.sort((a, b) => b.ts - a.ts);
+
+  const dismiss = async (key) => {
+    const newNotifs = { ...(data.gradeNotifications || {}) };
+    delete newNotifs[key];
+    const updated = { ...data, gradeNotifications: newNotifs };
+    await window.storage.set(STORAGE_KEY, JSON.stringify(updated), true);
+    setData(updated);
+  };
+
+  const dismissAll = async () => {
+    const newNotifs = { ...(data.gradeNotifications || {}) };
+    items.forEach(i => delete newNotifs[i.key]);
+    const updated = { ...data, gradeNotifications: newNotifs };
+    await window.storage.set(STORAGE_KEY, JSON.stringify(updated), true);
+    setData(updated);
+  };
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <div style={{ fontSize: 10, fontWeight: 500, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>Recently Graded</div>
+        {items.length > 1 && (
+          <button onClick={dismissAll} style={{ fontSize: 11, color: TEXT_SECONDARY, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600, padding: 0 }}>Dismiss all</button>
+        )}
+      </div>
+      {items.map(item => {
+        const isZero = parseFloat(item.grade.score) === 0;
+        return (
+          <div key={item.key} style={{ ...crd, padding: 14, marginBottom: 6, borderLeft: "4px solid " + (isZero ? RED : GREEN), background: isZero ? "#fef2f2" : "#ecfdf5" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: isZero ? "#991b1b" : "#065f46" }}>
+                  {item.assignment.name} has been graded
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: isZero ? RED : "#111827", marginTop: 4 }}>
+                  {item.grade.score}<span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}> / {item.grade.outOf || 100}</span>
+                </div>
+                {item.grade.comment && (
+                  <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 6, padding: "6px 8px", background: "rgba(255,255,255,0.7)", borderRadius: 6, lineHeight: 1.4 }}>
+                    {item.grade.comment}
+                  </div>
+                )}
+                {isZero && (
+                  <div style={{ fontSize: 12, color: RED, marginTop: 6, fontWeight: 600 }}>This assignment needs attention. Check the requirements and resubmit.</div>
+                )}
+              </div>
+              <button onClick={() => dismiss(item.key)} style={{ fontSize: 20, color: TEXT_MUTED, background: "none", border: "none", cursor: "pointer", padding: "0 4px", lineHeight: 1 }}>x</button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function HomeView({ data, setData, userName, isAdmin, setView }) {
   const [newNewsText, setNewNewsText] = useState("");
   const [newNewsType, setNewNewsType] = useState("info");
@@ -1183,6 +1256,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
 
                 {/* To-do summary + Rebound box */}
         {studentId && !isAdmin && <HomeTodoSummary data={data} setData={setData} studentId={studentId} setView={(v) => { const ev = new CustomEvent("nav", { detail: v }); window.dispatchEvent(ev); }} />}
+        {studentId && !isAdmin && <HomeGradedNotifications data={data} setData={setData} studentId={studentId} />}
         {studentId && !isAdmin && <HomeReboundBox data={data} setData={setData} studentId={studentId} />}
 
         {/* Admin: post news */}
