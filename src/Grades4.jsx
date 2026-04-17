@@ -1323,13 +1323,28 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                         const isEditing = editingCell === cellKey;
                         const score = g.score;
                         const outOf = g.outOf || 100;
+                        const hasRegrade = !!regradeRequests[cellKey];
+                        const isHighlighted = (highlight === "zero" && zeroCells.has(cellKey))
+                          || (highlight === "missing" && missingCells.has(cellKey))
+                          || (highlight === "regrade" && regradeCells.has(cellKey))
+                          || (highlight === "late" && lateCells.has(cellKey));
+                        const isDimmed = highlight && !isHighlighted;
+                        const sub = submissions[cellKey];
+                        const hasSubmission = !!sub;
+                        const hasGrade = score !== undefined && score !== "";
+                        const cellBg = isHighlighted
+                          ? (highlight === "zero" ? "#fecaca" : highlight === "missing" ? "#ddd6fe" : highlight === "regrade" ? "#fde68a" : "#fde68a")
+                          : zeroCells.has(cellKey) ? "#fef2f2"
+                          : missingCells.has(cellKey) ? "#f5f3ff"
+                          : "transparent";
                         return (
-                          <td key={id} style={{ textAlign: "center", padding: "4px 6px" }}>
+                          <td key={id} style={{ textAlign: "center", padding: "4px 6px", background: cellBg, opacity: isDimmed ? 0.3 : 1, transition: "opacity 0.15s" }}>
                             {isEditing ? (
                               <input autoFocus type="number" value={score ?? ""} onChange={e => updateGrade(s.id, id, "score", e.target.value)} onBlur={() => setEditingCell(null)} onKeyDown={e => e.key === "Enter" && setEditingCell(null)} style={{ ...inp, width: 48, padding: "4px 4px", fontSize: 12, textAlign: "center" }} />
                             ) : (
-                              <button onClick={(e) => { e.stopPropagation(); setEditingCell(cellKey); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 13, fontWeight: 700, padding: "4px 8px", borderRadius: 6, color: score !== undefined && score !== "" ? "#111827" : "#d1d5db", minWidth: 40 }}>
-                                {score !== undefined && score !== "" ? score + "/" + outOf : "-"}
+                              <button onClick={(e) => { e.stopPropagation(); setEditingCell(cellKey); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 13, fontWeight: 700, padding: "4px 8px", borderRadius: 6, color: hasGrade ? (parseFloat(score) === 0 ? RED : "#111827") : "#d1d5db", minWidth: 40, position: "relative" }}>
+                                {hasGrade ? score + "/" + outOf : missingCells.has(cellKey) ? "miss" : hasSubmission ? "\uD83D\uDCC4" : "-"}
+                                {hasRegrade && <sup style={{ fontSize: 9, marginLeft: 2, color: AMBER }}>RG</sup>}
                               </button>
                             )}
                           </td>
