@@ -927,12 +927,34 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
           {assignments.filter(a => a.id !== "participation").map(a => {
             const g = grades[sid + "-" + a.id] || {};
+            const sub = (data.submissions || {})[sid + "-" + a.id];
+            const dueDate = parseDueDate(a.due);
+            const isLate = sub && dueDate && sub.ts > dueDate.getTime();
+            const isPastDue = dueDate && Date.now() > dueDate.getTime();
+            const hasGrade = g.score !== undefined && g.score !== "";
             return (
               <div key={a.id} style={{ ...crd, padding: 14 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{a.name}</div>
-                  <div style={{ fontSize: 12, color: "#9ca3af" }}>{a.weight}%</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{a.name}</div>
+                    {hasGrade && parseFloat(g.score) === 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "#fef2f2", color: RED }}>Zero</span>}
+                    {!hasGrade && sub && isLate && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "#fffbeb", color: AMBER }}>Late</span>}
+                    {!hasGrade && !sub && isPastDue && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "#fef2f2", color: RED }}>Missing</span>}
+                    {!hasGrade && sub && !isLate && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "#eff6ff", color: "#2563eb" }}>Submitted</span>}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#9ca3af" }}>{a.weight}% {a.due ? "/ Due " + a.due : ""}</div>
                 </div>
+                {sub && (
+                  <div style={{ marginBottom: 8, padding: "6px 10px", background: "#f9fafb", borderRadius: 8 }}>
+                    {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 2 }}>View Submission</a>}
+                    {sub.notes && <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2, lineHeight: 1.4 }}>"{sub.notes}"</div>}
+                    <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
+                      Submitted {new Date(sub.ts).toLocaleString()}
+                      {isLate && <span style={{ color: AMBER, fontWeight: 600, marginLeft: 6 }}>LATE</span>}
+                    </div>
+                  </div>
+                )}
+                {!sub && <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic", marginBottom: 6 }}>No submission</div>}
                 {isAdmin ? (
                   <div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>

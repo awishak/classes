@@ -620,16 +620,58 @@ export function Gradebook({ data, setData, isAdmin, userName }) {
       <div>
         {assignments.map(a => {
           const g = grades[sid + "-" + a.id] || {};
+          const sub = (data.submissions || {})[sid + "-" + a.id];
+          const dueDate = parseDueDate(a.due);
+          const isLate = sub && dueDate && sub.ts > dueDate.getTime();
+          const isPastDue = dueDate && Date.now() > dueDate.getTime();
+          const hasGrade = g.score !== undefined && g.score !== "";
           return (
-            <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f4f4f5" }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#18181b" }}>{a.name}</div>
+            <div key={a.id} style={{ padding: "10px 0", borderBottom: "1px solid #f4f4f5" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "#18181b" }}>{a.name}</div>
+                  {hasGrade && parseFloat(g.score) === 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "#fef2f2", color: RED }}>Zero</span>}
+                  {!hasGrade && sub && isLate && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "#fffbeb", color: AMBER }}>Late</span>}
+                  {!hasGrade && !sub && isPastDue && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "#fef2f2", color: RED }}>Missing</span>}
+                  {!hasGrade && sub && !isLate && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "#eff6ff", color: "#2563eb" }}>Submitted</span>}
+                </div>
                 <div style={{ fontSize: 12, color: TEXT_SECONDARY }}>{a.weight}%{a.due ? " / Due: " + a.due : ""}</div>
               </div>
+              {sub && (
+                <div style={{ marginBottom: 6, padding: "6px 10px", background: "#f9fafb", borderRadius: 8 }}>
+                  {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 2 }}>View Submission</a>}
+                  {sub.notes && <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2, lineHeight: 1.4 }}>"{sub.notes}"</div>}
+                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>
+                    Submitted {new Date(sub.ts).toLocaleString()}
+                    {isLate && <span style={{ color: AMBER, fontWeight: 600, marginLeft: 6 }}>LATE</span>}
+                  </div>
+                </div>
+              )}
+              {!sub && a.id !== "participation" && <div style={{ fontSize: 12, color: "#d4d4d8", fontStyle: "italic", marginBottom: 4 }}>No submission</div>}
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <input type="number" value={g.score ?? ""} onChange={e => updateGrade(sid, a.id, "score", e.target.value)} style={{ ...inp, width: 56, padding: "4px 6px", fontSize: 13, textAlign: "center" }} placeholder="-" />
                 <span style={{ fontSize: 12, color: TEXT_MUTED }}>/{g.outOf || 100}</span>
+                <input value={g.comment || ""} onChange={e => updateGrade(sid, a.id, "comment", e.target.value)} placeholder="Comment..." style={{ ...inp, flex: 1, padding: "4px 8px", fontSize: 12, marginLeft: 8 }} />
               </div>
+              {/* Regrade request */}
+              {(() => {
+                const rr = (data.regradeRequests || {})[sid + "-" + a.id];
+                if (!rr) return null;
+                const dismissRegrade = async () => {
+                  const regradeRequests = { ...(data.regradeRequests || {}) };
+                  delete regradeRequests[sid + "-" + a.id];
+                  const updated = { ...data, regradeRequests };
+                  await saveData(updated); setData(updated);
+                };
+                return (
+                  <div style={{ marginTop: 6, padding: "6px 8px", background: "#fffbeb", borderRadius: 6, border: "1px solid #fde68a" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: AMBER, marginBottom: 2 }}>Regrade Request</div>
+                    <div style={{ fontSize: 12, color: "#92400e", lineHeight: 1.4 }}>{rr.note}</div>
+                    <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>{new Date(rr.ts).toLocaleString()}</div>
+                    <button onClick={dismissRegrade} style={{ ...pill, background: "#fff", color: TEXT_SECONDARY, border: "1px solid #e5e7eb", fontSize: 11, marginTop: 4 }}>Dismiss</button>
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
