@@ -3,7 +3,11 @@ import { ReboundPanel } from "./GameSystem";
 
 const F = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const TEXT_SECONDARY = "#6b7280";
+const TEXT_MUTED = "#9ca3af";
 const ACCENT = "#9f1239";
+const GREEN = "#16a34a";
+const RED = "#dc2626";
+const AMBER = "#d97706";
 
 const crd = { background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", overflow: "hidden" };
 const pill = { padding: "6px 12px", borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s" };
@@ -14,6 +18,16 @@ const sel = { ...inp, width: "auto" };
 
 const ADMIN_NAME = "Andrew Ishak";
 const GUEST_NAME = "__guest__";
+
+function parseDueDate(dueStr) {
+  if (!dueStr) return null;
+  const year = new Date().getFullYear();
+  const parsed = new Date(dueStr + ", " + year);
+  if (isNaN(parsed.getTime())) return null;
+  // Set to end of day so "due Apr 17" means midnight at the end of Apr 17
+  parsed.setHours(23, 59, 59, 999);
+  return parsed;
+}
 
 export const DEFAULT_ASSIGNMENTS = [
   { id: "interview", name: "Interview Assignment", weight: 5, due: "Apr 17", link: "", notes: "Interview someone who works in sports in a job you're interested in" },
@@ -137,18 +151,55 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           </a>
         </div>
 
-        {/* Student: current points summary */}
+        {/* Student: overall grade summary */}
         {studentId && (
-          <div style={{ ...crd, padding: 14, marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ textAlign: "center", flex: 1 }}>
-              <div style={{ ...sectionLabel, marginBottom: 2 }}>Rank</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: studentRank <= 5 ? "#d4a017" : "#111827" }}>#{studentRank}</div>
-            </div>
-            <div style={{ width: 1, height: 36, background: "#f3f4f6" }} />
-            <div style={{ textAlign: "center", flex: 1 }}>
-              <div style={{ ...sectionLabel, marginBottom: 2 }}>Game Points</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>{studentPts}</div>
-            </div>
+          <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+            {(() => {
+              const gradeAssignments = assignments.filter(a => a.id !== "participation");
+              let weightGraded = 0;
+              let weightedScore = 0;
+              gradeAssignments.forEach(a => {
+                const g = grades[studentId + "-" + a.id] || {};
+                if (g.score !== undefined && g.score !== "") {
+                  weightGraded += a.weight;
+                  weightedScore += (parseFloat(g.score) / (g.outOf || 100)) * a.weight;
+                }
+              });
+              const totalWeight = assignments.reduce((s, a) => s + a.weight, 0);
+              const pctAssessed = Math.round(weightGraded / totalWeight * 100);
+              const currentGrade = weightGraded > 0 ? Math.round(weightedScore / weightGraded * 1000) / 10 : null;
+              return (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <div style={{ textAlign: "center", flex: 1 }}>
+                      <div style={{ ...sectionLabel, marginBottom: 2 }}>Current Grade</div>
+                      <div style={{ fontSize: 28, fontWeight: 900, color: currentGrade === null ? "#d1d5db" : currentGrade >= 90 ? GREEN : currentGrade >= 80 ? "#111827" : currentGrade >= 70 ? AMBER : RED }}>
+                        {currentGrade !== null ? currentGrade + "%" : "---"}
+                      </div>
+                    </div>
+                    <div style={{ width: 1, height: 36, background: "#f3f4f6" }} />
+                    <div style={{ textAlign: "center", flex: 1 }}>
+                      <div style={{ ...sectionLabel, marginBottom: 2 }}>Rank</div>
+                      <div style={{ fontSize: 22, fontWeight: 900, color: studentRank <= 5 ? "#d4a017" : "#111827" }}>#{studentRank}</div>
+                    </div>
+                    <div style={{ width: 1, height: 36, background: "#f3f4f6" }} />
+                    <div style={{ textAlign: "center", flex: 1 }}>
+                      <div style={{ ...sectionLabel, marginBottom: 2 }}>Game Points</div>
+                      <div style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>{studentPts}</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12, color: TEXT_MUTED, textAlign: "center", marginTop: 10, lineHeight: 1.5 }}>
+                    {pctAssessed === 0
+                      ? "No assignments have been graded yet."
+                      : pctAssessed < 30
+                      ? "This reflects " + pctAssessed + "% of your total grade. We still have a long way to go."
+                      : pctAssessed < 70
+                      ? "This reflects " + pctAssessed + "% of your total grade so far."
+                      : "This reflects " + pctAssessed + "% of your total grade."}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -232,6 +283,20 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                             {a.notes && <span>{a.due ? " / " : ""}{a.notes}</span>}
                           </div>
                         </div>
+                        {/* Status badge for students */}
+                        {studentId && !isAdmin && a.id !== "participation" && (() => {
+                          const hasGrade = g && g.score !== undefined && g.score !== "";
+                          const isZero = hasGrade && parseFloat(g.score) === 0;
+                          const dueDate = parseDueDate(a.due);
+                          const isPastDue = dueDate && Date.now() > dueDate.getTime();
+                          const isLate = mySub && dueDate && mySub.ts > dueDate.getTime();
+                          if (isZero) return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 8, background: "#fef2f2", color: RED }}>Action Required</span>;
+                          if (hasGrade) return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 8, background: "#ecfdf5", color: GREEN }}>Graded</span>;
+                          if (mySub && isLate) return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 8, background: "#fffbeb", color: AMBER }}>Submitted Late</span>;
+                          if (mySub) return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 8, background: "#eff6ff", color: "#2563eb" }}>Submitted</span>;
+                          if (isPastDue && !mySub) return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 8, background: "#fef2f2", color: RED }}>Missing</span>;
+                          return null;
+                        })()}
                         {a.link && (
                           <a href={a.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ ...pillInactive, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                             Details <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -244,14 +309,23 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                     {studentId && a.id !== "participation" && g && (
                       <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
                         {g.score !== undefined && g.score !== "" ? (
-                          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                            <span style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>{g.score}</span>
-                            <span style={{ fontSize: 12, color: "#9ca3af" }}>/ {g.outOf || 100}</span>
+                          <div>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                              <span style={{ fontSize: 18, fontWeight: 900, color: parseFloat(g.score) === 0 ? RED : "#111827" }}>{g.score}</span>
+                              <span style={{ fontSize: 12, color: "#9ca3af" }}>/ {g.outOf || 100}</span>
+                            </div>
+                            {parseFloat(g.score) === 0 && (
+                              <div style={{ fontSize: 12, color: RED, marginTop: 4, fontWeight: 600 }}>This assignment needs attention. Complete all required components and submit, then request a regrade.</div>
+                            )}
                           </div>
                         ) : (
                           <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic" }}>Not graded yet</div>
                         )}
                         {g.comment && <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4, padding: "6px 8px", background: "#f8fafc", borderRadius: 6, lineHeight: 1.4 }}>{g.comment}</div>}
+                        {/* Regrade request button: only show for graded assignments */}
+                        {!isAdmin && g.score !== undefined && g.score !== "" && (
+                          <RegradeRequest assignmentId={a.id} data={data} setData={setData} studentId={studentId} />
+                        )}
                       </div>
                     )}
                     {/* Student submission */}
@@ -420,6 +494,64 @@ function StudentSubmission({ assignmentId, data, setData, studentId, existing })
   );
 }
 
+function RegradeRequest({ assignmentId, data, setData, studentId }) {
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  const key = studentId + "-" + assignmentId;
+  const existing = (data.regradeRequests || {})[key];
+
+  const submit = async () => {
+    if (!note.trim()) return;
+    const regradeRequests = { ...(data.regradeRequests || {}), [key]: { note: note.trim(), ts: Date.now() } };
+    const updated = { ...data, regradeRequests };
+    await saveData(updated); setData(updated);
+    setOpen(false); setNote(""); showMsg("Regrade requested");
+  };
+
+  const cancel = async () => {
+    if (!window.confirm("Cancel your regrade request?")) return;
+    const regradeRequests = { ...(data.regradeRequests || {}) };
+    delete regradeRequests[key];
+    const updated = { ...data, regradeRequests };
+    await saveData(updated); setData(updated); showMsg("Request cancelled");
+  };
+
+  if (existing) {
+    return (
+      <div style={{ marginTop: 8, padding: "8px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fde68a" }}>
+        {msg && <div style={{ fontSize: 12, color: "#10b981", fontWeight: 600, marginBottom: 4 }}>{msg}</div>}
+        <div style={{ fontSize: 11, fontWeight: 700, color: AMBER, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Regrade Requested</div>
+        <div style={{ fontSize: 13, color: "#92400e", lineHeight: 1.4 }}>{existing.note}</div>
+        <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>Sent {new Date(existing.ts).toLocaleString()}</div>
+        <button onClick={cancel} style={{ ...pill, background: "#fff", color: TEXT_SECONDARY, border: "1px solid #e5e7eb", fontSize: 11, marginTop: 6 }}>Cancel Request</button>
+      </div>
+    );
+  }
+
+  if (open) {
+    return (
+      <div style={{ marginTop: 8, padding: "8px 10px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Request Regrade</div>
+        <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Tell your instructor what to look for (required)..." rows={3} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 6 }} />
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={submit} disabled={!note.trim()} style={{ ...pill, background: note.trim() ? "#111827" : "#d1d5db", color: "#fff", flex: 1 }}>Submit Request</button>
+          <button onClick={() => { setOpen(false); setNote(""); }} style={pillInactive}>Cancel</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      {msg && <div style={{ fontSize: 12, color: "#10b981", fontWeight: 600, marginBottom: 4 }}>{msg}</div>}
+      <button onClick={() => setOpen(true)} style={{ ...pill, background: "#fff", color: ACCENT, border: "1px solid " + ACCENT + "40", fontSize: 12, width: "100%" }}>Request Regrade</button>
+    </div>
+  );
+}
+
 /* --- ADMIN SUBMISSIONS VIEW --- */
 function AdminSubmissions({ assignmentId, data, setData }) {
   const submissions = data.submissions || {};
@@ -433,17 +565,23 @@ function AdminSubmissions({ assignmentId, data, setData }) {
     const eg = editGrades[studentId] || {};
     const key = studentId + "-" + assignmentId;
     const existing = grades[key] || {};
+    const newGrade = {
+      ...existing,
+      score: eg.score !== undefined ? (eg.score === "" ? undefined : parseFloat(eg.score)) : existing.score,
+      outOf: eg.outOf !== undefined ? (parseFloat(eg.outOf) || 100) : (existing.outOf || 100),
+      comment: eg.comment !== undefined ? eg.comment : (existing.comment || ""),
+      gradedTs: Date.now(),
+    };
+    // Auto-clear regrade request for this student/assignment
+    const regradeRequests = { ...(data.regradeRequests || {}) };
+    delete regradeRequests[key];
+    // Create grade notification
+    const gradeNotifications = { ...(data.gradeNotifications || {}), [key]: { ts: Date.now() } };
     const updated = {
       ...data,
-      grades: {
-        ...grades,
-        [key]: {
-          ...existing,
-          score: eg.score !== undefined ? (eg.score === "" ? undefined : parseFloat(eg.score)) : existing.score,
-          outOf: eg.outOf !== undefined ? (parseFloat(eg.outOf) || 100) : (existing.outOf || 100),
-          comment: eg.comment !== undefined ? eg.comment : (existing.comment || ""),
-        }
-      }
+      grades: { ...grades, [key]: newGrade },
+      regradeRequests,
+      gradeNotifications,
     };
     await saveData(updated); setData(updated);
     setEditGrades(prev => { const n = { ...prev }; delete n[studentId]; return n; });
@@ -482,6 +620,18 @@ function AdminSubmissions({ assignmentId, data, setData }) {
               </div>
             )}
             {grade.comment && !isEditing && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, padding: "6px 8px", background: "#eff6ff", borderRadius: 6, lineHeight: 1.4 }}>{grade.comment}</div>}
+            {/* Regrade request */}
+            {(() => {
+              const rr = (data.regradeRequests || {})[s.id + "-" + assignmentId];
+              if (!rr || isEditing) return null;
+              return (
+                <div style={{ marginTop: 6, padding: "6px 8px", background: "#fffbeb", borderRadius: 6, border: "1px solid #fde68a" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: AMBER, marginBottom: 2 }}>Regrade Request</div>
+                  <div style={{ fontSize: 12, color: "#92400e", lineHeight: 1.4 }}>{rr.note}</div>
+                  <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{new Date(rr.ts).toLocaleString()}</div>
+                </div>
+              );
+            })()}
             {isEditing ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
                 <div style={{ display: "flex", gap: 6 }}>
@@ -514,6 +664,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
   const [reorderOpen, setReorderOpen] = useState(false);
   const [reboundModal, setReboundModal] = useState(null); // { type, week } or null
   const [activityFilter, setActivityFilter] = useState("all"); // "all" | "game" | "tot" | "fb"
+  const [highlight, setHighlight] = useState(null); // "zero" | "missing" | "regrade" | "late" | null
   const isGuest = userName === GUEST_NAME;
 
   const student = isAdmin ? (selStudent ? data.students.find(s => s.id === selStudent) : null) : data.students.find(s => s.name === userName);
@@ -522,7 +673,17 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
   const updateGrade = async (studentId, assignmentId, field, value) => {
     const key = studentId + "-" + assignmentId;
     const existing = grades[key] || {};
-    const updated = { ...data, grades: { ...grades, [key]: { ...existing, [field]: value } } };
+    const newGrade = { ...existing, [field]: value };
+    let extra = {};
+    // When updating score, clear regrade request and create notification
+    if (field === "score") {
+      newGrade.gradedTs = Date.now();
+      const regradeRequests = { ...(data.regradeRequests || {}) };
+      delete regradeRequests[key];
+      const gradeNotifications = { ...(data.gradeNotifications || {}), [key]: { ts: Date.now() } };
+      extra = { regradeRequests, gradeNotifications };
+    }
+    const updated = { ...data, grades: { ...grades, [key]: newGrade }, ...extra };
     await saveData(updated); setData(updated);
   };
 
@@ -806,11 +967,32 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                   <div style={{ fontSize: 12, color: "#9ca3af" }}>{a.weight}%</div>
                 </div>
                 {isAdmin ? (
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
-                    <input type="number" value={g.score ?? ""} onChange={e => updateGrade(sid, a.id, "score", e.target.value)} placeholder="Score" style={{ ...inp, width: 80, padding: "6px 10px", fontSize: 13 }} />
-                    <span style={{ fontSize: 13, color: "#9ca3af" }}>/</span>
-                    <input type="number" value={g.outOf ?? 100} onChange={e => updateGrade(sid, a.id, "outOf", e.target.value)} placeholder="100" style={{ ...inp, width: 60, padding: "6px 10px", fontSize: 13 }} />
-                    <input value={g.comment || ""} onChange={e => updateGrade(sid, a.id, "comment", e.target.value)} placeholder="Comment..." style={{ ...inp, flex: 1, padding: "6px 10px", fontSize: 13 }} />
+                  <div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
+                      <input type="number" value={g.score ?? ""} onChange={e => updateGrade(sid, a.id, "score", e.target.value)} placeholder="Score" style={{ ...inp, width: 80, padding: "6px 10px", fontSize: 13 }} />
+                      <span style={{ fontSize: 13, color: "#9ca3af" }}>/</span>
+                      <input type="number" value={g.outOf ?? 100} onChange={e => updateGrade(sid, a.id, "outOf", e.target.value)} placeholder="100" style={{ ...inp, width: 60, padding: "6px 10px", fontSize: 13 }} />
+                      <input value={g.comment || ""} onChange={e => updateGrade(sid, a.id, "comment", e.target.value)} placeholder="Comment..." style={{ ...inp, flex: 1, padding: "6px 10px", fontSize: 13 }} />
+                    </div>
+                    {/* Regrade request from student */}
+                    {(() => {
+                      const rr = (data.regradeRequests || {})[sid + "-" + a.id];
+                      if (!rr) return null;
+                      const dismissRegrade = async () => {
+                        const regradeRequests = { ...(data.regradeRequests || {}) };
+                        delete regradeRequests[sid + "-" + a.id];
+                        const updated = { ...data, regradeRequests };
+                        await saveData(updated); setData(updated);
+                      };
+                      return (
+                        <div style={{ marginTop: 6, padding: "8px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fde68a" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: AMBER, textTransform: "uppercase", marginBottom: 4 }}>Regrade Request</div>
+                          <div style={{ fontSize: 13, color: "#92400e", lineHeight: 1.4 }}>{rr.note}</div>
+                          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>{new Date(rr.ts).toLocaleString()}</div>
+                          <button onClick={dismissRegrade} style={{ ...pill, background: "#fff", color: TEXT_SECONDARY, border: "1px solid #e5e7eb", fontSize: 11, marginTop: 6 }}>Dismiss Request</button>
+                        </div>
+                      );
+                    })()}
                   </div>
                 ) : (
                   <div>
@@ -949,6 +1131,34 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
   if (isAdmin) {
     const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis").sort(lastSortObj);
     const gradeAssignments = assignments.filter(a => a.id !== "participation");
+    const submissions = data.submissions || {};
+    const regradeRequests = data.regradeRequests || {};
+
+    // Dashboard counts
+    let zeroCount = 0, missingCount = 0, regradeCount = 0, lateUngradedCount = 0;
+    const zeroCells = new Set();
+    const missingCells = new Set();
+    const regradeCells = new Set();
+    const lateCells = new Set();
+
+    sorted.forEach(s => {
+      gradeAssignments.forEach(a => {
+        const key = s.id + "-" + a.id;
+        const g = grades[key] || {};
+        const sub = submissions[key];
+        const dueDate = parseDueDate(a.due);
+        const isPastDue = dueDate && Date.now() > dueDate.getTime();
+        const hasGrade = g.score !== undefined && g.score !== "";
+        const isZero = hasGrade && parseFloat(g.score) === 0;
+        const isLate = sub && dueDate && sub.ts > dueDate.getTime();
+        const hasRegrade = !!regradeRequests[key];
+
+        if (isZero) { zeroCount++; zeroCells.add(key); }
+        if (isPastDue && !sub && !hasGrade) { missingCount++; missingCells.add(key); }
+        if (hasRegrade) { regradeCount++; regradeCells.add(key); }
+        if (isLate && !hasGrade) { lateUngradedCount++; lateCells.add(key); }
+      });
+    });
 
     // Build column order. data.assignmentOrder is an array of column ids covering named assignments + meta columns.
     const META_COLS = [
@@ -998,6 +1208,35 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
               <button onClick={() => setReorderOpen(!reorderOpen)} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>{reorderOpen ? "Done" : "Reorder columns"}</button>
             </div>
           </div>
+
+          {/* Dashboard summary */}
+          {(zeroCount > 0 || missingCount > 0 || regradeCount > 0 || lateUngradedCount > 0) && (
+            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+              {regradeCount > 0 && (
+                <button onClick={() => setHighlight(h => h === "regrade" ? null : "regrade")} style={{ ...pill, padding: "8px 16px", background: highlight === "regrade" ? AMBER : "#fffbeb", color: highlight === "regrade" ? "#fff" : "#92400e", border: "1px solid #fde68a" }}>
+                  {regradeCount} Regrade Request{regradeCount !== 1 ? "s" : ""}
+                </button>
+              )}
+              {zeroCount > 0 && (
+                <button onClick={() => setHighlight(h => h === "zero" ? null : "zero")} style={{ ...pill, padding: "8px 16px", background: highlight === "zero" ? RED : "#fef2f2", color: highlight === "zero" ? "#fff" : RED, border: "1px solid #fecaca" }}>
+                  {zeroCount} Zero{zeroCount !== 1 ? "s" : ""}
+                </button>
+              )}
+              {missingCount > 0 && (
+                <button onClick={() => setHighlight(h => h === "missing" ? null : "missing")} style={{ ...pill, padding: "8px 16px", background: highlight === "missing" ? "#7c3aed" : "#f5f3ff", color: highlight === "missing" ? "#fff" : "#7c3aed", border: "1px solid #c4b5fd" }}>
+                  {missingCount} Missing
+                </button>
+              )}
+              {lateUngradedCount > 0 && (
+                <button onClick={() => setHighlight(h => h === "late" ? null : "late")} style={{ ...pill, padding: "8px 16px", background: highlight === "late" ? AMBER : "#fffbeb", color: highlight === "late" ? "#fff" : AMBER, border: "1px solid #fde68a" }}>
+                  {lateUngradedCount} Late (ungraded)
+                </button>
+              )}
+              {highlight && (
+                <button onClick={() => setHighlight(null)} style={{ ...pillInactive, padding: "8px 12px", fontSize: 11 }}>Clear</button>
+              )}
+            </div>
+          )}
 
           {reorderOpen && (
             <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
@@ -1123,13 +1362,23 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                         const isEditing = editingCell === cellKey;
                         const score = g.score;
                         const outOf = g.outOf || 100;
+                        const hasRegrade = !!regradeRequests[cellKey];
+                        const isHighlighted = (highlight === "zero" && zeroCells.has(cellKey))
+                          || (highlight === "missing" && missingCells.has(cellKey))
+                          || (highlight === "regrade" && regradeCells.has(cellKey))
+                          || (highlight === "late" && lateCells.has(cellKey));
+                        const cellBg = isHighlighted ? (highlight === "zero" ? "#fef2f2" : highlight === "missing" ? "#f5f3ff" : highlight === "regrade" ? "#fffbeb" : "#fffbeb")
+                          : zeroCells.has(cellKey) ? "#fef2f2"
+                          : missingCells.has(cellKey) ? "#f5f3ff"
+                          : "transparent";
                         return (
-                          <td key={id} style={{ textAlign: "center", padding: "4px 6px" }}>
+                          <td key={id} style={{ textAlign: "center", padding: "4px 6px", background: cellBg, outline: isHighlighted ? "2px solid " + (highlight === "zero" ? RED : highlight === "missing" ? "#7c3aed" : AMBER) : "none" }}>
                             {isEditing ? (
                               <input autoFocus type="number" value={score ?? ""} onChange={e => updateGrade(s.id, id, "score", e.target.value)} onBlur={() => setEditingCell(null)} onKeyDown={e => e.key === "Enter" && setEditingCell(null)} style={{ ...inp, width: 48, padding: "4px 4px", fontSize: 12, textAlign: "center" }} />
                             ) : (
-                              <button onClick={(e) => { e.stopPropagation(); setEditingCell(cellKey); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 13, fontWeight: 700, padding: "4px 8px", borderRadius: 6, color: score !== undefined && score !== "" ? "#111827" : "#d1d5db", minWidth: 40 }}>
-                                {score !== undefined && score !== "" ? score + "/" + outOf : "-"}
+                              <button onClick={(e) => { e.stopPropagation(); setEditingCell(cellKey); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 13, fontWeight: 700, padding: "4px 8px", borderRadius: 6, color: score !== undefined && score !== "" ? (parseFloat(score) === 0 ? RED : "#111827") : "#d1d5db", minWidth: 40, position: "relative" }}>
+                                {score !== undefined && score !== "" ? score + "/" + outOf : missingCells.has(cellKey) ? "miss" : "-"}
+                                {hasRegrade && <sup style={{ fontSize: 9, marginLeft: 2, color: AMBER }}>RG</sup>}
                               </button>
                             )}
                           </td>
