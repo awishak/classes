@@ -50,6 +50,271 @@ function lastSortObj(a, b) { return lastName(a.name).localeCompare(lastName(b.na
 
 async function saveData(data) { try { const STORAGE_KEY = "comm118-game-v14"; await window.storage.set(STORAGE_KEY, JSON.stringify(data), true); return true; } catch { return false; } }
 
+/* ─── RUBRIC SYSTEM ─── */
+
+const DEFAULT_MASTER_RUBRIC = {
+  categories: [
+    { id: "content", label: "Content" },
+    { id: "structure", label: "Structure" },
+    { id: "delivery", label: "Presentation & Delivery" },
+    { id: "character", label: "Character" },
+    { id: "general", label: "General" },
+  ],
+  items: [
+    { id: "strong_ideas", cat: "content", label: "Strong, well-developed ideas", explanation: "Your ideas were fully focused and well-developed. You used relevant evidence and examples effectively to support your points.", link: "", positive: true },
+    { id: "good_evidence", cat: "content", label: "Good use of evidence", explanation: "You incorporated data and examples that strengthened your argument.", link: "", positive: true },
+    { id: "lacks_depth", cat: "content", label: "Lacks depth", explanation: "Your content would benefit from deeper development. Try to go beyond the surface level and explore your ideas more fully.", link: "", positive: false },
+    { id: "weak_evidence", cat: "content", label: "Weak or missing evidence", explanation: "Your work needed stronger supporting evidence. Include specific data, examples, or stories to back up your claims.", link: "", positive: false },
+    { id: "off_topic", cat: "content", label: "Off topic", explanation: "Parts of your work drifted from the core topic. Keep your focus tight on the question you're addressing.", link: "", positive: false },
+    { id: "logic_gaps", cat: "content", label: "Logic gaps", explanation: "Some of your reasoning had gaps that made it harder to follow your argument. Make sure each point connects clearly to the next.", link: "", positive: false },
+    { id: "strong_opening_closing", cat: "structure", label: "Strong opening and closing", explanation: "Your introduction grabbed attention and your conclusion landed effectively.", link: "", positive: true },
+    { id: "well_organized", cat: "structure", label: "Well organized", explanation: "Your work was clearly structured and easy to follow, with smooth transitions between ideas.", link: "", positive: true },
+    { id: "weak_intro_conclusion", cat: "structure", label: "Weak intro or conclusion", explanation: "Your introduction and/or conclusion needed more work. An engaging opening and a clear closing make a big difference.", link: "", positive: false },
+    { id: "hard_to_follow", cat: "structure", label: "Hard to follow", explanation: "The organization made it difficult to follow at times. Try outlining your main points in a clearer sequence.", link: "", positive: false },
+    { id: "rough_transitions", cat: "structure", label: "Rough transitions", explanation: "The transitions between your ideas were abrupt. Work on connecting your points so everything flows naturally.", link: "", positive: false },
+    { id: "confident_engaging", cat: "delivery", label: "Confident and engaging", explanation: "You came across as confident and well-prepared. Your presence kept the audience engaged.", link: "", positive: true },
+    { id: "strong_vocal", cat: "delivery", label: "Strong vocal variety", explanation: "Your use of tone, pacing, and emphasis was effective. It kept things dynamic.", link: "", positive: true },
+    { id: "good_pauses", cat: "delivery", label: "Good use of pauses", explanation: "You used pauses well for emphasis and impact.", link: "", positive: true },
+    { id: "needs_confidence", cat: "delivery", label: "Needs more confidence", explanation: "You seemed nervous or underprepared. Practice will help you feel more comfortable and present with more authority.", link: "", positive: false },
+    { id: "volume_clarity", cat: "delivery", label: "Volume or clarity issues", explanation: "There were moments where you were hard to hear or understand. Project your voice and enunciate clearly.", link: "", positive: false },
+    { id: "filler_words", cat: "delivery", label: "Too many filler words", explanation: "Filler words ('um,' 'like,' 'you know') were noticeable. Try to pause instead of filling the silence.", link: "", positive: false },
+    { id: "read_notes", cat: "delivery", label: "Read from notes too much", explanation: "You relied too heavily on your notes. Aim to make more eye contact and speak more naturally.", link: "", positive: false },
+    { id: "fresh_memorable", cat: "character", label: "Fresh and memorable", explanation: "Your work stood out. Your ideas felt original and left a strong impression.", link: "", positive: true },
+    { id: "insightful", cat: "character", label: "Insightful thinking", explanation: "You showed real depth of thought. Your perspective on this topic was thoughtful and engaging.", link: "", positive: true },
+    { id: "felt_generic", cat: "character", label: "Felt generic", explanation: "Your work covered the topic but didn't feel distinctive. Push yourself to find a unique angle or personal connection.", link: "", positive: false },
+    { id: "didnt_address", cat: "character", label: "Didn't fully address the question", explanation: "Your work didn't fully answer the question being asked. Make sure you're directly responding to what's being asked of you.", link: "", positive: false },
+    { id: "strong_effort", cat: "general", label: "Strong overall effort", explanation: "It's clear you put real effort into this. Keep it up.", link: "", positive: true },
+    { id: "submitted_late", cat: "general", label: "Submitted late", explanation: "This was submitted after the deadline.", link: "", positive: false },
+    { id: "missing_components", cat: "general", label: "Missing required components", explanation: "Your submission was missing one or more required components. Review the assignment requirements.", link: "", positive: false },
+    { id: "missing_name", cat: "general", label: "Missing name on document", explanation: "Please include your name on the document. Thank you.", link: "", positive: false },
+  ],
+  tiers: [
+    { label: "Excellent", min: 93, max: 100 },
+    { label: "Good", min: 85, max: 92 },
+    { label: "Satisfactory", min: 77, max: 84 },
+    { label: "Needs Improvement", min: 70, max: 76 },
+    { label: "Incomplete", min: 0, max: 69 },
+  ],
+};
+
+function RubricItemEditor({ item, onChange, onRemove, categories }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div style={{ padding: "8px 10px", borderRadius: 8, background: item.positive ? "#f0fdf4" : "#fef2f2", border: "1px solid " + (item.positive ? "#bbf7d0" : "#fecaca"), marginBottom: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <button onClick={() => onChange({ ...item, positive: !item.positive })} style={{ ...pill, padding: "2px 8px", fontSize: 10, background: item.positive ? GREEN : RED, color: "#fff", flexShrink: 0 }}>{item.positive ? "+" : "-"}</button>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#111827", flex: 1, cursor: "pointer" }} onClick={() => setExpanded(!expanded)}>{item.label}</span>
+        <button onClick={() => setExpanded(!expanded)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: TEXT_MUTED, fontFamily: F }}>{expanded ? "close" : "edit"}</button>
+        <button onClick={onRemove} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#d1d5db", fontFamily: F, padding: "0 4px" }}>x</button>
+      </div>
+      {expanded && (
+        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+          <input value={item.label} onChange={e => onChange({ ...item, label: e.target.value })} placeholder="Button label" style={{ ...inp, fontSize: 13, padding: "6px 8px" }} />
+          <textarea value={item.explanation} onChange={e => onChange({ ...item, explanation: e.target.value })} placeholder="Explanation for student..." rows={2} style={{ ...inp, fontSize: 13, padding: "6px 8px", resize: "vertical" }} />
+          <input value={item.link || ""} onChange={e => onChange({ ...item, link: e.target.value })} placeholder="Link (optional)" style={{ ...inp, fontSize: 13, padding: "6px 8px" }} />
+          <select value={item.cat} onChange={e => onChange({ ...item, cat: e.target.value })} style={{ ...sel, fontSize: 13, padding: "6px 8px" }}>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+          </select>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RubricEditor({ rubric, onSave, onCancel, title, categories: parentCategories }) {
+  const [items, setItems] = useState(rubric.items || []);
+  const [categories, setCategories] = useState(rubric.categories || parentCategories || DEFAULT_MASTER_RUBRIC.categories);
+  const [tiers, setTiers] = useState(rubric.tiers || DEFAULT_MASTER_RUBRIC.tiers);
+  const [sections, setSections] = useState(rubric.sections || []);
+  const [newCatLabel, setNewCatLabel] = useState("");
+  const [showTiers, setShowTiers] = useState(false);
+  const [showSections, setShowSections] = useState(false);
+
+  const addItem = (cat) => {
+    const id = genId();
+    setItems([...items, { id, cat, label: "", explanation: "", link: "", positive: true }]);
+  };
+
+  const updateItem = (id, updated) => {
+    setItems(items.map(i => i.id === id ? updated : i));
+  };
+
+  const removeItem = (id) => {
+    if (window.confirm("Remove this feedback item?")) setItems(items.filter(i => i.id !== id));
+  };
+
+  const addCategory = () => {
+    if (!newCatLabel.trim()) return;
+    const id = newCatLabel.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    setCategories([...categories, { id, label: newCatLabel.trim() }]);
+    setNewCatLabel("");
+  };
+
+  const removeCategory = (id) => {
+    if (items.some(i => i.cat === id)) {
+      if (!window.confirm("This category has feedback items. They will be moved to General. Continue?")) return;
+      setItems(items.map(i => i.cat === id ? { ...i, cat: "general" } : i));
+    }
+    setCategories(categories.filter(c => c.id !== id));
+  };
+
+  const addSection = () => {
+    setSections([...sections, { id: genId(), label: "", weight: 0 }]);
+  };
+
+  const save = () => {
+    const cleaned = items.filter(i => i.label.trim());
+    onSave({ items: cleaned, categories, tiers, sections });
+  };
+
+  return (
+    <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>{title}</div>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={save} style={{ ...pill, background: "#111827", color: "#fff" }}>Save</button>
+          <button onClick={onCancel} style={pillInactive}>Cancel</button>
+        </div>
+      </div>
+
+      {/* Sections (weight areas) */}
+      <button onClick={() => setShowSections(!showSections)} style={{ ...pillInactive, fontSize: 11, marginBottom: 8, width: "100%" }}>
+        {showSections ? "Hide Sections" : "Sections (" + sections.length + ")"}
+      </button>
+      {showSections && (
+        <div style={{ marginBottom: 12, padding: "10px 12px", background: "#f9fafb", borderRadius: 10 }}>
+          <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 6 }}>Sections define the major parts of the assignment (e.g., Document, Outline, Script). Set approximate weight as a percentage.</div>
+          {sections.map((s, i) => (
+            <div key={s.id} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
+              <input value={s.label} onChange={e => setSections(sections.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} placeholder="Section name" style={{ ...inp, flex: 1, fontSize: 13, padding: "4px 8px" }} />
+              <input type="number" value={s.weight} onChange={e => setSections(sections.map((x, j) => j === i ? { ...x, weight: parseInt(e.target.value) || 0 } : x))} style={{ ...inp, width: 50, fontSize: 13, padding: "4px 6px", textAlign: "center" }} />
+              <span style={{ fontSize: 11, color: TEXT_MUTED }}>%</span>
+              <button onClick={() => setSections(sections.filter((_, j) => j !== i))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#d1d5db" }}>x</button>
+            </div>
+          ))}
+          <button onClick={addSection} style={{ ...pillInactive, fontSize: 11, marginTop: 4 }}>+ Add Section</button>
+          {sections.length > 0 && (
+            <div style={{ fontSize: 11, color: sections.reduce((s, x) => s + x.weight, 0) === 100 ? GREEN : AMBER, marginTop: 4, fontWeight: 600 }}>
+              Total: {sections.reduce((s, x) => s + x.weight, 0)}%
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tiers */}
+      <button onClick={() => setShowTiers(!showTiers)} style={{ ...pillInactive, fontSize: 11, marginBottom: 8, width: "100%" }}>
+        {showTiers ? "Hide Tiers" : "Score Tiers (" + tiers.length + ")"}
+      </button>
+      {showTiers && (
+        <div style={{ marginBottom: 12, padding: "10px 12px", background: "#f9fafb", borderRadius: 10 }}>
+          {tiers.map((t, i) => (
+            <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
+              <input value={t.label} onChange={e => setTiers(tiers.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} style={{ ...inp, flex: 1, fontSize: 13, padding: "4px 8px" }} />
+              <input type="number" value={t.min} onChange={e => setTiers(tiers.map((x, j) => j === i ? { ...x, min: parseInt(e.target.value) || 0 } : x))} style={{ ...inp, width: 45, fontSize: 13, padding: "4px 6px", textAlign: "center" }} />
+              <span style={{ fontSize: 11, color: TEXT_MUTED }}>to</span>
+              <input type="number" value={t.max} onChange={e => setTiers(tiers.map((x, j) => j === i ? { ...x, max: parseInt(e.target.value) || 0 } : x))} style={{ ...inp, width: 45, fontSize: 13, padding: "4px 6px", textAlign: "center" }} />
+              <button onClick={() => setTiers(tiers.filter((_, j) => j !== i))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#d1d5db" }}>x</button>
+            </div>
+          ))}
+          <button onClick={() => setTiers([...tiers, { label: "", min: 0, max: 0 }])} style={{ ...pillInactive, fontSize: 11, marginTop: 4 }}>+ Add Tier</button>
+        </div>
+      )}
+
+      {/* Categories and feedback items */}
+      {categories.map(cat => {
+        const catItems = items.filter(i => i.cat === cat.id);
+        return (
+          <div key={cat.id} style={{ marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#111827", textTransform: "uppercase", letterSpacing: "0.05em" }}>{cat.label}</div>
+              <div style={{ display: "flex", gap: 4 }}>
+                <button onClick={() => addItem(cat.id)} style={{ ...pill, fontSize: 10, padding: "2px 8px", background: "#f3f4f6", color: "#4b5563" }}>+ Add</button>
+                {cat.id !== "general" && <button onClick={() => removeCategory(cat.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#d1d5db" }}>x</button>}
+              </div>
+            </div>
+            {catItems.map(item => (
+              <RubricItemEditor key={item.id} item={item} onChange={updated => updateItem(item.id, updated)} onRemove={() => removeItem(item.id)} categories={categories} />
+            ))}
+            {catItems.length === 0 && <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic", padding: "4px 0" }}>No items yet</div>}
+          </div>
+        );
+      })}
+
+      {/* Add category */}
+      <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+        <input value={newCatLabel} onChange={e => setNewCatLabel(e.target.value)} placeholder="New category name..." style={{ ...inp, flex: 1, fontSize: 13, padding: "6px 8px" }} onKeyDown={e => e.key === "Enter" && addCategory()} />
+        <button onClick={addCategory} style={pillInactive}>+ Category</button>
+      </div>
+    </div>
+  );
+}
+
+function AssignmentRubricButton({ assignmentId, data, setData }) {
+  const [editing, setEditing] = useState(false);
+  const [copyFrom, setCopyFrom] = useState(null);
+  const rubrics = data.assignmentRubrics || {};
+  const master = data.masterRubric || DEFAULT_MASTER_RUBRIC;
+  const hasRubric = !!rubrics[assignmentId];
+  const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
+
+  const createFromMaster = () => {
+    setEditing(true);
+    setCopyFrom({ items: [...master.items], categories: [...master.categories], tiers: [...master.tiers], sections: [] });
+  };
+
+  const createFromAssignment = (srcId) => {
+    const src = rubrics[srcId];
+    if (!src) return;
+    setEditing(true);
+    setCopyFrom({ items: src.items.map(i => ({ ...i, id: genId() })), categories: [...src.categories], tiers: [...src.tiers], sections: (src.sections || []).map(s => ({ ...s, id: genId() })) });
+  };
+
+  const editExisting = () => {
+    setEditing(true);
+    setCopyFrom(rubrics[assignmentId]);
+  };
+
+  const save = async (rubric) => {
+    const updated = { ...data, assignmentRubrics: { ...rubrics, [assignmentId]: rubric } };
+    await saveData(updated); setData(updated);
+    setEditing(false); setCopyFrom(null);
+  };
+
+  const remove = async () => {
+    if (!window.confirm("Remove rubric from this assignment?")) return;
+    const newRubrics = { ...rubrics };
+    delete newRubrics[assignmentId];
+    const updated = { ...data, assignmentRubrics: newRubrics };
+    await saveData(updated); setData(updated);
+  };
+
+  if (editing && copyFrom) {
+    return <RubricEditor rubric={copyFrom} onSave={save} onCancel={() => { setEditing(false); setCopyFrom(null); }} title="Assignment Rubric" categories={master.categories} />;
+  }
+
+  const otherAssignments = assignments.filter(a => a.id !== assignmentId && a.id !== "participation" && rubrics[a.id]);
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      {hasRubric ? (
+        <div style={{ display: "flex", gap: 4 }}>
+          <button onClick={editExisting} style={{ ...pill, background: "#eff6ff", color: "#2563eb", fontSize: 11, flex: 1 }}>Edit Rubric</button>
+          <button onClick={remove} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Remove</button>
+        </div>
+      ) : (
+        <div>
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            <button onClick={createFromMaster} style={{ ...pill, background: "#f3f4f6", color: "#4b5563", fontSize: 11 }}>Create from Master</button>
+            {otherAssignments.map(a => (
+              <button key={a.id} onClick={() => createFromAssignment(a.id)} style={{ ...pill, background: "#f3f4f6", color: "#4b5563", fontSize: 11 }}>Copy from {a.name.length > 20 ? a.name.slice(0, 20) + "..." : a.name}</button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── ASSIGNMENTS TAB ─── */
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
@@ -70,6 +335,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const [editLocal, setEditLocal] = useState(null);
   const [editBlurb, setEditBlurb] = useState(false);
   const [blurbLocal, setBlurbLocal] = useState("");
+  const [editMasterRubric, setEditMasterRubric] = useState(false);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const isGuest = userName === GUEST_NAME;
@@ -141,6 +407,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           <div style={{ ...sectionLabel }}>Assignments & Weights</div>
           <div style={{ display: "flex", gap: 6 }}>
             {isAdmin && <button onClick={addAssignment} style={{ ...pillInactive, fontSize: 11 }}>+ Add</button>}
+            {isAdmin && <button onClick={() => setEditMasterRubric(!editMasterRubric)} style={{ ...pillInactive, fontSize: 11 }}>{editMasterRubric ? "Cancel" : "Master Rubric"}</button>}
             {isAdmin && setView && <button onClick={() => setView("grades")} style={{ ...pillInactive, fontSize: 11 }}>Gradebook</button>}
           </div>
         </div>
@@ -150,6 +417,20 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           </a>
         </div>
+
+        {/* Master Rubric Editor */}
+        {isAdmin && editMasterRubric && (
+          <RubricEditor
+            rubric={data.masterRubric || DEFAULT_MASTER_RUBRIC}
+            onSave={async (rubric) => {
+              const updated = { ...data, masterRubric: rubric };
+              await saveData(updated); setData(updated);
+              setEditMasterRubric(false); showMsg("Master rubric saved");
+            }}
+            onCancel={() => setEditMasterRubric(false)}
+            title="Master Rubric Template"
+          />
+        )}
 
         {/* Student: overall grade summary */}
         {studentId && (
@@ -338,6 +619,12 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                         <TogglePanel label="View Submissions" count={data.students.filter(s => s.name !== ADMIN_NAME && submissions[s.id + "-" + a.id]).length}>
                           <AdminSubmissions assignmentId={a.id} data={data} setData={setData} />
                         </TogglePanel>
+                      </div>
+                    )}
+                    {/* Assignment rubric */}
+                    {isAdmin && a.id !== "participation" && (
+                      <div onClick={e => e.stopPropagation()}>
+                        <AssignmentRubricButton assignmentId={a.id} data={data} setData={setData} />
                       </div>
                     )}
                   </div>
