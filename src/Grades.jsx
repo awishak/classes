@@ -920,14 +920,268 @@ function RegradeRequest({ assignmentId, data, setData, studentId }) {
   );
 }
 
+/* --- QUICK GRADE --- */
+function QuickGrade({ assignmentId, studentId, studentName, data, setData, onClose }) {
+  const rubric = (data.assignmentRubrics || {})[assignmentId];
+  const sub = (data.submissions || {})[studentId + "-" + assignmentId];
+  const existingGrade = (data.grades || {})[studentId + "-" + assignmentId] || {};
+
+  const [selected, setSelected] = useState(new Set());
+  const [customNote, setCustomNote] = useState("");
+  const [generatedComment, setGeneratedComment] = useState("");
+  const [suggestedTier, setSuggestedTier] = useState(null);
+  const [selectedTier, setSelectedTier] = useState(null);
+  const [score, setScore] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState("select"); // "select" | "review"
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  if (!rubric) return null;
+
+  const tiers = rubric.tiers || [];
+  const allItems = rubric.items || [];
+  const sections = rubric.sections || [];
+
+  const toggle = (id) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelected(next);
+  };
+
+  const generateFeedback = async () => {
+    if (selected.size === 0) { showMsg("Select at least one feedback item"); return; }
+    setLoading(true);
+    try {
+      const selectedItems = allItems.filter(i => selected.has(i.id));
+      const positives = selectedItems.filter(i => i.positive);
+      const negatives = selectedItems.filter(i => !i.positive);
+
+      // Build section context for the AI
+      const sectionInfo = sections.map(s => {
+        const subIds = (s.subsections || []).map(sub => sub.id);
+        const sectionItems = selectedItems.filter(i => subIds.includes(i.sub));
+        return { label: s.label, weight: s.weight, positiveCount: sectionItems.filter(i => i.positive).length, negativeCount: sectionItems.filter(i => !i.positive).length };
+      }).filter(s => s.positiveCount + s.negativeCount > 0);
+
+      const generalItems = selectedItems.filter(i => i.sub === "general");
+
+      const tierList = tiers.map(t => t.label + " (" + t.min + "-" + t.max + ")").join(", ");
+
+      const prompt = `You are Professor Andrew Ishak at Santa Clara University. You are grading a student's assignment. Based on the feedback items selected below, write a grade comment directly to the student.
+
+Rules:
+- Write in multiple short paragraphs, plain text, no bullet points, no numbered lists, no markdown headers (bold section labels are OK, same font size, left justified)
+- Lead with the positive feedback first, then address areas for improvement
+- Be warm but direct, like a professor who genuinely cares about student growth
+- Address the student as "you"
+- Each paragraph should cover related feedback naturally, not just list items one by one
+- Include any relevant links from the feedback items naturally in the text
+- Keep it concise but substantive
+
+${customNote ? "The professor wants to add this personal note (incorporate it naturally, put it first): " + customNote : ""}
+
+Sections and their approximate weights:
+${sectionInfo.map(s => s.label + " (~" + s.weight + "%): " + s.positiveCount + " positive, " + s.negativeCount + " negative").join("\n")}
+${generalItems.length > 0 ? "General items: " + generalItems.length : ""}
+
+Selected positive feedback:
+${positives.map(i => "- " + i.label + ": " + i.explanation + (i.link ? " [Link: " + i.link + "]" : "")).join("\n") || "(none)"}
+
+Selected negative feedback:
+${negatives.map(i => "- " + i.label + ": " + i.explanation + (i.link ? " [Link: " + i.link + "]" : "")).join("\n") || "(none)"}
+
+Available tiers: ${tierList}
+
+Based on the balance of positive and negative feedback across the weighted sections, suggest the most appropriate tier. Respond with ONLY a JSON object (no markdown, no backticks):
+{"tier": "tier label", "comment": "your full comment to the student"}`;
+
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+
+      const result = await response.json();
+      const text = (result.content || []).map(c => c.text || "").join("");
+      const clean = text.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+
+      setGeneratedComment(parsed.comment || "");
+      const tierMatch = tiers.find(t => t.label.toLowerCase() === (parsed.tier || "").toLowerCase());
+      if (tierMatch) {
+        setSuggestedTier(tierMatch.label);
+        setSelectedTier(tierMatch.label);
+        setScore(String(Math.round((tierMatch.min + tierMatch.max) / 2)));
+      }
+      setStep("review");
+    } catch (err) {
+      console.error("Quick Grade AI error:", err);
+      showMsg("Error generating feedback. Try again.");
+    }
+    setLoading(false);
+  };
+
+  const selectTier = (tierLabel) => {
+    setSelectedTier(tierLabel);
+    const t = tiers.find(x => x.label === tierLabel);
+    if (t) setScore(String(Math.round((t.min + t.max) / 2)));
+  };
+
+  const saveQuickGrade = async () => {
+    if (!score) { showMsg("Enter a score"); return; }
+    const key = studentId + "-" + assignmentId;
+    const grades = data.grades || {};
+    const existing = grades[key] || {};
+    const newGrade = { ...existing, score: parseFloat(score), outOf: 100, comment: generatedComment, gradedTs: Date.now() };
+    const regradeRequests = { ...(data.regradeRequests || {}) };
+    delete regradeRequests[key];
+    const gradeNotifications = { ...(data.gradeNotifications || {}), [key]: { ts: Date.now() } };
+    const updated = { ...data, grades: { ...grades, [key]: newGrade }, regradeRequests, gradeNotifications };
+    await saveData(updated); setData(updated);
+    showMsg("Grade saved");
+    onClose();
+  };
+
+  // Render subsection items as toggle buttons
+  const renderSubItems = (subId) => {
+    const subItems = allItems.filter(i => i.sub === subId);
+    if (subItems.length === 0) return <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic", padding: "2px 0" }}>No items</div>;
+    return subItems.map(item => {
+      const isOn = selected.has(item.id);
+      const bg = isOn ? (item.positive ? GREEN : RED) : (item.positive ? "#ecfdf5" : "#fef2f2");
+      const color = isOn ? "#fff" : (item.positive ? "#065f46" : "#991b1b");
+      const border = isOn ? "transparent" : (item.positive ? "#a7f3d0" : "#fecaca");
+      return (
+        <button key={item.id} onClick={() => toggle(item.id)} style={{ ...pill, padding: "6px 12px", fontSize: 12, background: bg, color, border: "1.5px solid " + border, margin: "2px 4px 2px 0" }}>
+          {item.positive ? "+" : "-"} {item.label}
+        </button>
+      );
+    });
+  };
+
+  return (
+    <div style={{ ...crd, padding: 16, marginBottom: 12, border: "2px solid " + ACCENT }}>
+      {msg && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "#1e293b", color: "#fff", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, zIndex: 999 }}>{msg}</div>}
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>Quick Grade: {studentName}</div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{(data.assignments || []).find(a => a.id === assignmentId)?.name}</div>
+        </div>
+        <button onClick={onClose} style={pillInactive}>Close</button>
+      </div>
+
+      {/* Submission link */}
+      {sub && (
+        <div style={{ padding: "8px 10px", background: "#f9fafb", borderRadius: 8, marginBottom: 12 }}>
+          {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, fontWeight: 500 }}>View Submission</a>}
+          {sub.notes && <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>"{sub.notes}"</div>}
+          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>Submitted {new Date(sub.ts).toLocaleString()}</div>
+        </div>
+      )}
+
+      {step === "select" && (
+        <div>
+          {/* Custom note */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Personal note (optional, will appear first)</div>
+            <textarea value={customNote} onChange={e => setCustomNote(e.target.value)} placeholder="Add a personal note to the student..." rows={2} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical" }} />
+          </div>
+
+          {/* Sections with subsections and items */}
+          {sections.map(sec => (
+            <div key={sec.id} style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: "#111827", marginBottom: 6 }}>{sec.label} <span style={{ fontWeight: 500, color: TEXT_MUTED }}>(~{sec.weight}%)</span></div>
+              {(sec.subsections || []).map(sub => (
+                <div key={sub.id} style={{ marginBottom: 8, marginLeft: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{sub.label}</div>
+                  <div style={{ display: "flex", flexWrap: "wrap" }}>
+                    {renderSubItems(sub.id)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+
+          {/* General items */}
+          {allItems.filter(i => i.sub === "general").length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: "#111827", marginBottom: 6 }}>General</div>
+              <div style={{ display: "flex", flexWrap: "wrap" }}>
+                {renderSubItems("general")}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button onClick={generateFeedback} disabled={loading || selected.size === 0} style={{ ...pill, background: selected.size > 0 ? "#111827" : "#d1d5db", color: "#fff", padding: "10px 20px", fontSize: 14 }}>
+              {loading ? "Generating..." : "Generate Feedback (" + selected.size + " selected)"}
+            </button>
+            <span style={{ fontSize: 12, color: TEXT_MUTED }}>{selected.size} item{selected.size !== 1 ? "s" : ""} selected</span>
+          </div>
+        </div>
+      )}
+
+      {step === "review" && (
+        <div>
+          {/* Tier selection */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 6 }}>
+              Tier {suggestedTier ? "(AI suggested: " + suggestedTier + ")" : ""}
+            </div>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              {tiers.map(t => (
+                <button key={t.label} onClick={() => selectTier(t.label)} style={{ ...pill, padding: "8px 14px", fontSize: 12, background: selectedTier === t.label ? "#111827" : "#f3f4f6", color: selectedTier === t.label ? "#fff" : "#4b5563", border: suggestedTier === t.label && selectedTier !== t.label ? "2px solid " + ACCENT : "2px solid transparent" }}>
+                  {t.label} ({t.min}-{t.max})
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Score */}
+          <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase" }}>Score</div>
+            <input type="number" value={score} onChange={e => setScore(e.target.value)} style={{ ...inp, width: 70, fontSize: 16, fontWeight: 900, padding: "6px 10px", textAlign: "center" }} />
+            <span style={{ fontSize: 13, color: TEXT_MUTED }}>/ 100</span>
+            {selectedTier && (() => {
+              const t = tiers.find(x => x.label === selectedTier);
+              const s = parseFloat(score);
+              if (t && (s < t.min || s > t.max)) return <span style={{ fontSize: 11, color: AMBER, fontWeight: 600 }}>Outside {selectedTier} range ({t.min}-{t.max})</span>;
+              return null;
+            })()}
+          </div>
+
+          {/* Comment preview */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Comment (editable)</div>
+            <textarea value={generatedComment} onChange={e => setGeneratedComment(e.target.value)} rows={8} style={{ ...inp, fontSize: 13, padding: "10px 12px", resize: "vertical", lineHeight: 1.6 }} />
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={saveQuickGrade} style={{ ...pill, background: GREEN, color: "#fff", padding: "10px 20px", fontSize: 14, flex: 1 }}>Save Grade</button>
+            <button onClick={() => setStep("select")} style={{ ...pillInactive, padding: "10px 16px" }}>Back</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* --- ADMIN SUBMISSIONS VIEW --- */
 function AdminSubmissions({ assignmentId, data, setData }) {
   const submissions = data.submissions || {};
   const grades = data.grades || {};
   const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME).sort(lastSortObj);
   const [editGrades, setEditGrades] = useState({});
+  const [quickGradeStudent, setQuickGradeStudent] = useState(null);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+  const hasRubric = !!(data.assignmentRubrics || {})[assignmentId];
 
   const saveGrade = async (studentId) => {
     const eg = editGrades[studentId] || {};
@@ -1014,7 +1268,15 @@ function AdminSubmissions({ assignmentId, data, setData }) {
                 </div>
               </div>
             ) : (
-              <button onClick={() => startGradeEdit(s.id)} style={{ ...pillInactive, fontSize: 12, marginTop: 6, width: "100%" }}>Grade</button>
+              <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                <button onClick={() => startGradeEdit(s.id)} style={{ ...pillInactive, fontSize: 12, flex: 1 }}>Grade</button>
+                {hasRubric && <button onClick={() => setQuickGradeStudent(quickGradeStudent === s.id ? null : s.id)} style={{ ...pill, fontSize: 12, background: quickGradeStudent === s.id ? ACCENT : "#eff6ff", color: quickGradeStudent === s.id ? "#fff" : ACCENT }}>Quick Grade</button>}
+              </div>
+            )}
+            {quickGradeStudent === s.id && (
+              <div style={{ marginTop: 8 }}>
+                <QuickGrade assignmentId={assignmentId} studentId={s.id} studentName={s.name} data={data} setData={setData} onClose={() => setQuickGradeStudent(null)} />
+              </div>
             )}
           </div>
         );
@@ -1033,6 +1295,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
   const [reboundModal, setReboundModal] = useState(null); // { type, week } or null
   const [activityFilter, setActivityFilter] = useState("all"); // "all" | "game" | "tot" | "fb"
   const [highlight, setHighlight] = useState(null); // "zero" | "missing" | "regrade" | "late" | null
+  const [quickGradeId, setQuickGradeId] = useState(null); // "studentId-assignmentId" or null
   const isGuest = userName === GUEST_NAME;
 
   const student = isAdmin ? (selStudent ? data.students.find(s => s.id === selStudent) : null) : data.students.find(s => s.name === userName);
@@ -1384,6 +1647,17 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                         </div>
                       );
                     })()}
+                    {/* Quick Grade button */}
+                    {!!(data.assignmentRubrics || {})[a.id] && (
+                      <button onClick={() => setQuickGradeId(quickGradeId === sid + "-" + a.id ? null : sid + "-" + a.id)} style={{ ...pill, fontSize: 11, marginTop: 6, background: quickGradeId === sid + "-" + a.id ? ACCENT : "#eff6ff", color: quickGradeId === sid + "-" + a.id ? "#fff" : ACCENT, width: "100%" }}>
+                        {quickGradeId === sid + "-" + a.id ? "Close Quick Grade" : "Quick Grade"}
+                      </button>
+                    )}
+                    {quickGradeId === sid + "-" + a.id && (
+                      <div style={{ marginTop: 8 }}>
+                        <QuickGrade assignmentId={a.id} studentId={sid} studentName={student?.name || ""} data={data} setData={setData} onClose={() => setQuickGradeId(null)} />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div>
