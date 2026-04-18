@@ -1120,7 +1120,7 @@ Based on the balance of positive and negative feedback across the weighted secti
           {/* Free form instructions to AI */}
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Say something to the student (optional)</div>
-            <textarea value={customNote} onChange={e => setCustomNote(e.target.value)} placeholder='e.g. "Let them know I\'m here for them if they have questions" or "Great job picking this person to interview"' rows={2} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical" }} />
+            <textarea value={customNote} onChange={e => setCustomNote(e.target.value)} placeholder={"e.g. \"Let them know I'm here if they have questions\" or \"Great job picking this person\""} rows={2} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical" }} />
             <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>This gets woven into the comment naturally. Say it however you want.</div>
           </div>
 
