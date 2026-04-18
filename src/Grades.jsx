@@ -996,14 +996,10 @@ Available tiers: ${tierList}
 Based on the balance of positive and negative feedback across the weighted sections, suggest the most appropriate tier. Respond with ONLY a JSON object (no markdown, no backticks):
 {"tier": "tier label", "comment": "your full comment to the student"}`;
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("/api/generate-feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: prompt }],
-        }),
+        body: JSON.stringify({ prompt }),
       });
 
       const result = await response.json();
