@@ -1002,6 +1002,14 @@ Based on the balance of positive and negative feedback across the weighted secti
         body: JSON.stringify({ prompt }),
       });
 
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("API error:", response.status, errText);
+        showMsg("Error: " + response.status + ". Check console.");
+        setLoading(false);
+        return;
+      }
+
       const result = await response.json();
       const text = (result.content || []).map(c => c.text || "").join("");
       const clean = text.replace(/```json|```/g, "").trim();
