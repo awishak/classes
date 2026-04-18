@@ -934,6 +934,11 @@ function QuickGrade({ assignmentId, studentId, studentName, data, setData, onClo
   const [score, setScore] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState("select"); // "select" | "review"
+  const [addingItem, setAddingItem] = useState(false);
+  const [newItemLabel, setNewItemLabel] = useState("");
+  const [newItemExplanation, setNewItemExplanation] = useState("");
+  const [newItemPositive, setNewItemPositive] = useState(false);
+  const [newItemSub, setNewItemSub] = useState("general");
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
@@ -943,10 +948,34 @@ function QuickGrade({ assignmentId, studentId, studentName, data, setData, onClo
   const allItems = rubric.items || [];
   const sections = rubric.sections || [];
 
+  // Flatten subsections for the new item dropdown
+  const allSubsections = [];
+  sections.forEach(sec => {
+    (sec.subsections || []).forEach(sub => {
+      allSubsections.push({ id: sub.id, label: sec.label + " > " + sub.label });
+    });
+  });
+
   const toggle = (id) => {
     const next = new Set(selected);
     if (next.has(id)) next.delete(id); else next.add(id);
     setSelected(next);
+  };
+
+  const saveNewItemToRubric = async () => {
+    if (!newItemLabel.trim()) return;
+    const newItem = { id: genId(), sub: newItemSub, label: newItemLabel.trim(), explanation: newItemExplanation.trim(), link: "", positive: newItemPositive };
+    const rubrics = data.assignmentRubrics || {};
+    const current = rubrics[assignmentId] || rubric;
+    const updatedRubric = { ...current, items: [...(current.items || []), newItem] };
+    const updated = { ...data, assignmentRubrics: { ...rubrics, [assignmentId]: updatedRubric } };
+    await saveData(updated); setData(updated);
+    // Auto-select the new item
+    const next = new Set(selected);
+    next.add(newItem.id);
+    setSelected(next);
+    setNewItemLabel(""); setNewItemExplanation(""); setNewItemPositive(false); setNewItemSub("general"); setAddingItem(false);
+    showMsg("Added to rubric");
   };
 
   const generateFeedback = async () => {
@@ -968,18 +997,21 @@ function QuickGrade({ assignmentId, studentId, studentName, data, setData, onClo
 
       const tierList = tiers.map(t => t.label + " (" + t.min + "-" + t.max + ")").join(", ");
 
-      const prompt = `You are Professor Andrew Ishak at Santa Clara University. You are grading a student's assignment. Based on the feedback items selected below, write a grade comment directly to the student.
+      const prompt = `You are writing brief grading feedback for a college professor. The professor's style is casual, warm, and direct. Short sentences. No flowery language. No words like "excellence," "exemplary," "substantive," "demonstrates," "genuinely," "meaningful," "exceptional." Write like a real person talking to a student they like.
 
 Rules:
-- Write in multiple short paragraphs, plain text, no bullet points, no numbered lists, no markdown headers (bold section labels are OK, same font size, left justified)
-- Lead with the positive feedback first, then address areas for improvement
-- Be warm but direct, like a professor who genuinely cares about student growth
+- Keep it SHORT. 2-4 short paragraphs max. Each paragraph is 1-3 sentences.
+- Plain text only. No bullet points, no numbered lists, no markdown, no bold headers.
+- Lead with the positive stuff, then areas for improvement.
 - Address the student as "you"
-- Each paragraph should cover related feedback naturally, not just list items one by one
-- Include any relevant links from the feedback items naturally in the text
-- Keep it concise but substantive
+- Use the explanation text from each feedback item but rewrite it to be casual and concise. Don't just copy it verbatim.
+- If there are links, include them naturally.
+- No filler phrases like "Overall," "In conclusion," "This assignment," "Moving forward." Just say the thing.
+- Sound like a person, not a grading rubric.
 
-${customNote ? "The professor wants to add this personal note (incorporate it naturally, put it first): " + customNote : ""}
+Good example of the right tone: "Nice work on the interview guide. Your questions are thoughtful and well-organized. The summary is clear and I can tell you actually engaged with the conversation. One thing to work on: include more specific details from the interview itself. I want to hear what they actually said, not just general takeaways."
+
+${customNote ? "Include this personal note at the start (keep it natural): " + customNote : ""}
 
 Sections and their approximate weights:
 ${sectionInfo.map(s => s.label + " (~" + s.weight + "%): " + s.positiveCount + " positive, " + s.negativeCount + " negative").join("\n")}
@@ -1091,10 +1123,11 @@ Based on the balance of positive and negative feedback across the weighted secti
 
       {step === "select" && (
         <div>
-          {/* Custom note */}
+          {/* Free form instructions to AI */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Personal note (optional, will appear first)</div>
-            <textarea value={customNote} onChange={e => setCustomNote(e.target.value)} placeholder="Add a personal note to the student..." rows={2} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical" }} />
+            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Say something to the student (optional)</div>
+            <textarea value={customNote} onChange={e => setCustomNote(e.target.value)} placeholder='e.g. "Let them know I\'m here for them if they have questions" or "Great job picking this person to interview"' rows={2} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical" }} />
+            <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>This gets woven into the comment naturally. Say it however you want.</div>
           </div>
 
           {/* Sections with subsections and items */}
@@ -1118,6 +1151,28 @@ Based on the balance of positive and negative feedback across the weighted secti
               <div style={{ fontSize: 13, fontWeight: 900, color: "#111827", marginBottom: 6 }}>General</div>
               <div style={{ display: "flex", flexWrap: "wrap" }}>
                 {renderSubItems("general")}
+              </div>
+            </div>
+          )}
+
+          {/* Add new item to rubric */}
+          {!addingItem ? (
+            <button onClick={() => setAddingItem(true)} style={{ ...pillInactive, fontSize: 11, marginBottom: 12 }}>+ Add new feedback item to rubric</button>
+          ) : (
+            <div style={{ padding: "10px 12px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 6 }}>New rubric item (saves for all students)</div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                <button onClick={() => setNewItemPositive(!newItemPositive)} style={{ ...pill, padding: "4px 10px", fontSize: 11, background: newItemPositive ? GREEN : RED, color: "#fff", flexShrink: 0 }}>{newItemPositive ? "+ Positive" : "- Negative"}</button>
+                <select value={newItemSub} onChange={e => setNewItemSub(e.target.value)} style={{ ...sel, fontSize: 12, padding: "4px 8px" }}>
+                  <option value="general">General</option>
+                  {allSubsections.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+              </div>
+              <input value={newItemLabel} onChange={e => setNewItemLabel(e.target.value)} placeholder="Button label (short)" style={{ ...inp, fontSize: 13, padding: "6px 8px", marginBottom: 4 }} />
+              <textarea value={newItemExplanation} onChange={e => setNewItemExplanation(e.target.value)} placeholder="Explanation for student..." rows={2} style={{ ...inp, fontSize: 13, padding: "6px 8px", resize: "vertical", marginBottom: 6 }} />
+              <div style={{ display: "flex", gap: 4 }}>
+                <button onClick={saveNewItemToRubric} disabled={!newItemLabel.trim()} style={{ ...pill, background: newItemLabel.trim() ? "#111827" : "#d1d5db", color: "#fff", flex: 1 }}>Save to Rubric</button>
+                <button onClick={() => { setAddingItem(false); setNewItemLabel(""); setNewItemExplanation(""); }} style={pillInactive}>Cancel</button>
               </div>
             </div>
           )}
