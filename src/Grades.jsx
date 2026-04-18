@@ -53,40 +53,60 @@ async function saveData(data) { try { const STORAGE_KEY = "comm118-game-v14"; aw
 /* ─── RUBRIC SYSTEM ─── */
 
 const DEFAULT_MASTER_RUBRIC = {
-  categories: [
-    { id: "content", label: "Content" },
-    { id: "structure", label: "Structure" },
-    { id: "delivery", label: "Presentation & Delivery" },
-    { id: "character", label: "Character" },
-    { id: "general", label: "General" },
+  sections: [
+    { id: "document", label: "Document", weight: 20, subsections: [
+      { id: "doc_completeness", label: "Completeness" },
+      { id: "doc_formatting", label: "Formatting" },
+    ]},
+    { id: "presentation", label: "Presentation", weight: 80, subsections: [
+      { id: "content", label: "Content" },
+      { id: "structure", label: "Structure" },
+      { id: "delivery", label: "Presentation & Delivery" },
+      { id: "character", label: "Character" },
+    ]},
   ],
   items: [
-    { id: "strong_ideas", cat: "content", label: "Strong, well-developed ideas", explanation: "Your ideas were fully focused and well-developed. You used relevant evidence and examples effectively to support your points.", link: "", positive: true },
-    { id: "good_evidence", cat: "content", label: "Good use of evidence", explanation: "You incorporated data and examples that strengthened your argument.", link: "", positive: true },
-    { id: "lacks_depth", cat: "content", label: "Lacks depth", explanation: "Your content would benefit from deeper development. Try to go beyond the surface level and explore your ideas more fully.", link: "", positive: false },
-    { id: "weak_evidence", cat: "content", label: "Weak or missing evidence", explanation: "Your work needed stronger supporting evidence. Include specific data, examples, or stories to back up your claims.", link: "", positive: false },
-    { id: "off_topic", cat: "content", label: "Off topic", explanation: "Parts of your work drifted from the core topic. Keep your focus tight on the question you're addressing.", link: "", positive: false },
-    { id: "logic_gaps", cat: "content", label: "Logic gaps", explanation: "Some of your reasoning had gaps that made it harder to follow your argument. Make sure each point connects clearly to the next.", link: "", positive: false },
-    { id: "strong_opening_closing", cat: "structure", label: "Strong opening and closing", explanation: "Your introduction grabbed attention and your conclusion landed effectively.", link: "", positive: true },
-    { id: "well_organized", cat: "structure", label: "Well organized", explanation: "Your work was clearly structured and easy to follow, with smooth transitions between ideas.", link: "", positive: true },
-    { id: "weak_intro_conclusion", cat: "structure", label: "Weak intro or conclusion", explanation: "Your introduction and/or conclusion needed more work. An engaging opening and a clear closing make a big difference.", link: "", positive: false },
-    { id: "hard_to_follow", cat: "structure", label: "Hard to follow", explanation: "The organization made it difficult to follow at times. Try outlining your main points in a clearer sequence.", link: "", positive: false },
-    { id: "rough_transitions", cat: "structure", label: "Rough transitions", explanation: "The transitions between your ideas were abrupt. Work on connecting your points so everything flows naturally.", link: "", positive: false },
-    { id: "confident_engaging", cat: "delivery", label: "Confident and engaging", explanation: "You came across as confident and well-prepared. Your presence kept the audience engaged.", link: "", positive: true },
-    { id: "strong_vocal", cat: "delivery", label: "Strong vocal variety", explanation: "Your use of tone, pacing, and emphasis was effective. It kept things dynamic.", link: "", positive: true },
-    { id: "good_pauses", cat: "delivery", label: "Good use of pauses", explanation: "You used pauses well for emphasis and impact.", link: "", positive: true },
-    { id: "needs_confidence", cat: "delivery", label: "Needs more confidence", explanation: "You seemed nervous or underprepared. Practice will help you feel more comfortable and present with more authority.", link: "", positive: false },
-    { id: "volume_clarity", cat: "delivery", label: "Volume or clarity issues", explanation: "There were moments where you were hard to hear or understand. Project your voice and enunciate clearly.", link: "", positive: false },
-    { id: "filler_words", cat: "delivery", label: "Too many filler words", explanation: "Filler words ('um,' 'like,' 'you know') were noticeable. Try to pause instead of filling the silence.", link: "", positive: false },
-    { id: "read_notes", cat: "delivery", label: "Read from notes too much", explanation: "You relied too heavily on your notes. Aim to make more eye contact and speak more naturally.", link: "", positive: false },
-    { id: "fresh_memorable", cat: "character", label: "Fresh and memorable", explanation: "Your work stood out. Your ideas felt original and left a strong impression.", link: "", positive: true },
-    { id: "insightful", cat: "character", label: "Insightful thinking", explanation: "You showed real depth of thought. Your perspective on this topic was thoughtful and engaging.", link: "", positive: true },
-    { id: "felt_generic", cat: "character", label: "Felt generic", explanation: "Your work covered the topic but didn't feel distinctive. Push yourself to find a unique angle or personal connection.", link: "", positive: false },
-    { id: "didnt_address", cat: "character", label: "Didn't fully address the question", explanation: "Your work didn't fully answer the question being asked. Make sure you're directly responding to what's being asked of you.", link: "", positive: false },
-    { id: "strong_effort", cat: "general", label: "Strong overall effort", explanation: "It's clear you put real effort into this. Keep it up.", link: "", positive: true },
-    { id: "submitted_late", cat: "general", label: "Submitted late", explanation: "This was submitted after the deadline.", link: "", positive: false },
-    { id: "missing_components", cat: "general", label: "Missing required components", explanation: "Your submission was missing one or more required components. Review the assignment requirements.", link: "", positive: false },
-    { id: "missing_name", cat: "general", label: "Missing name on document", explanation: "Please include your name on the document. Thank you.", link: "", positive: false },
+    // Document > Completeness
+    { id: "doc_complete", sub: "doc_completeness", label: "Document is complete", explanation: "Very nice work on the entire document. Everything required is here and well done.", link: "", positive: true },
+    { id: "doc_missing_parts", sub: "doc_completeness", label: "Missing required parts", explanation: "Your document was missing one or more required components. Review the assignment requirements and make sure each section is addressed.", link: "", positive: false },
+    { id: "doc_purpose", sub: "doc_completeness", label: "Missing specific purpose", explanation: "Make sure to include the specific speech purpose. This helps frame everything else in your document.", link: "", positive: false },
+    // Document > Formatting
+    { id: "doc_well_formatted", sub: "doc_formatting", label: "Well formatted", explanation: "Your document is well formatted and easy to read.", link: "", positive: true },
+    { id: "doc_needs_formatting", sub: "doc_formatting", label: "Needs better formatting", explanation: "Work on your formatting. You should have proper indentation (nesting) where appropriate, and it should look good so that someone quickly looking at it can get an idea of what you are doing.", link: "", positive: false },
+    { id: "doc_line_markers", sub: "doc_formatting", label: "Missing line markers", explanation: "Make sure to use line markers (a, b, c, 1, 2, 3) all the way through your outline.", link: "", positive: false },
+    { id: "doc_nesting", sub: "doc_formatting", label: "Needs nesting", explanation: "Don't forget to nest ideas so that you don't simply have a list. Nesting will help break your work into sections so it's easier for you and the audience to understand.", link: "", positive: false },
+    // Presentation > Content
+    { id: "strong_ideas", sub: "content", label: "Strong, well-developed ideas", explanation: "Your ideas were fully focused and well-developed. You used relevant evidence and examples effectively to support your points.", link: "", positive: true },
+    { id: "good_evidence", sub: "content", label: "Good use of evidence", explanation: "You incorporated data and examples that strengthened your argument.", link: "", positive: true },
+    { id: "lacks_depth", sub: "content", label: "Lacks depth", explanation: "Your content would benefit from deeper development. Try to go beyond the surface level and explore your ideas more fully.", link: "", positive: false },
+    { id: "weak_evidence", sub: "content", label: "Weak or missing evidence", explanation: "Your work needed stronger supporting evidence. Include specific data, examples, or stories to back up your claims.", link: "", positive: false },
+    { id: "off_topic", sub: "content", label: "Off topic", explanation: "Parts of your work drifted from the core topic. Keep your focus tight on the question you're addressing.", link: "", positive: false },
+    { id: "logic_gaps", sub: "content", label: "Logic gaps", explanation: "Some of your reasoning had gaps that made it harder to follow your argument. Make sure each point connects clearly to the next.", link: "", positive: false },
+    // Presentation > Structure
+    { id: "strong_opening_closing", sub: "structure", label: "Strong opening and closing", explanation: "Your introduction grabbed attention and your conclusion landed effectively.", link: "", positive: true },
+    { id: "well_organized", sub: "structure", label: "Well organized", explanation: "Your work was clearly structured and easy to follow, with smooth transitions between ideas.", link: "", positive: true },
+    { id: "weak_intro_conclusion", sub: "structure", label: "Weak intro or conclusion", explanation: "Your introduction and/or conclusion needed more work. An engaging opening and a clear closing make a big difference.", link: "", positive: false },
+    { id: "hard_to_follow", sub: "structure", label: "Hard to follow", explanation: "The organization made it difficult to follow at times. Try outlining your main points in a clearer sequence.", link: "", positive: false },
+    { id: "rough_transitions", sub: "structure", label: "Rough transitions", explanation: "The transitions between your ideas were abrupt. Work on connecting your points so everything flows naturally.", link: "", positive: false },
+    // Presentation > Delivery
+    { id: "confident_engaging", sub: "delivery", label: "Confident and engaging", explanation: "You came across as confident and well-prepared. Your presence kept the audience engaged.", link: "", positive: true },
+    { id: "strong_vocal", sub: "delivery", label: "Strong vocal variety", explanation: "Your use of tone, pacing, and emphasis was effective. It kept things dynamic.", link: "", positive: true },
+    { id: "good_pauses", sub: "delivery", label: "Good use of pauses", explanation: "You used pauses well for emphasis and impact.", link: "", positive: true },
+    { id: "needs_confidence", sub: "delivery", label: "Needs more confidence", explanation: "You seemed nervous or underprepared. Practice will help you feel more comfortable and present with more authority.", link: "", positive: false },
+    { id: "volume_clarity", sub: "delivery", label: "Volume or clarity issues", explanation: "There were moments where you were hard to hear or understand. Project your voice and enunciate clearly.", link: "", positive: false },
+    { id: "filler_words", sub: "delivery", label: "Too many filler words", explanation: "Filler words ('um,' 'like,' 'you know') were noticeable. Try to pause instead of filling the silence.", link: "", positive: false },
+    { id: "read_notes", sub: "delivery", label: "Read from notes too much", explanation: "You relied too heavily on your notes. Aim to make more eye contact and speak more naturally.", link: "", positive: false },
+    // Presentation > Character
+    { id: "fresh_memorable", sub: "character", label: "Fresh and memorable", explanation: "Your work stood out. Your ideas felt original and left a strong impression.", link: "", positive: true },
+    { id: "insightful", sub: "character", label: "Insightful thinking", explanation: "You showed real depth of thought. Your perspective on this topic was thoughtful and engaging.", link: "", positive: true },
+    { id: "felt_generic", sub: "character", label: "Felt generic", explanation: "Your work covered the topic but didn't feel distinctive. Push yourself to find a unique angle or personal connection.", link: "", positive: false },
+    { id: "didnt_address", sub: "character", label: "Didn't fully address the question", explanation: "Your work didn't fully answer the question being asked. Make sure you're directly responding to what's being asked of you.", link: "", positive: false },
+    // General (no section)
+    { id: "strong_effort", sub: "general", label: "Strong overall effort", explanation: "It's clear you put real effort into this. Keep it up.", link: "", positive: true },
+    { id: "submitted_late", sub: "general", label: "Submitted late", explanation: "This was submitted after the deadline.", link: "", positive: false },
+    { id: "missing_components", sub: "general", label: "Missing required components", explanation: "Your submission was missing one or more required components. Review the assignment requirements.", link: "", positive: false },
+    { id: "missing_name", sub: "general", label: "Missing name on document", explanation: "Please include your name on the document. Thank you.", link: "", positive: false },
+    { id: "missing_colors", sub: "general", label: "Missing stylistic highlights", explanation: "Don't forget to highlight your stylistic elements in three different colors. This is an important part of the assignment.", link: "", positive: false },
   ],
   tiers: [
     { label: "Excellent", min: 93, max: 100 },
@@ -97,13 +117,13 @@ const DEFAULT_MASTER_RUBRIC = {
   ],
 };
 
-function RubricItemEditor({ item, onChange, onRemove, categories }) {
+function RubricItemEditor({ item, onChange, onRemove, allSubsections }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div style={{ padding: "8px 10px", borderRadius: 8, background: item.positive ? "#f0fdf4" : "#fef2f2", border: "1px solid " + (item.positive ? "#bbf7d0" : "#fecaca"), marginBottom: 4 }}>
+    <div style={{ padding: "6px 10px", borderRadius: 8, background: item.positive ? "#f0fdf4" : "#fef2f2", border: "1px solid " + (item.positive ? "#bbf7d0" : "#fecaca"), marginBottom: 4 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <button onClick={() => onChange({ ...item, positive: !item.positive })} style={{ ...pill, padding: "2px 8px", fontSize: 10, background: item.positive ? GREEN : RED, color: "#fff", flexShrink: 0 }}>{item.positive ? "+" : "-"}</button>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "#111827", flex: 1, cursor: "pointer" }} onClick={() => setExpanded(!expanded)}>{item.label}</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#111827", flex: 1, cursor: "pointer" }} onClick={() => setExpanded(!expanded)}>{item.label || "(new item)"}</span>
         <button onClick={() => setExpanded(!expanded)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: TEXT_MUTED, fontFamily: F }}>{expanded ? "close" : "edit"}</button>
         <button onClick={onRemove} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#d1d5db", fontFamily: F, padding: "0 4px" }}>x</button>
       </div>
@@ -111,9 +131,10 @@ function RubricItemEditor({ item, onChange, onRemove, categories }) {
         <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
           <input value={item.label} onChange={e => onChange({ ...item, label: e.target.value })} placeholder="Button label" style={{ ...inp, fontSize: 13, padding: "6px 8px" }} />
           <textarea value={item.explanation} onChange={e => onChange({ ...item, explanation: e.target.value })} placeholder="Explanation for student..." rows={2} style={{ ...inp, fontSize: 13, padding: "6px 8px", resize: "vertical" }} />
-          <input value={item.link || ""} onChange={e => onChange({ ...item, link: e.target.value })} placeholder="Link (optional)" style={{ ...inp, fontSize: 13, padding: "6px 8px" }} />
-          <select value={item.cat} onChange={e => onChange({ ...item, cat: e.target.value })} style={{ ...sel, fontSize: 13, padding: "6px 8px" }}>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+          <input value={item.link || ""} onChange={e => onChange({ ...item, link: e.target.value })} placeholder="Link to resource (optional)" style={{ ...inp, fontSize: 13, padding: "6px 8px" }} />
+          <select value={item.sub} onChange={e => onChange({ ...item, sub: e.target.value })} style={{ ...sel, fontSize: 13, padding: "6px 8px" }}>
+            <option value="general">General (no section)</option>
+            {allSubsections.map(s => <option key={s.id} value={s.id}>{s.sectionLabel} &gt; {s.label}</option>)}
           </select>
         </div>
       )}
@@ -121,18 +142,59 @@ function RubricItemEditor({ item, onChange, onRemove, categories }) {
   );
 }
 
-function RubricEditor({ rubric, onSave, onCancel, title, categories: parentCategories }) {
-  const [items, setItems] = useState(rubric.items || []);
-  const [categories, setCategories] = useState(rubric.categories || parentCategories || DEFAULT_MASTER_RUBRIC.categories);
-  const [tiers, setTiers] = useState(rubric.tiers || DEFAULT_MASTER_RUBRIC.tiers);
+function RubricEditor({ rubric, onSave, onCancel, title }) {
   const [sections, setSections] = useState(rubric.sections || []);
-  const [newCatLabel, setNewCatLabel] = useState("");
+  const [items, setItems] = useState(rubric.items || []);
+  const [tiers, setTiers] = useState(rubric.tiers || DEFAULT_MASTER_RUBRIC.tiers);
   const [showTiers, setShowTiers] = useState(false);
-  const [showSections, setShowSections] = useState(false);
 
-  const addItem = (cat) => {
-    const id = genId();
-    setItems([...items, { id, cat, label: "", explanation: "", link: "", positive: true }]);
+  // Flatten all subsections for the item editor dropdown
+  const allSubsections = [];
+  sections.forEach(sec => {
+    (sec.subsections || []).forEach(sub => {
+      allSubsections.push({ id: sub.id, label: sub.label, sectionLabel: sec.label });
+    });
+  });
+
+  const addSection = () => {
+    setSections([...sections, { id: genId(), label: "", weight: 0, subsections: [] }]);
+  };
+
+  const updateSection = (idx, field, value) => {
+    setSections(sections.map((s, i) => i === idx ? { ...s, [field]: value } : s));
+  };
+
+  const removeSection = (idx) => {
+    const sec = sections[idx];
+    const subIds = (sec.subsections || []).map(s => s.id);
+    if (items.some(i => subIds.includes(i.sub))) {
+      if (!window.confirm("This section has feedback items. They will be moved to General. Continue?")) return;
+      setItems(items.map(i => subIds.includes(i.sub) ? { ...i, sub: "general" } : i));
+    }
+    setSections(sections.filter((_, i) => i !== idx));
+  };
+
+  const addSubsection = (secIdx) => {
+    const sec = sections[secIdx];
+    const newSub = { id: genId(), label: "" };
+    setSections(sections.map((s, i) => i === secIdx ? { ...s, subsections: [...(s.subsections || []), newSub] } : s));
+  };
+
+  const updateSubsection = (secIdx, subIdx, label) => {
+    setSections(sections.map((s, i) => i === secIdx ? { ...s, subsections: s.subsections.map((sub, j) => j === subIdx ? { ...sub, label } : sub) } : s));
+  };
+
+  const removeSubsection = (secIdx, subIdx) => {
+    const subId = sections[secIdx].subsections[subIdx].id;
+    if (items.some(i => i.sub === subId)) {
+      if (!window.confirm("This subsection has feedback items. They will be moved to General. Continue?")) return;
+      setItems(items.map(i => i.sub === subId ? { ...i, sub: "general" } : i));
+    }
+    setSections(sections.map((s, i) => i === secIdx ? { ...s, subsections: s.subsections.filter((_, j) => j !== subIdx) } : s));
+  };
+
+  const addItem = (sub) => {
+    setItems([...items, { id: genId(), sub, label: "", explanation: "", link: "", positive: true }]);
   };
 
   const updateItem = (id, updated) => {
@@ -143,29 +205,12 @@ function RubricEditor({ rubric, onSave, onCancel, title, categories: parentCateg
     if (window.confirm("Remove this feedback item?")) setItems(items.filter(i => i.id !== id));
   };
 
-  const addCategory = () => {
-    if (!newCatLabel.trim()) return;
-    const id = newCatLabel.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
-    setCategories([...categories, { id, label: newCatLabel.trim() }]);
-    setNewCatLabel("");
-  };
-
-  const removeCategory = (id) => {
-    if (items.some(i => i.cat === id)) {
-      if (!window.confirm("This category has feedback items. They will be moved to General. Continue?")) return;
-      setItems(items.map(i => i.cat === id ? { ...i, cat: "general" } : i));
-    }
-    setCategories(categories.filter(c => c.id !== id));
-  };
-
-  const addSection = () => {
-    setSections([...sections, { id: genId(), label: "", weight: 0 }]);
-  };
-
   const save = () => {
     const cleaned = items.filter(i => i.label.trim());
-    onSave({ items: cleaned, categories, tiers, sections });
+    onSave({ sections, items: cleaned, tiers });
   };
+
+  const totalWeight = sections.reduce((s, x) => s + (x.weight || 0), 0);
 
   return (
     <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
@@ -177,36 +222,12 @@ function RubricEditor({ rubric, onSave, onCancel, title, categories: parentCateg
         </div>
       </div>
 
-      {/* Sections (weight areas) */}
-      <button onClick={() => setShowSections(!showSections)} style={{ ...pillInactive, fontSize: 11, marginBottom: 8, width: "100%" }}>
-        {showSections ? "Hide Sections" : "Sections (" + sections.length + ")"}
-      </button>
-      {showSections && (
-        <div style={{ marginBottom: 12, padding: "10px 12px", background: "#f9fafb", borderRadius: 10 }}>
-          <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 6 }}>Sections define the major parts of the assignment (e.g., Document, Outline, Script). Set approximate weight as a percentage.</div>
-          {sections.map((s, i) => (
-            <div key={s.id} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
-              <input value={s.label} onChange={e => setSections(sections.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} placeholder="Section name" style={{ ...inp, flex: 1, fontSize: 13, padding: "4px 8px" }} />
-              <input type="number" value={s.weight} onChange={e => setSections(sections.map((x, j) => j === i ? { ...x, weight: parseInt(e.target.value) || 0 } : x))} style={{ ...inp, width: 50, fontSize: 13, padding: "4px 6px", textAlign: "center" }} />
-              <span style={{ fontSize: 11, color: TEXT_MUTED }}>%</span>
-              <button onClick={() => setSections(sections.filter((_, j) => j !== i))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#d1d5db" }}>x</button>
-            </div>
-          ))}
-          <button onClick={addSection} style={{ ...pillInactive, fontSize: 11, marginTop: 4 }}>+ Add Section</button>
-          {sections.length > 0 && (
-            <div style={{ fontSize: 11, color: sections.reduce((s, x) => s + x.weight, 0) === 100 ? GREEN : AMBER, marginTop: 4, fontWeight: 600 }}>
-              Total: {sections.reduce((s, x) => s + x.weight, 0)}%
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Tiers */}
-      <button onClick={() => setShowTiers(!showTiers)} style={{ ...pillInactive, fontSize: 11, marginBottom: 8, width: "100%" }}>
+      <button onClick={() => setShowTiers(!showTiers)} style={{ ...pillInactive, fontSize: 11, marginBottom: 12, width: "100%" }}>
         {showTiers ? "Hide Tiers" : "Score Tiers (" + tiers.length + ")"}
       </button>
       {showTiers && (
-        <div style={{ marginBottom: 12, padding: "10px 12px", background: "#f9fafb", borderRadius: 10 }}>
+        <div style={{ marginBottom: 16, padding: "10px 12px", background: "#f9fafb", borderRadius: 10 }}>
           {tiers.map((t, i) => (
             <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
               <input value={t.label} onChange={e => setTiers(tiers.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} style={{ ...inp, flex: 1, fontSize: 13, padding: "4px 8px" }} />
@@ -220,30 +241,61 @@ function RubricEditor({ rubric, onSave, onCancel, title, categories: parentCateg
         </div>
       )}
 
-      {/* Categories and feedback items */}
-      {categories.map(cat => {
-        const catItems = items.filter(i => i.cat === cat.id);
+      {/* Sections with subsections and items */}
+      {sections.map((sec, secIdx) => {
         return (
-          <div key={cat.id} style={{ marginBottom: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#111827", textTransform: "uppercase", letterSpacing: "0.05em" }}>{cat.label}</div>
-              <div style={{ display: "flex", gap: 4 }}>
-                <button onClick={() => addItem(cat.id)} style={{ ...pill, fontSize: 10, padding: "2px 8px", background: "#f3f4f6", color: "#4b5563" }}>+ Add</button>
-                {cat.id !== "general" && <button onClick={() => removeCategory(cat.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#d1d5db" }}>x</button>}
-              </div>
+          <div key={sec.id} style={{ marginBottom: 16, padding: "12px 14px", background: "#f9fafb", borderRadius: 12, border: "1px solid #e5e7eb" }}>
+            {/* Section header */}
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+              <input value={sec.label} onChange={e => updateSection(secIdx, "label", e.target.value)} placeholder="Section name" style={{ ...inp, flex: 1, fontSize: 14, fontWeight: 700, padding: "6px 10px" }} />
+              <span style={{ fontSize: 11, color: TEXT_MUTED, flexShrink: 0 }}>~</span>
+              <input type="number" value={sec.weight} onChange={e => updateSection(secIdx, "weight", parseInt(e.target.value) || 0)} style={{ ...inp, width: 50, fontSize: 13, padding: "6px", textAlign: "center" }} />
+              <span style={{ fontSize: 11, color: TEXT_MUTED, flexShrink: 0 }}>%</span>
+              <button onClick={() => removeSection(secIdx)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#d1d5db" }}>x</button>
             </div>
-            {catItems.map(item => (
-              <RubricItemEditor key={item.id} item={item} onChange={updated => updateItem(item.id, updated)} onRemove={() => removeItem(item.id)} categories={categories} />
-            ))}
-            {catItems.length === 0 && <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic", padding: "4px 0" }}>No items yet</div>}
+
+            {/* Subsections */}
+            {(sec.subsections || []).map((sub, subIdx) => {
+              const subItems = items.filter(i => i.sub === sub.id);
+              return (
+                <div key={sub.id} style={{ marginBottom: 10, marginLeft: 12, paddingLeft: 12, borderLeft: "3px solid #e5e7eb" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                    <input value={sub.label} onChange={e => updateSubsection(secIdx, subIdx, e.target.value)} placeholder="Subsection name" style={{ ...inp, flex: 1, fontSize: 13, fontWeight: 600, padding: "4px 8px" }} />
+                    <button onClick={() => addItem(sub.id)} style={{ ...pill, fontSize: 10, padding: "2px 8px", background: "#e5e7eb", color: "#4b5563" }}>+ Item</button>
+                    <button onClick={() => removeSubsection(secIdx, subIdx)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#d1d5db" }}>x</button>
+                  </div>
+                  {subItems.map(item => (
+                    <RubricItemEditor key={item.id} item={item} onChange={updated => updateItem(item.id, updated)} onRemove={() => removeItem(item.id)} allSubsections={allSubsections} />
+                  ))}
+                  {subItems.length === 0 && <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic", padding: "2px 0" }}>No items</div>}
+                </div>
+              );
+            })}
+            <button onClick={() => addSubsection(secIdx)} style={{ ...pillInactive, fontSize: 11, marginLeft: 12 }}>+ Add Subsection</button>
           </div>
         );
       })}
 
-      {/* Add category */}
-      <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-        <input value={newCatLabel} onChange={e => setNewCatLabel(e.target.value)} placeholder="New category name..." style={{ ...inp, flex: 1, fontSize: 13, padding: "6px 8px" }} onKeyDown={e => e.key === "Enter" && addCategory()} />
-        <button onClick={addCategory} style={pillInactive}>+ Category</button>
+      {/* Add section */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
+        <button onClick={addSection} style={{ ...pillInactive, fontSize: 11 }}>+ Add Section</button>
+        {sections.length > 0 && (
+          <span style={{ fontSize: 11, fontWeight: 600, color: totalWeight === 100 ? GREEN : AMBER }}>
+            Total weight: {totalWeight}%
+          </span>
+        )}
+      </div>
+
+      {/* General (unsectioned) items */}
+      <div style={{ padding: "12px 14px", background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", textTransform: "uppercase", letterSpacing: "0.05em" }}>General</div>
+          <button onClick={() => addItem("general")} style={{ ...pill, fontSize: 10, padding: "2px 8px", background: "#f3f4f6", color: "#4b5563" }}>+ Add</button>
+        </div>
+        {items.filter(i => i.sub === "general").map(item => (
+          <RubricItemEditor key={item.id} item={item} onChange={updated => updateItem(item.id, updated)} onRemove={() => removeItem(item.id)} allSubsections={allSubsections} />
+        ))}
+        {items.filter(i => i.sub === "general").length === 0 && <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic" }}>No items</div>}
       </div>
     </div>
   );
@@ -257,16 +309,47 @@ function AssignmentRubricButton({ assignmentId, data, setData }) {
   const hasRubric = !!rubrics[assignmentId];
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
 
+  const deepCopy = (src) => ({
+    items: src.items.map(i => ({ ...i, id: genId() })),
+    sections: (src.sections || []).map(s => ({ ...s, id: genId(), subsections: (s.subsections || []).map(sub => ({ ...sub, id: genId() })) })),
+    tiers: [...(src.tiers || DEFAULT_MASTER_RUBRIC.tiers)],
+  });
+
   const createFromMaster = () => {
+    // Deep copy with fresh IDs, but keep subsection references intact
+    const copy = { items: [], sections: [], tiers: [...master.tiers] };
+    const subIdMap = {};
+    (master.sections || []).forEach(sec => {
+      const newSecId = genId();
+      const newSubs = (sec.subsections || []).map(sub => {
+        const newSubId = genId();
+        subIdMap[sub.id] = newSubId;
+        return { ...sub, id: newSubId };
+      });
+      copy.sections.push({ ...sec, id: newSecId, subsections: newSubs });
+    });
+    copy.items = master.items.map(i => ({ ...i, id: genId(), sub: subIdMap[i.sub] || i.sub }));
     setEditing(true);
-    setCopyFrom({ items: [...master.items], categories: [...master.categories], tiers: [...master.tiers], sections: [] });
+    setCopyFrom(copy);
   };
 
   const createFromAssignment = (srcId) => {
     const src = rubrics[srcId];
     if (!src) return;
+    const copy = { items: [], sections: [], tiers: [...(src.tiers || DEFAULT_MASTER_RUBRIC.tiers)] };
+    const subIdMap = {};
+    (src.sections || []).forEach(sec => {
+      const newSecId = genId();
+      const newSubs = (sec.subsections || []).map(sub => {
+        const newSubId = genId();
+        subIdMap[sub.id] = newSubId;
+        return { ...sub, id: newSubId };
+      });
+      copy.sections.push({ ...sec, id: newSecId, subsections: newSubs });
+    });
+    copy.items = src.items.map(i => ({ ...i, id: genId(), sub: subIdMap[i.sub] || i.sub }));
     setEditing(true);
-    setCopyFrom({ items: src.items.map(i => ({ ...i, id: genId() })), categories: [...src.categories], tiers: [...src.tiers], sections: (src.sections || []).map(s => ({ ...s, id: genId() })) });
+    setCopyFrom(copy);
   };
 
   const editExisting = () => {
@@ -289,7 +372,7 @@ function AssignmentRubricButton({ assignmentId, data, setData }) {
   };
 
   if (editing && copyFrom) {
-    return <RubricEditor rubric={copyFrom} onSave={save} onCancel={() => { setEditing(false); setCopyFrom(null); }} title="Assignment Rubric" categories={master.categories} />;
+    return <RubricEditor rubric={copyFrom} onSave={save} onCancel={() => { setEditing(false); setCopyFrom(null); }} title="Assignment Rubric" />;
   }
 
   const otherAssignments = assignments.filter(a => a.id !== assignmentId && a.id !== "participation" && rubrics[a.id]);
@@ -302,13 +385,11 @@ function AssignmentRubricButton({ assignmentId, data, setData }) {
           <button onClick={remove} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Remove</button>
         </div>
       ) : (
-        <div>
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-            <button onClick={createFromMaster} style={{ ...pill, background: "#f3f4f6", color: "#4b5563", fontSize: 11 }}>Create from Master</button>
-            {otherAssignments.map(a => (
-              <button key={a.id} onClick={() => createFromAssignment(a.id)} style={{ ...pill, background: "#f3f4f6", color: "#4b5563", fontSize: 11 }}>Copy from {a.name.length > 20 ? a.name.slice(0, 20) + "..." : a.name}</button>
-            ))}
-          </div>
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          <button onClick={createFromMaster} style={{ ...pill, background: "#f3f4f6", color: "#4b5563", fontSize: 11 }}>Create from Master</button>
+          {otherAssignments.map(a => (
+            <button key={a.id} onClick={() => createFromAssignment(a.id)} style={{ ...pill, background: "#f3f4f6", color: "#4b5563", fontSize: 11 }}>Copy from {a.name.length > 20 ? a.name.slice(0, 20) + "..." : a.name}</button>
+          ))}
         </div>
       )}
     </div>
