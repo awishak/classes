@@ -24,6 +24,7 @@ function parseDueDate(dueStr) {
   const year = new Date().getFullYear();
   const parsed = new Date(dueStr + ", " + year);
   if (isNaN(parsed.getTime())) return null;
+  // Set to end of day so "due Apr 17" means midnight at the end of Apr 17
   parsed.setHours(23, 59, 59, 999);
   return parsed;
 }
@@ -35,12 +36,6 @@ export const DEFAULT_ASSIGNMENTS = [
   { id: "presentation", name: "Final Presentation/Project", weight: 25, due: "Jun 1", link: "", notes: "" },
   { id: "peer_eval", name: "Peer Evaluation", weight: 10, due: "Jun 8", link: "", notes: "" },
   { id: "final_reflection", name: "Final Reflection", weight: 10, due: "Jun 8", link: "", notes: "" },
-  { id: "participation", name: "Participation", weight: 25, due: "", link: "", notes: "Weekly Game, Around the Horn, Rotating Fishbowl" },
-  { id: "interview", name: "Interview Assignment", weight: 5, due: "Apr 17", link: "", notes: "Interview someone who works in sports in a job you're interested in" },
-  { id: "woc_proposal", name: "Intersections Proposal", weight: 5, due: "Apr 24", link: "", notes: "" },
-  { id: "woc_submission", name: "Intersections Submission", weight: 20, due: "May 8", link: "", notes: "" },
-  { id: "leadership_guide", name: "Leadership Guide", weight: 15, due: "May 20", link: "", notes: "" },
-  { id: "final_project", name: "Final Project: Teach Me Something New", weight: 30, due: "Jun 8", link: "", notes: "" },
   { id: "participation", name: "Participation", weight: 25, due: "", link: "", notes: "Weekly Game, Around the Horn, Rotating Fishbowl" },
 ];
 
@@ -55,6 +50,352 @@ function lastName(name) { if (name === "Ava da Cunha") return "da Cunha"; if (na
 function lastSortObj(a, b) { return lastName(a.name).localeCompare(lastName(b.name)); }
 
 async function saveData(data) { try { const STORAGE_KEY = "comm4-v1"; await window.storage.set(STORAGE_KEY, JSON.stringify(data), true); return true; } catch { return false; } }
+
+/* ─── RUBRIC SYSTEM ─── */
+
+const DEFAULT_MASTER_RUBRIC = {
+  sections: [
+    { id: "document", label: "Document", weight: 20, subsections: [
+      { id: "doc_completeness", label: "Completeness" },
+      { id: "doc_formatting", label: "Formatting" },
+    ]},
+    { id: "presentation", label: "Presentation", weight: 80, subsections: [
+      { id: "content", label: "Content" },
+      { id: "structure", label: "Structure" },
+      { id: "delivery", label: "Presentation & Delivery" },
+      { id: "character", label: "Character" },
+    ]},
+  ],
+  items: [
+    // Document > Completeness
+    { id: "doc_complete", sub: "doc_completeness", label: "Document is complete", explanation: "Very nice work on the entire document. Everything required is here and well done.", link: "", positive: true },
+    { id: "doc_missing_parts", sub: "doc_completeness", label: "Missing required parts", explanation: "Your document was missing one or more required components. Review the assignment requirements and make sure each section is addressed.", link: "", positive: false },
+    { id: "doc_purpose", sub: "doc_completeness", label: "Missing specific purpose", explanation: "Make sure to include the specific speech purpose. This helps frame everything else in your document.", link: "", positive: false },
+    // Document > Formatting
+    { id: "doc_well_formatted", sub: "doc_formatting", label: "Well formatted", explanation: "Your document is well formatted and easy to read.", link: "", positive: true },
+    { id: "doc_needs_formatting", sub: "doc_formatting", label: "Needs better formatting", explanation: "Work on your formatting. You should have proper indentation (nesting) where appropriate, and it should look good so that someone quickly looking at it can get an idea of what you are doing.", link: "", positive: false },
+    { id: "doc_line_markers", sub: "doc_formatting", label: "Missing line markers", explanation: "Make sure to use line markers (a, b, c, 1, 2, 3) all the way through your outline.", link: "", positive: false },
+    { id: "doc_nesting", sub: "doc_formatting", label: "Needs nesting", explanation: "Don't forget to nest ideas so that you don't simply have a list. Nesting will help break your work into sections so it's easier for you and the audience to understand.", link: "", positive: false },
+    // Presentation > Content
+    { id: "strong_ideas", sub: "content", label: "Strong, well-developed ideas", explanation: "Your ideas were fully focused and well-developed. You used relevant evidence and examples effectively to support your points.", link: "", positive: true },
+    { id: "good_evidence", sub: "content", label: "Good use of evidence", explanation: "You incorporated data and examples that strengthened your argument.", link: "", positive: true },
+    { id: "lacks_depth", sub: "content", label: "Lacks depth", explanation: "Your content would benefit from deeper development. Try to go beyond the surface level and explore your ideas more fully.", link: "", positive: false },
+    { id: "weak_evidence", sub: "content", label: "Weak or missing evidence", explanation: "Your work needed stronger supporting evidence. Include specific data, examples, or stories to back up your claims.", link: "", positive: false },
+    { id: "off_topic", sub: "content", label: "Off topic", explanation: "Parts of your work drifted from the core topic. Keep your focus tight on the question you're addressing.", link: "", positive: false },
+    { id: "logic_gaps", sub: "content", label: "Logic gaps", explanation: "Some of your reasoning had gaps that made it harder to follow your argument. Make sure each point connects clearly to the next.", link: "", positive: false },
+    // Presentation > Structure
+    { id: "strong_opening_closing", sub: "structure", label: "Strong opening and closing", explanation: "Your introduction grabbed attention and your conclusion landed effectively.", link: "", positive: true },
+    { id: "well_organized", sub: "structure", label: "Well organized", explanation: "Your work was clearly structured and easy to follow, with smooth transitions between ideas.", link: "", positive: true },
+    { id: "weak_intro_conclusion", sub: "structure", label: "Weak intro or conclusion", explanation: "Your introduction and/or conclusion needed more work. An engaging opening and a clear closing make a big difference.", link: "", positive: false },
+    { id: "hard_to_follow", sub: "structure", label: "Hard to follow", explanation: "The organization made it difficult to follow at times. Try outlining your main points in a clearer sequence.", link: "", positive: false },
+    { id: "rough_transitions", sub: "structure", label: "Rough transitions", explanation: "The transitions between your ideas were abrupt. Work on connecting your points so everything flows naturally.", link: "", positive: false },
+    // Presentation > Delivery
+    { id: "confident_engaging", sub: "delivery", label: "Confident and engaging", explanation: "You came across as confident and well-prepared. Your presence kept the audience engaged.", link: "", positive: true },
+    { id: "strong_vocal", sub: "delivery", label: "Strong vocal variety", explanation: "Your use of tone, pacing, and emphasis was effective. It kept things dynamic.", link: "", positive: true },
+    { id: "good_pauses", sub: "delivery", label: "Good use of pauses", explanation: "You used pauses well for emphasis and impact.", link: "", positive: true },
+    { id: "needs_confidence", sub: "delivery", label: "Needs more confidence", explanation: "You seemed nervous or underprepared. Practice will help you feel more comfortable and present with more authority.", link: "", positive: false },
+    { id: "volume_clarity", sub: "delivery", label: "Volume or clarity issues", explanation: "There were moments where you were hard to hear or understand. Project your voice and enunciate clearly.", link: "", positive: false },
+    { id: "filler_words", sub: "delivery", label: "Too many filler words", explanation: "Filler words ('um,' 'like,' 'you know') were noticeable. Try to pause instead of filling the silence.", link: "", positive: false },
+    { id: "read_notes", sub: "delivery", label: "Read from notes too much", explanation: "You relied too heavily on your notes. Aim to make more eye contact and speak more naturally.", link: "", positive: false },
+    // Presentation > Character
+    { id: "fresh_memorable", sub: "character", label: "Fresh and memorable", explanation: "Your work stood out. Your ideas felt original and left a strong impression.", link: "", positive: true },
+    { id: "insightful", sub: "character", label: "Insightful thinking", explanation: "You showed real depth of thought. Your perspective on this topic was thoughtful and engaging.", link: "", positive: true },
+    { id: "felt_generic", sub: "character", label: "Felt generic", explanation: "Your work covered the topic but didn't feel distinctive. Push yourself to find a unique angle or personal connection.", link: "", positive: false },
+    { id: "didnt_address", sub: "character", label: "Didn't fully address the question", explanation: "Your work didn't fully answer the question being asked. Make sure you're directly responding to what's being asked of you.", link: "", positive: false },
+    // General (no section)
+    { id: "strong_effort", sub: "general", label: "Strong overall effort", explanation: "It's clear you put real effort into this. Keep it up.", link: "", positive: true },
+    { id: "submitted_late", sub: "general", label: "Submitted late", explanation: "This was submitted after the deadline.", link: "", positive: false },
+    { id: "missing_components", sub: "general", label: "Missing required components", explanation: "Your submission was missing one or more required components. Review the assignment requirements.", link: "", positive: false },
+    { id: "missing_name", sub: "general", label: "Missing name on document", explanation: "Please include your name on the document. Thank you.", link: "", positive: false },
+    { id: "missing_colors", sub: "general", label: "Missing stylistic highlights", explanation: "Don't forget to highlight your stylistic elements in three different colors. This is an important part of the assignment.", link: "", positive: false },
+  ],
+  tiers: [
+    { label: "Excellent", min: 93, max: 100 },
+    { label: "Good", min: 85, max: 92 },
+    { label: "Satisfactory", min: 77, max: 84 },
+    { label: "Needs Improvement", min: 70, max: 76 },
+    { label: "Incomplete", min: 0, max: 69 },
+  ],
+};
+
+function RubricItemEditor({ item, onChange, onRemove, allSubsections }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div style={{ padding: "6px 10px", borderRadius: 8, background: item.positive ? "#f0fdf4" : "#fef2f2", border: "1px solid " + (item.positive ? "#bbf7d0" : "#fecaca"), marginBottom: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <button onClick={() => onChange({ ...item, positive: !item.positive })} style={{ ...pill, padding: "2px 8px", fontSize: 10, background: item.positive ? GREEN : RED, color: "#fff", flexShrink: 0 }}>{item.positive ? "+" : "-"}</button>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#111827", flex: 1, cursor: "pointer" }} onClick={() => setExpanded(!expanded)}>{item.label || "(new item)"}</span>
+        <button onClick={() => setExpanded(!expanded)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: TEXT_MUTED, fontFamily: F }}>{expanded ? "close" : "edit"}</button>
+        <button onClick={onRemove} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#d1d5db", fontFamily: F, padding: "0 4px" }}>x</button>
+      </div>
+      {expanded && (
+        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+          <input value={item.label} onChange={e => onChange({ ...item, label: e.target.value })} placeholder="Button label" style={{ ...inp, fontSize: 13, padding: "6px 8px" }} />
+          <textarea value={item.explanation} onChange={e => onChange({ ...item, explanation: e.target.value })} placeholder="Explanation for student..." rows={2} style={{ ...inp, fontSize: 13, padding: "6px 8px", resize: "vertical" }} />
+          <input value={item.link || ""} onChange={e => onChange({ ...item, link: e.target.value })} placeholder="Link to resource (optional)" style={{ ...inp, fontSize: 13, padding: "6px 8px" }} />
+          <select value={item.sub} onChange={e => onChange({ ...item, sub: e.target.value })} style={{ ...sel, fontSize: 13, padding: "6px 8px" }}>
+            <option value="general">General (no section)</option>
+            {allSubsections.map(s => <option key={s.id} value={s.id}>{s.sectionLabel} &gt; {s.label}</option>)}
+          </select>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RubricEditor({ rubric, onSave, onCancel, title }) {
+  const [sections, setSections] = useState(rubric.sections || []);
+  const [items, setItems] = useState(rubric.items || []);
+  const [tiers, setTiers] = useState(rubric.tiers || DEFAULT_MASTER_RUBRIC.tiers);
+  const [showTiers, setShowTiers] = useState(false);
+
+  // Flatten all subsections for the item editor dropdown
+  const allSubsections = [];
+  sections.forEach(sec => {
+    (sec.subsections || []).forEach(sub => {
+      allSubsections.push({ id: sub.id, label: sub.label, sectionLabel: sec.label });
+    });
+  });
+
+  const addSection = () => {
+    setSections([...sections, { id: genId(), label: "", weight: 0, subsections: [] }]);
+  };
+
+  const updateSection = (idx, field, value) => {
+    setSections(sections.map((s, i) => i === idx ? { ...s, [field]: value } : s));
+  };
+
+  const removeSection = (idx) => {
+    const sec = sections[idx];
+    const subIds = (sec.subsections || []).map(s => s.id);
+    if (items.some(i => subIds.includes(i.sub))) {
+      if (!window.confirm("This section has feedback items. They will be moved to General. Continue?")) return;
+      setItems(items.map(i => subIds.includes(i.sub) ? { ...i, sub: "general" } : i));
+    }
+    setSections(sections.filter((_, i) => i !== idx));
+  };
+
+  const addSubsection = (secIdx) => {
+    const sec = sections[secIdx];
+    const newSub = { id: genId(), label: "" };
+    setSections(sections.map((s, i) => i === secIdx ? { ...s, subsections: [...(s.subsections || []), newSub] } : s));
+  };
+
+  const updateSubsection = (secIdx, subIdx, label) => {
+    setSections(sections.map((s, i) => i === secIdx ? { ...s, subsections: s.subsections.map((sub, j) => j === subIdx ? { ...sub, label } : sub) } : s));
+  };
+
+  const removeSubsection = (secIdx, subIdx) => {
+    const subId = sections[secIdx].subsections[subIdx].id;
+    if (items.some(i => i.sub === subId)) {
+      if (!window.confirm("This subsection has feedback items. They will be moved to General. Continue?")) return;
+      setItems(items.map(i => i.sub === subId ? { ...i, sub: "general" } : i));
+    }
+    setSections(sections.map((s, i) => i === secIdx ? { ...s, subsections: s.subsections.filter((_, j) => j !== subIdx) } : s));
+  };
+
+  const addItem = (sub) => {
+    setItems([...items, { id: genId(), sub, label: "", explanation: "", link: "", positive: true }]);
+  };
+
+  const updateItem = (id, updated) => {
+    setItems(items.map(i => i.id === id ? updated : i));
+  };
+
+  const removeItem = (id) => {
+    if (window.confirm("Remove this feedback item?")) setItems(items.filter(i => i.id !== id));
+  };
+
+  const save = () => {
+    const cleaned = items.filter(i => i.label.trim());
+    onSave({ sections, items: cleaned, tiers });
+  };
+
+  const totalWeight = sections.reduce((s, x) => s + (x.weight || 0), 0);
+
+  return (
+    <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>{title}</div>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={save} style={{ ...pill, background: "#111827", color: "#fff" }}>Save</button>
+          <button onClick={onCancel} style={pillInactive}>Cancel</button>
+        </div>
+      </div>
+
+      {/* Tiers */}
+      <button onClick={() => setShowTiers(!showTiers)} style={{ ...pillInactive, fontSize: 11, marginBottom: 12, width: "100%" }}>
+        {showTiers ? "Hide Tiers" : "Score Tiers (" + tiers.length + ")"}
+      </button>
+      {showTiers && (
+        <div style={{ marginBottom: 16, padding: "10px 12px", background: "#f9fafb", borderRadius: 10 }}>
+          {tiers.map((t, i) => (
+            <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
+              <input value={t.label} onChange={e => setTiers(tiers.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} style={{ ...inp, flex: 1, fontSize: 13, padding: "4px 8px" }} />
+              <input type="number" value={t.min} onChange={e => setTiers(tiers.map((x, j) => j === i ? { ...x, min: parseInt(e.target.value) || 0 } : x))} style={{ ...inp, width: 45, fontSize: 13, padding: "4px 6px", textAlign: "center" }} />
+              <span style={{ fontSize: 11, color: TEXT_MUTED }}>to</span>
+              <input type="number" value={t.max} onChange={e => setTiers(tiers.map((x, j) => j === i ? { ...x, max: parseInt(e.target.value) || 0 } : x))} style={{ ...inp, width: 45, fontSize: 13, padding: "4px 6px", textAlign: "center" }} />
+              <button onClick={() => setTiers(tiers.filter((_, j) => j !== i))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#d1d5db" }}>x</button>
+            </div>
+          ))}
+          <button onClick={() => setTiers([...tiers, { label: "", min: 0, max: 0 }])} style={{ ...pillInactive, fontSize: 11, marginTop: 4 }}>+ Add Tier</button>
+        </div>
+      )}
+
+      {/* Sections with subsections and items */}
+      {sections.map((sec, secIdx) => {
+        return (
+          <div key={sec.id} style={{ marginBottom: 16, padding: "12px 14px", background: "#f9fafb", borderRadius: 12, border: "1px solid #e5e7eb" }}>
+            {/* Section header */}
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+              <input value={sec.label} onChange={e => updateSection(secIdx, "label", e.target.value)} placeholder="Section name" style={{ ...inp, flex: 1, fontSize: 14, fontWeight: 700, padding: "6px 10px" }} />
+              <span style={{ fontSize: 11, color: TEXT_MUTED, flexShrink: 0 }}>~</span>
+              <input type="number" value={sec.weight} onChange={e => updateSection(secIdx, "weight", parseInt(e.target.value) || 0)} style={{ ...inp, width: 50, fontSize: 13, padding: "6px", textAlign: "center" }} />
+              <span style={{ fontSize: 11, color: TEXT_MUTED, flexShrink: 0 }}>%</span>
+              <button onClick={() => removeSection(secIdx)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#d1d5db" }}>x</button>
+            </div>
+
+            {/* Subsections */}
+            {(sec.subsections || []).map((sub, subIdx) => {
+              const subItems = items.filter(i => i.sub === sub.id);
+              return (
+                <div key={sub.id} style={{ marginBottom: 10, marginLeft: 12, paddingLeft: 12, borderLeft: "3px solid #e5e7eb" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                    <input value={sub.label} onChange={e => updateSubsection(secIdx, subIdx, e.target.value)} placeholder="Subsection name" style={{ ...inp, flex: 1, fontSize: 13, fontWeight: 600, padding: "4px 8px" }} />
+                    <button onClick={() => addItem(sub.id)} style={{ ...pill, fontSize: 10, padding: "2px 8px", background: "#e5e7eb", color: "#4b5563" }}>+ Item</button>
+                    <button onClick={() => removeSubsection(secIdx, subIdx)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#d1d5db" }}>x</button>
+                  </div>
+                  {subItems.map(item => (
+                    <RubricItemEditor key={item.id} item={item} onChange={updated => updateItem(item.id, updated)} onRemove={() => removeItem(item.id)} allSubsections={allSubsections} />
+                  ))}
+                  {subItems.length === 0 && <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic", padding: "2px 0" }}>No items</div>}
+                </div>
+              );
+            })}
+            <button onClick={() => addSubsection(secIdx)} style={{ ...pillInactive, fontSize: 11, marginLeft: 12 }}>+ Add Subsection</button>
+          </div>
+        );
+      })}
+
+      {/* Add section */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
+        <button onClick={addSection} style={{ ...pillInactive, fontSize: 11 }}>+ Add Section</button>
+        {sections.length > 0 && (
+          <span style={{ fontSize: 11, fontWeight: 600, color: totalWeight === 100 ? GREEN : AMBER }}>
+            Total weight: {totalWeight}%
+          </span>
+        )}
+      </div>
+
+      {/* General (unsectioned) items */}
+      <div style={{ padding: "12px 14px", background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", textTransform: "uppercase", letterSpacing: "0.05em" }}>General</div>
+          <button onClick={() => addItem("general")} style={{ ...pill, fontSize: 10, padding: "2px 8px", background: "#f3f4f6", color: "#4b5563" }}>+ Add</button>
+        </div>
+        {items.filter(i => i.sub === "general").map(item => (
+          <RubricItemEditor key={item.id} item={item} onChange={updated => updateItem(item.id, updated)} onRemove={() => removeItem(item.id)} allSubsections={allSubsections} />
+        ))}
+        {items.filter(i => i.sub === "general").length === 0 && <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic" }}>No items</div>}
+      </div>
+    </div>
+  );
+}
+
+function AssignmentRubricButton({ assignmentId, data, setData }) {
+  const [editing, setEditing] = useState(false);
+  const [copyFrom, setCopyFrom] = useState(null);
+  const rubrics = data.assignmentRubrics || {};
+  const master = data.masterRubric || DEFAULT_MASTER_RUBRIC;
+  const hasRubric = !!rubrics[assignmentId];
+  const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
+
+  const deepCopy = (src) => ({
+    items: src.items.map(i => ({ ...i, id: genId() })),
+    sections: (src.sections || []).map(s => ({ ...s, id: genId(), subsections: (s.subsections || []).map(sub => ({ ...sub, id: genId() })) })),
+    tiers: [...(src.tiers || DEFAULT_MASTER_RUBRIC.tiers)],
+  });
+
+  const createFromMaster = () => {
+    // Deep copy with fresh IDs, but keep subsection references intact
+    const copy = { items: [], sections: [], tiers: [...master.tiers] };
+    const subIdMap = {};
+    (master.sections || []).forEach(sec => {
+      const newSecId = genId();
+      const newSubs = (sec.subsections || []).map(sub => {
+        const newSubId = genId();
+        subIdMap[sub.id] = newSubId;
+        return { ...sub, id: newSubId };
+      });
+      copy.sections.push({ ...sec, id: newSecId, subsections: newSubs });
+    });
+    copy.items = master.items.map(i => ({ ...i, id: genId(), sub: subIdMap[i.sub] || i.sub }));
+    setEditing(true);
+    setCopyFrom(copy);
+  };
+
+  const createFromAssignment = (srcId) => {
+    const src = rubrics[srcId];
+    if (!src) return;
+    const copy = { items: [], sections: [], tiers: [...(src.tiers || DEFAULT_MASTER_RUBRIC.tiers)] };
+    const subIdMap = {};
+    (src.sections || []).forEach(sec => {
+      const newSecId = genId();
+      const newSubs = (sec.subsections || []).map(sub => {
+        const newSubId = genId();
+        subIdMap[sub.id] = newSubId;
+        return { ...sub, id: newSubId };
+      });
+      copy.sections.push({ ...sec, id: newSecId, subsections: newSubs });
+    });
+    copy.items = src.items.map(i => ({ ...i, id: genId(), sub: subIdMap[i.sub] || i.sub }));
+    setEditing(true);
+    setCopyFrom(copy);
+  };
+
+  const editExisting = () => {
+    setEditing(true);
+    setCopyFrom(rubrics[assignmentId]);
+  };
+
+  const save = async (rubric) => {
+    const updated = { ...data, assignmentRubrics: { ...rubrics, [assignmentId]: rubric } };
+    await saveData(updated); setData(updated);
+    setEditing(false); setCopyFrom(null);
+  };
+
+  const remove = async () => {
+    if (!window.confirm("Remove rubric from this assignment?")) return;
+    const newRubrics = { ...rubrics };
+    delete newRubrics[assignmentId];
+    const updated = { ...data, assignmentRubrics: newRubrics };
+    await saveData(updated); setData(updated);
+  };
+
+  if (editing && copyFrom) {
+    return <RubricEditor rubric={copyFrom} onSave={save} onCancel={() => { setEditing(false); setCopyFrom(null); }} title="Assignment Rubric" />;
+  }
+
+  const otherAssignments = assignments.filter(a => a.id !== assignmentId && a.id !== "participation" && rubrics[a.id]);
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      {hasRubric ? (
+        <div style={{ display: "flex", gap: 4 }}>
+          <button onClick={editExisting} style={{ ...pill, background: "#eff6ff", color: "#2563eb", fontSize: 11, flex: 1 }}>Edit Rubric</button>
+          <button onClick={remove} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Remove</button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          <button onClick={createFromMaster} style={{ ...pill, background: "#f3f4f6", color: "#4b5563", fontSize: 11 }}>Create from Master</button>
+          {otherAssignments.map(a => (
+            <button key={a.id} onClick={() => createFromAssignment(a.id)} style={{ ...pill, background: "#f3f4f6", color: "#4b5563", fontSize: 11 }}>Copy from {a.name.length > 20 ? a.name.slice(0, 20) + "..." : a.name}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ─── ASSIGNMENTS TAB ─── */
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -76,6 +417,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const [editLocal, setEditLocal] = useState(null);
   const [editBlurb, setEditBlurb] = useState(false);
   const [blurbLocal, setBlurbLocal] = useState("");
+  const [editMasterRubric, setEditMasterRubric] = useState(false);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const isGuest = userName === GUEST_NAME;
@@ -147,15 +489,24 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           <div style={{ ...sectionLabel }}>Assignments & Weights</div>
           <div style={{ display: "flex", gap: 6 }}>
             {isAdmin && <button onClick={addAssignment} style={{ ...pillInactive, fontSize: 11 }}>+ Add</button>}
+            {isAdmin && <button onClick={() => setEditMasterRubric(!editMasterRubric)} style={{ ...pillInactive, fontSize: 11 }}>{editMasterRubric ? "Cancel" : "Master Rubric"}</button>}
             {isAdmin && setView && <button onClick={() => setView("grades")} style={{ ...pillInactive, fontSize: 11 }}>Gradebook</button>}
           </div>
         </div>
-        <div style={{ marginBottom: 16 }}>
-          <a href="https://camino.instructure.com/courses/117721/assignments" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
-            For detailed info, see Camino
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          </a>
-        </div>
+
+        {/* Master Rubric Editor */}
+        {isAdmin && editMasterRubric && (
+          <RubricEditor
+            rubric={data.masterRubric || DEFAULT_MASTER_RUBRIC}
+            onSave={async (rubric) => {
+              const updated = { ...data, masterRubric: rubric };
+              await saveData(updated); setData(updated);
+              setEditMasterRubric(false); showMsg("Master rubric saved");
+            }}
+            onCancel={() => setEditMasterRubric(false)}
+            title="Master Rubric Template"
+          />
+        )}
 
         {/* Student: overall grade summary */}
         {studentId && (
@@ -311,27 +662,45 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                         {isAdmin && !a.link && <span style={{ fontSize: 11, color: "#d1d5db", fontStyle: "italic" }}>Click to edit</span>}
                       </div>
                     </div>
+                    {/* Student grade inline */}
                     {studentId && a.id !== "participation" && g && (
                       <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
                         {g.score !== undefined && g.score !== "" ? (
-                          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                            <span style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>{g.score}</span>
-                            <span style={{ fontSize: 12, color: "#9ca3af" }}>/ {g.outOf || 100}</span>
+                          <div>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                              <span style={{ fontSize: 18, fontWeight: 900, color: parseFloat(g.score) === 0 ? RED : "#111827" }}>{g.score}</span>
+                              <span style={{ fontSize: 12, color: "#9ca3af" }}>/ {g.outOf || 100}</span>
+                            </div>
+                            {parseFloat(g.score) === 0 && (
+                              <div style={{ fontSize: 12, color: RED, marginTop: 4, fontWeight: 600 }}>This assignment needs attention. Complete all required components and submit, then request a regrade.</div>
+                            )}
                           </div>
                         ) : (
                           <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic" }}>Not graded yet</div>
                         )}
                         {g.comment && <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4, padding: "6px 8px", background: "#f8fafc", borderRadius: 6, lineHeight: 1.4 }}>{g.comment}</div>}
+                        {/* Regrade request button: only show for graded assignments */}
+                        {!isAdmin && g.score !== undefined && g.score !== "" && (
+                          <RegradeRequest assignmentId={a.id} data={data} setData={setData} studentId={studentId} />
+                        )}
                       </div>
                     )}
+                    {/* Student submission */}
                     {studentId && !isAdmin && a.id !== "participation" && (
                       <StudentSubmission assignmentId={a.id} data={data} setData={setData} studentId={studentId} existing={mySub} />
                     )}
+                    {/* Admin submissions view */}
                     {isAdmin && a.id !== "participation" && (
                       <div onClick={e => e.stopPropagation()}>
                         <TogglePanel label="View Submissions" count={data.students.filter(s => s.name !== ADMIN_NAME && submissions[s.id + "-" + a.id]).length}>
                           <AdminSubmissions assignmentId={a.id} data={data} setData={setData} />
                         </TogglePanel>
+                      </div>
+                    )}
+                    {/* Assignment rubric */}
+                    {isAdmin && a.id !== "participation" && (
+                      <div onClick={e => e.stopPropagation()}>
+                        <AssignmentRubricButton assignmentId={a.id} data={data} setData={setData} />
                       </div>
                     )}
                   </div>
@@ -546,14 +915,327 @@ function RegradeRequest({ assignmentId, data, setData, studentId }) {
   );
 }
 
+/* --- QUICK GRADE --- */
+function QuickGrade({ assignmentId, studentId, studentName, data, setData, onClose }) {
+  const rubric = (data.assignmentRubrics || {})[assignmentId];
+  const sub = (data.submissions || {})[studentId + "-" + assignmentId];
+  const existingGrade = (data.grades || {})[studentId + "-" + assignmentId] || {};
+
+  const [selected, setSelected] = useState(new Set());
+  const [customNote, setCustomNote] = useState("");
+  const [generatedComment, setGeneratedComment] = useState("");
+  const [suggestedTier, setSuggestedTier] = useState(null);
+  const [selectedTier, setSelectedTier] = useState(null);
+  const [score, setScore] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState("select"); // "select" | "review"
+  const [addingItem, setAddingItem] = useState(false);
+  const [newItemLabel, setNewItemLabel] = useState("");
+  const [newItemExplanation, setNewItemExplanation] = useState("");
+  const [newItemPositive, setNewItemPositive] = useState(false);
+  const [newItemSub, setNewItemSub] = useState("general");
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  if (!rubric) return null;
+
+  const tiers = rubric.tiers || [];
+  const allItems = rubric.items || [];
+  const sections = rubric.sections || [];
+
+  // Flatten subsections for the new item dropdown
+  const allSubsections = [];
+  sections.forEach(sec => {
+    (sec.subsections || []).forEach(sub => {
+      allSubsections.push({ id: sub.id, label: sec.label + " > " + sub.label });
+    });
+  });
+
+  const toggle = (id) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelected(next);
+  };
+
+  const saveNewItemToRubric = async () => {
+    if (!newItemLabel.trim()) return;
+    const newItem = { id: genId(), sub: newItemSub, label: newItemLabel.trim(), explanation: newItemExplanation.trim(), link: "", positive: newItemPositive };
+    const rubrics = data.assignmentRubrics || {};
+    const current = rubrics[assignmentId] || rubric;
+    const updatedRubric = { ...current, items: [...(current.items || []), newItem] };
+    const updated = { ...data, assignmentRubrics: { ...rubrics, [assignmentId]: updatedRubric } };
+    await saveData(updated); setData(updated);
+    // Auto-select the new item
+    const next = new Set(selected);
+    next.add(newItem.id);
+    setSelected(next);
+    setNewItemLabel(""); setNewItemExplanation(""); setNewItemPositive(false); setNewItemSub("general"); setAddingItem(false);
+    showMsg("Added to rubric");
+  };
+
+  const generateFeedback = async () => {
+    if (selected.size === 0) { showMsg("Select at least one feedback item"); return; }
+    setLoading(true);
+    try {
+      const selectedItems = allItems.filter(i => selected.has(i.id));
+      const positives = selectedItems.filter(i => i.positive);
+      const negatives = selectedItems.filter(i => !i.positive);
+
+      // Build section context for the AI
+      const sectionInfo = sections.map(s => {
+        const subIds = (s.subsections || []).map(sub => sub.id);
+        const sectionItems = selectedItems.filter(i => subIds.includes(i.sub));
+        return { label: s.label, weight: s.weight, positiveCount: sectionItems.filter(i => i.positive).length, negativeCount: sectionItems.filter(i => !i.positive).length };
+      }).filter(s => s.positiveCount + s.negativeCount > 0);
+
+      const generalItems = selectedItems.filter(i => i.sub === "general");
+
+      const tierList = tiers.map(t => t.label + " (" + t.min + "-" + t.max + ")").join(", ");
+
+      const prompt = `You are writing brief grading feedback for a college professor. The professor's style is casual, warm, and direct. Short sentences. No flowery language. No words like "excellence," "exemplary," "substantive," "demonstrates," "genuinely," "meaningful," "exceptional." Write like a real person talking to a student they like.
+
+Rules:
+- Keep it SHORT. 2-4 short paragraphs max. Each paragraph is 1-3 sentences.
+- Plain text only. No bullet points, no numbered lists, no markdown, no bold headers.
+- Lead with the positive stuff, then areas for improvement.
+- Address the student as "you"
+- Use the explanation text from each feedback item but rewrite it to be casual and concise. Don't just copy it verbatim.
+- If there are links, include them naturally.
+- No filler phrases like "Overall," "In conclusion," "This assignment," "Moving forward." Just say the thing.
+- Sound like a person, not a grading rubric.
+
+Good example of the right tone: "Nice work on the interview guide. Your questions are thoughtful and well-organized. The summary is clear and I can tell you actually engaged with the conversation. One thing to work on: include more specific details from the interview itself. I want to hear what they actually said, not just general takeaways."
+
+${customNote ? "Include this personal note at the start (keep it natural): " + customNote : ""}
+
+Sections and their approximate weights:
+${sectionInfo.map(s => s.label + " (~" + s.weight + "%): " + s.positiveCount + " positive, " + s.negativeCount + " negative").join("\n")}
+${generalItems.length > 0 ? "General items: " + generalItems.length : ""}
+
+Selected positive feedback:
+${positives.map(i => "- " + i.label + ": " + i.explanation + (i.link ? " [Link: " + i.link + "]" : "")).join("\n") || "(none)"}
+
+Selected negative feedback:
+${negatives.map(i => "- " + i.label + ": " + i.explanation + (i.link ? " [Link: " + i.link + "]" : "")).join("\n") || "(none)"}
+
+Available tiers: ${tierList}
+
+Based on the balance of positive and negative feedback across the weighted sections, suggest the most appropriate tier. Respond with ONLY a JSON object (no markdown, no backticks):
+{"tier": "tier label", "comment": "your full comment to the student"}`;
+
+      const response = await fetch("/api/generate-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("API error:", response.status, errText);
+        showMsg("Error: " + response.status + ". Check console.");
+        setLoading(false);
+        return;
+      }
+
+      const result = await response.json();
+      const text = (result.content || []).map(c => c.text || "").join("");
+      const clean = text.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+
+      setGeneratedComment(parsed.comment || "");
+      const tierMatch = tiers.find(t => t.label.toLowerCase() === (parsed.tier || "").toLowerCase());
+      if (tierMatch) {
+        setSuggestedTier(tierMatch.label);
+        setSelectedTier(tierMatch.label);
+        setScore(String(Math.round((tierMatch.min + tierMatch.max) / 2)));
+      }
+      setStep("review");
+    } catch (err) {
+      console.error("Quick Grade AI error:", err);
+      showMsg("Error generating feedback. Try again.");
+    }
+    setLoading(false);
+  };
+
+  const selectTier = (tierLabel) => {
+    setSelectedTier(tierLabel);
+    const t = tiers.find(x => x.label === tierLabel);
+    if (t) setScore(String(Math.round((t.min + t.max) / 2)));
+  };
+
+  const saveQuickGrade = async () => {
+    if (!score) { showMsg("Enter a score"); return; }
+    const key = studentId + "-" + assignmentId;
+    const grades = data.grades || {};
+    const existing = grades[key] || {};
+    const newGrade = { ...existing, score: parseFloat(score), outOf: 100, comment: generatedComment, gradedTs: Date.now() };
+    const regradeRequests = { ...(data.regradeRequests || {}) };
+    delete regradeRequests[key];
+    const gradeNotifications = { ...(data.gradeNotifications || {}), [key]: { ts: Date.now() } };
+    const updated = { ...data, grades: { ...grades, [key]: newGrade }, regradeRequests, gradeNotifications };
+    await saveData(updated); setData(updated);
+    showMsg("Grade saved");
+    onClose();
+  };
+
+  // Render subsection items as toggle buttons
+  const renderSubItems = (subId) => {
+    const subItems = allItems.filter(i => i.sub === subId);
+    if (subItems.length === 0) return <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic", padding: "2px 0" }}>No items</div>;
+    return subItems.map(item => {
+      const isOn = selected.has(item.id);
+      const bg = isOn ? (item.positive ? GREEN : RED) : (item.positive ? "#ecfdf5" : "#fef2f2");
+      const color = isOn ? "#fff" : (item.positive ? "#065f46" : "#991b1b");
+      const border = isOn ? "transparent" : (item.positive ? "#a7f3d0" : "#fecaca");
+      return (
+        <button key={item.id} onClick={() => toggle(item.id)} style={{ ...pill, padding: "6px 12px", fontSize: 12, background: bg, color, border: "1.5px solid " + border, margin: "2px 4px 2px 0" }}>
+          {item.positive ? "+" : "-"} {item.label}
+        </button>
+      );
+    });
+  };
+
+  return (
+    <div style={{ ...crd, padding: 16, marginBottom: 12, border: "2px solid " + ACCENT }}>
+      {msg && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "#1e293b", color: "#fff", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, zIndex: 999 }}>{msg}</div>}
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>Quick Grade: {studentName}</div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{(data.assignments || []).find(a => a.id === assignmentId)?.name}</div>
+        </div>
+        <button onClick={onClose} style={pillInactive}>Close</button>
+      </div>
+
+      {/* Submission link */}
+      {sub && (
+        <div style={{ padding: "8px 10px", background: "#f9fafb", borderRadius: 8, marginBottom: 12 }}>
+          {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, fontWeight: 500 }}>View Submission</a>}
+          {sub.notes && <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>"{sub.notes}"</div>}
+          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>Submitted {new Date(sub.ts).toLocaleString()}</div>
+        </div>
+      )}
+
+      {step === "select" && (
+        <div>
+          {/* Free form instructions to AI */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Say something to the student (optional)</div>
+            <textarea value={customNote} onChange={e => setCustomNote(e.target.value)} placeholder={"e.g. \"Let them know I'm here if they have questions\" or \"Great job picking this person\""} rows={2} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical" }} />
+            <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>This gets woven into the comment naturally. Say it however you want.</div>
+          </div>
+
+          {/* Sections with subsections and items */}
+          {sections.map(sec => (
+            <div key={sec.id} style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: "#111827", marginBottom: 6 }}>{sec.label} <span style={{ fontWeight: 500, color: TEXT_MUTED }}>(~{sec.weight}%)</span></div>
+              {(sec.subsections || []).map(sub => (
+                <div key={sub.id} style={{ marginBottom: 8, marginLeft: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{sub.label}</div>
+                  <div style={{ display: "flex", flexWrap: "wrap" }}>
+                    {renderSubItems(sub.id)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+
+          {/* General items */}
+          {allItems.filter(i => i.sub === "general").length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: "#111827", marginBottom: 6 }}>General</div>
+              <div style={{ display: "flex", flexWrap: "wrap" }}>
+                {renderSubItems("general")}
+              </div>
+            </div>
+          )}
+
+          {/* Add new item to rubric */}
+          {!addingItem ? (
+            <button onClick={() => setAddingItem(true)} style={{ ...pillInactive, fontSize: 11, marginBottom: 12 }}>+ Add new feedback item to rubric</button>
+          ) : (
+            <div style={{ padding: "10px 12px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 6 }}>New rubric item (saves for all students)</div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                <button onClick={() => setNewItemPositive(!newItemPositive)} style={{ ...pill, padding: "4px 10px", fontSize: 11, background: newItemPositive ? GREEN : RED, color: "#fff", flexShrink: 0 }}>{newItemPositive ? "+ Positive" : "- Negative"}</button>
+                <select value={newItemSub} onChange={e => setNewItemSub(e.target.value)} style={{ ...sel, fontSize: 12, padding: "4px 8px" }}>
+                  <option value="general">General</option>
+                  {allSubsections.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+              </div>
+              <input value={newItemLabel} onChange={e => setNewItemLabel(e.target.value)} placeholder="Button label (short)" style={{ ...inp, fontSize: 13, padding: "6px 8px", marginBottom: 4 }} />
+              <textarea value={newItemExplanation} onChange={e => setNewItemExplanation(e.target.value)} placeholder="Explanation for student..." rows={2} style={{ ...inp, fontSize: 13, padding: "6px 8px", resize: "vertical", marginBottom: 6 }} />
+              <div style={{ display: "flex", gap: 4 }}>
+                <button onClick={saveNewItemToRubric} disabled={!newItemLabel.trim()} style={{ ...pill, background: newItemLabel.trim() ? "#111827" : "#d1d5db", color: "#fff", flex: 1 }}>Save to Rubric</button>
+                <button onClick={() => { setAddingItem(false); setNewItemLabel(""); setNewItemExplanation(""); }} style={pillInactive}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button onClick={generateFeedback} disabled={loading || selected.size === 0} style={{ ...pill, background: selected.size > 0 ? "#111827" : "#d1d5db", color: "#fff", padding: "10px 20px", fontSize: 14 }}>
+              {loading ? "Generating..." : "Generate Feedback (" + selected.size + " selected)"}
+            </button>
+            <span style={{ fontSize: 12, color: TEXT_MUTED }}>{selected.size} item{selected.size !== 1 ? "s" : ""} selected</span>
+          </div>
+        </div>
+      )}
+
+      {step === "review" && (
+        <div>
+          {/* Tier selection */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 6 }}>
+              Tier {suggestedTier ? "(AI suggested: " + suggestedTier + ")" : ""}
+            </div>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              {tiers.map(t => (
+                <button key={t.label} onClick={() => selectTier(t.label)} style={{ ...pill, padding: "8px 14px", fontSize: 12, background: selectedTier === t.label ? "#111827" : "#f3f4f6", color: selectedTier === t.label ? "#fff" : "#4b5563", border: suggestedTier === t.label && selectedTier !== t.label ? "2px solid " + ACCENT : "2px solid transparent" }}>
+                  {t.label} ({t.min}-{t.max})
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Score */}
+          <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase" }}>Score</div>
+            <input type="number" value={score} onChange={e => setScore(e.target.value)} style={{ ...inp, width: 70, fontSize: 16, fontWeight: 900, padding: "6px 10px", textAlign: "center" }} />
+            <span style={{ fontSize: 13, color: TEXT_MUTED }}>/ 100</span>
+            {selectedTier && (() => {
+              const t = tiers.find(x => x.label === selectedTier);
+              const s = parseFloat(score);
+              if (t && (s < t.min || s > t.max)) return <span style={{ fontSize: 11, color: AMBER, fontWeight: 600 }}>Outside {selectedTier} range ({t.min}-{t.max})</span>;
+              return null;
+            })()}
+          </div>
+
+          {/* Comment preview */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Comment (editable)</div>
+            <textarea value={generatedComment} onChange={e => setGeneratedComment(e.target.value)} rows={8} style={{ ...inp, fontSize: 13, padding: "10px 12px", resize: "vertical", lineHeight: 1.6 }} />
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={saveQuickGrade} style={{ ...pill, background: GREEN, color: "#fff", padding: "10px 20px", fontSize: 14, flex: 1 }}>Save Grade</button>
+            <button onClick={() => setStep("select")} style={{ ...pillInactive, padding: "10px 16px" }}>Back</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* --- ADMIN SUBMISSIONS VIEW --- */
 function AdminSubmissions({ assignmentId, data, setData }) {
   const submissions = data.submissions || {};
   const grades = data.grades || {};
   const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME).sort(lastSortObj);
   const [editGrades, setEditGrades] = useState({});
+  const [quickGradeStudent, setQuickGradeStudent] = useState(null);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+  const hasRubric = !!(data.assignmentRubrics || {})[assignmentId];
 
   const saveGrade = async (studentId) => {
     const eg = editGrades[studentId] || {};
@@ -566,8 +1248,10 @@ function AdminSubmissions({ assignmentId, data, setData }) {
       comment: eg.comment !== undefined ? eg.comment : (existing.comment || ""),
       gradedTs: Date.now(),
     };
+    // Auto-clear regrade request for this student/assignment
     const regradeRequests = { ...(data.regradeRequests || {}) };
     delete regradeRequests[key];
+    // Create grade notification
     const gradeNotifications = { ...(data.gradeNotifications || {}), [key]: { ts: Date.now() } };
     const updated = {
       ...data,
@@ -638,7 +1322,15 @@ function AdminSubmissions({ assignmentId, data, setData }) {
                 </div>
               </div>
             ) : (
-              <button onClick={() => startGradeEdit(s.id)} style={{ ...pillInactive, fontSize: 12, marginTop: 6, width: "100%" }}>Grade</button>
+              <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                <button onClick={() => startGradeEdit(s.id)} style={{ ...pillInactive, fontSize: 12, flex: 1 }}>Grade</button>
+                {hasRubric && <button onClick={() => setQuickGradeStudent(quickGradeStudent === s.id ? null : s.id)} style={{ ...pill, fontSize: 12, background: quickGradeStudent === s.id ? ACCENT : "#eff6ff", color: quickGradeStudent === s.id ? "#fff" : ACCENT }}>Quick Grade</button>}
+              </div>
+            )}
+            {quickGradeStudent === s.id && (
+              <div style={{ marginTop: 8 }}>
+                <QuickGrade assignmentId={assignmentId} studentId={s.id} studentName={s.name} data={data} setData={setData} onClose={() => setQuickGradeStudent(null)} />
+              </div>
             )}
           </div>
         );
@@ -654,9 +1346,10 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
   const [selStudent, setSelStudent] = useState(null);
   const [editingCell, setEditingCell] = useState(null);
   const [reorderOpen, setReorderOpen] = useState(false);
-  const [reboundModal, setReboundModal] = useState(null);
-  const [highlight, setHighlight] = useState(null);
-  const [activityFilter, setActivityFilter] = useState("all");
+  const [reboundModal, setReboundModal] = useState(null); // { type, week } or null
+  const [activityFilter, setActivityFilter] = useState("all"); // "all" | "game" | "tot" | "fb"
+  const [highlight, setHighlight] = useState(null); // "zero" | "missing" | "regrade" | "late" | null
+  const [quickGradeId, setQuickGradeId] = useState(null); // "studentId-assignmentId" or null
   const isGuest = userName === GUEST_NAME;
 
   const student = isAdmin ? (selStudent ? data.students.find(s => s.id === selStudent) : null) : data.students.find(s => s.name === userName);
@@ -667,6 +1360,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     const existing = grades[key] || {};
     const newGrade = { ...existing, [field]: value };
     let extra = {};
+    // When updating score, clear regrade request and create notification
     if (field === "score") {
       newGrade.gradedTs = Date.now();
       const regradeRequests = { ...(data.regradeRequests || {}) };
@@ -728,6 +1422,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     const weeklyGames = data.weeklyGames || {};
     const reboundGrades = data.reboundGrades || {};
 
+    // Weekly games: recompute grade points from responses, then apply any rebound overrides
     let gameGradeEarned = 0;
     let gameGradePossible = 0;
     const scoredGames = Object.keys(weeklyGames).filter(w => weeklyGames[w]?.scored);
@@ -743,31 +1438,40 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
           original += catPts;
         }
       });
+      // Apply rebound override if one exists for this student/week
       const rg = reboundGrades[sid + "-game-" + w];
       let earned = original;
       if (rg && typeof rg.gradePoints === "number") {
-        let cap;
-        if (rg.type === "absence_override") cap = 60;
-        else if (original < 50) cap = 60;
-        else if (original <= 65) cap = 70;
-        else if (original <= 79) cap = 80;
-        else cap = 100;
-        const capped = Math.min(rg.gradePoints, cap);
-        earned = Math.max(original, capped);
+        if (rg.type === "makeup") {
+          earned = Math.max(original, rg.gradePoints);
+        } else {
+          // Cap based on original grade percentage (or lowest tier for absence override)
+          let cap;
+          if (rg.type === "absence_override") cap = 60;
+          else if (original < 50) cap = 60;
+          else if (original <= 65) cap = 70;
+          else if (original <= 79) cap = 80;
+          else cap = 100;
+          const capped = Math.min(rg.gradePoints, cap);
+          earned = Math.max(original, capped);
+        }
       }
       gameGradeEarned += earned;
     });
 
+    // This or That: from log
     const totEntries = log.filter(e => e.studentId === sid && (e.source || "").startsWith("ToT Wk"));
     const totEarned = totEntries.reduce((s, e) => s + e.amount, 0);
     const scoredToTs = Object.keys(data.weeklyToT || {}).filter(w => (data.weeklyToT[w] || {}).scored).length;
     const totPossible = scoredToTs * 20;
 
+    // Fishbowl: from log (main fishbowl entries, not star bonus)
     const fbEntries = log.filter(e => e.studentId === sid && (e.source || "").startsWith("Fishbowl Wk"));
     const fbEarned = fbEntries.reduce((s, e) => s + e.amount, 0);
     const confirmedFishbowls = Object.keys(data.weeklyFishbowl || {}).filter(w => (data.weeklyFishbowl[w] || {}).confirmed).length;
     const fbPossible = confirmedFishbowls * 20;
 
+    // Around the Horn / PTI: from log (bonus, not in denominator)
     const athEntries = log.filter(e => e.studentId === sid && ((e.source || "") === "Around the Horn" || (e.source || "") === "PTI"));
     const athEarned = athEntries.reduce((s, e) => s + e.amount, 0);
 
@@ -793,6 +1497,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
 
   // ─── HELPERS FOR NEW GRADEBOOK ───
 
+  // Returns array of week numbers (sorted) where any activity of given type was scored
   const getScoredWeeks = (type) => {
     const store = type === "game" ? data.weeklyGames : type === "tot" ? data.weeklyToT : data.weeklyFishbowl;
     const weeks = Object.keys(store || {})
@@ -803,6 +1508,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     return weeks;
   };
 
+  // Per-week game breakdown for one student
   const getWeeklyGameBreakdown = (sid) => {
     const weeklyGames = data.weeklyGames || {};
     const reboundGrades = data.reboundGrades || {};
@@ -824,12 +1530,17 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
       const rg = reboundGrades[sid + "-game-" + w];
       let cap = null, applied = null;
       if (rg && typeof rg.gradePoints === "number") {
-        if (rg.type === "absence_override") cap = 60;
-        else if (original < 50) cap = 60;
-        else if (original <= 65) cap = 70;
-        else if (original <= 79) cap = 80;
-        else cap = 100;
-        applied = Math.max(original, Math.min(rg.gradePoints, cap));
+        if (rg.type === "makeup") {
+          cap = 100;
+          applied = Math.max(original, rg.gradePoints);
+        } else {
+          if (rg.type === "absence_override") cap = 60;
+          else if (original < 50) cap = 60;
+          else if (original <= 65) cap = 70;
+          else if (original <= 79) cap = 80;
+          else cap = 100;
+          applied = Math.max(original, Math.min(rg.gradePoints, cap));
+        }
       }
       return {
         week: w,
@@ -844,6 +1555,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     });
   };
 
+  // Per-week ToT breakdown
   const getWeeklyToTBreakdown = (sid) => {
     const tots = data.weeklyToT || {};
     const weeks = getScoredWeeks("tot");
@@ -860,6 +1572,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     });
   };
 
+  // Per-week Fishbowl breakdown
   const getWeeklyFishbowlBreakdown = (sid) => {
     const fbs = data.weeklyFishbowl || {};
     const weeks = getScoredWeeks("fishbowl");
@@ -870,6 +1583,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     });
   };
 
+  // Counters for one student: planned absences, unannounced absences, rebounds completed
   const getCounters = (sid) => {
     const rebounds = data.rebounds || {};
     const reboundGrades = data.reboundGrades || {};
@@ -884,12 +1598,14 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     return { planned, unannounced, rebounds: reboundCount };
   };
 
+  // ATH/PTI total for one student
   const getATHTotal = (sid) => {
     return (data.log || [])
       .filter(e => e.studentId === sid && (e.source === "Around the Horn" || e.source === "PTI"))
       .reduce((s, e) => s + e.amount, 0);
   };
 
+  // Top 5 student IDs by leaderboard (game points), excluding admin and test student
   const getAZone = () => {
     const ranked = data.students
       .filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis")
@@ -898,6 +1614,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     return new Set(ranked.slice(0, 5).map(s => s.id));
   };
 
+  // Game leaderboard rank for one student (1-indexed)
   const getRank = (sid) => {
     const ranked = data.students
       .filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis")
@@ -907,11 +1624,12 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     return idx === -1 ? null : idx + 1;
   };
 
+  // Color logic for weekly cells
   const cellColor = (pct, hasRebound) => {
-    if (hasRebound) return { bg: "#dbeafe", color: "#1e40af" };
-    if (pct === null || pct === 0) return { bg: "#f3f4f6", color: "#9ca3af" };
-    if (pct >= 80) return { bg: "#dcfce7", color: "#166534" };
-    return { bg: "#fef3c7", color: "#92400e" };
+    if (hasRebound) return { bg: "#dbeafe", color: "#1e40af" }; // blue
+    if (pct === null || pct === 0) return { bg: "#f3f4f6", color: "#9ca3af" }; // gray
+    if (pct >= 80) return { bg: "#dcfce7", color: "#166534" }; // green
+    return { bg: "#fef3c7", color: "#92400e" }; // yellow
   };
 
 
@@ -944,6 +1662,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                   </div>
                   <div style={{ fontSize: 12, color: "#9ca3af" }}>{a.weight}% {a.due ? "/ Due " + a.due : ""}</div>
                 </div>
+                {/* Submission info */}
                 {sub && (
                   <div style={{ marginBottom: 8, padding: "6px 10px", background: "#f9fafb", borderRadius: 8 }}>
                     {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 2 }}>View Submission</a>}
@@ -963,6 +1682,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                       <input type="number" value={g.outOf ?? 100} onChange={e => updateGrade(sid, a.id, "outOf", e.target.value)} placeholder="100" style={{ ...inp, width: 60, padding: "6px 10px", fontSize: 13 }} />
                       <input value={g.comment || ""} onChange={e => updateGrade(sid, a.id, "comment", e.target.value)} placeholder="Comment..." style={{ ...inp, flex: 1, padding: "6px 10px", fontSize: 13 }} />
                     </div>
+                    {/* Regrade request from student */}
                     {(() => {
                       const rr = (data.regradeRequests || {})[sid + "-" + a.id];
                       if (!rr) return null;
@@ -981,6 +1701,17 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                         </div>
                       );
                     })()}
+                    {/* Quick Grade button */}
+                    {!!(data.assignmentRubrics || {})[a.id] && (
+                      <button onClick={() => setQuickGradeId(quickGradeId === sid + "-" + a.id ? null : sid + "-" + a.id)} style={{ ...pill, fontSize: 11, marginTop: 6, background: quickGradeId === sid + "-" + a.id ? ACCENT : "#eff6ff", color: quickGradeId === sid + "-" + a.id ? "#fff" : ACCENT, width: "100%" }}>
+                        {quickGradeId === sid + "-" + a.id ? "Close Quick Grade" : "Quick Grade"}
+                      </button>
+                    )}
+                    {quickGradeId === sid + "-" + a.id && (
+                      <div style={{ marginTop: 8 }}>
+                        <QuickGrade assignmentId={a.id} studentId={sid} studentName={student?.name || ""} data={data} setData={setData} onClose={() => setQuickGradeId(null)} />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div>
@@ -1008,21 +1739,22 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {gameWeeks.map(g => {
                 const final = g.applied !== null ? g.applied : g.original;
-                const status = !g.answered ? "absent" : g.applied !== null ? "rebound" : final >= 80 ? "ok" : "low";
+                const hasMakeup = g.rebound?.type === "makeup";
+                const status = (!g.answered && !hasMakeup) ? "absent" : g.applied !== null ? "rebound" : final >= 80 ? "ok" : "low";
                 return (
                   <div key={g.week} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 8, background: status === "rebound" ? "#dbeafe" : status === "ok" ? "#f0fdf4" : status === "absent" ? "#fef2f2" : "#fffbeb" }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Week {g.week}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>
-                      {!g.answered ? (
+                      {!g.answered && !hasMakeup ? (
                         <span style={{ color: "#dc2626", fontStyle: "italic" }}>Absent</span>
-                      ) : (
+                      ) : !hasMakeup ? (
                         <span style={{ color: "#6b7280" }}>{g.correctCount}/{g.totalQs} correct</span>
-                      )}
+                      ) : null}
                       {g.applied !== null ? (
                         <span style={{ fontWeight: 700 }}>
-                          <span style={{ color: "#9ca3af", textDecoration: "line-through", fontWeight: 500, marginRight: 6 }}>{g.original}</span>
+                          {!hasMakeup && <span style={{ color: "#9ca3af", textDecoration: "line-through", fontWeight: 500, marginRight: 6 }}>{g.original}</span>}
                           <span style={{ color: "#1e40af" }}>{g.applied}/100</span>
-                          <span style={{ fontSize: 11, color: "#6b7280", marginLeft: 6, fontWeight: 500 }}>({g.rebound.type === "absence_override" ? "Override" : "Rebound"})</span>
+                          <span style={{ fontSize: 11, color: "#6b7280", marginLeft: 6, fontWeight: 500 }}>({g.rebound.type === "makeup" ? "Makeup" : g.rebound.type === "absence_override" ? "Override" : "Rebound"})</span>
                         </span>
                       ) : (
                         <span style={{ fontWeight: 700, color: status === "ok" ? "#166534" : status === "absent" ? "#9ca3af" : "#92400e" }}>{g.original}/100</span>
@@ -1075,7 +1807,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, borderBottom: "1px solid #f3f4f6" }}>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Weekly Game (Grade pts)</div>
-                <div style={{ fontSize: 11, color: "#9ca3af" }}>Recomputed from responses / On Reading 15pts, Extra 2.5pts</div>
+                <div style={{ fontSize: 11, color: "#9ca3af" }}>Recomputed from responses / On Topic 15pts, Sports World 2.5pts</div>
               </div>
               <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{p.gameGradeEarned}<span style={{ fontSize: 12, color: "#9ca3af" }}> / {p.gameGradePossible}</span></div>
             </div>
@@ -1118,7 +1850,36 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
   if (isAdmin) {
     const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis").sort(lastSortObj);
     const gradeAssignments = assignments.filter(a => a.id !== "participation");
+    const submissions = data.submissions || {};
+    const regradeRequests = data.regradeRequests || {};
 
+    // Dashboard counts
+    let zeroCount = 0, missingCount = 0, regradeCount = 0, lateUngradedCount = 0;
+    const zeroCells = new Set();
+    const missingCells = new Set();
+    const regradeCells = new Set();
+    const lateCells = new Set();
+
+    sorted.forEach(s => {
+      gradeAssignments.forEach(a => {
+        const key = s.id + "-" + a.id;
+        const g = grades[key] || {};
+        const sub = submissions[key];
+        const dueDate = parseDueDate(a.due);
+        const isPastDue = dueDate && Date.now() > dueDate.getTime();
+        const hasGrade = g.score !== undefined && g.score !== "";
+        const isZero = hasGrade && parseFloat(g.score) === 0;
+        const isLate = sub && dueDate && sub.ts > dueDate.getTime();
+        const hasRegrade = !!regradeRequests[key];
+
+        if (isZero) { zeroCount++; zeroCells.add(key); }
+        if (isPastDue && !sub && !hasGrade) { missingCount++; missingCells.add(key); }
+        if (hasRegrade) { regradeCount++; regradeCells.add(key); }
+        if (isLate && !hasGrade) { lateUngradedCount++; lateCells.add(key); }
+      });
+    });
+
+    // Build column order. data.assignmentOrder is an array of column ids covering named assignments + meta columns.
     const META_COLS = [
       { id: "__inclass", label: "In-Class", sublabel: "25%" },
       { id: "__ath", label: "ATH", sublabel: "Bonus" },
@@ -1148,34 +1909,6 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
       return a ? { id, label: a.name, sublabel: a.weight + "%" } : null;
     };
 
-    const submissions = data.submissions || {};
-    const regradeRequests = data.regradeRequests || {};
-
-    let zeroCount = 0, missingCount = 0, regradeCount = 0, lateUngradedCount = 0;
-    const zeroCells = new Set();
-    const missingCells = new Set();
-    const regradeCells = new Set();
-    const lateCells = new Set();
-
-    sorted.forEach(s => {
-      gradeAssignments.forEach(a => {
-        const key = s.id + "-" + a.id;
-        const g = grades[key] || {};
-        const sub = submissions[key];
-        const dueDate = parseDueDate(a.due);
-        const isPastDue = dueDate && Date.now() > dueDate.getTime();
-        const hasGrade = g.score !== undefined && g.score !== "";
-        const isZero = hasGrade && parseFloat(g.score) === 0;
-        const isLate = sub && dueDate && sub.ts > dueDate.getTime();
-        const hasRegrade = !!regradeRequests[key];
-
-        if (isZero) { zeroCount++; zeroCells.add(key); }
-        if (isPastDue && !sub && !hasGrade) { missingCount++; missingCells.add(key); }
-        if (hasRegrade) { regradeCount++; regradeCells.add(key); }
-        if (isLate && !hasGrade) { lateUngradedCount++; lateCells.add(key); }
-      });
-    });
-
     const aZone = getAZone();
     const gameWeeksAll = getScoredWeeks("game");
     const totWeeksAll = getScoredWeeks("tot");
@@ -1195,6 +1928,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
             </div>
           </div>
 
+          {/* Dashboard summary */}
           {(zeroCount > 0 || missingCount > 0 || regradeCount > 0 || lateUngradedCount > 0) && (
             <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
               {regradeCount > 0 && (
@@ -1307,6 +2041,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                         </div>
                       </td>
                       {colOrder.map(id => {
+                        // Meta cells
                         if (id === "__inclass") {
                           return (
                             <td key={id} style={{ textAlign: "center", padding: "4px 6px" }}>
@@ -1340,6 +2075,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                             </td>
                           );
                         }
+                        // Named assignment cell (editable)
                         const cellKey = s.id + "-" + id;
                         const g = grades[cellKey] || {};
                         const isEditing = editingCell === cellKey;
@@ -1364,7 +2100,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                             {isEditing ? (
                               <input autoFocus type="number" value={score ?? ""} onChange={e => updateGrade(s.id, id, "score", e.target.value)} onBlur={() => setEditingCell(null)} onKeyDown={e => e.key === "Enter" && setEditingCell(null)} style={{ ...inp, width: 48, padding: "4px 4px", fontSize: 12, textAlign: "center" }} />
                             ) : (
-                              <button onClick={(e) => { e.stopPropagation(); setEditingCell(cellKey); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 13, fontWeight: 700, padding: "4px 8px", borderRadius: 6, color: hasGrade ? (parseFloat(score) === 0 ? RED : "#111827") : "#d1d5db", minWidth: 40, position: "relative" }}>
+                              <button onClick={(e) => { e.stopPropagation(); setEditingCell(cellKey); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 13, fontWeight: 700, padding: "4px 8px", borderRadius: 6, color: score !== undefined && score !== "" ? (parseFloat(score) === 0 ? RED : "#111827") : "#d1d5db", minWidth: 40, position: "relative" }}>
                                 {hasGrade ? score + "/" + outOf : missingCells.has(cellKey) ? "miss" : hasSubmission ? "\uD83D\uDCC4" : "-"}
                                 {hasRegrade && <sup style={{ fontSize: 9, marginLeft: 2, color: AMBER }}>RG</sup>}
                               </button>
@@ -1372,19 +2108,22 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                           </td>
                         );
                       })}
+                      {/* Per-week game cells */}
                       {(activityFilter === "all" || activityFilter === "game") && gameBd.map(b => {
                         const final = b.applied !== null ? b.applied : b.original;
-                        const pct = b.answered ? final : null;
+                        const hasMakeup = b.rebound?.type === "makeup";
+                        const pct = (b.answered || hasMakeup) ? final : null;
                         const c = cellColor(pct, b.applied !== null);
                         return (
                           <td key={"g-" + b.week} style={{ textAlign: "center", padding: "2px 4px" }}>
                             <button onClick={(e) => { e.stopPropagation(); setReboundModal({ type: "game", week: b.week }); }} style={{ background: c.bg, color: c.color, border: "none", borderRadius: 6, padding: "6px 4px", fontSize: 12, fontWeight: 700, fontFamily: F, cursor: "pointer", fontVariantNumeric: "tabular-nums", minWidth: 42 }}>
-                              {!b.answered ? "abs" : final}
-                              {b.applied !== null && <sup style={{ fontSize: 9, marginLeft: 2 }}>R</sup>}
+                              {!b.answered && !hasMakeup ? "abs" : final}
+                              {b.applied !== null && <sup style={{ fontSize: 9, marginLeft: 2 }}>{hasMakeup ? "M" : "R"}</sup>}
                             </button>
                           </td>
                         );
                       })}
+                      {/* Per-week ToT cells */}
                       {(activityFilter === "all" || activityFilter === "tot") && totBd.map(b => {
                         const pct = b.answered ? Math.round(b.score / b.max * 100) : null;
                         const c = cellColor(pct, false);
@@ -1396,6 +2135,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                           </td>
                         );
                       })}
+                      {/* Per-week FB cells */}
                       {(activityFilter === "all" || activityFilter === "fb") && fbBd.map(b => {
                         const pct = b.score === 0 ? null : Math.round(b.score / b.max * 100);
                         const c = cellColor(pct, false);
