@@ -472,7 +472,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
     await saveData(updated); setData(updated); setEditId(null); setEditLocal(null); showMsg("Removed");
   };
 
-  const defaultBlurb = "Here's how your grade works. There are four major assignments worth 75% of your grade, and a participation bucket worth the other 25%. The participation bucket is where the weekly game, Around the Horn, and Rotating Fishbowl all live.\n\nThe game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. The weekly game is the biggest example: the game weights all question types equally (10 pts each), but your grade weights On Reading questions much more heavily (15 pts each) than Extra questions (2.5 pts each). So if you want to climb the leaderboard, be good at everything. If you want a good grade, focus on the course material.\n\nThe top 5 on the leaderboard at the end of the quarter get automatic A's. That's real. Everything else, just do the work, show up, and engage.";
+  const defaultBlurb = "Here's how your grade works. There are four major assignments worth 75% of your grade, and a participation bucket worth the other 25%. The participation bucket is where the weekly game, Around the Horn, and Rotating Fishbowl all live.\n\nThe game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. The weekly game is the biggest example: the game weights all question types equally (10 pts each), but your grade weights On Reading questions much more heavily (15 pts each) than Extra questions (2.5 pts each). So if you want to climb the leaderboard, be good at everything. If you want a good grade, focus on the course material.\n\nThe top 5 on the leaderboard at the end of the quarter get automatic A's. That's real. Everything else, just do the work, show up, and engage."";
   const blurbText = data.assignmentsBlurb || defaultBlurb;
 
   const saveBlurb = async () => {
@@ -703,6 +703,12 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                         <AssignmentRubricButton assignmentId={a.id} data={data} setData={setData} />
                       </div>
                     )}
+                    {/* Bulk notes import */}
+                    {isAdmin && a.id !== "participation" && (
+                      <div onClick={e => e.stopPropagation()}>
+                        <BulkNotesImport assignmentId={a.id} data={data} setData={setData} />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -915,6 +921,182 @@ function RegradeRequest({ assignmentId, data, setData, studentId }) {
   );
 }
 
+/* --- BULK NOTES IMPORT --- */
+function BulkNotesImport({ assignmentId, data, setData }) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState("text"); // "text" | "photo"
+  const [text, setText] = useState("");
+  const [imageData, setImageData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 3000); };
+
+  const students = (data.students || []).filter(s => s.name !== ADMIN_NAME);
+  const bulkNotes = (data.bulkNotes || {})[assignmentId] || {};
+  const noteCount = Object.keys(bulkNotes).length;
+
+  const parseAndSave = async (input) => {
+    const lines = input.split("\n").filter(l => l.trim());
+    const notes = { ...bulkNotes };
+    let matched = 0;
+
+    lines.forEach(line => {
+      const colonIdx = line.indexOf(":");
+      if (colonIdx === -1) return;
+      const namePart = line.slice(0, colonIdx).trim().toLowerCase();
+      const comment = line.slice(colonIdx + 1).trim();
+      if (!comment) return;
+
+      const student = students.find(s => {
+        const full = s.name.toLowerCase();
+        const first = full.split(" ")[0];
+        const last = full.split(" ").slice(-1)[0];
+        return full === namePart || first === namePart || last === namePart || full.includes(namePart);
+      });
+
+      if (student) {
+        notes[student.id] = comment;
+        matched++;
+      }
+    });
+
+    if (matched === 0) {
+      showMsg("No students matched. Use first name, last name, or full name before the colon.");
+      return;
+    }
+
+    const allBulk = { ...(data.bulkNotes || {}), [assignmentId]: notes };
+    const updated = { ...data, bulkNotes: allBulk };
+    await saveData(updated); setData(updated);
+    setText("");
+    showMsg("Matched " + matched + " student" + (matched !== 1 ? "s" : ""));
+  };
+
+  const handleText = async () => {
+    if (!text.trim()) return;
+    await parseAndSave(text);
+  };
+
+  const handleImage = async (file) => {
+    if (!file) return;
+    setLoading(true);
+
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(",")[1]);
+        r.onerror = () => rej(new Error("Read failed"));
+        r.readAsDataURL(file);
+      });
+
+      const studentList = students.map(s => s.name).join(", ");
+
+      const response = await fetch("/api/generate-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: `This is a photo of handwritten grading notes. Extract each student's note and format as "Student Name: comment" on separate lines.
+
+The students in this class are: ${studentList}
+
+Match each note to the correct student name from the list above. Use the student's full name exactly as listed. If you can't read a name or match it, skip it. Only output the matched lines, nothing else.`,
+          image: base64,
+          mediaType: file.type || "image/jpeg",
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("Image parse error:", response.status, errText);
+        showMsg("Error reading image. Check console.");
+        setLoading(false);
+        return;
+      }
+
+      const result = await response.json();
+      const parsed = (result.content || []).map(c => c.text || "").join("");
+      setText(parsed);
+      showMsg("Notes extracted from image. Review and click Save.");
+    } catch (err) {
+      console.error("Image upload error:", err);
+      showMsg("Error processing image.");
+    }
+    setLoading(false);
+    setImageData(null);
+  };
+
+  const clearAll = async () => {
+    if (!window.confirm("Clear all bulk notes for this assignment?")) return;
+    const allBulk = { ...(data.bulkNotes || {}) };
+    delete allBulk[assignmentId];
+    const updated = { ...data, bulkNotes: allBulk };
+    await saveData(updated); setData(updated);
+    showMsg("Cleared");
+  };
+
+  if (!open) {
+    return (
+      <div style={{ marginTop: 6 }}>
+        <button onClick={() => setOpen(true)} style={{ ...pillInactive, fontSize: 11, width: "100%" }}>
+          Bulk Notes {noteCount > 0 ? "(" + noteCount + " saved)" : ""}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 8, padding: "12px 14px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb" }}>
+      {msg && <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginBottom: 6 }}>{msg}</div>}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>Bulk Notes Import</div>
+        <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#d1d5db" }}>x</button>
+      </div>
+
+      <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+        <button onClick={() => setMode("text")} style={{ ...pill, fontSize: 11, padding: "4px 10px", background: mode === "text" ? "#111827" : "#e5e7eb", color: mode === "text" ? "#fff" : "#4b5563" }}>Type / Paste</button>
+        <button onClick={() => setMode("photo")} style={{ ...pill, fontSize: 11, padding: "4px 10px", background: mode === "photo" ? "#111827" : "#e5e7eb", color: mode === "photo" ? "#fff" : "#4b5563" }}>Photo of Notes</button>
+      </div>
+
+      {mode === "text" && (
+        <div>
+          <textarea value={text} onChange={e => setText(e.target.value)} placeholder={"One per line:\nJohn: Great interview subject choice\nJane: Needs deeper follow-up questions\nBob: Really impressed with the thank-you"} rows={6} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 6 }} />
+          <div style={{ display: "flex", gap: 4 }}>
+            <button onClick={handleText} disabled={!text.trim()} style={{ ...pill, background: text.trim() ? "#111827" : "#d1d5db", color: "#fff", flex: 1 }}>Save Notes</button>
+          </div>
+        </div>
+      )}
+
+      {mode === "photo" && (
+        <div>
+          <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginBottom: 6 }}>Take a photo of your handwritten notes. AI will read them and match to students.</div>
+          <input type="file" accept="image/*" capture="environment" onChange={e => { if (e.target.files[0]) handleImage(e.target.files[0]); }} style={{ marginBottom: 6 }} />
+          {loading && <div style={{ fontSize: 13, color: ACCENT, fontWeight: 600 }}>Reading your notes...</div>}
+          {text && !loading && (
+            <div>
+              <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>Extracted notes (edit if needed, then save):</div>
+              <textarea value={text} onChange={e => setText(e.target.value)} rows={6} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 6 }} />
+              <button onClick={handleText} style={{ ...pill, background: "#111827", color: "#fff", width: "100%" }}>Save Notes</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Show existing notes */}
+      {noteCount > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Saved notes ({noteCount})</div>
+          {students.filter(s => bulkNotes[s.id]).map(s => (
+            <div key={s.id} style={{ fontSize: 12, color: "#111827", padding: "4px 0", borderBottom: "1px solid #f3f4f6" }}>
+              <span style={{ fontWeight: 600 }}>{s.name}:</span> <span style={{ color: TEXT_SECONDARY }}>{bulkNotes[s.id]}</span>
+            </div>
+          ))}
+          <button onClick={clearAll} style={{ ...pill, fontSize: 10, background: "#fef2f2", color: RED, marginTop: 6 }}>Clear All Notes</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* --- QUICK GRADE --- */
 function QuickGrade({ assignmentId, studentId, studentName, data, setData, onClose }) {
   const rubric = (data.assignmentRubrics || {})[assignmentId];
@@ -922,7 +1104,8 @@ function QuickGrade({ assignmentId, studentId, studentName, data, setData, onClo
   const existingGrade = (data.grades || {})[studentId + "-" + assignmentId] || {};
 
   const [selected, setSelected] = useState(new Set());
-  const [customNote, setCustomNote] = useState("");
+  const bulkNote = ((data.bulkNotes || {})[assignmentId] || {})[studentId] || "";
+  const [customNote, setCustomNote] = useState(bulkNote);
   const [generatedComment, setGeneratedComment] = useState("");
   const [suggestedTier, setSuggestedTier] = useState(null);
   const [selectedTier, setSelectedTier] = useState(null);
