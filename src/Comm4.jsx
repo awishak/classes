@@ -2062,7 +2062,7 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
   const [editingExplain, setEditingExplain] = useState(false);
   const [explainText, setExplainText] = useState("");
   const [expandedId, setExpandedId] = useState(null);
-  const shuffledStudents = shuffleTeams(students, log, teams);
+  // Use fixed team assignments (project groups)
   const visible = showAll ? ranked : ranked.slice(0, 10);
   const myRank = ranked.findIndex(s => s.name === userName);
   const meInVisible = myRank >= 0 && myRank < visible.length;
@@ -2135,8 +2135,7 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
   };
 
   const renderRow = (s, i, isMe, isGhost) => {
-    const shuffled = shuffledStudents.find(st => st.id === s.id);
-    const team = teams.find(t => t.id === (shuffled?.teamId || s.teamId));
+    const team = teams.find(t => t.id === s.teamId);
     const tc = team ? TEAM_COLORS[team.colorIdx] : TEAM_COLORS[0];
     const inA = i < 5;
     const bw = mx > 0 ? Math.max((s.points / mx) * 100, 2) : 2;
@@ -2301,7 +2300,55 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
 }
 
 /* ─── TEAMS ─── */
-function TeamsView({ teams, students, log, data }) {
+const DEFAULT_TEAM_BLURBS = {
+  "team-1": {
+    description: "Your group has a strong sports thread running through it. Eddie, you're interested in sports broadcasting and the transfer portal. Andreas, you've been thinking about gender differences in classroom participation. Sash, you want to explore player/coach relationships. Adrieana, you've got a wide range of interests including NIL deals, parent involvement in youth sports, and athlete branding.",
+    suggestion: "You might consider focusing on how communication shapes relationships and decisions in college athletics. There's a clear overlap between NIL negotiations, transfer portal decisions, player/coach dynamics, and how parents fit into the picture. You could also explore how athletes communicate their personal brand.",
+    questions: ["How does communication shape NIL deal outcomes for college athletes?", "What role does the player/coach relationship play in transfer portal decisions?", "How does parent involvement affect communication in youth sports?"],
+  },
+  "team-2": {
+    description: "Mikey, you're interested in music artist branding. Destin, you want to look at the restaurant industry. Chris, you're drawn to sports and branding. All three of you are thinking about how industries build identity.",
+    suggestion: "You might consider exploring how different industries use branding, marketing, and communication to create loyalty and stand out. There's an interesting overlap between how a music artist builds a fanbase, how a restaurant builds regulars, and how a sports brand builds community.",
+    questions: ["How do music artists use social media to build and maintain their brand?", "What communication strategies make a restaurant brand successful?", "How do entertainment and food industries differ in how they build audience loyalty?"],
+  },
+  "team-3": {
+    description: "Lola, you're interested in film communication, linguistic trends, and how people view neurodivergence. Elizabeth, you want to explore Gen Z and Snapchat. Fiona, you're drawn to interpersonal communication in healthcare.",
+    suggestion: "You might consider looking at how different media forms shape the way people understand health, identity, and each other. There's an interesting connection between how film portrays neurodivergence, how social media changes health conversations for Gen Z, and how doctors and patients communicate. The common thread is how the medium changes the message.",
+    questions: ["How does communication between healthcare providers and patients affect outcomes?", "How do films shape public understanding of neurodivergence or mental health?", "How does social media change the way Gen Z talks about health and identity?"],
+  },
+  "team-4": {
+    description: "Ava, you're interested in how social media influences wellness habits, romantic partners, and spending. Zoe, you're thinking about fashion and health. Penelope, you want to explore Gen Z and Snapchat. Kalia, you're interested in music preferences and shopping trends.",
+    suggestion: "You might consider exploring how social media platforms change what people actually do in their daily lives. All four of you are circling the same idea: platforms influence wellness, spending, relationships, and lifestyle choices. The question is how and why.",
+    questions: ["How does social media influence college students' spending habits?", "What role does social media play in shaping wellness and eating behaviors?", "How do platforms like TikTok and Instagram affect how people choose romantic partners?"],
+  },
+  "team-5": {
+    description: "Charlotte, you want to know why fashion trends spread and why college campuses have different trends. Adriana, you're interested in music artist branding. Addison, you're thinking about trendsetting communication and marketing. Gus, you're looking at Gen Z and Snapchat.",
+    suggestion: "You might consider digging into why some trends take off and others don't. Charlotte's question about campus trends is a great anchor. Adriana and Addison both care about how artists and brands set trends, and Gus brings the platform angle. You could explore how trends move through social media and culture, and what makes something catch on.",
+    questions: ["What communication patterns drive fashion trends on college campuses?", "How do music artists use communication strategies to set trends?", "What role do platforms like TikTok play in accelerating trend cycles?"],
+  },
+  "team-6": {
+    description: "Tim, you're interested in marketing. Finn, you're looking at marketing and branding with music or brands. Drew, you're thinking about sports broadcasting and PR. Diego, you're drawn to science communication.",
+    suggestion: "You might consider exploring how you tell a compelling story about something complex. Tim and Finn both care about marketing and branding. Drew brings the sports media angle. Diego's science communication interest is the most unique here, but it fits under the same umbrella: how do you make something resonate with an audience? The overlap is persuasive storytelling across different industries.",
+    questions: ["How do sports brands use storytelling to connect with audiences?", "What makes science communication effective for general audiences?", "How do marketing strategies differ across entertainment, sports, and tech industries?"],
+  },
+  "team-7": {
+    description: "Santi, you're interested in how foreign film communicates, plus sports and trends. Marissa, you're thinking about music preferences and shopping trends. Kelly, you want to explore healthcare communication. Carter, you're also drawn to healthcare communication and technology between departments.",
+    suggestion: "You might consider exploring how communication works differently depending on context. Santi's foreign film interest raises questions about how culture shapes communication. Kelly and Carter both care about healthcare, where context and clarity can be life-or-death. Marissa's interest in trends and preferences connects to how context shapes consumer choices. The thread is cross-cultural and cross-context communication.",
+    questions: ["How does foreign film communicate cultural values differently than American film?", "How do communication practices in healthcare vary across cultural contexts?", "How do cultural differences shape consumer trends and preferences?"],
+  },
+  "team-8": {
+    description: "Emma, you're interested in AI in school and interpersonal communication. Sienna, you're thinking about trendsetting, marketing, and relationships. Angelina, you care about marketing, fashion trends, and social media's effects on eating habits. Phoebe, you're interested in fashion and health.",
+    suggestion: "You might consider exploring how digital media shapes the way people see themselves and make decisions. Angelina and Phoebe both touch on how media affects eating habits and body image. Sienna's interest in trendsetting and relationships connects to how online content shapes self-perception. Emma's AI angle is unique but relevant: how is AI changing the way people communicate and present themselves? The overlap is digital media, self-image, and identity.",
+    questions: ["How does social media influence college students' body image and eating habits?", "What role does AI play in shaping how people communicate and present themselves?", "How do fashion influencers affect consumer behavior among Gen Z?"],
+  },
+};
+
+function TeamsView({ teams, students, log, data, setData, userName, isAdmin }) {
+  const [editingTeam, setEditingTeam] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
   if (data?.teamsHidden) {
     return (
       <div style={{ padding: "60px 20px", fontFamily: F, textAlign: "center" }}>
@@ -2317,48 +2364,33 @@ function TeamsView({ teams, students, log, data }) {
   }
 
   const bios = data.bios || {};
+  const teamBlurbs = data.teamBlurbs || {};
+  const currentStudent = students.find(s => s.name === userName);
+  const myTeamId = currentStudent?.teamId;
 
-  const TEAM_BLURBS = {
-    "team-1": {
-      description: "Your group has a strong sports thread running through it. Eddie, you're interested in sports broadcasting and the transfer portal. Andreas, you've been thinking about gender differences in classroom participation. Sash, you want to explore player/coach relationships. Adrieana, you've got a wide range of interests including NIL deals, parent involvement in youth sports, and athlete branding.",
-      suggestion: "You might consider focusing on how communication shapes relationships and decisions in college athletics. There's a clear overlap between NIL negotiations, transfer portal decisions, player/coach dynamics, and how parents fit into the picture. You could also explore how athletes communicate their personal brand.",
-      questions: ["How does communication shape NIL deal outcomes for college athletes?", "What role does the player/coach relationship play in transfer portal decisions?", "How does parent involvement affect communication in youth sports?"],
-    },
-    "team-2": {
-      description: "Mikey, you're interested in music artist branding. Destin, you want to look at the restaurant industry. Chris, you're drawn to sports and branding. All three of you are thinking about how industries build identity.",
-      suggestion: "You might consider exploring how different industries use branding, marketing, and communication to create loyalty and stand out. There's an interesting overlap between how a music artist builds a fanbase, how a restaurant builds regulars, and how a sports brand builds community.",
-      questions: ["How do music artists use social media to build and maintain their brand?", "What communication strategies make a restaurant brand successful?", "How do entertainment and food industries differ in how they build audience loyalty?"],
-    },
-    "team-3": {
-      description: "Lola, you're interested in film communication, linguistic trends, and how people view neurodivergence. Elizabeth, you want to explore Gen Z and Snapchat. Fiona, you're drawn to interpersonal communication in healthcare.",
-      suggestion: "You might consider looking at how different media forms shape the way people understand health, identity, and each other. There's an interesting connection between how film portrays neurodivergence, how social media changes health conversations for Gen Z, and how doctors and patients communicate. The common thread is how the medium changes the message.",
-      questions: ["How does communication between healthcare providers and patients affect outcomes?", "How do films shape public understanding of neurodivergence or mental health?", "How does social media change the way Gen Z talks about health and identity?"],
-    },
-    "team-4": {
-      description: "Ava, you're interested in how social media influences wellness habits, romantic partners, and spending. Zoe, you're thinking about fashion and health. Penelope, you want to explore Gen Z and Snapchat. Kalia, you're interested in music preferences and shopping trends.",
-      suggestion: "You might consider exploring how social media platforms change what people actually do in their daily lives. All four of you are circling the same idea: platforms influence wellness, spending, relationships, and lifestyle choices. The question is how and why.",
-      questions: ["How does social media influence college students' spending habits?", "What role does social media play in shaping wellness and eating behaviors?", "How do platforms like TikTok and Instagram affect how people choose romantic partners?"],
-    },
-    "team-5": {
-      description: "Charlotte, you want to know why fashion trends spread and why college campuses have different trends. Adriana, you're interested in music artist branding. Addison, you're thinking about trendsetting communication and marketing. Gus, you're looking at Gen Z and Snapchat.",
-      suggestion: "You might consider digging into why some trends take off and others don't. Charlotte's question about campus trends is a great anchor. Adriana and Addison both care about how artists and brands set trends, and Gus brings the platform angle. You could explore how trends move through social media and culture, and what makes something catch on.",
-      questions: ["What communication patterns drive fashion trends on college campuses?", "How do music artists use communication strategies to set trends?", "What role do platforms like TikTok play in accelerating trend cycles?"],
-    },
-    "team-6": {
-      description: "Tim, you're interested in marketing. Finn, you're looking at marketing and branding with music or brands. Drew, you're thinking about sports broadcasting and PR. Diego, you're drawn to science communication.",
-      suggestion: "You might consider exploring how you tell a compelling story about something complex. Tim and Finn both care about marketing and branding. Drew brings the sports media angle. Diego's science communication interest is the most unique here, but it fits under the same umbrella: how do you make something resonate with an audience? The overlap is persuasive storytelling across different industries.",
-      questions: ["How do sports brands use storytelling to connect with audiences?", "What makes science communication effective for general audiences?", "How do marketing strategies differ across entertainment, sports, and tech industries?"],
-    },
-    "team-7": {
-      description: "Santi, you're interested in how foreign film communicates, plus sports and trends. Marissa, you're thinking about music preferences and shopping trends. Kelly, you want to explore healthcare communication. Carter, you're also drawn to healthcare communication and technology between departments.",
-      suggestion: "You might consider exploring how communication works differently depending on context. Santi's foreign film interest raises questions about how culture shapes communication. Kelly and Carter both care about healthcare, where context and clarity can be life-or-death. Marissa's interest in trends and preferences connects to how context shapes consumer choices. The thread is cross-cultural and cross-context communication.",
-      questions: ["How does foreign film communicate cultural values differently than American film?", "How do communication practices in healthcare vary across cultural contexts?", "How do cultural differences shape consumer trends and preferences?"],
-    },
-    "team-8": {
-      description: "Emma, you're interested in AI in school and interpersonal communication. Sienna, you're thinking about trendsetting, marketing, and relationships. Angelina, you care about marketing, fashion trends, and social media's effects on eating habits. Phoebe, you're interested in fashion and health.",
-      suggestion: "You might consider exploring how digital media shapes the way people see themselves and make decisions. Angelina and Phoebe both touch on how media affects eating habits and body image. Sienna's interest in trendsetting and relationships connects to how online content shapes self-perception. Emma's AI angle is unique but relevant: how is AI changing the way people communicate and present themselves? The overlap is digital media, self-image, and identity.",
-      questions: ["How does social media influence college students' body image and eating habits?", "What role does AI play in shaping how people communicate and present themselves?", "How do fashion influencers affect consumer behavior among Gen Z?"],
-    },
+  const startEdit = (teamId) => {
+    const blurb = teamBlurbs[teamId] || DEFAULT_TEAM_BLURBS[teamId] || {};
+    const team = teams.find(t => t.id === teamId);
+    setEditingTeam(teamId);
+    setEditForm({
+      name: team?.name || "",
+      description: blurb.description || "",
+      suggestion: blurb.suggestion || "",
+      questions: (blurb.questions || []).join("\n"),
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editingTeam || !editForm) return;
+    const newBlurbs = { ...teamBlurbs, [editingTeam]: {
+      description: editForm.description.trim(),
+      suggestion: editForm.suggestion.trim(),
+      questions: editForm.questions.split("\n").map(q => q.trim()).filter(q => q),
+    }};
+    const newTeams = teams.map(t => t.id === editingTeam ? { ...t, name: editForm.name.trim() || t.name } : t);
+    const updated = { ...data, teamBlurbs: newBlurbs, teams: newTeams };
+    await saveData(updated); setData(updated);
+    setEditingTeam(null); setEditForm(null); showMsg("Saved");
   };
 
   const teamData = teams.map(t => {
@@ -2368,22 +2400,32 @@ function TeamsView({ teams, students, log, data }) {
 
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      {msg && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "#18181b", color: "#fff", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, zIndex: 999 }}>{msg}</div>}
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 4 }}>Project Groups</div>
         <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12, lineHeight: 1.5 }}>Your group for the quarter. Each group has suggested research directions and questions to get you started.</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {teamData.map((team, i) => {
             const tc = TEAM_COLORS[team.colorIdx];
-            const blurb = TEAM_BLURBS[team.id] || {};
+            const blurb = teamBlurbs[team.id] || DEFAULT_TEAM_BLURBS[team.id] || {};
+            const canEdit = isAdmin || myTeamId === team.id;
+            const isEditing = editingTeam === team.id;
             return (
               <div key={team.id} style={{ borderRadius: 16, border: "1px solid #f3f4f6", overflow: "hidden", background: "#fff" }}>
                 {/* Header */}
                 <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, background: tc.accent + "08", borderBottom: "1px solid #f3f4f6" }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 900, flexShrink: 0 }}>{i + 1}</div>
-                  <div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: TEXT_PRIMARY }}>{team.name}</div>
+                  <div style={{ flex: 1 }}>
+                    {isEditing ? (
+                      <input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} style={{ ...inp, fontSize: 16, fontWeight: 800, padding: "4px 8px" }} />
+                    ) : (
+                      <div style={{ fontSize: 16, fontWeight: 800, color: TEXT_PRIMARY }}>{team.name}</div>
+                    )}
                     <div style={{ fontSize: 11, color: TEXT_MUTED }}>{team.members.length} members</div>
                   </div>
+                  {canEdit && !isEditing && (
+                    <button onClick={() => startEdit(team.id)} style={{ ...pillInactive, fontSize: 11 }}>Edit</button>
+                  )}
                 </div>
 
                 {/* Members with photos and hometowns */}
@@ -2408,10 +2450,23 @@ function TeamsView({ teams, students, log, data }) {
                   </div>
                 </div>
 
-                {/* Blurb */}
-                {blurb.description && (
+                {/* Blurb - editable or display */}
+                {isEditing ? (
                   <div style={{ padding: "14px 16px" }}>
-                    <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.7, marginBottom: 10 }}>{blurb.description}</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Description</div>
+                    <textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} rows={4} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 10 }} />
+                    <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Suggested Direction</div>
+                    <textarea value={editForm.suggestion} onChange={e => setEditForm({ ...editForm, suggestion: e.target.value })} rows={3} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 10 }} />
+                    <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Research Questions (one per line)</div>
+                    <textarea value={editForm.questions} onChange={e => setEditForm({ ...editForm, questions: e.target.value })} rows={4} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 10 }} />
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={saveEdit} style={{ ...pill, background: "#18181b", color: "#fff", flex: 1 }}>Save</button>
+                      <button onClick={() => { setEditingTeam(null); setEditForm(null); }} style={pillInactive}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (blurb.description || blurb.suggestion) ? (
+                  <div style={{ padding: "14px 16px" }}>
+                    {blurb.description && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.7, marginBottom: 10 }}>{blurb.description}</div>}
                     {blurb.suggestion && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.7, marginBottom: 10 }}>{blurb.suggestion}</div>}
                     {blurb.questions && blurb.questions.length > 0 && (
                       <div>
@@ -2422,7 +2477,7 @@ function TeamsView({ teams, students, log, data }) {
                       </div>
                     )}
                   </div>
-                )}
+                ) : null}
               </div>
             );
           })}
@@ -3266,7 +3321,7 @@ function RosterCombined({ data, setData, userName, isAdmin }) {
         {isAdmin && <button onClick={() => setSub("draft")} style={sub === "draft" ? pillActive : pillInactive}>Draft</button>}
       </div>
       {sub === "roster" && <RosterView data={data} setData={setData} userName={userName} />}
-      {sub === "teams" && <TeamsView teams={data.teams} students={data.students} log={data.log} data={data} />}
+      {sub === "teams" && <TeamsView teams={data.teams} students={data.students} log={data.log} data={data} setData={setData} userName={userName} isAdmin={isAdmin} />}
       {sub === "draft" && isAdmin && <TeamBuilder data={data} setData={setData} />}
     </div>
   );
