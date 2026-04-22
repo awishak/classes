@@ -472,11 +472,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
     await saveData(updated); setData(updated); setEditId(null); setEditLocal(null); showMsg("Removed");
   };
 
-  const defaultBlurb = "Here's how your grade works. There are four major assignments worth 75% of your grade, and a participation bucket worth the other 25%. The participation bucket is where the weekly game, Around the Horn, and Rotating Fishbowl all live.
-
-The game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. The weekly game is the biggest example: the game weights all question types equally (10 pts each), but your grade weights On Reading questions much more heavily (15 pts each) than Extra questions (2.5 pts each). So if you want to climb the leaderboard, be good at everything. If you want a good grade, focus on the course material.
-
-The top 5 on the leaderboard at the end of the quarter get automatic A's. That's real. Everything else, just do the work, show up, and engage.";
+  const defaultBlurb = "Here's how your grade works. There are four major assignments worth 75% of your grade, and a participation bucket worth the other 25%. The participation bucket is where the weekly game, Around the Horn, and Rotating Fishbowl all live.\n\nThe game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. The weekly game is the biggest example: the game weights all question types equally (10 pts each), but your grade weights On Reading questions much more heavily (15 pts each) than Extra questions (2.5 pts each). So if you want to climb the leaderboard, be good at everything. If you want a good grade, focus on the course material.\n\nThe top 5 on the leaderboard at the end of the quarter get automatic A's. That's real. Everything else, just do the work, show up, and engage.";
   const blurbText = data.assignmentsBlurb || defaultBlurb;
 
   const saveBlurb = async () => {
