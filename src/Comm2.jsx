@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { AssignmentsView, Gradebook, DEFAULT_ASSIGNMENTS } from "./Comm2Grades.jsx";
+import { AssignmentsView, Gradebook, GradingInbox, DEFAULT_ASSIGNMENTS } from "./Comm2Grades.jsx";
 import { GameAdmin, StudentAnswerView, Accolades } from "./Comm2Game.jsx";
 
 const STORAGE_KEY = "comm2-v1";
@@ -3291,7 +3291,8 @@ export default function Comm2() {
       {view === "activities" && effectiveAdmin && <GameAdmin data={data} setData={setData} />}
       {view === "roster" && <RosterView data={data} setData={setData} userName={effectiveUserName} />}
       {view === "admin" && effectiveAdmin && <AdminPanel data={data} setData={setData} />}
-      {view === "gradebook" && effectiveAdmin && <Gradebook data={data} setData={setData} isAdmin={true} userName={effectiveUserName} />}
+      {view === "gradebook" && effectiveAdmin && <Gradebook data={data} setData={setData} isAdmin={true} userName={effectiveUserName} setView={setView} />}
+      {view === "grading" && effectiveAdmin && <GradingInbox data={data} setData={setData} userName={effectiveUserName} />}
     </div>
   );
 }

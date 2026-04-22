@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { AssignmentsView, Gradebook, DEFAULT_ASSIGNMENTS as _DA } from "./Grades4.jsx";
+import { AssignmentsView, Gradebook, GradingInbox, DEFAULT_ASSIGNMENTS as _DA } from "./Grades4.jsx";
 import { GameAdmin, StudentAnswerView, Accolades } from "./GameSystem4.jsx";
 
 const STORAGE_KEY = "comm4-v1";
@@ -5453,7 +5453,8 @@ export default function Comm4() {
       {view === "readings" && !isGuest && <ReadingsView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "inclass" && !isGuest && <InClassView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "inclassadmin" && isAdmin && !studentView && !testStudent && <GameAdmin data={data} setData={setData} />}
-      {view === "grades" && isAdmin && !studentView && <Gradebook data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
+      {view === "grades" && isAdmin && !studentView && <Gradebook data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} setView={setView} />}
+      {view === "grading" && isAdmin && !studentView && <GradingInbox data={data} setData={setData} userName={effectiveUserName} />}
       {view === "pti" && isAdmin && !studentView && <PTIMode data={data} setData={setData} />}
       {view === "activities" && isAdmin && !studentView && <GameAdmin data={data} setData={setData} />}
       {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} setView={setView} />}
