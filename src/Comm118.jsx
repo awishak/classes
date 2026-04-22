@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { AssignmentsView, Gradebook, DEFAULT_ASSIGNMENTS } from "./Grades.jsx";
+import { AssignmentsView, Gradebook, GradingInbox, DEFAULT_ASSIGNMENTS } from "./Grades.jsx";
 import { GameAdmin, StudentAnswerView, Accolades } from "./GameSystem.jsx";
 
 const STORAGE_KEY = "comm118-game-v14";
@@ -5746,7 +5746,8 @@ export default function Comm118() {
       {view === "readings" && !isGuest && <ReadingsView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "inclass" && !isGuest && <InClassView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "inclassadmin" && isAdmin && !studentView && !testStudent && <GameAdmin data={data} setData={setData} />}
-      {view === "grades" && isAdmin && !studentView && !testStudent && <Gradebook data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
+      {view === "grades" && isAdmin && !studentView && !testStudent && <Gradebook data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} setView={setView} />}
+      {view === "grading" && isAdmin && !studentView && !testStudent && <GradingInbox data={data} setData={setData} userName={effectiveUserName} />}
       {view === "pti" && isAdmin && !studentView && !testStudent && <PTIMode data={data} setData={setData} />}
       {view === "boards" && !isGuest && <BoardsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "mynotes" && !isGuest && <MyNotesView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}

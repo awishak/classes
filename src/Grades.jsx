@@ -490,6 +490,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
             {isAdmin && <button onClick={addAssignment} style={{ ...pillInactive, fontSize: 11 }}>+ Add</button>}
             {isAdmin && <button onClick={() => setEditMasterRubric(!editMasterRubric)} style={{ ...pillInactive, fontSize: 11 }}>{editMasterRubric ? "Cancel" : "Master Rubric"}</button>}
             {isAdmin && setView && <button onClick={() => setView("grades")} style={{ ...pillInactive, fontSize: 11 }}>Gradebook</button>}
+            {isAdmin && setView && <button onClick={() => setView("grading")} style={{ ...pill, fontSize: 11, background: "#eff6ff", color: ACCENT }}>Grading</button>}
           </div>
         </div>
 
@@ -1521,7 +1522,7 @@ function AdminSubmissions({ assignmentId, data, setData }) {
   );
 }
 
-export function Gradebook({ data, setData, userName, isAdmin }) {
+export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
   const participation = data.participation || {};
@@ -2105,6 +2106,25 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <div style={{ ...sectionLabel }}>Gradebook</div>
             <div style={{ display: "flex", gap: 6 }}>
+              {setView && <button onClick={() => setView("grading")} style={{ ...pill, fontSize: 11, padding: "4px 10px", background: "#eff6ff", color: ACCENT }}>Grading ({(() => {
+                let count = 0;
+                const ga = assignments.filter(a => a.id !== "participation");
+                (data.students || []).filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis").forEach(s => {
+                  ga.forEach(a => {
+                    const k = s.id + "-" + a.id;
+                    const g = grades[k] || {};
+                    const sub = submissions[k];
+                    const dd = parseDueDate(a.due);
+                    const hg = g.score !== undefined && g.score !== "";
+                    if (regradeRequests[k]) count++;
+                    else if (hg && sub && g.gradedTs && sub.ts > g.gradedTs) count++;
+                    else if (hg && parseFloat(g.score) === 0) count++;
+                    else if (sub && !hg) count++;
+                    else if (dd && Date.now() > dd.getTime() && !sub && !hg) count++;
+                  });
+                });
+                return count;
+              })()})</button>}
               <button onClick={() => setActivityFilter("all")} style={{ ...pill, background: activityFilter === "all" ? ACCENT : "#f3f4f6", color: activityFilter === "all" ? "#fff" : "#4b5563", fontSize: 11, padding: "4px 10px" }}>All</button>
               <button onClick={() => setActivityFilter("game")} style={{ ...pill, background: activityFilter === "game" ? ACCENT : "#f3f4f6", color: activityFilter === "game" ? "#fff" : "#4b5563", fontSize: 11, padding: "4px 10px" }}>Game</button>
               <button onClick={() => setActivityFilter("tot")} style={{ ...pill, background: activityFilter === "tot" ? ACCENT : "#f3f4f6", color: activityFilter === "tot" ? "#fff" : "#4b5563", fontSize: 11, padding: "4px 10px" }}>ToT</button>
@@ -2383,6 +2403,285 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 12 }}>My Grades</div>
         {renderStudentGrades(studentId)}
+      </div>
+    </div>
+  );
+}
+
+/* ─── GRADING INBOX ─── */
+export function GradingInbox({ data, setData, userName }) {
+  const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
+  const grades = data.grades || {};
+  const submissions = data.submissions || {};
+  const regradeRequests = data.regradeRequests || {};
+  const students = (data.students || []).filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis");
+  const bios = data.bios || {};
+
+  const [filter, setFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [gradeForm, setGradeForm] = useState({});
+  const [completedItems, setCompletedItems] = useState(new Set());
+  const [quickGradeOpen, setQuickGradeOpen] = useState(false);
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  // Build inbox items
+  const items = [];
+  const gradeAssignments = assignments.filter(a => a.id !== "participation");
+
+  students.forEach(s => {
+    gradeAssignments.forEach(a => {
+      const key = s.id + "-" + a.id;
+      const g = grades[key] || {};
+      const sub = submissions[key];
+      const rr = regradeRequests[key];
+      const dueDate = parseDueDate(a.due);
+      const isPastDue = dueDate && Date.now() > dueDate.getTime();
+      const hasGrade = g.score !== undefined && g.score !== "";
+      const isZero = hasGrade && parseFloat(g.score) === 0;
+      const isLate = sub && dueDate && sub.ts > dueDate.getTime();
+      const isResub = hasGrade && sub && g.gradedTs && sub.ts > g.gradedTs;
+
+      if (rr) {
+        items.push({ id: key + "-regrade", type: "regrade", student: s, assignment: a, key, sub, grade: g, regradeNote: rr.note, ts: rr.ts, priority: 1 });
+      }
+      if (isResub) {
+        items.push({ id: key + "-resub", type: "resub", student: s, assignment: a, key, sub, grade: g, ts: sub.ts, priority: 2 });
+      }
+      if (isZero) {
+        items.push({ id: key + "-zero", type: "zero", student: s, assignment: a, key, sub, grade: g, ts: g.gradedTs || 0, priority: 3 });
+      }
+      if (sub && !hasGrade && isLate) {
+        items.push({ id: key + "-late", type: "late", student: s, assignment: a, key, sub, grade: g, ts: sub.ts, priority: 4 });
+      } else if (sub && !hasGrade && !isLate) {
+        items.push({ id: key + "-ungraded", type: "ungraded", student: s, assignment: a, key, sub, grade: g, ts: sub.ts, priority: 5 });
+      }
+      if (isPastDue && !sub && !hasGrade) {
+        items.push({ id: key + "-missing", type: "missing", student: s, assignment: a, key, sub: null, grade: g, ts: dueDate.getTime(), priority: 6 });
+      }
+    });
+  });
+
+  // Filter
+  const filtered = filter === "all" ? items : items.filter(i => i.type === filter);
+
+  // Sort
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === "newest") return b.ts - a.ts;
+    if (sortBy === "oldest") return a.ts - b.ts;
+    if (sortBy === "assignment") return a.assignment.name.localeCompare(b.assignment.name) || b.ts - a.ts;
+    if (sortBy === "student") return lastName(a.student.name).localeCompare(lastName(b.student.name)) || b.ts - a.ts;
+    if (sortBy === "priority") return a.priority - b.priority || b.ts - a.ts;
+    return 0;
+  });
+
+  const typeConfig = {
+    regrade: { label: "Regrade", bg: "#fffbeb", color: "#92400e", border: "#fde68a" },
+    resub: { label: "Resubmitted", bg: "#eff6ff", color: "#1e40af", border: "#93c5fd" },
+    zero: { label: "Zero", bg: "#fef2f2", color: "#991b1b", border: "#fecaca" },
+    late: { label: "Late", bg: "#fffbeb", color: "#92400e", border: "#fde68a" },
+    ungraded: { label: "Ungraded", bg: "#f0fdf4", color: "#166534", border: "#bbf7d0" },
+    missing: { label: "Missing", bg: "#f5f3ff", color: "#5b21b6", border: "#c4b5fd" },
+  };
+
+  const typeCounts = {};
+  items.forEach(i => { typeCounts[i.type] = (typeCounts[i.type] || 0) + 1; });
+
+  const selectItem = (item) => {
+    setSelectedItem(item);
+    setQuickGradeOpen(false);
+    const g = grades[item.key] || {};
+    setGradeForm({ score: g.score ?? "", outOf: g.outOf || 100, comment: g.comment || "" });
+  };
+
+  const saveGrade = async () => {
+    if (!selectedItem) return;
+    const key = selectedItem.key;
+    const existing = grades[key] || {};
+    const newGrade = {
+      ...existing,
+      score: gradeForm.score === "" ? undefined : parseFloat(gradeForm.score),
+      outOf: parseFloat(gradeForm.outOf) || 100,
+      comment: gradeForm.comment,
+      gradedTs: Date.now(),
+    };
+    const newRegradeRequests = { ...regradeRequests };
+    delete newRegradeRequests[key];
+    const gradeNotifications = { ...(data.gradeNotifications || {}), [key]: { ts: Date.now() } };
+    const updated = { ...data, grades: { ...grades, [key]: newGrade }, regradeRequests: newRegradeRequests, gradeNotifications };
+    await saveData(updated); setData(updated);
+
+    // Mark as completed, fade out after 2 minutes
+    const itemId = selectedItem.id;
+    setCompletedItems(prev => new Set([...prev, itemId]));
+    setTimeout(() => { setCompletedItems(prev => { const next = new Set(prev); next.delete(itemId); return next; }); }, 120000);
+
+    setSelectedItem(null);
+    showMsg("Grade saved");
+  };
+
+  return (
+    <div style={{ fontFamily: F, height: "calc(100vh - 60px)", display: "flex", flexDirection: "column" }}>
+      {msg && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "#1e293b", color: "#fff", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, zIndex: 999 }}>{msg}</div>}
+
+      {/* Header */}
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid #f3f4f6" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>Grading Inbox <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_MUTED }}>({items.length})</span></div>
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ ...sel, fontSize: 12, padding: "4px 8px" }}>
+            <option value="priority">By Priority</option>
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="assignment">By Assignment</option>
+            <option value="student">By Student</option>
+          </select>
+        </div>
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          <button onClick={() => setFilter("all")} style={{ ...pill, padding: "5px 12px", fontSize: 11, background: filter === "all" ? "#111827" : "#f3f4f6", color: filter === "all" ? "#fff" : "#4b5563" }}>All ({items.length})</button>
+          {["ungraded", "regrade", "resub", "zero", "late", "missing"].map(t => {
+            const tc = typeConfig[t];
+            const count = typeCounts[t] || 0;
+            if (count === 0) return null;
+            return <button key={t} onClick={() => setFilter(t)} style={{ ...pill, padding: "5px 12px", fontSize: 11, background: filter === t ? tc.color : tc.bg, color: filter === t ? "#fff" : tc.color, border: "1px solid " + tc.border }}>{tc.label} ({count})</button>;
+          })}
+        </div>
+      </div>
+
+      {/* Split panel */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        {/* Left: item list */}
+        <div style={{ width: "40%", minWidth: 300, borderRight: "1px solid #f3f4f6", overflowY: "auto" }}>
+          {sorted.length === 0 && (
+            <div style={{ padding: 40, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>
+              {filter === "all" ? "Nothing to grade. Nice work." : "No " + (typeConfig[filter]?.label || "") + " items."}
+            </div>
+          )}
+          {sorted.filter(item => !completedItems.has(item.id) || item.id === selectedItem?.id).map(item => {
+            const tc = typeConfig[item.type];
+            const isSelected = selectedItem?.id === item.id;
+            const isCompleted = completedItems.has(item.id);
+            const bio = bios[item.student.id] || {};
+            return (
+              <div key={item.id} onClick={() => selectItem(item)} style={{
+                padding: "12px 16px", cursor: "pointer", borderBottom: "1px solid #f9fafb",
+                background: isSelected ? ACCENT + "08" : isCompleted ? "#f0fdf4" : "#fff",
+                borderLeft: isSelected ? "3px solid " + ACCENT : "3px solid transparent",
+                opacity: isCompleted ? 0.6 : 1,
+                transition: "opacity 0.3s",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {bio.photo ? (
+                    <img src={bio.photo} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: TEXT_MUTED, flexShrink: 0 }}>{item.student.name[0]}</div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{item.student.name}</span>
+                      {isCompleted && <span style={{ fontSize: 12, color: GREEN }}>&#10003;</span>}
+                    </div>
+                    <div style={{ fontSize: 12, color: TEXT_SECONDARY, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.assignment.name}</div>
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: tc.bg, color: tc.color, border: "1px solid " + tc.border, flexShrink: 0 }}>{tc.label}</span>
+                </div>
+                <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
+                  {item.ts ? new Date(item.ts).toLocaleDateString() : ""}
+                  {item.type === "regrade" && item.regradeNote && <span style={{ marginLeft: 6 }}>"{item.regradeNote.length > 40 ? item.regradeNote.slice(0, 40) + "..." : item.regradeNote}"</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Right: grading panel */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+          {!selectedItem ? (
+            <div style={{ padding: 60, textAlign: "center", color: TEXT_MUTED }}>
+              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Select an item to grade</div>
+              <div style={{ fontSize: 13 }}>Click on any item in the list to open it here.</div>
+            </div>
+          ) : (
+            <div>
+              {/* Student header */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                {(() => { const bio = bios[selectedItem.student.id] || {}; return bio.photo ? (
+                  <img src={bio.photo} alt="" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover" }} />
+                ) : (
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: TEXT_MUTED }}>{selectedItem.student.name[0]}</div>
+                ); })()}
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>{selectedItem.student.name}</div>
+                  <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>{selectedItem.assignment.name} ({selectedItem.assignment.weight}%)</div>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 6, background: typeConfig[selectedItem.type].bg, color: typeConfig[selectedItem.type].color, border: "1px solid " + typeConfig[selectedItem.type].border, marginLeft: "auto" }}>{typeConfig[selectedItem.type].label}</span>
+              </div>
+
+              {/* Regrade request note */}
+              {selectedItem.type === "regrade" && selectedItem.regradeNote && (
+                <div style={{ padding: "10px 14px", background: "#fffbeb", borderRadius: 10, border: "1px solid #fde68a", marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: AMBER, textTransform: "uppercase", marginBottom: 4 }}>Regrade Request</div>
+                  <div style={{ fontSize: 13, color: "#92400e", lineHeight: 1.5 }}>{selectedItem.regradeNote}</div>
+                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>{new Date(selectedItem.ts).toLocaleString()}</div>
+                </div>
+              )}
+
+              {/* Submission */}
+              {selectedItem.sub ? (
+                <div style={{ padding: "10px 14px", background: "#f9fafb", borderRadius: 10, marginBottom: 12 }}>
+                  {selectedItem.sub.docUrl && <a href={selectedItem.sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: ACCENT, fontWeight: 600, textDecoration: "none" }}>View Submission</a>}
+                  {selectedItem.sub.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, lineHeight: 1.5 }}>"{selectedItem.sub.notes}"</div>}
+                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
+                    Submitted {new Date(selectedItem.sub.ts).toLocaleString()}
+                    {selectedItem.type === "late" && <span style={{ color: AMBER, fontWeight: 600, marginLeft: 6 }}>LATE</span>}
+                    {selectedItem.type === "resub" && <span style={{ color: "#2563eb", fontWeight: 600, marginLeft: 6 }}>RESUBMITTED</span>}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding: "10px 14px", background: "#fef2f2", borderRadius: 10, marginBottom: 12, fontSize: 13, color: RED }}>No submission</div>
+              )}
+
+              {/* Existing grade */}
+              {selectedItem.grade.score !== undefined && selectedItem.grade.score !== "" && (
+                <div style={{ padding: "10px 14px", background: "#f9fafb", borderRadius: 10, marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Current Grade</div>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: parseFloat(selectedItem.grade.score) === 0 ? RED : "#111827" }}>{selectedItem.grade.score}<span style={{ fontSize: 13, color: TEXT_MUTED, fontWeight: 500 }}> / {selectedItem.grade.outOf || 100}</span></div>
+                  {selectedItem.grade.comment && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, lineHeight: 1.5 }}>{selectedItem.grade.comment}</div>}
+                </div>
+              )}
+
+              {/* Quick Grade button */}
+              {!!(data.assignmentRubrics || {})[selectedItem.assignment.id] && (
+                <button onClick={() => setQuickGradeOpen(!quickGradeOpen)} style={{ ...pill, background: quickGradeOpen ? ACCENT : "#eff6ff", color: quickGradeOpen ? "#fff" : ACCENT, width: "100%", marginBottom: 12, fontSize: 13 }}>
+                  {quickGradeOpen ? "Close Quick Grade" : "Quick Grade"}
+                </button>
+              )}
+              {quickGradeOpen && (
+                <QuickGrade assignmentId={selectedItem.assignment.id} studentId={selectedItem.student.id} studentName={selectedItem.student.name} data={data} setData={setData} onClose={() => {
+                  setQuickGradeOpen(false);
+                  const itemId = selectedItem.id;
+                  setCompletedItems(prev => new Set([...prev, itemId]));
+                  setTimeout(() => { setCompletedItems(prev => { const next = new Set(prev); next.delete(itemId); return next; }); }, 120000);
+                  setSelectedItem(null);
+                }} />
+              )}
+
+              {/* Manual grade inputs */}
+              {!quickGradeOpen && (
+                <div>
+                  <div style={{ ...sectionLabel, marginBottom: 6 }}>Grade</div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                    <input type="number" value={gradeForm.score} onChange={e => setGradeForm({ ...gradeForm, score: e.target.value })} placeholder="Score" style={{ ...inp, width: 90, fontSize: 16, fontWeight: 700, padding: "8px 12px", textAlign: "center" }} />
+                    <span style={{ fontSize: 14, color: TEXT_MUTED }}>/</span>
+                    <input type="number" value={gradeForm.outOf} onChange={e => setGradeForm({ ...gradeForm, outOf: e.target.value })} style={{ ...inp, width: 60, fontSize: 14, padding: "8px 10px", textAlign: "center" }} />
+                  </div>
+                  <textarea value={gradeForm.comment} onChange={e => setGradeForm({ ...gradeForm, comment: e.target.value })} placeholder="Comment for student..." rows={3} style={{ ...inp, fontSize: 13, padding: "8px 12px", resize: "vertical", marginBottom: 10 }} />
+                  <button onClick={saveGrade} style={{ ...pill, background: GREEN, color: "#fff", width: "100%", fontSize: 14, padding: "10px 16px" }}>Save Grade</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
