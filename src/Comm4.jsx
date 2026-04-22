@@ -2315,45 +2315,83 @@ function TeamsView({ teams, students, log, data }) {
       </div>
     );
   }
-  // Use fixed team assignments (project groups), not snake draft shuffle
-  const teamTotals = teams.map(t => {
-    const members = students.filter(s => s.teamId === t.id);
-    const total = members.reduce((sum, m) => sum + gp(log, m.id), 0);
-    return { ...t, total, members };
-  }).sort((a, b) => b.total - a.total);
 
-  const weeklyWins = data?.weeklyTeamWins || {};
-  const winCounts = {};
-  Object.values(weeklyWins).forEach(tid => { if (tid) winCounts[tid] = (winCounts[tid] || 0) + 1; });
+  const TEAM_BLURBS = {
+    "team-1": {
+      description: "How do athletes, coaches, and organizations communicate in high-stakes moments? Think NIL negotiations, transfer portal decisions, player/coach dynamics, and how youth sports parents fit into the picture.",
+      questions: ["How does communication shape NIL deal outcomes for college athletes?", "What role does the player/coach relationship play in transfer portal decisions?", "How does parent involvement affect communication in youth sports?"],
+    },
+    "team-2": {
+      description: "How do industries build identity and connect with audiences? This group looks at how music artists and restaurants use branding, marketing, and communication to create loyalty and stand out.",
+      questions: ["How do music artists use social media to build and maintain their brand?", "What communication strategies make a restaurant brand successful?", "How do entertainment and food industries differ in how they build audience loyalty?"],
+    },
+    "team-3": {
+      description: "Different media forms shape how people understand health, identity, and each other. This group explores healthcare communication, how film and language influence perception, and how social media affects Gen Z's relationship with these topics.",
+      questions: ["How does communication between healthcare providers and patients affect outcomes?", "How do films shape public understanding of neurodivergence or mental health?", "How does social media change the way Gen Z talks about health and identity?"],
+    },
+    "team-4": {
+      description: "How does social media change what people actually do? This group looks at how platforms influence wellness habits, spending, relationships, and everyday decisions.",
+      questions: ["How does social media influence college students' spending habits?", "What role does social media play in shaping wellness and eating behaviors?", "How do platforms like TikTok and Instagram affect how people choose romantic partners?"],
+    },
+    "team-5": {
+      description: "Why do some trends take off and others don't? This group digs into how fashion and music trends move through social media and culture, and why college campuses become trendsetters.",
+      questions: ["What communication patterns drive fashion trends on college campuses?", "How do music artists use communication strategies to set trends?", "What role do platforms like TikTok play in accelerating trend cycles?"],
+    },
+    "team-6": {
+      description: "How do you tell a compelling story about something complex? This group looks at how marketing and branding work across sports, science, music, and media, and what makes a message stick.",
+      questions: ["How do sports brands use storytelling to connect with audiences?", "What makes science communication effective for general audiences?", "How do marketing strategies differ across entertainment, sports, and tech industries?"],
+    },
+    "team-7": {
+      description: "Communication works differently depending on context. This group explores how culture, industry, and setting shape the way people talk to each other, from foreign film to healthcare to everyday trends.",
+      questions: ["How does foreign film communicate cultural values differently than American film?", "How do communication practices in healthcare vary across cultural contexts?", "How do cultural differences shape consumer trends and preferences?"],
+    },
+    "team-8": {
+      description: "How does digital media shape the way people see themselves and make decisions? This group looks at how social media, AI, and online content influence self-image, eating habits, fashion choices, and identity.",
+      questions: ["How does social media influence college students' body image and eating habits?", "What role does AI play in shaping how people communicate and present themselves?", "How do fashion influencers affect consumer behavior among Gen Z?"],
+    },
+  };
+
+  const teamData = teams.map(t => {
+    const members = students.filter(s => s.teamId === t.id);
+    return { ...t, members };
+  });
 
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <div style={{ ...sectionLabel, marginBottom: 4 }}>This Week's Teams</div>
-        <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12, lineHeight: 1.5 }}>Teams shuffle weekly based on leaderboard rank. The team whose top 3 players score highest on the weekly game earns 10 bonus points each.</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
-          {teamTotals.map((team, i) => {
+        <div style={{ ...sectionLabel, marginBottom: 4 }}>Project Groups</div>
+        <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12, lineHeight: 1.5 }}>Your group for the quarter. Each group has a research direction and suggested questions to get you started.</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 12 }}>
+          {teamData.map((team, i) => {
             const tc = TEAM_COLORS[team.colorIdx];
-            const memberData = team.members.map(m => ({ ...m, points: gp(log, m.id) })).sort((a, b) => b.points - a.points);
-            const wins = winCounts[team.id] || 0;
+            const blurb = TEAM_BLURBS[team.id] || {};
             return (
               <div key={team.id} style={{ borderRadius: 16, border: "1px solid #f3f4f6", overflow: "hidden", background: "#fff" }}>
-                <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 12, background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 900, flexShrink: 0 }}>#{i + 1}</div>
+                <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, borderBottom: "1px solid #f3f4f6" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 900, flexShrink: 0 }}>{i + 1}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{team.name}</div>
-                    <div style={{ fontSize: 11, color: TEXT_MUTED }}>{memberData.length} players{wins > 0 ? " / " + wins + " win" + (wins !== 1 ? "s" : "") : ""}</div>
+                    <div style={{ fontSize: 11, color: TEXT_MUTED }}>{team.members.length} members</div>
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{team.total}</div>
                 </div>
-                <div style={{ padding: "0 16px 12px" }}>
-                  {memberData.map(m => (
-                    <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderTop: "1px solid #f9fafb" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: tc.accent, flexShrink: 0 }} />
-                        <span style={{ fontSize: 13, color: "#52525b" }}>{m.name}</span>
+                {blurb.description && (
+                  <div style={{ padding: "12px 16px", borderBottom: "1px solid #f3f4f6" }}>
+                    <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>{blurb.description}</div>
+                    {blurb.questions && blurb.questions.length > 0 && (
+                      <div style={{ marginTop: 10 }}>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Research Questions</div>
+                        {blurb.questions.map((q, qi) => (
+                          <div key={qi} style={{ fontSize: 12, color: "#52525b", lineHeight: 1.5, padding: "3px 0", paddingLeft: 10, borderLeft: "2px solid " + tc.accent + "40" }}>{q}</div>
+                        ))}
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{m.points}</span>
+                    )}
+                  </div>
+                )}
+                <div style={{ padding: "10px 16px 14px" }}>
+                  {team.members.map(m => (
+                    <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 0" }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: tc.accent, flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: "#52525b" }}>{m.name}</span>
                     </div>
                   ))}
                 </div>
