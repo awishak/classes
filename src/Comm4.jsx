@@ -3200,7 +3200,7 @@ function RosterCombined({ data, setData, userName, isAdmin }) {
         {isAdmin && <button onClick={() => setSub("draft")} style={sub === "draft" ? pillActive : pillInactive}>Draft</button>}
       </div>
       {sub === "roster" && <RosterView data={data} setData={setData} userName={userName} />}
-      {sub === "teams" && <TeamsView teams={data.teams} students={visibleStudents} log={data.log} data={data} />}
+      {sub === "teams" && <TeamsView teams={data.teams} students={data.students} log={data.log} data={data} />}
       {sub === "draft" && isAdmin && <TeamBuilder data={data} setData={setData} />}
     </div>
   );
