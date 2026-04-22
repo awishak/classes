@@ -713,6 +713,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                       </div>
                     )}
                     {/* Bulk notes import */}
+                    {isAdmin && <div style={{ marginTop: 6, padding: 8, background: "#ec4899", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 700 }}>BULK NOTES TEST - {a.id}</div>}
                     {isAdmin && a.id !== "participation" && (
                       <div onClick={e => e.stopPropagation()}>
                         <BulkNotesImport assignmentId={a.id} data={data} setData={setData} />
@@ -1046,7 +1047,7 @@ Match each note to the correct student name from the list above. Use the student
   if (!open) {
     return (
       <div style={{ marginTop: 6 }}>
-        <button onClick={() => setOpen(true)} style={{ ...pillInactive, fontSize: 11, width: "100%" }}>
+        <button onClick={() => setOpen(true)} style={{ ...pillInactive, fontSize: 11, width: "100%", background: "#ec4899", color: "#fff" }}>
           Bulk Notes {noteCount > 0 ? "(" + noteCount + " saved)" : ""}
         </button>
       </div>
