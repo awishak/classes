@@ -2036,11 +2036,12 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
     const regradeRequests = data.regradeRequests || {};
 
     // Dashboard counts
-    let zeroCount = 0, missingCount = 0, regradeCount = 0, lateUngradedCount = 0;
+    let zeroCount = 0, missingCount = 0, regradeCount = 0, lateUngradedCount = 0, resubCount = 0;
     const zeroCells = new Set();
     const missingCells = new Set();
     const regradeCells = new Set();
     const lateCells = new Set();
+    const resubCells = new Set();
 
     sorted.forEach(s => {
       gradeAssignments.forEach(a => {
@@ -2053,11 +2054,13 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
         const isZero = hasGrade && parseFloat(g.score) === 0;
         const isLate = sub && dueDate && sub.ts > dueDate.getTime();
         const hasRegrade = !!regradeRequests[key];
+        const isResub = hasGrade && sub && g.gradedTs && sub.ts > g.gradedTs;
 
         if (isZero) { zeroCount++; zeroCells.add(key); }
         if (isPastDue && !sub && !hasGrade) { missingCount++; missingCells.add(key); }
         if (hasRegrade) { regradeCount++; regradeCells.add(key); }
         if (isLate && !hasGrade) { lateUngradedCount++; lateCells.add(key); }
+        if (isResub) { resubCount++; resubCells.add(key); }
       });
     });
 
@@ -2111,8 +2114,13 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
           </div>
 
           {/* Dashboard summary */}
-          {(zeroCount > 0 || missingCount > 0 || regradeCount > 0 || lateUngradedCount > 0) && (
+          {(zeroCount > 0 || missingCount > 0 || regradeCount > 0 || lateUngradedCount > 0 || resubCount > 0) && (
             <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+              {resubCount > 0 && (
+                <button onClick={() => setHighlight(h => h === "resub" ? null : "resub")} style={{ ...pill, padding: "8px 16px", background: highlight === "resub" ? "#2563eb" : "#eff6ff", color: highlight === "resub" ? "#fff" : "#2563eb", border: "1px solid #93c5fd" }}>
+                  {resubCount} Resubmitted
+                </button>
+              )}
               {regradeCount > 0 && (
                 <button onClick={() => setHighlight(h => h === "regrade" ? null : "regrade")} style={{ ...pill, padding: "8px 16px", background: highlight === "regrade" ? AMBER : "#fffbeb", color: highlight === "regrade" ? "#fff" : "#92400e", border: "1px solid #fde68a" }}>
                   {regradeCount} Regrade Request{regradeCount !== 1 ? "s" : ""}
@@ -2267,15 +2275,18 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                         const isHighlighted = (highlight === "zero" && zeroCells.has(cellKey))
                           || (highlight === "missing" && missingCells.has(cellKey))
                           || (highlight === "regrade" && regradeCells.has(cellKey))
-                          || (highlight === "late" && lateCells.has(cellKey));
+                          || (highlight === "late" && lateCells.has(cellKey))
+                          || (highlight === "resub" && resubCells.has(cellKey));
                         const isDimmed = highlight && !isHighlighted;
                         const sub = submissions[cellKey];
                         const hasSubmission = !!sub;
                         const hasGrade = score !== undefined && score !== "";
+                        const isResub = hasGrade && hasSubmission && g.gradedTs && sub.ts > g.gradedTs;
                         const cellBg = isHighlighted
-                          ? (highlight === "zero" ? "#fecaca" : highlight === "missing" ? "#ddd6fe" : highlight === "regrade" ? "#fde68a" : "#fde68a")
+                          ? (highlight === "zero" ? "#fecaca" : highlight === "missing" ? "#ddd6fe" : highlight === "resub" ? "#bfdbfe" : "#fde68a")
                           : zeroCells.has(cellKey) ? "#fef2f2"
                           : missingCells.has(cellKey) ? "#f5f3ff"
+                          : resubCells.has(cellKey) ? "#eff6ff"
                           : "transparent";
                         return (
                           <td key={id} style={{ textAlign: "center", padding: "4px 6px", background: cellBg, opacity: isDimmed ? 0.3 : 1, transition: "opacity 0.15s" }}>
@@ -2284,6 +2295,7 @@ export function Gradebook({ data, setData, userName, isAdmin }) {
                             ) : (
                               <button onClick={(e) => { e.stopPropagation(); setEditingCell(cellKey); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 13, fontWeight: 700, padding: "4px 8px", borderRadius: 6, color: score !== undefined && score !== "" ? (parseFloat(score) === 0 ? RED : "#111827") : "#d1d5db", minWidth: 40, position: "relative" }}>
                                 {hasGrade ? score + "/" + outOf : missingCells.has(cellKey) ? "miss" : hasSubmission ? "\uD83D\uDCC4" : "-"}
+                                {isResub && <sup style={{ fontSize: 9, marginLeft: 2, color: "#2563eb" }}>RS</sup>}
                                 {hasRegrade && <sup style={{ fontSize: 9, marginLeft: 2, color: AMBER }}>RG</sup>}
                               </button>
                             )}
