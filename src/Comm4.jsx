@@ -2316,37 +2316,47 @@ function TeamsView({ teams, students, log, data }) {
     );
   }
 
+  const bios = data.bios || {};
+
   const TEAM_BLURBS = {
     "team-1": {
-      description: "How do athletes, coaches, and organizations communicate in high-stakes moments? Think NIL negotiations, transfer portal decisions, player/coach dynamics, and how youth sports parents fit into the picture.",
+      description: "Your group has a strong sports thread running through it. Eddie, you're interested in sports broadcasting and the transfer portal. Andreas, you've been thinking about gender differences in classroom participation. Sash, you want to explore player/coach relationships. Adrieana, you've got a wide range of interests including NIL deals, parent involvement in youth sports, and athlete branding.",
+      suggestion: "You might consider focusing on how communication shapes relationships and decisions in college athletics. There's a clear overlap between NIL negotiations, transfer portal decisions, player/coach dynamics, and how parents fit into the picture. You could also explore how athletes communicate their personal brand.",
       questions: ["How does communication shape NIL deal outcomes for college athletes?", "What role does the player/coach relationship play in transfer portal decisions?", "How does parent involvement affect communication in youth sports?"],
     },
     "team-2": {
-      description: "How do industries build identity and connect with audiences? This group looks at how music artists and restaurants use branding, marketing, and communication to create loyalty and stand out.",
+      description: "Mikey, you're interested in music artist branding. Destin, you want to look at the restaurant industry. Chris, you're drawn to sports and branding. All three of you are thinking about how industries build identity.",
+      suggestion: "You might consider exploring how different industries use branding, marketing, and communication to create loyalty and stand out. There's an interesting overlap between how a music artist builds a fanbase, how a restaurant builds regulars, and how a sports brand builds community.",
       questions: ["How do music artists use social media to build and maintain their brand?", "What communication strategies make a restaurant brand successful?", "How do entertainment and food industries differ in how they build audience loyalty?"],
     },
     "team-3": {
-      description: "Different media forms shape how people understand health, identity, and each other. This group explores healthcare communication, how film and language influence perception, and how social media affects Gen Z's relationship with these topics.",
+      description: "Lola, you're interested in film communication, linguistic trends, and how people view neurodivergence. Elizabeth, you want to explore Gen Z and Snapchat. Fiona, you're drawn to interpersonal communication in healthcare.",
+      suggestion: "You might consider looking at how different media forms shape the way people understand health, identity, and each other. There's an interesting connection between how film portrays neurodivergence, how social media changes health conversations for Gen Z, and how doctors and patients communicate. The common thread is how the medium changes the message.",
       questions: ["How does communication between healthcare providers and patients affect outcomes?", "How do films shape public understanding of neurodivergence or mental health?", "How does social media change the way Gen Z talks about health and identity?"],
     },
     "team-4": {
-      description: "How does social media change what people actually do? This group looks at how platforms influence wellness habits, spending, relationships, and everyday decisions.",
+      description: "Ava, you're interested in how social media influences wellness habits, romantic partners, and spending. Zoe, you're thinking about fashion and health. Penelope, you want to explore Gen Z and Snapchat. Kalia, you're interested in music preferences and shopping trends.",
+      suggestion: "You might consider exploring how social media platforms change what people actually do in their daily lives. All four of you are circling the same idea: platforms influence wellness, spending, relationships, and lifestyle choices. The question is how and why.",
       questions: ["How does social media influence college students' spending habits?", "What role does social media play in shaping wellness and eating behaviors?", "How do platforms like TikTok and Instagram affect how people choose romantic partners?"],
     },
     "team-5": {
-      description: "Why do some trends take off and others don't? This group digs into how fashion and music trends move through social media and culture, and why college campuses become trendsetters.",
+      description: "Charlotte, you want to know why fashion trends spread and why college campuses have different trends. Adriana, you're interested in music artist branding. Addison, you're thinking about trendsetting communication and marketing. Gus, you're looking at Gen Z and Snapchat.",
+      suggestion: "You might consider digging into why some trends take off and others don't. Charlotte's question about campus trends is a great anchor. Adriana and Addison both care about how artists and brands set trends, and Gus brings the platform angle. You could explore how trends move through social media and culture, and what makes something catch on.",
       questions: ["What communication patterns drive fashion trends on college campuses?", "How do music artists use communication strategies to set trends?", "What role do platforms like TikTok play in accelerating trend cycles?"],
     },
     "team-6": {
-      description: "How do you tell a compelling story about something complex? This group looks at how marketing and branding work across sports, science, music, and media, and what makes a message stick.",
+      description: "Tim, you're interested in marketing. Finn, you're looking at marketing and branding with music or brands. Drew, you're thinking about sports broadcasting and PR. Diego, you're drawn to science communication.",
+      suggestion: "You might consider exploring how you tell a compelling story about something complex. Tim and Finn both care about marketing and branding. Drew brings the sports media angle. Diego's science communication interest is the most unique here, but it fits under the same umbrella: how do you make something resonate with an audience? The overlap is persuasive storytelling across different industries.",
       questions: ["How do sports brands use storytelling to connect with audiences?", "What makes science communication effective for general audiences?", "How do marketing strategies differ across entertainment, sports, and tech industries?"],
     },
     "team-7": {
-      description: "Communication works differently depending on context. This group explores how culture, industry, and setting shape the way people talk to each other, from foreign film to healthcare to everyday trends.",
+      description: "Santi, you're interested in how foreign film communicates, plus sports and trends. Marissa, you're thinking about music preferences and shopping trends. Kelly, you want to explore healthcare communication. Carter, you're also drawn to healthcare communication and technology between departments.",
+      suggestion: "You might consider exploring how communication works differently depending on context. Santi's foreign film interest raises questions about how culture shapes communication. Kelly and Carter both care about healthcare, where context and clarity can be life-or-death. Marissa's interest in trends and preferences connects to how context shapes consumer choices. The thread is cross-cultural and cross-context communication.",
       questions: ["How does foreign film communicate cultural values differently than American film?", "How do communication practices in healthcare vary across cultural contexts?", "How do cultural differences shape consumer trends and preferences?"],
     },
     "team-8": {
-      description: "How does digital media shape the way people see themselves and make decisions? This group looks at how social media, AI, and online content influence self-image, eating habits, fashion choices, and identity.",
+      description: "Emma, you're interested in AI in school and interpersonal communication. Sienna, you're thinking about trendsetting, marketing, and relationships. Angelina, you care about marketing, fashion trends, and social media's effects on eating habits. Phoebe, you're interested in fashion and health.",
+      suggestion: "You might consider exploring how digital media shapes the way people see themselves and make decisions. Angelina and Phoebe both touch on how media affects eating habits and body image. Sienna's interest in trendsetting and relationships connects to how online content shapes self-perception. Emma's AI angle is unique but relevant: how is AI changing the way people communicate and present themselves? The overlap is digital media, self-image, and identity.",
       questions: ["How does social media influence college students' body image and eating habits?", "What role does AI play in shaping how people communicate and present themselves?", "How do fashion influencers affect consumer behavior among Gen Z?"],
     },
   };
@@ -2360,41 +2370,59 @@ function TeamsView({ teams, students, log, data }) {
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 4 }}>Project Groups</div>
-        <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12, lineHeight: 1.5 }}>Your group for the quarter. Each group has a research direction and suggested questions to get you started.</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 12 }}>
+        <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12, lineHeight: 1.5 }}>Your group for the quarter. Each group has suggested research directions and questions to get you started.</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {teamData.map((team, i) => {
             const tc = TEAM_COLORS[team.colorIdx];
             const blurb = TEAM_BLURBS[team.id] || {};
             return (
               <div key={team.id} style={{ borderRadius: 16, border: "1px solid #f3f4f6", overflow: "hidden", background: "#fff" }}>
-                <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, borderBottom: "1px solid #f3f4f6" }}>
+                {/* Header */}
+                <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, background: tc.accent + "08", borderBottom: "1px solid #f3f4f6" }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 900, flexShrink: 0 }}>{i + 1}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{team.name}</div>
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: TEXT_PRIMARY }}>{team.name}</div>
                     <div style={{ fontSize: 11, color: TEXT_MUTED }}>{team.members.length} members</div>
                   </div>
                 </div>
+
+                {/* Members with photos and hometowns */}
+                <div style={{ padding: "14px 16px", borderBottom: "1px solid #f3f4f6" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                    {team.members.map(m => {
+                      const bio = bios[m.id] || {};
+                      return (
+                        <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 180 }}>
+                          {bio.photo ? (
+                            <img src={bio.photo} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid " + tc.accent + "30" }} />
+                          ) : (
+                            <div style={{ width: 36, height: 36, borderRadius: "50%", background: tc.accent + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: tc.accent, flexShrink: 0 }}>{m.name[0]}</div>
+                          )}
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{m.name}</div>
+                            {bio.hometown && <div style={{ fontSize: 11, color: TEXT_MUTED }}>{bio.hometown}</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Blurb */}
                 {blurb.description && (
-                  <div style={{ padding: "12px 16px", borderBottom: "1px solid #f3f4f6" }}>
-                    <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>{blurb.description}</div>
+                  <div style={{ padding: "14px 16px" }}>
+                    <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.7, marginBottom: 10 }}>{blurb.description}</div>
+                    {blurb.suggestion && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.7, marginBottom: 10 }}>{blurb.suggestion}</div>}
                     {blurb.questions && blurb.questions.length > 0 && (
-                      <div style={{ marginTop: 10 }}>
-                        <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Research Questions</div>
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Suggested Research Questions</div>
                         {blurb.questions.map((q, qi) => (
-                          <div key={qi} style={{ fontSize: 12, color: "#52525b", lineHeight: 1.5, padding: "3px 0", paddingLeft: 10, borderLeft: "2px solid " + tc.accent + "40" }}>{q}</div>
+                          <div key={qi} style={{ fontSize: 12, color: "#52525b", lineHeight: 1.6, padding: "4px 0 4px 10px", borderLeft: "2px solid " + tc.accent + "40" }}>{q}</div>
                         ))}
                       </div>
                     )}
                   </div>
                 )}
-                <div style={{ padding: "10px 16px 14px" }}>
-                  {team.members.map(m => (
-                    <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 0" }}>
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: tc.accent, flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, color: "#52525b" }}>{m.name}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
             );
           })}
