@@ -481,7 +481,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
     await saveData(updated); setData(updated); setEditId(null); setEditLocal(null); showMsg("Removed");
   };
 
-  const defaultBlurb = "Your grade is based on your speeches, peer reviews, and contributions throughout the quarter. Each speech is weighted differently based on its complexity and importance."";
+  const defaultBlurb = "Your grade is based on your speeches, peer reviews, and contributions throughout the quarter. Each speech is weighted differently based on its complexity and importance.";
   const blurbText = data.assignmentsBlurb || defaultBlurb;
 
   const saveBlurb = async () => {
