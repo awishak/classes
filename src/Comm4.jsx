@@ -2315,9 +2315,9 @@ function TeamsView({ teams, students, log, data }) {
       </div>
     );
   }
-  const shuffled = shuffleTeams(students, log, teams);
+  // Use fixed team assignments (project groups), not snake draft shuffle
   const teamTotals = teams.map(t => {
-    const members = shuffled.filter(s => s.teamId === t.id);
+    const members = students.filter(s => s.teamId === t.id);
     const total = members.reduce((sum, m) => sum + gp(log, m.id), 0);
     return { ...t, total, members };
   }).sort((a, b) => b.total - a.total);
