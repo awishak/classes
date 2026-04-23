@@ -1845,6 +1845,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
           {assignments.filter(a => a.id !== "participation").map(a => {
             const g = grades[sid + "-" + a.id] || {};
             const sub = (data.submissions || {})[sid + "-" + a.id];
+            const vidSub = (data.videoSubmissions || {})[sid + "-" + a.id];
             const dueDate = parseDueDate(a.due);
             const isLate = sub && dueDate && sub.ts > dueDate.getTime();
             const isPastDue = dueDate && Date.now() > dueDate.getTime();
@@ -2430,6 +2431,7 @@ export function GradingInbox({ data, setData, userName }) {
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
   const submissions = data.submissions || {};
+  const videoSubmissions = data.videoSubmissions || {};
   const regradeRequests = data.regradeRequests || {};
   const students = (data.students || []).filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis");
   const bios = data.bios || {};
@@ -2452,6 +2454,7 @@ export function GradingInbox({ data, setData, userName }) {
       const key = s.id + "-" + a.id;
       const g = grades[key] || {};
       const sub = submissions[key];
+      const vidSub = videoSubmissions[key];
       const rr = regradeRequests[key];
       const dueDate = parseDueDate(a.due);
       const isPastDue = dueDate && Date.now() > dueDate.getTime();
@@ -2461,21 +2464,21 @@ export function GradingInbox({ data, setData, userName }) {
       const isResub = hasGrade && sub && g.gradedTs && sub.ts > g.gradedTs;
 
       if (rr) {
-        items.push({ id: key + "-regrade", type: "regrade", student: s, assignment: a, key, sub, grade: g, regradeNote: rr.note, ts: rr.ts, priority: 1 });
+        items.push({ id: key + "-regrade", type: "regrade", student: s, assignment: a, key, sub, vidSub, grade: g, regradeNote: rr.note, ts: rr.ts, priority: 1 });
       }
       if (isResub) {
-        items.push({ id: key + "-resub", type: "resub", student: s, assignment: a, key, sub, grade: g, ts: sub.ts, priority: 2 });
+        items.push({ id: key + "-resub", type: "resub", student: s, assignment: a, key, sub, vidSub, grade: g, ts: sub.ts, priority: 2 });
       }
       if (isZero) {
-        items.push({ id: key + "-zero", type: "zero", student: s, assignment: a, key, sub, grade: g, ts: g.gradedTs || 0, priority: 3 });
+        items.push({ id: key + "-zero", type: "zero", student: s, assignment: a, key, sub, vidSub, grade: g, ts: g.gradedTs || 0, priority: 3 });
       }
       if (sub && !hasGrade && isLate) {
-        items.push({ id: key + "-late", type: "late", student: s, assignment: a, key, sub, grade: g, ts: sub.ts, priority: 4 });
+        items.push({ id: key + "-late", type: "late", student: s, assignment: a, key, sub, vidSub, grade: g, ts: sub.ts, priority: 4 });
       } else if (sub && !hasGrade && !isLate) {
-        items.push({ id: key + "-ungraded", type: "ungraded", student: s, assignment: a, key, sub, grade: g, ts: sub.ts, priority: 5 });
+        items.push({ id: key + "-ungraded", type: "ungraded", student: s, assignment: a, key, sub, vidSub, grade: g, ts: sub.ts, priority: 5 });
       }
       if (isPastDue && !sub && !hasGrade) {
-        items.push({ id: key + "-missing", type: "missing", student: s, assignment: a, key, sub: null, grade: g, ts: dueDate.getTime(), priority: 6 });
+        items.push({ id: key + "-missing", type: "missing", student: s, assignment: a, key, sub: null, vidSub, grade: g, ts: dueDate.getTime(), priority: 6 });
       }
     });
   });
@@ -2648,6 +2651,7 @@ export function GradingInbox({ data, setData, userName }) {
                 <div style={{ padding: "10px 14px", background: "#f9fafb", borderRadius: 10, marginBottom: 12 }}>
                   {selectedItem.sub.docUrl && <a href={selectedItem.sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: ACCENT, fontWeight: 600, textDecoration: "none" }}>View Submission</a>}
                   {selectedItem.sub.videoUrl && <a href={selectedItem.sub.videoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: ACCENT, fontWeight: 600, textDecoration: "none", marginLeft: 12 }}>Video</a>}
+                  {selectedItem.vidSub && selectedItem.vidSub.url && <a href={selectedItem.vidSub.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: ACCENT, fontWeight: 600, textDecoration: "none", marginLeft: 12 }}>Video</a>}
                   {selectedItem.sub.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, lineHeight: 1.5 }}>"{selectedItem.sub.notes}"</div>}
                   <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
                     Submitted {new Date(selectedItem.sub.ts).toLocaleString()}
