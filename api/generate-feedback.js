@@ -1,6 +1,8 @@
 export const config = {
   api: {
-    bodyParser: true,
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
   },
 };
 
@@ -24,7 +26,19 @@ export default async function handler(req, res) {
 
     const prompt = body?.prompt;
     if (!prompt) {
-      return res.status(400).json({ error: "Missing prompt. Received keys: " + Object.keys(body || {}).join(", ") });
+      return res.status(400).json({ error: "Missing prompt" });
+    }
+
+    // Build messages array
+    let content;
+    if (body.image && body.mediaType) {
+      // Image + text prompt
+      content = [
+        { type: "image", source: { type: "base64", media_type: body.mediaType, data: body.image } },
+        { type: "text", text: prompt },
+      ];
+    } else {
+      content = prompt;
     }
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -37,7 +51,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 1000,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content }],
       }),
     });
 
