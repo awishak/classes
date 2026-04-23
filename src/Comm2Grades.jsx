@@ -842,20 +842,23 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
 /* --- STUDENT SUBMISSION (doc link only) --- */
 function StudentSubmission({ assignmentId, data, setData, studentId, existing }) {
   const [docUrl, setDocUrl] = useState(existing?.docUrl || "");
+  const [videoUrl, setVideoUrl] = useState(existing?.videoUrl || "");
   const [notes, setNotes] = useState(existing?.notes || "");
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
   React.useEffect(() => {
     setDocUrl(existing?.docUrl || "");
+    setVideoUrl(existing?.videoUrl || "");
     setNotes(existing?.notes || "");
-  }, [existing?.docUrl, existing?.notes]);
+  }, [existing?.docUrl, existing?.videoUrl, existing?.notes]);
 
   const submit = async () => {
-    if (!docUrl.trim()) return;
+    if (!docUrl.trim() && !videoUrl.trim()) return;
     const key = studentId + "-" + assignmentId;
     const submissions = data.submissions || {};
-    const updated = { ...data, submissions: { ...submissions, [key]: { docUrl: docUrl.trim(), notes: notes.trim(), ts: Date.now() } } };
+    const prev = submissions[key] || {};
+    const updated = { ...data, submissions: { ...submissions, [key]: { ...prev, docUrl: docUrl.trim(), videoUrl: videoUrl.trim(), notes: notes.trim(), ts: Date.now() } } };
     await saveData(updated); setData(updated); showMsg("Submitted");
   };
 
@@ -865,6 +868,7 @@ function StudentSubmission({ assignmentId, data, setData, studentId, existing })
       <div style={{ fontSize: 10, fontWeight: 500, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Your Submission</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <input value={docUrl} onChange={e => setDocUrl(e.target.value)} placeholder="Google Doc link" style={{ ...inp, fontSize: 13, padding: "8px 10px" }} />
+        <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="Video link (Vimeo, YouTube, etc.)" style={{ ...inp, fontSize: 13, padding: "8px 10px" }} />
         <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes for your instructor (optional)" rows={2} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical" }} />
         <button onClick={submit} style={{ ...pill, background: "#111827", color: "#fff", width: "100%" }}>{existing?.ts ? "Resubmit" : "Submit"}</button>
       </div>
@@ -1304,6 +1308,7 @@ Based on the balance of positive and negative feedback across the weighted secti
       {sub && (
         <div style={{ padding: "8px 10px", background: "#f9fafb", borderRadius: 8, marginBottom: 12 }}>
           {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, fontWeight: 500 }}>View Submission</a>}
+                    {sub.videoUrl && <a href={sub.videoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, fontWeight: 500, marginLeft: 8 }}>Video</a>}
           {sub.notes && <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>"{sub.notes}"</div>}
           <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>Submitted {new Date(sub.ts).toLocaleString()}</div>
         </div>
@@ -1484,6 +1489,7 @@ function AdminSubmissions({ assignmentId, data, setData }) {
             {sub && (
               <div style={{ marginBottom: 8 }}>
                 {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 2 }}>Google Doc</a>}
+                    {sub.videoUrl && <a href={sub.videoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 2 }}>Video</a>}
                 {sub.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, lineHeight: 1.4 }}>"{sub.notes}"</div>}
                 <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>Submitted {new Date(sub.ts).toLocaleString()}</div>
               </div>
@@ -1859,6 +1865,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
                 {sub && (
                   <div style={{ marginBottom: 8, padding: "6px 10px", background: "#f9fafb", borderRadius: 8 }}>
                     {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 2 }}>View Submission</a>}
+                    {sub.videoUrl && <a href={sub.videoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 2 }}>Video</a>}
                     {sub.notes && <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2, lineHeight: 1.4 }}>"{sub.notes}"</div>}
                     <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
                       Submitted {new Date(sub.ts).toLocaleString()}
@@ -2640,6 +2647,7 @@ export function GradingInbox({ data, setData, userName }) {
               {selectedItem.sub ? (
                 <div style={{ padding: "10px 14px", background: "#f9fafb", borderRadius: 10, marginBottom: 12 }}>
                   {selectedItem.sub.docUrl && <a href={selectedItem.sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: ACCENT, fontWeight: 600, textDecoration: "none" }}>View Submission</a>}
+                  {selectedItem.sub.videoUrl && <a href={selectedItem.sub.videoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: ACCENT, fontWeight: 600, textDecoration: "none", marginLeft: 12 }}>Video</a>}
                   {selectedItem.sub.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, lineHeight: 1.5 }}>"{selectedItem.sub.notes}"</div>}
                   <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
                     Submitted {new Date(selectedItem.sub.ts).toLocaleString()}
