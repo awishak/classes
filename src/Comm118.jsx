@@ -4063,7 +4063,6 @@ function MyNotesView({ data, setData, isAdmin, userName }) {
   const studentNotes = data.studentNotes || {};
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState("");
-  const [viewingStudent, setViewingStudent] = useState(null);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
@@ -4081,72 +4080,53 @@ function MyNotesView({ data, setData, isAdmin, userName }) {
     await saveData(updated); setData(updated); showMsg("Deleted");
   };
 
-  // Admin: view all students' notes
-  if (isAdmin && !viewingStudent) {
-    const studentsWithNotes = data.students.filter(s => {
-      const notes = studentNotes[s.name];
-      return notes && notes.entries && notes.entries.length > 0;
-    }).sort(lastSortObj);
-
-    const studentsWithout = data.students.filter(s => {
-      const notes = studentNotes[s.name];
-      return !notes || !notes.entries || notes.entries.length === 0;
-    }).sort(lastSortObj);
+  // Admin: view all students' notes inline, sorted by last edited, all students shown
+  if (isAdmin) {
+    const allStudents = [...data.students]
+      .filter(s => s.name !== ADMIN_NAME && s.name !== TEST_STUDENT)
+      .map(s => {
+        const notes = studentNotes[s.name];
+        const entries = (notes && notes.entries) || [];
+        const lastTs = entries.length > 0 ? Math.max(...entries.map(e => e.ts || 0)) : 0;
+        return { student: s, entries, lastTs };
+      })
+      .sort((a, b) => {
+        // Last-edited descending; students with no notes go to the bottom
+        if (a.lastTs === 0 && b.lastTs === 0) return a.student.name.localeCompare(b.student.name);
+        if (a.lastTs === 0) return 1;
+        if (b.lastTs === 0) return -1;
+        return b.lastTs - a.lastTs;
+      });
 
     return (
-      <div style={{ padding: "24px 20px 40px", fontFamily: F }}>
+      <div style={{ padding: "0 0 20px", fontFamily: F }}>
         <Toast message={msg} />
-        <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          <div style={{ ...sectionLabel, marginBottom: 16 }}>Student Notes</div>
-
-          {studentsWithNotes.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No students have written notes yet</div>}
-
-          {studentsWithNotes.map(s => {
-            const notes = studentNotes[s.name];
-            const latest = notes.entries[0];
-            return (
-              <div key={s.id} onClick={() => setViewingStudent(s.name)} style={{ ...crd, padding: 14, marginBottom: 8, cursor: "pointer" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</span>
-                  <span style={{ fontSize: 11, color: TEXT_MUTED }}>{notes.entries.length} note{notes.entries.length !== 1 ? "s" : ""}</span>
-                </div>
-                <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.4 }}>{latest.text.length > 100 ? latest.text.slice(0, 100) + "..." : latest.text}</div>
-                <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>Last updated {new Date(latest.ts).toLocaleDateString()}</div>
+        {allStudents.map(({ student: s, entries, lastTs }) => (
+          <div key={s.id} style={{ ...crd, padding: 14, marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: entries.length > 0 ? 10 : 0 }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY }}>{s.name}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {lastTs > 0 && <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 600 }}>Last edited {new Date(lastTs).toLocaleDateString()}</span>}
+                <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 600 }}>{entries.length} note{entries.length !== 1 ? "s" : ""}</span>
               </div>
-            );
-          })}
-
-          {studentsWithout.length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 6 }}>No notes yet:</div>
-              <div style={{ fontSize: 12, color: TEXT_MUTED, lineHeight: 1.6 }}>{studentsWithout.map(s => s.name.split(" ")[0]).join(", ")}</div>
             </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Admin viewing a specific student's notes
-  if (isAdmin && viewingStudent) {
-    const notes = studentNotes[viewingStudent] || { entries: [] };
-    return (
-      <div style={{ padding: "24px 20px 40px", fontFamily: F }}>
-        <Toast message={msg} />
-        <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          <button onClick={() => setViewingStudent(null)} style={{ ...pillInactive, marginBottom: 16 }}>Back to All Notes</button>
-          <div style={{ ...sectionLabel, marginBottom: 16 }}>{viewingStudent}'s Notes</div>
-          {notes.entries.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No notes yet</div>}
-          {notes.entries.map(entry => (
-            <div key={entry.id} style={{ ...crd, padding: 14, marginBottom: 8 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{new Date(entry.ts).toLocaleDateString()}</span>
-                <button onClick={() => { if (window.confirm("Delete this note?")) deleteNote(viewingStudent, entry.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 12 }}>x</button>
+            {entries.length === 0 ? (
+              <div style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic" }}>No notes yet</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {entries.map(entry => (
+                  <div key={entry.id} style={{ padding: "10px 12px", background: "#fafafa", borderRadius: 8, border: "1px solid " + BORDER }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, color: TEXT_SECONDARY, fontWeight: 600 }}>{new Date(entry.ts).toLocaleDateString()}</span>
+                      <button onClick={() => { if (window.confirm("Delete this note?")) deleteNote(s.name, entry.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 12 }}>x</button>
+                    </div>
+                    <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{entry.text}</div>
+                  </div>
+                ))}
               </div>
-              <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{entry.text}</div>
-            </div>
-          ))}
-        </div>
+            )}
+          </div>
+        ))}
       </div>
     );
   }
@@ -4155,35 +4135,32 @@ function MyNotesView({ data, setData, isAdmin, userName }) {
   const myNotes = studentNotes[userName] || { entries: [] };
 
   return (
-    <div style={{ padding: "24px 20px 40px", fontFamily: F }}>
+    <div style={{ fontFamily: F }}>
       <Toast message={msg} />
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ ...sectionLabel }}>My Notes</div>
-          <button onClick={() => { setEditing(!editing); setEditText(""); }} style={editing ? pillActive : pillInactive}>{editing ? "Cancel" : "+ New Note"}</button>
-        </div>
-
-        <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>Your notes are private, visible only to you and your instructor.</div>
-
-        {editing && (
-          <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
-            <textarea value={editText} onChange={e => setEditText(e.target.value)} placeholder="Write a note..." rows={4} style={{ ...inp, resize: "vertical", fontSize: 14, lineHeight: 1.6, marginBottom: 8 }} />
-            <button onClick={() => { if (editText.trim()) saveNote(userName, editText); }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%" }}>Save Note</button>
-          </div>
-        )}
-
-        {myNotes.entries.length === 0 && !editing && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No notes yet. Click "+ New Note" to start.</div>}
-
-        {myNotes.entries.map(entry => (
-          <div key={entry.id} style={{ ...crd, padding: 14, marginBottom: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{new Date(entry.ts).toLocaleDateString()}</span>
-              <button onClick={() => { if (window.confirm("Delete this note?")) deleteNote(userName, entry.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 12 }}>x</button>
-            </div>
-            <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{entry.text}</div>
-          </div>
-        ))}
+      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: 10 }}>
+        <button onClick={() => { setEditing(!editing); setEditText(""); }} style={editing ? pillActive : pillInactive}>{editing ? "Cancel" : "+ New Note"}</button>
       </div>
+
+      <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>Your notes are private, visible only to you and your instructor.</div>
+
+      {editing && (
+        <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
+          <textarea value={editText} onChange={e => setEditText(e.target.value)} placeholder="Write a note..." rows={4} style={{ ...inp, resize: "vertical", fontSize: 14, lineHeight: 1.6, marginBottom: 8 }} />
+          <button onClick={() => { if (editText.trim()) saveNote(userName, editText); }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%" }}>Save Note</button>
+        </div>
+      )}
+
+      {myNotes.entries.length === 0 && !editing && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No notes yet. Click "+ New Note" to start.</div>}
+
+      {myNotes.entries.map(entry => (
+        <div key={entry.id} style={{ ...crd, padding: 14, marginBottom: 8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{new Date(entry.ts).toLocaleDateString()}</span>
+            <button onClick={() => { if (window.confirm("Delete this note?")) deleteNote(userName, entry.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 12 }}>x</button>
+          </div>
+          <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{entry.text}</div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -5511,20 +5488,66 @@ function ToDoView({ data, setData, userName, isAdmin }) {
 function ActivitiesView({ data, setData, isAdmin, userName }) {
   const student = data.students.find(s => s.name === userName);
   const studentId = student?.id;
+  const [openEventKey, setOpenEventKey] = useState(null);
+  const [showAdminTools, setShowAdminTools] = useState(false);
 
-  // Detect what's live so we can surface a banner at the top
+  // Detect what's live
   const liveItems = [];
-  if (data?.activeGame?.live) liveItems.push({ id: "weekly-game", label: "Weekly Game", anchor: "section-weekly-game" });
-  if (data?.activeToT?.live) liveItems.push({ id: "tot", label: "This or That", anchor: "section-tot" });
-  if (data?.headlines?.activeHeadlineId) liveItems.push({ id: "headlines", label: "Headlines", anchor: "section-headlines" });
-  const openSurveys = (data?.surveys || []).filter(s => s.status === "open");
-  if (openSurveys.length > 0) liveItems.push({ id: "surveys", label: openSurveys.length === 1 ? "Survey" : openSurveys.length + " Surveys", anchor: "section-surveys" });
-  const openBoards = (data?.boards || []).filter(b => b.active);
-  if (openBoards.length > 0) liveItems.push({ id: "boards", label: openBoards.length === 1 ? "Discussion Board" : openBoards.length + " Boards", anchor: "section-boards" });
+  if (data?.activeGame?.live) liveItems.push({ id: "weekly-game", label: "Weekly Game" });
+  if (data?.activeToT?.live) liveItems.push({ id: "tot", label: "This or That" });
+  const liveHeadlineSession = (data?.headlines?.sessions || []).find(s => s.activeHeadlineId && s.phase !== "done");
+  if (liveHeadlineSession) liveItems.push({ id: "headlines", label: "Headlines" });
+  const openSurveys = (data?.surveys || []).filter(s => s.active);
+  if (openSurveys.length > 0) liveItems.push({ id: "surveys", label: openSurveys.length === 1 ? "Survey" : openSurveys.length + " Surveys" });
 
-  const scrollToSection = (anchor) => {
-    const el = document.getElementById(anchor);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  // Build unified event list (reverse chronological)
+  // Game scored timestamps live in data.rebounds[type-week].scoredTs
+  const rebounds = data.rebounds || {};
+  const events = [];
+
+  // Past weekly games (scored)
+  Object.keys(data.weeklyGames || {}).forEach(w => {
+    const g = data.weeklyGames[w];
+    if (!g?.scored) return;
+    const ts = (rebounds["game-" + w]?.scoredTs) || 0;
+    const responses = g.responses || {};
+    const played = (g.questions || []).some((_, qi) => responses[studentId + "-" + qi] !== undefined);
+    events.push({ key: "game-" + w, type: "game", typeLabel: "Weekly Game", title: "Week " + w, ts, week: w, activity: g, played });
+  });
+
+  // Past ToT (scored)
+  Object.keys(data.weeklyToT || {}).forEach(w => {
+    const t = data.weeklyToT[w];
+    if (!t?.scored) return;
+    const ts = (rebounds["tot-" + w]?.scoredTs) || 0;
+    const responses = t.responses || {};
+    const played = (t.questions || []).some((_, qi) => responses[studentId + "-" + qi] !== undefined);
+    events.push({ key: "tot-" + w, type: "tot", typeLabel: "This or That", title: "Week " + w, ts, week: w, activity: t, played });
+  });
+
+  // Headlines sessions (any session, with done sessions and live sessions both surfaced)
+  const headlineSessions = data?.headlines?.sessions || [];
+  const headlineItems = data?.headlines?.items || [];
+  headlineSessions.forEach(s => {
+    const isDone = s.phase === "done";
+    const sessionHeadlines = headlineItems.filter(it => it.sessionId === s.id);
+    if (sessionHeadlines.length === 0 && !isDone) return; // skip empty in-progress sessions
+    events.push({ key: "headlines-" + s.id, type: "headlines", typeLabel: "Headlines", title: s.name || "Headlines Session", ts: s.ts || 0, session: s, sessionHeadlines, isDone });
+  });
+
+  // Surveys (closed = past event)
+  (data?.surveys || []).forEach(s => {
+    if (s.active) return;
+    events.push({ key: "survey-" + s.id, type: "survey", typeLabel: "Survey", title: s.title || "Survey", ts: s.ts || 0, survey: s });
+  });
+
+  // Sort reverse chrono
+  events.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+  const fmtDate = (ts) => {
+    if (!ts) return "";
+    const d = new Date(ts);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
   return (
@@ -5533,48 +5556,131 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
 
         {/* Live banner */}
         {liveItems.length > 0 && (
-          <div style={{ ...crd, padding: 14, marginBottom: 24, background: "#ecfdf5", border: "1px solid #a7f3d0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: liveItems.length > 0 ? 8 : 0 }}>
+          <div style={{ ...crd, padding: 14, marginBottom: 20, background: "#ecfdf5", border: "1px solid #a7f3d0" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: GREEN, animation: "livePulse 1.6s ease-in-out infinite", display: "inline-block" }} />
               <span style={{ fontSize: 10, fontWeight: 800, color: "#065f46", textTransform: "uppercase", letterSpacing: "0.1em" }}>Live now</span>
             </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {liveItems.map(item => (
-                <button key={item.id} onClick={() => scrollToSection(item.anchor)} style={{ ...linkPill, background: "#fff", border: "1px solid #a7f3d0", color: "#065f46" }}>
-                  {item.label}
-                </button>
-              ))}
+            <div style={{ fontSize: 13, color: "#065f46", fontWeight: 600 }}>
+              {liveItems.map(i => i.label).join(", ")}
             </div>
           </div>
         )}
 
-        {/* Weekly Game */}
-        <div id="section-weekly-game" style={{ marginBottom: 32 }}>
-          <div style={{ ...sectionLabel, marginBottom: 10 }}>Weekly Game</div>
+        {/* Live (active answer interface for current weekly game / ToT) */}
+        <div style={{ marginBottom: 32 }}>
           <StudentAnswerView data={data} setData={setData} userName={userName} />
-          <div style={{ marginTop: 20 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Past Weekly Games</div>
-            <PastGamesReview data={data} studentId={studentId} filter="game" />
+        </div>
+
+        {/* Live headlines session (active) */}
+        {liveHeadlineSession && (
+          <div style={{ marginBottom: 32 }}>
+            <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
           </div>
+        )}
+
+        {/* Live survey (active) */}
+        {openSurveys.length > 0 && (
+          <div style={{ marginBottom: 32 }}>
+            <SurveyView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+          </div>
+        )}
+
+        {/* Past events: Live section */}
+        <div id="section-live" style={{ marginBottom: 32 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={sectionLabel}>Live</div>
+            {isAdmin && (
+              <button onClick={() => setShowAdminTools(!showAdminTools)} style={linkPill}>
+                {showAdminTools ? "Hide admin tools" : "Admin tools"}
+              </button>
+            )}
+          </div>
+
+          {events.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No past events yet</div>}
+
+          {events.map(ev => {
+            const isOpen = openEventKey === ev.key;
+            return (
+              <div key={ev.key} style={{ marginBottom: 8 }}>
+                <button onClick={() => {
+                  if ((ev.type === "game" || ev.type === "tot") && !ev.played) return;
+                  setOpenEventKey(isOpen ? null : ev.key);
+                }} disabled={(ev.type === "game" || ev.type === "tot") && !ev.played} style={{
+                  ...crd, padding: 14, width: "100%", textAlign: "left", fontFamily: F,
+                  cursor: ((ev.type === "game" || ev.type === "tot") && !ev.played) ? "not-allowed" : "pointer",
+                  opacity: ((ev.type === "game" || ev.type === "tot") && !ev.played) ? 0.55 : 1,
+                  display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8,
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>{ev.typeLabel}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, marginTop: 2 }}>{ev.title}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                    {ev.ts > 0 && <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 600 }}>{fmtDate(ev.ts)}</span>}
+                    {(ev.type === "game" || ev.type === "tot") && !ev.played ? (
+                      <span style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>You did not play</span>
+                    ) : (
+                      <span style={{ ...linkPill, padding: "4px 10px" }}>{isOpen ? "Close" : "Open"}</span>
+                    )}
+                  </div>
+                </button>
+
+                {isOpen && (ev.type === "game" || ev.type === "tot") && (
+                  <div style={{ marginTop: 8 }}>
+                    <GameReviewDetail activity={ev.activity} type={ev.type} week={ev.week} data={data} studentId={studentId} onBack={() => setOpenEventKey(null)} />
+                  </div>
+                )}
+
+                {isOpen && ev.type === "headlines" && (
+                  <div style={{ ...crd, padding: 14, marginTop: 8 }}>
+                    {ev.sessionHeadlines.length === 0 ? (
+                      <div style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>No headlines were used in this session.</div>
+                    ) : ev.sessionHeadlines.map(h => (
+                      <div key={h.id} style={{ padding: "10px 0", borderBottom: "1px solid " + BORDER }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                          <div style={{ flex: 1, fontSize: 14, color: TEXT_PRIMARY, fontWeight: 600, lineHeight: 1.4 }}>{h.text}</div>
+                          {h.url && <a href={h.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#2563eb", textDecoration: "none", flexShrink: 0 }}>Source</a>}
+                        </div>
+                        {(h.realCategories || []).length > 0 && (
+                          <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 4 }}>
+                            <span style={{ fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", fontSize: 10, letterSpacing: "0.08em" }}>Surface: </span>
+                            {(h.realCategories || []).join(", ")}
+                          </div>
+                        )}
+                        {(h.realConcepts || []).length > 0 && (
+                          <div style={{ fontSize: 12, color: ACCENT, fontWeight: 700, marginTop: 2 }}>
+                            <span style={{ fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", fontSize: 10, letterSpacing: "0.08em" }}>Concept: </span>
+                            {(h.realConcepts || []).map(id => (data?.headlines?.concepts || []).find(c => c.id === id)?.name || id).join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {isOpen && ev.type === "survey" && (
+                  <div style={{ ...crd, padding: 14, marginTop: 8 }}>
+                    <ClosedSurveyDetail survey={ev.survey} data={data} userName={userName} isAdmin={isAdmin} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
-        {/* This or That */}
-        <div id="section-tot" style={{ marginBottom: 32 }}>
-          <div style={{ ...sectionLabel, marginBottom: 10 }}>This or That</div>
-          <PastGamesReview data={data} studentId={studentId} filter="tot" />
-        </div>
-
-        {/* Headlines */}
-        <div id="section-headlines" style={{ marginBottom: 32 }}>
-          <div style={{ ...sectionLabel, marginBottom: 10 }}>Headlines</div>
-          <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
-        </div>
-
-        {/* Surveys */}
-        <div id="section-surveys" style={{ marginBottom: 32 }}>
-          <div style={{ ...sectionLabel, marginBottom: 10 }}>Surveys</div>
-          <SurveyView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
-        </div>
+        {/* Admin tools (admin only, toggleable) */}
+        {isAdmin && showAdminTools && (
+          <div style={{ marginBottom: 32, paddingTop: 16, borderTop: "2px dashed " + BORDER_STRONG }}>
+            <div style={{ ...sectionLabel, marginBottom: 10 }}>Admin Tools</div>
+            <div style={{ marginBottom: 24 }}>
+              <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <SurveyView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+            </div>
+          </div>
+        )}
 
         {/* Boards */}
         <div id="section-boards" style={{ marginBottom: 32 }}>
@@ -5589,6 +5695,72 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
         </div>
 
       </div>
+    </div>
+  );
+}
+
+function ClosedSurveyDetail({ survey, data, userName, isAdmin }) {
+  const sid = data.students.find(s => s.name === userName)?.id;
+  const myResp = sid ? (survey.responses || {})[sid] : null;
+  const showAggregate = isAdmin || survey.showResults;
+  const responses = survey.responses || {};
+  const totalResponded = Object.keys(responses).length;
+
+  return (
+    <div>
+      {(survey.questions || []).map((q, qi) => {
+        const myAnswer = myResp ? myResp[q.id] : null;
+        // Aggregate by option for multiple_choice / true_false / likert
+        let aggregate = null;
+        if (showAggregate && (q.type === "multiple_choice" || q.type === "true_false" || q.type === "likert")) {
+          const counts = {};
+          Object.values(responses).forEach(r => {
+            const v = r[q.id];
+            if (v === undefined || v === null || v === "") return;
+            counts[v] = (counts[v] || 0) + 1;
+          });
+          const total = Object.values(counts).reduce((s, n) => s + n, 0);
+          aggregate = { counts, total };
+        }
+        const opts = q.type === "true_false" ? ["True", "False"] : q.type === "likert" ? ["1", "2", "3", "4", "5"] : (q.options || []);
+        return (
+          <div key={q.id} style={{ paddingBottom: 12, marginBottom: 12, borderBottom: qi < survey.questions.length - 1 ? "1px solid " + BORDER : "none" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 8 }}>{qi + 1}. {q.text}</div>
+
+            {q.type === "short_answer" || q.type === "number" ? (
+              <div>
+                {myAnswer && <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginBottom: 4 }}><span style={{ fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", fontSize: 10 }}>Your answer: </span>{myAnswer}</div>}
+                {showAggregate && (
+                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>{Object.keys(responses).filter(k => responses[k][q.id]).length} responded</div>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {opts.map(opt => {
+                  const isMine = myAnswer == opt;
+                  const cnt = aggregate ? (aggregate.counts[opt] || 0) : 0;
+                  const pct = aggregate && aggregate.total > 0 ? Math.round((cnt / aggregate.total) * 100) : 0;
+                  return (
+                    <div key={opt} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", borderRadius: 8, background: isMine ? ACCENT + "0d" : "transparent" }}>
+                      <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: isMine ? 700 : 500, flex: 1 }}>{opt}{isMine && <span style={{ fontSize: 9, fontWeight: 800, color: ACCENT, background: ACCENT + "1a", padding: "1px 5px", borderRadius: 4, marginLeft: 6 }}>YOU</span>}</span>
+                      {aggregate && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                          <div style={{ width: 60, height: 6, borderRadius: 3, background: "#f3f4f6", overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: pct + "%", background: ACCENT, borderRadius: 3 }} />
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_SECONDARY, width: 32, textAlign: "right" }}>{pct}%</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {!myAnswer && !showAggregate && <div style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic" }}>You did not respond</div>}
+                {showAggregate && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>{aggregate?.total || 0} responses</div>}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -6077,8 +6249,8 @@ export default function Comm118() {
   const activitiesLive = !!(
     data?.activeGame?.live ||
     data?.activeToT?.live ||
-    data?.headlines?.activeHeadlineId ||
-    (data?.surveys || []).some(s => s.status === "open") ||
+    (data?.headlines?.sessions || []).some(s => s.activeHeadlineId && s.phase !== "done") ||
+    (data?.surveys || []).some(s => s.active) ||
     (data?.boards || []).some(b => b.active)
   );
 
