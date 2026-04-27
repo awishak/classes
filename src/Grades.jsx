@@ -386,9 +386,9 @@ function AssignmentRubricButton({ assignmentId, data, setData }) {
   return (
     <div style={{ marginTop: 8 }}>
       {hasRubric ? (
-        <div style={{ display: "flex", gap: 4 }}>
-          <button onClick={editExisting} style={{ ...pill, background: "#eff6ff", color: "#2563eb", fontSize: 11, flex: 1 }}>Edit Rubric</button>
-          <button onClick={remove} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Remove</button>
+        <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+          <button onClick={remove} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, marginRight: "auto" }}>Remove</button>
+          <button onClick={editExisting} style={{ ...pill, background: "#eff6ff", color: "#2563eb", fontSize: 11 }}>Edit Rubric</button>
         </div>
       ) : (
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
@@ -409,7 +409,7 @@ function TogglePanel({ label, count, children }) {
   const [show, setShow] = useState(false);
   return (
     <div style={{ marginTop: 10 }}>
-      <button onClick={() => setShow(!show)} style={{ ...pillInactive, fontSize: 12, width: "100%" }}>{show ? "Hide Submissions" : label + " (" + count + ")"}</button>
+      <button onClick={() => setShow(!show)} style={{ ...pillInactive, fontSize: 12 }}>{show ? "Hide Submissions" : label + " (" + count + ")"}</button>
       {show && children}
     </div>
   );
@@ -543,6 +543,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const [blurbLocal, setBlurbLocal] = useState("");
   const [editMasterRubric, setEditMasterRubric] = useState(false);
   const [openId, setOpenId] = useState(null);
+  const [hoveredDotId, setHoveredDotId] = useState(null);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const isGuest = userName === GUEST_NAME;
@@ -738,36 +739,74 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           <div style={{ ...crd, padding: 16, marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ ...sectionLabel, marginBottom: 8 }}>Your Assignments</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 {sortedAssignments.map(a => {
                   const state = getAssignmentState(a, data, studentId);
                   const c = dotColor(state);
                   const sz = dotSize(a.weight);
                   const isSubmittedNotGraded = state === "submitted";
-                  const totalWeight = sortedAssignments.reduce((s, x) => s + (x.weight || 0), 0);
                   const sub = submissions[studentId + "-" + a.id];
                   const g = grades[studentId + "-" + a.id] || {};
+                  const isHovered = hoveredDotId === a.id;
                   // Build tooltip lines
-                  const lines = [a.name];
-                  if (a.id === "participation") {
-                    lines.push("Ongoing");
-                  } else if (sub) {
-                    lines.push("Submitted " + new Date(sub.ts).toLocaleDateString("en-US", { month: "short", day: "numeric" }));
-                  } else if (a.due) {
-                    lines.push("Due " + a.due);
-                  }
-                  if (g.score !== undefined && g.score !== "") {
-                    lines.push("Grade: " + g.score + " / " + (g.outOf || 100));
-                  }
-                  lines.push((a.weight || 0) + "% of total grade");
+                  let dueLine;
+                  if (a.id === "participation") dueLine = "Ongoing";
+                  else if (sub) dueLine = "Submitted " + new Date(sub.ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                  else if (a.due) dueLine = "Due " + a.due;
+                  else dueLine = null;
+                  const gradeLine = (g.score !== undefined && g.score !== "") ? ("Grade: " + g.score + " / " + (g.outOf || 100)) : null;
                   return (
-                    <div key={a.id} title={lines.join("\n")} style={{
-                      width: sz, height: sz, borderRadius: "50%",
-                      background: c.fill,
-                      border: isSubmittedNotGraded ? "2px solid " + c.border : "none",
-                      flexShrink: 0,
-                      cursor: "default",
-                    }} />
+                    <div key={a.id} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      onMouseEnter={() => setHoveredDotId(a.id)}
+                      onMouseLeave={() => setHoveredDotId(null)}
+                      onClick={e => { e.stopPropagation(); setHoveredDotId(isHovered ? null : a.id); }}
+                    >
+                      <div style={{
+                        width: sz, height: sz, borderRadius: "50%",
+                        background: c.fill,
+                        border: isSubmittedNotGraded ? "2px solid " + c.border : "none",
+                        flexShrink: 0,
+                        cursor: "pointer",
+                        transition: "transform 0.12s",
+                        transform: isHovered ? "scale(1.1)" : "scale(1)",
+                      }} />
+                      {isHovered && (
+                        <div style={{
+                          position: "absolute",
+                          bottom: "calc(100% + 8px)",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                          background: TEXT_PRIMARY,
+                          color: "#fff",
+                          padding: "8px 12px",
+                          borderRadius: 8,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          fontFamily: F,
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.18)",
+                          zIndex: 50,
+                          pointerEvents: "none",
+                          lineHeight: 1.5,
+                        }}>
+                          <div style={{ fontWeight: 800, marginBottom: 2 }}>{a.name}</div>
+                          {dueLine && <div style={{ color: "#d1d5db" }}>{dueLine}</div>}
+                          {gradeLine && <div style={{ color: "#d1d5db" }}>{gradeLine}</div>}
+                          <div style={{ color: "#d1d5db" }}>{a.weight || 0}% of total grade</div>
+                          <div style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            width: 0,
+                            height: 0,
+                            borderLeft: "5px solid transparent",
+                            borderRight: "5px solid transparent",
+                            borderTop: "5px solid " + TEXT_PRIMARY,
+                          }} />
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -834,10 +873,10 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                       <div style={{ ...sectionLabel, marginBottom: 4 }}>Description / Notes</div>
                       <textarea value={editLocal.notes} onChange={e => setEditLocal({ ...editLocal, notes: e.target.value })} placeholder="Short description students will see" rows={3} style={{ ...inp, resize: "vertical" }} />
                     </div>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={saveEdit} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Save</button>
+                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", alignItems: "center" }}>
+                      {a.id !== "participation" && <button onClick={() => { if (window.confirm("Remove " + a.name + "?")) removeAssignment(a.id); }} style={{ ...pill, background: "#fef2f2", color: RED, marginRight: "auto" }}>Delete</button>}
                       <button onClick={() => { setEditId(null); setEditLocal(null); }} style={pillInactive}>Cancel</button>
-                      {a.id !== "participation" && <button onClick={() => { if (window.confirm("Remove " + a.name + "?")) removeAssignment(a.id); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>}
+                      <button onClick={saveEdit} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Save</button>
                     </div>
                   </div>
                 </div>
@@ -1223,7 +1262,7 @@ Match each note to the correct student name from the list above. Use the student
   if (!open) {
     return (
       <div style={{ marginTop: 6 }}>
-        <button onClick={() => setOpen(true)} style={{ ...pillInactive, fontSize: 11, width: "100%" }}>
+        <button onClick={() => setOpen(true)} style={{ ...pillInactive, fontSize: 11 }}>
           Bulk Notes {noteCount > 0 ? "(" + noteCount + " saved)" : ""}
         </button>
       </div>
@@ -1246,8 +1285,8 @@ Match each note to the correct student name from the list above. Use the student
       {mode === "text" && (
         <div>
           <textarea value={text} onChange={e => setText(e.target.value)} placeholder={"One per line:\nJohn: Great interview subject choice\nJane: Needs deeper follow-up questions\nBob: Really impressed with the thank-you"} rows={6} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 6 }} />
-          <div style={{ display: "flex", gap: 4 }}>
-            <button onClick={handleText} disabled={!text.trim()} style={{ ...pill, background: text.trim() ? "#111827" : "#d1d5db", color: "#fff", flex: 1 }}>Save Notes</button>
+          <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+            <button onClick={handleText} disabled={!text.trim()} style={{ ...pill, background: text.trim() ? TEXT_PRIMARY : "#d1d5db", color: "#fff" }}>Save Notes</button>
           </div>
         </div>
       )}
@@ -1261,7 +1300,9 @@ Match each note to the correct student name from the list above. Use the student
             <div>
               <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>Extracted notes (edit if needed, then save):</div>
               <textarea value={text} onChange={e => setText(e.target.value)} rows={6} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 6 }} />
-              <button onClick={handleText} style={{ ...pill, background: "#111827", color: "#fff", width: "100%" }}>Save Notes</button>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button onClick={handleText} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Save Notes</button>
+              </div>
             </div>
           )}
         </div>
