@@ -204,7 +204,7 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
     { id: "home", label: "Home", guest: false },
     { id: "schedule", label: "Schedule", guest: true },
     { id: "assignments", label: "Assignments", guest: false },
-    { id: "activities", label: "Activities", guest: false },
+    { id: "activities", label: "Live", guest: false },
     { id: "more", label: "More", guest: false },
   ];
   // Admin extras render after the student tabs
@@ -2138,15 +2138,33 @@ function ScheduleView({ data, setData, isAdmin }) {
 
   // Scroll to a specific day's edit block in the admin panel
   const scrollToEdit = (wi, di) => {
-    const el = document.getElementById("edit-" + wi + "-" + di);
-    if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.style.outline = "2px solid " + ACCENT; setTimeout(() => { if (el) el.style.outline = ""; }, 1200); }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.getElementById("edit-" + wi + "-" + di);
+        if (!el) return;
+        const top = el.getBoundingClientRect().top + window.pageYOffset - 80;
+        window.scrollTo({ top, behavior: "smooth" });
+        el.style.outline = "2px solid " + ACCENT;
+        setTimeout(() => { if (el) el.style.outline = ""; }, 1500);
+      });
+    });
   };
 
   // Scroll back up to the pretty-list view of a day or week
+  // Wrap in requestAnimationFrame so we wait for React re-render after save
   const scrollToView = (wi, di) => {
     const id = di === undefined ? "view-week-" + wi : "view-" + wi + "-" + di;
-    const el = document.getElementById(id);
-    if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.style.outline = "2px solid " + ACCENT; setTimeout(() => { if (el) el.style.outline = ""; }, 1200); }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        // Account for sticky nav height (~60px)
+        const top = el.getBoundingClientRect().top + window.pageYOffset - 80;
+        window.scrollTo({ top, behavior: "smooth" });
+        el.style.outline = "2px solid " + ACCENT;
+        setTimeout(() => { if (el) el.style.outline = ""; }, 1500);
+      });
+    });
   };
 
   // Render a reading row (used in both pretty list and admin display)
@@ -4883,6 +4901,11 @@ function ClassTools({ data, setData, isAdmin, userName }) {
     const updatedItems = items.map(it => it.id === hid ? { ...it, realCategories: session.realCategories, realConcepts: conceptPicks, surfaceVotes: session.votes, conceptVotesData: session.conceptVotes, adminNotes: adminNotes.trim() || it.adminNotes } : it);
     await saveHL({ ...hl, items: updatedItems, sessions: sessions.map(s => s.id === sessionId ? { ...s, phase: "done", realConcepts: conceptPicks } : s) });
   };
+  const closeSession = async (sessionId) => {
+    if (!window.confirm("End this Headlines session? It will no longer show as live.")) return;
+    await saveHL({ ...hl, sessions: sessions.map(s => s.id === sessionId ? { ...s, phase: "done", activeHeadlineId: null } : s) });
+    showMsg("Session ended");
+  };
   const saveHeadlineNotes = async (headlineId, notes) => {
     await saveHL({ ...hl, items: items.map(it => it.id === headlineId ? { ...it, adminNotes: notes } : it) });
     showMsg("Notes saved");
@@ -4979,7 +5002,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <button onClick={() => setActiveSession(null)} style={pillInactive}>Back</button>
               <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY }}>Headlines</div>
-              <div style={{ width: 60 }} />
+              <button onClick={() => closeSession(session.id)} style={{ ...pillInactive, color: RED }}>End session</button>
             </div>
 
             <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
@@ -5107,14 +5130,18 @@ function ClassTools({ data, setData, isAdmin, userName }) {
             {sessions.length === 0 && <div style={{ fontSize: 13, color: "#d4d4d8", textAlign: "center", padding: 12 }}>No sessions yet.</div>}
             {[...sessions].reverse().map(s => {
               const count = items.filter(it => it.sessionId === s.id).length;
+              const isLive = s.activeHeadlineId && s.phase !== "done";
               return (
-                <button key={s.id} onClick={() => setActiveSession(s.id)} style={{ ...crd, padding: 14, marginBottom: 4, width: "100%", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</div>
+                <div key={s.id} style={{ ...crd, padding: 14, marginBottom: 4, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <button onClick={() => setActiveSession(s.id)} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</div>
+                      {isLive && <span style={{ fontSize: 9, fontWeight: 800, color: "#065f46", background: "#d1fae5", padding: "2px 6px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>Live</span>}
+                    </div>
                     <div style={{ fontSize: 11, color: TEXT_MUTED }}>{count} headline{count !== 1 ? "s" : ""} / {new Date(s.ts).toLocaleDateString()}</div>
-                  </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
-                </button>
+                  </button>
+                  {isLive && <button onClick={(e) => { e.stopPropagation(); closeSession(s.id); }} style={{ ...pillInactive, color: RED, fontSize: 11, padding: "4px 10px" }}>End</button>}
+                </div>
               );
             })}
           </div>
@@ -5493,61 +5520,61 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
 
   // Detect what's live
   const liveItems = [];
-  if (data?.activeGame?.live) liveItems.push({ id: "weekly-game", label: "Weekly Game" });
-  if (data?.activeToT?.live) liveItems.push({ id: "tot", label: "This or That" });
+  if (data?.activeGame?.live) liveItems.push({ id: "weekly-game", label: "Weekly Game", anchor: "live-now-section" });
+  if (data?.activeToT?.live) liveItems.push({ id: "tot", label: "This or That", anchor: "live-now-section" });
   const liveHeadlineSession = (data?.headlines?.sessions || []).find(s => s.activeHeadlineId && s.phase !== "done");
-  if (liveHeadlineSession) liveItems.push({ id: "headlines", label: "Headlines" });
+  if (liveHeadlineSession) liveItems.push({ id: "headlines", label: "Headlines", anchor: "live-now-section" });
   const openSurveys = (data?.surveys || []).filter(s => s.active);
-  if (openSurveys.length > 0) liveItems.push({ id: "surveys", label: openSurveys.length === 1 ? "Survey" : openSurveys.length + " Surveys" });
+  if (openSurveys.length > 0) liveItems.push({ id: "surveys", label: openSurveys.length === 1 ? "Survey" : openSurveys.length + " Surveys", anchor: "live-now-section" });
+  const anythingLive = liveItems.length > 0;
 
   // Build unified event list (reverse chronological)
-  // Game scored timestamps live in data.rebounds[type-week].scoredTs
   const rebounds = data.rebounds || {};
   const events = [];
 
-  // Past weekly games (scored)
   Object.keys(data.weeklyGames || {}).forEach(w => {
     const g = data.weeklyGames[w];
     if (!g?.scored) return;
     const ts = (rebounds["game-" + w]?.scoredTs) || 0;
     const responses = g.responses || {};
     const played = (g.questions || []).some((_, qi) => responses[studentId + "-" + qi] !== undefined);
-    events.push({ key: "game-" + w, type: "game", typeLabel: "Weekly Game", title: "Week " + w, ts, week: w, activity: g, played });
+    events.push({ key: "game-" + w, type: "game", typeLabel: "Weekly Game", ts, week: w, activity: g, played });
   });
 
-  // Past ToT (scored)
   Object.keys(data.weeklyToT || {}).forEach(w => {
     const t = data.weeklyToT[w];
     if (!t?.scored) return;
     const ts = (rebounds["tot-" + w]?.scoredTs) || 0;
     const responses = t.responses || {};
     const played = (t.questions || []).some((_, qi) => responses[studentId + "-" + qi] !== undefined);
-    events.push({ key: "tot-" + w, type: "tot", typeLabel: "This or That", title: "Week " + w, ts, week: w, activity: t, played });
+    events.push({ key: "tot-" + w, type: "tot", typeLabel: "This or That", ts, week: w, activity: t, played });
   });
 
-  // Headlines sessions (any session, with done sessions and live sessions both surfaced)
   const headlineSessions = data?.headlines?.sessions || [];
   const headlineItems = data?.headlines?.items || [];
   headlineSessions.forEach(s => {
-    const isDone = s.phase === "done";
+    if (s.activeHeadlineId && s.phase !== "done") return; // skip live ones (shown in live section above)
     const sessionHeadlines = headlineItems.filter(it => it.sessionId === s.id);
-    if (sessionHeadlines.length === 0 && !isDone) return; // skip empty in-progress sessions
-    events.push({ key: "headlines-" + s.id, type: "headlines", typeLabel: "Headlines", title: s.name || "Headlines Session", ts: s.ts || 0, session: s, sessionHeadlines, isDone });
+    if (sessionHeadlines.length === 0) return;
+    events.push({ key: "headlines-" + s.id, type: "headlines", typeLabel: "Headlines", ts: s.ts || 0, session: s, sessionHeadlines });
   });
 
-  // Surveys (closed = past event)
   (data?.surveys || []).forEach(s => {
     if (s.active) return;
-    events.push({ key: "survey-" + s.id, type: "survey", typeLabel: "Survey", title: s.title || "Survey", ts: s.ts || 0, survey: s });
+    events.push({ key: "survey-" + s.id, type: "survey", typeLabel: "Survey", ts: s.ts || 0, survey: s });
   });
 
-  // Sort reverse chrono
   events.sort((a, b) => (b.ts || 0) - (a.ts || 0));
 
-  const fmtDate = (ts) => {
-    if (!ts) return "";
-    const d = new Date(ts);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  // Format ts as "Wed, Apr 23"
+  const fmtDayDate = (ts) => {
+    if (!ts) return "Date unknown";
+    return new Date(ts).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  };
+
+  const scrollToLive = () => {
+    const el = document.getElementById("live-now-section");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -5555,123 +5582,123 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
         {/* Live banner */}
-        {liveItems.length > 0 && (
-          <div style={{ ...crd, padding: 14, marginBottom: 20, background: "#ecfdf5", border: "1px solid #a7f3d0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: GREEN, animation: "livePulse 1.6s ease-in-out infinite", display: "inline-block" }} />
-              <span style={{ fontSize: 10, fontWeight: 800, color: "#065f46", textTransform: "uppercase", letterSpacing: "0.1em" }}>Live now</span>
+        {anythingLive && (
+          <div style={{ ...crd, padding: 14, marginBottom: 20, background: "#ecfdf5", border: "1px solid #a7f3d0", display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: GREEN, animation: "livePulse 1.6s ease-in-out infinite", display: "inline-block" }} />
+                <span style={{ fontSize: 10, fontWeight: 800, color: "#065f46", textTransform: "uppercase", letterSpacing: "0.1em" }}>Live now</span>
+              </div>
+              <div style={{ fontSize: 13, color: "#065f46", fontWeight: 700 }}>
+                {liveItems.map(i => i.label).join(", ")}
+              </div>
             </div>
-            <div style={{ fontSize: 13, color: "#065f46", fontWeight: 600 }}>
-              {liveItems.map(i => i.label).join(", ")}
-            </div>
+            <button onClick={scrollToLive} style={{ ...linkPill, background: "#fff", border: "1px solid #a7f3d0", color: "#065f46" }}>Open</button>
           </div>
         )}
 
-        {/* Live (active answer interface for current weekly game / ToT) */}
-        <div style={{ marginBottom: 32 }}>
-          <StudentAnswerView data={data} setData={setData} userName={userName} />
-        </div>
-
-        {/* Live headlines session (active) */}
-        {liveHeadlineSession && (
-          <div style={{ marginBottom: 32 }}>
-            <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
-          </div>
-        )}
-
-        {/* Live survey (active) */}
-        {openSurveys.length > 0 && (
-          <div style={{ marginBottom: 32 }}>
-            <SurveyView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
-          </div>
-        )}
-
-        {/* Past events: Live section */}
-        <div id="section-live" style={{ marginBottom: 32 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={sectionLabel}>Live</div>
-            {isAdmin && (
-              <button onClick={() => setShowAdminTools(!showAdminTools)} style={linkPill}>
-                {showAdminTools ? "Hide admin tools" : "Admin tools"}
-              </button>
+        {/* Currently Live section: shows the live UI inline */}
+        {anythingLive && (
+          <div id="live-now-section" style={{ marginBottom: 32 }}>
+            {(data?.activeGame?.live || data?.activeToT?.live) && (
+              <div style={{ marginBottom: 20 }}>
+                <StudentAnswerView data={data} setData={setData} userName={userName} />
+              </div>
+            )}
+            {liveHeadlineSession && (
+              <div style={{ marginBottom: 20 }}>
+                <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+              </div>
+            )}
+            {openSurveys.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <SurveyView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+              </div>
             )}
           </div>
+        )}
 
-          {events.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No past events yet</div>}
-
-          {events.map(ev => {
-            const isOpen = openEventKey === ev.key;
-            return (
-              <div key={ev.key} style={{ marginBottom: 8 }}>
-                <button onClick={() => {
-                  if ((ev.type === "game" || ev.type === "tot") && !ev.played) return;
-                  setOpenEventKey(isOpen ? null : ev.key);
-                }} disabled={(ev.type === "game" || ev.type === "tot") && !ev.played} style={{
-                  ...crd, padding: 14, width: "100%", textAlign: "left", fontFamily: F,
-                  cursor: ((ev.type === "game" || ev.type === "tot") && !ev.played) ? "not-allowed" : "pointer",
-                  opacity: ((ev.type === "game" || ev.type === "tot") && !ev.played) ? 0.55 : 1,
-                  display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8,
-                }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>{ev.typeLabel}</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, marginTop: 2 }}>{ev.title}</div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                    {ev.ts > 0 && <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 600 }}>{fmtDate(ev.ts)}</span>}
-                    {(ev.type === "game" || ev.type === "tot") && !ev.played ? (
-                      <span style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>You did not play</span>
-                    ) : (
-                      <span style={{ ...linkPill, padding: "4px 10px" }}>{isOpen ? "Close" : "Open"}</span>
-                    )}
-                  </div>
-                </button>
-
-                {isOpen && (ev.type === "game" || ev.type === "tot") && (
-                  <div style={{ marginTop: 8 }}>
-                    <GameReviewDetail activity={ev.activity} type={ev.type} week={ev.week} data={data} studentId={studentId} onBack={() => setOpenEventKey(null)} />
-                  </div>
-                )}
-
-                {isOpen && ev.type === "headlines" && (
-                  <div style={{ ...crd, padding: 14, marginTop: 8 }}>
-                    {ev.sessionHeadlines.length === 0 ? (
-                      <div style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>No headlines were used in this session.</div>
-                    ) : ev.sessionHeadlines.map(h => (
-                      <div key={h.id} style={{ padding: "10px 0", borderBottom: "1px solid " + BORDER }}>
-                        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                          <div style={{ flex: 1, fontSize: 14, color: TEXT_PRIMARY, fontWeight: 600, lineHeight: 1.4 }}>{h.text}</div>
-                          {h.url && <a href={h.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#2563eb", textDecoration: "none", flexShrink: 0 }}>Source</a>}
-                        </div>
-                        {(h.realCategories || []).length > 0 && (
-                          <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 4 }}>
-                            <span style={{ fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", fontSize: 10, letterSpacing: "0.08em" }}>Surface: </span>
-                            {(h.realCategories || []).join(", ")}
-                          </div>
-                        )}
-                        {(h.realConcepts || []).length > 0 && (
-                          <div style={{ fontSize: 12, color: ACCENT, fontWeight: 700, marginTop: 2 }}>
-                            <span style={{ fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", fontSize: 10, letterSpacing: "0.08em" }}>Concept: </span>
-                            {(h.realConcepts || []).map(id => (data?.headlines?.concepts || []).find(c => c.id === id)?.name || id).join(", ")}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {isOpen && ev.type === "survey" && (
-                  <div style={{ ...crd, padding: 14, marginTop: 8 }}>
-                    <ClosedSurveyDetail survey={ev.survey} data={data} userName={userName} isAdmin={isAdmin} />
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        {/* Past events list */}
+        <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={sectionLabel}>{anythingLive ? "Past Events" : "Live"}</div>
+          {isAdmin && (
+            <button onClick={() => setShowAdminTools(!showAdminTools)} style={linkPill}>
+              {showAdminTools ? "Hide admin tools" : "Admin tools"}
+            </button>
+          )}
         </div>
+
+        {events.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No past events yet</div>}
+
+        {events.map(ev => {
+          const isOpen = openEventKey === ev.key;
+          const cantOpen = (ev.type === "game" || ev.type === "tot") && !ev.played;
+          return (
+            <div key={ev.key} style={{ marginBottom: 8 }}>
+              <button onClick={() => { if (!cantOpen) setOpenEventKey(isOpen ? null : ev.key); }} disabled={cantOpen} style={{
+                ...crd, padding: 14, width: "100%", textAlign: "left", fontFamily: F,
+                cursor: cantOpen ? "not-allowed" : "pointer",
+                opacity: cantOpen ? 0.55 : 1,
+                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8,
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>{ev.typeLabel}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, marginTop: 2 }}>{fmtDayDate(ev.ts)}</div>
+                </div>
+                <div style={{ flexShrink: 0 }}>
+                  {cantOpen ? (
+                    <span style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>You did not play</span>
+                  ) : (
+                    <span style={{ ...linkPill, padding: "4px 10px" }}>{isOpen ? "Close" : "Open"}</span>
+                  )}
+                </div>
+              </button>
+
+              {isOpen && (ev.type === "game" || ev.type === "tot") && (
+                <div style={{ marginTop: 8 }}>
+                  <GameReviewDetail activity={ev.activity} type={ev.type} week={ev.week} data={data} studentId={studentId} onBack={() => setOpenEventKey(null)} />
+                </div>
+              )}
+
+              {isOpen && ev.type === "headlines" && (
+                <div style={{ ...crd, padding: 14, marginTop: 8 }}>
+                  {ev.sessionHeadlines.length === 0 ? (
+                    <div style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>No headlines were used in this session.</div>
+                  ) : ev.sessionHeadlines.map(h => (
+                    <div key={h.id} style={{ padding: "10px 0", borderBottom: "1px solid " + BORDER }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                        <div style={{ flex: 1, fontSize: 14, color: TEXT_PRIMARY, fontWeight: 600, lineHeight: 1.4 }}>{h.text}</div>
+                        {h.url && <a href={h.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#2563eb", textDecoration: "none", flexShrink: 0 }}>Source</a>}
+                      </div>
+                      {(h.realCategories || []).length > 0 && (
+                        <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 4 }}>
+                          <span style={{ fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", fontSize: 10, letterSpacing: "0.08em" }}>Surface: </span>
+                          {(h.realCategories || []).join(", ")}
+                        </div>
+                      )}
+                      {(h.realConcepts || []).length > 0 && (
+                        <div style={{ fontSize: 12, color: ACCENT, fontWeight: 700, marginTop: 2 }}>
+                          <span style={{ fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", fontSize: 10, letterSpacing: "0.08em" }}>Concept: </span>
+                          {(h.realConcepts || []).map(id => (data?.headlines?.concepts || []).find(c => c.id === id)?.name || id).join(", ")}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {isOpen && ev.type === "survey" && (
+                <div style={{ ...crd, padding: 14, marginTop: 8 }}>
+                  <ClosedSurveyDetail survey={ev.survey} data={data} userName={userName} isAdmin={isAdmin} />
+                </div>
+              )}
+            </div>
+          );
+        })}
 
         {/* Admin tools (admin only, toggleable) */}
         {isAdmin && showAdminTools && (
-          <div style={{ marginBottom: 32, paddingTop: 16, borderTop: "2px dashed " + BORDER_STRONG }}>
+          <div style={{ marginTop: 32, paddingTop: 16, borderTop: "2px dashed " + BORDER_STRONG }}>
             <div style={{ ...sectionLabel, marginBottom: 10 }}>Admin Tools</div>
             <div style={{ marginBottom: 24 }}>
               <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
@@ -5681,18 +5708,6 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
             </div>
           </div>
         )}
-
-        {/* Boards */}
-        <div id="section-boards" style={{ marginBottom: 32 }}>
-          <div style={{ ...sectionLabel, marginBottom: 10 }}>Discussion Boards</div>
-          <BoardsView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
-        </div>
-
-        {/* Notes */}
-        <div id="section-notes" style={{ marginBottom: 32 }}>
-          <div style={{ ...sectionLabel, marginBottom: 10 }}>My Notes</div>
-          <MyNotesView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
-        </div>
 
       </div>
     </div>
@@ -5790,6 +5805,18 @@ function MoreView({ data, setData, isAdmin, userName }) {
         <div style={{ marginBottom: 32 }}>
           <div style={{ ...sectionLabel, marginBottom: 10 }}>Readings</div>
           <ReadingsView data={data} setData={setData} isAdmin={isAdmin} />
+        </div>
+
+        {/* Discussion Boards */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>Discussion Boards</div>
+          <BoardsView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+        </div>
+
+        {/* My Notes */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>My Notes</div>
+          <MyNotesView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
         </div>
 
       </div>
