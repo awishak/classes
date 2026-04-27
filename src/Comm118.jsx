@@ -1917,12 +1917,17 @@ const TOPIC_COLORS = {
   "Finals": TEXT_MUTED,
 };
 
-function WeekHeaderEditor({ week, wi, data, setData, onDone }) {
+function WeekHeaderEditor({ week, wi, data, setData, onDone, onSaveAndBack }) {
   const [local, setLocal] = useState({ label: week.label || "", theme: week.theme || "", question: week.question || "" });
   const set = (field, value) => setLocal(prev => ({ ...prev, [field]: value }));
-  const handleDone = async () => {
+  const save = async () => {
     const updated = { ...data, schedule: data.schedule.map((w, i) => i === wi ? { ...w, label: local.label, theme: local.theme, question: local.question } : w) };
-    await saveData(updated); setData(updated); onDone();
+    await saveData(updated); setData(updated);
+    if (onDone) onDone();
+  };
+  const saveAndBack = async () => {
+    await save();
+    if (onSaveAndBack) onSaveAndBack();
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
@@ -1932,13 +1937,14 @@ function WeekHeaderEditor({ week, wi, data, setData, onDone }) {
       </div>
       <div style={{ display: "flex", gap: 4 }}>
         <input value={local.question} onChange={e => set("question", e.target.value)} placeholder="Driving question" style={{ ...inp, padding: "4px 8px", fontSize: 12, flex: 1 }} />
-        <button onClick={handleDone} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Done</button>
+        <button onClick={save} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Save</button>
+        {onSaveAndBack && <button onClick={saveAndBack} style={{ ...bt, fontSize: 11, padding: "3px 10px" }}>Go back</button>}
       </div>
     </div>
   );
 }
 
-function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDate, onDone }) {
+function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDate, onDone, onSaveAndBack }) {
   const [local, setLocal] = useState({
     date: d.date, day: d.day, topic: d.topic || "", holiday: !!d.holiday,
     activities: (d.activities || []).join(", "), assignment: d.assignment || "",
@@ -1946,14 +1952,19 @@ function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDa
   });
   const set = (field, value) => setLocal(prev => ({ ...prev, [field]: value }));
 
-  const handleDone = async () => {
+  const save = async () => {
     const patch = {
       date: local.date, day: local.day, topic: local.topic, holiday: local.holiday,
       activities: local.activities.split(",").map(s => s.trim()).filter(Boolean),
       assignment: local.assignment, notes: local.notes, adminNotes: local.adminNotes,
     };
     const updated = { ...data, schedule: data.schedule.map((w, i) => i === wi ? { ...w, dates: w.dates.map((dt, di) => di === realDi ? { ...dt, ...patch } : dt) } : w) };
-    await saveData(updated); setData(updated); onDone();
+    await saveData(updated); setData(updated);
+    if (onDone) onDone();
+  };
+  const saveAndBack = async () => {
+    await save();
+    if (onSaveAndBack) onSaveAndBack();
   };
 
   return (
@@ -2011,9 +2022,49 @@ function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDa
       <textarea value={local.notes} onChange={e => set("notes", e.target.value)} placeholder="Notes (students see this)" rows={2} style={{ ...inp, padding: "3px 6px", fontSize: 11, resize: "vertical" }} />
       <textarea value={local.adminNotes} onChange={e => set("adminNotes", e.target.value)} placeholder="Admin notes (students can't see)" rows={2} style={{ ...inp, padding: "3px 6px", fontSize: 11, resize: "vertical", borderColor: "#f59e0b", background: "#fffbeb" }} />
       <div style={{ display: "flex", gap: 4 }}>
-        <button onClick={handleDone} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Done</button>
-        <button onClick={() => { removeDate(wi, realDi); onDone(); }} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: "transparent", color: RED, border: "1px solid " + RED + "33" }}>X</button>
+        <button onClick={save} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Save</button>
+        {onSaveAndBack && <button onClick={saveAndBack} style={{ ...bt, fontSize: 11, padding: "3px 10px" }}>Go back</button>}
+        <button onClick={() => { if (window.confirm("Remove this day?")) { removeDate(wi, realDi); if (onDone) onDone(); } }} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: "transparent", color: RED, border: "1px solid " + RED + "33", marginLeft: "auto" }}>Remove day</button>
       </div>
+    </div>
+  );
+}
+
+function ReadingsList({ d, readings }) {
+  const [expanded, setExpanded] = useState(false);
+  const items = (d.readings || []).filter(r => r.type === "fishbowl" || r.type === "required" || r.type === "recommended");
+  if (items.length === 0) return null;
+  const showCollapse = items.length > 5;
+  const visible = showCollapse && !expanded ? items.slice(0, 5) : items;
+  const hidden = items.length - visible.length;
+  return (
+    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER, display: "flex", flexDirection: "column", gap: 4 }}>
+      {visible.map((r, ri) => {
+        const rdg = readings.find(x => x.id === r.readingId);
+        if (!rdg) return null;
+        const link = rdg.pdfUrl || rdg.url;
+        const tColor = r.type === "fishbowl" ? PURPLE : r.type === "required" ? "#b45309" : GREEN;
+        const tLabel = r.type === "fishbowl" ? "Fish" : r.type === "required" ? "Req" : "Rec";
+        const isReq = r.type === "required";
+        return (
+          <div key={ri} style={{ display: "flex", alignItems: "flex-start", gap: 6, background: isReq ? "#fffbeb" : "transparent", padding: isReq ? "4px 8px" : "2px 0", borderRadius: isReq ? 6 : 0 }}>
+            <span style={{ fontSize: 10, fontWeight: 800, color: tColor, textTransform: "uppercase", marginTop: 2, flexShrink: 0, width: 28, letterSpacing: "0.05em" }}>{tLabel}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {link ? (
+                <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 600, lineHeight: 1.35 }}>{rdg.title}</a>
+              ) : (
+                <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 600, lineHeight: 1.35 }}>{rdg.title}</span>
+              )}
+              {rdg.pdfUrl && <span style={{ fontSize: 9, fontWeight: 800, color: RED, background: "#fef2f2", padding: "1px 4px", borderRadius: 3, marginLeft: 4 }}>PDF</span>}
+            </div>
+          </div>
+        );
+      })}
+      {showCollapse && (
+        <button onClick={e => { e.stopPropagation(); setExpanded(!expanded); }} style={{ ...linkPill, alignSelf: "flex-start", marginTop: 2 }}>
+          {expanded ? "Show fewer" : "Show " + hidden + " more"}
+        </button>
+      )}
     </div>
   );
 }
@@ -2091,35 +2142,17 @@ function ScheduleView({ data, setData, isAdmin }) {
     if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.style.outline = "2px solid " + ACCENT; setTimeout(() => { if (el) el.style.outline = ""; }, 1200); }
   };
 
+  // Scroll back up to the pretty-list view of a day or week
+  const scrollToView = (wi, di) => {
+    const id = di === undefined ? "view-week-" + wi : "view-" + wi + "-" + di;
+    const el = document.getElementById(id);
+    if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.style.outline = "2px solid " + ACCENT; setTimeout(() => { if (el) el.style.outline = ""; }, 1200); }
+  };
+
   // Render a reading row (used in both pretty list and admin display)
   const renderReadings = (d) => {
-    const hasReadings = (d.readings || []).length > 0;
-    if (!hasReadings) return null;
-    return (
-      <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER, display: "flex", flexDirection: "column", gap: 4 }}>
-        {(d.readings || []).filter(r => r.type === "fishbowl" || r.type === "required" || r.type === "recommended").map((r, ri) => {
-          const rdg = (data.readings || []).find(x => x.id === r.readingId);
-          if (!rdg) return null;
-          const link = rdg.pdfUrl || rdg.url;
-          const tColor = r.type === "fishbowl" ? PURPLE : r.type === "required" ? "#b45309" : GREEN;
-          const tLabel = r.type === "fishbowl" ? "Fish" : r.type === "required" ? "Req" : "Rec";
-          const isReq = r.type === "required";
-          return (
-            <div key={ri} style={{ display: "flex", alignItems: "flex-start", gap: 6, background: isReq ? "#fffbeb" : "transparent", padding: isReq ? "4px 8px" : "2px 0", borderRadius: isReq ? 6 : 0 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: tColor, textTransform: "uppercase", marginTop: 2, flexShrink: 0, width: 28, letterSpacing: "0.05em" }}>{tLabel}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                {link ? (
-                  <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 600, lineHeight: 1.35 }}>{rdg.title}</a>
-                ) : (
-                  <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 600, lineHeight: 1.35 }}>{rdg.title}</span>
-                )}
-                {rdg.pdfUrl && <span style={{ fontSize: 9, fontWeight: 800, color: RED, background: "#fef2f2", padding: "1px 4px", borderRadius: 3, marginLeft: 4 }}>PDF</span>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
+    if (!(d.readings || []).length) return null;
+    return <ReadingsList d={d} readings={data.readings || []} />;
   };
 
   return (
@@ -2131,13 +2164,13 @@ function ScheduleView({ data, setData, isAdmin }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div style={sectionLabel}>Schedule</div>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            {data.scheduleDocUrl && !editLinks && (
+            {isAdmin && data.scheduleDocUrl && !editLinks && (
               <a href={data.scheduleDocUrl} target="_blank" rel="noopener noreferrer" style={{ ...linkPill, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 Doc
               </a>
             )}
-            {data.scheduleCanvaUrl && !editLinks && (
+            {isAdmin && data.scheduleCanvaUrl && !editLinks && (
               <a href={data.scheduleCanvaUrl} target="_blank" rel="noopener noreferrer" style={{ ...linkPill, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                 Canva
@@ -2165,11 +2198,11 @@ function ScheduleView({ data, setData, isAdmin }) {
             const orderedDates = [...week.dates].map((d, idx) => ({ d, realDi: idx })).sort((a, b) => (dayOrder[a.d.day] || 9) - (dayOrder[b.d.day] || 9));
 
             return (
-              <div key={wi}>
+              <div key={wi} id={"view-week-" + wi}>
                 {/* Week header */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                   {week.week <= 10 && (
-                    <div style={{ width: 32, height: 32, borderRadius: 10, background: isHidden && !isAdmin ? TEXT_MUTED : tc, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 800, fontFamily: F, flexShrink: 0 }}>{week.week}</div>
+                    <div style={{ width: 32, height: 32, borderRadius: 10, background: isHidden ? TEXT_MUTED : tc, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 800, fontFamily: F, flexShrink: 0 }}>{week.week}</div>
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
@@ -2180,8 +2213,8 @@ function ScheduleView({ data, setData, isAdmin }) {
                   </div>
                 </div>
 
-                {/* Hidden week: students see only no-class days */}
-                {isHidden && !isAdmin ? (
+                {/* Hidden week: everyone sees only no-class days (admin gets same view as students) */}
+                {isHidden ? (
                   <div style={{ marginLeft: week.week <= 10 ? 42 : 0 }}>
                     {orderedDates.filter(({ d }) => d.holiday).map(({ d }, di) => (
                       <div key={di} style={{ fontSize: 13, color: RED, fontWeight: 700, padding: "6px 0" }}>{d.day} {d.date}, no in-person class</div>
@@ -2197,13 +2230,14 @@ function ScheduleView({ data, setData, isAdmin }) {
                       const dayLabel = d.day;
 
                       return (
-                        <div key={realDi} onClick={() => isAdmin && scrollToEdit(wi, realDi)} style={{
+                        <div key={realDi} id={"view-" + wi + "-" + realDi} onClick={() => isAdmin && scrollToEdit(wi, realDi)} style={{
                           padding: "12px 14px", borderRadius: 12,
-                          background: isHoliday ? "#fffbeb" : "#fff",
-                          border: "1px solid " + (isHoliday ? "#fde68a" : BORDER),
-                          borderLeft: isFri ? "4px solid #c4b5fd" : "1px solid " + (isHoliday ? "#fde68a" : BORDER),
+                          background: "#fff",
+                          border: "1px solid " + BORDER,
+                          borderLeft: isFri ? "4px solid #c4b5fd" : "1px solid " + BORDER,
                           cursor: isAdmin ? "pointer" : "default",
                           display: "flex", gap: 14, alignItems: "flex-start",
+                          transition: "outline 0.2s",
                         }}>
                           {/* Left column: date + day */}
                           <div style={{ flexShrink: 0, width: 60 }}>
@@ -2238,7 +2272,6 @@ function ScheduleView({ data, setData, isAdmin }) {
                             {renderReadings(d)}
 
                             {d.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.notes}</div>}
-                            {isAdmin && d.adminNotes && <div style={{ fontSize: 12, color: AMBER, marginTop: 6, padding: "6px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fef3c7", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.adminNotes}</div>}
                           </div>
                         </div>
                       );
@@ -2277,7 +2310,7 @@ function ScheduleView({ data, setData, isAdmin }) {
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, paddingBottom: 10, borderBottom: "1px solid " + BORDER }}>
                       {week.week <= 10 && <div style={{ width: 28, height: 28, borderRadius: 8, background: tc, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{week.week}</div>}
                       <div style={{ flex: 1 }}>
-                        <WeekHeaderEditor week={week} wi={wi} data={data} setData={setData} onDone={() => {}} />
+                        <WeekHeaderEditor week={week} wi={wi} data={data} setData={setData} onDone={() => {}} onSaveAndBack={() => scrollToView(wi)} />
                       </div>
                       <button onClick={toggleHidden} style={{ ...pill, background: isHidden ? "#fef2f2" : "#ecfdf5", color: isHidden ? RED : GREEN, fontSize: 11, padding: "4px 10px" }}>{isHidden ? "Hidden" : "Visible"}</button>
                       <button onClick={() => { if (window.confirm("Remove week " + week.week + "?")) removeWeek(wi); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 18, padding: 4, lineHeight: 1 }}>x</button>
@@ -2291,7 +2324,7 @@ function ScheduleView({ data, setData, isAdmin }) {
                             <span style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" }}>{d.day}</span>
                             <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_PRIMARY }}>{d.date}</span>
                           </div>
-                          <ScheduleCardEditor d={d} wi={wi} realDi={realDi} data={data} setData={setData} updateDate={updateDate} removeDate={removeDate} onDone={() => {}} />
+                          <ScheduleCardEditor d={d} wi={wi} realDi={realDi} data={data} setData={setData} updateDate={updateDate} removeDate={removeDate} onDone={() => {}} onSaveAndBack={() => scrollToView(wi, realDi)} />
                         </div>
                       ))}
                       <button onClick={() => addDate(wi)} style={{ ...pill, background: "transparent", border: "1px dashed " + BORDER_STRONG, color: TEXT_MUTED, fontSize: 11, padding: "6px 0" }}>+ Add day</button>
@@ -3538,7 +3571,7 @@ function BioView({ student, data, setData, userName, onBack }) {
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 480, margin: "0 auto" }}>
-        <button onClick={onBack} style={pillInactive}>Back to Roster</button>
+        {onBack && <button onClick={onBack} style={pillInactive}>Back to Roster</button>}
 
         <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", borderRadius: 16, padding: "24px 20px", marginTop: 12, display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ position: "relative" }}>
@@ -5476,48 +5509,118 @@ function ToDoView({ data, setData, userName, isAdmin }) {
 
 /* ─── ACTIVITIES (Pass 1 placeholder, Pass 4 will rebuild) ─── */
 function ActivitiesView({ data, setData, isAdmin, userName }) {
-  const [section, setSection] = useState("inclass");
-  const sections = [
-    { id: "inclass", label: "Class Games / Headlines / Surveys" },
-    { id: "boards", label: "Boards" },
-    { id: "mynotes", label: "Notes" },
-  ];
+  const student = data.students.find(s => s.name === userName);
+  const studentId = student?.id;
+
+  // Detect what's live so we can surface a banner at the top
+  const liveItems = [];
+  if (data?.activeGame?.live) liveItems.push({ id: "weekly-game", label: "Weekly Game", anchor: "section-weekly-game" });
+  if (data?.activeToT?.live) liveItems.push({ id: "tot", label: "This or That", anchor: "section-tot" });
+  if (data?.headlines?.activeHeadlineId) liveItems.push({ id: "headlines", label: "Headlines", anchor: "section-headlines" });
+  const openSurveys = (data?.surveys || []).filter(s => s.status === "open");
+  if (openSurveys.length > 0) liveItems.push({ id: "surveys", label: openSurveys.length === 1 ? "Survey" : openSurveys.length + " Surveys", anchor: "section-surveys" });
+  const openBoards = (data?.boards || []).filter(b => b.active);
+  if (openBoards.length > 0) liveItems.push({ id: "boards", label: openBoards.length === 1 ? "Discussion Board" : openBoards.length + " Boards", anchor: "section-boards" });
+
+  const scrollToSection = (anchor) => {
+    const el = document.getElementById(anchor);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
-    <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto", padding: "20px 20px 40px", fontFamily: F }}>
-      <div style={{ display: "flex", gap: 6, marginBottom: 18, flexWrap: "wrap" }}>
-        {sections.map(s => (
-          <button key={s.id} onClick={() => setSection(s.id)}
-            style={section === s.id ? pillActive : pillInactive}>{s.label}</button>
-        ))}
+    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+
+        {/* Live banner */}
+        {liveItems.length > 0 && (
+          <div style={{ ...crd, padding: 14, marginBottom: 24, background: "#ecfdf5", border: "1px solid #a7f3d0" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: liveItems.length > 0 ? 8 : 0 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: GREEN, animation: "livePulse 1.6s ease-in-out infinite", display: "inline-block" }} />
+              <span style={{ fontSize: 10, fontWeight: 800, color: "#065f46", textTransform: "uppercase", letterSpacing: "0.1em" }}>Live now</span>
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {liveItems.map(item => (
+                <button key={item.id} onClick={() => scrollToSection(item.anchor)} style={{ ...linkPill, background: "#fff", border: "1px solid #a7f3d0", color: "#065f46" }}>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Weekly Game */}
+        <div id="section-weekly-game" style={{ marginBottom: 32 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>Weekly Game</div>
+          <StudentAnswerView data={data} setData={setData} userName={userName} />
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Past Weekly Games</div>
+            <PastGamesReview data={data} studentId={studentId} filter="game" />
+          </div>
+        </div>
+
+        {/* This or That */}
+        <div id="section-tot" style={{ marginBottom: 32 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>This or That</div>
+          <PastGamesReview data={data} studentId={studentId} filter="tot" />
+        </div>
+
+        {/* Headlines */}
+        <div id="section-headlines" style={{ marginBottom: 32 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>Headlines</div>
+          <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+        </div>
+
+        {/* Surveys */}
+        <div id="section-surveys" style={{ marginBottom: 32 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>Surveys</div>
+          <SurveyView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+        </div>
+
+        {/* Boards */}
+        <div id="section-boards" style={{ marginBottom: 32 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>Discussion Boards</div>
+          <BoardsView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+        </div>
+
+        {/* Notes */}
+        <div id="section-notes" style={{ marginBottom: 32 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>My Notes</div>
+          <MyNotesView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+        </div>
+
       </div>
-      {section === "inclass" && <InClassView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />}
-      {section === "boards" && <BoardsView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />}
-      {section === "mynotes" && <MyNotesView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />}
     </div>
   );
 }
 
-/* ─── MORE (Pass 1 placeholder, Pass 4 will rebuild) ─── */
+/* ─── MORE ─── */
 function MoreView({ data, setData, isAdmin, userName }) {
-  const [section, setSection] = useState("roster");
-  const sections = [
-    { id: "roster", label: "Roster" },
-    { id: "readings", label: "Readings" },
-    { id: "leaderboard", label: "Leaderboard" },
-  ];
-  // Compute leaderboard inputs the same way the App did
-  const visibleStudents = data ? data.students.filter(s => s.name !== ADMIN_NAME && s.name !== TEST_STUDENT) : [];
+  const me = data?.students.find(s => s.name === userName);
   return (
-    <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto", padding: "20px 20px 40px", fontFamily: F }}>
-      <div style={{ display: "flex", gap: 6, marginBottom: 18, flexWrap: "wrap" }}>
-        {sections.map(s => (
-          <button key={s.id} onClick={() => setSection(s.id)}
-            style={section === s.id ? pillActive : pillInactive}>{s.label}</button>
-        ))}
+    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+
+        {/* Your info */}
+        {me && (
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ ...sectionLabel, marginBottom: 10 }}>Your Info</div>
+            <BioView student={me} data={data} setData={setData} userName={userName} onBack={null} />
+          </div>
+        )}
+
+        {/* Class roster */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>Class Roster</div>
+          <RosterCombined data={data} setData={setData} userName={userName} isAdmin={isAdmin} />
+        </div>
+
+        {/* Readings */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>Readings</div>
+          <ReadingsView data={data} setData={setData} isAdmin={isAdmin} />
+        </div>
+
       </div>
-      {section === "roster" && <RosterCombined data={data} setData={setData} userName={userName} isAdmin={isAdmin} />}
-      {section === "readings" && <ReadingsView data={data} setData={setData} isAdmin={isAdmin} />}
-      {section === "leaderboard" && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={isAdmin} userName={userName} data={data} setData={setData} />}
     </div>
   );
 }
@@ -5970,6 +6073,15 @@ export default function Comm118() {
 
   if (!userName) return <NamePicker data={data} onSelect={name => { setUserName(name); setView(name === GUEST_NAME ? "schedule" : "home"); }} />;
 
+  // Detect anything live in Activities tab to drive the green dot indicator
+  const activitiesLive = !!(
+    data?.activeGame?.live ||
+    data?.activeToT?.live ||
+    data?.headlines?.activeHeadlineId ||
+    (data?.surveys || []).some(s => s.status === "open") ||
+    (data?.boards || []).some(b => b.active)
+  );
+
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F, fontSize: 15 }}>
       {isAdmin && (
@@ -5980,7 +6092,7 @@ export default function Comm118() {
           <a href="/dashboard" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: "#9ca3af", background: "transparent" }}>Dash</a>
         </div>
       )}
-      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={testStudent || displayName} onLogout={() => { if (testStudent) { setTestStudent(null); return; } try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} testStudent={testStudent} setTestStudent={isAdmin ? setTestStudent : null} allStudents={data ? data.students.filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis").sort((a, b) => { const al = a.name.split(" ").slice(-1)[0]; const bl = b.name.split(" ").slice(-1)[0]; return al.localeCompare(bl); }) : []} activitiesLive={false} />
+      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={testStudent || displayName} onLogout={() => { if (testStudent) { setTestStudent(null); return; } try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} testStudent={testStudent} setTestStudent={isAdmin ? setTestStudent : null} allStudents={data ? data.students.filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis").sort((a, b) => { const al = a.name.split(" ").slice(-1)[0]; const bl = b.name.split(" ").slice(-1)[0]; return al.localeCompare(bl); }) : []} activitiesLive={activitiesLive} />
       {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} setView={setView} />}
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "assignments" && !isGuest && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} setView={setView} />}
