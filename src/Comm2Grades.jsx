@@ -1,21 +1,26 @@
 import React, { useState } from "react";
 import { ReboundPanel } from "./Comm2Game.jsx";
 
-const F = "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif";
+const F = "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+const TEXT_PRIMARY = "#111827";
+const TEXT_SECONDARY = "#4b5563";
+const TEXT_MUTED = "#9ca3af";
+const BORDER = "#f3f4f6";
+const BORDER_STRONG = "#e5e7eb";
 const ACCENT = "#2563eb";
-const TEXT_SECONDARY = "#52525b";
-const TEXT_MUTED = "#a1a1aa";
-const BORDER = "#e8e8ec";
-const GREEN = "#059669";
-const RED = "#dc2626";
-const AMBER = "#d97706";
+const GREEN = "#10b981";
+const RED = "#ef4444";
+const AMBER = "#f59e0b";
+const TEAL = "#14b8a6";
 
-const crd = { background: "#fff", borderRadius: 14, border: "1px solid " + BORDER, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" };
-const pill = { padding: "7px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s" };
-const pillInactive = { ...pill, background: "#f4f4f5", color: "#52525b" };
-const sectionLabel = { fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: F };
-const inp = { background: "#fff", border: "1.5px solid " + BORDER, borderRadius: 10, padding: "10px 14px", color: "#18181b", fontFamily: F, fontSize: 15, fontWeight: 400, outline: "none", width: "100%", boxSizing: "border-box" };
+const crd = { background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, overflow: "hidden" };
+const pill = { padding: "8px 14px", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s" };
+const pillInactive = { ...pill, background: "#f3f4f6", color: TEXT_SECONDARY };
+const linkPill = { ...pill, background: "#f3f4f6", color: TEXT_SECONDARY, padding: "6px 12px", fontSize: 11, fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 };
+const sectionLabel = { fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.12em", fontFamily: F };
+const inp = { background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 10, padding: "10px 12px", color: TEXT_PRIMARY, fontFamily: F, fontSize: 14, fontWeight: 500, outline: "none", width: "100%", boxSizing: "border-box" };
 const sel = { ...inp, width: "auto" };
+const CONTAINER_MAX = 720;
 
 const ADMIN_NAME = "Andrew Ishak";
 const GUEST_NAME = "__guest__";
@@ -413,30 +418,89 @@ function TogglePanel({ label, count, children }) {
   const [show, setShow] = useState(false);
   return (
     <div style={{ marginTop: 10 }}>
-      <button onClick={() => setShow(!show)} style={{ ...pillInactive, fontSize: 12, width: "100%" }}>{show ? "Hide Submissions" : label + " (" + count + ")"}</button>
+      <button onClick={() => setShow(!show)} style={{ ...pillInactive, fontSize: 12 }}>{show ? "Hide Submissions" : label + " (" + count + ")"}</button>
       {show && children}
     </div>
   );
 }
 
+// Format ts as "Wed, Apr 23"
+function fmtDayDate(ts) {
+  if (!ts) return "";
+  return new Date(ts).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+// Format due like "Apr 17" -> "Thu, Apr 17"
+function fmtDue(dueStr) {
+  if (!dueStr) return "";
+  const d = parseDueDate(dueStr);
+  if (!d) return dueStr;
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+// Determine state for an assignment dot
+function getAssignmentState(a, data, studentId) {
+  const grades = data.grades || {};
+  const submissions = data.submissions || {};
+  const g = grades[studentId + "-" + a.id] || {};
+  const sub = submissions[studentId + "-" + a.id];
+  const hasGrade = g.score !== undefined && g.score !== "";
+  const isZero = hasGrade && parseFloat(g.score) === 0;
+  const dueDate = parseDueDate(a.due);
+  const isPastDue = dueDate && Date.now() > dueDate.getTime();
+  const isLate = sub && dueDate && sub.ts > dueDate.getTime();
+  if (isZero) return "zero";
+  if (hasGrade) return "graded";
+  if (isLate) return "late";
+  if (sub) return "submitted";
+  if (!a.due) return "ongoing";
+  if (isPastDue) return "missing";
+  return "upcoming";
+}
+
+function dotSize(weight) {
+  const w = Math.max(1, Math.min(40, weight || 1));
+  return Math.round(14 + w * 0.87);
+}
+
+function dotColor(state) {
+  if (state === "graded") return { fill: GREEN, border: GREEN };
+  if (state === "submitted") return { fill: GREEN, border: TEXT_PRIMARY };
+  if (state === "late" || state === "zero" || state === "missing") return { fill: RED, border: RED };
+  if (state === "ongoing") return { fill: TEAL, border: TEAL };
+  return { fill: AMBER, border: AMBER };
+}
+
+function StatusBadge({ state }) {
+  const map = {
+    graded: { label: "Graded", bg: "#ecfdf5", color: GREEN },
+    submitted: { label: "Submitted", bg: "#eff6ff", color: "#2563eb" },
+    late: { label: "Submitted Late", bg: "#fffbeb", color: AMBER },
+    zero: { label: "Action Required", bg: "#fef2f2", color: RED },
+    missing: { label: "Missing", bg: "#fef2f2", color: RED },
+    upcoming: { label: "Upcoming", bg: "#fffbeb", color: AMBER },
+    ongoing: { label: "Ongoing", bg: "#f0fdfa", color: TEAL },
+  };
+  const m = map[state] || map.upcoming;
+  return <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: m.bg, color: m.color, textTransform: "uppercase", letterSpacing: "0.06em" }}>{m.label}</span>;
+}
+
 export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
+  const submissions = data.submissions || {};
   const [editId, setEditId] = useState(null);
   const [editLocal, setEditLocal] = useState(null);
   const [editBlurb, setEditBlurb] = useState(false);
   const [blurbLocal, setBlurbLocal] = useState("");
   const [editMasterRubric, setEditMasterRubric] = useState(false);
+  const [openId, setOpenId] = useState(null);
+  const [hoveredDotId, setHoveredDotId] = useState(null);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const isGuest = userName === GUEST_NAME;
   const student = !isAdmin && !isGuest ? data.students.find(s => s.name === userName) : null;
   const studentId = student?.id;
-
-  // Leaderboard points for current student
-  const studentPts = studentId ? data.log.filter(e => e.studentId === studentId).reduce((s, e) => s + e.amount, 0) : 0;
-  const ranked = data.students.map(s => ({ ...s, points: data.log.filter(e => e.studentId === s.id).reduce((t, e) => t + e.amount, 0) })).sort((a, b) => b.points - a.points);
-  const studentRank = studentId ? ranked.findIndex(s => s.id === studentId) + 1 : null;
 
   const startEdit = (a) => {
     setEditId(a.id);
@@ -446,24 +510,6 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const saveEdit = async () => {
     if (!editId || !editLocal) return;
     let updated = { ...data, assignments: (data.assignments || DEFAULT_ASSIGNMENTS).map(a => a.id === editId ? { ...a, ...editLocal, weight: parseInt(editLocal.weight) || 0 } : a) };
-    // Sync due date to schedule
-    if (editLocal.due && data.schedule) {
-      const assignment = (data.assignments || DEFAULT_ASSIGNMENTS).find(a => a.id === editId);
-      if (assignment) {
-        const newSchedule = data.schedule.map(week => ({
-          ...week,
-          dates: week.dates.map(d => {
-            const cleanedAssignment = (d.assignment || "").split(", ").filter(a => a !== assignment.name && a !== assignment.name + " due").join(", ");
-            if (d.date === editLocal.due) {
-              const newAssignment = cleanedAssignment ? cleanedAssignment + ", " + editLocal.name + " due" : editLocal.name + " due";
-              return { ...d, assignment: newAssignment };
-            }
-            return { ...d, assignment: cleanedAssignment };
-          })
-        }));
-        updated.schedule = newSchedule;
-      }
-    }
     await saveData(updated); setData(updated);
     setEditId(null); setEditLocal(null); showMsg("Saved");
   };
@@ -476,35 +522,120 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   };
 
   const removeAssignment = async (id) => {
-    if (id === "participation") return;
     const updated = { ...data, assignments: assignments.filter(a => a.id !== id) };
     await saveData(updated); setData(updated); setEditId(null); setEditLocal(null); showMsg("Removed");
   };
 
-  const defaultBlurb = "Your grade is based on your speeches, peer reviews, and contributions throughout the quarter. Each speech is weighted differently based on its complexity and importance.";
+  const defaultBlurb = "Your grade is based on your speeches and contributions throughout the quarter. Each speech is weighted by its complexity and importance. Submit a Google Doc and a video for each speech.";
   const blurbText = data.assignmentsBlurb || defaultBlurb;
-
   const saveBlurb = async () => {
     const updated = { ...data, assignmentsBlurb: blurbLocal };
     await saveData(updated); setData(updated);
     setEditBlurb(false); showMsg("Saved");
   };
 
+  // Sort assignments by due date ascending; undated last
+  const today = new Date();
+  const year = today.getFullYear();
+  const sortedAssignments = [...assignments].sort((a, b) => {
+    if (!a.due && !b.due) return 0;
+    if (!a.due) return 1;
+    if (!b.due) return -1;
+    return new Date(a.due + ", " + year) - new Date(b.due + ", " + year);
+  });
+
+  // Find next assignment
+  const nextAssignment = sortedAssignments.find(a => {
+    if (!studentId) return !!a.due;
+    const state = getAssignmentState(a, data, studentId);
+    return state === "upcoming" || state === "missing";
+  });
+
+  // Compute current grade
+  const computeCurrentGrade = () => {
+    let weightGraded = 0;
+    let weightedScore = 0;
+    sortedAssignments.forEach(a => {
+      const g = grades[studentId + "-" + a.id] || {};
+      if (g.score !== undefined && g.score !== "") {
+        weightGraded += a.weight;
+        weightedScore += (parseFloat(g.score) / (g.outOf || 100)) * a.weight;
+      }
+    });
+    const totalWeight = sortedAssignments.reduce((s, a) => s + a.weight, 0);
+    const currentGrade = weightGraded > 0 ? Math.round(weightedScore / weightGraded * 1000) / 10 : null;
+    const pctAssessed = totalWeight > 0 ? Math.round(weightGraded / totalWeight * 100) : 0;
+    return { currentGrade, pctAssessed };
+  };
+
+  const { currentGrade, pctAssessed } = studentId ? computeCurrentGrade() : { currentGrade: null, pctAssessed: 0 };
+  const gradeColor = currentGrade === null ? TEXT_MUTED : currentGrade >= 90 ? GREEN : currentGrade >= 80 ? TEXT_PRIMARY : currentGrade >= 70 ? AMBER : RED;
+
+  // Render the body of an assignment card (used for next + collapsed)
+  const renderAssignmentBody = (a) => {
+    const g = studentId ? (grades[studentId + "-" + a.id] || {}) : null;
+    const sub = studentId ? submissions[studentId + "-" + a.id] : null;
+    return (
+      <div>
+        {a.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.5, marginBottom: 12 }}>{a.notes}</div>}
+        {a.link && (
+          <a href={a.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ ...linkPill, textDecoration: "none", marginBottom: 12 }}>
+            Assignment Doc
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5 a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+        )}
+
+        {studentId && g && g.score !== undefined && g.score !== "" && (
+          <div style={{ marginTop: 12, padding: "10px 12px", background: "#fafafa", borderRadius: 10, border: "1px solid " + BORDER }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+              <span style={sectionLabel}>Grade</span>
+              <span style={{ fontSize: 22, fontWeight: 900, color: parseFloat(g.score) === 0 ? RED : TEXT_PRIMARY, marginLeft: 8 }}>{g.score}</span>
+              <span style={{ fontSize: 13, color: TEXT_MUTED }}>/ {g.outOf || 100}</span>
+            </div>
+            {parseFloat(g.score) === 0 && (
+              <div style={{ fontSize: 12, color: RED, marginTop: 6, fontWeight: 600 }}>This assignment needs attention. Complete all required components and submit, then request a regrade.</div>
+            )}
+            {g.comment && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 6, lineHeight: 1.5 }}>{g.comment}</div>}
+            {!isAdmin && <RegradeRequest assignmentId={a.id} data={data} setData={setData} studentId={studentId} />}
+          </div>
+        )}
+
+        {studentId && !isAdmin && (
+          <StudentSubmission assignmentId={a.id} data={data} setData={setData} studentId={studentId} existing={sub} />
+        )}
+
+        {isAdmin && (
+          <div onClick={e => e.stopPropagation()} style={{ marginTop: 12 }}>
+            <TogglePanel label="View Submissions" count={data.students.filter(s => s.name !== ADMIN_NAME && submissions[s.id + "-" + a.id]).length}>
+              <AdminSubmissions assignmentId={a.id} data={data} setData={setData} />
+            </TogglePanel>
+            <AssignmentRubricButton assignmentId={a.id} data={data} setData={setData} />
+            <BulkNotesImport assignmentId={a.id} data={data} setData={setData} />
+            <button onClick={() => startEdit(a)} style={{ ...pillInactive, marginTop: 8, fontSize: 11 }}>Edit Assignment</button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <Toast message={msg} />
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-          <div style={{ ...sectionLabel }}>Assignments & Weights</div>
-          <div style={{ display: "flex", gap: 6 }}>
-            {isAdmin && <button onClick={addAssignment} style={{ ...pillInactive, fontSize: 11 }}>+ Add</button>}
-            {isAdmin && <button onClick={() => setEditMasterRubric(!editMasterRubric)} style={{ ...pillInactive, fontSize: 11 }}>{editMasterRubric ? "Cancel" : "Master Rubric"}</button>}
-            {isAdmin && setView && <button onClick={() => setView("grades")} style={{ ...pillInactive, fontSize: 11 }}>Gradebook</button>}
-            {isAdmin && setView && <button onClick={() => setView("grading")} style={{ ...pill, fontSize: 11, background: "#eff6ff", color: ACCENT }}>Grading</button>}
-          </div>
+      <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto" }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <div style={sectionLabel}>Assignments</div>
+          {isAdmin && (
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={addAssignment} style={{ ...linkPill, cursor: "pointer", border: "none" }}>+ Add</button>
+              <button onClick={() => setEditMasterRubric(!editMasterRubric)} style={{ ...linkPill, cursor: "pointer", border: "none" }}>{editMasterRubric ? "Cancel" : "Master Rubric"}</button>
+              {setView && <button onClick={() => setView("gradebook")} style={{ ...linkPill, cursor: "pointer", border: "none" }}>Gradebook</button>}
+              {setView && <button onClick={() => setView("grading")} style={{ ...linkPill, cursor: "pointer", border: "none", color: ACCENT, background: ACCENT + "12" }}>Grading</button>}
+            </div>
+          )}
         </div>
 
-        {/* Master Rubric Editor */}
         {isAdmin && editMasterRubric && (
           <RubricEditor
             rubric={data.masterRubric || DEFAULT_MASTER_RUBRIC}
@@ -518,328 +649,207 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           />
         )}
 
-        {/* Student: overall grade summary */}
+        {/* HERO: dot strip + current grade */}
         {studentId && (
-          <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
-            {(() => {
-              const gradeAssignments = assignments.filter(a => a.id !== "participation");
-              let weightGraded = 0;
-              let weightedScore = 0;
-              gradeAssignments.forEach(a => {
-                const g = grades[studentId + "-" + a.id] || {};
-                if (g.score !== undefined && g.score !== "") {
-                  weightGraded += a.weight;
-                  weightedScore += (parseFloat(g.score) / (g.outOf || 100)) * a.weight;
-                }
-              });
-              const totalWeight = assignments.reduce((s, a) => s + a.weight, 0);
-              const pctAssessed = Math.round(weightGraded / totalWeight * 100);
-              const currentGrade = weightGraded > 0 ? Math.round(weightedScore / weightGraded * 1000) / 10 : null;
-              return (
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    <div style={{ textAlign: "center", flex: 1 }}>
-                      <div style={{ ...sectionLabel, marginBottom: 2 }}>Current Grade</div>
-                      <div style={{ fontSize: 28, fontWeight: 900, color: currentGrade === null ? "#d1d5db" : currentGrade >= 90 ? GREEN : currentGrade >= 80 ? "#111827" : currentGrade >= 70 ? AMBER : RED }}>
-                        {currentGrade !== null ? currentGrade + "%" : "---"}
-                      </div>
+          <div style={{ ...crd, padding: 16, marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ ...sectionLabel, marginBottom: 8 }}>Your Assignments</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                {sortedAssignments.map(a => {
+                  const state = getAssignmentState(a, data, studentId);
+                  const c = dotColor(state);
+                  const sz = dotSize(a.weight);
+                  const isSubmittedNotGraded = state === "submitted";
+                  const sub = submissions[studentId + "-" + a.id];
+                  const g = grades[studentId + "-" + a.id] || {};
+                  const isHovered = hoveredDotId === a.id;
+                  let dueLine;
+                  if (!a.due) dueLine = "Ongoing";
+                  else if (sub) dueLine = "Submitted " + new Date(sub.ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                  else dueLine = "Due " + a.due;
+                  const gradeLine = (g.score !== undefined && g.score !== "") ? ("Grade: " + g.score + " / " + (g.outOf || 100)) : null;
+                  return (
+                    <div key={a.id} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      onMouseEnter={() => setHoveredDotId(a.id)}
+                      onMouseLeave={() => setHoveredDotId(null)}
+                      onClick={e => { e.stopPropagation(); setHoveredDotId(isHovered ? null : a.id); }}
+                    >
+                      <div style={{
+                        width: sz, height: sz, borderRadius: "50%",
+                        background: c.fill,
+                        border: isSubmittedNotGraded ? "2px solid " + c.border : "none",
+                        flexShrink: 0,
+                        cursor: "pointer",
+                        transition: "transform 0.12s",
+                        transform: isHovered ? "scale(1.1)" : "scale(1)",
+                      }} />
+                      {isHovered && (
+                        <div style={{
+                          position: "absolute",
+                          bottom: "calc(100% + 8px)",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                          background: TEXT_PRIMARY,
+                          color: "#fff",
+                          padding: "8px 12px",
+                          borderRadius: 8,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          fontFamily: F,
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.18)",
+                          zIndex: 50,
+                          pointerEvents: "none",
+                          lineHeight: 1.5,
+                        }}>
+                          <div style={{ fontWeight: 800, marginBottom: 2 }}>{a.name}</div>
+                          <div style={{ color: "#d1d5db" }}>{dueLine}</div>
+                          {gradeLine && <div style={{ color: "#d1d5db" }}>{gradeLine}</div>}
+                          <div style={{ color: "#d1d5db" }}>{a.weight || 0}% of total grade</div>
+                          <div style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            width: 0,
+                            height: 0,
+                            borderLeft: "5px solid transparent",
+                            borderRight: "5px solid transparent",
+                            borderTop: "5px solid " + TEXT_PRIMARY,
+                          }} />
+                        </div>
+                      )}
                     </div>
-                    <div style={{ width: 1, height: 36, background: "#f3f4f6" }} />
-                    <div style={{ textAlign: "center", flex: 1 }}>
-                      <div style={{ ...sectionLabel, marginBottom: 2 }}>Rank</div>
-                      <div style={{ fontSize: 22, fontWeight: 900, color: studentRank <= 5 ? "#d4a017" : "#111827" }}>#{studentRank}</div>
-                    </div>
-                    <div style={{ width: 1, height: 36, background: "#f3f4f6" }} />
-                    <div style={{ textAlign: "center", flex: 1 }}>
-                      <div style={{ ...sectionLabel, marginBottom: 2 }}>Game Points</div>
-                      <div style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>{studentPts}</div>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 12, color: TEXT_MUTED, textAlign: "center", marginTop: 10, lineHeight: 1.5 }}>
-                    {pctAssessed === 0
-                      ? "No assignments have been graded yet."
-                      : pctAssessed < 30
-                      ? "This reflects " + pctAssessed + "% of your total grade. We still have a long way to go."
-                      : pctAssessed < 70
-                      ? "This reflects " + pctAssessed + "% of your total grade so far."
-                      : "This reflects " + pctAssessed + "% of your total grade."}
-                  </div>
-                </div>
-              );
-            })()}
+                  );
+                })}
+              </div>
+            </div>
+            <div style={{ width: 1, height: 56, background: BORDER }} />
+            <div style={{ textAlign: "center", flexShrink: 0, minWidth: 96 }}>
+              <div style={{ ...sectionLabel, marginBottom: 4 }}>Current Grade</div>
+              <div style={{ fontSize: 32, fontWeight: 900, color: gradeColor, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+                {currentGrade !== null ? currentGrade + "%" : "---"}
+              </div>
+              {pctAssessed > 0 && pctAssessed < 100 && (
+                <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 4, fontWeight: 600 }}>{pctAssessed}% of grade so far</div>
+              )}
+            </div>
           </div>
         )}
 
-        <div style={{ ...crd, padding: 16, marginBottom: 16, cursor: isAdmin ? "pointer" : "default" }} onClick={() => { if (isAdmin && !editBlurb) { setBlurbLocal(blurbText); setEditBlurb(true); } }}>
-          {isAdmin && editBlurb ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }} onClick={e => e.stopPropagation()}>
-              <textarea value={blurbLocal} onChange={e => setBlurbLocal(e.target.value)} rows={8} style={{ ...inp, fontSize: 14, lineHeight: 1.6, resize: "vertical" }} />
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={saveBlurb} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 0", flex: 1 }}>Done</button>
-                <button onClick={() => setEditBlurb(false)} style={{ ...pillInactive, padding: "10px 16px" }}>Cancel</button>
+        {/* Next Assignment */}
+        {nextAssignment && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ ...sectionLabel, marginBottom: 10, color: ACCENT }}>Next Assignment</div>
+            <div style={{ ...crd, padding: 18, border: "2px solid " + ACCENT }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+                <div style={{ minWidth: 48, height: 48, borderRadius: 12, background: ACCENT + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: ACCENT, flexShrink: 0, padding: "0 6px" }}>{nextAssignment.weight}%</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: TEXT_PRIMARY, lineHeight: 1.2 }}>{nextAssignment.name}</div>
+                  {nextAssignment.due && <div style={{ fontSize: 13, color: ACCENT, fontWeight: 700, marginTop: 4 }}>Due {fmtDue(nextAssignment.due)}</div>}
+                </div>
+                {studentId && <StatusBadge state={getAssignmentState(nextAssignment, data, studentId)} />}
               </div>
+              {renderAssignmentBody(nextAssignment)}
             </div>
-          ) : (
-            <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-              {blurbText}
-              {isAdmin && <div style={{ fontSize: 11, color: "#d1d5db", marginTop: 6, fontStyle: "italic" }}>Click to edit</div>}
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
+        {/* All Assignments list */}
+        <div style={{ ...sectionLabel, marginBottom: 10 }}>All Assignments</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {(() => {
-            const today = new Date();
-            const year = today.getFullYear();
-            const nextDueId = assignments.reduce((found, a) => {
-              if (found || !a.due) return found;
-              const parsed = new Date(a.due + ", " + year);
-              if (parsed >= new Date(year, today.getMonth(), today.getDate())) return a.id;
-              return found;
-            }, null);
-            const sorted = [...assignments].sort((a, b) => {
-              if (!a.due && !b.due) return 0;
-              if (!a.due) return 1;
-              if (!b.due) return -1;
-              return new Date(a.due + ", " + year) - new Date(b.due + ", " + year);
-            });
-            return sorted.map(a => {
+          {sortedAssignments.map(a => {
             const isEdit = isAdmin && editId === a.id;
-            const g = studentId ? (grades[studentId + "-" + a.id] || {}) : null;
-            const submissions = data.submissions || {};
-            const mySubKey = studentId ? studentId + "-" + a.id : null;
-            const mySub = mySubKey ? submissions[mySubKey] : null;
-            const isNext = a.id === nextDueId;
-            return (
-              <div key={a.id} style={{ ...crd, padding: 16, cursor: isAdmin && !isEdit ? "pointer" : "default", border: isNext ? "2px solid " + ACCENT : crd.border }} onClick={() => isAdmin && !isEdit && startEdit(a)}>
-                {isEdit && editLocal ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }} onClick={e => e.stopPropagation()}>
+            const isOpen = openId === a.id;
+            const state = studentId ? getAssignmentState(a, data, studentId) : "upcoming";
+
+            if (isEdit && editLocal) {
+              return (
+                <div key={a.id} style={{ ...crd, padding: 16 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     <input value={editLocal.name} onChange={e => setEditLocal({ ...editLocal, name: e.target.value })} style={{ ...inp, fontWeight: 700, fontSize: 15 }} />
                     <div style={{ display: "flex", gap: 8 }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ ...sectionLabel, marginBottom: 4 }}>Weight (%)</div>
-                        <input type="number" value={editLocal.weight} onChange={e => setEditLocal({ ...editLocal, weight: e.target.value })} style={{ ...inp }} />
+                        <input type="number" value={editLocal.weight} onChange={e => setEditLocal({ ...editLocal, weight: e.target.value })} style={inp} />
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ ...sectionLabel, marginBottom: 4 }}>Due Date</div>
-                        <input value={editLocal.due} onChange={e => setEditLocal({ ...editLocal, due: e.target.value })} placeholder="e.g. Apr 20" style={{ ...inp }} />
+                        <input value={editLocal.due} onChange={e => setEditLocal({ ...editLocal, due: e.target.value })} placeholder="e.g. Apr 20" style={inp} />
                       </div>
                     </div>
                     <div>
                       <div style={{ ...sectionLabel, marginBottom: 4 }}>Google Doc Link</div>
-                      <input value={editLocal.link} onChange={e => setEditLocal({ ...editLocal, link: e.target.value })} placeholder="https://docs.google.com/..." style={{ ...inp }} />
+                      <input value={editLocal.link} onChange={e => setEditLocal({ ...editLocal, link: e.target.value })} placeholder="https://docs.google.com/..." style={inp} />
                     </div>
                     <div>
-                      <div style={{ ...sectionLabel, marginBottom: 4 }}>Notes</div>
-                      <input value={editLocal.notes} onChange={e => setEditLocal({ ...editLocal, notes: e.target.value })} placeholder="Optional notes" style={{ ...inp }} />
+                      <div style={{ ...sectionLabel, marginBottom: 4 }}>Description / Notes</div>
+                      <textarea value={editLocal.notes} onChange={e => setEditLocal({ ...editLocal, notes: e.target.value })} placeholder="Short description students will see" rows={3} style={{ ...inp, resize: "vertical" }} />
                     </div>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={saveEdit} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 0", flex: 1 }}>Done</button>
-                      {a.id !== "participation" && <button onClick={() => { if (window.confirm("Remove " + a.name + "?")) removeAssignment(a.id); }} style={{ ...pill, background: "#fef2f2", color: "#ef4444", padding: "10px 16px" }}>Delete</button>}
+                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                      <button onClick={() => { if (window.confirm("Remove " + a.name + "?")) removeAssignment(a.id); }} style={{ ...pill, background: "#fef2f2", color: RED, marginRight: "auto" }}>Delete</button>
+                      <button onClick={() => { setEditId(null); setEditLocal(null); }} style={pillInactive}>Cancel</button>
+                      <button onClick={saveEdit} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Save</button>
                     </div>
                   </div>
-                ) : (
-                  <div onClick={e => e.stopPropagation()}>
-                    <div onClick={() => isAdmin && startEdit(a)} style={{ cursor: isAdmin ? "pointer" : "default" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 10, background: a.id === "participation" ? "#f3f4f6" : ACCENT + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: a.id === "participation" ? "#6b7280" : ACCENT, flexShrink: 0 }}>{a.weight}%</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{a.name}</div>
-                          <div style={{ fontSize: 12, color: isNext ? ACCENT : TEXT_SECONDARY, fontWeight: isNext ? 700 : 400, marginTop: 2 }}>
-                            {a.due && <span>{isNext ? "Due next: " : "Due "}{a.due}</span>}
-                            {a.notes && <span>{a.due ? " / " : ""}{a.notes}</span>}
-                          </div>
-                        </div>
-                        {/* Status badge for students */}
-                        {studentId && !isAdmin && a.id !== "participation" && (() => {
-                          const hasGrade = g && g.score !== undefined && g.score !== "";
-                          const isZero = hasGrade && parseFloat(g.score) === 0;
-                          const dueDate = parseDueDate(a.due);
-                          const isPastDue = dueDate && Date.now() > dueDate.getTime();
-                          const isLate = mySub && dueDate && mySub.ts > dueDate.getTime();
-                          if (isZero) return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 8, background: "#fef2f2", color: RED }}>Action Required</span>;
-                          if (hasGrade) return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 8, background: "#ecfdf5", color: GREEN }}>Graded</span>;
-                          if (mySub && isLate) return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 8, background: "#fffbeb", color: AMBER }}>Submitted Late</span>;
-                          if (mySub) return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 8, background: "#eff6ff", color: "#2563eb" }}>Submitted</span>;
-                          if (isPastDue && !mySub) return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 8, background: "#fef2f2", color: RED }}>Missing</span>;
-                          return null;
-                        })()}
-                        {a.link && (
-                          <a href={a.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ ...pillInactive, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                            Details <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                          </a>
-                        )}
-                        {isAdmin && !a.link && <span style={{ fontSize: 11, color: "#d1d5db", fontStyle: "italic" }}>Click to edit</span>}
-                      </div>
-                    </div>
-                    {/* Student grade inline */}
-                    {studentId && a.id !== "participation" && g && (
-                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
-                        {g.score !== undefined && g.score !== "" ? (
-                          <div>
-                            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                              <span style={{ fontSize: 18, fontWeight: 900, color: parseFloat(g.score) === 0 ? RED : "#111827" }}>{g.score}</span>
-                              <span style={{ fontSize: 12, color: "#9ca3af" }}>/ {g.outOf || 100}</span>
-                            </div>
-                            {parseFloat(g.score) === 0 && (
-                              <div style={{ fontSize: 12, color: RED, marginTop: 4, fontWeight: 600 }}>This assignment needs attention. Complete all required components and submit, then request a regrade.</div>
-                            )}
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic" }}>Not graded yet</div>
-                        )}
-                        {g.comment && <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4, padding: "6px 8px", background: "#f8fafc", borderRadius: 6, lineHeight: 1.4 }}>{g.comment}</div>}
-                        {/* Regrade request button: only show for graded assignments */}
-                        {!isAdmin && g.score !== undefined && g.score !== "" && (
-                          <RegradeRequest assignmentId={a.id} data={data} setData={setData} studentId={studentId} />
-                        )}
-                      </div>
-                    )}
-                    {/* Student submission */}
-                    {studentId && !isAdmin && a.id !== "participation" && (
-                      <StudentSubmission assignmentId={a.id} data={data} setData={setData} studentId={studentId} existing={mySub} />
-                    )}
-                    {/* Admin submissions view */}
-                    {isAdmin && a.id !== "participation" && (
-                      <div onClick={e => e.stopPropagation()}>
-                        <TogglePanel label="View Submissions" count={data.students.filter(s => s.name !== ADMIN_NAME && submissions[s.id + "-" + a.id]).length}>
-                          <AdminSubmissions assignmentId={a.id} data={data} setData={setData} />
-                        </TogglePanel>
-                      </div>
-                    )}
-                    {/* Assignment rubric */}
-                    {isAdmin && a.id !== "participation" && (
-                      <div onClick={e => e.stopPropagation()}>
-                        <AssignmentRubricButton assignmentId={a.id} data={data} setData={setData} />
-                      </div>
-                    )}
-                    {/* Bulk notes import */}
-                    {isAdmin && a.id !== "participation" && (
-                      <div onClick={e => e.stopPropagation()}>
-                        <BulkNotesImport assignmentId={a.id} data={data} setData={setData} />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          });
-          })()}
-        </div>
-        <div style={{ ...crd, padding: 16, marginTop: 16 }}>
-          <div style={{ ...sectionLabel, marginBottom: 10 }}>Participation Breakdown (25%)</div>
-          {studentId ? (() => {
-            const log = data.log || [];
-            const participation = data.participation || {};
-            const getPart = (w, cat) => { const k = studentId + "-w" + w + "-" + cat; return participation[k]; };
-            // Game log totals by source type
-            const gamePts = {};
-            log.filter(e => e.studentId === studentId).forEach(e => {
-              const src = e.source || "Other";
-              let bucket = "Other";
-              if (src.startsWith("Game Wk")) bucket = "Weekly Game";
-              else if (src.startsWith("ToT")) bucket = "This or That";
-              else if (src === "PTI" || src === "Around the Horn") bucket = "PTI";
-              else if (src.startsWith("Fishbowl")) bucket = "Fishbowl";
-              else if (src.startsWith("Team Win")) bucket = "Team Win";
-              else bucket = src;
-              gamePts[bucket] = (gamePts[bucket] || 0) + e.amount;
-            });
-            // Grade-side participation totals
-            let gradeQuizTotal = 0, gradeTotTotal = 0, gradePtiTotal = 0, gradeFbTotal = 0;
-            let quizWeeks = 0, totWeeks = 0, ptiWeeks = 0, fbWeeks = 0;
-            for (let w = 1; w <= 10; w++) {
-              const qv = getPart(w, "quiz");
-              if (qv !== undefined && qv !== null && qv !== "") {
-                const scores = typeof qv === "object" ? qv : {};
-                QUIZ_BREAKDOWN.forEach(q => { gradeQuizTotal += (scores[q.id] || 0) * q.gradePts; });
-                quizWeeks++;
-              }
-              const tv = getPart(w, "tot"); if (tv !== undefined && tv !== null && tv !== "") { gradeTotTotal += parseFloat(tv) || 0; totWeeks++; }
-              const pv = getPart(w, "pti"); if (pv !== undefined && pv !== null && pv !== "") { gradePtiTotal += parseFloat(pv) || 0; ptiWeeks++; }
-              const fv = getPart(w, "fishbowl"); if (fv !== undefined && fv !== null && fv !== "") { gradeFbTotal += parseFloat(fv) || 0; fbWeeks++; }
+                </div>
+              );
             }
+
             return (
-              <div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-                  {[
-                    { label: "Weekly Game", game: gamePts["Weekly Game"] || 0, grade: Math.round(gradeQuizTotal * 10) / 10, weeks: quizWeeks, icon: "Q" },
-                    { label: "This or That", game: gamePts["This or That"] || 0, grade: gradeTotTotal, weeks: totWeeks, icon: "TT" },
-                    { label: "Around the Horn", game: gamePts["PTI"] || 0, grade: gradePtiTotal, weeks: ptiWeeks, icon: "P" },
-                    { label: "Fishbowl", game: gamePts["Fishbowl"] || 0, grade: gradeFbTotal, weeks: fbWeeks, icon: "FB" },
-                  ].map(p => (
-                    <div key={p.label} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #f3f4f6" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                        <div style={{ width: 24, height: 24, borderRadius: 6, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 900, color: "#6b7280", flexShrink: 0 }}>{p.icon}</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{p.label}</div>
-                      </div>
-                      <div style={{ display: "flex", gap: 12 }}>
-                        <div>
-                          <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" }}>Game</div>
-                          <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>{p.game}</div>
-                        </div>
-                        {p.grade > 0 && (
-                          <div>
-                            <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" }}>Grade</div>
-                            <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>{Math.round(p.grade * 10) / 10}</div>
-                          </div>
-                        )}
-                      </div>
-                      {p.weeks > 0 && <div style={{ fontSize: 10, color: "#d1d5db", marginTop: 4 }}>{p.weeks} week{p.weeks !== 1 ? "s" : ""} recorded</div>}
+              <div key={a.id} style={{ marginBottom: 0 }}>
+                <button onClick={() => setOpenId(isOpen ? null : a.id)} style={{
+                  ...crd, padding: 14, width: "100%", textAlign: "left", fontFamily: F, cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 10,
+                }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: ACCENT + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: ACCENT, flexShrink: 0 }}>{a.weight}%</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{a.name}</div>
+                    <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>
+                      {a.due ? "Due " + fmtDue(a.due) : "Ongoing"}
                     </div>
-                  ))}
-                </div>
-                {(gamePts["Team Win"] || 0) > 0 && (
-                  <div style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #f3f4f6", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Team Win Bonuses</span>
-                    <span style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>{gamePts["Team Win"]}</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                    {studentId && <StatusBadge state={state} />}
+                    <span style={{ ...linkPill, padding: "4px 10px" }}>{isOpen ? "Close" : "Open"}</span>
+                  </div>
+                </button>
+                {isOpen && (
+                  <div style={{ marginTop: 8, ...crd, padding: 16 }} onClick={e => e.stopPropagation()}>
+                    {renderAssignmentBody(a)}
                   </div>
                 )}
               </div>
             );
-          })() : (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {[
-                { label: "Weekly Game", detail: "100 pts/week, dual weighted", icon: "Q" },
-                { label: "This or That", detail: "20 pts/week, game only", icon: "TT" },
-                { label: "Around the Horn", detail: "Variable, game + grade", icon: "P" },
-                { label: "Rotating Fishbowl", detail: "20 pts/time, game + grade", icon: "FB" },
-              ].map(p => (
-                <div key={p.label} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 900, color: "#6b7280", flexShrink: 0 }}>{p.icon}</div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{p.label}</div>
-                    <div style={{ fontSize: 11, color: "#9ca3af" }}>{p.detail}</div>
-                  </div>
-                </div>
-              ))}
+          })}
+        </div>
+
+        {/* Class explanation (bottom) */}
+        <div style={{ ...crd, padding: 16, marginTop: 24, cursor: isAdmin ? "pointer" : "default" }} onClick={() => { if (isAdmin && !editBlurb) { setBlurbLocal(blurbText); setEditBlurb(true); } }}>
+          {isAdmin && editBlurb ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }} onClick={e => e.stopPropagation()}>
+              <textarea value={blurbLocal} onChange={e => setBlurbLocal(e.target.value)} rows={8} style={{ ...inp, fontSize: 14, lineHeight: 1.6, resize: "vertical" }} />
+              <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                <button onClick={() => setEditBlurb(false)} style={pillInactive}>Cancel</button>
+                <button onClick={saveBlurb} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Save</button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div style={{ ...sectionLabel, marginBottom: 8 }}>How Your Grade Works</div>
+              <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                {blurbText}
+                {isAdmin && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 6, fontStyle: "italic" }}>Click to edit</div>}
+              </div>
             </div>
           )}
-          <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 10, background: "#f8fafc", border: "1px solid #f3f4f6" }}>
-            <div style={{ ...sectionLabel, marginBottom: 6 }}>Game Dual Weighting</div>
-            <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 1fr 1fr", gap: "4px 12px", fontSize: 12 }}>
-              <div style={{ fontWeight: 700, color: "#9ca3af" }}></div>
-              <div style={{ fontWeight: 700, color: "#9ca3af" }}>Qs</div>
-              <div style={{ fontWeight: 700, color: "#9ca3af" }}>Game</div>
-              <div style={{ fontWeight: 700, color: "#9ca3af" }}>Grade</div>
-              {QUIZ_BREAKDOWN.map(q => (
-                <React.Fragment key={q.id}>
-                  <div style={{ fontWeight: 600, color: "#374151" }}>{q.label}</div>
-                  <div style={{ color: "#6b7280" }}>{q.count}</div>
-                  <div style={{ color: "#6b7280" }}>{q.gamePts} pts ea</div>
-                  <div style={{ color: "#6b7280" }}>{q.gradePts} pts ea</div>
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
         </div>
+
       </div>
     </div>
   );
 }
 
-/* ─── GRADEBOOK ─── */
-/* --- STUDENT SUBMISSION (doc link only) --- */
 function StudentSubmission({ assignmentId, data, setData, studentId, existing }) {
   const [docUrl, setDocUrl] = useState(existing?.docUrl || "");
   const [videoUrl, setVideoUrl] = useState(existing?.videoUrl || "");
@@ -863,16 +873,18 @@ function StudentSubmission({ assignmentId, data, setData, studentId, existing })
   };
 
   return (
-    <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6" }}>
-      {msg && <div style={{ fontSize: 12, color: "#10b981", fontWeight: 600, marginBottom: 4 }}>{msg}</div>}
-      <div style={{ fontSize: 10, fontWeight: 500, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Your Submission</div>
+    <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
+      {msg && <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginBottom: 4 }}>{msg}</div>}
+      <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>Your Submission</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <input value={docUrl} onChange={e => setDocUrl(e.target.value)} placeholder="Google Doc link" style={{ ...inp, fontSize: 13, padding: "8px 10px" }} />
         <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="Video link (Vimeo, YouTube, etc.)" style={{ ...inp, fontSize: 13, padding: "8px 10px" }} />
         <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes for your instructor (optional)" rows={2} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical" }} />
-        <button onClick={submit} style={{ ...pill, background: "#111827", color: "#fff", width: "100%" }}>{existing?.ts ? "Resubmit" : "Submit"}</button>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button onClick={submit} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>{existing?.ts ? "Resubmit" : "Submit"}</button>
+        </div>
       </div>
-      {existing?.ts && <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 6 }}>Submitted {new Date(existing.ts).toLocaleString()}</div>}
+      {existing?.ts && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 6 }}>Submitted {new Date(existing.ts).toLocaleString()}</div>}
     </div>
   );
 }
@@ -916,21 +928,21 @@ function RegradeRequest({ assignmentId, data, setData, studentId }) {
 
   if (open) {
     return (
-      <div style={{ marginTop: 8, padding: "8px 10px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Request Regrade</div>
+      <div style={{ marginTop: 8, padding: "10px 12px", background: "#fafafa", borderRadius: 10, border: "1px solid " + BORDER }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>Request Regrade</div>
         <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Tell your instructor what to look for (required)..." rows={3} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 6 }} />
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={submit} disabled={!note.trim()} style={{ ...pill, background: note.trim() ? "#111827" : "#d1d5db", color: "#fff", flex: 1 }}>Submit Request</button>
+        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
           <button onClick={() => { setOpen(false); setNote(""); }} style={pillInactive}>Cancel</button>
+          <button onClick={submit} disabled={!note.trim()} style={{ ...pill, background: note.trim() ? TEXT_PRIMARY : "#d1d5db", color: "#fff" }}>Submit Request</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ marginTop: 8 }}>
-      {msg && <div style={{ fontSize: 12, color: "#10b981", fontWeight: 600, marginBottom: 4 }}>{msg}</div>}
-      <button onClick={() => setOpen(true)} style={{ ...pill, background: "#fff", color: ACCENT, border: "1px solid " + ACCENT + "40", fontSize: 12, width: "100%" }}>Request Regrade</button>
+    <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
+      {msg && <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginRight: "auto" }}>{msg}</div>}
+      <button onClick={() => setOpen(true)} style={{ ...pill, background: "#fff", color: ACCENT, border: "1px solid " + ACCENT + "40", fontSize: 12 }}>Request Regrade</button>
     </div>
   );
 }
