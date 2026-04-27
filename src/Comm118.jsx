@@ -5519,9 +5519,13 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
   const [showAdminTools, setShowAdminTools] = useState(false);
 
   // Detect what's live
+  // Game/ToT: prefer explicit `live: true` flag if set; otherwise any unscored slot is treated as live.
+  const isSlotLive = (slot) => slot && (slot.live === true || (slot.live !== false && !slot.scored));
+  const liveGameWeeks = Object.keys(data?.weeklyGames || {}).filter(w => isSlotLive(data.weeklyGames[w]));
+  const liveToTWeeks = Object.keys(data?.weeklyToT || {}).filter(w => isSlotLive(data.weeklyToT[w]));
   const liveItems = [];
-  if (data?.activeGame?.live) liveItems.push({ id: "weekly-game", label: "Weekly Game", anchor: "live-now-section" });
-  if (data?.activeToT?.live) liveItems.push({ id: "tot", label: "This or That", anchor: "live-now-section" });
+  if (liveGameWeeks.length > 0) liveItems.push({ id: "weekly-game", label: "Weekly Game", anchor: "live-now-section" });
+  if (liveToTWeeks.length > 0) liveItems.push({ id: "tot", label: "This or That", anchor: "live-now-section" });
   const liveHeadlineSession = (data?.headlines?.sessions || []).find(s => s.activeHeadlineId && s.phase !== "done");
   if (liveHeadlineSession) liveItems.push({ id: "headlines", label: "Headlines", anchor: "live-now-section" });
   const openSurveys = (data?.surveys || []).filter(s => s.active);
@@ -5597,26 +5601,20 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
           </div>
         )}
 
-        {/* Currently Live section: shows the live UI inline */}
-        {anythingLive && (
-          <div id="live-now-section" style={{ marginBottom: 32 }}>
-            {(data?.activeGame?.live || data?.activeToT?.live) && (
-              <div style={{ marginBottom: 20 }}>
-                <StudentAnswerView data={data} setData={setData} userName={userName} />
-              </div>
-            )}
-            {liveHeadlineSession && (
-              <div style={{ marginBottom: 20 }}>
-                <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
-              </div>
-            )}
-            {openSurveys.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <SurveyView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
-              </div>
-            )}
-          </div>
-        )}
+        {/* Currently Live section: always render StudentAnswerView so students can play whenever a live game/ToT is open. The component handles its own empty state. */}
+        <div id="live-now-section" style={{ marginBottom: anythingLive ? 32 : 24 }}>
+          <StudentAnswerView data={data} setData={setData} userName={userName} />
+          {liveHeadlineSession && (
+            <div style={{ marginTop: 20 }}>
+              <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+            </div>
+          )}
+          {openSurveys.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <SurveyView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
+            </div>
+          )}
+        </div>
 
         {/* Past events list */}
         <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -6273,9 +6271,10 @@ export default function Comm118() {
   if (!userName) return <NamePicker data={data} onSelect={name => { setUserName(name); setView(name === GUEST_NAME ? "schedule" : "home"); }} />;
 
   // Detect anything live in Activities tab to drive the green dot indicator
+  const isLiveSlot = (slot) => slot && (slot.live === true || (slot.live !== false && !slot.scored));
   const activitiesLive = !!(
-    data?.activeGame?.live ||
-    data?.activeToT?.live ||
+    Object.keys(data?.weeklyGames || {}).some(w => isLiveSlot(data.weeklyGames[w])) ||
+    Object.keys(data?.weeklyToT || {}).some(w => isLiveSlot(data.weeklyToT[w])) ||
     (data?.headlines?.sessions || []).some(s => s.activeHeadlineId && s.phase !== "done") ||
     (data?.surveys || []).some(s => s.active) ||
     (data?.boards || []).some(b => b.active)
