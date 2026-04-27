@@ -131,6 +131,7 @@ const pillActive = { ...pill, background: "#111827", color: "#fff" };
 const pillInactive = { ...pill, background: "#f3f4f6", color: "#4b5563" };
 const bt = { padding: "9px 18px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, cursor: "pointer", fontFamily: F, fontWeight: 700, fontSize: 13, transition: "all 0.15s", background: "#fff", color: "#4b5563", letterSpacing: "-0.005em" };
 const sectionLabel = { fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: F };
+const linkPill = { padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: F, border: "none", background: "#f3f4f6", color: TEXT_PRIMARY, transition: "all 0.15s", letterSpacing: "-0.005em" };
 const inp = { background: "#fff", border: "1.5px solid " + BORDER_STRONG, borderRadius: 10, padding: "10px 14px", color: TEXT_PRIMARY, fontFamily: F, fontSize: 15, fontWeight: 500, outline: "none", width: "100%", boxSizing: "border-box" };
 const sel = { ...inp, width: "auto" };
 
@@ -994,7 +995,7 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
                 )}
                 {t.due && <span style={{ fontSize: 11, color: pastDue ? RED : TEXT_SECONDARY, fontWeight: pastDue ? 800 : 600, marginLeft: 6 }}>{pastDue ? "Past due" : t.due}</span>}
               </div>
-              {t.linkTab && <button onClick={() => setView(t.linkTab)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 700 }}>Go</button>}
+              {t.linkTab && <button onClick={() => setView(t.linkTab)} style={linkPill}>Open</button>}
               {t.auto && (t.id.startsWith("reading-") || t.id.startsWith("assignment-")) && (
                 <button onClick={() => hideTodo(t.id)} title="Dismiss" style={{ fontSize: 14, color: TEXT_MUTED, background: "none", border: "none", cursor: "pointer", padding: "0 4px", lineHeight: 1 }}>x</button>
               )}
@@ -1327,7 +1328,6 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   const [editingMsg, setEditingMsg] = useState(null);
   const [editMsgText, setEditMsgText] = useState("");
   const [msg, setMsg] = useState("");
-  const [leaderboardExpanded, setLeaderboardExpanded] = useState(false);
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
   const news = data.news || [];
@@ -1407,9 +1407,8 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
     return { ...a, daysLeft, dueLabel };
   })();
 
-  // Expanded leaderboard
+  // Top 10 for leaderboard preview
   const top10 = ranked.slice(0, 10);
-  const lbList = leaderboardExpanded ? ranked : top10;
 
   // To-Do: assignments due soon
   const todoDue = assignments.filter(a => a.due && a.id !== "participation").map(a => {
@@ -1487,7 +1486,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           <div style={{ ...crd, padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>Coming Up</div>
-              <button onClick={() => setView("schedule")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 700, fontFamily: F }}>Full schedule</button>
+              <button onClick={() => setView("schedule")} style={linkPill}>Open</button>
             </div>
             {next3.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED }}>No upcoming classes</div>}
             {next3.map((d, i) => (
@@ -1508,18 +1507,18 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
                   <div style={{ fontSize: 10, fontWeight: 800, color: nextAssignment.daysLeft <= 1 ? RED : AMBER, textTransform: "uppercase", letterSpacing: "0.1em" }}>Next assignment, {nextAssignment.dueLabel}</div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nextAssignment.name}</div>
                 </div>
-                <button onClick={() => setView("assignments")} style={{ ...pill, background: "#f3f4f6", color: TEXT_PRIMARY, fontSize: 11, padding: "5px 10px" }}>Open</button>
+                <button onClick={() => setView("assignments")} style={linkPill}>Open</button>
               </div>
             )}
           </div>
 
-          {/* Top 10 Leaderboard with expand */}
+          {/* Top 10 Leaderboard */}
           <div style={{ ...crd, padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>Leaderboard</div>
-              <button onClick={() => setLeaderboardExpanded(!leaderboardExpanded)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 700, fontFamily: F }}>{leaderboardExpanded ? "Show top 10" : "Show all"}</button>
+              <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED }}>Top 10</div>
             </div>
-            {lbList.map((s, i) => (
+            {top10.map((s, i) => (
               <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, background: s.name === userName ? ACCENT + "0d" : "transparent", borderRadius: 8, margin: s.name === userName ? "0 -6px" : 0, padding: s.name === userName ? "5px 6px" : "5px 0" }}>
                 <span style={{ fontSize: 12, fontWeight: 900, color: i < 5 ? "#d4a017" : TEXT_MUTED, width: 18, textAlign: "right" }}>{i + 1}</span>
                 <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 4 }}>
@@ -1532,10 +1531,13 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
                 <span style={{ fontSize: 12, fontWeight: 800, color: TEXT_PRIMARY, width: 32, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{s.points}</span>
               </div>
             ))}
-            {!leaderboardExpanded && meData && myRank >= 10 && (
-              <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px dashed " + BORDER, display: "flex", alignItems: "center", gap: 8 }}>
+            {meData && myRank >= 10 && (
+              <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px dashed " + BORDER_STRONG, display: "flex", alignItems: "center", gap: 8, background: ACCENT + "0d", borderRadius: 8, margin: "6px -6px 0", padding: "5px 6px" }}>
                 <span style={{ fontSize: 12, fontWeight: 900, color: TEXT_MUTED, width: 18, textAlign: "right" }}>{myRank + 1}</span>
-                <div style={{ flex: 1, fontSize: 13, fontWeight: 800, color: TEXT_PRIMARY }}>{meData.name.split(" ")[0]} (you)</div>
+                <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{meData.name.split(" ")[0]} {lastName(meData.name)}</div>
+                  <span style={{ fontSize: 9, fontWeight: 800, color: ACCENT, background: ACCENT + "1a", padding: "1px 5px", borderRadius: 4, flexShrink: 0 }}>YOU</span>
+                </div>
                 <span style={{ fontSize: 12, fontWeight: 800, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{meData.points}</span>
               </div>
             )}
@@ -1741,7 +1743,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
             <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Week {currentWeek.week} Readings</div>
-                <button onClick={() => setView("more")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>All readings</button>
+                <button onClick={() => setView("more")} style={linkPill}>Open</button>
               </div>
               {required.length > 0 && (
                 <div style={{ marginBottom: recommended.length > 0 ? 12 : 0 }}>
@@ -1789,7 +1791,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Active Discussion Boards</div>
-              <button onClick={() => setView("activities")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>All boards</button>
+              <button onClick={() => setView("activities")} style={linkPill}>Open</button>
             </div>
             {boards.filter(b => b.active).map(board => {
               const postCount = Object.keys(board.posts || {}).filter(k => !(board.posts[k].archived)).length;
@@ -1807,32 +1809,6 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
             })}
           </div>
         )}
-
-        {/* Sports question */}
-        <div style={{ ...crd, padding: 14, marginBottom: 16, cursor: "pointer" }} onClick={() => setView("activities")}>
-          <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.5 }}>What's going on in the sports world right now that you think is interesting?</div>
-          <div style={{ fontSize: 12, color: ACCENT, fontWeight: 600, marginTop: 6 }}>Go to Headlines</div>
-        </div>
-
-        {/* Assignments & To-Do */}
-        <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Assignments</div>
-            <button onClick={() => setView("assignments")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>Details</button>
-          </div>
-          {todoDue.map(a => (
-            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid " + BORDER }}>
-              <button onClick={() => checkTodo(a.id)} style={{ width: 22, height: 22, borderRadius: 6, border: "2px solid " + (a.completed ? GREEN : "#d4d4d8"), background: a.completed ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, padding: 0 }}>
-                {a.completed && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
-              </button>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: a.completed ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: a.completed ? "line-through" : "none" }}>{a.name}</div>
-                {a.due && <div style={{ fontSize: 11, color: TEXT_SECONDARY, fontWeight: 500 }}>{a.due}</div>}
-              </div>
-              <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>{a.weight}%</span>
-            </div>
-          ))}
-        </div>
 
         {/* SCU Sports Calendar */}
         {(() => {
@@ -1853,7 +1829,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
             <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>SCU Sports This Week</div>
-                <a href="https://santaclarabroncos.com/calendar" target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: ACCENT, fontWeight: 600, textDecoration: "none", fontFamily: F }}>Full calendar</a>
+                <a href="https://santaclarabroncos.com/calendar" target="_blank" rel="noopener noreferrer" style={{ ...linkPill, textDecoration: "none", display: "inline-block" }}>Open</a>
               </div>
               {upcoming.map((ev, i) => {
                 const parts = ev.d.split("/");
@@ -2044,17 +2020,11 @@ function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDa
 
 function ScheduleView({ data, setData, isAdmin }) {
   const schedule = data.schedule || DEFAULT_SCHEDULE;
-  const [editCell, setEditCell] = useState(null);
-  const [editWeek, setEditWeek] = useState(null);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
   const updateDate = async (weekIdx, dateIdx, field, value) => {
     const updated = { ...data, schedule: data.schedule.map((w, wi) => wi === weekIdx ? { ...w, dates: w.dates.map((d, di) => di === dateIdx ? { ...d, [field]: value } : d) } : w) };
-    await saveData(updated); setData(updated);
-  };
-  const updateWeek = async (weekIdx, field, value) => {
-    const updated = { ...data, schedule: data.schedule.map((w, wi) => wi === weekIdx ? { ...w, [field]: value } : w) };
     await saveData(updated); setData(updated);
   };
   const addDate = async (weekIdx) => {
@@ -2090,201 +2060,250 @@ function ScheduleView({ data, setData, isAdmin }) {
     await saveData(updated); setData(updated); setEditLinks(false); showMsg("Saved");
   };
 
-  return (
-    <div style={{ padding: "20px 16px 40px", fontFamily: F }}>
-      <Toast message={msg} />
-      <div style={{ maxWidth: 960, margin: "0 auto" }}>
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ ...sectionLabel, marginBottom: 8 }}>Schedule</div>
-            {isAdmin && (
-              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                {data.scheduleDocUrl && !editLinks && (
-                  <a href={data.scheduleDocUrl} target="_blank" rel="noopener noreferrer" style={{ ...pillInactive, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    Doc
-                  </a>
-                )}
-                {data.scheduleCanvaUrl && !editLinks && (
-                  <a href={data.scheduleCanvaUrl} target="_blank" rel="noopener noreferrer" style={{ ...pillInactive, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                    Canva
-                  </a>
-                )}
-                <button onClick={() => setEditLinks(!editLinks)} style={{ ...pillInactive, fontSize: 11 }}>{editLinks ? "Cancel" : "Links"}</button>
-              </div>
-            )}
-          </div>
-          {isAdmin && editLinks && (
-            <div style={{ ...crd, padding: 12, marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-              <input value={docUrl} onChange={e => setDocUrl(e.target.value)} placeholder="Google Doc URL" style={{ ...inp, fontSize: 12, padding: "6px 8px" }} />
-              <input value={canvaUrl} onChange={e => setCanvaUrl(e.target.value)} placeholder="Canva URL" style={{ ...inp, fontSize: 12, padding: "6px 8px" }} />
-              <button onClick={saveLinks} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "8px 0", width: "100%" }}>Save</button>
-            </div>
-          )}
-          {isAdmin && (
-            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-              <button onClick={addWeek} style={pillInactive}>+ Week</button>
-              <button onClick={() => { if (window.confirm("Reset?")) resetSchedule(); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Reset</button>
-            </div>
-          )}
-        </div>
+  // Match a day's free-text assignment field to an entry in data.assignments by name
+  const matchAssignment = (txt) => {
+    if (!txt) return null;
+    const lower = txt.toLowerCase();
+    const candidates = (data.assignments || []).filter(a => a.id !== "participation");
+    // Prefer longest matching name
+    let best = null;
+    candidates.forEach(a => {
+      const n = (a.name || "").toLowerCase();
+      if (!n) return;
+      if (lower.includes(n)) {
+        if (!best || n.length > best.name.toLowerCase().length) best = a;
+      }
+    });
+    return best;
+  };
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-        {schedule.map((week, wi) => {
-          const tc = TOPIC_COLORS[week.label] || TEXT_SECONDARY;
-          const mon = week.dates.find(d => d.day === "Mon");
-          const wed = week.dates.find(d => d.day === "Wed");
-          const fri = week.dates.find(d => d.day === "Fri" || d.day === "Finals");
-          const days = [mon, wed, fri].filter(Boolean);
-          const isEditing = editWeek === wi;
-          const hiddenWeeks = data.hiddenWeeks || [];
-          const isHidden = hiddenWeeks.includes(week.week);
+  // Trigger a "switch view" event toward AssignmentsView; used elsewhere via the App's nav listener
+  const goToAssignment = (assignmentId) => {
+    const ev = new CustomEvent("nav", { detail: "assignments" });
+    window.dispatchEvent(ev);
+    // Optionally: store the target assignment in sessionStorage so AssignmentsView can scroll
+    try { sessionStorage.setItem("comm118-jump-assignment", assignmentId); } catch(e) {}
+  };
 
-          const toggleHidden = async () => {
-            const newHidden = isHidden ? hiddenWeeks.filter(w => w !== week.week) : [...hiddenWeeks, week.week];
-            const updated = { ...data, hiddenWeeks: newHidden };
-            await saveData(updated); setData(updated);
-          };
+  // Scroll to a specific day's edit block in the admin panel
+  const scrollToEdit = (wi, di) => {
+    const el = document.getElementById("edit-" + wi + "-" + di);
+    if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.style.outline = "2px solid " + ACCENT; setTimeout(() => { if (el) el.style.outline = ""; }, 1200); }
+  };
 
+  // Render a reading row (used in both pretty list and admin display)
+  const renderReadings = (d) => {
+    const hasReadings = (d.readings || []).length > 0;
+    if (!hasReadings) return null;
+    return (
+      <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER, display: "flex", flexDirection: "column", gap: 4 }}>
+        {(d.readings || []).filter(r => r.type === "fishbowl" || r.type === "required" || r.type === "recommended").map((r, ri) => {
+          const rdg = (data.readings || []).find(x => x.id === r.readingId);
+          if (!rdg) return null;
+          const link = rdg.pdfUrl || rdg.url;
+          const tColor = r.type === "fishbowl" ? PURPLE : r.type === "required" ? "#b45309" : GREEN;
+          const tLabel = r.type === "fishbowl" ? "Fish" : r.type === "required" ? "Req" : "Rec";
+          const isReq = r.type === "required";
           return (
-            <div key={wi}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                {week.week <= 10 && <div style={{ width: 36, height: 36, borderRadius: 10, background: isHidden && !isAdmin ? TEXT_MUTED : ACCENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 15, fontWeight: 800, fontFamily: F, flexShrink: 0 }}>{week.week}</div>}
-                {isAdmin && isEditing ? (
-                  <WeekHeaderEditor week={week} wi={wi} data={data} setData={setData} onDone={() => setEditWeek(null)} />
+            <div key={ri} style={{ display: "flex", alignItems: "flex-start", gap: 6, background: isReq ? "#fffbeb" : "transparent", padding: isReq ? "4px 8px" : "2px 0", borderRadius: isReq ? 6 : 0 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: tColor, textTransform: "uppercase", marginTop: 2, flexShrink: 0, width: 28, letterSpacing: "0.05em" }}>{tLabel}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {link ? (
+                  <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 600, lineHeight: 1.35 }}>{rdg.title}</a>
                 ) : (
-                  <div style={{ flex: 1, cursor: isAdmin ? "pointer" : "default" }} onClick={() => isAdmin && setEditWeek(wi)}>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.25 }}>{week.label}{week.theme ? " — " + week.theme : ""}</div>
-                    <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>{days.map(d => d.date).join("  /  ")}</div>
-                  </div>
+                  <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 600, lineHeight: 1.35 }}>{rdg.title}</span>
                 )}
-                {isAdmin && <button onClick={toggleHidden} style={{ ...pill, background: isHidden ? "#fef2f2" : "#ecfdf5", color: isHidden ? RED : GREEN, fontSize: 11, padding: "4px 10px" }}>{isHidden ? "Hidden" : "Visible"}</button>}
-                {isAdmin && <button onClick={() => removeWeek(wi)} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 16, padding: 4 }}>x</button>}
+                {rdg.pdfUrl && <span style={{ fontSize: 9, fontWeight: 800, color: RED, background: "#fef2f2", padding: "1px 4px", borderRadius: 3, marginLeft: 4 }}>PDF</span>}
               </div>
-
-              {/* Hidden week: students only see topic and no-class days */}
-              {isHidden && !isAdmin ? (
-                <div style={{ marginBottom: 16, marginLeft: 48 }}>
-                  {days.filter(d => d.holiday).map((d, di) => (
-                    <div key={di} style={{ fontSize: 13, color: RED, fontWeight: 600 }}>{d.day} {d.date} — No in-person class</div>
-                  ))}
-                  {days.filter(d => d.holiday).length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>Details coming soon</div>}
-                </div>
-              ) : (
-                <>
-              {week.question && !isEditing && <div style={{ fontSize: 14, fontStyle: "italic", color: TEXT_SECONDARY, marginBottom: 10, marginLeft: 48, lineHeight: 1.4 }}>"{week.question}"</div>}
-
-              <div className="schedule-days" style={{ display: "grid", gap: 8 }}>
-                {days.map((d, di) => {
-                  const realDi = week.dates.indexOf(d);
-                  const isHoliday = d.holiday;
-                  const isFri = d.fri || d.day === "Fri";
-                  const isEdit = editCell && editCell.w === wi && editCell.d === realDi;
-                  const hasReadings = (d.readings || []).length > 0;
-
-                  return (
-                    <div key={di} onClick={() => isAdmin && !isEdit && setEditCell({ w: wi, d: realDi })} style={{
-                      padding: "14px 16px", borderRadius: 14, minHeight: 60,
-                      background: "#fff",
-                      border: isFri ? "2px solid #c4b5fd" : "1px solid " + BORDER,
-                      cursor: isAdmin && !isEdit ? "pointer" : "default",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
-                    }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: isFri ? PURPLE : TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>{d.day}</span>
-                        <span style={{ fontSize: 12, fontWeight: 500, color: TEXT_MUTED }}>{d.date}</span>
-                      </div>
-
-                      {isEdit && isAdmin ? (
-                        <ScheduleCardEditor d={d} wi={wi} realDi={realDi} data={data} setData={setData} updateDate={updateDate} removeDate={removeDate} onDone={() => setEditCell(null)} />
-                      ) : (
-                        <div>
-                          {isHoliday && <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, color: "#dc2626", background: "#fef2f2", padding: "3px 8px", borderRadius: 6, marginBottom: d.topic ? 6 : 0 }}>No in-person class</div>}
-                          {d.topic && <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, fontWeight: 400 }}>{d.topic}</div>}
-                          {!isHoliday && !d.topic && <div style={{ fontSize: 15, color: TEXT_MUTED, fontStyle: "italic" }}>—</div>}
-                          {!isHoliday && (
-                            <>
-                              {(d.activities || []).length > 0 && (
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
-                                  {(d.activities || []).map((act, ai) => (
-                                    <span key={ai} style={{ fontSize: 11, fontWeight: 700, color: TEXT_PRIMARY, background: "#f4f4f5", padding: "3px 8px", borderRadius: 6 }}>{act}</span>
-                                  ))}
-                                </div>
-                              )}
-                              {d.assignment && <div style={{ fontSize: 13, color: "#c2410c", marginTop: 6, fontWeight: 600 }}>{d.assignment}</div>}
-                              {hasReadings && (
-                                <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER, display: "flex", flexDirection: "column", gap: 4 }}>
-                                  {(d.readings || []).filter(r => r.type === "fishbowl" || r.type === "required" || r.type === "recommended").map((r, ri) => {
-                                    const rdg = (data.readings || []).find(x => x.id === r.readingId);
-                                    if (!rdg) return null;
-                                    const link = rdg.pdfUrl || rdg.url;
-                                    const tColor = r.type === "fishbowl" ? "#7c3aed" : r.type === "required" ? "#b45309" : GREEN;
-                                    const tLabel = r.type === "fishbowl" ? "Fish" : r.type === "required" ? "Req" : "Rec";
-                                    const isFish = r.type === "fishbowl";
-                                    const isReq = r.type === "required";
-                                    return (
-                                      <div key={ri} style={{ display: "flex", alignItems: "flex-start", gap: 6, background: isReq ? "#fffbeb" : "transparent", padding: isReq ? "4px 8px" : "2px 0", borderRadius: isReq ? 6 : 0, margin: isReq ? "0 -8px" : 0 }}>
-                                        <span style={{ fontSize: 11, fontWeight: 700, color: tColor, textTransform: "uppercase", marginTop: 2, flexShrink: 0, width: 30 }}>{tLabel}</span>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                          {link ? (
-                                            <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500, lineHeight: 1.35 }}>{isFish ? "\uD83D\uDC1F " : ""}{rdg.title}</a>
-                                          ) : (
-                                            <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500, lineHeight: 1.35 }}>{isFish ? "\uD83D\uDC1F " : ""}{rdg.title}</span>
-                                          )}
-                                          {rdg.pdfUrl && <span style={{ fontSize: 9, fontWeight: 700, color: RED, background: "#fef2f2", padding: "1px 4px", borderRadius: 3, marginLeft: 4 }}>PDF</span>}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                              {d.notes && !isHoliday && <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.notes}</div>}
-                              {isAdmin && d.adminNotes && <div style={{ fontSize: 12, color: AMBER, marginTop: 6, padding: "6px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fef3c7", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.adminNotes}</div>}
-                            </>
-                          )}
-                          {isHoliday && d.assignment && <div style={{ fontSize: 13, color: "#c2410c", marginTop: 6, fontWeight: 600 }}>{d.assignment}</div>}
-                          {isHoliday && hasReadings && (
-                                <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER, display: "flex", flexDirection: "column", gap: 4 }}>
-                                  {(d.readings || []).filter(r => r.type === "fishbowl" || r.type === "required" || r.type === "recommended").map((r, ri) => {
-                                    const rdg = (data.readings || []).find(x => x.id === r.readingId);
-                                    if (!rdg) return null;
-                                    const link = rdg.pdfUrl || rdg.url;
-                                    const tColor = r.type === "fishbowl" ? "#7c3aed" : r.type === "required" ? "#b45309" : GREEN;
-                                    const tLabel = r.type === "fishbowl" ? "Fish" : r.type === "required" ? "Req" : "Rec";
-                                    const isFish = r.type === "fishbowl";
-                                    const isReq = r.type === "required";
-                                    return (
-                                      <div key={ri} style={{ display: "flex", alignItems: "flex-start", gap: 6, background: isReq ? "#fffbeb" : "transparent", padding: isReq ? "4px 8px" : "2px 0", borderRadius: isReq ? 6 : 0, margin: isReq ? "0 -8px" : 0 }}>
-                                        <span style={{ fontSize: 11, fontWeight: 700, color: tColor, textTransform: "uppercase", marginTop: 2, flexShrink: 0, width: 30 }}>{tLabel}</span>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                          {link ? (
-                                            <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500, lineHeight: 1.35 }}>{isFish ? "\uD83D\uDC1F " : ""}{rdg.title}</a>
-                                          ) : (
-                                            <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500, lineHeight: 1.35 }}>{isFish ? "\uD83D\uDC1F " : ""}{rdg.title}</span>
-                                          )}
-                                          {rdg.pdfUrl && <span style={{ fontSize: 9, fontWeight: 700, color: RED, background: "#fef2f2", padding: "1px 4px", borderRadius: 3, marginLeft: 4 }}>PDF</span>}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                          )}
-                          {isHoliday && d.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.notes}</div>}
-                          {isHoliday && isAdmin && d.adminNotes && <div style={{ fontSize: 12, color: AMBER, marginTop: 6, padding: "6px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fef3c7", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.adminNotes}</div>}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              {isAdmin && <button onClick={() => addDate(wi)} style={{ ...pill, background: "transparent", border: "1px dashed " + BORDER, color: TEXT_MUTED, width: "100%", marginTop: 8, fontSize: 12 }}>+</button>}
-                </>
-              )}
             </div>
           );
         })}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ padding: "20px 16px 40px", fontFamily: F }}>
+      <Toast message={msg} />
+      <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto" }}>
+
+        {/* Header: title + Doc/Canva links */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <div style={sectionLabel}>Schedule</div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            {data.scheduleDocUrl && !editLinks && (
+              <a href={data.scheduleDocUrl} target="_blank" rel="noopener noreferrer" style={{ ...linkPill, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Doc
+              </a>
+            )}
+            {data.scheduleCanvaUrl && !editLinks && (
+              <a href={data.scheduleCanvaUrl} target="_blank" rel="noopener noreferrer" style={{ ...linkPill, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                Canva
+              </a>
+            )}
+            {isAdmin && <button onClick={() => setEditLinks(!editLinks)} style={linkPill}>{editLinks ? "Cancel" : "Links"}</button>}
+          </div>
         </div>
+        {isAdmin && editLinks && (
+          <div style={{ ...crd, padding: 12, marginBottom: 14, display: "flex", flexDirection: "column", gap: 6 }}>
+            <input value={docUrl} onChange={e => setDocUrl(e.target.value)} placeholder="Google Doc URL" style={{ ...inp, fontSize: 12, padding: "6px 8px" }} />
+            <input value={canvaUrl} onChange={e => setCanvaUrl(e.target.value)} placeholder="Canva URL" style={{ ...inp, fontSize: 12, padding: "6px 8px" }} />
+            <button onClick={saveLinks} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "8px 0", width: "100%" }}>Save</button>
+          </div>
+        )}
+
+        {/* ====== PRETTY LIST (everyone) ====== */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+          {schedule.map((week, wi) => {
+            const tc = TOPIC_COLORS[week.label] || TEXT_SECONDARY;
+            const hiddenWeeks = data.hiddenWeeks || [];
+            const isHidden = hiddenWeeks.includes(week.week);
+            // Sort dates within the week chronologically by day order
+            const dayOrder = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7, Finals: 8 };
+            const orderedDates = [...week.dates].map((d, idx) => ({ d, realDi: idx })).sort((a, b) => (dayOrder[a.d.day] || 9) - (dayOrder[b.d.day] || 9));
+
+            return (
+              <div key={wi}>
+                {/* Week header */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  {week.week <= 10 && (
+                    <div style={{ width: 32, height: 32, borderRadius: 10, background: isHidden && !isAdmin ? TEXT_MUTED : tc, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 800, fontFamily: F, flexShrink: 0 }}>{week.week}</div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>{week.label || "TBD"}</span>
+                      {week.theme && <span style={{ fontSize: 14, color: TEXT_SECONDARY, fontWeight: 500 }}>{week.theme}</span>}
+                    </div>
+                    {week.question && <div style={{ fontSize: 13, fontStyle: "italic", color: TEXT_SECONDARY, marginTop: 2, lineHeight: 1.4 }}>"{week.question}"</div>}
+                  </div>
+                </div>
+
+                {/* Hidden week: students see only no-class days */}
+                {isHidden && !isAdmin ? (
+                  <div style={{ marginLeft: week.week <= 10 ? 42 : 0 }}>
+                    {orderedDates.filter(({ d }) => d.holiday).map(({ d }, di) => (
+                      <div key={di} style={{ fontSize: 13, color: RED, fontWeight: 700, padding: "6px 0" }}>{d.day} {d.date}, no in-person class</div>
+                    ))}
+                    {orderedDates.filter(({ d }) => d.holiday).length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>Details coming soon</div>}
+                  </div>
+                ) : (
+                  <div style={{ marginLeft: week.week <= 10 ? 42 : 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                    {orderedDates.map(({ d, realDi }, idx) => {
+                      const isHoliday = d.holiday;
+                      const isFri = d.fri || d.day === "Fri";
+                      const matched = matchAssignment(d.assignment);
+                      const dayLabel = d.day;
+
+                      return (
+                        <div key={realDi} onClick={() => isAdmin && scrollToEdit(wi, realDi)} style={{
+                          padding: "12px 14px", borderRadius: 12,
+                          background: isHoliday ? "#fffbeb" : "#fff",
+                          border: "1px solid " + (isHoliday ? "#fde68a" : BORDER),
+                          borderLeft: isFri ? "4px solid #c4b5fd" : "1px solid " + (isHoliday ? "#fde68a" : BORDER),
+                          cursor: isAdmin ? "pointer" : "default",
+                          display: "flex", gap: 14, alignItems: "flex-start",
+                        }}>
+                          {/* Left column: date + day */}
+                          <div style={{ flexShrink: 0, width: 60 }}>
+                            <div style={{ fontSize: 11, fontWeight: 800, color: isFri ? PURPLE : TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" }}>{dayLabel}</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginTop: 1 }}>{d.date}</div>
+                          </div>
+
+                          {/* Right column: content */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {isHoliday && <div style={{ display: "inline-block", fontSize: 10, fontWeight: 800, color: "#92400e", background: "#fef3c7", padding: "2px 8px", borderRadius: 6, marginBottom: d.topic || d.notes ? 6 : 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>No in-person class</div>}
+                            {!isHoliday && d.topic && <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.45, fontWeight: 600 }}>{d.topic}</div>}
+                            {!isHoliday && !d.topic && <div style={{ fontSize: 14, color: TEXT_MUTED, fontStyle: "italic" }}>TBD</div>}
+                            {isHoliday && d.topic && <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.45, fontWeight: 600, marginTop: 4 }}>{d.topic}</div>}
+
+                            {(d.activities || []).length > 0 && (
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                                {(d.activities || []).map((act, ai) => (
+                                  <span key={ai} style={{ fontSize: 10, fontWeight: 800, color: TEXT_PRIMARY, background: "#f3f4f6", padding: "3px 8px", borderRadius: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>{act}</span>
+                                ))}
+                              </div>
+                            )}
+
+                            {d.assignment && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                                <span style={{ fontSize: 13, color: "#c2410c", fontWeight: 700 }}>{d.assignment}</span>
+                                {matched && (
+                                  <button onClick={e => { e.stopPropagation(); goToAssignment(matched.id); }} style={linkPill}>Open</button>
+                                )}
+                              </div>
+                            )}
+
+                            {renderReadings(d)}
+
+                            {d.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.notes}</div>}
+                            {isAdmin && d.adminNotes && <div style={{ fontSize: 12, color: AMBER, marginTop: 6, padding: "6px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fef3c7", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>{d.adminNotes}</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ====== ADMIN PANEL (admin only) ====== */}
+        {isAdmin && (
+          <div style={{ marginTop: 40, paddingTop: 24, borderTop: "2px solid " + BORDER_STRONG }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div>
+                <div style={{ ...sectionLabel, marginBottom: 2 }}>Admin Panel</div>
+                <div style={{ fontSize: 12, color: TEXT_MUTED }}>Edit anything below; the list above updates immediately.</div>
+              </div>
+              <button onClick={() => { if (window.confirm("Reset entire schedule to defaults?")) resetSchedule(); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Reset</button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              {schedule.map((week, wi) => {
+                const tc = TOPIC_COLORS[week.label] || TEXT_SECONDARY;
+                const hiddenWeeks = data.hiddenWeeks || [];
+                const isHidden = hiddenWeeks.includes(week.week);
+                const toggleHidden = async () => {
+                  const newHidden = isHidden ? hiddenWeeks.filter(w => w !== week.week) : [...hiddenWeeks, week.week];
+                  const updated = { ...data, hiddenWeeks: newHidden };
+                  await saveData(updated); setData(updated);
+                };
+                return (
+                  <div key={wi} style={{ ...crd, padding: 14, background: "#fafafa" }}>
+                    {/* Week divider */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, paddingBottom: 10, borderBottom: "1px solid " + BORDER }}>
+                      {week.week <= 10 && <div style={{ width: 28, height: 28, borderRadius: 8, background: tc, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{week.week}</div>}
+                      <div style={{ flex: 1 }}>
+                        <WeekHeaderEditor week={week} wi={wi} data={data} setData={setData} onDone={() => {}} />
+                      </div>
+                      <button onClick={toggleHidden} style={{ ...pill, background: isHidden ? "#fef2f2" : "#ecfdf5", color: isHidden ? RED : GREEN, fontSize: 11, padding: "4px 10px" }}>{isHidden ? "Hidden" : "Visible"}</button>
+                      <button onClick={() => { if (window.confirm("Remove week " + week.week + "?")) removeWeek(wi); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 18, padding: 4, lineHeight: 1 }}>x</button>
+                    </div>
+
+                    {/* Day edit blocks */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {week.dates.map((d, realDi) => (
+                        <div key={realDi} id={"edit-" + wi + "-" + realDi} style={{ ...crd, padding: 12, background: "#fff", transition: "outline 0.2s" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" }}>{d.day}</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_PRIMARY }}>{d.date}</span>
+                          </div>
+                          <ScheduleCardEditor d={d} wi={wi} realDi={realDi} data={data} setData={setData} updateDate={updateDate} removeDate={removeDate} onDone={() => {}} />
+                        </div>
+                      ))}
+                      <button onClick={() => addDate(wi)} style={{ ...pill, background: "transparent", border: "1px dashed " + BORDER_STRONG, color: TEXT_MUTED, fontSize: 11, padding: "6px 0" }}>+ Add day</button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <button onClick={addWeek} style={{ ...pill, background: "#fff", border: "1px dashed " + BORDER_STRONG, color: TEXT_PRIMARY, fontSize: 12, padding: "10px 0", fontWeight: 700 }}>+ Add week</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -3466,11 +3485,9 @@ function RosterCombined({ data, setData, userName, isAdmin }) {
     <div style={{ fontFamily: F }}>
       <div style={{ display: "flex", gap: 6, padding: "16px 20px 0", justifyContent: "center" }}>
         <button onClick={() => setSub("roster")} style={sub === "roster" ? pillActive : pillInactive}>Roster</button>
-        <button onClick={() => setSub("teams")} style={sub === "teams" ? pillActive : pillInactive}>Teams</button>
         {isAdmin && <button onClick={() => setSub("draft")} style={sub === "draft" ? pillActive : pillInactive}>Draft</button>}
       </div>
       {sub === "roster" && <RosterView data={data} setData={setData} userName={userName} />}
-      {sub === "teams" && <TeamsView teams={data.teams} students={data.students} log={data.log} data={data} />}
       {sub === "draft" && isAdmin && <TeamBuilder data={data} setData={setData} />}
     </div>
   );
