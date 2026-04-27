@@ -5519,8 +5519,9 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
   const [showAdminTools, setShowAdminTools] = useState(false);
 
   // Detect what's live
-  // Game/ToT: prefer explicit `live: true` flag if set; otherwise any unscored slot is treated as live.
-  const isSlotLive = (slot) => slot && (slot.live === true || (slot.live !== false && !slot.scored));
+  // GameSystem signals live state with phase: "live" + active: true.
+  // phase: "done" means closed (with or without scoring).
+  const isSlotLive = (slot) => !!(slot && slot.phase === "live");
   const liveGameWeeks = Object.keys(data?.weeklyGames || {}).filter(w => isSlotLive(data.weeklyGames[w]));
   const liveToTWeeks = Object.keys(data?.weeklyToT || {}).filter(w => isSlotLive(data.weeklyToT[w]));
   const liveItems = [];
@@ -5538,7 +5539,10 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
 
   Object.keys(data.weeklyGames || {}).forEach(w => {
     const g = data.weeklyGames[w];
-    if (!g?.scored) return;
+    if (!g) return;
+    // Past = either scored, or closed (phase === "done"). Skip live and pre-launch slots.
+    const isPast = g.scored || g.phase === "done";
+    if (!isPast) return;
     const ts = (rebounds["game-" + w]?.scoredTs) || 0;
     const responses = g.responses || {};
     const played = (g.questions || []).some((_, qi) => responses[studentId + "-" + qi] !== undefined);
@@ -5547,7 +5551,9 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
 
   Object.keys(data.weeklyToT || {}).forEach(w => {
     const t = data.weeklyToT[w];
-    if (!t?.scored) return;
+    if (!t) return;
+    const isPast = t.scored || t.phase === "done";
+    if (!isPast) return;
     const ts = (rebounds["tot-" + w]?.scoredTs) || 0;
     const responses = t.responses || {};
     const played = (t.questions || []).some((_, qi) => responses[studentId + "-" + qi] !== undefined);
@@ -6271,7 +6277,8 @@ export default function Comm118() {
   if (!userName) return <NamePicker data={data} onSelect={name => { setUserName(name); setView(name === GUEST_NAME ? "schedule" : "home"); }} />;
 
   // Detect anything live in Activities tab to drive the green dot indicator
-  const isLiveSlot = (slot) => slot && (slot.live === true || (slot.live !== false && !slot.scored));
+  // Live = GameSystem set phase: "live". phase: "done" means closed.
+  const isLiveSlot = (slot) => !!(slot && slot.phase === "live");
   const activitiesLive = !!(
     Object.keys(data?.weeklyGames || {}).some(w => isLiveSlot(data.weeklyGames[w])) ||
     Object.keys(data?.weeklyToT || {}).some(w => isLiveSlot(data.weeklyToT[w])) ||
