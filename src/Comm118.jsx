@@ -799,7 +799,7 @@ function InClassView({ data, setData, isAdmin, userName }) {
   );
 }
 
-function HomeTodoSummary({ data, setData, studentId, setView }) {
+function HomeTodoSummary({ data, setData, studentId, setView, classDays, nextAssignment }) {
   const todos = data.todos || [];
   const todoChecks = data.todoChecks || {};
   const rebounds = data.rebounds || {};
@@ -950,14 +950,65 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
     if (linkTab === "boards") linkTab = "activities";
     if (linkTab === "classtools") linkTab = "activities";
     if (linkTab === "roster") linkTab = "more";
-    return { ...t, dueTs, linkTab };
+    return { ...t, dueTs, linkTab, kind: "todo", category: "To-do" };
   });
-  const allTodos = [...reboundTodos, ...readingTodos, ...assignmentTodos, ...myManualTodos];
 
-  // Filter out checked
+  // Tag categories on each list of items
+  const taggedRebound = reboundTodos.map(t => ({ ...t, kind: "rebound", category: t.id.startsWith("makeup-") ? "Office hours makeup" : "Rebound" }));
+  const taggedReading = readingTodos.map(t => ({ ...t, kind: "reading", category: t.title.startsWith("Fishbowl reading:") ? "Fishbowl reading" : "Reading" }));
+  const taggedAssignment = assignmentTodos.map(t => ({ ...t, kind: "assignment", category: "Assignment" }));
+
+  // Class days from props (chronologically merged in)
+  const classTodos = (classDays || []).map(d => {
+    const year = new Date().getFullYear();
+    const parsed = new Date(d.date + ", " + year);
+    const ts = parsed.getTime();
+    return {
+      id: "class-" + d.date,
+      title: d.holiday ? "No in-person class" : (d.topic || "Class"),
+      due: d.day + " " + d.date,
+      dueTs: ts,
+      linkTab: "schedule",
+      kind: "class",
+      category: d.holiday ? "No class" : "Class",
+      classMeta: d, // pass through for richer rendering if needed
+      auto: true, // never check-able
+    };
+  });
+
+  // Next assignment from props (only if not already in assignmentTodos for next 7 days)
+  // The assignmentTodos picks up assignments due within 7 days. If nextAssignment is further out
+  // (e.g. due in 14 days), it won't be in assignmentTodos. Add it as its own entry to keep the
+  // "Next assignment, due in N days" callout visible.
+  const nextAssignmentTodos = [];
+  if (nextAssignment) {
+    const alreadyIn = taggedAssignment.some(t => t.id === "assignment-" + nextAssignment.id);
+    if (!alreadyIn) {
+      nextAssignmentTodos.push({
+        id: "assignment-" + nextAssignment.id,
+        title: nextAssignment.name,
+        due: nextAssignment.dueLabel,
+        dueTs: nextAssignment.dueTs,
+        linkTab: "assignments",
+        kind: "assignment",
+        category: "Next assignment",
+        auto: true,
+      });
+    }
+  }
+
+  const allTodos = [
+    ...classTodos,
+    ...taggedRebound,
+    ...taggedReading,
+    ...taggedAssignment,
+    ...nextAssignmentTodos,
+    ...myManualTodos,
+  ];
+
+  // Filter out checked / hidden
   const unchecked = allTodos.filter(t => {
     if (t.auto) {
-      // For auto reading/assignment, allow user to dismiss via hide
       if (hiddenTodos[studentId + "-" + t.id]) return false;
       return true;
     }
@@ -965,63 +1016,87 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
   });
   const checked = allTodos.filter(t => !t.auto && todoChecks[studentId + "-" + t.id]);
 
+  // Sort chronologically by dueTs (items without dueTs sink to bottom)
+  unchecked.sort((a, b) => {
+    if (a.dueTs == null && b.dueTs == null) return 0;
+    if (a.dueTs == null) return 1;
+    if (b.dueTs == null) return -1;
+    return a.dueTs - b.dueTs;
+  });
+
   if (unchecked.length === 0 && checked.length === 0) return null;
 
-  const isPastDue = (t) => t.dueTs && Date.now() > t.dueTs + (t.auto ? 0 : 24 * 60 * 60 * 1000);
+  const isPastDue = (t) => t.dueTs && Date.now() > t.dueTs + (t.kind === "class" ? 24 * 60 * 60 * 1000 : (t.auto ? 0 : 24 * 60 * 60 * 1000));
+
+  // Build a "due in N days" or "due today" / "due tomorrow" label from dueTs (for the small category header)
+  const _todayMidnight = new Date();
+  _todayMidnight.setHours(0, 0, 0, 0);
+  const _today0 = _todayMidnight.getTime();
+  const fmtDueLabel = (t) => {
+    // For items that already provide a due string, use it directly
+    if (t.due) return t.due;
+    if (!t.dueTs) return "";
+    const diff = t.dueTs - _today0;
+    const days = Math.round(diff / (1000 * 60 * 60 * 24));
+    if (days < 0) return "Past due";
+    if (days === 0) return "today";
+    if (days === 1) return "tomorrow";
+    return "in " + days + " days";
+  };
+
+  // Color the small category line based on urgency
+  const categoryColor = (t) => {
+    if (!t.dueTs) return TEXT_MUTED;
+    const diff = t.dueTs - _today0;
+    const days = Math.round(diff / (1000 * 60 * 60 * 24));
+    if (days <= 0) return RED;
+    if (days <= 2) return AMBER;
+    return TEXT_MUTED;
+  };
 
   return (
-    <div style={{ ...crd, padding: 16, marginBottom: 12 }}>
-      <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>To-Do ({unchecked.length})</div>
+    <div>
       {unchecked.map(t => {
         const pastDue = isPastDue(t);
+        const label = t.kind === "class" ? t.category + " " + t.due : (t.category + ", " + (t.due ? t.due : fmtDueLabel(t)).replace(/^Due /, "due "));
+        const catColor = categoryColor(t);
         return (
-          <div key={t.id} style={{ padding: "8px 0", borderBottom: "1px solid " + BORDER }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {!t.auto && (
-                <button onClick={() => toggleCheck(t.id)} style={{
-                  display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 8, cursor: "pointer",
-                  border: "1px solid " + BORDER_STRONG, background: "#fff", fontFamily: F, fontSize: 11, fontWeight: 700, color: TEXT_MUTED, flexShrink: 0,
-                }}>
-                  <div style={{ width: 14, height: 14, borderRadius: 3, border: "2px solid " + BORDER_STRONG, background: "#fff" }} />
-                  Mark done
-                </button>
-              )}
-              {t.auto && <div style={{ width: 6, height: 6, borderRadius: 3, background: AMBER, flexShrink: 0 }} />}
-              <div style={{ flex: 1, minWidth: 0 }}>
+          <div key={t.id} style={{ padding: "10px 0", borderBottom: "1px solid " + BORDER, display: "flex", alignItems: "center", gap: 10 }}>
+            {!t.auto && (
+              <button onClick={() => toggleCheck(t.id)} style={{
+                display: "flex", alignItems: "center", padding: 0, borderRadius: 4, cursor: "pointer",
+                border: "2px solid " + BORDER_STRONG, background: "#fff", flexShrink: 0, width: 18, height: 18,
+              }} aria-label="Mark done" />
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: pastDue ? RED : catColor, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                {pastDue ? t.category + ", past due" : label}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {t.link ? (
-                  <a href={t.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 600, color: "#2563eb", textDecoration: "none" }}>{t.title}</a>
+                  <a href={t.link} target="_blank" rel="noopener noreferrer" style={{ color: TEXT_PRIMARY, textDecoration: "none" }}>{t.title}</a>
                 ) : (
-                  <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{t.title}</span>
+                  <span>{t.title}</span>
                 )}
-                {t.due && <span style={{ fontSize: 11, color: pastDue ? RED : TEXT_SECONDARY, fontWeight: pastDue ? 800 : 600, marginLeft: 6 }}>{pastDue ? "Past due" : t.due}</span>}
               </div>
-              {t.linkTab && <button onClick={() => setView(t.linkTab)} style={linkPill}>Open</button>}
-              {t.auto && (t.id.startsWith("reading-") || t.id.startsWith("assignment-")) && (
-                <button onClick={() => hideTodo(t.id)} title="Dismiss" style={{ fontSize: 14, color: TEXT_MUTED, background: "none", border: "none", cursor: "pointer", padding: "0 4px", lineHeight: 1 }}>x</button>
-              )}
             </div>
-            {pastDue && !t.auto && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, paddingLeft: 22 }}>
-                <span style={{ fontSize: 11, color: RED }}>Remove from to-do list?</span>
-                <button onClick={() => hideTodo(t.id)} style={{ fontSize: 11, color: RED, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 800, padding: 0 }}>Remove</button>
-              </div>
+            {t.linkTab && <button onClick={() => setView(t.linkTab)} style={linkPill}>Open</button>}
+            {t.auto && (t.id.startsWith("reading-") || t.id.startsWith("assignment-")) && (
+              <button onClick={() => hideTodo(t.id)} title="Dismiss" style={{ fontSize: 14, color: TEXT_MUTED, background: "none", border: "none", cursor: "pointer", padding: "0 4px", lineHeight: 1 }}>x</button>
             )}
           </div>
         );
       })}
       {checked.length > 0 && (
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: 10, paddingTop: 8 }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.1em" }}>Completed</div>
           {checked.map(t => (
             <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", opacity: 0.5 }}>
               <button onClick={() => toggleCheck(t.id)} style={{
-                display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 8, cursor: "pointer",
-                border: "1px solid " + GREEN, background: GREEN + "10", fontFamily: F, fontSize: 11, fontWeight: 700, color: GREEN, flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center", padding: 0, borderRadius: 4, cursor: "pointer",
+                border: "2px solid " + GREEN, background: GREEN, flexShrink: 0, width: 18, height: 18,
               }}>
-                <div style={{ width: 14, height: 14, borderRadius: 3, border: "2px solid " + GREEN, background: GREEN, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
-                </div>
-                Done
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
               </button>
               <span style={{ fontSize: 13, color: TEXT_MUTED, textDecoration: "line-through" }}>{t.title}</span>
             </div>
@@ -1433,9 +1508,6 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       <Toast message={msg} />
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
-        {/* Compact to-do list on home page */}
-        {studentId && !isAdmin && <HomeTodoSummary data={data} setData={setData} studentId={studentId} setView={(v) => { const ev = new CustomEvent("nav", { detail: v }); window.dispatchEvent(ev); }} />}
-
         {/* Recently graded assignments */}
         {studentId && !isAdmin && <HomeGradedNotifications data={data} setData={setData} studentId={studentId} />}
 
@@ -1482,33 +1554,46 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         )}
 
         <div className="home-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-          {/* Upcoming classes */}
+          {/* Coming Up: unified chronological feed of classes, readings, assignments, todos */}
           <div style={{ ...crd, padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>Coming Up</div>
               <button onClick={() => setView("schedule")} style={linkPill}>Open</button>
             </div>
-            {next3.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED }}>No upcoming classes</div>}
-            {next3.map((d, i) => (
-              <div key={i} style={{ padding: "8px 0", borderBottom: i < next3.length - 1 || nextAssignment ? "1px solid " + BORDER : "none" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: d.holiday ? RED : TEXT_PRIMARY }}>{d.day} {d.date}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED }}>{d.weekLabel}</span>
-                </div>
-                {d.topic && <div style={{ fontSize: 13, color: TEXT_PRIMARY, marginTop: 2, lineHeight: 1.35 }}>{d.topic}</div>}
-                {d.holiday && <div style={{ fontSize: 12, color: RED, marginTop: 2 }}>No in-person class</div>}
-                {d.assignment && <div style={{ fontSize: 12, color: "#c2410c", marginTop: 2, fontWeight: 700 }}>{d.assignment}</div>}
-                {d.notes && !d.holiday && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 1 }}>{d.notes}</div>}
-              </div>
-            ))}
-            {nextAssignment && (
-              <div style={{ padding: "10px 0 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: nextAssignment.daysLeft <= 1 ? RED : AMBER, textTransform: "uppercase", letterSpacing: "0.1em" }}>Next assignment, {nextAssignment.dueLabel}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nextAssignment.name}</div>
-                </div>
-                <button onClick={() => setView("assignments")} style={linkPill}>Open</button>
-              </div>
+            {studentId && !isAdmin ? (
+              <HomeTodoSummary
+                data={data}
+                setData={setData}
+                studentId={studentId}
+                setView={setView}
+                classDays={next3}
+                nextAssignment={nextAssignment}
+              />
+            ) : (
+              <>
+                {next3.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED }}>No upcoming classes</div>}
+                {next3.map((d, i) => (
+                  <div key={i} style={{ padding: "8px 0", borderBottom: i < next3.length - 1 || nextAssignment ? "1px solid " + BORDER : "none" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: d.holiday ? RED : TEXT_PRIMARY }}>{d.day} {d.date}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED }}>{d.weekLabel}</span>
+                    </div>
+                    {d.topic && <div style={{ fontSize: 13, color: TEXT_PRIMARY, marginTop: 2, lineHeight: 1.35 }}>{d.topic}</div>}
+                    {d.holiday && <div style={{ fontSize: 12, color: RED, marginTop: 2 }}>No in-person class</div>}
+                    {d.assignment && <div style={{ fontSize: 12, color: "#c2410c", marginTop: 2, fontWeight: 700 }}>{d.assignment}</div>}
+                    {d.notes && !d.holiday && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 1 }}>{d.notes}</div>}
+                  </div>
+                ))}
+                {nextAssignment && (
+                  <div style={{ padding: "10px 0 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: nextAssignment.daysLeft <= 1 ? RED : AMBER, textTransform: "uppercase", letterSpacing: "0.1em" }}>Next assignment, {nextAssignment.dueLabel}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nextAssignment.name}</div>
+                    </div>
+                    <button onClick={() => setView("assignments")} style={linkPill}>Open</button>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
