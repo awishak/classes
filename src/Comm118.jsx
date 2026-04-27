@@ -803,6 +803,10 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
   const todoChecks = data.todoChecks || {};
   const rebounds = data.rebounds || {};
   const hiddenTodos = data.hiddenTodos || {};
+  const grades = data.grades || {};
+  const schedule = data.schedule || [];
+  const assignments = data.assignments || [];
+  const readings = data.readings || [];
 
   const toggleCheck = async (todoId) => {
     const key = studentId + "-" + todoId;
@@ -844,7 +848,7 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
         const optedIn = todoChecks["optin-" + rKey + "-" + studentId];
         if (optedIn) {
           const hoursLeft = Math.max(0, Math.round((deadline - Date.now()) / (1000 * 60 * 60)));
-          reboundTodos.push({ id: "rebound-" + rKey, title: "Submit rebound: " + label + " Wk " + w, due: hoursLeft + "h left", dueTs: deadline, linkTab: "inclass", auto: true });
+          reboundTodos.push({ id: "rebound-" + rKey, title: "Submit rebound: " + label + " Wk " + w, due: hoursLeft + "h left", dueTs: deadline, linkTab: "activities", auto: true });
         }
       }
       if (status === "planned_makeup") {
@@ -860,6 +864,74 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
     });
   });
 
+  // ── Smarter auto-todos: readings within next 5 days, assignments due within next 7 days
+  const now = new Date();
+  const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const FIVE_DAYS = 5 * 24 * 60 * 60 * 1000;
+  const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+
+  // Readings attached to schedule days in next 5 days
+  const readingTodos = [];
+  const seenReadingKeys = new Set();
+  schedule.forEach(week => {
+    (week.dates || []).forEach(d => {
+      if (!d.readings || d.readings.length === 0) return;
+      if (d.day === "Finals") return;
+      const year = now.getFullYear();
+      const parsed = new Date(d.date + ", " + year);
+      if (isNaN(parsed)) return;
+      const ts = parsed.getTime();
+      if (ts < today0) return;
+      if (ts - today0 > FIVE_DAYS) return;
+      d.readings.forEach(r => {
+        if (r.type !== "required" && r.type !== "fishbowl") return;
+        const rdg = readings.find(x => x.id === r.readingId);
+        if (!rdg) return;
+        const key = "reading-" + r.readingId + "-" + d.date;
+        if (seenReadingKeys.has(key)) return;
+        seenReadingKeys.add(key);
+        const link = rdg.pdfUrl || rdg.url || null;
+        const daysLeft = Math.round((ts - today0) / (1000 * 60 * 60 * 24));
+        const dueLabel = daysLeft === 0 ? "Due today" : daysLeft === 1 ? "Due tomorrow" : "Due in " + daysLeft + "d (" + d.day + ")";
+        readingTodos.push({
+          id: key,
+          title: (r.type === "fishbowl" ? "Fishbowl reading: " : "Reading: ") + rdg.title,
+          due: dueLabel,
+          dueTs: ts,
+          link,
+          linkTab: link ? null : "more",
+          auto: true,
+        });
+      });
+    });
+  });
+
+  // Assignments due within next 7 days, not yet graded for this student
+  const assignmentTodos = [];
+  assignments.forEach(a => {
+    if (!a.due || a.id === "participation") return;
+    // Skip if already graded
+    const g = grades[studentId + "-" + a.id];
+    if (g && g.score !== undefined && g.score !== "") return;
+    // Parse due
+    const year = now.getFullYear();
+    const parsed = new Date(a.due + ", " + year);
+    if (isNaN(parsed)) return;
+    const ts = parsed.getTime();
+    if (ts < today0) return;
+    if (ts - today0 > SEVEN_DAYS) return;
+    const daysLeft = Math.round((ts - today0) / (1000 * 60 * 60 * 24));
+    const dueLabel = daysLeft === 0 ? "Due today" : daysLeft === 1 ? "Due tomorrow" : "Due in " + daysLeft + "d";
+    assignmentTodos.push({
+      id: "assignment-" + a.id,
+      title: a.name,
+      due: dueLabel,
+      dueTs: ts,
+      linkTab: "assignments",
+      auto: true,
+    });
+  });
+
   // Filter manual todos for this student, parse dueTs from due string
   const myManualTodos = todos.filter(t => !t.targetStudents || t.targetStudents.includes(studentId)).filter(t => !hiddenTodos[studentId + "-" + t.id]).map(t => {
     let dueTs = null;
@@ -869,13 +941,25 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
         if (!isNaN(parsed.getTime())) dueTs = parsed.getTime();
       } catch {}
     }
-    return { ...t, dueTs };
+    // Migrate old linkTab values
+    let linkTab = t.linkTab;
+    if (linkTab === "leaderboard") linkTab = "more";
+    if (linkTab === "readings") linkTab = "more";
+    if (linkTab === "inclass") linkTab = "activities";
+    if (linkTab === "boards") linkTab = "activities";
+    if (linkTab === "classtools") linkTab = "activities";
+    if (linkTab === "roster") linkTab = "more";
+    return { ...t, dueTs, linkTab };
   });
-  const allTodos = [...reboundTodos, ...myManualTodos];
+  const allTodos = [...reboundTodos, ...readingTodos, ...assignmentTodos, ...myManualTodos];
 
   // Filter out checked
   const unchecked = allTodos.filter(t => {
-    if (t.auto) return true;
+    if (t.auto) {
+      // For auto reading/assignment, allow user to dismiss via hide
+      if (hiddenTodos[studentId + "-" + t.id]) return false;
+      return true;
+    }
     return !todoChecks[studentId + "-" + t.id];
   });
   const checked = allTodos.filter(t => !t.auto && todoChecks[studentId + "-" + t.id]);
@@ -885,46 +969,53 @@ function HomeTodoSummary({ data, setData, studentId, setView }) {
   const isPastDue = (t) => t.dueTs && Date.now() > t.dueTs + (t.auto ? 0 : 24 * 60 * 60 * 1000);
 
   return (
-    <div style={{ ...crd, padding: 14, marginBottom: 12, borderLeft: "3px solid " + ACCENT }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>To-Do ({unchecked.length})</div>
+    <div style={{ ...crd, padding: 16, marginBottom: 12 }}>
+      <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>To-Do ({unchecked.length})</div>
       {unchecked.map(t => {
         const pastDue = isPastDue(t);
         return (
-          <div key={t.id} style={{ padding: "6px 0", borderBottom: "1px solid #f4f4f5" }}>
+          <div key={t.id} style={{ padding: "8px 0", borderBottom: "1px solid " + BORDER }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {!t.auto && (
                 <button onClick={() => toggleCheck(t.id)} style={{
-                  display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, cursor: "pointer",
-                  border: "1px solid " + BORDER, background: "#fff", fontFamily: F, fontSize: 11, fontWeight: 600, color: TEXT_MUTED, flexShrink: 0,
+                  display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 8, cursor: "pointer",
+                  border: "1px solid " + BORDER_STRONG, background: "#fff", fontFamily: F, fontSize: 11, fontWeight: 700, color: TEXT_MUTED, flexShrink: 0,
                 }}>
-                  <div style={{ width: 14, height: 14, borderRadius: 3, border: "2px solid " + BORDER, background: "#fff" }} />
+                  <div style={{ width: 14, height: 14, borderRadius: 3, border: "2px solid " + BORDER_STRONG, background: "#fff" }} />
                   Mark done
                 </button>
               )}
-              {t.auto && <div style={{ width: 6, height: 6, borderRadius: 3, background: "#f59e0b", flexShrink: 0 }} />}
+              {t.auto && <div style={{ width: 6, height: 6, borderRadius: 3, background: AMBER, flexShrink: 0 }} />}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY }}>{t.title}</span>
-                {t.due && <span style={{ fontSize: 11, color: pastDue ? RED : TEXT_SECONDARY, fontWeight: pastDue ? 700 : 500, marginLeft: 6 }}>{pastDue ? "Past due" : t.due}</span>}
+                {t.link ? (
+                  <a href={t.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 600, color: "#2563eb", textDecoration: "none" }}>{t.title}</a>
+                ) : (
+                  <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{t.title}</span>
+                )}
+                {t.due && <span style={{ fontSize: 11, color: pastDue ? RED : TEXT_SECONDARY, fontWeight: pastDue ? 800 : 600, marginLeft: 6 }}>{pastDue ? "Past due" : t.due}</span>}
               </div>
-              {t.linkTab && <button onClick={() => setView(t.linkTab)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600 }}>Go</button>}
+              {t.linkTab && <button onClick={() => setView(t.linkTab)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 700 }}>Go</button>}
+              {t.auto && (t.id.startsWith("reading-") || t.id.startsWith("assignment-")) && (
+                <button onClick={() => hideTodo(t.id)} title="Dismiss" style={{ fontSize: 14, color: TEXT_MUTED, background: "none", border: "none", cursor: "pointer", padding: "0 4px", lineHeight: 1 }}>x</button>
+              )}
             </div>
             {pastDue && !t.auto && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, paddingLeft: 22 }}>
                 <span style={{ fontSize: 11, color: RED }}>Remove from to-do list?</span>
-                <button onClick={() => hideTodo(t.id)} style={{ fontSize: 11, color: RED, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 700, padding: 0 }}>Remove</button>
+                <button onClick={() => hideTodo(t.id)} style={{ fontSize: 11, color: RED, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 800, padding: 0 }}>Remove</button>
               </div>
             )}
           </div>
         );
       })}
       {checked.length > 0 && (
-        <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>Completed</div>
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.1em" }}>Completed</div>
           {checked.map(t => (
             <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", opacity: 0.5 }}>
               <button onClick={() => toggleCheck(t.id)} style={{
-                display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, cursor: "pointer",
-                border: "1px solid " + GREEN, background: GREEN + "10", fontFamily: F, fontSize: 11, fontWeight: 600, color: GREEN, flexShrink: 0,
+                display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 8, cursor: "pointer",
+                border: "1px solid " + GREEN, background: GREEN + "10", fontFamily: F, fontSize: 11, fontWeight: 700, color: GREEN, flexShrink: 0,
               }}>
                 <div style={{ width: 14, height: 14, borderRadius: 3, border: "2px solid " + GREEN, background: GREEN, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
@@ -1236,6 +1327,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   const [editingMsg, setEditingMsg] = useState(null);
   const [editMsgText, setEditMsgText] = useState("");
   const [msg, setMsg] = useState("");
+  const [leaderboardExpanded, setLeaderboardExpanded] = useState(false);
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
   const news = data.news || [];
@@ -1279,6 +1371,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   // Next 3 upcoming classes
   const today = new Date();
   const todayStr = today.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
   const upcomingDates = [];
   schedule.forEach(week => {
     (week.dates || []).forEach(d => {
@@ -1293,6 +1386,30 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   });
   upcomingDates.sort((a, b) => a.parsedDate - b.parsedDate);
   const next3 = upcomingDates.slice(0, 3);
+
+  // Next assignment with days-until-due
+  const nextAssignment = (() => {
+    let candidates = [];
+    assignments.forEach(a => {
+      if (!a.due || a.id === "participation") return;
+      const year = today.getFullYear();
+      const parsed = new Date(a.due + ", " + year);
+      if (isNaN(parsed)) return;
+      const ts = parsed.getTime();
+      if (ts < today0) return;
+      candidates.push({ ...a, dueTs: ts });
+    });
+    candidates.sort((a, b) => a.dueTs - b.dueTs);
+    if (candidates.length === 0) return null;
+    const a = candidates[0];
+    const daysLeft = Math.round((a.dueTs - today0) / (1000 * 60 * 60 * 24));
+    const dueLabel = daysLeft === 0 ? "due today" : daysLeft === 1 ? "due tomorrow" : "due in " + daysLeft + " days";
+    return { ...a, daysLeft, dueLabel };
+  })();
+
+  // Expanded leaderboard
+  const top10 = ranked.slice(0, 10);
+  const lbList = leaderboardExpanded ? ranked : top10;
 
   // To-Do: assignments due soon
   const todoDue = assignments.filter(a => a.due && a.id !== "participation").map(a => {
@@ -1315,7 +1432,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <Toast message={msg} />
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
         {/* Compact to-do list on home page */}
         {studentId && !isAdmin && <HomeTodoSummary data={data} setData={setData} studentId={studentId} setView={(v) => { const ev = new CustomEvent("nav", { detail: v }); window.dispatchEvent(ev); }} />}
@@ -1369,48 +1486,57 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           {/* Upcoming classes */}
           <div style={{ ...crd, padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Coming Up</div>
-              <button onClick={() => setView("schedule")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>Full schedule</button>
+              <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>Coming Up</div>
+              <button onClick={() => setView("schedule")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 700, fontFamily: F }}>Full schedule</button>
             </div>
             {next3.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED }}>No upcoming classes</div>}
             {next3.map((d, i) => (
-              <div key={i} style={{ padding: "8px 0", borderBottom: i < next3.length - 1 ? "1px solid " + BORDER : "none" }}>
+              <div key={i} style={{ padding: "8px 0", borderBottom: i < next3.length - 1 || nextAssignment ? "1px solid " + BORDER : "none" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: d.holiday ? RED : ACCENT }}>{d.day} {d.date}</span>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED }}>{d.weekLabel}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: d.holiday ? RED : TEXT_PRIMARY }}>{d.day} {d.date}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED }}>{d.weekLabel}</span>
                 </div>
                 {d.topic && <div style={{ fontSize: 13, color: TEXT_PRIMARY, marginTop: 2, lineHeight: 1.35 }}>{d.topic}</div>}
                 {d.holiday && <div style={{ fontSize: 12, color: RED, marginTop: 2 }}>No in-person class</div>}
-                {d.assignment && <div style={{ fontSize: 12, color: "#c2410c", marginTop: 2, fontWeight: 600 }}>{d.assignment}</div>}
+                {d.assignment && <div style={{ fontSize: 12, color: "#c2410c", marginTop: 2, fontWeight: 700 }}>{d.assignment}</div>}
                 {d.notes && !d.holiday && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 1 }}>{d.notes}</div>}
               </div>
             ))}
+            {nextAssignment && (
+              <div style={{ padding: "10px 0 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: nextAssignment.daysLeft <= 1 ? RED : AMBER, textTransform: "uppercase", letterSpacing: "0.1em" }}>Next assignment, {nextAssignment.dueLabel}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nextAssignment.name}</div>
+                </div>
+                <button onClick={() => setView("assignments")} style={{ ...pill, background: "#f3f4f6", color: TEXT_PRIMARY, fontSize: 11, padding: "5px 10px" }}>Open</button>
+              </div>
+            )}
           </div>
 
-          {/* Mini leaderboard */}
+          {/* Top 10 Leaderboard with expand */}
           <div style={{ ...crd, padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Leaderboard</div>
-              <button onClick={() => setView("leaderboard")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>See all</button>
+              <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>Leaderboard</div>
+              <button onClick={() => setLeaderboardExpanded(!leaderboardExpanded)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 700, fontFamily: F }}>{leaderboardExpanded ? "Show top 10" : "Show all"}</button>
             </div>
-            {top5.map((s, i) => (
-              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, background: s.name === userName ? ACCENT + "08" : "transparent", borderRadius: 6, margin: s.name === userName ? "0 -6px" : 0, padding: s.name === userName ? "4px 6px" : "4px 0" }}>
-                <span style={{ fontSize: 12, fontWeight: 900, color: i < 5 ? "#d4a017" : TEXT_MUTED, width: 18 }}>{i + 1}</span>
+            {lbList.map((s, i) => (
+              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, background: s.name === userName ? ACCENT + "0d" : "transparent", borderRadius: 8, margin: s.name === userName ? "0 -6px" : 0, padding: s.name === userName ? "5px 6px" : "5px 0" }}>
+                <span style={{ fontSize: 12, fontWeight: 900, color: i < 5 ? "#d4a017" : TEXT_MUTED, width: 18, textAlign: "right" }}>{i + 1}</span>
                 <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 4 }}>
-                  <div style={{ fontSize: 13, fontWeight: s.name === userName ? 700 : 500, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name.split(" ")[0]} {lastName(s.name)}</div>
-                  {s.name === userName && <span style={{ fontSize: 9, fontWeight: 800, color: ACCENT, background: ACCENT + "15", padding: "1px 5px", borderRadius: 4, flexShrink: 0 }}>YOU</span>}
+                  <div style={{ fontSize: 13, fontWeight: s.name === userName ? 800 : 600, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name.split(" ")[0]} {lastName(s.name)}</div>
+                  {s.name === userName && <span style={{ fontSize: 9, fontWeight: 800, color: ACCENT, background: ACCENT + "1a", padding: "1px 5px", borderRadius: 4, flexShrink: 0 }}>YOU</span>}
                 </div>
-                <div style={{ width: 60, height: 6, borderRadius: 3, background: "#f4f4f5", overflow: "hidden" }}>
+                <div style={{ width: 60, height: 6, borderRadius: 3, background: "#f3f4f6", overflow: "hidden" }}>
                   <div style={{ height: "100%", width: (s.points / mx * 100) + "%", background: i < 5 ? "#d4a017" : ACCENT, borderRadius: 3 }} />
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_PRIMARY, width: 28, textAlign: "right" }}>{s.points}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: TEXT_PRIMARY, width: 32, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{s.points}</span>
               </div>
             ))}
-            {meData && myRank >= 5 && (
+            {!leaderboardExpanded && meData && myRank >= 10 && (
               <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px dashed " + BORDER, display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 900, color: TEXT_MUTED, width: 18 }}>{myRank + 1}</span>
-                <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{meData.name.split(" ")[0]} (you)</div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_PRIMARY }}>{meData.points}</span>
+                <span style={{ fontSize: 12, fontWeight: 900, color: TEXT_MUTED, width: 18, textAlign: "right" }}>{myRank + 1}</span>
+                <div style={{ flex: 1, fontSize: 13, fontWeight: 800, color: TEXT_PRIMARY }}>{meData.name.split(" ")[0]} (you)</div>
+                <span style={{ fontSize: 12, fontWeight: 800, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{meData.points}</span>
               </div>
             )}
           </div>
@@ -1615,7 +1741,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
             <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Week {currentWeek.week} Readings</div>
-                <button onClick={() => setView("readings")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>All readings</button>
+                <button onClick={() => setView("more")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>All readings</button>
               </div>
               {required.length > 0 && (
                 <div style={{ marginBottom: recommended.length > 0 ? 12 : 0 }}>
@@ -1663,13 +1789,13 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Active Discussion Boards</div>
-              <button onClick={() => setView("boards")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>All boards</button>
+              <button onClick={() => setView("activities")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>All boards</button>
             </div>
             {boards.filter(b => b.active).map(board => {
               const postCount = Object.keys(board.posts || {}).filter(k => !(board.posts[k].archived)).length;
               const myPost = (board.posts || {})[userName];
               return (
-                <div key={board.id} onClick={() => setView("boards")} style={{ padding: "8px 0", borderBottom: "1px solid " + BORDER, cursor: "pointer" }}>
+                <div key={board.id} onClick={() => setView("activities")} style={{ padding: "8px 0", borderBottom: "1px solid " + BORDER, cursor: "pointer" }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{board.title}</div>
                   <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2, lineHeight: 1.35 }}>{board.prompt.length > 80 ? board.prompt.slice(0, 80) + "..." : board.prompt}</div>
                   <div style={{ display: "flex", gap: 8, marginTop: 4, fontSize: 11 }}>
@@ -1683,7 +1809,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         )}
 
         {/* Sports question */}
-        <div style={{ ...crd, padding: 14, marginBottom: 16, cursor: "pointer" }} onClick={() => setView("classtools")}>
+        <div style={{ ...crd, padding: 14, marginBottom: 16, cursor: "pointer" }} onClick={() => setView("activities")}>
           <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.5 }}>What's going on in the sports world right now that you think is interesting?</div>
           <div style={{ fontSize: 12, color: ACCENT, fontWeight: 600, marginTop: 6 }}>Go to Headlines</div>
         </div>
