@@ -87,47 +87,51 @@ const DEFAULT_SCHEDULE = [
 ];
 
 const ACCENT = "#9f1239";
-const BG = "#f7f7f8";
-const BORDER = "#e8e8ec";
-const TEXT_PRIMARY = "#18181b";
-const TEXT_SECONDARY = "#52525b";
-const TEXT_MUTED = "#a1a1aa";
-const GREEN = "#059669";
-const RED = "#dc2626";
-const AMBER = "#d97706";
-const PURPLE = "#7c3aed";
-const F = "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif";
+const BG = "#ffffff";
+const BORDER = "#f3f4f6";
+const BORDER_STRONG = "#e5e7eb";
+const TEXT_PRIMARY = "#111827";
+const TEXT_SECONDARY = "#4b5563";
+const TEXT_MUTED = "#9ca3af";
+const GREEN = "#10b981";
+const RED = "#ef4444";
+const AMBER = "#f59e0b";
+const PURPLE = "#8b5cf6";
+const CONTAINER_MAX = 960;
+const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 
-// Load DM Sans
-if (typeof document !== "undefined" && !document.getElementById("dm-sans-font")) {
+// Load Outfit
+if (typeof document !== "undefined" && !document.getElementById("outfit-font")) {
   const link = document.createElement("link");
-  link.id = "dm-sans-font";
-  link.href = "https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&display=swap";
+  link.id = "outfit-font";
+  link.href = "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap";
   link.rel = "stylesheet";
   document.head.appendChild(link);
 }
-// Responsive schedule grid
+// Responsive schedule grid + base font
 if (typeof document !== "undefined" && !document.getElementById("comm118-responsive")) {
   const style = document.createElement("style");
   style.id = "comm118-responsive";
   style.textContent = `
+    body { font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif; background: #ffffff; }
     .schedule-days { grid-template-columns: 1fr !important; }
     .home-grid { grid-template-columns: 1fr !important; }
     @media (min-width: 700px) { .schedule-days { grid-template-columns: repeat(3, 1fr) !important; } }
     @media (min-width: 700px) { .schedule-days[data-cols="2"] { grid-template-columns: repeat(2, 1fr) !important; } }
     @media (min-width: 700px) { .home-grid { grid-template-columns: 1fr 1fr !important; } }
     @keyframes tickerPulse { 0% { transform: scale(1.15); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   `;
   document.head.appendChild(style);
 }
 
-const crd = { background: "#fff", borderRadius: 14, border: "1px solid " + BORDER, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" };
-const pill = { padding: "7px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s" };
-const pillActive = { ...pill, background: "#18181b", color: "#fff" };
-const pillInactive = { ...pill, background: "#f4f4f5", color: "#52525b" };
-const bt = { padding: "9px 18px", borderRadius: 10, border: "1px solid " + BORDER, cursor: "pointer", fontFamily: F, fontWeight: 600, fontSize: 13, transition: "all 0.15s", background: "#fff", color: "#52525b" };
-const sectionLabel = { fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: F };
-const inp = { background: "#fff", border: "1.5px solid " + BORDER, borderRadius: 10, padding: "10px 14px", color: TEXT_PRIMARY, fontFamily: F, fontSize: 15, fontWeight: 400, outline: "none", width: "100%", boxSizing: "border-box" };
+const crd = { background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, overflow: "hidden" };
+const pill = { padding: "7px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s", letterSpacing: "-0.005em" };
+const pillActive = { ...pill, background: "#111827", color: "#fff" };
+const pillInactive = { ...pill, background: "#f3f4f6", color: "#4b5563" };
+const bt = { padding: "9px 18px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, cursor: "pointer", fontFamily: F, fontWeight: 700, fontSize: 13, transition: "all 0.15s", background: "#fff", color: "#4b5563", letterSpacing: "-0.005em" };
+const sectionLabel = { fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: F };
+const inp = { background: "#fff", border: "1.5px solid " + BORDER_STRONG, borderRadius: 10, padding: "10px 14px", color: TEXT_PRIMARY, fontFamily: F, fontSize: 15, fontWeight: 500, outline: "none", width: "100%", boxSizing: "border-box" };
 const sel = { ...inp, width: "auto" };
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -193,69 +197,117 @@ function shuffleTeams(students, log, teams) {
 function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#18181b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 14, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
 
 /* ─── NAV ─── */
-function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent, allStudents }) {
-  const tabs = [
-    { id: "home", label: "Home", admin: false, guest: false },
-    { id: "todo", label: "To-Do", admin: true, guest: false },
-    { id: "leaderboard", label: "Leaderboard", admin: false, guest: true },
-    { id: "schedule", label: "Schedule", admin: false, guest: true },
-    { id: "assignments", label: "Assignments", admin: false, guest: false },
-    { id: "grades", label: "Gradebook", admin: true, guest: false },
-    { id: "readings", label: "Readings", admin: false, guest: false },
-    { id: "inclass", label: "In-Class", admin: false, guest: false },
-    { id: "inclassadmin", label: "In-Class Admin", admin: true, guest: false },
-    { id: "accolades", label: "Accolades", admin: false, guest: false },
-    { id: "boards", label: "Boards", admin: false, guest: false },
-    { id: "mynotes", label: "My Notes", admin: false, guest: false },
-    { id: "pti", label: "Around the Horn", admin: true, guest: false },
-    { id: "roster", label: "Roster", admin: false, guest: false },
-    { id: "admin", label: "Admin", admin: true, guest: false },
+function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent, allStudents, activitiesLive }) {
+  // Student tabs (always visible, no guest gating). Guests still get a slim subset.
+  const studentTabs = [
+    { id: "home", label: "Home", guest: false },
+    { id: "schedule", label: "Schedule", guest: true },
+    { id: "assignments", label: "Assignments", guest: false },
+    { id: "activities", label: "Activities", guest: false },
+    { id: "more", label: "More", guest: false },
   ];
-  const visibleTabs = tabs.filter(t => {
-    if (t.admin && !isAdmin) return false;
-    if (isGuest && !t.guest) return false;
-    return true;
-  });
+  // Admin extras render after the student tabs
+  const adminTabs = [
+    { id: "pti", label: "PTI" },
+    { id: "inclassadmin", label: "In-Class Admin" },
+    { id: "draft", label: "Draft" },
+    { id: "grades", label: "Gradebook" },
+    { id: "grading", label: "Grading Inbox" },
+    { id: "todo", label: "To-Do" },
+    { id: "admin", label: "Admin" },
+  ];
+  const visibleStudentTabs = studentTabs.filter(t => isGuest ? t.guest : true);
+  const showAdmin = isAdmin && !studentView && !testStudent;
+
+  const tabBtn = (t, isActive, badge) => (
+    <button key={t.id} onClick={() => setView(t.id)} style={{
+      padding: "7px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer",
+      fontFamily: F, border: "none", transition: "all 0.15s", letterSpacing: "-0.005em",
+      background: isActive ? "#111827" : "transparent",
+      color: isActive ? "#fff" : "#4b5563",
+      display: "inline-flex", alignItems: "center", gap: 6,
+    }}>
+      {t.label}
+      {badge}
+    </button>
+  );
+
   return (
-    <div style={{ background: studentView ? "#334155" : ACCENT, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, position: "sticky", top: 0, zIndex: 50 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", fontFamily: F, letterSpacing: "-0.01em" }}>{courseTitle || "Comm and Sport"}</div>
-        {studentView && <span style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.05em" }}>Student View</span>}
-      </div>
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
-        {visibleTabs.map(t => (
-          <button key={t.id} onClick={() => setView(t.id)} style={view === t.id
-            ? { ...pill, background: "#fff", color: studentView ? "#334155" : ACCENT, fontWeight: 700, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
-            : { ...pill, background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.85)" }
-          }>{t.label}</button>
-        ))}
-        <a href="https://camino.instructure.com/courses/117721" target="_blank" rel="noopener noreferrer" style={{ ...pill, background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
-          Camino <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-        </a>
-        {setStudentView && !testStudent && (
-          <button onClick={() => setStudentView(!studentView)} style={{
-            padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
-            fontFamily: F, border: studentView ? "1px solid #fbbf24" : "1px solid rgba(255,255,255,0.2)",
-            background: studentView ? "#fbbf24" : "transparent", color: studentView ? "#18181b" : "rgba(255,255,255,0.6)", transition: "all 0.15s",
-          }}>{studentView ? "Exit Student View" : "Student View"}</button>
-        )}
-        {setTestStudent && allStudents && (
-          <select value={testStudent || ""} onChange={e => setTestStudent(e.target.value || null)} style={{
-            padding: "5px 10px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
-            fontFamily: F, border: testStudent ? "1px solid #f87171" : "1px solid rgba(255,255,255,0.2)",
-            background: testStudent ? "#f87171" : "transparent", color: testStudent ? "#fff" : "rgba(255,255,255,0.6)",
-            outline: "none", maxWidth: 160,
+    <div style={{
+      background: "#fff", borderBottom: "1px solid " + BORDER,
+      position: "sticky", top: 0, zIndex: 50,
+    }}>
+      <div style={{
+        maxWidth: CONTAINER_MAX, margin: "0 auto",
+        padding: "12px 20px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        flexWrap: "wrap", gap: 10,
+      }}>
+        {/* Left: course chip */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{
+            display: "inline-block", padding: "4px 10px", borderRadius: 8,
+            background: ACCENT, color: "#fff",
+            fontSize: 12, fontWeight: 800, fontFamily: F, letterSpacing: "-0.005em",
+          }}>{courseTitle || "Comm and Sport"}</span>
+          {studentView && <span style={{ fontSize: 10, fontWeight: 800, color: "#b45309", textTransform: "uppercase", letterSpacing: "0.1em" }}>Student View</span>}
+        </div>
+
+        {/* Right: tabs + meta */}
+        <div style={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center" }}>
+          {visibleStudentTabs.map(t => {
+            const isActive = view === t.id;
+            const badge = (t.id === "activities" && activitiesLive) ? (
+              <span style={{
+                width: 7, height: 7, borderRadius: "50%", background: GREEN,
+                display: "inline-block", animation: "livePulse 1.6s ease-in-out infinite",
+              }} />
+            ) : null;
+            return tabBtn(t, isActive, badge);
+          })}
+
+          {showAdmin && adminTabs.map(t => tabBtn(t, view === t.id, null))}
+
+          <a href="https://camino.instructure.com/courses/117721" target="_blank" rel="noopener noreferrer" style={{
+            padding: "6px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, fontFamily: F,
+            color: TEXT_MUTED, background: "transparent", textDecoration: "none",
+            display: "inline-flex", alignItems: "center", gap: 4,
           }}>
-            <option value="" style={{ color: "#000" }}>Test as student...</option>
-            {allStudents.map(s => <option key={s.id} value={s.name} style={{ color: "#000" }}>{s.name}</option>)}
-          </select>
-        )}
-        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginLeft: 4 }}>{userName}</span>
-        <button onClick={onLogout} style={{
-          padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
-          fontFamily: F, border: "1px solid rgba(255,255,255,0.2)",
-          background: "transparent", color: "rgba(255,255,255,0.6)", transition: "all 0.15s",
-        }}>Switch</button>
+            Camino <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+
+          {setStudentView && !testStudent && (
+            <button onClick={() => setStudentView(!studentView)} style={{
+              padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
+              fontFamily: F,
+              border: studentView ? "1px solid #f59e0b" : "1px solid " + BORDER_STRONG,
+              background: studentView ? "#fef3c7" : "#fff",
+              color: studentView ? "#92400e" : TEXT_SECONDARY,
+              transition: "all 0.15s",
+            }}>{studentView ? "Exit Student View" : "Student View"}</button>
+          )}
+
+          {setTestStudent && allStudents && (
+            <select value={testStudent || ""} onChange={e => setTestStudent(e.target.value || null)} style={{
+              padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
+              fontFamily: F,
+              border: testStudent ? "1px solid #ef4444" : "1px solid " + BORDER_STRONG,
+              background: testStudent ? "#fee2e2" : "#fff",
+              color: testStudent ? "#991b1b" : TEXT_SECONDARY,
+              outline: "none", maxWidth: 160,
+            }}>
+              <option value="">Test as student...</option>
+              {allStudents.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+            </select>
+          )}
+
+          <span style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, marginLeft: 4 }}>{userName}</span>
+          <button onClick={onLogout} style={{
+            padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
+            fontFamily: F, border: "1px solid " + BORDER_STRONG,
+            background: "#fff", color: TEXT_SECONDARY, transition: "all 0.15s",
+          }}>Switch</button>
+        </div>
       </div>
     </div>
   );
@@ -5279,6 +5331,54 @@ function ToDoView({ data, setData, userName, isAdmin }) {
   );
 }
 
+/* ─── ACTIVITIES (Pass 1 placeholder, Pass 4 will rebuild) ─── */
+function ActivitiesView({ data, setData, isAdmin, userName }) {
+  const [section, setSection] = useState("inclass");
+  const sections = [
+    { id: "inclass", label: "Class Games / Headlines / Surveys" },
+    { id: "boards", label: "Boards" },
+    { id: "mynotes", label: "Notes" },
+  ];
+  return (
+    <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto", padding: "20px 20px 40px", fontFamily: F }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 18, flexWrap: "wrap" }}>
+        {sections.map(s => (
+          <button key={s.id} onClick={() => setSection(s.id)}
+            style={section === s.id ? pillActive : pillInactive}>{s.label}</button>
+        ))}
+      </div>
+      {section === "inclass" && <InClassView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />}
+      {section === "boards" && <BoardsView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />}
+      {section === "mynotes" && <MyNotesView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />}
+    </div>
+  );
+}
+
+/* ─── MORE (Pass 1 placeholder, Pass 4 will rebuild) ─── */
+function MoreView({ data, setData, isAdmin, userName }) {
+  const [section, setSection] = useState("roster");
+  const sections = [
+    { id: "roster", label: "Roster" },
+    { id: "readings", label: "Readings" },
+    { id: "leaderboard", label: "Leaderboard" },
+  ];
+  // Compute leaderboard inputs the same way the App did
+  const visibleStudents = data ? data.students.filter(s => s.name !== ADMIN_NAME && s.name !== TEST_STUDENT) : [];
+  return (
+    <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto", padding: "20px 20px 40px", fontFamily: F }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 18, flexWrap: "wrap" }}>
+        {sections.map(s => (
+          <button key={s.id} onClick={() => setSection(s.id)}
+            style={section === s.id ? pillActive : pillInactive}>{s.label}</button>
+        ))}
+      </div>
+      {section === "roster" && <RosterCombined data={data} setData={setData} userName={userName} isAdmin={isAdmin} />}
+      {section === "readings" && <ReadingsView data={data} setData={setData} isAdmin={isAdmin} />}
+      {section === "leaderboard" && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={isAdmin} userName={userName} data={data} setData={setData} />}
+    </div>
+  );
+}
+
 /* ─── APP ─── */
 export default function Comm118() {
   const [data, setData] = useState(null);
@@ -5725,7 +5825,7 @@ export default function Comm118() {
 
   if (loading) return <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ fontSize: 14, fontWeight: 700, color: "#94a3b8" }}>Loading...</div></div>;
 
-  if (!userName) return <NamePicker data={data} onSelect={name => { setUserName(name); setView(name === GUEST_NAME ? "leaderboard" : "home"); }} />;
+  if (!userName) return <NamePicker data={data} onSelect={name => { setUserName(name); setView(name === GUEST_NAME ? "schedule" : "home"); }} />;
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F, fontSize: 15 }}>
@@ -5737,23 +5837,30 @@ export default function Comm118() {
           <a href="/dashboard" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: "#9ca3af", background: "transparent" }}>Dash</a>
         </div>
       )}
-      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={testStudent || displayName} onLogout={() => { if (testStudent) { setTestStudent(null); return; } try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} testStudent={testStudent} setTestStudent={isAdmin ? setTestStudent : null} allStudents={data ? data.students.filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis").sort((a, b) => { const al = a.name.split(" ").slice(-1)[0]; const bl = b.name.split(" ").slice(-1)[0]; return al.localeCompare(bl); }) : []} />
-      {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
+      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={testStudent || displayName} onLogout={() => { if (testStudent) { setTestStudent(null); return; } try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} testStudent={testStudent} setTestStudent={isAdmin ? setTestStudent : null} allStudents={data ? data.students.filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis").sort((a, b) => { const al = a.name.split(" ").slice(-1)[0]; const bl = b.name.split(" ").slice(-1)[0]; return al.localeCompare(bl); }) : []} activitiesLive={false} />
       {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} setView={setView} />}
-      {view === "todo" && !isGuest && <ToDoView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
-      {view === "leaderboard" && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={effectiveUserName} data={data} setData={setData} />}
+      {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "assignments" && !isGuest && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} setView={setView} />}
-      {view === "readings" && !isGuest && <ReadingsView data={data} setData={setData} isAdmin={effectiveAdmin} />}
-      {view === "inclass" && !isGuest && <InClassView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
+      {view === "activities" && !isGuest && <ActivitiesView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
+      {view === "more" && !isGuest && <MoreView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
+
+      {/* Admin extras */}
+      {view === "todo" && isAdmin && !studentView && !testStudent && <ToDoView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
       {view === "inclassadmin" && isAdmin && !studentView && !testStudent && <GameAdmin data={data} setData={setData} />}
+      {view === "draft" && isAdmin && !studentView && !testStudent && <TeamBuilder data={data} setData={setData} />}
       {view === "grades" && isAdmin && !studentView && !testStudent && <Gradebook data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} setView={setView} />}
       {view === "grading" && isAdmin && !studentView && !testStudent && <GradingInbox data={data} setData={setData} userName={effectiveUserName} />}
       {view === "pti" && isAdmin && !studentView && !testStudent && <PTIMode data={data} setData={setData} />}
+      {view === "admin" && isAdmin && !studentView && !testStudent && <AdminPanel data={data} setData={setData} />}
+
+      {/* Backwards-compat redirects: old tab IDs route to the new homes */}
+      {view === "leaderboard" && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={effectiveUserName} data={data} setData={setData} />}
+      {view === "readings" && !isGuest && <ReadingsView data={data} setData={setData} isAdmin={effectiveAdmin} />}
+      {view === "inclass" && !isGuest && <InClassView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "boards" && !isGuest && <BoardsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "mynotes" && !isGuest && <MyNotesView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "roster" && !isGuest && <RosterCombined data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
-      {view === "accolades" && !isGuest && <Accolades data={data} />}
-      {view === "admin" && isAdmin && !studentView && !testStudent && <AdminPanel data={data} setData={setData} />}
+
       {isGuest && view !== "leaderboard" && view !== "schedule" && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={false} userName={effectiveUserName} data={data} setData={setData} />}
       {(view === "admin" || view === "pti") && !isAdmin && !isGuest && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={effectiveUserName} data={data} setData={setData} />}
     </div>
