@@ -744,12 +744,29 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                   const c = dotColor(state);
                   const sz = dotSize(a.weight);
                   const isSubmittedNotGraded = state === "submitted";
+                  const totalWeight = sortedAssignments.reduce((s, x) => s + (x.weight || 0), 0);
+                  const sub = submissions[studentId + "-" + a.id];
+                  const g = grades[studentId + "-" + a.id] || {};
+                  // Build tooltip lines
+                  const lines = [a.name];
+                  if (a.id === "participation") {
+                    lines.push("Ongoing");
+                  } else if (sub) {
+                    lines.push("Submitted " + new Date(sub.ts).toLocaleDateString("en-US", { month: "short", day: "numeric" }));
+                  } else if (a.due) {
+                    lines.push("Due " + a.due);
+                  }
+                  if (g.score !== undefined && g.score !== "") {
+                    lines.push("Grade: " + g.score + " / " + (g.outOf || 100));
+                  }
+                  lines.push((a.weight || 0) + "% of total grade");
                   return (
-                    <div key={a.id} title={a.name + " (" + a.weight + "%)"} style={{
+                    <div key={a.id} title={lines.join("\n")} style={{
                       width: sz, height: sz, borderRadius: "50%",
                       background: c.fill,
                       border: isSubmittedNotGraded ? "2px solid " + c.border : "none",
                       flexShrink: 0,
+                      cursor: "default",
                     }} />
                   );
                 })}
@@ -767,24 +784,6 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
             </div>
           </div>
         )}
-
-        {/* Class blurb */}
-        <div style={{ ...crd, padding: 16, marginBottom: 16, cursor: isAdmin ? "pointer" : "default" }} onClick={() => { if (isAdmin && !editBlurb) { setBlurbLocal(blurbText); setEditBlurb(true); } }}>
-          {isAdmin && editBlurb ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }} onClick={e => e.stopPropagation()}>
-              <textarea value={blurbLocal} onChange={e => setBlurbLocal(e.target.value)} rows={8} style={{ ...inp, fontSize: 14, lineHeight: 1.6, resize: "vertical" }} />
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={saveBlurb} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Save</button>
-                <button onClick={() => setEditBlurb(false)} style={pillInactive}>Cancel</button>
-              </div>
-            </div>
-          ) : (
-            <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-              {blurbText}
-              {isAdmin && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 6, fontStyle: "italic" }}>Click to edit</div>}
-            </div>
-          )}
-        </div>
 
         {/* Next Assignment */}
         {nextAssignment && (
@@ -875,6 +874,27 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
               </div>
             );
           })}
+        </div>
+
+        {/* Class explanation (bottom) */}
+        <div style={{ ...crd, padding: 16, marginTop: 24, cursor: isAdmin ? "pointer" : "default" }} onClick={() => { if (isAdmin && !editBlurb) { setBlurbLocal(blurbText); setEditBlurb(true); } }}>
+          {isAdmin && editBlurb ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }} onClick={e => e.stopPropagation()}>
+              <textarea value={blurbLocal} onChange={e => setBlurbLocal(e.target.value)} rows={8} style={{ ...inp, fontSize: 14, lineHeight: 1.6, resize: "vertical" }} />
+              <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                <button onClick={() => setEditBlurb(false)} style={pillInactive}>Cancel</button>
+                <button onClick={saveBlurb} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Save</button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div style={{ ...sectionLabel, marginBottom: 8 }}>How Your Grade Works</div>
+              <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                {blurbText}
+                {isAdmin && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 6, fontStyle: "italic" }}>Click to edit</div>}
+              </div>
+            </div>
+          )}
         </div>
 
       </div>
@@ -1014,15 +1034,17 @@ function StudentSubmission({ assignmentId, data, setData, studentId, existing })
   };
 
   return (
-    <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6" }}>
-      {msg && <div style={{ fontSize: 12, color: "#10b981", fontWeight: 600, marginBottom: 4 }}>{msg}</div>}
-      <div style={{ fontSize: 10, fontWeight: 500, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Your Submission</div>
+    <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
+      {msg && <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginBottom: 4 }}>{msg}</div>}
+      <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>Your Submission</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <input value={docUrl} onChange={e => setDocUrl(e.target.value)} placeholder="Google Doc link" style={{ ...inp, fontSize: 13, padding: "8px 10px" }} />
         <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes for your instructor (optional)" rows={2} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical" }} />
-        <button onClick={submit} style={{ ...pill, background: "#111827", color: "#fff", width: "100%" }}>{existing?.ts ? "Resubmit" : "Submit"}</button>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button onClick={submit} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>{existing?.ts ? "Resubmit" : "Submit"}</button>
+        </div>
       </div>
-      {existing?.ts && <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 6 }}>Submitted {new Date(existing.ts).toLocaleString()}</div>}
+      {existing?.ts && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 6 }}>Submitted {new Date(existing.ts).toLocaleString()}</div>}
     </div>
   );
 }
@@ -1066,21 +1088,21 @@ function RegradeRequest({ assignmentId, data, setData, studentId }) {
 
   if (open) {
     return (
-      <div style={{ marginTop: 8, padding: "8px 10px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Request Regrade</div>
+      <div style={{ marginTop: 8, padding: "10px 12px", background: "#fafafa", borderRadius: 10, border: "1px solid " + BORDER }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>Request Regrade</div>
         <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Tell your instructor what to look for (required)..." rows={3} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 6 }} />
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={submit} disabled={!note.trim()} style={{ ...pill, background: note.trim() ? "#111827" : "#d1d5db", color: "#fff", flex: 1 }}>Submit Request</button>
+        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
           <button onClick={() => { setOpen(false); setNote(""); }} style={pillInactive}>Cancel</button>
+          <button onClick={submit} disabled={!note.trim()} style={{ ...pill, background: note.trim() ? TEXT_PRIMARY : "#d1d5db", color: "#fff" }}>Submit Request</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ marginTop: 8 }}>
-      {msg && <div style={{ fontSize: 12, color: "#10b981", fontWeight: 600, marginBottom: 4 }}>{msg}</div>}
-      <button onClick={() => setOpen(true)} style={{ ...pill, background: "#fff", color: ACCENT, border: "1px solid " + ACCENT + "40", fontSize: 12, width: "100%" }}>Request Regrade</button>
+    <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
+      {msg && <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginRight: "auto" }}>{msg}</div>}
+      <button onClick={() => setOpen(true)} style={{ ...pill, background: "#fff", color: ACCENT, border: "1px solid " + ACCENT + "40", fontSize: 12 }}>Request Regrade</button>
     </div>
   );
 }
