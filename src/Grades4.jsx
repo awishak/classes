@@ -455,18 +455,15 @@ function computeParticipationGrade(data, sid) {
     }
     gameGradeEarned += earned;
   });
-  const totEntries = log.filter(e => e.studentId === sid && (e.source || "").startsWith("ToT Wk"));
-  const totEarned = totEntries.reduce((s, e) => s + e.amount, 0);
-  const scoredToTs = Object.keys(data.weeklyToT || {}).filter(w => (data.weeklyToT[w] || {}).scored).length;
-  const totPossible = scoredToTs * 20;
+  // This or That: leaderboard only, does NOT contribute to participation grade
   const fbEntries = log.filter(e => e.studentId === sid && (e.source || "").startsWith("Fishbowl Wk"));
   const fbEarned = fbEntries.reduce((s, e) => s + e.amount, 0);
   const confirmedFishbowls = Object.keys(data.weeklyFishbowl || {}).filter(w => (data.weeklyFishbowl[w] || {}).confirmed).length;
   const fbPossible = confirmedFishbowls * 20;
   const athEntries = log.filter(e => e.studentId === sid && ((e.source || "") === "Around the Horn" || (e.source || "") === "PTI"));
   const athEarned = athEntries.reduce((s, e) => s + e.amount, 0);
-  const totalEarned = gameGradeEarned + totEarned + fbEarned + athEarned;
-  const totalPossible = gameGradePossible + totPossible + fbPossible;
+  const totalEarned = gameGradeEarned + fbEarned + athEarned;
+  const totalPossible = gameGradePossible + fbPossible;
   const participationPct = totalPossible > 0 ? (totalEarned / totalPossible) : 0;
   const participationGrade = participationPct * 25;
   return { participationGrade, participationPct, totalEarned, totalPossible };
@@ -1750,6 +1747,272 @@ function AdminSubmissions({ assignmentId, data, setData }) {
   );
 }
 
+function GameVsGradeComparison({ data, computeAutoParticipation, assignments, grades }) {
+  const [openId, setOpenId] = useState(null);
+  const [sortKey, setSortKey] = useState("game");
+  const [sortDir, setSortDir] = useState("desc");
+
+  const log = data.log || [];
+  const students = (data.students || []).filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis");
+  const reboundGrades = data.reboundGrades || {};
+  const weeklyGames = data.weeklyGames || {};
+  const weeklyToT = data.weeklyToT || {};
+  const weeklyFishbowl = data.weeklyFishbowl || {};
+  const partWeight = (assignments.find(a => a.id === "participation")?.weight) || 25;
+  const gradeAssignments = assignments.filter(a => a.id !== "participation");
+
+  // Build per-student data
+  const rows = students.map(s => {
+    const sid = s.id;
+    const components = []; // each: { label, gamePts, gradePts (or null) }
+    let gamePoints = 0; // raw leaderboard points
+    let gradeFromParticipationActivities = 0; // sum of grade contributions inside participation bucket
+    let gradeParticipationPossible = 0;
+
+    // Weekly games (scored only)
+    const scoredGameWeeks = Object.keys(weeklyGames).filter(w => weeklyGames[w]?.scored).sort((a, b) => parseInt(a) - parseInt(b));
+    scoredGameWeeks.forEach(w => {
+      const game = weeklyGames[w];
+      const gameLog = log.filter(e => e.studentId === sid && e.source === "Game Wk " + w);
+      const gPts = gameLog.reduce((a, e) => a + e.amount, 0);
+      // Grade points: dual-weighted recompute from responses + rebound override
+      let original = 0;
+      (game.questions || []).forEach((q, qi) => {
+        const ans = game.responses?.[sid + "-" + qi];
+        if (ans === q.correct) {
+          const cat = q.category || "on_topic";
+          const catPts = cat === "on_topic" ? 15 : 2.5;
+          original += catPts;
+        }
+      });
+      const rg = reboundGrades[sid + "-game-" + w];
+      let earned = original;
+      if (rg && typeof rg.gradePoints === "number") {
+        if (rg.type === "makeup") {
+          earned = Math.max(original, rg.gradePoints);
+        } else {
+          let cap;
+          if (rg.type === "absence_override") cap = 60;
+          else if (original < 50) cap = 60;
+          else if (original <= 65) cap = 70;
+          else if (original <= 79) cap = 80;
+          else cap = 100;
+          const capped = Math.min(rg.gradePoints, cap);
+          earned = Math.max(original, capped);
+        }
+      }
+      gamePoints += gPts;
+      gradeFromParticipationActivities += earned;
+      gradeParticipationPossible += 100;
+      components.push({ label: "Weekly Game Wk " + w, gamePts: gPts, gradePts: Math.round(earned * 10) / 10 });
+    });
+
+    // Weekly ToT (scored only) — leaderboard ONLY
+    const scoredToTWeeks = Object.keys(weeklyToT).filter(w => weeklyToT[w]?.scored).sort((a, b) => parseInt(a) - parseInt(b));
+    scoredToTWeeks.forEach(w => {
+      const totLog = log.filter(e => e.studentId === sid && e.source === "ToT Wk " + w);
+      const gPts = totLog.reduce((a, e) => a + e.amount, 0);
+      gamePoints += gPts;
+      components.push({ label: "This or That Wk " + w, gamePts: gPts, gradePts: null });
+    });
+
+    // Fishbowl (confirmed only)
+    const confirmedFbWeeks = Object.keys(weeklyFishbowl).filter(w => weeklyFishbowl[w]?.confirmed).sort((a, b) => parseInt(a) - parseInt(b));
+    confirmedFbWeeks.forEach(w => {
+      const fbLog = log.filter(e => e.studentId === sid && e.source === "Fishbowl Wk " + w);
+      const gPts = fbLog.reduce((a, e) => a + e.amount, 0);
+      gamePoints += gPts;
+      gradeFromParticipationActivities += gPts;
+      gradeParticipationPossible += 20;
+      components.push({ label: "Fishbowl Wk " + w, gamePts: gPts, gradePts: gPts });
+    });
+
+    // Around the Horn / PTI (one summary row)
+    const athLog = log.filter(e => e.studentId === sid && (e.source === "Around the Horn" || e.source === "PTI"));
+    if (athLog.length > 0) {
+      const gPts = athLog.reduce((a, e) => a + e.amount, 0);
+      gamePoints += gPts;
+      gradeFromParticipationActivities += gPts;
+      components.push({ label: "Around the Horn", gamePts: gPts, gradePts: gPts });
+    }
+
+    // Team Win bonuses (one summary row) — leaderboard ONLY
+    const twLog = log.filter(e => e.studentId === sid && (e.source || "").startsWith("Team Win"));
+    if (twLog.length > 0) {
+      const gPts = twLog.reduce((a, e) => a + e.amount, 0);
+      gamePoints += gPts;
+      components.push({ label: "Team Win Bonuses", gamePts: gPts, gradePts: null });
+    }
+
+    // Other log entries (catch-all, leaderboard only)
+    const otherLog = log.filter(e => {
+      if (e.studentId !== sid) return false;
+      const src = e.source || "";
+      if (src.startsWith("Game Wk")) return false;
+      if (src.startsWith("ToT Wk")) return false;
+      if (src.startsWith("Fishbowl Wk")) return false;
+      if (src === "Around the Horn" || src === "PTI") return false;
+      if (src.startsWith("Team Win")) return false;
+      return true;
+    });
+    if (otherLog.length > 0) {
+      const gPts = otherLog.reduce((a, e) => a + e.amount, 0);
+      gamePoints += gPts;
+      components.push({ label: "Other / Adjustments", gamePts: gPts, gradePts: null });
+    }
+
+    // Participation grade pct (out of 1)
+    const participationPct = gradeParticipationPossible > 0 ? (gradeFromParticipationActivities / gradeParticipationPossible) : 0;
+    const participationGradeOutOf25 = participationPct * partWeight;
+
+    // Final in-class grade: combine participation contribution + each graded assignment, weighted
+    let weightGraded = partWeight;
+    let weightedScore = participationGradeOutOf25; // participation's contribution is its share of the 100% scale
+    gradeAssignments.forEach(a => {
+      const g = grades[sid + "-" + a.id] || {};
+      if (g.score !== undefined && g.score !== "") {
+        weightGraded += a.weight;
+        weightedScore += (parseFloat(g.score) / (g.outOf || 100)) * a.weight;
+      }
+    });
+    const finalGradePct = weightGraded > 0 ? Math.round(weightedScore / weightGraded * 1000) / 10 : null;
+    const letter = (() => {
+      if (finalGradePct === null) return "—";
+      if (finalGradePct >= 93) return "A";
+      if (finalGradePct >= 90) return "A-";
+      if (finalGradePct >= 87) return "B+";
+      if (finalGradePct >= 83) return "B";
+      if (finalGradePct >= 80) return "B-";
+      if (finalGradePct >= 77) return "C+";
+      if (finalGradePct >= 73) return "C";
+      if (finalGradePct >= 70) return "C-";
+      if (finalGradePct >= 60) return "D";
+      return "F";
+    })();
+
+    return { student: s, components, gamePoints, finalGradePct, letter, participationPct, gradeParticipationPossible };
+  });
+
+  // Compute leaderboard rank
+  const byGame = [...rows].sort((a, b) => b.gamePoints - a.gamePoints);
+  byGame.forEach((r, i) => { r.gameRank = i + 1; });
+  // Compute grade rank
+  const byGrade = [...rows].filter(r => r.finalGradePct !== null).sort((a, b) => b.finalGradePct - a.finalGradePct);
+  byGrade.forEach((r, i) => { r.gradeRank = i + 1; });
+  rows.forEach(r => { if (r.gradeRank == null) r.gradeRank = null; });
+
+  // Sort
+  const sorted = [...rows].sort((a, b) => {
+    let av, bv;
+    if (sortKey === "name") { av = a.student.name; bv = b.student.name; return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av); }
+    if (sortKey === "game") { av = a.gamePoints; bv = b.gamePoints; }
+    else if (sortKey === "grade") { av = a.finalGradePct ?? -1; bv = b.finalGradePct ?? -1; }
+    else if (sortKey === "gap") { av = (a.gameRank ?? 999) - (a.gradeRank ?? 999); bv = (b.gameRank ?? 999) - (b.gradeRank ?? 999); }
+    return sortDir === "asc" ? av - bv : bv - av;
+  });
+
+  const setSort = (k) => {
+    if (sortKey === k) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortKey(k); setSortDir(k === "name" ? "asc" : "desc"); }
+  };
+
+  const arrow = (k) => sortKey === k ? (sortDir === "asc" ? " ↑" : " ↓") : "";
+
+  return (
+    <div style={{ ...crd, padding: 20, marginTop: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div>
+          <div style={{ ...sectionLabel, marginBottom: 4 }}>Game vs Grade Comparison</div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED }}>Click a student to see how each component contributes to leaderboard score versus in-class grade.</div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 90px 110px 110px 70px 70px", gap: 4, alignItems: "center", paddingBottom: 8, borderBottom: "1px solid " + BORDER_STRONG, marginBottom: 8 }}>
+        <button onClick={() => setSort("name")} style={{ ...sectionLabel, background: "none", border: "none", textAlign: "left", cursor: "pointer", padding: 0 }}>Student{arrow("name")}</button>
+        <button onClick={() => setSort("game")} style={{ ...sectionLabel, background: "none", border: "none", textAlign: "right", cursor: "pointer", padding: 0 }}>Game Pts{arrow("game")}</button>
+        <button onClick={() => setSort("game")} style={{ ...sectionLabel, background: "none", border: "none", textAlign: "right", cursor: "pointer", padding: 0 }}>LB Rank</button>
+        <button onClick={() => setSort("grade")} style={{ ...sectionLabel, background: "none", border: "none", textAlign: "right", cursor: "pointer", padding: 0 }}>Grade %{arrow("grade")}</button>
+        <span style={{ ...sectionLabel, textAlign: "right" }}>Letter</span>
+        <button onClick={() => setSort("gap")} style={{ ...sectionLabel, background: "none", border: "none", textAlign: "right", cursor: "pointer", padding: 0 }}>Gap{arrow("gap")}</button>
+      </div>
+
+      {sorted.map(r => {
+        const gap = (r.gameRank != null && r.gradeRank != null) ? (r.gameRank - r.gradeRank) : null;
+        const gapColor = gap == null ? TEXT_MUTED : Math.abs(gap) >= 5 ? RED : Math.abs(gap) >= 3 ? AMBER : TEXT_SECONDARY;
+        const gapStr = gap == null ? "—" : (gap > 0 ? "+" + gap : gap.toString());
+        const isOpen = openId === r.student.id;
+        return (
+          <div key={r.student.id}>
+            <button onClick={() => setOpenId(isOpen ? null : r.student.id)} style={{
+              display: "grid", gridTemplateColumns: "1.4fr 90px 110px 110px 70px 70px", gap: 4, alignItems: "center",
+              padding: "8px 0", width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid " + BORDER, cursor: "pointer", fontFamily: F,
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{r.student.name}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{r.gamePoints}</span>
+              <span style={{ fontSize: 12, color: TEXT_SECONDARY, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>#{r.gameRank}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{r.finalGradePct !== null ? r.finalGradePct + "%" : "—"}</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: TEXT_PRIMARY, textAlign: "right" }}>{r.letter}</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: gapColor, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{gapStr}</span>
+            </button>
+
+            {isOpen && (
+              <div style={{ padding: "12px 16px", background: "#fafafa", borderRadius: 10, marginTop: 8, marginBottom: 8 }}>
+                {r.components.length === 0 ? (
+                  <div style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic" }}>No participation data yet.</div>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: F }}>
+                    <thead>
+                      <tr>
+                        <th style={{ ...sectionLabel, textAlign: "left", padding: "4px 6px" }}>Component</th>
+                        <th style={{ ...sectionLabel, textAlign: "right", padding: "4px 6px" }}>Game Pts</th>
+                        <th style={{ ...sectionLabel, textAlign: "right", padding: "4px 6px" }}>Grade Pts</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {r.components.map((c, i) => (
+                        <tr key={i} style={{ borderTop: "1px solid " + BORDER }}>
+                          <td style={{ fontSize: 13, color: TEXT_PRIMARY, padding: "6px 6px" }}>{c.label}</td>
+                          <td style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, textAlign: "right", padding: "6px 6px", fontVariantNumeric: "tabular-nums" }}>{c.gamePts}</td>
+                          <td style={{ fontSize: 13, fontWeight: 700, color: c.gradePts === null ? TEXT_MUTED : TEXT_PRIMARY, textAlign: "right", padding: "6px 6px", fontVariantNumeric: "tabular-nums" }}>{c.gradePts === null ? "—" : c.gradePts}</td>
+                        </tr>
+                      ))}
+                      <tr style={{ borderTop: "2px solid " + BORDER_STRONG, background: "#fff" }}>
+                        <td style={{ fontSize: 12, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", padding: "8px 6px" }}>Total</td>
+                        <td style={{ fontSize: 14, fontWeight: 900, color: TEXT_PRIMARY, textAlign: "right", padding: "8px 6px", fontVariantNumeric: "tabular-nums" }}>{r.gamePoints}</td>
+                        <td style={{ fontSize: 14, fontWeight: 900, color: TEXT_PRIMARY, textAlign: "right", padding: "8px 6px", fontVariantNumeric: "tabular-nums" }}>
+                          {r.gradeParticipationPossible > 0 ? Math.round(r.participationPct * 1000) / 10 + "%" : "—"}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                )}
+                <div style={{ display: "flex", gap: 16, marginTop: 12, paddingTop: 12, borderTop: "1px solid " + BORDER, flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ ...sectionLabel, marginBottom: 2 }}>Leaderboard</div>
+                    <div style={{ fontSize: 13, color: TEXT_PRIMARY }}>{r.gamePoints} pts, rank #{r.gameRank}</div>
+                  </div>
+                  <div>
+                    <div style={{ ...sectionLabel, marginBottom: 2 }}>Participation Grade</div>
+                    <div style={{ fontSize: 13, color: TEXT_PRIMARY }}>{r.gradeParticipationPossible > 0 ? Math.round(r.participationPct * 1000) / 10 + "% (" + Math.round(r.participationPct * partWeight * 10) / 10 + " / " + partWeight + ")" : "No data yet"}</div>
+                  </div>
+                  <div>
+                    <div style={{ ...sectionLabel, marginBottom: 2 }}>Final In-Class Grade</div>
+                    <div style={{ fontSize: 13, color: TEXT_PRIMARY }}>{r.finalGradePct !== null ? r.finalGradePct + "%, " + r.letter : "—"}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <div style={{ marginTop: 12, fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5 }}>
+        Game points come from all participation activities. Grade points only come from Weekly Games (dual-weighted), Fishbowl, and Around the Horn / PTI. This or That and Team Win Bonuses are leaderboard-only.
+      </div>
+    </div>
+  );
+}
+
 export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
@@ -1870,7 +2133,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
       gameGradeEarned += earned;
     });
 
-    // This or That: from log
+    // This or That: leaderboard only, does NOT contribute to participation grade
     const totEntries = log.filter(e => e.studentId === sid && (e.source || "").startsWith("ToT Wk"));
     const totEarned = totEntries.reduce((s, e) => s + e.amount, 0);
     const scoredToTs = Object.keys(data.weeklyToT || {}).filter(w => (data.weeklyToT[w] || {}).scored).length;
@@ -1886,8 +2149,8 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
     const athEntries = log.filter(e => e.studentId === sid && ((e.source || "") === "Around the Horn" || (e.source || "") === "PTI"));
     const athEarned = athEntries.reduce((s, e) => s + e.amount, 0);
 
-    const totalEarned = gameGradeEarned + totEarned + fbEarned + athEarned;
-    const totalPossible = gameGradePossible + totPossible + fbPossible;
+    const totalEarned = gameGradeEarned + fbEarned + athEarned;
+    const totalPossible = gameGradePossible + fbPossible;
     const participationPct = totalPossible > 0 ? (totalEarned / totalPossible) : 0;
     const participationGrade = participationPct * 25;
 
@@ -2605,6 +2868,9 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
               {renderStudentGrades(selStudent)}
             </div>
           )}
+
+          {/* Game vs Grade Comparison */}
+          <GameVsGradeComparison data={data} computeAutoParticipation={computeAutoParticipation} assignments={assignments} grades={grades} />
 
           {reboundModal && (
             <div onClick={() => setReboundModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 16px", overflowY: "auto" }}>
