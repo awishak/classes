@@ -1025,7 +1025,21 @@ export function StudentAnswerView({ data, setData, userName }) {
   // Get activity
   const actType = mode;
   const activities = actType === "game" ? games : tots;
-  const activity = activities[week] || activities[String(week)];
+  const liveActivity = activities[week] || activities[String(week)];
+
+  // Freeze activity while student is mid-selection so admin advances and live updates
+  // don't kick them out of the question they're answering.
+  const frozenActivityRef = React.useRef(null);
+  React.useEffect(() => {
+    if (selected !== null && liveActivity) {
+      if (!frozenActivityRef.current) frozenActivityRef.current = liveActivity;
+    } else {
+      frozenActivityRef.current = null;
+    }
+  }, [selected, liveActivity]);
+
+  const activity = (selected !== null && frozenActivityRef.current) ? frozenActivityRef.current : liveActivity;
+
   if (!activity) return <div style={{ padding: 40, textAlign: "center", fontFamily: F, color: "#9ca3af" }}>Not available.<br /><button onClick={() => setWeek(null)} style={{ ...pillInactive, marginTop: 12 }}>Back</button></div>;
 
   const qs = activity.questions || [];
