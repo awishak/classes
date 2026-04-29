@@ -1759,114 +1759,158 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
   const weeklyFishbowl = data.weeklyFishbowl || {};
   const partWeight = (assignments.find(a => a.id === "participation")?.weight) || 25;
   const gradeAssignments = assignments.filter(a => a.id !== "participation");
+  const totalAssignmentWeight = assignments.reduce((s, a) => s + (a.weight || 0), 0);
 
-  // Build per-student data
+  const scoredGameWeeks = Object.keys(weeklyGames).filter(w => weeklyGames[w]?.scored).sort((a, b) => parseInt(a) - parseInt(b));
+  const scoredToTWeeks = Object.keys(weeklyToT).filter(w => weeklyToT[w]?.scored).sort((a, b) => parseInt(a) - parseInt(b));
+  const confirmedFbWeeks = Object.keys(weeklyFishbowl).filter(w => weeklyFishbowl[w]?.confirmed).sort((a, b) => parseInt(a) - parseInt(b));
+
+  // Recompute weekly game points from activity (matches getWeeklyGameBreakdown)
+  // Returns { gamePts, gradePts } for one student/week
+  const computeGameWeek = (sid, w) => {
+    const game = weeklyGames[w];
+    if (!game) return { gamePts: 0, gradePts: 0 };
+    let gamePts = 0;
+    let gradeOriginal = 0;
+    (game.questions || []).forEach((q, qi) => {
+      const ans = game.responses?.[sid + "-" + qi];
+      if (ans === q.correct) {
+        gamePts += 10; // each correct = 10 game pts
+        const cat = q.category || "on_topic";
+        gradeOriginal += cat === "on_topic" ? 15 : 2.5;
+      }
+    });
+    // Apply rebound override to grade only
+    const rg = reboundGrades[sid + "-game-" + w];
+    let gradePts = gradeOriginal;
+    if (rg && typeof rg.gradePoints === "number") {
+      if (rg.type === "makeup") {
+        gradePts = Math.max(gradeOriginal, rg.gradePoints);
+      } else {
+        let cap;
+        if (rg.type === "absence_override") cap = 60;
+        else if (gradeOriginal < 50) cap = 60;
+        else if (gradeOriginal <= 65) cap = 70;
+        else if (gradeOriginal <= 79) cap = 80;
+        else cap = 100;
+        const capped = Math.min(rg.gradePoints, cap);
+        gradePts = Math.max(gradeOriginal, capped);
+      }
+    }
+    return { gamePts, gradePts: Math.round(gradePts * 10) / 10 };
+  };
+
+  // ToT: leaderboard only. Recompute from activity.
+  const computeToTWeek = (sid, w) => {
+    const tot = weeklyToT[w];
+    if (!tot) return { gamePts: 0 };
+    const ptsEach = tot.questions?.length > 0 ? 20 / tot.questions.length : 20;
+    let gamePts = 0;
+    (tot.questions || []).forEach((q, qi) => {
+      if (tot.responses?.[sid + "-" + qi] === q.correct) gamePts += ptsEach;
+    });
+    return { gamePts: Math.round(gamePts * 10) / 10 };
+  };
+
+  // Fishbowl: from scores object
+  const computeFbWeek = (sid, w) => {
+    const fb = weeklyFishbowl[w];
+    if (!fb) return { gamePts: 0, gradePts: 0 };
+    const score = fb.scores?.[sid] ?? 0;
+    return { gamePts: score, gradePts: score };
+  };
+
+  // Build rows
   const rows = students.map(s => {
     const sid = s.id;
-    const components = []; // each: { label, gamePts, gradePts (or null) }
-    let gamePoints = 0; // raw leaderboard points
-    let gradeFromParticipationActivities = 0; // sum of grade contributions inside participation bucket
-    let gradeParticipationPossible = 0;
+    const components = [];
 
-    // Weekly games (scored only)
-    const scoredGameWeeks = Object.keys(weeklyGames).filter(w => weeklyGames[w]?.scored).sort((a, b) => parseInt(a) - parseInt(b));
+    let totalGameFromComponents = 0;
+    let participationEarned = 0;
+    let participationPossible = 0;
+
+    // Weekly games
     scoredGameWeeks.forEach(w => {
-      const game = weeklyGames[w];
-      const gameLog = log.filter(e => e.studentId === sid && e.source === "Game Wk " + w);
-      const gPts = gameLog.reduce((a, e) => a + e.amount, 0);
-      // Grade points: dual-weighted recompute from responses + rebound override
-      let original = 0;
-      (game.questions || []).forEach((q, qi) => {
-        const ans = game.responses?.[sid + "-" + qi];
-        if (ans === q.correct) {
-          const cat = q.category || "on_topic";
-          const catPts = cat === "on_topic" ? 15 : 2.5;
-          original += catPts;
-        }
-      });
-      const rg = reboundGrades[sid + "-game-" + w];
-      let earned = original;
-      if (rg && typeof rg.gradePoints === "number") {
-        if (rg.type === "makeup") {
-          earned = Math.max(original, rg.gradePoints);
-        } else {
-          let cap;
-          if (rg.type === "absence_override") cap = 60;
-          else if (original < 50) cap = 60;
-          else if (original <= 65) cap = 70;
-          else if (original <= 79) cap = 80;
-          else cap = 100;
-          const capped = Math.min(rg.gradePoints, cap);
-          earned = Math.max(original, capped);
-        }
-      }
-      gamePoints += gPts;
-      gradeFromParticipationActivities += earned;
-      gradeParticipationPossible += 100;
-      components.push({ label: "Weekly Game Wk " + w, gamePts: gPts, gradePts: Math.round(earned * 10) / 10 });
+      const { gamePts, gradePts } = computeGameWeek(sid, w);
+      totalGameFromComponents += gamePts;
+      participationEarned += gradePts;
+      participationPossible += 100;
+      components.push({ label: "Weekly Game Wk " + w, gamePts: Math.round(gamePts * 10) / 10, gradePts });
     });
 
-    // Weekly ToT (scored only) — leaderboard ONLY
-    const scoredToTWeeks = Object.keys(weeklyToT).filter(w => weeklyToT[w]?.scored).sort((a, b) => parseInt(a) - parseInt(b));
+    // This or That
     scoredToTWeeks.forEach(w => {
-      const totLog = log.filter(e => e.studentId === sid && e.source === "ToT Wk " + w);
-      const gPts = totLog.reduce((a, e) => a + e.amount, 0);
-      gamePoints += gPts;
-      components.push({ label: "This or That Wk " + w, gamePts: gPts, gradePts: null });
+      const { gamePts } = computeToTWeek(sid, w);
+      totalGameFromComponents += gamePts;
+      components.push({ label: "This or That Wk " + w, gamePts, gradePts: null });
     });
 
-    // Fishbowl (confirmed only)
-    const confirmedFbWeeks = Object.keys(weeklyFishbowl).filter(w => weeklyFishbowl[w]?.confirmed).sort((a, b) => parseInt(a) - parseInt(b));
+    // Fishbowl
     confirmedFbWeeks.forEach(w => {
-      const fbLog = log.filter(e => e.studentId === sid && e.source === "Fishbowl Wk " + w);
-      const gPts = fbLog.reduce((a, e) => a + e.amount, 0);
-      gamePoints += gPts;
-      gradeFromParticipationActivities += gPts;
-      gradeParticipationPossible += 20;
-      components.push({ label: "Fishbowl Wk " + w, gamePts: gPts, gradePts: gPts });
+      const { gamePts, gradePts } = computeFbWeek(sid, w);
+      totalGameFromComponents += gamePts;
+      participationEarned += gradePts;
+      participationPossible += 20;
+      components.push({ label: "Fishbowl Wk " + w, gamePts, gradePts });
     });
 
-    // Around the Horn / PTI (one summary row)
+    // Around the Horn / PTI from log
     const athLog = log.filter(e => e.studentId === sid && (e.source === "Around the Horn" || e.source === "PTI"));
     if (athLog.length > 0) {
-      const gPts = athLog.reduce((a, e) => a + e.amount, 0);
-      gamePoints += gPts;
-      gradeFromParticipationActivities += gPts;
-      components.push({ label: "Around the Horn", gamePts: gPts, gradePts: gPts });
+      const gPts = Math.round(athLog.reduce((a, e) => a + e.amount, 0) * 10) / 10;
+      totalGameFromComponents += gPts;
+      participationEarned += gPts;
+      components.push({ label: "Around the Horn / PTI", gamePts: gPts, gradePts: gPts });
     }
 
-    // Team Win bonuses (one summary row) — leaderboard ONLY
-    const twLog = log.filter(e => e.studentId === sid && (e.source || "").startsWith("Team Win"));
+    // Team Win bonuses (game only, no space in source)
+    const twLog = log.filter(e => e.studentId === sid && (e.source || "").startsWith("Team Win Wk"));
     if (twLog.length > 0) {
       const gPts = twLog.reduce((a, e) => a + e.amount, 0);
-      gamePoints += gPts;
+      totalGameFromComponents += gPts;
       components.push({ label: "Team Win Bonuses", gamePts: gPts, gradePts: null });
     }
 
-    // Other log entries (catch-all, leaderboard only)
+    // Featured Post (game only)
+    const fpLog = log.filter(e => e.studentId === sid && e.source === "Featured Post");
+    if (fpLog.length > 0) {
+      const gPts = fpLog.reduce((a, e) => a + e.amount, 0);
+      totalGameFromComponents += gPts;
+      components.push({ label: "Featured Post", gamePts: gPts, gradePts: null });
+    }
+
+    // Catch-all: anything in log not covered above
     const otherLog = log.filter(e => {
       if (e.studentId !== sid) return false;
       const src = e.source || "";
-      if (src.startsWith("Game Wk")) return false;
+      if (src.startsWith("Game Wk")) return false; // covered by activity recompute
       if (src.startsWith("ToT Wk")) return false;
-      if (src.startsWith("Fishbowl Wk")) return false;
+      if (src.startsWith("Fishbowl Wk") || src.startsWith("Fishbowl Star Wk")) return false;
+      if (src.startsWith("Team Win Wk")) return false;
       if (src === "Around the Horn" || src === "PTI") return false;
-      if (src.startsWith("Team Win")) return false;
+      if (src === "Featured Post") return false;
+      if (src.startsWith("Quiz Q") || src.startsWith("Quiz #")) return false; // legacy bulk awards from old game
       return true;
     });
     if (otherLog.length > 0) {
       const gPts = otherLog.reduce((a, e) => a + e.amount, 0);
-      gamePoints += gPts;
-      components.push({ label: "Other / Adjustments", gamePts: gPts, gradePts: null });
+      totalGameFromComponents += gPts;
+      // Penalty entries (negative) feed both per Andrew
+      const gradePts = gPts < 0 ? gPts : null;
+      components.push({ label: "Other / Adjustments", gamePts: gPts, gradePts });
+      if (gPts < 0) participationEarned += gPts;
     }
 
-    // Participation grade pct (out of 1)
-    const participationPct = gradeParticipationPossible > 0 ? (gradeFromParticipationActivities / gradeParticipationPossible) : 0;
-    const participationGradeOutOf25 = participationPct * partWeight;
+    // Leaderboard total = sum of ALL log entries (matches the actual leaderboard)
+    const leaderboardTotal = log.filter(e => e.studentId === sid).reduce((a, e) => a + e.amount, 0);
 
-    // Final in-class grade: combine participation contribution + each graded assignment, weighted
-    let weightGraded = partWeight;
-    let weightedScore = participationGradeOutOf25; // participation's contribution is its share of the 100% scale
+    // Participation grade out of 25 (or partWeight)
+    const participationPct = participationPossible > 0 ? (participationEarned / participationPossible) : 0;
+    const participationGrade = participationPct * partWeight;
+
+    // Final in-class grade — match AssignmentsView computeCurrentGrade
+    let weightGraded = 0;
+    let weightedScore = 0;
     gradeAssignments.forEach(a => {
       const g = grades[sid + "-" + a.id] || {};
       if (g.score !== undefined && g.score !== "") {
@@ -1874,7 +1918,11 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
         weightedScore += (parseFloat(g.score) / (g.outOf || 100)) * a.weight;
       }
     });
+    weightGraded += partWeight;
+    weightedScore += participationGrade;
     const finalGradePct = weightGraded > 0 ? Math.round(weightedScore / weightGraded * 1000) / 10 : null;
+    const pctAssessed = totalAssignmentWeight > 0 ? Math.round(weightGraded / totalAssignmentWeight * 100) : 0;
+
     const letter = (() => {
       if (finalGradePct === null) return "—";
       if (finalGradePct >= 93) return "A";
@@ -1889,22 +1937,33 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
       return "F";
     })();
 
-    return { student: s, components, gamePoints, finalGradePct, letter, participationPct, gradeParticipationPossible };
+    return {
+      student: s,
+      components,
+      leaderboardTotal: Math.round(leaderboardTotal * 10) / 10,
+      gameFromComponents: Math.round(totalGameFromComponents * 10) / 10,
+      participationEarned: Math.round(participationEarned * 10) / 10,
+      participationPossible,
+      participationPct,
+      participationGrade: Math.round(participationGrade * 10) / 10,
+      finalGradePct,
+      pctAssessed,
+      letter,
+    };
   });
 
-  // Compute leaderboard rank
-  const byGame = [...rows].sort((a, b) => b.gamePoints - a.gamePoints);
+  // Compute leaderboard rank (by leaderboardTotal)
+  const byGame = [...rows].sort((a, b) => b.leaderboardTotal - a.leaderboardTotal);
   byGame.forEach((r, i) => { r.gameRank = i + 1; });
   // Compute grade rank
   const byGrade = [...rows].filter(r => r.finalGradePct !== null).sort((a, b) => b.finalGradePct - a.finalGradePct);
   byGrade.forEach((r, i) => { r.gradeRank = i + 1; });
   rows.forEach(r => { if (r.gradeRank == null) r.gradeRank = null; });
 
-  // Sort
   const sorted = [...rows].sort((a, b) => {
     let av, bv;
     if (sortKey === "name") { av = a.student.name; bv = b.student.name; return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av); }
-    if (sortKey === "game") { av = a.gamePoints; bv = b.gamePoints; }
+    if (sortKey === "game") { av = a.leaderboardTotal; bv = b.leaderboardTotal; }
     else if (sortKey === "grade") { av = a.finalGradePct ?? -1; bv = b.finalGradePct ?? -1; }
     else if (sortKey === "gap") { av = (a.gameRank ?? 999) - (a.gradeRank ?? 999); bv = (b.gameRank ?? 999) - (b.gradeRank ?? 999); }
     return sortDir === "asc" ? av - bv : bv - av;
@@ -1926,9 +1985,9 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 90px 110px 110px 70px 70px", gap: 4, alignItems: "center", paddingBottom: 8, borderBottom: "1px solid " + BORDER_STRONG, marginBottom: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 90px 80px 100px 60px 70px", gap: 8, alignItems: "center", paddingBottom: 8, borderBottom: "1px solid " + BORDER_STRONG, marginBottom: 8 }}>
         <button onClick={() => setSort("name")} style={{ ...sectionLabel, background: "none", border: "none", textAlign: "left", cursor: "pointer", padding: 0 }}>Student{arrow("name")}</button>
-        <button onClick={() => setSort("game")} style={{ ...sectionLabel, background: "none", border: "none", textAlign: "right", cursor: "pointer", padding: 0 }}>Game Pts{arrow("game")}</button>
+        <button onClick={() => setSort("game")} style={{ ...sectionLabel, background: "none", border: "none", textAlign: "right", cursor: "pointer", padding: 0 }}>Leaderboard{arrow("game")}</button>
         <button onClick={() => setSort("game")} style={{ ...sectionLabel, background: "none", border: "none", textAlign: "right", cursor: "pointer", padding: 0 }}>LB Rank</button>
         <button onClick={() => setSort("grade")} style={{ ...sectionLabel, background: "none", border: "none", textAlign: "right", cursor: "pointer", padding: 0 }}>Grade %{arrow("grade")}</button>
         <span style={{ ...sectionLabel, textAlign: "right" }}>Letter</span>
@@ -1943,11 +2002,11 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
         return (
           <div key={r.student.id}>
             <button onClick={() => setOpenId(isOpen ? null : r.student.id)} style={{
-              display: "grid", gridTemplateColumns: "1.4fr 90px 110px 110px 70px 70px", gap: 4, alignItems: "center",
+              display: "grid", gridTemplateColumns: "1.4fr 90px 80px 100px 60px 70px", gap: 8, alignItems: "center",
               padding: "8px 0", width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid " + BORDER, cursor: "pointer", fontFamily: F,
             }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{r.student.name}</span>
-              <span style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{r.gamePoints}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{r.leaderboardTotal}</span>
               <span style={{ fontSize: 12, color: TEXT_SECONDARY, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>#{r.gameRank}</span>
               <span style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{r.finalGradePct !== null ? r.finalGradePct + "%" : "—"}</span>
               <span style={{ fontSize: 13, fontWeight: 800, color: TEXT_PRIMARY, textAlign: "right" }}>{r.letter}</span>
@@ -1976,10 +2035,10 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
                         </tr>
                       ))}
                       <tr style={{ borderTop: "2px solid " + BORDER_STRONG, background: "#fff" }}>
-                        <td style={{ fontSize: 12, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", padding: "8px 6px" }}>Total</td>
-                        <td style={{ fontSize: 14, fontWeight: 900, color: TEXT_PRIMARY, textAlign: "right", padding: "8px 6px", fontVariantNumeric: "tabular-nums" }}>{r.gamePoints}</td>
+                        <td style={{ fontSize: 12, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", padding: "8px 6px" }}>Components Total</td>
+                        <td style={{ fontSize: 14, fontWeight: 900, color: TEXT_PRIMARY, textAlign: "right", padding: "8px 6px", fontVariantNumeric: "tabular-nums" }}>{r.gameFromComponents}</td>
                         <td style={{ fontSize: 14, fontWeight: 900, color: TEXT_PRIMARY, textAlign: "right", padding: "8px 6px", fontVariantNumeric: "tabular-nums" }}>
-                          {r.gradeParticipationPossible > 0 ? Math.round(r.participationPct * 1000) / 10 + "%" : "—"}
+                          {r.participationPossible > 0 ? r.participationEarned + " / " + r.participationPossible : "—"}
                         </td>
                       </tr>
                     </tbody>
@@ -1987,16 +2046,26 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
                 )}
                 <div style={{ display: "flex", gap: 16, marginTop: 12, paddingTop: 12, borderTop: "1px solid " + BORDER, flexWrap: "wrap" }}>
                   <div>
-                    <div style={{ ...sectionLabel, marginBottom: 2 }}>Leaderboard</div>
-                    <div style={{ fontSize: 13, color: TEXT_PRIMARY }}>{r.gamePoints} pts, rank #{r.gameRank}</div>
+                    <div style={{ ...sectionLabel, marginBottom: 2 }}>Leaderboard Total</div>
+                    <div style={{ fontSize: 13, color: TEXT_PRIMARY }}>{r.leaderboardTotal} pts (rank #{r.gameRank})</div>
+                    {r.leaderboardTotal !== r.gameFromComponents && (
+                      <div style={{ fontSize: 11, color: AMBER, marginTop: 2 }}>Components sum: {r.gameFromComponents}. Diff: {Math.round((r.leaderboardTotal - r.gameFromComponents) * 10) / 10}</div>
+                    )}
                   </div>
                   <div>
                     <div style={{ ...sectionLabel, marginBottom: 2 }}>Participation Grade</div>
-                    <div style={{ fontSize: 13, color: TEXT_PRIMARY }}>{r.gradeParticipationPossible > 0 ? Math.round(r.participationPct * 1000) / 10 + "% (" + Math.round(r.participationPct * partWeight * 10) / 10 + " / " + partWeight + ")" : "No data yet"}</div>
+                    <div style={{ fontSize: 13, color: TEXT_PRIMARY }}>
+                      {r.participationPossible > 0
+                        ? Math.round(r.participationPct * 1000) / 10 + "% (" + r.participationGrade + " / " + partWeight + ")"
+                        : "No data yet"}
+                    </div>
                   </div>
                   <div>
                     <div style={{ ...sectionLabel, marginBottom: 2 }}>Final In-Class Grade</div>
                     <div style={{ fontSize: 13, color: TEXT_PRIMARY }}>{r.finalGradePct !== null ? r.finalGradePct + "%, " + r.letter : "—"}</div>
+                    {r.pctAssessed > 0 && r.pctAssessed < 100 && (
+                      <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>{r.pctAssessed}% of grade assessed so far</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2006,7 +2075,7 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
       })}
 
       <div style={{ marginTop: 12, fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5 }}>
-        Game points come from all participation activities. Grade points only come from Weekly Games (dual-weighted), Fishbowl, and Around the Horn / PTI. This or That and Team Win Bonuses are leaderboard-only.
+        Leaderboard total = sum of all log entries. Game points per component recomputed from activity data. Grade points only count Weekly Games (dual-weighted), Fishbowl, and Around the Horn / PTI. This or That, Team Wins, and Featured Posts are leaderboard-only.
       </div>
     </div>
   );
