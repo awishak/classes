@@ -1477,7 +1477,18 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   const assignmentLines = [];
   if (studentId) {
     const gradedAssignments = assignments.filter(a => a.id !== "participation");
-    // Overdue (not yet submitted, past due)
+
+    // Chip helper: returns { label, bg, color } for a line based on state.
+    const chipFor = (a) => {
+      const sub = submissions[studentId + "-" + a.id];
+      const g = grades[studentId + "-" + a.id] || {};
+      const hasGrade = g.score !== undefined && g.score !== "";
+      if (hasGrade) return { label: "Graded " + g.score, bg: "#ecfdf5", color: "#047857" };
+      if (sub) return { label: "Submitted", bg: "#eff6ff", color: "#2563eb" };
+      return { label: "Upcoming", bg: "#fffbeb", color: "#92400e" };
+    };
+
+    // Overdue (not yet submitted, past due) — no chip needed; the text "past due" is the signal
     gradedAssignments.forEach(a => {
       if (!a.due) return;
       const sub = submissions[studentId + "-" + a.id];
@@ -1487,10 +1498,10 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       const parsed = new Date(a.due + ", " + year);
       if (isNaN(parsed)) return;
       if (parsed.getTime() < today0) {
-        assignmentLines.push({ kind: "overdue", color: "#dc2626", textColor: "#991b1b", text: a.name + " past due" });
+        assignmentLines.push({ kind: "overdue", color: "#dc2626", textColor: "#991b1b", text: a.name + " past due", chip: { label: "Missing", bg: "#fef2f2", color: "#991b1b" } });
       }
     });
-    // Due today / tomorrow — shows regardless of submission/grade state, with status in text
+    // Due today / tomorrow — shows regardless of submission/grade state
     gradedAssignments.forEach(a => {
       if (!a.due) return;
       const parsed = new Date(a.due + ", " + year);
@@ -1499,14 +1510,8 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       if (ts < today0) return;
       const days = Math.round((ts - today0) / (1000 * 60 * 60 * 24));
       if (days !== 0 && days !== 1) return;
-      const sub = submissions[studentId + "-" + a.id];
-      const g = grades[studentId + "-" + a.id] || {};
-      const hasGrade = g.score !== undefined && g.score !== "";
-      let suffix = "";
-      if (hasGrade) suffix = " · Graded: " + g.score;
-      else if (sub) suffix = " · Submitted";
       const when = days === 0 ? " due today" : " due tomorrow";
-      assignmentLines.push({ kind: "due", color: "#f59e0b", textColor: "#92400e", text: a.name + when + suffix });
+      assignmentLines.push({ kind: "due", color: "#f59e0b", textColor: "#92400e", text: a.name + when, chip: chipFor(a) });
     });
     // Recently graded (within last 7 days)
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -1514,7 +1519,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       const g = grades[studentId + "-" + a.id] || {};
       if (g.score === undefined || g.score === "") return;
       if (!g.ts || g.ts < sevenDaysAgo) return;
-      assignmentLines.push({ kind: "graded", color: "#6b7280", textColor: "#4b5563", text: a.name + " graded: " + g.score, ts: g.ts });
+      assignmentLines.push({ kind: "graded", color: "#6b7280", textColor: "#4b5563", text: a.name, ts: g.ts, chip: { label: "Graded " + g.score, bg: "#ecfdf5", color: "#047857" } });
     });
     // Sort recently-graded by recency, take top 2
     const recent = assignmentLines.filter(l => l.kind === "graded").sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 2);
@@ -1529,22 +1534,14 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         const parsed = new Date(a.due + ", " + year);
         if (isNaN(parsed)) return false;
         return parsed.getTime() >= today0;
-      }).map(a => {
-        const sub = submissions[studentId + "-" + a.id];
-        const g = grades[studentId + "-" + a.id] || {};
-        const hasGrade = g.score !== undefined && g.score !== "";
-        return { ...a, ts: new Date(a.due + ", " + year).getTime(), sub: !!sub, graded: hasGrade, score: g.score };
-      }).sort((a, b) => a.ts - b.ts);
+      }).map(a => ({ ...a, ts: new Date(a.due + ", " + year).getTime() })).sort((a, b) => a.ts - b.ts);
       return candidates[0] || null;
     })();
     if (nextA) {
       const days = Math.round((nextA.ts - today0) / (1000 * 60 * 60 * 24));
       if (days >= 2) {
-        let suffix = "";
-        if (nextA.graded) suffix = " · Graded: " + nextA.score;
-        else if (nextA.sub) suffix = " · Submitted";
-        const dayLabel = "Next: " + nextA.name + " due in " + days + " days" + suffix;
-        assignmentLines.push({ kind: "next", color: "#d1d5db", textColor: "#6b7280", text: dayLabel });
+        const dayLabel = "Next: " + nextA.name + " due in " + days + " days";
+        assignmentLines.push({ kind: "next", color: "#d1d5db", textColor: "#6b7280", text: dayLabel, chip: chipFor(nextA) });
       }
     }
   }
@@ -1645,11 +1642,12 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
             <span style={{ fontSize: 11, color: TEXT_MUTED }}>Open ›</span>
           </div>
           {assignmentLines.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {assignmentLines.map((l, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span style={{ display: "inline-block", width: 4, height: 4, background: l.color, borderRadius: "50%", flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: l.textColor, lineHeight: 1.4 }}>{l.text}</span>
+                  <span style={{ fontSize: 12, color: l.textColor, lineHeight: 1.4, flex: 1, minWidth: 0 }}>{l.text}</span>
+                  {l.chip && <span style={{ fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 5, background: l.chip.bg, color: l.chip.color, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>{l.chip.label}</span>}
                 </div>
               ))}
             </div>
