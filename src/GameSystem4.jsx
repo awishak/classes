@@ -921,12 +921,30 @@ export function StudentAnswerView({ data, setData, userName }) {
   const [msg, setMsg] = useState("");
   const [countdown, setCountdown] = useState(0);
   const lastSubmitRef = React.useRef(0);
+  const frozenActivityRef = React.useRef(null);
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 1500); };
 
   const student = data.students.find(s => s.name === userName);
   const sid = student?.id;
   const games = data.weeklyGames || {};
   const tots = data.weeklyToT || {};
+
+  // Compute liveActivity for the freeze effect (declared up here so the hook order is stable)
+  const liveActivityForFreeze = (() => {
+    if (week === null) return null;
+    const activities = mode === "game" ? games : tots;
+    return activities[week] || activities[String(week)];
+  })();
+
+  // Freeze activity while student is mid-selection so admin advances and live updates
+  // don't kick them out of the question they're answering.
+  React.useEffect(() => {
+    if (selected !== null && liveActivityForFreeze) {
+      if (!frozenActivityRef.current) frozenActivityRef.current = liveActivityForFreeze;
+    } else {
+      frozenActivityRef.current = null;
+    }
+  }, [selected, liveActivityForFreeze]);
 
   // Auto-refresh data every 5 seconds for live sync; pauses when student has a pending selection
   React.useEffect(() => {
@@ -1030,14 +1048,7 @@ export function StudentAnswerView({ data, setData, userName }) {
 
   // Freeze activity while student is mid-selection so admin advances and live updates
   // don't kick them out of the question they're answering.
-  const frozenActivityRef = React.useRef(null);
-  React.useEffect(() => {
-    if (selected !== null && liveActivity) {
-      if (!frozenActivityRef.current) frozenActivityRef.current = liveActivity;
-    } else {
-      frozenActivityRef.current = null;
-    }
-  }, [selected, liveActivity]);
+  // (Hook moved above early returns to keep hook order stable.)
 
   const activity = (selected !== null && frozenActivityRef.current) ? frozenActivityRef.current : liveActivity;
 
