@@ -1810,6 +1810,31 @@ function ScheduleView({ data, setData, isAdmin }) {
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
+  // Auto-scroll to current week on mount (student view only — admin stays at top)
+  React.useEffect(() => {
+    if (isAdmin) return;
+    const t = setTimeout(() => {
+      const today = new Date();
+      const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      const year = today.getFullYear();
+      let target = -1;
+      schedule.forEach((week, wi) => {
+        (week.dates || []).forEach(d => {
+          if (d.day === "Finals") return;
+          const parsed = new Date(d.date + ", " + year);
+          if (isNaN(parsed)) return;
+          const dayDiff = (parsed.getTime() - today0) / (1000 * 60 * 60 * 24);
+          if (dayDiff >= -3 && dayDiff <= 4 && target === -1) target = wi;
+        });
+      });
+      if (target >= 0) {
+        const el = document.getElementById("view-week-" + target);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 200);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line
+
   const updateDate = async (weekIdx, dateIdx, field, value) => {
     const updated = { ...data, schedule: data.schedule.map((w, wi) => wi === weekIdx ? { ...w, dates: w.dates.map((d, di) => di === dateIdx ? { ...d, [field]: value } : d) } : w) };
     await saveData(updated); setData(updated);
@@ -1940,6 +1965,63 @@ function ScheduleView({ data, setData, isAdmin }) {
             <button onClick={saveLinks} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "8px 0", width: "100%" }}>Save</button>
           </div>
         )}
+
+        {/* Jump-to-week pill bar */}
+        {(() => {
+          const today = new Date();
+          const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+          const year = today.getFullYear();
+          const hiddenWeeks = data.hiddenWeeks || [];
+          // Detect current week: a week is "current" if today falls within (or before) any of its dates
+          let currentWeekIdx = -1;
+          schedule.forEach((week, wi) => {
+            (week.dates || []).forEach(d => {
+              if (d.day === "Finals") return;
+              const parsed = new Date(d.date + ", " + year);
+              if (isNaN(parsed)) return;
+              const dayDiff = (parsed.getTime() - today0) / (1000 * 60 * 60 * 24);
+              if (dayDiff >= -3 && dayDiff <= 4 && currentWeekIdx === -1) currentWeekIdx = wi;
+            });
+          });
+          // Fallback: first week with any date in the future
+          if (currentWeekIdx === -1) {
+            for (let wi = 0; wi < schedule.length; wi++) {
+              const hasFuture = (schedule[wi].dates || []).some(d => {
+                if (d.day === "Finals") return false;
+                const parsed = new Date(d.date + ", " + year);
+                return !isNaN(parsed) && parsed.getTime() >= today0;
+              });
+              if (hasFuture) { currentWeekIdx = wi; break; }
+            }
+          }
+          const jumpToWeek = (wi) => {
+            const el = document.getElementById("view-week-" + wi);
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+          };
+          return (
+            <div style={{ background: "#fafaf9", borderRadius: 10, padding: "8px 10px", marginBottom: 16, display: "flex", gap: 6, alignItems: "center", overflowX: "auto", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11, color: TEXT_MUTED, flexShrink: 0 }}>Jump to:</span>
+              {schedule.map((week, wi) => {
+                const isCurrent = wi === currentWeekIdx;
+                const isHidden = hiddenWeeks.includes(week.week);
+                return (
+                  <button key={wi} onClick={() => jumpToWeek(wi)} style={{
+                    fontSize: 11, padding: "3px 9px", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: F,
+                    background: isCurrent ? ACCENT : "#fff",
+                    color: isCurrent ? "#fff" : (isHidden ? TEXT_MUTED : TEXT_SECONDARY),
+                    fontWeight: isCurrent ? 600 : 400,
+                    fontStyle: isHidden ? "italic" : "normal",
+                    border: isCurrent ? "none" : "1px solid " + BORDER_STRONG,
+                    opacity: isHidden ? 0.6 : 1,
+                    flexShrink: 0,
+                  }}>
+                    Wk {week.week}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* ====== PRETTY LIST (everyone) ====== */}
         <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
@@ -3215,7 +3297,10 @@ async function uploadPdf(file, readingId) {
 
 function RosterView({ data, setData, userName }) {
   const [selectedId, setSelectedId] = useState(null);
-  const sorted = [...data.students].sort(lastSortObj);
+  const [search, setSearch] = useState("");
+  const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis").sort(lastSortObj);
+  const q = search.trim().toLowerCase();
+  const filtered = q ? sorted.filter(s => s.name.toLowerCase().includes(q)) : sorted;
 
   if (selectedId) {
     const student = data.students.find(s => s.id === selectedId);
@@ -3226,41 +3311,48 @@ function RosterView({ data, setData, userName }) {
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <div style={{ maxWidth: 500, margin: "0 auto" }}>
-        <div style={{ ...sectionLabel, marginBottom: 12 }}>Class Roster</div>
+        <div style={{ ...sectionLabel, marginBottom: 10 }}>Class roster</div>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search classmates" style={{ ...inp, fontSize: 13, padding: "8px 12px", marginBottom: 12, width: "100%", boxSizing: "border-box" }} />
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {sorted.map(s => {
+          {filtered.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center", padding: 20 }}>No matches.</div>}
+          {filtered.map(s => {
             const team = data.teams.find(t => t.id === s.teamId);
             const tc = team ? TEAM_COLORS[team.colorIdx] : TEAM_COLORS[0];
             const bio = (data.bios || {})[s.id] || {};
             const initials = s.name.split(" ").map(n => n[0]).join("");
             const hasPhoto = !!bio.photo;
+            const isMe = s.name === userName;
             return (
               <button key={s.id} onClick={() => setSelectedId(s.id)} style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
-                background: "#fff", border: "1px solid #f3f4f6", borderRadius: 12,
-                cursor: "pointer", textAlign: "left", fontFamily: F, width: "100%", transition: "all 0.1s",
+                display: "flex", alignItems: "center", gap: 12, padding: "10px 12px",
+                background: isMe ? ACCENT + "0d" : "#fff", border: "1px solid " + (isMe ? ACCENT + "40" : BORDER),
+                borderRadius: 12,
+                cursor: "pointer", textAlign: "left", fontFamily: F, width: "100%",
               }}>
                 {hasPhoto ? (
-                  <img src={bio.photo} alt="" style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                  <img src={bio.photo} alt="" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
                 ) : (
-                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 900, color: "#fff", flexShrink: 0 }}>{initials}</div>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, color: "#fff", flexShrink: 0 }}>{initials}</div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, display: "flex", alignItems: "center", gap: 6 }}>
+                    {s.name}
+                    {isMe && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", background: ACCENT + "1a", color: ACCENT, borderRadius: 4, letterSpacing: "0.06em" }}>YOU</span>}
+                  </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2, flexWrap: "wrap", fontSize: 11 }}>
-                    {team && <span style={{ color: tc.accent, fontWeight: 600 }}>{team.name}</span>}
-                    {team && (bio.year || bio.hometown) && <span style={{ color: "#d4d4d8" }}>/</span>}
-                    {bio.year && <span style={{ color: TEXT_SECONDARY, fontWeight: 600 }}>{bio.year}</span>}
-                    {bio.year && bio.hometown && <span style={{ color: "#d4d4d8" }}>/</span>}
+                    {team && <span style={{ color: tc.accent, fontWeight: 500 }}>{team.name}</span>}
+                    {team && (bio.year || bio.hometown) && <span style={{ color: "#d4d4d8" }}>·</span>}
+                    {bio.year && <span style={{ color: TEXT_SECONDARY }}>{bio.year}</span>}
+                    {bio.year && bio.hometown && <span style={{ color: "#d4d4d8" }}>·</span>}
                     {bio.hometown && <span style={{ color: TEXT_SECONDARY }}>{bio.hometown}</span>}
                   </div>
-                  {bio.motto && <div style={{ fontSize: 11, color: "#b0b0b0", fontStyle: "italic", marginTop: 2 }}>{bio.motto}</div>}
+                  {bio.motto && <div style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bio.motto}</div>}
                 </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
               </button>
             );
           })}
         </div>
+        <div style={{ textAlign: "center", marginTop: 12, fontSize: 11, color: TEXT_MUTED }}>{sorted.length} students</div>
       </div>
     </div>
   );
@@ -4168,18 +4260,16 @@ function BoardsView({ data, setData, isAdmin, userName }) {
           const postCount = Object.keys(board.posts || {}).length;
           const myPost = (board.posts || {})[userName];
           return (
-            <div key={board.id} onClick={() => { setViewingBoard(board.id); if (!myPost) setEditText(""); }} style={{ ...crd, padding: 16, marginBottom: 10, cursor: "pointer" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.3 }}>{board.title}</div>
-                  <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, lineHeight: 1.4 }}>{board.prompt.length > 100 ? board.prompt.slice(0, 100) + "..." : board.prompt}</div>
-                  <div style={{ display: "flex", gap: 10, marginTop: 6, fontSize: 12, color: TEXT_MUTED }}>
-                    <span>{postCount} response{postCount !== 1 ? "s" : ""}</span>
-                    {myPost && <span style={{ color: GREEN, fontWeight: 600 }}>You responded</span>}
-                    {!myPost && <span style={{ color: ACCENT, fontWeight: 600 }}>Not yet responded</span>}
-                  </div>
-                </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" style={{ flexShrink: 0, marginTop: 4 }}><path d="M9 18l6-6-6-6"/></svg>
+            <div key={board.id} onClick={() => { setViewingBoard(board.id); if (!myPost) setEditText(""); }} style={{ ...crd, padding: 14, marginBottom: 8, cursor: "pointer" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, lineHeight: 1.3, flex: 1, minWidth: 0 }}>{board.title}</div>
+                <span style={{ fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 5, background: "#ecfdf5", color: "#047857", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Active</span>
+              </div>
+              <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.4, marginBottom: 6 }}>{board.prompt.length > 120 ? board.prompt.slice(0, 120) + "..." : board.prompt}</div>
+              <div style={{ display: "flex", gap: 10, fontSize: 11, color: TEXT_MUTED }}>
+                <span>{postCount} {postCount === 1 ? "reply" : "replies"}</span>
+                {myPost && <><span>·</span><span style={{ color: GREEN, fontWeight: 500 }}>You responded</span></>}
+                {!myPost && <><span>·</span><span style={{ color: ACCENT, fontWeight: 500 }}>Not yet responded</span></>}
               </div>
             </div>
           );
