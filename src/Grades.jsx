@@ -745,11 +745,41 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           />
         )}
 
-        {/* HERO: dot strip + current grade */}
+        {/* HERO: current grade big + dot strip below */}
         {studentId && (
-          <div style={{ ...crd, padding: 16, marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ ...sectionLabel, marginBottom: 8 }}>Your Assignments</div>
+          <div style={{ ...crd, padding: 20, marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
+              <div>
+                <div style={{ ...sectionLabel, marginBottom: 6 }}>Current grade</div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <div style={{ fontSize: 38, fontWeight: 500, color: gradeColor, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+                    {currentGrade !== null ? currentGrade + "%" : "---"}
+                  </div>
+                  {currentGrade !== null && (
+                    <div style={{ fontSize: 20, fontWeight: 500, color: gradeColor, lineHeight: 1 }}>
+                      {(() => {
+                        const g = currentGrade;
+                        if (g >= 93) return "A";
+                        if (g >= 90) return "A-";
+                        if (g >= 87) return "B+";
+                        if (g >= 83) return "B";
+                        if (g >= 80) return "B-";
+                        if (g >= 77) return "C+";
+                        if (g >= 73) return "C";
+                        if (g >= 70) return "C-";
+                        if (g >= 60) return "D";
+                        return "F";
+                      })()}
+                    </div>
+                  )}
+                </div>
+                {pctAssessed > 0 && pctAssessed < 100 && (
+                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 6 }}>{pctAssessed}% of grade assessed so far</div>
+                )}
+              </div>
+            </div>
+            <div style={{ paddingTop: 14, borderTop: "1px solid " + BORDER }}>
+              <div style={{ ...sectionLabel, marginBottom: 8 }}>Your assignments</div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 {sortedAssignments.map(a => {
                   const state = getAssignmentState(a, data, studentId);
@@ -759,7 +789,6 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                   const sub = submissions[studentId + "-" + a.id];
                   const g = grades[studentId + "-" + a.id] || {};
                   const isHovered = hoveredDotId === a.id;
-                  // Build tooltip lines
                   let dueLine;
                   if (a.id === "participation") dueLine = "Ongoing";
                   else if (sub) dueLine = "Submitted " + new Date(sub.ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -821,16 +850,6 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                   );
                 })}
               </div>
-            </div>
-            <div style={{ width: 1, height: 56, background: BORDER }} />
-            <div style={{ textAlign: "center", flexShrink: 0, minWidth: 96 }}>
-              <div style={{ ...sectionLabel, marginBottom: 4 }}>Current Grade</div>
-              <div style={{ fontSize: 32, fontWeight: 900, color: gradeColor, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
-                {currentGrade !== null ? currentGrade + "%" : "---"}
-              </div>
-              {pctAssessed > 0 && pctAssessed < 100 && (
-                <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 4, fontWeight: 600 }}>{pctAssessed}% of grade so far</div>
-              )}
             </div>
           </div>
         )}

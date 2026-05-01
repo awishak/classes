@@ -197,6 +197,28 @@ function shuffleTeams(students, log, teams) {
 
 function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#18181b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 14, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
 
+// Reusable page header with a visible back button. Use at the top of every interior page.
+function PageHeader({ title, onBack, right }) {
+  const goBack = () => {
+    if (onBack) { onBack(); return; }
+    try { window.history.back(); } catch(e) {}
+  };
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, gap: 8 }}>
+      <button onClick={goBack} style={{
+        display: "inline-flex", alignItems: "center", gap: 4, padding: "6px 12px 6px 8px", borderRadius: 10,
+        background: "#fff", border: "1px solid " + BORDER_STRONG, cursor: "pointer", fontFamily: F,
+        fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500,
+      }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        Back
+      </button>
+      {title && <div style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, letterSpacing: "0.05em", textTransform: "uppercase" }}>{title}</div>}
+      <div>{right || <div style={{ width: 1 }} />}</div>
+    </div>
+  );
+}
+
 /* ─── NAV ─── */
 function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent, allStudents, activitiesLive }) {
   // Student tabs (always visible, no guest gating). Guests still get a slim subset.
@@ -1962,31 +1984,6 @@ function ScheduleView({ data, setData, isAdmin }) {
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
-  // Auto-scroll to current week on mount (student view only — admin stays at top)
-  React.useEffect(() => {
-    if (isAdmin) return;
-    const t = setTimeout(() => {
-      const today = new Date();
-      const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-      const year = today.getFullYear();
-      let target = -1;
-      schedule.forEach((week, wi) => {
-        (week.dates || []).forEach(d => {
-          if (d.day === "Finals") return;
-          const parsed = new Date(d.date + ", " + year);
-          if (isNaN(parsed)) return;
-          const dayDiff = (parsed.getTime() - today0) / (1000 * 60 * 60 * 24);
-          if (dayDiff >= -3 && dayDiff <= 4 && target === -1) target = wi;
-        });
-      });
-      if (target >= 0) {
-        const el = document.getElementById("view-week-" + target);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    }, 200);
-    return () => clearTimeout(t);
-  }, []); // eslint-disable-line
-
   const updateDate = async (weekIdx, dateIdx, field, value) => {
     const updated = { ...data, schedule: data.schedule.map((w, wi) => wi === weekIdx ? { ...w, dates: w.dates.map((d, di) => di === dateIdx ? { ...d, [field]: value } : d) } : w) };
     await saveData(updated); setData(updated);
@@ -2091,9 +2088,7 @@ function ScheduleView({ data, setData, isAdmin }) {
       <Toast message={msg} />
       <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto" }}>
 
-        {/* Header: title + Doc/Canva links */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div style={sectionLabel}>Schedule</div>
+        <PageHeader title="Schedule" right={
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             {isAdmin && data.scheduleDocUrl && !editLinks && (
               <a href={data.scheduleDocUrl} target="_blank" rel="noopener noreferrer" style={{ ...linkPill, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
@@ -2109,7 +2104,7 @@ function ScheduleView({ data, setData, isAdmin }) {
             )}
             {isAdmin && <button onClick={() => setEditLinks(!editLinks)} style={linkPill}>{editLinks ? "Cancel" : "Links"}</button>}
           </div>
-        </div>
+        } />
         {isAdmin && editLinks && (
           <div style={{ ...crd, padding: 12, marginBottom: 14, display: "flex", flexDirection: "column", gap: 6 }}>
             <input value={docUrl} onChange={e => setDocUrl(e.target.value)} placeholder="Google Doc URL" style={{ ...inp, fontSize: 12, padding: "6px 8px" }} />
@@ -2117,63 +2112,6 @@ function ScheduleView({ data, setData, isAdmin }) {
             <button onClick={saveLinks} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "8px 0", width: "100%" }}>Save</button>
           </div>
         )}
-
-        {/* Jump-to-week pill bar */}
-        {(() => {
-          const today = new Date();
-          const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-          const year = today.getFullYear();
-          const hiddenWeeks = data.hiddenWeeks || [];
-          // Detect current week: a week is "current" if today falls within (or before) any of its dates
-          let currentWeekIdx = -1;
-          schedule.forEach((week, wi) => {
-            (week.dates || []).forEach(d => {
-              if (d.day === "Finals") return;
-              const parsed = new Date(d.date + ", " + year);
-              if (isNaN(parsed)) return;
-              const dayDiff = (parsed.getTime() - today0) / (1000 * 60 * 60 * 24);
-              if (dayDiff >= -3 && dayDiff <= 4 && currentWeekIdx === -1) currentWeekIdx = wi;
-            });
-          });
-          // Fallback: first week with any date in the future
-          if (currentWeekIdx === -1) {
-            for (let wi = 0; wi < schedule.length; wi++) {
-              const hasFuture = (schedule[wi].dates || []).some(d => {
-                if (d.day === "Finals") return false;
-                const parsed = new Date(d.date + ", " + year);
-                return !isNaN(parsed) && parsed.getTime() >= today0;
-              });
-              if (hasFuture) { currentWeekIdx = wi; break; }
-            }
-          }
-          const jumpToWeek = (wi) => {
-            const el = document.getElementById("view-week-" + wi);
-            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-          };
-          return (
-            <div style={{ background: "#fafaf9", borderRadius: 10, padding: "8px 10px", marginBottom: 16, display: "flex", gap: 6, alignItems: "center", overflowX: "auto", flexWrap: "wrap" }}>
-              <span style={{ fontSize: 11, color: TEXT_MUTED, flexShrink: 0 }}>Jump to:</span>
-              {schedule.map((week, wi) => {
-                const isCurrent = wi === currentWeekIdx;
-                const isHidden = hiddenWeeks.includes(week.week);
-                return (
-                  <button key={wi} onClick={() => jumpToWeek(wi)} style={{
-                    fontSize: 11, padding: "3px 9px", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: F,
-                    background: isCurrent ? ACCENT : "#fff",
-                    color: isCurrent ? "#fff" : (isHidden ? TEXT_MUTED : TEXT_SECONDARY),
-                    fontWeight: isCurrent ? 600 : 400,
-                    fontStyle: isHidden ? "italic" : "normal",
-                    border: isCurrent ? "none" : "1px solid " + BORDER_STRONG,
-                    opacity: isHidden ? 0.6 : 1,
-                    flexShrink: 0,
-                  }}>
-                    Wk {week.week}
-                  </button>
-                );
-              })}
-            </div>
-          );
-        })()}
 
         {/* ====== PRETTY LIST (everyone) ====== */}
         <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
@@ -2183,7 +2121,7 @@ function ScheduleView({ data, setData, isAdmin }) {
             const isHidden = hiddenWeeks.includes(week.week);
             // Sort dates within the week chronologically by day order
             const dayOrder = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7, Finals: 8 };
-            const orderedDates = [...(week.dates || [])].map((d, idx) => ({ d, realDi: idx })).sort((a, b) => (dayOrder[a.d.day] || 9) - (dayOrder[b.d.day] || 9));
+            const orderedDates = [...week.dates].map((d, idx) => ({ d, realDi: idx })).sort((a, b) => (dayOrder[a.d.day] || 9) - (dayOrder[b.d.day] || 9));
 
             return (
               <div key={wi} id={"view-week-" + wi}>
@@ -2441,7 +2379,6 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
     const team = teams.find(t => t.id === (shuffled?.teamId || s.teamId));
     const tc = team ? TEAM_COLORS[team.colorIdx] : TEAM_COLORS[0];
     const inA = i < 5;
-    const bw = mx > 0 ? Math.max((s.points / mx) * 100, 2) : 2;
     const bio = bios[s.id] || {};
     const initials = s.name.split(" ").map(n => n[0]).join("");
     const wp = weekPoints[s.id] || 0;
@@ -2450,7 +2387,6 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
     const offset = animOffsets[s.id] || 0;
     const isExpanded = expandedId === s.id;
 
-    // Point breakdown by source
     const breakdown = {};
     log.filter(e => e.studentId === s.id).forEach(e => {
       const src = e.source || "Other";
@@ -2458,68 +2394,60 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
     });
     const breakdownEntries = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
 
+    const rankColor = inA ? "#d4a017" : TEXT_MUTED;
+
     return (
       <div key={s.id + (isGhost ? "-ghost" : "")} style={{
-        borderRadius: 14, overflow: "hidden", marginBottom: 8, background: "#fff",
-        border: isGhost ? "2px dashed #93c5fd" : inA ? "2px solid #d4a017" : "1px solid #f3f4f6",
+        borderRadius: 12, marginBottom: 6, background: isMe ? ACCENT + "0d" : "#fff",
+        border: isGhost ? "2px dashed #93c5fd" : "1px solid " + (isMe ? ACCENT + "40" : BORDER),
         transform: offset ? "translateY(" + offset + "px)" : "none",
         transition: offset ? "none" : "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
         position: "relative",
         zIndex: offset > 0 ? 10 : offset < 0 ? 0 : 1,
-        boxShadow: offset > 0 ? "0 4px 16px rgba(0,0,0,0.12)" : "none",
       }}>
-        <div onClick={() => setExpandedId(isExpanded ? null : s.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", cursor: "pointer" }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            fontSize: 14, fontWeight: 900, fontFamily: F,
-            background: inA ? "#d4a017" : "#f4f4f5",
-            color: inA ? "#fff" : TEXT_SECONDARY,
-          }}>{i + 1}</div>
+        <button onClick={() => setExpandedId(isExpanded ? null : s.id)} style={{
+          width: "100%", textAlign: "left", background: "transparent", border: "none",
+          display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", cursor: "pointer", fontFamily: F,
+        }}>
+          <div style={{ width: 22, textAlign: "right", fontSize: 13, fontWeight: 600, color: rankColor, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{i + 1}</div>
           {bio.photo ? (
-            <img src={bio.photo} alt="" style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "3px solid " + (inA ? "#d4a01744" : "#f4f4f5") }} />
+            <img src={bio.photo} alt="" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
           ) : (
-            <div style={{ width: 80, height: 80, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 900, color: "#fff", flexShrink: 0, border: "3px solid " + (inA ? "#d4a01744" : "#f4f4f5") }}>{initials}</div>
+            <div style={{ width: 40, height: 40, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, color: "#fff", flexShrink: 0 }}>{initials}</div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 18, fontWeight: 900, color: TEXT_PRIMARY, fontFamily: F }}>{s.name}</span>
-              {starCounts[s.id] > 0 && <span style={{ fontSize: 13, color: "#d97706" }}>{Array(starCounts[s.id]).fill("\u2733").join("")}</span>}
-              {isMe && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#dbeafe", color: "#1d4ed8", fontWeight: 700 }}>YOU</span>}
+              <span style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY }}>{s.name}</span>
+              {starCounts[s.id] > 0 && <span style={{ fontSize: 11, color: "#d97706" }}>{Array(starCounts[s.id]).fill("\u2733").join("")}</span>}
+              {isMe && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", background: ACCENT + "1a", color: ACCENT, borderRadius: 4, letterSpacing: "0.06em" }}>YOU</span>}
+              {inA && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", background: "#fef3c7", color: "#854d0e", borderRadius: 4, letterSpacing: "0.06em" }}>A ZONE</span>}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
-              {team && !data?.teamsHidden && <span style={{ fontSize: 11, color: tc.accent, fontWeight: 600 }}>{team.name}</span>}
-              {team && (bio.year || bio.hometown) && <span style={{ fontSize: 11, color: "#d4d4d8" }}>/</span>}
-              {bio.year && <span style={{ fontSize: 11, color: TEXT_SECONDARY, fontWeight: 600 }}>{bio.year}</span>}
-              {bio.year && bio.hometown && <span style={{ fontSize: 11, color: "#d4d4d8" }}>/</span>}
-              {bio.hometown && <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{bio.hometown}</span>}
-            </div>
-            {bio.motto && <div style={{ fontSize: 11, color: "#b0b0b0", fontStyle: "italic", marginTop: 2 }}>{bio.motto}</div>}
+            {(team || wp > 0 || movement !== 0) && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
+                {team && !data?.teamsHidden && <span style={{ fontSize: 11, color: tc.accent, fontWeight: 500 }}>{team.name}</span>}
+                {wp > 0 && <span style={{ fontSize: 11, color: GREEN, fontWeight: 500 }}>+{wp} this wk</span>}
+                {movement > 0 && <span style={{ fontSize: 11, color: GREEN, fontWeight: 500 }}>&#9650;{movement}</span>}
+                {movement < 0 && <span style={{ fontSize: 11, color: RED, fontWeight: 500 }}>&#9660;{Math.abs(movement)}</span>}
+              </div>
+            )}
           </div>
-          <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 30, fontWeight: 900, color: inA ? "#b8860b" : TEXT_PRIMARY, fontFamily: F, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{s.points}</div>
-            <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 1 }}>pts</div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 3 }}>
-              {wp > 0 && <span style={{ fontSize: 11, color: GREEN, fontWeight: 700 }}>+{wp} this wk</span>}
-              {movement > 0 && <span style={{ fontSize: 11, color: GREEN, fontWeight: 700 }}>&#9650;{movement}</span>}
-              {movement < 0 && <span style={{ fontSize: 11, color: RED, fontWeight: 700 }}>&#9660;{Math.abs(movement)}</span>}
-            </div>
+          <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 4 }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.01em" }}>{s.points}</div>
+            <div style={{ fontSize: 9, color: TEXT_MUTED, marginTop: 2, textTransform: "uppercase", letterSpacing: "0.08em" }}>pts</div>
           </div>
-        </div>
+        </button>
         {isExpanded && (
-          <div style={{ padding: "0 16px 14px", borderTop: "1px solid #f3f4f6" }}>
-            <div style={{ ...sectionLabel, marginTop: 10, marginBottom: 6 }}>Point Breakdown</div>
-            {breakdownEntries.length === 0 && <div style={{ fontSize: 12, color: "#d4d4d8", fontStyle: "italic" }}>No points yet.</div>}
+          <div style={{ padding: "0 14px 12px 44px", borderTop: "1px solid " + BORDER }}>
+            <div style={{ ...sectionLabel, marginTop: 8, marginBottom: 4 }}>Breakdown</div>
+            {breakdownEntries.length === 0 && <div style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic" }}>No points yet.</div>}
             {breakdownEntries.map(([src, pts]) => (
-              <div key={src} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", fontSize: 13 }}>
+              <div key={src} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0", fontSize: 12 }}>
                 <span style={{ color: TEXT_SECONDARY }}>{src}</span>
-                <span style={{ fontWeight: 700, color: pts > 0 ? TEXT_PRIMARY : RED }}>{pts > 0 ? "+" : ""}{pts}</span>
+                <span style={{ fontWeight: 500, color: pts > 0 ? TEXT_PRIMARY : RED, fontVariantNumeric: "tabular-nums" }}>{pts > 0 ? "+" : ""}{pts}</span>
               </div>
             ))}
           </div>
         )}
-        <div style={{ height: 4, background: "#f4f4f5" }}>
-          <div style={{ height: "100%", width: bw + "%", background: inA ? "#d4a017" : tc.accent, transition: "width 0.5s", borderRadius: "0 2px 2px 0" }} />
-        </div>
       </div>
     );
   };
@@ -5817,14 +5745,39 @@ function MoreView({ data, setData, isAdmin, userName }) {
 export default function Comm118() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState("home");
+  const [view, _setView] = useState("home");
+
+  // setView wrapper that also pushes browser history so the back button works.
+  const setView = useCallback((next) => {
+    _setView(prev => {
+      if (prev === next) return prev;
+      try { window.history.pushState({ view: next }, "", "#" + next); } catch(e) {}
+      return next;
+    });
+  }, []);
+
+  // Sync view with browser back/forward.
+  useEffect(() => {
+    const onPop = (e) => {
+      const v = (e.state && e.state.view) || (window.location.hash || "").replace(/^#/, "") || "home";
+      _setView(v);
+    };
+    window.addEventListener("popstate", onPop);
+    // On first mount, register the initial state and check for a deep-link hash
+    try {
+      const hash = (window.location.hash || "").replace(/^#/, "");
+      if (hash) _setView(hash);
+      window.history.replaceState({ view: hash || "home" }, "", "#" + (hash || "home"));
+    } catch(e) {}
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   // Listen for nav events from ToDoView "Go" buttons
   useEffect(() => {
     const handler = (e) => setView(e.detail);
     window.addEventListener("nav", handler);
     return () => window.removeEventListener("nav", handler);
-  }, []);
+  }, [setView]);
   const [userName, setUserName] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY + "-user"); } catch(e) { return null; }
   });

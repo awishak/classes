@@ -988,36 +988,64 @@ export function StudentAnswerView({ data, setData, userName }) {
     showMsg("Locked in"); setSelected(null);
   };
 
-  // Week selector
+  // Auto-jump to live activity if one exists and the student hasn't already picked a slot
+  React.useEffect(() => {
+    if (week !== null) return;
+    const liveGameWeek = Object.keys(games).find(w => games[w]?.phase === "live");
+    if (liveGameWeek) { setMode("game"); setWeek(parseInt(liveGameWeek) || liveGameWeek); return; }
+    const liveTotWeek = Object.keys(tots).find(w => tots[w]?.phase === "live");
+    if (liveTotWeek) { setMode("tot"); setWeek(parseInt(liveTotWeek) || liveTotWeek); return; }
+  }, [week, games, tots]);
+
+  // Week selector — clean past-events list when nothing is live
   if (week === null) {
+    const gameSlots = Object.keys(games).filter(w => games[w]?.scored || games[w]?.phase === "done").map(w => ({ w, item: games[w], type: "game" }));
+    const totSlots = Object.keys(tots).filter(w => tots[w]?.scored || tots[w]?.phase === "done").map(w => ({ w, item: tots[w], type: "tot" }));
+    gameSlots.sort((a, b) => parseInt(b.w) - parseInt(a.w));
+    totSlots.sort((a, b) => parseInt(b.w) - parseInt(a.w));
+
+    const renderSlotCard = (slot) => {
+      const w = slot.w;
+      const item = slot.item;
+      const isScored = item?.scored;
+      const hasResponded = sid && item?.responses && Object.keys(item.responses).some(k => k.startsWith(sid));
+      const label = slot.type === "game" ? "Weekly Game" : "This or That";
+      return (
+        <button key={slot.type + "-" + w} onClick={() => { setMode(slot.type); setWeek(parseInt(w) || w); setSelected(null); }} style={{
+          width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 8, cursor: "pointer", fontFamily: F,
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 16, fontWeight: 500, color: "#111827", letterSpacing: "-0.01em" }}>{label}, Wk {w}</div>
+            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+              {isScored ? "Results available" : "Closed"}
+              {hasResponded && " · You played"}
+              {!hasResponded && isScored && " · You did not play"}
+            </div>
+          </div>
+          <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 500 }}>Open ›</span>
+        </button>
+      );
+    };
+
     return (
-      <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <div style={{ padding: "0 0 16px", fontFamily: F }}>
         <div style={{ maxWidth: 500, margin: "0 auto" }}>
-          <div style={{ ...sectionLabel, marginBottom: 12 }}>Answer</div>
-          <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-            <button onClick={() => setMode("game")} style={mode === "game" ? pillActive : pillInactive}>Weekly Game</button>
-            <button onClick={() => setMode("tot")} style={mode === "tot" ? pillActive : pillInactive}>This or That</button>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
-            {Array.from({ length: 10 }).map((_, i) => {
-              const w = i + 1;
-              const item = mode === "game" ? games[w] : (tots[w] || tots[String(w)]);
-              const isLive = item?.phase === "live";
-              const isScored = item?.scored;
-              const hasResponded = sid && item?.responses && Object.keys(item.responses).some(k => k.startsWith(sid));
-              const isAvailable = isLive || isScored;
-              return (
-                <button key={w} onClick={() => { if (isAvailable) { setWeek(w); setSelected(null); } }} style={{
-                  ...crd, padding: "14px 8px", cursor: isAvailable ? "pointer" : "default", textAlign: "center",
-                  opacity: isAvailable ? 1 : 0.4,
-                  border: isLive ? "2px solid #d97706" : hasResponded ? "2px solid " + GREEN : "1px solid #f3f4f6",
-                }}>
-                  <div style={{ fontSize: 20, fontWeight: 900, color: isLive ? "#d97706" : hasResponded ? GREEN : isScored ? "#111827" : "#d1d5db" }}>{w}</div>
-                  <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{isScored ? "Results" : isLive ? "LIVE" : ""}</div>
-                </button>
-              );
-            })}
-          </div>
+          {gameSlots.length === 0 && totSlots.length === 0 && (
+            <div style={{ fontSize: 13, color: "#9ca3af", textAlign: "center", padding: "24px 0" }}>No live activities right now.</div>
+          )}
+          {gameSlots.length > 0 && (
+            <div style={{ marginBottom: gameSlots.length > 0 && totSlots.length > 0 ? 16 : 0 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Past Weekly Games</div>
+              {gameSlots.map(renderSlotCard)}
+            </div>
+          )}
+          {totSlots.length > 0 && (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Past This or That</div>
+              {totSlots.map(renderSlotCard)}
+            </div>
+          )}
         </div>
       </div>
     );
