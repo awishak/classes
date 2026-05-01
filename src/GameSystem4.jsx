@@ -506,6 +506,7 @@ function ToTEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack, 
 function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamBonus, msg, showMsg }) {
   const [countdownActive, setCountdownActive] = useState(false);
   const [countdownSecs, setCountdownSecs] = useState(0);
+  const lastSubmitRef = React.useRef(0);
   const activities = type === "game" ? (data.weeklyGames || {}) : (data.weeklyToT || {});
   const activity = activities[week] || activities[String(week)];
   const wKey = activities[week] ? week : String(week);
