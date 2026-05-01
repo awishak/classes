@@ -1392,17 +1392,10 @@ function HomeGradedNotifications({ data, setData, studentId }) {
 }
 
 function HomeView({ data, setData, userName, isAdmin, setView }) {
+  const [msg, setMsg] = useState("");
+  const [newsExpanded, setNewsExpanded] = useState(false);
   const [newNewsText, setNewNewsText] = useState("");
   const [newNewsType, setNewNewsType] = useState("info");
-  const [replyingTo, setReplyingTo] = useState(null);
-  const [replyText, setReplyText] = useState("");
-  const [composing, setComposing] = useState(false);
-  const [composeText, setComposeText] = useState("");
-  const [composeRecipients, setComposeRecipients] = useState("all");
-  const [selectedStudents, setSelectedStudents] = useState([]);
-  const [editingMsg, setEditingMsg] = useState(null);
-  const [editMsgText, setEditMsgText] = useState("");
-  const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
   const news = data.news || [];
@@ -1410,11 +1403,12 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   const schedule = data.schedule || [];
   const assignments = data.assignments || [];
   const grades = data.grades || {};
-  const todoChecks = data.todoChecks || {};
+  const submissions = data.submissions || {};
   const student = data.students.find(s => s.name === userName);
   const studentId = student?.id;
+  const isStudent = !!studentId && !isAdmin;
 
-  // Add news
+  // Admin: post news
   const addNews = async () => {
     if (!newNewsText.trim()) return;
     const item = { id: genId(), text: newNewsText.trim(), type: newNewsType, ts: Date.now() };
@@ -1427,729 +1421,386 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
     await saveData(updated); setData(updated); showMsg("Removed");
   };
 
-  // Featured posts from boards
-  const featuredPosts = [];
-  boards.forEach(board => {
-    Object.entries(board.posts || {}).forEach(([author, post]) => {
-      if (post.featured) featuredPosts.push({ author, text: post.text, boardTitle: board.title, ts: post.ts });
-    });
-  });
-  featuredPosts.sort((a, b) => b.ts - a.ts);
-
-  // Mini leaderboard
-  const ranked = data.students.map(s => ({ ...s, points: data.log.filter(e => e.studentId === s.id).reduce((t, e) => t + e.amount, 0) })).sort((a, b) => b.points - a.points);
-  const top5 = ranked.slice(0, 5);
-  const mx = top5.length > 0 ? Math.max(top5[0].points, 1) : 1;
-  const myRank = ranked.findIndex(s => s.name === userName);
-  const meData = myRank >= 0 ? ranked[myRank] : null;
-
-  // Next 3 upcoming classes
   const today = new Date();
-  const todayStr = today.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const year = today.getFullYear();
+
+  // ─── Live activity detection ───
+  const isLiveSlot = (s) => !!(s && s.phase === "live");
+  let liveActivity = null;
+  Object.keys(data.weeklyGames || {}).forEach(w => {
+    if (isLiveSlot(data.weeklyGames[w])) liveActivity = { type: "Weekly Game", week: w, label: "Weekly Game, Wk " + w };
+  });
+  Object.keys(data.weeklyToT || {}).forEach(w => {
+    if (isLiveSlot(data.weeklyToT[w])) liveActivity = { type: "This or That", week: w, label: "This or That, Wk " + w };
+  });
+  (data.headlines?.sessions || []).forEach(s => {
+    if (s.activeHeadlineId && s.phase !== "done") liveActivity = { type: "Headlines", label: "Headlines: " + (s.weekLabel || "live") };
+  });
+  (data.surveys || []).forEach(s => {
+    if (s.active) liveActivity = { type: "Survey", label: s.question || "Class survey" };
+  });
+
+  // ─── Rebound detection ───
+  let activeRebound = null;
+  if (studentId) {
+    const rebounds = data.rebounds || {};
+    Object.keys(rebounds).forEach(rk => {
+      const rd = rebounds[rk];
+      if (!rd) return;
+      const ss = (rd.studentStatuses || {})[studentId];
+      if (!ss) return;
+      // Active rebound: student opted in, not yet completed
+      if (ss.status === "planned_makeup" || ss.status === "rebound" || ss.status === "unannounced") {
+        const reboundGrades = data.reboundGrades || {};
+        if (reboundGrades[studentId + "-" + rk]) return; // already completed
+        const deadline = ss.deadline || rd.deadline;
+        let timeLeft = "";
+        if (deadline) {
+          const ms = deadline - Date.now();
+          if (ms > 0) {
+            const hrs = Math.floor(ms / (1000 * 60 * 60));
+            const days = Math.floor(hrs / 24);
+            if (days >= 1) timeLeft = days + "d left";
+            else timeLeft = hrs + "h left";
+          } else {
+            timeLeft = "Past due";
+          }
+        }
+        const m = rk.match(/^(game|tot)-(\w+)$/);
+        const activityLabel = m ? (m[1] === "game" ? "Weekly Game Wk " + m[2] : "This or That Wk " + m[2]) : rk;
+        const log = data.log || [];
+        const earnedSrc = m ? (m[1] === "game" ? "Game Wk" + m[2] : "ToT Wk" + m[2]) : "";
+        const earnedEntries = log.filter(e => e.studentId === studentId && e.source === earnedSrc);
+        const earned = earnedEntries.reduce((a, e) => a + e.amount, 0);
+        if (!activeRebound) activeRebound = { activityLabel, timeLeft, scoreLine: earned > 0 ? "You scored " + earned + "/100. Submit a rebound to improve your grade." : "Submit a rebound to improve your grade." };
+      }
+    });
+  }
+
+  // ─── Assignments context lines ───
+  const assignmentLines = [];
+  if (studentId) {
+    const gradedAssignments = assignments.filter(a => a.id !== "participation");
+    // Overdue (not yet submitted, past due)
+    gradedAssignments.forEach(a => {
+      if (!a.due) return;
+      const sub = submissions[studentId + "-" + a.id];
+      const g = grades[studentId + "-" + a.id] || {};
+      if (g.score !== undefined && g.score !== "") return;
+      if (sub) return;
+      const parsed = new Date(a.due + ", " + year);
+      if (isNaN(parsed)) return;
+      if (parsed.getTime() < today0) {
+        assignmentLines.push({ kind: "overdue", color: "#dc2626", textColor: "#991b1b", text: a.name + " past due" });
+      }
+    });
+    // Due today / tomorrow
+    gradedAssignments.forEach(a => {
+      if (!a.due) return;
+      const sub = submissions[studentId + "-" + a.id];
+      const g = grades[studentId + "-" + a.id] || {};
+      if (g.score !== undefined && g.score !== "") return;
+      if (sub) return;
+      const parsed = new Date(a.due + ", " + year);
+      if (isNaN(parsed)) return;
+      const ts = parsed.getTime();
+      if (ts < today0) return;
+      const days = Math.round((ts - today0) / (1000 * 60 * 60 * 24));
+      if (days === 0) assignmentLines.push({ kind: "due", color: "#f59e0b", textColor: "#92400e", text: a.name + " due today" });
+      else if (days === 1) assignmentLines.push({ kind: "due", color: "#f59e0b", textColor: "#92400e", text: a.name + " due tomorrow" });
+    });
+    // Recently graded (within last 7 days)
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    gradedAssignments.forEach(a => {
+      const g = grades[studentId + "-" + a.id] || {};
+      if (g.score === undefined || g.score === "") return;
+      if (!g.ts || g.ts < sevenDaysAgo) return;
+      assignmentLines.push({ kind: "graded", color: "#6b7280", textColor: "#4b5563", text: a.name + " graded: " + g.score, ts: g.ts });
+    });
+    // Sort recently-graded by recency, take top 2
+    const recent = assignmentLines.filter(l => l.kind === "graded").sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 2);
+    const others = assignmentLines.filter(l => l.kind !== "graded");
+    assignmentLines.length = 0;
+    others.forEach(l => assignmentLines.push(l));
+    recent.forEach(l => assignmentLines.push(l));
+    // Next assignment (gray, only if no overdue/due-soon/graded already covers it)
+    const nextA = (() => {
+      const candidates = gradedAssignments.filter(a => {
+        if (!a.due) return false;
+        const sub = submissions[studentId + "-" + a.id];
+        const g = grades[studentId + "-" + a.id] || {};
+        if (g.score !== undefined && g.score !== "") return false;
+        if (sub) return false;
+        const parsed = new Date(a.due + ", " + year);
+        if (isNaN(parsed)) return false;
+        return parsed.getTime() >= today0;
+      }).map(a => ({ ...a, ts: new Date(a.due + ", " + year).getTime() })).sort((a, b) => a.ts - b.ts);
+      return candidates[0] || null;
+    })();
+    if (nextA) {
+      const days = Math.round((nextA.ts - today0) / (1000 * 60 * 60 * 24));
+      if (days >= 2) {
+        const dayLabel = "Next: " + nextA.name + " due in " + days + " days";
+        assignmentLines.push({ kind: "next", color: "#d1d5db", textColor: "#6b7280", text: dayLabel });
+      }
+    }
+  }
+
+  // ─── This week schedule data ───
   const upcomingDates = [];
   schedule.forEach(week => {
     (week.dates || []).forEach(d => {
       if (d.day === "Finals") return;
-      const dateStr = d.date;
-      const year = today.getFullYear();
-      const parsed = new Date(dateStr + ", " + year);
-      if (!isNaN(parsed) && parsed >= new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+      const parsed = new Date(d.date + ", " + year);
+      if (!isNaN(parsed) && parsed.getTime() >= today0) {
         upcomingDates.push({ ...d, weekLabel: week.label, weekNum: week.week, parsedDate: parsed });
       }
     });
   });
   upcomingDates.sort((a, b) => a.parsedDate - b.parsedDate);
-  const next3 = upcomingDates.slice(0, 3);
-
-  // Next assignment with days-until-due
-  const nextAssignment = (() => {
-    let candidates = [];
-    assignments.forEach(a => {
-      if (!a.due || a.id === "participation") return;
-      const year = today.getFullYear();
-      const parsed = new Date(a.due + ", " + year);
-      if (isNaN(parsed)) return;
-      const ts = parsed.getTime();
-      if (ts < today0) return;
-      candidates.push({ ...a, dueTs: ts });
+  const nextClass = upcomingDates[0];
+  const followingClasses = upcomingDates.slice(1, 3);
+  // Readings + assignments for next class
+  const nextClassReadings = [];
+  if (nextClass) {
+    (nextClass.readings || []).forEach(r => {
+      const rdg = (data.readings || []).find(x => x.id === r.readingId);
+      if (rdg) nextClassReadings.push({ title: rdg.title, type: r.type });
     });
-    candidates.sort((a, b) => a.dueTs - b.dueTs);
-    if (candidates.length === 0) return null;
-    const a = candidates[0];
-    const daysLeft = Math.round((a.dueTs - today0) / (1000 * 60 * 60 * 24));
-    const dueLabel = daysLeft === 0 ? "due today" : daysLeft === 1 ? "due tomorrow" : "due in " + daysLeft + " days";
-    return { ...a, daysLeft, dueLabel };
-  })();
+  }
+  const nextClassAssignmentDue = nextClass && nextClass.assignment ? nextClass.assignment : null;
 
-  // Top 10 for leaderboard preview
-  const top10 = ranked.slice(0, 10);
+  // ─── Discussion boards data ───
+  const activeBoards = boards.filter(b => b.active);
+  const latestBoard = activeBoards.sort((a, b) => (b.ts || 0) - (a.ts || 0))[0] || boards[0];
+  const latestReplyCount = latestBoard ? Object.keys(latestBoard.posts || {}).length : 0;
 
-  // To-Do: assignments due soon
-  const todoDue = assignments.filter(a => a.due && a.id !== "participation").map(a => {
-    const g = studentId ? grades[studentId + "-" + a.id] : null;
-    const completed = g && g.score !== undefined && g.score !== "";
-    const todoKey = userName + "-assignment-" + a.id;
-    const checked = todoChecks[todoKey];
-    return { ...a, completed: completed || checked };
-  });
+  // ─── Leaderboard data ───
+  const ranked = data.students.map(s => ({ ...s, points: data.log.filter(e => e.studentId === s.id).reduce((t, e) => t + e.amount, 0) })).sort((a, b) => b.points - a.points);
+  const myRank = ranked.findIndex(s => s.name === userName);
+  const totalStudents = data.students.filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis").length;
 
-  const checkTodo = async (assignmentId) => {
-    const key = userName + "-assignment-" + assignmentId;
-    const updated = { ...data, todoChecks: { ...todoChecks, [key]: !todoChecks[key] } };
-    await saveData(updated); setData(updated);
+  // ─── Roster count ───
+  const rosterCount = totalStudents;
+
+  // News colors
+  const newsColors = {
+    info: { bg: "#eff6ff", border: "#bfdbfe", textColor: "#1e40af", labelBg: "#dbeafe", label: "Info" },
+    assignment: { bg: "#fffbeb", border: "#fcd34d", textColor: "#92400e", labelBg: "#fef3c7", label: "Assignment" },
+    alert: { bg: "#fef2f2", border: "#fca5a5", textColor: "#991b1b", labelBg: "#fee2e2", label: "Alert" },
   };
 
-  // News type config
-  const newsColors = { info: { bg: "#eff6ff", color: "#2563eb", label: "Info" }, assignment: { bg: "#fffbeb", color: "#d97706", label: "Assignment" }, alert: { bg: "#fef2f2", color: "#dc2626", label: "Alert" } };
+  // Build the card list in the right order
+  const cards = [];
+  if (activeRebound) cards.push("rebound");
+  if (liveActivity) cards.push("live");
+  cards.push("assignments", "thisweek", "boards");
+  if (!liveActivity) cards.push("live"); // Live appears at position 4 when nothing's live
+  cards.push("leaderboard", "roster");
+
+  const renderCard = (name) => {
+    if (name === "rebound" && activeRebound) {
+      return (
+        <button key="rebound" onClick={() => setView("assignments")} style={{ width: "100%", textAlign: "left", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                <span style={{ display: "inline-block", width: 6, height: 6, background: "#dc2626", borderRadius: "50%" }} />
+                <div style={{ fontSize: 18, fontWeight: 500, color: "#7f1d1d", letterSpacing: "-0.01em" }}>Rebound</div>
+              </div>
+              <div style={{ fontSize: 13, color: "#991b1b", fontWeight: 500, marginBottom: 4 }}>{activeRebound.activityLabel}</div>
+              <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.4 }}>{activeRebound.scoreLine}</div>
+            </div>
+            {activeRebound.timeLeft && <span style={{ fontSize: 11, color: "#991b1b", fontWeight: 500, flexShrink: 0 }}>{activeRebound.timeLeft}</span>}
+          </div>
+        </button>
+      );
+    }
+    if (name === "live") {
+      const live = !!liveActivity;
+      return (
+        <button key="live" onClick={() => setView("activities")} style={{ width: "100%", textAlign: "left", background: live ? "#ecfdf5" : "#fff", border: live ? "1px solid #6ee7b7" : "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                {live && <span style={{ display: "inline-block", width: 6, height: 6, background: "#10b981", borderRadius: "50%", animation: "livePulse 1.6s ease-in-out infinite" }} />}
+                <div style={{ fontSize: 18, fontWeight: 500, color: live ? "#065f46" : TEXT_PRIMARY, letterSpacing: "-0.01em" }}>{live ? "Live now" : "Answer questions"}</div>
+              </div>
+              <div style={{ fontSize: 13, color: live ? "#047857" : TEXT_SECONDARY, fontWeight: 500, marginBottom: 4 }}>{live ? liveActivity.label : "Past activities"}</div>
+              <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.4 }}>{live ? "Tap to answer questions in real time." : "Nothing live right now. Browse past activities."}</div>
+            </div>
+            <span style={{ fontSize: 11, color: live ? "#047857" : TEXT_MUTED, fontWeight: 500, flexShrink: 0 }}>Open ›</span>
+          </div>
+        </button>
+      );
+    }
+    if (name === "assignments") {
+      return (
+        <button key="assignments" onClick={() => setView("assignments")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: assignmentLines.length > 0 ? 8 : 0 }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Assignments</div>
+            <span style={{ fontSize: 11, color: TEXT_MUTED }}>Open ›</span>
+          </div>
+          {assignmentLines.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {assignmentLines.map((l, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ display: "inline-block", width: 4, height: 4, background: l.color, borderRadius: "50%", flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: l.textColor, lineHeight: 1.4 }}>{l.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {assignmentLines.length === 0 && (
+            <div style={{ fontSize: 12, color: TEXT_MUTED }}>Open to view your assignments and grades.</div>
+          )}
+        </button>
+      );
+    }
+    if (name === "thisweek") {
+      return (
+        <button key="thisweek" onClick={() => setView("schedule")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>This week</div>
+            <span style={{ fontSize: 11, color: TEXT_MUTED }}>Open ›</span>
+          </div>
+          {nextClass ? (
+            <>
+              <div style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY, marginBottom: 4 }}>{nextClass.day} {nextClass.date}: {nextClass.topic || "Class"}</div>
+              {(nextClassReadings.length > 0 || nextClassAssignmentDue) && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, paddingLeft: 2, marginBottom: followingClasses.length > 0 ? 8 : 0 }}>
+                  {nextClassReadings.map((r, i) => <div key={i} style={{ fontSize: 12, color: TEXT_SECONDARY }}>Reading: {r.title}</div>)}
+                  {nextClassAssignmentDue && <div style={{ fontSize: 12, color: "#b45309", fontWeight: 500 }}>{nextClassAssignmentDue}</div>}
+                </div>
+              )}
+              {followingClasses.length > 0 && (
+                <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 6, display: "flex", flexDirection: "column", gap: 2 }}>
+                  {followingClasses.map((d, i) => <div key={i} style={{ fontSize: 11, color: TEXT_MUTED }}>{d.day} {d.date}: {d.topic || "Class"}</div>)}
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ fontSize: 12, color: TEXT_MUTED }}>No upcoming classes scheduled.</div>
+          )}
+        </button>
+      );
+    }
+    if (name === "boards") {
+      return (
+        <button key="boards" onClick={() => setView("more")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Discussion boards</div>
+            <span style={{ fontSize: 11, color: TEXT_MUTED }}>Open ›</span>
+          </div>
+          {latestBoard ? (
+            <div style={{ fontSize: 12, color: TEXT_SECONDARY }}>Latest: "{latestBoard.title}" · {latestReplyCount} {latestReplyCount === 1 ? "reply" : "replies"}</div>
+          ) : (
+            <div style={{ fontSize: 12, color: TEXT_MUTED }}>No active boards.</div>
+          )}
+        </button>
+      );
+    }
+    if (name === "leaderboard") {
+      return (
+        <button key="leaderboard" onClick={() => setView("leaderboard")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Leaderboard</div>
+            <span style={{ fontSize: 11, color: TEXT_MUTED }}>Open ›</span>
+          </div>
+          {isStudent && myRank >= 0 ? (
+            <div style={{ fontSize: 12, color: TEXT_SECONDARY }}>You're #{myRank + 1} of {totalStudents}</div>
+          ) : (
+            <div style={{ fontSize: 12, color: TEXT_SECONDARY }}>Class standings</div>
+          )}
+        </button>
+      );
+    }
+    if (name === "roster") {
+      return (
+        <button key="roster" onClick={() => setView("more")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Class roster</div>
+            <span style={{ fontSize: 11, color: TEXT_MUTED }}>Open ›</span>
+          </div>
+          <div style={{ fontSize: 12, color: TEXT_SECONDARY }}>{rosterCount} students</div>
+        </button>
+      );
+    }
+    return null;
+  };
+
+  // News banner
+  const renderNewsBanner = () => {
+    if (news.length === 0 && !isAdmin) return null;
+    if (news.length === 0 && isAdmin) {
+      // Admin sees compose box even when empty
+      return (
+        <div style={{ ...crd, padding: 12, marginBottom: 14 }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <select value={newNewsType} onChange={e => setNewNewsType(e.target.value)} style={{ ...sel, fontSize: 12, padding: "6px 8px", width: 110 }}>
+              <option value="info">Info</option>
+              <option value="assignment">Assignment</option>
+              <option value="alert">Alert</option>
+            </select>
+            <input value={newNewsText} onChange={e => setNewNewsText(e.target.value)} placeholder="Post an announcement..." style={{ ...inp, flex: 1, fontSize: 13, padding: "6px 10px" }} onKeyDown={e => e.key === "Enter" && addNews()} />
+            <button onClick={addNews} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Post</button>
+          </div>
+        </div>
+      );
+    }
+    const visible = newsExpanded ? news : news.slice(0, 2);
+    const more = news.length - visible.length;
+    return (
+      <div style={{ marginBottom: 14 }}>
+        {visible.map((item, idx) => {
+          const nc = newsColors[item.type] || newsColors.info;
+          return (
+            <div key={item.id} style={{ background: nc.bg, border: "1px solid " + nc.border, borderRadius: 12, padding: "10px 12px", marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                <span style={{ fontSize: 9, fontWeight: 500, color: nc.textColor, background: nc.labelBg, padding: "3px 7px", borderRadius: 5, letterSpacing: "0.06em", textTransform: "uppercase", flexShrink: 0, marginTop: 2 }}>{nc.label}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, color: "#1f2937", lineHeight: 1.45 }}>{item.text}</div>
+                  <div style={{ fontSize: 10, color: nc.textColor, marginTop: 4 }}>
+                    {new Date(item.ts).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    {idx === visible.length - 1 && more > 0 && !newsExpanded && (
+                      <> · <span onClick={(e) => { e.stopPropagation(); setNewsExpanded(true); }} style={{ textDecoration: "underline", cursor: "pointer" }}>{more} more</span></>
+                    )}
+                    {idx === visible.length - 1 && newsExpanded && news.length > 2 && (
+                      <> · <span onClick={(e) => { e.stopPropagation(); setNewsExpanded(false); }} style={{ textDecoration: "underline", cursor: "pointer" }}>show less</span></>
+                    )}
+                  </div>
+                </div>
+                {isAdmin && <button onClick={() => removeNews(item.id)} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 14, lineHeight: 1, padding: "0 4px" }}>x</button>}
+              </div>
+            </div>
+          );
+        })}
+        {isAdmin && (
+          <div style={{ ...crd, padding: 10, marginTop: 4 }}>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <select value={newNewsType} onChange={e => setNewNewsType(e.target.value)} style={{ ...sel, fontSize: 12, padding: "6px 8px", width: 110 }}>
+                <option value="info">Info</option>
+                <option value="assignment">Assignment</option>
+                <option value="alert">Alert</option>
+              </select>
+              <input value={newNewsText} onChange={e => setNewNewsText(e.target.value)} placeholder="Post another..." style={{ ...inp, flex: 1, fontSize: 13, padding: "6px 10px" }} onKeyDown={e => e.key === "Enter" && addNews()} />
+              <button onClick={addNews} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Post</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
-
-        {/* Recently graded assignments */}
-        {studentId && !isAdmin && <HomeGradedNotifications data={data} setData={setData} studentId={studentId} />}
-
-        {/* Pending rebounds/makeups for student */}
-        {studentId && !isAdmin && <HomeReboundBox data={data} setData={setData} studentId={studentId} />}
-
-        {/* Admin: post news */}
-        {isAdmin && (
-          <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
-            <div style={{ display: "flex", gap: 8 }}>
-              <select value={newNewsType} onChange={e => setNewNewsType(e.target.value)} style={{ ...sel, width: 110, fontSize: 13 }}>
-                <option value="info">Info</option>
-                <option value="assignment">Assignment</option>
-                <option value="alert">Alert</option>
-              </select>
-              <input value={newNewsText} onChange={e => setNewNewsText(e.target.value)} placeholder="Post an update..." style={{ ...inp, flex: 1 }} onKeyDown={e => e.key === "Enter" && addNews()} />
-              <button onClick={addNews} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Post</button>
-            </div>
-          </div>
-        )}
-
-        {/* News feed */}
-        {news.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            {news.slice(0, 5).map(item => {
-              const nc = newsColors[item.type] || newsColors.info;
-              const isAssignment = item.type === "assignment";
-              const matchedAssignment = isAssignment ? todoDue.find(a => item.text.toLowerCase().includes(a.name.toLowerCase())) : null;
-              return (
-                <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 0", borderBottom: "1px solid " + BORDER }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: nc.color, background: nc.bg, padding: "3px 8px", borderRadius: 6, flexShrink: 0, marginTop: 2, textTransform: "uppercase" }}>{nc.label}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.45 }}>{item.text}</div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 2 }}>
-                      <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{new Date(item.ts).toLocaleDateString()}</span>
-                      {matchedAssignment && matchedAssignment.completed && <span style={{ fontSize: 11, fontWeight: 700, color: GREEN }}>You've completed this</span>}
-                    </div>
-                  </div>
-                  {isAdmin && <button onClick={() => removeNews(item.id)} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 14 }}>x</button>}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="home-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-          {/* Coming Up: unified chronological feed of classes, readings, assignments, todos */}
-          <div style={{ ...crd, padding: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>Coming Up</div>
-              <button onClick={() => setView("schedule")} style={linkPill}>Open</button>
-            </div>
-            {studentId && !isAdmin ? (
-              <HomeTodoSummary
-                data={data}
-                setData={setData}
-                studentId={studentId}
-                setView={setView}
-                classDays={next3}
-                nextAssignment={nextAssignment}
-              />
-            ) : (
-              <>
-                {next3.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED }}>No upcoming classes</div>}
-                {next3.map((d, i) => (
-                  <div key={i} style={{ padding: "8px 0", borderBottom: i < next3.length - 1 || nextAssignment ? "1px solid " + BORDER : "none" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: d.holiday ? RED : TEXT_PRIMARY }}>{d.day} {d.date}</span>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED }}>{d.weekLabel}</span>
-                    </div>
-                    {d.topic && <div style={{ fontSize: 13, color: TEXT_PRIMARY, marginTop: 2, lineHeight: 1.35 }}>{d.topic}</div>}
-                    {d.holiday && <div style={{ fontSize: 12, color: RED, marginTop: 2 }}>No in-person class</div>}
-                    {d.assignment && <div style={{ fontSize: 12, color: "#c2410c", marginTop: 2, fontWeight: 700 }}>{d.assignment}</div>}
-                    {d.notes && !d.holiday && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 1 }}>{d.notes}</div>}
-                  </div>
-                ))}
-                {nextAssignment && (
-                  <div style={{ padding: "10px 0 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 10, fontWeight: 800, color: nextAssignment.daysLeft <= 1 ? RED : AMBER, textTransform: "uppercase", letterSpacing: "0.1em" }}>Next assignment, {nextAssignment.dueLabel}</div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nextAssignment.name}</div>
-                    </div>
-                    <button onClick={() => setView("assignments")} style={linkPill}>Open</button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Top 10 Leaderboard */}
-          <div style={{ ...crd, padding: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>Leaderboard</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED }}>Top 10</div>
-            </div>
-            {top10.map((s, i) => (
-              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, background: s.name === userName ? ACCENT + "0d" : "transparent", borderRadius: 8, margin: s.name === userName ? "0 -6px" : 0, padding: s.name === userName ? "5px 6px" : "5px 0" }}>
-                <span style={{ fontSize: 12, fontWeight: 900, color: i < 5 ? "#d4a017" : TEXT_MUTED, width: 18, textAlign: "right" }}>{i + 1}</span>
-                <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 4 }}>
-                  <div style={{ fontSize: 13, fontWeight: s.name === userName ? 800 : 600, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name.split(" ")[0]} {lastName(s.name)}</div>
-                  {s.name === userName && <span style={{ fontSize: 9, fontWeight: 800, color: ACCENT, background: ACCENT + "1a", padding: "1px 5px", borderRadius: 4, flexShrink: 0 }}>YOU</span>}
-                </div>
-                <div style={{ width: 60, height: 6, borderRadius: 3, background: "#f3f4f6", overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: (s.points / mx * 100) + "%", background: i < 5 ? "#d4a017" : ACCENT, borderRadius: 3 }} />
-                </div>
-                <span style={{ fontSize: 12, fontWeight: 800, color: TEXT_PRIMARY, width: 32, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{s.points}</span>
-              </div>
-            ))}
-            {meData && myRank >= 10 && (
-              <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px dashed " + BORDER_STRONG, display: "flex", alignItems: "center", gap: 8, background: ACCENT + "0d", borderRadius: 8, margin: "6px -6px 0", padding: "5px 6px" }}>
-                <span style={{ fontSize: 12, fontWeight: 900, color: TEXT_MUTED, width: 18, textAlign: "right" }}>{myRank + 1}</span>
-                <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 4 }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{meData.name.split(" ")[0]} {lastName(meData.name)}</div>
-                  <span style={{ fontSize: 9, fontWeight: 800, color: ACCENT, background: ACCENT + "1a", padding: "1px 5px", borderRadius: 4, flexShrink: 0 }}>YOU</span>
-                </div>
-                <span style={{ fontSize: 12, fontWeight: 800, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{meData.points}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Messages + Instructor Card side by side */}
-        <div className="home-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16, alignItems: "start" }}>
-          {/* Messages / Notes */}
-          {(() => {
-            const messages = data.messages || [];
-            const archived = data.archivedMessages || [];
-            const myMessages = isAdmin
-              ? messages.filter(m => !archived.includes(m.id))
-              : messages.filter(m => m.to === "all" || (Array.isArray(m.to) && m.to.includes(userName)) || m.to === userName || m.from === userName);
-          if (myMessages.length === 0 && !isAdmin && !composing) return <div />;
-
-          const sendReply = async (msgId) => {
-            if (!replyText.trim()) return;
-            const updated = { ...data, messages: messages.map(m => m.id === msgId ? { ...m, replies: [...(m.replies || []), { from: userName, text: replyText.trim(), ts: Date.now() }] } : m) };
-            await saveData(updated); setData(updated);
-            setReplyingTo(null); setReplyText(""); showMsg("Reply sent");
-          };
-
-          const sendMessage = async () => {
-            if (!composeText.trim()) return;
-            let to;
-            if (isAdmin) {
-              to = composeRecipients === "all" ? "all" : selectedStudents;
-              if (composeRecipients !== "all" && selectedStudents.length === 0) return;
-            } else {
-              to = ADMIN_NAME;
-            }
-            const m = { id: genId(), from: userName, to, text: composeText.trim(), ts: Date.now(), replies: [] };
-            const updated = { ...data, messages: [m, ...(data.messages || [])] };
-            await saveData(updated); setData(updated);
-            setComposeText(""); setSelectedStudents([]); setComposing(false); showMsg("Message sent");
-          };
-
-          const archiveMessage = async (msgId) => {
-            const updated = { ...data, archivedMessages: [...archived, msgId] };
-            await saveData(updated); setData(updated); showMsg("Archived");
-          };
-
-          const deleteMessage = async (msgId) => {
-            const updated = { ...data, messages: messages.filter(m => m.id !== msgId) };
-            await saveData(updated); setData(updated); showMsg("Deleted");
-          };
-
-          const editMessage = async (msgId) => {
-            if (!editMsgText.trim()) return;
-            const updated = { ...data, messages: messages.map(m => m.id === msgId ? { ...m, text: editMsgText.trim(), edited: true } : m) };
-            await saveData(updated); setData(updated);
-            setEditingMsg(null); setEditMsgText(""); showMsg("Edited");
-          };
-
-          const deleteReply = async (msgId, replyIdx) => {
-            const updated = { ...data, messages: messages.map(m => m.id === msgId ? { ...m, replies: (m.replies || []).filter((_, i) => i !== replyIdx) } : m) };
-            await saveData(updated); setData(updated); showMsg("Reply deleted");
-          };
-
-          const toggleStudent = (name) => {
-            setSelectedStudents(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
-          };
-
-          return (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Messages</div>
-                <button onClick={() => setComposing(!composing)} style={composing ? pillActive : pillInactive}>{composing ? "Cancel" : isAdmin ? "New Message" : "Message Instructor"}</button>
-              </div>
-
-              {composing && isAdmin && (
-                <div style={{ ...crd, padding: 14, marginBottom: 10 }}>
-                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                    <button onClick={() => { setComposeRecipients("all"); setSelectedStudents([]); }} style={composeRecipients === "all" ? pillActive : pillInactive}>All Students</button>
-                    <button onClick={() => setComposeRecipients("select")} style={composeRecipients === "select" ? pillActive : pillInactive}>Select Students</button>
-                  </div>
-                  {composeRecipients === "select" && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8, maxHeight: 120, overflowY: "auto", padding: 4 }}>
-                      {[...data.students].sort(lastSortObj).map(s => (
-                        <button key={s.id} onClick={() => toggleStudent(s.name)} style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, cursor: "pointer", fontFamily: F, border: "1px solid " + (selectedStudents.includes(s.name) ? ACCENT : BORDER), background: selectedStudents.includes(s.name) ? ACCENT + "15" : "transparent", color: selectedStudents.includes(s.name) ? ACCENT : TEXT_PRIMARY }}>{s.name.split(" ")[0]}</button>
-                      ))}
-                    </div>
-                  )}
-                  <textarea value={composeText} onChange={e => setComposeText(e.target.value)} placeholder="Write your message..." rows={3} style={{ ...inp, resize: "vertical", fontSize: 14, marginBottom: 8 }} />
-                  <button onClick={sendMessage} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%" }}>
-                    Send{composeRecipients === "all" ? " to All" : selectedStudents.length > 0 ? " to " + selectedStudents.length + " student" + (selectedStudents.length !== 1 ? "s" : "") : ""}
-                  </button>
-                </div>
-              )}
-
-              {composing && !isAdmin && (
-                <div style={{ ...crd, padding: 14, marginBottom: 10 }}>
-                  <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginBottom: 8 }}>Send a message to your instructor</div>
-                  <textarea value={composeText} onChange={e => setComposeText(e.target.value)} placeholder="Write your message..." rows={3} style={{ ...inp, resize: "vertical", fontSize: 14, marginBottom: 8 }} />
-                  <button onClick={sendMessage} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%" }}>Send to Instructor</button>
-                </div>
-              )}
-
-              {myMessages.slice(0, 10).map(msgItem => {
-                const isFromAdmin = msgItem.from === ADMIN_NAME;
-                const isOwn = msgItem.from === userName;
-                const recipientLabel = msgItem.to === "all" ? "All students" : Array.isArray(msgItem.to) ? msgItem.to.map(n => n.split(" ")[0]).join(", ") : msgItem.to;
-                const isReplying = replyingTo === msgItem.id;
-                const isEditingThis = editingMsg === msgItem.id;
-                return (
-                  <div key={msgItem.id} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: isFromAdmin ? "3px solid " + ACCENT : "3px solid " + GREEN }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                      <div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{msgItem.from}</span>
-                        {isAdmin && <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>to {recipientLabel}</span>}
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{new Date(msgItem.ts).toLocaleDateString()}</span>
-                        {msgItem.edited && <span style={{ fontSize: 10, color: TEXT_MUTED, fontStyle: "italic" }}>edited</span>}
-                      </div>
-                    </div>
-
-                    {isEditingThis ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                        <textarea value={editMsgText} onChange={e => setEditMsgText(e.target.value)} rows={3} style={{ ...inp, resize: "vertical", fontSize: 14 }} />
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => editMessage(msgItem.id)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Save</button>
-                          <button onClick={() => { setEditingMsg(null); setEditMsgText(""); }} style={pillInactive}>Cancel</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{msgItem.text}</div>
-                    )}
-
-                    {(msgItem.replies || []).length > 0 && (
-                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER }}>
-                        {msgItem.replies.map((r, ri) => (
-                          <div key={ri} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "4px 0", fontSize: 13 }}>
-                            <div>
-                              <span style={{ fontWeight: 700, color: r.from === ADMIN_NAME ? ACCENT : TEXT_PRIMARY }}>{r.from.split(" ")[0]}:</span>
-                              <span style={{ color: TEXT_PRIMARY, marginLeft: 4 }}>{r.text}</span>
-                              <span style={{ fontSize: 10, color: TEXT_SECONDARY, marginLeft: 6 }}>{new Date(r.ts).toLocaleDateString()}</span>
-                            </div>
-                            {(isAdmin || r.from === userName) && <button onClick={() => deleteReply(msgItem.id, ri)} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 11, flexShrink: 0 }}>x</button>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {!isEditingThis && (
-                        <button onClick={() => { setReplyingTo(replyingTo === msgItem.id ? null : msgItem.id); setReplyText(""); }} style={{ ...pillInactive, fontSize: 11 }}>{isReplying ? "Cancel" : "Reply"}</button>
-                      )}
-                      {(isOwn || isAdmin) && !isEditingThis && (
-                        <button onClick={() => { setEditingMsg(msgItem.id); setEditMsgText(msgItem.text); }} style={{ ...pillInactive, fontSize: 11 }}>Edit</button>
-                      )}
-                      {(isOwn || isAdmin) && (
-                        <button onClick={() => { if (window.confirm("Delete this message?")) deleteMessage(msgItem.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Delete</button>
-                      )}
-                      {isAdmin && !isOwn && (
-                        <button onClick={() => archiveMessage(msgItem.id)} style={{ ...pillInactive, fontSize: 11 }}>Archive</button>
-                      )}
-                    </div>
-
-                    {isReplying && !isEditingThis && (
-                      <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                        <input value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Your reply..." style={{ ...inp, flex: 1, fontSize: 13 }} onKeyDown={e => e.key === "Enter" && sendReply(msgItem.id)} />
-                        <button onClick={() => sendReply(msgItem.id)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Send</button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {myMessages.length === 0 && isAdmin && !composing && <div style={{ ...crd, padding: 16, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>No messages yet</div>}
-            </div>
-          );
-        })()}
-
-        {/* Instructor Card */}
+        {renderNewsBanner()}
+        {cards.map(renderCard)}
         <InstructorCard data={data} setData={setData} isAdmin={isAdmin} />
-        </div>
-
-        {/* This week's readings (everyone) */}
-        {(() => {
-          const currentWeek = schedule.find(w => {
-            return (w.dates || []).some(d => {
-              if (d.day === "Finals") return false;
-              const year = today.getFullYear();
-              const parsed = new Date(d.date + ", " + year);
-              const dayDiff = (parsed - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / (1000 * 60 * 60 * 24);
-              return dayDiff >= -3 && dayDiff <= 4;
-            });
-          });
-          if (!currentWeek) return null;
-          const weekReadings = [];
-          (currentWeek.dates || []).forEach(d => {
-            (d.readings || []).forEach(r => {
-              const rdg = (data.readings || []).find(x => x.id === r.readingId);
-              if (rdg) weekReadings.push({ ...rdg, day: d.day, date: d.date, type: r.type });
-            });
-          });
-          if (weekReadings.length === 0) return null;
-          const required = weekReadings.filter(r => r.type === "required" || r.type === "fishbowl");
-          const recommended = weekReadings.filter(r => r.type === "recommended");
-          return (
-            <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Week {currentWeek.week} Readings</div>
-                <button onClick={() => setView("more")} style={linkPill}>Open</button>
-              </div>
-              {required.length > 0 && (
-                <div style={{ marginBottom: recommended.length > 0 ? 12 : 0 }}>
-                  <div style={{ fontSize: 12, color: "#b45309", fontWeight: 600, marginBottom: 6 }}>These readings are required for this week.</div>
-                  {required.map((r, i) => {
-                    const link = r.pdfUrl || r.url;
-                    const isFish = r.type === "fishbowl";
-                    return (
-                      <div key={i} style={{ padding: "4px 0" }}>
-                        {link ? (
-                          <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{isFish ? "Fishbowl: " : ""}{r.title}</a>
-                        ) : (
-                          <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500 }}>{isFish ? "Fishbowl: " : ""}{r.title}</span>
-                        )}
-                        <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>{r.day} {r.date}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              {recommended.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginBottom: 6 }}>These readings are recommended for further understanding of course material.</div>
-                  {recommended.map((r, i) => {
-                    const link = r.pdfUrl || r.url;
-                    return (
-                      <div key={i} style={{ padding: "4px 0" }}>
-                        {link ? (
-                          <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{r.title}</a>
-                        ) : (
-                          <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500 }}>{r.title}</span>
-                        )}
-                        <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>{r.day} {r.date}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* Active Discussion Boards */}
-        {boards.filter(b => b.active).length > 0 && (
-          <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Active Discussion Boards</div>
-              <button onClick={() => setView("activities")} style={linkPill}>Open</button>
-            </div>
-            {boards.filter(b => b.active).map(board => {
-              const postCount = Object.keys(board.posts || {}).filter(k => !(board.posts[k].archived)).length;
-              const myPost = (board.posts || {})[userName];
-              return (
-                <div key={board.id} onClick={() => setView("activities")} style={{ padding: "8px 0", borderBottom: "1px solid " + BORDER, cursor: "pointer" }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{board.title}</div>
-                  <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2, lineHeight: 1.35 }}>{board.prompt.length > 80 ? board.prompt.slice(0, 80) + "..." : board.prompt}</div>
-                  <div style={{ display: "flex", gap: 8, marginTop: 4, fontSize: 11 }}>
-                    <span style={{ color: TEXT_MUTED }}>{postCount} response{postCount !== 1 ? "s" : ""}</span>
-                    {myPost && !myPost.archived ? <span style={{ color: GREEN, fontWeight: 600 }}>You responded</span> : <span style={{ color: ACCENT, fontWeight: 600 }}>Respond now</span>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* SCU Sports Calendar */}
-        {(() => {
-          const SCU_EVENTS = [{"e":"Women's Golf vs Silicon Valley Showcase","d":"3/30/2026","t":"All Day","l":"Millbrae, Calif. | Green Hills CC","c":"Women's Golf"},{"e":"Baseball vs San Jose State","d":"3/30/2026","t":"6:05PM","l":"Santa Clara, Calif.","c":"Baseball"},{"e":"Women's Golf vs Silicon Valley Showcase","d":"3/31/2026","t":"All Day","l":"Millbrae, Calif. | Green Hills CC","c":"Women's Golf"},{"e":"Men's Tennis vs Pacific","d":"4/2/2026","t":"11:00AM","l":"Santa Clara, Calif.","c":"Men's Tennis"},{"e":"Softball vs Oregon State","d":"4/2/2026","t":"6:00PM","l":"Santa Clara, Calif.","c":"Softball"},{"e":"Baseball at San Diego","d":"4/2/2026","t":"6:00PM","l":"San Diego","c":"Baseball"},{"e":"Women's Cross Country/Track  Day One","d":"4/3/2026","t":"","l":"Stanford, Calif.","c":"Women's Cross Country/Track"},{"e":"Women's Cross Country/Track  Day One","d":"4/3/2026","t":"","l":"San Francisco","c":"Women's Cross Country/Track"},{"e":"Men's Cross Country/Track  Day One","d":"4/3/2026","t":"","l":"Berkeley, Calif.","c":"Men's Cross Country/Track"},{"e":"Men's Cross Country/Track  Day One","d":"4/3/2026","t":"","l":"Stanford, Calif.","c":"Men's Cross Country/Track"},{"e":"Men's Cross Country/Track  Day One","d":"4/3/2026","t":"","l":"San Francisco","c":"Men's Cross Country/Track"},{"e":"Women's Beach Volleyball vs UTEP","d":"4/3/2026","t":"10:00AM","l":"Boise, Idaho","c":"Women's Beach Volleyball"},{"e":"Women's Tennis vs LMU","d":"4/3/2026","t":"11:00AM","l":"Santa Clara, Calif.","c":"Women's Tennis"},{"e":"Women's Beach Volleyball at Boise State","d":"4/3/2026","t":"4:00PM","l":"Boise, Idaho","c":"Women's Beach Volleyball"},{"e":"Softball vs Oregon State","d":"4/3/2026","t":"6:00PM","l":"Santa Clara, Calif.","c":"Softball"},{"e":"Baseball at San Diego","d":"4/3/2026","t":"6:00PM","l":"San Diego","c":"Baseball"},{"e":"Women's Cross Country/Track  Day Two","d":"4/4/2026","t":"","l":"Stanford, Calif.","c":"Women's Cross Country/Track"},{"e":"Women's Cross Country/Track  Day Two","d":"4/4/2026","t":"","l":"San Francisco","c":"Women's Cross Country/Track"},{"e":"Men's Rowing vs Redwood Shores Invitational II","d":"4/4/2026","t":"","l":"Redwood City, Calif.","c":"Men's Rowing"},{"e":"Women's Rowing at Cal","d":"4/4/2026","t":"","l":"Berkeley, Calif.","c":"Women's Rowing"},{"e":"Men's Cross Country/Track  Day Two","d":"4/4/2026","t":"","l":"Stanford, Calif.","c":"Men's Cross Country/Track"},{"e":"Men's Cross Country/Track  Day Two","d":"4/4/2026","t":"","l":"Berkeley, Calif.","c":"Men's Cross Country/Track"},{"e":"Men's Cross Country/Track  Day Two","d":"4/4/2026","t":"","l":"San Francisco","c":"Men's Cross Country/Track"},{"e":"Women's Beach Volleyball vs CSUN","d":"4/4/2026","t":"9:30AM","l":"Boise, Idaho","c":"Women's Beach Volleyball"},{"e":"Men's Tennis vs Saint Mary's","d":"4/4/2026","t":"1:00PM","l":"Santa Clara, Calif.","c":"Men's Tennis"},{"e":"Softball vs Oregon State","d":"4/4/2026","t":"1:00PM","l":"Santa Clara, Calif.","c":"Softball"},{"e":"Baseball at San Diego","d":"4/4/2026","t":"1:00PM","l":"San Diego","c":"Baseball"},{"e":"Women's Beach Volleyball vs Oregon","d":"4/4/2026","t":"1:30PM","l":"Boise, Idaho","c":"Women's Beach Volleyball"},{"e":"Baseball vs Clemson","d":"4/6/2026","t":"6:00PM","l":"Santa Clara, Calif.","c":"Baseball"},{"e":"Women's Golf vs Wyoming Cowgirl Classic","d":"4/7/2026","t":"All Day","l":"Maricopa, Ariz. | Ak Chin Southern Dunes GC","c":"Women's Golf"},{"e":"Women's Tennis at Sacramento State","d":"4/7/2026","t":"1:00PM","l":"Sacramento, Calif.","c":"Women's Tennis"},{"e":"Women's Beach Volleyball vs San Jose State","d":"4/7/2026","t":"4:00PM","l":"Santa Clara, Calif.","c":"Women's Beach Volleyball"},{"e":"Women's Golf vs Wyoming Cowgirl Classic","d":"4/8/2026","t":"All Day","l":"Maricopa, Ariz. | Ak Chin Southern Dunes GC","c":"Women's Golf"},{"e":"Softball vs Florida State","d":"4/8/2026","t":"6:00PM","l":"Santa Clara, Calif.","c":"Softball"},{"e":"Men's Tennis at Pepperdine","d":"4/9/2026","t":"12:00PM","l":"Malibu, Calif.","c":"Men's Tennis"},{"e":"Women's Rowing at Seattle","d":"4/10/2026","t":"","l":"Vancouver, Wash.","c":"Women's Rowing"},{"e":"Women's Beach Volleyball vs Chaminade","d":"4/10/2026","t":"1:00PM","l":"Honolulu","c":"Women's Beach Volleyball"},{"e":"Women's Beach Volleyball vs Hawaii Pacific","d":"4/10/2026","t":"3:00PM","l":"Honolulu","c":"Women's Beach Volleyball"},{"e":"Softball vs San Diego","d":"4/10/2026","t":"6:00PM","l":"Santa Clara, Calif.","c":"Softball"},{"e":"Baseball vs Saint Mary's","d":"4/10/2026","t":"6:00PM","l":"Santa Clara, Calif.","c":"Baseball"},{"e":"Women's Rowing vs Portland Invitational","d":"4/11/2026","t":"","l":"Vancouver, Wash.","c":"Women's Rowing"},{"e":"Men's Rowing at Gonzaga","d":"4/11/2026","t":"","l":"Spokane, Wash.","c":"Men's Rowing"},{"e":"Women's Tennis at Pacific","d":"4/11/2026","t":"11:00AM","l":"Stockton, Calif.","c":"Women's Tennis"},{"e":"Women's Beach Volleyball vs Oregon","d":"4/11/2026","t":"11:00AM","l":"Honolulu","c":"Women's Beach Volleyball"},{"e":"Softball vs San Diego","d":"4/11/2026","t":"1:00PM","l":"Santa Clara, Calif.","c":"Softball"},{"e":"Baseball vs Saint Mary's","d":"4/11/2026","t":"1:00PM","l":"Santa Clara, Calif.","c":"Baseball"},{"e":"Men's Tennis vs LMU","d":"4/12/2026","t":"11:00AM","l":"Santa Clara, Calif.","c":"Men's Tennis"},{"e":"Softball vs San Diego","d":"4/12/2026","t":"12:00PM","l":"Santa Clara, Calif.","c":"Softball"},{"e":"Women's Tennis at Saint Mary's","d":"4/12/2026","t":"12:00PM","l":"Moraga, Calif.","c":"Women's Tennis"},{"e":"Baseball vs Saint Mary's","d":"4/12/2026","t":"12:00PM","l":"Santa Clara, Calif.","c":"Baseball"},{"e":"Women's Beach Volleyball at Hawaii","d":"4/12/2026","t":"2:00PM","l":"Honolulu","c":"Women's Beach Volleyball"},{"e":"Women's Beach Volleyball vs Oregon","d":"4/12/2026","t":"5:00PM","l":"Honolulu","c":"Women's Beach Volleyball"},{"e":"Baseball at Stanford","d":"4/15/2026","t":"6:05PM","l":"Stanford, Calif.","c":"Baseball"},{"e":"Men's Cross Country/Track  Day One","d":"4/16/2026","t":"","l":"Azusa, Calif.","c":"Men's Cross Country/Track"},{"e":"Women's Cross Country/Track  Day One","d":"4/16/2026","t":"7:30AM","l":"Azusa, Calif.","c":"Women's Cross Country/Track"},{"e":"Women's Tennis vs Washington State","d":"4/16/2026","t":"11:00AM","l":"Santa Clara, Calif.","c":"Women's Tennis"},{"e":"Men's Cross Country/Track  Day Two","d":"4/17/2026","t":"","l":"Azusa, Calif.","c":"Men's Cross Country/Track"},{"e":"Women's Cross Country/Track  Day Two","d":"4/17/2026","t":"7:00AM","l":"Azusa, Calif.","c":"Women's Cross Country/Track"},{"e":"Women's Tennis vs Gonzaga","d":"4/17/2026","t":"11:00AM","l":"Santa Clara, Calif.","c":"Women's Tennis"},{"e":"Women's Beach Volleyball vs Sacramento State","d":"4/17/2026","t":"12:00PM","l":"Davis, Calif.","c":"Women's Beach Volleyball"},{"e":"Women's Beach Volleyball at UC Davis","d":"4/17/2026","t":"2:00PM","l":"Davis, Calif.","c":"Women's Beach Volleyball"},{"e":"Softball at Pacific","d":"4/17/2026","t":"6:00PM","l":"Stockton, Calif.","c":"Softball"},{"e":"Baseball at Pacific","d":"4/17/2026","t":"6:00PM","l":"Stockton, Calif.","c":"Baseball"},{"e":"Men's Cross Country/Track  Day Three","d":"4/18/2026","t":"","l":"Azusa, Calif.","c":"Men's Cross Country/Track"},{"e":"Women's Cross Country/Track  Day Three","d":"4/18/2026","t":"8:30AM","l":"Azusa, Calif.","c":"Women's Cross Country/Track"},{"e":"Women's Beach Volleyball at UC Davis","d":"4/18/2026","t":"10:00AM","l":"Davis, Calif.","c":"Women's Beach Volleyball"},{"e":"Men's Tennis vs San Diego","d":"4/18/2026","t":"11:00AM","l":"Santa Clara, Calif.","c":"Men's Tennis"},{"e":"Women's Beach Volleyball vs Sacramento State","d":"4/18/2026","t":"12:00PM","l":"Davis, Calif.","c":"Women's Beach Volleyball"},{"e":"Baseball at Pacific","d":"4/18/2026","t":"3:00PM","l":"Stockton, Calif.","c":"Baseball"},{"e":"Softball at Pacific","d":"4/18/2026","t":"4:00PM","l":"Stockton, Calif.","c":"Softball"},{"e":"Softball at Pacific","d":"4/19/2026","t":"12:00PM","l":"Stockton, Calif.","c":"Softball"},{"e":"Baseball at Pacific","d":"4/19/2026","t":"1:00PM","l":"Stockton, Calif.","c":"Baseball"},{"e":"Baseball vs Stanford","d":"4/20/2026","t":"6:00PM","l":"Santa Clara, Calif.","c":"Baseball"},{"e":"Softball vs Stanford","d":"4/22/2026","t":"6:00PM","l":"Santa Clara, Calif.","c":"Softball"},{"e":"Women's Beach Volleyball vs West Coast Conference","d":"4/23/2026","t":"TBA","l":"Santa Monica, Calif.","c":"Women's Beach Volleyball"},{"e":"Men's Tennis vs WCC Championship Tournament","d":"4/23/2026","t":"","l":"Green Valley Country Club | Fairfield, Calif.","c":"Men's Tennis"},{"e":"Women's Tennis vs WCC Championship Tournament","d":"4/23/2026","t":"","l":"Green Valley Country Club | Fairfield, Calif.","c":"Women's Tennis"},{"e":"Women's Tennis vs WCC Championship Tournament","d":"4/24/2026","t":"","l":"Green Valley Country Club | Fairfield, Calif.","c":"Women's Tennis"},{"e":"Men's Tennis vs WCC Championship Tournament","d":"4/24/2026","t":"","l":"Green Valley Country Club | Fairfield, Calif.","c":"Men's Tennis"},{"e":"Women's Beach Volleyball vs West Coast Conference","d":"4/24/2026","t":"TBA","l":"Santa Monica, Calif.","c":"Women's Beach Volleyball"},{"e":"Baseball vs Portland","d":"4/24/2026","t":"6:00PM","l":"Santa Clara, Calif.","c":"Baseball"},{"e":"Women's Tennis vs WCC Championship Tournament","d":"4/25/2026","t":"","l":"Green Valley Country Club | Fairfield, Calif.","c":"Women's Tennis"},{"e":"Women's Golf vs WCC Championship","d":"4/25/2026","t":"All Day","l":"Fairfield, Calif. | Green Valley CC","c":"Women's Golf"},{"e":"Men's Tennis vs WCC Championship Tournament","d":"4/25/2026","t":"","l":"Green Valley Country Club | Fairfield, Calif.","c":"Men's Tennis"},{"e":"Men's Rowing vs WIRAs","d":"4/25/2026","t":"","l":"Rancho Cordova, Calif.","c":"Men's Rowing"},{"e":"Women's Rowing vs WIRAs","d":"4/25/2026","t":"","l":"Rancho Cordova, Calif.","c":"Women's Rowing"},{"e":"Women's Rowing vs Seattle","d":"4/25/2026","t":"","l":"Los Gatos, Calif.","c":"Women's Rowing"},{"e":"Baseball vs Portland","d":"4/25/2026","t":"1:00PM","l":"Santa Clara, Calif.","c":"Baseball"},{"e":"Women's Golf vs WCC Championship","d":"4/26/2026","t":"All Day","l":"Fairfield, Calif. | Green Valley CC","c":"Women's Golf"},{"e":"Women's Rowing vs WIRAs","d":"4/26/2026","t":"","l":"Rancho Cordova, Calif.","c":"Women's Rowing"},{"e":"Men's Rowing vs WIRAs","d":"4/26/2026","t":"","l":"Rancho Cordova, Calif.","c":"Men's Rowing"},{"e":"Baseball vs Portland","d":"4/26/2026","t":"12:00PM","l":"Santa Clara, Calif.","c":"Baseball"},{"e":"Women's Golf vs WCC Championship","d":"4/27/2026","t":"All Day","l":"Fairfield, Calif. | Green Valley CC","c":"Women's Golf"},{"e":"Baseball at Cal Poly","d":"4/28/2026","t":"4:05PM","l":"San Luis Obispo, Calif.","c":"Baseball"},{"e":"Men's Golf vs WCC Championship","d":"5/1/2026","t":"All Day","l":"Fairfield, Calif. | Green Valley CC","c":"Men's Golf"},{"e":"Men's Cross Country/Track  Payton Jordan Invitational","d":"5/1/2026","t":"","l":"Stanford, Calif.","c":"Men's Cross Country/Track"},{"e":"Women's Cross Country/Track  Payton Jordan Invitational","d":"5/1/2026","t":"","l":"Stanford, Calif.","c":"Women's Cross Country/Track"},{"e":"Softball at Seattle U","d":"5/1/2026","t":"5:00PM","l":"Seattle","c":"Softball"},{"e":"Baseball at Gonzaga","d":"5/1/2026","t":"6:00PM","l":"Spokane, Wash.","c":"Baseball"},{"e":"Men's Golf vs WCC Championship","d":"5/2/2026","t":"All Day","l":"Fairfield, Calif. | Green Valley CC","c":"Men's Golf"},{"e":"Softball at Seattle U","d":"5/2/2026","t":"2:00PM","l":"Seattle","c":"Softball"},{"e":"Baseball at Gonzaga","d":"5/2/2026","t":"6:00PM","l":"Spokane, Wash.","c":"Baseball"},{"e":"Men's Golf vs WCC Championship","d":"5/3/2026","t":"All Day","l":"Fairfield, Calif. | Green Valley CC","c":"Men's Golf"},{"e":"Softball at Seattle U","d":"5/3/2026","t":"12:00PM","l":"Seattle","c":"Softball"},{"e":"Baseball at Gonzaga","d":"5/3/2026","t":"1:00PM","l":"Spokane, Wash.","c":"Baseball"},{"e":"Baseball vs Cal Poly","d":"5/5/2026","t":"4:00PM","l":"Santa Clara, Calif.","c":"Baseball"},{"e":"Softball vs Saint Mary's","d":"5/7/2026","t":"6:00PM","l":"Santa Clara, Calif.","c":"Softball"},{"e":"Men's Cross Country/Track  Day One","d":"5/8/2026","t":"","l":"Azusa, Calif.","c":"Men's Cross Country/Track"},{"e":"Women's Cross Country/Track  Day One","d":"5/8/2026","t":"","l":"Azusa, Calif.","c":"Women's Cross Country/Track"},{"e":"Men's Rowing vs Dad Vail Regatta","d":"5/8/2026","t":"","l":"Camden, N.J.","c":"Men's Rowing"},{"e":"Baseball at Seattle","d":"5/8/2026","t":"4:00PM","l":"Bellevue, Wash.","c":"Baseball"},{"e":"Softball vs Saint Mary's","d":"5/8/2026","t":"7:00PM","l":"Santa Clara, Calif.","c":"Softball"},{"e":"Men's Cross Country/Track  Day Two","d":"5/9/2026","t":"","l":"Azusa, Calif.","c":"Men's Cross Country/Track"},{"e":"Men's Rowing vs Dad Vail Regatta","d":"5/9/2026","t":"","l":"Camden, N.J.","c":"Men's Rowing"},{"e":"Women's Cross Country/Track  Day Two","d":"5/9/2026","t":"","l":"Azusa, Calif.","c":"Women's Cross Country/Track"},{"e":"Softball vs Saint Mary's","d":"5/9/2026","t":"1:00PM","l":"Santa Clara, Calif.","c":"Softball"},{"e":"Baseball at Seattle","d":"5/9/2026","t":"2:00PM","l":"Bellevue, Wash.","c":"Baseball"},{"e":"Baseball at Seattle","d":"5/10/2026","t":"12:00PM","l":"Bellevue, Wash.","c":"Baseball"},{"e":"Baseball vs Pepperdine","d":"5/14/2026","t":"6:00PM","l":"Santa Clara, Calif.","c":"Baseball"},{"e":"Softball vs NCAA","d":"5/15/2026","t":"","l":"TBA","c":"Softball"},{"e":"Women's Rowing vs West Coast Conference Championships","d":"5/15/2026","t":"","l":"Rancho Cordova, Calif.","c":"Women's Rowing"},{"e":"Baseball vs Pepperdine","d":"5/15/2026","t":"6:00PM","l":"Santa Clara, Calif.","c":"Baseball"},{"e":"Men's Cross Country/Track  West Coast Last Chance","d":"5/16/2026","t":"","l":"San Francisco","c":"Men's Cross Country/Track"},{"e":"Women's Rowing vs West Coast Conference Championships","d":"5/16/2026","t":"","l":"Rancho Cordova, Calif.","c":"Women's Rowing"},{"e":"Women's Cross Country/Track  West Coast Last Chance","d":"5/16/2026","t":"","l":"San Francisco","c":"Women's Cross Country/Track"},{"e":"Baseball vs Pepperdine","d":"5/16/2026","t":"1:00PM","l":"Santa Clara, Calif.","c":"Baseball"},{"e":"Baseball vs First Round","d":"5/20/2026","t":"TBA","l":"Scottsdale, Ariz.","c":"Baseball"},{"e":"Baseball vs Day Two","d":"5/21/2026","t":"TBA","l":"Scottsdale, Ariz.","c":"Baseball"},{"e":"Baseball vs Semifinals","d":"5/22/2026","t":"TBA","l":"Scottsdale, Ariz.","c":"Baseball"},{"e":"Softball vs NCAA","d":"5/22/2026","t":"","l":"TBA","c":"Softball"},{"e":"Baseball vs Championship Day","d":"5/23/2026","t":"TBA","l":"Scottsdale, Ariz.","c":"Baseball"},{"e":"Men's Cross Country/Track  NCAA Outdoor Track & Field Championships West First Round","d":"5/27/2026","t":"","l":"Fayetteville, Ark.","c":"Men's Cross Country/Track"},{"e":"Women's Cross Country/Track  NCAA Outdoor Track & Field Championships West First Round","d":"5/27/2026","t":"","l":"Fayetteville, Ark.","c":"Women's Cross Country/Track"},{"e":"Softball vs NCAA","d":"5/28/2026","t":"","l":"Oklahoma City, Okla.","c":"Softball"},{"e":"Men's Rowing vs IRA National Championship","d":"5/29/2026","t":"","l":"Rancho Cordova, Calif.","c":"Men's Rowing"},{"e":"Men's Rowing vs IRA National Championship","d":"5/30/2026","t":"","l":"Rancho Cordova, Calif.","c":"Men's Rowing"},{"e":"Men's Rowing vs IRA National Championship","d":"5/31/2026","t":"","l":"Rancho Cordova, Calif.","c":"Men's Rowing"},{"e":"Women's Cross Country/Track  NCAA Outdoor Track & Field Championships","d":"6/10/2026","t":"","l":"Eugene, Ore.","c":"Women's Cross Country/Track"},{"e":"Men's Cross Country/Track  NCAA Outdoor Track & Field Championships","d":"6/10/2026","t":"","l":"Eugene, Ore.","c":"Men's Cross Country/Track"}];
-          const now = new Date();
-          const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-          const weekEnd = todayMs + 7 * 24 * 60 * 60 * 1000;
-          const upcoming = SCU_EVENTS.filter(ev => {
-            const parts = ev.d.split("/");
-            const evDate = new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1])).getTime();
-            return evDate >= todayMs && evDate < weekEnd;
-          }).sort((a, b) => {
-            const da = new Date(a.d).getTime(); const db = new Date(b.d).getTime();
-            return da - db;
-          });
-          if (upcoming.length === 0) return null;
-          return (
-            <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>SCU Sports This Week</div>
-                <a href="https://santaclarabroncos.com/calendar" target="_blank" rel="noopener noreferrer" style={{ ...linkPill, textDecoration: "none", display: "inline-block" }}>Open</a>
-              </div>
-              {upcoming.map((ev, i) => {
-                const parts = ev.d.split("/");
-                const evDate = new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]));
-                const dayName = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][evDate.getDay()];
-                const monthDay = evDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                return (
-                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "6px 0", borderBottom: i < upcoming.length - 1 ? "1px solid " + BORDER : "none" }}>
-                    <div style={{ width: 42, textAlign: "center", flexShrink: 0 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>{dayName}</div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY }}>{evDate.getDate()}</div>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY, lineHeight: 1.3 }}>{ev.e}</div>
-                      <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 1 }}>{ev.t && ev.t !== "All Day" ? ev.t + " / " : ""}{ev.l}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })()}
-
-
-        {/* Featured posts */}
-        {featuredPosts.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Featured Posts</div>
-            {featuredPosts.slice(0, 3).map((fp, i) => (
-              <div key={i} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: "3px solid #d97706" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#d97706", marginBottom: 4 }}>{fp.boardTitle}</div>
-                <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.5 }}>{fp.text.length > 200 ? fp.text.slice(0, 200) + "..." : fp.text}</div>
-                <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>{fp.author}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Admin section */}
-        {isAdmin && (
-          <div style={{ marginTop: 8 }}>
-            {/* Quick links */}
-            <div style={{ ...crd, padding: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Quick Links</div>
-              {(data.adminLinks || []).map((link, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: "1px solid " + BORDER }}>
-                  <a href={link.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500, flex: 1 }}>{link.label}</a>
-                  <button onClick={async () => { const updated = { ...data, adminLinks: (data.adminLinks || []).filter((_, j) => j !== i) }; await saveData(updated); setData(updated); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 12 }}>x</button>
-                </div>
-              ))}
-              {(!data.adminLinks || data.adminLinks.length === 0) && <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 6 }}>No links yet</div>}
-              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                <input id="admin-link-label" placeholder="Label" style={{ ...inp, flex: 1, fontSize: 12 }} />
-                <input id="admin-link-url" placeholder="URL" style={{ ...inp, flex: 2, fontSize: 12 }} />
-                <button onClick={async () => {
-                  const label = document.getElementById("admin-link-label").value.trim();
-                  const url = document.getElementById("admin-link-url").value.trim();
-                  if (!label || !url) return;
-                  const updated = { ...data, adminLinks: [...(data.adminLinks || []), { label, url }] };
-                  await saveData(updated); setData(updated);
-                  document.getElementById("admin-link-label").value = "";
-                  document.getElementById("admin-link-url").value = "";
-                  showMsg("Link added");
-                }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Add</button>
-              </div>
-            </div>
-          </div>
-        )}
-
       </div>
-    </div>
-  );
-}
-
-const TOPIC_COLORS = {
-  "Gambling": "#16a34a",
-  "Value": "#2563eb",
-  "Athletes & Corps": "#d97706",
-  "Media": "#dc2626",
-  "Identity": "#7c3aed",
-  "Community": "#0891b2",
-  "OJ": "#dc2626",
-  "Leadership": "#57534e",
-  "Final Project": ACCENT,
-  "Finals": TEXT_MUTED,
-};
-
-function WeekHeaderEditor({ week, wi, data, setData, onDone, onSaveAndBack }) {
-  const [local, setLocal] = useState({ label: week.label || "", theme: week.theme || "", question: week.question || "" });
-  const set = (field, value) => setLocal(prev => ({ ...prev, [field]: value }));
-  const save = async () => {
-    const updated = { ...data, schedule: data.schedule.map((w, i) => i === wi ? { ...w, label: local.label, theme: local.theme, question: local.question } : w) };
-    await saveData(updated); setData(updated);
-    if (onDone) onDone();
-  };
-  const saveAndBack = async () => {
-    await save();
-    if (onSaveAndBack) onSaveAndBack();
-  };
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
-      <div style={{ display: "flex", gap: 6 }}>
-        <input value={local.label} onChange={e => set("label", e.target.value)} placeholder="Label" style={{ ...inp, padding: "4px 8px", fontSize: 12, width: 90 }} />
-        <input value={local.theme} onChange={e => set("theme", e.target.value)} placeholder="Theme" style={{ ...inp, padding: "4px 8px", fontSize: 12, flex: 1 }} />
-      </div>
-      <div style={{ display: "flex", gap: 4 }}>
-        <input value={local.question} onChange={e => set("question", e.target.value)} placeholder="Driving question" style={{ ...inp, padding: "4px 8px", fontSize: 12, flex: 1 }} />
-        <button onClick={save} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Save</button>
-        {onSaveAndBack && <button onClick={saveAndBack} style={{ ...bt, fontSize: 11, padding: "3px 10px" }}>Go back</button>}
-      </div>
-    </div>
-  );
-}
-
-function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDate, onDone, onSaveAndBack }) {
-  const [local, setLocal] = useState({
-    date: d.date, day: d.day, topic: d.topic || "", holiday: !!d.holiday,
-    activities: (d.activities || []).join(", "), assignment: d.assignment || "",
-    notes: d.notes || "", adminNotes: d.adminNotes || "",
-  });
-  const set = (field, value) => setLocal(prev => ({ ...prev, [field]: value }));
-
-  const save = async () => {
-    const patch = {
-      date: local.date, day: local.day, topic: local.topic, holiday: local.holiday,
-      activities: local.activities.split(",").map(s => s.trim()).filter(Boolean),
-      assignment: local.assignment, notes: local.notes, adminNotes: local.adminNotes,
-    };
-    const updated = { ...data, schedule: data.schedule.map((w, i) => i === wi ? { ...w, dates: w.dates.map((dt, di) => di === realDi ? { ...dt, ...patch } : dt) } : w) };
-    await saveData(updated); setData(updated);
-    if (onDone) onDone();
-  };
-  const saveAndBack = async () => {
-    await save();
-    if (onSaveAndBack) onSaveAndBack();
-  };
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }} onClick={e => e.stopPropagation()}>
-      <div style={{ display: "flex", gap: 4 }}>
-        <input value={local.date} onChange={e => set("date", e.target.value)} style={{ ...inp, padding: "3px 6px", fontSize: 11, width: 60 }} />
-        <input value={local.day} onChange={e => set("day", e.target.value)} style={{ ...inp, padding: "3px 6px", fontSize: 11, width: 40 }} />
-        <label style={{ fontSize: 11, color: TEXT_MUTED, display: "flex", alignItems: "center", gap: 2 }}><input type="checkbox" checked={local.holiday} onChange={e => set("holiday", e.target.checked)} />Off</label>
-      </div>
-      <textarea value={local.topic} onChange={e => set("topic", e.target.value)} placeholder="Topic" rows={2} style={{ ...inp, padding: "4px 6px", fontSize: 12, resize: "vertical" }} />
-      <input value={local.activities} onChange={e => set("activities", e.target.value)} placeholder="Activities (comma-separated: Game, Fishbowl, etc.)" style={{ ...inp, padding: "3px 6px", fontSize: 11, fontWeight: 700 }} />
-      <select value={local.assignment} onChange={e => set("assignment", e.target.value)} style={{ ...sel, width: "100%", fontSize: 11, padding: "3px 6px" }}>
-        <option value="">No assignment due</option>
-        {(data.assignments || []).filter(a => a.id !== "participation").map(a => (
-          <option key={a.id} value={a.name + " due"}>{a.name}</option>
-        ))}
-      </select>
-      <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>Readings</div>
-      {(d.readings || []).map((r, ri) => {
-        const rdg = (data.readings || []).find(x => x.id === r.readingId);
-        return (
-          <div key={ri} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, padding: "3px 6px", background: r.type === "required" ? "#fef2f2" : "#f0fdf4", borderRadius: 6 }}>
-            <span style={{ flex: 1, color: "#374151", fontWeight: 500 }}>{rdg?.title || "Unknown"}</span>
-            <select value={r.type} onChange={e => {
-              const upd = [...(d.readings || [])]; upd[ri] = { ...upd[ri], type: e.target.value };
-              updateDate(wi, realDi, "readings", upd);
-            }} style={{ fontSize: 11, border: "none", background: "transparent", color: r.type === "fishbowl" ? "#7c3aed" : r.type === "required" ? "#b45309" : r.type === "additional" ? TEXT_MUTED : GREEN, fontWeight: 700, cursor: "pointer" }}>
-              <option value="fishbowl">Fishbowl</option>
-              <option value="required">Required</option>
-              <option value="recommended">Recommended</option>
-              <option value="additional">Additional</option>
-            </select>
-            <button onClick={() => {
-              const upd = (d.readings || []).filter((_, i) => i !== ri);
-              updateDate(wi, realDi, "readings", upd);
-            }} style={{ background: "none", border: "none", cursor: "pointer", color: RED, fontSize: 12, padding: "0 2px" }}>x</button>
-          </div>
-        );
-      })}
-      {(data.readings || []).length > 0 ? (
-        <select value="" onChange={e => {
-          if (!e.target.value) return;
-          const existing = d.readings || [];
-          if (existing.some(r => r.readingId === e.target.value)) return;
-          updateDate(wi, realDi, "readings", [...existing, { readingId: e.target.value, type: "required" }]);
-        }} style={{ ...sel, width: "100%", fontSize: 11, padding: "3px 6px" }}>
-          <option value="">+ Add reading...</option>
-          {(data.readings || []).filter(r => !(d.readings || []).some(dr => dr.readingId === r.id)).map(r => (
-            <option key={r.id} value={r.id}>{r.title}</option>
-          ))}
-        </select>
-      ) : (
-        <div style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>No readings in repository yet</div>
-      )}
-      <textarea value={local.notes} onChange={e => set("notes", e.target.value)} placeholder="Notes (students see this)" rows={2} style={{ ...inp, padding: "3px 6px", fontSize: 11, resize: "vertical" }} />
-      <textarea value={local.adminNotes} onChange={e => set("adminNotes", e.target.value)} placeholder="Admin notes (students can't see)" rows={2} style={{ ...inp, padding: "3px 6px", fontSize: 11, resize: "vertical", borderColor: "#f59e0b", background: "#fffbeb" }} />
-      <div style={{ display: "flex", gap: 4 }}>
-        <button onClick={save} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Save</button>
-        {onSaveAndBack && <button onClick={saveAndBack} style={{ ...bt, fontSize: 11, padding: "3px 10px" }}>Go back</button>}
-        <button onClick={() => { if (window.confirm("Remove this day?")) { removeDate(wi, realDi); if (onDone) onDone(); } }} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: "transparent", color: RED, border: "1px solid " + RED + "33", marginLeft: "auto" }}>Remove day</button>
-      </div>
-    </div>
-  );
-}
-
-function ReadingsList({ d, readings }) {
-  const [expanded, setExpanded] = useState(false);
-  const items = (d.readings || []).filter(r => r.type === "fishbowl" || r.type === "required" || r.type === "recommended");
-  if (items.length === 0) return null;
-  const showCollapse = items.length > 5;
-  const visible = showCollapse && !expanded ? items.slice(0, 5) : items;
-  const hidden = items.length - visible.length;
-  return (
-    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER, display: "flex", flexDirection: "column", gap: 4 }}>
-      {visible.map((r, ri) => {
-        const rdg = readings.find(x => x.id === r.readingId);
-        if (!rdg) return null;
-        const link = rdg.pdfUrl || rdg.url;
-        const tColor = r.type === "fishbowl" ? PURPLE : r.type === "required" ? "#b45309" : GREEN;
-        const tLabel = r.type === "fishbowl" ? "Fish" : r.type === "required" ? "Req" : "Rec";
-        const isReq = r.type === "required";
-        return (
-          <div key={ri} style={{ display: "flex", alignItems: "flex-start", gap: 6, background: isReq ? "#fffbeb" : "transparent", padding: isReq ? "4px 8px" : "2px 0", borderRadius: isReq ? 6 : 0 }}>
-            <span style={{ fontSize: 10, fontWeight: 800, color: tColor, textTransform: "uppercase", marginTop: 2, flexShrink: 0, width: 28, letterSpacing: "0.05em" }}>{tLabel}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              {link ? (
-                <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 600, lineHeight: 1.35 }}>{rdg.title}</a>
-              ) : (
-                <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 600, lineHeight: 1.35 }}>{rdg.title}</span>
-              )}
-              {rdg.pdfUrl && <span style={{ fontSize: 9, fontWeight: 800, color: RED, background: "#fef2f2", padding: "1px 4px", borderRadius: 3, marginLeft: 4 }}>PDF</span>}
-            </div>
-          </div>
-        );
-      })}
-      {showCollapse && (
-        <button onClick={e => { e.stopPropagation(); setExpanded(!expanded); }} style={{ ...linkPill, alignSelf: "flex-start", marginTop: 2 }}>
-          {expanded ? "Show fewer" : "Show " + hidden + " more"}
-        </button>
-      )}
     </div>
   );
 }
@@ -5618,6 +5269,9 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
   if (openSurveys.length > 0) liveItems.push({ id: "surveys", label: openSurveys.length === 1 ? "Survey" : openSurveys.length + " Surveys", anchor: "live-now-section" });
   const anythingLive = liveItems.length > 0;
 
+  // Default: when something is live, hide the past events list; show a "See past events" toggle
+  const [showPast, setShowPast] = useState(!anythingLive);
+
   // Build unified event list (reverse chronological)
   const rebounds = data.rebounds || {};
   const events = [];
@@ -5709,7 +5363,10 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
 
         {/* Past events list */}
         <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={sectionLabel}>{anythingLive ? "Past Events" : "Live"}</div>
+          <button onClick={() => setShowPast(!showPast)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: F }}>
+            <div style={sectionLabel}>{anythingLive ? "Past events" : "Live"}</div>
+            <span style={{ fontSize: 11, color: TEXT_MUTED }}>{showPast ? "Hide" : "Show"}</span>
+          </button>
           {isAdmin && (
             <button onClick={() => setShowAdminTools(!showAdminTools)} style={linkPill}>
               {showAdminTools ? "Hide admin tools" : "Admin tools"}
@@ -5717,9 +5374,9 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
           )}
         </div>
 
-        {events.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No past events yet</div>}
+        {showPast && events.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No past events yet</div>}
 
-        {events.map(ev => {
+        {showPast && events.map(ev => {
           const isOpen = openEventKey === ev.key;
           const cantOpen = (ev.type === "game" || ev.type === "tot") && !ev.played;
           return (
