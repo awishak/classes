@@ -745,42 +745,38 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           />
         )}
 
-        {/* HERO: current grade big + dot strip below */}
+        {/* HERO: current grade big + dot strip below — centered */}
         {studentId && (
-          <div style={{ ...crd, padding: 20, marginBottom: 16 }}>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
-              <div>
-                <div style={{ ...sectionLabel, marginBottom: 6 }}>Current grade</div>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                  <div style={{ fontSize: 38, fontWeight: 500, color: gradeColor, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
-                    {currentGrade !== null ? currentGrade + "%" : "---"}
-                  </div>
-                  {currentGrade !== null && (
-                    <div style={{ fontSize: 20, fontWeight: 500, color: gradeColor, lineHeight: 1 }}>
-                      {(() => {
-                        const g = currentGrade;
-                        if (g >= 93) return "A";
-                        if (g >= 90) return "A-";
-                        if (g >= 87) return "B+";
-                        if (g >= 83) return "B";
-                        if (g >= 80) return "B-";
-                        if (g >= 77) return "C+";
-                        if (g >= 73) return "C";
-                        if (g >= 70) return "C-";
-                        if (g >= 60) return "D";
-                        return "F";
-                      })()}
-                    </div>
-                  )}
-                </div>
-                {pctAssessed > 0 && pctAssessed < 100 && (
-                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 6 }}>{pctAssessed}% of grade assessed so far</div>
-                )}
+          <div style={{ ...crd, padding: 24, marginBottom: 16, textAlign: "center" }}>
+            <div style={{ ...sectionLabel, marginBottom: 8 }}>Current grade</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, justifyContent: "center" }}>
+              <div style={{ fontSize: 48, fontWeight: 500, color: gradeColor, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+                {currentGrade !== null ? currentGrade + "%" : "---"}
               </div>
+              {currentGrade !== null && (
+                <div style={{ fontSize: 24, fontWeight: 500, color: gradeColor, lineHeight: 1 }}>
+                  {(() => {
+                    const g = currentGrade;
+                    if (g >= 93) return "A";
+                    if (g >= 90) return "A-";
+                    if (g >= 87) return "B+";
+                    if (g >= 83) return "B";
+                    if (g >= 80) return "B-";
+                    if (g >= 77) return "C+";
+                    if (g >= 73) return "C";
+                    if (g >= 70) return "C-";
+                    if (g >= 60) return "D";
+                    return "F";
+                  })()}
+                </div>
+              )}
             </div>
-            <div style={{ paddingTop: 14, borderTop: "1px solid " + BORDER }}>
-              <div style={{ ...sectionLabel, marginBottom: 8 }}>Your assignments</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            {pctAssessed > 0 && pctAssessed < 100 && (
+              <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 6 }}>{pctAssessed}% of grade assessed so far</div>
+            )}
+            <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid " + BORDER }}>
+              <div style={{ ...sectionLabel, marginBottom: 10 }}>Your assignments</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
                 {sortedAssignments.map(a => {
                   const state = getAssignmentState(a, data, studentId);
                   const c = dotColor(state);
@@ -872,8 +868,8 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           </div>
         )}
 
-        {/* Assignments list */}
-        <div style={{ ...sectionLabel, marginBottom: 10 }}>All Assignments</div>
+        {/* Assignments list — catalog of grades */}
+        <div style={{ ...sectionLabel, marginBottom: 10 }}>All assignments</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {sortedAssignments.map(a => {
             const isEdit = isAdmin && editId === a.id;
@@ -926,6 +922,23 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                       {a.due ? "Due " + fmtDue(a.due) : "Ongoing"}
                     </div>
                   </div>
+                  {studentId && (() => {
+                    const g = grades[studentId + "-" + a.id] || {};
+                    const hasGrade = g.score !== undefined && g.score !== "";
+                    if (hasGrade) {
+                      const scoreNum = parseFloat(g.score);
+                      const outOf = g.outOf || 100;
+                      const pct = (scoreNum / outOf) * 100;
+                      const sc = pct >= 90 ? GREEN : pct >= 80 ? TEXT_PRIMARY : pct >= 70 ? AMBER : RED;
+                      return (
+                        <div style={{ textAlign: "right", flexShrink: 0, minWidth: 60 }}>
+                          <div style={{ fontSize: 18, fontWeight: 500, color: sc, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>{g.score}</div>
+                          <div style={{ fontSize: 9, color: TEXT_MUTED, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>/ {outOf}</div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                     {studentId && <StatusBadge state={state} />}
                     <span style={{ ...linkPill, padding: "4px 10px" }}>{isOpen ? "Close" : "Open"}</span>
