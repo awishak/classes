@@ -1455,18 +1455,13 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         const reboundGrades = data.reboundGrades || {};
         if (reboundGrades[studentId + "-" + rk]) return; // already completed
         const deadline = ss.deadline || rd.deadline;
-        let timeLeft = "";
-        if (deadline) {
-          const ms = deadline - Date.now();
-          if (ms > 0) {
-            const hrs = Math.floor(ms / (1000 * 60 * 60));
-            const days = Math.floor(hrs / 24);
-            if (days >= 1) timeLeft = days + "d left";
-            else timeLeft = hrs + "h left";
-          } else {
-            timeLeft = "Past due";
-          }
-        }
+        // Hide card if deadline is missing or has passed
+        if (!deadline) return;
+        const ms = deadline - Date.now();
+        if (ms <= 0) return;
+        const hrs = Math.floor(ms / (1000 * 60 * 60));
+        const days = Math.floor(hrs / 24);
+        const timeLeft = days >= 1 ? days + "d left" : hrs + "h left";
         const m = rk.match(/^(game|tot)-(\w+)$/);
         const activityLabel = m ? (m[1] === "game" ? "Weekly Game Wk " + m[2] : "This or That Wk " + m[2]) : rk;
         const log = data.log || [];
@@ -1495,20 +1490,23 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         assignmentLines.push({ kind: "overdue", color: "#dc2626", textColor: "#991b1b", text: a.name + " past due" });
       }
     });
-    // Due today / tomorrow
+    // Due today / tomorrow — shows regardless of submission/grade state, with status in text
     gradedAssignments.forEach(a => {
       if (!a.due) return;
-      const sub = submissions[studentId + "-" + a.id];
-      const g = grades[studentId + "-" + a.id] || {};
-      if (g.score !== undefined && g.score !== "") return;
-      if (sub) return;
       const parsed = new Date(a.due + ", " + year);
       if (isNaN(parsed)) return;
       const ts = parsed.getTime();
       if (ts < today0) return;
       const days = Math.round((ts - today0) / (1000 * 60 * 60 * 24));
-      if (days === 0) assignmentLines.push({ kind: "due", color: "#f59e0b", textColor: "#92400e", text: a.name + " due today" });
-      else if (days === 1) assignmentLines.push({ kind: "due", color: "#f59e0b", textColor: "#92400e", text: a.name + " due tomorrow" });
+      if (days !== 0 && days !== 1) return;
+      const sub = submissions[studentId + "-" + a.id];
+      const g = grades[studentId + "-" + a.id] || {};
+      const hasGrade = g.score !== undefined && g.score !== "";
+      let suffix = "";
+      if (hasGrade) suffix = " · Graded: " + g.score;
+      else if (sub) suffix = " · Submitted";
+      const when = days === 0 ? " due today" : " due tomorrow";
+      assignmentLines.push({ kind: "due", color: "#f59e0b", textColor: "#92400e", text: a.name + when + suffix });
     });
     // Recently graded (within last 7 days)
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -1524,24 +1522,28 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
     assignmentLines.length = 0;
     others.forEach(l => assignmentLines.push(l));
     recent.forEach(l => assignmentLines.push(l));
-    // Next assignment (gray, only if no overdue/due-soon/graded already covers it)
+    // Next assignment (gray) — anything coming up, regardless of submission/graded state
     const nextA = (() => {
       const candidates = gradedAssignments.filter(a => {
         if (!a.due) return false;
-        const sub = submissions[studentId + "-" + a.id];
-        const g = grades[studentId + "-" + a.id] || {};
-        if (g.score !== undefined && g.score !== "") return false;
-        if (sub) return false;
         const parsed = new Date(a.due + ", " + year);
         if (isNaN(parsed)) return false;
         return parsed.getTime() >= today0;
-      }).map(a => ({ ...a, ts: new Date(a.due + ", " + year).getTime() })).sort((a, b) => a.ts - b.ts);
+      }).map(a => {
+        const sub = submissions[studentId + "-" + a.id];
+        const g = grades[studentId + "-" + a.id] || {};
+        const hasGrade = g.score !== undefined && g.score !== "";
+        return { ...a, ts: new Date(a.due + ", " + year).getTime(), sub: !!sub, graded: hasGrade, score: g.score };
+      }).sort((a, b) => a.ts - b.ts);
       return candidates[0] || null;
     })();
     if (nextA) {
       const days = Math.round((nextA.ts - today0) / (1000 * 60 * 60 * 24));
       if (days >= 2) {
-        const dayLabel = "Next: " + nextA.name + " due in " + days + " days";
+        let suffix = "";
+        if (nextA.graded) suffix = " · Graded: " + nextA.score;
+        else if (nextA.sub) suffix = " · Submitted";
+        const dayLabel = "Next: " + nextA.name + " due in " + days + " days" + suffix;
         assignmentLines.push({ kind: "next", color: "#d1d5db", textColor: "#6b7280", text: dayLabel });
       }
     }

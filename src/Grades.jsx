@@ -610,13 +610,27 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
     return new Date(a.due + ", " + year) - new Date(b.due + ", " + year);
   });
 
-  // ── Find next assignment: first non-graded, non-participation that is upcoming or due
-  const nextAssignment = sortedAssignments.find(a => {
-    if (a.id === "participation") return false;
-    if (!studentId) return !!a.due; // for admins/guests, just show first dated
-    const state = getAssignmentState(a, data, studentId);
-    return state === "upcoming" || state === "missing";
-  });
+  // ── Find next assignment: first non-participation assignment with a due date today or in the future,
+  // regardless of submission or grading state. The status chip differentiates upcoming/submitted/graded.
+  // Falls back to first missing (past-due, ungraded) assignment if nothing is upcoming.
+  const todayMidnight = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
+  const nextAssignment = (() => {
+    if (!studentId) return sortedAssignments.find(a => a.id !== "participation" && !!a.due) || null;
+    // First, anything with a due date today or in the future
+    const upcoming = sortedAssignments.find(a => {
+      if (a.id === "participation") return false;
+      const dueDate = parseDueDate(a.due);
+      if (!dueDate) return false;
+      return dueDate.getTime() >= todayMidnight;
+    });
+    if (upcoming) return upcoming;
+    // Otherwise, fall back to anything past-due but ungraded (missing/late state)
+    return sortedAssignments.find(a => {
+      if (a.id === "participation") return false;
+      const state = getAssignmentState(a, data, studentId);
+      return state === "missing" || state === "late";
+    }) || null;
+  })();
 
   // ── Compute current grade including participation
   const computeCurrentGrade = () => {
