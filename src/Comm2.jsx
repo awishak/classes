@@ -122,6 +122,19 @@ const RED = "#ef4444";
 const AMBER = "#f59e0b";
 const PURPLE = "#8b5cf6";
 const TEAL = "#14b8a6";
+const TOPIC_COLORS = {
+  "Foundations": ACCENT,
+  "Storytelling": PURPLE,
+  "Ethics": AMBER,
+  "Delivery": TEAL,
+  "In Class": GREEN,
+  "Information": ACCENT,
+  "Organization": PURPLE,
+  "Persuasion": RED,
+  "A Good Change": GREEN,
+  "Wrap-up": TEAL,
+  "Finals": TEXT_PRIMARY,
+};
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const CONTAINER_MAX = 960;
 
