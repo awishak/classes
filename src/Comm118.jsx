@@ -1688,7 +1688,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
     }
     if (name === "boards") {
       return (
-        <button key="boards" onClick={() => setView("more")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+        <button key="boards" onClick={() => setView("boards")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Discussion boards</div>
             <span style={{ fontSize: 11, color: TEXT_MUTED }}>Open ›</span>
@@ -1718,7 +1718,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
     }
     if (name === "roster") {
       return (
-        <button key="roster" onClick={() => setView("more")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+        <button key="roster" onClick={() => setView("roster")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Class roster</div>
             <span style={{ fontSize: 11, color: TEXT_MUTED }}>Open ›</span>
@@ -1801,6 +1801,158 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         {cards.map(renderCard)}
         <InstructorCard data={data} setData={setData} isAdmin={isAdmin} />
       </div>
+    </div>
+  );
+}
+
+function WeekHeaderEditor({ week, wi, data, setData, onDone, onSaveAndBack }) {
+  const [local, setLocal] = useState({ label: week.label || "", theme: week.theme || "", question: week.question || "" });
+  const set = (field, value) => setLocal(prev => ({ ...prev, [field]: value }));
+  const save = async () => {
+    const updated = { ...data, schedule: data.schedule.map((w, i) => i === wi ? { ...w, label: local.label, theme: local.theme, question: local.question } : w) };
+    await saveData(updated); setData(updated);
+    if (onDone) onDone();
+  };
+  const saveAndBack = async () => {
+    await save();
+    if (onSaveAndBack) onSaveAndBack();
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
+      <div style={{ display: "flex", gap: 6 }}>
+        <input value={local.label} onChange={e => set("label", e.target.value)} placeholder="Label" style={{ ...inp, padding: "4px 8px", fontSize: 12, width: 90 }} />
+        <input value={local.theme} onChange={e => set("theme", e.target.value)} placeholder="Theme" style={{ ...inp, padding: "4px 8px", fontSize: 12, flex: 1 }} />
+      </div>
+      <div style={{ display: "flex", gap: 4 }}>
+        <input value={local.question} onChange={e => set("question", e.target.value)} placeholder="Driving question" style={{ ...inp, padding: "4px 8px", fontSize: 12, flex: 1 }} />
+        <button onClick={save} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Save</button>
+        {onSaveAndBack && <button onClick={saveAndBack} style={{ ...bt, fontSize: 11, padding: "3px 10px" }}>Go back</button>}
+      </div>
+    </div>
+  );
+}
+
+function ScheduleCardEditor({ d, wi, realDi, data, setData, updateDate, removeDate, onDone, onSaveAndBack }) {
+  const [local, setLocal] = useState({
+    date: d.date, day: d.day, topic: d.topic || "", holiday: !!d.holiday,
+    activities: (d.activities || []).join(", "), assignment: d.assignment || "",
+    notes: d.notes || "", adminNotes: d.adminNotes || "",
+  });
+  const set = (field, value) => setLocal(prev => ({ ...prev, [field]: value }));
+
+  const save = async () => {
+    const patch = {
+      date: local.date, day: local.day, topic: local.topic, holiday: local.holiday,
+      activities: local.activities.split(",").map(s => s.trim()).filter(Boolean),
+      assignment: local.assignment, notes: local.notes, adminNotes: local.adminNotes,
+    };
+    const updated = { ...data, schedule: data.schedule.map((w, i) => i === wi ? { ...w, dates: w.dates.map((dt, di) => di === realDi ? { ...dt, ...patch } : dt) } : w) };
+    await saveData(updated); setData(updated);
+    if (onDone) onDone();
+  };
+  const saveAndBack = async () => {
+    await save();
+    if (onSaveAndBack) onSaveAndBack();
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }} onClick={e => e.stopPropagation()}>
+      <div style={{ display: "flex", gap: 4 }}>
+        <input value={local.date} onChange={e => set("date", e.target.value)} style={{ ...inp, padding: "3px 6px", fontSize: 11, width: 60 }} />
+        <input value={local.day} onChange={e => set("day", e.target.value)} style={{ ...inp, padding: "3px 6px", fontSize: 11, width: 40 }} />
+        <label style={{ fontSize: 11, color: TEXT_MUTED, display: "flex", alignItems: "center", gap: 2 }}><input type="checkbox" checked={local.holiday} onChange={e => set("holiday", e.target.checked)} />Off</label>
+      </div>
+      <textarea value={local.topic} onChange={e => set("topic", e.target.value)} placeholder="Topic" rows={2} style={{ ...inp, padding: "4px 6px", fontSize: 12, resize: "vertical" }} />
+      <input value={local.activities} onChange={e => set("activities", e.target.value)} placeholder="Activities (comma-separated: Game, Fishbowl, etc.)" style={{ ...inp, padding: "3px 6px", fontSize: 11, fontWeight: 700 }} />
+      <select value={local.assignment} onChange={e => set("assignment", e.target.value)} style={{ ...sel, width: "100%", fontSize: 11, padding: "3px 6px" }}>
+        <option value="">No assignment due</option>
+        {(data.assignments || []).filter(a => a.id !== "participation").map(a => (
+          <option key={a.id} value={a.name + " due"}>{a.name}</option>
+        ))}
+      </select>
+      <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>Readings</div>
+      {(d.readings || []).map((r, ri) => {
+        const rdg = (data.readings || []).find(x => x.id === r.readingId);
+        return (
+          <div key={ri} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, padding: "3px 6px", background: r.type === "required" ? "#fef2f2" : "#f0fdf4", borderRadius: 6 }}>
+            <span style={{ flex: 1, color: "#374151", fontWeight: 500 }}>{rdg?.title || "Unknown"}</span>
+            <select value={r.type} onChange={e => {
+              const upd = [...(d.readings || [])]; upd[ri] = { ...upd[ri], type: e.target.value };
+              updateDate(wi, realDi, "readings", upd);
+            }} style={{ fontSize: 11, border: "none", background: "transparent", color: r.type === "fishbowl" ? "#7c3aed" : r.type === "required" ? "#b45309" : r.type === "additional" ? TEXT_MUTED : GREEN, fontWeight: 700, cursor: "pointer" }}>
+              <option value="fishbowl">Fishbowl</option>
+              <option value="required">Required</option>
+              <option value="recommended">Recommended</option>
+              <option value="additional">Additional</option>
+            </select>
+            <button onClick={() => {
+              const upd = (d.readings || []).filter((_, i) => i !== ri);
+              updateDate(wi, realDi, "readings", upd);
+            }} style={{ background: "none", border: "none", cursor: "pointer", color: RED, fontSize: 12, padding: "0 2px" }}>x</button>
+          </div>
+        );
+      })}
+      {(data.readings || []).length > 0 ? (
+        <select value="" onChange={e => {
+          if (!e.target.value) return;
+          const existing = d.readings || [];
+          if (existing.some(r => r.readingId === e.target.value)) return;
+          updateDate(wi, realDi, "readings", [...existing, { readingId: e.target.value, type: "required" }]);
+        }} style={{ ...sel, width: "100%", fontSize: 11, padding: "3px 6px" }}>
+          <option value="">+ Add reading...</option>
+          {(data.readings || []).filter(r => !(d.readings || []).some(dr => dr.readingId === r.id)).map(r => (
+            <option key={r.id} value={r.id}>{r.title}</option>
+          ))}
+        </select>
+      ) : (
+        <div style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>No readings in repository yet</div>
+      )}
+      <textarea value={local.notes} onChange={e => set("notes", e.target.value)} placeholder="Notes (students see this)" rows={2} style={{ ...inp, padding: "3px 6px", fontSize: 11, resize: "vertical" }} />
+      <textarea value={local.adminNotes} onChange={e => set("adminNotes", e.target.value)} placeholder="Admin notes (students can't see)" rows={2} style={{ ...inp, padding: "3px 6px", fontSize: 11, resize: "vertical", borderColor: "#f59e0b", background: "#fffbeb" }} />
+      <div style={{ display: "flex", gap: 4 }}>
+        <button onClick={save} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: ACCENT, color: "#fff" }}>Save</button>
+        {onSaveAndBack && <button onClick={saveAndBack} style={{ ...bt, fontSize: 11, padding: "3px 10px" }}>Go back</button>}
+        <button onClick={() => { if (window.confirm("Remove this day?")) { removeDate(wi, realDi); if (onDone) onDone(); } }} style={{ ...bt, fontSize: 11, padding: "3px 10px", background: "transparent", color: RED, border: "1px solid " + RED + "33", marginLeft: "auto" }}>Remove day</button>
+      </div>
+    </div>
+  );
+}
+
+function ReadingsList({ d, readings }) {
+  const [expanded, setExpanded] = useState(false);
+  const items = (d.readings || []).filter(r => r.type === "fishbowl" || r.type === "required" || r.type === "recommended");
+  if (items.length === 0) return null;
+  const showCollapse = items.length > 5;
+  const visible = showCollapse && !expanded ? items.slice(0, 5) : items;
+  const hidden = items.length - visible.length;
+  return (
+    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER, display: "flex", flexDirection: "column", gap: 4 }}>
+      {visible.map((r, ri) => {
+        const rdg = readings.find(x => x.id === r.readingId);
+        if (!rdg) return null;
+        const link = rdg.pdfUrl || rdg.url;
+        const tColor = r.type === "fishbowl" ? PURPLE : r.type === "required" ? "#b45309" : GREEN;
+        const tLabel = r.type === "fishbowl" ? "Fish" : r.type === "required" ? "Req" : "Rec";
+        const isReq = r.type === "required";
+        return (
+          <div key={ri} style={{ display: "flex", alignItems: "flex-start", gap: 6, background: isReq ? "#fffbeb" : "transparent", padding: isReq ? "4px 8px" : "2px 0", borderRadius: isReq ? 6 : 0 }}>
+            <span style={{ fontSize: 10, fontWeight: 800, color: tColor, textTransform: "uppercase", marginTop: 2, flexShrink: 0, width: 28, letterSpacing: "0.05em" }}>{tLabel}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {link ? (
+                <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 600, lineHeight: 1.35 }}>{rdg.title}</a>
+              ) : (
+                <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 600, lineHeight: 1.35 }}>{rdg.title}</span>
+              )}
+              {rdg.pdfUrl && <span style={{ fontSize: 9, fontWeight: 800, color: RED, background: "#fef2f2", padding: "1px 4px", borderRadius: 3, marginLeft: 4 }}>PDF</span>}
+            </div>
+          </div>
+        );
+      })}
+      {showCollapse && (
+        <button onClick={e => { e.stopPropagation(); setExpanded(!expanded); }} style={{ ...linkPill, alignSelf: "flex-start", marginTop: 2 }}>
+          {expanded ? "Show fewer" : "Show " + hidden + " more"}
+        </button>
+      )}
     </div>
   );
 }
@@ -2031,7 +2183,7 @@ function ScheduleView({ data, setData, isAdmin }) {
             const isHidden = hiddenWeeks.includes(week.week);
             // Sort dates within the week chronologically by day order
             const dayOrder = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7, Finals: 8 };
-            const orderedDates = [...week.dates].map((d, idx) => ({ d, realDi: idx })).sort((a, b) => (dayOrder[a.d.day] || 9) - (dayOrder[b.d.day] || 9));
+            const orderedDates = [...(week.dates || [])].map((d, idx) => ({ d, realDi: idx })).sort((a, b) => (dayOrder[a.d.day] || 9) - (dayOrder[b.d.day] || 9));
 
             return (
               <div key={wi} id={"view-week-" + wi}>
@@ -5422,17 +5574,17 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
 
         {/* Live banner */}
         {anythingLive && (
-          <div style={{ ...crd, padding: 14, marginBottom: 20, background: "#ecfdf5", border: "1px solid #a7f3d0", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ background: "#ecfdf5", border: "1px solid #6ee7b7", borderRadius: 14, padding: 14, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: GREEN, animation: "livePulse 1.6s ease-in-out infinite", display: "inline-block" }} />
-                <span style={{ fontSize: 10, fontWeight: 800, color: "#065f46", textTransform: "uppercase", letterSpacing: "0.1em" }}>Live now</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: GREEN, animation: "livePulse 1.6s ease-in-out infinite", display: "inline-block" }} />
+                <div style={{ fontSize: 18, fontWeight: 500, color: "#065f46", letterSpacing: "-0.01em" }}>Live now</div>
               </div>
-              <div style={{ fontSize: 13, color: "#065f46", fontWeight: 700 }}>
+              <div style={{ fontSize: 13, color: "#047857", fontWeight: 500 }}>
                 {liveItems.map(i => i.label).join(", ")}
               </div>
             </div>
-            <button onClick={scrollToLive} style={{ ...linkPill, background: "#fff", border: "1px solid #a7f3d0", color: "#065f46" }}>Open</button>
+            <button onClick={scrollToLive} style={{ fontSize: 11, padding: "5px 12px", borderRadius: 8, border: "1px solid #6ee7b7", background: "#fff", color: "#065f46", cursor: "pointer", fontFamily: F, fontWeight: 500 }}>Open</button>
           </div>
         )}
 
@@ -5464,7 +5616,7 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
           )}
         </div>
 
-        {showPast && events.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No past events yet</div>}
+        {showPast && events.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>No past events yet</div>}
 
         {showPast && events.map(ev => {
           const isOpen = openEventKey === ev.key;
@@ -5472,20 +5624,21 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
           return (
             <div key={ev.key} style={{ marginBottom: 8 }}>
               <button onClick={() => { if (!cantOpen) setOpenEventKey(isOpen ? null : ev.key); }} disabled={cantOpen} style={{
-                ...crd, padding: 14, width: "100%", textAlign: "left", fontFamily: F,
+                background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14,
+                padding: 14, width: "100%", textAlign: "left", fontFamily: F,
                 cursor: cantOpen ? "not-allowed" : "pointer",
                 opacity: cantOpen ? 0.55 : 1,
                 display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8,
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>{ev.typeLabel}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, marginTop: 2 }}>{fmtDayDate(ev.ts)}</div>
+                  <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>{ev.typeLabel}</div>
+                  <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>{fmtDayDate(ev.ts)}</div>
                 </div>
                 <div style={{ flexShrink: 0 }}>
                   {cantOpen ? (
                     <span style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>You did not play</span>
                   ) : (
-                    <span style={{ ...linkPill, padding: "4px 10px" }}>{isOpen ? "Close" : "Open"}</span>
+                    <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 500 }}>{isOpen ? "Close" : "Open ›"}</span>
                   )}
                 </div>
               </button>
