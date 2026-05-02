@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ReboundPanel } from "./Comm2Game.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -438,6 +438,74 @@ function fmtDue(dueStr) {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
+// Top-level participation grade computation — mirrors Gradebook's computeAutoParticipation.
+// AssignmentsView calls this to populate the participation row of the grades table.
+function computeParticipationGrade(data, sid) {
+  const log = data.log || [];
+  const weeklyGames = data.weeklyGames || {};
+  const reboundGrades = data.reboundGrades || {};
+  let gameGradeEarned = 0;
+  let gameGradePossible = 0;
+  const scoredGames = Object.keys(weeklyGames).filter(w => weeklyGames[w]?.scored);
+  scoredGames.forEach(w => {
+    const game = weeklyGames[w];
+    gameGradePossible += 100;
+    let original = 0;
+    (game.questions || []).forEach((q, qi) => {
+      const ans = game.responses?.[sid + "-" + qi];
+      if (ans === q.correct) {
+        const cat = q.category || "on_topic";
+        const catPts = cat === "on_topic" ? 15 : 2.5;
+        original += catPts;
+      }
+    });
+    const rg = reboundGrades[sid + "-game-" + w];
+    let earned = original;
+    if (rg && typeof rg.gradePoints === "number") {
+      if (rg.type === "makeup") {
+        earned = Math.max(original, rg.gradePoints);
+      } else {
+        let cap;
+        if (rg.type === "absence_override") cap = 60;
+        else if (original < 50) cap = 60;
+        else if (original <= 65) cap = 70;
+        else if (original <= 79) cap = 80;
+        else cap = 100;
+        const capped = Math.min(rg.gradePoints, cap);
+        earned = Math.max(original, capped);
+      }
+    }
+    gameGradeEarned += earned;
+  });
+  const totEntries = log.filter(e => e.studentId === sid && (e.source || "").startsWith("ToT Wk"));
+  const totEarned = totEntries.reduce((s, e) => s + e.amount, 0);
+  const scoredToTs = Object.keys(data.weeklyToT || {}).filter(w => (data.weeklyToT[w] || {}).scored).length;
+  const totPossible = scoredToTs * 20;
+  const fbEntries = log.filter(e => e.studentId === sid && (e.source || "").startsWith("Fishbowl Wk"));
+  const fbEarned = fbEntries.reduce((s, e) => s + e.amount, 0);
+  const confirmedFishbowls = Object.keys(data.weeklyFishbowl || {}).filter(w => (data.weeklyFishbowl[w] || {}).confirmed).length;
+  const fbPossible = confirmedFishbowls * 20;
+  const athEntries = log.filter(e => e.studentId === sid && ((e.source || "") === "Around the Horn" || (e.source || "") === "PTI"));
+  const athEarned = athEntries.reduce((s, e) => s + e.amount, 0);
+  const totalEarned = gameGradeEarned + totEarned + fbEarned + athEarned;
+  const totalPossible = gameGradePossible + totPossible + fbPossible;
+  const participationPct = totalPossible > 0 ? (totalEarned / totalPossible) : 0;
+  const participationGrade = participationPct * 25;
+  return {
+    gameGradeEarned: Math.round(gameGradeEarned * 10) / 10,
+    gameGradePossible,
+    totEarned: Math.round(totEarned * 10) / 10,
+    totPossible,
+    fbEarned: Math.round(fbEarned * 10) / 10,
+    fbPossible,
+    athEarned: Math.round(athEarned * 10) / 10,
+    totalEarned: Math.round(totalEarned * 10) / 10,
+    totalPossible,
+    participationPct,
+    participationGrade: Math.round(participationGrade * 10) / 10,
+  };
+}
+
 // Determine state for an assignment dot
 function getAssignmentState(a, data, studentId) {
   const grades = data.grades || {};
@@ -470,6 +538,118 @@ function dotColor(state) {
   if (state === "ongoing") return { fill: TEAL, border: TEAL };
   return { fill: AMBER, border: AMBER };
 }
+function ParticipationDetail({ data, studentId }) {
+  const log = data.log || [];
+  const participation = data.participation || {};
+  const getPart = (w, cat) => { const k = studentId + "-w" + w + "-" + cat; return participation[k]; };
+
+  if (!studentId) {
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        {[
+          { label: "Weekly Game", detail: "100 pts/week, dual weighted", icon: "Q" },
+          { label: "This or That", detail: "20 pts/week, game only", icon: "TT" },
+          { label: "Around the Horn", detail: "Variable, game + grade", icon: "P" },
+          { label: "Rotating Fishbowl", detail: "20 pts/time, game + grade", icon: "FB" },
+        ].map(p => (
+          <div key={p.label} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid " + BORDER, display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 900, color: TEXT_SECONDARY, flexShrink: 0 }}>{p.icon}</div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{p.label}</div>
+              <div style={{ fontSize: 11, color: TEXT_MUTED }}>{p.detail}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const gamePts = {};
+  log.filter(e => e.studentId === studentId).forEach(e => {
+    const src = e.source || "Other";
+    let bucket = "Other";
+    if (src.startsWith("Game Wk")) bucket = "Weekly Game";
+    else if (src.startsWith("ToT")) bucket = "This or That";
+    else if (src === "PTI" || src === "Around the Horn") bucket = "PTI";
+    else if (src.startsWith("Fishbowl")) bucket = "Fishbowl";
+    else if (src.startsWith("Team Win")) bucket = "Team Win";
+    else bucket = src;
+    gamePts[bucket] = (gamePts[bucket] || 0) + e.amount;
+  });
+  let gradeQuizTotal = 0, gradeTotTotal = 0, gradePtiTotal = 0, gradeFbTotal = 0;
+  let quizWeeks = 0, totWeeks = 0, ptiWeeks = 0, fbWeeks = 0;
+  for (let w = 1; w <= 10; w++) {
+    const qv = getPart(w, "quiz");
+    if (qv !== undefined && qv !== null && qv !== "") {
+      const scores = typeof qv === "object" ? qv : {};
+      QUIZ_BREAKDOWN.forEach(q => { gradeQuizTotal += (scores[q.id] || 0) * q.gradePts; });
+      quizWeeks++;
+    }
+    const tv = getPart(w, "tot"); if (tv !== undefined && tv !== null && tv !== "") { gradeTotTotal += parseFloat(tv) || 0; totWeeks++; }
+    const pv = getPart(w, "pti"); if (pv !== undefined && pv !== null && pv !== "") { gradePtiTotal += parseFloat(pv) || 0; ptiWeeks++; }
+    const fv = getPart(w, "fishbowl"); if (fv !== undefined && fv !== null && fv !== "") { gradeFbTotal += parseFloat(fv) || 0; fbWeeks++; }
+  }
+  const items = [
+    { label: "Weekly Game", game: gamePts["Weekly Game"] || 0, grade: Math.round(gradeQuizTotal * 10) / 10, weeks: quizWeeks, icon: "Q" },
+    { label: "This or That", game: gamePts["This or That"] || 0, grade: gradeTotTotal, weeks: totWeeks, icon: "TT" },
+    { label: "Around the Horn", game: gamePts["PTI"] || 0, grade: gradePtiTotal, weeks: ptiWeeks, icon: "P" },
+    { label: "Fishbowl", game: gamePts["Fishbowl"] || 0, grade: gradeFbTotal, weeks: fbWeeks, icon: "FB" },
+  ];
+  return (
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+        {items.map(p => (
+          <div key={p.label} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid " + BORDER }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+              <div style={{ width: 24, height: 24, borderRadius: 6, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 900, color: TEXT_SECONDARY, flexShrink: 0 }}>{p.icon}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{p.label}</div>
+            </div>
+            <div style={{ display: "flex", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 9, color: TEXT_MUTED, fontWeight: 600, textTransform: "uppercase" }}>Game</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY }}>{p.game}</div>
+              </div>
+              {p.grade > 0 && (
+                <div>
+                  <div style={{ fontSize: 9, color: TEXT_MUTED, fontWeight: 600, textTransform: "uppercase" }}>Grade</div>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY }}>{Math.round(p.grade * 10) / 10}</div>
+                </div>
+              )}
+            </div>
+            {p.weeks > 0 && <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>{p.weeks} week{p.weeks !== 1 ? "s" : ""} recorded</div>}
+          </div>
+        ))}
+      </div>
+      {(gamePts["Team Win"] || 0) > 0 && (
+        <div style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid " + BORDER, marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>Team Win Bonuses</span>
+          <span style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY }}>{gamePts["Team Win"]}</span>
+        </div>
+      )}
+      <div style={{ padding: "10px 12px", borderRadius: 10, background: "#f8fafc", border: "1px solid " + BORDER }}>
+        <div style={{ ...sectionLabel, marginBottom: 6 }}>Game Dual Weighting</div>
+        <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 1fr 1fr", gap: "4px 12px", fontSize: 12 }}>
+          <div style={{ fontWeight: 700, color: TEXT_MUTED }}></div>
+          <div style={{ fontWeight: 700, color: TEXT_MUTED }}>Qs</div>
+          <div style={{ fontWeight: 700, color: TEXT_MUTED }}>Game</div>
+          <div style={{ fontWeight: 700, color: TEXT_MUTED }}>Grade</div>
+          {QUIZ_BREAKDOWN.map(q => (
+            <React.Fragment key={q.id}>
+              <div style={{ fontWeight: 600, color: TEXT_SECONDARY }}>{q.label}</div>
+              <div style={{ color: TEXT_SECONDARY }}>{q.count}</div>
+              <div style={{ color: TEXT_SECONDARY }}>{q.gamePts} pts ea</div>
+              <div style={{ color: TEXT_SECONDARY }}>{q.gradePts} pts ea</div>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ─── GRADEBOOK ─── */
+/* --- STUDENT SUBMISSION (doc link only) --- */
 
 function StatusBadge({ state }) {
   const map = {
@@ -496,8 +676,34 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const [editMasterRubric, setEditMasterRubric] = useState(false);
   const [openId, setOpenId] = useState(null);
   const [hoveredDotId, setHoveredDotId] = useState(null);
+  const [tableExpandedId, setTableExpandedId] = useState(null);
+  const [howGradeOpen, setHowGradeOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" ? window.innerWidth >= 600 : true);
+  useEffect(() => {
+    const onResize = () => setIsDesktop(window.innerWidth >= 600);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  // Jump from the assignment table to the All-assignments section, expand that one.
+  // Uses an offset scroll so the row appears below the sticky nav, not under it.
+  const jumpToAssignment = (id) => {
+    setOpenId(id);
+    // Wait two frames so the expansion has rendered before measuring,
+    // then scroll with an offset that clears the sticky nav (~80px).
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.getElementById("assignment-row-" + id);
+        if (!el) return;
+        const navOffset = 80;
+        const top = el.getBoundingClientRect().top + window.pageYOffset - navOffset;
+        window.scrollTo({ top, behavior: "smooth" });
+      });
+    });
+  };
+
   const isGuest = userName === GUEST_NAME;
   const student = !isAdmin && !isGuest ? data.students.find(s => s.name === userName) : null;
   const studentId = student?.id;
@@ -510,6 +716,23 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const saveEdit = async () => {
     if (!editId || !editLocal) return;
     let updated = { ...data, assignments: (data.assignments || DEFAULT_ASSIGNMENTS).map(a => a.id === editId ? { ...a, ...editLocal, weight: parseInt(editLocal.weight) || 0 } : a) };
+    if (editLocal.due && data.schedule) {
+      const assignment = (data.assignments || DEFAULT_ASSIGNMENTS).find(a => a.id === editId);
+      if (assignment) {
+        const newSchedule = data.schedule.map(week => ({
+          ...week,
+          dates: week.dates.map(d => {
+            const cleanedAssignment = (d.assignment || "").split(", ").filter(a => a !== assignment.name && a !== assignment.name + " due").join(", ");
+            if (d.date === editLocal.due) {
+              const newAssignment = cleanedAssignment ? cleanedAssignment + ", " + editLocal.name + " due" : editLocal.name + " due";
+              return { ...d, assignment: newAssignment };
+            }
+            return { ...d, assignment: cleanedAssignment };
+          })
+        }));
+        updated.schedule = newSchedule;
+      }
+    }
     await saveData(updated); setData(updated);
     setEditId(null); setEditLocal(null); showMsg("Saved");
   };
@@ -522,73 +745,104 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   };
 
   const removeAssignment = async (id) => {
+    if (id === "participation") return;
     const updated = { ...data, assignments: assignments.filter(a => a.id !== id) };
     await saveData(updated); setData(updated); setEditId(null); setEditLocal(null); showMsg("Removed");
   };
 
-  const defaultBlurb = "Your grade is based on your speeches and contributions throughout the quarter. Each speech is weighted by its complexity and importance. Submit a Google Doc and a video for each speech.";
+  const defaultBlurb = "Here's how your grade works. There are four major assignments worth 75% of your grade, and a participation bucket worth the other 25%. The participation bucket is where the weekly game, This or That, Around the Horn, and Rotating Fishbowl all live.\n\nThe game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. The weekly game is the biggest example: the game weights all question types equally (10 pts each), but your grade weights On Topic questions much more heavily (15 pts each) than Sports World questions (2.5 pts each). So if you want to climb the leaderboard, be good at everything. If you want a good grade, focus on the course material.\n\nThe top 5 on the leaderboard at the end of the quarter get automatic A's. That's real. Everything else, just do the work, show up, and engage.";
   const blurbText = data.assignmentsBlurb || defaultBlurb;
+
   const saveBlurb = async () => {
     const updated = { ...data, assignmentsBlurb: blurbLocal };
     await saveData(updated); setData(updated);
     setEditBlurb(false); showMsg("Saved");
   };
 
-  // Sort assignments by due date ascending; undated last
+  // ── Sort assignments: due-date ascending, undated last, participation last
   const today = new Date();
   const year = today.getFullYear();
   const sortedAssignments = [...assignments].sort((a, b) => {
+    if (a.id === "participation") return 1;
+    if (b.id === "participation") return -1;
     if (!a.due && !b.due) return 0;
     if (!a.due) return 1;
     if (!b.due) return -1;
     return new Date(a.due + ", " + year) - new Date(b.due + ", " + year);
   });
 
-  // Find next assignment
-  const nextAssignment = sortedAssignments.find(a => {
-    if (!studentId) return !!a.due;
-    const state = getAssignmentState(a, data, studentId);
-    return state === "upcoming" || state === "missing";
-  });
+  // ── Find next assignment: first non-participation assignment with a due date today or in the future,
+  // regardless of submission or grading state. The status chip differentiates upcoming/submitted/graded.
+  // Falls back to first missing (past-due, ungraded) assignment if nothing is upcoming.
+  const todayMidnight = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
+  const nextAssignment = (() => {
+    if (!studentId) return sortedAssignments.find(a => a.id !== "participation" && !!a.due) || null;
+    // First, anything with a due date today or in the future
+    const upcoming = sortedAssignments.find(a => {
+      if (a.id === "participation") return false;
+      const dueDate = parseDueDate(a.due);
+      if (!dueDate) return false;
+      return dueDate.getTime() >= todayMidnight;
+    });
+    if (upcoming) return upcoming;
+    // Otherwise, fall back to anything past-due but ungraded (missing/late state)
+    return sortedAssignments.find(a => {
+      if (a.id === "participation") return false;
+      const state = getAssignmentState(a, data, studentId);
+      return state === "missing" || state === "late";
+    }) || null;
+  })();
 
-  // Compute current grade
+  // ── Compute current grade including participation
   const computeCurrentGrade = () => {
+    const gradeAssignments = sortedAssignments.filter(a => a.id !== "participation");
     let weightGraded = 0;
     let weightedScore = 0;
-    sortedAssignments.forEach(a => {
+    gradeAssignments.forEach(a => {
       const g = grades[studentId + "-" + a.id] || {};
       if (g.score !== undefined && g.score !== "") {
         weightGraded += a.weight;
         weightedScore += (parseFloat(g.score) / (g.outOf || 100)) * a.weight;
       }
     });
-    const totalWeight = sortedAssignments.reduce((s, a) => s + a.weight, 0);
+    // Always include participation contribution since it's 25%
+    const partWeight = (sortedAssignments.find(a => a.id === "participation")?.weight) || 25;
+    const part = computeParticipationGrade(data, studentId);
+    weightGraded += partWeight;
+    weightedScore += part.participationGrade; // already in raw points (0-25 scale)
+    // weightedScore as currently summed is in "weighted points out of weightGraded"
+    // For non-participation we did (score/outOf) * weight, summing into weighted points.
+    // For participation we added participationGrade (0-25), which is the same as (pct * 25).
+    // Treat both as weighted points relative to the same total weightGraded.
     const currentGrade = weightGraded > 0 ? Math.round(weightedScore / weightGraded * 1000) / 10 : null;
-    const pctAssessed = totalWeight > 0 ? Math.round(weightGraded / totalWeight * 100) : 0;
+    const totalWeight = sortedAssignments.reduce((s, a) => s + a.weight, 0);
+    const pctAssessed = Math.round(weightGraded / totalWeight * 100);
     return { currentGrade, pctAssessed };
   };
 
   const { currentGrade, pctAssessed } = studentId ? computeCurrentGrade() : { currentGrade: null, pctAssessed: 0 };
   const gradeColor = currentGrade === null ? TEXT_MUTED : currentGrade >= 90 ? GREEN : currentGrade >= 80 ? TEXT_PRIMARY : currentGrade >= 70 ? AMBER : RED;
 
-  // Render the body of an assignment card (used for next + collapsed)
-  const renderAssignmentBody = (a) => {
+  // Render a row for an assignment (used for next + list, with `expanded` flag)
+  const renderAssignmentBody = (a, isNext = false) => {
     const g = studentId ? (grades[studentId + "-" + a.id] || {}) : null;
     const sub = studentId ? submissions[studentId + "-" + a.id] : null;
+    const state = studentId ? getAssignmentState(a, data, studentId) : (a.id === "participation" ? "participation" : "upcoming");
     return (
       <div>
         {a.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.5, marginBottom: 12 }}>{a.notes}</div>}
         {a.link && (
           <a href={a.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ ...linkPill, textDecoration: "none", marginBottom: 12 }}>
             Assignment Doc
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5 a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           </a>
         )}
 
-        {studentId && g && g.score !== undefined && g.score !== "" && (
+        {/* Student grade inline */}
+        {studentId && a.id !== "participation" && g && g.score !== undefined && g.score !== "" && (
           <div style={{ marginTop: 12, padding: "10px 12px", background: "#fafafa", borderRadius: 10, border: "1px solid " + BORDER }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-              <span style={sectionLabel}>Grade</span>
+              <span style={{ ...sectionLabel }}>Grade</span>
               <span style={{ fontSize: 22, fontWeight: 900, color: parseFloat(g.score) === 0 ? RED : TEXT_PRIMARY, marginLeft: 8 }}>{g.score}</span>
               <span style={{ fontSize: 13, color: TEXT_MUTED }}>/ {g.outOf || 100}</span>
             </div>
@@ -600,11 +854,13 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           </div>
         )}
 
-        {studentId && !isAdmin && (
+        {/* Student submission */}
+        {studentId && !isAdmin && a.id !== "participation" && (
           <StudentSubmission assignmentId={a.id} data={data} setData={setData} studentId={studentId} existing={sub} />
         )}
 
-        {isAdmin && (
+        {/* Admin tools per assignment */}
+        {isAdmin && a.id !== "participation" && (
           <div onClick={e => e.stopPropagation()} style={{ marginTop: 12 }}>
             <TogglePanel label="View Submissions" count={data.students.filter(s => s.name !== ADMIN_NAME && submissions[s.id + "-" + a.id]).length}>
               <AdminSubmissions assignmentId={a.id} data={data} setData={setData} />
@@ -623,19 +879,43 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
       <Toast message={msg} />
       <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto" }}>
 
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div style={sectionLabel}>Assignments</div>
-          {isAdmin && (
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={addAssignment} style={{ ...linkPill, cursor: "pointer", border: "none" }}>+ Add</button>
-              <button onClick={() => setEditMasterRubric(!editMasterRubric)} style={{ ...linkPill, cursor: "pointer", border: "none" }}>{editMasterRubric ? "Cancel" : "Master Rubric"}</button>
-              {setView && <button onClick={() => setView("gradebook")} style={{ ...linkPill, cursor: "pointer", border: "none" }}>Gradebook</button>}
-              {setView && <button onClick={() => setView("grading")} style={{ ...linkPill, cursor: "pointer", border: "none", color: ACCENT, background: ACCENT + "12" }}>Grading</button>}
-            </div>
-          )}
-        </div>
+        {/* Student identity strip — clickable to bio */}
+        {student && (() => {
+          const bio = (data.bios || {})[student.id] || {};
+          const initials = student.name.split(" ").map(n => n[0]).join("");
+          return (
+            <button
+              onClick={() => setView && setView("more")}
+              style={{
+                display: "flex", alignItems: "center", gap: 12,
+                background: "transparent", border: "none", padding: 0, cursor: "pointer", fontFamily: F,
+                marginBottom: 18, width: "100%", textAlign: "left",
+              }}
+            >
+              {bio.photo ? (
+                <img src={bio.photo} alt="" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 600, flexShrink: 0 }}>{initials}</div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 19, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.01em", lineHeight: 1.2 }}>{student.name}</div>
+                {bio.motto && <div style={{ fontSize: 13, color: TEXT_SECONDARY, fontStyle: "italic", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>"{bio.motto}"</div>}
+              </div>
+            </button>
+          );
+        })()}
 
+        {/* Admin buttons (top right, no page title) */}
+        {isAdmin && (
+          <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginBottom: 14 }}>
+            <button onClick={addAssignment} style={{ ...linkPill, cursor: "pointer", border: "none" }}>+ Add</button>
+            <button onClick={() => setEditMasterRubric(!editMasterRubric)} style={{ ...linkPill, cursor: "pointer", border: "none" }}>{editMasterRubric ? "Cancel" : "Master Rubric"}</button>
+            {setView && <button onClick={() => setView("grades")} style={{ ...linkPill, cursor: "pointer", border: "none" }}>Gradebook</button>}
+            {setView && <button onClick={() => setView("grading")} style={{ ...linkPill, cursor: "pointer", border: "none", color: ACCENT, background: ACCENT + "12" }}>Grading</button>}
+          </div>
+        )}
+
+        {/* Master Rubric Editor */}
         {isAdmin && editMasterRubric && (
           <RubricEditor
             rubric={data.masterRubric || DEFAULT_MASTER_RUBRIC}
@@ -649,93 +929,165 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           />
         )}
 
-        {/* HERO: dot strip + current grade */}
-        {studentId && (
-          <div style={{ ...crd, padding: 16, marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ ...sectionLabel, marginBottom: 8 }}>Your Assignments</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                {sortedAssignments.map(a => {
-                  const state = getAssignmentState(a, data, studentId);
-                  const c = dotColor(state);
-                  const sz = dotSize(a.weight);
-                  const isSubmittedNotGraded = state === "submitted";
-                  const sub = submissions[studentId + "-" + a.id];
-                  const g = grades[studentId + "-" + a.id] || {};
-                  const isHovered = hoveredDotId === a.id;
-                  let dueLine;
-                  if (!a.due) dueLine = "Ongoing";
-                  else if (sub) dueLine = "Submitted " + new Date(sub.ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                  else dueLine = "Due " + a.due;
-                  const gradeLine = (g.score !== undefined && g.score !== "") ? ("Grade: " + g.score + " / " + (g.outOf || 100)) : null;
-                  return (
-                    <div key={a.id} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}
-                      onMouseEnter={() => setHoveredDotId(a.id)}
-                      onMouseLeave={() => setHoveredDotId(null)}
-                      onClick={e => { e.stopPropagation(); setHoveredDotId(isHovered ? null : a.id); }}
+        {/* ASSIGNMENT TABLE — table on desktop, card list on mobile */}
+        {studentId && <div style={{ ...sectionLabel, marginBottom: 10 }}>Assignment table</div>}
+        {studentId && (() => {
+          const partRow = sortedAssignments.find(a => a.id === "participation");
+          const partWeight = partRow?.weight || 25;
+          const part = computeParticipationGrade(data, studentId);
+          // Build rows for every assignment
+          const rows = sortedAssignments.map(a => {
+            const isPart = a.id === "participation";
+            const g = grades[studentId + "-" + a.id] || {};
+            const sub = submissions[studentId + "-" + a.id];
+            const state = getAssignmentState(a, data, studentId);
+            let scoreText, contribution, hasGrade, scoreColor;
+            if (isPart) {
+              scoreText = part.totalEarned + " / " + part.totalPossible;
+              const pct = part.totalPossible > 0 ? part.totalEarned / part.totalPossible : 0;
+              contribution = Math.round(pct * partWeight * 10) / 10;
+              hasGrade = part.totalPossible > 0;
+              scoreColor = pct >= 0.9 ? GREEN : pct >= 0.8 ? TEXT_PRIMARY : pct >= 0.7 ? AMBER : RED;
+            } else {
+              hasGrade = g.score !== undefined && g.score !== "";
+              if (hasGrade) {
+                const sc = parseFloat(g.score);
+                const out = g.outOf || 100;
+                scoreText = g.score + " / " + out;
+                const pct = out > 0 ? sc / out : 0;
+                contribution = Math.round(pct * a.weight * 10) / 10;
+                scoreColor = pct >= 0.9 ? GREEN : pct >= 0.8 ? TEXT_PRIMARY : pct >= 0.7 ? AMBER : RED;
+              } else {
+                scoreText = "—";
+                contribution = null;
+                scoreColor = TEXT_MUTED;
+              }
+            }
+            return { a, isPart, state, scoreText, scoreColor, hasGrade, contribution, sub, g };
+          });
+
+          if (isDesktop) {
+            // ─── DESKTOP TABLE ───
+            return (
+              <div style={{ ...crd, marginBottom: 16, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: F }}>
+                  <thead>
+                    <tr style={{ background: "#fafafa", borderBottom: "1px solid " + BORDER_STRONG }}>
+                      <th style={{ ...sectionLabel, textAlign: "left", padding: "12px 16px", fontWeight: 700 }}>Assignment</th>
+                      <th style={{ ...sectionLabel, textAlign: "left", padding: "12px 12px", fontWeight: 700 }}>Due / Status</th>
+                      <th style={{ ...sectionLabel, textAlign: "right", padding: "12px 12px", fontWeight: 700 }}>Weight</th>
+                      <th style={{ ...sectionLabel, textAlign: "right", padding: "12px 12px", fontWeight: 700 }}>Score</th>
+                      <th style={{ ...sectionLabel, textAlign: "right", padding: "12px 16px", fontWeight: 700 }}>Contribution</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r, i) => {
+                      const isExpanded = tableExpandedId === r.a.id;
+                      const isLast = i === rows.length - 1;
+                      const dueText = r.isPart ? "Ongoing" : (r.a.due ? "Due " + fmtDue(r.a.due) : "—");
+                      return (
+                        <React.Fragment key={r.a.id}>
+                          <tr
+                            onClick={() => r.isPart ? setTableExpandedId(isExpanded ? null : r.a.id) : jumpToAssignment(r.a.id)}
+                            style={{
+                              borderBottom: (!isLast || isExpanded) ? "1px solid " + BORDER : "none",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <td style={{ padding: "14px 16px", fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY }}>
+                              {r.isPart && <span style={{ display: "inline-block", marginRight: 6, color: TEXT_MUTED, fontSize: 11, transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>›</span>}
+                              {r.a.name}
+                            </td>
+                            <td style={{ padding: "14px 12px", fontSize: 12, color: TEXT_SECONDARY }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <span>{dueText}</span>
+                                <StatusBadge state={r.state} />
+                              </div>
+                            </td>
+                            <td style={{ padding: "14px 12px", fontSize: 13, color: TEXT_SECONDARY, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{r.a.weight}%</td>
+                            <td style={{ padding: "14px 12px", textAlign: "right" }}>
+                              <span style={{ fontSize: 15, fontWeight: 500, color: r.scoreColor, fontVariantNumeric: "tabular-nums" }}>{r.scoreText}</span>
+                            </td>
+                            <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                              {r.contribution !== null ? (
+                                <span style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{r.contribution} pts</span>
+                              ) : (
+                                <span style={{ fontSize: 13, color: TEXT_MUTED }}>—</span>
+                              )}
+                            </td>
+                          </tr>
+                          {isExpanded && r.isPart && (
+                            <tr>
+                              <td colSpan={5} style={{ padding: "0 16px 16px", background: "#fafafa", borderBottom: !isLast ? "1px solid " + BORDER : "none" }}>
+                                <ParticipationDetail data={data} studentId={studentId} />
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ background: "#fafafa", borderTop: "1px solid " + BORDER_STRONG }}>
+                      <td colSpan={4} style={{ padding: "14px 16px", fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY, textAlign: "right" }}>Current grade</td>
+                      <td style={{ padding: "14px 16px", fontSize: 18, fontWeight: 500, color: gradeColor, fontVariantNumeric: "tabular-nums", textAlign: "right", letterSpacing: "-0.01em" }}>{currentGrade !== null ? currentGrade + "%" : "---"}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            );
+          }
+
+          // ─── MOBILE LIST (card per row) ───
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+              {rows.map(r => {
+                const isExpanded = tableExpandedId === r.a.id;
+                const dueText = r.isPart ? "Ongoing" : (r.a.due ? "Due " + fmtDue(r.a.due) : "—");
+                return (
+                  <div key={r.a.id}>
+                    <div
+                      onClick={() => r.isPart ? setTableExpandedId(isExpanded ? null : r.a.id) : jumpToAssignment(r.a.id)}
+                      style={{ ...crd, padding: "12px 14px", cursor: "pointer" }}
                     >
-                      <div style={{
-                        width: sz, height: sz, borderRadius: "50%",
-                        background: c.fill,
-                        border: isSubmittedNotGraded ? "2px solid " + c.border : "none",
-                        flexShrink: 0,
-                        cursor: "pointer",
-                        transition: "transform 0.12s",
-                        transform: isHovered ? "scale(1.1)" : "scale(1)",
-                      }} />
-                      {isHovered && (
-                        <div style={{
-                          position: "absolute",
-                          bottom: "calc(100% + 8px)",
-                          left: "50%",
-                          transform: "translateX(-50%)",
-                          background: TEXT_PRIMARY,
-                          color: "#fff",
-                          padding: "8px 12px",
-                          borderRadius: 8,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          fontFamily: F,
-                          whiteSpace: "nowrap",
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.18)",
-                          zIndex: 50,
-                          pointerEvents: "none",
-                          lineHeight: 1.5,
-                        }}>
-                          <div style={{ fontWeight: 800, marginBottom: 2 }}>{a.name}</div>
-                          <div style={{ color: "#d1d5db" }}>{dueLine}</div>
-                          {gradeLine && <div style={{ color: "#d1d5db" }}>{gradeLine}</div>}
-                          <div style={{ color: "#d1d5db" }}>{a.weight || 0}% of total grade</div>
-                          <div style={{
-                            position: "absolute",
-                            top: "100%",
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            width: 0,
-                            height: 0,
-                            borderLeft: "5px solid transparent",
-                            borderRight: "5px solid transparent",
-                            borderTop: "5px solid " + TEXT_PRIMARY,
-                          }} />
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, lineHeight: 1.3 }}>
+                            {r.isPart && <span style={{ display: "inline-block", marginRight: 4, color: TEXT_MUTED, fontSize: 11, transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>›</span>}
+                            {r.a.name}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                            <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{dueText}</span>
+                            <StatusBadge state={r.state} />
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div style={{ fontSize: 16, fontWeight: 500, color: r.scoreColor, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{r.scoreText}</div>
+                          <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>{r.a.weight}% wt</div>
+                        </div>
+                      </div>
+                      {r.contribution !== null && (
+                        <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid " + BORDER, display: "flex", justifyContent: "space-between", fontSize: 11, color: TEXT_SECONDARY }}>
+                          <span>Contribution to grade</span>
+                          <span style={{ fontWeight: 500, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{r.contribution} pts</span>
                         </div>
                       )}
                     </div>
-                  );
-                })}
+                    {isExpanded && r.isPart && (
+                      <div style={{ ...crd, padding: 14, marginTop: 4 }}>
+                        <ParticipationDetail data={data} studentId={studentId} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <div style={{ ...crd, padding: "12px 14px", background: "#fafafa", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY }}>Current grade</span>
+                <span style={{ fontSize: 18, fontWeight: 500, color: gradeColor, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>{currentGrade !== null ? currentGrade + "%" : "---"}</span>
               </div>
             </div>
-            <div style={{ width: 1, height: 56, background: BORDER }} />
-            <div style={{ textAlign: "center", flexShrink: 0, minWidth: 96 }}>
-              <div style={{ ...sectionLabel, marginBottom: 4 }}>Current Grade</div>
-              <div style={{ fontSize: 32, fontWeight: 900, color: gradeColor, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
-                {currentGrade !== null ? currentGrade + "%" : "---"}
-              </div>
-              {pctAssessed > 0 && pctAssessed < 100 && (
-                <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 4, fontWeight: 600 }}>{pctAssessed}% of grade so far</div>
-              )}
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Next Assignment */}
         {nextAssignment && (
@@ -750,18 +1102,18 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                 </div>
                 {studentId && <StatusBadge state={getAssignmentState(nextAssignment, data, studentId)} />}
               </div>
-              {renderAssignmentBody(nextAssignment)}
+              {renderAssignmentBody(nextAssignment, true)}
             </div>
           </div>
         )}
 
-        {/* All Assignments list */}
-        <div style={{ ...sectionLabel, marginBottom: 10 }}>All Assignments</div>
+        {/* Assignments list — catalog of grades */}
+        <div style={{ ...sectionLabel, marginBottom: 10 }}>All assignments</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {sortedAssignments.map(a => {
             const isEdit = isAdmin && editId === a.id;
             const isOpen = openId === a.id;
-            const state = studentId ? getAssignmentState(a, data, studentId) : "upcoming";
+            const state = studentId ? getAssignmentState(a, data, studentId) : (a.id === "participation" ? "participation" : "upcoming");
 
             if (isEdit && editLocal) {
               return (
@@ -786,8 +1138,8 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                       <div style={{ ...sectionLabel, marginBottom: 4 }}>Description / Notes</div>
                       <textarea value={editLocal.notes} onChange={e => setEditLocal({ ...editLocal, notes: e.target.value })} placeholder="Short description students will see" rows={3} style={{ ...inp, resize: "vertical" }} />
                     </div>
-                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                      <button onClick={() => { if (window.confirm("Remove " + a.name + "?")) removeAssignment(a.id); }} style={{ ...pill, background: "#fef2f2", color: RED, marginRight: "auto" }}>Delete</button>
+                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", alignItems: "center" }}>
+                      {a.id !== "participation" && <button onClick={() => { if (window.confirm("Remove " + a.name + "?")) removeAssignment(a.id); }} style={{ ...pill, background: "#fef2f2", color: RED, marginRight: "auto" }}>Delete</button>}
                       <button onClick={() => { setEditId(null); setEditLocal(null); }} style={pillInactive}>Cancel</button>
                       <button onClick={saveEdit} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Save</button>
                     </div>
@@ -796,27 +1148,64 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
               );
             }
 
+            const anyOpen = openId !== null;
+            const dimmed = anyOpen && !isOpen;
             return (
-              <div key={a.id} style={{ marginBottom: 0 }}>
+              <div
+                key={a.id}
+                id={"assignment-row-" + a.id}
+                style={{
+                  marginBottom: 0,
+                  background: "#fff",
+                  border: isOpen ? "2px solid " + ACCENT : "1px solid " + BORDER,
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  opacity: dimmed ? 0.4 : 1,
+                  transition: "opacity 0.15s, border-color 0.15s",
+                }}
+              >
                 <button onClick={() => setOpenId(isOpen ? null : a.id)} style={{
-                  ...crd, padding: 14, width: "100%", textAlign: "left", fontFamily: F, cursor: "pointer",
+                  background: "transparent", border: "none", padding: 14, width: "100%", textAlign: "left", fontFamily: F, cursor: "pointer",
                   display: "flex", alignItems: "center", gap: 10,
                 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: ACCENT + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: ACCENT, flexShrink: 0 }}>{a.weight}%</div>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: a.id === "participation" ? TEAL + "1a" : ACCENT + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: a.id === "participation" ? TEAL : ACCENT, flexShrink: 0 }}>{a.weight}%</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{a.name}</div>
                     <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>
                       {a.due ? "Due " + fmtDue(a.due) : "Ongoing"}
                     </div>
                   </div>
+                  {studentId && (() => {
+                    const g = grades[studentId + "-" + a.id] || {};
+                    const hasGrade = g.score !== undefined && g.score !== "";
+                    if (hasGrade) {
+                      const scoreNum = parseFloat(g.score);
+                      const outOf = g.outOf || 100;
+                      const pct = (scoreNum / outOf) * 100;
+                      const sc = pct >= 90 ? GREEN : pct >= 80 ? TEXT_PRIMARY : pct >= 70 ? AMBER : RED;
+                      return (
+                        <div style={{ textAlign: "right", flexShrink: 0, minWidth: 60 }}>
+                          <div style={{ fontSize: 18, fontWeight: 500, color: sc, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>{g.score}</div>
+                          <div style={{ fontSize: 9, color: TEXT_MUTED, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>/ {outOf}</div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                     {studentId && <StatusBadge state={state} />}
                     <span style={{ ...linkPill, padding: "4px 10px" }}>{isOpen ? "Close" : "Open"}</span>
                   </div>
                 </button>
                 {isOpen && (
-                  <div style={{ marginTop: 8, ...crd, padding: 16 }} onClick={e => e.stopPropagation()}>
-                    {renderAssignmentBody(a)}
+                  <div style={{ padding: "0 16px 16px", borderTop: "1px solid " + BORDER }} onClick={e => e.stopPropagation()}>
+                    <div style={{ paddingTop: 14 }}>
+                      {a.id === "participation" ? (
+                        <ParticipationDetail data={data} studentId={studentId} />
+                      ) : (
+                        renderAssignmentBody(a)
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -824,10 +1213,10 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           })}
         </div>
 
-        {/* Class explanation (bottom) */}
-        <div style={{ ...crd, padding: 16, marginTop: 24, cursor: isAdmin ? "pointer" : "default" }} onClick={() => { if (isAdmin && !editBlurb) { setBlurbLocal(blurbText); setEditBlurb(true); } }}>
+        {/* Class explanation (bottom) — collapsed by default */}
+        <div style={{ ...crd, padding: 16, marginTop: 24 }}>
           {isAdmin && editBlurb ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <textarea value={blurbLocal} onChange={e => setBlurbLocal(e.target.value)} rows={8} style={{ ...inp, fontSize: 14, lineHeight: 1.6, resize: "vertical" }} />
               <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                 <button onClick={() => setEditBlurb(false)} style={pillInactive}>Cancel</button>
@@ -836,716 +1225,28 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
             </div>
           ) : (
             <div>
-              <div style={{ ...sectionLabel, marginBottom: 8 }}>How Your Grade Works</div>
-              <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-                {blurbText}
-                {isAdmin && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 6, fontStyle: "italic" }}>Click to edit</div>}
-              </div>
-            </div>
-          )}
-        </div>
-
-      </div>
-    </div>
-  );
-}
-
-function StudentSubmission({ assignmentId, data, setData, studentId, existing }) {
-  const [docUrl, setDocUrl] = useState(existing?.docUrl || "");
-  const [videoUrl, setVideoUrl] = useState(existing?.videoUrl || "");
-  const [notes, setNotes] = useState(existing?.notes || "");
-  const [msg, setMsg] = useState("");
-  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
-
-  React.useEffect(() => {
-    setDocUrl(existing?.docUrl || "");
-    setVideoUrl(existing?.videoUrl || "");
-    setNotes(existing?.notes || "");
-  }, [existing?.docUrl, existing?.videoUrl, existing?.notes]);
-
-  const submit = async () => {
-    if (!docUrl.trim() && !videoUrl.trim()) return;
-    const key = studentId + "-" + assignmentId;
-    const submissions = data.submissions || {};
-    const prev = submissions[key] || {};
-    const updated = { ...data, submissions: { ...submissions, [key]: { ...prev, docUrl: docUrl.trim(), videoUrl: videoUrl.trim(), notes: notes.trim(), ts: Date.now() } } };
-    await saveData(updated); setData(updated); showMsg("Submitted");
-  };
-
-  return (
-    <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
-      {msg && <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginBottom: 4 }}>{msg}</div>}
-      <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>Your Submission</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <input value={docUrl} onChange={e => setDocUrl(e.target.value)} placeholder="Google Doc link" style={{ ...inp, fontSize: 13, padding: "8px 10px" }} />
-        <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="Video link (Vimeo, YouTube, etc.)" style={{ ...inp, fontSize: 13, padding: "8px 10px" }} />
-        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes for your instructor (optional)" rows={2} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical" }} />
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <button onClick={submit} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>{existing?.ts ? "Resubmit" : "Submit"}</button>
-        </div>
-      </div>
-      {existing?.ts && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 6 }}>Submitted {new Date(existing.ts).toLocaleString()}</div>}
-    </div>
-  );
-}
-
-function RegradeRequest({ assignmentId, data, setData, studentId }) {
-  const [open, setOpen] = useState(false);
-  const [note, setNote] = useState("");
-  const [msg, setMsg] = useState("");
-  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
-
-  const key = studentId + "-" + assignmentId;
-  const existing = (data.regradeRequests || {})[key];
-
-  const submit = async () => {
-    if (!note.trim()) return;
-    const regradeRequests = { ...(data.regradeRequests || {}), [key]: { note: note.trim(), ts: Date.now() } };
-    const updated = { ...data, regradeRequests };
-    await saveData(updated); setData(updated);
-    setOpen(false); setNote(""); showMsg("Regrade requested");
-  };
-
-  const cancel = async () => {
-    if (!window.confirm("Cancel your regrade request?")) return;
-    const regradeRequests = { ...(data.regradeRequests || {}) };
-    delete regradeRequests[key];
-    const updated = { ...data, regradeRequests };
-    await saveData(updated); setData(updated); showMsg("Request cancelled");
-  };
-
-  if (existing) {
-    return (
-      <div style={{ marginTop: 8, padding: "8px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fde68a" }}>
-        {msg && <div style={{ fontSize: 12, color: "#10b981", fontWeight: 600, marginBottom: 4 }}>{msg}</div>}
-        <div style={{ fontSize: 11, fontWeight: 700, color: AMBER, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Regrade Requested</div>
-        <div style={{ fontSize: 13, color: "#92400e", lineHeight: 1.4 }}>{existing.note}</div>
-        <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>Sent {new Date(existing.ts).toLocaleString()}</div>
-        <button onClick={cancel} style={{ ...pill, background: "#fff", color: TEXT_SECONDARY, border: "1px solid #e5e7eb", fontSize: 11, marginTop: 6 }}>Cancel Request</button>
-      </div>
-    );
-  }
-
-  if (open) {
-    return (
-      <div style={{ marginTop: 8, padding: "10px 12px", background: "#fafafa", borderRadius: 10, border: "1px solid " + BORDER }}>
-        <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>Request Regrade</div>
-        <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Tell your instructor what to look for (required)..." rows={3} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 6 }} />
-        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-          <button onClick={() => { setOpen(false); setNote(""); }} style={pillInactive}>Cancel</button>
-          <button onClick={submit} disabled={!note.trim()} style={{ ...pill, background: note.trim() ? TEXT_PRIMARY : "#d1d5db", color: "#fff" }}>Submit Request</button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
-      {msg && <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginRight: "auto" }}>{msg}</div>}
-      <button onClick={() => setOpen(true)} style={{ ...pill, background: "#fff", color: ACCENT, border: "1px solid " + ACCENT + "40", fontSize: 12 }}>Request Regrade</button>
-    </div>
-  );
-}
-
-/* --- BULK NOTES IMPORT --- */
-function BulkNotesImport({ assignmentId, data, setData }) {
-  const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState("text"); // "text" | "photo"
-  const [text, setText] = useState("");
-  const [imageData, setImageData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState("");
-  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 3000); };
-
-  const students = (data.students || []).filter(s => s.name !== ADMIN_NAME);
-  const bulkNotes = (data.bulkNotes || {})[assignmentId] || {};
-  const noteCount = Object.keys(bulkNotes).length;
-
-  const parseAndSave = async (input) => {
-    const lines = input.split("\n").filter(l => l.trim());
-    const notes = { ...bulkNotes };
-    let matched = 0;
-
-    lines.forEach(line => {
-      const colonIdx = line.indexOf(":");
-      if (colonIdx === -1) return;
-      const namePart = line.slice(0, colonIdx).trim().toLowerCase();
-      const comment = line.slice(colonIdx + 1).trim();
-      if (!comment) return;
-
-      const student = students.find(s => {
-        const full = s.name.toLowerCase();
-        const first = full.split(" ")[0];
-        const last = full.split(" ").slice(-1)[0];
-        return full === namePart || first === namePart || last === namePart || full.includes(namePart);
-      });
-
-      if (student) {
-        notes[student.id] = comment;
-        matched++;
-      }
-    });
-
-    if (matched === 0) {
-      showMsg("No students matched. Use first name, last name, or full name before the colon.");
-      return;
-    }
-
-    const allBulk = { ...(data.bulkNotes || {}), [assignmentId]: notes };
-    const updated = { ...data, bulkNotes: allBulk };
-    await saveData(updated); setData(updated);
-    setText("");
-    showMsg("Matched " + matched + " student" + (matched !== 1 ? "s" : ""));
-  };
-
-  const handleText = async () => {
-    if (!text.trim()) return;
-    await parseAndSave(text);
-  };
-
-  const handleImage = async (file) => {
-    if (!file) return;
-    setLoading(true);
-
-    try {
-      const base64 = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(r.result.split(",")[1]);
-        r.onerror = () => rej(new Error("Read failed"));
-        r.readAsDataURL(file);
-      });
-
-      const studentList = students.map(s => s.name).join(", ");
-
-      const response = await fetch("/api/generate-feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: `This is a photo of handwritten grading notes. Extract each student's note and format as "Student Name: comment" on separate lines.
-
-The students in this class are: ${studentList}
-
-Match each note to the correct student name from the list above. Use the student's full name exactly as listed. If you can't read a name or match it, skip it. Only output the matched lines, nothing else.`,
-          image: base64,
-          mediaType: file.type || "image/jpeg",
-        }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("Image parse error:", response.status, errText);
-        showMsg("Error reading image. Check console.");
-        setLoading(false);
-        return;
-      }
-
-      const result = await response.json();
-      const parsed = (result.content || []).map(c => c.text || "").join("");
-      setText(parsed);
-      showMsg("Notes extracted from image. Review and click Save.");
-    } catch (err) {
-      console.error("Image upload error:", err);
-      showMsg("Error processing image.");
-    }
-    setLoading(false);
-    setImageData(null);
-  };
-
-  const clearAll = async () => {
-    if (!window.confirm("Clear all bulk notes for this assignment?")) return;
-    const allBulk = { ...(data.bulkNotes || {}) };
-    delete allBulk[assignmentId];
-    const updated = { ...data, bulkNotes: allBulk };
-    await saveData(updated); setData(updated);
-    showMsg("Cleared");
-  };
-
-  if (!open) {
-    return (
-      <div style={{ marginTop: 6 }}>
-        <button onClick={() => setOpen(true)} style={{ ...pillInactive, fontSize: 11, width: "100%" }}>
-          Bulk Notes {noteCount > 0 ? "(" + noteCount + " saved)" : ""}
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ marginTop: 8, padding: "12px 14px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb" }}>
-      {msg && <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginBottom: 6 }}>{msg}</div>}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>Bulk Notes Import</div>
-        <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#d1d5db" }}>x</button>
-      </div>
-
-      <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-        <button onClick={() => setMode("text")} style={{ ...pill, fontSize: 11, padding: "4px 10px", background: mode === "text" ? "#111827" : "#e5e7eb", color: mode === "text" ? "#fff" : "#4b5563" }}>Type / Paste</button>
-        <button onClick={() => setMode("photo")} style={{ ...pill, fontSize: 11, padding: "4px 10px", background: mode === "photo" ? "#111827" : "#e5e7eb", color: mode === "photo" ? "#fff" : "#4b5563" }}>Photo of Notes</button>
-      </div>
-
-      {mode === "text" && (
-        <div>
-          <textarea value={text} onChange={e => setText(e.target.value)} placeholder={"One per line:\nJohn: Great interview subject choice\nJane: Needs deeper follow-up questions\nBob: Really impressed with the thank-you"} rows={6} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 6 }} />
-          <div style={{ display: "flex", gap: 4 }}>
-            <button onClick={handleText} disabled={!text.trim()} style={{ ...pill, background: text.trim() ? "#111827" : "#d1d5db", color: "#fff", flex: 1 }}>Save Notes</button>
-          </div>
-        </div>
-      )}
-
-      {mode === "photo" && (
-        <div>
-          <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginBottom: 6 }}>Take a photo of your handwritten notes. AI will read them and match to students.</div>
-          <input type="file" accept="image/*" capture="environment" onChange={e => { if (e.target.files[0]) handleImage(e.target.files[0]); }} style={{ marginBottom: 6 }} />
-          {loading && <div style={{ fontSize: 13, color: ACCENT, fontWeight: 600 }}>Reading your notes...</div>}
-          {text && !loading && (
-            <div>
-              <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>Extracted notes (edit if needed, then save):</div>
-              <textarea value={text} onChange={e => setText(e.target.value)} rows={6} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 6 }} />
-              <button onClick={handleText} style={{ ...pill, background: "#111827", color: "#fff", width: "100%" }}>Save Notes</button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Show existing notes */}
-      {noteCount > 0 && (
-        <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Saved notes ({noteCount})</div>
-          {students.filter(s => bulkNotes[s.id]).map(s => (
-            <div key={s.id} style={{ fontSize: 12, color: "#111827", padding: "4px 0", borderBottom: "1px solid #f3f4f6" }}>
-              <span style={{ fontWeight: 600 }}>{s.name}:</span> <span style={{ color: TEXT_SECONDARY }}>{bulkNotes[s.id]}</span>
-            </div>
-          ))}
-          <button onClick={clearAll} style={{ ...pill, fontSize: 10, background: "#fef2f2", color: RED, marginTop: 6 }}>Clear All Notes</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* --- QUICK GRADE --- */
-function QuickGrade({ assignmentId, studentId, studentName, data, setData, onClose }) {
-  const rubric = (data.assignmentRubrics || {})[assignmentId];
-  const sub = (data.submissions || {})[studentId + "-" + assignmentId];
-  const existingGrade = (data.grades || {})[studentId + "-" + assignmentId] || {};
-
-  const [selected, setSelected] = useState(new Set());
-  const bulkNote = ((data.bulkNotes || {})[assignmentId] || {})[studentId] || "";
-  const [customNote, setCustomNote] = useState(bulkNote);
-  const [generatedComment, setGeneratedComment] = useState("");
-  const [suggestedTier, setSuggestedTier] = useState(null);
-  const [selectedTier, setSelectedTier] = useState(null);
-  const [score, setScore] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState("select"); // "select" | "review"
-  const [addingItem, setAddingItem] = useState(false);
-  const [newItemLabel, setNewItemLabel] = useState("");
-  const [newItemExplanation, setNewItemExplanation] = useState("");
-  const [newItemPositive, setNewItemPositive] = useState(false);
-  const [newItemSub, setNewItemSub] = useState("general");
-  const [msg, setMsg] = useState("");
-  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
-
-  if (!rubric) return null;
-
-  const tiers = rubric.tiers || [];
-  const allItems = rubric.items || [];
-  const sections = rubric.sections || [];
-
-  // Flatten subsections for the new item dropdown
-  const allSubsections = [];
-  sections.forEach(sec => {
-    (sec.subsections || []).forEach(sub => {
-      allSubsections.push({ id: sub.id, label: sec.label + " > " + sub.label });
-    });
-  });
-
-  const toggle = (id) => {
-    const next = new Set(selected);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    setSelected(next);
-  };
-
-  const saveNewItemToRubric = async () => {
-    if (!newItemLabel.trim()) return;
-    const newItem = { id: genId(), sub: newItemSub, label: newItemLabel.trim(), explanation: newItemExplanation.trim(), link: "", positive: newItemPositive };
-    const rubrics = data.assignmentRubrics || {};
-    const current = rubrics[assignmentId] || rubric;
-    const updatedRubric = { ...current, items: [...(current.items || []), newItem] };
-    const updated = { ...data, assignmentRubrics: { ...rubrics, [assignmentId]: updatedRubric } };
-    await saveData(updated); setData(updated);
-    // Auto-select the new item
-    const next = new Set(selected);
-    next.add(newItem.id);
-    setSelected(next);
-    setNewItemLabel(""); setNewItemExplanation(""); setNewItemPositive(false); setNewItemSub("general"); setAddingItem(false);
-    showMsg("Added to rubric");
-  };
-
-  const generateFeedback = async () => {
-    if (selected.size === 0) { showMsg("Select at least one feedback item"); return; }
-    setLoading(true);
-    try {
-      const selectedItems = allItems.filter(i => selected.has(i.id));
-      const positives = selectedItems.filter(i => i.positive);
-      const negatives = selectedItems.filter(i => !i.positive);
-
-      // Build section context for the AI
-      const sectionInfo = sections.map(s => {
-        const subIds = (s.subsections || []).map(sub => sub.id);
-        const sectionItems = selectedItems.filter(i => subIds.includes(i.sub));
-        return { label: s.label, weight: s.weight, positiveCount: sectionItems.filter(i => i.positive).length, negativeCount: sectionItems.filter(i => !i.positive).length };
-      }).filter(s => s.positiveCount + s.negativeCount > 0);
-
-      const generalItems = selectedItems.filter(i => i.sub === "general");
-
-      const tierList = tiers.map(t => t.label + " (" + t.min + "-" + t.max + ")").join(", ");
-
-      const prompt = `You are writing brief grading feedback for a college professor. The professor's style is casual, warm, and direct. Short sentences. No flowery language. No words like "excellence," "exemplary," "substantive," "demonstrates," "genuinely," "meaningful," "exceptional." Write like a real person talking to a student they like.
-
-Rules:
-- Keep it SHORT. 2-4 short paragraphs max. Each paragraph is 1-3 sentences.
-- Plain text only. No bullet points, no numbered lists, no markdown, no bold headers.
-- Lead with the positive stuff, then areas for improvement.
-- Address the student as "you"
-- Use the explanation text from each feedback item but rewrite it to be casual and concise. Don't just copy it verbatim.
-- If there are links, include them naturally.
-- No filler phrases like "Overall," "In conclusion," "This assignment," "Moving forward." Just say the thing.
-- Sound like a person, not a grading rubric.
-
-Good example of the right tone: "Nice work on the interview guide. Your questions are thoughtful and well-organized. The summary is clear and I can tell you actually engaged with the conversation. One thing to work on: include more specific details from the interview itself. I want to hear what they actually said, not just general takeaways."
-
-${customNote ? "Include this personal note at the start (keep it natural): " + customNote : ""}
-
-Sections and their approximate weights:
-${sectionInfo.map(s => s.label + " (~" + s.weight + "%): " + s.positiveCount + " positive, " + s.negativeCount + " negative").join("\n")}
-${generalItems.length > 0 ? "General items: " + generalItems.length : ""}
-
-Selected positive feedback:
-${positives.map(i => "- " + i.label + ": " + i.explanation + (i.link ? " [Link: " + i.link + "]" : "")).join("\n") || "(none)"}
-
-Selected negative feedback:
-${negatives.map(i => "- " + i.label + ": " + i.explanation + (i.link ? " [Link: " + i.link + "]" : "")).join("\n") || "(none)"}
-
-Available tiers: ${tierList}
-
-Based on the balance of positive and negative feedback across the weighted sections, suggest the most appropriate tier. Respond with ONLY a JSON object (no markdown, no backticks):
-{"tier": "tier label", "comment": "your full comment to the student"}`;
-
-      const response = await fetch("/api/generate-feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("API error:", response.status, errText);
-        showMsg("Error: " + response.status + ". Check console.");
-        setLoading(false);
-        return;
-      }
-
-      const result = await response.json();
-      const text = (result.content || []).map(c => c.text || "").join("");
-      const clean = text.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
-
-      setGeneratedComment(parsed.comment || "");
-      const tierMatch = tiers.find(t => t.label.toLowerCase() === (parsed.tier || "").toLowerCase());
-      if (tierMatch) {
-        setSuggestedTier(tierMatch.label);
-        setSelectedTier(tierMatch.label);
-        setScore(String(Math.round((tierMatch.min + tierMatch.max) / 2)));
-      }
-      setStep("review");
-    } catch (err) {
-      console.error("Quick Grade AI error:", err);
-      showMsg("Error generating feedback. Try again.");
-    }
-    setLoading(false);
-  };
-
-  const selectTier = (tierLabel) => {
-    setSelectedTier(tierLabel);
-    const t = tiers.find(x => x.label === tierLabel);
-    if (t) setScore(String(Math.round((t.min + t.max) / 2)));
-  };
-
-  const saveQuickGrade = async () => {
-    if (!score) { showMsg("Enter a score"); return; }
-    const key = studentId + "-" + assignmentId;
-    const grades = data.grades || {};
-    const existing = grades[key] || {};
-    const newGrade = { ...existing, score: parseFloat(score), outOf: 100, comment: generatedComment, gradedTs: Date.now() };
-    const regradeRequests = { ...(data.regradeRequests || {}) };
-    delete regradeRequests[key];
-    const gradeNotifications = { ...(data.gradeNotifications || {}), [key]: { ts: Date.now() } };
-    const updated = { ...data, grades: { ...grades, [key]: newGrade }, regradeRequests, gradeNotifications };
-    await saveData(updated); setData(updated);
-    showMsg("Grade saved");
-    onClose();
-  };
-
-  // Render subsection items as toggle buttons
-  const renderSubItems = (subId) => {
-    const subItems = allItems.filter(i => i.sub === subId);
-    if (subItems.length === 0) return <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic", padding: "2px 0" }}>No items</div>;
-    return subItems.map(item => {
-      const isOn = selected.has(item.id);
-      const bg = isOn ? (item.positive ? GREEN : RED) : (item.positive ? "#ecfdf5" : "#fef2f2");
-      const color = isOn ? "#fff" : (item.positive ? "#065f46" : "#991b1b");
-      const border = isOn ? "transparent" : (item.positive ? "#a7f3d0" : "#fecaca");
-      return (
-        <button key={item.id} onClick={() => toggle(item.id)} style={{ ...pill, padding: "6px 12px", fontSize: 12, background: bg, color, border: "1.5px solid " + border, margin: "2px 4px 2px 0" }}>
-          {item.positive ? "+" : "-"} {item.label}
-        </button>
-      );
-    });
-  };
-
-  return (
-    <div style={{ ...crd, padding: 16, marginBottom: 12, border: "2px solid " + ACCENT }}>
-      {msg && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "#1e293b", color: "#fff", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, zIndex: 999 }}>{msg}</div>}
-
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>Quick Grade: {studentName}</div>
-          <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{(data.assignments || []).find(a => a.id === assignmentId)?.name}</div>
-        </div>
-        <button onClick={onClose} style={pillInactive}>Close</button>
-      </div>
-
-      {/* Submission link */}
-      {sub && (
-        <div style={{ padding: "8px 10px", background: "#f9fafb", borderRadius: 8, marginBottom: 12 }}>
-          {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, fontWeight: 500 }}>View Submission</a>}
-                    {sub.videoUrl && <a href={sub.videoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, fontWeight: 500, marginLeft: 8 }}>Video</a>}
-          {sub.notes && <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>"{sub.notes}"</div>}
-          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>Submitted {new Date(sub.ts).toLocaleString()}</div>
-        </div>
-      )}
-
-      {step === "select" && (
-        <div>
-          {/* Free form instructions to AI */}
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Say something to the student (optional)</div>
-            <textarea value={customNote} onChange={e => setCustomNote(e.target.value)} placeholder={"e.g. \"Let them know I'm here if they have questions\" or \"Great job picking this person\""} rows={2} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical" }} />
-            <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>This gets woven into the comment naturally. Say it however you want.</div>
-          </div>
-
-          {/* Sections with subsections and items */}
-          {sections.map(sec => (
-            <div key={sec.id} style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 900, color: "#111827", marginBottom: 6 }}>{sec.label} <span style={{ fontWeight: 500, color: TEXT_MUTED }}>(~{sec.weight}%)</span></div>
-              {(sec.subsections || []).map(sub => (
-                <div key={sub.id} style={{ marginBottom: 8, marginLeft: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{sub.label}</div>
-                  <div style={{ display: "flex", flexWrap: "wrap" }}>
-                    {renderSubItems(sub.id)}
-                  </div>
+              <button onClick={() => setHowGradeOpen(!howGradeOpen)} style={{
+                background: "transparent", border: "none", padding: 0, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: F,
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+              }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY }}>How your grade works</div>
+                <span style={{ fontSize: 14, color: TEXT_MUTED, transform: howGradeOpen ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>›</span>
+              </button>
+              {howGradeOpen && (
+                <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap", marginTop: 12, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
+                  {blurbText}
+                  {isAdmin && (
+                    <div style={{ marginTop: 10 }}>
+                      <button onClick={() => { setBlurbLocal(blurbText); setEditBlurb(true); }} style={linkPill}>Edit</button>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          ))}
-
-          {/* General items */}
-          {allItems.filter(i => i.sub === "general").length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 900, color: "#111827", marginBottom: 6 }}>General</div>
-              <div style={{ display: "flex", flexWrap: "wrap" }}>
-                {renderSubItems("general")}
-              </div>
-            </div>
-          )}
-
-          {/* Add new item to rubric */}
-          {!addingItem ? (
-            <button onClick={() => setAddingItem(true)} style={{ ...pillInactive, fontSize: 11, marginBottom: 12 }}>+ Add new feedback item to rubric</button>
-          ) : (
-            <div style={{ padding: "10px 12px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb", marginBottom: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 6 }}>New rubric item (saves for all students)</div>
-              <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-                <button onClick={() => setNewItemPositive(!newItemPositive)} style={{ ...pill, padding: "4px 10px", fontSize: 11, background: newItemPositive ? GREEN : RED, color: "#fff", flexShrink: 0 }}>{newItemPositive ? "+ Positive" : "- Negative"}</button>
-                <select value={newItemSub} onChange={e => setNewItemSub(e.target.value)} style={{ ...sel, fontSize: 12, padding: "4px 8px" }}>
-                  <option value="general">General</option>
-                  {allSubsections.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                </select>
-              </div>
-              <input value={newItemLabel} onChange={e => setNewItemLabel(e.target.value)} placeholder="Button label (short)" style={{ ...inp, fontSize: 13, padding: "6px 8px", marginBottom: 4 }} />
-              <textarea value={newItemExplanation} onChange={e => setNewItemExplanation(e.target.value)} placeholder="Explanation for student..." rows={2} style={{ ...inp, fontSize: 13, padding: "6px 8px", resize: "vertical", marginBottom: 6 }} />
-              <div style={{ display: "flex", gap: 4 }}>
-                <button onClick={saveNewItemToRubric} disabled={!newItemLabel.trim()} style={{ ...pill, background: newItemLabel.trim() ? "#111827" : "#d1d5db", color: "#fff", flex: 1 }}>Save to Rubric</button>
-                <button onClick={() => { setAddingItem(false); setNewItemLabel(""); setNewItemExplanation(""); }} style={pillInactive}>Cancel</button>
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button onClick={generateFeedback} disabled={loading || selected.size === 0} style={{ ...pill, background: selected.size > 0 ? "#111827" : "#d1d5db", color: "#fff", padding: "10px 20px", fontSize: 14 }}>
-              {loading ? "Generating..." : "Generate Feedback (" + selected.size + " selected)"}
-            </button>
-            <span style={{ fontSize: 12, color: TEXT_MUTED }}>{selected.size} item{selected.size !== 1 ? "s" : ""} selected</span>
-          </div>
-        </div>
-      )}
-
-      {step === "review" && (
-        <div>
-          {/* Tier selection */}
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 6 }}>
-              Tier {suggestedTier ? "(AI suggested: " + suggestedTier + ")" : ""}
-            </div>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-              {tiers.map(t => (
-                <button key={t.label} onClick={() => selectTier(t.label)} style={{ ...pill, padding: "8px 14px", fontSize: 12, background: selectedTier === t.label ? "#111827" : "#f3f4f6", color: selectedTier === t.label ? "#fff" : "#4b5563", border: suggestedTier === t.label && selectedTier !== t.label ? "2px solid " + ACCENT : "2px solid transparent" }}>
-                  {t.label} ({t.min}-{t.max})
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Score */}
-          <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase" }}>Score</div>
-            <input type="number" value={score} onChange={e => setScore(e.target.value)} style={{ ...inp, width: 70, fontSize: 16, fontWeight: 900, padding: "6px 10px", textAlign: "center" }} />
-            <span style={{ fontSize: 13, color: TEXT_MUTED }}>/ 100</span>
-            {selectedTier && (() => {
-              const t = tiers.find(x => x.label === selectedTier);
-              const s = parseFloat(score);
-              if (t && (s < t.min || s > t.max)) return <span style={{ fontSize: 11, color: AMBER, fontWeight: 600 }}>Outside {selectedTier} range ({t.min}-{t.max})</span>;
-              return null;
-            })()}
-          </div>
-
-          {/* Comment preview */}
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Comment (editable)</div>
-            <textarea value={generatedComment} onChange={e => setGeneratedComment(e.target.value)} rows={8} style={{ ...inp, fontSize: 13, padding: "10px 12px", resize: "vertical", lineHeight: 1.6 }} />
-          </div>
-
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={saveQuickGrade} style={{ ...pill, background: GREEN, color: "#fff", padding: "10px 20px", fontSize: 14, flex: 1 }}>Save Grade</button>
-            <button onClick={() => setStep("select")} style={{ ...pillInactive, padding: "10px 16px" }}>Back</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* --- ADMIN SUBMISSIONS VIEW --- */
-function AdminSubmissions({ assignmentId, data, setData }) {
-  const submissions = data.submissions || {};
-  const grades = data.grades || {};
-  const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME).sort(lastSortObj);
-  const [editGrades, setEditGrades] = useState({});
-  const [quickGradeStudent, setQuickGradeStudent] = useState(null);
-  const [msg, setMsg] = useState("");
-  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
-  const hasRubric = !!(data.assignmentRubrics || {})[assignmentId];
-
-  const saveGrade = async (studentId) => {
-    const eg = editGrades[studentId] || {};
-    const key = studentId + "-" + assignmentId;
-    const existing = grades[key] || {};
-    const newGrade = {
-      ...existing,
-      score: eg.score !== undefined ? (eg.score === "" ? undefined : parseFloat(eg.score)) : existing.score,
-      outOf: eg.outOf !== undefined ? (parseFloat(eg.outOf) || 100) : (existing.outOf || 100),
-      comment: eg.comment !== undefined ? eg.comment : (existing.comment || ""),
-      gradedTs: Date.now(),
-    };
-    // Auto-clear regrade request for this student/assignment
-    const regradeRequests = { ...(data.regradeRequests || {}) };
-    delete regradeRequests[key];
-    // Create grade notification
-    const gradeNotifications = { ...(data.gradeNotifications || {}), [key]: { ts: Date.now() } };
-    const updated = {
-      ...data,
-      grades: { ...grades, [key]: newGrade },
-      regradeRequests,
-      gradeNotifications,
-    };
-    await saveData(updated); setData(updated);
-    setEditGrades(prev => { const n = { ...prev }; delete n[studentId]; return n; });
-    showMsg("Saved");
-  };
-
-  const startGradeEdit = (studentId) => {
-    const key = studentId + "-" + assignmentId;
-    const g = grades[key] || {};
-    setEditGrades(prev => ({ ...prev, [studentId]: { score: g.score !== undefined ? String(g.score) : "", outOf: String(g.outOf || 100), comment: g.comment || "" } }));
-  };
-
-  return (
-    <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-      {msg && <div style={{ fontSize: 12, color: "#10b981", fontWeight: 600 }}>{msg}</div>}
-      {sorted.map(s => {
-        const sub = submissions[s.id + "-" + assignmentId];
-        const grade = grades[s.id + "-" + assignmentId] || {};
-        const isEditing = editGrades[s.id] !== undefined;
-        const eg = editGrades[s.id] || {};
-
-        return (
-          <div key={s.id} style={{ padding: 12, borderRadius: 10, background: sub ? "#f9fafb" : "transparent", border: "1px solid " + (sub ? "#e5e7eb" : "#f3f4f6") }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: sub ? 6 : 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{s.name}</div>
-              {grade.score !== undefined && !isEditing && (
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{grade.score}<span style={{ fontSize: 12, color: "#9ca3af" }}>/{grade.outOf || 100}</span></div>
               )}
-              {!sub && !isEditing && <span style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic" }}>No submission</span>}
             </div>
-            {sub && (
-              <div style={{ marginBottom: 8 }}>
-                {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 2 }}>Google Doc</a>}
-                    {sub.videoUrl && <a href={sub.videoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 2 }}>Video</a>}
-                {sub.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, lineHeight: 1.4 }}>"{sub.notes}"</div>}
-                <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>Submitted {new Date(sub.ts).toLocaleString()}</div>
-              </div>
-            )}
-            {grade.comment && !isEditing && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, padding: "6px 8px", background: "#eff6ff", borderRadius: 6, lineHeight: 1.4 }}>{grade.comment}</div>}
-            {/* Regrade request */}
-            {(() => {
-              const rr = (data.regradeRequests || {})[s.id + "-" + assignmentId];
-              if (!rr || isEditing) return null;
-              return (
-                <div style={{ marginTop: 6, padding: "6px 8px", background: "#fffbeb", borderRadius: 6, border: "1px solid #fde68a" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: AMBER, marginBottom: 2 }}>Regrade Request</div>
-                  <div style={{ fontSize: 12, color: "#92400e", lineHeight: 1.4 }}>{rr.note}</div>
-                  <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{new Date(rr.ts).toLocaleString()}</div>
-                </div>
-              );
-            })()}
-            {isEditing ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <input value={eg.score} onChange={e => setEditGrades(prev => ({ ...prev, [s.id]: { ...eg, score: e.target.value } }))} placeholder="Score" style={{ ...inp, fontSize: 13, padding: "6px 8px", width: 70 }} type="number" />
-                  <span style={{ fontSize: 13, color: "#9ca3af", display: "flex", alignItems: "center" }}>/</span>
-                  <input value={eg.outOf} onChange={e => setEditGrades(prev => ({ ...prev, [s.id]: { ...eg, outOf: e.target.value } }))} placeholder="Out of" style={{ ...inp, fontSize: 13, padding: "6px 8px", width: 70 }} type="number" />
-                </div>
-                <textarea value={eg.comment} onChange={e => setEditGrades(prev => ({ ...prev, [s.id]: { ...eg, comment: e.target.value } }))} placeholder="Comment for student..." rows={2} style={{ ...inp, fontSize: 13, padding: "6px 8px", resize: "vertical" }} />
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => saveGrade(s.id)} style={{ ...pill, background: "#111827", color: "#fff", flex: 1 }}>Save</button>
-                  <button onClick={() => setEditGrades(prev => { const n = { ...prev }; delete n[s.id]; return n; })} style={pillInactive}>Cancel</button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
-                <button onClick={() => startGradeEdit(s.id)} style={{ ...pillInactive, fontSize: 12, flex: 1 }}>Grade</button>
-                {hasRubric && <button onClick={() => setQuickGradeStudent(quickGradeStudent === s.id ? null : s.id)} style={{ ...pill, fontSize: 12, background: quickGradeStudent === s.id ? ACCENT : "#eff6ff", color: quickGradeStudent === s.id ? "#fff" : ACCENT }}>Quick Grade</button>}
-              </div>
-            )}
-            {quickGradeStudent === s.id && (
-              <div style={{ marginTop: 8 }}>
-                <QuickGrade assignmentId={assignmentId} studentId={s.id} studentName={s.name} data={data} setData={setData} onClose={() => setQuickGradeStudent(null)} />
-              </div>
-            )}
-          </div>
-        );
-      })}
+          )}
+        </div>
+
+      </div>
     </div>
   );
 }

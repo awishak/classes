@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ReboundPanel } from "./GameSystem4";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -542,8 +542,34 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const [editMasterRubric, setEditMasterRubric] = useState(false);
   const [openId, setOpenId] = useState(null);
   const [hoveredDotId, setHoveredDotId] = useState(null);
+  const [tableExpandedId, setTableExpandedId] = useState(null);
+  const [howGradeOpen, setHowGradeOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" ? window.innerWidth >= 600 : true);
+  useEffect(() => {
+    const onResize = () => setIsDesktop(window.innerWidth >= 600);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  // Jump from the assignment table to the All-assignments section, expand that one.
+  // Uses an offset scroll so the row appears below the sticky nav, not under it.
+  const jumpToAssignment = (id) => {
+    setOpenId(id);
+    // Wait two frames so the expansion has rendered before measuring,
+    // then scroll with an offset that clears the sticky nav (~80px).
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.getElementById("assignment-row-" + id);
+        if (!el) return;
+        const navOffset = 80;
+        const top = el.getBoundingClientRect().top + window.pageYOffset - navOffset;
+        window.scrollTo({ top, behavior: "smooth" });
+      });
+    });
+  };
+
   const isGuest = userName === GUEST_NAME;
   const student = !isAdmin && !isGuest ? data.students.find(s => s.name === userName) : null;
   const studentId = student?.id;
@@ -611,13 +637,27 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
     return new Date(a.due + ", " + year) - new Date(b.due + ", " + year);
   });
 
-  // ── Find next assignment: first non-graded, non-participation that is upcoming or due
-  const nextAssignment = sortedAssignments.find(a => {
-    if (a.id === "participation") return false;
-    if (!studentId) return !!a.due; // for admins/guests, just show first dated
-    const state = getAssignmentState(a, data, studentId);
-    return state === "upcoming" || state === "missing";
-  });
+  // ── Find next assignment: first non-participation assignment with a due date today or in the future,
+  // regardless of submission or grading state. The status chip differentiates upcoming/submitted/graded.
+  // Falls back to first missing (past-due, ungraded) assignment if nothing is upcoming.
+  const todayMidnight = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
+  const nextAssignment = (() => {
+    if (!studentId) return sortedAssignments.find(a => a.id !== "participation" && !!a.due) || null;
+    // First, anything with a due date today or in the future
+    const upcoming = sortedAssignments.find(a => {
+      if (a.id === "participation") return false;
+      const dueDate = parseDueDate(a.due);
+      if (!dueDate) return false;
+      return dueDate.getTime() >= todayMidnight;
+    });
+    if (upcoming) return upcoming;
+    // Otherwise, fall back to anything past-due but ungraded (missing/late state)
+    return sortedAssignments.find(a => {
+      if (a.id === "participation") return false;
+      const state = getAssignmentState(a, data, studentId);
+      return state === "missing" || state === "late";
+    }) || null;
+  })();
 
   // ── Compute current grade including participation
   const computeCurrentGrade = () => {
@@ -705,18 +745,41 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
       <Toast message={msg} />
       <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto" }}>
 
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div style={sectionLabel}>Assignments</div>
-          {isAdmin && (
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={addAssignment} style={{ ...linkPill, cursor: "pointer", border: "none" }}>+ Add</button>
-              <button onClick={() => setEditMasterRubric(!editMasterRubric)} style={{ ...linkPill, cursor: "pointer", border: "none" }}>{editMasterRubric ? "Cancel" : "Master Rubric"}</button>
-              {setView && <button onClick={() => setView("grades")} style={{ ...linkPill, cursor: "pointer", border: "none" }}>Gradebook</button>}
-              {setView && <button onClick={() => setView("grading")} style={{ ...linkPill, cursor: "pointer", border: "none", color: ACCENT, background: ACCENT + "12" }}>Grading</button>}
-            </div>
-          )}
-        </div>
+        {/* Student identity strip — clickable to bio */}
+        {student && (() => {
+          const bio = (data.bios || {})[student.id] || {};
+          const initials = student.name.split(" ").map(n => n[0]).join("");
+          return (
+            <button
+              onClick={() => setView && setView("more")}
+              style={{
+                display: "flex", alignItems: "center", gap: 12,
+                background: "transparent", border: "none", padding: 0, cursor: "pointer", fontFamily: F,
+                marginBottom: 18, width: "100%", textAlign: "left",
+              }}
+            >
+              {bio.photo ? (
+                <img src={bio.photo} alt="" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 600, flexShrink: 0 }}>{initials}</div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 19, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.01em", lineHeight: 1.2 }}>{student.name}</div>
+                {bio.motto && <div style={{ fontSize: 13, color: TEXT_SECONDARY, fontStyle: "italic", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>"{bio.motto}"</div>}
+              </div>
+            </button>
+          );
+        })()}
+
+        {/* Admin buttons (top right, no page title) */}
+        {isAdmin && (
+          <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginBottom: 14 }}>
+            <button onClick={addAssignment} style={{ ...linkPill, cursor: "pointer", border: "none" }}>+ Add</button>
+            <button onClick={() => setEditMasterRubric(!editMasterRubric)} style={{ ...linkPill, cursor: "pointer", border: "none" }}>{editMasterRubric ? "Cancel" : "Master Rubric"}</button>
+            {setView && <button onClick={() => setView("grades")} style={{ ...linkPill, cursor: "pointer", border: "none" }}>Gradebook</button>}
+            {setView && <button onClick={() => setView("grading")} style={{ ...linkPill, cursor: "pointer", border: "none", color: ACCENT, background: ACCENT + "12" }}>Grading</button>}
+          </div>
+        )}
 
         {/* Master Rubric Editor */}
         {isAdmin && editMasterRubric && (
@@ -732,95 +795,165 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           />
         )}
 
-        {/* HERO: dot strip + current grade */}
-        {studentId && (
-          <div style={{ ...crd, padding: 16, marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ ...sectionLabel, marginBottom: 8 }}>Your Assignments</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                {sortedAssignments.map(a => {
-                  const state = getAssignmentState(a, data, studentId);
-                  const c = dotColor(state);
-                  const sz = dotSize(a.weight);
-                  const isSubmittedNotGraded = state === "submitted";
-                  const sub = submissions[studentId + "-" + a.id];
-                  const g = grades[studentId + "-" + a.id] || {};
-                  const isHovered = hoveredDotId === a.id;
-                  // Build tooltip lines
-                  let dueLine;
-                  if (a.id === "participation") dueLine = "Ongoing";
-                  else if (sub) dueLine = "Submitted " + new Date(sub.ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                  else if (a.due) dueLine = "Due " + a.due;
-                  else dueLine = null;
-                  const gradeLine = (g.score !== undefined && g.score !== "") ? ("Grade: " + g.score + " / " + (g.outOf || 100)) : null;
-                  return (
-                    <div key={a.id} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}
-                      onMouseEnter={() => setHoveredDotId(a.id)}
-                      onMouseLeave={() => setHoveredDotId(null)}
-                      onClick={e => { e.stopPropagation(); setHoveredDotId(isHovered ? null : a.id); }}
+        {/* ASSIGNMENT TABLE — table on desktop, card list on mobile */}
+        {studentId && <div style={{ ...sectionLabel, marginBottom: 10 }}>Assignment table</div>}
+        {studentId && (() => {
+          const partRow = sortedAssignments.find(a => a.id === "participation");
+          const partWeight = partRow?.weight || 25;
+          const part = computeParticipationGrade(data, studentId);
+          // Build rows for every assignment
+          const rows = sortedAssignments.map(a => {
+            const isPart = a.id === "participation";
+            const g = grades[studentId + "-" + a.id] || {};
+            const sub = submissions[studentId + "-" + a.id];
+            const state = getAssignmentState(a, data, studentId);
+            let scoreText, contribution, hasGrade, scoreColor;
+            if (isPart) {
+              scoreText = part.totalEarned + " / " + part.totalPossible;
+              const pct = part.totalPossible > 0 ? part.totalEarned / part.totalPossible : 0;
+              contribution = Math.round(pct * partWeight * 10) / 10;
+              hasGrade = part.totalPossible > 0;
+              scoreColor = pct >= 0.9 ? GREEN : pct >= 0.8 ? TEXT_PRIMARY : pct >= 0.7 ? AMBER : RED;
+            } else {
+              hasGrade = g.score !== undefined && g.score !== "";
+              if (hasGrade) {
+                const sc = parseFloat(g.score);
+                const out = g.outOf || 100;
+                scoreText = g.score + " / " + out;
+                const pct = out > 0 ? sc / out : 0;
+                contribution = Math.round(pct * a.weight * 10) / 10;
+                scoreColor = pct >= 0.9 ? GREEN : pct >= 0.8 ? TEXT_PRIMARY : pct >= 0.7 ? AMBER : RED;
+              } else {
+                scoreText = "—";
+                contribution = null;
+                scoreColor = TEXT_MUTED;
+              }
+            }
+            return { a, isPart, state, scoreText, scoreColor, hasGrade, contribution, sub, g };
+          });
+
+          if (isDesktop) {
+            // ─── DESKTOP TABLE ───
+            return (
+              <div style={{ ...crd, marginBottom: 16, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: F }}>
+                  <thead>
+                    <tr style={{ background: "#fafafa", borderBottom: "1px solid " + BORDER_STRONG }}>
+                      <th style={{ ...sectionLabel, textAlign: "left", padding: "12px 16px", fontWeight: 700 }}>Assignment</th>
+                      <th style={{ ...sectionLabel, textAlign: "left", padding: "12px 12px", fontWeight: 700 }}>Due / Status</th>
+                      <th style={{ ...sectionLabel, textAlign: "right", padding: "12px 12px", fontWeight: 700 }}>Weight</th>
+                      <th style={{ ...sectionLabel, textAlign: "right", padding: "12px 12px", fontWeight: 700 }}>Score</th>
+                      <th style={{ ...sectionLabel, textAlign: "right", padding: "12px 16px", fontWeight: 700 }}>Contribution</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r, i) => {
+                      const isExpanded = tableExpandedId === r.a.id;
+                      const isLast = i === rows.length - 1;
+                      const dueText = r.isPart ? "Ongoing" : (r.a.due ? "Due " + fmtDue(r.a.due) : "—");
+                      return (
+                        <React.Fragment key={r.a.id}>
+                          <tr
+                            onClick={() => r.isPart ? setTableExpandedId(isExpanded ? null : r.a.id) : jumpToAssignment(r.a.id)}
+                            style={{
+                              borderBottom: (!isLast || isExpanded) ? "1px solid " + BORDER : "none",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <td style={{ padding: "14px 16px", fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY }}>
+                              {r.isPart && <span style={{ display: "inline-block", marginRight: 6, color: TEXT_MUTED, fontSize: 11, transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>›</span>}
+                              {r.a.name}
+                            </td>
+                            <td style={{ padding: "14px 12px", fontSize: 12, color: TEXT_SECONDARY }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <span>{dueText}</span>
+                                <StatusBadge state={r.state} />
+                              </div>
+                            </td>
+                            <td style={{ padding: "14px 12px", fontSize: 13, color: TEXT_SECONDARY, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{r.a.weight}%</td>
+                            <td style={{ padding: "14px 12px", textAlign: "right" }}>
+                              <span style={{ fontSize: 15, fontWeight: 500, color: r.scoreColor, fontVariantNumeric: "tabular-nums" }}>{r.scoreText}</span>
+                            </td>
+                            <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                              {r.contribution !== null ? (
+                                <span style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{r.contribution} pts</span>
+                              ) : (
+                                <span style={{ fontSize: 13, color: TEXT_MUTED }}>—</span>
+                              )}
+                            </td>
+                          </tr>
+                          {isExpanded && r.isPart && (
+                            <tr>
+                              <td colSpan={5} style={{ padding: "0 16px 16px", background: "#fafafa", borderBottom: !isLast ? "1px solid " + BORDER : "none" }}>
+                                <ParticipationDetail data={data} studentId={studentId} />
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ background: "#fafafa", borderTop: "1px solid " + BORDER_STRONG }}>
+                      <td colSpan={4} style={{ padding: "14px 16px", fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY, textAlign: "right" }}>Current grade</td>
+                      <td style={{ padding: "14px 16px", fontSize: 18, fontWeight: 500, color: gradeColor, fontVariantNumeric: "tabular-nums", textAlign: "right", letterSpacing: "-0.01em" }}>{currentGrade !== null ? currentGrade + "%" : "---"}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            );
+          }
+
+          // ─── MOBILE LIST (card per row) ───
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+              {rows.map(r => {
+                const isExpanded = tableExpandedId === r.a.id;
+                const dueText = r.isPart ? "Ongoing" : (r.a.due ? "Due " + fmtDue(r.a.due) : "—");
+                return (
+                  <div key={r.a.id}>
+                    <div
+                      onClick={() => r.isPart ? setTableExpandedId(isExpanded ? null : r.a.id) : jumpToAssignment(r.a.id)}
+                      style={{ ...crd, padding: "12px 14px", cursor: "pointer" }}
                     >
-                      <div style={{
-                        width: sz, height: sz, borderRadius: "50%",
-                        background: c.fill,
-                        border: isSubmittedNotGraded ? "2px solid " + c.border : "none",
-                        flexShrink: 0,
-                        cursor: "pointer",
-                        transition: "transform 0.12s",
-                        transform: isHovered ? "scale(1.1)" : "scale(1)",
-                      }} />
-                      {isHovered && (
-                        <div style={{
-                          position: "absolute",
-                          bottom: "calc(100% + 8px)",
-                          left: "50%",
-                          transform: "translateX(-50%)",
-                          background: TEXT_PRIMARY,
-                          color: "#fff",
-                          padding: "8px 12px",
-                          borderRadius: 8,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          fontFamily: F,
-                          whiteSpace: "nowrap",
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.18)",
-                          zIndex: 50,
-                          pointerEvents: "none",
-                          lineHeight: 1.5,
-                        }}>
-                          <div style={{ fontWeight: 800, marginBottom: 2 }}>{a.name}</div>
-                          {dueLine && <div style={{ color: "#d1d5db" }}>{dueLine}</div>}
-                          {gradeLine && <div style={{ color: "#d1d5db" }}>{gradeLine}</div>}
-                          <div style={{ color: "#d1d5db" }}>{a.weight || 0}% of total grade</div>
-                          <div style={{
-                            position: "absolute",
-                            top: "100%",
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            width: 0,
-                            height: 0,
-                            borderLeft: "5px solid transparent",
-                            borderRight: "5px solid transparent",
-                            borderTop: "5px solid " + TEXT_PRIMARY,
-                          }} />
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, lineHeight: 1.3 }}>
+                            {r.isPart && <span style={{ display: "inline-block", marginRight: 4, color: TEXT_MUTED, fontSize: 11, transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>›</span>}
+                            {r.a.name}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                            <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{dueText}</span>
+                            <StatusBadge state={r.state} />
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div style={{ fontSize: 16, fontWeight: 500, color: r.scoreColor, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{r.scoreText}</div>
+                          <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>{r.a.weight}% wt</div>
+                        </div>
+                      </div>
+                      {r.contribution !== null && (
+                        <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid " + BORDER, display: "flex", justifyContent: "space-between", fontSize: 11, color: TEXT_SECONDARY }}>
+                          <span>Contribution to grade</span>
+                          <span style={{ fontWeight: 500, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{r.contribution} pts</span>
                         </div>
                       )}
                     </div>
-                  );
-                })}
+                    {isExpanded && r.isPart && (
+                      <div style={{ ...crd, padding: 14, marginTop: 4 }}>
+                        <ParticipationDetail data={data} studentId={studentId} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <div style={{ ...crd, padding: "12px 14px", background: "#fafafa", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY }}>Current grade</span>
+                <span style={{ fontSize: 18, fontWeight: 500, color: gradeColor, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>{currentGrade !== null ? currentGrade + "%" : "---"}</span>
               </div>
             </div>
-            <div style={{ width: 1, height: 56, background: BORDER }} />
-            <div style={{ textAlign: "center", flexShrink: 0, minWidth: 96 }}>
-              <div style={{ ...sectionLabel, marginBottom: 4 }}>Current Grade</div>
-              <div style={{ fontSize: 32, fontWeight: 900, color: gradeColor, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
-                {currentGrade !== null ? currentGrade + "%" : "---"}
-              </div>
-              {pctAssessed > 0 && pctAssessed < 100 && (
-                <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 4, fontWeight: 600 }}>{pctAssessed}% of grade so far</div>
-              )}
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Next Assignment */}
         {nextAssignment && (
@@ -840,8 +973,8 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           </div>
         )}
 
-        {/* Assignments list */}
-        <div style={{ ...sectionLabel, marginBottom: 10 }}>All Assignments</div>
+        {/* Assignments list — catalog of grades */}
+        <div style={{ ...sectionLabel, marginBottom: 10 }}>All assignments</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {sortedAssignments.map(a => {
             const isEdit = isAdmin && editId === a.id;
@@ -881,10 +1014,24 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
               );
             }
 
+            const anyOpen = openId !== null;
+            const dimmed = anyOpen && !isOpen;
             return (
-              <div key={a.id} style={{ marginBottom: 0 }}>
+              <div
+                key={a.id}
+                id={"assignment-row-" + a.id}
+                style={{
+                  marginBottom: 0,
+                  background: "#fff",
+                  border: isOpen ? "2px solid " + ACCENT : "1px solid " + BORDER,
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  opacity: dimmed ? 0.4 : 1,
+                  transition: "opacity 0.15s, border-color 0.15s",
+                }}
+              >
                 <button onClick={() => setOpenId(isOpen ? null : a.id)} style={{
-                  ...crd, padding: 14, width: "100%", textAlign: "left", fontFamily: F, cursor: "pointer",
+                  background: "transparent", border: "none", padding: 14, width: "100%", textAlign: "left", fontFamily: F, cursor: "pointer",
                   display: "flex", alignItems: "center", gap: 10,
                 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: a.id === "participation" ? TEAL + "1a" : ACCENT + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: a.id === "participation" ? TEAL : ACCENT, flexShrink: 0 }}>{a.weight}%</div>
@@ -894,18 +1041,37 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                       {a.due ? "Due " + fmtDue(a.due) : "Ongoing"}
                     </div>
                   </div>
+                  {studentId && (() => {
+                    const g = grades[studentId + "-" + a.id] || {};
+                    const hasGrade = g.score !== undefined && g.score !== "";
+                    if (hasGrade) {
+                      const scoreNum = parseFloat(g.score);
+                      const outOf = g.outOf || 100;
+                      const pct = (scoreNum / outOf) * 100;
+                      const sc = pct >= 90 ? GREEN : pct >= 80 ? TEXT_PRIMARY : pct >= 70 ? AMBER : RED;
+                      return (
+                        <div style={{ textAlign: "right", flexShrink: 0, minWidth: 60 }}>
+                          <div style={{ fontSize: 18, fontWeight: 500, color: sc, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>{g.score}</div>
+                          <div style={{ fontSize: 9, color: TEXT_MUTED, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>/ {outOf}</div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                     {studentId && <StatusBadge state={state} />}
                     <span style={{ ...linkPill, padding: "4px 10px" }}>{isOpen ? "Close" : "Open"}</span>
                   </div>
                 </button>
                 {isOpen && (
-                  <div style={{ marginTop: 8, ...crd, padding: 16 }} onClick={e => e.stopPropagation()}>
-                    {a.id === "participation" ? (
-                      <ParticipationDetail data={data} studentId={studentId} />
-                    ) : (
-                      renderAssignmentBody(a)
-                    )}
+                  <div style={{ padding: "0 16px 16px", borderTop: "1px solid " + BORDER }} onClick={e => e.stopPropagation()}>
+                    <div style={{ paddingTop: 14 }}>
+                      {a.id === "participation" ? (
+                        <ParticipationDetail data={data} studentId={studentId} />
+                      ) : (
+                        renderAssignmentBody(a)
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -913,10 +1079,10 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           })}
         </div>
 
-        {/* Class explanation (bottom) */}
-        <div style={{ ...crd, padding: 16, marginTop: 24, cursor: isAdmin ? "pointer" : "default" }} onClick={() => { if (isAdmin && !editBlurb) { setBlurbLocal(blurbText); setEditBlurb(true); } }}>
+        {/* Class explanation (bottom) — collapsed by default */}
+        <div style={{ ...crd, padding: 16, marginTop: 24 }}>
           {isAdmin && editBlurb ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <textarea value={blurbLocal} onChange={e => setBlurbLocal(e.target.value)} rows={8} style={{ ...inp, fontSize: 14, lineHeight: 1.6, resize: "vertical" }} />
               <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                 <button onClick={() => setEditBlurb(false)} style={pillInactive}>Cancel</button>
@@ -925,11 +1091,23 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
             </div>
           ) : (
             <div>
-              <div style={{ ...sectionLabel, marginBottom: 8 }}>How Your Grade Works</div>
-              <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-                {blurbText}
-                {isAdmin && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 6, fontStyle: "italic" }}>Click to edit</div>}
-              </div>
+              <button onClick={() => setHowGradeOpen(!howGradeOpen)} style={{
+                background: "transparent", border: "none", padding: 0, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: F,
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+              }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY }}>How your grade works</div>
+                <span style={{ fontSize: 14, color: TEXT_MUTED, transform: howGradeOpen ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>›</span>
+              </button>
+              {howGradeOpen && (
+                <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap", marginTop: 12, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
+                  {blurbText}
+                  {isAdmin && (
+                    <div style={{ marginTop: 10 }}>
+                      <button onClick={() => { setBlurbLocal(blurbText); setEditBlurb(true); }} style={linkPill}>Edit</button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

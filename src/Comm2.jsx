@@ -122,19 +122,6 @@ const RED = "#ef4444";
 const AMBER = "#f59e0b";
 const PURPLE = "#8b5cf6";
 const TEAL = "#14b8a6";
-const TOPIC_COLORS = {
-  "Foundations": ACCENT,
-  "Storytelling": PURPLE,
-  "Ethics": AMBER,
-  "Delivery": TEAL,
-  "In Class": GREEN,
-  "Information": ACCENT,
-  "Organization": PURPLE,
-  "Persuasion": RED,
-  "A Good Change": GREEN,
-  "Wrap-up": TEAL,
-  "Finals": TEXT_PRIMARY,
-};
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const CONTAINER_MAX = 960;
 
@@ -207,6 +194,33 @@ function lastSortObj(a, b) { return lastName(a.name).localeCompare(lastName(b.na
 function rs(students, log) { return students.map(s => ({ ...s, points: gp(log, s.id) })).sort((a, b) => b.points - a.points); }
 
 function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#18181b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 14, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
+
+function scrollToWithOffset(el, offset = 80) {
+  if (!el) return;
+  const top = el.getBoundingClientRect().top + window.pageYOffset - offset;
+  window.scrollTo({ top, behavior: "smooth" });
+}
+
+function PageHeader({ title, onBack, right }) {
+  const goBack = () => {
+    if (onBack) { onBack(); return; }
+    try { window.history.back(); } catch(e) {}
+  };
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, gap: 8 }}>
+      <button onClick={goBack} style={{
+        display: "inline-flex", alignItems: "center", gap: 4, padding: "6px 12px 6px 8px", borderRadius: 10,
+        background: "#fff", border: "1px solid " + BORDER_STRONG, cursor: "pointer", fontFamily: F,
+        fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500,
+      }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        Back
+      </button>
+      {title && <div style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, letterSpacing: "0.05em", textTransform: "uppercase" }}>{title}</div>}
+      <div>{right || <div style={{ width: 1 }} />}</div>
+    </div>
+  );
+}
 
 /* --- NAV --- */
 const ADMIN_NAME = "Andrew Ishak";
@@ -1711,7 +1725,10 @@ function SurveyView({ data, setData, isAdmin, userName }) {
 /* --- ROSTER --- */
 function RosterView({ data, setData, userName }) {
   const [selectedId, setSelectedId] = useState(null);
-  const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME).sort(lastSortObj);
+  const [search, setSearch] = useState("");
+  const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis").sort(lastSortObj);
+  const q = search.trim().toLowerCase();
+  const filtered = q ? sorted.filter(s => s.name.toLowerCase().includes(q)) : sorted;
 
   if (selectedId) {
     const student = data.students.find(s => s.id === selectedId);
@@ -1722,35 +1739,48 @@ function RosterView({ data, setData, userName }) {
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
       <div style={{ maxWidth: 500, margin: "0 auto" }}>
-        <div style={{ ...sectionLabel, marginBottom: 12 }}>Roster ({sorted.length} students)</div>
+        <div style={{ ...sectionLabel, marginBottom: 10 }}>Class roster</div>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search classmates" style={{ ...inp, fontSize: 13, padding: "8px 12px", marginBottom: 12, width: "100%", boxSizing: "border-box" }} />
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {sorted.map(s => {
+          {filtered.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center", padding: 20 }}>No matches.</div>}
+          {filtered.map(s => {
+            const team = (data.teams || []).find(t => t.id === s.teamId);
+            const tc = { accent: ACCENT, bg: ACCENT + "12" };
             const bio = (data.bios || {})[s.id] || {};
             const initials = s.name.split(" ").map(n => n[0]).join("");
+            const hasPhoto = !!bio.photo;
+            const isMe = s.name === userName;
             return (
               <button key={s.id} onClick={() => setSelectedId(s.id)} style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
-                background: "#fff", border: "1px solid #f3f4f6", borderRadius: 12,
-                cursor: "pointer", textAlign: "left", fontFamily: F, width: "100%", transition: "all 0.1s",
+                display: "flex", alignItems: "center", gap: 12, padding: "10px 12px",
+                background: isMe ? ACCENT + "0d" : "#fff", border: "1px solid " + (isMe ? ACCENT + "40" : BORDER),
+                borderRadius: 12,
+                cursor: "pointer", textAlign: "left", fontFamily: F, width: "100%",
               }}>
-                {bio.photo ? (
-                  <img src={bio.photo} alt="" style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                {hasPhoto ? (
+                  <img src={bio.photo} alt="" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
                 ) : (
-                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 900, color: "#fff", flexShrink: 0 }}>{initials}</div>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, color: "#fff", flexShrink: 0 }}>{initials}</div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2, flexWrap: "wrap", fontSize: 13 }}>
-                    {bio.major && <span style={{ color: TEXT_SECONDARY, fontWeight: 600 }}>{bio.major}</span>}
-                    {bio.major && bio.hometown && <span style={{ color: "#d4d4d8" }}>/</span>}
+                  <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, display: "flex", alignItems: "center", gap: 6 }}>
+                    {s.name}
+                    {isMe && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", background: ACCENT + "1a", color: ACCENT, borderRadius: 4, letterSpacing: "0.06em" }}>YOU</span>}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2, flexWrap: "wrap", fontSize: 11 }}>
+                    {team && <span style={{ color: tc.accent, fontWeight: 500 }}>{team.name}</span>}
+                    {team && (bio.year || bio.hometown) && <span style={{ color: "#d4d4d8" }}>·</span>}
+                    {bio.year && <span style={{ color: TEXT_SECONDARY }}>{bio.year}</span>}
+                    {bio.year && bio.hometown && <span style={{ color: "#d4d4d8" }}>·</span>}
                     {bio.hometown && <span style={{ color: TEXT_SECONDARY }}>{bio.hometown}</span>}
                   </div>
+                  {bio.motto && <div style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bio.motto}</div>}
                 </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
               </button>
             );
           })}
         </div>
+        <div style={{ textAlign: "center", marginTop: 12, fontSize: 11, color: TEXT_MUTED }}>{sorted.length} students</div>
       </div>
     </div>
   );
@@ -2589,17 +2619,10 @@ function HomeGradedNotifications({ data, setData, studentId }) {
 }
 
 function HomeView({ data, setData, userName, isAdmin, setView }) {
+  const [msg, setMsg] = useState("");
+  const [newsExpanded, setNewsExpanded] = useState(false);
   const [newNewsText, setNewNewsText] = useState("");
   const [newNewsType, setNewNewsType] = useState("info");
-  const [replyingTo, setReplyingTo] = useState(null);
-  const [replyText, setReplyText] = useState("");
-  const [composing, setComposing] = useState(false);
-  const [composeText, setComposeText] = useState("");
-  const [composeRecipients, setComposeRecipients] = useState("all");
-  const [selectedStudents, setSelectedStudents] = useState([]);
-  const [editingMsg, setEditingMsg] = useState(null);
-  const [editMsgText, setEditMsgText] = useState("");
-  const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
   const news = data.news || [];
@@ -2607,10 +2630,12 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   const schedule = data.schedule || [];
   const assignments = data.assignments || [];
   const grades = data.grades || {};
-  const todoChecks = data.todoChecks || {};
+  const submissions = data.submissions || {};
   const student = data.students.find(s => s.name === userName);
   const studentId = student?.id;
+  const isStudent = !!studentId && !isAdmin;
 
+  // Admin: post news
   const addNews = async () => {
     if (!newNewsText.trim()) return;
     const item = { id: genId(), text: newNewsText.trim(), type: newNewsType, ts: Date.now() };
@@ -2623,456 +2648,424 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
     await saveData(updated); setData(updated); showMsg("Removed");
   };
 
-  // Featured posts from boards
-  const featuredPosts = [];
-  boards.forEach(board => {
-    Object.entries(board.posts || {}).forEach(([author, post]) => {
-      if (post.featured) featuredPosts.push({ author, text: post.text, boardTitle: board.title, ts: post.ts });
-    });
-  });
-  featuredPosts.sort((a, b) => b.ts - a.ts);
-
-  // Mini leaderboard
-  const ranked = data.students.map(s => ({ ...s, points: data.log.filter(e => e.studentId === s.id).reduce((t, e) => t + e.amount, 0) })).sort((a, b) => b.points - a.points);
-  const top5 = ranked.slice(0, 5);
-  const mx = top5.length > 0 ? Math.max(top5[0].points, 1) : 1;
-  const myRank = ranked.findIndex(s => s.name === userName);
-  const meData = myRank >= 0 ? ranked[myRank] : null;
-
-  // Next 3 upcoming classes
   const today = new Date();
+  const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const year = today.getFullYear();
+
+  // ─── Live activity detection ───
+  const isLiveSlot = (s) => !!(s && s.phase === "live");
+  let liveActivity = null;
+  Object.keys(data.weeklyGames || {}).forEach(w => {
+    if (isLiveSlot(data.weeklyGames[w])) liveActivity = { type: "Weekly Game", week: w, label: "Weekly Game, Wk " + w };
+  });
+  Object.keys(data.weeklyToT || {}).forEach(w => {
+    if (isLiveSlot(data.weeklyToT[w])) liveActivity = { type: "This or That", week: w, label: "This or That, Wk " + w };
+  });
+  (data.headlines?.sessions || []).forEach(s => {
+    if (s.activeHeadlineId && s.phase !== "done") liveActivity = { type: "Headlines", label: "Headlines: " + (s.weekLabel || "live") };
+  });
+  (data.surveys || []).forEach(s => {
+    if (s.active) liveActivity = { type: "Survey", label: s.question || "Class survey" };
+  });
+
+  // ─── Rebound detection ───
+  let activeRebound = null;
+  if (studentId) {
+    const rebounds = data.rebounds || {};
+    Object.keys(rebounds).forEach(rk => {
+      const rd = rebounds[rk];
+      if (!rd) return;
+      const ss = (rd.studentStatuses || {})[studentId];
+      if (!ss) return;
+      // Active rebound: student opted in, not yet completed
+      if (ss.status === "planned_makeup" || ss.status === "rebound" || ss.status === "unannounced") {
+        const reboundGrades = data.reboundGrades || {};
+        if (reboundGrades[studentId + "-" + rk]) return; // already completed
+        const deadline = ss.deadline || rd.deadline;
+        // Hide card if deadline is missing or has passed
+        if (!deadline) return;
+        const ms = deadline - Date.now();
+        if (ms <= 0) return;
+        const hrs = Math.floor(ms / (1000 * 60 * 60));
+        const days = Math.floor(hrs / 24);
+        const timeLeft = days >= 1 ? days + "d left" : hrs + "h left";
+        const m = rk.match(/^(game|tot)-(\w+)$/);
+        const activityLabel = m ? (m[1] === "game" ? "Weekly Game Wk " + m[2] : "This or That Wk " + m[2]) : rk;
+        const log = data.log || [];
+        const earnedSrc = m ? (m[1] === "game" ? "Game Wk" + m[2] : "ToT Wk" + m[2]) : "";
+        const earnedEntries = log.filter(e => e.studentId === studentId && e.source === earnedSrc);
+        const earned = earnedEntries.reduce((a, e) => a + e.amount, 0);
+        if (!activeRebound) activeRebound = { activityLabel, timeLeft, scoreLine: earned > 0 ? "You scored " + earned + "/100. Submit a rebound to improve your grade." : "Submit a rebound to improve your grade." };
+      }
+    });
+  }
+
+  // ─── Assignments context lines ───
+  const assignmentLines = [];
+  if (studentId) {
+    const gradedAssignments = assignments.filter(a => a.id !== "participation");
+
+    // Chip helper: returns { label, bg, color } for a line based on state.
+    const chipFor = (a) => {
+      const sub = submissions[studentId + "-" + a.id];
+      const g = grades[studentId + "-" + a.id] || {};
+      const hasGrade = g.score !== undefined && g.score !== "";
+      if (hasGrade) return { label: "Graded " + g.score, bg: "#ecfdf5", color: "#047857" };
+      if (sub) return { label: "Submitted", bg: "#eff6ff", color: "#2563eb" };
+      return { label: "Upcoming", bg: "#fffbeb", color: "#92400e" };
+    };
+
+    // Overdue (not yet submitted, past due) — no chip needed; the text "past due" is the signal
+    gradedAssignments.forEach(a => {
+      if (!a.due) return;
+      const sub = submissions[studentId + "-" + a.id];
+      const g = grades[studentId + "-" + a.id] || {};
+      if (g.score !== undefined && g.score !== "") return;
+      if (sub) return;
+      const parsed = new Date(a.due + ", " + year);
+      if (isNaN(parsed)) return;
+      if (parsed.getTime() < today0) {
+        assignmentLines.push({ kind: "overdue", color: "#dc2626", textColor: "#991b1b", text: a.name + " past due", chip: { label: "Missing", bg: "#fef2f2", color: "#991b1b" } });
+      }
+    });
+    // Due today / tomorrow — shows regardless of submission/grade state
+    gradedAssignments.forEach(a => {
+      if (!a.due) return;
+      const parsed = new Date(a.due + ", " + year);
+      if (isNaN(parsed)) return;
+      const ts = parsed.getTime();
+      if (ts < today0) return;
+      const days = Math.round((ts - today0) / (1000 * 60 * 60 * 24));
+      if (days !== 0 && days !== 1) return;
+      const when = days === 0 ? " due today" : " due tomorrow";
+      assignmentLines.push({ kind: "due", color: "#f59e0b", textColor: "#92400e", text: a.name + when, chip: chipFor(a) });
+    });
+    // Next assignment (prominent, dark) — anything coming up, regardless of submission/graded state.
+    // Skip if already covered by due today/tomorrow.
+    const nextA = (() => {
+      const candidates = gradedAssignments.filter(a => {
+        if (!a.due) return false;
+        const parsed = new Date(a.due + ", " + year);
+        if (isNaN(parsed)) return false;
+        return parsed.getTime() >= today0;
+      }).map(a => ({ ...a, ts: new Date(a.due + ", " + year).getTime() })).sort((a, b) => a.ts - b.ts);
+      return candidates[0] || null;
+    })();
+    if (nextA) {
+      const days = Math.round((nextA.ts - today0) / (1000 * 60 * 60 * 24));
+      if (days >= 2) {
+        const dayLabel = "Next: " + nextA.name + " due in " + days + " days";
+        assignmentLines.push({ kind: "next", color: ACCENT, textColor: TEXT_PRIMARY, text: dayLabel, chip: chipFor(nextA) });
+      }
+    }
+    // Last graded (quieter — single line, only most recent, no time limit)
+    const lastGraded = (() => {
+      let best = null;
+      gradedAssignments.forEach(a => {
+        const g = grades[studentId + "-" + a.id] || {};
+        if (g.score === undefined || g.score === "") return;
+        if (!g.ts) return;
+        if (!best || g.ts > best.ts) best = { a, score: g.score, ts: g.ts };
+      });
+      return best;
+    })();
+    if (lastGraded) {
+      assignmentLines.push({ kind: "lastgraded", color: "#d1d5db", textColor: TEXT_SECONDARY, text: "Last graded: " + lastGraded.a.name, chip: { label: "Graded " + lastGraded.score, bg: "#ecfdf5", color: "#047857" } });
+    }
+  }
+
+  // ─── This week schedule data ───
   const upcomingDates = [];
   schedule.forEach(week => {
     (week.dates || []).forEach(d => {
       if (d.day === "Finals") return;
-      const year = today.getFullYear();
       const parsed = new Date(d.date + ", " + year);
-      if (!isNaN(parsed) && parsed >= new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+      if (!isNaN(parsed) && parsed.getTime() >= today0) {
         upcomingDates.push({ ...d, weekLabel: week.label, weekNum: week.week, parsedDate: parsed });
       }
     });
   });
   upcomingDates.sort((a, b) => a.parsedDate - b.parsedDate);
-  const next3 = upcomingDates.slice(0, 3);
-
-  // Next assignment with days-until-due (used by integrated Coming Up feed)
-  const nextAssignment = (() => {
-    const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-    let candidates = [];
-    assignments.forEach(a => {
-      if (!a.due) return;
-      const year = today.getFullYear();
-      const parsed = new Date(a.due + ", " + year);
-      if (isNaN(parsed)) return;
-      const ts = parsed.getTime();
-      if (ts < today0) return;
-      candidates.push({ ...a, dueTs: ts });
+  const nextClass = upcomingDates[0];
+  const followingClasses = upcomingDates.slice(1, 3);
+  // Readings + assignments for next class
+  const nextClassReadings = [];
+  if (nextClass) {
+    (nextClass.readings || []).forEach(r => {
+      const rdg = (data.readings || []).find(x => x.id === r.readingId);
+      if (rdg) nextClassReadings.push({ title: rdg.title, type: r.type, url: rdg.pdfUrl || rdg.url || null });
     });
-    candidates.sort((a, b) => a.dueTs - b.dueTs);
-    if (candidates.length === 0) return null;
-    const a = candidates[0];
-    const daysLeft = Math.round((a.dueTs - today0) / (1000 * 60 * 60 * 24));
-    const dueLabel = daysLeft === 0 ? "due today" : daysLeft === 1 ? "due tomorrow" : "due in " + daysLeft + " days";
-    return { ...a, daysLeft, dueLabel };
-  })();
+  }
+  const nextClassAssignmentDue = nextClass && nextClass.assignment ? nextClass.assignment : null;
 
-  // Assignment checklist
-  const todoDue = assignments.filter(a => a.due && a.id !== "participation").map(a => {
-    const g = studentId ? grades[studentId + "-" + a.id] : null;
-    const completed = g && g.score !== undefined && g.score !== "";
-    const todoKey = userName + "-assignment-" + a.id;
-    const checked = todoChecks[todoKey];
-    return { ...a, completed: completed || checked };
-  });
+  // ─── Discussion boards data ───
+  const activeBoards = boards.filter(b => b.active);
+  const latestBoard = activeBoards.sort((a, b) => (b.ts || 0) - (a.ts || 0))[0] || boards[0];
+  const latestReplyCount = latestBoard ? Object.keys(latestBoard.posts || {}).length : 0;
 
-  const checkTodo = async (assignmentId) => {
-    const key = userName + "-assignment-" + assignmentId;
-    const updated = { ...data, todoChecks: { ...todoChecks, [key]: !todoChecks[key] } };
-    await saveData(updated); setData(updated);
+  // ─── Leaderboard data ───
+  const ranked = data.students.map(s => ({ ...s, points: data.log.filter(e => e.studentId === s.id).reduce((t, e) => t + e.amount, 0) })).sort((a, b) => b.points - a.points);
+  const myRank = ranked.findIndex(s => s.name === userName);
+  const totalStudents = data.students.filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis").length;
+
+  // ─── Roster count ───
+  const rosterCount = totalStudents;
+
+  // News colors
+  const newsColors = {
+    info: { bg: "#eff6ff", border: "#bfdbfe", textColor: "#1e40af", labelBg: "#dbeafe", label: "Info" },
+    assignment: { bg: "#fffbeb", border: "#fcd34d", textColor: "#92400e", labelBg: "#fef3c7", label: "Assignment" },
+    alert: { bg: "#fef2f2", border: "#fca5a5", textColor: "#991b1b", labelBg: "#fee2e2", label: "Alert" },
   };
 
-  // This week's media
-  const currentWeek = schedule.find(w => {
-    return (w.dates || []).some(d => {
-      if (d.day === "Finals") return false;
-      const year = today.getFullYear();
-      const parsed = new Date(d.date + ", " + year);
-      const dayDiff = (parsed - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / (1000 * 60 * 60 * 24);
-      return dayDiff >= -3 && dayDiff <= 4;
-    });
-  });
+  // Build the card list in the right order
+  const cards = [];
+  if (activeRebound) cards.push("rebound");
+  if (liveActivity) cards.push("live");
+  cards.push("assignments", "schedule", "boards");
+  if (!liveActivity) cards.push("live"); // Live appears at position 4 when nothing's live
+  cards.push("roster");
 
-  const newsColors = { info: { bg: "#eff6ff", color: "#2563eb", label: "Info" }, assignment: { bg: "#fffbeb", color: "#d97706", label: "Assignment" }, alert: { bg: "#fef2f2", color: "#dc2626", label: "Alert" } };
+  const renderCard = (name) => {
+    if (name === "rebound" && activeRebound) {
+      return (
+        <button key="rebound" onClick={() => setView("assignments")} style={{ width: "100%", textAlign: "left", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                <span style={{ display: "inline-block", width: 6, height: 6, background: "#dc2626", borderRadius: "50%" }} />
+                <div style={{ fontSize: 18, fontWeight: 500, color: "#7f1d1d", letterSpacing: "-0.01em" }}>Rebound</div>
+              </div>
+              <div style={{ fontSize: 13, color: "#991b1b", fontWeight: 500, marginBottom: 4 }}>{activeRebound.activityLabel}</div>
+              <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.4 }}>{activeRebound.scoreLine}</div>
+            </div>
+            {activeRebound.timeLeft && <span style={{ fontSize: 11, color: "#991b1b", fontWeight: 500, flexShrink: 0 }}>{activeRebound.timeLeft}</span>}
+          </div>
+        </button>
+      );
+    }
+    if (name === "live") {
+      const live = !!liveActivity;
+      const openBtnStyle = {
+        fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
+        border: "1px solid " + (live ? "#6ee7b7" : BORDER_STRONG),
+        background: "#fff", color: live ? "#065f46" : TEXT_PRIMARY,
+        cursor: "pointer", fontFamily: F, flexShrink: 0,
+      };
+      return (
+        <button key="live" onClick={() => setView("activities")} style={{ width: "100%", textAlign: "left", background: live ? "#ecfdf5" : "#fff", border: live ? "1px solid #6ee7b7" : "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                {live && <span style={{ display: "inline-block", width: 6, height: 6, background: "#10b981", borderRadius: "50%", animation: "livePulse 1.6s ease-in-out infinite" }} />}
+                <div style={{ fontSize: 18, fontWeight: 500, color: live ? "#065f46" : TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Live</div>
+              </div>
+              <div style={{ fontSize: 13, color: live ? "#047857" : TEXT_SECONDARY, fontWeight: 500, marginBottom: 4 }}>{live ? liveActivity.label : "Past activities"}</div>
+              <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.4 }}>{live ? "Tap to answer questions in real time." : "Nothing live right now. Browse past activities."}</div>
+            </div>
+            <span style={openBtnStyle}>Open</span>
+          </div>
+        </button>
+      );
+    }
+    if (name === "assignments") {
+      const openBtnStyle = {
+        fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
+        border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
+        cursor: "pointer", fontFamily: F, flexShrink: 0,
+      };
+      return (
+        <button key="assignments" onClick={() => setView("assignments")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: assignmentLines.length > 0 ? 10 : 0 }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Assignments</div>
+            <span style={openBtnStyle}>Open</span>
+          </div>
+          {assignmentLines.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {assignmentLines.map((l, i) => {
+                const isLastGraded = l.kind === "lastgraded";
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, opacity: isLastGraded ? 0.85 : 1 }}>
+                    <span style={{ display: "inline-block", width: 5, height: 5, background: l.color, borderRadius: "50%", flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: l.textColor, lineHeight: 1.4, flex: 1, minWidth: 0, fontWeight: l.kind === "next" ? 500 : 400 }}>{l.text}</span>
+                    {l.chip && <span style={{ fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 5, background: l.chip.bg, color: l.chip.color, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>{l.chip.label}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {assignmentLines.length === 0 && (
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>Open to view your assignments and grades.</div>
+          )}
+        </button>
+      );
+    }
+    if (name === "schedule") {
+      const openBtnStyle = {
+        fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
+        border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
+        cursor: "pointer", fontFamily: F, flexShrink: 0,
+      };
+      return (
+        <button key="schedule" onClick={() => setView("schedule")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Schedule</div>
+            <span style={openBtnStyle}>Open</span>
+          </div>
+          {nextClass ? (
+            <>
+              <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, marginBottom: 4 }}>{nextClass.day} {nextClass.date}: {nextClass.topic || "Class"}</div>
+              {(nextClassReadings.length > 0 || nextClassAssignmentDue) && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 3, paddingLeft: 2, marginBottom: followingClasses.length > 0 ? 8 : 0 }}>
+                  {nextClassReadings.map((r, i) => (
+                    r.url ? (
+                      <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none" }}>Reading: {r.title}</a>
+                    ) : (
+                      <div key={i} style={{ fontSize: 13, color: TEXT_SECONDARY }}>Reading: {r.title}</div>
+                    )
+                  ))}
+                  {nextClassAssignmentDue && <div style={{ fontSize: 13, color: "#b45309", fontWeight: 500 }}>{nextClassAssignmentDue}</div>}
+                </div>
+              )}
+              {followingClasses.length > 0 && (
+                <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 8, display: "flex", flexDirection: "column", gap: 3 }}>
+                  {followingClasses.map((d, i) => <div key={i} style={{ fontSize: 12, color: TEXT_SECONDARY }}>{d.day} {d.date}: {d.topic || "Class"}</div>)}
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>No upcoming classes scheduled.</div>
+          )}
+        </button>
+      );
+    }
+    if (name === "boards") {
+      const openBtnStyle = {
+        fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
+        border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
+        cursor: "pointer", fontFamily: F, flexShrink: 0,
+      };
+      return (
+        <button key="boards" onClick={() => setView("boards")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Boards</div>
+            <span style={openBtnStyle}>Open</span>
+          </div>
+          {latestBoard ? (
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>Latest: "{latestBoard.title}" · {latestReplyCount} {latestReplyCount === 1 ? "reply" : "replies"}</div>
+          ) : (
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>No active boards.</div>
+          )}
+        </button>
+      );
+    }
+    if (name === "roster") {
+      const openBtnStyle = {
+        fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
+        border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
+        cursor: "pointer", fontFamily: F, flexShrink: 0,
+      };
+      return (
+        <button key="roster" onClick={() => setView("roster")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Roster</div>
+            <span style={openBtnStyle}>Open</span>
+          </div>
+          <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>{rosterCount} students</div>
+        </button>
+      );
+    }
+    return null;
+  };
 
-  return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
-      <Toast message={msg} />
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
-
-        {studentId && !isAdmin && <HomeGradedNotifications data={data} setData={setData} studentId={studentId} />}
-        {studentId && !isAdmin && <HomeReboundBox data={data} setData={setData} studentId={studentId} />}
-
-        {/* Admin: post news */}
+  // News banner
+  const renderNewsBanner = () => {
+    if (news.length === 0 && !isAdmin) return null;
+    if (news.length === 0 && isAdmin) {
+      // Admin sees compose box even when empty
+      return (
+        <div style={{ ...crd, padding: 12, marginBottom: 14 }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <select value={newNewsType} onChange={e => setNewNewsType(e.target.value)} style={{ ...sel, fontSize: 12, padding: "6px 8px", width: 110 }}>
+              <option value="info">Info</option>
+              <option value="assignment">Assignment</option>
+              <option value="alert">Alert</option>
+            </select>
+            <input value={newNewsText} onChange={e => setNewNewsText(e.target.value)} placeholder="Post an announcement..." style={{ ...inp, flex: 1, fontSize: 13, padding: "6px 10px" }} onKeyDown={e => e.key === "Enter" && addNews()} />
+            <button onClick={addNews} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Post</button>
+          </div>
+        </div>
+      );
+    }
+    const visible = newsExpanded ? news : news.slice(0, 2);
+    const more = news.length - visible.length;
+    return (
+      <div style={{ marginBottom: 14 }}>
+        {visible.map((item, idx) => {
+          const nc = newsColors[item.type] || newsColors.info;
+          return (
+            <div key={item.id} style={{ background: nc.bg, border: "1px solid " + nc.border, borderRadius: 12, padding: "10px 12px", marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                <span style={{ fontSize: 9, fontWeight: 500, color: nc.textColor, background: nc.labelBg, padding: "3px 7px", borderRadius: 5, letterSpacing: "0.06em", textTransform: "uppercase", flexShrink: 0, marginTop: 2 }}>{nc.label}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, color: "#1f2937", lineHeight: 1.45 }}>{item.text}</div>
+                  <div style={{ fontSize: 10, color: nc.textColor, marginTop: 4 }}>
+                    {new Date(item.ts).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    {idx === visible.length - 1 && more > 0 && !newsExpanded && (
+                      <> · <span onClick={(e) => { e.stopPropagation(); setNewsExpanded(true); }} style={{ textDecoration: "underline", cursor: "pointer" }}>{more} more</span></>
+                    )}
+                    {idx === visible.length - 1 && newsExpanded && news.length > 2 && (
+                      <> · <span onClick={(e) => { e.stopPropagation(); setNewsExpanded(false); }} style={{ textDecoration: "underline", cursor: "pointer" }}>show less</span></>
+                    )}
+                  </div>
+                </div>
+                {isAdmin && <button onClick={() => removeNews(item.id)} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 14, lineHeight: 1, padding: "0 4px" }}>x</button>}
+              </div>
+            </div>
+          );
+        })}
         {isAdmin && (
-          <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
-            <div style={{ display: "flex", gap: 8 }}>
-              <select value={newNewsType} onChange={e => setNewNewsType(e.target.value)} style={{ ...sel, width: 110, fontSize: 13 }}>
+          <div style={{ ...crd, padding: 10, marginTop: 4 }}>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <select value={newNewsType} onChange={e => setNewNewsType(e.target.value)} style={{ ...sel, fontSize: 12, padding: "6px 8px", width: 110 }}>
                 <option value="info">Info</option>
                 <option value="assignment">Assignment</option>
                 <option value="alert">Alert</option>
               </select>
-              <input value={newNewsText} onChange={e => setNewNewsText(e.target.value)} placeholder="Post an update..." style={{ ...inp, flex: 1 }} onKeyDown={e => e.key === "Enter" && addNews()} />
+              <input value={newNewsText} onChange={e => setNewNewsText(e.target.value)} placeholder="Post another..." style={{ ...inp, flex: 1, fontSize: 13, padding: "6px 10px" }} onKeyDown={e => e.key === "Enter" && addNews()} />
               <button onClick={addNews} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Post</button>
             </div>
           </div>
         )}
+      </div>
+    );
+  };
 
-        {/* News feed */}
-        {news.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            {news.slice(0, 5).map(item => {
-              const nc = newsColors[item.type] || newsColors.info;
-              return (
-                <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 0", borderBottom: "1px solid " + BORDER }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: nc.color, background: nc.bg, padding: "3px 8px", borderRadius: 6, flexShrink: 0, marginTop: 2, textTransform: "uppercase" }}>{nc.label}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.45 }}>{item.text}</div>
-                    <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>{new Date(item.ts).toLocaleDateString()}</div>
-                  </div>
-                  {isAdmin && <button onClick={() => removeNews(item.id)} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 14 }}>x</button>}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Coming Up: unified chronological feed of classes, assignments, todos */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ ...crd, padding: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>Coming Up</div>
-              <button onClick={() => setView("schedule")} style={linkPill}>Open</button>
-            </div>
-            {studentId && !isAdmin ? (
-              <HomeTodoSummary
-                data={data}
-                setData={setData}
-                studentId={studentId}
-                setView={setView}
-                classDays={next3}
-                nextAssignment={nextAssignment}
-              />
-            ) : (
-              <>
-                {next3.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED }}>No upcoming classes</div>}
-                {next3.map((d, i) => (
-                  <div key={i} style={{ padding: "8px 0", borderBottom: i < next3.length - 1 ? "1px solid " + BORDER : "none" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: d.holiday ? RED : TEXT_PRIMARY }}>{d.day} {d.date}</span>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED }}>{d.weekLabel}</span>
-                    </div>
-                    {d.topic && <div style={{ fontSize: 13, color: TEXT_PRIMARY, marginTop: 2, lineHeight: 1.35 }}>{d.topic}</div>}
-                    {d.holiday && <div style={{ fontSize: 12, color: RED, marginTop: 2 }}>No in-person class</div>}
-                    {d.assignment && <div style={{ fontSize: 12, color: "#c2410c", marginTop: 2, fontWeight: 700 }}>{d.assignment}</div>}
-                    {d.notes && !d.holiday && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 1 }}>{d.notes}</div>}
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* This week's media */}
-        {(() => {
-          const weekMedia = (data.media || []).filter(m => {
-            if (!currentWeek) return false;
-            return m.week === currentWeek.week;
-          });
-          if (weekMedia.length === 0) return null;
-          return (
-            <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Week {currentWeek.week} Media</div>
-                <button onClick={() => setView("media")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>All media</button>
-              </div>
-              {weekMedia.map(m => (
-                <div key={m.id} style={{ padding: "4px 0" }}>
-                  {m.url ? (
-                    <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>{m.title}</a>
-                  ) : (
-                    <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500 }}>{m.title}</span>
-                  )}
-                  {m.notes && <div style={{ fontSize: 11, color: TEXT_MUTED }}>{m.notes}</div>}
-                </div>
-              ))}
-            </div>
-          );
-        })()}
-
-        {/* Messages + Instructor Card side by side */}
-        <div className="home-grid-c2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16, alignItems: "start" }}>
-          {/* Messages / Notes */}
-          {(() => {
-            const messages = data.messages || [];
-            const archived = data.archivedMessages || [];
-            const myMessages = isAdmin
-              ? messages.filter(m => !archived.includes(m.id))
-              : messages.filter(m => m.to === "all" || (Array.isArray(m.to) && m.to.includes(userName)) || m.to === userName || m.from === userName);
-            if (myMessages.length === 0 && !isAdmin && !composing) return <div />;
-
-          const sendReply = async (msgId) => {
-            if (!replyText.trim()) return;
-            const updated = { ...data, messages: messages.map(m => m.id === msgId ? { ...m, replies: [...(m.replies || []), { from: userName, text: replyText.trim(), ts: Date.now() }] } : m) };
-            await saveData(updated); setData(updated);
-            setReplyingTo(null); setReplyText(""); showMsg("Reply sent");
-          };
-
-          const sendMessage = async () => {
-            if (!composeText.trim()) return;
-            let to;
-            if (isAdmin) {
-              to = composeRecipients === "all" ? "all" : selectedStudents;
-              if (composeRecipients !== "all" && selectedStudents.length === 0) return;
-            } else {
-              to = ADMIN_NAME;
-            }
-            const m = { id: genId(), from: userName, to, text: composeText.trim(), ts: Date.now(), replies: [] };
-            const updated = { ...data, messages: [m, ...(data.messages || [])] };
-            await saveData(updated); setData(updated);
-            setComposeText(""); setSelectedStudents([]); setComposing(false); showMsg("Message sent");
-          };
-
-          const archiveMessage = async (msgId) => {
-            const updated = { ...data, archivedMessages: [...archived, msgId] };
-            await saveData(updated); setData(updated); showMsg("Archived");
-          };
-
-          const deleteMessage = async (msgId) => {
-            const updated = { ...data, messages: messages.filter(m => m.id !== msgId) };
-            await saveData(updated); setData(updated); showMsg("Deleted");
-          };
-
-          const editMessage = async (msgId) => {
-            if (!editMsgText.trim()) return;
-            const updated = { ...data, messages: messages.map(m => m.id === msgId ? { ...m, text: editMsgText.trim(), edited: true } : m) };
-            await saveData(updated); setData(updated);
-            setEditingMsg(null); setEditMsgText(""); showMsg("Edited");
-          };
-
-          const deleteReply = async (msgId, replyIdx) => {
-            const updated = { ...data, messages: messages.map(m => m.id === msgId ? { ...m, replies: (m.replies || []).filter((_, i) => i !== replyIdx) } : m) };
-            await saveData(updated); setData(updated); showMsg("Reply deleted");
-          };
-
-          const toggleStudent = (name) => {
-            setSelectedStudents(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
-          };
-
-          return (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Messages</div>
-                <button onClick={() => setComposing(!composing)} style={composing ? pillActive : pillInactive}>{composing ? "Cancel" : isAdmin ? "New Message" : "Message Instructor"}</button>
-              </div>
-
-              {composing && isAdmin && (
-                <div style={{ ...crd, padding: 14, marginBottom: 10 }}>
-                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                    <button onClick={() => { setComposeRecipients("all"); setSelectedStudents([]); }} style={composeRecipients === "all" ? pillActive : pillInactive}>All Students</button>
-                    <button onClick={() => setComposeRecipients("select")} style={composeRecipients === "select" ? pillActive : pillInactive}>Select Students</button>
-                  </div>
-                  {composeRecipients === "select" && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8, maxHeight: 120, overflowY: "auto", padding: 4 }}>
-                      {[...data.students].sort(lastSortObj).map(s => (
-                        <button key={s.id} onClick={() => toggleStudent(s.name)} style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, cursor: "pointer", fontFamily: F, border: "1px solid " + (selectedStudents.includes(s.name) ? ACCENT : BORDER), background: selectedStudents.includes(s.name) ? ACCENT + "15" : "transparent", color: selectedStudents.includes(s.name) ? ACCENT : TEXT_PRIMARY }}>{s.name.split(" ")[0]}</button>
-                      ))}
-                    </div>
-                  )}
-                  <textarea value={composeText} onChange={e => setComposeText(e.target.value)} placeholder="Write your message..." rows={3} style={{ ...inp, resize: "vertical", fontSize: 14, marginBottom: 8 }} />
-                  <button onClick={sendMessage} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%" }}>
-                    Send{composeRecipients === "all" ? " to All" : selectedStudents.length > 0 ? " to " + selectedStudents.length + " student" + (selectedStudents.length !== 1 ? "s" : "") : ""}
-                  </button>
-                </div>
-              )}
-
-              {composing && !isAdmin && (
-                <div style={{ ...crd, padding: 14, marginBottom: 10 }}>
-                  <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginBottom: 8 }}>Send a message to your instructor</div>
-                  <textarea value={composeText} onChange={e => setComposeText(e.target.value)} placeholder="Write your message..." rows={3} style={{ ...inp, resize: "vertical", fontSize: 14, marginBottom: 8 }} />
-                  <button onClick={sendMessage} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%" }}>Send to Instructor</button>
-                </div>
-              )}
-
-              {myMessages.slice(0, 10).map(msgItem => {
-                const isFromAdmin = msgItem.from === ADMIN_NAME;
-                const isOwn = msgItem.from === userName;
-                const recipientLabel = msgItem.to === "all" ? "All students" : Array.isArray(msgItem.to) ? msgItem.to.map(n => n.split(" ")[0]).join(", ") : msgItem.to;
-                const isReplying = replyingTo === msgItem.id;
-                const isEditingThis = editingMsg === msgItem.id;
-                return (
-                  <div key={msgItem.id} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: isFromAdmin ? "3px solid " + ACCENT : "3px solid " + GREEN }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                      <div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{msgItem.from}</span>
-                        {isAdmin && <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>to {recipientLabel}</span>}
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{new Date(msgItem.ts).toLocaleDateString()}</span>
-                        {msgItem.edited && <span style={{ fontSize: 10, color: TEXT_MUTED, fontStyle: "italic" }}>edited</span>}
-                      </div>
-                    </div>
-
-                    {isEditingThis ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                        <textarea value={editMsgText} onChange={e => setEditMsgText(e.target.value)} rows={3} style={{ ...inp, resize: "vertical", fontSize: 14 }} />
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => editMessage(msgItem.id)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Save</button>
-                          <button onClick={() => { setEditingMsg(null); setEditMsgText(""); }} style={pillInactive}>Cancel</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{msgItem.text}</div>
-                    )}
-
-                    {(msgItem.replies || []).length > 0 && (
-                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER }}>
-                        {msgItem.replies.map((r, ri) => (
-                          <div key={ri} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "4px 0", fontSize: 13 }}>
-                            <div>
-                              <span style={{ fontWeight: 700, color: r.from === ADMIN_NAME ? ACCENT : TEXT_PRIMARY }}>{r.from.split(" ")[0]}:</span>
-                              <span style={{ color: TEXT_PRIMARY, marginLeft: 4 }}>{r.text}</span>
-                              <span style={{ fontSize: 10, color: TEXT_MUTED, marginLeft: 6 }}>{new Date(r.ts).toLocaleDateString()}</span>
-                            </div>
-                            {(isAdmin || r.from === userName) && <button onClick={() => deleteReply(msgItem.id, ri)} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 11, flexShrink: 0 }}>x</button>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {!isEditingThis && (
-                        <button onClick={() => { setReplyingTo(replyingTo === msgItem.id ? null : msgItem.id); setReplyText(""); }} style={{ ...pillInactive, fontSize: 11 }}>{isReplying ? "Cancel" : "Reply"}</button>
-                      )}
-                      {(isOwn || isAdmin) && !isEditingThis && (
-                        <button onClick={() => { setEditingMsg(msgItem.id); setEditMsgText(msgItem.text); }} style={{ ...pillInactive, fontSize: 11 }}>Edit</button>
-                      )}
-                      {(isOwn || isAdmin) && (
-                        <button onClick={() => { if (window.confirm("Delete this message?")) deleteMessage(msgItem.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11 }}>Delete</button>
-                      )}
-                      {isAdmin && !isOwn && (
-                        <button onClick={() => archiveMessage(msgItem.id)} style={{ ...pillInactive, fontSize: 11 }}>Archive</button>
-                      )}
-                    </div>
-
-                    {isReplying && !isEditingThis && (
-                      <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                        <input value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Your reply..." style={{ ...inp, flex: 1, fontSize: 13 }} onKeyDown={e => e.key === "Enter" && sendReply(msgItem.id)} />
-                        <button onClick={() => sendReply(msgItem.id)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Send</button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {myMessages.length === 0 && isAdmin && !composing && <div style={{ ...crd, padding: 16, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>No messages yet</div>}
-            </div>
-          );
-        })()}
-
-        {/* Instructor Card */}
+  return (
+    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <Toast message={msg} />
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        {renderNewsBanner()}
+        {cards.map(renderCard)}
         <InstructorCard data={data} setData={setData} isAdmin={isAdmin} />
-        </div>
-
-        {/* Active Discussion Boards */}
-        {boards.filter(b => b.active).length > 0 && (
-          <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Active Discussion Boards</div>
-              <button onClick={() => setView("boards")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>All boards</button>
-            </div>
-            {boards.filter(b => b.active).map(board => {
-              const postCount = Object.keys(board.posts || {}).filter(k => !(board.posts[k].archived)).length;
-              const myPost = (board.posts || {})[userName];
-              return (
-                <div key={board.id} onClick={() => setView("boards")} style={{ padding: "8px 0", borderBottom: "1px solid " + BORDER, cursor: "pointer" }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{board.title}</div>
-                  <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2, lineHeight: 1.35 }}>{board.prompt.length > 80 ? board.prompt.slice(0, 80) + "..." : board.prompt}</div>
-                  <div style={{ display: "flex", gap: 8, marginTop: 4, fontSize: 11 }}>
-                    <span style={{ color: TEXT_MUTED }}>{postCount} response{postCount !== 1 ? "s" : ""}</span>
-                    {myPost && !myPost.archived ? <span style={{ color: GREEN, fontWeight: 600 }}>You responded</span> : <span style={{ color: ACCENT, fontWeight: 600 }}>Respond now</span>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Assignments checklist */}
-        <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Assignments</div>
-            <button onClick={() => setView("assignments")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: ACCENT, fontWeight: 600, fontFamily: F }}>Details</button>
-          </div>
-          {todoDue.map(a => (
-            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid " + BORDER }}>
-              <button onClick={() => checkTodo(a.id)} style={{ width: 22, height: 22, borderRadius: 6, border: "2px solid " + (a.completed ? GREEN : "#d4d4d8"), background: a.completed ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, padding: 0 }}>
-                {a.completed && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
-              </button>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: a.completed ? TEXT_MUTED : TEXT_PRIMARY, textDecoration: a.completed ? "line-through" : "none" }}>{a.name}</div>
-                {a.due && <div style={{ fontSize: 11, color: TEXT_MUTED }}>{a.due}</div>}
-              </div>
-              <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>{a.weight}%</span>
-            </div>
-          ))}
-        </div>
-
-
-        {/* Featured posts */}
-        {featuredPosts.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Featured Posts</div>
-            {featuredPosts.slice(0, 3).map((fp, i) => (
-              <div key={i} style={{ ...crd, padding: 14, marginBottom: 8, borderLeft: "3px solid #d97706" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#d97706", marginBottom: 4 }}>{fp.boardTitle}</div>
-                <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.5 }}>{fp.text.length > 200 ? fp.text.slice(0, 200) + "..." : fp.text}</div>
-                <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>{fp.author}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Admin quick links */}
-        {isAdmin && (
-          <div style={{ ...crd, padding: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Quick Links</div>
-            {(data.adminLinks || []).map((link, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: "1px solid " + BORDER }}>
-                <a href={link.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 500, flex: 1 }}>{link.label}</a>
-                <button onClick={async () => { const updated = { ...data, adminLinks: (data.adminLinks || []).filter((_, j) => j !== i) }; await saveData(updated); setData(updated); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 12 }}>x</button>
-              </div>
-            ))}
-            {(!data.adminLinks || data.adminLinks.length === 0) && <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 6 }}>No links yet</div>}
-            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-              <input id="c2-admin-link-label" placeholder="Label" style={{ ...inp, flex: 1, fontSize: 12 }} />
-              <input id="c2-admin-link-url" placeholder="URL" style={{ ...inp, flex: 2, fontSize: 12 }} />
-              <button onClick={async () => {
-                const label = document.getElementById("c2-admin-link-label").value.trim();
-                const url = document.getElementById("c2-admin-link-url").value.trim();
-                if (!label || !url) return;
-                const updated = { ...data, adminLinks: [...(data.adminLinks || []), { label, url }] };
-                await saveData(updated); setData(updated);
-                document.getElementById("c2-admin-link-label").value = "";
-                document.getElementById("c2-admin-link-url").value = "";
-              }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Add</button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-/* ─── MY NOTES ─── */
+const TOPIC_COLORS = {
+  "Gambling": "#16a34a",
+  "Value": "#2563eb",
+  "Athletes & Corps": "#d97706",
+  "Media": "#dc2626",
+  "Identity": "#7c3aed",
+  "Community": "#0891b2",
+  "OJ": "#dc2626",
+  "Leadership": "#57534e",
+  "Final Project": ACCENT,
+  "Finals": TEXT_MUTED,
+};
+
 function MyNotesView({ data, setData, isAdmin, userName }) {
   const studentNotes = data.studentNotes || {};
   const [editing, setEditing] = useState(false);
@@ -3416,18 +3409,16 @@ function BoardsView({ data, setData, isAdmin, userName }) {
           const postCount = Object.keys(board.posts || {}).length;
           const myPost = (board.posts || {})[userName];
           return (
-            <div key={board.id} onClick={() => { setViewingBoard(board.id); if (!myPost) setEditText(""); }} style={{ ...crd, padding: 16, marginBottom: 10, cursor: "pointer" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.3 }}>{board.title}</div>
-                  <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, lineHeight: 1.4 }}>{board.prompt.length > 100 ? board.prompt.slice(0, 100) + "..." : board.prompt}</div>
-                  <div style={{ display: "flex", gap: 10, marginTop: 6, fontSize: 12, color: TEXT_MUTED }}>
-                    <span>{postCount} response{postCount !== 1 ? "s" : ""}</span>
-                    {myPost && <span style={{ color: GREEN, fontWeight: 600 }}>You responded</span>}
-                    {!myPost && <span style={{ color: ACCENT, fontWeight: 600 }}>Not yet responded</span>}
-                  </div>
-                </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" style={{ flexShrink: 0, marginTop: 4 }}><path d="M9 18l6-6-6-6"/></svg>
+            <div key={board.id} onClick={() => { setViewingBoard(board.id); if (!myPost) setEditText(""); }} style={{ ...crd, padding: 14, marginBottom: 8, cursor: "pointer" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, lineHeight: 1.3, flex: 1, minWidth: 0 }}>{board.title}</div>
+                <span style={{ fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 5, background: "#ecfdf5", color: "#047857", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Active</span>
+              </div>
+              <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.4, marginBottom: 6 }}>{board.prompt.length > 120 ? board.prompt.slice(0, 120) + "..." : board.prompt}</div>
+              <div style={{ display: "flex", gap: 10, fontSize: 11, color: TEXT_MUTED }}>
+                <span>{postCount} {postCount === 1 ? "reply" : "replies"}</span>
+                {myPost && <><span>·</span><span style={{ color: GREEN, fontWeight: 500 }}>You responded</span></>}
+                {!myPost && <><span>·</span><span style={{ color: ACCENT, fontWeight: 500 }}>Not yet responded</span></>}
               </div>
             </div>
           );
@@ -3635,6 +3626,9 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
   if (openSurveys.length > 0) liveItems.push({ id: "surveys", label: openSurveys.length === 1 ? "Survey" : openSurveys.length + " Surveys", anchor: "live-now-section" });
   const anythingLive = liveItems.length > 0;
 
+  // Default: when something is live, hide the past events list; show a "See past events" toggle
+  const [showPast, setShowPast] = useState(!anythingLive);
+
   // Build unified event list (reverse chronological)
   const rebounds = data.rebounds || {};
   const events = [];
@@ -3686,7 +3680,7 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
 
   const scrollToLive = () => {
     const el = document.getElementById("live-now-section");
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToWithOffset(el);
   };
 
   return (
@@ -3695,17 +3689,17 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
 
         {/* Live banner */}
         {anythingLive && (
-          <div style={{ ...crd, padding: 14, marginBottom: 20, background: "#ecfdf5", border: "1px solid #a7f3d0", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ background: "#ecfdf5", border: "1px solid #6ee7b7", borderRadius: 14, padding: 14, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: GREEN, animation: "livePulse 1.6s ease-in-out infinite", display: "inline-block" }} />
-                <span style={{ fontSize: 10, fontWeight: 800, color: "#065f46", textTransform: "uppercase", letterSpacing: "0.1em" }}>Live now</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: GREEN, animation: "livePulse 1.6s ease-in-out infinite", display: "inline-block" }} />
+                <div style={{ fontSize: 18, fontWeight: 500, color: "#065f46", letterSpacing: "-0.01em" }}>Live now</div>
               </div>
-              <div style={{ fontSize: 13, color: "#065f46", fontWeight: 700 }}>
+              <div style={{ fontSize: 13, color: "#047857", fontWeight: 500 }}>
                 {liveItems.map(i => i.label).join(", ")}
               </div>
             </div>
-            <button onClick={scrollToLive} style={{ ...linkPill, background: "#fff", border: "1px solid #a7f3d0", color: "#065f46" }}>Open</button>
+            <button onClick={scrollToLive} style={{ fontSize: 11, padding: "5px 12px", borderRadius: 8, border: "1px solid #6ee7b7", background: "#fff", color: "#065f46", cursor: "pointer", fontFamily: F, fontWeight: 500 }}>Open</button>
           </div>
         )}
 
@@ -3714,7 +3708,7 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
           <StudentAnswerView data={data} setData={setData} userName={userName} />
           {liveHeadlineSession && (
             <div style={{ marginTop: 20 }}>
-              <div />
+              <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
             </div>
           )}
           {openSurveys.length > 0 && (
@@ -3726,7 +3720,10 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
 
         {/* Past events list */}
         <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={sectionLabel}>{anythingLive ? "Past Events" : "Live"}</div>
+          <button onClick={() => setShowPast(!showPast)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: F }}>
+            <div style={sectionLabel}>{anythingLive ? "Past events" : "Live"}</div>
+            <span style={{ fontSize: 11, color: TEXT_MUTED }}>{showPast ? "Hide" : "Show"}</span>
+          </button>
           {isAdmin && (
             <button onClick={() => setShowAdminTools(!showAdminTools)} style={linkPill}>
               {showAdminTools ? "Hide admin tools" : "Admin tools"}
@@ -3734,28 +3731,46 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
           )}
         </div>
 
-        {events.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No past events yet</div>}
+        {showPast && events.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>No past events yet</div>}
 
-        {events.map(ev => {
+        {showPast && events.map(ev => {
           const isOpen = openEventKey === ev.key;
           const cantOpen = (ev.type === "game" || ev.type === "tot") && !ev.played;
+          // Compute student's score for this game/ToT from the log
+          let scoreDisplay = null;
+          if ((ev.type === "game" || ev.type === "tot") && ev.played && studentId) {
+            const src = (ev.type === "game" ? "Game Wk" : "ToT Wk") + ev.week;
+            const earned = (data.log || []).filter(e => e.studentId === studentId && e.source === src).reduce((s, e) => s + e.amount, 0);
+            const totalQ = (ev.activity?.questions || []).length;
+            const outOf = ev.type === "game" ? totalQ * 10 : totalQ * 10; // both score 10 per Q
+            const pct = outOf > 0 ? Math.round((earned / outOf) * 100) : 0;
+            const sc = pct >= 90 ? GREEN : pct >= 80 ? TEXT_PRIMARY : pct >= 70 ? AMBER : RED;
+            scoreDisplay = { earned, outOf, pct, color: sc };
+          }
           return (
             <div key={ev.key} style={{ marginBottom: 8 }}>
               <button onClick={() => { if (!cantOpen) setOpenEventKey(isOpen ? null : ev.key); }} disabled={cantOpen} style={{
-                ...crd, padding: 14, width: "100%", textAlign: "left", fontFamily: F,
+                background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14,
+                padding: 14, width: "100%", textAlign: "left", fontFamily: F,
                 cursor: cantOpen ? "not-allowed" : "pointer",
                 opacity: cantOpen ? 0.55 : 1,
-                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8,
+                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>{ev.typeLabel}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, marginTop: 2 }}>{fmtDayDate(ev.ts)}</div>
+                  <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>{ev.typeLabel}</div>
+                  <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>{fmtDayDate(ev.ts)}</div>
                 </div>
+                {scoreDisplay && (
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontSize: 18, fontWeight: 500, color: scoreDisplay.color, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>{scoreDisplay.earned}</div>
+                    <div style={{ fontSize: 9, color: TEXT_MUTED, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>/ {scoreDisplay.outOf}</div>
+                  </div>
+                )}
                 <div style={{ flexShrink: 0 }}>
                   {cantOpen ? (
                     <span style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>You did not play</span>
                   ) : (
-                    <span style={{ ...linkPill, padding: "4px 10px" }}>{isOpen ? "Close" : "Open"}</span>
+                    <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 500 }}>{isOpen ? "Close" : "Open ›"}</span>
                   )}
                 </div>
               </button>
@@ -3807,7 +3822,7 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
           <div style={{ marginTop: 32, paddingTop: 16, borderTop: "2px dashed " + BORDER_STRONG }}>
             <div style={{ ...sectionLabel, marginBottom: 10 }}>Admin Tools</div>
             <div style={{ marginBottom: 24 }}>
-              <div />
+              <ClassTools data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
             </div>
             <div style={{ marginBottom: 24 }}>
               <SurveyView data={data} setData={setData} isAdmin={isAdmin} userName={userName} />
@@ -3933,13 +3948,35 @@ function MoreView({ data, setData, isAdmin, userName }) {
 export default function Comm2() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState("home");
+  const [view, _setView] = useState("home");
+
+  const setView = useCallback((next) => {
+    _setView(prev => {
+      if (prev === next) return prev;
+      try { window.history.pushState({ view: next }, "", "#" + next); } catch(e) {}
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const onPop = (e) => {
+      const v = (e.state && e.state.view) || (window.location.hash || "").replace(/^#/, "") || "home";
+      _setView(v);
+    };
+    window.addEventListener("popstate", onPop);
+    try {
+      const hash = (window.location.hash || "").replace(/^#/, "");
+      if (hash) _setView(hash);
+      window.history.replaceState({ view: hash || "home" }, "", "#" + (hash || "home"));
+    } catch(e) {}
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   useEffect(() => {
     const handler = (e) => setView(e.detail);
     window.addEventListener("nav", handler);
     return () => window.removeEventListener("nav", handler);
-  }, []);
+  }, [setView]);
   const [userName, setUserName] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY + "-user"); } catch(e) { return null; }
   });
