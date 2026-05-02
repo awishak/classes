@@ -744,6 +744,7 @@ export function StudentAnswerView({ data, setData, userName }) {
   const [week, setWeek] = useState(null);
   const [mode, setMode] = useState("game");
   const [selected, setSelected] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [countdown, setCountdown] = useState(0);
   const lastSubmitRef = React.useRef(0);
@@ -759,6 +760,8 @@ export function StudentAnswerView({ data, setData, userName }) {
     if (week === null) return;
     const activity = mode === "game" ? games[week] : (tots[week] || tots[String(week)]);
     if (!activity || activity.phase !== "live") return;
+    if (selected !== null) return; // Pause refresh while student is mid-selection
+    if (saving) return; // Pause refresh while a save is in flight
     const iv = setInterval(async () => {
       try {
         const raw = await window.storage.get("comm2-v1", true);
@@ -783,7 +786,7 @@ export function StudentAnswerView({ data, setData, userName }) {
       } catch(e) {}
     }, 2000);
     return () => clearInterval(iv);
-  }, [week, mode, sid, games, tots]);
+  }, [week, mode, sid, games, tots, selected, saving]);
 
   // Countdown effect
   React.useEffect(() => {
@@ -801,17 +804,52 @@ export function StudentAnswerView({ data, setData, userName }) {
   }, [week, mode, data]);
 
   const submitAnswer = async (actType, w, qIdx, answerIdx) => {
-    const activities = actType === "game" ? games : tots;
-    const activity = activities[w] || activities[String(w)];
-    if (!activity || !sid) return;
-    const key = sid + "-" + qIdx;
-    const responses = { ...(activity.responses || {}), [key]: answerIdx };
-    const wKey = activities[w] ? w : String(w);
+    if (!sid) return;
     const dataKey = actType === "game" ? "weeklyGames" : "weeklyToT";
-    const updated = { ...data, [dataKey]: { ...activities, [wKey]: { ...activity, responses } } };
-    await saveData(updated); setData(updated);
-    lastSubmitRef.current = Date.now();
-    showMsg("Locked in"); setSelected(null);
+    const myKey = sid + "-" + qIdx;
+    setSaving(true);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const raw = await window.storage.get("comm2-v1", true);
+        if (!raw?.value) {
+          if (attempt === 2) { setSaving(false); showMsg("Save failed. Try again."); return; }
+          continue;
+        }
+        const fresh = JSON.parse(raw.value);
+        const activities = fresh[dataKey] || {};
+        const wKey = activities[w] !== undefined ? w : (activities[String(w)] !== undefined ? String(w) : w);
+        const activity = activities[wKey];
+        if (!activity || activity.phase !== "live") {
+          setSaving(false); showMsg("This question closed"); setSelected(null); return;
+        }
+        const mergedResponses = { ...(activity.responses || {}), [myKey]: answerIdx };
+        const updated = { ...fresh, [dataKey]: { ...activities, [wKey]: { ...activity, responses: mergedResponses } } };
+        const ok = await saveData(updated);
+        if (!ok) {
+          if (attempt === 2) { setSaving(false); showMsg("Save failed. Try again."); return; }
+          continue;
+        }
+        const verifyRaw = await window.storage.get("comm2-v1", true);
+        if (verifyRaw?.value) {
+          try {
+            const verifyData = JSON.parse(verifyRaw.value);
+            const va = (verifyData[dataKey] || {})[wKey];
+            if (va && va.responses && va.responses[myKey] === answerIdx) {
+              setData(verifyData);
+              lastSubmitRef.current = Date.now();
+              setSelected(null);
+              setSaving(false);
+              showMsg("Locked in");
+              return;
+            }
+          } catch(e) {}
+        }
+        if (attempt === 2) { setSaving(false); showMsg("Save failed. Try again."); return; }
+      } catch(e) {
+        if (attempt === 2) { setSaving(false); showMsg("Save failed. Try again."); return; }
+      }
+      await new Promise(r => setTimeout(r, 50 + Math.random() * 100));
+    }
   };
 
   // Week selector
@@ -1018,7 +1056,7 @@ export function StudentAnswerView({ data, setData, userName }) {
                 );
               })}
             </div>
-            {selected !== null && <button onClick={() => submitAnswer(actType, week, currentQ, selected)} style={{ ...pill, fontSize: 14, padding: "12px 40px", background: "#111827", color: "#fff", fontWeight: 700 }}>Lock in answer</button>}
+            {selected !== null && <button onClick={() => submitAnswer(actType, week, currentQ, selected)} disabled={saving} style={{ ...pill, fontSize: 14, padding: "12px 40px", background: saving ? "#6b7280" : "#111827", color: "#fff", fontWeight: 700, cursor: saving ? "wait" : "pointer", opacity: saving ? 0.85 : 1 }}>{saving ? "Saving..." : "Lock in answer"}</button>}
           </>
         )}
 

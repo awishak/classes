@@ -917,6 +917,7 @@ export function StudentAnswerView({ data, setData, userName }) {
   const [week, setWeek] = useState(null);
   const [mode, setMode] = useState("game");
   const [selected, setSelected] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [countdown, setCountdown] = useState(0);
   const lastSubmitRef = React.useRef(0);
@@ -933,6 +934,7 @@ export function StudentAnswerView({ data, setData, userName }) {
     const activity = mode === "game" ? games[week] : (tots[week] || tots[String(week)]);
     if (!activity || activity.phase !== "live") return;
     if (selected !== null) return; // Pause refresh while student is mid-selection
+    if (saving) return; // Pause refresh while a save is in flight
     const iv = setInterval(async () => {
       try {
         const raw = await window.storage.get("comm118-game-v14", true);
@@ -957,7 +959,7 @@ export function StudentAnswerView({ data, setData, userName }) {
       } catch(e) {}
     }, 5000);
     return () => clearInterval(iv);
-  }, [week, mode, sid, selected]);
+  }, [week, mode, sid, selected, saving]);
 
   // Countdown effect
   React.useEffect(() => {
@@ -975,17 +977,96 @@ export function StudentAnswerView({ data, setData, userName }) {
   }, [week, mode, data]);
 
   const submitAnswer = async (actType, w, qIdx, answerIdx) => {
-    const activities = actType === "game" ? games : tots;
-    const activity = activities[w] || activities[String(w)];
-    if (!activity || !sid) return;
-    const key = sid + "-" + qIdx;
-    const responses = { ...(activity.responses || {}), [key]: answerIdx };
-    const wKey = activities[w] ? w : String(w);
+    if (!sid) return;
     const dataKey = actType === "game" ? "weeklyGames" : "weeklyToT";
-    const updated = { ...data, [dataKey]: { ...activities, [wKey]: { ...activity, responses } } };
-    await saveData(updated); setData(updated);
-    lastSubmitRef.current = Date.now();
-    showMsg("Locked in"); setSelected(null);
+    const myKey = sid + "-" + qIdx;
+
+    // Mark UI as saving immediately, but don't claim "Locked in" until we verify.
+    setSaving(true);
+
+    // Try up to 3 times. Each try: re-read latest data, merge ONLY this student's
+    // answer into responses, write, then verify by reading back.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        // 1. Read latest from storage (not the React closure, which may be stale).
+        const raw = await window.storage.get("comm118-game-v14", true);
+        if (!raw?.value) {
+          // Storage empty — bail out, can't safely write.
+          if (attempt === 2) {
+            setSaving(false);
+            showMsg("Save failed. Try again.");
+            return;
+          }
+          continue;
+        }
+        const fresh = JSON.parse(raw.value);
+
+        // 2. Locate the activity in the fresh data.
+        const activities = fresh[dataKey] || {};
+        const wKey = activities[w] !== undefined ? w : (activities[String(w)] !== undefined ? String(w) : w);
+        const activity = activities[wKey];
+        if (!activity || activity.phase !== "live") {
+          // Slot is no longer live (admin closed it). Don't write.
+          setSaving(false);
+          showMsg("This question closed");
+          setSelected(null);
+          return;
+        }
+
+        // 3. Merge ONLY this student's single response into the fresh responses object.
+        const mergedResponses = { ...(activity.responses || {}), [myKey]: answerIdx };
+        const updated = {
+          ...fresh,
+          [dataKey]: {
+            ...activities,
+            [wKey]: { ...activity, responses: mergedResponses },
+          },
+        };
+
+        // 4. Write.
+        const ok = await saveData(updated);
+        if (!ok) {
+          if (attempt === 2) {
+            setSaving(false);
+            showMsg("Save failed. Try again.");
+            return;
+          }
+          continue;
+        }
+
+        // 5. Verify by reading back. If our answer landed, great. If not, retry.
+        const verifyRaw = await window.storage.get("comm118-game-v14", true);
+        if (verifyRaw?.value) {
+          try {
+            const verifyData = JSON.parse(verifyRaw.value);
+            const va = (verifyData[dataKey] || {})[wKey];
+            if (va && va.responses && va.responses[myKey] === answerIdx) {
+              // Confirmed.
+              setData(verifyData);
+              lastSubmitRef.current = Date.now();
+              setSelected(null);
+              setSaving(false);
+              showMsg("Locked in");
+              return;
+            }
+          } catch(e) {}
+        }
+        // Verify failed — someone else's write clobbered ours. Retry.
+        if (attempt === 2) {
+          setSaving(false);
+          showMsg("Save failed. Try again.");
+          return;
+        }
+      } catch(e) {
+        if (attempt === 2) {
+          setSaving(false);
+          showMsg("Save failed. Try again.");
+          return;
+        }
+      }
+      // Tiny backoff before retrying so collisions don't repeat.
+      await new Promise(r => setTimeout(r, 50 + Math.random() * 100));
+    }
   };
 
   // Auto-jump to live activity if one exists and the student hasn't already picked a slot
@@ -997,58 +1078,9 @@ export function StudentAnswerView({ data, setData, userName }) {
     if (liveTotWeek) { setMode("tot"); setWeek(parseInt(liveTotWeek) || liveTotWeek); return; }
   }, [week, games, tots]);
 
-  // Week selector — clean past-events list when nothing is live
+  // When no live activity, render nothing here. Past events are listed by ActivitiesView below.
   if (week === null) {
-    const gameSlots = Object.keys(games).filter(w => games[w]?.scored || games[w]?.phase === "done").map(w => ({ w, item: games[w], type: "game" }));
-    const totSlots = Object.keys(tots).filter(w => tots[w]?.scored || tots[w]?.phase === "done").map(w => ({ w, item: tots[w], type: "tot" }));
-    gameSlots.sort((a, b) => parseInt(b.w) - parseInt(a.w));
-    totSlots.sort((a, b) => parseInt(b.w) - parseInt(a.w));
-
-    const renderSlotCard = (slot) => {
-      const w = slot.w;
-      const item = slot.item;
-      const isScored = item?.scored;
-      const hasResponded = sid && item?.responses && Object.keys(item.responses).some(k => k.startsWith(sid));
-      const label = slot.type === "game" ? "Weekly Game" : "This or That";
-      return (
-        <button key={slot.type + "-" + w} onClick={() => { setMode(slot.type); setWeek(parseInt(w) || w); setSelected(null); }} style={{
-          width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 14, marginBottom: 8, cursor: "pointer", fontFamily: F,
-          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
-        }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 16, fontWeight: 500, color: "#111827", letterSpacing: "-0.01em" }}>{label}, Wk {w}</div>
-            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
-              {isScored ? "Results available" : "Closed"}
-              {hasResponded && " · You played"}
-              {!hasResponded && isScored && " · You did not play"}
-            </div>
-          </div>
-          <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 500 }}>Open ›</span>
-        </button>
-      );
-    };
-
-    return (
-      <div style={{ padding: "0 0 16px", fontFamily: F }}>
-        <div style={{ maxWidth: 500, margin: "0 auto" }}>
-          {gameSlots.length === 0 && totSlots.length === 0 && (
-            <div style={{ fontSize: 13, color: "#9ca3af", textAlign: "center", padding: "24px 0" }}>No live activities right now.</div>
-          )}
-          {gameSlots.length > 0 && (
-            <div style={{ marginBottom: gameSlots.length > 0 && totSlots.length > 0 ? 16 : 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Past Weekly Games</div>
-              {gameSlots.map(renderSlotCard)}
-            </div>
-          )}
-          {totSlots.length > 0 && (
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Past This or That</div>
-              {totSlots.map(renderSlotCard)}
-            </div>
-          )}
-        </div>
-      </div>
-    );
+    return null;
   }
 
   // Get activity
@@ -1316,7 +1348,7 @@ export function StudentAnswerView({ data, setData, userName }) {
                 );
               })}
             </div>
-            {selected !== null && <button onClick={() => submitAnswer(actType, week, currentQ, selected)} style={{ ...pill, fontSize: 14, padding: "12px 40px", background: "#111827", color: "#fff", fontWeight: 700 }}>Lock in answer</button>}
+            {selected !== null && <button onClick={() => submitAnswer(actType, week, currentQ, selected)} disabled={saving} style={{ ...pill, fontSize: 14, padding: "12px 40px", background: saving ? "#6b7280" : "#111827", color: "#fff", fontWeight: 700, cursor: saving ? "wait" : "pointer", opacity: saving ? 0.85 : 1 }}>{saving ? "Saving..." : "Lock in answer"}</button>}
           </>
         )}
 
