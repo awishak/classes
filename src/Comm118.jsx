@@ -197,6 +197,15 @@ function shuffleTeams(students, log, teams) {
 
 function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#18181b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 14, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
 
+// Scroll an element into view with an offset that clears the sticky nav.
+// Use this everywhere instead of element.scrollIntoView({block:"start"}) because
+// scrollIntoView ignores the sticky nav and lands the element under it.
+function scrollToWithOffset(el, offset = 80) {
+  if (!el) return;
+  const top = el.getBoundingClientRect().top + window.pageYOffset - offset;
+  window.scrollTo({ top, behavior: "smooth" });
+}
+
 // Reusable page header with a visible back button. Use at the top of every interior page.
 function PageHeader({ title, onBack, right }) {
   const goBack = () => {
@@ -2068,7 +2077,7 @@ function ScheduleView({ data, setData, isAdmin }) {
       const id = exactDayId || (nearestWeekIdx >= 0 ? "view-week-" + nearestWeekIdx : null);
       if (id) {
         const el = document.getElementById(id);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        scrollToWithOffset(el);
       }
     }, 250);
     return () => clearTimeout(t);
@@ -2231,7 +2240,7 @@ function ScheduleView({ data, setData, isAdmin }) {
           }
           const jumpToWeek = (wi) => {
             const el = document.getElementById("view-week-" + wi);
-            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+            scrollToWithOffset(el);
           };
           return (
             <div style={{ background: "#fafaf9", borderRadius: 12, padding: "10px 12px", marginBottom: 18, display: "flex", gap: 6, alignItems: "center", overflowX: "auto", flexWrap: "wrap" }}>
@@ -5668,7 +5677,7 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
 
   const scrollToLive = () => {
     const el = document.getElementById("live-now-section");
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToWithOffset(el);
   };
 
   return (

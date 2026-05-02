@@ -553,12 +553,20 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
   // Jump from the assignment table to the All-assignments section, expand that one.
+  // Uses an offset scroll so the row appears below the sticky nav, not under it.
   const jumpToAssignment = (id) => {
     setOpenId(id);
-    setTimeout(() => {
-      const el = document.getElementById("assignment-row-" + id);
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 50);
+    // Wait two frames so the expansion has rendered before measuring,
+    // then scroll with an offset that clears the sticky nav (~80px).
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.getElementById("assignment-row-" + id);
+        if (!el) return;
+        const navOffset = 80;
+        const top = el.getBoundingClientRect().top + window.pageYOffset - navOffset;
+        window.scrollTo({ top, behavior: "smooth" });
+      });
+    });
   };
 
   const isGuest = userName === GUEST_NAME;
