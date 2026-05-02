@@ -542,6 +542,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const [openId, setOpenId] = useState(null);
   const [hoveredDotId, setHoveredDotId] = useState(null);
   const [tableExpandedId, setTableExpandedId] = useState(null);
+  const [howGradeOpen, setHowGradeOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" ? window.innerWidth >= 600 : true);
   useEffect(() => {
     const onResize = () => setIsDesktop(window.innerWidth >= 600);
@@ -550,6 +551,16 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   }, []);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  // Jump from the assignment table to the All-assignments section, expand that one.
+  const jumpToAssignment = (id) => {
+    setOpenId(id);
+    setTimeout(() => {
+      const el = document.getElementById("assignment-row-" + id);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  };
+
   const isGuest = userName === GUEST_NAME;
   const student = !isAdmin && !isGuest ? data.students.find(s => s.name === userName) : null;
   const studentId = student?.id;
@@ -725,18 +736,15 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
       <Toast message={msg} />
       <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto" }}>
 
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div style={sectionLabel}>Assignments</div>
-          {isAdmin && (
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={addAssignment} style={{ ...linkPill, cursor: "pointer", border: "none" }}>+ Add</button>
-              <button onClick={() => setEditMasterRubric(!editMasterRubric)} style={{ ...linkPill, cursor: "pointer", border: "none" }}>{editMasterRubric ? "Cancel" : "Master Rubric"}</button>
-              {setView && <button onClick={() => setView("grades")} style={{ ...linkPill, cursor: "pointer", border: "none" }}>Gradebook</button>}
-              {setView && <button onClick={() => setView("grading")} style={{ ...linkPill, cursor: "pointer", border: "none", color: ACCENT, background: ACCENT + "12" }}>Grading</button>}
-            </div>
-          )}
-        </div>
+        {/* Admin buttons (top right, no page title) */}
+        {isAdmin && (
+          <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginBottom: 14 }}>
+            <button onClick={addAssignment} style={{ ...linkPill, cursor: "pointer", border: "none" }}>+ Add</button>
+            <button onClick={() => setEditMasterRubric(!editMasterRubric)} style={{ ...linkPill, cursor: "pointer", border: "none" }}>{editMasterRubric ? "Cancel" : "Master Rubric"}</button>
+            {setView && <button onClick={() => setView("grades")} style={{ ...linkPill, cursor: "pointer", border: "none" }}>Gradebook</button>}
+            {setView && <button onClick={() => setView("grading")} style={{ ...linkPill, cursor: "pointer", border: "none", color: ACCENT, background: ACCENT + "12" }}>Grading</button>}
+          </div>
+        )}
 
         {/* Master Rubric Editor */}
         {isAdmin && editMasterRubric && (
@@ -752,7 +760,8 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           />
         )}
 
-        {/* GRADES PANEL — table on desktop, card list on mobile */}
+        {/* ASSIGNMENT TABLE — table on desktop, card list on mobile */}
+        {studentId && <div style={{ ...sectionLabel, marginBottom: 10 }}>Assignment table</div>}
         {studentId && (() => {
           const partRow = sortedAssignments.find(a => a.id === "participation");
           const partWeight = partRow?.weight || 25;
@@ -810,10 +819,10 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                       return (
                         <React.Fragment key={r.a.id}>
                           <tr
-                            onClick={() => r.isPart ? setTableExpandedId(isExpanded ? null : r.a.id) : null}
+                            onClick={() => r.isPart ? setTableExpandedId(isExpanded ? null : r.a.id) : jumpToAssignment(r.a.id)}
                             style={{
                               borderBottom: (!isLast || isExpanded) ? "1px solid " + BORDER : "none",
-                              cursor: r.isPart ? "pointer" : "default",
+                              cursor: "pointer",
                             }}
                           >
                             <td style={{ padding: "14px 16px", fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY }}>
@@ -849,6 +858,12 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                       );
                     })}
                   </tbody>
+                  <tfoot>
+                    <tr style={{ background: "#fafafa", borderTop: "1px solid " + BORDER_STRONG }}>
+                      <td colSpan={4} style={{ padding: "14px 16px", fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY, textAlign: "right" }}>Current grade</td>
+                      <td style={{ padding: "14px 16px", fontSize: 18, fontWeight: 500, color: gradeColor, fontVariantNumeric: "tabular-nums", textAlign: "right", letterSpacing: "-0.01em" }}>{currentGrade !== null ? currentGrade + "%" : "---"}</td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             );
@@ -863,8 +878,8 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                 return (
                   <div key={r.a.id}>
                     <div
-                      onClick={() => r.isPart ? setTableExpandedId(isExpanded ? null : r.a.id) : null}
-                      style={{ ...crd, padding: "12px 14px", cursor: r.isPart ? "pointer" : "default" }}
+                      onClick={() => r.isPart ? setTableExpandedId(isExpanded ? null : r.a.id) : jumpToAssignment(r.a.id)}
+                      style={{ ...crd, padding: "12px 14px", cursor: "pointer" }}
                     >
                       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -897,6 +912,10 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                   </div>
                 );
               })}
+              <div style={{ ...crd, padding: "12px 14px", background: "#fafafa", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY }}>Current grade</span>
+                <span style={{ fontSize: 18, fontWeight: 500, color: gradeColor, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>{currentGrade !== null ? currentGrade + "%" : "---"}</span>
+              </div>
             </div>
           );
         })()}
@@ -960,10 +979,24 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
               );
             }
 
+            const anyOpen = openId !== null;
+            const dimmed = anyOpen && !isOpen;
             return (
-              <div key={a.id} style={{ marginBottom: 0 }}>
+              <div
+                key={a.id}
+                id={"assignment-row-" + a.id}
+                style={{
+                  marginBottom: 0,
+                  background: "#fff",
+                  border: isOpen ? "2px solid " + ACCENT : "1px solid " + BORDER,
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  opacity: dimmed ? 0.4 : 1,
+                  transition: "opacity 0.15s, border-color 0.15s",
+                }}
+              >
                 <button onClick={() => setOpenId(isOpen ? null : a.id)} style={{
-                  ...crd, padding: 14, width: "100%", textAlign: "left", fontFamily: F, cursor: "pointer",
+                  background: "transparent", border: "none", padding: 14, width: "100%", textAlign: "left", fontFamily: F, cursor: "pointer",
                   display: "flex", alignItems: "center", gap: 10,
                 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: a.id === "participation" ? TEAL + "1a" : ACCENT + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: a.id === "participation" ? TEAL : ACCENT, flexShrink: 0 }}>{a.weight}%</div>
@@ -996,12 +1029,14 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                   </div>
                 </button>
                 {isOpen && (
-                  <div style={{ marginTop: 8, ...crd, padding: 16 }} onClick={e => e.stopPropagation()}>
-                    {a.id === "participation" ? (
-                      <ParticipationDetail data={data} studentId={studentId} />
-                    ) : (
-                      renderAssignmentBody(a)
-                    )}
+                  <div style={{ padding: "0 16px 16px", borderTop: "1px solid " + BORDER }} onClick={e => e.stopPropagation()}>
+                    <div style={{ paddingTop: 14 }}>
+                      {a.id === "participation" ? (
+                        <ParticipationDetail data={data} studentId={studentId} />
+                      ) : (
+                        renderAssignmentBody(a)
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1009,48 +1044,10 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           })}
         </div>
 
-        {/* GRADE SUMMARY (bottom) */}
-        {studentId && (
-          <div style={{ ...crd, padding: 16, marginTop: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div>
-              <div style={{ ...sectionLabel, marginBottom: 4 }}>Current grade</div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                <span style={{ fontSize: 28, fontWeight: 500, color: gradeColor, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
-                  {currentGrade !== null ? currentGrade + "%" : "---"}
-                </span>
-                {currentGrade !== null && (
-                  <span style={{ fontSize: 16, fontWeight: 500, color: gradeColor }}>
-                    {(() => {
-                      const g = currentGrade;
-                      if (g >= 93) return "A";
-                      if (g >= 90) return "A-";
-                      if (g >= 87) return "B+";
-                      if (g >= 83) return "B";
-                      if (g >= 80) return "B-";
-                      if (g >= 77) return "C+";
-                      if (g >= 73) return "C";
-                      if (g >= 70) return "C-";
-                      if (g >= 60) return "D";
-                      return "F";
-                    })()}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div style={{ textAlign: "right", fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5 }}>
-              {pctAssessed >= 100 ? (
-                <span>All assignments graded</span>
-              ) : (
-                <span>{pctAssessed}% of total grade<br/>assessed so far</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Class explanation (bottom) */}
-        <div style={{ ...crd, padding: 16, marginTop: 12, cursor: isAdmin ? "pointer" : "default" }} onClick={() => { if (isAdmin && !editBlurb) { setBlurbLocal(blurbText); setEditBlurb(true); } }}>
+        {/* Class explanation (bottom) — collapsed by default */}
+        <div style={{ ...crd, padding: 16, marginTop: 24 }}>
           {isAdmin && editBlurb ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <textarea value={blurbLocal} onChange={e => setBlurbLocal(e.target.value)} rows={8} style={{ ...inp, fontSize: 14, lineHeight: 1.6, resize: "vertical" }} />
               <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                 <button onClick={() => setEditBlurb(false)} style={pillInactive}>Cancel</button>
@@ -1059,11 +1056,23 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
             </div>
           ) : (
             <div>
-              <div style={{ ...sectionLabel, marginBottom: 8 }}>How Your Grade Works</div>
-              <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-                {blurbText}
-                {isAdmin && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 6, fontStyle: "italic" }}>Click to edit</div>}
-              </div>
+              <button onClick={() => setHowGradeOpen(!howGradeOpen)} style={{
+                background: "transparent", border: "none", padding: 0, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: F,
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+              }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY }}>How your grade works</div>
+                <span style={{ fontSize: 14, color: TEXT_MUTED, transform: howGradeOpen ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>›</span>
+              </button>
+              {howGradeOpen && (
+                <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap", marginTop: 12, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
+                  {blurbText}
+                  {isAdmin && (
+                    <div style={{ marginTop: 10 }}>
+                      <button onClick={() => { setBlurbLocal(blurbText); setEditBlurb(true); }} style={linkPill}>Edit</button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
