@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ReboundPanel } from "./GameSystem";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -541,6 +541,13 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   const [editMasterRubric, setEditMasterRubric] = useState(false);
   const [openId, setOpenId] = useState(null);
   const [hoveredDotId, setHoveredDotId] = useState(null);
+  const [tableExpandedId, setTableExpandedId] = useState(null);
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" ? window.innerWidth >= 600 : true);
+  useEffect(() => {
+    const onResize = () => setIsDesktop(window.innerWidth >= 600);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const isGuest = userName === GUEST_NAME;
@@ -745,110 +752,154 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           />
         )}
 
-        {/* HERO: current grade big + dot strip below — centered */}
-        {studentId && (
-          <div style={{ ...crd, padding: 24, marginBottom: 16, textAlign: "center" }}>
-            <div style={{ ...sectionLabel, marginBottom: 8 }}>Current grade</div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 10, justifyContent: "center" }}>
-              <div style={{ fontSize: 48, fontWeight: 500, color: gradeColor, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
-                {currentGrade !== null ? currentGrade + "%" : "---"}
+        {/* GRADES PANEL — table on desktop, card list on mobile */}
+        {studentId && (() => {
+          const partRow = sortedAssignments.find(a => a.id === "participation");
+          const partWeight = partRow?.weight || 25;
+          const part = computeParticipationGrade(data, studentId);
+          // Build rows for every assignment
+          const rows = sortedAssignments.map(a => {
+            const isPart = a.id === "participation";
+            const g = grades[studentId + "-" + a.id] || {};
+            const sub = submissions[studentId + "-" + a.id];
+            const state = getAssignmentState(a, data, studentId);
+            let scoreText, contribution, hasGrade, scoreColor;
+            if (isPart) {
+              scoreText = part.totalEarned + " / " + part.totalPossible;
+              const pct = part.totalPossible > 0 ? part.totalEarned / part.totalPossible : 0;
+              contribution = Math.round(pct * partWeight * 10) / 10;
+              hasGrade = part.totalPossible > 0;
+              scoreColor = pct >= 0.9 ? GREEN : pct >= 0.8 ? TEXT_PRIMARY : pct >= 0.7 ? AMBER : RED;
+            } else {
+              hasGrade = g.score !== undefined && g.score !== "";
+              if (hasGrade) {
+                const sc = parseFloat(g.score);
+                const out = g.outOf || 100;
+                scoreText = g.score + " / " + out;
+                const pct = out > 0 ? sc / out : 0;
+                contribution = Math.round(pct * a.weight * 10) / 10;
+                scoreColor = pct >= 0.9 ? GREEN : pct >= 0.8 ? TEXT_PRIMARY : pct >= 0.7 ? AMBER : RED;
+              } else {
+                scoreText = "—";
+                contribution = null;
+                scoreColor = TEXT_MUTED;
+              }
+            }
+            return { a, isPart, state, scoreText, scoreColor, hasGrade, contribution, sub, g };
+          });
+
+          if (isDesktop) {
+            // ─── DESKTOP TABLE ───
+            return (
+              <div style={{ ...crd, marginBottom: 16, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: F }}>
+                  <thead>
+                    <tr style={{ background: "#fafafa", borderBottom: "1px solid " + BORDER_STRONG }}>
+                      <th style={{ ...sectionLabel, textAlign: "left", padding: "12px 16px", fontWeight: 700 }}>Assignment</th>
+                      <th style={{ ...sectionLabel, textAlign: "left", padding: "12px 12px", fontWeight: 700 }}>Due / Status</th>
+                      <th style={{ ...sectionLabel, textAlign: "right", padding: "12px 12px", fontWeight: 700 }}>Weight</th>
+                      <th style={{ ...sectionLabel, textAlign: "right", padding: "12px 12px", fontWeight: 700 }}>Score</th>
+                      <th style={{ ...sectionLabel, textAlign: "right", padding: "12px 16px", fontWeight: 700 }}>Contribution</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r, i) => {
+                      const isExpanded = tableExpandedId === r.a.id;
+                      const isLast = i === rows.length - 1;
+                      const dueText = r.isPart ? "Ongoing" : (r.a.due ? "Due " + fmtDue(r.a.due) : "—");
+                      return (
+                        <React.Fragment key={r.a.id}>
+                          <tr
+                            onClick={() => r.isPart ? setTableExpandedId(isExpanded ? null : r.a.id) : null}
+                            style={{
+                              borderBottom: (!isLast || isExpanded) ? "1px solid " + BORDER : "none",
+                              cursor: r.isPart ? "pointer" : "default",
+                            }}
+                          >
+                            <td style={{ padding: "14px 16px", fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY }}>
+                              {r.isPart && <span style={{ display: "inline-block", marginRight: 6, color: TEXT_MUTED, fontSize: 11, transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>›</span>}
+                              {r.a.name}
+                            </td>
+                            <td style={{ padding: "14px 12px", fontSize: 12, color: TEXT_SECONDARY }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <span>{dueText}</span>
+                                <StatusBadge state={r.state} />
+                              </div>
+                            </td>
+                            <td style={{ padding: "14px 12px", fontSize: 13, color: TEXT_SECONDARY, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{r.a.weight}%</td>
+                            <td style={{ padding: "14px 12px", textAlign: "right" }}>
+                              <span style={{ fontSize: 15, fontWeight: 500, color: r.scoreColor, fontVariantNumeric: "tabular-nums" }}>{r.scoreText}</span>
+                            </td>
+                            <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                              {r.contribution !== null ? (
+                                <span style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{r.contribution} pts</span>
+                              ) : (
+                                <span style={{ fontSize: 13, color: TEXT_MUTED }}>—</span>
+                              )}
+                            </td>
+                          </tr>
+                          {isExpanded && r.isPart && (
+                            <tr>
+                              <td colSpan={5} style={{ padding: "0 16px 16px", background: "#fafafa", borderBottom: !isLast ? "1px solid " + BORDER : "none" }}>
+                                <ParticipationDetail data={data} studentId={studentId} />
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-              {currentGrade !== null && (
-                <div style={{ fontSize: 24, fontWeight: 500, color: gradeColor, lineHeight: 1 }}>
-                  {(() => {
-                    const g = currentGrade;
-                    if (g >= 93) return "A";
-                    if (g >= 90) return "A-";
-                    if (g >= 87) return "B+";
-                    if (g >= 83) return "B";
-                    if (g >= 80) return "B-";
-                    if (g >= 77) return "C+";
-                    if (g >= 73) return "C";
-                    if (g >= 70) return "C-";
-                    if (g >= 60) return "D";
-                    return "F";
-                  })()}
-                </div>
-              )}
-            </div>
-            {pctAssessed > 0 && pctAssessed < 100 && (
-              <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 6 }}>{pctAssessed}% of grade assessed so far</div>
-            )}
-            <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid " + BORDER }}>
-              <div style={{ ...sectionLabel, marginBottom: 10 }}>Your assignments</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-                {sortedAssignments.map(a => {
-                  const state = getAssignmentState(a, data, studentId);
-                  const c = dotColor(state);
-                  const sz = dotSize(a.weight);
-                  const isSubmittedNotGraded = state === "submitted";
-                  const sub = submissions[studentId + "-" + a.id];
-                  const g = grades[studentId + "-" + a.id] || {};
-                  const isHovered = hoveredDotId === a.id;
-                  let dueLine;
-                  if (a.id === "participation") dueLine = "Ongoing";
-                  else if (sub) dueLine = "Submitted " + new Date(sub.ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                  else if (a.due) dueLine = "Due " + a.due;
-                  else dueLine = null;
-                  const gradeLine = (g.score !== undefined && g.score !== "") ? ("Grade: " + g.score + " / " + (g.outOf || 100)) : null;
-                  return (
-                    <div key={a.id} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}
-                      onMouseEnter={() => setHoveredDotId(a.id)}
-                      onMouseLeave={() => setHoveredDotId(null)}
-                      onClick={e => { e.stopPropagation(); setHoveredDotId(isHovered ? null : a.id); }}
+            );
+          }
+
+          // ─── MOBILE LIST (card per row) ───
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+              {rows.map(r => {
+                const isExpanded = tableExpandedId === r.a.id;
+                const dueText = r.isPart ? "Ongoing" : (r.a.due ? "Due " + fmtDue(r.a.due) : "—");
+                return (
+                  <div key={r.a.id}>
+                    <div
+                      onClick={() => r.isPart ? setTableExpandedId(isExpanded ? null : r.a.id) : null}
+                      style={{ ...crd, padding: "12px 14px", cursor: r.isPart ? "pointer" : "default" }}
                     >
-                      <div style={{
-                        width: sz, height: sz, borderRadius: "50%",
-                        background: c.fill,
-                        border: isSubmittedNotGraded ? "2px solid " + c.border : "none",
-                        flexShrink: 0,
-                        cursor: "pointer",
-                        transition: "transform 0.12s",
-                        transform: isHovered ? "scale(1.1)" : "scale(1)",
-                      }} />
-                      {isHovered && (
-                        <div style={{
-                          position: "absolute",
-                          bottom: "calc(100% + 8px)",
-                          left: "50%",
-                          transform: "translateX(-50%)",
-                          background: TEXT_PRIMARY,
-                          color: "#fff",
-                          padding: "8px 12px",
-                          borderRadius: 8,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          fontFamily: F,
-                          whiteSpace: "nowrap",
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.18)",
-                          zIndex: 50,
-                          pointerEvents: "none",
-                          lineHeight: 1.5,
-                        }}>
-                          <div style={{ fontWeight: 800, marginBottom: 2 }}>{a.name}</div>
-                          {dueLine && <div style={{ color: "#d1d5db" }}>{dueLine}</div>}
-                          {gradeLine && <div style={{ color: "#d1d5db" }}>{gradeLine}</div>}
-                          <div style={{ color: "#d1d5db" }}>{a.weight || 0}% of total grade</div>
-                          <div style={{
-                            position: "absolute",
-                            top: "100%",
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            width: 0,
-                            height: 0,
-                            borderLeft: "5px solid transparent",
-                            borderRight: "5px solid transparent",
-                            borderTop: "5px solid " + TEXT_PRIMARY,
-                          }} />
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, lineHeight: 1.3 }}>
+                            {r.isPart && <span style={{ display: "inline-block", marginRight: 4, color: TEXT_MUTED, fontSize: 11, transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>›</span>}
+                            {r.a.name}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                            <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{dueText}</span>
+                            <StatusBadge state={r.state} />
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div style={{ fontSize: 16, fontWeight: 500, color: r.scoreColor, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{r.scoreText}</div>
+                          <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>{r.a.weight}% wt</div>
+                        </div>
+                      </div>
+                      {r.contribution !== null && (
+                        <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid " + BORDER, display: "flex", justifyContent: "space-between", fontSize: 11, color: TEXT_SECONDARY }}>
+                          <span>Contribution to grade</span>
+                          <span style={{ fontWeight: 500, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{r.contribution} pts</span>
                         </div>
                       )}
                     </div>
-                  );
-                })}
-              </div>
+                    {isExpanded && r.isPart && (
+                      <div style={{ ...crd, padding: 14, marginTop: 4 }}>
+                        <ParticipationDetail data={data} studentId={studentId} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Next Assignment */}
         {nextAssignment && (
@@ -958,8 +1009,46 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           })}
         </div>
 
+        {/* GRADE SUMMARY (bottom) */}
+        {studentId && (
+          <div style={{ ...crd, padding: 16, marginTop: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div>
+              <div style={{ ...sectionLabel, marginBottom: 4 }}>Current grade</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                <span style={{ fontSize: 28, fontWeight: 500, color: gradeColor, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+                  {currentGrade !== null ? currentGrade + "%" : "---"}
+                </span>
+                {currentGrade !== null && (
+                  <span style={{ fontSize: 16, fontWeight: 500, color: gradeColor }}>
+                    {(() => {
+                      const g = currentGrade;
+                      if (g >= 93) return "A";
+                      if (g >= 90) return "A-";
+                      if (g >= 87) return "B+";
+                      if (g >= 83) return "B";
+                      if (g >= 80) return "B-";
+                      if (g >= 77) return "C+";
+                      if (g >= 73) return "C";
+                      if (g >= 70) return "C-";
+                      if (g >= 60) return "D";
+                      return "F";
+                    })()}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div style={{ textAlign: "right", fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5 }}>
+              {pctAssessed >= 100 ? (
+                <span>All assignments graded</span>
+              ) : (
+                <span>{pctAssessed}% of total grade<br/>assessed so far</span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Class explanation (bottom) */}
-        <div style={{ ...crd, padding: 16, marginTop: 24, cursor: isAdmin ? "pointer" : "default" }} onClick={() => { if (isAdmin && !editBlurb) { setBlurbLocal(blurbText); setEditBlurb(true); } }}>
+        <div style={{ ...crd, padding: 16, marginTop: 12, cursor: isAdmin ? "pointer" : "default" }} onClick={() => { if (isAdmin && !editBlurb) { setBlurbLocal(blurbText); setEditBlurb(true); } }}>
           {isAdmin && editBlurb ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }} onClick={e => e.stopPropagation()}>
               <textarea value={blurbLocal} onChange={e => setBlurbLocal(e.target.value)} rows={8} style={{ ...inp, fontSize: 14, lineHeight: 1.6, resize: "vertical" }} />
