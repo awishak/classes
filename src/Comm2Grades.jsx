@@ -1362,6 +1362,278 @@ function AdminSubmissions({ assignmentId, data, setData }) {
   );
 }
 
+function StudentSubmission({ assignmentId, data, setData, studentId, existing }) {
+  const [docUrl, setDocUrl] = useState(existing?.docUrl || "");
+  const [notes, setNotes] = useState(existing?.notes || "");
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  React.useEffect(() => {
+    setDocUrl(existing?.docUrl || "");
+    setNotes(existing?.notes || "");
+  }, [existing?.docUrl, existing?.notes]);
+
+  const submit = async () => {
+    if (!docUrl.trim()) return;
+    const key = studentId + "-" + assignmentId;
+    const submissions = data.submissions || {};
+    const updated = { ...data, submissions: { ...submissions, [key]: { docUrl: docUrl.trim(), notes: notes.trim(), ts: Date.now() } } };
+    await saveData(updated); setData(updated); showMsg("Submitted");
+  };
+
+  return (
+    <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
+      {msg && <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginBottom: 4 }}>{msg}</div>}
+      <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>Your Submission</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <input value={docUrl} onChange={e => setDocUrl(e.target.value)} placeholder="Google Doc link" style={{ ...inp, fontSize: 13, padding: "8px 10px" }} />
+        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes for your instructor (optional)" rows={2} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical" }} />
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button onClick={submit} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>{existing?.ts ? "Resubmit" : "Submit"}</button>
+        </div>
+      </div>
+      {existing?.ts && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 6 }}>Submitted {new Date(existing.ts).toLocaleString()}</div>}
+    </div>
+  );
+}
+
+function RegradeRequest({ assignmentId, data, setData, studentId }) {
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  const key = studentId + "-" + assignmentId;
+  const existing = (data.regradeRequests || {})[key];
+
+  const submit = async () => {
+    if (!note.trim()) return;
+    const regradeRequests = { ...(data.regradeRequests || {}), [key]: { note: note.trim(), ts: Date.now() } };
+    const updated = { ...data, regradeRequests };
+    await saveData(updated); setData(updated);
+    setOpen(false); setNote(""); showMsg("Regrade requested");
+  };
+
+  const cancel = async () => {
+    if (!window.confirm("Cancel your regrade request?")) return;
+    const regradeRequests = { ...(data.regradeRequests || {}) };
+    delete regradeRequests[key];
+    const updated = { ...data, regradeRequests };
+    await saveData(updated); setData(updated); showMsg("Request cancelled");
+  };
+
+  if (existing) {
+    return (
+      <div style={{ marginTop: 8, padding: "8px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fde68a" }}>
+        {msg && <div style={{ fontSize: 12, color: "#10b981", fontWeight: 600, marginBottom: 4 }}>{msg}</div>}
+        <div style={{ fontSize: 11, fontWeight: 700, color: AMBER, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Regrade Requested</div>
+        <div style={{ fontSize: 13, color: "#92400e", lineHeight: 1.4 }}>{existing.note}</div>
+        <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>Sent {new Date(existing.ts).toLocaleString()}</div>
+        <button onClick={cancel} style={{ ...pill, background: "#fff", color: TEXT_SECONDARY, border: "1px solid #e5e7eb", fontSize: 11, marginTop: 6 }}>Cancel Request</button>
+      </div>
+    );
+  }
+
+  if (open) {
+    return (
+      <div style={{ marginTop: 8, padding: "10px 12px", background: "#fafafa", borderRadius: 10, border: "1px solid " + BORDER }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>Request Regrade</div>
+        <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Tell your instructor what to look for (required)..." rows={3} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 6 }} />
+        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+          <button onClick={() => { setOpen(false); setNote(""); }} style={pillInactive}>Cancel</button>
+          <button onClick={submit} disabled={!note.trim()} style={{ ...pill, background: note.trim() ? TEXT_PRIMARY : "#d1d5db", color: "#fff" }}>Submit Request</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
+      {msg && <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginRight: "auto" }}>{msg}</div>}
+      <button onClick={() => setOpen(true)} style={{ ...pill, background: "#fff", color: ACCENT, border: "1px solid " + ACCENT + "40", fontSize: 12 }}>Request Regrade</button>
+    </div>
+  );
+}
+
+/* --- BULK NOTES IMPORT --- */
+function BulkNotesImport({ assignmentId, data, setData }) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState("text"); // "text" | "photo"
+  const [text, setText] = useState("");
+  const [imageData, setImageData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 3000); };
+
+  const students = (data.students || []).filter(s => s.name !== ADMIN_NAME);
+  const bulkNotes = (data.bulkNotes || {})[assignmentId] || {};
+  const noteCount = Object.keys(bulkNotes).length;
+
+  const parseAndSave = async (input) => {
+    const lines = input.split("\n").filter(l => l.trim());
+    const notes = { ...bulkNotes };
+    let matched = 0;
+
+    lines.forEach(line => {
+      const colonIdx = line.indexOf(":");
+      if (colonIdx === -1) return;
+      const namePart = line.slice(0, colonIdx).trim().toLowerCase();
+      const comment = line.slice(colonIdx + 1).trim();
+      if (!comment) return;
+
+      const student = students.find(s => {
+        const full = s.name.toLowerCase();
+        const first = full.split(" ")[0];
+        const last = full.split(" ").slice(-1)[0];
+        return full === namePart || first === namePart || last === namePart || full.includes(namePart);
+      });
+
+      if (student) {
+        notes[student.id] = comment;
+        matched++;
+      }
+    });
+
+    if (matched === 0) {
+      showMsg("No students matched. Use first name, last name, or full name before the colon.");
+      return;
+    }
+
+    const allBulk = { ...(data.bulkNotes || {}), [assignmentId]: notes };
+    const updated = { ...data, bulkNotes: allBulk };
+    await saveData(updated); setData(updated);
+    setText("");
+    showMsg("Matched " + matched + " student" + (matched !== 1 ? "s" : ""));
+  };
+
+  const handleText = async () => {
+    if (!text.trim()) return;
+    await parseAndSave(text);
+  };
+
+  const handleImage = async (file) => {
+    if (!file) return;
+    setLoading(true);
+
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(",")[1]);
+        r.onerror = () => rej(new Error("Read failed"));
+        r.readAsDataURL(file);
+      });
+
+      const studentList = students.map(s => s.name).join(", ");
+
+      const response = await fetch("/api/generate-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: `This is a photo of handwritten grading notes. Extract each student's note and format as "Student Name: comment" on separate lines.
+
+The students in this class are: ${studentList}
+
+Match each note to the correct student name from the list above. Use the student's full name exactly as listed. If you can't read a name or match it, skip it. Only output the matched lines, nothing else.`,
+          image: base64,
+          mediaType: file.type || "image/jpeg",
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("Image parse error:", response.status, errText);
+        showMsg("Error reading image. Check console.");
+        setLoading(false);
+        return;
+      }
+
+      const result = await response.json();
+      const parsed = (result.content || []).map(c => c.text || "").join("");
+      setText(parsed);
+      showMsg("Notes extracted from image. Review and click Save.");
+    } catch (err) {
+      console.error("Image upload error:", err);
+      showMsg("Error processing image.");
+    }
+    setLoading(false);
+    setImageData(null);
+  };
+
+  const clearAll = async () => {
+    if (!window.confirm("Clear all bulk notes for this assignment?")) return;
+    const allBulk = { ...(data.bulkNotes || {}) };
+    delete allBulk[assignmentId];
+    const updated = { ...data, bulkNotes: allBulk };
+    await saveData(updated); setData(updated);
+    showMsg("Cleared");
+  };
+
+  if (!open) {
+    return (
+      <div style={{ marginTop: 6 }}>
+        <button onClick={() => setOpen(true)} style={{ ...pillInactive, fontSize: 11 }}>
+          Bulk Notes {noteCount > 0 ? "(" + noteCount + " saved)" : ""}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 8, padding: "12px 14px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb" }}>
+      {msg && <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginBottom: 6 }}>{msg}</div>}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>Bulk Notes Import</div>
+        <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#d1d5db" }}>x</button>
+      </div>
+
+      <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+        <button onClick={() => setMode("text")} style={{ ...pill, fontSize: 11, padding: "4px 10px", background: mode === "text" ? "#111827" : "#e5e7eb", color: mode === "text" ? "#fff" : "#4b5563" }}>Type / Paste</button>
+        <button onClick={() => setMode("photo")} style={{ ...pill, fontSize: 11, padding: "4px 10px", background: mode === "photo" ? "#111827" : "#e5e7eb", color: mode === "photo" ? "#fff" : "#4b5563" }}>Photo of Notes</button>
+      </div>
+
+      {mode === "text" && (
+        <div>
+          <textarea value={text} onChange={e => setText(e.target.value)} placeholder={"One per line:\nJohn: Great interview subject choice\nJane: Needs deeper follow-up questions\nBob: Really impressed with the thank-you"} rows={6} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 6 }} />
+          <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+            <button onClick={handleText} disabled={!text.trim()} style={{ ...pill, background: text.trim() ? TEXT_PRIMARY : "#d1d5db", color: "#fff" }}>Save Notes</button>
+          </div>
+        </div>
+      )}
+
+      {mode === "photo" && (
+        <div>
+          <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginBottom: 6 }}>Take a photo of your handwritten notes. AI will read them and match to students.</div>
+          <input type="file" accept="image/*" capture="environment" onChange={e => { if (e.target.files[0]) handleImage(e.target.files[0]); }} style={{ marginBottom: 6 }} />
+          {loading && <div style={{ fontSize: 13, color: ACCENT, fontWeight: 600 }}>Reading your notes...</div>}
+          {text && !loading && (
+            <div>
+              <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>Extracted notes (edit if needed, then save):</div>
+              <textarea value={text} onChange={e => setText(e.target.value)} rows={6} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical", marginBottom: 6 }} />
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button onClick={handleText} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Save Notes</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Show existing notes */}
+      {noteCount > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Saved notes ({noteCount})</div>
+          {students.filter(s => bulkNotes[s.id]).map(s => (
+            <div key={s.id} style={{ fontSize: 12, color: "#111827", padding: "4px 0", borderBottom: "1px solid #f3f4f6" }}>
+              <span style={{ fontWeight: 600 }}>{s.name}:</span> <span style={{ color: TEXT_SECONDARY }}>{bulkNotes[s.id]}</span>
+            </div>
+          ))}
+          <button onClick={clearAll} style={{ ...pill, fontSize: 10, background: "#fef2f2", color: RED, marginTop: 6 }}>Clear All Notes</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* --- QUICK GRADE --- */
 export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
