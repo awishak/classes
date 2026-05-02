@@ -233,8 +233,6 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
     { id: "home", label: "Home", guest: false },
     { id: "schedule", label: "Schedule", guest: true },
     { id: "assignments", label: "Assignments", guest: false },
-    { id: "submit", label: "Submit", guest: false },
-    { id: "activities", label: "Live", guest: false },
     { id: "more", label: "More", guest: false },
   ];
   const adminTabs = [
@@ -777,6 +775,42 @@ function ScheduleView({ data, setData, isAdmin }) {
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
+  // Auto-jump on mount: try to land on today's date card; fall back to current-week header.
+  React.useEffect(() => {
+    const t = setTimeout(() => {
+      const today = new Date();
+      const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      const year = today.getFullYear();
+      let exactDayId = null;
+      let nearestWeekIdx = -1;
+      let smallestPositiveDiff = Infinity;
+      schedule.forEach((week, wi) => {
+        (week.dates || []).forEach((d, di) => {
+          if (d.day === "Finals") return;
+          const parsed = new Date(d.date + ", " + year);
+          if (isNaN(parsed)) return;
+          const diff = (parsed.getTime() - today0) / (1000 * 60 * 60 * 24);
+          if (diff === 0 && exactDayId === null) {
+            exactDayId = "view-" + wi + "-" + di;
+          }
+          if (diff >= -3 && diff <= 4 && nearestWeekIdx === -1) {
+            nearestWeekIdx = wi;
+          }
+          if (diff > 0 && diff < smallestPositiveDiff) {
+            smallestPositiveDiff = diff;
+            if (nearestWeekIdx === -1) nearestWeekIdx = wi;
+          }
+        });
+      });
+      const id = exactDayId || (nearestWeekIdx >= 0 ? "view-week-" + nearestWeekIdx : null);
+      if (id) {
+        const el = document.getElementById(id);
+        scrollToWithOffset(el);
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line
+
   const updateDate = async (weekIdx, dateIdx, field, value) => {
     const updated = { ...data, schedule: data.schedule.map((w, wi) => wi === weekIdx ? { ...w, dates: w.dates.map((d, di) => di === dateIdx ? { ...d, [field]: value } : d) } : w) };
     await saveData(updated); setData(updated);
@@ -881,9 +915,7 @@ function ScheduleView({ data, setData, isAdmin }) {
       <Toast message={msg} />
       <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto" }}>
 
-        {/* Header: title + Doc/Canva links */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div style={sectionLabel}>Schedule</div>
+        <PageHeader title="Schedule" right={
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             {isAdmin && data.scheduleDocUrl && !editLinks && (
               <a href={data.scheduleDocUrl} target="_blank" rel="noopener noreferrer" style={{ ...linkPill, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
@@ -899,7 +931,7 @@ function ScheduleView({ data, setData, isAdmin }) {
             )}
             {isAdmin && <button onClick={() => setEditLinks(!editLinks)} style={linkPill}>{editLinks ? "Cancel" : "Links"}</button>}
           </div>
-        </div>
+        } />
         {isAdmin && editLinks && (
           <div style={{ ...crd, padding: 12, marginBottom: 14, display: "flex", flexDirection: "column", gap: 6 }}>
             <input value={docUrl} onChange={e => setDocUrl(e.target.value)} placeholder="Google Doc URL" style={{ ...inp, fontSize: 12, padding: "6px 8px" }} />
@@ -908,8 +940,64 @@ function ScheduleView({ data, setData, isAdmin }) {
           </div>
         )}
 
+        {/* Week jump pills */}
+        {(() => {
+          const today = new Date();
+          const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+          const year = today.getFullYear();
+          const hiddenWeeks = data.hiddenWeeks || [];
+          let currentWeekIdx = -1;
+          schedule.forEach((week, wi) => {
+            (week.dates || []).forEach(d => {
+              if (d.day === "Finals") return;
+              const parsed = new Date(d.date + ", " + year);
+              if (isNaN(parsed)) return;
+              const diff = (parsed.getTime() - today0) / (1000 * 60 * 60 * 24);
+              if (diff >= -3 && diff <= 4 && currentWeekIdx === -1) currentWeekIdx = wi;
+            });
+          });
+          if (currentWeekIdx === -1) {
+            for (let wi = 0; wi < schedule.length; wi++) {
+              const hasFuture = (schedule[wi].dates || []).some(d => {
+                if (d.day === "Finals") return false;
+                const parsed = new Date(d.date + ", " + year);
+                return !isNaN(parsed) && parsed.getTime() >= today0;
+              });
+              if (hasFuture) { currentWeekIdx = wi; break; }
+            }
+          }
+          const jumpToWeek = (wi) => {
+            const el = document.getElementById("view-week-" + wi);
+            scrollToWithOffset(el);
+          };
+          return (
+            <div style={{ background: "#fafaf9", borderRadius: 12, padding: "10px 12px", marginBottom: 18, display: "flex", gap: 6, alignItems: "center", overflowX: "auto", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: TEXT_SECONDARY, flexShrink: 0, fontWeight: 500 }}>Jump to:</span>
+              {schedule.map((week, wi) => {
+                const isCurrent = wi === currentWeekIdx;
+                const isHidden = hiddenWeeks.includes(week.week);
+                if (isHidden && !isAdmin) return null;
+                return (
+                  <button key={wi} onClick={() => jumpToWeek(wi)} style={{
+                    fontSize: 12, padding: "4px 11px", borderRadius: 7, cursor: "pointer", fontFamily: F,
+                    background: isCurrent ? ACCENT : "#fff",
+                    color: isCurrent ? "#fff" : (isHidden ? TEXT_MUTED : TEXT_SECONDARY),
+                    fontWeight: isCurrent ? 600 : 500,
+                    fontStyle: isHidden ? "italic" : "normal",
+                    border: isCurrent ? "1px solid " + ACCENT : "1px solid " + BORDER_STRONG,
+                    opacity: isHidden ? 0.6 : 1,
+                    flexShrink: 0,
+                  }}>
+                    Wk {week.week}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })()}
+
         {/* ====== PRETTY LIST (everyone) ====== */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {schedule.map((week, wi) => {
             const tc = TOPIC_COLORS[week.label] || TEXT_SECONDARY;
             const hiddenWeeks = data.hiddenWeeks || [];
@@ -918,74 +1006,103 @@ function ScheduleView({ data, setData, isAdmin }) {
             const dayOrder = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7, Finals: 8 };
             const orderedDates = [...week.dates].map((d, idx) => ({ d, realDi: idx })).sort((a, b) => (dayOrder[a.d.day] || 9) - (dayOrder[b.d.day] || 9));
 
+            // Detect if this is the current week
+            const today = new Date();
+            const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+            const year = today.getFullYear();
+            const isCurrent = orderedDates.some(({ d }) => {
+              if (d.day === "Finals") return false;
+              const parsed = new Date(d.date + ", " + year);
+              if (isNaN(parsed)) return false;
+              const diff = (parsed.getTime() - today0) / (1000 * 60 * 60 * 24);
+              return diff >= -3 && diff <= 4;
+            });
+
             return (
-              <div key={wi} id={"view-week-" + wi}>
+              <div key={wi} id={"view-week-" + wi} style={{
+                background: "#fff",
+                border: "1px solid " + (isCurrent ? ACCENT + "33" : BORDER_STRONG),
+                borderRadius: 14,
+                overflow: "hidden",
+                opacity: isHidden ? 0.6 : 1,
+                boxShadow: isCurrent ? "0 0 0 1px " + ACCENT + "1a" : "none",
+              }}>
+                {/* Topic color stripe */}
+                <div style={{ height: 3, background: isHidden ? TEXT_MUTED : tc }} />
+
                 {/* Week header */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  {week.week <= 10 && (
-                    <div style={{ width: 32, height: 32, borderRadius: 10, background: isHidden ? TEXT_MUTED : tc, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 800, fontFamily: F, flexShrink: 0 }}>{week.week}</div>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>{week.label || "TBD"}</span>
-                      {week.theme && <span style={{ fontSize: 14, color: TEXT_SECONDARY, fontWeight: 500 }}>{week.theme}</span>}
+                <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid " + BORDER }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {week.week <= 10 && (
+                      <div style={{ width: 30, height: 30, borderRadius: 9, background: isHidden ? TEXT_MUTED : tc, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: F, flexShrink: 0 }}>{week.week}</div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>{week.label || "TBD"}</span>
+                        {week.theme && <span style={{ fontSize: 13, color: TEXT_SECONDARY, fontWeight: 400 }}>{week.theme}</span>}
+                      </div>
+                      {week.question && <div style={{ fontSize: 13, fontStyle: "italic", color: TEXT_SECONDARY, marginTop: 3, lineHeight: 1.4 }}>"{week.question}"</div>}
                     </div>
-                    {week.question && <div style={{ fontSize: 13, fontStyle: "italic", color: TEXT_SECONDARY, marginTop: 2, lineHeight: 1.4 }}>"{week.question}"</div>}
+                    {isCurrent && <span style={{ fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 5, background: ACCENT + "1a", color: ACCENT, textTransform: "uppercase", letterSpacing: "0.08em", flexShrink: 0 }}>This week</span>}
                   </div>
                 </div>
 
-                {/* Hidden week: everyone sees only no-class days (admin gets same view as students) */}
+                {/* Days */}
                 {isHidden ? (
-                  <div style={{ marginLeft: week.week <= 10 ? 42 : 0 }}>
+                  <div style={{ padding: "14px 16px" }}>
                     {orderedDates.filter(({ d }) => d.holiday).map(({ d }, di) => (
-                      <div key={di} style={{ fontSize: 13, color: RED, fontWeight: 700, padding: "6px 0" }}>{d.day} {d.date}, no in-person class</div>
+                      <div key={di} style={{ fontSize: 13, color: RED, fontWeight: 600, padding: "4px 0" }}>{d.day} {d.date}, no in-person class</div>
                     ))}
                     {orderedDates.filter(({ d }) => d.holiday).length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>Details coming soon</div>}
                   </div>
                 ) : (
-                  <div style={{ marginLeft: week.week <= 10 ? 42 : 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div>
                     {orderedDates.map(({ d, realDi }, idx) => {
                       const isHoliday = d.holiday;
                       const isFri = d.fri || d.day === "Fri";
                       const matched = matchAssignment(d.assignment);
-                      const dayLabel = d.day;
+                      const isLast = idx === orderedDates.length - 1;
+                      // Is this day today?
+                      const parsed = new Date(d.date + ", " + year);
+                      const isToday = !isNaN(parsed) && Math.round((parsed.getTime() - today0) / (1000 * 60 * 60 * 24)) === 0;
 
                       return (
                         <div key={realDi} id={"view-" + wi + "-" + realDi} onClick={() => isAdmin && scrollToEdit(wi, realDi)} style={{
-                          padding: "12px 14px", borderRadius: 12,
-                          background: "#fff",
-                          border: "1px solid " + BORDER,
-                          borderLeft: isFri ? "4px solid #c4b5fd" : "1px solid " + BORDER,
+                          padding: "14px 16px",
+                          borderBottom: !isLast ? "1px solid " + BORDER : "none",
+                          background: isToday ? ACCENT + "08" : "#fff",
+                          borderLeft: isFri ? "3px solid #c4b5fd" : "none",
+                          paddingLeft: isFri ? 13 : 16,
                           cursor: isAdmin ? "pointer" : "default",
                           display: "flex", gap: 14, alignItems: "flex-start",
-                          transition: "outline 0.2s",
                         }}>
                           {/* Left column: date + day */}
-                          <div style={{ flexShrink: 0, width: 60 }}>
-                            <div style={{ fontSize: 11, fontWeight: 800, color: isFri ? PURPLE : TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" }}>{dayLabel}</div>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, marginTop: 1 }}>{d.date}</div>
+                          <div style={{ flexShrink: 0, width: 56 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: isToday ? ACCENT : (isFri ? PURPLE : TEXT_MUTED), textTransform: "uppercase", letterSpacing: "0.08em" }}>{d.day}</div>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: isToday ? ACCENT : TEXT_PRIMARY, marginTop: 2 }}>{d.date}</div>
+                            {isToday && <div style={{ fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 3 }}>Today</div>}
                           </div>
 
                           {/* Right column: content */}
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {isHoliday && <div style={{ display: "inline-block", fontSize: 10, fontWeight: 800, color: "#92400e", background: "#fef3c7", padding: "2px 8px", borderRadius: 6, marginBottom: d.topic || d.notes ? 6 : 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>No in-person class</div>}
-                            {!isHoliday && d.topic && <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.45, fontWeight: 600 }}>{d.topic}</div>}
+                            {isHoliday && <div style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#92400e", background: "#fef3c7", padding: "2px 8px", borderRadius: 6, marginBottom: d.topic || d.notes ? 6 : 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>No in-person class</div>}
+                            {!isHoliday && d.topic && <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.45, fontWeight: 500 }}>{d.topic}</div>}
                             {!isHoliday && !d.topic && <div style={{ fontSize: 14, color: TEXT_MUTED, fontStyle: "italic" }}>TBD</div>}
-                            {isHoliday && d.topic && <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.45, fontWeight: 600, marginTop: 4 }}>{d.topic}</div>}
+                            {isHoliday && d.topic && <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.45, fontWeight: 500, marginTop: 4 }}>{d.topic}</div>}
 
                             {(d.activities || []).length > 0 && (
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
                                 {(d.activities || []).map((act, ai) => (
-                                  <span key={ai} style={{ fontSize: 10, fontWeight: 800, color: TEXT_PRIMARY, background: "#f3f4f6", padding: "3px 8px", borderRadius: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>{act}</span>
+                                  <span key={ai} style={{ fontSize: 10, fontWeight: 700, color: TEXT_PRIMARY, background: "#f3f4f6", padding: "3px 8px", borderRadius: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>{act}</span>
                                 ))}
                               </div>
                             )}
 
                             {d.assignment && (
-                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-                                <span style={{ fontSize: 13, color: "#c2410c", fontWeight: 700 }}>{d.assignment}</span>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                                <span style={{ fontSize: 13, color: "#c2410c", fontWeight: 600 }}>{d.assignment}</span>
                                 {matched && (
-                                  <button onClick={e => { e.stopPropagation(); goToAssignment(matched.id); }} style={linkPill}>Open</button>
+                                  <button onClick={e => { e.stopPropagation(); goToAssignment(matched.id); }} style={{ fontSize: 11, fontWeight: 500, padding: "4px 10px", borderRadius: 7, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY, cursor: "pointer", fontFamily: F }}>Open</button>
                                 )}
                               </div>
                             )}
@@ -1062,7 +1179,6 @@ function ScheduleView({ data, setData, isAdmin }) {
     </div>
   );
 }
-/* --- TO-DO --- */
 function ToDoView({ data, setData, userName, isAdmin }) {
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
@@ -2821,9 +2937,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   // Build the card list in the right order
   const cards = [];
   if (activeRebound) cards.push("rebound");
-  if (liveActivity) cards.push("live");
   cards.push("assignments", "schedule", "boards");
-  if (!liveActivity) cards.push("live"); // Live appears at position 4 when nothing's live
   cards.push("roster");
 
   const renderCard = (name) => {
@@ -4086,8 +4200,6 @@ export default function Comm2() {
       {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} setView={setView} />}
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "assignments" && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} setView={setView} />}
-      {view === "submit" && <SubmitView data={data} setData={setData} userName={effectiveUserName} />}
-      {view === "activities" && !isGuest && <ActivitiesView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "more" && !isGuest && <MoreView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "todo" && !isGuest && <ToDoView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
       {view === "pti" && effectiveAdmin && <PTIView data={data} setData={setData} />}

@@ -805,18 +805,17 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
         weightedScore += (parseFloat(g.score) / (g.outOf || 100)) * a.weight;
       }
     });
-    // Always include participation contribution since it's 25%
-    const partWeight = (sortedAssignments.find(a => a.id === "participation")?.weight) || 25;
-    const part = computeParticipationGrade(data, studentId);
-    weightGraded += partWeight;
-    weightedScore += part.participationGrade; // already in raw points (0-25 scale)
-    // weightedScore as currently summed is in "weighted points out of weightGraded"
-    // For non-participation we did (score/outOf) * weight, summing into weighted points.
-    // For participation we added participationGrade (0-25), which is the same as (pct * 25).
-    // Treat both as weighted points relative to the same total weightGraded.
+    // Include participation contribution only if a participation row exists in the assignments.
+    const partRow = sortedAssignments.find(a => a.id === "participation");
+    if (partRow) {
+      const partWeight = partRow.weight || 25;
+      const part = computeParticipationGrade(data, studentId);
+      weightGraded += partWeight;
+      weightedScore += part.participationGrade;
+    }
     const currentGrade = weightGraded > 0 ? Math.round(weightedScore / weightGraded * 1000) / 10 : null;
     const totalWeight = sortedAssignments.reduce((s, a) => s + a.weight, 0);
-    const pctAssessed = Math.round(weightGraded / totalWeight * 100);
+    const pctAssessed = totalWeight > 0 ? Math.round(weightGraded / totalWeight * 100) : 0;
     return { currentGrade, pctAssessed };
   };
 

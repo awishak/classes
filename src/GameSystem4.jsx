@@ -928,6 +928,15 @@ export function StudentAnswerView({ data, setData, userName }) {
   const games = data.weeklyGames || {};
   const tots = data.weeklyToT || {};
 
+  // Auto-jump to live activity if one exists.
+  React.useEffect(() => {
+    if (week !== null) return;
+    const liveGameWeek = Object.keys(games).find(w => games[w]?.phase === "live");
+    if (liveGameWeek) { setMode("game"); setWeek(parseInt(liveGameWeek) || liveGameWeek); return; }
+    const liveTotWeek = Object.keys(tots).find(w => tots[w]?.phase === "live");
+    if (liveTotWeek) { setMode("tot"); setWeek(parseInt(liveTotWeek) || liveTotWeek); return; }
+  }, [week, games, tots]);
+
   // Auto-refresh data every 5 seconds for live sync; pauses when student has a pending selection
   React.useEffect(() => {
     if (week === null) return;
@@ -1025,38 +1034,9 @@ export function StudentAnswerView({ data, setData, userName }) {
   };
 
   // Week selector
+  // When no live activity, render nothing here. Past events are listed by ActivitiesView.
   if (week === null) {
-    return (
-      <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
-        <div style={{ maxWidth: 500, margin: "0 auto" }}>
-          <div style={{ ...sectionLabel, marginBottom: 12 }}>Answer</div>
-          <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-            <button onClick={() => setMode("game")} style={mode === "game" ? pillActive : pillInactive}>Weekly Game</button>
-            <button onClick={() => setMode("tot")} style={mode === "tot" ? pillActive : pillInactive}>This or That</button>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
-            {Array.from({ length: 10 }).map((_, i) => {
-              const w = i + 1;
-              const item = mode === "game" ? games[w] : (tots[w] || tots[String(w)]);
-              const isLive = item?.phase === "live";
-              const isScored = item?.scored;
-              const hasResponded = sid && item?.responses && Object.keys(item.responses).some(k => k.startsWith(sid));
-              const isAvailable = isLive || isScored;
-              return (
-                <button key={w} onClick={() => { if (isAvailable) { setWeek(w); setSelected(null); } }} style={{
-                  ...crd, padding: "14px 8px", cursor: isAvailable ? "pointer" : "default", textAlign: "center",
-                  opacity: isAvailable ? 1 : 0.4,
-                  border: isLive ? "2px solid #d97706" : hasResponded ? "2px solid " + GREEN : "1px solid #f3f4f6",
-                }}>
-                  <div style={{ fontSize: 20, fontWeight: 900, color: isLive ? "#d97706" : hasResponded ? GREEN : isScored ? "#111827" : "#d1d5db" }}>{w}</div>
-                  <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{isScored ? "Results" : isLive ? "LIVE" : ""}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   // Get activity
