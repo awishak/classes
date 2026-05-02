@@ -1827,6 +1827,19 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   );
 }
 
+const TOPIC_COLORS = {
+  "Gambling": "#16a34a",
+  "Value": "#2563eb",
+  "Athletes & Corps": "#d97706",
+  "Media": "#dc2626",
+  "Identity": "#7c3aed",
+  "Community": "#0891b2",
+  "OJ": "#dc2626",
+  "Leadership": "#57534e",
+  "Final Project": ACCENT,
+  "Finals": TEXT_MUTED,
+};
+
 function WeekHeaderEditor({ week, wi, data, setData, onDone, onSaveAndBack }) {
   const [local, setLocal] = useState({ label: week.label || "", theme: week.theme || "", question: week.question || "" });
   const set = (field, value) => setLocal(prev => ({ ...prev, [field]: value }));

@@ -1012,7 +1012,7 @@ export function StudentAnswerView({ data, setData, userName }) {
       const label = slot.type === "game" ? "Weekly Game" : "This or That";
       return (
         <button key={slot.type + "-" + w} onClick={() => { setMode(slot.type); setWeek(parseInt(w) || w); setSelected(null); }} style={{
-          width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 8, cursor: "pointer", fontFamily: F,
+          width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 14, marginBottom: 8, cursor: "pointer", fontFamily: F,
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
         }}>
           <div style={{ flex: 1, minWidth: 0 }}>
