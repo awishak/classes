@@ -1535,21 +1535,8 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       const when = days === 0 ? " due today" : " due tomorrow";
       assignmentLines.push({ kind: "due", color: "#f59e0b", textColor: "#92400e", text: a.name + when, chip: chipFor(a) });
     });
-    // Recently graded (within last 7 days)
-    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    gradedAssignments.forEach(a => {
-      const g = grades[studentId + "-" + a.id] || {};
-      if (g.score === undefined || g.score === "") return;
-      if (!g.ts || g.ts < sevenDaysAgo) return;
-      assignmentLines.push({ kind: "graded", color: "#6b7280", textColor: "#4b5563", text: a.name, ts: g.ts, chip: { label: "Graded " + g.score, bg: "#ecfdf5", color: "#047857" } });
-    });
-    // Sort recently-graded by recency, take top 2
-    const recent = assignmentLines.filter(l => l.kind === "graded").sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 2);
-    const others = assignmentLines.filter(l => l.kind !== "graded");
-    assignmentLines.length = 0;
-    others.forEach(l => assignmentLines.push(l));
-    recent.forEach(l => assignmentLines.push(l));
-    // Next assignment (gray) — anything coming up, regardless of submission/graded state
+    // Next assignment (prominent, dark) — anything coming up, regardless of submission/graded state.
+    // Skip if already covered by due today/tomorrow.
     const nextA = (() => {
       const candidates = gradedAssignments.filter(a => {
         if (!a.due) return false;
@@ -1563,8 +1550,22 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       const days = Math.round((nextA.ts - today0) / (1000 * 60 * 60 * 24));
       if (days >= 2) {
         const dayLabel = "Next: " + nextA.name + " due in " + days + " days";
-        assignmentLines.push({ kind: "next", color: "#d1d5db", textColor: "#6b7280", text: dayLabel, chip: chipFor(nextA) });
+        assignmentLines.push({ kind: "next", color: ACCENT, textColor: TEXT_PRIMARY, text: dayLabel, chip: chipFor(nextA) });
       }
+    }
+    // Last graded (quieter — single line, only most recent, no time limit)
+    const lastGraded = (() => {
+      let best = null;
+      gradedAssignments.forEach(a => {
+        const g = grades[studentId + "-" + a.id] || {};
+        if (g.score === undefined || g.score === "") return;
+        if (!g.ts) return;
+        if (!best || g.ts > best.ts) best = { a, score: g.score, ts: g.ts };
+      });
+      return best;
+    })();
+    if (lastGraded) {
+      assignmentLines.push({ kind: "lastgraded", color: "#d1d5db", textColor: TEXT_SECONDARY, text: "Last graded: " + lastGraded.a.name, chip: { label: "Graded " + lastGraded.score, bg: "#ecfdf5", color: "#047857" } });
     }
   }
 
@@ -1587,7 +1588,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   if (nextClass) {
     (nextClass.readings || []).forEach(r => {
       const rdg = (data.readings || []).find(x => x.id === r.readingId);
-      if (rdg) nextClassReadings.push({ title: rdg.title, type: r.type });
+      if (rdg) nextClassReadings.push({ title: rdg.title, type: r.type, url: rdg.pdfUrl || rdg.url || null });
     });
   }
   const nextClassAssignmentDue = nextClass && nextClass.assignment ? nextClass.assignment : null;
@@ -1616,7 +1617,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   const cards = [];
   if (activeRebound) cards.push("rebound");
   if (liveActivity) cards.push("live");
-  cards.push("assignments", "thisweek", "boards");
+  cards.push("assignments", "schedule", "boards");
   if (!liveActivity) cards.push("live"); // Live appears at position 4 when nothing's live
   cards.push("leaderboard", "roster");
 
@@ -1640,112 +1641,152 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
     }
     if (name === "live") {
       const live = !!liveActivity;
+      const openBtnStyle = {
+        fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
+        border: "1px solid " + (live ? "#6ee7b7" : BORDER_STRONG),
+        background: "#fff", color: live ? "#065f46" : TEXT_PRIMARY,
+        cursor: "pointer", fontFamily: F, flexShrink: 0,
+      };
       return (
         <button key="live" onClick={() => setView("activities")} style={{ width: "100%", textAlign: "left", background: live ? "#ecfdf5" : "#fff", border: live ? "1px solid #6ee7b7" : "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                 {live && <span style={{ display: "inline-block", width: 6, height: 6, background: "#10b981", borderRadius: "50%", animation: "livePulse 1.6s ease-in-out infinite" }} />}
-                <div style={{ fontSize: 18, fontWeight: 500, color: live ? "#065f46" : TEXT_PRIMARY, letterSpacing: "-0.01em" }}>{live ? "Live now" : "Answer questions"}</div>
+                <div style={{ fontSize: 18, fontWeight: 500, color: live ? "#065f46" : TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Live</div>
               </div>
               <div style={{ fontSize: 13, color: live ? "#047857" : TEXT_SECONDARY, fontWeight: 500, marginBottom: 4 }}>{live ? liveActivity.label : "Past activities"}</div>
-              <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.4 }}>{live ? "Tap to answer questions in real time." : "Nothing live right now. Browse past activities."}</div>
+              <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.4 }}>{live ? "Tap to answer questions in real time." : "Nothing live right now. Browse past activities."}</div>
             </div>
-            <span style={{ fontSize: 11, color: live ? "#047857" : TEXT_MUTED, fontWeight: 500, flexShrink: 0 }}>Open ›</span>
+            <span style={openBtnStyle}>Open</span>
           </div>
         </button>
       );
     }
     if (name === "assignments") {
+      const openBtnStyle = {
+        fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
+        border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
+        cursor: "pointer", fontFamily: F, flexShrink: 0,
+      };
       return (
         <button key="assignments" onClick={() => setView("assignments")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: assignmentLines.length > 0 ? 8 : 0 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: assignmentLines.length > 0 ? 10 : 0 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Assignments</div>
-            <span style={{ fontSize: 11, color: TEXT_MUTED }}>Open ›</span>
+            <span style={openBtnStyle}>Open</span>
           </div>
           {assignmentLines.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {assignmentLines.map((l, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ display: "inline-block", width: 4, height: 4, background: l.color, borderRadius: "50%", flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: l.textColor, lineHeight: 1.4, flex: 1, minWidth: 0 }}>{l.text}</span>
-                  {l.chip && <span style={{ fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 5, background: l.chip.bg, color: l.chip.color, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>{l.chip.label}</span>}
-                </div>
-              ))}
+              {assignmentLines.map((l, i) => {
+                const isLastGraded = l.kind === "lastgraded";
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, opacity: isLastGraded ? 0.85 : 1 }}>
+                    <span style={{ display: "inline-block", width: 5, height: 5, background: l.color, borderRadius: "50%", flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: l.textColor, lineHeight: 1.4, flex: 1, minWidth: 0, fontWeight: l.kind === "next" ? 500 : 400 }}>{l.text}</span>
+                    {l.chip && <span style={{ fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 5, background: l.chip.bg, color: l.chip.color, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>{l.chip.label}</span>}
+                  </div>
+                );
+              })}
             </div>
           )}
           {assignmentLines.length === 0 && (
-            <div style={{ fontSize: 12, color: TEXT_MUTED }}>Open to view your assignments and grades.</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>Open to view your assignments and grades.</div>
           )}
         </button>
       );
     }
-    if (name === "thisweek") {
+    if (name === "schedule") {
+      const openBtnStyle = {
+        fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
+        border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
+        cursor: "pointer", fontFamily: F, flexShrink: 0,
+      };
       return (
-        <button key="thisweek" onClick={() => setView("schedule")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>This week</div>
-            <span style={{ fontSize: 11, color: TEXT_MUTED }}>Open ›</span>
+        <button key="schedule" onClick={() => setView("schedule")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Schedule</div>
+            <span style={openBtnStyle}>Open</span>
           </div>
           {nextClass ? (
             <>
-              <div style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY, marginBottom: 4 }}>{nextClass.day} {nextClass.date}: {nextClass.topic || "Class"}</div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, marginBottom: 4 }}>{nextClass.day} {nextClass.date}: {nextClass.topic || "Class"}</div>
               {(nextClassReadings.length > 0 || nextClassAssignmentDue) && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 2, paddingLeft: 2, marginBottom: followingClasses.length > 0 ? 8 : 0 }}>
-                  {nextClassReadings.map((r, i) => <div key={i} style={{ fontSize: 12, color: TEXT_SECONDARY }}>Reading: {r.title}</div>)}
-                  {nextClassAssignmentDue && <div style={{ fontSize: 12, color: "#b45309", fontWeight: 500 }}>{nextClassAssignmentDue}</div>}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3, paddingLeft: 2, marginBottom: followingClasses.length > 0 ? 8 : 0 }}>
+                  {nextClassReadings.map((r, i) => (
+                    r.url ? (
+                      <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none" }}>Reading: {r.title}</a>
+                    ) : (
+                      <div key={i} style={{ fontSize: 13, color: TEXT_SECONDARY }}>Reading: {r.title}</div>
+                    )
+                  ))}
+                  {nextClassAssignmentDue && <div style={{ fontSize: 13, color: "#b45309", fontWeight: 500 }}>{nextClassAssignmentDue}</div>}
                 </div>
               )}
               {followingClasses.length > 0 && (
-                <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 6, display: "flex", flexDirection: "column", gap: 2 }}>
-                  {followingClasses.map((d, i) => <div key={i} style={{ fontSize: 11, color: TEXT_MUTED }}>{d.day} {d.date}: {d.topic || "Class"}</div>)}
+                <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 8, display: "flex", flexDirection: "column", gap: 3 }}>
+                  {followingClasses.map((d, i) => <div key={i} style={{ fontSize: 12, color: TEXT_SECONDARY }}>{d.day} {d.date}: {d.topic || "Class"}</div>)}
                 </div>
               )}
             </>
           ) : (
-            <div style={{ fontSize: 12, color: TEXT_MUTED }}>No upcoming classes scheduled.</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>No upcoming classes scheduled.</div>
           )}
         </button>
       );
     }
     if (name === "boards") {
+      const openBtnStyle = {
+        fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
+        border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
+        cursor: "pointer", fontFamily: F, flexShrink: 0,
+      };
       return (
         <button key="boards" onClick={() => setView("boards")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Discussion boards</div>
-            <span style={{ fontSize: 11, color: TEXT_MUTED }}>Open ›</span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Boards</div>
+            <span style={openBtnStyle}>Open</span>
           </div>
           {latestBoard ? (
-            <div style={{ fontSize: 12, color: TEXT_SECONDARY }}>Latest: "{latestBoard.title}" · {latestReplyCount} {latestReplyCount === 1 ? "reply" : "replies"}</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>Latest: "{latestBoard.title}" · {latestReplyCount} {latestReplyCount === 1 ? "reply" : "replies"}</div>
           ) : (
-            <div style={{ fontSize: 12, color: TEXT_MUTED }}>No active boards.</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>No active boards.</div>
           )}
         </button>
       );
     }
     if (name === "leaderboard") {
+      const openBtnStyle = {
+        fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
+        border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
+        cursor: "pointer", fontFamily: F, flexShrink: 0,
+      };
       return (
         <button key="leaderboard" onClick={() => setView("leaderboard")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Leaderboard</div>
-            <span style={{ fontSize: 11, color: TEXT_MUTED }}>Open ›</span>
+            <span style={openBtnStyle}>Open</span>
           </div>
           {isStudent && myRank >= 0 ? (
-            <div style={{ fontSize: 12, color: TEXT_SECONDARY }}>You're #{myRank + 1} of {totalStudents}</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>You're #{myRank + 1} of {totalStudents}</div>
           ) : (
-            <div style={{ fontSize: 12, color: TEXT_SECONDARY }}>Class standings</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>Class standings</div>
           )}
         </button>
       );
     }
     if (name === "roster") {
+      const openBtnStyle = {
+        fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
+        border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
+        cursor: "pointer", fontFamily: F, flexShrink: 0,
+      };
       return (
         <button key="roster" onClick={() => setView("roster")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Class roster</div>
-            <span style={{ fontSize: 11, color: TEXT_MUTED }}>Open ›</span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Roster</div>
+            <span style={openBtnStyle}>Open</span>
           </div>
-          <div style={{ fontSize: 12, color: TEXT_SECONDARY }}>{rosterCount} students</div>
+          <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>{rosterCount} students</div>
         </button>
       );
     }
@@ -1997,6 +2038,42 @@ function ScheduleView({ data, setData, isAdmin }) {
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
+  // Auto-jump on mount: try to land on today's date card; fall back to current-week header.
+  React.useEffect(() => {
+    const t = setTimeout(() => {
+      const today = new Date();
+      const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      const year = today.getFullYear();
+      let exactDayId = null;
+      let nearestWeekIdx = -1;
+      let smallestPositiveDiff = Infinity;
+      schedule.forEach((week, wi) => {
+        (week.dates || []).forEach((d, di) => {
+          if (d.day === "Finals") return;
+          const parsed = new Date(d.date + ", " + year);
+          if (isNaN(parsed)) return;
+          const diff = (parsed.getTime() - today0) / (1000 * 60 * 60 * 24);
+          if (diff === 0 && exactDayId === null) {
+            exactDayId = "view-" + wi + "-" + di;
+          }
+          if (diff >= -3 && diff <= 4 && nearestWeekIdx === -1) {
+            nearestWeekIdx = wi;
+          }
+          if (diff > 0 && diff < smallestPositiveDiff) {
+            smallestPositiveDiff = diff;
+            if (nearestWeekIdx === -1) nearestWeekIdx = wi;
+          }
+        });
+      });
+      const id = exactDayId || (nearestWeekIdx >= 0 ? "view-week-" + nearestWeekIdx : null);
+      if (id) {
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line
+
   const updateDate = async (weekIdx, dateIdx, field, value) => {
     const updated = { ...data, schedule: data.schedule.map((w, wi) => wi === weekIdx ? { ...w, dates: w.dates.map((d, di) => di === dateIdx ? { ...d, [field]: value } : d) } : w) };
     await saveData(updated); setData(updated);
@@ -2125,6 +2202,62 @@ function ScheduleView({ data, setData, isAdmin }) {
             <button onClick={saveLinks} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "8px 0", width: "100%" }}>Save</button>
           </div>
         )}
+
+        {/* Week jump pills */}
+        {(() => {
+          const today = new Date();
+          const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+          const year = today.getFullYear();
+          const hiddenWeeks = data.hiddenWeeks || [];
+          let currentWeekIdx = -1;
+          schedule.forEach((week, wi) => {
+            (week.dates || []).forEach(d => {
+              if (d.day === "Finals") return;
+              const parsed = new Date(d.date + ", " + year);
+              if (isNaN(parsed)) return;
+              const diff = (parsed.getTime() - today0) / (1000 * 60 * 60 * 24);
+              if (diff >= -3 && diff <= 4 && currentWeekIdx === -1) currentWeekIdx = wi;
+            });
+          });
+          if (currentWeekIdx === -1) {
+            for (let wi = 0; wi < schedule.length; wi++) {
+              const hasFuture = (schedule[wi].dates || []).some(d => {
+                if (d.day === "Finals") return false;
+                const parsed = new Date(d.date + ", " + year);
+                return !isNaN(parsed) && parsed.getTime() >= today0;
+              });
+              if (hasFuture) { currentWeekIdx = wi; break; }
+            }
+          }
+          const jumpToWeek = (wi) => {
+            const el = document.getElementById("view-week-" + wi);
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+          };
+          return (
+            <div style={{ background: "#fafaf9", borderRadius: 12, padding: "10px 12px", marginBottom: 18, display: "flex", gap: 6, alignItems: "center", overflowX: "auto", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: TEXT_SECONDARY, flexShrink: 0, fontWeight: 500 }}>Jump to:</span>
+              {schedule.map((week, wi) => {
+                const isCurrent = wi === currentWeekIdx;
+                const isHidden = hiddenWeeks.includes(week.week);
+                if (isHidden && !isAdmin) return null;
+                return (
+                  <button key={wi} onClick={() => jumpToWeek(wi)} style={{
+                    fontSize: 12, padding: "4px 11px", borderRadius: 7, cursor: "pointer", fontFamily: F,
+                    background: isCurrent ? ACCENT : "#fff",
+                    color: isCurrent ? "#fff" : (isHidden ? TEXT_MUTED : TEXT_SECONDARY),
+                    fontWeight: isCurrent ? 600 : 500,
+                    fontStyle: isHidden ? "italic" : "normal",
+                    border: isCurrent ? "1px solid " + ACCENT : "1px solid " + BORDER_STRONG,
+                    opacity: isHidden ? 0.6 : 1,
+                    flexShrink: 0,
+                  }}>
+                    Wk {week.week}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* ====== PRETTY LIST (everyone) ====== */}
         <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
@@ -5562,6 +5695,17 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
         {showPast && events.map(ev => {
           const isOpen = openEventKey === ev.key;
           const cantOpen = (ev.type === "game" || ev.type === "tot") && !ev.played;
+          // Compute student's score for this game/ToT from the log
+          let scoreDisplay = null;
+          if ((ev.type === "game" || ev.type === "tot") && ev.played && studentId) {
+            const src = (ev.type === "game" ? "Game Wk" : "ToT Wk") + ev.week;
+            const earned = (data.log || []).filter(e => e.studentId === studentId && e.source === src).reduce((s, e) => s + e.amount, 0);
+            const totalQ = (ev.activity?.questions || []).length;
+            const outOf = ev.type === "game" ? totalQ * 10 : totalQ * 10; // both score 10 per Q
+            const pct = outOf > 0 ? Math.round((earned / outOf) * 100) : 0;
+            const sc = pct >= 90 ? GREEN : pct >= 80 ? TEXT_PRIMARY : pct >= 70 ? AMBER : RED;
+            scoreDisplay = { earned, outOf, pct, color: sc };
+          }
           return (
             <div key={ev.key} style={{ marginBottom: 8 }}>
               <button onClick={() => { if (!cantOpen) setOpenEventKey(isOpen ? null : ev.key); }} disabled={cantOpen} style={{
@@ -5569,12 +5713,18 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
                 padding: 14, width: "100%", textAlign: "left", fontFamily: F,
                 cursor: cantOpen ? "not-allowed" : "pointer",
                 opacity: cantOpen ? 0.55 : 1,
-                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8,
+                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>{ev.typeLabel}</div>
                   <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>{fmtDayDate(ev.ts)}</div>
                 </div>
+                {scoreDisplay && (
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontSize: 18, fontWeight: 500, color: scoreDisplay.color, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>{scoreDisplay.earned}</div>
+                    <div style={{ fontSize: 9, color: TEXT_MUTED, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>/ {scoreDisplay.outOf}</div>
+                  </div>
+                )}
                 <div style={{ flexShrink: 0 }}>
                   {cantOpen ? (
                     <span style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>You did not play</span>
