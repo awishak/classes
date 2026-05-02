@@ -736,6 +736,32 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
       <Toast message={msg} />
       <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto" }}>
 
+        {/* Student identity strip — clickable to bio */}
+        {student && (() => {
+          const bio = (data.bios || {})[student.id] || {};
+          const initials = student.name.split(" ").map(n => n[0]).join("");
+          return (
+            <button
+              onClick={() => setView && setView("more")}
+              style={{
+                display: "flex", alignItems: "center", gap: 12,
+                background: "transparent", border: "none", padding: 0, cursor: "pointer", fontFamily: F,
+                marginBottom: 18, width: "100%", textAlign: "left",
+              }}
+            >
+              {bio.photo ? (
+                <img src={bio.photo} alt="" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 600, flexShrink: 0 }}>{initials}</div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 19, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.01em", lineHeight: 1.2 }}>{student.name}</div>
+                {bio.motto && <div style={{ fontSize: 13, color: TEXT_SECONDARY, fontStyle: "italic", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>"{bio.motto}"</div>}
+              </div>
+            </button>
+          );
+        })()}
+
         {/* Admin buttons (top right, no page title) */}
         {isAdmin && (
           <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginBottom: 14 }}>
