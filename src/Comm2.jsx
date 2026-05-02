@@ -340,21 +340,28 @@ function NamePicker({ data, onSelect }) {
 
   if (selected) {
     return (
-      <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ minHeight: "100vh", background: "#fafaf9", color: TEXT_PRIMARY, fontFamily: F, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div style={{ maxWidth: 360, width: "100%" }}>
-          <div style={{ background: ACCENT, borderRadius: 16, padding: "32px 24px", marginBottom: 16, textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>{selected}</div>
-            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>Enter your PIN</div>
+          <div style={{ textAlign: "center", marginBottom: 24 }}>
+            <div style={{ width: 56, height: 56, borderRadius: 14, background: ACCENT, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+              <span style={{ color: "#fff", fontSize: 18, fontWeight: 700 }}>2</span>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>{selected}</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4 }}>Enter your PIN to continue</div>
           </div>
-          <div style={{ ...crd, padding: 20 }}>
-            <input autoFocus type="password" inputMode="numeric" maxLength={6} value={pin} onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setError(""); }} onKeyDown={e => e.key === "Enter" && tryLogin()} placeholder="6-digit PIN" style={{ ...inp, textAlign: "center", fontSize: 24, fontWeight: 800, letterSpacing: "0.3em" }} />
-            {error && <div style={{ fontSize: 13, color: RED, textAlign: "center", marginTop: 8, fontWeight: 600 }}>{error}</div>}
+          <div style={{ background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 18 }}>
+            <input autoFocus type="password" inputMode="numeric" maxLength={6} value={pin} onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setError(""); }} onKeyDown={e => e.key === "Enter" && tryLogin()} placeholder="6-digit PIN" style={{ ...inp, textAlign: "center", fontSize: 22, fontWeight: 600, letterSpacing: "0.3em" }} />
+            {error && <div style={{ fontSize: 13, color: RED, textAlign: "center", marginTop: 8, fontWeight: 500 }}>{error}</div>}
             <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, cursor: "pointer", fontSize: 13, color: TEXT_SECONDARY }}>
               <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} style={{ width: 16, height: 16 }} />
               Remember me on this device
             </label>
-            <button onClick={tryLogin} style={{ ...pill, background: ACCENT, color: "#fff", padding: "12px 0", width: "100%", marginTop: 12, fontSize: 15 }}>Sign In</button>
-            <button onClick={() => { setSelected(null); setPin(""); setError(""); }} style={{ ...pillInactive, width: "100%", marginTop: 8, padding: "10px 0" }}>Back</button>
+            <button onClick={tryLogin} style={{ ...pill, background: ACCENT, color: "#fff", padding: "12px 0", width: "100%", marginTop: 14, fontSize: 14, fontWeight: 500 }}>Sign in</button>
+            <button onClick={() => { setSelected(null); setPin(""); setError(""); }} style={{
+              width: "100%", marginTop: 8, padding: "10px 0", background: "#fff",
+              border: "1px solid " + BORDER_STRONG, borderRadius: 10, cursor: "pointer", fontFamily: F,
+              fontSize: 13, fontWeight: 500, color: TEXT_SECONDARY,
+            }}>Back</button>
           </div>
         </div>
       </div>
@@ -362,47 +369,57 @@ function NamePicker({ data, onSelect }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ maxWidth: 420, width: "100%" }}>
-        <div style={{ background: ACCENT, borderRadius: 16, padding: "36px 24px", marginBottom: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>COMM 2: Public Speaking</div>
-          <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", fontWeight: 500, marginTop: 6 }}>Ishak / Santa Clara University</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 4 }}>MWF 9:15 to 10:20 am / Vari 128</div>
+    <div style={{ minHeight: "100vh", background: "#fafaf9", color: TEXT_PRIMARY, fontFamily: F, padding: "60px 20px 40px" }}>
+      <div style={{ maxWidth: 420, width: "100%", margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ width: 56, height: 56, borderRadius: 14, background: ACCENT, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+            <span style={{ color: "#fff", fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em" }}>2</span>
+          </div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: ACCENT, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>COMM 2 · Spring 2026</div>
+          <div style={{ fontSize: 24, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.02em", lineHeight: 1.15 }}>Public Speaking</div>
+          <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 6 }}>MWF 9:15 to 10:20 am · Vari 128</div>
         </div>
-        <div style={{ ...crd, padding: "14px 18px", marginBottom: 12 }}>
-          <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.6, textAlign: "center" }}>This app is our class hub: schedule, leaderboard, and more. Please see Camino for official grades. Select your name.</div>
+
+        <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.55, textAlign: "center", marginBottom: 18, padding: "0 4px" }}>
+          This app is our class hub. Please see Camino for official grades.
         </div>
-        <div style={{ ...crd, padding: 4 }}>
+
+        <div style={{ ...sectionLabel, marginBottom: 8, paddingLeft: 4 }}>Select your name</div>
+        <div style={{ background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 4 }}>
           {sorted.map(name => {
             const student = data?.students?.find(s => s.name === name);
             const bio = student ? (data?.bios || {})[student.id] : null;
             const photoUrl = bio?.photo;
+            const isAdmin = name === ADMIN_NAME;
             return (
-            <button key={name} onClick={() => setSelected(name)} style={{
-              display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 14px", textAlign: "left",
-              fontFamily: F, fontSize: 15, fontWeight: name === ADMIN_NAME ? 700 : 400,
-              background: name === ADMIN_NAME ? "#eff6ff" : "transparent",
-              color: name === ADMIN_NAME ? ACCENT : TEXT_PRIMARY,
-              border: "none", borderRadius: 10, cursor: "pointer", transition: "background 0.1s",
-            }}>
-              {photoUrl ? (
-                <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-              ) : (
-                <span style={{ width: 36, height: 36, borderRadius: "50%", background: name === ADMIN_NAME ? ACCENT : "#e4e4e7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: name === ADMIN_NAME ? "#fff" : TEXT_SECONDARY, flexShrink: 0 }}>
-                  {name.split(" ").map(n => n[0]).join("")}
-                </span>
-              )}
-              {name}
-            </button>
+              <button key={name} onClick={() => setSelected(name)} style={{
+                display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 12px", textAlign: "left",
+                fontFamily: F, fontSize: 14, fontWeight: isAdmin ? 600 : 400,
+                background: "transparent",
+                color: TEXT_PRIMARY,
+                border: "none", borderRadius: 10, cursor: "pointer",
+              }}>
+                {photoUrl ? (
+                  <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                ) : (
+                  <span style={{ width: 36, height: 36, borderRadius: "50%", background: isAdmin ? ACCENT : "#e4e4e7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: isAdmin ? "#fff" : TEXT_SECONDARY, flexShrink: 0 }}>
+                    {name.split(" ").map(n => n[0]).join("")}
+                  </span>
+                )}
+                <span style={{ flex: 1, minWidth: 0 }}>{name}</span>
+                {isAdmin && <span style={{ fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 5, background: ACCENT + "12", color: ACCENT, textTransform: "uppercase", letterSpacing: "0.08em", flexShrink: 0 }}>Instructor</span>}
+              </button>
             );
           })}
         </div>
+
         <button onClick={() => onSelect(GUEST_NAME)} style={{
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", padding: "12px 16px",
-          fontFamily: F, fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY,
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", padding: "11px 16px",
+          fontFamily: F, fontSize: 13, fontWeight: 500, color: TEXT_SECONDARY,
           background: "transparent", border: "1px dashed #d1d5db", borderRadius: 12, cursor: "pointer", marginTop: 12,
-        }}>Continue as Guest</button>
-        <div style={{ textAlign: "center", marginTop: 16, fontSize: 11, color: TEXT_MUTED }}>Questions? Contact aishak@scu.edu</div>
+        }}>Continue as guest</button>
+
+        <div style={{ textAlign: "center", marginTop: 18, fontSize: 11, color: TEXT_MUTED }}>aishak@scu.edu</div>
       </div>
     </div>
   );
