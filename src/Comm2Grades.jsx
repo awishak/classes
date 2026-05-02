@@ -1250,6 +1250,118 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   );
 }
 
+function AdminSubmissions({ assignmentId, data, setData }) {
+  const submissions = data.submissions || {};
+  const grades = data.grades || {};
+  const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME).sort(lastSortObj);
+  const [editGrades, setEditGrades] = useState({});
+  const [quickGradeStudent, setQuickGradeStudent] = useState(null);
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+  const hasRubric = !!(data.assignmentRubrics || {})[assignmentId];
+
+  const saveGrade = async (studentId) => {
+    const eg = editGrades[studentId] || {};
+    const key = studentId + "-" + assignmentId;
+    const existing = grades[key] || {};
+    const newGrade = {
+      ...existing,
+      score: eg.score !== undefined ? (eg.score === "" ? undefined : parseFloat(eg.score)) : existing.score,
+      outOf: eg.outOf !== undefined ? (parseFloat(eg.outOf) || 100) : (existing.outOf || 100),
+      comment: eg.comment !== undefined ? eg.comment : (existing.comment || ""),
+      gradedTs: Date.now(),
+    };
+    // Auto-clear regrade request for this student/assignment
+    const regradeRequests = { ...(data.regradeRequests || {}) };
+    delete regradeRequests[key];
+    // Create grade notification
+    const gradeNotifications = { ...(data.gradeNotifications || {}), [key]: { ts: Date.now() } };
+    const updated = {
+      ...data,
+      grades: { ...grades, [key]: newGrade },
+      regradeRequests,
+      gradeNotifications,
+    };
+    await saveData(updated); setData(updated);
+    setEditGrades(prev => { const n = { ...prev }; delete n[studentId]; return n; });
+    showMsg("Saved");
+  };
+
+  const startGradeEdit = (studentId) => {
+    const key = studentId + "-" + assignmentId;
+    const g = grades[key] || {};
+    setEditGrades(prev => ({ ...prev, [studentId]: { score: g.score !== undefined ? String(g.score) : "", outOf: String(g.outOf || 100), comment: g.comment || "" } }));
+  };
+
+  return (
+    <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+      {msg && <div style={{ fontSize: 12, color: "#10b981", fontWeight: 600 }}>{msg}</div>}
+      {sorted.map(s => {
+        const sub = submissions[s.id + "-" + assignmentId];
+        const grade = grades[s.id + "-" + assignmentId] || {};
+        const isEditing = editGrades[s.id] !== undefined;
+        const eg = editGrades[s.id] || {};
+
+        return (
+          <div key={s.id} style={{ padding: 12, borderRadius: 10, background: sub ? "#f9fafb" : "transparent", border: "1px solid " + (sub ? "#e5e7eb" : "#f3f4f6") }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: sub ? 6 : 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{s.name}</div>
+              {grade.score !== undefined && !isEditing && (
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{grade.score}<span style={{ fontSize: 12, color: "#9ca3af" }}>/{grade.outOf || 100}</span></div>
+              )}
+              {!sub && !isEditing && <span style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic" }}>No submission</span>}
+            </div>
+            {sub && (
+              <div style={{ marginBottom: 8 }}>
+                {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 2 }}>Google Doc</a>}
+                {sub.notes && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, lineHeight: 1.4 }}>"{sub.notes}"</div>}
+                <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>Submitted {new Date(sub.ts).toLocaleString()}</div>
+              </div>
+            )}
+            {grade.comment && !isEditing && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4, padding: "6px 8px", background: "#eff6ff", borderRadius: 6, lineHeight: 1.4 }}>{grade.comment}</div>}
+            {/* Regrade request */}
+            {(() => {
+              const rr = (data.regradeRequests || {})[s.id + "-" + assignmentId];
+              if (!rr || isEditing) return null;
+              return (
+                <div style={{ marginTop: 6, padding: "6px 8px", background: "#fffbeb", borderRadius: 6, border: "1px solid #fde68a" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: AMBER, marginBottom: 2 }}>Regrade Request</div>
+                  <div style={{ fontSize: 12, color: "#92400e", lineHeight: 1.4 }}>{rr.note}</div>
+                  <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{new Date(rr.ts).toLocaleString()}</div>
+                </div>
+              );
+            })()}
+            {isEditing ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input value={eg.score} onChange={e => setEditGrades(prev => ({ ...prev, [s.id]: { ...eg, score: e.target.value } }))} placeholder="Score" style={{ ...inp, fontSize: 13, padding: "6px 8px", width: 70 }} type="number" />
+                  <span style={{ fontSize: 13, color: "#9ca3af", display: "flex", alignItems: "center" }}>/</span>
+                  <input value={eg.outOf} onChange={e => setEditGrades(prev => ({ ...prev, [s.id]: { ...eg, outOf: e.target.value } }))} placeholder="Out of" style={{ ...inp, fontSize: 13, padding: "6px 8px", width: 70 }} type="number" />
+                </div>
+                <textarea value={eg.comment} onChange={e => setEditGrades(prev => ({ ...prev, [s.id]: { ...eg, comment: e.target.value } }))} placeholder="Comment for student..." rows={2} style={{ ...inp, fontSize: 13, padding: "6px 8px", resize: "vertical" }} />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => saveGrade(s.id)} style={{ ...pill, background: "#111827", color: "#fff", flex: 1 }}>Save</button>
+                  <button onClick={() => setEditGrades(prev => { const n = { ...prev }; delete n[s.id]; return n; })} style={pillInactive}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                <button onClick={() => startGradeEdit(s.id)} style={{ ...pillInactive, fontSize: 12, flex: 1 }}>Grade</button>
+                {hasRubric && <button onClick={() => setQuickGradeStudent(quickGradeStudent === s.id ? null : s.id)} style={{ ...pill, fontSize: 12, background: quickGradeStudent === s.id ? ACCENT : "#eff6ff", color: quickGradeStudent === s.id ? "#fff" : ACCENT }}>Quick Grade</button>}
+              </div>
+            )}
+            {quickGradeStudent === s.id && (
+              <div style={{ marginTop: 8 }}>
+                <QuickGrade assignmentId={assignmentId} studentId={s.id} studentName={s.name} data={data} setData={setData} onClose={() => setQuickGradeStudent(null)} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};

@@ -6198,13 +6198,14 @@ export default function Comm4() {
       {view === "grading" && isAdmin && !studentView && <GradingInbox data={data} setData={setData} userName={effectiveUserName} />}
       {view === "pti" && isAdmin && !studentView && <PTIMode data={data} setData={setData} />}
       {view === "admin" && isAdmin && !studentView && <AdminPanel data={data} setData={setData} />}
+      {/* Dedicated routes for nav cards */}
+      {view === "leaderboard" && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={effectiveUserName} data={data} setData={setData} />}
+      {view === "boards" && !isGuest && <BoardsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
+      {view === "roster" && !isGuest && <RosterCombined data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} />}
       {/* Backwards-compat redirects */}
-      {view === "leaderboard" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "readings" && !isGuest && <MoreView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "inclass" && !isGuest && <ActivitiesView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
-      {view === "boards" && !isGuest && <MoreView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "mynotes" && !isGuest && <MoreView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
-      {view === "roster" && !isGuest && <MoreView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "accolades" && !isGuest && <Accolades data={data} />}
     </div>
   );
