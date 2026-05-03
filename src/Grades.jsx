@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ReboundPanel } from "./GameSystem";
-import { useTheme, themedInteriorCrd, themedHeadingFont } from "./theme.js";
+import { useTheme, themedInteriorCrd, themedHeadingFont } from "./theme.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const TEXT_PRIMARY = "#111827";

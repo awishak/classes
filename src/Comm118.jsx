@@ -8,7 +8,7 @@ import {
   PixelStar, PixelArrow, PixelHeart, PixelMushroom, PixelCoin, PixelLightning,
   TRASH_TALK, ENCOURAGEMENT, randomChampionshipLine,
   THEME_KEYFRAMES_CSS, themedFontsUrl,
-} from "./theme.js";
+} from "./theme.jsx";
 
 const STORAGE_KEY = "comm118-game-v14";
 
