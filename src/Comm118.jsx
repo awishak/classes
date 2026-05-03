@@ -1438,12 +1438,157 @@ function HomeGradedNotifications({ data, setData, studentId }) {
   );
 }
 
+// ─── THEME SYSTEM ──────────────────────────────────────────────────────────
+// Three themes: "clean" (default), "locked" (bold confident), "crashing" (Y2K maximalist).
+// Per-class, per-user, persisted in localStorage.
+
+const THEME_KEY = STORAGE_KEY + "-theme";
+const THEMES = ["clean", "locked", "crashing"];
+const THEME_LABELS = { clean: "Clean", locked: "Locked In", crashing: "Crashing Out" };
+const THEME_DESCS = {
+  clean: "Calm and minimal",
+  locked: "Bold and confident",
+  crashing: "Maximum chaos",
+};
+
+function useTheme() {
+  const [theme, setThemeRaw] = useState(() => {
+    try { return localStorage.getItem(THEME_KEY) || "clean"; } catch(e) { return "clean"; }
+  });
+  const setTheme = (t) => {
+    try { localStorage.setItem(THEME_KEY, t); } catch(e) {}
+    setThemeRaw(t);
+  };
+  const cycleTheme = () => {
+    const i = THEMES.indexOf(theme);
+    setTheme(THEMES[(i + 1) % THEMES.length]);
+  };
+  return { theme, setTheme, cycleTheme };
+}
+
+// Card style by theme. Returns the inline-style object matching `crd` shape.
+function themedCard(theme) {
+  if (theme === "locked") {
+    return {
+      background: "#fff", borderRadius: 14, border: "2px solid #1f2937", overflow: "hidden",
+      boxShadow: "0 4px 12px rgba(17, 24, 39, 0.12), 0 2px 4px rgba(17, 24, 39, 0.08)",
+    };
+  }
+  if (theme === "crashing") {
+    return {
+      background: "#fff", borderRadius: 14, border: "3px solid #ec4899", overflow: "hidden",
+      boxShadow: "6px 6px 0 #f59e0b, 8px 8px 0 #1f2937",
+    };
+  }
+  // clean (default)
+  return {
+    background: "#fff", borderRadius: 14, border: "1px solid #d1d5db", overflow: "hidden",
+    boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)",
+  };
+}
+
+// Returns a stable "wacky" border + shadow combo for crashing-out cards, deterministic per index.
+const CRASHING_PALETTE = [
+  { border: "#ec4899", shadow1: "#f59e0b", shadow2: "#1f2937" },
+  { border: "#0ea5e9", shadow1: "#a855f7", shadow2: "#1f2937" },
+  { border: "#16a34a", shadow1: "#ec4899", shadow2: "#1f2937" },
+  { border: "#f59e0b", shadow1: "#0ea5e9", shadow2: "#1f2937" },
+  { border: "#a855f7", shadow1: "#16a34a", shadow2: "#1f2937" },
+  { border: "#dc2626", shadow1: "#0ea5e9", shadow2: "#1f2937" },
+];
+function crashingCardFor(idx) {
+  const p = CRASHING_PALETTE[idx % CRASHING_PALETTE.length];
+  return {
+    background: "#fff", borderRadius: 14, border: "3px solid " + p.border, overflow: "hidden",
+    boxShadow: "5px 5px 0 " + p.shadow1 + ", 7px 7px 0 " + p.shadow2,
+    transform: idx % 2 === 0 ? "rotate(-0.5deg)" : "rotate(0.5deg)",
+  };
+}
+
+// Page background by theme
+function themedPageBg(theme) {
+  if (theme === "locked") return "#f9fafb";
+  if (theme === "crashing") {
+    return "linear-gradient(135deg, #fce7f3 0%, #fef3c7 25%, #dbeafe 50%, #ddd6fe 75%, #fce7f3 100%)";
+  }
+  return "#fafaf9";
+}
+
+// Heading font by theme
+function themedHeadingFont(theme) {
+  if (theme === "crashing") return "'Bricolage Grotesque', 'Outfit', -apple-system, sans-serif";
+  return F;
+}
+
+// 8-bit pixel star — pure CSS animation
+function PixelStar({ top, right, delay = 0 }) {
+  const size = 24;
+  return (
+    <div style={{
+      position: "absolute", top, right, width: size, height: size, zIndex: 5,
+      animation: "pixelStarTwinkle 1.6s ease-in-out infinite",
+      animationDelay: delay + "s",
+      pointerEvents: "none",
+    }}>
+      <svg viewBox="0 0 24 24" width={size} height={size} shapeRendering="crispEdges">
+        <rect x="10" y="2" width="4" height="4" fill="#fbbf24" />
+        <rect x="8" y="6" width="2" height="2" fill="#fbbf24" />
+        <rect x="14" y="6" width="2" height="2" fill="#fbbf24" />
+        <rect x="6" y="8" width="2" height="2" fill="#fbbf24" />
+        <rect x="16" y="8" width="2" height="2" fill="#fbbf24" />
+        <rect x="2" y="10" width="4" height="4" fill="#fbbf24" />
+        <rect x="6" y="10" width="12" height="4" fill="#fde047" />
+        <rect x="18" y="10" width="4" height="4" fill="#fbbf24" />
+        <rect x="6" y="14" width="2" height="2" fill="#fbbf24" />
+        <rect x="16" y="14" width="2" height="2" fill="#fbbf24" />
+        <rect x="8" y="16" width="2" height="2" fill="#fbbf24" />
+        <rect x="14" y="16" width="2" height="2" fill="#fbbf24" />
+        <rect x="10" y="18" width="4" height="4" fill="#fbbf24" />
+      </svg>
+    </div>
+  );
+}
+
+// 8-bit pixel arrow (bouncing)
+function PixelArrow({ bottom, left }) {
+  const size = 28;
+  return (
+    <div style={{
+      position: "absolute", bottom, left, width: size, height: size, zIndex: 5,
+      animation: "pixelArrowBounce 0.9s ease-in-out infinite",
+      pointerEvents: "none",
+    }}>
+      <svg viewBox="0 0 28 28" width={size} height={size} shapeRendering="crispEdges">
+        <rect x="12" y="2" width="4" height="4" fill="#ec4899" />
+        <rect x="10" y="6" width="8" height="2" fill="#ec4899" />
+        <rect x="8" y="8" width="12" height="2" fill="#ec4899" />
+        <rect x="6" y="10" width="16" height="2" fill="#ec4899" />
+        <rect x="12" y="12" width="4" height="14" fill="#ec4899" />
+      </svg>
+    </div>
+  );
+}
+
+const TRASH_TALK = [
+  "I'm winning",
+  "I'm beating you",
+  "That A is mine",
+  "hey you gotta lock in my dude",
+  "have you seen these?",
+  "catch up",
+  "stay mad",
+];
+
 function HomeView({ data, setData, userName, isAdmin, setView }) {
   const [msg, setMsg] = useState("");
   const [newsExpanded, setNewsExpanded] = useState(false);
   const [newNewsText, setNewNewsText] = useState("");
   const [newNewsType, setNewNewsType] = useState("info");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  const { theme, cycleTheme } = useTheme();
+  // Choose a stable trash-talk line per page load (changes only on remount)
+  const trashTalkRef = React.useRef(TRASH_TALK[Math.floor(Math.random() * TRASH_TALK.length)]);
 
   const news = data.news || [];
   const boards = data.boards || [];
@@ -1646,10 +1791,38 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   if (!liveActivity) cards.push("live"); // Live appears at position 4 when nothing's live
   cards.push("leaderboard", "roster");
 
+  // Theme-aware card style. Returns the style object for a card given its index in the list.
+  // Clean: subtle. Locked: bold dark border + shadow. Crashing: rotating colorful palette.
+  const cardStyle = (idx) => {
+    if (theme === "locked") {
+      return {
+        background: "#fff", border: "2px solid #1f2937", borderRadius: 14, padding: 16,
+        marginBottom: 12, cursor: "pointer", fontFamily: F,
+        boxShadow: "0 4px 12px rgba(17, 24, 39, 0.12), 0 2px 4px rgba(17, 24, 39, 0.08)",
+      };
+    }
+    if (theme === "crashing") {
+      const p = CRASHING_PALETTE[idx % CRASHING_PALETTE.length];
+      return {
+        background: "#fff", border: "3px solid " + p.border, borderRadius: 14, padding: 16,
+        marginBottom: 14, cursor: "pointer", fontFamily: F,
+        boxShadow: "5px 5px 0 " + p.shadow1 + ", 7px 7px 0 " + p.shadow2,
+        transform: idx % 2 === 0 ? "rotate(-0.4deg)" : "rotate(0.4deg)",
+      };
+    }
+    return {
+      background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14,
+      marginBottom: 10, cursor: "pointer", fontFamily: F,
+      boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)",
+    };
+  };
+  // Index counter for cardStyle; increments per render of a non-special card.
+  let cardIdx = 0;
+
   const renderCard = (name) => {
     if (name === "rebound" && activeRebound) {
       return (
-        <button key="rebound" onClick={() => setView("assignments")} style={{ width: "100%", textAlign: "left", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+        <button key="rebound" onClick={() => setView("assignments")} style={(() => { const s = { width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }; if (theme === "clean") { s.background = "#fef2f2"; s.border = "1px solid #fca5a5"; } return s; })()}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
@@ -1673,7 +1846,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="live" onClick={() => setView("activities")} style={{ width: "100%", textAlign: "left", background: live ? "#ecfdf5" : "#fff", border: live ? "1px solid #6ee7b7" : "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="live" onClick={() => setView("activities")} style={(() => { const s = { width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }; if (live && theme !== "crashing") { s.background = "#ecfdf5"; s.border = "1px solid #6ee7b7"; } return s; })()}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
@@ -1695,7 +1868,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="assignments" onClick={() => setView("assignments")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="assignments" onClick={() => setView("assignments")} style={{ width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: assignmentLines.length > 0 ? 10 : 0 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Assignments</div>
             <span style={openBtnStyle}>Open</span>
@@ -1727,7 +1900,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="schedule" onClick={() => setView("schedule")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="schedule" onClick={() => setView("schedule")} style={{ width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Schedule</div>
             <span style={openBtnStyle}>Open</span>
@@ -1766,7 +1939,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="boards" onClick={() => setView("boards")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="boards" onClick={() => setView("boards")} style={{ width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Boards</div>
             <span style={openBtnStyle}>Open</span>
@@ -1785,16 +1958,52 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
+      // Find current leader (excluding admin and test student) and their photo
+      const leader = ranked.find(s => s.name !== ADMIN_NAME && s.name !== TEST_STUDENT && s.points > 0);
+      const leaderBio = leader ? (data.bios || {})[leader.id] : null;
+      const leaderPhoto = leaderBio?.photo;
+      const leaderInitials = leader ? leader.name.split(" ").map(n => n[0]).join("") : "";
+      const isLeader = leader && leader.name === userName;
       return (
-        <button key="leaderboard" onClick={() => setView("leaderboard")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="leaderboard" onClick={() => setView("leaderboard")} style={{ width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Leaderboard</div>
             <span style={openBtnStyle}>Open</span>
           </div>
-          {isStudent && myRank >= 0 ? (
-            <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>You're #{myRank + 1} of {totalStudents}</div>
+          {leader ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+              {leaderPhoto ? (
+                <img src={leaderPhoto} alt={leader.name} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: theme === "crashing" ? "3px solid #fbbf24" : "2px solid #fff", boxShadow: "0 0 0 1px " + (theme === "crashing" ? "#1f2937" : "#d1d5db") }} />
+              ) : (
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: ACCENT, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, flexShrink: 0 }}>{leaderInitials}</div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {theme === "crashing" ? (
+                  <div style={{
+                    background: "#fff", border: "2px solid #1f2937", borderRadius: 12, padding: "6px 12px",
+                    fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500, position: "relative",
+                    boxShadow: "3px 3px 0 #fbbf24",
+                    fontFamily: themedHeadingFont(theme),
+                  }}>
+                    <span style={{ position: "absolute", left: -7, top: 14, width: 0, height: 0, borderTop: "6px solid transparent", borderBottom: "6px solid transparent", borderRight: "7px solid #1f2937" }} />
+                    <span style={{ position: "absolute", left: -4, top: 15, width: 0, height: 0, borderTop: "5px solid transparent", borderBottom: "5px solid transparent", borderRight: "5px solid #fff" }} />
+                    {isLeader ? "you're locked in" : trashTalkRef.current}
+                    <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2, fontWeight: 400 }}>— {leader.name.split(" ")[0]}</div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY }}>#1: {leader.name}</div>
+                    {isStudent && myRank >= 0 && <div style={{ fontSize: 12, color: TEXT_SECONDARY }}>You're #{myRank + 1} of {totalStudents}</div>}
+                  </div>
+                )}
+              </div>
+            </div>
           ) : (
-            <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>Class standings</div>
+            isStudent && myRank >= 0 ? (
+              <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>You're #{myRank + 1} of {totalStudents}</div>
+            ) : (
+              <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>Class standings</div>
+            )
           )}
         </button>
       );
@@ -1806,7 +2015,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="roster" onClick={() => setView("roster")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="roster" onClick={() => setView("roster")} style={{ width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Roster</div>
             <span style={openBtnStyle}>Open</span>
@@ -1882,12 +2091,54 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme), background: themedPageBg(theme), minHeight: "100vh", position: "relative", overflow: "hidden" }}>
+      {theme === "crashing" && (
+        <>
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&display=swap" />
+          <style>{`
+            @keyframes pixelStarTwinkle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85) rotate(15deg); } }
+            @keyframes pixelArrowBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+            @keyframes wiggle { 0%, 100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
+          `}</style>
+          <PixelStar top={20} right={20} delay={0} />
+          <PixelStar top={70} right={60} delay={0.4} />
+          <PixelArrow bottom={80} left={20} />
+        </>
+      )}
       <Toast message={msg} />
-      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+      <div style={{ maxWidth: 720, margin: "0 auto", position: "relative", zIndex: 1 }}>
         {renderNewsBanner()}
         {cards.map(renderCard)}
         <InstructorCard data={data} setData={setData} isAdmin={isAdmin} />
+
+        {/* Theme picker — bottom of home */}
+        <button onClick={cycleTheme} style={(() => {
+          const base = { width: "100%", textAlign: "left", marginTop: 20, cursor: "pointer", fontFamily: themedHeadingFont(theme), padding: 14 };
+          if (theme === "locked") {
+            return { ...base, background: "#1f2937", color: "#fff", border: "2px solid #1f2937", borderRadius: 14, boxShadow: "0 4px 12px rgba(17, 24, 39, 0.18)" };
+          }
+          if (theme === "crashing") {
+            return { ...base, background: "linear-gradient(135deg, #ec4899, #f59e0b, #0ea5e9)", color: "#fff", border: "3px solid #1f2937", borderRadius: 14, boxShadow: "5px 5px 0 #1f2937", transform: "rotate(-0.5deg)" };
+          }
+          return { ...base, background: "#fff", color: TEXT_PRIMARY, border: "1px solid #d1d5db", borderRadius: 14, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" };
+        })()}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", opacity: 0.7, marginBottom: 4 }}>Theme</div>
+              <div style={{ fontSize: theme === "crashing" ? 22 : 18, fontWeight: theme === "crashing" ? 800 : (theme === "locked" ? 700 : 500), letterSpacing: "-0.01em", lineHeight: 1.1 }}>{THEME_LABELS[theme]}</div>
+              <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>{THEME_DESCS[theme]} · tap to change</div>
+            </div>
+            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+              {THEMES.map(t => (
+                <span key={t} style={{
+                  width: 8, height: 8, borderRadius: "50%",
+                  background: t === theme ? (theme === "crashing" ? "#fff" : (theme === "locked" ? "#fff" : ACCENT)) : "rgba(255,255,255,0.3)",
+                  border: t === theme ? "none" : (theme === "clean" ? "1px solid #d1d5db" : "none"),
+                }} />
+              ))}
+            </div>
+          </div>
+        </button>
       </div>
     </div>
   );
