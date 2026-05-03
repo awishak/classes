@@ -46,6 +46,11 @@ function themedInteriorCrd(theme, idx) {
   }
   return { background: "#fff", borderRadius: 14, border: "1px solid #d1d5db", overflow: "hidden", boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" };
 }
+function themedHeadingFont(theme) {
+  if (theme === "crashing") return "'Rubik Mono One', 'Bricolage Grotesque', 'Outfit', sans-serif";
+  if (theme === "locked") return "'Space Grotesk', 'Outfit', -apple-system, sans-serif";
+  return F;
+}
 // ─── END THEME ───
 
 const pill = { padding: "8px 14px", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s" };
@@ -777,7 +782,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto" }}>
 
@@ -2301,6 +2306,8 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
 }
 
 export function Gradebook({ data, setData, userName, isAdmin, setView }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
   const participation = data.participation || {};
@@ -3180,7 +3187,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   if (!studentId) return <div style={{ padding: 40, textAlign: "center", fontFamily: F, color: TEXT_SECONDARY }}>Student not found.</div>;
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 12 }}>My Grades</div>
         {renderStudentGrades(studentId)}

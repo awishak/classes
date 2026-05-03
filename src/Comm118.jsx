@@ -842,7 +842,7 @@ function InClassView({ data, setData, isAdmin, userName }) {
   const student = data.students.find(s => s.name === userName);
   const studentId = student?.id;
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
         {/* Weekly Game (live + past games) */}
@@ -3164,7 +3164,7 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
 
         {/* Explanation */}
@@ -3247,6 +3247,8 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
 
 /* ─── TEAMS ─── */
 function TeamsView({ teams, students, log, data }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   if (data?.teamsHidden) {
     return (
       <div style={{ padding: "60px 20px", fontFamily: F, textAlign: "center" }}>
@@ -3272,7 +3274,7 @@ function TeamsView({ teams, students, log, data }) {
   Object.values(weeklyWins).forEach(tid => { if (tid) winCounts[tid] = (winCounts[tid] || 0) + 1; });
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 4 }}>This Week's Teams</div>
         <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12, lineHeight: 1.5 }}>Teams shuffle weekly based on leaderboard rank. The team whose top 3 players score highest on the weekly game earns 10 bonus points each.</div>
@@ -4102,7 +4104,7 @@ function RosterView({ data, setData, userName }) {
   }
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
       <div style={{ maxWidth: 500, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 10 }}>Class roster</div>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search classmates" style={{ ...inp, fontSize: 13, padding: "8px 12px", marginBottom: 12, width: "100%", boxSizing: "border-box" }} />
@@ -4209,7 +4211,7 @@ function BioView({ student, data, setData, userName, onBack }) {
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 480, margin: "0 auto" }}>
         {onBack && <button onClick={onBack} style={pillInactive}>Back to Roster</button>}
@@ -5454,6 +5456,8 @@ const COMM_CONCEPTS = [
 ];
 
 function ClassTools({ data, setData, isAdmin, userName }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const isGuest = userName === GUEST_NAME;
   const student = data.students.find(s => s.name === userName);
   const sid = student?.id;
@@ -5623,7 +5627,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
   if (isAdmin) {
     if (session) {
       return (
-        <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+        <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
           <Toast message={msg} />
           <div style={{ maxWidth: 700, margin: "0 auto" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
@@ -5744,7 +5748,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
 
     // Session list
     return (
-      <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
         <Toast message={msg} />
         <div style={{ maxWidth: 700, margin: "0 auto" }}>
           <div style={{ ...sectionLabel, marginBottom: 12 }}>Class Tools</div>
@@ -5804,7 +5808,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
   const { tally: stConceptTally, count: stConceptCount } = buildTally(currentSession?.conceptVotes);
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 500, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 12 }}>Class Tools</div>
@@ -5920,6 +5924,8 @@ const WEEKLY_ITEMS = [
 ];
 
 function ToDoView({ data, setData, userName, isAdmin }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const [adding, setAdding] = useState(false);
@@ -6062,7 +6068,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
   });
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -6220,7 +6226,7 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
         {/* Live banner */}
@@ -6443,7 +6449,7 @@ function MoreView({ data, setData, isAdmin, userName }) {
   const crd = themedInteriorCrd(theme, 0);
   const me = data?.students.find(s => s.name === userName);
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
         {/* Your info */}
