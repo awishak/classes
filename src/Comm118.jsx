@@ -244,10 +244,6 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
       link.href = "https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap";
     } else if (theme === "crashing") {
       link.href = "https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Press+Start+2P&display=swap";
-    } else if (theme === "glossier") {
-      link.href = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Inter:wght@400;500;600&display=swap";
-    } else if (theme === "espn") {
-      link.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap";
     }
     document.head.appendChild(link);
   }, [theme]);
@@ -274,14 +270,10 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
 
   const tabBtn = (t, isActive, badge) => (
     <button key={t.id} onClick={() => setView(t.id)} style={{
-      padding: "7px 14px", borderRadius: theme === "glossier" ? 0 : (theme === "espn" ? 999 : 10), fontSize: 13, fontWeight: theme === "glossier" ? 500 : (theme === "espn" ? 600 : 700), cursor: "pointer",
-      fontFamily: theme === "glossier" ? "'Inter', sans-serif" : themedFont, transition: "all 0.15s",
-      letterSpacing: theme === "glossier" ? "0.08em" : "-0.005em",
-      textTransform: theme === "glossier" ? "uppercase" : "none",
-      background: isActive ? (theme === "crashing" ? "#ec4899" : (theme === "locked" ? "#1f2937" : (theme === "glossier" ? "transparent" : (theme === "espn" ? "transparent" : "#111827")))) : "transparent",
-      color: isActive ? (theme === "glossier" ? "#1e3aff" : (theme === "espn" ? "#0073cf" : "#fff")) : (theme === "espn" ? "#4b5563" : "#4b5563"),
-      borderBottom: theme === "glossier" && isActive ? "2px solid #1e3aff" : "none",
-      border: theme === "espn" ? (isActive ? "1px solid #0073cf" : "1px solid transparent") : "none",
+      padding: "7px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer",
+      fontFamily: themedFont, border: "none", transition: "all 0.15s", letterSpacing: "-0.005em",
+      background: isActive ? (theme === "crashing" ? "#ec4899" : (theme === "locked" ? "#1f2937" : "#111827")) : "transparent",
+      color: isActive ? "#fff" : "#4b5563",
       display: "inline-flex", alignItems: "center", gap: 6,
     }}>
       {t.label}
@@ -304,16 +296,15 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{
             display: "inline-block",
-            padding: theme === "crashing" ? "5px 12px" : (theme === "glossier" ? "0" : (theme === "espn" ? "4px 10px" : "4px 10px")),
-            borderRadius: theme === "glossier" ? 0 : (theme === "espn" ? 4 : 8),
-            background: theme === "crashing" ? "#1f2937" : (theme === "glossier" ? "transparent" : (theme === "espn" ? "#0073cf" : ACCENT)),
-            color: theme === "glossier" ? "#000" : "#fff",
-            fontSize: theme === "crashing" ? 13 : (theme === "glossier" ? 22 : 12),
-            fontWeight: theme === "clean" ? 800 : (theme === "glossier" ? 500 : (theme === "espn" ? 800 : 400)),
+            padding: theme === "crashing" ? "5px 12px" : "4px 10px",
+            borderRadius: 8,
+            background: theme === "crashing" ? "#1f2937" : ACCENT,
+            color: "#fff",
+            fontSize: theme === "crashing" ? 13 : 12,
+            fontWeight: theme === "clean" ? 800 : 400,
             fontFamily: themedFont,
-            letterSpacing: theme === "locked" ? "0.04em" : (theme === "glossier" ? "-0.01em" : (theme === "espn" ? "-0.01em" : "-0.005em")),
+            letterSpacing: theme === "locked" ? "0.04em" : "-0.005em",
             textTransform: theme === "locked" ? "uppercase" : "none",
-            fontStyle: theme === "glossier" ? "italic" : "normal",
             border: theme === "crashing" ? "2px solid #ec4899" : "none",
             boxShadow: theme === "crashing" ? "3px 3px 0 #fbbf24" : (theme === "locked" ? "inset 0 -2px 0 #dc2626" : "none"),
           }}>{courseTitle || "Comm and Sport"}</span>
@@ -1478,13 +1469,11 @@ function HomeGradedNotifications({ data, setData, studentId }) {
 // Per-class, per-user, persisted in localStorage.
 
 const THEME_KEY = STORAGE_KEY + "-theme";
-const THEMES = ["clean", "locked", "espn", "glossier", "crashing"];
-const THEME_LABELS = { clean: "Clean", locked: "Locked In", espn: "ESPN", glossier: "Glossier", crashing: "Crashing Out" };
+const THEMES = ["clean", "locked", "crashing"];
+const THEME_LABELS = { clean: "Clean", locked: "Locked In", crashing: "Crashing Out" };
 const THEME_DESCS = {
   clean: "Calm and minimal",
   locked: "Bold and confident",
-  espn: "Sports network",
-  glossier: "Soft and editorial",
   crashing: "Maximum chaos",
 };
 
@@ -1492,9 +1481,16 @@ function useTheme() {
   const [theme, setThemeRaw] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) || "clean"; } catch(e) { return "clean"; }
   });
+  // Listen for theme changes from other components on the same page
+  React.useEffect(() => {
+    const onChange = (e) => setThemeRaw(e.detail);
+    window.addEventListener("themechange", onChange);
+    return () => window.removeEventListener("themechange", onChange);
+  }, []);
   const setTheme = (t) => {
     try { localStorage.setItem(THEME_KEY, t); } catch(e) {}
     setThemeRaw(t);
+    try { window.dispatchEvent(new CustomEvent("themechange", { detail: t })); } catch(e) {}
   };
   const cycleTheme = () => {
     const i = THEMES.indexOf(theme);
@@ -1548,8 +1544,6 @@ function themedPageBg(theme) {
   if (theme === "crashing") {
     return "linear-gradient(135deg, #fce7f3 0%, #fef3c7 20%, #dbeafe 40%, #ddd6fe 60%, #fbcfe8 80%, #fef3c7 100%)";
   }
-  if (theme === "glossier") return "#f4f0eb";
-  if (theme === "espn") return "#fafafa";
   return "#fafaf9";
 }
 
@@ -1557,24 +1551,18 @@ function themedPageBg(theme) {
 function themedHeadingFont(theme) {
   if (theme === "crashing") return "'Rubik Mono One', 'Bricolage Grotesque', 'Outfit', sans-serif";
   if (theme === "locked") return "'Archivo Black', 'Outfit', -apple-system, sans-serif";
-  if (theme === "glossier") return "'Cormorant Garamond', 'Playfair Display', Georgia, serif";
-  if (theme === "espn") return "'Inter', 'Helvetica Neue', Arial, sans-serif";
   return F;
 }
 
-// Body font (only differs for glossier where headings are serif and body is sans)
+// Body font (only used where headings differ from body)
 function themedBodyFont(theme) {
-  if (theme === "glossier") return "'Inter', 'Helvetica Neue', sans-serif";
-  if (theme === "espn") return "'Inter', 'Helvetica Neue', Arial, sans-serif";
   return themedHeadingFont(theme);
 }
 
-// Theme accent color (used for theme-aware buttons/links)
+// Theme accent color
 function themedAccent(theme) {
-  if (theme === "glossier") return "#1e3aff";
   if (theme === "locked") return "#dc2626";
   if (theme === "crashing") return "#ec4899";
-  if (theme === "espn") return "#0073cf";
   return ACCENT;
 }
 
@@ -1989,21 +1977,6 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         transform: idx % 2 === 0 ? "rotate(-1deg)" : "rotate(1deg)",
       };
     }
-    if (theme === "glossier") {
-      return {
-        background: "#fffaf6", border: "none", borderRadius: 0, padding: "24px 28px",
-        marginBottom: 16, cursor: "pointer", fontFamily: themedFont,
-        boxShadow: "none",
-      };
-    }
-    if (theme === "espn") {
-      return {
-        background: "#fff", border: "1px solid #e5e7eb", borderRadius: 4, padding: 16,
-        marginBottom: 0, cursor: "pointer", fontFamily: themedFont,
-        boxShadow: "none",
-        borderBottom: "1px solid #e5e7eb",
-      };
-    }
     return {
       background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14,
       marginBottom: 10, cursor: "pointer", fontFamily: F,
@@ -2289,12 +2262,6 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       {theme === "locked" && (
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" />
       )}
-      {theme === "glossier" && (
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Inter:wght@400;500;600&display=swap" />
-      )}
-      {theme === "espn" && (
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
-      )}
       {theme === "crashing" && (
         <>
           <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Press+Start+2P&family=Bricolage+Grotesque:wght@800&display=swap" />
@@ -2356,33 +2323,26 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           if (theme === "crashing") {
             return { ...base, background: "linear-gradient(135deg, #ec4899, #f59e0b, #0ea5e9, #a855f7)", color: "#fff", border: "4px solid #1f2937", borderRadius: 14, boxShadow: "6px 6px 0 #1f2937", transform: "rotate(-1deg)", padding: 18 };
           }
-          if (theme === "glossier") {
-            return { ...base, background: "#fffaf6", color: "#000", border: "none", borderRadius: 0, padding: "24px 28px", boxShadow: "none" };
-          }
-          if (theme === "espn") {
-            return { ...base, background: "#fff", color: "#111827", border: "1px solid #e5e7eb", borderRadius: 4, padding: 16, boxShadow: "none" };
-          }
           return { ...base, background: "#fff", color: TEXT_PRIMARY, border: "1px solid #d1d5db", borderRadius: 14, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" };
         })()}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: theme === "glossier" ? 600 : 700, letterSpacing: theme === "glossier" ? "0.2em" : "0.12em", textTransform: "uppercase", opacity: 0.75, marginBottom: theme === "glossier" ? 8 : 4, fontFamily: theme === "glossier" ? themedBodyFont(theme) : undefined, color: theme === "espn" ? "#0073cf" : undefined }}>Theme</div>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", opacity: 0.75, marginBottom: 4 }}>Theme</div>
               <div style={{
-                fontSize: theme === "crashing" ? 24 : (theme === "locked" ? 22 : (theme === "glossier" ? 28 : (theme === "espn" ? 22 : 18))),
-                fontWeight: theme === "crashing" ? 400 : (theme === "locked" ? 400 : (theme === "glossier" ? 500 : (theme === "espn" ? 800 : 500))),
-                letterSpacing: theme === "locked" ? "0.04em" : (theme === "espn" ? "-0.02em" : "-0.01em"),
+                fontSize: theme === "crashing" ? 24 : (theme === "locked" ? 22 : 18),
+                fontWeight: theme === "crashing" ? 400 : (theme === "locked" ? 400 : 500),
+                letterSpacing: theme === "locked" ? "0.04em" : "-0.01em",
                 lineHeight: 1.1,
                 textTransform: theme === "locked" ? "uppercase" : "none",
-                fontStyle: theme === "glossier" ? "italic" : "normal",
               }}>{THEME_LABELS[theme]}</div>
-              <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4, fontFamily: theme === "crashing" ? "'Press Start 2P', monospace" : (theme === "glossier" ? themedBodyFont(theme) : undefined) }}>{THEME_DESCS[theme]} {theme === "crashing" ? "" : "·"} tap to change</div>
+              <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4, fontFamily: theme === "crashing" ? "'Press Start 2P', monospace" : undefined }}>{THEME_DESCS[theme]} {theme === "crashing" ? "" : "·"} tap to change</div>
             </div>
             <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
               {THEMES.map(t => (
                 <span key={t} style={{
                   width: 8, height: 8, borderRadius: "50%",
-                  background: t === theme ? (theme === "crashing" ? "#fff" : (theme === "locked" ? "#fff" : (theme === "glossier" ? "#1e3aff" : (theme === "espn" ? "#0073cf" : ACCENT)))) : "rgba(0,0,0,0.15)",
-                  border: t === theme ? "none" : (theme === "clean" ? "1px solid #d1d5db" : (theme === "glossier" ? "1px solid #d4cdc1" : (theme === "espn" ? "1px solid #e5e7eb" : "none"))),
+                  background: t === theme ? (theme === "crashing" ? "#fff" : (theme === "locked" ? "#fff" : ACCENT)) : "rgba(0,0,0,0.15)",
+                  border: t === theme ? "none" : (theme === "clean" ? "1px solid #d1d5db" : "none"),
                 }} />
               ))}
             </div>
