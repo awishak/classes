@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTheme, themedInteriorCrd, themedHeadingFont } from "./theme.jsx";
 
 const F = "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif";
 const ACCENT = "#2563eb";
@@ -50,6 +51,8 @@ function rs(students, log) { return students.map(s => ({ ...s, points: gp(log, s
 
 /* ─── ADMIN: GAME + TOT + FISHBOWL SETUP ─── */
 export function GameAdmin({ data, setData }) {
+  const { theme } = useTheme("comm2-v1");
+  const crd = themedInteriorCrd(theme, 0);
   const [week, setWeek] = useState(null);
   const [mode, setMode] = useState("game");
   const [msg, setMsg] = useState("");
@@ -186,7 +189,7 @@ export function GameAdmin({ data, setData }) {
   }
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 12 }}>Game Manager</div>
@@ -317,6 +320,8 @@ function ReviewAnswers({ type, week, data, setData }) {
 }
 
 function GameEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack, msg }) {
+  const { theme } = useTheme("comm2-v1");
+  const crd = themedInteriorCrd(theme, 0);
   const [questions, setQuestions] = useState(JSON.parse(JSON.stringify(initial)));
   const [dragIdx, setDragIdx] = useState(null);
 
@@ -336,7 +341,7 @@ function GameEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack,
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
@@ -385,6 +390,8 @@ function GameEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack,
 
 /* ─── TOT EDITOR (setup phase, with drag reorder) ─── */
 function ToTEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack, msg }) {
+  const { theme } = useTheme("comm2-v1");
+  const crd = themedInteriorCrd(theme, 0);
   const [questions, setQuestions] = useState(JSON.parse(JSON.stringify(initial)));
   const updateQ = (i, field, value) => {
     const u = [...questions];
@@ -401,7 +408,7 @@ function ToTEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack, 
   const ptsEach = questions.length > 0 ? Math.round(20 / questions.length * 10) / 10 : 20;
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
@@ -451,6 +458,8 @@ function ToTEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack, 
 
 /* ─── LIVE ACTIVITY ADMIN (question control + live monitor) ─── */
 function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, msg, showMsg }) {
+  const { theme } = useTheme("comm2-v1");
+  const crd = themedInteriorCrd(theme, 0);
   const [countdownActive, setCountdownActive] = useState(false);
   const [countdownSecs, setCountdownSecs] = useState(0);
   const activities = type === "game" ? (data.weeklyGames || {}) : (data.weeklyToT || {});
@@ -537,7 +546,7 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, msg, sh
   const isLocked = (qi) => lockedQs.includes(qi);
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
@@ -642,6 +651,8 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, msg, sh
 }
 
 function FishbowlAdmin({ week, data, setData, onBack }) {
+  const { theme } = useTheme("comm2-v1");
+  const crd = themedInteriorCrd(theme, 0);
   const fishbowls = data.weeklyFishbowl || {};
   const existing = fishbowls[week] || {};
   const isConfirmed = existing.confirmed;
@@ -685,7 +696,7 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
@@ -741,6 +752,8 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
 
 /* ─── STUDENT: GAME + TOT ANSWER VIEW ─── */
 export function StudentAnswerView({ data, setData, userName }) {
+  const { theme } = useTheme("comm2-v1");
+  const crd = themedInteriorCrd(theme, 0);
   const [week, setWeek] = useState(null);
   const [mode, setMode] = useState("game");
   const [selected, setSelected] = useState(null);
@@ -855,7 +868,7 @@ export function StudentAnswerView({ data, setData, userName }) {
   // Week selector
   if (week === null) {
     return (
-      <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
         <div style={{ maxWidth: 500, margin: "0 auto" }}>
           <div style={{ ...sectionLabel, marginBottom: 12 }}>Answer</div>
           <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
@@ -902,7 +915,7 @@ export function StudentAnswerView({ data, setData, userName }) {
   if (actType === "game" && activity.scored) {
     let gameTotal = 0;
     return (
-      <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
         <div style={{ maxWidth: 500, margin: "0 auto" }}>
           <button onClick={() => setWeek(null)} style={{ ...pillInactive, marginBottom: 12 }}>Back</button>
           <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", marginBottom: 12 }}>Week {week} Results</div>
@@ -937,7 +950,7 @@ export function StudentAnswerView({ data, setData, userName }) {
     const ptsEach = qs.length > 0 ? 20 / qs.length : 20;
     let total = 0;
     return (
-      <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
         <div style={{ maxWidth: 500, margin: "0 auto" }}>
           <button onClick={() => setWeek(null)} style={{ ...pillInactive, marginBottom: 12 }}>Back</button>
           <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", marginBottom: 12 }}>Week {week} This or That Results</div>
@@ -980,7 +993,7 @@ export function StudentAnswerView({ data, setData, userName }) {
     const correct = myAnswer !== undefined && myAnswer === q.correct;
     const allLocked = lockedQs.length >= qs.length;
     return (
-      <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
         <Toast message={msg} />
         <div style={{ maxWidth: 400, margin: "0 auto", textAlign: "center" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -1019,7 +1032,7 @@ export function StudentAnswerView({ data, setData, userName }) {
 
   // Show current question for answering
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 400, margin: "0 auto", textAlign: "center" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -1077,6 +1090,8 @@ export function StudentAnswerView({ data, setData, userName }) {
 
 /* --- ACCOLADES --- */
 export function Accolades({ data }) {
+  const { theme } = useTheme("comm2-v1");
+  const crd = themedInteriorCrd(theme, 0);
   const stars = data.fishbowlStars || {};
   const games = data.weeklyGames || {};
 
@@ -1096,7 +1111,7 @@ export function Accolades({ data }) {
   const starEntries = Object.entries(stars).filter(([_, sid]) => sid).sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <div style={{ maxWidth: 500, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 16 }}>Accolades</div>
         <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
@@ -1157,6 +1172,8 @@ const STATUS_COLORS = {
 };
 
 export function ReboundPanel({ data, setData, activityType, week, isAdmin, userName }) {
+  const { theme } = useTheme("comm2-v1");
+  const crd = themedInteriorCrd(theme, 0);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const [reboundLink, setReboundLink] = useState("");

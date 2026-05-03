@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ReboundPanel } from "./Comm2Game.jsx";
+import { useTheme, themedInteriorCrd, themedHeadingFont } from "./theme.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const TEXT_PRIMARY = "#111827";
@@ -667,6 +668,8 @@ function StatusBadge({ state }) {
 }
 
 export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
+  const { theme } = useTheme("comm2-v1");
+  const crd = themedInteriorCrd(theme, 0);
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
   const submissions = data.submissions || {};
@@ -875,7 +878,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto" }}>
 
@@ -1640,6 +1643,8 @@ Match each note to the correct student name from the list above. Use the student
 
 /* --- QUICK GRADE --- */
 export function Gradebook({ data, setData, userName, isAdmin, setView }) {
+  const { theme } = useTheme("comm2-v1");
+  const crd = themedInteriorCrd(theme, 0);
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
   const participation = data.participation || {};
@@ -2518,7 +2523,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   if (!studentId) return <div style={{ padding: 40, textAlign: "center", fontFamily: F, color: TEXT_SECONDARY }}>Student not found.</div>;
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 12 }}>My Grades</div>
         {renderStudentGrades(studentId)}
@@ -2529,6 +2534,8 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
 
 /* ─── GRADING INBOX ─── */
 export function GradingInbox({ data, setData, userName }) {
+  const { theme } = useTheme("comm2-v1");
+  const crd = themedInteriorCrd(theme, 0);
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
   const submissions = data.submissions || {};

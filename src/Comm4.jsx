@@ -245,6 +245,23 @@ function PageHeader({ title, onBack, right }) {
 
 /* ─── NAV ─── */
 function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent, allStudents, activitiesLive }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const themedFont = themedHeadingFont(theme, F);
+  // Load themed fonts here so they're available across the app, not just on Home
+  React.useEffect(() => {
+    if (theme === "clean") return;
+    const id = "themed-fonts-" + theme;
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    if (theme === "locked") {
+      link.href = "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap";
+    } else if (theme === "crashing") {
+      link.href = "https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Press+Start+2P&display=swap";
+    }
+    document.head.appendChild(link);
+  }, [theme]);
   // Student-visible
   const studentTabs = [
     { id: "home", label: "Home", guest: false },
@@ -266,7 +283,19 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
   return (
     <div style={{ background: "#fff", padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, position: "sticky", top: 0, zIndex: 50, borderBottom: "1px solid " + BORDER }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ background: ACCENT, color: "#fff", padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 800, fontFamily: F, letterSpacing: "-0.01em" }}>{courseTitle || "Comm Research"}</div>
+        <div style={{
+          background: theme === "crashing" ? "#1f2937" : ACCENT,
+          color: "#fff",
+          padding: theme === "crashing" ? "5px 12px" : "5px 12px",
+          borderRadius: 8,
+          fontSize: theme === "crashing" ? 13 : 12,
+          fontWeight: theme === "clean" ? 800 : 400,
+          fontFamily: themedFont,
+          letterSpacing: theme === "locked" ? "0.04em" : "-0.01em",
+          textTransform: theme === "locked" ? "uppercase" : "none",
+          border: theme === "crashing" ? "2px solid #ec4899" : "none",
+          boxShadow: theme === "crashing" ? "3px 3px 0 #fbbf24" : (theme === "locked" ? "inset 0 -2px 0 #dc2626" : "none"),
+        }}>{courseTitle || "Comm Research"}</div>
         {studentView && <span style={{ fontSize: 11, fontWeight: 700, color: "#d97706", textTransform: "uppercase", letterSpacing: "0.05em" }}>Student View</span>}
       </div>
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
@@ -276,7 +305,8 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
           return (
             <button key={t.id} onClick={() => setView(t.id)} style={{
               ...pill,
-              background: isActive ? TEXT_PRIMARY : "transparent",
+              fontFamily: themedFont,
+              background: isActive ? (theme === "crashing" ? "#ec4899" : (theme === "locked" ? "#1f2937" : TEXT_PRIMARY)) : "transparent",
               color: isActive ? "#fff" : TEXT_SECONDARY,
               position: "relative",
               fontWeight: 700,
@@ -801,10 +831,12 @@ function PastGamesReview({ data, studentId, filter }) {
 }
 
 function InClassView({ data, setData, isAdmin, userName }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const crd = themedInteriorCrd(theme, 0);
   const student = data.students.find(s => s.name === userName);
   const studentId = student?.id;
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
         {/* Weekly Game (live + past games) */}
@@ -1618,10 +1650,37 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   if (!liveActivity) cards.push("live"); // Live appears at position 4 when nothing's live
   cards.push("leaderboard", "roster");
 
+  // Theme-aware card style. Returns the style object for a card given its index.
+  const themedFont = themedHeadingFont(theme, F);
+  const cardStyle = (idx) => {
+    if (theme === "locked") {
+      return {
+        background: "#fff", border: "2px solid #1f2937", borderRadius: 12, padding: 16,
+        marginBottom: 12, cursor: "pointer", fontFamily: themedFont,
+        boxShadow: "inset 0 -3px 0 #dc2626, 0 6px 16px rgba(17, 24, 39, 0.18), 0 2px 4px rgba(17, 24, 39, 0.12)",
+      };
+    }
+    if (theme === "crashing") {
+      const p = CRASHING_PALETTE[idx % CRASHING_PALETTE.length];
+      return {
+        background: "#fff", border: "4px solid " + p.border, borderRadius: 14, padding: 16,
+        marginBottom: 16, cursor: "pointer", fontFamily: themedFont,
+        boxShadow: "6px 6px 0 " + p.shadow1 + ", 9px 9px 0 " + p.shadow2,
+        transform: idx % 2 === 0 ? "rotate(-1deg)" : "rotate(1deg)",
+      };
+    }
+    return {
+      background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14,
+      marginBottom: 10, cursor: "pointer", fontFamily: F,
+      boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)",
+    };
+  };
+  let cardIdx = 0;
+
   const renderCard = (name) => {
     if (name === "rebound" && activeRebound) {
       return (
-        <button key="rebound" onClick={() => setView("assignments")} style={{ width: "100%", textAlign: "left", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F }}>
+        <button key="rebound" onClick={() => setView("assignments")} style={(() => { const s = { width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }; if (theme === "clean") { s.background = "#fef2f2"; s.border = "1px solid #fca5a5"; } return s; })()}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
@@ -1645,7 +1704,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="live" onClick={() => setView("activities")} style={{ width: "100%", textAlign: "left", background: live ? "#ecfdf5" : "#fff", border: live ? "1px solid #6ee7b7" : "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="live" onClick={() => setView("activities")} style={(() => { const s = { width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }; if (live && theme !== "crashing") { s.background = "#ecfdf5"; s.border = "1px solid #6ee7b7"; } return s; })()}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
@@ -1667,7 +1726,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="assignments" onClick={() => setView("assignments")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="assignments" onClick={() => setView("assignments")} style={{ width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: assignmentLines.length > 0 ? 10 : 0 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Assignments</div>
             <span style={openBtnStyle}>Open</span>
@@ -1699,7 +1758,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="schedule" onClick={() => setView("schedule")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="schedule" onClick={() => setView("schedule")} style={{ width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Schedule</div>
             <span style={openBtnStyle}>Open</span>
@@ -1738,7 +1797,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="boards" onClick={() => setView("boards")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="boards" onClick={() => setView("boards")} style={{ width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Boards</div>
             <span style={openBtnStyle}>Open</span>
@@ -1758,7 +1817,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="leaderboard" onClick={() => setView("leaderboard")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="leaderboard" onClick={() => setView("leaderboard")} style={{ width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Leaderboard</div>
             <span style={openBtnStyle}>Open</span>
@@ -1778,7 +1837,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="roster" onClick={() => setView("roster")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="roster" onClick={() => setView("roster")} style={{ width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Roster</div>
             <span style={openBtnStyle}>Open</span>
@@ -2065,6 +2124,8 @@ function ReadingsList({ d, readings }) {
 }
 
 function ScheduleView({ data, setData, isAdmin }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const crd = themedInteriorCrd(theme, 0);
   const schedule = data.schedule || DEFAULT_SCHEDULE;
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
@@ -2485,6 +2546,8 @@ function getWeekBounds() {
 }
 
 function Leaderboard({ students, log, teams, isAdmin, userName, data, setData }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const crd = themedInteriorCrd(theme, 0);
   const ranked = rs(students, log);
   const mx = ranked.length > 0 ? Math.max(ranked[0].points, 1) : 1;
   const [showAll, setShowAll] = useState(false);
@@ -2643,7 +2706,7 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
 
         {/* Explanation */}
@@ -2767,6 +2830,8 @@ const DEFAULT_TEAM_BLURBS = {
 };
 
 function TeamsView({ teams, students, log, data, setData, userName, isAdmin }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const crd = themedInteriorCrd(theme, 0);
   const [editingTeam, setEditingTeam] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [msg, setMsg] = useState("");
@@ -2822,7 +2887,7 @@ function TeamsView({ teams, students, log, data, setData, userName, isAdmin }) {
   });
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       {msg && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "#18181b", color: "#fff", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, zIndex: 999 }}>{msg}</div>}
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 4 }}>Project Groups</div>
@@ -3683,6 +3748,8 @@ async function uploadPdf(file, readingId) {
 }
 
 function RosterView({ data, setData, userName }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const crd = themedInteriorCrd(theme, 0);
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState("");
   const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis").sort(lastSortObj);
@@ -3696,7 +3763,7 @@ function RosterView({ data, setData, userName }) {
   }
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <div style={{ maxWidth: 500, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 10 }}>Class roster</div>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search classmates" style={{ ...inp, fontSize: 13, padding: "8px 12px", marginBottom: 12, width: "100%", boxSizing: "border-box" }} />
@@ -3762,6 +3829,8 @@ function RosterCombined({ data, setData, userName, isAdmin }) {
 }
 
 function BioView({ student, data, setData, userName, onBack }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const crd = themedInteriorCrd(theme, 0);
   const isOwn = student.name === userName;
   const isAdmin = userName === ADMIN_NAME;
   const canEdit = isOwn || isAdmin;
@@ -3803,7 +3872,7 @@ function BioView({ student, data, setData, userName, onBack }) {
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 480, margin: "0 auto" }}>
         {onBack && <button onClick={onBack} style={pillInactive}>Back to Roster</button>}
@@ -3893,6 +3962,8 @@ function BioView({ student, data, setData, userName, onBack }) {
 
 /* ─── READINGS & MEDIA ─── */
 function ReadingsView({ data, setData, isAdmin }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const crd = themedInteriorCrd(theme, 0);
   const readings = data.readings || [];
   const schedule = data.schedule || [];
   const [editId, setEditId] = useState(null);
@@ -4296,6 +4367,8 @@ function ReadingsView({ data, setData, isAdmin }) {
 
 /* ─── MY NOTES ─── */
 function MyNotesView({ data, setData, isAdmin, userName }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const crd = themedInteriorCrd(theme, 0);
   const studentNotes = data.studentNotes || {};
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState("");
@@ -4402,6 +4475,8 @@ function MyNotesView({ data, setData, isAdmin, userName }) {
 }
 
 function BoardsView({ data, setData, isAdmin, userName }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const crd = themedInteriorCrd(theme, 0);
   const boards = data.boards || [];
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -5058,6 +5133,8 @@ const COMM_CONCEPTS = [
 ];
 
 function ClassTools({ data, setData, isAdmin, userName }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const crd = themedInteriorCrd(theme, 0);
   const isGuest = userName === GUEST_NAME;
   const student = data.students.find(s => s.name === userName);
   const sid = student?.id;
@@ -5227,7 +5304,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
   if (isAdmin) {
     if (session) {
       return (
-        <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+        <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
           <Toast message={msg} />
           <div style={{ maxWidth: 700, margin: "0 auto" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
@@ -5348,7 +5425,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
 
     // Session list
     return (
-      <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+      <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
         <Toast message={msg} />
         <div style={{ maxWidth: 700, margin: "0 auto" }}>
           <div style={{ ...sectionLabel, marginBottom: 12 }}>Class Tools</div>
@@ -5404,7 +5481,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
   const { tally: stConceptTally, count: stConceptCount } = buildTally(currentSession?.conceptVotes);
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 500, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 12 }}>Class Tools</div>
@@ -5520,6 +5597,8 @@ const WEEKLY_ITEMS = [
 ];
 
 function ToDoView({ data, setData, userName, isAdmin }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const crd = themedInteriorCrd(theme, 0);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const [adding, setAdding] = useState(false);
@@ -5662,7 +5741,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
   });
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -5741,6 +5820,8 @@ function ToDoView({ data, setData, userName, isAdmin }) {
 
 /* ─── APP ─── */
 function ActivitiesView({ data, setData, isAdmin, userName }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const crd = themedInteriorCrd(theme, 0);
   const student = data.students.find(s => s.name === userName);
   const studentId = student?.id;
   const [openEventKey, setOpenEventKey] = useState(null);
@@ -5819,7 +5900,7 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
         {/* Live banner */}
@@ -6038,9 +6119,11 @@ function ClosedSurveyDetail({ survey, data, userName, isAdmin }) {
 
 /* ─── MORE ─── */
 function MoreView({ data, setData, isAdmin, userName }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const crd = themedInteriorCrd(theme, 0);
   const me = data?.students.find(s => s.name === userName);
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
         {/* Your info */}
