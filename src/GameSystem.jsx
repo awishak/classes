@@ -1123,15 +1123,11 @@ export function StudentAnswerView({ data, setData, userName }) {
     if (liveTotWeek) { setMode("tot"); setWeek(parseInt(liveTotWeek) || liveTotWeek); return; }
   }, [week, games, tots]);
 
-  // When no live activity, render nothing here. Past events are listed by ActivitiesView below.
-  if (week === null) {
-    return null;
-  }
-
-  // Get activity
+  // Get activity (must be computed before the conditional return so the hooks below
+  // are always called in the same order on every render — Rules of Hooks).
   const actType = mode;
   const activities = actType === "game" ? games : tots;
-  const liveActivity = activities[week] || activities[String(week)];
+  const liveActivity = week !== null ? (activities[week] || activities[String(week)]) : null;
 
   // Freeze activity while student is mid-selection so admin advances and live updates
   // don't kick them out of the question they're answering.
@@ -1145,6 +1141,11 @@ export function StudentAnswerView({ data, setData, userName }) {
       frozenActivityRef.current = null;
     }
   }, [selected, liveActivity]);
+
+  // When no live activity, render nothing here. Past events are listed by ActivitiesView below.
+  if (week === null) {
+    return null;
+  }
 
   const activity = (selected !== null && frozenActivityRef.current) ? frozenActivityRef.current : liveActivity;
 
