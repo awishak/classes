@@ -36,11 +36,11 @@ function parseDueDate(dueStr) {
 }
 
 export const DEFAULT_ASSIGNMENTS = [
-  { id: "interview", name: "Interview Assignment", weight: 5, due: "Apr 17", link: "", notes: "Interview someone who works in sports in a job you're interested in" },
-  { id: "woc_proposal", name: "Intersections Proposal", weight: 5, due: "Apr 24", link: "", notes: "" },
-  { id: "woc_submission", name: "Intersections Submission", weight: 20, due: "May 8", link: "", notes: "" },
-  { id: "leadership_guide", name: "Leadership Guide", weight: 15, due: "May 20", link: "", notes: "" },
-  { id: "final_project", name: "Final Project: Teach Me Something New", weight: 30, due: "Jun 8", link: "", notes: "" },
+  { id: "interview", name: "Interview Assignment", weight: 5, due: "Apr 17", dueTime: "11:59 PM", link: "", notes: "Interview someone who works in sports in a job you're interested in" },
+  { id: "woc_proposal", name: "Intersections Proposal", weight: 5, due: "Apr 24", dueTime: "11:59 PM", link: "", notes: "" },
+  { id: "woc_submission", name: "Intersections Submission", weight: 20, due: "May 8", dueTime: "11:59 PM", link: "", notes: "" },
+  { id: "leadership_guide", name: "Leadership Guide", weight: 15, due: "May 20", dueTime: "11:59 PM", link: "", notes: "" },
+  { id: "final_project", name: "Final Project: Teach Me Something New", weight: 30, due: "Jun 8", dueTime: "11:59 PM", link: "", notes: "" },
   { id: "participation", name: "Participation", weight: 25, due: "", link: "", notes: "Weekly Game, This or That, Around the Horn, Rotating Fishbowl" },
 ];
 
@@ -475,11 +475,12 @@ function fmtDayDate(ts) {
 }
 
 // Format due like "Apr 17" -> "Thu, Apr 17"
-function fmtDue(dueStr) {
+function fmtDue(dueStr, dueTime) {
   if (!dueStr) return "";
   const d = parseDueDate(dueStr);
-  if (!d) return dueStr;
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const datePart = d ? d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : dueStr;
+  const timePart = dueTime || "11:59 PM";
+  return datePart + ", " + timePart;
 }
 
 // Determine state for an assignment dot
@@ -575,7 +576,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
 
   const startEdit = (a) => {
     setEditId(a.id);
-    setEditLocal({ name: a.name, weight: a.weight, due: a.due || "", link: a.link || "", notes: a.notes || "" });
+    setEditLocal({ name: a.name, weight: a.weight, due: a.due || "", dueTime: a.dueTime || "", link: a.link || "", notes: a.notes || "" });
   };
 
   const saveEdit = async () => {
@@ -849,7 +850,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                     {rows.map((r, i) => {
                       const isExpanded = tableExpandedId === r.a.id;
                       const isLast = i === rows.length - 1;
-                      const dueText = r.isPart ? "Ongoing" : (r.a.due ? "Due " + fmtDue(r.a.due) : "—");
+                      const dueText = r.isPart ? "Ongoing" : (r.a.due ? "Due " + fmtDue(r.a.due, r.a.dueTime) : "—");
                       return (
                         <React.Fragment key={r.a.id}>
                           <tr
@@ -908,7 +909,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
               {rows.map(r => {
                 const isExpanded = tableExpandedId === r.a.id;
-                const dueText = r.isPart ? "Ongoing" : (r.a.due ? "Due " + fmtDue(r.a.due) : "—");
+                const dueText = r.isPart ? "Ongoing" : (r.a.due ? "Due " + fmtDue(r.a.due, r.a.dueTime) : "—");
                 return (
                   <div key={r.a.id}>
                     <div
@@ -963,7 +964,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                 <div style={{ minWidth: 48, height: 48, borderRadius: 12, background: ACCENT + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: ACCENT, flexShrink: 0, padding: "0 6px" }}>{nextAssignment.weight}%</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 18, fontWeight: 800, color: TEXT_PRIMARY, lineHeight: 1.2 }}>{nextAssignment.name}</div>
-                  {nextAssignment.due && <div style={{ fontSize: 13, color: ACCENT, fontWeight: 700, marginTop: 4 }}>Due {fmtDue(nextAssignment.due)}</div>}
+                  {nextAssignment.due && <div style={{ fontSize: 13, color: ACCENT, fontWeight: 700, marginTop: 4 }}>Due {fmtDue(nextAssignment.due, nextAssignment.dueTime)}</div>}
                 </div>
                 {studentId && <StatusBadge state={getAssignmentState(nextAssignment, data, studentId)} />}
               </div>
@@ -993,6 +994,10 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                       <div style={{ flex: 1 }}>
                         <div style={{ ...sectionLabel, marginBottom: 4 }}>Due Date</div>
                         <input value={editLocal.due} onChange={e => setEditLocal({ ...editLocal, due: e.target.value })} placeholder="e.g. Apr 20" style={inp} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ ...sectionLabel, marginBottom: 4 }}>Due Time</div>
+                        <input value={editLocal.dueTime || ""} onChange={e => setEditLocal({ ...editLocal, dueTime: e.target.value })} placeholder="11:59 PM" style={inp} />
                       </div>
                     </div>
                     <div>
@@ -1037,7 +1042,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{a.name}</div>
                     <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>
-                      {a.due ? "Due " + fmtDue(a.due) : "Ongoing"}
+                      {a.due ? "Due " + fmtDue(a.due, a.dueTime) : "Ongoing"}
                     </div>
                   </div>
                   {studentId && (() => {

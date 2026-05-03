@@ -36,16 +36,16 @@ function parseDueDate(dueStr) {
 }
 
 export const DEFAULT_ASSIGNMENTS = [
-  { id: "speech_college", name: "Why I Chose to Go to College", weight: 3, due: "Apr 6", link: "", notes: "" },
-  { id: "speech_character", name: "Does Character Matter in College?", weight: 3, due: "Apr 10", link: "", notes: "" },
-  { id: "speech_ethics", name: "Ethics Bowl", weight: 5, due: "Apr 17", link: "", notes: "" },
-  { id: "speech_occasion", name: "Special Occasion", weight: 10, due: "Apr 24", link: "", notes: "" },
-  { id: "speech_wildcard", name: "Wildcard", weight: 3, due: "May 1", link: "", notes: "" },
-  { id: "speech_preview", name: "Preview", weight: 5, due: "May 8", link: "", notes: "" },
-  { id: "speech_3things", name: "3 Things to Know", weight: 20, due: "May 15", link: "", notes: "" },
-  { id: "speech_goodchange1", name: "A Good Change Rd 1", weight: 10, due: "May 27", link: "", notes: "" },
-  { id: "speech_improvements", name: "Improvements", weight: 3, due: "Jun 5", link: "", notes: "" },
-  { id: "speech_goodchange2", name: "A Good Change Rd 2", weight: 20, due: "Jun 10", link: "", notes: "" },
+  { id: "speech_college", name: "Why I Chose to Go to College", weight: 3, due: "Apr 6", dueTime: "11:59 PM", link: "", notes: "" },
+  { id: "speech_character", name: "Does Character Matter in College?", weight: 3, due: "Apr 10", dueTime: "11:59 PM", link: "", notes: "" },
+  { id: "speech_ethics", name: "Ethics Bowl", weight: 5, due: "Apr 17", dueTime: "11:59 PM", link: "", notes: "" },
+  { id: "speech_occasion", name: "Special Occasion", weight: 10, due: "Apr 24", dueTime: "11:59 PM", link: "", notes: "" },
+  { id: "speech_wildcard", name: "Wildcard", weight: 3, due: "May 1", dueTime: "11:59 PM", link: "", notes: "" },
+  { id: "speech_preview", name: "Preview", weight: 5, due: "May 8", dueTime: "11:59 PM", link: "", notes: "" },
+  { id: "speech_3things", name: "3 Things to Know", weight: 20, due: "May 15", dueTime: "11:59 PM", link: "", notes: "" },
+  { id: "speech_goodchange1", name: "A Good Change Rd 1", weight: 10, due: "May 27", dueTime: "11:59 PM", link: "", notes: "" },
+  { id: "speech_improvements", name: "Improvements", weight: 3, due: "Jun 5", dueTime: "11:59 PM", link: "", notes: "" },
+  { id: "speech_goodchange2", name: "A Good Change Rd 2", weight: 20, due: "Jun 10", dueTime: "11:59 PM", link: "", notes: "" },
   { id: "video_account", name: "Video Account Setup", weight: 1, due: "", link: "", notes: "" },
   { id: "peer_review_1", name: "Peer Review #1", weight: 1, due: "", link: "", notes: "" },
   { id: "peer_review_2", name: "Peer Review #2", weight: 1, due: "", link: "", notes: "" },
@@ -431,11 +431,12 @@ function fmtDayDate(ts) {
 }
 
 // Format due like "Apr 17" -> "Thu, Apr 17"
-function fmtDue(dueStr) {
+function fmtDue(dueStr, dueTime) {
   if (!dueStr) return "";
   const d = parseDueDate(dueStr);
-  if (!d) return dueStr;
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const datePart = d ? d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : dueStr;
+  const timePart = dueTime || "11:59 PM";
+  return datePart + ", " + timePart;
 }
 
 // Top-level participation grade computation — mirrors Gradebook's computeAutoParticipation.
@@ -710,7 +711,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
 
   const startEdit = (a) => {
     setEditId(a.id);
-    setEditLocal({ name: a.name, weight: a.weight, due: a.due || "", link: a.link || "", notes: a.notes || "" });
+    setEditLocal({ name: a.name, weight: a.weight, due: a.due || "", dueTime: a.dueTime || "", link: a.link || "", notes: a.notes || "" });
   };
 
   const saveEdit = async () => {
@@ -983,7 +984,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                     {rows.map((r, i) => {
                       const isExpanded = tableExpandedId === r.a.id;
                       const isLast = i === rows.length - 1;
-                      const dueText = r.isPart ? "Ongoing" : (r.a.due ? "Due " + fmtDue(r.a.due) : "—");
+                      const dueText = r.isPart ? "Ongoing" : (r.a.due ? "Due " + fmtDue(r.a.due, r.a.dueTime) : "—");
                       return (
                         <React.Fragment key={r.a.id}>
                           <tr
@@ -1042,7 +1043,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
               {rows.map(r => {
                 const isExpanded = tableExpandedId === r.a.id;
-                const dueText = r.isPart ? "Ongoing" : (r.a.due ? "Due " + fmtDue(r.a.due) : "—");
+                const dueText = r.isPart ? "Ongoing" : (r.a.due ? "Due " + fmtDue(r.a.due, r.a.dueTime) : "—");
                 return (
                   <div key={r.a.id}>
                     <div
@@ -1097,7 +1098,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                 <div style={{ minWidth: 48, height: 48, borderRadius: 12, background: ACCENT + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: ACCENT, flexShrink: 0, padding: "0 6px" }}>{nextAssignment.weight}%</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 18, fontWeight: 800, color: TEXT_PRIMARY, lineHeight: 1.2 }}>{nextAssignment.name}</div>
-                  {nextAssignment.due && <div style={{ fontSize: 13, color: ACCENT, fontWeight: 700, marginTop: 4 }}>Due {fmtDue(nextAssignment.due)}</div>}
+                  {nextAssignment.due && <div style={{ fontSize: 13, color: ACCENT, fontWeight: 700, marginTop: 4 }}>Due {fmtDue(nextAssignment.due, nextAssignment.dueTime)}</div>}
                 </div>
                 {studentId && <StatusBadge state={getAssignmentState(nextAssignment, data, studentId)} />}
               </div>
@@ -1127,6 +1128,10 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                       <div style={{ flex: 1 }}>
                         <div style={{ ...sectionLabel, marginBottom: 4 }}>Due Date</div>
                         <input value={editLocal.due} onChange={e => setEditLocal({ ...editLocal, due: e.target.value })} placeholder="e.g. Apr 20" style={inp} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ ...sectionLabel, marginBottom: 4 }}>Due Time</div>
+                        <input value={editLocal.dueTime || ""} onChange={e => setEditLocal({ ...editLocal, dueTime: e.target.value })} placeholder="11:59 PM" style={inp} />
                       </div>
                     </div>
                     <div>
@@ -1171,7 +1176,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{a.name}</div>
                     <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>
-                      {a.due ? "Due " + fmtDue(a.due) : "Ongoing"}
+                      {a.due ? "Due " + fmtDue(a.due, a.dueTime) : "Ongoing"}
                     </div>
                   </div>
                   {studentId && (() => {

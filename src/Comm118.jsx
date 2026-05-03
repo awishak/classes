@@ -6150,6 +6150,16 @@ export default function Comm118() {
           d._scheduleMigV2 = true;
           await saveData(d);
         }
+        // Migration: backfill dueTime "11:59 PM" on any assignment with a due date but no dueTime
+        if (d && d.assignments && !d._dueTimeMigV1) {
+          let changed = false;
+          d.assignments = d.assignments.map(a => {
+            if (a.due && !a.dueTime) { changed = true; return { ...a, dueTime: "11:59 PM" }; }
+            return a;
+          });
+          d._dueTimeMigV1 = true;
+          if (changed) await saveData(d);
+        }
         // Migration: fix "Quizzes" to "Weekly Game" in participation assignment notes
         if (d && d.assignments) {
           const partA = d.assignments.find(a => a.id === "participation");

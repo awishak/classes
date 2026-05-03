@@ -4165,6 +4165,16 @@ export default function Comm2() {
           await saveData(d);
         }
         if (d && !d.submissions) { d.submissions = {}; await saveData(d); }
+        // Migration: backfill dueTime "11:59 PM" on assignments with a due date but no dueTime
+        if (d && d.assignments && !d._dueTimeMigV1) {
+          let changed = false;
+          d.assignments = d.assignments.map(a => {
+            if (a.due && !a.dueTime) { changed = true; return { ...a, dueTime: "11:59 PM" }; }
+            return a;
+          });
+          d._dueTimeMigV1 = true;
+          if (changed) await saveData(d);
+        }
         if (d && !d.students.find(s => s.name === TEST_STUDENT)) {
           const tsId = genId();
           d.students.push({ id: tsId, name: TEST_STUDENT, teamId: d.teams?.[0]?.id || "" });
