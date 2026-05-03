@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const F = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const ACCENT = "#9f1239";
@@ -11,6 +11,39 @@ const BORDER = "#e5e5e4";
 const AMBER = "#d97706";
 
 const crd = { background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", overflow: "hidden" };
+
+// ─── THEME (mirrored helpers) ───
+const THEME_KEY_GS = "comm118-game-v14-theme";
+const CRASHING_PALETTE_GS = [
+  { border: "#ec4899", shadow1: "#f59e0b", shadow2: "#1f2937" },
+  { border: "#0ea5e9", shadow1: "#a855f7", shadow2: "#1f2937" },
+  { border: "#16a34a", shadow1: "#ec4899", shadow2: "#1f2937" },
+  { border: "#f59e0b", shadow1: "#0ea5e9", shadow2: "#1f2937" },
+  { border: "#a855f7", shadow1: "#16a34a", shadow2: "#1f2937" },
+  { border: "#dc2626", shadow1: "#0ea5e9", shadow2: "#1f2937" },
+];
+function useTheme() {
+  const [theme, setThemeRaw] = useState(() => {
+    try { return localStorage.getItem(THEME_KEY_GS) || "clean"; } catch(e) { return "clean"; }
+  });
+  useEffect(() => {
+    const onChange = (e) => setThemeRaw(e.detail);
+    window.addEventListener("themechange", onChange);
+    return () => window.removeEventListener("themechange", onChange);
+  }, []);
+  return { theme };
+}
+function themedInteriorCrd(theme, idx) {
+  if (theme === "locked") {
+    return { background: "#fff", borderRadius: 12, border: "2px solid #1f2937", overflow: "hidden", boxShadow: "inset 0 -3px 0 #dc2626, 0 2px 6px rgba(17, 24, 39, 0.12)" };
+  }
+  if (theme === "crashing") {
+    const p = CRASHING_PALETTE_GS[(idx || 0) % CRASHING_PALETTE_GS.length];
+    return { background: "#fff", borderRadius: 14, border: "3px solid " + p.border, overflow: "hidden", boxShadow: "4px 4px 0 " + p.shadow1 + ", 6px 6px 0 " + p.shadow2 };
+  }
+  return { background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", overflow: "hidden" };
+}
+// ─── END THEME ───
 const pill = { padding: "6px 12px", borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s" };
 const pillActive = { ...pill, background: "#111827", color: "#fff" };
 const pillInactive = { ...pill, background: "#f3f4f6", color: "#4b5563" };
@@ -914,6 +947,8 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
 
 /* ─── STUDENT: GAME + TOT ANSWER VIEW ─── */
 export function StudentAnswerView({ data, setData, userName }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const [week, setWeek] = useState(null);
   const [mode, setMode] = useState("game");
   const [selected, setSelected] = useState(null);
@@ -1369,6 +1404,8 @@ export function StudentAnswerView({ data, setData, userName }) {
 
 /* ─── ACCOLADES ─── */
 export function Accolades({ data }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const stars = data.fishbowlStars || {};
   const games = data.weeklyGames || {};
 
@@ -1453,6 +1490,8 @@ const STATUS_COLORS = {
 };
 
 export function ReboundPanel({ data, setData, activityType, week, isAdmin, userName }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const [reboundLink, setReboundLink] = useState("");

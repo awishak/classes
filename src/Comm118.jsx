@@ -837,6 +837,8 @@ function PastGamesReview({ data, studentId, filter }) {
 }
 
 function InClassView({ data, setData, isAdmin, userName }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const student = data.students.find(s => s.name === userName);
   const studentId = student?.id;
   return (
@@ -1564,6 +1566,28 @@ function themedAccent(theme) {
   if (theme === "locked") return "#dc2626";
   if (theme === "crashing") return "#ec4899";
   return ACCENT;
+}
+
+// Quieter interior card style for theme. Used by Schedule, Assignments, Activities, Boards, Leaderboard, Roster, More.
+// Same shape as `crd` but theme-aware. Rotation skipped on interior cards (would be unreadable for long lists).
+function themedInteriorCrd(theme, idx) {
+  if (theme === "locked") {
+    return {
+      background: "#fff", borderRadius: 12, border: "2px solid #1f2937", overflow: "hidden",
+      boxShadow: "inset 0 -3px 0 #dc2626, 0 2px 6px rgba(17, 24, 39, 0.12)",
+    };
+  }
+  if (theme === "crashing") {
+    const p = CRASHING_PALETTE[(idx || 0) % CRASHING_PALETTE.length];
+    return {
+      background: "#fff", borderRadius: 14, border: "3px solid " + p.border, overflow: "hidden",
+      boxShadow: "4px 4px 0 " + p.shadow1 + ", 6px 6px 0 " + p.shadow2,
+    };
+  }
+  return {
+    background: "#fff", borderRadius: 14, border: "1px solid #d1d5db", overflow: "hidden",
+    boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)",
+  };
 }
 
 // 8-bit pixel star — pure CSS animation
@@ -2547,6 +2571,7 @@ function ScheduleView({ data, setData, isAdmin }) {
   const schedule = data.schedule || DEFAULT_SCHEDULE;
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+  const { theme } = useTheme();
 
   // Auto-jump on mount: try to land on today's date card; fall back to current-week header.
   React.useEffect(() => {
@@ -2792,14 +2817,13 @@ function ScheduleView({ data, setData, isAdmin }) {
             });
 
             return (
-              <div key={wi} id={"view-week-" + wi} style={{
-                background: "#fff",
-                border: "1px solid " + (isCurrent ? ACCENT + "55" : "#d1d5db"),
-                borderRadius: 14,
-                overflow: "hidden",
-                opacity: isHidden ? 0.6 : 1,
-                boxShadow: isCurrent ? "0 0 0 1px " + ACCENT + "33, 0 2px 6px rgba(17, 24, 39, 0.08)" : "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)",
-              }}>
+              <div key={wi} id={"view-week-" + wi} style={(() => {
+                const base = themedInteriorCrd(theme, wi);
+                if (theme === "clean") {
+                  return { ...base, border: "1px solid " + (isCurrent ? ACCENT + "55" : "#d1d5db"), boxShadow: isCurrent ? "0 0 0 1px " + ACCENT + "33, 0 2px 6px rgba(17, 24, 39, 0.08)" : "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)", opacity: isHidden ? 0.6 : 1 };
+                }
+                return { ...base, opacity: isHidden ? 0.6 : 1 };
+              })()}>
                 {/* Topic color stripe */}
                 <div style={{ height: 3, background: isHidden ? TEXT_MUTED : tc }} />
 
@@ -2980,6 +3004,8 @@ function getWeekBounds() {
 }
 
 function Leaderboard({ students, log, teams, isAdmin, userName, data, setData }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const ranked = rs(students, log);
   const mx = ranked.length > 0 ? Math.max(ranked[0].points, 1) : 1;
   const [showAll, setShowAll] = useState(false);
@@ -4061,6 +4087,8 @@ async function uploadPdf(file, readingId) {
 }
 
 function RosterView({ data, setData, userName }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState("");
   const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis").sort(lastSortObj);
@@ -4138,6 +4166,8 @@ function RosterCombined({ data, setData, userName, isAdmin }) {
 }
 
 function BioView({ student, data, setData, userName, onBack }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const isOwn = student.name === userName;
   const isAdmin = userName === ADMIN_NAME;
   const canEdit = isOwn || isAdmin;
@@ -4269,6 +4299,8 @@ function BioView({ student, data, setData, userName, onBack }) {
 
 /* ─── READINGS & MEDIA ─── */
 function ReadingsView({ data, setData, isAdmin }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const readings = data.readings || [];
   const schedule = data.schedule || [];
   const [editId, setEditId] = useState(null);
@@ -4671,6 +4703,8 @@ function ReadingsView({ data, setData, isAdmin }) {
 
 /* ─── MY NOTES ─── */
 function MyNotesView({ data, setData, isAdmin, userName }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const studentNotes = data.studentNotes || {};
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState("");
@@ -4778,6 +4812,8 @@ function MyNotesView({ data, setData, isAdmin, userName }) {
 
 /* ─── DISCUSSION BOARDS ─── */
 function BoardsView({ data, setData, isAdmin, userName }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const boards = data.boards || [];
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -6104,6 +6140,8 @@ function ToDoView({ data, setData, userName, isAdmin }) {
 
 /* ─── ACTIVITIES (Pass 1 placeholder, Pass 4 will rebuild) ─── */
 function ActivitiesView({ data, setData, isAdmin, userName }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const student = data.students.find(s => s.name === userName);
   const studentId = student?.id;
   const [openEventKey, setOpenEventKey] = useState(null);
@@ -6401,6 +6439,8 @@ function ClosedSurveyDetail({ survey, data, userName, isAdmin }) {
 
 /* ─── MORE ─── */
 function MoreView({ data, setData, isAdmin, userName }) {
+  const { theme } = useTheme();
+  const crd = themedInteriorCrd(theme, 0);
   const me = data?.students.find(s => s.name === userName);
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
