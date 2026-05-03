@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ReboundPanel } from "./GameSystem";
 import { useTheme, themedInteriorCrd, themedHeadingFont } from "./styles.jsx";
+import { parseDueDate, fmtDue, genId, gp, Toast } from "./utils.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const TEXT_PRIMARY = "#111827";
@@ -28,16 +29,6 @@ const CONTAINER_MAX = 720;
 const ADMIN_NAME = "Andrew Ishak";
 const GUEST_NAME = "__guest__";
 
-function parseDueDate(dueStr) {
-  if (!dueStr) return null;
-  const year = new Date().getFullYear();
-  const parsed = new Date(dueStr + ", " + year);
-  if (isNaN(parsed.getTime())) return null;
-  // Set to end of day so "due Apr 17" means midnight at the end of Apr 17
-  parsed.setHours(23, 59, 59, 999);
-  return parsed;
-}
-
 export const DEFAULT_ASSIGNMENTS = [
   { id: "interview", name: "Interview Assignment", weight: 5, due: "Apr 17", dueTime: "11:59 PM", link: "", notes: "Interview someone who works in sports in a job you're interested in" },
   { id: "woc_proposal", name: "Intersections Proposal", weight: 5, due: "Apr 24", dueTime: "11:59 PM", link: "", notes: "" },
@@ -52,7 +43,6 @@ export const QUIZ_BREAKDOWN = [
   { id: "sports_world", label: "Sports World", count: 4, gamePts: 10, gradePts: 2.5 },
 ];
 
-function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#1e293b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 13, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
 
 function lastName(name) { if (name === "Alexander Watanabe Eriksson") return "Watanabe Eriksson"; return name.split(" ").slice(-1)[0]; }
 function lastSortObj(a, b) { return lastName(a.name).localeCompare(lastName(b.name)); }
@@ -406,7 +396,6 @@ function AssignmentRubricButton({ assignmentId, data, setData }) {
 }
 
 /* ─── ASSIGNMENTS TAB ─── */
-function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
 function TogglePanel({ label, count, children }) {
   const [show, setShow] = useState(false);
@@ -478,14 +467,6 @@ function fmtDayDate(ts) {
 }
 
 // Format due like "Apr 17" -> "Thu, Apr 17"
-function fmtDue(dueStr, dueTime) {
-  if (!dueStr) return "";
-  const d = parseDueDate(dueStr);
-  const datePart = d ? d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : dueStr;
-  const timePart = dueTime || "11:59 PM";
-  return datePart + ", " + timePart;
-}
-
 // Determine state for an assignment dot
 function getAssignmentState(a, data, studentId) {
   if (a.id === "participation") return "participation";

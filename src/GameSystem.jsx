@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useTheme, themedInteriorCrd, themedHeadingFont } from "./styles.jsx";
+import { genId, gp, Toast } from "./utils.jsx";
 
 const F = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const ACCENT = "#9f1239";
@@ -33,12 +34,9 @@ const OPT_COLORS = [
   { bg: "#059669", light: "#ecfdf5" },
 ];
 
-function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#1e293b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 13, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
-function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 function lastName(name) { if (name === "Alexander Watanabe Eriksson") return "Watanabe Eriksson"; return name.split(" ").slice(-1)[0]; }
 function lastSortObj(a, b) { return lastName(a.name).localeCompare(lastName(b.name)); }
 async function saveData(data) { try { await window.storage.set("comm118-game-v14", JSON.stringify(data), true); return true; } catch { return false; } }
-function gp(log, sid) { return log.filter(e => e.studentId === sid).reduce((s, e) => s + e.amount, 0); }
 function rs(students, log) { return students.map(s => ({ ...s, points: gp(log, s.id) })).sort((a, b) => b.points - a.points); }
 function shuffleTeams(students, log, teams) {
   const ranked = rs(students, log);

@@ -12,6 +12,7 @@ import {
   TRASH_TALK, ENCOURAGEMENT, randomChampionshipLine,
   THEME_KEYFRAMES_CSS,
 } from "./styles.jsx";
+import { genId, shuffle, gp, Toast } from "./utils.jsx";
 
 const STORAGE_KEY = "comm2-v1";
 
@@ -139,8 +140,6 @@ if (typeof document !== "undefined" && !document.getElementById("comm2-responsiv
   document.head.appendChild(style);
 }
 
-function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
 async function loadData() { try { const r = await window.storage.get(STORAGE_KEY, true); return r ? JSON.parse(r.value) : null; } catch { return null; } }
 
@@ -166,13 +165,11 @@ async function saveData(newData) {
   } catch(e) { console.error("saveData failed:", e); return false; }
 }
 
-function gp(log, sid) { return log.filter(e => e.studentId === sid).reduce((s, e) => s + e.amount, 0); }
 function lastName(name) { if (name === "Anne Sephora Pohan") return "Pohan"; return name.split(" ").slice(-1)[0]; }
 function lastSort(a, b) { return lastName(a).localeCompare(lastName(b)); }
 function lastSortObj(a, b) { return lastName(a.name).localeCompare(lastName(b.name)); }
 function rs(students, log) { return students.map(s => ({ ...s, points: gp(log, s.id) })).sort((a, b) => b.points - a.points); }
 
-function Toast({ message }) { if (!message) return null; return <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: "#18181b", color: "#fff", padding: "10px 24px", borderRadius: 12, fontWeight: 600, zIndex: 100, fontFamily: F, fontSize: 14, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>{message}</div>; }
 
 function scrollToWithOffset(el, offset = 80) {
   if (!el) return;
