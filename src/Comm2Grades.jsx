@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ReboundPanel } from "./Comm2Game.jsx";
-import { useTheme, themedInteriorCrd, themedHeadingFont } from "./theme.jsx";
+import { useTheme, themedInteriorCrd, themedHeadingFont } from "./styles.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const TEXT_PRIMARY = "#111827";

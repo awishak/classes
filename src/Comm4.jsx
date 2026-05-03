@@ -2,13 +2,16 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { AssignmentsView, Gradebook, GradingInbox, DEFAULT_ASSIGNMENTS as _DA } from "./Grades4.jsx";
 import { GameAdmin, StudentAnswerView, Accolades } from "./GameSystem4.jsx";
 import {
+  BG, BORDER, BORDER_STRONG, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
+  GREEN, RED, AMBER, PURPLE, CONTAINER_MAX, F,
+  crd, pill, pillActive, pillInactive, bt, sectionLabel, linkPill, inp, sel,
   useTheme, THEMES, THEME_LABELS, THEME_DESCS,
   themedPageBg, themedHeadingFont, themedAccent,
   themedInteriorCrd, CRASHING_PALETTE,
   PixelStar, PixelArrow, PixelHeart, PixelMushroom, PixelCoin, PixelLightning,
   TRASH_TALK, ENCOURAGEMENT, randomChampionshipLine,
   THEME_KEYFRAMES_CSS,
-} from "./theme.jsx";
+} from "./styles.jsx";
 
 const STORAGE_KEY = "comm4-v1";
 
@@ -106,56 +109,7 @@ const DEFAULT_SCHEDULE = [
 
 const ACCENT = "#059669";
 const ACCENT_LIGHT = "#d1fae5";
-const BG = "#ffffff";
-const BORDER = "#f3f4f6";
-const BORDER_STRONG = "#e5e7eb";
-const TEXT_PRIMARY = "#111827";
-const TEXT_SECONDARY = "#4b5563";
-const TEXT_MUTED = "#9ca3af";
-const GREEN = "#10b981";
-const RED = "#ef4444";
-const AMBER = "#f59e0b";
-const PURPLE = "#8b5cf6";
 const TEAL = "#14b8a6";
-const F = "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-const CONTAINER_MAX = 960;
-
-// Load Outfit
-if (typeof document !== "undefined" && !document.getElementById("outfit-font")) {
-  const link = document.createElement("link");
-  link.id = "outfit-font";
-  link.href = "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap";
-  link.rel = "stylesheet";
-  document.head.appendChild(link);
-  const style = document.createElement("style");
-  style.textContent = "body { font-family: " + F + "; }";
-  document.head.appendChild(style);
-}
-// Responsive grid + animations
-if (typeof document !== "undefined" && !document.getElementById("comm4-responsive")) {
-  const style = document.createElement("style");
-  style.id = "comm4-responsive";
-  style.textContent = `
-    .schedule-days { grid-template-columns: 1fr !important; }
-    .home-grid { grid-template-columns: 1fr !important; }
-    @media (min-width: 700px) { .schedule-days { grid-template-columns: repeat(3, 1fr) !important; } }
-    @media (min-width: 700px) { .schedule-days[data-cols="2"] { grid-template-columns: repeat(2, 1fr) !important; } }
-    @media (min-width: 700px) { .home-grid { grid-template-columns: 1fr 1fr !important; } }
-    @keyframes tickerPulse { 0% { transform: scale(1.15); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
-    @keyframes livePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85); } }
-  `;
-  document.head.appendChild(style);
-}
-
-const crd = { background: "#fff", borderRadius: 14, border: "1px solid #d1d5db", overflow: "hidden", boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" };
-const pill = { padding: "8px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s" };
-const pillActive = { ...pill, background: TEXT_PRIMARY, color: "#fff" };
-const pillInactive = { ...pill, background: "#f3f4f6", color: TEXT_SECONDARY };
-const bt = { padding: "9px 18px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, cursor: "pointer", fontFamily: F, fontWeight: 700, fontSize: 13, transition: "all 0.15s", background: "#fff", color: TEXT_SECONDARY };
-const linkPill = { padding: "6px 12px", borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: F, border: "none", background: "#f3f4f6", color: TEXT_SECONDARY, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 };
-const sectionLabel = { fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.12em", fontFamily: F };
-const inp = { background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 10, padding: "10px 12px", color: TEXT_PRIMARY, fontFamily: F, fontSize: 14, fontWeight: 500, outline: "none", width: "100%", boxSizing: "border-box" };
-const sel = { ...inp, width: "auto" };
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }

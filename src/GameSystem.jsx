@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useTheme, themedInteriorCrd, themedHeadingFont } from "./theme.jsx";
+import { useTheme, themedInteriorCrd, themedHeadingFont } from "./styles.jsx";
 
 const F = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const ACCENT = "#9f1239";
