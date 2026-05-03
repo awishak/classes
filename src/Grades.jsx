@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ReboundPanel } from "./GameSystem";
+import { useTheme, themedInteriorCrd, themedHeadingFont } from "./theme.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const TEXT_PRIMARY = "#111827";
@@ -15,43 +16,6 @@ const TEAL = "#14b8a6";
 
 const crd = { background: "#fff", borderRadius: 14, border: "1px solid #d1d5db", overflow: "hidden", boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" };
 
-// ─── THEME (mirrored from Comm118.jsx; circular import so we duplicate) ───
-const THEME_KEY_GRADES = "comm118-game-v14-theme";
-const CRASHING_PALETTE_G = [
-  { border: "#ec4899", shadow1: "#f59e0b", shadow2: "#1f2937" },
-  { border: "#0ea5e9", shadow1: "#a855f7", shadow2: "#1f2937" },
-  { border: "#16a34a", shadow1: "#ec4899", shadow2: "#1f2937" },
-  { border: "#f59e0b", shadow1: "#0ea5e9", shadow2: "#1f2937" },
-  { border: "#a855f7", shadow1: "#16a34a", shadow2: "#1f2937" },
-  { border: "#dc2626", shadow1: "#0ea5e9", shadow2: "#1f2937" },
-];
-function useTheme() {
-  const [theme, setThemeRaw] = useState(() => {
-    try { return localStorage.getItem(THEME_KEY_GRADES) || "clean"; } catch(e) { return "clean"; }
-  });
-  useEffect(() => {
-    const onChange = (e) => setThemeRaw(e.detail);
-    window.addEventListener("themechange", onChange);
-    return () => window.removeEventListener("themechange", onChange);
-  }, []);
-  return { theme };
-}
-function themedInteriorCrd(theme, idx) {
-  if (theme === "locked") {
-    return { background: "#fff", borderRadius: 12, border: "2px solid #1f2937", overflow: "hidden", boxShadow: "inset 0 -3px 0 #dc2626, 0 2px 6px rgba(17, 24, 39, 0.12)" };
-  }
-  if (theme === "crashing") {
-    const p = CRASHING_PALETTE_G[(idx || 0) % CRASHING_PALETTE_G.length];
-    return { background: "#fff", borderRadius: 14, border: "3px solid " + p.border, overflow: "hidden", boxShadow: "4px 4px 0 " + p.shadow1 + ", 6px 6px 0 " + p.shadow2 };
-  }
-  return { background: "#fff", borderRadius: 14, border: "1px solid #d1d5db", overflow: "hidden", boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" };
-}
-function themedHeadingFont(theme) {
-  if (theme === "crashing") return "'Rubik Mono One', 'Bricolage Grotesque', 'Outfit', sans-serif";
-  if (theme === "locked") return "'Space Grotesk', 'Outfit', -apple-system, sans-serif";
-  return F;
-}
-// ─── END THEME ───
 
 const pill = { padding: "8px 14px", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s" };
 const pillInactive = { ...pill, background: "#f3f4f6", color: TEXT_SECONDARY };
@@ -571,7 +535,7 @@ function StatusBadge({ state }) {
 }
 
 export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme("comm118-game-v14");
   const crd = themedInteriorCrd(theme, 0);
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
@@ -782,7 +746,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto" }}>
 
@@ -2306,7 +2270,7 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
 }
 
 export function Gradebook({ data, setData, userName, isAdmin, setView }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme("comm118-game-v14");
   const crd = themedInteriorCrd(theme, 0);
   const assignments = data.assignments || DEFAULT_ASSIGNMENTS;
   const grades = data.grades || {};
@@ -3187,7 +3151,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   if (!studentId) return <div style={{ padding: 40, textAlign: "center", fontFamily: F, color: TEXT_SECONDARY }}>Student not found.</div>;
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 12 }}>My Grades</div>
         {renderStudentGrades(studentId)}

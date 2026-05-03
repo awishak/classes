@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { AssignmentsView, Gradebook, GradingInbox, DEFAULT_ASSIGNMENTS } from "./Grades.jsx";
 import { GameAdmin, StudentAnswerView, Accolades } from "./GameSystem.jsx";
+import {
+  useTheme, THEMES, THEME_LABELS, THEME_DESCS,
+  themedPageBg, themedHeadingFont, themedBodyFont, themedAccent,
+  themedInteriorCrd, CRASHING_PALETTE,
+  PixelStar, PixelArrow, PixelHeart, PixelMushroom, PixelCoin, PixelLightning,
+  TRASH_TALK, ENCOURAGEMENT, randomChampionshipLine,
+  THEME_KEYFRAMES_CSS, themedFontsUrl,
+} from "./theme.js";
 
 const STORAGE_KEY = "comm118-game-v14";
 
@@ -230,8 +238,8 @@ function PageHeader({ title, onBack, right }) {
 
 /* ─── NAV ─── */
 function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent, allStudents, activitiesLive }) {
-  const { theme } = useTheme();
-  const themedFont = themedHeadingFont(theme);
+  const { theme } = useTheme(STORAGE_KEY);
+  const themedFont = themedHeadingFont(theme, F);
   // Load themed fonts here so they're available across the app, not just on Home
   React.useEffect(() => {
     if (theme === "clean") return;
@@ -837,12 +845,12 @@ function PastGamesReview({ data, studentId, filter }) {
 }
 
 function InClassView({ data, setData, isAdmin, userName }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme(STORAGE_KEY);
   const crd = themedInteriorCrd(theme, 0);
   const student = data.students.find(s => s.name === userName);
   const studentId = student?.id;
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
         {/* Weekly Game (live + past games) */}
@@ -1466,319 +1474,6 @@ function HomeGradedNotifications({ data, setData, studentId }) {
   );
 }
 
-// ─── THEME SYSTEM ──────────────────────────────────────────────────────────
-// Three themes: "clean" (default), "locked" (bold confident), "crashing" (Y2K maximalist).
-// Per-class, per-user, persisted in localStorage.
-
-const THEME_KEY = STORAGE_KEY + "-theme";
-const THEMES = ["clean", "locked", "crashing"];
-const THEME_LABELS = { clean: "Clean", locked: "Locked In", crashing: "Crashing Out" };
-const THEME_DESCS = {
-  clean: "Calm and minimal",
-  locked: "Bold and confident",
-  crashing: "Maximum chaos",
-};
-
-function useTheme() {
-  const [theme, setThemeRaw] = useState(() => {
-    try { return localStorage.getItem(THEME_KEY) || "clean"; } catch(e) { return "clean"; }
-  });
-  // Listen for theme changes from other components on the same page
-  React.useEffect(() => {
-    const onChange = (e) => setThemeRaw(e.detail);
-    window.addEventListener("themechange", onChange);
-    return () => window.removeEventListener("themechange", onChange);
-  }, []);
-  const setTheme = (t) => {
-    try { localStorage.setItem(THEME_KEY, t); } catch(e) {}
-    setThemeRaw(t);
-    try { window.dispatchEvent(new CustomEvent("themechange", { detail: t })); } catch(e) {}
-  };
-  const cycleTheme = () => {
-    const i = THEMES.indexOf(theme);
-    setTheme(THEMES[(i + 1) % THEMES.length]);
-  };
-  return { theme, setTheme, cycleTheme };
-}
-
-// Card style by theme. Returns the inline-style object matching `crd` shape.
-function themedCard(theme) {
-  if (theme === "locked") {
-    return {
-      background: "#fff", borderRadius: 14, border: "2px solid #1f2937", overflow: "hidden",
-      boxShadow: "0 4px 12px rgba(17, 24, 39, 0.12), 0 2px 4px rgba(17, 24, 39, 0.08)",
-    };
-  }
-  if (theme === "crashing") {
-    return {
-      background: "#fff", borderRadius: 14, border: "3px solid #ec4899", overflow: "hidden",
-      boxShadow: "6px 6px 0 #f59e0b, 8px 8px 0 #1f2937",
-    };
-  }
-  // clean (default)
-  return {
-    background: "#fff", borderRadius: 14, border: "1px solid #d1d5db", overflow: "hidden",
-    boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)",
-  };
-}
-
-// Returns a stable "wacky" border + shadow combo for crashing-out cards, deterministic per index.
-const CRASHING_PALETTE = [
-  { border: "#ec4899", shadow1: "#f59e0b", shadow2: "#1f2937" },
-  { border: "#0ea5e9", shadow1: "#a855f7", shadow2: "#1f2937" },
-  { border: "#16a34a", shadow1: "#ec4899", shadow2: "#1f2937" },
-  { border: "#f59e0b", shadow1: "#0ea5e9", shadow2: "#1f2937" },
-  { border: "#a855f7", shadow1: "#16a34a", shadow2: "#1f2937" },
-  { border: "#dc2626", shadow1: "#0ea5e9", shadow2: "#1f2937" },
-];
-function crashingCardFor(idx) {
-  const p = CRASHING_PALETTE[idx % CRASHING_PALETTE.length];
-  return {
-    background: "#fff", borderRadius: 14, border: "3px solid " + p.border, overflow: "hidden",
-    boxShadow: "5px 5px 0 " + p.shadow1 + ", 7px 7px 0 " + p.shadow2,
-    transform: idx % 2 === 0 ? "rotate(-0.5deg)" : "rotate(0.5deg)",
-  };
-}
-
-// Page background by theme
-function themedPageBg(theme) {
-  if (theme === "locked") return "#f3f4f6";
-  if (theme === "crashing") {
-    return "linear-gradient(135deg, #fce7f3 0%, #fef3c7 20%, #dbeafe 40%, #ddd6fe 60%, #fbcfe8 80%, #fef3c7 100%)";
-  }
-  return "#fafaf9";
-}
-
-// Heading font by theme
-function themedHeadingFont(theme) {
-  if (theme === "crashing") return "'Rubik Mono One', 'Bricolage Grotesque', 'Outfit', sans-serif";
-  if (theme === "locked") return "'Space Grotesk', 'Outfit', -apple-system, sans-serif";
-  return F;
-}
-
-// Body font (only used where headings differ from body)
-function themedBodyFont(theme) {
-  return themedHeadingFont(theme);
-}
-
-// Theme accent color
-function themedAccent(theme) {
-  if (theme === "locked") return "#dc2626";
-  if (theme === "crashing") return "#ec4899";
-  return ACCENT;
-}
-
-// Quieter interior card style for theme. Used by Schedule, Assignments, Activities, Boards, Leaderboard, Roster, More.
-// Same shape as `crd` but theme-aware. Rotation skipped on interior cards (would be unreadable for long lists).
-function themedInteriorCrd(theme, idx) {
-  if (theme === "locked") {
-    return {
-      background: "#fff", borderRadius: 12, border: "2px solid #1f2937", overflow: "hidden",
-      boxShadow: "inset 0 -3px 0 #dc2626, 0 2px 6px rgba(17, 24, 39, 0.12)",
-    };
-  }
-  if (theme === "crashing") {
-    const p = CRASHING_PALETTE[(idx || 0) % CRASHING_PALETTE.length];
-    return {
-      background: "#fff", borderRadius: 14, border: "3px solid " + p.border, overflow: "hidden",
-      boxShadow: "4px 4px 0 " + p.shadow1 + ", 6px 6px 0 " + p.shadow2,
-    };
-  }
-  return {
-    background: "#fff", borderRadius: 14, border: "1px solid #d1d5db", overflow: "hidden",
-    boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)",
-  };
-}
-
-// 8-bit pixel star — pure CSS animation
-function PixelStar({ top, right, left, bottom, delay = 0, color = "#fbbf24" }) {
-  const size = 24;
-  return (
-    <div style={{
-      position: "absolute", top, right, left, bottom, width: size, height: size, zIndex: 5,
-      animation: "pixelStarTwinkle 1.6s ease-in-out infinite",
-      animationDelay: delay + "s",
-      pointerEvents: "none",
-    }}>
-      <svg viewBox="0 0 24 24" width={size} height={size} shapeRendering="crispEdges">
-        <rect x="10" y="2" width="4" height="4" fill={color} />
-        <rect x="8" y="6" width="2" height="2" fill={color} />
-        <rect x="14" y="6" width="2" height="2" fill={color} />
-        <rect x="6" y="8" width="2" height="2" fill={color} />
-        <rect x="16" y="8" width="2" height="2" fill={color} />
-        <rect x="2" y="10" width="4" height="4" fill={color} />
-        <rect x="6" y="10" width="12" height="4" fill={color} opacity="0.7" />
-        <rect x="18" y="10" width="4" height="4" fill={color} />
-        <rect x="6" y="14" width="2" height="2" fill={color} />
-        <rect x="16" y="14" width="2" height="2" fill={color} />
-        <rect x="8" y="16" width="2" height="2" fill={color} />
-        <rect x="14" y="16" width="2" height="2" fill={color} />
-        <rect x="10" y="18" width="4" height="4" fill={color} />
-      </svg>
-    </div>
-  );
-}
-
-// 8-bit pixel arrow (bouncing)
-function PixelArrow({ bottom, left, top, right, delay = 0, color = "#ec4899" }) {
-  const size = 28;
-  return (
-    <div style={{
-      position: "absolute", bottom, left, top, right, width: size, height: size, zIndex: 5,
-      animation: "pixelArrowBounce 0.9s ease-in-out infinite",
-      animationDelay: delay + "s",
-      pointerEvents: "none",
-    }}>
-      <svg viewBox="0 0 28 28" width={size} height={size} shapeRendering="crispEdges">
-        <rect x="12" y="2" width="4" height="4" fill={color} />
-        <rect x="10" y="6" width="8" height="2" fill={color} />
-        <rect x="8" y="8" width="12" height="2" fill={color} />
-        <rect x="6" y="10" width="16" height="2" fill={color} />
-        <rect x="12" y="12" width="4" height="14" fill={color} />
-      </svg>
-    </div>
-  );
-}
-
-// 8-bit pixel heart (pulsing)
-function PixelHeart({ top, right, left, bottom, delay = 0 }) {
-  const size = 26;
-  return (
-    <div style={{
-      position: "absolute", top, right, left, bottom, width: size, height: size, zIndex: 5,
-      animation: "pixelHeartPulse 1.1s ease-in-out infinite",
-      animationDelay: delay + "s",
-      pointerEvents: "none",
-    }}>
-      <svg viewBox="0 0 26 26" width={size} height={size} shapeRendering="crispEdges">
-        <rect x="4" y="4" width="6" height="2" fill="#dc2626" />
-        <rect x="16" y="4" width="6" height="2" fill="#dc2626" />
-        <rect x="2" y="6" width="10" height="4" fill="#dc2626" />
-        <rect x="14" y="6" width="10" height="4" fill="#dc2626" />
-        <rect x="4" y="6" width="2" height="2" fill="#fca5a5" />
-        <rect x="16" y="6" width="2" height="2" fill="#fca5a5" />
-        <rect x="2" y="10" width="22" height="2" fill="#dc2626" />
-        <rect x="4" y="12" width="18" height="2" fill="#dc2626" />
-        <rect x="6" y="14" width="14" height="2" fill="#dc2626" />
-        <rect x="8" y="16" width="10" height="2" fill="#dc2626" />
-        <rect x="10" y="18" width="6" height="2" fill="#dc2626" />
-        <rect x="12" y="20" width="2" height="2" fill="#dc2626" />
-      </svg>
-    </div>
-  );
-}
-
-// 8-bit pixel mushroom (wiggling)
-function PixelMushroom({ top, right, left, bottom, delay = 0 }) {
-  const size = 28;
-  return (
-    <div style={{
-      position: "absolute", top, right, left, bottom, width: size, height: size, zIndex: 5,
-      animation: "pixelWiggle 1.4s ease-in-out infinite",
-      animationDelay: delay + "s",
-      pointerEvents: "none",
-    }}>
-      <svg viewBox="0 0 28 28" width={size} height={size} shapeRendering="crispEdges">
-        <rect x="8" y="2" width="12" height="2" fill="#dc2626" />
-        <rect x="6" y="4" width="16" height="2" fill="#dc2626" />
-        <rect x="4" y="6" width="20" height="4" fill="#dc2626" />
-        <rect x="8" y="6" width="4" height="4" fill="#fff" />
-        <rect x="16" y="6" width="4" height="4" fill="#fff" />
-        <rect x="2" y="10" width="24" height="2" fill="#dc2626" />
-        <rect x="6" y="10" width="4" height="2" fill="#fff" />
-        <rect x="14" y="10" width="2" height="2" fill="#fff" />
-        <rect x="18" y="10" width="4" height="2" fill="#fff" />
-        <rect x="2" y="12" width="24" height="2" fill="#dc2626" />
-        <rect x="8" y="14" width="12" height="6" fill="#fef3c7" />
-        <rect x="10" y="16" width="2" height="2" fill="#1f2937" />
-        <rect x="16" y="16" width="2" height="2" fill="#1f2937" />
-        <rect x="8" y="20" width="12" height="4" fill="#fef3c7" />
-      </svg>
-    </div>
-  );
-}
-
-// 8-bit pixel coin (spinning via scaleX)
-function PixelCoin({ top, right, left, bottom, delay = 0 }) {
-  const size = 22;
-  return (
-    <div style={{
-      position: "absolute", top, right, left, bottom, width: size, height: size, zIndex: 5,
-      animation: "pixelCoinSpin 1.2s linear infinite",
-      animationDelay: delay + "s",
-      pointerEvents: "none",
-    }}>
-      <svg viewBox="0 0 22 22" width={size} height={size} shapeRendering="crispEdges">
-        <rect x="8" y="2" width="6" height="2" fill="#fbbf24" />
-        <rect x="6" y="4" width="2" height="2" fill="#fbbf24" />
-        <rect x="14" y="4" width="2" height="2" fill="#fbbf24" />
-        <rect x="4" y="6" width="2" height="10" fill="#fbbf24" />
-        <rect x="16" y="6" width="2" height="10" fill="#fbbf24" />
-        <rect x="6" y="6" width="10" height="10" fill="#fde047" />
-        <rect x="9" y="7" width="4" height="2" fill="#f59e0b" />
-        <rect x="9" y="9" width="2" height="6" fill="#f59e0b" />
-        <rect x="6" y="16" width="2" height="2" fill="#fbbf24" />
-        <rect x="14" y="16" width="2" height="2" fill="#fbbf24" />
-        <rect x="8" y="18" width="6" height="2" fill="#fbbf24" />
-      </svg>
-    </div>
-  );
-}
-
-// 8-bit pixel lightning bolt
-function PixelLightning({ top, right, left, bottom, delay = 0 }) {
-  const size = 22;
-  return (
-    <div style={{
-      position: "absolute", top, right, left, bottom, width: size, height: size, zIndex: 5,
-      animation: "pixelFlash 0.8s ease-in-out infinite",
-      animationDelay: delay + "s",
-      pointerEvents: "none",
-    }}>
-      <svg viewBox="0 0 22 22" width={size} height={size} shapeRendering="crispEdges">
-        <rect x="10" y="0" width="6" height="2" fill="#fde047" />
-        <rect x="8" y="2" width="6" height="2" fill="#fde047" />
-        <rect x="6" y="4" width="6" height="2" fill="#fde047" />
-        <rect x="4" y="6" width="6" height="2" fill="#fde047" />
-        <rect x="2" y="8" width="10" height="2" fill="#fde047" />
-        <rect x="6" y="10" width="6" height="2" fill="#fde047" />
-        <rect x="4" y="12" width="6" height="2" fill="#fde047" />
-        <rect x="2" y="14" width="6" height="2" fill="#fde047" />
-        <rect x="0" y="16" width="6" height="2" fill="#fde047" />
-      </svg>
-    </div>
-  );
-}
-
-const TRASH_TALK = [
-  "I'm winning",
-  "I'm beating you",
-  "That A is mine",
-  "hey you gotta lock in my dude",
-  "have you seen these?",
-  "catch up",
-  "stay mad",
-];
-
-const ENCOURAGEMENT = [
-  "hell yeah dude",
-  "let's go",
-  "snooby wooby!",
-  "you are confident. you are capable",
-  "i believe in you",
-  "let __NAME__ cook!",
-  "you've got this",
-  "lock in",
-  "we're built for this",
-];
-
-// Random sports championship year line
-const CHAMPIONSHIPS = ["Super Bowl", "World Series", "NBA Finals"];
-function randomChampionshipLine() {
-  const year = 1989 + Math.floor(Math.random() * (2026 - 1989 + 1));
-  const event = CHAMPIONSHIPS[Math.floor(Math.random() * CHAMPIONSHIPS.length)];
-  return year + " " + event;
-}
 
 function HomeView({ data, setData, userName, isAdmin, setView }) {
   const [msg, setMsg] = useState("");
@@ -1787,7 +1482,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   const [newNewsType, setNewNewsType] = useState("info");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
-  const { theme, cycleTheme } = useTheme();
+  const { theme, cycleTheme } = useTheme(STORAGE_KEY);
   // Choose a stable trash-talk line per page load (changes only on remount)
   const trashTalkRef = React.useRef(TRASH_TALK[Math.floor(Math.random() * TRASH_TALK.length)]);
   const encouragementRef = React.useRef(ENCOURAGEMENT[Math.floor(Math.random() * ENCOURAGEMENT.length)]);
@@ -1996,7 +1691,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
 
   // Theme-aware card style. Returns the style object for a card given its index in the list.
   // Clean: subtle. Locked: bold dark border + deep shadow + red accent line. Crashing: rotating colorful palette. Glossier: minimal off-white, no shadow.
-  const themedFont = themedHeadingFont(theme);
+  const themedFont = themedHeadingFont(theme, F);
   const cardStyle = (idx) => {
     if (theme === "locked") {
       return {
@@ -2187,7 +1882,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
                     background: "#fff", border: "2px solid #1f2937", borderRadius: 12, padding: "6px 12px",
                     fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500, position: "relative",
                     boxShadow: "3px 3px 0 #fbbf24",
-                    fontFamily: themedHeadingFont(theme),
+                    fontFamily: themedHeadingFont(theme, F),
                   }}>
                     <span style={{ position: "absolute", left: -7, top: 14, width: 0, height: 0, borderTop: "6px solid transparent", borderBottom: "6px solid transparent", borderRight: "7px solid #1f2937" }} />
                     <span style={{ position: "absolute", left: -4, top: 15, width: 0, height: 0, borderTop: "5px solid transparent", borderBottom: "5px solid transparent", borderRight: "5px solid #fff" }} />
@@ -2199,7 +1894,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
                     background: "#fff", border: "2px solid #1f2937", borderRadius: 12, padding: "8px 14px",
                     fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500, position: "relative",
                     boxShadow: "inset 0 -3px 0 #dc2626",
-                    fontFamily: themedHeadingFont(theme),
+                    fontFamily: themedHeadingFont(theme, F),
                     letterSpacing: "-0.01em",
                   }}>
                     <span style={{ position: "absolute", left: -8, top: 14, width: 0, height: 0, borderTop: "6px solid transparent", borderBottom: "6px solid transparent", borderRight: "8px solid #1f2937" }} />
@@ -2308,7 +2003,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme), background: themedPageBg(theme), minHeight: "100vh", position: "relative", overflow: "hidden" }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F), background: themedPageBg(theme), minHeight: "100vh", position: "relative", overflow: "hidden" }}>
       {theme === "locked" && (
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" />
       )}
@@ -2366,7 +2061,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
 
         {/* Theme picker — bottom of home */}
         <button onClick={cycleTheme} style={(() => {
-          const base = { width: "100%", textAlign: "left", marginTop: 20, cursor: "pointer", fontFamily: themedHeadingFont(theme), padding: 14 };
+          const base = { width: "100%", textAlign: "left", marginTop: 20, cursor: "pointer", fontFamily: themedHeadingFont(theme, F), padding: 14 };
           if (theme === "locked") {
             return { ...base, background: "#1f2937", color: "#fff", border: "2px solid #1f2937", borderRadius: 12, boxShadow: "inset 0 -4px 0 #dc2626, 0 6px 16px rgba(17, 24, 39, 0.25)" };
           }
@@ -2571,7 +2266,7 @@ function ScheduleView({ data, setData, isAdmin }) {
   const schedule = data.schedule || DEFAULT_SCHEDULE;
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
-  const { theme } = useTheme();
+  const { theme } = useTheme(STORAGE_KEY);
 
   // Auto-jump on mount: try to land on today's date card; fall back to current-week header.
   React.useEffect(() => {
@@ -3004,7 +2699,7 @@ function getWeekBounds() {
 }
 
 function Leaderboard({ students, log, teams, isAdmin, userName, data, setData }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme(STORAGE_KEY);
   const crd = themedInteriorCrd(theme, 0);
   const ranked = rs(students, log);
   const mx = ranked.length > 0 ? Math.max(ranked[0].points, 1) : 1;
@@ -3164,7 +2859,7 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
 
         {/* Explanation */}
@@ -3247,7 +2942,7 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
 
 /* ─── TEAMS ─── */
 function TeamsView({ teams, students, log, data }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme(STORAGE_KEY);
   const crd = themedInteriorCrd(theme, 0);
   if (data?.teamsHidden) {
     return (
@@ -3274,7 +2969,7 @@ function TeamsView({ teams, students, log, data }) {
   Object.values(weeklyWins).forEach(tid => { if (tid) winCounts[tid] = (winCounts[tid] || 0) + 1; });
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 4 }}>This Week's Teams</div>
         <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12, lineHeight: 1.5 }}>Teams shuffle weekly based on leaderboard rank. The team whose top 3 players score highest on the weekly game earns 10 bonus points each.</div>
@@ -4089,7 +3784,7 @@ async function uploadPdf(file, readingId) {
 }
 
 function RosterView({ data, setData, userName }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme(STORAGE_KEY);
   const crd = themedInteriorCrd(theme, 0);
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState("");
@@ -4104,7 +3799,7 @@ function RosterView({ data, setData, userName }) {
   }
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <div style={{ maxWidth: 500, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 10 }}>Class roster</div>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search classmates" style={{ ...inp, fontSize: 13, padding: "8px 12px", marginBottom: 12, width: "100%", boxSizing: "border-box" }} />
@@ -4168,7 +3863,7 @@ function RosterCombined({ data, setData, userName, isAdmin }) {
 }
 
 function BioView({ student, data, setData, userName, onBack }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme(STORAGE_KEY);
   const crd = themedInteriorCrd(theme, 0);
   const isOwn = student.name === userName;
   const isAdmin = userName === ADMIN_NAME;
@@ -4211,7 +3906,7 @@ function BioView({ student, data, setData, userName, onBack }) {
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 480, margin: "0 auto" }}>
         {onBack && <button onClick={onBack} style={pillInactive}>Back to Roster</button>}
@@ -4301,7 +3996,7 @@ function BioView({ student, data, setData, userName, onBack }) {
 
 /* ─── READINGS & MEDIA ─── */
 function ReadingsView({ data, setData, isAdmin }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme(STORAGE_KEY);
   const crd = themedInteriorCrd(theme, 0);
   const readings = data.readings || [];
   const schedule = data.schedule || [];
@@ -4705,7 +4400,7 @@ function ReadingsView({ data, setData, isAdmin }) {
 
 /* ─── MY NOTES ─── */
 function MyNotesView({ data, setData, isAdmin, userName }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme(STORAGE_KEY);
   const crd = themedInteriorCrd(theme, 0);
   const studentNotes = data.studentNotes || {};
   const [editing, setEditing] = useState(false);
@@ -4814,7 +4509,7 @@ function MyNotesView({ data, setData, isAdmin, userName }) {
 
 /* ─── DISCUSSION BOARDS ─── */
 function BoardsView({ data, setData, isAdmin, userName }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme(STORAGE_KEY);
   const crd = themedInteriorCrd(theme, 0);
   const boards = data.boards || [];
   const [creating, setCreating] = useState(false);
@@ -5456,7 +5151,7 @@ const COMM_CONCEPTS = [
 ];
 
 function ClassTools({ data, setData, isAdmin, userName }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme(STORAGE_KEY);
   const crd = themedInteriorCrd(theme, 0);
   const isGuest = userName === GUEST_NAME;
   const student = data.students.find(s => s.name === userName);
@@ -5627,7 +5322,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
   if (isAdmin) {
     if (session) {
       return (
-        <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
+        <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
           <Toast message={msg} />
           <div style={{ maxWidth: 700, margin: "0 auto" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
@@ -5748,7 +5443,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
 
     // Session list
     return (
-      <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
+      <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
         <Toast message={msg} />
         <div style={{ maxWidth: 700, margin: "0 auto" }}>
           <div style={{ ...sectionLabel, marginBottom: 12 }}>Class Tools</div>
@@ -5808,7 +5503,7 @@ function ClassTools({ data, setData, isAdmin, userName }) {
   const { tally: stConceptTally, count: stConceptCount } = buildTally(currentSession?.conceptVotes);
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 500, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 12 }}>Class Tools</div>
@@ -5924,7 +5619,7 @@ const WEEKLY_ITEMS = [
 ];
 
 function ToDoView({ data, setData, userName, isAdmin }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme(STORAGE_KEY);
   const crd = themedInteriorCrd(theme, 0);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
@@ -6068,7 +5763,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
   });
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -6146,7 +5841,7 @@ function ToDoView({ data, setData, userName, isAdmin }) {
 
 /* ─── ACTIVITIES (Pass 1 placeholder, Pass 4 will rebuild) ─── */
 function ActivitiesView({ data, setData, isAdmin, userName }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme(STORAGE_KEY);
   const crd = themedInteriorCrd(theme, 0);
   const student = data.students.find(s => s.name === userName);
   const studentId = student?.id;
@@ -6226,7 +5921,7 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
         {/* Live banner */}
@@ -6445,11 +6140,11 @@ function ClosedSurveyDetail({ survey, data, userName, isAdmin }) {
 
 /* ─── MORE ─── */
 function MoreView({ data, setData, isAdmin, userName }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme(STORAGE_KEY);
   const crd = themedInteriorCrd(theme, 0);
   const me = data?.students.find(s => s.name === userName);
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme) }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
         {/* Your info */}
@@ -6987,8 +6682,8 @@ export default function Comm118() {
 }
 
 function ThemedComm118Wrapper({ data, isAdmin, isGuest, view, setView, displayName, testStudent, setTestStudent, setStudentView, studentView, setUserName, effectiveUserName, effectiveAdmin, activitiesLive, visibleStudents, setData }) {
-  const { theme } = useTheme();
-  const themedFont = themedHeadingFont(theme);
+  const { theme } = useTheme(STORAGE_KEY);
+  const themedFont = themedHeadingFont(theme, F);
 
   // Load themed fonts at the top level so every page gets them
   React.useEffect(() => {
