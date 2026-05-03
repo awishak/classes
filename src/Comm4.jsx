@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { AssignmentsView, Gradebook, GradingInbox, DEFAULT_ASSIGNMENTS as _DA } from "./Grades4.jsx";
 import { GameAdmin, StudentAnswerView, Accolades } from "./GameSystem4.jsx";
+import {
+  useTheme, THEMES, THEME_LABELS, THEME_DESCS,
+  themedPageBg, themedHeadingFont, themedAccent,
+  themedInteriorCrd, CRASHING_PALETTE,
+  PixelStar, PixelArrow, PixelHeart, PixelMushroom, PixelCoin, PixelLightning,
+  TRASH_TALK, ENCOURAGEMENT, randomChampionshipLine,
+  THEME_KEYFRAMES_CSS,
+} from "./theme.js";
 
 const STORAGE_KEY = "comm4-v1";
 
@@ -1407,6 +1415,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   const [newNewsText, setNewNewsText] = useState("");
   const [newNewsType, setNewNewsType] = useState("info");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+  const { theme, cycleTheme } = useTheme(STORAGE_KEY);
 
   const news = data.news || [];
   const boards = data.boards || [];
@@ -1845,12 +1854,46 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   };
 
   return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: F }}>
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
         {renderNewsBanner()}
         {cards.map(renderCard)}
         <InstructorCard data={data} setData={setData} isAdmin={isAdmin} />
+
+        {/* Theme picker — bottom of home */}
+        <button onClick={cycleTheme} style={(() => {
+          const base = { width: "100%", textAlign: "left", marginTop: 20, cursor: "pointer", fontFamily: themedHeadingFont(theme, F), padding: 14 };
+          if (theme === "locked") {
+            return { ...base, background: "#1f2937", color: "#fff", border: "2px solid #1f2937", borderRadius: 12, boxShadow: "inset 0 -4px 0 #dc2626, 0 6px 16px rgba(17, 24, 39, 0.25)" };
+          }
+          if (theme === "crashing") {
+            return { ...base, background: "linear-gradient(135deg, #ec4899, #f59e0b, #0ea5e9, #a855f7)", color: "#fff", border: "4px solid #1f2937", borderRadius: 14, boxShadow: "6px 6px 0 #1f2937", transform: "rotate(-1deg)", padding: 18 };
+          }
+          return { ...base, background: "#fff", color: TEXT_PRIMARY, border: "1px solid #d1d5db", borderRadius: 14, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" };
+        })()}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", opacity: 0.75, marginBottom: 4 }}>Theme</div>
+              <div style={{
+                fontSize: theme === "crashing" ? 24 : (theme === "locked" ? 22 : 18),
+                fontWeight: theme === "crashing" ? 400 : (theme === "locked" ? 400 : 500),
+                letterSpacing: theme === "locked" ? "0.04em" : "-0.01em",
+                lineHeight: 1.1,
+                textTransform: theme === "locked" ? "uppercase" : "none",
+              }}>{THEME_LABELS[theme]}</div>
+            </div>
+            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+              {THEMES.map(t => (
+                <span key={t} style={{
+                  width: 8, height: 8, borderRadius: "50%",
+                  background: t === theme ? (theme === "crashing" ? "#fff" : (theme === "locked" ? "#fff" : ACCENT)) : "rgba(0,0,0,0.15)",
+                  border: t === theme ? "none" : (theme === "clean" ? "1px solid #d1d5db" : "none"),
+                }} />
+              ))}
+            </div>
+          </div>
+        </button>
       </div>
     </div>
   );
@@ -6186,16 +6229,66 @@ export default function Comm4() {
     (data?.boards || []).some(b => b.active)
   );
 
+  return <ThemedComm4Wrapper data={data} isAdmin={effectiveAdmin} isGuest={isGuest} view={view} setView={setView} displayName={displayName} testStudent={testStudent} setTestStudent={setTestStudent} setStudentView={setStudentView} studentView={studentView} setUserName={setUserName} effectiveUserName={effectiveUserName} effectiveAdmin={effectiveAdmin} activitiesLive={activitiesLive} visibleStudents={visibleStudents} setData={setData} />;
+}
+
+function ThemedComm4Wrapper({ data, isAdmin, isGuest, view, setView, displayName, testStudent, setTestStudent, setStudentView, studentView, setUserName, effectiveUserName, effectiveAdmin, activitiesLive, visibleStudents, setData }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  const themedFont = themedHeadingFont(theme, F);
+
+  // Load themed fonts at the top level so every page gets them
+  React.useEffect(() => {
+    if (theme === "clean") return;
+    const id = "themed-fonts-" + theme;
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    if (theme === "locked") {
+      link.href = "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap";
+    } else if (theme === "crashing") {
+      link.href = "https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Press+Start+2P&display=swap";
+    }
+    document.head.appendChild(link);
+  }, [theme]);
+
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT_PRIMARY, fontFamily: F, fontSize: 15 }}>
+    <div style={{ minHeight: "100vh", background: themedPageBg(theme), color: TEXT_PRIMARY, fontFamily: themedFont, fontSize: 15, position: "relative" }}>
+      {theme === "crashing" && (
+        <>
+          <style>{THEME_KEYFRAMES_CSS}</style>
+          {/* Fixed-position pixel art that follows you across all pages */}
+          <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1 }}>
+            <PixelStar top="10%" right="3%" delay={0} />
+            <PixelStar top="35%" right="7%" delay={0.4} />
+            <PixelStar top="20%" left="4%" delay={0.2} color="#ec4899" />
+            <PixelStar bottom="20%" right="5%" delay={0.6} color="#0ea5e9" />
+            <PixelArrow bottom="15%" left="3%" delay={0} />
+            <PixelArrow top="50%" right="2%" delay={0.3} color="#a855f7" />
+            <PixelHeart top="42%" left="3%" delay={0} />
+            <PixelHeart bottom="35%" right="6%" delay={0.5} />
+            <PixelMushroom top="62%" right="3%" delay={0} />
+            <PixelMushroom bottom="55%" left="5%" delay={0.4} />
+            <PixelCoin top="72%" left="6%" delay={0} />
+            <PixelCoin top="85%" right="6%" delay={0.3} />
+            <PixelLightning top="90%" left="2%" delay={0.1} />
+            <PixelLightning bottom="60%" right="3%" delay={0.5} />
+          </div>
+        </>
+      )}
+      {theme === "locked" && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg, #dc2626 0%, #1f2937 50%, #dc2626 100%)", zIndex: 100, pointerEvents: "none" }} />
+      )}
+
       {isAdmin && (
-        <div style={{ background: "#111", display: "flex", justifyContent: "center", gap: 4, padding: "5px 12px" }}>
+        <div style={{ background: "#111", display: "flex", justifyContent: "center", gap: 4, padding: "5px 12px", position: "relative", zIndex: 10 }}>
           <a href="/comm118" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: "#9ca3af", background: "transparent" }}>118</a>
           <a href="/comm2" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: "#9ca3af", background: "transparent" }}>COMM 2</a>
           <a href="/comm4" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: STORAGE_KEY === "comm4-v1" ? "#fff" : "#9ca3af", background: STORAGE_KEY === "comm4-v1" ? "#333" : "transparent" }}>COMM 4</a>
           <a href="/dashboard" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: "#9ca3af", background: "transparent" }}>Dash</a>
         </div>
       )}
+      <div style={{ position: "relative", zIndex: 2 }}>
       <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={testStudent || displayName} onLogout={() => { if (testStudent) { setTestStudent(null); return; } try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} testStudent={testStudent} setTestStudent={isAdmin ? setTestStudent : null} allStudents={data ? data.students.filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis").sort((a, b) => { const al = a.name.split(" ").slice(-1)[0]; const bl = b.name.split(" ").slice(-1)[0]; return al.localeCompare(bl); }) : []} activitiesLive={activitiesLive} />
       {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} setView={setView} />}
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
@@ -6217,6 +6310,7 @@ export default function Comm4() {
       {view === "inclass" && !isGuest && <ActivitiesView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "mynotes" && !isGuest && <MoreView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "accolades" && !isGuest && <Accolades data={data} />}
+      </div>
     </div>
   );
 }
