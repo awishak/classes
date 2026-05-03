@@ -13,7 +13,7 @@ const RED = "#ef4444";
 const AMBER = "#f59e0b";
 const TEAL = "#14b8a6";
 
-const crd = { background: "#fff", borderRadius: 16, border: "1px solid " + BORDER_STRONG, overflow: "hidden", boxShadow: "0 1px 2px rgba(17, 24, 39, 0.04)" };
+const crd = { background: "#fff", borderRadius: 14, border: "1px solid #d1d5db", overflow: "hidden", boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" };
 const pill = { padding: "8px 14px", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s" };
 const pillInactive = { ...pill, background: "#f3f4f6", color: TEXT_SECONDARY };
 const linkPill = { ...pill, background: "#f3f4f6", color: TEXT_SECONDARY, padding: "6px 12px", fontSize: 11, fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 };

@@ -125,7 +125,7 @@ if (typeof document !== "undefined" && !document.getElementById("comm118-respons
   document.head.appendChild(style);
 }
 
-const crd = { background: "#fff", borderRadius: 16, border: "1px solid " + BORDER_STRONG, overflow: "hidden", boxShadow: "0 1px 2px rgba(17, 24, 39, 0.04)" };
+const crd = { background: "#fff", borderRadius: 14, border: "1px solid #d1d5db", overflow: "hidden", boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" };
 const pill = { padding: "7px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s", letterSpacing: "-0.005em" };
 const pillActive = { ...pill, background: "#111827", color: "#fff" };
 const pillInactive = { ...pill, background: "#f3f4f6", color: "#4b5563" };
@@ -1673,7 +1673,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="live" onClick={() => setView("activities")} style={{ width: "100%", textAlign: "left", background: live ? "#ecfdf5" : "#fff", border: live ? "1px solid #6ee7b7" : "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="live" onClick={() => setView("activities")} style={{ width: "100%", textAlign: "left", background: live ? "#ecfdf5" : "#fff", border: live ? "1px solid #6ee7b7" : "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
@@ -1695,7 +1695,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="assignments" onClick={() => setView("assignments")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="assignments" onClick={() => setView("assignments")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: assignmentLines.length > 0 ? 10 : 0 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Assignments</div>
             <span style={openBtnStyle}>Open</span>
@@ -1727,7 +1727,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="schedule" onClick={() => setView("schedule")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="schedule" onClick={() => setView("schedule")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Schedule</div>
             <span style={openBtnStyle}>Open</span>
@@ -1766,7 +1766,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="boards" onClick={() => setView("boards")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="boards" onClick={() => setView("boards")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Boards</div>
             <span style={openBtnStyle}>Open</span>
@@ -1786,7 +1786,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="leaderboard" onClick={() => setView("leaderboard")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="leaderboard" onClick={() => setView("leaderboard")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Leaderboard</div>
             <span style={openBtnStyle}>Open</span>
@@ -1806,7 +1806,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         cursor: "pointer", fontFamily: F, flexShrink: 0,
       };
       return (
-        <button key="roster" onClick={() => setView("roster")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 2px rgba(17, 24, 39, 0.04)" }}>
+        <button key="roster" onClick={() => setView("roster")} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #d1d5db", borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", fontFamily: F, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 18, fontWeight: 500, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>Roster</div>
             <span style={openBtnStyle}>Open</span>
@@ -2309,11 +2309,11 @@ function ScheduleView({ data, setData, isAdmin }) {
             return (
               <div key={wi} id={"view-week-" + wi} style={{
                 background: "#fff",
-                border: "1px solid " + (isCurrent ? ACCENT + "33" : BORDER_STRONG),
+                border: "1px solid " + (isCurrent ? ACCENT + "55" : "#d1d5db"),
                 borderRadius: 14,
                 overflow: "hidden",
                 opacity: isHidden ? 0.6 : 1,
-                boxShadow: isCurrent ? "0 0 0 1px " + ACCENT + "1a, 0 1px 3px rgba(17, 24, 39, 0.05)" : "0 1px 2px rgba(17, 24, 39, 0.04)",
+                boxShadow: isCurrent ? "0 0 0 1px " + ACCENT + "33, 0 2px 6px rgba(17, 24, 39, 0.08)" : "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)",
               }}>
                 {/* Topic color stripe */}
                 <div style={{ height: 3, background: isHidden ? TEXT_MUTED : tc }} />
