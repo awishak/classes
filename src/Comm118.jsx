@@ -241,7 +241,7 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
     link.id = id;
     link.rel = "stylesheet";
     if (theme === "locked") {
-      link.href = "https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap";
+      link.href = "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap";
     } else if (theme === "crashing") {
       link.href = "https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Press+Start+2P&display=swap";
     }
@@ -1550,7 +1550,7 @@ function themedPageBg(theme) {
 // Heading font by theme
 function themedHeadingFont(theme) {
   if (theme === "crashing") return "'Rubik Mono One', 'Bricolage Grotesque', 'Outfit', sans-serif";
-  if (theme === "locked") return "'Archivo Black', 'Outfit', -apple-system, sans-serif";
+  if (theme === "locked") return "'Space Grotesk', 'Outfit', -apple-system, sans-serif";
   return F;
 }
 
@@ -1736,6 +1736,18 @@ const TRASH_TALK = [
   "stay mad",
 ];
 
+const ENCOURAGEMENT = [
+  "hell yeah dude",
+  "let's go",
+  "snooby wooby!",
+  "you are confident. you are capable",
+  "i believe in you",
+  "let __NAME__ cook!",
+  "you've got this",
+  "lock in",
+  "we're built for this",
+];
+
 // Random sports championship year line
 const CHAMPIONSHIPS = ["Super Bowl", "World Series", "NBA Finals"];
 function randomChampionshipLine() {
@@ -1754,6 +1766,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   const { theme, cycleTheme } = useTheme();
   // Choose a stable trash-talk line per page load (changes only on remount)
   const trashTalkRef = React.useRef(TRASH_TALK[Math.floor(Math.random() * TRASH_TALK.length)]);
+  const encouragementRef = React.useRef(ENCOURAGEMENT[Math.floor(Math.random() * ENCOURAGEMENT.length)]);
   const championshipRef = React.useRef(randomChampionshipLine());
 
   const news = data.news || [];
@@ -2140,7 +2153,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           {leader ? (
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
               {leaderPhoto ? (
-                <img src={leaderPhoto} alt={leader.name} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: theme === "crashing" ? "3px solid #fbbf24" : "2px solid #fff", boxShadow: "0 0 0 1px " + (theme === "crashing" ? "#1f2937" : "#d1d5db") }} />
+                <img src={leaderPhoto} alt={leader.name} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: theme === "crashing" ? "3px solid #fbbf24" : (theme === "locked" ? "2px solid #1f2937" : "2px solid #fff"), boxShadow: "0 0 0 1px " + (theme === "crashing" ? "#1f2937" : (theme === "locked" ? "#dc2626" : "#d1d5db")) }} />
               ) : (
                 <div style={{ width: 44, height: 44, borderRadius: "50%", background: ACCENT, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, flexShrink: 0 }}>{leaderInitials}</div>
               )}
@@ -2156,6 +2169,19 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
                     <span style={{ position: "absolute", left: -4, top: 15, width: 0, height: 0, borderTop: "5px solid transparent", borderBottom: "5px solid transparent", borderRight: "5px solid #fff" }} />
                     {isLeader ? "you're locked in" : trashTalkRef.current}
                     <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2, fontWeight: 400 }}>— {leader.name.split(" ")[0]}</div>
+                  </div>
+                ) : theme === "locked" ? (
+                  <div style={{
+                    background: "#fff", border: "2px solid #1f2937", borderRadius: 12, padding: "8px 14px",
+                    fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500, position: "relative",
+                    boxShadow: "inset 0 -3px 0 #dc2626",
+                    fontFamily: themedHeadingFont(theme),
+                    letterSpacing: "-0.01em",
+                  }}>
+                    <span style={{ position: "absolute", left: -8, top: 14, width: 0, height: 0, borderTop: "6px solid transparent", borderBottom: "6px solid transparent", borderRight: "8px solid #1f2937" }} />
+                    <span style={{ position: "absolute", left: -5, top: 15, width: 0, height: 0, borderTop: "5px solid transparent", borderBottom: "5px solid transparent", borderRight: "5px solid #fff" }} />
+                    {isLeader ? "you're locked in" : encouragementRef.current.replace("__NAME__", (userName || "").split(" ")[0] || "you")}
+                    <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>— {leader.name.split(" ")[0]}</div>
                   </div>
                 ) : (
                   <div>
@@ -2260,7 +2286,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme), background: themedPageBg(theme), minHeight: "100vh", position: "relative", overflow: "hidden" }}>
       {theme === "locked" && (
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" />
       )}
       {theme === "crashing" && (
         <>
@@ -2335,7 +2361,6 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
                 lineHeight: 1.1,
                 textTransform: theme === "locked" ? "uppercase" : "none",
               }}>{THEME_LABELS[theme]}</div>
-              <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4, fontFamily: theme === "crashing" ? "'Press Start 2P', monospace" : undefined }}>{THEME_DESCS[theme]} {theme === "crashing" ? "" : "·"} tap to change</div>
             </div>
             <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
               {THEMES.map(t => (
