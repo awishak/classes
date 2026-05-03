@@ -230,6 +230,23 @@ function PageHeader({ title, onBack, right }) {
 
 /* ─── NAV ─── */
 function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent, allStudents, activitiesLive }) {
+  const { theme } = useTheme();
+  const themedFont = themedHeadingFont(theme);
+  // Load themed fonts here so they're available across the app, not just on Home
+  React.useEffect(() => {
+    if (theme === "clean") return;
+    const id = "themed-fonts-" + theme;
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    if (theme === "locked") {
+      link.href = "https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap";
+    } else if (theme === "crashing") {
+      link.href = "https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Press+Start+2P&display=swap";
+    }
+    document.head.appendChild(link);
+  }, [theme]);
   // Student tabs (always visible, no guest gating). Guests still get a slim subset.
   const studentTabs = [
     { id: "home", label: "Home", guest: false },
@@ -254,8 +271,8 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
   const tabBtn = (t, isActive, badge) => (
     <button key={t.id} onClick={() => setView(t.id)} style={{
       padding: "7px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer",
-      fontFamily: F, border: "none", transition: "all 0.15s", letterSpacing: "-0.005em",
-      background: isActive ? "#111827" : "transparent",
+      fontFamily: themedFont, border: "none", transition: "all 0.15s", letterSpacing: "-0.005em",
+      background: isActive ? (theme === "crashing" ? "#ec4899" : (theme === "locked" ? "#1f2937" : "#111827")) : "transparent",
       color: isActive ? "#fff" : "#4b5563",
       display: "inline-flex", alignItems: "center", gap: 6,
     }}>
@@ -278,9 +295,12 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
         {/* Left: course chip */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{
-            display: "inline-block", padding: "4px 10px", borderRadius: 8,
-            background: ACCENT, color: "#fff",
-            fontSize: 12, fontWeight: 800, fontFamily: F, letterSpacing: "-0.005em",
+            display: "inline-block", padding: theme === "crashing" ? "5px 12px" : "4px 10px", borderRadius: theme === "crashing" ? 8 : 8,
+            background: theme === "crashing" ? "#1f2937" : ACCENT, color: "#fff",
+            fontSize: theme === "crashing" ? 13 : 12, fontWeight: theme === "clean" ? 800 : 400, fontFamily: themedFont, letterSpacing: theme === "locked" ? "0.04em" : "-0.005em",
+            textTransform: theme === "locked" ? "uppercase" : "none",
+            border: theme === "crashing" ? "2px solid #ec4899" : "none",
+            boxShadow: theme === "crashing" ? "3px 3px 0 #fbbf24" : (theme === "locked" ? "inset 0 -2px 0 #dc2626" : "none"),
           }}>{courseTitle || "Comm and Sport"}</span>
           {studentView && <span style={{ fontSize: 10, fontWeight: 800, color: "#b45309", textTransform: "uppercase", letterSpacing: "0.1em" }}>Student View</span>}
         </div>
@@ -1517,7 +1537,7 @@ function themedPageBg(theme) {
 // Heading font by theme
 function themedHeadingFont(theme) {
   if (theme === "crashing") return "'Rubik Mono One', 'Bricolage Grotesque', 'Outfit', sans-serif";
-  if (theme === "locked") return "'Anton', 'Outfit', -apple-system, sans-serif";
+  if (theme === "locked") return "'Archivo Black', 'Outfit', -apple-system, sans-serif";
   return F;
 }
 
@@ -2215,7 +2235,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme), background: themedPageBg(theme), minHeight: "100vh", position: "relative", overflow: "hidden" }}>
       {theme === "locked" && (
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&display=swap" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" />
       )}
       {theme === "crashing" && (
         <>
