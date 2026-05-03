@@ -1914,11 +1914,12 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
 
   // Theme-aware card style. Returns the style object for a card given its index in the list.
   // Clean: subtle. Locked: bold dark border + deep shadow + red accent line. Crashing: rotating colorful palette.
+  const themedFont = themedHeadingFont(theme);
   const cardStyle = (idx) => {
     if (theme === "locked") {
       return {
         background: "#fff", border: "2px solid #1f2937", borderRadius: 12, padding: 16,
-        marginBottom: 12, cursor: "pointer", fontFamily: F,
+        marginBottom: 12, cursor: "pointer", fontFamily: themedFont,
         boxShadow: "inset 0 -3px 0 #dc2626, 0 6px 16px rgba(17, 24, 39, 0.18), 0 2px 4px rgba(17, 24, 39, 0.12)",
       };
     }
@@ -1926,7 +1927,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       const p = CRASHING_PALETTE[idx % CRASHING_PALETTE.length];
       return {
         background: "#fff", border: "4px solid " + p.border, borderRadius: 14, padding: 16,
-        marginBottom: 16, cursor: "pointer", fontFamily: F,
+        marginBottom: 16, cursor: "pointer", fontFamily: themedFont,
         boxShadow: "6px 6px 0 " + p.shadow1 + ", 9px 9px 0 " + p.shadow2,
         transform: idx % 2 === 0 ? "rotate(-1deg)" : "rotate(1deg)",
       };
@@ -1964,7 +1965,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
         border: "1px solid " + (live ? "#6ee7b7" : BORDER_STRONG),
         background: "#fff", color: live ? "#065f46" : TEXT_PRIMARY,
-        cursor: "pointer", fontFamily: F, flexShrink: 0,
+        cursor: "pointer", fontFamily: themedFont, flexShrink: 0,
       };
       return (
         <button key="live" onClick={() => setView("activities")} style={(() => { const s = { width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }; if (live && theme !== "crashing") { s.background = "#ecfdf5"; s.border = "1px solid #6ee7b7"; } return s; })()}>
@@ -1986,7 +1987,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       const openBtnStyle = {
         fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
         border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
-        cursor: "pointer", fontFamily: F, flexShrink: 0,
+        cursor: "pointer", fontFamily: themedFont, flexShrink: 0,
       };
       return (
         <button key="assignments" onClick={() => setView("assignments")} style={{ width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }}>
@@ -2018,7 +2019,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       const openBtnStyle = {
         fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
         border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
-        cursor: "pointer", fontFamily: F, flexShrink: 0,
+        cursor: "pointer", fontFamily: themedFont, flexShrink: 0,
       };
       return (
         <button key="schedule" onClick={() => setView("schedule")} style={{ width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }}>
@@ -2057,7 +2058,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       const openBtnStyle = {
         fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
         border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
-        cursor: "pointer", fontFamily: F, flexShrink: 0,
+        cursor: "pointer", fontFamily: themedFont, flexShrink: 0,
       };
       return (
         <button key="boards" onClick={() => setView("boards")} style={{ width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }}>
@@ -2077,7 +2078,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       const openBtnStyle = {
         fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
         border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
-        cursor: "pointer", fontFamily: F, flexShrink: 0,
+        cursor: "pointer", fontFamily: themedFont, flexShrink: 0,
       };
       // Find current leader (excluding admin and test student) and their photo
       const leader = ranked.find(s => s.name !== ADMIN_NAME && s.name !== TEST_STUDENT && s.points > 0);
