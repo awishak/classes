@@ -3525,7 +3525,7 @@ function BoardsView({ data, setData, isAdmin, userName }) {
           {isAdmin && <button onClick={() => setCreating(!creating)} style={creating ? pillActive : pillInactive}>{creating ? "Cancel" : "+ New Board"}</button>}
         </div>
 
-        {isAdmin && (creating || editingSurvey) && (
+        {isAdmin && creating && (
           <div style={{ ...crd, padding: 18, marginBottom: 20 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Board title (e.g. Week 1 Discussion)" style={{ ...inp, fontWeight: 700, fontSize: 16 }} />
