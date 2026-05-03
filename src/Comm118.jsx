@@ -1507,63 +1507,175 @@ function crashingCardFor(idx) {
 
 // Page background by theme
 function themedPageBg(theme) {
-  if (theme === "locked") return "#f9fafb";
+  if (theme === "locked") return "#f3f4f6";
   if (theme === "crashing") {
-    return "linear-gradient(135deg, #fce7f3 0%, #fef3c7 25%, #dbeafe 50%, #ddd6fe 75%, #fce7f3 100%)";
+    return "linear-gradient(135deg, #fce7f3 0%, #fef3c7 20%, #dbeafe 40%, #ddd6fe 60%, #fbcfe8 80%, #fef3c7 100%)";
   }
   return "#fafaf9";
 }
 
 // Heading font by theme
 function themedHeadingFont(theme) {
-  if (theme === "crashing") return "'Bricolage Grotesque', 'Outfit', -apple-system, sans-serif";
+  if (theme === "crashing") return "'Rubik Mono One', 'Bricolage Grotesque', 'Outfit', sans-serif";
+  if (theme === "locked") return "'Anton', 'Outfit', -apple-system, sans-serif";
   return F;
 }
 
 // 8-bit pixel star — pure CSS animation
-function PixelStar({ top, right, delay = 0 }) {
+function PixelStar({ top, right, left, bottom, delay = 0, color = "#fbbf24" }) {
   const size = 24;
   return (
     <div style={{
-      position: "absolute", top, right, width: size, height: size, zIndex: 5,
+      position: "absolute", top, right, left, bottom, width: size, height: size, zIndex: 5,
       animation: "pixelStarTwinkle 1.6s ease-in-out infinite",
       animationDelay: delay + "s",
       pointerEvents: "none",
     }}>
       <svg viewBox="0 0 24 24" width={size} height={size} shapeRendering="crispEdges">
-        <rect x="10" y="2" width="4" height="4" fill="#fbbf24" />
-        <rect x="8" y="6" width="2" height="2" fill="#fbbf24" />
-        <rect x="14" y="6" width="2" height="2" fill="#fbbf24" />
-        <rect x="6" y="8" width="2" height="2" fill="#fbbf24" />
-        <rect x="16" y="8" width="2" height="2" fill="#fbbf24" />
-        <rect x="2" y="10" width="4" height="4" fill="#fbbf24" />
-        <rect x="6" y="10" width="12" height="4" fill="#fde047" />
-        <rect x="18" y="10" width="4" height="4" fill="#fbbf24" />
-        <rect x="6" y="14" width="2" height="2" fill="#fbbf24" />
-        <rect x="16" y="14" width="2" height="2" fill="#fbbf24" />
-        <rect x="8" y="16" width="2" height="2" fill="#fbbf24" />
-        <rect x="14" y="16" width="2" height="2" fill="#fbbf24" />
-        <rect x="10" y="18" width="4" height="4" fill="#fbbf24" />
+        <rect x="10" y="2" width="4" height="4" fill={color} />
+        <rect x="8" y="6" width="2" height="2" fill={color} />
+        <rect x="14" y="6" width="2" height="2" fill={color} />
+        <rect x="6" y="8" width="2" height="2" fill={color} />
+        <rect x="16" y="8" width="2" height="2" fill={color} />
+        <rect x="2" y="10" width="4" height="4" fill={color} />
+        <rect x="6" y="10" width="12" height="4" fill={color} opacity="0.7" />
+        <rect x="18" y="10" width="4" height="4" fill={color} />
+        <rect x="6" y="14" width="2" height="2" fill={color} />
+        <rect x="16" y="14" width="2" height="2" fill={color} />
+        <rect x="8" y="16" width="2" height="2" fill={color} />
+        <rect x="14" y="16" width="2" height="2" fill={color} />
+        <rect x="10" y="18" width="4" height="4" fill={color} />
       </svg>
     </div>
   );
 }
 
 // 8-bit pixel arrow (bouncing)
-function PixelArrow({ bottom, left }) {
+function PixelArrow({ bottom, left, top, right, delay = 0, color = "#ec4899" }) {
   const size = 28;
   return (
     <div style={{
-      position: "absolute", bottom, left, width: size, height: size, zIndex: 5,
+      position: "absolute", bottom, left, top, right, width: size, height: size, zIndex: 5,
       animation: "pixelArrowBounce 0.9s ease-in-out infinite",
+      animationDelay: delay + "s",
       pointerEvents: "none",
     }}>
       <svg viewBox="0 0 28 28" width={size} height={size} shapeRendering="crispEdges">
-        <rect x="12" y="2" width="4" height="4" fill="#ec4899" />
-        <rect x="10" y="6" width="8" height="2" fill="#ec4899" />
-        <rect x="8" y="8" width="12" height="2" fill="#ec4899" />
-        <rect x="6" y="10" width="16" height="2" fill="#ec4899" />
-        <rect x="12" y="12" width="4" height="14" fill="#ec4899" />
+        <rect x="12" y="2" width="4" height="4" fill={color} />
+        <rect x="10" y="6" width="8" height="2" fill={color} />
+        <rect x="8" y="8" width="12" height="2" fill={color} />
+        <rect x="6" y="10" width="16" height="2" fill={color} />
+        <rect x="12" y="12" width="4" height="14" fill={color} />
+      </svg>
+    </div>
+  );
+}
+
+// 8-bit pixel heart (pulsing)
+function PixelHeart({ top, right, left, bottom, delay = 0 }) {
+  const size = 26;
+  return (
+    <div style={{
+      position: "absolute", top, right, left, bottom, width: size, height: size, zIndex: 5,
+      animation: "pixelHeartPulse 1.1s ease-in-out infinite",
+      animationDelay: delay + "s",
+      pointerEvents: "none",
+    }}>
+      <svg viewBox="0 0 26 26" width={size} height={size} shapeRendering="crispEdges">
+        <rect x="4" y="4" width="6" height="2" fill="#dc2626" />
+        <rect x="16" y="4" width="6" height="2" fill="#dc2626" />
+        <rect x="2" y="6" width="10" height="4" fill="#dc2626" />
+        <rect x="14" y="6" width="10" height="4" fill="#dc2626" />
+        <rect x="4" y="6" width="2" height="2" fill="#fca5a5" />
+        <rect x="16" y="6" width="2" height="2" fill="#fca5a5" />
+        <rect x="2" y="10" width="22" height="2" fill="#dc2626" />
+        <rect x="4" y="12" width="18" height="2" fill="#dc2626" />
+        <rect x="6" y="14" width="14" height="2" fill="#dc2626" />
+        <rect x="8" y="16" width="10" height="2" fill="#dc2626" />
+        <rect x="10" y="18" width="6" height="2" fill="#dc2626" />
+        <rect x="12" y="20" width="2" height="2" fill="#dc2626" />
+      </svg>
+    </div>
+  );
+}
+
+// 8-bit pixel mushroom (wiggling)
+function PixelMushroom({ top, right, left, bottom, delay = 0 }) {
+  const size = 28;
+  return (
+    <div style={{
+      position: "absolute", top, right, left, bottom, width: size, height: size, zIndex: 5,
+      animation: "pixelWiggle 1.4s ease-in-out infinite",
+      animationDelay: delay + "s",
+      pointerEvents: "none",
+    }}>
+      <svg viewBox="0 0 28 28" width={size} height={size} shapeRendering="crispEdges">
+        <rect x="8" y="2" width="12" height="2" fill="#dc2626" />
+        <rect x="6" y="4" width="16" height="2" fill="#dc2626" />
+        <rect x="4" y="6" width="20" height="4" fill="#dc2626" />
+        <rect x="8" y="6" width="4" height="4" fill="#fff" />
+        <rect x="16" y="6" width="4" height="4" fill="#fff" />
+        <rect x="2" y="10" width="24" height="2" fill="#dc2626" />
+        <rect x="6" y="10" width="4" height="2" fill="#fff" />
+        <rect x="14" y="10" width="2" height="2" fill="#fff" />
+        <rect x="18" y="10" width="4" height="2" fill="#fff" />
+        <rect x="2" y="12" width="24" height="2" fill="#dc2626" />
+        <rect x="8" y="14" width="12" height="6" fill="#fef3c7" />
+        <rect x="10" y="16" width="2" height="2" fill="#1f2937" />
+        <rect x="16" y="16" width="2" height="2" fill="#1f2937" />
+        <rect x="8" y="20" width="12" height="4" fill="#fef3c7" />
+      </svg>
+    </div>
+  );
+}
+
+// 8-bit pixel coin (spinning via scaleX)
+function PixelCoin({ top, right, left, bottom, delay = 0 }) {
+  const size = 22;
+  return (
+    <div style={{
+      position: "absolute", top, right, left, bottom, width: size, height: size, zIndex: 5,
+      animation: "pixelCoinSpin 1.2s linear infinite",
+      animationDelay: delay + "s",
+      pointerEvents: "none",
+    }}>
+      <svg viewBox="0 0 22 22" width={size} height={size} shapeRendering="crispEdges">
+        <rect x="8" y="2" width="6" height="2" fill="#fbbf24" />
+        <rect x="6" y="4" width="2" height="2" fill="#fbbf24" />
+        <rect x="14" y="4" width="2" height="2" fill="#fbbf24" />
+        <rect x="4" y="6" width="2" height="10" fill="#fbbf24" />
+        <rect x="16" y="6" width="2" height="10" fill="#fbbf24" />
+        <rect x="6" y="6" width="10" height="10" fill="#fde047" />
+        <rect x="9" y="7" width="4" height="2" fill="#f59e0b" />
+        <rect x="9" y="9" width="2" height="6" fill="#f59e0b" />
+        <rect x="6" y="16" width="2" height="2" fill="#fbbf24" />
+        <rect x="14" y="16" width="2" height="2" fill="#fbbf24" />
+        <rect x="8" y="18" width="6" height="2" fill="#fbbf24" />
+      </svg>
+    </div>
+  );
+}
+
+// 8-bit pixel lightning bolt
+function PixelLightning({ top, right, left, bottom, delay = 0 }) {
+  const size = 22;
+  return (
+    <div style={{
+      position: "absolute", top, right, left, bottom, width: size, height: size, zIndex: 5,
+      animation: "pixelFlash 0.8s ease-in-out infinite",
+      animationDelay: delay + "s",
+      pointerEvents: "none",
+    }}>
+      <svg viewBox="0 0 22 22" width={size} height={size} shapeRendering="crispEdges">
+        <rect x="10" y="0" width="6" height="2" fill="#fde047" />
+        <rect x="8" y="2" width="6" height="2" fill="#fde047" />
+        <rect x="6" y="4" width="6" height="2" fill="#fde047" />
+        <rect x="4" y="6" width="6" height="2" fill="#fde047" />
+        <rect x="2" y="8" width="10" height="2" fill="#fde047" />
+        <rect x="6" y="10" width="6" height="2" fill="#fde047" />
+        <rect x="4" y="12" width="6" height="2" fill="#fde047" />
+        <rect x="2" y="14" width="6" height="2" fill="#fde047" />
+        <rect x="0" y="16" width="6" height="2" fill="#fde047" />
       </svg>
     </div>
   );
@@ -1579,6 +1691,14 @@ const TRASH_TALK = [
   "stay mad",
 ];
 
+// Random sports championship year line
+const CHAMPIONSHIPS = ["Super Bowl", "World Series", "NBA Finals"];
+function randomChampionshipLine() {
+  const year = 1989 + Math.floor(Math.random() * (2026 - 1989 + 1));
+  const event = CHAMPIONSHIPS[Math.floor(Math.random() * CHAMPIONSHIPS.length)];
+  return year + " " + event;
+}
+
 function HomeView({ data, setData, userName, isAdmin, setView }) {
   const [msg, setMsg] = useState("");
   const [newsExpanded, setNewsExpanded] = useState(false);
@@ -1589,6 +1709,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   const { theme, cycleTheme } = useTheme();
   // Choose a stable trash-talk line per page load (changes only on remount)
   const trashTalkRef = React.useRef(TRASH_TALK[Math.floor(Math.random() * TRASH_TALK.length)]);
+  const championshipRef = React.useRef(randomChampionshipLine());
 
   const news = data.news || [];
   const boards = data.boards || [];
@@ -1792,22 +1913,22 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   cards.push("leaderboard", "roster");
 
   // Theme-aware card style. Returns the style object for a card given its index in the list.
-  // Clean: subtle. Locked: bold dark border + shadow. Crashing: rotating colorful palette.
+  // Clean: subtle. Locked: bold dark border + deep shadow + red accent line. Crashing: rotating colorful palette.
   const cardStyle = (idx) => {
     if (theme === "locked") {
       return {
-        background: "#fff", border: "2px solid #1f2937", borderRadius: 14, padding: 16,
+        background: "#fff", border: "2px solid #1f2937", borderRadius: 12, padding: 16,
         marginBottom: 12, cursor: "pointer", fontFamily: F,
-        boxShadow: "0 4px 12px rgba(17, 24, 39, 0.12), 0 2px 4px rgba(17, 24, 39, 0.08)",
+        boxShadow: "inset 0 -3px 0 #dc2626, 0 6px 16px rgba(17, 24, 39, 0.18), 0 2px 4px rgba(17, 24, 39, 0.12)",
       };
     }
     if (theme === "crashing") {
       const p = CRASHING_PALETTE[idx % CRASHING_PALETTE.length];
       return {
-        background: "#fff", border: "3px solid " + p.border, borderRadius: 14, padding: 16,
-        marginBottom: 14, cursor: "pointer", fontFamily: F,
-        boxShadow: "5px 5px 0 " + p.shadow1 + ", 7px 7px 0 " + p.shadow2,
-        transform: idx % 2 === 0 ? "rotate(-0.4deg)" : "rotate(0.4deg)",
+        background: "#fff", border: "4px solid " + p.border, borderRadius: 14, padding: 16,
+        marginBottom: 16, cursor: "pointer", fontFamily: F,
+        boxShadow: "6px 6px 0 " + p.shadow1 + ", 9px 9px 0 " + p.shadow2,
+        transform: idx % 2 === 0 ? "rotate(-1deg)" : "rotate(1deg)",
       };
     }
     return {
@@ -2092,21 +2213,57 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
 
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme), background: themedPageBg(theme), minHeight: "100vh", position: "relative", overflow: "hidden" }}>
+      {theme === "locked" && (
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&display=swap" />
+      )}
       {theme === "crashing" && (
         <>
-          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&display=swap" />
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Press+Start+2P&family=Bricolage+Grotesque:wght@800&display=swap" />
           <style>{`
-            @keyframes pixelStarTwinkle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85) rotate(15deg); } }
-            @keyframes pixelArrowBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-            @keyframes wiggle { 0%, 100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
+            @keyframes pixelStarTwinkle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7) rotate(20deg); } }
+            @keyframes pixelArrowBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+            @keyframes pixelHeartPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+            @keyframes pixelWiggle { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+            @keyframes pixelCoinSpin { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(-1); } }
+            @keyframes pixelFlash { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+            @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+            @keyframes rainbow { 0% { color: #ec4899; } 16% { color: #f59e0b; } 33% { color: #16a34a; } 50% { color: #0ea5e9; } 66% { color: #a855f7; } 83% { color: #dc2626; } 100% { color: #ec4899; } }
+            @keyframes pageWobble { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+            .crashing-page { background-size: 400% 400% !important; animation: pageWobble 8s ease-in-out infinite; }
+            .crashing-rainbow-text { animation: rainbow 2s linear infinite; }
+            .crashing-marquee-track { display: inline-block; animation: marquee 22s linear infinite; white-space: nowrap; }
           `}</style>
+          {/* 10+ pixel art elements scattered everywhere */}
           <PixelStar top={20} right={20} delay={0} />
-          <PixelStar top={70} right={60} delay={0.4} />
-          <PixelArrow bottom={80} left={20} />
+          <PixelStar top={120} right={50} delay={0.4} />
+          <PixelStar top={70} left={30} delay={0.2} color="#ec4899" />
+          <PixelStar bottom={120} right={30} delay={0.6} color="#0ea5e9" />
+          <PixelArrow bottom={80} left={20} delay={0} />
+          <PixelArrow top={250} right={15} delay={0.3} color="#a855f7" />
+          <PixelHeart top={180} left={15} delay={0} />
+          <PixelHeart bottom={200} right={50} delay={0.5} />
+          <PixelMushroom top={350} right={20} delay={0} />
+          <PixelMushroom bottom={300} left={25} delay={0.4} />
+          <PixelCoin top={420} left={40} delay={0} />
+          <PixelCoin top={550} right={40} delay={0.3} />
+          <PixelLightning top={600} left={20} delay={0.1} />
+          <PixelLightning bottom={400} right={25} delay={0.5} />
         </>
       )}
       <Toast message={msg} />
       <div style={{ maxWidth: 720, margin: "0 auto", position: "relative", zIndex: 1 }}>
+        {theme === "crashing" && (
+          <div style={{
+            background: "#1f2937", color: "#fde047", border: "3px solid #ec4899", borderRadius: 8,
+            padding: "6px 0", marginBottom: 16, overflow: "hidden", position: "relative",
+            boxShadow: "4px 4px 0 #ec4899", fontFamily: "'Press Start 2P', monospace", fontSize: 11, letterSpacing: "0.05em",
+          }}>
+            <div className="crashing-marquee-track">
+              <span style={{ paddingRight: 60 }}>★ {championshipRef.current} ★ LOCKED IN ★ {championshipRef.current} ★ NEVER MISS ★ {championshipRef.current} ★ STAY HUNGRY ★</span>
+              <span style={{ paddingRight: 60 }}>★ {championshipRef.current} ★ LOCKED IN ★ {championshipRef.current} ★ NEVER MISS ★ {championshipRef.current} ★ STAY HUNGRY ★</span>
+            </div>
+          </div>
+        )}
         {renderNewsBanner()}
         {cards.map(renderCard)}
         <InstructorCard data={data} setData={setData} isAdmin={isAdmin} />
@@ -2115,18 +2272,18 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
         <button onClick={cycleTheme} style={(() => {
           const base = { width: "100%", textAlign: "left", marginTop: 20, cursor: "pointer", fontFamily: themedHeadingFont(theme), padding: 14 };
           if (theme === "locked") {
-            return { ...base, background: "#1f2937", color: "#fff", border: "2px solid #1f2937", borderRadius: 14, boxShadow: "0 4px 12px rgba(17, 24, 39, 0.18)" };
+            return { ...base, background: "#1f2937", color: "#fff", border: "2px solid #1f2937", borderRadius: 12, boxShadow: "inset 0 -4px 0 #dc2626, 0 6px 16px rgba(17, 24, 39, 0.25)" };
           }
           if (theme === "crashing") {
-            return { ...base, background: "linear-gradient(135deg, #ec4899, #f59e0b, #0ea5e9)", color: "#fff", border: "3px solid #1f2937", borderRadius: 14, boxShadow: "5px 5px 0 #1f2937", transform: "rotate(-0.5deg)" };
+            return { ...base, background: "linear-gradient(135deg, #ec4899, #f59e0b, #0ea5e9, #a855f7)", color: "#fff", border: "4px solid #1f2937", borderRadius: 14, boxShadow: "6px 6px 0 #1f2937", transform: "rotate(-1deg)", padding: 18 };
           }
           return { ...base, background: "#fff", color: TEXT_PRIMARY, border: "1px solid #d1d5db", borderRadius: 14, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" };
         })()}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", opacity: 0.7, marginBottom: 4 }}>Theme</div>
-              <div style={{ fontSize: theme === "crashing" ? 22 : 18, fontWeight: theme === "crashing" ? 800 : (theme === "locked" ? 700 : 500), letterSpacing: "-0.01em", lineHeight: 1.1 }}>{THEME_LABELS[theme]}</div>
-              <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>{THEME_DESCS[theme]} · tap to change</div>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", opacity: 0.75, marginBottom: 4 }}>Theme</div>
+              <div style={{ fontSize: theme === "crashing" ? 24 : (theme === "locked" ? 22 : 18), fontWeight: theme === "crashing" ? 400 : (theme === "locked" ? 400 : 500), letterSpacing: theme === "locked" ? "0.04em" : "-0.01em", lineHeight: 1.1, textTransform: theme === "locked" ? "uppercase" : "none" }}>{THEME_LABELS[theme]}</div>
+              <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4, fontFamily: theme === "crashing" ? "'Press Start 2P', monospace" : undefined }}>{THEME_DESCS[theme]} {theme === "crashing" ? "" : "·"} tap to change</div>
             </div>
             <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
               {THEMES.map(t => (
