@@ -13,7 +13,7 @@ import {
   THEME_KEYFRAMES_CSS, GUEST_NAME,
 } from "./styles.jsx";
 import { genId, shuffle, gp, Toast } from "./utils.jsx";
-import { MyNotesView, BioView, RosterView, ReadingsView, BoardsView, ToDoView, NamePicker } from "./components.jsx";
+import { MyNotesView, BioView, RosterView, ReadingsView, BoardsView, ToDoView, NamePicker, Nav } from "./components.jsx";
 
 const STORAGE_KEY = "comm4-v1";
 
@@ -28,6 +28,23 @@ const DEFAULT_ASSIGNMENTS = [
 ];
 
 const POINT_SOURCES = ["Weekly Game","Assignment","Participation","Bonus","Other"];
+
+// Nav tabs (passed to shared <Nav> component)
+const STUDENT_TABS = [
+  { id: "home", label: "Home", guest: false },
+  { id: "schedule", label: "Schedule", guest: true },
+  { id: "assignments", label: "Assignments", guest: false },
+  { id: "activities", label: "Live", guest: false },
+  { id: "more", label: "More", guest: false },
+];
+const ADMIN_TABS = [
+  { id: "pti", label: "Around the Horn" },
+  { id: "inclassadmin", label: "In-Class Admin" },
+  { id: "grades", label: "Gradebook" },
+  { id: "grading", label: "Grading" },
+  { id: "todo", label: "To-Do" },
+  { id: "admin", label: "Admin" },
+];
 
 const TEAM_COLORS = [
   { accent: "#2563eb", bg: "#eff6ff" },
@@ -196,127 +213,6 @@ function PageHeader({ title, onBack, right }) {
 }
 
 /* ─── NAV ─── */
-function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent, allStudents, activitiesLive }) {
-  const { theme } = useTheme(STORAGE_KEY);
-  const themedFont = themedHeadingFont(theme, F);
-  // Load themed fonts here so they're available across the app, not just on Home
-  React.useEffect(() => {
-    if (theme === "clean") return;
-    const id = "themed-fonts-" + theme;
-    if (document.getElementById(id)) return;
-    const link = document.createElement("link");
-    link.id = id;
-    link.rel = "stylesheet";
-    if (theme === "locked") {
-      link.href = "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap";
-    } else if (theme === "crashing") {
-      link.href = "https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Press+Start+2P&display=swap";
-    }
-    document.head.appendChild(link);
-  }, [theme]);
-  // Student-visible
-  const studentTabs = [
-    { id: "home", label: "Home", guest: false },
-    { id: "schedule", label: "Schedule", guest: true },
-    { id: "assignments", label: "Assignments", guest: false },
-    { id: "activities", label: "Live", guest: false },
-    { id: "more", label: "More", guest: false },
-  ];
-  // Admin extras (after More)
-  const adminTabs = [
-    { id: "pti", label: "Around the Horn" },
-    { id: "inclassadmin", label: "In-Class Admin" },
-    { id: "grades", label: "Gradebook" },
-    { id: "grading", label: "Grading" },
-    { id: "todo", label: "To-Do" },
-    { id: "admin", label: "Admin" },
-  ];
-  const visibleStudent = studentTabs.filter(t => !isGuest || t.guest);
-  return (
-    <div style={{ background: "#fff", padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, position: "sticky", top: 0, zIndex: 50, borderBottom: "1px solid " + BORDER }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{
-          background: theme === "crashing" ? "#1f2937" : ACCENT,
-          color: "#fff",
-          padding: theme === "crashing" ? "5px 12px" : "5px 12px",
-          borderRadius: 8,
-          fontSize: theme === "crashing" ? 13 : 12,
-          fontWeight: theme === "clean" ? 800 : 400,
-          fontFamily: themedFont,
-          letterSpacing: theme === "locked" ? "0.04em" : "-0.01em",
-          textTransform: theme === "locked" ? "uppercase" : "none",
-          border: theme === "crashing" ? "2px solid #ec4899" : "none",
-          boxShadow: theme === "crashing" ? "3px 3px 0 #fbbf24" : (theme === "locked" ? "inset 0 -2px 0 #dc2626" : "none"),
-        }}>{courseTitle || "Comm Research"}</div>
-        {studentView && <span style={{ fontSize: 11, fontWeight: 700, color: "#d97706", textTransform: "uppercase", letterSpacing: "0.05em" }}>Student View</span>}
-      </div>
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
-        {visibleStudent.map(t => {
-          const isActive = view === t.id;
-          const isLiveDot = t.id === "activities" && activitiesLive;
-          return (
-            <button key={t.id} onClick={() => setView(t.id)} style={{
-              ...pill,
-              fontFamily: themedFont,
-              background: isActive ? (theme === "crashing" ? "#ec4899" : (theme === "locked" ? "#1f2937" : TEXT_PRIMARY)) : "transparent",
-              color: isActive ? "#fff" : TEXT_SECONDARY,
-              position: "relative",
-              fontWeight: 700,
-            }}>
-              {t.label}
-              {isLiveDot && <span style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: GREEN, animation: "livePulse 1.6s ease-in-out infinite" }} />}
-            </button>
-          );
-        })}
-        {isAdmin && !isGuest && (
-          <>
-            <span style={{ width: 1, height: 18, background: BORDER_STRONG, margin: "0 4px" }} />
-            {adminTabs.map(t => {
-              const isActive = view === t.id;
-              return (
-                <button key={t.id} onClick={() => setView(t.id)} style={{
-                  ...pill,
-                  background: isActive ? TEXT_PRIMARY : "transparent",
-                  color: isActive ? "#fff" : TEXT_MUTED,
-                  fontSize: 11,
-                  padding: "6px 10px",
-                  fontWeight: 700,
-                }}>{t.label}</button>
-              );
-            })}
-          </>
-        )}
-        <a href="https://camino.instructure.com/courses/117721" target="_blank" rel="noopener noreferrer" style={{ ...linkPill, fontSize: 11 }}>
-          Camino <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-        </a>
-        {setStudentView && !testStudent && (
-          <button onClick={() => setStudentView(!studentView)} style={{
-            padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
-            fontFamily: F, border: studentView ? "1px solid #d97706" : "1px solid " + BORDER_STRONG,
-            background: studentView ? "#fef3c7" : "#fff", color: studentView ? "#92400e" : TEXT_MUTED, transition: "all 0.15s",
-          }}>{studentView ? "Exit" : "Student View"}</button>
-        )}
-        {setTestStudent && allStudents && (
-          <select value={testStudent || ""} onChange={e => setTestStudent(e.target.value || null)} style={{
-            padding: "5px 8px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
-            fontFamily: F, border: testStudent ? "1px solid " + RED : "1px solid " + BORDER_STRONG,
-            background: testStudent ? "#fef2f2" : "#fff", color: testStudent ? RED : TEXT_MUTED,
-            outline: "none", maxWidth: 140,
-          }}>
-            <option value="">Test as student...</option>
-            {allStudents.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-          </select>
-        )}
-        <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 4 }}>{userName}</span>
-        <button onClick={onLogout} style={{
-          padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
-          fontFamily: F, border: "1px solid " + BORDER_STRONG,
-          background: "#fff", color: TEXT_MUTED, transition: "all 0.15s",
-        }}>Switch</button>
-      </div>
-    </div>
-  );
-}
 
 /* ─── NAME PICKER (front page) ─── */
 const ADMIN_NAME = "Andrew Ishak";
@@ -4969,7 +4865,7 @@ function ThemedComm4Wrapper({ data, isAdmin, isGuest, view, setView, displayName
         </div>
       )}
       <div style={{ position: "relative", zIndex: 2 }}>
-      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={testStudent || displayName} onLogout={() => { if (testStudent) { setTestStudent(null); return; } try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} testStudent={testStudent} setTestStudent={isAdmin ? setTestStudent : null} allStudents={data ? data.students.filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis").sort((a, b) => { const al = a.name.split(" ").slice(-1)[0]; const bl = b.name.split(" ").slice(-1)[0]; return al.localeCompare(bl); }) : []} activitiesLive={activitiesLive} />
+      <Nav view={view} setView={setView} isAdmin={effectiveAdmin} isGuest={isGuest} userName={testStudent || displayName} onLogout={() => { if (testStudent) { setTestStudent(null); return; } try { localStorage.removeItem(STORAGE_KEY + "-user"); } catch(e) {} setUserName(null); }} studentView={studentView} setStudentView={isAdmin ? setStudentView : null} courseTitle={data?.courseTitle} testStudent={testStudent} setTestStudent={isAdmin ? setTestStudent : null} allStudents={data ? data.students.filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis").sort((a, b) => { const al = a.name.split(" ").slice(-1)[0]; const bl = b.name.split(" ").slice(-1)[0]; return al.localeCompare(bl); }) : []} activitiesLive={activitiesLive} storageKey={STORAGE_KEY} accent={ACCENT} defaultTitle="Comm Research" caminoUrl="https://camino.instructure.com/courses/117721" studentTabs={STUDENT_TABS} adminTabs={ADMIN_TABS} />
       {view === "home" && !isGuest && <HomeView data={data} setData={setData} userName={effectiveUserName} isAdmin={effectiveAdmin} setView={setView} />}
       {view === "schedule" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "assignments" && !isGuest && <AssignmentsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} setView={setView} />}

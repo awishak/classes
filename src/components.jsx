@@ -1490,3 +1490,129 @@ export function NamePicker({
     </div>
   );
 }
+
+// ─── Nav (all three classes) ──────────────────────────────────────────
+// Top sticky nav bar. Course chip on the left, tab buttons on the right
+// with optional admin-only tabs separated by a vertical divider.
+//
+// Props:
+//   view, setView, isAdmin, isGuest, userName, onLogout, studentView,
+//   setStudentView, courseTitle, testStudent, setTestStudent, allStudents,
+//   activitiesLive: standard
+//   storageKey: for theme
+//   accent: class accent color
+//   studentTabs: array of { id, label, guest } — student-visible tabs
+//   adminTabs: array of { id, label } — admin-only tabs (after divider)
+//   defaultTitle: fallback for the course chip when courseTitle is empty
+//   caminoUrl: URL for the Camino course site, or null to omit the link
+export function Nav({
+  view, setView, isAdmin, isGuest, userName, onLogout,
+  studentView, setStudentView, courseTitle, testStudent, setTestStudent,
+  allStudents, activitiesLive,
+  storageKey, accent,
+  studentTabs, adminTabs, defaultTitle, caminoUrl,
+}) {
+  const { theme } = useTheme(storageKey);
+  const themedFont = themedHeadingFont(theme, F);
+  React.useEffect(() => {
+    if (theme === "clean") return;
+    const id = "themed-fonts-" + theme;
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    if (theme === "locked") {
+      link.href = "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap";
+    } else if (theme === "crashing") {
+      link.href = "https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Press+Start+2P&display=swap";
+    }
+    document.head.appendChild(link);
+  }, [theme]);
+  const visibleStudent = studentTabs.filter(t => !isGuest || t.guest);
+  return (
+    <div style={{ background: "#fff", padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, position: "sticky", top: 0, zIndex: 50, borderBottom: "1px solid " + BORDER }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{
+          background: theme === "crashing" ? "#1f2937" : accent,
+          color: "#fff",
+          padding: "5px 12px",
+          borderRadius: 8,
+          fontSize: theme === "crashing" ? 13 : 12,
+          fontWeight: theme === "clean" ? 800 : 400,
+          fontFamily: themedFont,
+          letterSpacing: theme === "locked" ? "0.04em" : "-0.01em",
+          textTransform: theme === "locked" ? "uppercase" : "none",
+          border: theme === "crashing" ? "2px solid #ec4899" : "none",
+          boxShadow: theme === "crashing" ? "3px 3px 0 #fbbf24" : (theme === "locked" ? "inset 0 -2px 0 #dc2626" : "none"),
+        }}>{courseTitle || defaultTitle}</div>
+        {studentView && <span style={{ fontSize: 11, fontWeight: 700, color: "#d97706", textTransform: "uppercase", letterSpacing: "0.05em" }}>Student View</span>}
+      </div>
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+        {visibleStudent.map(t => {
+          const isActive = view === t.id;
+          const isLiveDot = t.id === "activities" && activitiesLive;
+          return (
+            <button key={t.id} onClick={() => setView(t.id)} style={{
+              ...pill,
+              fontFamily: themedFont,
+              background: isActive ? (theme === "crashing" ? "#ec4899" : (theme === "locked" ? "#1f2937" : TEXT_PRIMARY)) : "transparent",
+              color: isActive ? "#fff" : TEXT_SECONDARY,
+              position: "relative",
+              fontWeight: 700,
+            }}>
+              {t.label}
+              {isLiveDot && <span style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: GREEN, animation: "livePulse 1.6s ease-in-out infinite" }} />}
+            </button>
+          );
+        })}
+        {isAdmin && !isGuest && adminTabs && adminTabs.length > 0 && (
+          <>
+            <span style={{ width: 1, height: 18, background: BORDER_STRONG, margin: "0 4px" }} />
+            {adminTabs.map(t => {
+              const isActive = view === t.id;
+              return (
+                <button key={t.id} onClick={() => setView(t.id)} style={{
+                  ...pill,
+                  background: isActive ? TEXT_PRIMARY : "transparent",
+                  color: isActive ? "#fff" : TEXT_MUTED,
+                  fontSize: 11,
+                  padding: "6px 10px",
+                  fontWeight: 700,
+                }}>{t.label}</button>
+              );
+            })}
+          </>
+        )}
+        {caminoUrl && (
+          <a href={caminoUrl} target="_blank" rel="noopener noreferrer" style={{ ...linkPill, fontSize: 11 }}>
+            Camino <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+        )}
+        {setStudentView && !testStudent && (
+          <button onClick={() => setStudentView(!studentView)} style={{
+            padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
+            fontFamily: F, border: studentView ? "1px solid #d97706" : "1px solid " + BORDER_STRONG,
+            background: studentView ? "#fef3c7" : "#fff", color: studentView ? "#92400e" : TEXT_MUTED, transition: "all 0.15s",
+          }}>{studentView ? "Exit" : "Student View"}</button>
+        )}
+        {setTestStudent && allStudents && (
+          <select value={testStudent || ""} onChange={e => setTestStudent(e.target.value || null)} style={{
+            padding: "5px 8px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
+            fontFamily: F, border: testStudent ? "1px solid " + RED : "1px solid " + BORDER_STRONG,
+            background: testStudent ? "#fef2f2" : "#fff", color: testStudent ? RED : TEXT_MUTED,
+            outline: "none", maxWidth: 140,
+          }}>
+            <option value="">Test as student...</option>
+            {allStudents.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+          </select>
+        )}
+        <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 4 }}>{userName}</span>
+        <button onClick={onLogout} style={{
+          padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
+          fontFamily: F, border: "1px solid " + BORDER_STRONG,
+          background: "#fff", color: TEXT_MUTED, transition: "all 0.15s",
+        }}>Switch</button>
+      </div>
+    </div>
+  );
+}
