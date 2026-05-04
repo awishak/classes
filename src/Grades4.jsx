@@ -34,7 +34,7 @@ export const DEFAULT_ASSIGNMENTS = [
   { id: "presentation", name: "Final Presentation/Project", weight: 25, due: "Jun 1", dueTime: "11:59 PM", link: "", notes: "" },
   { id: "peer_eval", name: "Peer Evaluation", weight: 10, due: "Jun 8", dueTime: "11:59 PM", link: "", notes: "" },
   { id: "final_reflection", name: "Final Reflection", weight: 10, due: "Jun 8", dueTime: "11:59 PM", link: "", notes: "" },
-  { id: "participation", name: "Participation", weight: 25, due: "", link: "", notes: "Weekly Game, Around the Horn, Rotating Fishbowl" },
+  { id: "participation", name: "In-Class", weight: 25, due: "", link: "", notes: "Weekly Game, In-Class points, Rotating Fishbowl" },
 ];
 
 export const QUIZ_BREAKDOWN = [
@@ -1129,15 +1129,19 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
 function ParticipationDetail({ data, studentId }) {
   const log = data.log || [];
   const participation = data.participation || {};
+  const reboundGrades = data.reboundGrades || {};
+  const weeklyGames = data.weeklyGames || {};
+  const weeklyFishbowl = data.weeklyFishbowl || {};
   const getPart = (w, cat) => { const k = studentId + "-w" + w + "-" + cat; return participation[k]; };
 
+  // Admin-style placeholder when no student selected
   if (!studentId) {
     return (
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {[
           { label: "Weekly Game", detail: "100 pts/week, dual weighted", icon: "Q" },
           { label: "This or That", detail: "20 pts/week, game only", icon: "TT" },
-          { label: "Around the Horn", detail: "Variable, game + grade", icon: "P" },
+          { label: "In-Class points", detail: "Variable, game + grade", icon: "IC" },
           { label: "Rotating Fishbowl", detail: "20 pts/time, game + grade", icon: "FB" },
         ].map(p => (
           <div key={p.label} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid " + BORDER, display: "flex", alignItems: "center", gap: 8 }}>
@@ -1152,83 +1156,187 @@ function ParticipationDetail({ data, studentId }) {
     );
   }
 
+  // ─── GRADE BREAKDOWN ROWS ─────────────────────────────────────────────
+  // Each row = a single concrete entry that contributed to this student's grade.
+  // Weekly games: per-week score / 100, with rebound annotation if applicable.
+  // Fishbowls: per-week score / 20 (only if a value was recorded).
+  // In-class points: total accumulated across all weeks (single line).
+  const gradeRows = [];
+
+  // Weekly games (for each week 1..10 in numeric order)
+  const allWeeks = new Set([
+    ...Object.keys(weeklyGames),
+    ...Object.keys(weeklyFishbowl),
+  ]);
+  const weekNums = [...allWeeks].map(w => parseInt(w)).filter(n => !isNaN(n)).sort((a, b) => a - b);
+
+  weekNums.forEach(w => {
+    const game = weeklyGames[w];
+    if (game && game.scored) {
+      // Compute the auto grade from the live responses
+      let original = 0;
+      let answered = 0;
+      (game.questions || []).forEach((q, qi) => {
+        if (game.responses?.[studentId + "-" + qi] !== undefined) answered++;
+        if (game.responses?.[studentId + "-" + qi] === q.correct) {
+          const cat = q.category || "on_topic";
+          const catPts = cat === "on_topic" ? 15 : 2.5;
+          original += catPts;
+        }
+      });
+
+      // Manual override from the participation map (for students who didn't play live but you graded later)
+      const qv = getPart(w, "quiz");
+      let manualGrade = null;
+      if (qv && typeof qv === "object") {
+        let manualSum = 0;
+        QUIZ_BREAKDOWN.forEach(q => { manualSum += (qv[q.id] || 0) * q.gradePts; });
+        if (manualSum > 0) manualGrade = manualSum;
+      }
+
+      // Rebound override
+      const rg = reboundGrades[studentId + "-game-" + w];
+      let displayed = original;
+      let preReboundOriginal = null;
+      if (manualGrade !== null) displayed = manualGrade;
+      if (rg && typeof rg.gradePoints === "number") {
+        const ref = manualGrade !== null ? manualGrade : original;
+        if (rg.type === "makeup") {
+          displayed = Math.max(ref, rg.gradePoints);
+        } else {
+          let cap;
+          if (rg.type === "absence_override") cap = 60;
+          else if (ref < 50) cap = 60;
+          else if (ref <= 65) cap = 70;
+          else if (ref <= 79) cap = 80;
+          else cap = 100;
+          const capped = Math.min(rg.gradePoints, cap);
+          displayed = Math.max(ref, capped);
+        }
+        if (displayed !== ref) preReboundOriginal = Math.round(ref * 10) / 10;
+      }
+
+      // Skip if student has nothing recorded for this week (didn't play live, no manual, no rebound)
+      if (answered === 0 && manualGrade === null && !rg) return;
+      gradeRows.push({
+        label: "Week " + w + " Game",
+        score: Math.round(displayed * 10) / 10,
+        outOf: 100,
+        note: preReboundOriginal !== null ? "(was originally " + preReboundOriginal + " before rebound)" : null,
+      });
+    }
+
+    const fb = weeklyFishbowl[w];
+    if (fb && fb.confirmed) {
+      const fv = getPart(w, "fishbowl");
+      let fbScore = null;
+      if (fv !== undefined && fv !== null && fv !== "") {
+        fbScore = parseFloat(fv) || 0;
+      } else {
+        // Fall back to log entries (older data)
+        const fbLogTotal = log.filter(e => e.studentId === studentId && (e.source || "").startsWith("Fishbowl Wk" + w)).reduce((s, e) => s + e.amount, 0);
+        if (fbLogTotal > 0) fbScore = fbLogTotal;
+      }
+      if (fbScore !== null) {
+        gradeRows.push({ label: "Week " + w + " Fishbowl", score: fbScore, outOf: 20 });
+      }
+    }
+  });
+
+  // In-class points (PTI / Around the Horn) — single summary line
+  const inClassPts = log.filter(e => e.studentId === studentId && (e.source === "PTI" || e.source === "Around the Horn")).reduce((s, e) => s + e.amount, 0);
+
+  // ─── GAME BREAKDOWN BUCKETS (for the gray section below) ─────────────
   const gamePts = {};
   log.filter(e => e.studentId === studentId).forEach(e => {
     const src = e.source || "Other";
     let bucket = "Other";
     if (src.startsWith("Game Wk")) bucket = "Weekly Game";
     else if (src.startsWith("ToT")) bucket = "This or That";
-    else if (src === "PTI" || src === "Around the Horn") bucket = "PTI";
+    else if (src === "PTI" || src === "Around the Horn") bucket = "In-Class";
     else if (src.startsWith("Fishbowl")) bucket = "Fishbowl";
     else if (src.startsWith("Team Win")) bucket = "Team Win";
     else bucket = src;
     gamePts[bucket] = (gamePts[bucket] || 0) + e.amount;
   });
-  let gradeQuizTotal = 0, gradeTotTotal = 0, gradePtiTotal = 0, gradeFbTotal = 0;
-  let quizWeeks = 0, totWeeks = 0, ptiWeeks = 0, fbWeeks = 0;
-  for (let w = 1; w <= 10; w++) {
-    const qv = getPart(w, "quiz");
-    if (qv !== undefined && qv !== null && qv !== "") {
-      const scores = typeof qv === "object" ? qv : {};
-      QUIZ_BREAKDOWN.forEach(q => { gradeQuizTotal += (scores[q.id] || 0) * q.gradePts; });
-      quizWeeks++;
-    }
-    const tv = getPart(w, "tot"); if (tv !== undefined && tv !== null && tv !== "") { gradeTotTotal += parseFloat(tv) || 0; totWeeks++; }
-    const pv = getPart(w, "pti"); if (pv !== undefined && pv !== null && pv !== "") { gradePtiTotal += parseFloat(pv) || 0; ptiWeeks++; }
-    const fv = getPart(w, "fishbowl"); if (fv !== undefined && fv !== null && fv !== "") { gradeFbTotal += parseFloat(fv) || 0; fbWeeks++; }
-  }
-  const items = [
-    { label: "Weekly Game", game: gamePts["Weekly Game"] || 0, grade: Math.round(gradeQuizTotal * 10) / 10, weeks: quizWeeks, icon: "Q" },
-    { label: "This or That", game: gamePts["This or That"] || 0, grade: gradeTotTotal, weeks: totWeeks, icon: "TT" },
-    { label: "Around the Horn", game: gamePts["PTI"] || 0, grade: gradePtiTotal, weeks: ptiWeeks, icon: "P" },
-    { label: "Fishbowl", game: gamePts["Fishbowl"] || 0, grade: gradeFbTotal, weeks: fbWeeks, icon: "FB" },
+  const gameTotal = Object.values(gamePts).reduce((s, v) => s + v, 0);
+  const gameBuckets = [
+    { label: "Weekly Game", total: gamePts["Weekly Game"] || 0, icon: "Q" },
+    { label: "This or That", total: gamePts["This or That"] || 0, icon: "TT" },
+    { label: "In-Class", total: gamePts["In-Class"] || 0, icon: "IC" },
+    { label: "Fishbowl", total: gamePts["Fishbowl"] || 0, icon: "FB" },
   ];
+
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-        {items.map(p => (
-          <div key={p.label} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid " + BORDER }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-              <div style={{ width: 24, height: 24, borderRadius: 6, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 900, color: TEXT_SECONDARY, flexShrink: 0 }}>{p.icon}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{p.label}</div>
-            </div>
-            <div style={{ display: "flex", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 9, color: TEXT_MUTED, fontWeight: 600, textTransform: "uppercase" }}>Game</div>
-                <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY }}>{p.game}</div>
+      {/* ─── GRADE BREAKDOWN (top, primary) ─── */}
+      <div style={{ ...sectionLabel, marginBottom: 8 }}>What counts toward your grade</div>
+      {gradeRows.length === 0 && inClassPts === 0 ? (
+        <div style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid " + BORDER, fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 14 }}>
+          Nothing recorded yet.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 14 }}>
+          {gradeRows.map((r, i) => (
+            <div key={i} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid " + BORDER, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{r.label}</div>
+                {r.note && <div style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>{r.note}</div>}
               </div>
-              {p.grade > 0 && (
-                <div>
-                  <div style={{ fontSize: 9, color: TEXT_MUTED, fontWeight: 600, textTransform: "uppercase" }}>Grade</div>
-                  <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY }}>{Math.round(p.grade * 10) / 10}</div>
-                </div>
-              )}
+              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>{r.score}<span style={{ color: TEXT_MUTED, fontWeight: 400 }}>/{r.outOf}</span></div>
             </div>
-            {p.weeks > 0 && <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>{p.weeks} week{p.weeks !== 1 ? "s" : ""} recorded</div>}
-          </div>
-        ))}
-      </div>
-      {(gamePts["Team Win"] || 0) > 0 && (
-        <div style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid " + BORDER, marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>Team Win Bonuses</span>
-          <span style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY }}>{gamePts["Team Win"]}</span>
+          ))}
+          {inClassPts > 0 && (
+            <div style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid " + BORDER, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>In-Class points</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>+{Math.round(inClassPts * 10) / 10}</div>
+            </div>
+          )}
         </div>
       )}
-      <div style={{ padding: "10px 12px", borderRadius: 10, background: "#f8fafc", border: "1px solid " + BORDER }}>
-        <div style={{ ...sectionLabel, marginBottom: 6 }}>Game Dual Weighting</div>
-        <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 1fr 1fr", gap: "4px 12px", fontSize: 12 }}>
-          <div style={{ fontWeight: 700, color: TEXT_MUTED }}></div>
-          <div style={{ fontWeight: 700, color: TEXT_MUTED }}>Qs</div>
-          <div style={{ fontWeight: 700, color: TEXT_MUTED }}>Game</div>
-          <div style={{ fontWeight: 700, color: TEXT_MUTED }}>Grade</div>
-          {QUIZ_BREAKDOWN.map(q => (
-            <React.Fragment key={q.id}>
-              <div style={{ fontWeight: 600, color: TEXT_SECONDARY }}>{q.label}</div>
-              <div style={{ color: TEXT_SECONDARY }}>{q.count}</div>
-              <div style={{ color: TEXT_SECONDARY }}>{q.gamePts} pts ea</div>
-              <div style={{ color: TEXT_SECONDARY }}>{q.gradePts} pts ea</div>
-            </React.Fragment>
+
+      {/* ─── GAME BREAKDOWN (bottom, gray, supplemental) ─── */}
+      <div style={{ background: "#f8fafc", border: "1px solid " + BORDER, borderRadius: 12, padding: 14 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 4, gap: 8, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>Game Score</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{Math.round(gameTotal * 10) / 10}</div>
+        </div>
+        <div style={{ fontSize: 11, color: TEXT_MUTED, lineHeight: 1.45, marginBottom: 10 }}>
+          Your Game Score is for the in-class leaderboard. It&apos;s weighted differently than your grade. Top of the leaderboard at the end of the quarter gets an automatic A.
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
+          {gameBuckets.map(b => (
+            <div key={b.label} style={{ padding: "8px 10px", borderRadius: 8, background: "#fff", border: "1px solid " + BORDER, display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 22, height: 22, borderRadius: 6, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 900, color: TEXT_SECONDARY, flexShrink: 0 }}>{b.icon}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>{b.label}</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{b.total}</div>
+              </div>
+            </div>
           ))}
+        </div>
+        {(gamePts["Team Win"] || 0) > 0 && (
+          <div style={{ padding: "8px 12px", borderRadius: 8, background: "#fff", border: "1px solid " + BORDER, marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: TEXT_SECONDARY }}>Team Win Bonuses</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{gamePts["Team Win"]}</span>
+          </div>
+        )}
+        <div style={{ paddingTop: 8, borderTop: "1px solid " + BORDER }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Weekly Game weighting</div>
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 1fr 1fr", gap: "3px 12px", fontSize: 11 }}>
+            <div style={{ fontWeight: 700, color: TEXT_MUTED }}></div>
+            <div style={{ fontWeight: 700, color: TEXT_MUTED }}>Qs</div>
+            <div style={{ fontWeight: 700, color: TEXT_MUTED }}>Game</div>
+            <div style={{ fontWeight: 700, color: TEXT_MUTED }}>Grade</div>
+            {QUIZ_BREAKDOWN.map(q => (
+              <React.Fragment key={q.id}>
+                <div style={{ fontWeight: 600, color: TEXT_SECONDARY }}>{q.label}</div>
+                <div style={{ color: TEXT_SECONDARY }}>{q.count}</div>
+                <div style={{ color: TEXT_SECONDARY }}>{q.gamePts} pts ea</div>
+                <div style={{ color: TEXT_SECONDARY }}>{q.gradePts} pts ea</div>
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       </div>
     </div>

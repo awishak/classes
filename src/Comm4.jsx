@@ -4741,6 +4741,16 @@ export default function Comm4() {
           d._dueTimeMigV1 = true;
           if (changed) await saveData(d);
         }
+        // Migration: rename "Participation" assignment to "In-Class"
+        if (d && d.assignments && !d._inClassRenameV1) {
+          let changed = false;
+          d.assignments = d.assignments.map(a => {
+            if (a.id === "participation" && a.name === "Participation") { changed = true; return { ...a, name: "In-Class" }; }
+            return a;
+          });
+          d._inClassRenameV1 = true;
+          if (changed) await saveData(d);
+        }
         if (d && !d.students.find(s => s.name === TEST_STUDENT)) {
           const tsId = genId();
           d.students.push({ id: tsId, name: TEST_STUDENT, teamId: d.teams?.[0]?.id || "" });

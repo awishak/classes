@@ -4846,6 +4846,16 @@ export default function Comm118() {
           d._dueTimeMigV1 = true;
           if (changed) await saveData(d);
         }
+        // Migration: rename "Participation" assignment to "In-Class"
+        if (d && d.assignments && !d._inClassRenameV1) {
+          let changed = false;
+          d.assignments = d.assignments.map(a => {
+            if (a.id === "participation" && a.name === "Participation") { changed = true; return { ...a, name: "In-Class" }; }
+            return a;
+          });
+          d._inClassRenameV1 = true;
+          if (changed) await saveData(d);
+        }
         // Migration: fix "Quizzes" to "Weekly Game" in participation assignment notes
         if (d && d.assignments) {
           const partA = d.assignments.find(a => a.id === "participation");
