@@ -690,7 +690,11 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   };
 
   const isGuest = userName === GUEST_NAME;
-  const student = !isAdmin && !isGuest ? data.students.find(s => s.name === userName) : null;
+  const normalize = s => (s || "").trim().toLowerCase();
+  const student = !isAdmin && !isGuest
+    ? (data.students.find(s => s.name === userName)
+       || data.students.find(s => normalize(s.name) === normalize(userName)))
+    : null;
   const studentId = student?.id;
 
   const startEdit = (a) => {
@@ -862,6 +866,22 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
     <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: CONTAINER_MAX, margin: "0 auto" }}>
+
+        {/* Diagnostic: non-admin, non-guest user with no matched student record */}
+        {!isAdmin && !isGuest && !student && (
+          <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: 14, marginBottom: 16, color: "#991b1b" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Account not matched</div>
+            <div style={{ fontSize: 13, lineHeight: 1.5 }}>You are signed in as <strong>{userName}</strong>, but no student record matches that name. Submission and grade features are disabled until this is fixed.</div>
+            <div style={{ fontSize: 12, lineHeight: 1.5, marginTop: 6 }}>First, try signing out and picking your name again. If that doesn't work, email aishak@scu.edu so the roster can be updated.</div>
+            <button
+              onClick={() => {
+                try { localStorage.removeItem("comm2-v1-user"); } catch(e) {}
+                window.location.reload();
+              }}
+              style={{ marginTop: 10, padding: "6px 12px", fontSize: 12, fontWeight: 700, background: "#fff", color: "#991b1b", border: "1px solid #fca5a5", borderRadius: 8, cursor: "pointer", fontFamily: F }}
+            >Sign out and pick again</button>
+          </div>
+        )}
 
         {/* Student identity strip — clickable to bio */}
         {student && (() => {
