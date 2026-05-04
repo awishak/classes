@@ -1616,3 +1616,114 @@ export function Nav({
     </div>
   );
 }
+
+// ─── ThemedClassWrapper (all three classes) ───────────────────────────
+// Top-level layout shell. Handles:
+//   - Theme-aware page background, font, pixel art (crashing), bottom stripe (locked)
+//   - Admin-only top nav strip linking the three classes
+//   - The shared <Nav> bar
+//   - Renders class-specific routes as `children`
+//
+// Each class passes in its data, view state, theme + class identity, plus
+// the route table as JSX `children`.
+//
+// Props:
+//   data, setData, view, setView, isAdmin, effectiveAdmin, isGuest,
+//   displayName, effectiveUserName, testStudent, setTestStudent,
+//   studentView, setStudentView, activitiesLive: all standard
+//   storageKey: e.g. "comm118-game-v14" — also used to highlight active
+//     class in the admin nav strip
+//   accent: class accent color
+//   onLogout: () => void — class-specific logout handler (some classes
+//     need to also reset view/studentView state on logout)
+//   defaultTitle, caminoUrl, studentTabs, adminTabs: forwarded to <Nav>
+//   children: per-class route map (e.g. {view === "home" && <HomeView ... />})
+export function ThemedClassWrapper({
+  data, setData, view, setView, isAdmin, effectiveAdmin, isGuest,
+  displayName, effectiveUserName, testStudent, setTestStudent,
+  studentView, setStudentView, activitiesLive,
+  storageKey, accent, onLogout,
+  defaultTitle, caminoUrl, studentTabs, adminTabs,
+  children,
+}) {
+  const { theme } = useTheme(storageKey);
+  const themedFont = themedHeadingFont(theme, F);
+
+  // Load themed fonts at the top level so every page gets them
+  React.useEffect(() => {
+    if (theme === "clean") return;
+    const id = "themed-fonts-" + theme;
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    if (theme === "locked") {
+      link.href = "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap";
+    } else if (theme === "crashing") {
+      link.href = "https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Press+Start+2P&display=swap";
+    }
+    document.head.appendChild(link);
+  }, [theme]);
+
+  return (
+    <div style={{ minHeight: "100vh", background: themedPageBg(theme), color: TEXT_PRIMARY, fontFamily: themedFont, fontSize: 15, position: "relative" }}>
+      {theme === "crashing" && (
+        <>
+          <style>{THEME_KEYFRAMES_CSS}</style>
+          {/* Fixed-position pixel art that follows you across all pages */}
+          <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1 }}>
+            <PixelStar top="10%" right="3%" delay={0} />
+            <PixelStar top="35%" right="7%" delay={0.4} />
+            <PixelStar top="20%" left="4%" delay={0.2} color="#ec4899" />
+            <PixelStar bottom="20%" right="5%" delay={0.6} color="#0ea5e9" />
+            <PixelArrow bottom="15%" left="3%" delay={0} />
+            <PixelArrow top="50%" right="2%" delay={0.3} color="#a855f7" />
+            <PixelHeart top="42%" left="3%" delay={0} />
+            <PixelHeart bottom="35%" right="6%" delay={0.5} />
+            <PixelMushroom top="62%" right="3%" delay={0} />
+            <PixelMushroom bottom="55%" left="5%" delay={0.4} />
+            <PixelCoin top="72%" left="6%" delay={0} />
+            <PixelCoin top="85%" right="6%" delay={0.3} />
+            <PixelLightning top="90%" left="2%" delay={0.1} />
+            <PixelLightning bottom="60%" right="3%" delay={0.5} />
+          </div>
+        </>
+      )}
+      {theme === "locked" && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg, #dc2626 0%, #1f2937 50%, #dc2626 100%)", zIndex: 100, pointerEvents: "none" }} />
+      )}
+
+      {isAdmin && (
+        <div style={{ background: "#111", display: "flex", justifyContent: "center", gap: 4, padding: "5px 12px", position: "relative", zIndex: 10 }}>
+          <a href="/comm118" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: storageKey === "comm118-game-v14" ? "#fff" : "#9ca3af", background: storageKey === "comm118-game-v14" ? "#333" : "transparent" }}>118</a>
+          <a href="/comm2" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: storageKey === "comm2-v1" ? "#fff" : "#9ca3af", background: storageKey === "comm2-v1" ? "#333" : "transparent" }}>COMM 2</a>
+          <a href="/comm4" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: storageKey === "comm4-v1" ? "#fff" : "#9ca3af", background: storageKey === "comm4-v1" ? "#333" : "transparent" }}>COMM 4</a>
+          <a href="/dashboard" style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: F, textDecoration: "none", color: "#9ca3af", background: "transparent" }}>Dash</a>
+        </div>
+      )}
+      <div style={{ position: "relative", zIndex: 2 }}>
+        <Nav
+          view={view} setView={setView}
+          isAdmin={effectiveAdmin} isGuest={isGuest}
+          userName={testStudent || displayName}
+          onLogout={onLogout}
+          studentView={studentView}
+          setStudentView={isAdmin ? setStudentView : null}
+          courseTitle={data?.courseTitle}
+          testStudent={testStudent}
+          setTestStudent={isAdmin ? setTestStudent : null}
+          allStudents={data ? data.students.filter(s => s.name !== ADMIN_NAME && s.name !== TEST_STUDENT).sort((a, b) => {
+            const al = a.name.split(" ").slice(-1)[0];
+            const bl = b.name.split(" ").slice(-1)[0];
+            return al.localeCompare(bl);
+          }) : []}
+          activitiesLive={activitiesLive}
+          storageKey={storageKey} accent={accent}
+          defaultTitle={defaultTitle} caminoUrl={caminoUrl}
+          studentTabs={studentTabs} adminTabs={adminTabs}
+        />
+        {children}
+      </div>
+    </div>
+  );
+}
