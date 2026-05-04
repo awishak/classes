@@ -1375,7 +1375,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
 
   // Build the card list in the right order
   const cards = [];
-  if (activeRebound) cards.push("rebound");
+  if (studentId) cards.push("rebound"); // HomeReboundBox self-hides when no pending items
   if (liveActivity) cards.push("live");
   cards.push("assignments", "schedule", "boards");
   if (!liveActivity) cards.push("live"); // Live appears at position 4 when nothing's live
@@ -1409,22 +1409,8 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   let cardIdx = 0;
 
   const renderCard = (name) => {
-    if (name === "rebound" && activeRebound) {
-      return (
-        <button key="rebound" onClick={() => setView("assignments")} style={(() => { const s = { width: "100%", textAlign: "left", ...cardStyle(cardIdx++) }; if (theme === "clean") { s.background = "#fef2f2"; s.border = "1px solid #fca5a5"; } return s; })()}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                <span style={{ display: "inline-block", width: 6, height: 6, background: "#dc2626", borderRadius: "50%" }} />
-                <div style={{ fontSize: 18, fontWeight: 500, color: "#7f1d1d", letterSpacing: "-0.01em" }}>Rebound</div>
-              </div>
-              <div style={{ fontSize: 13, color: "#991b1b", fontWeight: 500, marginBottom: 4 }}>{activeRebound.activityLabel}</div>
-              <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.4 }}>{activeRebound.scoreLine}</div>
-            </div>
-            {activeRebound.timeLeft && <span style={{ fontSize: 11, color: "#991b1b", fontWeight: 500, flexShrink: 0 }}>{activeRebound.timeLeft}</span>}
-          </div>
-        </button>
-      );
+    if (name === "rebound") {
+      return <div key="rebound"><HomeReboundBox data={data} setData={setData} studentId={studentId} /></div>;
     }
     if (name === "live") {
       const live = !!liveActivity;
