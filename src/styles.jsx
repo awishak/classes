@@ -22,6 +22,12 @@ export const PURPLE = "#8b5cf6";
 // ─── LAYOUT ───────────────────────────────────────────────────────────
 export const CONTAINER_MAX = 960;
 
+// ─── CLASS CONSTANTS ─────────────────────────────────────────────────
+// These are shared across all three classes. Used in roster filtering,
+// admin checks, etc.
+export const ADMIN_NAME = "Andrew Ishak";
+export const TEST_STUDENT = "Bruce Willis";
+
 // ─── TYPOGRAPHY ───────────────────────────────────────────────────────
 export const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 
