@@ -13,7 +13,7 @@ import {
   THEME_KEYFRAMES_CSS, themedFontsUrl,
 } from "./styles.jsx";
 import { genId, shuffle, gp, Toast } from "./utils.jsx";
-import { MyNotesView } from "./components.jsx";
+import { MyNotesView, BioView } from "./components.jsx";
 
 const STORAGE_KEY = "comm118-game-v14";
 
@@ -3749,7 +3749,7 @@ function RosterView({ data, setData, userName }) {
   if (selectedId) {
     const student = data.students.find(s => s.id === selectedId);
     if (!student) { setSelectedId(null); return null; }
-    return <BioView student={student} data={data} setData={setData} userName={userName} onBack={() => setSelectedId(null)} />;
+    return <BioView student={student} data={data} setData={setData} userName={userName} onBack={() => setSelectedId(null)} storageKey={STORAGE_KEY} saveData={saveData} uploadPhoto={uploadPhoto} bioFields={BIO_FIELDS} teamColors={TEAM_COLORS} favTeamLabel="Fav Team" />;
   }
 
   return (
@@ -3816,137 +3816,6 @@ function RosterCombined({ data, setData, userName, isAdmin }) {
   );
 }
 
-function BioView({ student, data, setData, userName, onBack }) {
-  const { theme } = useTheme(STORAGE_KEY);
-  const crd = themedInteriorCrd(theme, 0);
-  const isOwn = student.name === userName;
-  const isAdmin = userName === ADMIN_NAME;
-  const canEdit = isOwn || isAdmin;
-  const bio = (data.bios || {})[student.id] || {};
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ ...bio });
-  const [uploading, setUploading] = useState(false);
-  const [msg, setMsg] = useState("");
-  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
-
-  const team = data.teams.find(t => t.id === student.teamId);
-  const tc = team ? TEAM_COLORS[team.colorIdx] : TEAM_COLORS[0];
-  const [editName, setEditName] = useState(student.name);
-  const initials = student.name.split(" ").map(n => n[0]).join("");
-
-  const saveBio = async () => {
-    let updated = { ...data, bios: { ...(data.bios || {}), [student.id]: form } };
-    if (editName.trim() && editName.trim() !== student.name) {
-      updated = { ...updated, students: updated.students.map(s => s.id === student.id ? { ...s, name: editName.trim() } : s) };
-    }
-    await saveData(updated); setData(updated);
-    setEditing(false); showMsg("Saved");
-  };
-
-  const handlePhoto = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { showMsg("Max 2MB"); return; }
-    setUploading(true);
-    try {
-      const url = await uploadPhoto(file, student.id);
-      const newForm = { ...form, photo: url };
-      setForm(newForm);
-      const updated = { ...data, bios: { ...(data.bios || {}), [student.id]: newForm } };
-      await saveData(updated); setData(updated);
-      showMsg("Photo uploaded");
-    } catch (err) { showMsg("Upload failed"); }
-    setUploading(false);
-  };
-
-  return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
-      <Toast message={msg} />
-      <div style={{ maxWidth: 480, margin: "0 auto" }}>
-        {onBack && <button onClick={onBack} style={pillInactive}>Back to Roster</button>}
-
-        <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", borderRadius: 16, padding: "24px 20px", marginTop: 12, display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ position: "relative" }}>
-            {bio.photo ? (
-              <img src={bio.photo} alt="" style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", border: "3px solid rgba(255,255,255,0.2)" }} />
-            ) : (
-              <div style={{ width: 64, height: 64, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 900, color: "#fff", border: "3px solid rgba(255,255,255,0.2)" }}>{initials}</div>
-            )}
-            {canEdit && (
-              <label style={{ position: "absolute", bottom: -2, right: -2, width: 22, height: 22, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_SECONDARY} strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <input type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
-              </label>
-            )}
-          </div>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: "#fff" }}>{student.name}</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>{team ? team.name : "Unassigned"}</div>
-          </div>
-        </div>
-
-        {editing ? (
-          <div style={{ ...crd, padding: 16, marginTop: 12 }}>
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ ...sectionLabel, marginBottom: 4 }}>Name</div>
-              <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Your name" style={inp} />
-            </div>
-            {BIO_FIELDS.map(f => (
-              <div key={f.key} style={{ marginBottom: 12 }}>
-                <div style={{ ...sectionLabel, marginBottom: 4 }}>{f.label}</div>
-                {f.type === "textarea" ? (
-                  <textarea value={form[f.key] || ""} onChange={e => setForm({ ...form, [f.key]: e.target.value })} placeholder={f.placeholder} rows={3} style={{ ...inp, resize: "vertical" }} />
-                ) : (
-                  <input value={form[f.key] || ""} onChange={e => setForm({ ...form, [f.key]: e.target.value })} placeholder={f.placeholder} style={inp} />
-                )}
-              </div>
-            ))}
-            {isAdmin && (
-              <div style={{ marginBottom: 12, padding: "10px 12px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fef3c7" }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: AMBER, textTransform: "uppercase", marginBottom: 4 }}>Admin Only</div>
-                <div style={{ ...sectionLabel, marginBottom: 2 }}>Student Email</div>
-                <div style={{ fontSize: 13, color: TEXT_PRIMARY }}>{form.email || "Not provided"}</div>
-              </div>
-            )}
-            {(isOwn || isAdmin) && (
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ ...sectionLabel, marginBottom: 4 }}>Email</div>
-                <input value={form.email || ""} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="your.email@scu.edu" style={inp} />
-                {isOwn && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>Only visible to your instructor</div>}
-              </div>
-            )}
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={saveBio} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1, padding: "10px 0" }}>Save</button>
-              <button onClick={() => { setForm({ ...bio }); setEditing(false); }} style={{ ...pillInactive, flex: 1, padding: "10px 0" }}>Cancel</button>
-            </div>
-          </div>
-        ) : (
-          <div style={{ ...crd, padding: 16, marginTop: 12 }}>
-            {bio.about || bio.major || bio.year || bio.hometown || bio.favTeam || bio.motto || bio.funFact ? (
-              <>
-                {bio.about && <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.5, marginBottom: 12 }}>{bio.about}</div>}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {bio.major && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Major</div><div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{bio.major}</div></div>}
-                  {bio.year && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Year</div><div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{bio.year}</div></div>}
-                  {bio.hometown && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Hometown</div><div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{bio.hometown}</div></div>}
-                  {bio.favTeam && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Fav Team</div><div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{bio.favTeam}</div></div>}
-                  {bio.motto && <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Motto</div><div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{bio.motto}</div></div>}
-                </div>
-                {bio.funFact && <div style={{ marginTop: 10 }}><div style={{ ...sectionLabel, marginBottom: 2 }}>Fun Fact</div><div style={{ fontSize: 13, color: "#374151" }}>{bio.funFact}</div></div>}
-                {isAdmin && bio.email && <div style={{ marginTop: 10, padding: "6px 10px", background: "#fffbeb", borderRadius: 6, border: "1px solid #fef3c7" }}><div style={{ fontSize: 10, fontWeight: 700, color: AMBER, textTransform: "uppercase", marginBottom: 2 }}>Admin Only</div><div style={{ fontSize: 13, color: TEXT_PRIMARY }}>{bio.email}</div></div>}
-              </>
-            ) : (
-              <div style={{ textAlign: "center", padding: "20px 0", color: TEXT_MUTED, fontSize: 13 }}>
-                {canEdit ? "No bio yet. Click edit to add one." : "This person hasn't filled out their bio yet."}
-              </div>
-            )}
-            {canEdit && <button onClick={() => { setForm({ ...bio }); setEditing(true); }} style={{ ...pillInactive, width: "100%", marginTop: 12, padding: "10px 0" }}>Edit Bio</button>}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 /* ─── READINGS & MEDIA ─── */
 function ReadingsView({ data, setData, isAdmin }) {
@@ -5998,7 +5867,7 @@ function MoreView({ data, setData, isAdmin, userName }) {
         {me && (
           <div style={{ marginBottom: 32 }}>
             <div style={{ ...sectionLabel, marginBottom: 10 }}>Your Info</div>
-            <BioView student={me} data={data} setData={setData} userName={userName} onBack={null} />
+            <BioView student={me} data={data} setData={setData} userName={userName} onBack={null} storageKey={STORAGE_KEY} saveData={saveData} uploadPhoto={uploadPhoto} bioFields={BIO_FIELDS} teamColors={TEAM_COLORS} favTeamLabel="Fav Team" />
           </div>
         )}
 
