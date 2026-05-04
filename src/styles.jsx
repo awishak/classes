@@ -27,6 +27,7 @@ export const CONTAINER_MAX = 960;
 // admin checks, etc.
 export const ADMIN_NAME = "Andrew Ishak";
 export const TEST_STUDENT = "Bruce Willis";
+export const GUEST_NAME = "__guest__";
 
 // ─── TYPOGRAPHY ───────────────────────────────────────────────────────
 export const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";

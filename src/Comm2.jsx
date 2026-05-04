@@ -10,10 +10,10 @@ import {
   themedInteriorCrd, CRASHING_PALETTE,
   PixelStar, PixelArrow, PixelHeart, PixelMushroom, PixelCoin, PixelLightning,
   TRASH_TALK, ENCOURAGEMENT, randomChampionshipLine,
-  THEME_KEYFRAMES_CSS,
+  THEME_KEYFRAMES_CSS, GUEST_NAME,
 } from "./styles.jsx";
 import { genId, shuffle, gp, Toast } from "./utils.jsx";
-import { MyNotesView, RosterView, BoardsView, ToDoView } from "./components.jsx";
+import { MyNotesView, RosterView, BoardsView, ToDoView, NamePicker } from "./components.jsx";
 
 const STORAGE_KEY = "comm2-v1";
 
@@ -201,7 +201,6 @@ function PageHeader({ title, onBack, right }) {
 
 /* --- NAV --- */
 const ADMIN_NAME = "Andrew Ishak";
-const GUEST_NAME = "__guest__";
 const TEST_STUDENT = "Bruce Willis";
 
 function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView, setStudentView, courseTitle, testStudent, setTestStudent, allStudents, activitiesLive }) {
@@ -319,117 +318,6 @@ function Nav({ view, setView, isAdmin, isGuest, userName, onLogout, studentView,
 }
 
 /* --- NAME PICKER --- */
-function NamePicker({ data, onSelect }) {
-  const [selected, setSelected] = useState(null);
-  const [pin, setPin] = useState("");
-  const [error, setError] = useState("");
-  const [remember, setRemember] = useState(true);
-  const pins = data?.pins || {};
-
-  const names = data ? data.students.map(s => s.name).sort(lastSort) : [...ALL_STUDENTS].sort(lastSort);
-  const sorted = [ADMIN_NAME, ...names.filter(n => n !== ADMIN_NAME && n !== TEST_STUDENT)];
-
-  const tryLogin = () => {
-    if (!selected) return;
-    if (selected === ADMIN_NAME) {
-      if (pin !== "118711") { setError("Wrong PIN"); setPin(""); return; }
-      if (remember) { try { localStorage.setItem(STORAGE_KEY + "-user", selected); } catch(e) {} }
-      onSelect(selected); return;
-    }
-    const student = data.students.find(s => s.name === selected);
-    if (!student) return;
-    const correctPin = pins[student.id];
-    if (correctPin && pin !== String(correctPin)) { setError("Wrong PIN"); setPin(""); return; }
-    if (remember) { try { localStorage.setItem(STORAGE_KEY + "-user", selected); } catch(e) {} }
-    onSelect(selected);
-  };
-
-  if (selected) {
-    return (
-      <div style={{ minHeight: "100vh", background: "#fafaf9", color: TEXT_PRIMARY, fontFamily: F, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <div style={{ maxWidth: 360, width: "100%" }}>
-          <div style={{ textAlign: "center", marginBottom: 24 }}>
-            <div style={{ width: 56, height: 56, borderRadius: 14, background: ACCENT, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
-              <span style={{ color: "#fff", fontSize: 18, fontWeight: 700 }}>2</span>
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.01em" }}>{selected}</div>
-            <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 4 }}>Enter your PIN to continue</div>
-          </div>
-          <div style={{ background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 18 }}>
-            <input autoFocus type="password" inputMode="numeric" maxLength={6} value={pin} onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setError(""); }} onKeyDown={e => e.key === "Enter" && tryLogin()} placeholder="6-digit PIN" style={{ ...inp, textAlign: "center", fontSize: 22, fontWeight: 600, letterSpacing: "0.3em" }} />
-            {error && <div style={{ fontSize: 13, color: RED, textAlign: "center", marginTop: 8, fontWeight: 500 }}>{error}</div>}
-            <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, cursor: "pointer", fontSize: 13, color: TEXT_SECONDARY }}>
-              <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} style={{ width: 16, height: 16 }} />
-              Remember me on this device
-            </label>
-            <button onClick={tryLogin} style={{ ...pill, background: ACCENT, color: "#fff", padding: "12px 0", width: "100%", marginTop: 14, fontSize: 14, fontWeight: 500 }}>Sign in</button>
-            <button onClick={() => { setSelected(null); setPin(""); setError(""); }} style={{
-              width: "100%", marginTop: 8, padding: "10px 0", background: "#fff",
-              border: "1px solid " + BORDER_STRONG, borderRadius: 10, cursor: "pointer", fontFamily: F,
-              fontSize: 13, fontWeight: 500, color: TEXT_SECONDARY,
-            }}>Back</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ minHeight: "100vh", background: "#fafaf9", color: TEXT_PRIMARY, fontFamily: F, padding: "60px 20px 40px" }}>
-      <div style={{ maxWidth: 420, width: "100%", margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 14, background: ACCENT, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
-            <span style={{ color: "#fff", fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em" }}>2</span>
-          </div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: ACCENT, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>COMM 2 · Spring 2026</div>
-          <div style={{ fontSize: 24, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.02em", lineHeight: 1.15 }}>Public Speaking</div>
-          <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 6 }}>MWF 9:15 to 10:20 am · Vari 128</div>
-        </div>
-
-        <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.55, textAlign: "center", marginBottom: 18, padding: "0 4px" }}>
-          This app is our class hub. Please see Camino for official grades.
-        </div>
-
-        <div style={{ ...sectionLabel, marginBottom: 8, paddingLeft: 4 }}>Select your name</div>
-        <div style={{ background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 4 }}>
-          {sorted.map(name => {
-            const student = data?.students?.find(s => s.name === name);
-            const bio = student ? (data?.bios || {})[student.id] : null;
-            const photoUrl = bio?.photo;
-            const isAdmin = name === ADMIN_NAME;
-            return (
-              <button key={name} onClick={() => setSelected(name)} style={{
-                display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 12px", textAlign: "left",
-                fontFamily: F, fontSize: 14, fontWeight: isAdmin ? 600 : 400,
-                background: "transparent",
-                color: TEXT_PRIMARY,
-                border: "none", borderRadius: 10, cursor: "pointer",
-              }}>
-                {photoUrl ? (
-                  <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                ) : (
-                  <span style={{ width: 36, height: 36, borderRadius: "50%", background: isAdmin ? ACCENT : "#e4e4e7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: isAdmin ? "#fff" : TEXT_SECONDARY, flexShrink: 0 }}>
-                    {name.split(" ").map(n => n[0]).join("")}
-                  </span>
-                )}
-                <span style={{ flex: 1, minWidth: 0 }}>{name}</span>
-                {isAdmin && <span style={{ fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 5, background: ACCENT + "12", color: ACCENT, textTransform: "uppercase", letterSpacing: "0.08em", flexShrink: 0 }}>Instructor</span>}
-              </button>
-            );
-          })}
-        </div>
-
-        <button onClick={() => onSelect(GUEST_NAME)} style={{
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", padding: "11px 16px",
-          fontFamily: F, fontSize: 13, fontWeight: 500, color: TEXT_SECONDARY,
-          background: "transparent", border: "1px dashed #d1d5db", borderRadius: 12, cursor: "pointer", marginTop: 12,
-        }}>Continue as guest</button>
-
-        <div style={{ textAlign: "center", marginTop: 18, fontSize: 11, color: TEXT_MUTED }}>aishak@scu.edu</div>
-      </div>
-    </div>
-  );
-}
 
 /* ─── INSTRUCTOR CARD ─── */
 const REBOUND_POLICY = `You can earn additional points after a low (or missing) score in some cases. Here are three different situations that might apply to you.
@@ -3595,7 +3483,7 @@ export default function Comm2() {
   }, [data, refresh]);
 
   if (loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F, color: TEXT_MUTED }}>Loading...</div>;
-  if (!userName) return <NamePicker data={data} onSelect={setUserName} />;
+  if (!userName) return <NamePicker data={data} onSelect={setUserName} storageKey={STORAGE_KEY} allStudents={ALL_STUDENTS} accent={ACCENT} adminPin="118711" lastSort={lastSort} iconText="2" iconFontSize={18} courseCode="COMM 2 · Spring 2026" courseTitle="Public Speaking" meetingInfo="MWF 9:15 to 10:20 am · Vari 128" />;
 
   const students = data.students || [];
   const log = data.log || [];
