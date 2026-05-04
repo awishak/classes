@@ -10,7 +10,9 @@ import {
   TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
   pill, pillActive, pillInactive, bt, inp, sel, sectionLabel, linkPill,
   ADMIN_NAME, TEST_STUDENT, GUEST_NAME,
-  useTheme, themedInteriorCrd, themedHeadingFont,
+  useTheme, themedInteriorCrd, themedHeadingFont, themedPageBg,
+  PixelStar, PixelArrow, PixelHeart, PixelMushroom, PixelCoin, PixelLightning,
+  THEME_KEYFRAMES_CSS,
 } from "./styles.jsx";
 import { genId, gp, Toast, parseDueDate, fmtDue } from "./utils.jsx";
 
