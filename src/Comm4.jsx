@@ -4636,7 +4636,7 @@ function MoreView({ data, setData, isAdmin, userName }) {
         {/* Readings */}
         <div style={{ marginBottom: 32 }}>
           <div style={{ ...sectionLabel, marginBottom: 10 }}>Readings</div>
-          <ReadingsView data={data} setData={setData} isAdmin={isAdmin} storageKey={STORAGE_KEY} saveData={saveData} uploadPdf={uploadPdf} />
+          <ReadingsView data={data} setData={setData} isAdmin={isAdmin} storageKey={STORAGE_KEY} saveData={saveData} uploadPdf={uploadPdf} accent={ACCENT} />
         </div>
 
         {/* Discussion Boards */}

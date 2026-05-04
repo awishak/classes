@@ -4638,7 +4638,7 @@ function MoreView({ data, setData, isAdmin, userName }) {
         {/* Readings */}
         <div style={{ marginBottom: 32 }}>
           <div style={{ ...sectionLabel, marginBottom: 10 }}>Readings</div>
-          <ReadingsView data={data} setData={setData} isAdmin={isAdmin} storageKey={STORAGE_KEY} saveData={saveData} uploadPdf={uploadPdf} />
+          <ReadingsView data={data} setData={setData} isAdmin={isAdmin} storageKey={STORAGE_KEY} saveData={saveData} uploadPdf={uploadPdf} accent={ACCENT} />
         </div>
 
         {/* Discussion Boards */}
@@ -5191,7 +5191,7 @@ function ThemedComm118Wrapper({ data, isAdmin, isGuest, view, setView, displayNa
 
       {/* Backwards-compat redirects: old tab IDs route to the new homes */}
       {view === "leaderboard" && <Leaderboard students={visibleStudents} log={data.log} teams={data.teams} isAdmin={effectiveAdmin} userName={effectiveUserName} data={data} setData={setData} />}
-      {view === "readings" && !isGuest && <ReadingsView data={data} setData={setData} isAdmin={effectiveAdmin} storageKey={STORAGE_KEY} saveData={saveData} uploadPdf={uploadPdf} />}
+      {view === "readings" && !isGuest && <ReadingsView data={data} setData={setData} isAdmin={effectiveAdmin} storageKey={STORAGE_KEY} saveData={saveData} uploadPdf={uploadPdf} accent={ACCENT} />}
       {view === "inclass" && !isGuest && <InClassView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "boards" && !isGuest && <BoardsView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} storageKey={STORAGE_KEY} saveData={saveData} accent={ACCENT} />}
       {view === "mynotes" && !isGuest && <MyNotesView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} storageKey={STORAGE_KEY} saveData={saveData} />}

@@ -390,7 +390,7 @@ export function RosterView({
 // upload PDFs, attach to schedule days.
 // Props: data, setData, isAdmin (existing); storageKey (theme);
 // saveData (persistence); uploadPdf(file, readingId) (PDF upload)
-export function ReadingsView({ data, setData, isAdmin, storageKey, saveData, uploadPdf }) {
+export function ReadingsView({ data, setData, isAdmin, storageKey, saveData, uploadPdf, accent }) {
   const { theme } = useTheme(storageKey);
   const crd = themedInteriorCrd(theme, 0);
   const readings = data.readings || [];
@@ -605,7 +605,7 @@ export function ReadingsView({ data, setData, isAdmin, storageKey, saveData, upl
           return (
             <div key={w.week} style={{ ...crd, padding: 18, marginBottom: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{w.week}</div>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: accent, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{w.week}</div>
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.2 }}>{w.label}</div>
                   {w.theme && <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 1 }}>{w.theme}</div>}
