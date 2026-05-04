@@ -13,7 +13,7 @@ import {
   THEME_KEYFRAMES_CSS, themedFontsUrl,
 } from "./styles.jsx";
 import { genId, shuffle, gp, Toast } from "./utils.jsx";
-import { MyNotesView, BioView } from "./components.jsx";
+import { MyNotesView, BioView, RosterView } from "./components.jsx";
 
 const STORAGE_KEY = "comm118-game-v14";
 
@@ -3737,70 +3737,6 @@ async function uploadPdf(file, readingId) {
   return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${path}?t=${Date.now()}`;
 }
 
-function RosterView({ data, setData, userName }) {
-  const { theme } = useTheme(STORAGE_KEY);
-  const crd = themedInteriorCrd(theme, 0);
-  const [selectedId, setSelectedId] = useState(null);
-  const [search, setSearch] = useState("");
-  const sorted = [...data.students].filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis").sort(lastSortObj);
-  const q = search.trim().toLowerCase();
-  const filtered = q ? sorted.filter(s => s.name.toLowerCase().includes(q)) : sorted;
-
-  if (selectedId) {
-    const student = data.students.find(s => s.id === selectedId);
-    if (!student) { setSelectedId(null); return null; }
-    return <BioView student={student} data={data} setData={setData} userName={userName} onBack={() => setSelectedId(null)} storageKey={STORAGE_KEY} saveData={saveData} uploadPhoto={uploadPhoto} bioFields={BIO_FIELDS} teamColors={TEAM_COLORS} favTeamLabel="Fav Team" />;
-  }
-
-  return (
-    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
-      <div style={{ maxWidth: 500, margin: "0 auto" }}>
-        <div style={{ ...sectionLabel, marginBottom: 10 }}>Class roster</div>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search classmates" style={{ ...inp, fontSize: 13, padding: "8px 12px", marginBottom: 12, width: "100%", boxSizing: "border-box" }} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {filtered.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center", padding: 20 }}>No matches.</div>}
-          {filtered.map(s => {
-            const team = data.teams.find(t => t.id === s.teamId);
-            const tc = team ? TEAM_COLORS[team.colorIdx] : TEAM_COLORS[0];
-            const bio = (data.bios || {})[s.id] || {};
-            const initials = s.name.split(" ").map(n => n[0]).join("");
-            const hasPhoto = !!bio.photo;
-            const isMe = s.name === userName;
-            return (
-              <button key={s.id} onClick={() => setSelectedId(s.id)} style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "10px 12px",
-                background: isMe ? ACCENT + "0d" : "#fff", border: "1px solid " + (isMe ? ACCENT + "40" : BORDER),
-                borderRadius: 12,
-                cursor: "pointer", textAlign: "left", fontFamily: F, width: "100%",
-              }}>
-                {hasPhoto ? (
-                  <img src={bio.photo} alt="" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                ) : (
-                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, color: "#fff", flexShrink: 0 }}>{initials}</div>
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, display: "flex", alignItems: "center", gap: 6 }}>
-                    {s.name}
-                    {isMe && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", background: ACCENT + "1a", color: ACCENT, borderRadius: 4, letterSpacing: "0.06em" }}>YOU</span>}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2, flexWrap: "wrap", fontSize: 11 }}>
-                    {team && <span style={{ color: tc.accent, fontWeight: 500 }}>{team.name}</span>}
-                    {team && (bio.year || bio.hometown) && <span style={{ color: "#d4d4d8" }}>·</span>}
-                    {bio.year && <span style={{ color: TEXT_SECONDARY }}>{bio.year}</span>}
-                    {bio.year && bio.hometown && <span style={{ color: "#d4d4d8" }}>·</span>}
-                    {bio.hometown && <span style={{ color: TEXT_SECONDARY }}>{bio.hometown}</span>}
-                  </div>
-                  {bio.motto && <div style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bio.motto}</div>}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        <div style={{ textAlign: "center", marginTop: 12, fontSize: 11, color: TEXT_MUTED }}>{sorted.length} students</div>
-      </div>
-    </div>
-  );
-}
 
 function RosterCombined({ data, setData, userName, isAdmin }) {
   const [sub, setSub] = useState("roster");
@@ -3810,7 +3746,7 @@ function RosterCombined({ data, setData, userName, isAdmin }) {
         <button onClick={() => setSub("roster")} style={sub === "roster" ? pillActive : pillInactive}>Roster</button>
         {isAdmin && <button onClick={() => setSub("draft")} style={sub === "draft" ? pillActive : pillInactive}>Draft</button>}
       </div>
-      {sub === "roster" && <RosterView data={data} setData={setData} userName={userName} />}
+      {sub === "roster" && <RosterView data={data} setData={setData} userName={userName} storageKey={STORAGE_KEY} adminName={ADMIN_NAME} testStudent={TEST_STUDENT} accent={ACCENT} getTeamColor={s => { const t = data.teams.find(x => x.id === s.teamId); return t ? TEAM_COLORS[t.colorIdx] : TEAM_COLORS[0]; }} lastSortObj={lastSortObj} BioComponent={BioView} bioComponentProps={{ saveData, uploadPhoto, bioFields: BIO_FIELDS, teamColors: TEAM_COLORS, favTeamLabel: "Fav Team" }} />}
       {sub === "draft" && isAdmin && <TeamBuilder data={data} setData={setData} />}
     </div>
   );

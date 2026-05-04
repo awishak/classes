@@ -286,3 +286,97 @@ export function BioView({
     </div>
   );
 }
+
+// ─── RosterView ───────────────────────────────────────────────────────
+// Class roster grid. Each student is a tappable card showing photo,
+// team color, and a few bio fields. Tapping opens BioView.
+//
+// All three classes have RosterView, but Comm 2 has no teams (single
+// section), so getTeamColor returns a class-accent fallback there.
+//
+// Props:
+//   data, setData, userName: standard
+//   storageKey: for theme
+//   adminName: name to filter out (admin doesn't appear in roster)
+//   testStudent: name to filter out (test/demo account)
+//   accent: the class accent color (used in "YOU" badge)
+//   getTeamColor: (student) => { accent, bg } — class-specific team color
+//     resolution. Comm 118 + Comm 4 use TEAM_COLORS by team.colorIdx.
+//     Comm 2 returns a single class-accent color for everyone.
+//   lastSortObj: (a, b) => number — class-specific last-name sort that
+//     handles roster overrides (multi-word last names)
+//   BioComponent: BioView for Comm 118 + Comm 4, the local Comm 2
+//     BioView for Comm 2. The roster delegates rendering when a student
+//     is selected.
+//   bioComponentProps: extra props to forward to BioComponent (bioFields,
+//     teamColors, favTeamLabel, saveData, uploadPhoto). Roster doesn't
+//     care about their shape, just passes them through.
+export function RosterView({
+  data, setData, userName,
+  storageKey, adminName, testStudent, accent,
+  getTeamColor, lastSortObj,
+  BioComponent, bioComponentProps = {},
+}) {
+  const { theme } = useTheme(storageKey);
+  const crd = themedInteriorCrd(theme, 0);
+  const [selectedId, setSelectedId] = useState(null);
+  const [search, setSearch] = useState("");
+  const sorted = [...data.students].filter(s => s.name !== adminName && s.name !== testStudent).sort(lastSortObj);
+  const q = search.trim().toLowerCase();
+  const filtered = q ? sorted.filter(s => s.name.toLowerCase().includes(q)) : sorted;
+
+  if (selectedId) {
+    const student = data.students.find(s => s.id === selectedId);
+    if (!student) { setSelectedId(null); return null; }
+    return <BioComponent student={student} data={data} setData={setData} userName={userName} onBack={() => setSelectedId(null)} storageKey={storageKey} {...bioComponentProps} />;
+  }
+
+  return (
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
+      <div style={{ maxWidth: 500, margin: "0 auto" }}>
+        <div style={{ ...sectionLabel, marginBottom: 10 }}>Class roster</div>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search classmates" style={{ ...inp, fontSize: 13, padding: "8px 12px", marginBottom: 12, width: "100%", boxSizing: "border-box" }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {filtered.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center", padding: 20 }}>No matches.</div>}
+          {filtered.map(s => {
+            const team = (data.teams || []).find(t => t.id === s.teamId);
+            const tc = getTeamColor(s);
+            const bio = (data.bios || {})[s.id] || {};
+            const initials = s.name.split(" ").map(n => n[0]).join("");
+            const hasPhoto = !!bio.photo;
+            const isMe = s.name === userName;
+            return (
+              <button key={s.id} onClick={() => setSelectedId(s.id)} style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "10px 12px",
+                background: isMe ? accent + "0d" : "#fff", border: "1px solid " + (isMe ? accent + "40" : BORDER),
+                borderRadius: 12,
+                cursor: "pointer", textAlign: "left", fontFamily: F, width: "100%",
+              }}>
+                {hasPhoto ? (
+                  <img src={bio.photo} alt="" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, color: "#fff", flexShrink: 0 }}>{initials}</div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, display: "flex", alignItems: "center", gap: 6 }}>
+                    {s.name}
+                    {isMe && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", background: accent + "1a", color: accent, borderRadius: 4, letterSpacing: "0.06em" }}>YOU</span>}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2, flexWrap: "wrap", fontSize: 11 }}>
+                    {team && <span style={{ color: tc.accent, fontWeight: 500 }}>{team.name}</span>}
+                    {team && (bio.year || bio.hometown) && <span style={{ color: "#d4d4d8" }}>·</span>}
+                    {bio.year && <span style={{ color: TEXT_SECONDARY }}>{bio.year}</span>}
+                    {bio.year && bio.hometown && <span style={{ color: "#d4d4d8" }}>·</span>}
+                    {bio.hometown && <span style={{ color: TEXT_SECONDARY }}>{bio.hometown}</span>}
+                  </div>
+                  {bio.motto && <div style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bio.motto}</div>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ textAlign: "center", marginTop: 12, fontSize: 11, color: TEXT_MUTED }}>{sorted.length} students</div>
+      </div>
+    </div>
+  );
+}
