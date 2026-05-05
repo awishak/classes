@@ -12,6 +12,7 @@ import {
   ADMIN_NAME, TEST_STUDENT, GUEST_NAME,
   useTheme, themedInteriorCrd, themedHeadingFont, themedPageBg,
   PixelStar, PixelArrow, PixelHeart, PixelMushroom, PixelCoin, PixelLightning,
+  SnapGhost, SnapStreakCounter, SnapStoryRing,
   THEME_KEYFRAMES_CSS,
 } from "./styles.jsx";
 import { genId, gp, Toast, parseDueDate, fmtDue } from "./utils.jsx";
@@ -356,7 +357,13 @@ export function RosterView({
                 cursor: "pointer", textAlign: "left", fontFamily: F, width: "100%",
               }}>
                 {hasPhoto ? (
-                  <img src={bio.photo} alt="" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                  theme === "snap" ? (
+                    <SnapStoryRing size={52}>
+                      <img src={bio.photo} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+                    </SnapStoryRing>
+                  ) : (
+                    <img src={bio.photo} alt="" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                  )
                 ) : (
                   <div style={{ width: 48, height: 48, borderRadius: "50%", background: tc.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, color: "#fff", flexShrink: 0 }}>{initials}</div>
                 )}
@@ -1527,6 +1534,8 @@ export function Nav({
       link.href = "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap";
     } else if (theme === "crashing") {
       link.href = "https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Press+Start+2P&display=swap";
+    } else if (theme === "snap") {
+      link.href = "https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap";
     }
     document.head.appendChild(link);
   }, [theme]);
@@ -1663,6 +1672,8 @@ export function ThemedClassWrapper({
       link.href = "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap";
     } else if (theme === "crashing") {
       link.href = "https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Press+Start+2P&display=swap";
+    } else if (theme === "snap") {
+      link.href = "https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap";
     }
     document.head.appendChild(link);
   }, [theme]);
@@ -1693,6 +1704,24 @@ export function ThemedClassWrapper({
       )}
       {theme === "locked" && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg, #dc2626 0%, #1f2937 50%, #dc2626 100%)", zIndex: 100, pointerEvents: "none" }} />
+      )}
+      {theme === "snap" && (
+        <>
+          <style>{THEME_KEYFRAMES_CSS}</style>
+          {/* Fixed-position ghost mascots that follow across all pages */}
+          <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1 }}>
+            <SnapGhost top="8%" right="4%" delay={0} variant={1} size={42} />
+            <SnapGhost top="32%" left="3%" delay={0.4} variant={2} size={38} />
+            <SnapGhost top="58%" right="5%" delay={0.7} variant={3} size={44} />
+            <SnapGhost bottom="22%" left="4%" delay={0.2} variant={1} size={36} />
+            <SnapGhost bottom="48%" right="3%" delay={0.5} variant={2} size={40} />
+            <SnapGhost top="78%" left="6%" delay={0.9} variant={3} size={34} />
+          </div>
+          {/* Bottom story-ring gradient stripe */}
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg, #FFFC00 0%, #ec4899 50%, #a855f7 100%)", zIndex: 100, pointerEvents: "none" }} />
+          {/* Fire streak counter (top-right) — slot under admin nav strip if present */}
+          <SnapStreakCounter data={data} studentId={(data?.students || []).find(s => s.name === effectiveUserName)?.id} top={isAdmin ? 56 : 18} />
+        </>
       )}
 
       {isAdmin && (

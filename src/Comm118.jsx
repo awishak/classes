@@ -9,7 +9,8 @@ import {
   themedPageBg, themedHeadingFont, themedBodyFont, themedAccent,
   themedInteriorCrd, CRASHING_PALETTE,
   PixelStar, PixelArrow, PixelHeart, PixelMushroom, PixelCoin, PixelLightning,
-  TRASH_TALK, ENCOURAGEMENT, randomChampionshipLine,
+  SnapGhost, SnapStreakCounter, SnapStoryRing,
+  TRASH_TALK, ENCOURAGEMENT, randomChampionshipLine, SNAP_TALK,
   THEME_KEYFRAMES_CSS, GUEST_NAME, themedFontsUrl,
 } from "./styles.jsx";
 import { genId, shuffle, gp, Toast } from "./utils.jsx";
@@ -1199,6 +1200,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
   const trashTalkRef = React.useRef(TRASH_TALK[Math.floor(Math.random() * TRASH_TALK.length)]);
   const encouragementRef = React.useRef(ENCOURAGEMENT[Math.floor(Math.random() * ENCOURAGEMENT.length)]);
   const championshipRef = React.useRef(randomChampionshipLine());
+  const snapTalkRef = React.useRef(SNAP_TALK[Math.floor(Math.random() * SNAP_TALK.length)]);
 
   const news = data.news || [];
   const boards = data.boards || [];
@@ -1570,7 +1572,13 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           {leader ? (
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
               {leaderPhoto ? (
-                <img src={leaderPhoto} alt={leader.name} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: theme === "crashing" ? "3px solid #fbbf24" : (theme === "locked" ? "2px solid #1f2937" : "2px solid #fff"), boxShadow: "0 0 0 1px " + (theme === "crashing" ? "#1f2937" : (theme === "locked" ? "#dc2626" : "#d1d5db")) }} />
+                theme === "snap" ? (
+                  <SnapStoryRing size={48}>
+                    <img src={leaderPhoto} alt={leader.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+                  </SnapStoryRing>
+                ) : (
+                  <img src={leaderPhoto} alt={leader.name} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: theme === "crashing" ? "3px solid #fbbf24" : (theme === "locked" ? "2px solid #1f2937" : "2px solid #fff"), boxShadow: "0 0 0 1px " + (theme === "crashing" ? "#1f2937" : (theme === "locked" ? "#dc2626" : "#d1d5db")) }} />
+                )
               ) : (
                 <div style={{ width: 44, height: 44, borderRadius: "50%", background: ACCENT, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, flexShrink: 0 }}>{leaderInitials}</div>
               )}
@@ -1599,6 +1607,21 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
                     <span style={{ position: "absolute", left: -5, top: 15, width: 0, height: 0, borderTop: "5px solid transparent", borderBottom: "5px solid transparent", borderRight: "5px solid #fff" }} />
                     {isLeader ? "you're locked in" : encouragementRef.current.replace("__NAME__", (userName || "").split(" ")[0] || "you")}
                     <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>— {leader.name.split(" ")[0]}</div>
+                  </div>
+                ) : theme === "snap" ? (
+                  <div style={{
+                    background: "#fff", border: "3px solid #000", borderRadius: 16, padding: "8px 14px",
+                    fontSize: 13, color: "#000", fontWeight: 700, position: "relative",
+                    boxShadow: "3px 3px 0 #000",
+                    fontFamily: "'Nunito', -apple-system, sans-serif",
+                  }}>
+                    <span style={{ position: "absolute", left: -10, top: 14, width: 0, height: 0, borderTop: "7px solid transparent", borderBottom: "7px solid transparent", borderRight: "10px solid #000" }} />
+                    <span style={{ position: "absolute", left: -6, top: 15, width: 0, height: 0, borderTop: "6px solid transparent", borderBottom: "6px solid transparent", borderRight: "6px solid #fff" }} />
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ fontSize: 14 }}>👻</span>
+                      <span>{isLeader ? "main character behavior" : snapTalkRef.current.replace("__NAME__", leader.name.split(" ")[0])}</span>
+                    </span>
+                    <div style={{ fontSize: 10, color: "#999", marginTop: 3, fontWeight: 700 }}>— {leader.name.split(" ")[0]} · disappears in 24h</div>
                   </div>
                 ) : (
                   <div>
@@ -1753,6 +1776,21 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
             </div>
           </div>
         )}
+        {theme === "snap" && (
+          <>
+            <style>{`.snap-marquee-track { display: inline-block; animation: marquee 18s linear infinite; white-space: nowrap; }`}</style>
+            <div style={{
+              background: "#FFFC00", color: "#000", border: "3px solid #000", borderRadius: 16,
+              padding: "8px 0", marginBottom: 16, overflow: "hidden", position: "relative",
+              boxShadow: "4px 4px 0 #000", fontFamily: "'Nunito', -apple-system, sans-serif", fontSize: 12, fontWeight: 900, letterSpacing: "0.04em",
+            }}>
+              <div className="snap-marquee-track">
+                <span style={{ paddingRight: 50 }}>🔥 STREAK ACTIVE · 24H REMAINING · TAP TO REVEAL · SNAP BACK · 👻 BEST FRIENDS FOREVER · NEW STORY · 📸 SCREENSHOT TAKEN ·</span>
+                <span style={{ paddingRight: 50 }}>🔥 STREAK ACTIVE · 24H REMAINING · TAP TO REVEAL · SNAP BACK · 👻 BEST FRIENDS FOREVER · NEW STORY · 📸 SCREENSHOT TAKEN ·</span>
+              </div>
+            </div>
+          </>
+        )}
         {renderNewsBanner()}
         {cards.map(renderCard)}
         <InstructorCard data={data} setData={setData} isAdmin={isAdmin} />
@@ -1765,6 +1803,9 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           }
           if (theme === "crashing") {
             return { ...base, background: "linear-gradient(135deg, #ec4899, #f59e0b, #0ea5e9, #a855f7)", color: "#fff", border: "4px solid #1f2937", borderRadius: 14, boxShadow: "6px 6px 0 #1f2937", transform: "rotate(-1deg)", padding: 18 };
+          }
+          if (theme === "snap") {
+            return { ...base, background: "#FFFC00", color: "#000", border: "3px solid #000", borderRadius: 16, boxShadow: "4px 4px 0 #000", padding: 16, fontWeight: 900 };
           }
           return { ...base, background: "#fff", color: TEXT_PRIMARY, border: "1px solid #d1d5db", borderRadius: 14, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" };
         })()}>

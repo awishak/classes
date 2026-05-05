@@ -1646,6 +1646,9 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
           if (theme === "crashing") {
             return { ...base, background: "linear-gradient(135deg, #ec4899, #f59e0b, #0ea5e9, #a855f7)", color: "#fff", border: "4px solid #1f2937", borderRadius: 14, boxShadow: "6px 6px 0 #1f2937", transform: "rotate(-1deg)", padding: 18 };
           }
+          if (theme === "snap") {
+            return { ...base, background: "#FFFC00", color: "#000", border: "3px solid #000", borderRadius: 16, boxShadow: "4px 4px 0 #000", padding: 16, fontWeight: 900 };
+          }
           return { ...base, background: "#fff", color: TEXT_PRIMARY, border: "1px solid #d1d5db", borderRadius: 14, boxShadow: "0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04)" };
         })()}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>

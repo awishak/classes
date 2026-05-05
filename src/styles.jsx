@@ -107,12 +107,13 @@ injectGlobalStyles();
 
 // ─── THEME SYSTEM (Clean / Locked In / Crashing Out) ─────────────────
 
-export const THEMES = ["clean", "locked", "crashing"];
-export const THEME_LABELS = { clean: "Clean", locked: "Locked In", crashing: "Crashing Out" };
+export const THEMES = ["clean", "locked", "crashing", "snap"];
+export const THEME_LABELS = { clean: "Clean", locked: "Locked In", crashing: "Crashing Out", snap: "Snapchat" };
 export const THEME_DESCS = {
   clean: "Calm and minimal",
   locked: "Bold and confident",
   crashing: "Maximum chaos",
+  snap: "Yellow, ephemeral, kinda thirsty",
 };
 
 // useTheme takes the class's storage key and reads/writes that class's theme.
@@ -149,6 +150,7 @@ export function themedPageBg(theme) {
   if (theme === "crashing") {
     return "linear-gradient(135deg, #fce7f3 0%, #fef3c7 20%, #dbeafe 40%, #ddd6fe 60%, #fbcfe8 80%, #fef3c7 100%)";
   }
+  if (theme === "snap") return "#FFFC00";
   return "#fafaf9";
 }
 
@@ -156,6 +158,7 @@ export function themedPageBg(theme) {
 export function themedHeadingFont(theme, defaultFont) {
   if (theme === "crashing") return "'Rubik Mono One', 'Bricolage Grotesque', 'Outfit', sans-serif";
   if (theme === "locked") return "'Space Grotesk', 'Outfit', -apple-system, sans-serif";
+  if (theme === "snap") return "'Nunito', 'Avenir Next', -apple-system, sans-serif";
   return defaultFont;
 }
 
@@ -168,6 +171,7 @@ export function themedBodyFont(theme, defaultFont) {
 export function themedAccent(theme, defaultAccent) {
   if (theme === "locked") return "#dc2626";
   if (theme === "crashing") return "#ec4899";
+  // Snap keeps the class accent so each class retains its identity
   return defaultAccent;
 }
 
@@ -195,6 +199,12 @@ export function themedInteriorCrd(theme, idx) {
     return {
       background: "#fff", borderRadius: 14, border: "3px solid " + p.border, overflow: "hidden",
       boxShadow: "4px 4px 0 " + p.shadow1 + ", 6px 6px 0 " + p.shadow2,
+    };
+  }
+  if (theme === "snap") {
+    return {
+      background: "#fff", borderRadius: 16, border: "3px solid #000", overflow: "hidden",
+      boxShadow: "4px 4px 0 #000",
     };
   }
   return {
@@ -391,6 +401,103 @@ export function randomChampionshipLine() {
   return year + " " + event;
 }
 
+// ─── SNAP THEME COPY ────────────────────────────────────────────────────
+
+export const SNAP_TALK = [
+  "screenshot this real quick",
+  "main character behavior fr",
+  "they said and i quote: nothing",
+  "ratio'd by __NAME__",
+  "this you?",
+  "best friend goals",
+  "no bc why are u like this",
+  "the audacity to lock in",
+  "new pfp activated",
+  "send this to your bsf",
+  "streak is safe",
+  "POV: you got the receipts",
+  "she ate. left no crumbs",
+];
+
+// ─── SNAP THEME COMPONENTS ──────────────────────────────────────────────
+
+// Cute Snapchat-style ghost. Three variants for visual variety.
+export function SnapGhost({ top, right, left, bottom, delay = 0, size = 36, variant = 1 }) {
+  const style = { position: "absolute", top, right, left, bottom, animation: "ghostBob 3s ease-in-out infinite", animationDelay: delay + "s", pointerEvents: "none" };
+  // variant 1: basic smile, variant 2: winking, variant 3: tongue out
+  return (
+    <div style={style}>
+      <svg width={size} height={size} viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        {/* Ghost body — rounded top, wavy bottom */}
+        <path d="M32 4 C18 4 10 14 10 28 L10 54 L14 50 L18 54 L22 50 L26 54 L30 50 L34 54 L38 50 L42 54 L46 50 L50 54 L54 50 L54 28 C54 14 46 4 32 4 Z" fill="#fff" stroke="#000" strokeWidth="3" strokeLinejoin="round" />
+        {/* Eyes */}
+        {variant === 2 ? (
+          <>
+            <path d="M22 24 Q26 20 30 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="40" cy="24" r="2.5" fill="#000" />
+          </>
+        ) : (
+          <>
+            <circle cx="24" cy="24" r="2.5" fill="#000" />
+            <circle cx="40" cy="24" r="2.5" fill="#000" />
+          </>
+        )}
+        {/* Mouth */}
+        {variant === 3 ? (
+          <>
+            <ellipse cx="32" cy="36" rx="6" ry="4" fill="#ec4899" stroke="#000" strokeWidth="2" />
+            <path d="M32 38 L32 44" stroke="#ec4899" strokeWidth="3" strokeLinecap="round" />
+          </>
+        ) : (
+          <path d="M26 34 Q32 40 38 34" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" />
+        )}
+        {/* Cheek blush */}
+        <circle cx="20" cy="32" r="3" fill="#fbcfe8" opacity="0.8" />
+        <circle cx="44" cy="32" r="3" fill="#fbcfe8" opacity="0.8" />
+      </svg>
+    </div>
+  );
+}
+
+// Fixed-position fire-streak counter shown when theme is snap. Reads game points
+// from data.log for the given studentId. Shows "🔥 N" with a wiggle animation.
+export function SnapStreakCounter({ data, studentId, top = 56 }) {
+  if (!studentId) return null;
+  const log = data?.log || [];
+  const total = log.filter(e => e.studentId === studentId).reduce((s, e) => s + (e.amount || 0), 0);
+  const display = Math.round(total);
+  return (
+    <div style={{ position: "fixed", top, right: 12, zIndex: 60, pointerEvents: "none" }}>
+      <div style={{
+        background: "#fff", border: "2.5px solid #000", borderRadius: 999,
+        padding: "5px 12px", boxShadow: "3px 3px 0 #000",
+        display: "flex", alignItems: "center", gap: 6,
+        fontFamily: "'Nunito', -apple-system, sans-serif", fontWeight: 900, fontSize: 14, color: "#000",
+      }}>
+        <span style={{ display: "inline-block", animation: "streakFlicker 0.8s ease-in-out infinite" }}>🔥</span>
+        <span style={{ fontVariantNumeric: "tabular-nums" }}>{display}</span>
+      </div>
+    </div>
+  );
+}
+
+// Wraps an avatar (img) with a Snapchat-story-style gradient ring.
+// Use anywhere a roster/leaderboard photo appears when theme === "snap".
+export function SnapStoryRing({ children, size = 56 }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%", padding: 2.5,
+      background: "linear-gradient(135deg, #FFFC00 0%, #ec4899 50%, #a855f7 100%)",
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      flexShrink: 0,
+    }}>
+      <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "#fff", padding: 2, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ─── SHARED CSS for keyframes (pixel art animations + page wobble) ──────
 // Inject this once at the top level of any class app's render tree when the
 // theme is "crashing". It's safe to inject multiple times — duplicate
@@ -404,11 +511,16 @@ export const THEME_KEYFRAMES_CSS = `
   @keyframes pixelFlash { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
   @keyframes pageWobble { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+  @keyframes ghostBob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
+  @keyframes snapPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+  @keyframes streakFlicker { 0%, 100% { transform: rotate(-4deg) scale(1); } 50% { transform: rotate(6deg) scale(1.1); } }
+  @keyframes storyRingSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 `;
 
 // Returns the Google Fonts URL for the given theme, or null for clean.
 export function themedFontsUrl(theme) {
   if (theme === "locked") return "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap";
   if (theme === "crashing") return "https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Press+Start+2P&display=swap";
+  if (theme === "snap") return "https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap";
   return null;
 }
