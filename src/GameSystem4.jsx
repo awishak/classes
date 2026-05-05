@@ -547,7 +547,6 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
   // Refresh data every 2 seconds for live updates
   React.useEffect(() => {
     const iv = setInterval(async () => {
-      if (Date.now() - lastSubmitRef.current < 3000) return;
       try {
         const raw = await window.storage.get("comm4-v1", true);
         if (raw?.value) { const d = JSON.parse(raw.value); setData(d); }
@@ -932,12 +931,28 @@ export function StudentAnswerView({ data, setData, userName }) {
   const [msg, setMsg] = useState("");
   const [countdown, setCountdown] = useState(0);
   const lastSubmitRef = React.useRef(0);
+  // Freeze activity while student is mid-selection so admin advances and live updates
+  // don't kick them out of the question they're answering. (Hook must be at top level.)
+  const frozenActivityRef = React.useRef(null);
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 1500); };
 
   const student = data.students.find(s => s.name === userName);
   const sid = student?.id;
   const games = data.weeklyGames || {};
   const tots = data.weeklyToT || {};
+
+  // Compute liveActivity at top level so the freeze effect can depend on it.
+  // Re-derived during render; if no live activity, this is undefined and the
+  // effect is a no-op until one appears.
+  const _topLevelActivities = mode === "game" ? games : tots;
+  const _topLevelLive = (week !== null) ? (_topLevelActivities[week] || _topLevelActivities[String(week)]) : null;
+  React.useEffect(() => {
+    if (selected !== null && _topLevelLive) {
+      if (!frozenActivityRef.current) frozenActivityRef.current = _topLevelLive;
+    } else {
+      frozenActivityRef.current = null;
+    }
+  }, [selected, _topLevelLive]);
 
   // Auto-jump to live activity if one exists.
   React.useEffect(() => {
@@ -1054,17 +1069,6 @@ export function StudentAnswerView({ data, setData, userName }) {
   const actType = mode;
   const activities = actType === "game" ? games : tots;
   const liveActivity = activities[week] || activities[String(week)];
-
-  // Freeze activity while student is mid-selection so admin advances and live updates
-  // don't kick them out of the question they're answering.
-  const frozenActivityRef = React.useRef(null);
-  React.useEffect(() => {
-    if (selected !== null && liveActivity) {
-      if (!frozenActivityRef.current) frozenActivityRef.current = liveActivity;
-    } else {
-      frozenActivityRef.current = null;
-    }
-  }, [selected, liveActivity]);
 
   const activity = (selected !== null && frozenActivityRef.current) ? frozenActivityRef.current : liveActivity;
 

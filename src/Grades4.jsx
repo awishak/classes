@@ -2425,6 +2425,10 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   const [activityFilter, setActivityFilter] = useState("all"); // "all" | "game" | "tot" | "fb"
   const [highlight, setHighlight] = useState(null); // "zero" | "missing" | "regrade" | "late" | null
   const [quickGradeId, setQuickGradeId] = useState(null); // "studentId-assignmentId" or null
+  // Class chart (admin only)
+  const [chartOpen, setChartOpen] = useState(false);
+  const [chartMode, setChartMode] = useState("game"); // "game" | "grade"
+  const [chartSort, setChartSort] = useState("total_desc"); // total_desc, total_asc, name, weeklygame, tot, inclass, fishbowl, teamwins, team
   const isGuest = userName === GUEST_NAME;
 
   const student = isAdmin ? (selStudent ? data.students.find(s => s.id === selStudent) : null) : data.students.find(s => s.name === userName);
@@ -3024,6 +3028,191 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
               <button onClick={() => setReorderOpen(!reorderOpen)} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>{reorderOpen ? "Done" : "Reorder columns"}</button>
             </div>
           </div>
+
+          {/* Class chart (collapsible) */}
+          {(() => {
+            const COLORS = {
+              weeklyGame: "#bbf7d0",   // light green — Comm 4 accent feel, washed out
+              tot: "#3b82f6",           // blue
+              fishbowl: "#a855f7",      // purple
+              teamwins: "#0d9488",      // teal
+              inclass: "#f59e0b",       // amber/orange (last)
+            };
+            const COMP_ORDER = ["weeklyGame", "tot", "fishbowl", "teamwins", "inclass"];
+            const COMP_LABELS = {
+              weeklyGame: "Weekly Game",
+              tot: "This or That",
+              fishbowl: "Fishbowl",
+              teamwins: "Team Wins",
+              inclass: "In-Class points",
+            };
+            const log = data.log || [];
+            const reboundGrades = data.reboundGrades || {};
+            const computeGameComponents = (sid) => {
+              const c = { weeklyGame: 0, tot: 0, fishbowl: 0, teamwins: 0, inclass: 0 };
+              log.filter(e => e.studentId === sid).forEach(e => {
+                const src = e.source || "";
+                if (src.startsWith("Game Wk")) c.weeklyGame += e.amount;
+                else if (src.startsWith("ToT Wk") || src.startsWith("ToT")) c.tot += e.amount;
+                else if (src.startsWith("Fishbowl Wk") || src.startsWith("Fishbowl")) c.fishbowl += e.amount;
+                else if (src === "PTI" || src === "Around the Horn") c.inclass += e.amount;
+                else if (src.startsWith("Team Win")) c.teamwins += e.amount;
+              });
+              return c;
+            };
+            const computeGradeComponents = (sid) => {
+              const c = { weeklyGame: 0, tot: 0, fishbowl: 0, teamwins: 0, inclass: 0 };
+              const weeklyGames = data.weeklyGames || {};
+              Object.keys(weeklyGames).forEach(w => {
+                const game = weeklyGames[w];
+                if (!game?.scored) return;
+                let original = 0;
+                let answered = 0;
+                (game.questions || []).forEach((q, qi) => {
+                  if (game.responses?.[sid + "-" + qi] !== undefined) answered++;
+                  if (game.responses?.[sid + "-" + qi] === q.correct) {
+                    original += (q.category === "on_topic" ? 15 : 2.5);
+                  }
+                });
+                const qv = (data.participation || {})[sid + "-w" + w + "-quiz"];
+                let manualGrade = null;
+                if (qv && typeof qv === "object") {
+                  let manualSum = 0;
+                  QUIZ_BREAKDOWN.forEach(qq => { manualSum += (qv[qq.id] || 0) * qq.gradePts; });
+                  if (manualSum > 0) manualGrade = manualSum;
+                }
+                const rg = reboundGrades[sid + "-game-" + w];
+                let displayed = original;
+                if (manualGrade !== null) displayed = manualGrade;
+                if (rg && typeof rg.gradePoints === "number") {
+                  const ref = manualGrade !== null ? manualGrade : original;
+                  if (rg.type === "makeup") displayed = Math.max(ref, rg.gradePoints);
+                  else {
+                    let cap;
+                    if (rg.type === "absence_override") cap = 60;
+                    else if (ref < 50) cap = 60;
+                    else if (ref <= 65) cap = 70;
+                    else if (ref <= 79) cap = 80;
+                    else cap = 100;
+                    displayed = Math.max(ref, Math.min(rg.gradePoints, cap));
+                  }
+                }
+                if (answered > 0 || manualGrade !== null || rg) c.weeklyGame += displayed;
+              });
+              Object.keys(data.weeklyFishbowl || {}).forEach(w => {
+                const fb = data.weeklyFishbowl[w];
+                if (!fb?.confirmed) return;
+                const fv = (data.participation || {})[sid + "-w" + w + "-fishbowl"];
+                if (fv !== undefined && fv !== null && fv !== "") {
+                  c.fishbowl += parseFloat(fv) || 0;
+                } else {
+                  c.fishbowl += log.filter(e => e.studentId === sid && (e.source || "").startsWith("Fishbowl Wk" + w)).reduce((s, e) => s + e.amount, 0);
+                }
+              });
+              c.inclass = log.filter(e => e.studentId === sid && (e.source === "PTI" || e.source === "Around the Horn")).reduce((s, e) => s + e.amount, 0);
+              return c;
+            };
+
+            const studentRows = sorted.map(s => {
+              const c = chartMode === "game" ? computeGameComponents(s.id) : computeGradeComponents(s.id);
+              const total = COMP_ORDER.reduce((sum, k) => sum + c[k], 0);
+              const team = (data.teams || []).find(t => t.id === s.teamId);
+              return { id: s.id, name: s.name, components: c, total, teamName: team?.name || "", teamId: s.teamId || "" };
+            });
+
+            const sorted2 = [...studentRows];
+            switch (chartSort) {
+              case "total_desc": sorted2.sort((a, b) => b.total - a.total); break;
+              case "total_asc": sorted2.sort((a, b) => a.total - b.total); break;
+              case "name": sorted2.sort((a, b) => a.name.localeCompare(b.name)); break;
+              case "weeklygame": sorted2.sort((a, b) => b.components.weeklyGame - a.components.weeklyGame); break;
+              case "tot": sorted2.sort((a, b) => b.components.tot - a.components.tot); break;
+              case "inclass": sorted2.sort((a, b) => b.components.inclass - a.components.inclass); break;
+              case "fishbowl": sorted2.sort((a, b) => b.components.fishbowl - a.components.fishbowl); break;
+              case "teamwins": sorted2.sort((a, b) => b.components.teamwins - a.components.teamwins); break;
+              case "team": sorted2.sort((a, b) => (a.teamName || "ZZZ").localeCompare(b.teamName || "ZZZ") || b.total - a.total); break;
+              default: sorted2.sort((a, b) => b.total - a.total);
+            }
+
+            const maxTotal = Math.max(1, ...sorted2.map(r => r.total));
+
+            return (
+              <div style={{ ...crd, marginBottom: 16, padding: chartOpen ? 14 : "10px 14px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                  <button onClick={() => setChartOpen(!chartOpen)} style={{ background: "transparent", border: "none", cursor: "pointer", fontFamily: F, padding: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>Class Chart</span>
+                    <span style={{ fontSize: 11, color: TEXT_MUTED }}>{chartOpen ? "Hide" : "Show"}</span>
+                  </button>
+                  {chartOpen && (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", gap: 0, border: "1px solid " + BORDER, borderRadius: 8, overflow: "hidden" }}>
+                        <button onClick={() => setChartMode("game")} style={{ background: chartMode === "game" ? TEXT_PRIMARY : "#fff", color: chartMode === "game" ? "#fff" : TEXT_SECONDARY, border: "none", padding: "5px 10px", fontSize: 11, fontWeight: 700, fontFamily: F, cursor: "pointer" }}>Game Score</button>
+                        <button onClick={() => setChartMode("grade")} style={{ background: chartMode === "grade" ? TEXT_PRIMARY : "#fff", color: chartMode === "grade" ? "#fff" : TEXT_SECONDARY, border: "none", padding: "5px 10px", fontSize: 11, fontWeight: 700, fontFamily: F, cursor: "pointer" }}>Grade Points</button>
+                      </div>
+                      <select value={chartSort} onChange={e => setChartSort(e.target.value)} style={{ ...inp, fontSize: 11, padding: "5px 8px", width: "auto" }}>
+                        <option value="total_desc">Total (high to low)</option>
+                        <option value="total_asc">Total (low to high)</option>
+                        <option value="name">Name (A-Z)</option>
+                        <option value="weeklygame">Weekly Game</option>
+                        <option value="tot">This or That</option>
+                        <option value="fishbowl">Fishbowl</option>
+                        <option value="teamwins">Team Wins</option>
+                        <option value="inclass">In-Class points</option>
+                        <option value="team">Team</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {chartOpen && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 12, fontSize: 11 }}>
+                      {COMP_ORDER.map(k => (
+                        <div key={k} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ width: 12, height: 12, borderRadius: 3, background: COLORS[k] }} />
+                          <span style={{ color: TEXT_SECONDARY, fontWeight: 500 }}>{COMP_LABELS[k]}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {sorted2.map((row, idx) => {
+                        const widthPct = (row.total / maxTotal) * 100;
+                        const prevTeam = idx > 0 ? sorted2[idx - 1].teamId : null;
+                        const teamBreak = chartSort === "team" && idx > 0 && prevTeam !== row.teamId;
+                        return (
+                          <React.Fragment key={row.id}>
+                            {teamBreak && <div style={{ borderTop: "1px dashed " + BORDER, margin: "4px 0" }} />}
+                            <div style={{ display: "grid", gridTemplateColumns: "180px 1fr 60px", gap: 10, alignItems: "center" }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {row.name}
+                                {chartSort === "team" && row.teamName && <span style={{ marginLeft: 6, fontSize: 10, color: TEXT_MUTED, fontWeight: 500 }}>{row.teamName}</span>}
+                              </div>
+                              <div style={{ position: "relative", height: 22, background: "#f9fafb", borderRadius: 4, overflow: "hidden" }}>
+                                <div style={{ display: "flex", height: "100%", width: widthPct + "%" }} title={COMP_ORDER.map(k => COMP_LABELS[k] + ": " + Math.round(row.components[k] * 10) / 10).join(" · ")}>
+                                  {COMP_ORDER.map(k => {
+                                    const val = row.components[k];
+                                    if (val <= 0) return null;
+                                    const segPct = row.total > 0 ? (val / row.total) * 100 : 0;
+                                    return (
+                                      <div key={k} style={{ background: COLORS[k], width: segPct + "%", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                                        {segPct > 12 && <span style={{ fontSize: 10, color: TEXT_PRIMARY, fontWeight: 700 }}>{Math.round(val)}</span>}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{Math.round(row.total * 10) / 10}</div>
+                            </div>
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Dashboard summary */}
           {(zeroCount > 0 || missingCount > 0 || regradeCount > 0 || lateUngradedCount > 0 || resubCount > 0) && (
