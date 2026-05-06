@@ -454,7 +454,8 @@ function computeParticipationGrade(data, sid) {
   const athEntries = log.filter(e => e.studentId === sid && ((e.source || "") === "Around the Horn" || (e.source || "") === "PTI"));
   const athEarned = athEntries.reduce((s, e) => s + e.amount, 0);
   const totalEarned = gameGradeEarned + fbEarned + athEarned;
-  const totalPossible = gameGradePossible + fbPossible;
+  const offset = typeof data.participationDenominatorOffset === "number" ? data.participationDenominatorOffset : 0;
+  const totalPossible = gameGradePossible + fbPossible + offset;
   const participationPct = totalPossible > 0 ? (totalEarned / totalPossible) : 0;
   const participationGrade = participationPct * 25;
   return { participationGrade, participationPct, totalEarned, totalPossible };
@@ -2239,7 +2240,9 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
     const leaderboardTotal = log.filter(e => e.studentId === sid).reduce((a, e) => a + e.amount, 0);
 
     // Participation grade out of 25 (or partWeight)
-    const participationPct = participationPossible > 0 ? (participationEarned / participationPossible) : 0;
+    const offset = typeof data.participationDenominatorOffset === "number" ? data.participationDenominatorOffset : 0;
+    const participationPossibleAdj = participationPossible + offset;
+    const participationPct = participationPossibleAdj > 0 ? (participationEarned / participationPossibleAdj) : 0;
     const participationGrade = participationPct * partWeight;
 
     // Final in-class grade — match AssignmentsView computeCurrentGrade
@@ -2277,7 +2280,7 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
       leaderboardTotal: Math.round(leaderboardTotal * 10) / 10,
       gameFromComponents: Math.round(totalGameFromComponents * 10) / 10,
       participationEarned: Math.round(participationEarned * 10) / 10,
-      participationPossible,
+      participationPossible: participationPossibleAdj,
       participationPct,
       participationGrade: Math.round(participationGrade * 10) / 10,
       finalGradePct,
