@@ -934,7 +934,7 @@ export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveD
           <button onClick={() => { setViewingBoard(null); setEditingPost(null); }} style={{ ...pillInactive, marginBottom: 16 }}>Back to Boards</button>
           <div style={{ ...crd, padding: 20, marginBottom: 16 }}>
             <div style={{ fontSize: 20, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 6 }}>{board.title}</div>
-            <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5 }}>{board.prompt}</div>
+            <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{board.prompt}</div>
             <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 8 }}>{postList.length} response{postList.length !== 1 ? "s" : ""}</div>
             {isAdmin && (
               <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
@@ -1063,7 +1063,7 @@ export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveD
                 <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, lineHeight: 1.3, flex: 1, minWidth: 0 }}>{board.title}</div>
                 <span style={{ fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 5, background: "#ecfdf5", color: "#047857", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Active</span>
               </div>
-              <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.4, marginBottom: 6 }}>{board.prompt.length > 120 ? board.prompt.slice(0, 120) + "..." : board.prompt}</div>
+              <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.4, marginBottom: 6 }}>{(() => { const p = board.prompt.replace(/\s+/g, " "); return p.length > 120 ? p.slice(0, 120) + "..." : p; })()}</div>
               <div style={{ display: "flex", gap: 10, fontSize: 11, color: TEXT_MUTED }}>
                 <span>{postCount} {postCount === 1 ? "reply" : "replies"}</span>
                 {myPost && <><span>·</span><span style={{ color: GREEN, fontWeight: 500 }}>You responded</span></>}
