@@ -804,8 +804,16 @@ export function ReadingsView({ data, setData, isAdmin, storageKey, saveData, upl
 
 
 // ─── BoardsView (all three classes) ───────────────────────────────────
-// Discussion boards. Admin creates a prompt, students respond, can snap
-// (clap) for each other's posts. Admin can feature posts (+5 points).
+// Discussion boards. Admin creates a prompt, students respond. Students can
+// vote on each other's responses. Admin can feature posts (+5 points).
+// Students can post multiple responses, edit their own, and delete their own.
+//
+// Data shape:
+//   board.posts[userName] is an ARRAY of post objects. Each post has
+//   { id, text, ts, snaps?, featured?, archived? }.
+//   Older data may have a single post object instead of an array; we
+//   normalize on read so both shapes work and migrate forward on next save.
+//
 // Props: data, setData, isAdmin, userName (existing); storageKey (theme);
 // saveData (persistence); accent (class accent color for 'you' highlight)
 export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveData, accent }) {
@@ -815,11 +823,28 @@ export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveD
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newPrompt, setNewPrompt] = useState("");
-  const [editingPost, setEditingPost] = useState(null);
+  const [editingPostId, setEditingPostId] = useState(null); // post id being edited
   const [editText, setEditText] = useState("");
+  const [composing, setComposing] = useState(null); // boardId when student is composing a NEW post
+  const [composeText, setComposeText] = useState("");
   const [viewingBoard, setViewingBoard] = useState(null);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  // Normalize a board's posts into the new array-of-posts shape on read.
+  // Old shape: posts[name] = { text, ts, ... }
+  // New shape: posts[name] = [{ id, text, ts, ... }, ...]
+  const normalizePosts = (rawPosts) => {
+    const out = {};
+    Object.entries(rawPosts || {}).forEach(([name, val]) => {
+      if (Array.isArray(val)) {
+        out[name] = val.map(p => p.id ? p : { ...p, id: genId() });
+      } else if (val && typeof val === "object") {
+        out[name] = [{ ...val, id: val.id || genId() }];
+      }
+    });
+    return out;
+  };
 
   const createBoard = async () => {
     if (!newTitle.trim() || !newPrompt.trim()) return;
@@ -829,10 +854,41 @@ export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveD
     setNewTitle(""); setNewPrompt(""); setCreating(false); showMsg("Board created");
   };
 
-  const submitPost = async (boardId, text) => {
+  // Add a brand new post (works for first response or additional responses).
+  const addPost = async (boardId, text) => {
     if (!text.trim()) return;
-    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...b.posts, [userName]: { text: text.trim(), ts: Date.now() } } } : b) };
+    const board = boards.find(b => b.id === boardId);
+    if (!board) return;
+    const posts = normalizePosts(board.posts);
+    const myPosts = posts[userName] || [];
+    const newPost = { id: genId(), text: text.trim(), ts: Date.now(), snaps: [] };
+    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...posts, [userName]: [...myPosts, newPost] } } : b) };
     await saveData(updated); setData(updated); showMsg("Posted");
+  };
+
+  // Edit an existing post (own posts only — UI gates enforce this).
+  const editPost = async (boardId, postId, newText) => {
+    if (!newText.trim()) return;
+    const board = boards.find(b => b.id === boardId);
+    if (!board) return;
+    const posts = normalizePosts(board.posts);
+    const myPosts = (posts[userName] || []).map(p => p.id === postId ? { ...p, text: newText.trim(), editedTs: Date.now() } : p);
+    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...posts, [userName]: myPosts } } : b) };
+    await saveData(updated); setData(updated); showMsg("Updated");
+  };
+
+  // Delete one of your own posts (or admin deletes any post).
+  const deletePost = async (boardId, authorName, postId) => {
+    const board = boards.find(b => b.id === boardId);
+    if (!board) return;
+    const posts = normalizePosts(board.posts);
+    const remaining = (posts[authorName] || []).filter(p => p.id !== postId);
+    const newPostsForAuthor = remaining.length === 0 ? undefined : remaining;
+    const newPosts = { ...posts };
+    if (newPostsForAuthor) newPosts[authorName] = newPostsForAuthor;
+    else delete newPosts[authorName];
+    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: newPosts } : b) };
+    await saveData(updated); setData(updated); showMsg("Post deleted");
   };
 
   const closeBoard = async (boardId) => {
@@ -854,26 +910,31 @@ export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveD
     );
   };
 
-  const snap = async (boardId, postAuthor) => {
+  // Cast a vote on someone else's post (called "snap" in storage for backward compat).
+  const vote = async (boardId, postAuthor, postId) => {
     const board = boards.find(b => b.id === boardId);
     if (!board) return;
-    const post = (board.posts || {})[postAuthor];
-    if (!post) return;
-    const snaps = post.snaps || [];
+    const posts = normalizePosts(board.posts);
+    const authorPosts = posts[postAuthor] || [];
+    const target = authorPosts.find(p => p.id === postId);
+    if (!target) return;
+    const snaps = target.snaps || [];
     if (snaps.includes(userName)) return;
-    const updatedPost = { ...post, snaps: [...snaps, userName] };
-    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...b.posts, [postAuthor]: updatedPost } } : b) };
+    const updatedAuthorPosts = authorPosts.map(p => p.id === postId ? { ...p, snaps: [...snaps, userName] } : p);
+    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...posts, [postAuthor]: updatedAuthorPosts } } : b) };
     await saveData(updated); setData(updated);
   };
 
-  const featurePost = async (boardId, postAuthor) => {
+  const featurePost = async (boardId, postAuthor, postId) => {
     const board = boards.find(b => b.id === boardId);
     if (!board) return;
-    const post = (board.posts || {})[postAuthor];
-    if (!post || post.featured) return;
-    const updatedPost = { ...post, featured: true };
+    const posts = normalizePosts(board.posts);
+    const authorPosts = posts[postAuthor] || [];
+    const target = authorPosts.find(p => p.id === postId);
+    if (!target || target.featured) return;
+    const updatedAuthorPosts = authorPosts.map(p => p.id === postId ? { ...p, featured: true } : p);
     const student = data.students.find(s => s.name === postAuthor);
-    let updatedData = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...b.posts, [postAuthor]: updatedPost } } : b) };
+    let updatedData = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...posts, [postAuthor]: updatedAuthorPosts } } : b) };
     if (student) {
       const entry = { id: genId(), studentId: student.id, amount: 5, source: "Featured Post", ts: Date.now() };
       updatedData = { ...updatedData, log: [...updatedData.log, entry] };
@@ -881,32 +942,23 @@ export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveD
     await saveData(updatedData); setData(updatedData); showMsg("Featured! +5 pts to " + postAuthor);
   };
 
-  const deletePost = async (boardId, postAuthor) => {
+  const archivePost = async (boardId, postAuthor, postId) => {
     const board = boards.find(b => b.id === boardId);
     if (!board) return;
-    const newPosts = { ...board.posts };
-    delete newPosts[postAuthor];
-    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: newPosts } : b) };
-    await saveData(updated); setData(updated); showMsg("Post deleted");
-  };
-
-  const archivePost = async (boardId, postAuthor) => {
-    const board = boards.find(b => b.id === boardId);
-    if (!board) return;
-    const post = (board.posts || {})[postAuthor];
-    if (!post) return;
-    const updatedPost = { ...post, archived: true };
-    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...b.posts, [postAuthor]: updatedPost } } : b) };
+    const posts = normalizePosts(board.posts);
+    const authorPosts = posts[postAuthor] || [];
+    const updatedAuthorPosts = authorPosts.map(p => p.id === postId ? { ...p, archived: true } : p);
+    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...posts, [postAuthor]: updatedAuthorPosts } } : b) };
     await saveData(updated); setData(updated); showMsg("Post archived");
   };
 
-  const unarchivePost = async (boardId, postAuthor) => {
+  const unarchivePost = async (boardId, postAuthor, postId) => {
     const board = boards.find(b => b.id === boardId);
     if (!board) return;
-    const post = (board.posts || {})[postAuthor];
-    if (!post) return;
-    const updatedPost = { ...post, archived: false };
-    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...b.posts, [postAuthor]: updatedPost } } : b) };
+    const posts = normalizePosts(board.posts);
+    const authorPosts = posts[postAuthor] || [];
+    const updatedAuthorPosts = authorPosts.map(p => p.id === postId ? { ...p, archived: false } : p);
+    const updated = { ...data, boards: boards.map(b => b.id === boardId ? { ...b, posts: { ...posts, [postAuthor]: updatedAuthorPosts } } : b) };
     await saveData(updated); setData(updated); showMsg("Post restored");
   };
 
@@ -919,23 +971,33 @@ export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveD
   if (viewingBoard) {
     const board = boards.find(b => b.id === viewingBoard);
     if (!board) { setViewingBoard(null); return null; }
-    const posts = board.posts || {};
-    const allPostList = Object.entries(posts).sort((a, b) => a[1].ts - b[1].ts);
-    const postList = allPostList.filter(([_, p]) => !p.archived);
-    const archivedPostList = allPostList.filter(([_, p]) => p.archived);
-    const myPost = posts[userName];
-    const myPostVisible = myPost && !myPost.archived;
-    const isEditing = editingPost === board.id;
+    const posts = normalizePosts(board.posts);
+    // Flatten: every post becomes a row with its author attached
+    const allFlat = [];
+    Object.entries(posts).forEach(([name, arr]) => {
+      arr.forEach(p => allFlat.push({ author: name, post: p }));
+    });
+    const visibleFlat = allFlat.filter(({ post }) => !post.archived);
+    const archivedFlat = allFlat.filter(({ post }) => post.archived);
+    // Sort visible posts by vote count descending, then by timestamp ascending
+    visibleFlat.sort((a, b) => {
+      const av = (a.post.snaps || []).length;
+      const bv = (b.post.snaps || []).length;
+      if (bv !== av) return bv - av;
+      return a.post.ts - b.post.ts;
+    });
+    const myPosts = (posts[userName] || []).filter(p => !p.archived);
+    const isComposing = composing === board.id;
 
     return (
       <div style={{ padding: "24px 20px 40px", fontFamily: F }}>
         <Toast message={msg} />
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          <button onClick={() => { setViewingBoard(null); setEditingPost(null); }} style={{ ...pillInactive, marginBottom: 16 }}>Back to Boards</button>
+          <button onClick={() => { setViewingBoard(null); setEditingPostId(null); setComposing(null); }} style={{ ...pillInactive, marginBottom: 16 }}>Back to Boards</button>
           <div style={{ ...crd, padding: 20, marginBottom: 16 }}>
             <div style={{ fontSize: 20, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 6 }}>{board.title}</div>
             <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{board.prompt}</div>
-            <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 8 }}>{postList.length} response{postList.length !== 1 ? "s" : ""}</div>
+            <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 8 }}>{visibleFlat.length} response{visibleFlat.length !== 1 ? "s" : ""}</div>
             {isAdmin && (
               <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
                 <button onClick={() => closeBoard(board.id)} style={pillInactive}>{board.active ? "Close" : "Closed"}</button>
@@ -945,79 +1007,101 @@ export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveD
             )}
           </div>
 
-          {/* Write / edit response */}
+          {/* Compose new response */}
           {board.active && (
             <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
-              {isEditing || !myPostVisible ? (
+              {isComposing ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>{myPostVisible ? "Edit Your Response" : "Your Response"}</div>
-                  <textarea value={editText} onChange={e => setEditText(e.target.value)} placeholder="Write your response..." rows={4} style={{ ...inp, resize: "vertical", fontSize: 14, lineHeight: 1.6 }} />
+                  <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>{myPosts.length === 0 ? "Your Response" : "Add Another Response"}</div>
+                  <textarea autoFocus value={composeText} onChange={e => setComposeText(e.target.value)} placeholder="Write your response..." rows={4} style={{ ...inp, resize: "vertical", fontSize: 14, lineHeight: 1.6 }} />
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={() => { submitPost(board.id, editText); setEditingPost(null); }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>
-                      {myPostVisible ? "Save Changes" : "Post"}
-                    </button>
-                    {myPostVisible && <button onClick={() => { setEditingPost(null); setEditText(""); }} style={pillInactive}>Cancel</button>}
+                    <button onClick={async () => { await addPost(board.id, composeText); setComposeText(""); setComposing(null); }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Post</button>
+                    <button onClick={() => { setComposing(null); setComposeText(""); }} style={pillInactive}>Cancel</button>
                   </div>
                 </div>
               ) : (
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 6 }}>Your Response</div>
-                  <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{linkify(myPost.text)}</div>
-                  <button onClick={() => { setEditingPost(board.id); setEditText(myPost.text); }} style={{ ...pillInactive, marginTop: 8, fontSize: 12 }}>Edit</button>
-                </div>
+                <button onClick={() => { setComposing(board.id); setComposeText(""); }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", width: "100%", padding: "10px 14px", fontSize: 14 }}>
+                  {myPosts.length === 0 ? "+ Write your response" : "+ Add another response"}
+                </button>
               )}
             </div>
           )}
 
           {/* All responses */}
-          {postList.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No responses yet</div>}
-          {postList.map(([name, post]) => {
+          {visibleFlat.length === 0 && <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No responses yet</div>}
+          {visibleFlat.map(({ author, post }) => {
             const snaps = post.snaps || [];
-            const hasSnapped = snaps.includes(userName);
-            const snapCount = snaps.length;
+            const hasVoted = snaps.includes(userName);
+            const voteCount = snaps.length;
+            const isMine = author === userName;
+            const isEditingThis = editingPostId === post.id;
             return (
-            <div key={name} style={{ ...crd, padding: 14, marginBottom: 8, border: name === userName ? "2px solid " + accent : "1px solid " + BORDER }}>
+            <div key={post.id} style={{ ...crd, padding: 14, marginBottom: 8, border: isMine ? "2px solid " + accent : "1px solid " + BORDER }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{name}{name === userName ? " (you)" : ""}</span>
-                <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{new Date(post.ts).toLocaleDateString()}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{author}{isMine ? " (you)" : ""}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {voteCount > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: "#0d9488", background: "#ccfbf1", padding: "2px 8px", borderRadius: 999 }}>{voteCount} vote{voteCount !== 1 ? "s" : ""}</span>}
+                  <span style={{ fontSize: 11, color: TEXT_SECONDARY }}>{new Date(post.ts).toLocaleDateString()}{post.editedTs ? " · edited" : ""}</span>
+                </div>
               </div>
-              <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{linkify(post.text)}</div>
+              {isEditingThis ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)} rows={4} style={{ ...inp, resize: "vertical", fontSize: 14, lineHeight: 1.6 }} />
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={async () => { await editPost(board.id, post.id, editText); setEditingPostId(null); }} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1 }}>Save</button>
+                    <button onClick={() => { setEditingPostId(null); setEditText(""); }} style={pillInactive}>Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{linkify(post.text)}</div>
+              )}
               {post.featured && <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, color: "#d97706", background: "#fffbeb", padding: "2px 8px", borderRadius: 6, marginTop: 6 }}>Featured</div>}
-              <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                {name !== userName && (
-                  <button onClick={() => snap(board.id, name)} disabled={hasSnapped} style={{ background: hasSnapped ? "#f4f4f5" : "transparent", border: "1px solid " + (hasSnapped ? "#e4e4e7" : BORDER), borderRadius: 8, padding: "4px 10px", cursor: hasSnapped ? "default" : "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: hasSnapped ? TEXT_MUTED : TEXT_PRIMARY, fontFamily: F, fontWeight: 600, transition: "all 0.15s" }}>
-                    <span style={{ fontSize: 15 }}>&#x1F44F;</span>
-                    {snapCount > 0 && <span>{snapCount}</span>}
-                  </button>
-                )}
-                {isAdmin && !post.featured && (
-                  <button onClick={() => featurePost(board.id, name)} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Feature (+5 pts)</button>
-                )}
-                {isAdmin && (
-                  <button onClick={() => archivePost(board.id, name)} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Archive</button>
-                )}
-                {isAdmin && (
-                  <button onClick={() => { if (window.confirm("Delete " + name + "'s post?")) deletePost(board.id, name); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "4px 10px" }}>Delete</button>
-                )}
-                {name === userName && snapCount > 0 && (
-                  <span style={{ fontSize: 12, color: TEXT_MUTED }}>{snapCount} snap{snapCount !== 1 ? "s" : ""}</span>
-                )}
-              </div>
+              {!isEditingThis && (
+                <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  {!isMine && (
+                    <button onClick={() => vote(board.id, author, post.id)} disabled={hasVoted} style={{
+                      background: hasVoted ? "#ccfbf1" : "transparent",
+                      border: "1.5px solid " + (hasVoted ? "#0d9488" : BORDER_STRONG),
+                      borderRadius: 8, padding: "5px 12px", cursor: hasVoted ? "default" : "pointer",
+                      display: "flex", alignItems: "center", gap: 6, fontSize: 12,
+                      color: hasVoted ? "#0d9488" : TEXT_PRIMARY, fontFamily: F, fontWeight: 700, transition: "all 0.15s",
+                    }}>
+                      <span style={{ fontSize: 13 }}>{hasVoted ? "✓" : "👍"}</span>
+                      <span>{hasVoted ? "Voted" : "Vote"}</span>
+                    </button>
+                  )}
+                  {isMine && (
+                    <>
+                      <button onClick={() => { setEditingPostId(post.id); setEditText(post.text); }} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Edit</button>
+                      <button onClick={() => { if (window.confirm("Delete this response?")) deletePost(board.id, author, post.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "4px 10px" }}>Delete</button>
+                    </>
+                  )}
+                  {isAdmin && !post.featured && (
+                    <button onClick={() => featurePost(board.id, author, post.id)} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Feature (+5 pts)</button>
+                  )}
+                  {isAdmin && (
+                    <button onClick={() => archivePost(board.id, author, post.id)} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Archive</button>
+                  )}
+                  {isAdmin && !isMine && (
+                    <button onClick={() => { if (window.confirm("Delete " + author + "'s post?")) deletePost(board.id, author, post.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "4px 10px" }}>Delete</button>
+                  )}
+                </div>
+              )}
             </div>
             );
           })}
 
           {/* Archived posts (admin only) */}
-          {isAdmin && archivedPostList.length > 0 && (
+          {isAdmin && archivedFlat.length > 0 && (
             <div style={{ marginTop: 20 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Archived Posts ({archivedPostList.length})</div>
-              {archivedPostList.map(([name, post]) => (
-                <div key={name} style={{ ...crd, padding: 12, marginBottom: 6, opacity: 0.6 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Archived Posts ({archivedFlat.length})</div>
+              {archivedFlat.map(({ author, post }) => (
+                <div key={post.id} style={{ ...crd, padding: 12, marginBottom: 6, opacity: 0.6 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{author}</span>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => unarchivePost(board.id, name)} style={{ ...pillInactive, fontSize: 11, padding: "3px 8px" }}>Restore</button>
-                      <button onClick={() => { if (window.confirm("Permanently delete?")) deletePost(board.id, name); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "3px 8px" }}>Delete</button>
+                      <button onClick={() => unarchivePost(board.id, author, post.id)} style={{ ...pillInactive, fontSize: 11, padding: "3px 8px" }}>Restore</button>
+                      <button onClick={() => { if (window.confirm("Permanently delete?")) deletePost(board.id, author, post.id); }} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "3px 8px" }}>Delete</button>
                     </div>
                   </div>
                   <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.4 }}>{post.text.length > 100 ? post.text.slice(0, 100) + "..." : post.text}</div>
@@ -1055,10 +1139,13 @@ export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveD
 
         {activeBoards.length === 0 && !creating && <div style={{ ...crd, padding: 24, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No active boards</div>}
         {activeBoards.map(board => {
-          const postCount = Object.keys(board.posts || {}).length;
-          const myPost = (board.posts || {})[userName];
+          const norm = normalizePosts(board.posts);
+          let postCount = 0;
+          Object.values(norm).forEach(arr => arr.forEach(p => { if (!p.archived) postCount++; }));
+          const myPosts = (norm[userName] || []).filter(p => !p.archived);
+          const hasResponded = myPosts.length > 0;
           return (
-            <div key={board.id} onClick={() => { setViewingBoard(board.id); if (!myPost) setEditText(""); }} style={{ ...crd, padding: 14, marginBottom: 8, cursor: "pointer" }}>
+            <div key={board.id} onClick={() => { setViewingBoard(board.id); }} style={{ ...crd, padding: 14, marginBottom: 8, cursor: "pointer" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
                 <div style={{ fontSize: 14, fontWeight: 500, color: TEXT_PRIMARY, lineHeight: 1.3, flex: 1, minWidth: 0 }}>{board.title}</div>
                 <span style={{ fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 5, background: "#ecfdf5", color: "#047857", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Active</span>
@@ -1066,8 +1153,8 @@ export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveD
               <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.4, marginBottom: 6 }}>{(() => { const p = board.prompt.replace(/\s+/g, " "); return p.length > 120 ? p.slice(0, 120) + "..." : p; })()}</div>
               <div style={{ display: "flex", gap: 10, fontSize: 11, color: TEXT_MUTED }}>
                 <span>{postCount} {postCount === 1 ? "reply" : "replies"}</span>
-                {myPost && <><span>·</span><span style={{ color: GREEN, fontWeight: 500 }}>You responded</span></>}
-                {!myPost && <><span>·</span><span style={{ color: accent, fontWeight: 500 }}>Not yet responded</span></>}
+                {hasResponded && <><span>·</span><span style={{ color: GREEN, fontWeight: 500 }}>You responded ({myPosts.length})</span></>}
+                {!hasResponded && <><span>·</span><span style={{ color: accent, fontWeight: 500 }}>Not yet responded</span></>}
               </div>
             </div>
           );
@@ -1077,7 +1164,9 @@ export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveD
           <div style={{ marginTop: 24 }}>
             <div style={{ ...sectionLabel, marginBottom: 10 }}>Closed Boards</div>
             {closedBoards.map(board => {
-              const postCount = Object.keys(board.posts || {}).length;
+              const norm = normalizePosts(board.posts);
+              let postCount = 0;
+              Object.values(norm).forEach(arr => arr.forEach(p => { if (!p.archived) postCount++; }));
               return (
                 <div key={board.id} style={{ ...crd, padding: 14, marginBottom: 8, opacity: 0.7, cursor: "pointer" }} onClick={() => setViewingBoard(board.id)}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1100,7 +1189,9 @@ export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveD
           <div style={{ marginTop: 24 }}>
             <div style={{ ...sectionLabel, marginBottom: 10 }}>Archived Boards</div>
             {archivedBoards.map(board => {
-              const postCount = Object.keys(board.posts || {}).length;
+              const norm = normalizePosts(board.posts);
+              let postCount = 0;
+              Object.values(norm).forEach(arr => arr.forEach(p => { postCount++; }));
               return (
                 <div key={board.id} style={{ ...crd, padding: 14, marginBottom: 8, opacity: 0.5 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
