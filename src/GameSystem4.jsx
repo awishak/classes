@@ -67,6 +67,7 @@ export function GameAdmin({ data, setData }) {
   const { theme } = useTheme("comm4-v1");
   const crd = themedInteriorCrd(theme, 0);
   const [week, setWeek] = useState(null);
+  const [triviaId, setTriviaId] = useState(null);
   const [mode, setMode] = useState("game");
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
@@ -74,6 +75,37 @@ export function GameAdmin({ data, setData }) {
   const games = data.weeklyGames || {};
   const tots = data.weeklyToT || {};
   const fishbowls = data.weeklyFishbowl || {};
+  const triviaGames = data.triviaGames || {};
+
+  const saveTrivia = async (id, patch) => {
+    const existing = triviaGames[id] || {};
+    const updated = { ...data, triviaGames: { ...triviaGames, [id]: { ...existing, ...patch } } };
+    await saveData(updated); setData(updated);
+  };
+
+  const createTrivia = async () => {
+    const id = "trivia_" + Date.now();
+    const game = {
+      id, title: "Untitled Trivia", ts: Date.now(),
+      phase: "setup", scored: false,
+      defaultPointsPerQ: 5,
+      questions: [],
+      teams: [],
+      sittingOut: data.students.filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis").map(s => s.id),
+      openQs: [], lockedQs: [], revealedQs: [],
+      answers: {},
+      bonusPoints: { teams: {}, students: {} },
+    };
+    const updated = { ...data, triviaGames: { ...triviaGames, [id]: game } };
+    await saveData(updated); setData(updated); showMsg("Trivia game created"); setTriviaId(id);
+  };
+
+  const deleteTrivia = async (id) => {
+    const { [id]: _, ...rest } = triviaGames;
+    const updated = { ...data, triviaGames: rest };
+    await saveData(updated); setData(updated); showMsg("Deleted");
+    if (triviaId === id) setTriviaId(null);
+  };
 
   const saveGame = async (w, questions) => {
     const existing = games[w] || {};
@@ -239,16 +271,62 @@ export function GameAdmin({ data, setData }) {
     );
   }
 
+  // Trivia: route to setup view when one is selected
+  if (triviaId !== null && mode === "trivia") {
+    const game = triviaGames[triviaId];
+    if (!game) { setTriviaId(null); return null; }
+    return (
+      <TriviaSetup
+        game={game}
+        students={data.students}
+        onSave={(patch) => saveTrivia(triviaId, patch)}
+        onDelete={() => deleteTrivia(triviaId)}
+        onBack={() => setTriviaId(null)}
+        msg={msg} showMsg={showMsg}
+      />
+    );
+  }
+
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <div style={{ ...sectionLabel, marginBottom: 12 }}>Game Manager</div>
-        <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
           <button onClick={() => setMode("game")} style={mode === "game" ? pillActive : pillInactive}>Weekly Game</button>
           <button onClick={() => setMode("tot")} style={mode === "tot" ? pillActive : pillInactive}>This or That</button>
           <button onClick={() => setMode("fishbowl")} style={mode === "fishbowl" ? pillActive : pillInactive}>Fishbowl</button>
+          <button onClick={() => setMode("trivia")} style={mode === "trivia" ? pillActive : pillInactive}>Team Trivia</button>
         </div>
+
+        {mode === "trivia" ? (
+          <div>
+            <button onClick={createTrivia} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "10px 16px", marginBottom: 12 }}>+ New Trivia Game</button>
+            {Object.values(triviaGames).length === 0 && (
+              <div style={{ ...crd, padding: 24, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No trivia games yet. Create one above.</div>
+            )}
+            {Object.values(triviaGames).sort((a, b) => b.ts - a.ts).map(g => {
+              const numQs = (g.questions || []).length;
+              const numTeams = (g.teams || []).length;
+              const phaseLabel = g.scored ? "Done" : g.phase === "live" ? "LIVE" : "Setup";
+              const phaseColor = g.scored ? GREEN : g.phase === "live" ? "#d97706" : ACCENT;
+              return (
+                <button key={g.id} onClick={() => setTriviaId(g.id)} style={{
+                  ...crd, width: "100%", textAlign: "left", padding: 14, marginBottom: 8, cursor: "pointer",
+                  border: "2px solid " + phaseColor,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{g.title || "Untitled"}</div>
+                      <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{numQs} question{numQs !== 1 ? "s" : ""} · {numTeams} team{numTeams !== 1 ? "s" : ""}</div>
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: phaseColor, padding: "3px 8px", borderRadius: 6, background: phaseColor + "15", textTransform: "uppercase", letterSpacing: "0.05em" }}>{phaseLabel}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
           {Array.from({ length: 10 }).map((_, i) => {
             const w = i + 1;
@@ -267,12 +345,320 @@ export function GameAdmin({ data, setData }) {
             );
           })}
         </div>
+        )}
       </div>
     </div>
   );
 }
 
-/* ─── GAME EDITOR (setup phase, with drag reorder) ─── */
+/* ─── TEAM TRIVIA: SETUP VIEW ─────────────────────────────────────────
+   Admin builds questions + drag-drop teams + sitting-out list.
+   Phase progression:
+     setup → live (admin clicks Go Live) → done (admin clicks Finalize)
+*/
+function TriviaSetup({ game, students, onSave, onDelete, onBack, msg, showMsg }) {
+  const { theme } = useTheme("comm4-v1");
+  const crd = themedInteriorCrd(theme, 0);
+  const [title, setTitle] = useState(game.title || "");
+  const [defaultPts, setDefaultPts] = useState(game.defaultPointsPerQ || 5);
+  const [dragSrc, setDragSrc] = useState(null); // { type: "team"|"sitting"|"unassigned", id, studentId }
+
+  const questions = game.questions || [];
+  const teams = game.teams || [];
+  const sittingOut = game.sittingOut || [];
+  const eligibleStudents = students.filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis");
+  const studentById = (id) => eligibleStudents.find(s => s.id === id);
+
+  // Compute unassigned: students not in any team and not sitting out
+  const inAnyTeam = new Set();
+  teams.forEach(t => (t.memberIds || []).forEach(id => inAnyTeam.add(id)));
+  const sittingSet = new Set(sittingOut);
+  const unassigned = eligibleStudents.filter(s => !inAnyTeam.has(s.id) && !sittingSet.has(s.id)).map(s => s.id);
+
+  // Available team colors
+  const TEAM_PALETTE = [
+    { bg: "#fef2f2", accent: "#dc2626" }, // red
+    { bg: "#eff6ff", accent: "#2563eb" }, // blue
+    { bg: "#ecfdf5", accent: "#059669" }, // green
+    { bg: "#fffbeb", accent: "#d97706" }, // amber
+    { bg: "#f5f3ff", accent: "#7c3aed" }, // purple
+    { bg: "#ecfeff", accent: "#0891b2" }, // cyan
+    { bg: "#fdf2f8", accent: "#db2777" }, // pink
+    { bg: "#f7fee7", accent: "#65a30d" }, // lime
+  ];
+
+  const saveTitle = () => onSave({ title: title.trim() || "Untitled Trivia" });
+  const saveDefaultPts = (n) => { setDefaultPts(n); onSave({ defaultPointsPerQ: n }); };
+
+  // Question helpers
+  const addQ = () => {
+    const newQ = { id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6), text: "", expectedAnswer: "", pointsOverride: null };
+    onSave({ questions: [...questions, newQ] });
+  };
+  const updateQ = (idx, patch) => {
+    const next = questions.map((q, i) => i === idx ? { ...q, ...patch } : q);
+    onSave({ questions: next });
+  };
+  const removeQ = (idx) => {
+    if (!window.confirm("Delete question " + (idx + 1) + "?")) return;
+    onSave({ questions: questions.filter((_, i) => i !== idx) });
+  };
+
+  // Team helpers
+  const addTeam = () => {
+    const usedIdxs = new Set(teams.map(t => t.colorIdx));
+    let colorIdx = 0;
+    while (usedIdxs.has(colorIdx) && colorIdx < TEAM_PALETTE.length) colorIdx++;
+    if (colorIdx >= TEAM_PALETTE.length) colorIdx = teams.length % TEAM_PALETTE.length;
+    const newTeam = {
+      id: "team_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+      name: "Team " + (teams.length + 1),
+      colorIdx,
+      memberIds: [],
+    };
+    onSave({ teams: [...teams, newTeam] });
+  };
+  const renameTeam = (id, name) => onSave({ teams: teams.map(t => t.id === id ? { ...t, name } : t) });
+  const removeTeam = (id) => {
+    if (!window.confirm("Remove this team? Members go back to Sitting Out.")) return;
+    const team = teams.find(t => t.id === id);
+    const memberIds = team?.memberIds || [];
+    onSave({
+      teams: teams.filter(t => t.id !== id),
+      sittingOut: [...sittingOut, ...memberIds.filter(mid => !sittingOut.includes(mid))],
+    });
+  };
+  const cycleTeamColor = (id) => {
+    onSave({ teams: teams.map(t => t.id === id ? { ...t, colorIdx: ((t.colorIdx || 0) + 1) % TEAM_PALETTE.length } : t) });
+  };
+
+  // Drag and drop
+  const onDragStart = (studentId, sourceType, sourceId) => (e) => {
+    setDragSrc({ studentId, sourceType, sourceId });
+    e.dataTransfer.effectAllowed = "move";
+    try { e.dataTransfer.setData("text/plain", studentId); } catch(_) {}
+  };
+  const onDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; };
+  const moveStudent = (studentId, sourceType, sourceId, destType, destId) => {
+    if (sourceType === destType && sourceId === destId) return;
+    let newSitting = [...sittingOut];
+    let newTeams = teams.map(t => ({ ...t, memberIds: [...(t.memberIds || [])] }));
+
+    // Remove from source
+    if (sourceType === "sitting") newSitting = newSitting.filter(id => id !== studentId);
+    else if (sourceType === "team") {
+      const t = newTeams.find(t => t.id === sourceId);
+      if (t) t.memberIds = t.memberIds.filter(id => id !== studentId);
+    }
+    // (unassigned source doesn't store anywhere — just remove from team/sitting if present)
+    if (sourceType === "unassigned") {
+      newSitting = newSitting.filter(id => id !== studentId);
+      newTeams.forEach(t => { t.memberIds = t.memberIds.filter(id => id !== studentId); });
+    }
+
+    // Add to destination
+    if (destType === "sitting") {
+      if (!newSitting.includes(studentId)) newSitting.push(studentId);
+    } else if (destType === "team") {
+      const t = newTeams.find(t => t.id === destId);
+      if (t && !t.memberIds.includes(studentId)) t.memberIds.push(studentId);
+    }
+    // (unassigned dest just leaves them off any list)
+
+    onSave({ sittingOut: newSitting, teams: newTeams });
+  };
+  const onDrop = (destType, destId) => (e) => {
+    e.preventDefault();
+    if (!dragSrc) return;
+    moveStudent(dragSrc.studentId, dragSrc.sourceType, dragSrc.sourceId, destType, destId);
+    setDragSrc(null);
+  };
+
+  const autoDistribute = () => {
+    if (teams.length === 0) { showMsg("Add at least one team first"); return; }
+    if (!window.confirm("Distribute all unassigned students evenly across teams?")) return;
+    const newTeams = teams.map(t => ({ ...t, memberIds: [...(t.memberIds || [])] }));
+    let ti = 0;
+    unassigned.forEach(sid => {
+      newTeams[ti].memberIds.push(sid);
+      ti = (ti + 1) % newTeams.length;
+    });
+    onSave({ teams: newTeams });
+  };
+
+  const allInSittingOut = () => {
+    if (!window.confirm("Reset everyone to Sitting Out?")) return;
+    onSave({ sittingOut: eligibleStudents.map(s => s.id), teams: teams.map(t => ({ ...t, memberIds: [] })) });
+  };
+
+  // Validation for Go Live
+  const teamsWithMembers = teams.filter(t => (t.memberIds || []).length > 0);
+  const canGoLive = questions.length > 0 && teamsWithMembers.length >= 2 && questions.every(q => (q.text || "").trim().length > 0);
+  const goLive = async () => {
+    if (!canGoLive) {
+      showMsg("Need at least 2 teams with members and all questions filled");
+      return;
+    }
+    if (!window.confirm("Go live with this trivia? Teams will see open questions immediately.")) return;
+    await onSave({ phase: "live", openQs: [], lockedQs: [], revealedQs: [], answers: {} });
+    showMsg("Trivia is LIVE");
+  };
+
+  return (
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
+      <Toast message={msg} />
+      <div style={{ maxWidth: 800, margin: "0 auto" }}>
+        <button onClick={onBack} style={{ ...pillInactive, marginBottom: 12 }}>Back</button>
+
+        {/* Title + global settings */}
+        <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+          <div style={{ ...sectionLabel, marginBottom: 8 }}>Trivia Game</div>
+          <input
+            value={title} onChange={e => setTitle(e.target.value)} onBlur={saveTitle}
+            placeholder="Title (e.g. Methods Trivia Round 1)"
+            style={{ ...inp, fontSize: 16, fontWeight: 700, marginBottom: 10 }}
+          />
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <label style={{ fontSize: 12, color: TEXT_SECONDARY, fontWeight: 600 }}>Default points per correct answer:</label>
+            <input type="number" min={0} value={defaultPts} onChange={e => saveDefaultPts(parseInt(e.target.value) || 0)} style={{ ...inp, width: 70, textAlign: "center" }} />
+          </div>
+        </div>
+
+        {/* Questions */}
+        <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ ...sectionLabel }}>Questions ({questions.length})</div>
+            <button onClick={addQ} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12, padding: "5px 12px" }}>+ Add Question</button>
+          </div>
+          {questions.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>No questions yet.</div>}
+          {questions.map((q, i) => (
+            <div key={q.id} style={{ padding: 12, borderRadius: 10, border: "1px solid " + BORDER, marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED }}>Q{i + 1}</span>
+                <input
+                  value={q.text || ""} onChange={e => updateQ(i, { text: e.target.value })}
+                  placeholder="Question text"
+                  style={{ ...inp, flex: 1 }}
+                />
+                <button onClick={() => removeQ(i)} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "4px 8px" }}>✕</button>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  value={q.expectedAnswer || ""} onChange={e => updateQ(i, { expectedAnswer: e.target.value })}
+                  placeholder="Expected answer (admin reference, optional)"
+                  style={{ ...inp, flex: 1, fontSize: 12, color: TEXT_SECONDARY }}
+                />
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ fontSize: 10, color: TEXT_MUTED }}>pts:</span>
+                  <input
+                    type="number" min={0}
+                    value={q.pointsOverride === null || q.pointsOverride === undefined ? "" : q.pointsOverride}
+                    onChange={e => updateQ(i, { pointsOverride: e.target.value === "" ? null : parseInt(e.target.value) || 0 })}
+                    placeholder={String(defaultPts)}
+                    style={{ ...inp, width: 56, textAlign: "center", fontSize: 12 }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Team builder */}
+        <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ ...sectionLabel }}>Teams ({teams.length})</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={autoDistribute} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Auto-distribute</button>
+              <button onClick={allInSittingOut} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Reset</button>
+              <button onClick={addTeam} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12, padding: "5px 12px" }}>+ Add Team</button>
+            </div>
+          </div>
+          <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 10 }}>Drag students between Sitting Out and team boxes. Anyone in Sitting Out won&apos;t answer this round.</div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+            {/* Sitting Out column */}
+            <div
+              onDragOver={onDragOver} onDrop={onDrop("sitting", null)}
+              style={{ background: "#f9fafb", border: "2px dashed " + BORDER_STRONG, borderRadius: 10, padding: 10, minHeight: 120 }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Sitting Out ({sittingOut.length})</div>
+              {sittingOut.map(sid => {
+                const s = studentById(sid); if (!s) return null;
+                return (
+                  <div
+                    key={sid} draggable
+                    onDragStart={onDragStart(sid, "sitting", null)}
+                    style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 8, padding: "6px 10px", marginBottom: 4, fontSize: 12, fontWeight: 600, color: TEXT_PRIMARY, cursor: "grab" }}
+                  >{s.name}</div>
+                );
+              })}
+              {unassigned.length > 0 && (
+                <>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: AMBER, marginTop: 8, marginBottom: 4, textTransform: "uppercase" }}>Unassigned ({unassigned.length})</div>
+                  {unassigned.map(sid => {
+                    const s = studentById(sid); if (!s) return null;
+                    return (
+                      <div
+                        key={sid} draggable
+                        onDragStart={onDragStart(sid, "unassigned", null)}
+                        style={{ background: "#fffbeb", border: "1px solid " + AMBER, borderRadius: 8, padding: "6px 10px", marginBottom: 4, fontSize: 12, fontWeight: 600, color: "#92400e", cursor: "grab" }}
+                      >{s.name}</div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+
+            {/* Team columns */}
+            {teams.map(t => {
+              const palette = TEAM_PALETTE[(t.colorIdx || 0) % TEAM_PALETTE.length];
+              return (
+                <div
+                  key={t.id} onDragOver={onDragOver} onDrop={onDrop("team", t.id)}
+                  style={{ background: palette.bg, border: "2px solid " + palette.accent, borderRadius: 10, padding: 10, minHeight: 120 }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 8 }}>
+                    <input
+                      value={t.name} onChange={e => renameTeam(t.id, e.target.value)}
+                      style={{ ...inp, fontSize: 13, fontWeight: 800, color: palette.accent, padding: "4px 6px", flex: 1, background: "#fff" }}
+                    />
+                    <button onClick={() => cycleTeamColor(t.id)} title="Cycle color" style={{ ...pillInactive, padding: "4px 8px", fontSize: 10 }}>🎨</button>
+                    <button onClick={() => removeTeam(t.id)} style={{ ...pill, background: "#fff", color: RED, fontSize: 10, padding: "4px 8px", border: "1px solid " + BORDER }}>✕</button>
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: palette.accent, marginBottom: 6, textTransform: "uppercase" }}>{(t.memberIds || []).length} member{(t.memberIds || []).length !== 1 ? "s" : ""}</div>
+                  {(t.memberIds || []).map(sid => {
+                    const s = studentById(sid); if (!s) return null;
+                    return (
+                      <div
+                        key={sid} draggable
+                        onDragStart={onDragStart(sid, "team", t.id)}
+                        style={{ background: "#fff", border: "1px solid " + palette.accent, borderRadius: 8, padding: "6px 10px", marginBottom: 4, fontSize: 12, fontWeight: 600, color: TEXT_PRIMARY, cursor: "grab" }}
+                      >{s.name}</div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Action bar */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={goLive} disabled={!canGoLive} style={{
+            ...pill, padding: "12px 20px",
+            background: canGoLive ? GREEN : "#e4e4e7",
+            color: canGoLive ? "#fff" : TEXT_MUTED, cursor: canGoLive ? "pointer" : "not-allowed",
+            flex: 1, fontSize: 14, fontWeight: 700,
+          }}>Go Live</button>
+          <button onClick={() => { if (window.confirm("Delete this trivia game?")) onDelete(); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
+        </div>
+        {!canGoLive && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 8, textAlign: "center" }}>Need at least 2 teams with members, plus all questions filled in.</div>}
+      </div>
+    </div>
+  );
+}
+
+
 /* ─── REVIEW / OVERRIDE ANSWERS ─── */
 function ReviewAnswers({ type, week, data, setData }) {
   const [show, setShow] = useState(false);
