@@ -280,6 +280,8 @@ export function GameAdmin({ data, setData }) {
         <TriviaLiveAdmin
           game={game}
           students={data.students}
+          data={data}
+          setData={setData}
           onSave={(patch) => saveTrivia(triviaId, patch)}
           onBack={() => setTriviaId(null)}
           onFinalize={() => saveTrivia(triviaId, { phase: "done" })}
@@ -757,7 +759,7 @@ function TeamHeader({ team, accent, onRename, onCycleColor, onRemove }) {
    results grid) → admin opens next round.
    When all questions are revealed, "Finalize" button enables (step 4).
 */
-function TriviaLiveAdmin({ game, students, onSave, onBack, onFinalize, msg, showMsg }) {
+function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onFinalize, msg, showMsg }) {
   const { theme } = useTheme("comm4-v1");
   const crd = themedInteriorCrd(theme, 0);
 
@@ -796,10 +798,28 @@ function TriviaLiveAdmin({ game, students, onSave, onBack, onFinalize, msg, show
     });
   };
 
-  // Note: no local auto-refresh here. The parent app (Comm4.jsx) has a
-  // WebSocket subscription that pushes Supabase updates into `data`, which
-  // re-renders GameAdmin and re-passes a fresh `game` prop here. A local
-  // setInterval would capture stale closures and stomp admin edits to teams.
+  // Read-only auto-refresh from Supabase. Calls setData directly (never onSave)
+  // so admin edits to teams/questions can never be clobbered. Updates the
+  // entire data blob whenever Supabase has a different snapshot.
+  React.useEffect(() => {
+    const iv = setInterval(async () => {
+      try {
+        const raw = await window.storage.get("comm4-v1", true);
+        if (raw?.value) {
+          const d = JSON.parse(raw.value);
+          // Cheap shallow-ish check: only update if the trivia game's
+          // serialized snapshot differs.
+          const cur = data?.triviaGames?.[game.id];
+          const fresh = d?.triviaGames?.[game.id];
+          if (JSON.stringify(cur) !== JSON.stringify(fresh)) {
+            setData(d);
+          }
+        }
+      } catch (e) {}
+    }, 2000);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line
+  }, [game.id]);
 
   // Open the selected round
   const openRound = () => {
@@ -839,9 +859,14 @@ function TriviaLiveAdmin({ game, students, onSave, onBack, onFinalize, msg, show
     onSave({ answers: { ...answers, [key]: { ...a, gradedCorrect: correct } } });
   };
 
-  // Compute running team totals based on revealed questions (and locked-graded if you want to see live)
+  // Compute running team totals based on revealed questions PLUS any admin
+  // bonus points stored at game.bonusPoints.teams[teamId].
+  const teamBonus = (teamId) => {
+    const b = (game.bonusPoints?.teams || {})[teamId];
+    return typeof b === "number" ? b : 0;
+  };
   const teamRunningTotal = (teamId) => {
-    let total = 0;
+    let total = teamBonus(teamId);
     revealedQs.forEach(qi => {
       const key = teamId + "-" + qi;
       const a = answers[key];
@@ -852,6 +877,14 @@ function TriviaLiveAdmin({ game, students, onSave, onBack, onFinalize, msg, show
       }
     });
     return total;
+  };
+
+  const setTeamBonus = (teamId, value) => {
+    const newBonusPoints = {
+      ...(game.bonusPoints || { teams: {}, students: {} }),
+      teams: { ...((game.bonusPoints || {}).teams || {}), [teamId]: value },
+    };
+    onSave({ bonusPoints: newBonusPoints });
   };
 
   const teamColor = (t) => TEAM_PALETTE[(t.colorIdx || 0) % TEAM_PALETTE.length];
@@ -1071,16 +1104,31 @@ function TriviaLiveAdmin({ game, students, onSave, onBack, onFinalize, msg, show
 
         {/* Running standings strip */}
         <div style={{ ...crd, padding: 14, marginBottom: 16, background: "#fafafa" }}>
-          <div style={{ ...sectionLabel, marginBottom: 8 }}>Standings ({revealedQs.length} of {questions.length} questions revealed)</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
+            <div style={{ ...sectionLabel }}>Standings ({revealedQs.length} of {questions.length} questions revealed)</div>
+            <button
+              onClick={() => {
+                const url = window.location.origin + window.location.pathname + "?presenter=" + encodeURIComponent(game.id) + "&class=comm4";
+                window.open(url, "trivia-presenter", "width=1280,height=800");
+              }}
+              style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}
+            >Open Presenter →</button>
+          </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {sortedTeams.map((t, idx) => {
               const pal = teamColor(t);
               const total = teamRunningTotal(t.id);
+              const bonus = teamBonus(t.id);
               return (
-                <div key={t.id} style={{ background: pal.bg, border: "2px solid " + pal.accent, borderRadius: 10, padding: "8px 12px", minWidth: 110 }}>
+                <div key={t.id} style={{ background: pal.bg, border: "2px solid " + pal.accent, borderRadius: 10, padding: "8px 12px", minWidth: 130 }}>
                   <div style={{ fontSize: 9, fontWeight: 800, color: pal.accent, letterSpacing: "0.05em" }}>#{idx + 1}</div>
                   <div style={{ fontSize: 13, fontWeight: 800, color: TEXT_PRIMARY, lineHeight: 1.1 }}>{t.name}</div>
                   <div style={{ fontSize: 18, fontWeight: 900, color: pal.accent, fontVariantNumeric: "tabular-nums" }}>{total}</div>
+                  <TeamBonusEditor
+                    bonus={bonus}
+                    accent={pal.accent}
+                    onSave={(v) => setTeamBonus(t.id, v)}
+                  />
                 </div>
               );
             })}
@@ -2658,6 +2706,397 @@ function TriviaRevealGrid({ questions, roundQs, teams, answers, defaultPts, myTe
       })}
     </div>
   );
+}
+
+/* ─── BONUS EDITOR (admin) ────────────────────────────────────────────
+   Click-to-edit pill for adjusting a team's bonus points. Local state +
+   blur-saves so typing isn't disrupted by parent re-renders.
+*/
+function TeamBonusEditor({ bonus, accent, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(String(bonus || 0));
+  React.useEffect(() => { setValue(String(bonus || 0)); }, [bonus]);
+  const commit = () => {
+    const n = parseInt(value);
+    onSave(isNaN(n) ? 0 : n);
+    setEditing(false);
+  };
+  if (editing) {
+    return (
+      <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 4 }}>
+        <input
+          type="number" autoFocus
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => { if (e.key === "Enter") commit(); else if (e.key === "Escape") { setValue(String(bonus || 0)); setEditing(false); } }}
+          style={{ ...inp, width: 64, fontSize: 11, padding: "2px 6px", textAlign: "center" }}
+        />
+      </div>
+    );
+  }
+  if (!bonus || bonus === 0) {
+    return (
+      <button onClick={() => setEditing(true)} style={{
+        marginTop: 4, fontSize: 9, fontWeight: 700, color: accent, background: "transparent",
+        border: "1px dashed " + accent + "60", borderRadius: 6, padding: "1px 6px",
+        cursor: "pointer", fontFamily: F,
+      }}>+ bonus</button>
+    );
+  }
+  const positive = bonus > 0;
+  return (
+    <button onClick={() => setEditing(true)} style={{
+      marginTop: 4, fontSize: 10, fontWeight: 800,
+      color: positive ? "#fff" : "#fff",
+      background: positive ? accent : "#6b7280",
+      border: "none", borderRadius: 999, padding: "2px 8px",
+      cursor: "pointer", fontFamily: F,
+    }}>{positive ? "+" : ""}{bonus} bonus</button>
+  );
+}
+
+/* ─── TRIVIA PRESENTER VIEW ──────────────────────────────────────────
+   Read-only big-screen projector display. Opened in a separate window via
+   `?presenter=<gameId>&class=comm4` URL param. Routed from App.jsx (or
+   the per-class entry component) when the param is present.
+
+   Auto-refreshes from Supabase every 1 second so it stays in sync with
+   admin actions and student submissions.
+*/
+export function TriviaPresenter({ gameId, classKey }) {
+  const STORAGE_KEY = classKey === "comm118" ? "comm118-game-v14" : "comm4-v1";
+  const [data, setData] = useState(null);
+  const [pulseCount, setPulseCount] = useState(0); // for reveal pop animation
+
+  React.useEffect(() => {
+    let unsub = () => {};
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const raw = await window.storage.get(STORAGE_KEY, true);
+        if (!cancelled && raw?.value) setData(JSON.parse(raw.value));
+      } catch(e) {}
+    };
+    load();
+    const iv = setInterval(load, 1000);
+    return () => { cancelled = true; clearInterval(iv); unsub(); };
+  }, [STORAGE_KEY]);
+
+  // Detect reveal change and bump pulse for the pop animation
+  const prevRevealCountRef = React.useRef(0);
+  const game = data?.triviaGames?.[gameId];
+  React.useEffect(() => {
+    const cur = (game?.revealedQs || []).length;
+    if (cur > prevRevealCountRef.current) setPulseCount(p => p + 1);
+    prevRevealCountRef.current = cur;
+  }, [game?.revealedQs?.length]);
+
+  if (!data) {
+    return <div style={{ background: "#0f172a", color: "#fff", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F, fontSize: 24 }}>Loading...</div>;
+  }
+  if (!game) {
+    return <div style={{ background: "#0f172a", color: "#fff", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F, fontSize: 24 }}>Trivia game not found.</div>;
+  }
+
+  const TEAM_PALETTE = [
+    { bg: "#fef2f2", accent: "#dc2626" },
+    { bg: "#eff6ff", accent: "#2563eb" },
+    { bg: "#ecfdf5", accent: "#059669" },
+    { bg: "#fffbeb", accent: "#d97706" },
+    { bg: "#f5f3ff", accent: "#7c3aed" },
+    { bg: "#ecfeff", accent: "#0891b2" },
+    { bg: "#fdf2f8", accent: "#db2777" },
+    { bg: "#f7fee7", accent: "#65a30d" },
+  ];
+  const teamColor = (t) => TEAM_PALETTE[(t.colorIdx || 0) % TEAM_PALETTE.length];
+
+  const questions = game.questions || [];
+  const teams = game.teams || [];
+  const openQs = game.openQs || [];
+  const lockedQs = game.lockedQs || [];
+  const revealedQs = game.revealedQs || [];
+  const answers = game.answers || {};
+  const defaultPts = game.defaultPointsPerQ || 5;
+
+  const teamBonus = (teamId) => {
+    const b = (game.bonusPoints?.teams || {})[teamId];
+    return typeof b === "number" ? b : 0;
+  };
+  const teamTotal = (teamId) => {
+    let total = teamBonus(teamId);
+    revealedQs.forEach(qi => {
+      const a = answers[teamId + "-" + qi];
+      if (a && a.gradedCorrect === true) {
+        const q = questions[qi];
+        const pts = (q.pointsOverride !== null && q.pointsOverride !== undefined) ? q.pointsOverride : defaultPts;
+        total += pts;
+      }
+    });
+    return total;
+  };
+  const sortedTeams = [...teams].sort((a, b) => teamTotal(b.id) - teamTotal(a.id));
+
+  // Determine current phase for main display
+  const inProgress = [...openQs, ...lockedQs];
+  const lastRevealedBatch = revealedQs.slice(-4);
+  const isReveal = inProgress.length === 0 && revealedQs.length > 0 && revealedQs.length < questions.length;
+  const isOpen = openQs.length > 0;
+  const isLocked = openQs.length === 0 && lockedQs.length > 0;
+  const isDone = revealedQs.length === questions.length && questions.length > 0;
+  const isWaiting = !isOpen && !isLocked && !isReveal && !isDone;
+
+  return (
+    <div style={{
+      background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+      color: "#fff", minHeight: "100vh", fontFamily: F,
+      padding: "20px 28px", boxSizing: "border-box",
+      display: "flex", flexDirection: "column",
+    }}>
+      {/* Title + standings strip */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.1em" }}>{game.title}</div>
+        <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{revealedQs.length} of {questions.length} revealed</div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
+        {sortedTeams.map((t, idx) => {
+          const pal = teamColor(t);
+          return (
+            <div key={t.id} style={{
+              background: pal.accent, color: "#fff", borderRadius: 10,
+              padding: "8px 14px", minWidth: 140,
+              border: idx === 0 ? "3px solid #fbbf24" : "none",
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 800, opacity: 0.8, letterSpacing: "0.05em" }}>#{idx + 1}{idx === 0 ? " 👑" : ""}</div>
+              <div style={{ fontSize: 16, fontWeight: 900, lineHeight: 1.05 }}>{t.name}</div>
+              <div style={{ fontSize: 28, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
+                <PresenterCountUp value={teamTotal(t.id)} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Main area */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+
+        {isWaiting && (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
+            <div style={{ fontSize: 56, fontWeight: 900, color: "#fbbf24", textAlign: "center" }}>Get ready</div>
+            <div style={{ fontSize: 20, color: "#94a3b8", marginTop: 8 }}>Next round opening soon...</div>
+          </div>
+        )}
+
+        {isOpen && (
+          <PresenterOpenView
+            qs={openQs} questions={questions} teams={teams} answers={answers}
+            defaultPts={defaultPts} teamColor={teamColor}
+          />
+        )}
+
+        {isLocked && (
+          <PresenterLockedView
+            qs={lockedQs} questions={questions} teams={teams} answers={answers}
+            defaultPts={defaultPts} teamColor={teamColor}
+          />
+        )}
+
+        {isReveal && (
+          <PresenterRevealView
+            key={pulseCount}
+            roundQs={lastRevealedBatch} questions={questions}
+            teams={teams} answers={answers}
+            defaultPts={defaultPts} teamColor={teamColor}
+            sortedTeams={sortedTeams} teamTotal={teamTotal}
+          />
+        )}
+
+        {isDone && (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#fbbf24", letterSpacing: "0.1em", textTransform: "uppercase" }}>Final Standings</div>
+            <div style={{ fontSize: 80, fontWeight: 900, color: "#fbbf24", marginTop: 8 }}>🏆 {sortedTeams[0]?.name}</div>
+            <div style={{ fontSize: 36, fontWeight: 900, color: "#fff", marginTop: 4 }}>{teamTotal(sortedTeams[0]?.id)} points</div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+// Presenter sub-views
+function PresenterOpenView({ qs, questions, teams, answers, defaultPts, teamColor }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ fontSize: 14, fontWeight: 800, color: "#22d3ee", textTransform: "uppercase", letterSpacing: "0.1em" }}>Now Answering</div>
+      {qs.map(qi => {
+        const q = questions[qi]; if (!q) return null;
+        const qPts = (q.pointsOverride !== null && q.pointsOverride !== undefined) ? q.pointsOverride : defaultPts;
+        const submittedTeams = teams.filter(t => answers[t.id + "-" + qi]?.text);
+        const waitingTeams = teams.filter(t => !answers[t.id + "-" + qi]?.text);
+        return (
+          <div key={qi} style={{ background: "rgba(255,255,255,0.06)", borderRadius: 14, padding: 24, border: "2px solid rgba(255,255,255,0.1)" }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#94a3b8" }}>Q{qi + 1}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#fbbf24" }}>{qPts} pt{qPts !== 1 ? "s" : ""}</span>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 16 }}>{q.text}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {submittedTeams.map(t => {
+                const pal = teamColor(t);
+                return (
+                  <div key={t.id} style={{ background: pal.accent, color: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 14, fontWeight: 700 }}>
+                    ✓ {t.name}
+                  </div>
+                );
+              })}
+              {waitingTeams.map(t => (
+                <div key={t.id} style={{ background: "rgba(255,255,255,0.08)", color: "#94a3b8", borderRadius: 8, padding: "6px 12px", fontSize: 14, fontWeight: 700 }}>
+                  ... {t.name}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PresenterLockedView({ qs, questions, teams, answers, defaultPts, teamColor }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ fontSize: 14, fontWeight: 800, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.1em" }}>Locked In · Grading</div>
+      {qs.map(qi => {
+        const q = questions[qi]; if (!q) return null;
+        const qPts = (q.pointsOverride !== null && q.pointsOverride !== undefined) ? q.pointsOverride : defaultPts;
+        return (
+          <div key={qi} style={{ background: "rgba(255,255,255,0.06)", borderRadius: 14, padding: 24, border: "2px solid rgba(255,255,255,0.1)" }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#94a3b8" }}>Q{qi + 1}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#fbbf24" }}>{qPts} pt{qPts !== 1 ? "s" : ""}</span>
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 16 }}>{q.text}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
+              {teams.map(t => {
+                const pal = teamColor(t);
+                const a = answers[t.id + "-" + qi];
+                const submitted = !!a?.text;
+                const correct = a?.gradedCorrect === true;
+                const incorrect = a?.gradedCorrect === false;
+                return (
+                  <div key={t.id} style={{
+                    background: correct ? "#16a34a" : incorrect ? "#dc2626" : pal.accent,
+                    color: "#fff", borderRadius: 10, padding: "10px 14px",
+                    border: correct ? "3px solid #fbbf24" : "none",
+                    transition: "all 0.4s",
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, opacity: 0.9 }}>{t.name}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2, wordBreak: "break-word" }}>
+                      {submitted ? a.text : <span style={{ opacity: 0.6 }}>(no answer)</span>}
+                    </div>
+                    {correct && <div style={{ fontSize: 12, fontWeight: 800, marginTop: 4 }}>+{qPts}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PresenterRevealView({ roundQs, questions, teams, answers, defaultPts, teamColor, sortedTeams, teamTotal }) {
+  const roundPts = (teamId) => {
+    let total = 0;
+    roundQs.forEach(qi => {
+      const a = answers[teamId + "-" + qi];
+      if (a && a.gradedCorrect === true) {
+        const q = questions[qi];
+        const pts = (q.pointsOverride !== null && q.pointsOverride !== undefined) ? q.pointsOverride : defaultPts;
+        total += pts;
+      }
+    });
+    return total;
+  };
+  return (
+    <div>
+      <div style={{ fontSize: 14, fontWeight: 800, color: "#22d3ee", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>Reveal</div>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: `200px repeat(${roundQs.length}, 1fr) 100px`,
+        gap: 8, alignItems: "center", marginBottom: 8,
+      }}>
+        <div></div>
+        {roundQs.map(qi => (
+          <div key={qi} style={{ fontSize: 13, fontWeight: 800, color: "#94a3b8", textAlign: "center" }}>Q{qi + 1}</div>
+        ))}
+        <div style={{ fontSize: 13, fontWeight: 800, color: "#fbbf24", textAlign: "right" }}>+ROUND</div>
+      </div>
+      {sortedTeams.map((t, idx) => {
+        const pal = teamColor(t);
+        const earned = roundPts(t.id);
+        return (
+          <div key={t.id} style={{
+            display: "grid",
+            gridTemplateColumns: `200px repeat(${roundQs.length}, 1fr) 100px`,
+            gap: 8, alignItems: "stretch", marginBottom: 8,
+            background: "rgba(255,255,255,0.06)", border: "2px solid " + pal.accent,
+            borderRadius: 10, padding: 10,
+          }}>
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 6 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: pal.accent }}>#{idx + 1}</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#fff", lineHeight: 1.05 }}>{t.name}</div>
+            </div>
+            {roundQs.map(qi => {
+              const a = answers[t.id + "-" + qi];
+              const correct = a?.gradedCorrect === true;
+              const text = a?.text || "—";
+              return (
+                <div key={qi} style={{
+                  background: correct ? "#16a34a" : "rgba(255,255,255,0.04)",
+                  border: correct ? "3px solid #fbbf24" : "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 8, padding: "8px 10px",
+                  fontSize: 14, fontWeight: correct ? 800 : 600,
+                  color: "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center",
+                  wordBreak: "break-word",
+                }}>{text}</div>
+              );
+            })}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 28, fontWeight: 900, color: "#fbbf24", fontVariantNumeric: "tabular-nums",
+            }}>+<PresenterCountUp value={earned} /></div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PresenterCountUp({ value }) {
+  const [display, setDisplay] = useState(value);
+  const lastRef = React.useRef(value);
+  React.useEffect(() => {
+    if (value === lastRef.current) return;
+    const start = lastRef.current;
+    const end = value;
+    const duration = 1200;
+    const startTime = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= duration) { setDisplay(end); lastRef.current = end; return; }
+      const t = elapsed / duration;
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(Math.round(start + (end - start) * eased));
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [value]);
+  return <span>{display}</span>;
 }
 
 

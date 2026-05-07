@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import Comm118 from "./Comm118.jsx";
 import Comm4 from "./Comm4.jsx";
 import Comm2 from "./Comm2.jsx";
+import { TriviaPresenter as TriviaPresenter4 } from "./GameSystem4.jsx";
+import { TriviaPresenter as TriviaPresenter118 } from "./GameSystem.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 
@@ -133,11 +135,23 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("presenter")) { document.title = "Trivia Presenter"; return; }
     if (path === "/comm118" || path === "/comm118/") document.title = "COMM 118 Hub - Spring 2026";
     else if (path === "/comm4" || path === "/comm4/") document.title = "COMM 4 Hub - Spring 2026";
     else if (path === "/comm2" || path === "/comm2/") document.title = "COMM 2 Hub - Spring 2026";
     else document.title = "Ishak Classes";
   }, [path]);
+
+  // Presenter mode: stripped projector view, opened in a separate window.
+  // URL: /<class>?presenter=<gameId>&class=comm118|comm4
+  const params = new URLSearchParams(window.location.search);
+  const presenterGameId = params.get("presenter");
+  const presenterClass = params.get("class");
+  if (presenterGameId && presenterClass) {
+    if (presenterClass === "comm118") return <TriviaPresenter118 gameId={presenterGameId} classKey="comm118" />;
+    return <TriviaPresenter4 gameId={presenterGameId} classKey="comm4" />;
+  }
 
   if (path === "/comm118" || path === "/comm118/") {
     return <Comm118 />;
