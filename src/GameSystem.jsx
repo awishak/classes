@@ -581,7 +581,7 @@ function TriviaSetup({ game, students, onSave, onDelete, onBack, msg, showMsg })
             {/* Sitting Out column */}
             <div
               onDragOver={onDragOver} onDrop={onDrop("sitting", null)}
-              style={{ background: "#f9fafb", border: "2px dashed " + BORDER_STRONG, borderRadius: 10, padding: 10, minHeight: 120 }}
+              style={{ background: "#f9fafb", border: "2px dashed " + BORDER, borderRadius: 10, padding: 10, minHeight: 120 }}
             >
               <div style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Sitting Out ({sittingOut.length})</div>
               {sittingOut.map(sid => {
