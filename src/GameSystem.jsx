@@ -886,6 +886,107 @@ function TriviaLiveAdmin({ game, students, onSave, onBack, onFinalize, msg, show
   // Are we ready to finalize?
   const allDone = revealedQs.length === questions.length && questions.length > 0;
 
+  // ─── EDITING (mid-game): questions + teams panels ───
+  const [editQuestionsOpen, setEditQuestionsOpen] = useState(false);
+  const [editTeamsOpen, setEditTeamsOpen] = useState(false);
+  const [editDragSrc, setEditDragSrc] = useState(null);
+
+  // Question edit handlers
+  const addQ = () => {
+    const newQ = { id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6), text: "", expectedAnswer: "", pointsOverride: null };
+    onSave({ questions: [...questions, newQ] });
+  };
+  const updateQ = (idx, patch) => {
+    const next = questions.map((q, i) => i === idx ? { ...q, ...patch } : q);
+    onSave({ questions: next });
+  };
+  // Touched = locked or revealed; only allow delete on untouched questions to avoid orphaned answers
+  const isQTouched = (idx) => lockedQs.includes(idx) || revealedQs.includes(idx) || openQs.includes(idx);
+  const removeQ = (idx) => {
+    if (isQTouched(idx)) { showMsg("Can't delete a question that's been opened or revealed"); return; }
+    if (!window.confirm("Delete question " + (idx + 1) + "?")) return;
+    // Re-index: shift openQs/lockedQs/revealedQs and answer keys for higher-index questions
+    const next = questions.filter((_, i) => i !== idx);
+    const shift = (arr) => arr.filter(i => i !== idx).map(i => i > idx ? i - 1 : i);
+    const newAnswers = {};
+    Object.entries(answers).forEach(([k, v]) => {
+      const [tid, qiStr] = k.split("-");
+      const qi = parseInt(qiStr);
+      if (qi === idx) return; // drop
+      const newQi = qi > idx ? qi - 1 : qi;
+      newAnswers[tid + "-" + newQi] = v;
+    });
+    onSave({ questions: next, openQs: shift(openQs), lockedQs: shift(lockedQs), revealedQs: shift(revealedQs), answers: newAnswers });
+  };
+
+  // Team edit handlers
+  const addTeam = () => {
+    const usedIdxs = new Set(teams.map(t => t.colorIdx));
+    let colorIdx = 0;
+    while (usedIdxs.has(colorIdx) && colorIdx < TEAM_PALETTE.length) colorIdx++;
+    if (colorIdx >= TEAM_PALETTE.length) colorIdx = teams.length % TEAM_PALETTE.length;
+    const newTeam = {
+      id: "team_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+      name: "Team " + (teams.length + 1),
+      colorIdx, memberIds: [],
+    };
+    onSave({ teams: [...teams, newTeam] });
+  };
+  const renameTeam = (id, name) => onSave({ teams: teams.map(t => t.id === id ? { ...t, name } : t) });
+  const cycleTeamColor = (id) => onSave({ teams: teams.map(t => t.id === id ? { ...t, colorIdx: ((t.colorIdx || 0) + 1) % TEAM_PALETTE.length } : t) });
+  const removeTeam = (id) => {
+    if (!window.confirm("Remove this team mid-game? Members go back to Sitting Out. Past answers are kept but become orphaned.")) return;
+    const team = teams.find(t => t.id === id);
+    const memberIds = team?.memberIds || [];
+    const sittingOut = game.sittingOut || [];
+    onSave({
+      teams: teams.filter(t => t.id !== id),
+      sittingOut: [...sittingOut, ...memberIds.filter(mid => !sittingOut.includes(mid))],
+    });
+  };
+
+  // Drag/drop for mid-game team editing
+  const eligibleStudents = students.filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis");
+  const studentById = (id) => eligibleStudents.find(s => s.id === id);
+  const sittingOut = game.sittingOut || [];
+  const inAnyTeamSet = new Set();
+  teams.forEach(t => (t.memberIds || []).forEach(id => inAnyTeamSet.add(id)));
+  const sittingSet = new Set(sittingOut);
+  const unassigned = eligibleStudents.filter(s => !inAnyTeamSet.has(s.id) && !sittingSet.has(s.id)).map(s => s.id);
+
+  const onEditDragStart = (studentId, sourceType, sourceId) => (e) => {
+    setEditDragSrc({ studentId, sourceType, sourceId });
+    e.dataTransfer.effectAllowed = "move";
+    try { e.dataTransfer.setData("text/plain", studentId); } catch(_) {}
+  };
+  const onEditDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; };
+  const moveStudent = (studentId, sourceType, sourceId, destType, destId) => {
+    if (sourceType === destType && sourceId === destId) return;
+    let newSitting = [...sittingOut];
+    let newTeams = teams.map(t => ({ ...t, memberIds: [...(t.memberIds || [])] }));
+    if (sourceType === "sitting") newSitting = newSitting.filter(id => id !== studentId);
+    else if (sourceType === "team") {
+      const t = newTeams.find(t => t.id === sourceId);
+      if (t) t.memberIds = t.memberIds.filter(id => id !== studentId);
+    } else if (sourceType === "unassigned") {
+      newSitting = newSitting.filter(id => id !== studentId);
+      newTeams.forEach(t => { t.memberIds = t.memberIds.filter(id => id !== studentId); });
+    }
+    if (destType === "sitting") {
+      if (!newSitting.includes(studentId)) newSitting.push(studentId);
+    } else if (destType === "team") {
+      const t = newTeams.find(t => t.id === destId);
+      if (t && !t.memberIds.includes(studentId)) t.memberIds.push(studentId);
+    }
+    onSave({ sittingOut: newSitting, teams: newTeams });
+  };
+  const onEditDrop = (destType, destId) => (e) => {
+    e.preventDefault();
+    if (!editDragSrc) return;
+    moveStudent(editDragSrc.studentId, editDragSrc.sourceType, editDragSrc.sourceId, destType, destId);
+    setEditDragSrc(null);
+  };
+
   return (
     <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
       <Toast message={msg} />
@@ -897,6 +998,100 @@ function TriviaLiveAdmin({ game, students, onSave, onBack, onFinalize, msg, show
             <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{game.title}</span>
           </div>
         </div>
+
+        {/* Edit panels (collapsed by default) */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+          <button onClick={() => setEditQuestionsOpen(!editQuestionsOpen)} style={editQuestionsOpen ? pillActive : pillInactive}>
+            {editQuestionsOpen ? "Close Questions" : "Edit Questions"}
+          </button>
+          <button onClick={() => setEditTeamsOpen(!editTeamsOpen)} style={editTeamsOpen ? pillActive : pillInactive}>
+            {editTeamsOpen ? "Close Teams" : "Edit Teams"}
+          </button>
+        </div>
+
+        {/* Edit Questions panel */}
+        {editQuestionsOpen && (
+          <div style={{ ...crd, padding: 16, marginBottom: 16, border: "2px solid " + ACCENT }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ ...sectionLabel }}>Questions ({questions.length})</div>
+              <button onClick={addQ} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12, padding: "5px 12px" }}>+ Add Question</button>
+            </div>
+            <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 10 }}>Edit any question text or expected answer at any time. Questions that have been opened, locked, or revealed can&apos;t be deleted.</div>
+            {questions.map((q, i) => {
+              const touched = isQTouched(i);
+              const status = revealedQs.includes(i) ? "REVEALED" : lockedQs.includes(i) ? "LOCKED" : openQs.includes(i) ? "OPEN" : "AVAILABLE";
+              const statusColor = status === "REVEALED" ? GREEN : status === "LOCKED" ? "#d97706" : status === "OPEN" ? "#2563eb" : TEXT_MUTED;
+              return (
+                <div key={q.id} style={{ marginBottom: 8, position: "relative" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: statusColor, background: statusColor + "15", padding: "2px 6px", borderRadius: 4 }}>{status}</span>
+                    {touched && <span style={{ fontSize: 10, color: TEXT_MUTED, fontStyle: "italic" }}>(can&apos;t delete — already used)</span>}
+                  </div>
+                  <QuestionRow
+                    idx={i} question={q} defaultPts={defaultPts}
+                    onUpdate={(patch) => updateQ(i, patch)}
+                    onRemove={() => removeQ(i)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Edit Teams panel */}
+        {editTeamsOpen && (
+          <div style={{ ...crd, padding: 16, marginBottom: 16, border: "2px solid " + ACCENT }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 6 }}>
+              <div style={{ ...sectionLabel }}>Teams ({teams.length})</div>
+              <button onClick={addTeam} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12, padding: "5px 12px" }}>+ Add Team</button>
+            </div>
+            <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 10 }}>Drag students between Sitting Out and team boxes. Past answers stay credited to whichever team submitted them.</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+              {/* Sitting Out + Unassigned column */}
+              <div onDragOver={onEditDragOver} onDrop={onEditDrop("sitting", null)} style={{ background: "#f9fafb", border: "2px dashed " + BORDER, borderRadius: 10, padding: 10, minHeight: 120 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Sitting Out ({sittingOut.length})</div>
+                {sittingOut.map(sid => {
+                  const s = studentById(sid); if (!s) return null;
+                  return (
+                    <div key={sid} draggable onDragStart={onEditDragStart(sid, "sitting", null)} style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 8, padding: "6px 10px", marginBottom: 4, fontSize: 12, fontWeight: 600, color: TEXT_PRIMARY, cursor: "grab" }}>{s.name}</div>
+                  );
+                })}
+                {unassigned.length > 0 && (
+                  <>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: AMBER, marginTop: 8, marginBottom: 4, textTransform: "uppercase" }}>Unassigned ({unassigned.length})</div>
+                    {unassigned.map(sid => {
+                      const s = studentById(sid); if (!s) return null;
+                      return (
+                        <div key={sid} draggable onDragStart={onEditDragStart(sid, "unassigned", null)} style={{ background: "#fffbeb", border: "1px solid " + AMBER, borderRadius: 8, padding: "6px 10px", marginBottom: 4, fontSize: 12, fontWeight: 600, color: "#92400e", cursor: "grab" }}>{s.name}</div>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+              {/* Team columns */}
+              {teams.map(t => {
+                const palette = TEAM_PALETTE[(t.colorIdx || 0) % TEAM_PALETTE.length];
+                return (
+                  <div key={t.id} onDragOver={onEditDragOver} onDrop={onEditDrop("team", t.id)} style={{ background: palette.bg, border: "2px solid " + palette.accent, borderRadius: 10, padding: 10, minHeight: 120 }}>
+                    <TeamHeader
+                      team={t} accent={palette.accent}
+                      onRename={(name) => renameTeam(t.id, name)}
+                      onCycleColor={() => cycleTeamColor(t.id)}
+                      onRemove={() => removeTeam(t.id)}
+                    />
+                    <div style={{ fontSize: 10, fontWeight: 700, color: palette.accent, marginBottom: 6, textTransform: "uppercase" }}>{(t.memberIds || []).length} member{(t.memberIds || []).length !== 1 ? "s" : ""}</div>
+                    {(t.memberIds || []).map(sid => {
+                      const s = studentById(sid); if (!s) return null;
+                      return (
+                        <div key={sid} draggable onDragStart={onEditDragStart(sid, "team", t.id)} style={{ background: "#fff", border: "1px solid " + palette.accent, borderRadius: 8, padding: "6px 10px", marginBottom: 4, fontSize: 12, fontWeight: 600, color: TEXT_PRIMARY, cursor: "grab" }}>{s.name}</div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Running standings strip */}
         <div style={{ ...crd, padding: 14, marginBottom: 16, background: "#fafafa" }}>
