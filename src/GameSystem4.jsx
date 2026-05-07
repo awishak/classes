@@ -796,32 +796,10 @@ function TriviaLiveAdmin({ game, students, onSave, onBack, onFinalize, msg, show
     });
   };
 
-  // Auto-refresh from Supabase for incoming team answers
-  React.useEffect(() => {
-    const iv = setInterval(async () => {
-      try {
-        const raw = await window.storage.get("comm4-v1", true);
-        if (raw?.value) {
-          const d = JSON.parse(raw.value);
-          const fresh = (d.triviaGames || {})[game.id];
-          if (fresh) {
-            // Soft-merge the bits we care about. We pass updates through onSave
-            // so the parent's data state syncs naturally; but here we read for
-            // the live view by triggering a refresh through onSave with a no-op
-            // (keep things consistent without thrashing storage).
-            // Strategy: only rewrite if answers/openQs/lockedQs/revealedQs differ.
-            const currentSig = JSON.stringify({ a: game.answers, o: game.openQs, l: game.lockedQs, r: game.revealedQs });
-            const freshSig = JSON.stringify({ a: fresh.answers, o: fresh.openQs, l: fresh.lockedQs, r: fresh.revealedQs });
-            if (currentSig !== freshSig) {
-              onSave({ answers: fresh.answers || {}, openQs: fresh.openQs || [], lockedQs: fresh.lockedQs || [], revealedQs: fresh.revealedQs || [] });
-            }
-          }
-        }
-      } catch (e) {}
-    }, 2000);
-    return () => clearInterval(iv);
-  // eslint-disable-next-line
-  }, [game.id]);
+  // Note: no local auto-refresh here. The parent app (Comm4.jsx) has a
+  // WebSocket subscription that pushes Supabase updates into `data`, which
+  // re-renders GameAdmin and re-passes a fresh `game` prop here. A local
+  // setInterval would capture stale closures and stomp admin edits to teams.
 
   // Open the selected round
   const openRound = () => {
