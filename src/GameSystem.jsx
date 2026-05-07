@@ -277,6 +277,40 @@ export function GameAdmin({ data, setData }) {
   if (triviaId !== null && mode === "trivia") {
     const game = triviaGames[triviaId];
     if (!game) { setTriviaId(null); return null; }
+    if (game.phase === "done") {
+      return (
+        <TriviaFinalize
+          game={game}
+          students={data.students}
+          data={data}
+          setData={setData}
+          onSave={(patch) => saveTrivia(triviaId, patch)}
+          onAwardPoints={(logEntries, finalizedTs) => {
+            const updated = {
+              ...data,
+              log: [...(data.log || []), ...logEntries],
+              triviaGames: { ...triviaGames, [triviaId]: { ...game, finalizedTs, scored: true } },
+            };
+            saveData(updated); setData(updated);
+            showMsg("Points awarded");
+          }}
+          onUnfinalize={() => {
+            const tag = "Team Trivia: " + (game.title || "");
+            const filteredLog = (data.log || []).filter(e => !(e.source === tag && e.triviaGameId === game.id));
+            const updated = {
+              ...data,
+              log: filteredLog,
+              triviaGames: { ...triviaGames, [triviaId]: { ...game, finalizedTs: null, scored: false } },
+            };
+            saveData(updated); setData(updated);
+            showMsg("Unfinalized");
+          }}
+          onBackToLive={() => saveTrivia(triviaId, { phase: "live" })}
+          onBack={() => setTriviaId(null)}
+          msg={msg} showMsg={showMsg}
+        />
+      );
+    }
     if (game.phase === "live") {
       return (
         <TriviaLiveAdmin
@@ -286,6 +320,10 @@ export function GameAdmin({ data, setData }) {
           setData={setData}
           onSave={(patch) => saveTrivia(triviaId, patch)}
           onBack={() => setTriviaId(null)}
+          onBackToSetup={() => {
+            if (!window.confirm("Return to Setup? This clears all opened/locked/revealed questions and answers, but keeps your questions and teams.")) return;
+            saveTrivia(triviaId, { phase: "setup", openQs: [], lockedQs: [], revealedQs: [], answers: {} });
+          }}
           onFinalize={() => saveTrivia(triviaId, { phase: "done" })}
           msg={msg} showMsg={showMsg}
         />
@@ -761,7 +799,7 @@ function TeamHeader({ team, accent, onRename, onCycleColor, onRemove }) {
    results grid) → admin opens next round.
    When all questions are revealed, "Finalize" button enables (step 4).
 */
-function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onFinalize, msg, showMsg }) {
+function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBackToSetup, onFinalize, msg, showMsg }) {
   const { theme } = useTheme("comm118-game-v14");
   const crd = themedInteriorCrd(theme, 0);
 
@@ -1001,7 +1039,10 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onFina
       <Toast message={msg} />
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 6 }}>
-          <button onClick={onBack} style={pillInactive}>Back</button>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <button onClick={onBack} style={pillInactive}>Back</button>
+            {onBackToSetup && <button onClick={onBackToSetup} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>← Back to Setup</button>}
+          </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: "#d97706", padding: "3px 10px", borderRadius: 6, background: "#fffbeb", textTransform: "uppercase", letterSpacing: "0.05em" }}>LIVE</span>
             <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{game.title}</span>
@@ -2394,6 +2435,307 @@ export function StudentAnswerView({ data, setData, userName }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ─── TEAM TRIVIA: FINALIZE SCREEN ─────────────────────────────────────
+   After admin clicks "Finalize" on the live admin, the game's phase becomes
+   "done" and they land here. Final adjustments before awarding points:
+
+   1. Per-team bonus editor (reuses bonusPoints.teams)
+   2. Per-team-member attendance toggle (default on); off = no team-share
+   3. Per-student bonus editor (bonusPoints.students); applies regardless of team
+   4. Sitting-out + unassigned students also listed for personal bonuses
+   5. Big "Finalize and award points" button writes log entries
+
+   Idempotent: finalizedTs is set on award. If already finalized, the screen
+   shows the awarded summary and an "Unfinalize" button to undo (deletes
+   matching log entries).
+
+   "Back to live" returns the game to phase=live (e.g., admin needs to fix
+   a grading mistake).
+*/
+function TriviaFinalize({ game, students, data, setData, onSave, onAwardPoints, onUnfinalize, onBackToLive, onBack, msg, showMsg }) {
+  const { theme } = useTheme("comm118-game-v14");
+  const crd = themedInteriorCrd(theme, 0);
+
+  const TEAM_PALETTE = [
+    { bg: "#fef2f2", accent: "#dc2626" },
+    { bg: "#eff6ff", accent: "#2563eb" },
+    { bg: "#ecfdf5", accent: "#059669" },
+    { bg: "#fffbeb", accent: "#d97706" },
+    { bg: "#f5f3ff", accent: "#7c3aed" },
+    { bg: "#ecfeff", accent: "#0891b2" },
+    { bg: "#fdf2f8", accent: "#db2777" },
+    { bg: "#f7fee7", accent: "#65a30d" },
+  ];
+  const teamColor = (t) => TEAM_PALETTE[(t.colorIdx || 0) % TEAM_PALETTE.length];
+
+  const questions = game.questions || [];
+  const teams = game.teams || [];
+  const answers = game.answers || {};
+  const revealedQs = game.revealedQs || [];
+  const defaultPts = game.defaultPointsPerQ || 5;
+  const sittingOut = game.sittingOut || [];
+  const isFinalized = !!game.finalizedTs;
+  const eligibleStudents = students.filter(s => s.name !== "Andrew Ishak" && s.name !== "Bruce Willis");
+  const studentById = (id) => eligibleStudents.find(s => s.id === id);
+
+  // Attendance (defaults to true for all members). Stored at game.attendance[studentId].
+  const attendance = game.attendance || {};
+  const isPresent = (sid) => attendance[sid] !== false; // default true
+
+  const setAttendance = (sid, present) => {
+    onSave({ attendance: { ...attendance, [sid]: present } });
+  };
+
+  const teamCorrectPoints = (teamId) => {
+    let total = 0;
+    revealedQs.forEach(qi => {
+      const a = answers[teamId + "-" + qi];
+      if (a && a.gradedCorrect === true) {
+        const q = questions[qi];
+        const pts = (q.pointsOverride !== null && q.pointsOverride !== undefined) ? q.pointsOverride : defaultPts;
+        total += pts;
+      }
+    });
+    return total;
+  };
+  const teamBonus = (teamId) => {
+    const b = (game.bonusPoints?.teams || {})[teamId];
+    return typeof b === "number" ? b : 0;
+  };
+  const studentBonus = (sid) => {
+    const b = (game.bonusPoints?.students || {})[sid];
+    return typeof b === "number" ? b : 0;
+  };
+
+  // What this student would receive on Finalize:
+  // - if on a team and present: teamCorrectPoints(team) + teamBonus(team) + studentBonus(sid)
+  // - if on a team and NOT present: teamBonus(team) + studentBonus(sid)
+  // - if not on any team (sitting out or unassigned): just studentBonus(sid)
+  const studentTotal = (sid) => {
+    const team = teams.find(t => (t.memberIds || []).includes(sid));
+    if (team) {
+      const teamShare = isPresent(sid) ? teamCorrectPoints(team.id) : 0;
+      return teamShare + teamBonus(team.id) + studentBonus(sid);
+    }
+    return studentBonus(sid);
+  };
+
+  const setTeamBonus = (teamId, value) => {
+    onSave({ bonusPoints: { ...(game.bonusPoints || { teams: {}, students: {} }), teams: { ...((game.bonusPoints || {}).teams || {}), [teamId]: value } } });
+  };
+  const setStudentBonus = (sid, value) => {
+    onSave({ bonusPoints: { ...(game.bonusPoints || { teams: {}, students: {} }), students: { ...((game.bonusPoints || {}).students || {}), [sid]: value } } });
+  };
+
+  // Build the list of all students who would get an entry: every team member + sitting out + unassigned.
+  // They get an entry as long as their final amount is non-zero (we'll filter at award time).
+  const inAnyTeam = new Set();
+  teams.forEach(t => (t.memberIds || []).forEach(id => inAnyTeam.add(id)));
+  const sittingSet = new Set(sittingOut);
+  const unassigned = eligibleStudents.filter(s => !inAnyTeam.has(s.id) && !sittingSet.has(s.id));
+
+  const sortedTeams = [...teams].sort((a, b) => (teamCorrectPoints(b.id) + teamBonus(b.id)) - (teamCorrectPoints(a.id) + teamBonus(a.id)));
+
+  const award = () => {
+    if (!window.confirm("Award points to everyone? This adds entries to the leaderboard log. You can Unfinalize to undo.")) return;
+    const tag = "Team Trivia: " + (game.title || "Trivia");
+    const ts = Date.now();
+    const entries = [];
+    eligibleStudents.forEach(s => {
+      const amt = studentTotal(s.id);
+      if (amt === 0) return;
+      entries.push({
+        id: "log_" + ts + "_" + s.id + "_" + Math.random().toString(36).slice(2, 6),
+        studentId: s.id,
+        amount: amt,
+        source: tag,
+        triviaGameId: game.id,
+        ts,
+      });
+    });
+    onAwardPoints(entries, ts);
+  };
+
+  const unfinalize = () => {
+    if (!window.confirm("Unfinalize? This removes the log entries that were awarded. You can re-finalize after.")) return;
+    onUnfinalize();
+  };
+
+  return (
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
+      <Toast message={msg} />
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 6 }}>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={onBack} style={pillInactive}>Back</button>
+            {!isFinalized && <button onClick={onBackToLive} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>← Back to Live</button>}
+          </div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: isFinalized ? GREEN : "#d97706", padding: "3px 10px", borderRadius: 6, background: isFinalized ? "#ecfdf5" : "#fffbeb", textTransform: "uppercase", letterSpacing: "0.05em" }}>{isFinalized ? "Finalized" : "Ready to Finalize"}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{game.title}</span>
+          </div>
+        </div>
+
+        {isFinalized && (
+          <div style={{ ...crd, padding: 14, marginBottom: 16, background: "#ecfdf5", border: "2px solid " + GREEN }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>Awarded {new Date(game.finalizedTs).toLocaleString()}</div>
+            <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 4 }}>Points are in the leaderboard. To make changes, click Unfinalize, edit, then re-finalize.</div>
+            <button onClick={unfinalize} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 12, padding: "6px 14px", marginTop: 10 }}>Unfinalize</button>
+          </div>
+        )}
+
+        {/* Final standings preview */}
+        <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>Final Standings</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {sortedTeams.map((t, idx) => {
+              const pal = teamColor(t);
+              const correct = teamCorrectPoints(t.id);
+              const bonus = teamBonus(t.id);
+              return (
+                <div key={t.id} style={{ background: pal.bg, border: "2px solid " + pal.accent, borderRadius: 10, padding: "10px 14px", minWidth: 150 }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: pal.accent, letterSpacing: "0.05em" }}>#{idx + 1}{idx === 0 ? " 🏆" : ""}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY }}>{t.name}</div>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: pal.accent, fontVariantNumeric: "tabular-nums" }}>{correct + bonus}</div>
+                  <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>{correct} correct{bonus !== 0 ? " " + (bonus > 0 ? "+" : "") + bonus + " bonus" : ""}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Team adjustments: bonus + per-member attendance + personal bonus */}
+        <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>Adjust Each Team</div>
+          {teams.map(t => {
+            const pal = teamColor(t);
+            const correct = teamCorrectPoints(t.id);
+            const bonus = teamBonus(t.id);
+            return (
+              <div key={t.id} style={{ background: pal.bg, border: "2px solid " + pal.accent, borderRadius: 10, padding: 12, marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, gap: 8, flexWrap: "wrap" }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: pal.accent }}>{t.name} <span style={{ color: TEXT_MUTED, fontWeight: 500, fontSize: 12 }}>· {correct} from correct answers</span></div>
+                  <FinalBonusEditor
+                    label="Team bonus"
+                    bonus={bonus}
+                    accent={pal.accent}
+                    onSave={(v) => setTeamBonus(t.id, v)}
+                  />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {(t.memberIds || []).map(sid => {
+                    const s = studentById(sid); if (!s) return null;
+                    const present = isPresent(sid);
+                    const pBonus = studentBonus(sid);
+                    const pTotal = studentTotal(sid);
+                    return (
+                      <div key={sid} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", background: "#fff", borderRadius: 6, border: "1px solid " + BORDER, flexWrap: "wrap" }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, color: TEXT_PRIMARY }}>
+                          <input type="checkbox" checked={present} onChange={e => setAttendance(sid, e.target.checked)} style={{ cursor: "pointer" }} />
+                          <span>{s.name}</span>
+                        </label>
+                        <div style={{ flex: 1 }} />
+                        <FinalBonusEditor
+                          label="Bonus"
+                          bonus={pBonus}
+                          accent={pal.accent}
+                          onSave={(v) => setStudentBonus(sid, v)}
+                        />
+                        <div style={{ fontSize: 13, fontWeight: 800, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums", minWidth: 50, textAlign: "right" }}>= {pTotal}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Sitting out + unassigned students */}
+        {(sittingOut.length > 0 || unassigned.length > 0) && (
+          <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
+            <div style={{ ...sectionLabel, marginBottom: 10 }}>Other Students (Bonus only)</div>
+            <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>Students sitting out or not on any team. They don&apos;t get team points but you can still award personal bonus.</div>
+            {[...sittingOut, ...unassigned.map(s => s.id)].map(sid => {
+              const s = studentById(sid); if (!s) return null;
+              const sittingFlag = sittingSet.has(sid);
+              const pBonus = studentBonus(sid);
+              const pTotal = studentTotal(sid);
+              return (
+                <div key={sid} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "#fafafa", borderRadius: 6, border: "1px solid " + BORDER, marginBottom: 4, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: TEXT_PRIMARY }}>{s.name}</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: TEXT_MUTED, padding: "2px 6px", background: "#fff", borderRadius: 4, border: "1px solid " + BORDER, textTransform: "uppercase" }}>{sittingFlag ? "Sitting out" : "Unassigned"}</span>
+                  <div style={{ flex: 1 }} />
+                  <FinalBonusEditor
+                    label="Bonus"
+                    bonus={pBonus}
+                    accent={ACCENT}
+                    onSave={(v) => setStudentBonus(sid, v)}
+                  />
+                  <div style={{ fontSize: 13, fontWeight: 800, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums", minWidth: 50, textAlign: "right" }}>= {pTotal}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Award button */}
+        {!isFinalized && (
+          <button onClick={award} style={{
+            ...pill, padding: "14px 20px", background: GREEN, color: "#fff",
+            width: "100%", fontSize: 15, fontWeight: 800,
+          }}>Finalize &amp; Award Points to Everyone</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Editable bonus pill used in finalize for both team-bonus and student-bonus inputs.
+function FinalBonusEditor({ label, bonus, accent, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(String(bonus || 0));
+  React.useEffect(() => { setValue(String(bonus || 0)); }, [bonus]);
+  const commit = () => {
+    const n = parseInt(value);
+    onSave(isNaN(n) ? 0 : n);
+    setEditing(false);
+  };
+  if (editing) {
+    return (
+      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+        <span style={{ fontSize: 10, color: TEXT_MUTED }}>{label}:</span>
+        <input
+          type="number" autoFocus
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => { if (e.key === "Enter") commit(); else if (e.key === "Escape") { setValue(String(bonus || 0)); setEditing(false); } }}
+          style={{ ...inp, width: 64, fontSize: 12, padding: "2px 6px", textAlign: "center" }}
+        />
+      </div>
+    );
+  }
+  if (!bonus || bonus === 0) {
+    return (
+      <button onClick={() => setEditing(true)} style={{
+        fontSize: 10, fontWeight: 700, color: accent, background: "transparent",
+        border: "1px dashed " + accent + "60", borderRadius: 6, padding: "2px 8px",
+        cursor: "pointer", fontFamily: F,
+      }}>+ {label.toLowerCase()}</button>
+    );
+  }
+  const positive = bonus > 0;
+  return (
+    <button onClick={() => setEditing(true)} style={{
+      fontSize: 11, fontWeight: 800, color: "#fff",
+      background: positive ? accent : "#6b7280",
+      border: "none", borderRadius: 999, padding: "3px 10px",
+      cursor: "pointer", fontFamily: F,
+    }}>{positive ? "+" : ""}{bonus} {label.toLowerCase()}</button>
   );
 }
 

@@ -454,8 +454,7 @@ function computeParticipationGrade(data, sid) {
   const athEntries = log.filter(e => e.studentId === sid && ((e.source || "") === "Around the Horn" || (e.source || "") === "PTI"));
   const athEarned = athEntries.reduce((s, e) => s + e.amount, 0);
   const totalEarned = gameGradeEarned + fbEarned + athEarned;
-  const offset = typeof data.participationDenominatorOffset === "number" ? data.participationDenominatorOffset : 0;
-  const totalPossible = gameGradePossible + fbPossible + offset;
+  const totalPossible = gameGradePossible + fbPossible;
   const participationPct = totalPossible > 0 ? (totalEarned / totalPossible) : 0;
   const participationGrade = participationPct * 25;
   return { participationGrade, participationPct, totalEarned, totalPossible };
@@ -2240,9 +2239,7 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
     const leaderboardTotal = log.filter(e => e.studentId === sid).reduce((a, e) => a + e.amount, 0);
 
     // Participation grade out of 25 (or partWeight)
-    const offset = typeof data.participationDenominatorOffset === "number" ? data.participationDenominatorOffset : 0;
-    const participationPossibleAdj = participationPossible + offset;
-    const participationPct = participationPossibleAdj > 0 ? (participationEarned / participationPossibleAdj) : 0;
+    const participationPct = participationPossible > 0 ? (participationEarned / participationPossible) : 0;
     const participationGrade = participationPct * partWeight;
 
     // Final in-class grade — match AssignmentsView computeCurrentGrade
@@ -2280,7 +2277,7 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
       leaderboardTotal: Math.round(leaderboardTotal * 10) / 10,
       gameFromComponents: Math.round(totalGameFromComponents * 10) / 10,
       participationEarned: Math.round(participationEarned * 10) / 10,
-      participationPossible: participationPossibleAdj,
+      participationPossible,
       participationPct,
       participationGrade: Math.round(participationGrade * 10) / 10,
       finalGradePct,
@@ -3042,21 +3039,23 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
               tot: "#3b82f6",           // blue
               fishbowl: "#a855f7",      // purple
               teamwins: "#0d9488",      // teal
+              trivia: "#ec4899",        // pink/magenta (game-only)
               inclass: "#f59e0b",       // amber/orange (last)
             };
-            const COMP_ORDER = ["weeklyGame", "tot", "fishbowl", "teamwins", "inclass"];
+            const COMP_ORDER = ["weeklyGame", "tot", "fishbowl", "teamwins", "trivia", "inclass"];
             const COMP_LABELS = {
               weeklyGame: "Weekly Game",
               tot: "This or That",
               fishbowl: "Fishbowl",
               teamwins: "Team Wins",
+              trivia: "Team Trivia",
               inclass: "In-Class points",
             };
             // Per-student totals (game mode = log-derived; grade mode = grade-weighted)
             const log = data.log || [];
             const reboundGrades = data.reboundGrades || {};
             const computeGameComponents = (sid) => {
-              const c = { weeklyGame: 0, tot: 0, fishbowl: 0, teamwins: 0, inclass: 0 };
+              const c = { weeklyGame: 0, tot: 0, fishbowl: 0, teamwins: 0, trivia: 0, inclass: 0 };
               log.filter(e => e.studentId === sid).forEach(e => {
                 const src = e.source || "";
                 if (src.startsWith("Game Wk")) c.weeklyGame += e.amount;
@@ -3064,11 +3063,12 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
                 else if (src.startsWith("Fishbowl Wk") || src.startsWith("Fishbowl")) c.fishbowl += e.amount;
                 else if (src === "PTI" || src === "Around the Horn") c.inclass += e.amount;
                 else if (src.startsWith("Team Win")) c.teamwins += e.amount;
+                else if (src.startsWith("Team Trivia:") || src.startsWith("Team Trivia")) c.trivia += e.amount;
               });
               return c;
             };
             const computeGradeComponents = (sid) => {
-              const c = { weeklyGame: 0, tot: 0, fishbowl: 0, teamwins: 0, inclass: 0 };
+              const c = { weeklyGame: 0, tot: 0, fishbowl: 0, teamwins: 0, trivia: 0, inclass: 0 };
               const weeklyGames = data.weeklyGames || {};
               Object.keys(weeklyGames).forEach(w => {
                 const game = weeklyGames[w];
@@ -3141,6 +3141,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
               case "inclass": sorted2.sort((a, b) => b.components.inclass - a.components.inclass); break;
               case "fishbowl": sorted2.sort((a, b) => b.components.fishbowl - a.components.fishbowl); break;
               case "teamwins": sorted2.sort((a, b) => b.components.teamwins - a.components.teamwins); break;
+              case "trivia": sorted2.sort((a, b) => b.components.trivia - a.components.trivia); break;
               case "team": sorted2.sort((a, b) => (a.teamName || "ZZZ").localeCompare(b.teamName || "ZZZ") || b.total - a.total); break;
               default: sorted2.sort((a, b) => b.total - a.total);
             }
@@ -3168,6 +3169,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
                         <option value="tot">This or That</option>
                         <option value="fishbowl">Fishbowl</option>
                         <option value="teamwins">Team Wins</option>
+                        <option value="trivia">Team Trivia</option>
                         <option value="inclass">In-Class points</option>
                         <option value="team">Team</option>
                       </select>
