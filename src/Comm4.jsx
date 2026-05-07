@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { AssignmentsView, Gradebook, GradingInbox, DEFAULT_ASSIGNMENTS as _DA } from "./Grades4.jsx";
-import { GameAdmin, StudentAnswerView, Accolades } from "./GameSystem4.jsx";
+import { GameAdmin, StudentAnswerView, Accolades, TriviaPlayer } from "./GameSystem4.jsx";
 import {
   BG, BORDER, BORDER_STRONG, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
   GREEN, RED, AMBER, PURPLE, CONTAINER_MAX, F,
@@ -2348,8 +2348,7 @@ function Leaderboard({ students, log, teams, isAdmin, userName, data, setData })
   };
 
   const renderRow = (s, i, isMe, isGhost) => {
-    const shuffled = shuffledStudents.find(st => st.id === s.id);
-    const team = teams.find(t => t.id === (shuffled?.teamId || s.teamId));
+    const team = teams.find(t => t.id === s.teamId);
     const tc = team ? TEAM_COLORS[team.colorIdx] : TEAM_COLORS[0];
     const inA = i < 5;
     const bio = bios[s.id] || {};
@@ -4322,6 +4321,8 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
   if (liveHeadlineSession) liveItems.push({ id: "headlines", label: "Headlines", anchor: "live-now-section" });
   const openSurveys = (data?.surveys || []).filter(s => s.active);
   if (openSurveys.length > 0) liveItems.push({ id: "surveys", label: openSurveys.length === 1 ? "Survey" : openSurveys.length + " Surveys", anchor: "live-now-section" });
+  const liveTrivia = Object.values(data?.triviaGames || {}).find(g => g.phase === "live");
+  if (liveTrivia) liveItems.push({ id: "trivia", label: "Team Trivia", anchor: "live-now-section" });
   const anythingLive = liveItems.length > 0;
 
   // Default: when something is live, hide the past events list; show a "See past events" toggle
@@ -4403,6 +4404,11 @@ function ActivitiesView({ data, setData, isAdmin, userName }) {
 
         {/* Currently Live section: always render StudentAnswerView so students can play whenever a live game/ToT is open. The component handles its own empty state. */}
         <div id="live-now-section" style={{ marginBottom: anythingLive ? 32 : 24 }}>
+          {liveTrivia && (
+            <div style={{ marginBottom: 20 }}>
+              <TriviaPlayer data={data} setData={setData} userName={userName} />
+            </div>
+          )}
           <StudentAnswerView data={data} setData={setData} userName={userName} />
           {liveHeadlineSession && (
             <div style={{ marginTop: 20 }}>

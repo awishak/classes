@@ -277,6 +277,18 @@ export function GameAdmin({ data, setData }) {
   if (triviaId !== null && mode === "trivia") {
     const game = triviaGames[triviaId];
     if (!game) { setTriviaId(null); return null; }
+    if (game.phase === "live") {
+      return (
+        <TriviaLiveAdmin
+          game={game}
+          students={data.students}
+          onSave={(patch) => saveTrivia(triviaId, patch)}
+          onBack={() => setTriviaId(null)}
+          onFinalize={() => saveTrivia(triviaId, { phase: "done" })}
+          msg={msg} showMsg={showMsg}
+        />
+      );
+    }
     return (
       <TriviaSetup
         game={game}
@@ -739,6 +751,332 @@ function TeamHeader({ team, accent, onRename, onCycleColor, onRemove }) {
     </div>
   );
 }
+
+/* ─── TEAM TRIVIA: LIVE ADMIN VIEW ─────────────────────────────────────
+   Admin runs the trivia game.
+   Flow: pick 1-4 questions to open → teams answer → admin locks the round
+   → admin grades each team's answer ✓/✗ → admin reveals (students see
+   results grid) → admin opens next round.
+   When all questions are revealed, "Finalize" button enables (step 4).
+*/
+function TriviaLiveAdmin({ game, students, onSave, onBack, onFinalize, msg, showMsg }) {
+  const { theme } = useTheme("comm118-game-v14");
+  const crd = themedInteriorCrd(theme, 0);
+
+  const TEAM_PALETTE = [
+    { bg: "#fef2f2", accent: "#dc2626" },
+    { bg: "#eff6ff", accent: "#2563eb" },
+    { bg: "#ecfdf5", accent: "#059669" },
+    { bg: "#fffbeb", accent: "#d97706" },
+    { bg: "#f5f3ff", accent: "#7c3aed" },
+    { bg: "#ecfeff", accent: "#0891b2" },
+    { bg: "#fdf2f8", accent: "#db2777" },
+    { bg: "#f7fee7", accent: "#65a30d" },
+  ];
+
+  const questions = game.questions || [];
+  const teams = game.teams || [];
+  const openQs = game.openQs || [];
+  const lockedQs = game.lockedQs || [];
+  const revealedQs = game.revealedQs || [];
+  const answers = game.answers || {};
+  const defaultPts = game.defaultPointsPerQ || 5;
+
+  // A question is "in progress" if open or locked but not revealed
+  const inProgressQs = [...openQs, ...lockedQs];
+  // Eligible to be picked next: not currently in progress and not revealed
+  const usedSet = new Set([...inProgressQs, ...revealedQs]);
+  const availableQs = questions.map((q, idx) => ({ q, idx })).filter(({ idx }) => !usedSet.has(idx));
+
+  // Selection for next round
+  const [selectedQs, setSelectedQs] = useState([]);
+  const toggleSelect = (idx) => {
+    setSelectedQs(prev => {
+      if (prev.includes(idx)) return prev.filter(i => i !== idx);
+      if (prev.length >= 4) { showMsg("Max 4 questions per round"); return prev; }
+      return [...prev, idx];
+    });
+  };
+
+  // Auto-refresh from Supabase for incoming team answers
+  React.useEffect(() => {
+    const iv = setInterval(async () => {
+      try {
+        const raw = await window.storage.get("comm118-game-v14", true);
+        if (raw?.value) {
+          const d = JSON.parse(raw.value);
+          const fresh = (d.triviaGames || {})[game.id];
+          if (fresh) {
+            // Soft-merge the bits we care about. We pass updates through onSave
+            // so the parent's data state syncs naturally; but here we read for
+            // the live view by triggering a refresh through onSave with a no-op
+            // (keep things consistent without thrashing storage).
+            // Strategy: only rewrite if answers/openQs/lockedQs/revealedQs differ.
+            const currentSig = JSON.stringify({ a: game.answers, o: game.openQs, l: game.lockedQs, r: game.revealedQs });
+            const freshSig = JSON.stringify({ a: fresh.answers, o: fresh.openQs, l: fresh.lockedQs, r: fresh.revealedQs });
+            if (currentSig !== freshSig) {
+              onSave({ answers: fresh.answers || {}, openQs: fresh.openQs || [], lockedQs: fresh.lockedQs || [], revealedQs: fresh.revealedQs || [] });
+            }
+          }
+        }
+      } catch (e) {}
+    }, 2000);
+    return () => clearInterval(iv);
+  // eslint-disable-next-line
+  }, [game.id]);
+
+  // Open the selected round
+  const openRound = () => {
+    if (selectedQs.length === 0) { showMsg("Select at least one question"); return; }
+    onSave({ openQs: [...openQs, ...selectedQs] });
+    setSelectedQs([]);
+    showMsg("Round opened — teams can now answer");
+  };
+
+  // Lock all currently open questions
+  const lockRound = () => {
+    if (openQs.length === 0) return;
+    if (!window.confirm("Lock these " + openQs.length + " question" + (openQs.length !== 1 ? "s" : "") + "? Teams won't be able to change answers.")) return;
+    onSave({ openQs: [], lockedQs: [...lockedQs, ...openQs] });
+    showMsg("Locked");
+  };
+
+  // Reveal all currently locked questions
+  const revealRound = () => {
+    if (lockedQs.length === 0) return;
+    // Check that every locked question has every team's answer graded
+    const allGraded = lockedQs.every(qi => teams.every(t => {
+      const a = answers[t.id + "-" + qi];
+      return a && (a.gradedCorrect === true || a.gradedCorrect === false);
+    }));
+    if (!allGraded) {
+      if (!window.confirm("Some answers haven't been graded yet. Reveal anyway?")) return;
+    }
+    onSave({ lockedQs: [], revealedQs: [...revealedQs, ...lockedQs] });
+    showMsg("Revealed");
+  };
+
+  // Grade an answer
+  const gradeAnswer = (teamId, qIdx, correct) => {
+    const key = teamId + "-" + qIdx;
+    const a = answers[key] || { text: "", ts: 0 };
+    onSave({ answers: { ...answers, [key]: { ...a, gradedCorrect: correct } } });
+  };
+
+  // Compute running team totals based on revealed questions (and locked-graded if you want to see live)
+  const teamRunningTotal = (teamId) => {
+    let total = 0;
+    revealedQs.forEach(qi => {
+      const key = teamId + "-" + qi;
+      const a = answers[key];
+      if (a && a.gradedCorrect === true) {
+        const q = questions[qi];
+        const pts = (q.pointsOverride !== null && q.pointsOverride !== undefined) ? q.pointsOverride : defaultPts;
+        total += pts;
+      }
+    });
+    return total;
+  };
+
+  const teamColor = (t) => TEAM_PALETTE[(t.colorIdx || 0) % TEAM_PALETTE.length];
+
+  // Sort teams by running total descending for display
+  const sortedTeams = [...teams].sort((a, b) => teamRunningTotal(b.id) - teamRunningTotal(a.id));
+
+  // Are we ready to finalize?
+  const allDone = revealedQs.length === questions.length && questions.length > 0;
+
+  return (
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
+      <Toast message={msg} />
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 6 }}>
+          <button onClick={onBack} style={pillInactive}>Back</button>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#d97706", padding: "3px 10px", borderRadius: 6, background: "#fffbeb", textTransform: "uppercase", letterSpacing: "0.05em" }}>LIVE</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{game.title}</span>
+          </div>
+        </div>
+
+        {/* Running standings strip */}
+        <div style={{ ...crd, padding: 14, marginBottom: 16, background: "#fafafa" }}>
+          <div style={{ ...sectionLabel, marginBottom: 8 }}>Standings ({revealedQs.length} of {questions.length} questions revealed)</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {sortedTeams.map((t, idx) => {
+              const pal = teamColor(t);
+              const total = teamRunningTotal(t.id);
+              return (
+                <div key={t.id} style={{ background: pal.bg, border: "2px solid " + pal.accent, borderRadius: 10, padding: "8px 12px", minWidth: 110 }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: pal.accent, letterSpacing: "0.05em" }}>#{idx + 1}</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: TEXT_PRIMARY, lineHeight: 1.1 }}>{t.name}</div>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: pal.accent, fontVariantNumeric: "tabular-nums" }}>{total}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* In-progress questions: open or locked */}
+        {inProgressQs.length > 0 && (
+          <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 6, flexWrap: "wrap" }}>
+              <div style={{ ...sectionLabel }}>{openQs.length > 0 ? "Open Round" : "Locked — Grade Answers"}</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {openQs.length > 0 && (
+                  <button onClick={lockRound} style={{ ...pill, background: "#d97706", color: "#fff", fontSize: 12 }}>Lock {openQs.length} question{openQs.length !== 1 ? "s" : ""}</button>
+                )}
+                {lockedQs.length > 0 && (
+                  <button onClick={revealRound} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12 }}>Reveal Round</button>
+                )}
+              </div>
+            </div>
+
+            {inProgressQs.map(qi => {
+              const q = questions[qi];
+              if (!q) return null;
+              const isLocked = lockedQs.includes(qi);
+              const qPts = (q.pointsOverride !== null && q.pointsOverride !== undefined) ? q.pointsOverride : defaultPts;
+              return (
+                <div key={qi} style={{ padding: 14, borderRadius: 10, border: "1px solid " + BORDER, marginBottom: 10, background: "#fff" }}>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED }}>Q{qi + 1} · {qPts} pt{qPts !== 1 ? "s" : ""}</div>
+                    {isLocked ? (
+                      <span style={{ fontSize: 9, fontWeight: 800, color: "#d97706", background: "#fffbeb", padding: "2px 6px", borderRadius: 4 }}>LOCKED</span>
+                    ) : (
+                      <span style={{ fontSize: 9, fontWeight: 800, color: GREEN, background: "#ecfdf5", padding: "2px 6px", borderRadius: 4 }}>OPEN</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 4 }}>{q.text}</div>
+                  {q.expectedAnswer && (
+                    <div style={{ fontSize: 11, color: TEXT_SECONDARY, marginBottom: 8, fontStyle: "italic" }}>Expected: {q.expectedAnswer}</div>
+                  )}
+
+                  {/* Team answer cards */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8, marginTop: 8 }}>
+                    {teams.map(t => {
+                      const pal = teamColor(t);
+                      const a = answers[t.id + "-" + qi];
+                      const submitted = !!a && a.text;
+                      const correct = a?.gradedCorrect === true;
+                      const incorrect = a?.gradedCorrect === false;
+                      return (
+                        <div key={t.id} style={{
+                          background: correct ? "#ecfdf5" : incorrect ? "#fef2f2" : pal.bg,
+                          border: "2px solid " + (correct ? GREEN : incorrect ? RED : pal.accent),
+                          borderRadius: 10, padding: 10,
+                        }}>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: pal.accent, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{t.name}</div>
+                          {submitted ? (
+                            <div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 6, wordBreak: "break-word" }}>{a.text}</div>
+                          ) : (
+                            <div style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 6 }}>Waiting for answer...</div>
+                          )}
+                          {isLocked && submitted && (
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <button onClick={() => gradeAnswer(t.id, qi, true)} style={{
+                                flex: 1, padding: "5px 8px", borderRadius: 6,
+                                background: correct ? GREEN : "#fff", color: correct ? "#fff" : GREEN,
+                                border: "1.5px solid " + GREEN, cursor: "pointer", fontFamily: F, fontWeight: 700, fontSize: 13,
+                              }}>✓</button>
+                              <button onClick={() => gradeAnswer(t.id, qi, false)} style={{
+                                flex: 1, padding: "5px 8px", borderRadius: 6,
+                                background: incorrect ? RED : "#fff", color: incorrect ? "#fff" : RED,
+                                border: "1.5px solid " + RED, cursor: "pointer", fontFamily: F, fontWeight: 700, fontSize: 13,
+                              }}>✗</button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Question picker for next round */}
+        {availableQs.length > 0 && lockedQs.length === 0 && openQs.length === 0 && (
+          <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 6 }}>
+              <div style={{ ...sectionLabel }}>Pick Next Round (1-4 questions)</div>
+              <button onClick={openRound} disabled={selectedQs.length === 0} style={{
+                ...pill, padding: "8px 16px",
+                background: selectedQs.length === 0 ? "#e4e4e7" : GREEN,
+                color: selectedQs.length === 0 ? TEXT_MUTED : "#fff",
+                cursor: selectedQs.length === 0 ? "not-allowed" : "pointer",
+                fontSize: 13, fontWeight: 700,
+              }}>Open {selectedQs.length} question{selectedQs.length !== 1 ? "s" : ""}</button>
+            </div>
+            {availableQs.map(({ q, idx }) => {
+              const isSelected = selectedQs.includes(idx);
+              const qPts = (q.pointsOverride !== null && q.pointsOverride !== undefined) ? q.pointsOverride : defaultPts;
+              return (
+                <button key={q.id} onClick={() => toggleSelect(idx)} style={{
+                  width: "100%", textAlign: "left", padding: 10, borderRadius: 8, marginBottom: 6,
+                  background: isSelected ? "#ecfdf5" : "#fff",
+                  border: "1.5px solid " + (isSelected ? GREEN : BORDER),
+                  cursor: "pointer", fontFamily: F,
+                }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED, flexShrink: 0 }}>Q{idx + 1}</span>
+                    <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1 }}>{q.text}</span>
+                    <span style={{ fontSize: 10, color: TEXT_MUTED, flexShrink: 0 }}>{qPts} pt{qPts !== 1 ? "s" : ""}</span>
+                    {isSelected && <span style={{ fontSize: 14, color: GREEN, fontWeight: 800 }}>✓</span>}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Already-revealed questions summary (collapsible) */}
+        {revealedQs.length > 0 && (
+          <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+            <div style={{ ...sectionLabel, marginBottom: 8 }}>Revealed ({revealedQs.length})</div>
+            {revealedQs.map(qi => {
+              const q = questions[qi];
+              if (!q) return null;
+              const qPts = (q.pointsOverride !== null && q.pointsOverride !== undefined) ? q.pointsOverride : defaultPts;
+              return (
+                <div key={qi} style={{ padding: 10, borderRadius: 8, background: "#fafafa", marginBottom: 6 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED, marginBottom: 2 }}>Q{qi + 1}</div>
+                  <div style={{ fontSize: 13, color: TEXT_PRIMARY, marginBottom: 6 }}>{q.text}</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {teams.map(t => {
+                      const pal = teamColor(t);
+                      const a = answers[t.id + "-" + qi];
+                      const correct = a?.gradedCorrect === true;
+                      return (
+                        <button key={t.id} onClick={() => gradeAnswer(t.id, qi, !correct)} title="Click to flip" style={{
+                          background: correct ? "#ecfdf5" : "#fef2f2",
+                          border: "1.5px solid " + (correct ? GREEN : RED),
+                          borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: F,
+                          fontSize: 11, fontWeight: 700, color: correct ? GREEN : RED,
+                        }}>
+                          {t.name}: {correct ? "+" + qPts : "0"}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Finalize */}
+        {allDone && (
+          <button onClick={onFinalize} style={{ ...pill, padding: "12px 20px", background: TEXT_PRIMARY, color: "#fff", width: "100%", fontSize: 14, fontWeight: 700 }}>
+            All questions revealed — Finalize Game
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 
 /* ─── REVIEW / OVERRIDE ANSWERS ─── */
 function ReviewAnswers({ type, week, data, setData }) {
@@ -1836,6 +2174,356 @@ export function StudentAnswerView({ data, setData, userName }) {
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── TEAM TRIVIA: STUDENT PLAYER VIEW ────────────────────────────────
+   Used inside ActivitiesView. Routed when a trivia game has phase=live.
+   Determines the student's team. Sitting out students see a passive
+   message. Active team members see open questions, can submit on behalf
+   of the team (locked once any teammate submits). Locked questions show
+   "Waiting for results". Revealed questions show the round reveal grid
+   with running totals and an animated points count-up for their team.
+*/
+export function TriviaPlayer({ data, setData, userName }) {
+  const { theme } = useTheme("comm118-game-v14");
+  const crd = themedInteriorCrd(theme, 0);
+  const TEAM_PALETTE = [
+    { bg: "#fef2f2", accent: "#dc2626" },
+    { bg: "#eff6ff", accent: "#2563eb" },
+    { bg: "#ecfdf5", accent: "#059669" },
+    { bg: "#fffbeb", accent: "#d97706" },
+    { bg: "#f5f3ff", accent: "#7c3aed" },
+    { bg: "#ecfeff", accent: "#0891b2" },
+    { bg: "#fdf2f8", accent: "#db2777" },
+    { bg: "#f7fee7", accent: "#65a30d" },
+  ];
+
+  const triviaGames = data.triviaGames || {};
+  const liveGame = Object.values(triviaGames).find(g => g.phase === "live");
+
+  // Auto-refresh every 2 seconds (pause if mid-typing on a draft answer)
+  const lastDraftRef = React.useRef(0);
+  React.useEffect(() => {
+    if (!liveGame) return;
+    const iv = setInterval(async () => {
+      if (Date.now() - lastDraftRef.current < 3000) return; // pause refresh while typing
+      try {
+        const raw = await window.storage.get("comm118-game-v14", true);
+        if (raw?.value) { const d = JSON.parse(raw.value); setData(d); }
+      } catch (e) {}
+    }, 2000);
+    return () => clearInterval(iv);
+  }, [liveGame?.id]);
+
+  // Local draft answers per question. Keyed by question index.
+  const [drafts, setDrafts] = useState({});
+
+  if (!liveGame) {
+    return null; // ActivitiesView shouldn't route here, but safe fallback
+  }
+
+  const me = data.students.find(s => s.name === userName);
+  const myId = me?.id;
+  const teams = liveGame.teams || [];
+  const questions = liveGame.questions || [];
+  const openQs = liveGame.openQs || [];
+  const lockedQs = liveGame.lockedQs || [];
+  const revealedQs = liveGame.revealedQs || [];
+  const answers = liveGame.answers || {};
+  const defaultPts = liveGame.defaultPointsPerQ || 5;
+  const sittingOut = liveGame.sittingOut || [];
+
+  const myTeam = teams.find(t => (t.memberIds || []).includes(myId));
+  const isSittingOut = sittingOut.includes(myId) || (!myTeam && !sittingOut.includes(myId));
+
+  const teamColor = (t) => TEAM_PALETTE[(t.colorIdx || 0) % TEAM_PALETTE.length];
+
+  // Submit an answer for the team
+  const submitAnswer = async (qi, text) => {
+    if (!myTeam || !text.trim()) return;
+    const key = myTeam.id + "-" + qi;
+    if (answers[key] && answers[key].text) return; // already submitted
+    const updated = {
+      ...data,
+      triviaGames: {
+        ...triviaGames,
+        [liveGame.id]: {
+          ...liveGame,
+          answers: { ...answers, [key]: { text: text.trim(), gradedCorrect: null, ts: Date.now(), submittedBy: userName } },
+        },
+      },
+    };
+    await saveData(updated); setData(updated);
+    // Clear local draft
+    setDrafts(d => { const x = { ...d }; delete x[qi]; return x; });
+  };
+
+  // Compute team running total from revealed questions
+  const teamTotal = (teamId) => {
+    let total = 0;
+    revealedQs.forEach(qi => {
+      const a = answers[teamId + "-" + qi];
+      if (a && a.gradedCorrect === true) {
+        const q = questions[qi];
+        const pts = (q.pointsOverride !== null && q.pointsOverride !== undefined) ? q.pointsOverride : defaultPts;
+        total += pts;
+      }
+    });
+    return total;
+  };
+
+  // ─── SITTING OUT VIEW ───
+  if (!myTeam) {
+    return (
+      <div style={{ padding: "24px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
+        <div style={{ maxWidth: 600, margin: "0 auto" }}>
+          <div style={{ ...crd, padding: 24, textAlign: "center" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#d97706", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Live: {liveGame.title}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_PRIMARY, marginBottom: 8 }}>You&apos;re sitting this one out</div>
+            <div style={{ fontSize: 14, color: TEXT_SECONDARY, marginBottom: 16 }}>Cheer the teams on. Live standings below.</div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+              {[...teams].sort((a, b) => teamTotal(b.id) - teamTotal(a.id)).map((t, i) => {
+                const pal = teamColor(t);
+                return (
+                  <div key={t.id} style={{ background: pal.bg, border: "2px solid " + pal.accent, borderRadius: 10, padding: "8px 12px", minWidth: 100 }}>
+                    <div style={{ fontSize: 9, fontWeight: 800, color: pal.accent, letterSpacing: "0.05em" }}>#{i + 1}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: TEXT_PRIMARY }}>{t.name}</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: pal.accent, fontVariantNumeric: "tabular-nums" }}>{teamTotal(t.id)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── TEAM PLAYER VIEW ───
+  const myPal = teamColor(myTeam);
+  const myTotal = teamTotal(myTeam.id);
+
+  // Are there any open questions to answer right now?
+  const myOpenQs = openQs;
+  const myLockedAwaitingReveal = lockedQs;
+  const lastRevealedBatch = revealedQs.slice(-4); // show the most recent reveal
+
+  return (
+    <div style={{ padding: "24px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        {/* Team banner */}
+        <div style={{
+          background: myPal.bg, border: "3px solid " + myPal.accent, borderRadius: 14, padding: 16, marginBottom: 16,
+          textAlign: "center",
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: myPal.accent, textTransform: "uppercase", letterSpacing: "0.08em" }}>{liveGame.title}</div>
+          <div style={{ fontSize: 28, fontWeight: 900, color: TEXT_PRIMARY, lineHeight: 1.1 }}>{myTeam.name}</div>
+          <div style={{ fontSize: 11, color: TEXT_SECONDARY, marginTop: 4 }}>{(myTeam.memberIds || []).length} member{(myTeam.memberIds || []).length !== 1 ? "s" : ""}</div>
+          <div style={{ fontSize: 36, fontWeight: 900, color: myPal.accent, marginTop: 6, fontVariantNumeric: "tabular-nums" }}>
+            <SnapCountUp value={myTotal} />
+          </div>
+        </div>
+
+        {/* Open questions to answer */}
+        {myOpenQs.length > 0 && (
+          <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+            <div style={{ ...sectionLabel, marginBottom: 10 }}>Answer these now</div>
+            {myOpenQs.map(qi => {
+              const q = questions[qi]; if (!q) return null;
+              const key = myTeam.id + "-" + qi;
+              const submitted = answers[key];
+              const draft = drafts[qi] !== undefined ? drafts[qi] : "";
+              const qPts = (q.pointsOverride !== null && q.pointsOverride !== undefined) ? q.pointsOverride : defaultPts;
+              return (
+                <div key={qi} style={{ padding: 14, borderRadius: 10, border: "1px solid " + BORDER, marginBottom: 10 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED }}>Q{qi + 1} · {qPts} pt{qPts !== 1 ? "s" : ""}</span>
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 10 }}>{q.text}</div>
+                  {submitted ? (
+                    <div style={{ padding: 10, background: "#ecfdf5", border: "1.5px solid " + GREEN, borderRadius: 8 }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: GREEN, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Locked in</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{submitted.text}</div>
+                      <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>by {submitted.submittedBy || "teammate"}</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <textarea
+                        value={draft}
+                        onChange={e => { lastDraftRef.current = Date.now(); setDrafts(d => ({ ...d, [qi]: e.target.value })); }}
+                        placeholder="Type your team's answer..."
+                        rows={2}
+                        style={{ ...inp, resize: "vertical", fontSize: 14, lineHeight: 1.4 }}
+                      />
+                      <button
+                        onClick={() => submitAnswer(qi, draft)}
+                        disabled={!draft.trim()}
+                        style={{
+                          ...pill, padding: "10px 16px",
+                          background: draft.trim() ? myPal.accent : "#e4e4e7",
+                          color: draft.trim() ? "#fff" : TEXT_MUTED,
+                          cursor: draft.trim() ? "pointer" : "not-allowed",
+                          fontSize: 14, fontWeight: 700,
+                        }}>
+                        Submit for {myTeam.name}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Locked, waiting for reveal */}
+        {myOpenQs.length === 0 && myLockedAwaitingReveal.length > 0 && (
+          <div style={{ ...crd, padding: 20, marginBottom: 16, textAlign: "center" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#d97706", marginBottom: 6 }}>Locked in</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>Waiting for results...</div>
+          </div>
+        )}
+
+        {/* No open or locked = waiting for next round or game over */}
+        {myOpenQs.length === 0 && myLockedAwaitingReveal.length === 0 && revealedQs.length < questions.length && (
+          <div style={{ ...crd, padding: 20, marginBottom: 16, textAlign: "center" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 6 }}>Get ready for the next round</div>
+            <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>Waiting for the next questions to open...</div>
+          </div>
+        )}
+
+        {/* Reveal grid: shown when there are revealedQs and nothing else active */}
+        {revealedQs.length > 0 && myOpenQs.length === 0 && myLockedAwaitingReveal.length === 0 && (
+          <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
+            <div style={{ ...sectionLabel, marginBottom: 10 }}>Reveal · Round {Math.ceil(revealedQs.length / 4)}</div>
+            <TriviaRevealGrid
+              questions={questions}
+              roundQs={lastRevealedBatch}
+              teams={teams}
+              answers={answers}
+              defaultPts={defaultPts}
+              myTeamId={myTeam.id}
+              palette={TEAM_PALETTE}
+              teamTotal={teamTotal}
+            />
+          </div>
+        )}
+
+        {/* All done! */}
+        {revealedQs.length === questions.length && questions.length > 0 && (
+          <div style={{ ...crd, padding: 24, textAlign: "center", background: myPal.bg, border: "3px solid " + myPal.accent, borderRadius: 14, marginBottom: 16 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: myPal.accent, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Game Over</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_PRIMARY }}>{myTeam.name} finished with {myTotal} pts</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Animated count-up for the team total
+function SnapCountUp({ value }) {
+  const [display, setDisplay] = useState(value);
+  const lastValueRef = React.useRef(value);
+  React.useEffect(() => {
+    if (value === lastValueRef.current) return;
+    const start = lastValueRef.current;
+    const end = value;
+    const duration = 1200;
+    const startTime = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= duration) {
+        setDisplay(end);
+        lastValueRef.current = end;
+        return;
+      }
+      const t = elapsed / duration;
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(Math.round(start + (end - start) * eased));
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [value]);
+  return <span>{display}</span>;
+}
+
+// Reveal grid: rows = teams sorted by running total desc, columns = round questions,
+// cells = each team's answer with green box around correct ones.
+function TriviaRevealGrid({ questions, roundQs, teams, answers, defaultPts, myTeamId, palette, teamTotal }) {
+  const sorted = [...teams].sort((a, b) => teamTotal(b.id) - teamTotal(a.id));
+
+  const teamColor = (t) => palette[(t.colorIdx || 0) % palette.length];
+
+  // Round points earned per team (for this round only)
+  const roundPts = (teamId) => {
+    let total = 0;
+    roundQs.forEach(qi => {
+      const a = answers[teamId + "-" + qi];
+      if (a && a.gradedCorrect === true) {
+        const q = questions[qi];
+        const pts = (q.pointsOverride !== null && q.pointsOverride !== undefined) ? q.pointsOverride : defaultPts;
+        total += pts;
+      }
+    });
+    return total;
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      {/* Header row: question labels */}
+      <div style={{ display: "grid", gridTemplateColumns: `140px repeat(${roundQs.length}, 1fr) 80px`, gap: 4, alignItems: "center", marginBottom: 4 }}>
+        <div></div>
+        {roundQs.map(qi => (
+          <div key={qi} style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textAlign: "center" }}>Q{qi + 1}</div>
+        ))}
+        <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textAlign: "right" }}>+ROUND</div>
+      </div>
+      {sorted.map((t, idx) => {
+        const pal = teamColor(t);
+        const isMe = t.id === myTeamId;
+        const earned = roundPts(t.id);
+        return (
+          <div
+            key={t.id}
+            style={{
+              display: "grid", gridTemplateColumns: `140px repeat(${roundQs.length}, 1fr) 80px`,
+              gap: 4, alignItems: "stretch",
+              background: isMe ? pal.bg : "#fff",
+              border: "2px solid " + (isMe ? pal.accent : BORDER),
+              borderRadius: 10, padding: 6,
+              transition: "all 0.5s ease",
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 4 }}>
+              <div style={{ fontSize: 9, fontWeight: 800, color: pal.accent }}>#{idx + 1}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: TEXT_PRIMARY, lineHeight: 1.1 }}>{t.name}{isMe ? " ★" : ""}</div>
+            </div>
+            {roundQs.map(qi => {
+              const a = answers[t.id + "-" + qi];
+              const correct = a?.gradedCorrect === true;
+              const text = a?.text || "—";
+              return (
+                <div key={qi} style={{
+                  background: correct ? "#ecfdf5" : "#fafafa",
+                  border: correct ? "2px solid " + GREEN : "1px solid " + BORDER,
+                  borderRadius: 6, padding: "4px 6px",
+                  fontSize: 11, fontWeight: correct ? 700 : 500,
+                  color: correct ? GREEN : TEXT_SECONDARY,
+                  display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center",
+                  wordBreak: "break-word",
+                }}>{text}</div>
+              );
+            })}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 16, fontWeight: 900, color: pal.accent, fontVariantNumeric: "tabular-nums",
+            }}>+<SnapCountUp value={earned} /></div>
+          </div>
+        );
+      })}
     </div>
   );
 }
