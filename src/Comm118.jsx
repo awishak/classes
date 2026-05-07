@@ -20,6 +20,98 @@ const STORAGE_KEY = "comm118-game-v14";
 
 const POINT_SOURCES = ["Weekly Team Game","This or That","Assignment","Friday Response","Channel Switch","Participation","Bonus","Other"];
 
+// ─── Greeting system ───
+// Maps Monday date (yyyy-mm-dd) to label for the week
+const WEEK_LABELS = {
+  "2026-03-30": "week 1",
+  "2026-04-06": "week 2",
+  "2026-04-13": "week 3",
+  "2026-04-20": "week 4",
+  "2026-04-27": "week 5",
+  "2026-05-04": "week 6",
+  "2026-05-11": "week 7",
+  "2026-05-18": "week 8",
+  "2026-05-25": "week 9",
+  "2026-06-01": "week 10",
+  "2026-06-08": "finals week",
+};
+
+// Pre-loaded custom greetings (matched by full student name)
+const DEFAULT_CUSTOM_GREETINGS = {
+  "Alexander Watanabe Eriksson": ["Hej, [first]!", "God morgon, [first]!", "Tjena, [first]!"],
+  "Juliette Krumholz": ["You cannot be serious, [first]!"],
+  "Gianna Malnati": ["Ope, just gonna squeeze past ya, [first]"],
+  "Isabelle De Buyl": ["Bend it like Beckham, Izzy"],
+  "Samuel Canales": ["I'm walking here, [first]!"],
+  "Amaris Franco": ["Watch out for the mascots, [first]", "The Phillie Phanatic is coming, [first]", "Mascots, mascots everywhere, [first]"],
+  "Charlotte Halk": ["Preheat the oven, [first]"],
+  "Hannah Kamins": ["Don't forget to grease the pan, [first]"],
+  "Caroline Shah": ["Pizza rat says hi, [first]"],
+  "Francisco Soldavini": ["Start your engines, [first]"],
+};
+
+// Simple seeded picker so greeting is stable per student per day
+function pickGreeting(seedStr, options) {
+  if (!options || options.length === 0) return "";
+  let h = 0;
+  for (let i = 0; i < seedStr.length; i++) h = ((h << 5) - h + seedStr.charCodeAt(i)) | 0;
+  const idx = Math.abs(h) % options.length;
+  return options[idx];
+}
+
+function buildGreetingPool(firstName) {
+  const now = new Date();
+  const hour = now.getHours();
+  const day = now.getDay(); // 0=Sun, 1=Mon...
+  const month = now.getMonth(); // 5 = June
+  const generic = [];
+  // Time-based
+  if (hour >= 5 && hour < 12) generic.push("Good morning, [first]");
+  else if (hour >= 12 && hour < 17) generic.push("Good afternoon, [first]");
+  else generic.push("Good evening, [first]");
+  // Day-based
+  if (day === 1) {
+    // Monday: use week label
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const key = monday.toISOString().slice(0, 10);
+    const label = WEEK_LABELS[key];
+    if (label) generic.push("Happy " + label + ", [first]");
+    else generic.push("Happy Monday, [first]");
+  } else if (day === 2) generic.push("Happy Tuesday, [first]");
+  else if (day === 3) generic.push("Happy Wednesday, [first]");
+  else if (day === 4) { generic.push("Happy Thursday, [first]"); generic.push("Almost there, [first]"); }
+  else if (day === 5) { generic.push("Happy Friday, [first]"); generic.push("Made it to Friday, [first]"); }
+  else if (day === 6) generic.push("Happy Saturday, [first]");
+  else if (day === 0) generic.push("Happy Sunday, [first]");
+  // June-specific
+  if (month === 5) {
+    generic.push("We're almost there, [first]");
+    generic.push("Home stretch, [first]");
+  }
+  // Anytime
+  generic.push("Hi, [first]");
+  generic.push("Welcome back, [first]");
+  generic.push("Hey, [first]");
+  return generic.map(s => s.replace(/\[first\]/g, firstName));
+}
+
+function getDailyGreeting(studentName, studentId, customLines) {
+  const firstName = (studentName || "").split(" ")[0] || "there";
+  const today = new Date().toISOString().slice(0, 10);
+  const seed = today + "-" + (studentId || studentName);
+  const generic = buildGreetingPool(firstName);
+  const custom = (customLines || []).map(s => s.replace(/\[first\]/g, firstName));
+  // If they have customs, weight custom heavier (~70%)
+  if (custom.length > 0) {
+    // Use a second seed to decide custom vs generic
+    let h = 0; const s2 = seed + "-pick";
+    for (let i = 0; i < s2.length; i++) h = ((h << 5) - h + s2.charCodeAt(i)) | 0;
+    const useCustom = Math.abs(h) % 100 < 70;
+    if (useCustom) return pickGreeting(seed, custom);
+  }
+  return pickGreeting(seed, generic);
+}
+
 // Nav tabs (passed to shared <Nav> component)
 const STUDENT_TABS = [
   { id: "home", label: "Home", guest: false },
@@ -1791,6 +1883,24 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
             </div>
           </>
         )}
+        {(() => {
+          const customLines = studentId ? ((data.customGreetings || {})[studentId] || []) : [];
+          const greeting = getDailyGreeting(userName, studentId, customLines);
+          if (!greeting) return null;
+          return (
+            <div style={{
+              fontFamily: themedHeadingFont(theme, F),
+              fontSize: 26,
+              fontWeight: 600,
+              color: ACCENT,
+              letterSpacing: "-0.02em",
+              marginBottom: 16,
+              lineHeight: 1.2,
+            }}>
+              {greeting}
+            </div>
+          );
+        })()}
         {renderNewsBanner()}
         {cards.map(renderCard)}
         <InstructorCard data={data} setData={setData} isAdmin={isAdmin} />
@@ -2921,8 +3031,8 @@ function AdminPanel({ data, setData }) {
       </div>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
-        {["roster", "pins", "log"].map(m => (
-          <button key={m} onClick={() => setMode(m)} style={mode === m ? pillActive : pillInactive}>{m === "roster" ? "Roster" : m === "pins" ? "PINs" : "Log"}</button>
+        {["roster", "pins", "log", "greetings"].map(m => (
+          <button key={m} onClick={() => setMode(m)} style={mode === m ? pillActive : pillInactive}>{m === "roster" ? "Roster" : m === "pins" ? "PINs" : m === "log" ? "Log" : "Greetings"}</button>
         ))}
         <button onClick={() => { setMode("backups"); loadBackups(); }} style={mode === "backups" ? pillActive : pillInactive}>Backups</button>
         <div style={{ flex: 1 }} />
@@ -3007,6 +3117,77 @@ function AdminPanel({ data, setData }) {
           <button onClick={loadBackups} style={{ ...pillInactive, width: "100%", marginTop: 12 }}>Refresh</button>
         </div>
       )}
+
+      {mode === "greetings" && (
+        <GreetingsAdmin data={data} setData={setData} />
+      )}
+    </div>
+  );
+}
+
+function GreetingsAdmin({ data, setData }) {
+  const [openId, setOpenId] = useState(null);
+  const [newLine, setNewLine] = useState("");
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+  const greetings = data.customGreetings || {};
+  const sortedStudents = [...(data.students || [])].sort((a, b) => {
+    const al = a.name.split(" ").slice(-1)[0].toLowerCase();
+    const bl = b.name.split(" ").slice(-1)[0].toLowerCase();
+    return al.localeCompare(bl);
+  });
+
+  const addLine = async (sid) => {
+    const line = newLine.trim();
+    if (!line) return;
+    const cur = greetings[sid] || [];
+    const updated = { ...data, customGreetings: { ...greetings, [sid]: [...cur, line] } };
+    await saveData(updated); setData(updated);
+    setNewLine(""); showMsg("Added");
+  };
+
+  const removeLine = async (sid, idx) => {
+    const cur = greetings[sid] || [];
+    const next = cur.filter((_, i) => i !== idx);
+    const updated = { ...data, customGreetings: { ...greetings, [sid]: next } };
+    await saveData(updated); setData(updated);
+    showMsg("Removed");
+  };
+
+  return (
+    <div style={{ ...crd, padding: 16 }}>
+      <Toast message={msg} />
+      <div style={{ ...sectionLabel, marginBottom: 8 }}>Custom Greetings</div>
+      <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 16 }}>
+        Greetings show on the Home tab. Custom lines mix with the generic pool (custom shows about 70% of the time). Use [first] as a placeholder for the student's first name.
+      </div>
+      {sortedStudents.map(s => {
+        const lines = greetings[s.id] || [];
+        const isOpen = openId === s.id;
+        return (
+          <div key={s.id} style={{ borderBottom: "1px solid " + BORDER, padding: "10px 0" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => { setOpenId(isOpen ? null : s.id); setNewLine(""); }}>
+              <div style={{ fontSize: 14, color: TEXT_PRIMARY }}>{s.name}</div>
+              <div style={{ fontSize: 11, color: TEXT_MUTED }}>{lines.length} {lines.length === 1 ? "line" : "lines"}</div>
+            </div>
+            {isOpen && (
+              <div style={{ marginTop: 10, paddingLeft: 4 }}>
+                {lines.length === 0 && <div style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 8 }}>No custom lines yet.</div>}
+                {lines.map((line, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", fontSize: 13, color: TEXT_PRIMARY }}>
+                    <span style={{ flex: 1 }}>{line}</span>
+                    <button onClick={() => removeLine(s.id, i)} style={{ ...bt, fontSize: 11, padding: "2px 8px", background: "transparent", color: RED, border: "1px solid " + RED + "33" }}>X</button>
+                  </div>
+                ))}
+                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                  <input type="text" value={newLine} onChange={e => setNewLine(e.target.value)} placeholder="New greeting line, use [first] for first name" style={{ ...inp, flex: 1, fontSize: 13 }} onKeyDown={e => { if (e.key === "Enter") addLine(s.id); }} />
+                  <button onClick={() => addLine(s.id)} style={{ ...pill, background: ACCENT, color: "#fff", border: "1px solid " + ACCENT }}>Add</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -4837,6 +5018,16 @@ export default function Comm118() {
           await saveData(d);
         }
         if (d && !d.customTodos) { d.customTodos = []; await saveData(d); }
+        if (d && !d.customGreetings) {
+          d.customGreetings = {};
+          // Seed defaults by name match
+          (d.students || []).forEach(s => {
+            if (DEFAULT_CUSTOM_GREETINGS[s.name]) {
+              d.customGreetings[s.id] = [...DEFAULT_CUSTOM_GREETINGS[s.name]];
+            }
+          });
+          await saveData(d);
+        }
         // Migration: add interview assignment and fix weights if needed
         if (d && d.assignments && !d.assignments.find(a => a.id === "interview")) {
           d.assignments = [
