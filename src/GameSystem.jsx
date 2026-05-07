@@ -281,6 +281,7 @@ export function GameAdmin({ data, setData }) {
       <TriviaSetup
         game={game}
         students={data.students}
+        rosterTeams={data.teams}
         onSave={(patch) => saveTrivia(triviaId, patch)}
         onDelete={() => deleteTrivia(triviaId)}
         onBack={() => setTriviaId(null)}
@@ -358,12 +359,10 @@ export function GameAdmin({ data, setData }) {
    Phase progression:
      setup → live (admin clicks Go Live) → done (admin clicks Finalize)
 */
-function TriviaSetup({ game, students, onSave, onDelete, onBack, msg, showMsg }) {
+function TriviaSetup({ game, students, rosterTeams, onSave, onDelete, onBack, msg, showMsg }) {
   const { theme } = useTheme("comm118-game-v14");
   const crd = themedInteriorCrd(theme, 0);
-  const [title, setTitle] = useState(game.title || "");
-  const [defaultPts, setDefaultPts] = useState(game.defaultPointsPerQ || 5);
-  const [dragSrc, setDragSrc] = useState(null); // { type: "team"|"sitting"|"unassigned", id, studentId }
+  const [dragSrc, setDragSrc] = useState(null);
 
   const questions = game.questions || [];
   const teams = game.teams || [];
@@ -377,22 +376,18 @@ function TriviaSetup({ game, students, onSave, onDelete, onBack, msg, showMsg })
   const sittingSet = new Set(sittingOut);
   const unassigned = eligibleStudents.filter(s => !inAnyTeam.has(s.id) && !sittingSet.has(s.id)).map(s => s.id);
 
-  // Available team colors
   const TEAM_PALETTE = [
-    { bg: "#fef2f2", accent: "#dc2626" }, // red
-    { bg: "#eff6ff", accent: "#2563eb" }, // blue
-    { bg: "#ecfdf5", accent: "#059669" }, // green
-    { bg: "#fffbeb", accent: "#d97706" }, // amber
-    { bg: "#f5f3ff", accent: "#7c3aed" }, // purple
-    { bg: "#ecfeff", accent: "#0891b2" }, // cyan
-    { bg: "#fdf2f8", accent: "#db2777" }, // pink
-    { bg: "#f7fee7", accent: "#65a30d" }, // lime
+    { bg: "#fef2f2", accent: "#dc2626" },
+    { bg: "#eff6ff", accent: "#2563eb" },
+    { bg: "#ecfdf5", accent: "#059669" },
+    { bg: "#fffbeb", accent: "#d97706" },
+    { bg: "#f5f3ff", accent: "#7c3aed" },
+    { bg: "#ecfeff", accent: "#0891b2" },
+    { bg: "#fdf2f8", accent: "#db2777" },
+    { bg: "#f7fee7", accent: "#65a30d" },
   ];
 
-  const saveTitle = () => onSave({ title: title.trim() || "Untitled Trivia" });
-  const saveDefaultPts = (n) => { setDefaultPts(n); onSave({ defaultPointsPerQ: n }); };
-
-  // Question helpers
+  // Question helpers — operate on full questions array
   const addQ = () => {
     const newQ = { id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6), text: "", expectedAnswer: "", pointsOverride: null };
     onSave({ questions: [...questions, newQ] });
@@ -446,26 +441,22 @@ function TriviaSetup({ game, students, onSave, onDelete, onBack, msg, showMsg })
     let newSitting = [...sittingOut];
     let newTeams = teams.map(t => ({ ...t, memberIds: [...(t.memberIds || [])] }));
 
-    // Remove from source
     if (sourceType === "sitting") newSitting = newSitting.filter(id => id !== studentId);
     else if (sourceType === "team") {
       const t = newTeams.find(t => t.id === sourceId);
       if (t) t.memberIds = t.memberIds.filter(id => id !== studentId);
     }
-    // (unassigned source doesn't store anywhere — just remove from team/sitting if present)
     if (sourceType === "unassigned") {
       newSitting = newSitting.filter(id => id !== studentId);
       newTeams.forEach(t => { t.memberIds = t.memberIds.filter(id => id !== studentId); });
     }
 
-    // Add to destination
     if (destType === "sitting") {
       if (!newSitting.includes(studentId)) newSitting.push(studentId);
     } else if (destType === "team") {
       const t = newTeams.find(t => t.id === destId);
       if (t && !t.memberIds.includes(studentId)) t.memberIds.push(studentId);
     }
-    // (unassigned dest just leaves them off any list)
 
     onSave({ sittingOut: newSitting, teams: newTeams });
   };
@@ -476,16 +467,41 @@ function TriviaSetup({ game, students, onSave, onDelete, onBack, msg, showMsg })
     setDragSrc(null);
   };
 
+  // Auto-distribute: drains BOTH unassigned AND Sitting Out into teams (round-robin).
   const autoDistribute = () => {
     if (teams.length === 0) { showMsg("Add at least one team first"); return; }
-    if (!window.confirm("Distribute all unassigned students evenly across teams?")) return;
+    const pool = [...unassigned, ...sittingOut];
+    if (pool.length === 0) { showMsg("Nobody to distribute"); return; }
+    if (!window.confirm("Distribute " + pool.length + " student" + (pool.length !== 1 ? "s" : "") + " (Sitting Out + Unassigned) evenly across teams?")) return;
     const newTeams = teams.map(t => ({ ...t, memberIds: [...(t.memberIds || [])] }));
     let ti = 0;
-    unassigned.forEach(sid => {
+    pool.forEach(sid => {
       newTeams[ti].memberIds.push(sid);
       ti = (ti + 1) % newTeams.length;
     });
-    onSave({ teams: newTeams });
+    onSave({ teams: newTeams, sittingOut: [] });
+  };
+
+  // Import roster teams: create a trivia team for each project team in data.teams,
+  // pre-populated from each student's teamId field. Existing trivia teams are replaced.
+  const importFromRoster = () => {
+    if (!rosterTeams || rosterTeams.length === 0) { showMsg("No roster teams found"); return; }
+    if (teams.length > 0 && !window.confirm("Replace existing trivia teams with roster teams?")) return;
+    const newTeams = rosterTeams.map(rt => {
+      const memberIds = eligibleStudents.filter(s => s.teamId === rt.id).map(s => s.id);
+      return {
+        id: "team_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+        name: rt.name,
+        colorIdx: (rt.colorIdx !== undefined && rt.colorIdx !== null) ? rt.colorIdx : 0,
+        memberIds,
+      };
+    }).filter(t => t.memberIds.length > 0);
+    // Sitting Out becomes anyone not in a roster team
+    const inSomeTeam = new Set();
+    newTeams.forEach(t => t.memberIds.forEach(id => inSomeTeam.add(id)));
+    const newSitting = eligibleStudents.filter(s => !inSomeTeam.has(s.id)).map(s => s.id);
+    onSave({ teams: newTeams, sittingOut: newSitting });
+    showMsg("Imported " + newTeams.length + " team" + (newTeams.length !== 1 ? "s" : "") + " from roster");
   };
 
   const allInSittingOut = () => {
@@ -515,15 +531,12 @@ function TriviaSetup({ game, students, onSave, onDelete, onBack, msg, showMsg })
         {/* Title + global settings */}
         <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
           <div style={{ ...sectionLabel, marginBottom: 8 }}>Trivia Game</div>
-          <input
-            value={title} onChange={e => setTitle(e.target.value)} onBlur={saveTitle}
-            placeholder="Title (e.g. Methods Trivia Round 1)"
-            style={{ ...inp, fontSize: 16, fontWeight: 700, marginBottom: 10 }}
+          <TitlePtsEditor
+            initialTitle={game.title || ""}
+            initialPts={game.defaultPointsPerQ || 5}
+            onSaveTitle={(t) => onSave({ title: t.trim() || "Untitled Trivia" })}
+            onSavePts={(n) => onSave({ defaultPointsPerQ: n })}
           />
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <label style={{ fontSize: 12, color: TEXT_SECONDARY, fontWeight: 600 }}>Default points per correct answer:</label>
-            <input type="number" min={0} value={defaultPts} onChange={e => saveDefaultPts(parseInt(e.target.value) || 0)} style={{ ...inp, width: 70, textAlign: "center" }} />
-          </div>
         </div>
 
         {/* Questions */}
@@ -534,42 +547,22 @@ function TriviaSetup({ game, students, onSave, onDelete, onBack, msg, showMsg })
           </div>
           {questions.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>No questions yet.</div>}
           {questions.map((q, i) => (
-            <div key={q.id} style={{ padding: 12, borderRadius: 10, border: "1px solid " + BORDER, marginBottom: 8 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED }}>Q{i + 1}</span>
-                <input
-                  value={q.text || ""} onChange={e => updateQ(i, { text: e.target.value })}
-                  placeholder="Question text"
-                  style={{ ...inp, flex: 1 }}
-                />
-                <button onClick={() => removeQ(i)} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "4px 8px" }}>✕</button>
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  value={q.expectedAnswer || ""} onChange={e => updateQ(i, { expectedAnswer: e.target.value })}
-                  placeholder="Expected answer (admin reference, optional)"
-                  style={{ ...inp, flex: 1, fontSize: 12, color: TEXT_SECONDARY }}
-                />
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ fontSize: 10, color: TEXT_MUTED }}>pts:</span>
-                  <input
-                    type="number" min={0}
-                    value={q.pointsOverride === null || q.pointsOverride === undefined ? "" : q.pointsOverride}
-                    onChange={e => updateQ(i, { pointsOverride: e.target.value === "" ? null : parseInt(e.target.value) || 0 })}
-                    placeholder={String(defaultPts)}
-                    style={{ ...inp, width: 56, textAlign: "center", fontSize: 12 }}
-                  />
-                </div>
-              </div>
-            </div>
+            <QuestionRow
+              key={q.id}
+              idx={i} question={q}
+              defaultPts={game.defaultPointsPerQ || 5}
+              onUpdate={(patch) => updateQ(i, patch)}
+              onRemove={() => removeQ(i)}
+            />
           ))}
         </div>
 
         {/* Team builder */}
         <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 6 }}>
             <div style={{ ...sectionLabel }}>Teams ({teams.length})</div>
-            <div style={{ display: "flex", gap: 6 }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <button onClick={importFromRoster} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Import from roster</button>
               <button onClick={autoDistribute} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Auto-distribute</button>
               <button onClick={allInSittingOut} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Reset</button>
               <button onClick={addTeam} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12, padding: "5px 12px" }}>+ Add Team</button>
@@ -619,14 +612,13 @@ function TriviaSetup({ game, students, onSave, onDelete, onBack, msg, showMsg })
                   key={t.id} onDragOver={onDragOver} onDrop={onDrop("team", t.id)}
                   style={{ background: palette.bg, border: "2px solid " + palette.accent, borderRadius: 10, padding: 10, minHeight: 120 }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 8 }}>
-                    <input
-                      value={t.name} onChange={e => renameTeam(t.id, e.target.value)}
-                      style={{ ...inp, fontSize: 13, fontWeight: 800, color: palette.accent, padding: "4px 6px", flex: 1, background: "#fff" }}
-                    />
-                    <button onClick={() => cycleTeamColor(t.id)} title="Cycle color" style={{ ...pillInactive, padding: "4px 8px", fontSize: 10 }}>🎨</button>
-                    <button onClick={() => removeTeam(t.id)} style={{ ...pill, background: "#fff", color: RED, fontSize: 10, padding: "4px 8px", border: "1px solid " + BORDER }}>✕</button>
-                  </div>
+                  <TeamHeader
+                    team={t}
+                    accent={palette.accent}
+                    onRename={(name) => renameTeam(t.id, name)}
+                    onCycleColor={() => cycleTeamColor(t.id)}
+                    onRemove={() => removeTeam(t.id)}
+                  />
                   <div style={{ fontSize: 10, fontWeight: 700, color: palette.accent, marginBottom: 6, textTransform: "uppercase" }}>{(t.memberIds || []).length} member{(t.memberIds || []).length !== 1 ? "s" : ""}</div>
                   {(t.memberIds || []).map(sid => {
                     const s = studentById(sid); if (!s) return null;
@@ -660,7 +652,94 @@ function TriviaSetup({ game, students, onSave, onDelete, onBack, msg, showMsg })
   );
 }
 
-/* ─── GAME EDITOR (setup phase, with drag reorder) ─── */
+// ─── Subcomponents that hold local state for inputs ──────────────────────
+// React inputs lose focus / cursor position when the parent re-renders on
+// every keystroke (because parent saves to storage on every onChange).
+// These components keep input state local and only push it up on blur.
+
+function TitlePtsEditor({ initialTitle, initialPts, onSaveTitle, onSavePts }) {
+  const [title, setTitle] = useState(initialTitle);
+  const [pts, setPts] = useState(initialPts);
+  return (
+    <>
+      <input
+        value={title}
+        onChange={e => setTitle(e.target.value)}
+        onBlur={() => onSaveTitle(title)}
+        placeholder="Title (e.g. Methods Trivia Round 1)"
+        style={{ ...inp, fontSize: 16, fontWeight: 700, marginBottom: 10 }}
+      />
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <label style={{ fontSize: 12, color: TEXT_SECONDARY, fontWeight: 600 }}>Default points per correct answer:</label>
+        <input
+          type="number" min={0}
+          value={pts}
+          onChange={e => setPts(e.target.value)}
+          onBlur={() => onSavePts(parseInt(pts) || 0)}
+          style={{ ...inp, width: 70, textAlign: "center" }}
+        />
+      </div>
+    </>
+  );
+}
+
+function QuestionRow({ idx, question, defaultPts, onUpdate, onRemove }) {
+  const [text, setText] = useState(question.text || "");
+  const [expectedAnswer, setExpectedAnswer] = useState(question.expectedAnswer || "");
+  const [pts, setPts] = useState(question.pointsOverride === null || question.pointsOverride === undefined ? "" : question.pointsOverride);
+  return (
+    <div style={{ padding: 12, borderRadius: 10, border: "1px solid " + BORDER, marginBottom: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <span style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED }}>Q{idx + 1}</span>
+        <input
+          value={text}
+          onChange={e => setText(e.target.value)}
+          onBlur={() => onUpdate({ text })}
+          placeholder="Question text"
+          style={{ ...inp, flex: 1 }}
+        />
+        <button onClick={onRemove} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "4px 8px" }}>✕</button>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input
+          value={expectedAnswer}
+          onChange={e => setExpectedAnswer(e.target.value)}
+          onBlur={() => onUpdate({ expectedAnswer })}
+          placeholder="Expected answer (admin reference, optional)"
+          style={{ ...inp, flex: 1, fontSize: 12, color: TEXT_SECONDARY }}
+        />
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ fontSize: 10, color: TEXT_MUTED }}>pts:</span>
+          <input
+            type="number" min={0}
+            value={pts}
+            onChange={e => setPts(e.target.value)}
+            onBlur={() => onUpdate({ pointsOverride: pts === "" ? null : parseInt(pts) || 0 })}
+            placeholder={String(defaultPts)}
+            style={{ ...inp, width: 56, textAlign: "center", fontSize: 12 }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TeamHeader({ team, accent, onRename, onCycleColor, onRemove }) {
+  const [name, setName] = useState(team.name);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 8 }}>
+      <input
+        value={name}
+        onChange={e => setName(e.target.value)}
+        onBlur={() => onRename(name)}
+        style={{ ...inp, fontSize: 13, fontWeight: 800, color: accent, padding: "4px 6px", flex: 1, background: "#fff" }}
+      />
+      <button onClick={onCycleColor} title="Cycle color" style={{ ...pillInactive, padding: "4px 8px", fontSize: 10 }}>🎨</button>
+      <button onClick={onRemove} style={{ ...pill, background: "#fff", color: RED, fontSize: 10, padding: "4px 8px", border: "1px solid " + BORDER }}>✕</button>
+    </div>
+  );
+}
+
 /* ─── REVIEW / OVERRIDE ANSWERS ─── */
 function ReviewAnswers({ type, week, data, setData }) {
   const [show, setShow] = useState(false);
