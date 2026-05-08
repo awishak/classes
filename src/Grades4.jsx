@@ -1268,6 +1268,8 @@ function ParticipationDetail({ data, studentId, setView }) {
   if (inClassPts > 0) gameRows.push({ label: "In-Class points", pts: inClassPts });
   const teamWinPts = log.filter(e => e.studentId === studentId && (e.source || "").startsWith("Team Win")).reduce((s, e) => s + e.amount, 0);
   if (teamWinPts > 0) gameRows.push({ label: "Team Win Bonuses", pts: teamWinPts });
+  const triviaPts = log.filter(e => e.studentId === studentId && (e.source || "").startsWith("Team Trivia")).reduce((s, e) => s + e.amount, 0);
+  if (triviaPts > 0) gameRows.push({ label: "Team Trivia", pts: triviaPts });
   const gameTotal = gameRows.reduce((s, r) => s + r.pts, 0);
 
   // ─── COMPONENT TABLE ───
@@ -1280,6 +1282,7 @@ function ParticipationDetail({ data, studentId, setView }) {
     { label: "In-Class points", grade: "✓", game: "✓" },
     { label: "This or That", grade: "", game: "✓" },
     { label: "Team Win Bonuses", grade: "", game: "✓" },
+    { label: "Team Trivia", grade: "", game: "✓" },
   ];
 
   const goLeaderboard = () => { if (setView) setView("leaderboard"); };
@@ -2210,6 +2213,14 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
       components.push({ label: "Featured Post", gamePts: gPts, gradePts: null });
     }
 
+    // Team Trivia (game only)
+    const trLog = log.filter(e => e.studentId === sid && (e.source || "").startsWith("Team Trivia"));
+    if (trLog.length > 0) {
+      const gPts = trLog.reduce((a, e) => a + e.amount, 0);
+      totalGameFromComponents += gPts;
+      components.push({ label: "Team Trivia", gamePts: gPts, gradePts: null });
+    }
+
     // Catch-all: anything in log not covered above
     const otherLog = log.filter(e => {
       if (e.studentId !== sid) return false;
@@ -2220,6 +2231,7 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
       if (src.startsWith("Team Win Wk")) return false;
       if (src === "Around the Horn" || src === "PTI") return false;
       if (src === "Featured Post") return false;
+      if (src.startsWith("Team Trivia")) return false;
       if (src.startsWith("Quiz Q") || src.startsWith("Quiz #")) return false; // legacy bulk awards from old game
       return true;
     });
