@@ -413,15 +413,17 @@ function computeParticipationGrade(data, sid) {
   const log = data.log || [];
   const weeklyGames = data.weeklyGames || {};
   const reboundGrades = data.reboundGrades || {};
+  const manualGrades = data.manualGameGrades || {};
   let gameGradeEarned = 0;
   let gameGradePossible = 0;
   const scoredGames = Object.keys(weeklyGames).filter(w => weeklyGames[w]?.scored);
   scoredGames.forEach(w => {
     const game = weeklyGames[w];
-    gameGradePossible += 100;
     let original = 0;
+    let answered = 0;
     (game.questions || []).forEach((q, qi) => {
       const ans = game.responses?.[sid + "-" + qi];
+      if (ans !== undefined && ans !== null) answered++;
       if (ans === q.correct) {
         const cat = q.category || "on_topic";
         const catPts = cat === "on_topic" ? 15 : 2.5;
@@ -429,19 +431,26 @@ function computeParticipationGrade(data, sid) {
       }
     });
     const rg = reboundGrades[sid + "-game-" + w];
-    let earned = original;
+    const manualGrade = manualGrades[sid + "-" + w];
+    // Only count this week if the student engaged: attempted at least one question,
+    // has a manual grade, or has a rebound entry. Otherwise it's a week they
+    // didn't take (e.g. weeks 5/6 alternative) and shouldn't count.
+    if (answered === 0 && (manualGrade === null || manualGrade === undefined) && !rg) return;
+    gameGradePossible += 100;
+    let earned = manualGrade !== null && manualGrade !== undefined ? parseFloat(manualGrade) : original;
     if (rg && typeof rg.gradePoints === "number") {
+      const ref = earned;
       if (rg.type === "makeup") {
-        earned = Math.max(original, rg.gradePoints);
+        earned = Math.max(ref, rg.gradePoints);
       } else {
         let cap;
         if (rg.type === "absence_override") cap = 60;
-        else if (original < 50) cap = 60;
-        else if (original <= 65) cap = 70;
-        else if (original <= 79) cap = 80;
+        else if (ref < 50) cap = 60;
+        else if (ref <= 65) cap = 70;
+        else if (ref <= 79) cap = 80;
         else cap = 100;
         const capped = Math.min(rg.gradePoints, cap);
-        earned = Math.max(original, capped);
+        earned = Math.max(ref, capped);
       }
     }
     gameGradeEarned += earned;
@@ -2170,8 +2179,21 @@ function GameVsGradeComparison({ data, computeAutoParticipation, assignments, gr
     scoredGameWeeks.forEach(w => {
       const { gamePts, gradePts } = computeGameWeek(sid, w);
       totalGameFromComponents += gamePts;
-      participationEarned += gradePts;
-      participationPossible += 100;
+      // Only count this week toward the participation denominator if the student
+      // engaged: attempted at least one question, has a manual grade, or has a rebound.
+      const game = weeklyGames[w];
+      let answered = 0;
+      (game?.questions || []).forEach((q, qi) => {
+        const ans = game.responses?.[sid + "-" + qi];
+        if (ans !== undefined && ans !== null) answered++;
+      });
+      const rg = reboundGrades[sid + "-game-" + w];
+      const manualGrade = (data.manualGameGrades || {})[sid + "-" + w];
+      const engaged = answered > 0 || rg || (manualGrade !== null && manualGrade !== undefined);
+      if (engaged) {
+        participationEarned += gradePts;
+        participationPossible += 100;
+      }
       components.push({ label: "Weekly Game Wk " + w, gamePts: Math.round(gamePts * 10) / 10, gradePts });
     });
 
