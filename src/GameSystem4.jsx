@@ -325,6 +325,46 @@ export function GameAdmin({ data, setData }) {
             saveTrivia(triviaId, { phase: "setup", openQs: [], lockedQs: [], revealedQs: [], answers: {} });
           }}
           onFinalize={() => saveTrivia(triviaId, { phase: "done" })}
+          onEndGameAndPool={() => {
+            // End game early. Auto-reveal any locked rounds. Send any open OR never-opened questions to the shared pool.
+            const questions = game.questions || [];
+            const openQs = game.openQs || [];
+            const lockedQs = game.lockedQs || [];
+            const revealedQs = game.revealedQs || [];
+            const touchedSet = new Set([...openQs, ...lockedQs, ...revealedQs]);
+            const unopenedIdxs = questions.map((_, i) => i).filter(i => !touchedSet.has(i));
+            // Questions to bank: open + unopened (NOT locked — those got graded and will be revealed)
+            const toPoolIdxs = [...openQs, ...unopenedIdxs];
+            const poolAdditions = toPoolIdxs.map(i => {
+              const q = questions[i];
+              return {
+                id: q.id || ("q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6)),
+                text: q.text || "",
+                expectedAnswer: q.expectedAnswer || "",
+                pointsOverride: q.pointsOverride ?? null,
+                fromGameId: game.id,
+                fromGameTitle: game.title || "",
+                savedTs: Date.now(),
+              };
+            }).filter(q => q.text.trim().length > 0);
+            const msg = "End game now? " + (lockedQs.length > 0 ? "Locked round will be revealed. " : "") + (poolAdditions.length > 0 ? poolAdditions.length + " unused question" + (poolAdditions.length !== 1 ? "s" : "") + " will be saved to the pool. " : "") + "You'll go to the Finalize screen.";
+            if (!window.confirm(msg)) return;
+            const newRevealed = [...revealedQs, ...lockedQs];
+            const updatedGame = {
+              ...game,
+              phase: "done",
+              openQs: [],
+              lockedQs: [],
+              revealedQs: newRevealed,
+            };
+            const updated = {
+              ...data,
+              triviaGames: { ...triviaGames, [triviaId]: updatedGame },
+              triviaQuestionPool: [...(data.triviaQuestionPool || []), ...poolAdditions],
+            };
+            saveData(updated); setData(updated);
+            showMsg(poolAdditions.length > 0 ? "Saved " + poolAdditions.length + " to pool" : "Ending game");
+          }}
           msg={msg} showMsg={showMsg}
         />
       );
@@ -334,6 +374,11 @@ export function GameAdmin({ data, setData }) {
         game={game}
         students={data.students}
         rosterTeams={data.teams}
+        pool={data.triviaQuestionPool || []}
+        onPoolUpdate={(newPool) => {
+          const updated = { ...data, triviaQuestionPool: newPool };
+          saveData(updated); setData(updated);
+        }}
         onSave={(patch) => saveTrivia(triviaId, patch)}
         onDelete={() => deleteTrivia(triviaId)}
         onBack={() => setTriviaId(null)}
@@ -411,10 +456,44 @@ export function GameAdmin({ data, setData }) {
    Phase progression:
      setup → live (admin clicks Go Live) → done (admin clicks Finalize)
 */
-function TriviaSetup({ game, students, rosterTeams, onSave, onDelete, onBack, msg, showMsg }) {
+function TriviaSetup({ game, students, rosterTeams, pool, onPoolUpdate, onSave, onDelete, onBack, msg, showMsg }) {
   const { theme } = useTheme("comm4-v1");
   const crd = themedInteriorCrd(theme, 0);
   const [dragSrc, setDragSrc] = useState(null);
+  const [showPool, setShowPool] = useState(false);
+  const [poolSelection, setPoolSelection] = useState(new Set());
+
+  const poolList = pool || [];
+  const importSelected = () => {
+    if (poolSelection.size === 0) { showMsg("Nothing selected"); return; }
+    const picked = poolList.filter(p => poolSelection.has(p.id));
+    const existingQs = game.questions || [];
+    // Add picked questions to the game; assign fresh ids so they're independent of the pool entries
+    const newQs = picked.map(p => ({
+      id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+      text: p.text || "",
+      expectedAnswer: p.expectedAnswer || "",
+      pointsOverride: p.pointsOverride ?? null,
+    }));
+    onSave({ questions: [...existingQs, ...newQs] });
+    // Remove from pool
+    const remaining = poolList.filter(p => !poolSelection.has(p.id));
+    onPoolUpdate(remaining);
+    setPoolSelection(new Set());
+    showMsg("Imported " + picked.length + " from pool");
+  };
+  const togglePoolItem = (id) => {
+    setPoolSelection(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const deletePoolItem = (id) => {
+    if (!window.confirm("Delete this question from the pool? It will not be recoverable.")) return;
+    onPoolUpdate(poolList.filter(p => p.id !== id));
+    setPoolSelection(prev => { const n = new Set(prev); n.delete(id); return n; });
+  };
 
   const questions = game.questions || [];
   const teams = game.teams || [];
@@ -593,10 +672,40 @@ function TriviaSetup({ game, students, rosterTeams, onSave, onDelete, onBack, ms
 
         {/* Questions */}
         <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 6 }}>
             <div style={{ ...sectionLabel }}>Questions ({questions.length})</div>
-            <button onClick={addQ} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12, padding: "5px 12px" }}>+ Add Question</button>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <button onClick={() => setShowPool(!showPool)} style={{ ...pillInactive, fontSize: 11, padding: "5px 10px" }}>{showPool ? "Hide" : "View"} pool ({poolList.length})</button>
+              <button onClick={addQ} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12, padding: "5px 12px" }}>+ Add Question</button>
+            </div>
           </div>
+
+          {/* Pool panel */}
+          {showPool && (
+            <div style={{ background: "#fafaf9", border: "1.5px dashed " + BORDER, borderRadius: 10, padding: 12, marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Question Pool</div>
+                {poolSelection.size > 0 && (
+                  <button onClick={importSelected} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 11, padding: "4px 10px" }}>Import {poolSelection.size} selected</button>
+                )}
+              </div>
+              {poolList.length === 0 && <div style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic" }}>Pool is empty. Questions saved from "End Game & Finalize Now" will appear here.</div>}
+              {poolList.map(p => {
+                const selected = poolSelection.has(p.id);
+                return (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: 8, background: selected ? "#ecfdf5" : "#fff", border: "1px solid " + (selected ? GREEN : BORDER), borderRadius: 8, marginBottom: 4 }}>
+                    <input type="checkbox" checked={selected} onChange={() => togglePoolItem(p.id)} style={{ cursor: "pointer" }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: TEXT_PRIMARY }}>{p.text}</div>
+                      {p.fromGameTitle && <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>from "{p.fromGameTitle}"</div>}
+                    </div>
+                    <button onClick={() => deletePoolItem(p.id)} title="Delete from pool" style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 10, padding: "3px 7px" }}>✕</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {questions.length === 0 && <div style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>No questions yet.</div>}
           {questions.map((q, i) => (
             <QuestionRow
@@ -799,7 +908,7 @@ function TeamHeader({ team, accent, onRename, onCycleColor, onRemove }) {
    results grid) → admin opens next round.
    When all questions are revealed, "Finalize" button enables (step 4).
 */
-function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBackToSetup, onFinalize, msg, showMsg }) {
+function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBackToSetup, onFinalize, onEndGameAndPool, msg, showMsg }) {
   const { theme } = useTheme("comm4-v1");
   const crd = themedInteriorCrd(theme, 0);
 
@@ -1327,12 +1436,22 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
           </div>
         )}
 
-        {/* Finalize */}
-        {allDone && (
-          <button onClick={onFinalize} style={{ ...pill, padding: "12px 20px", background: TEXT_PRIMARY, color: "#fff", width: "100%", fontSize: 14, fontWeight: 700 }}>
-            All questions revealed — Finalize Game
-          </button>
-        )}
+        {/* Finalize controls — always available */}
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+          {allDone ? (
+            <button onClick={onFinalize} style={{ ...pill, padding: "12px 20px", background: TEXT_PRIMARY, color: "#fff", width: "100%", fontSize: 14, fontWeight: 700 }}>
+              All questions revealed — Finalize Game
+            </button>
+          ) : (
+            <>
+              <div style={{ fontSize: 11, color: TEXT_MUTED, textAlign: "center" }}>{revealedQs.length} of {questions.length} questions revealed</div>
+              <button onClick={onEndGameAndPool} style={{ ...pill, padding: "10px 16px", background: "#fff", color: TEXT_PRIMARY, border: "1.5px solid " + TEXT_PRIMARY, width: "100%", fontSize: 13, fontWeight: 700 }}>
+                End Game & Finalize Now
+              </button>
+              <div style={{ fontSize: 11, color: TEXT_MUTED, textAlign: "center" }}>Unused questions will be saved to the pool for next time</div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
