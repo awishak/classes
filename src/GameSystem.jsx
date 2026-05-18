@@ -3689,6 +3689,39 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const [reboundLink, setReboundLink] = useState("");
   const [showPolicy, setShowPolicy] = useState(false);
+  const [fbEditOpen, setFbEditOpen] = useState(false);
+  const [fbEditVals, setFbEditVals] = useState({});
+
+  // Save a single student's fishbowl score for this week. Touches only this
+  // student: updates weeklyFishbowl[week].scores[sid] (what the gradebook cell
+  // shows) and replaces only this student's "Fishbowl Wk<week>" log entry (what
+  // the participation total counts). Leaves all other students, the star bonus,
+  // and any Rebound/Makeup Fishbowl entries untouched.
+  const saveFishbowlScore = async (studentId, rawVal) => {
+    const newScore = Math.max(0, parseFloat(rawVal) || 0);
+    const fbAll = data.weeklyFishbowl || {};
+    const fbWeek = fbAll[week] || {};
+    const newScores = { ...(fbWeek.scores || {}), [studentId]: newScore };
+    const fbSource = "Fishbowl Wk" + week;
+    const oldEntry = (data.log || []).find(e => e.studentId === studentId && e.source === fbSource);
+    const newLog = (data.log || []).filter(e => !(e.studentId === studentId && e.source === fbSource));
+    if (newScore > 0) {
+      newLog.push({
+        id: genId(),
+        studentId,
+        amount: newScore,
+        source: fbSource,
+        ts: oldEntry ? oldEntry.ts : Date.now(),
+      });
+    }
+    const updated = {
+      ...data,
+      weeklyFishbowl: { ...fbAll, [week]: { ...fbWeek, scores: newScores } },
+      log: newLog,
+    };
+    await saveData(updated); setData(updated);
+    showMsg("Saved");
+  };
 
   const rebounds = data.rebounds || {};
   const reboundKey = activityType + "-" + week;
@@ -3876,6 +3909,41 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
           </div>
           <button onClick={() => setShowPolicy(!showPolicy)} style={{ fontSize: 11, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600, padding: 0, marginBottom: 10 }}>{showPolicy ? "Hide Policy" : "View Policy"}</button>
           {showPolicy && <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap", padding: 12, background: "#f9fafb", borderRadius: 8, marginBottom: 12, border: "1px solid " + BORDER }}>{policyText}</div>}
+
+          {activityType === "fishbowl" && (
+            <div style={{ marginBottom: 12, padding: 12, background: "#f9fafb", borderRadius: 8, border: "1px solid " + BORDER }}>
+              <button onClick={() => setFbEditOpen(!fbEditOpen)} style={{ fontSize: 12, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 700, padding: 0 }}>
+                {fbEditOpen ? "Hide Score Editor" : "Edit Individual Scores"}
+              </button>
+              {fbEditOpen && (
+                <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr", gap: 4 }}>
+                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>
+                    Change one student's fishbowl score for Week {week}. Saving updates only that student. Out of {maxPts}.
+                  </div>
+                  {sorted.map(s => {
+                    const cur = (data.weeklyFishbowl || {})[week]?.scores?.[s.id] ?? 0;
+                    const val = fbEditVals[s.id] !== undefined ? fbEditVals[s.id] : cur;
+                    return (
+                      <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", background: "#fff", borderRadius: 6, border: "1px solid " + BORDER }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY, flex: 1 }}>{s.name}</span>
+                        <input
+                          type="number"
+                          value={val}
+                          onChange={e => setFbEditVals(prev => ({ ...prev, [s.id]: e.target.value }))}
+                          style={{ ...inp, width: 64, fontSize: 13, textAlign: "center", padding: "4px" }}
+                        />
+                        <span style={{ fontSize: 12, color: TEXT_MUTED }}>/ {maxPts}</span>
+                        <button
+                          onClick={async () => { await saveFishbowlScore(s.id, val); setFbEditVals(prev => { const n = { ...prev }; delete n[s.id]; return n; }); }}
+                          style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12, padding: "4px 12px" }}
+                        >Save</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
             {sorted.map(s => {
