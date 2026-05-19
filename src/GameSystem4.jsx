@@ -3737,9 +3737,9 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
   const allScores = sorted.map(s => { const r = getStudentScore(s); return r ? r.gamePts : 0; });
   const classAvg = allScores.length > 0 ? Math.round((allScores.reduce((a, b) => a + b, 0) / allScores.length) * 10) / 10 : 0;
 
-  const isScored = activityType === "game" ? (data.weeklyGames || {})[week]?.scored
+  const isScored = activityType === "game" ? (((data.weeklyGames || {})[week] || (data.weeklyGames || {})[String(week)])?.scored)
     : activityType === "tot" ? ((data.weeklyToT || {})[week] || (data.weeklyToT || {})[String(week)])?.scored
-    : (data.weeklyFishbowl || {})[week]?.confirmed;
+    : ((data.weeklyFishbowl || {})[week] || (data.weeklyFishbowl || {})[String(week)])?.confirmed;
 
   if (!isScored) return null;
 
@@ -3772,24 +3772,17 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
     const status = ss.status || "present";
     const gradeOnly = status === "rebound" || status === "unannounced_override";
 
-    // Grade-only path for weekly games: write to data.reboundGrades (does NOT touch log or leaderboard)
+    // Grade-only path for weekly games: write to data.reboundGrades (does NOT touch log or leaderboard).
+    // Admin sets any grade 0-100; no eligibility wall, no cap, no must-exceed check.
     if (gradeOnly && activityType === "game") {
-      const originalGradePts = result.gradePts || 0;
-      let cap;
-      if (status === "unannounced_override") cap = 60;
-      else if (originalGradePts < 50) cap = 60;
-      else if (originalGradePts <= 65) cap = 70;
-      else if (originalGradePts <= 79) cap = 80;
-      else { showMsg("Not eligible (already 80%+)"); return; }
-
-      const inputPts = ss.customPts !== undefined ? ss.customPts : cap;
-      if (inputPts <= originalGradePts) { showMsg("Must exceed original grade of " + originalGradePts); return; }
-      const cappedPts = Math.min(inputPts, cap);
+      if (ss.customPts === undefined) { showMsg("Enter a grade first"); return; }
+      const inputPts = parseFloat(ss.customPts);
+      if (isNaN(inputPts)) { showMsg("Enter a valid number"); return; }
+      const cappedPts = Math.max(0, Math.min(inputPts, 100));
 
       const rgKey = studentId + "-game-" + week;
-      const rgType = status === "unannounced_override" ? "absence_override" : "rebound";
       const reboundGrades = { ...(data.reboundGrades || {}), [rgKey]: {
-        gradePoints: cappedPts, type: rgType, enteredTs: Date.now(), enteredBy: userName || "Admin",
+        gradePoints: cappedPts, type: "makeup", enteredTs: Date.now(), enteredBy: userName || "Admin",
       }};
       const newSS = { ...statuses, [studentId]: { ...ss, approved: true, reboundGradePts: cappedPts, gradeOnly: true } };
       const updated = { ...data, reboundGrades, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: newSS } } };
@@ -3962,19 +3955,18 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
                         </div>
                       )}
 
-                      {/* Points + approve: grade-points path for game rebound/override */}
-                      {eligible && isGameGradePath && (
+                      {/* Points + approve: grade-points path for game rebound/override.
+                          Always available to admin for a Weekly Game; no eligibility wall. */}
+                      {isGameGradePath && !ss.approved && (
                         <div>
                           <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>
-                            Original grade: <strong>{origGradePts}</strong> / 100 | Cap: <strong>{gradeCap}</strong> / 100 {status === "unannounced_override" ? "(absence override: lowest tier)" : ""}
+                            Original grade: <strong>{origGradePts}</strong> / 100. Set any grade out of 100.
                           </div>
                           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                             <span style={{ fontSize: 12, color: TEXT_MUTED }}>Rebound grade:</span>
-                            <input type="number" defaultValue={defaultGradeInput} onBlur={e => setCustomPts(s.id, e.target.value)} style={{ ...inp, width: 60, fontSize: 13, textAlign: "center", padding: "4px" }} />
+                            <input type="number" defaultValue={ss.customPts !== undefined ? ss.customPts : ""} onBlur={e => setCustomPts(s.id, e.target.value)} style={{ ...inp, width: 60, fontSize: 13, textAlign: "center", padding: "4px" }} />
                             <span style={{ fontSize: 12, color: TEXT_MUTED }}>/ 100 grade pts</span>
-                            {ss.link && (
-                              <button onClick={() => approveRebound(s.id)} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12, marginLeft: "auto" }}>Apply Grade</button>
-                            )}
+                            <button onClick={() => approveRebound(s.id)} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12, marginLeft: "auto" }}>Apply Grade</button>
                           </div>
                         </div>
                       )}
