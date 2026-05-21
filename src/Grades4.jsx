@@ -2439,10 +2439,37 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   const [quickGradeId, setQuickGradeId] = useState(null); // "studentId-assignmentId" or null
   // Apply Grade editor for student-detail modal: {sid, type: "game"|"fishbowl", week, value: string} | null
   const [gradeEditor, setGradeEditor] = useState(null);
+  // Assignment editor for student-detail modal: {sid, asgId, score, outOf, comment} | null
+  const [asgEditor, setAsgEditor] = useState(null);
   // Which assignment row is expanded inside the detail modal (single-expand)
   const [expandedAsgId, setExpandedAsgId] = useState(null);
   // Whether the In-Class row in the detail modal is expanded
   const [inClassExpanded, setInClassExpanded] = useState(true);
+
+  // Save all three fields (score, outOf, comment) for one assignment in one write.
+  // Mirrors updateGrade's regrade/notification behavior when score changes.
+  const saveAssignmentGrade = async (sid, asgId, score, outOf, comment) => {
+    const key = sid + "-" + asgId;
+    const existing = grades[key] || {};
+    const newGrade = {
+      ...existing,
+      score: score === "" ? "" : score,
+      outOf: outOf === "" ? 100 : outOf,
+      comment: comment || "",
+    };
+    let extra = {};
+    const scoreChanged = String(existing.score ?? "") !== String(score ?? "");
+    if (scoreChanged && score !== "" && score !== undefined) {
+      newGrade.gradedTs = Date.now();
+      const regradeRequests = { ...(data.regradeRequests || {}) };
+      delete regradeRequests[key];
+      const gradeNotifications = { ...(data.gradeNotifications || {}), [key]: { ts: Date.now() } };
+      extra = { regradeRequests, gradeNotifications };
+    }
+    const updated = { ...data, grades: { ...grades, [key]: newGrade }, ...extra };
+    await saveData(updated); setData(updated);
+    setAsgEditor(null);
+  };
 
   // Apply a manual grade rebound for one student's weekly game. Writes
   // reboundGrades[sid + "-game-" + w] with type "makeup" so the gradebook reads
@@ -2867,12 +2894,37 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
                   </div>
                 )}
                 {!sub && <div style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 10 }}>No submission</div>}
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <input type="number" value={g.score ?? ""} onChange={e => updateGrade(sid, a.id, "score", e.target.value)} placeholder="Score" style={{ ...inp, width: 80, padding: "6px 10px", fontSize: 13 }} />
-                  <span style={{ fontSize: 13, color: TEXT_MUTED }}>/</span>
-                  <input type="number" value={g.outOf ?? 100} onChange={e => updateGrade(sid, a.id, "outOf", e.target.value)} placeholder="100" style={{ ...inp, width: 60, padding: "6px 10px", fontSize: 13 }} />
-                  <input value={g.comment || ""} onChange={e => updateGrade(sid, a.id, "comment", e.target.value)} placeholder="Comment..." style={{ ...inp, flex: 1, minWidth: 180, padding: "6px 10px", fontSize: 13 }} />
-                </div>
+                {(() => {
+                  const isEditingAsg = asgEditor && asgEditor.sid === sid && asgEditor.asgId === a.id;
+                  if (!isEditingAsg) {
+                    return (
+                      <div>
+                        {g.comment && (
+                          <div style={{ marginBottom: 10, padding: "8px 12px", background: "#fff", borderRadius: 8, border: "1px solid " + BORDER }}>
+                            <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, marginBottom: 4 }}>YOUR COMMENT</div>
+                            <div style={{ fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.4 }}>{g.comment}</div>
+                          </div>
+                        )}
+                        <button onClick={() => setAsgEditor({ sid, asgId: a.id, score: g.score ?? "", outOf: g.outOf ?? 100, comment: g.comment || "" })} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12, padding: "6px 14px" }}>Update Grade</button>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div style={{ padding: 10, background: "#fff", borderRadius: 8, border: "1px solid " + BORDER }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
+                        <span style={{ fontSize: 12, color: TEXT_MUTED }}>Score:</span>
+                        <input type="number" value={asgEditor.score} onChange={e => setAsgEditor({ ...asgEditor, score: e.target.value })} placeholder="Score" style={{ ...inp, width: 80, padding: "6px 10px", fontSize: 13 }} />
+                        <span style={{ fontSize: 13, color: TEXT_MUTED }}>/</span>
+                        <input type="number" value={asgEditor.outOf} onChange={e => setAsgEditor({ ...asgEditor, outOf: e.target.value })} placeholder="100" style={{ ...inp, width: 60, padding: "6px 10px", fontSize: 13 }} />
+                      </div>
+                      <input value={asgEditor.comment} onChange={e => setAsgEditor({ ...asgEditor, comment: e.target.value })} placeholder="Comment..." style={{ ...inp, width: "100%", padding: "6px 10px", fontSize: 13, marginBottom: 8 }} />
+                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                        <button onClick={() => setAsgEditor(null)} style={{ ...pill, background: "#fff", color: TEXT_SECONDARY, border: "1px solid " + BORDER_STRONG, fontSize: 12, padding: "6px 12px" }}>Cancel</button>
+                        <button onClick={() => saveAssignmentGrade(sid, a.id, asgEditor.score, asgEditor.outOf, asgEditor.comment)} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12, padding: "6px 14px" }}>Save</button>
+                      </div>
+                    </div>
+                  );
+                })()}
                 {!!(data.assignmentRubrics || {})[a.id] && (
                   <button onClick={() => setQuickGradeId(quickGradeId === sid + "-" + a.id ? null : sid + "-" + a.id)} style={{ ...pill, fontSize: 11, marginTop: 8, background: quickGradeId === sid + "-" + a.id ? ACCENT : "#eff6ff", color: quickGradeId === sid + "-" + a.id ? "#fff" : ACCENT }}>
                     {quickGradeId === sid + "-" + a.id ? "Close Quick Grade" : "Quick Grade"}
@@ -2904,7 +2956,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
               {value}<span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600 }}>/{max}</span>
             </div>
             {opts.canEdit && !editing && (
-              <button onClick={() => setGradeEditor({ sid, type: opts.type, week: opts.week, value: String(value) })} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 11, padding: "4px 10px" }}>Apply Grade</button>
+              <button onClick={() => setGradeEditor({ sid, type: opts.type, week: opts.week, value: String(value) })} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 11, padding: "4px 10px" }}>Update Grade</button>
             )}
           </div>
           {editing && (
@@ -2912,7 +2964,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
               <span style={{ fontSize: 12, color: TEXT_MUTED }}>New grade:</span>
               <input type="number" value={gradeEditor.value} onChange={e => setGradeEditor({ ...gradeEditor, value: e.target.value })} style={{ ...inp, width: 70, fontSize: 13, padding: "4px 8px", textAlign: "center" }} />
               <span style={{ fontSize: 12, color: TEXT_MUTED }}>/ {max}</span>
-              <button onClick={() => opts.type === "game" ? applyManualGameGrade(sid, opts.week, gradeEditor.value) : applyManualFishbowlScore(sid, opts.week, gradeEditor.value)} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 11, padding: "4px 12px", marginLeft: "auto" }}>Apply</button>
+              <button onClick={() => opts.type === "game" ? applyManualGameGrade(sid, opts.week, gradeEditor.value) : applyManualFishbowlScore(sid, opts.week, gradeEditor.value)} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 11, padding: "4px 12px", marginLeft: "auto" }}>Save</button>
               <button onClick={() => setGradeEditor(null)} style={{ ...pill, background: "#fff", color: TEXT_SECONDARY, border: "1px solid " + BORDER, fontSize: 11, padding: "4px 10px" }}>Cancel</button>
             </div>
           )}
@@ -3561,7 +3613,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
               <div style={{ background: "#fff", borderRadius: 16, padding: 24, maxWidth: 900, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, position: "sticky", top: -24, background: "#fff", padding: "8px 0", zIndex: 1, borderBottom: "1px solid " + BORDER }}>
                   <div style={{ fontSize: 18, fontWeight: 900, color: TEXT_PRIMARY }}>{data.students.find(s => s.id === selStudent)?.name}</div>
-                  <button onClick={() => { setSelStudent(null); setExpandedAsgId(null); setGradeEditor(null); }} style={pillInactive}>Close</button>
+                  <button onClick={() => { setSelStudent(null); setExpandedAsgId(null); setGradeEditor(null); setAsgEditor(null); }} style={pillInactive}>Close</button>
                 </div>
                 {renderStudentGrades(selStudent)}
               </div>
