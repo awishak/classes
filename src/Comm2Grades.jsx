@@ -1656,6 +1656,84 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   const [activityFilter, setActivityFilter] = useState("all"); // "all" | "game" | "tot" | "fb"
   const [highlight, setHighlight] = useState(null); // "zero" | "missing" | "regrade" | "late" | null
   const [quickGradeId, setQuickGradeId] = useState(null); // "studentId-assignmentId" or null
+  // Apply Grade editor for student-detail modal: {sid, type: "game"|"fishbowl", week, value: string} | null
+  const [gradeEditor, setGradeEditor] = useState(null);
+  // Assignment editor for student-detail modal: {sid, asgId, score, outOf, comment} | null
+  const [asgEditor, setAsgEditor] = useState(null);
+  // Which assignment row is expanded inside the detail modal (single-expand)
+  const [expandedAsgId, setExpandedAsgId] = useState(null);
+  // Whether the In-Class row in the detail modal is expanded
+  const [inClassExpanded, setInClassExpanded] = useState(true);
+
+  // Apply a manual grade rebound for one student's weekly game. Writes
+  // reboundGrades[sid + "-game-" + w] with type "makeup" so the gradebook reads
+  // it uncapped.
+  const applyManualGameGrade = async (sid, w, rawVal) => {
+    const v = parseFloat(rawVal);
+    if (isNaN(v)) return;
+    const pts = Math.max(0, Math.min(v, 100));
+    const reboundGrades = { ...(data.reboundGrades || {}), [sid + "-game-" + w]: {
+      gradePoints: pts, type: "makeup", enteredTs: Date.now(), enteredBy: userName || "Admin",
+    }};
+    const updated = { ...data, reboundGrades };
+    await saveData(updated); setData(updated);
+    setGradeEditor(null);
+  };
+
+  // Apply a manual fishbowl score for one student/week. Updates
+  // weeklyFishbowl[w].scores[sid] AND replaces only this student's "Fishbowl Wk<w>"
+  // log entry.
+  const applyManualFishbowlScore = async (sid, w, rawVal) => {
+    const v = parseFloat(rawVal);
+    if (isNaN(v)) return;
+    const pts = Math.max(0, v);
+    const fbAll = data.weeklyFishbowl || {};
+    const fbWeek = fbAll[w] || {};
+    const newScores = { ...(fbWeek.scores || {}), [sid]: pts };
+    const fbSource = "Fishbowl Wk" + w;
+    const oldEntry = (data.log || []).find(e => e.studentId === sid && e.source === fbSource);
+    const newLog = (data.log || []).filter(e => !(e.studentId === sid && e.source === fbSource));
+    if (pts > 0) {
+      newLog.push({
+        id: "rb-fb-" + sid + "-" + w + "-" + Date.now(),
+        studentId: sid,
+        amount: pts,
+        source: fbSource,
+        ts: oldEntry ? oldEntry.ts : Date.now(),
+      });
+    }
+    const updated = {
+      ...data,
+      weeklyFishbowl: { ...fbAll, [w]: { ...fbWeek, scores: newScores } },
+      log: newLog,
+    };
+    await saveData(updated); setData(updated);
+    setGradeEditor(null);
+  };
+
+  // Save all three fields (score, outOf, comment) for one assignment in one write.
+  const saveAssignmentGrade = async (sid, asgId, score, outOf, comment) => {
+    const key = sid + "-" + asgId;
+    const existing = grades[key] || {};
+    const newGrade = {
+      ...existing,
+      score: score === "" ? "" : score,
+      outOf: outOf === "" ? 100 : outOf,
+      comment: comment || "",
+    };
+    let extra = {};
+    const scoreChanged = String(existing.score ?? "") !== String(score ?? "");
+    if (scoreChanged && score !== "" && score !== undefined) {
+      newGrade.gradedTs = Date.now();
+      const regradeRequests = { ...(data.regradeRequests || {}) };
+      delete regradeRequests[key];
+      const gradeNotifications = { ...(data.gradeNotifications || {}), [key]: { ts: Date.now() } };
+      extra = { regradeRequests, gradeNotifications };
+    }
+    const updated = { ...data, grades: { ...grades, [key]: newGrade }, ...extra };
+    await saveData(updated); setData(updated);
+    setAsgEditor(null);
+  };
   const isGuest = userName === GUEST_NAME;
 
   const student = isAdmin ? (selStudent ? data.students.find(s => s.id === selStudent) : null) : data.students.find(s => s.name === userName);
@@ -1942,211 +2020,272 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   const renderStudentGrades = (sid) => {
     const p = computeAutoParticipation(sid);
     const gameWeeks = getWeeklyGameBreakdown(sid);
-    const totWeeks = getWeeklyToTBreakdown(sid);
     const fbWeeks = getWeeklyFishbowlBreakdown(sid);
+
+    // Find the participation row in assignments and its weight
+    const partAsg = assignments.find(a => a.id === "participation");
+    const partWeight = partAsg?.weight || 25;
+    // Regular assignments (everything except participation)
+    const regularAsgs = assignments.filter(a => a.id !== "participation");
+
+    // Compute final grade % using same approach as AssignmentsView
+    let weightGraded = 0, weightedScore = 0;
+    regularAsgs.forEach(a => {
+      const g = grades[sid + "-" + a.id] || {};
+      if (g.score !== undefined && g.score !== "") {
+        weightGraded += a.weight;
+        weightedScore += (parseFloat(g.score) / (g.outOf || 100)) * a.weight;
+      }
+    });
+    weightGraded += partWeight;
+    const participationPct = p.participationPct || 0;
+    weightedScore += participationPct * partWeight;
+    const finalGradePct = weightGraded > 0 ? Math.round(weightedScore / weightGraded * 1000) / 10 : null;
+
+    // Leaderboard total (game score)
+    const leaderboardTotal = (data.log || []).filter(e => e.studentId === sid).reduce((a, e) => a + e.amount, 0);
+
+    // Group log entries for Game Score breakdown (read from log to match leaderboard exactly)
+    const log = data.log || [];
+    const studentLog = log.filter(e => e.studentId === sid);
+    const gameByWeek = {}, totByWeek = {}, fbByWeek = {};
+    let inClassPts = 0, teamWins = 0, teamTrivia = 0, otherPos = 0;
+    studentLog.forEach(e => {
+      const src = e.source || "";
+      let m;
+      if ((m = src.match(/^Game Wk(\d+)$/))) gameByWeek[m[1]] = (gameByWeek[m[1]] || 0) + e.amount;
+      else if ((m = src.match(/^ToT Wk(\d+)$/))) totByWeek[m[1]] = (totByWeek[m[1]] || 0) + e.amount;
+      else if ((m = src.match(/^Fishbowl Wk(\d+)$/))) fbByWeek[m[1]] = (fbByWeek[m[1]] || 0) + e.amount;
+      else if (src === "Around the Horn" || src === "PTI") inClassPts += e.amount;
+      else if (src.startsWith("Team Win")) teamWins += e.amount;
+      else if (src === "Team Trivia") teamTrivia += e.amount;
+      else if (e.amount > 0) otherPos += e.amount;
+    });
+
+    const sortedWeeks = (obj) => Object.keys(obj).sort((a, b) => parseInt(a) - parseInt(b));
+
+    // Helper to render one assignment row + expandable edit panel
+    const renderAsgRow = (a, i, last) => {
+      const g = grades[sid + "-" + a.id] || {};
+      const sub = (data.submissions || {})[sid + "-" + a.id];
+      const dueDate = parseDueDate(a.due);
+      const isLate = sub && dueDate && sub.ts > dueDate.getTime();
+      const hasGrade = g.score !== undefined && g.score !== "";
+      const isExpanded = expandedAsgId === a.id;
+      const sc = hasGrade ? parseFloat(g.score) : null;
+      const out = g.outOf || 100;
+      const pct = hasGrade && out > 0 ? sc / out : null;
+      const scoreColor = pct === null ? TEXT_MUTED : pct >= 0.9 ? GREEN : pct >= 0.8 ? TEXT_PRIMARY : pct >= 0.7 ? AMBER : RED;
+      const contribution = pct !== null ? Math.round(pct * a.weight * 10) / 10 : null;
+      const dueText = a.due ? "Due " + a.due + (a.dueTime ? ", " + a.dueTime : "") : "—";
+
+      return (
+        <React.Fragment key={a.id}>
+          <tr onClick={() => setExpandedAsgId(isExpanded ? null : a.id)} style={{ borderBottom: "1px solid " + BORDER, cursor: "pointer", background: isExpanded ? "#fafafa" : "transparent" }}>
+            <td style={{ padding: "12px 14px", fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{a.name}</td>
+            <td style={{ padding: "12px 10px", fontSize: 12, color: TEXT_SECONDARY }}>
+              {dueText}
+              {hasGrade && <div style={{ fontSize: 10, fontWeight: 700, color: GREEN, marginTop: 2 }}>GRADED</div>}
+              {!hasGrade && sub && <div style={{ fontSize: 10, fontWeight: 700, color: "#2563eb", marginTop: 2 }}>SUBMITTED{isLate ? " (LATE)" : ""}</div>}
+              {!hasGrade && !sub && <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, marginTop: 2 }}>NO SUBMISSION</div>}
+            </td>
+            <td style={{ padding: "12px 10px", fontSize: 13, textAlign: "right", color: TEXT_SECONDARY, fontVariantNumeric: "tabular-nums" }}>{a.weight}%</td>
+            <td style={{ padding: "12px 10px", fontSize: 13, fontWeight: 700, textAlign: "right", color: scoreColor, fontVariantNumeric: "tabular-nums" }}>
+              {hasGrade ? g.score + " / " + out : "—"}
+            </td>
+            <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 700, textAlign: "right", color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>
+              {contribution !== null ? contribution + " pts" : "—"}
+            </td>
+          </tr>
+          {isExpanded && (
+            <tr style={{ background: "#fafafa", borderBottom: "1px solid " + BORDER }}>
+              <td colSpan={5} style={{ padding: "10px 14px 16px" }}>
+                {sub && (
+                  <div style={{ marginBottom: 10, padding: "8px 12px", background: "#fff", borderRadius: 8, border: "1px solid " + BORDER }}>
+                    {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, fontWeight: 600, textDecoration: "none", display: "block", marginBottom: 4 }}>View Submission</a>}
+                    {sub.videoUrl && <a href={sub.videoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, fontWeight: 600, textDecoration: "none", display: "block", marginBottom: 4 }}>Video</a>}
+                    {sub.notes && <div style={{ fontSize: 12, color: TEXT_SECONDARY, fontStyle: "italic", lineHeight: 1.4 }}>"{sub.notes}"</div>}
+                    <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>Submitted {new Date(sub.ts).toLocaleString()}{isLate && <span style={{ color: AMBER, fontWeight: 700, marginLeft: 6 }}>LATE</span>}</div>
+                  </div>
+                )}
+                {!sub && <div style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 10 }}>No submission</div>}
+                {(() => {
+                  const isEditingAsg = asgEditor && asgEditor.sid === sid && asgEditor.asgId === a.id;
+                  if (!isEditingAsg) {
+                    return (
+                      <div>
+                        {g.comment && (
+                          <div style={{ marginBottom: 10, padding: "8px 12px", background: "#fff", borderRadius: 8, border: "1px solid " + BORDER }}>
+                            <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, marginBottom: 4 }}>YOUR COMMENT</div>
+                            <div style={{ fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.4 }}>{g.comment}</div>
+                          </div>
+                        )}
+                        <button onClick={() => setAsgEditor({ sid, asgId: a.id, score: g.score ?? "", outOf: g.outOf ?? 100, comment: g.comment || "" })} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12, padding: "6px 14px" }}>Update Grade</button>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div style={{ padding: 10, background: "#fff", borderRadius: 8, border: "1px solid " + BORDER }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
+                        <span style={{ fontSize: 12, color: TEXT_MUTED }}>Score:</span>
+                        <input type="number" value={asgEditor.score} onChange={e => setAsgEditor({ ...asgEditor, score: e.target.value })} placeholder="Score" style={{ ...inp, width: 80, padding: "6px 10px", fontSize: 13 }} />
+                        <span style={{ fontSize: 13, color: TEXT_MUTED }}>/</span>
+                        <input type="number" value={asgEditor.outOf} onChange={e => setAsgEditor({ ...asgEditor, outOf: e.target.value })} placeholder="100" style={{ ...inp, width: 60, padding: "6px 10px", fontSize: 13 }} />
+                      </div>
+                      <input value={asgEditor.comment} onChange={e => setAsgEditor({ ...asgEditor, comment: e.target.value })} placeholder="Comment..." style={{ ...inp, width: "100%", padding: "6px 10px", fontSize: 13, marginBottom: 8 }} />
+                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                        <button onClick={() => setAsgEditor(null)} style={{ ...pill, background: "#fff", color: TEXT_SECONDARY, border: "1px solid " + BORDER_STRONG, fontSize: 12, padding: "6px 12px" }}>Cancel</button>
+                        <button onClick={() => saveAssignmentGrade(sid, a.id, asgEditor.score, asgEditor.outOf, asgEditor.comment)} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12, padding: "6px 14px" }}>Save</button>
+                      </div>
+                    </div>
+                  );
+                })()}
+                {!!(data.assignmentRubrics || {})[a.id] && (
+                  <button onClick={() => setQuickGradeId(quickGradeId === sid + "-" + a.id ? null : sid + "-" + a.id)} style={{ ...pill, fontSize: 11, marginTop: 8, background: quickGradeId === sid + "-" + a.id ? ACCENT : "#eff6ff", color: quickGradeId === sid + "-" + a.id ? "#fff" : ACCENT }}>
+                    {quickGradeId === sid + "-" + a.id ? "Close Quick Grade" : "Quick Grade"}
+                  </button>
+                )}
+                {quickGradeId === sid + "-" + a.id && (
+                  <div style={{ marginTop: 10 }}>
+                    <QuickGrade assignmentId={a.id} studentId={sid} studentName={student?.name || ""} data={data} setData={setData} onClose={() => setQuickGradeId(null)} />
+                  </div>
+                )}
+              </td>
+            </tr>
+          )}
+        </React.Fragment>
+      );
+    };
+
+    // Helper to render one breakdown line (Grade Points list) with Update Grade button
+    const renderGradeLine = (label, value, max, opts) => {
+      const editing = gradeEditor && gradeEditor.sid === sid && gradeEditor.type === opts.type && gradeEditor.week === opts.week;
+      return (
+        <div key={opts.key} style={{ padding: "10px 12px", background: "#fff", borderRadius: 8, border: "1px solid " + BORDER, marginBottom: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>
+              {label}
+              {opts.note && <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 500, marginLeft: 6 }}>{opts.note}</span>}
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>
+              {value}<span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600 }}>/{max}</span>
+            </div>
+            {opts.canEdit && !editing && (
+              <button onClick={() => setGradeEditor({ sid, type: opts.type, week: opts.week, value: String(value) })} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 11, padding: "4px 10px" }}>Update Grade</button>
+            )}
+          </div>
+          {editing && (
+            <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid " + BORDER }}>
+              <span style={{ fontSize: 12, color: TEXT_MUTED }}>New grade:</span>
+              <input type="number" value={gradeEditor.value} onChange={e => setGradeEditor({ ...gradeEditor, value: e.target.value })} style={{ ...inp, width: 70, fontSize: 13, padding: "4px 8px", textAlign: "center" }} />
+              <span style={{ fontSize: 12, color: TEXT_MUTED }}>/ {max}</span>
+              <button onClick={() => opts.type === "game" ? applyManualGameGrade(sid, opts.week, gradeEditor.value) : applyManualFishbowlScore(sid, opts.week, gradeEditor.value)} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 11, padding: "4px 12px", marginLeft: "auto" }}>Save</button>
+              <button onClick={() => setGradeEditor(null)} style={{ ...pill, background: "#fff", color: TEXT_SECONDARY, border: "1px solid " + BORDER, fontSize: 11, padding: "4px 10px" }}>Cancel</button>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // Game Score line (read-only display)
+    const renderGameLine = (label, value, key) => (
+      <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#fff", borderRadius: 8, border: "1px solid " + BORDER, marginBottom: 4 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>{label}</div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{value}</div>
+      </div>
+    );
+
+    const inClassEarned = p.totalEarned || 0;
+    const inClassPossible = p.totalPossible || 0;
+    const inClassContribution = inClassPossible > 0 ? Math.round((inClassEarned / inClassPossible) * partWeight * 10) / 10 : null;
 
     return (
       <div>
-        <div style={{ ...sectionLabel, marginBottom: 8 }}>Assignment Grades</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
-          {assignments.filter(a => a.id !== "participation").map(a => {
-            const g = grades[sid + "-" + a.id] || {};
-            const sub = (data.submissions || {})[sid + "-" + a.id];
-            const vidSub = (data.videoSubmissions || {})[sid + "-" + a.id];
-            const dueDate = parseDueDate(a.due);
-            const isLate = sub && dueDate && sub.ts > dueDate.getTime();
-            const isPastDue = dueDate && Date.now() > dueDate.getTime();
-            const hasGrade = g.score !== undefined && g.score !== "";
-            return (
-              <div key={a.id} style={{ ...crd, padding: 14 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{a.name}</div>
-                    {hasGrade && parseFloat(g.score) === 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "#fef2f2", color: RED }}>Zero</span>}
-                    {!hasGrade && sub && isLate && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "#fffbeb", color: AMBER }}>Late</span>}
-                    {!hasGrade && !sub && isPastDue && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "#fef2f2", color: RED }}>Missing</span>}
-                    {!hasGrade && sub && !isLate && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "#eff6ff", color: "#2563eb" }}>Submitted</span>}
-                  </div>
-                  <div style={{ fontSize: 12, color: "#9ca3af" }}>{a.weight}% {a.due ? "/ Due " + a.due : ""}</div>
-                </div>
-                {/* Submission info */}
-                {sub && (
-                  <div style={{ marginBottom: 8, padding: "6px 10px", background: "#f9fafb", borderRadius: 8 }}>
-                    {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 2 }}>View Submission</a>}
-                    {sub.videoUrl && <a href={sub.videoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 2 }}>Video</a>}
-                    {sub.notes && <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2, lineHeight: 1.4 }}>"{sub.notes}"</div>}
-                    <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
-                      Submitted {new Date(sub.ts).toLocaleString()}
-                      {isLate && <span style={{ color: AMBER, fontWeight: 600, marginLeft: 6 }}>LATE</span>}
-                    </div>
-                  </div>
-                )}
-                {!sub && <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic", marginBottom: 6 }}>No submission</div>}
-                {isAdmin ? (
-                  <div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
-                      <input type="number" value={g.score ?? ""} onChange={e => updateGrade(sid, a.id, "score", e.target.value)} placeholder="Score" style={{ ...inp, width: 80, padding: "6px 10px", fontSize: 13 }} />
-                      <span style={{ fontSize: 13, color: "#9ca3af" }}>/</span>
-                      <input type="number" value={g.outOf ?? 100} onChange={e => updateGrade(sid, a.id, "outOf", e.target.value)} placeholder="100" style={{ ...inp, width: 60, padding: "6px 10px", fontSize: 13 }} />
-                      <input value={g.comment || ""} onChange={e => updateGrade(sid, a.id, "comment", e.target.value)} placeholder="Comment..." style={{ ...inp, flex: 1, padding: "6px 10px", fontSize: 13 }} />
-                    </div>
-                    {/* Regrade request from student */}
-                    {(() => {
-                      const rr = (data.regradeRequests || {})[sid + "-" + a.id];
-                      if (!rr) return null;
-                      const dismissRegrade = async () => {
-                        const regradeRequests = { ...(data.regradeRequests || {}) };
-                        delete regradeRequests[sid + "-" + a.id];
-                        const updated = { ...data, regradeRequests };
-                        await saveData(updated); setData(updated);
-                      };
-                      return (
-                        <div style={{ marginTop: 6, padding: "8px 10px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fde68a" }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: AMBER, textTransform: "uppercase", marginBottom: 4 }}>Regrade Request</div>
-                          <div style={{ fontSize: 13, color: "#92400e", lineHeight: 1.4 }}>{rr.note}</div>
-                          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>{new Date(rr.ts).toLocaleString()}</div>
-                          <button onClick={dismissRegrade} style={{ ...pill, background: "#fff", color: TEXT_SECONDARY, border: "1px solid #e5e7eb", fontSize: 11, marginTop: 6 }}>Dismiss Request</button>
-                        </div>
-                      );
-                    })()}
-                    {/* Quick Grade button */}
-                    {!!(data.assignmentRubrics || {})[a.id] && (
-                      <button onClick={() => setQuickGradeId(quickGradeId === sid + "-" + a.id ? null : sid + "-" + a.id)} style={{ ...pill, fontSize: 11, marginTop: 6, background: quickGradeId === sid + "-" + a.id ? ACCENT : "#eff6ff", color: quickGradeId === sid + "-" + a.id ? "#fff" : ACCENT, width: "100%" }}>
-                        {quickGradeId === sid + "-" + a.id ? "Close Quick Grade" : "Quick Grade"}
-                      </button>
+        <div style={{ ...sectionLabel, marginBottom: 10 }}>Assignment Table</div>
+        <div style={{ ...crd, marginBottom: 16, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: F }}>
+            <thead>
+              <tr style={{ background: "#fafafa", borderBottom: "1px solid " + BORDER_STRONG }}>
+                <th style={{ ...sectionLabel, textAlign: "left", padding: "10px 14px", fontWeight: 700 }}>Assignment</th>
+                <th style={{ ...sectionLabel, textAlign: "left", padding: "10px 10px", fontWeight: 700 }}>Due / Status</th>
+                <th style={{ ...sectionLabel, textAlign: "right", padding: "10px 10px", fontWeight: 700 }}>Weight</th>
+                <th style={{ ...sectionLabel, textAlign: "right", padding: "10px 10px", fontWeight: 700 }}>Score</th>
+                <th style={{ ...sectionLabel, textAlign: "right", padding: "10px 14px", fontWeight: 700 }}>Contribution</th>
+              </tr>
+            </thead>
+            <tbody>
+              {regularAsgs.map((a, i) => renderAsgRow(a, i, i === regularAsgs.length - 1))}
+
+              {/* In-Class row (always last, expandable) */}
+              <tr onClick={() => setInClassExpanded(!inClassExpanded)} style={{ borderBottom: inClassExpanded ? "1px solid " + BORDER : "none", cursor: "pointer", background: inClassExpanded ? "#fafafa" : "transparent" }}>
+                <td style={{ padding: "12px 14px", fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>
+                  <span style={{ display: "inline-block", marginRight: 6, transform: inClassExpanded ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", color: TEXT_MUTED }}>▸</span>
+                  In-Class
+                </td>
+                <td style={{ padding: "12px 10px", fontSize: 12, color: TEXT_SECONDARY }}>Ongoing <span style={{ fontSize: 10, fontWeight: 700, color: GREEN, marginLeft: 4 }}>ONGOING</span></td>
+                <td style={{ padding: "12px 10px", fontSize: 13, textAlign: "right", color: TEXT_SECONDARY, fontVariantNumeric: "tabular-nums" }}>{partWeight}%</td>
+                <td style={{ padding: "12px 10px", fontSize: 13, fontWeight: 700, textAlign: "right", color: AMBER, fontVariantNumeric: "tabular-nums" }}>{inClassEarned} / {inClassPossible}</td>
+                <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 700, textAlign: "right", color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{inClassContribution !== null ? inClassContribution + " pts" : "—"}</td>
+              </tr>
+
+              {inClassExpanded && (
+                <tr style={{ background: "#fafafa" }}>
+                  <td colSpan={5} style={{ padding: "12px 14px 16px" }}>
+                    {/* Grade Points block */}
+                    <div style={{ fontSize: 15, fontWeight: 800, color: TEXT_PRIMARY, marginBottom: 8 }}>Grade Points</div>
+                    {gameWeeks.length === 0 && fbWeeks.length === 0 && (
+                      <div style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 10 }}>No weekly data yet.</div>
                     )}
-                    {quickGradeId === sid + "-" + a.id && (
-                      <div style={{ marginTop: 8 }}>
-                        <QuickGrade assignmentId={a.id} studentId={sid} studentName={student?.name || ""} data={data} setData={setData} onClose={() => setQuickGradeId(null)} />
+                    {gameWeeks.map(gw => {
+                      const value = gw.applied !== null ? gw.applied : gw.original;
+                      const note = gw.applied !== null && gw.applied !== gw.original ? "(was originally " + gw.original + " before rebound)" : null;
+                      return renderGradeLine("Week " + gw.week + " Game", value, 100, { key: "g-" + gw.week, note, canEdit: true, type: "game", week: gw.week });
+                    })}
+                    {fbWeeks.map(fb => renderGradeLine("Week " + fb.week + " Fishbowl", fb.score, fb.max, { key: "f-" + fb.week, canEdit: true, type: "fishbowl", week: fb.week }))}
+                    {inClassPts !== 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#fff", borderRadius: 8, border: "1px solid " + BORDER, marginBottom: 4 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>In-Class points</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: inClassPts > 0 ? GREEN : RED, fontVariantNumeric: "tabular-nums" }}>{inClassPts > 0 ? "+" : ""}{inClassPts}</div>
                       </div>
                     )}
-                  </div>
-                ) : (
-                  <div>
-                    {g.score !== undefined && g.score !== "" ? (
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                        <span style={{ fontSize: 20, fontWeight: 900, color: "#111827" }}>{g.score}</span>
-                        <span style={{ fontSize: 13, color: "#9ca3af" }}>/ {g.outOf || 100}</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: TEXT_PRIMARY, color: "#fff", borderRadius: 8, marginTop: 8 }}>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 800 }}>Total</div>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>= {Math.round(participationPct * partWeight * 10) / 10} / {partWeight} toward grade</div>
                       </div>
-                    ) : (
-                      <div style={{ fontSize: 13, color: "#d1d5db", fontStyle: "italic" }}>Not graded yet</div>
-                    )}
-                    {g.comment && <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4, padding: "8px 10px", background: "#f8fafc", borderRadius: 8, lineHeight: 1.4 }}>{g.comment}</div>}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div style={{ ...sectionLabel, marginBottom: 8 }}>Weekly Game Breakdown</div>
-        <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
-          {gameWeeks.length === 0 ? (
-            <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>No games scored yet.</div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {gameWeeks.map(g => {
-                const final = g.applied !== null ? g.applied : g.original;
-                const hasMakeup = g.rebound?.type === "makeup";
-                const status = (!g.answered && !hasMakeup) ? "absent" : g.applied !== null ? "rebound" : final >= 80 ? "ok" : "low";
-                return (
-                  <div key={g.week} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 8, background: status === "rebound" ? "#dbeafe" : status === "ok" ? "#f0fdf4" : status === "absent" ? "#fef2f2" : "#fffbeb" }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Week {g.week}</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>
-                      {!g.answered && !hasMakeup ? (
-                        <span style={{ color: "#dc2626", fontStyle: "italic" }}>Absent</span>
-                      ) : !hasMakeup ? (
-                        <span style={{ color: "#6b7280" }}>{g.correctCount}/{g.totalQs} correct</span>
-                      ) : null}
-                      {g.applied !== null ? (
-                        <span style={{ fontWeight: 700 }}>
-                          {!hasMakeup && <span style={{ color: "#9ca3af", textDecoration: "line-through", fontWeight: 500, marginRight: 6 }}>{g.original}</span>}
-                          <span style={{ color: "#1e40af" }}>{g.applied}/100</span>
-                          <span style={{ fontSize: 11, color: "#6b7280", marginLeft: 6, fontWeight: 500 }}>({g.rebound.type === "makeup" ? "Makeup" : g.rebound.type === "absence_override" ? "Override" : "Rebound"})</span>
-                        </span>
-                      ) : (
-                        <span style={{ fontWeight: 700, color: status === "ok" ? "#166534" : status === "absent" ? "#9ca3af" : "#92400e" }}>{g.original}/100</span>
-                      )}
+                      <div style={{ fontSize: 20, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>{inClassEarned}<span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>/{inClassPossible}</span></div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+
+                    {/* Game Score block */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 16, marginBottom: 8 }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: TEXT_PRIMARY }}>Game Score</div>
+                      <div style={{ fontSize: 20, fontWeight: 900, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{leaderboardTotal}</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>For the in-class leaderboard. Doesn't count toward grade.</div>
+                    {sortedWeeks(gameByWeek).map(w => renderGameLine("Week " + w + " Game", gameByWeek[w], "gm-" + w))}
+                    {sortedWeeks(totByWeek).map(w => renderGameLine("Week " + w + " This or That", totByWeek[w], "tm-" + w))}
+                    {sortedWeeks(fbByWeek).map(w => renderGameLine("Week " + w + " Fishbowl", fbByWeek[w], "fm-" + w))}
+                    {inClassPts !== 0 && renderGameLine("In-Class points", inClassPts, "icp")}
+                    {teamWins !== 0 && renderGameLine("Team Win Bonuses", teamWins, "tw")}
+                    {teamTrivia !== 0 && renderGameLine("Team Trivia", teamTrivia, "tt")}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "#fff", borderRadius: 8, border: "2px solid " + TEXT_PRIMARY, marginTop: 8 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY }}>Total</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{leaderboardTotal}</div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
-        <div style={{ ...sectionLabel, marginBottom: 8 }}>This or That Breakdown</div>
-        <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
-          {totWeeks.length === 0 ? (
-            <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>None yet.</div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {totWeeks.map(t => (
-                <div key={t.week} style={{ display: "flex", justifyContent: "space-between", padding: "6px 10px", borderRadius: 8, background: !t.answered ? "#fef2f2" : t.score >= 16 ? "#f0fdf4" : "#fffbeb" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Week {t.week}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: !t.answered ? "#dc2626" : t.score >= 16 ? "#166534" : "#92400e" }}>
-                    {!t.answered ? "Absent" : t.score + "/" + t.max}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div style={{ ...sectionLabel, marginBottom: 8 }}>Fishbowl Breakdown</div>
-        <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
-          {fbWeeks.length === 0 ? (
-            <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>None yet.</div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {fbWeeks.map(f => (
-                <div key={f.week} style={{ display: "flex", justifyContent: "space-between", padding: "6px 10px", borderRadius: 8, background: f.score === 0 ? "#f3f4f6" : f.score >= 16 ? "#f0fdf4" : "#fffbeb" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Week {f.week}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: f.score === 0 ? "#9ca3af" : f.score >= 16 ? "#166534" : "#92400e" }}>{f.score}/{f.max}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div style={{ ...sectionLabel, marginBottom: 8 }}>Participation (25%) - auto-calculated</div>
-        <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, borderBottom: "1px solid #f3f4f6" }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Weekly Game (Grade pts)</div>
-                <div style={{ fontSize: 11, color: "#9ca3af" }}>Recomputed from responses / On Topic 15pts, Sports World 2.5pts</div>
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{p.gameGradeEarned}<span style={{ fontSize: 12, color: "#9ca3af" }}> / {p.gameGradePossible}</span></div>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, borderBottom: "1px solid #f3f4f6" }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>This or That</div>
-                <div style={{ fontSize: 11, color: "#9ca3af" }}>20 pts each</div>
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{p.totEarned}<span style={{ fontSize: 12, color: "#9ca3af" }}> / {p.totPossible}</span></div>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, borderBottom: "1px solid #f3f4f6" }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Fishbowl</div>
-                <div style={{ fontSize: 11, color: "#9ca3af" }}>20 pts each</div>
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{p.fbEarned}<span style={{ fontSize: 12, color: "#9ca3af" }}> / {p.fbPossible}</span></div>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, borderBottom: "1px solid #f3f4f6" }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Around the Horn</div>
-                <div style={{ fontSize: 11, color: "#9ca3af" }}>Bonus, not in denominator</div>
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontVariantNumeric: "tabular-nums" }}>+{p.athEarned}</div>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: ACCENT + "10", borderRadius: 8, marginTop: 4 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: ACCENT }}>Total</div>
-              <div style={{ fontSize: 20, fontWeight: 900, color: ACCENT, fontVariantNumeric: "tabular-nums" }}>{p.totalEarned} / {p.totalPossible} <span style={{ fontSize: 13, fontWeight: 700 }}>({Math.round(p.participationPct * 1000) / 10}%)</span></div>
-            </div>
+        {/* Current grade footer */}
+        {finalGradePct !== null && (
+          <div style={{ ...crd, padding: "14px 18px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_SECONDARY }}>Current grade</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: ACCENT, fontVariantNumeric: "tabular-nums" }}>{finalGradePct}%</div>
           </div>
-        </div>
+        )}
       </div>
     );
   };
@@ -2494,12 +2633,14 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
           </div>
 
           {selStudent && (
-            <div style={{ ...crd, padding: 20 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>{data.students.find(s => s.id === selStudent)?.name}</div>
-                <button onClick={() => setSelStudent(null)} style={pillInactive}>Close</button>
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 16px", overflowY: "auto" }}>
+              <div style={{ background: "#fff", borderRadius: 16, padding: 24, maxWidth: 900, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, position: "sticky", top: -24, background: "#fff", padding: "8px 0", zIndex: 1, borderBottom: "1px solid " + BORDER }}>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: TEXT_PRIMARY }}>{data.students.find(s => s.id === selStudent)?.name}</div>
+                  <button onClick={() => { setSelStudent(null); setExpandedAsgId(null); setGradeEditor(null); setAsgEditor(null); }} style={pillInactive}>Close</button>
+                </div>
+                {renderStudentGrades(selStudent)}
               </div>
-              {renderStudentGrades(selStudent)}
             </div>
           )}
 
