@@ -1643,6 +1643,317 @@ Match each note to the correct student name from the list above. Use the student
 }
 
 /* --- QUICK GRADE --- */
+function QuickGrade({ assignmentId, studentId, studentName, data, setData, onClose }) {
+  const rubric = (data.assignmentRubrics || {})[assignmentId];
+  const sub = (data.submissions || {})[studentId + "-" + assignmentId];
+  const existingGrade = (data.grades || {})[studentId + "-" + assignmentId] || {};
+
+  const [selected, setSelected] = useState(new Set());
+  const bulkNote = ((data.bulkNotes || {})[assignmentId] || {})[studentId] || "";
+  const [customNote, setCustomNote] = useState(bulkNote);
+  const [generatedComment, setGeneratedComment] = useState("");
+  const [suggestedTier, setSuggestedTier] = useState(null);
+  const [selectedTier, setSelectedTier] = useState(null);
+  const [score, setScore] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState("select"); // "select" | "review"
+  const [addingItem, setAddingItem] = useState(false);
+  const [newItemLabel, setNewItemLabel] = useState("");
+  const [newItemExplanation, setNewItemExplanation] = useState("");
+  const [newItemPositive, setNewItemPositive] = useState(false);
+  const [newItemSub, setNewItemSub] = useState("general");
+  const [msg, setMsg] = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
+
+  if (!rubric) return null;
+
+  const tiers = rubric.tiers || [];
+  const allItems = rubric.items || [];
+  const sections = rubric.sections || [];
+
+  // Flatten subsections for the new item dropdown
+  const allSubsections = [];
+  sections.forEach(sec => {
+    (sec.subsections || []).forEach(sub => {
+      allSubsections.push({ id: sub.id, label: sec.label + " > " + sub.label });
+    });
+  });
+
+  const toggle = (id) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelected(next);
+  };
+
+  const saveNewItemToRubric = async () => {
+    if (!newItemLabel.trim()) return;
+    const newItem = { id: genId(), sub: newItemSub, label: newItemLabel.trim(), explanation: newItemExplanation.trim(), link: "", positive: newItemPositive };
+    const rubrics = data.assignmentRubrics || {};
+    const current = rubrics[assignmentId] || rubric;
+    const updatedRubric = { ...current, items: [...(current.items || []), newItem] };
+    const updated = { ...data, assignmentRubrics: { ...rubrics, [assignmentId]: updatedRubric } };
+    await saveData(updated); setData(updated);
+    // Auto-select the new item
+    const next = new Set(selected);
+    next.add(newItem.id);
+    setSelected(next);
+    setNewItemLabel(""); setNewItemExplanation(""); setNewItemPositive(false); setNewItemSub("general"); setAddingItem(false);
+    showMsg("Added to rubric");
+  };
+
+  const generateFeedback = async () => {
+    if (selected.size === 0) { showMsg("Select at least one feedback item"); return; }
+    setLoading(true);
+    try {
+      const selectedItems = allItems.filter(i => selected.has(i.id));
+      const positives = selectedItems.filter(i => i.positive);
+      const negatives = selectedItems.filter(i => !i.positive);
+
+      // Build section context for the AI
+      const sectionInfo = sections.map(s => {
+        const subIds = (s.subsections || []).map(sub => sub.id);
+        const sectionItems = selectedItems.filter(i => subIds.includes(i.sub));
+        return { label: s.label, weight: s.weight, positiveCount: sectionItems.filter(i => i.positive).length, negativeCount: sectionItems.filter(i => !i.positive).length };
+      }).filter(s => s.positiveCount + s.negativeCount > 0);
+
+      const generalItems = selectedItems.filter(i => i.sub === "general");
+
+      const tierList = tiers.map(t => t.label + " (" + t.min + "-" + t.max + ")").join(", ");
+
+      const prompt = `You are writing brief grading feedback for a college professor. The professor's style is casual, warm, and direct. Short sentences. No flowery language. No words like "excellence," "exemplary," "substantive," "demonstrates," "genuinely," "meaningful," "exceptional." Write like a real person talking to a student they like.
+
+Rules:
+- Keep it SHORT. 2-4 short paragraphs max. Each paragraph is 1-3 sentences.
+- Plain text only. No bullet points, no numbered lists, no markdown, no bold headers.
+- Lead with the positive stuff, then areas for improvement.
+- Address the student as "you"
+- Use the explanation text from each feedback item but rewrite it to be casual and concise. Don't just copy it verbatim.
+- If there are links, include them naturally.
+- No filler phrases like "Overall," "In conclusion," "This assignment," "Moving forward." Just say the thing.
+- Sound like a person, not a grading rubric.
+
+Good example of the right tone: "Nice work on the interview guide. Your questions are thoughtful and well-organized. The summary is clear and I can tell you actually engaged with the conversation. One thing to work on: include more specific details from the interview itself. I want to hear what they actually said, not just general takeaways."
+
+${customNote ? "Include this personal note at the start (keep it natural): " + customNote : ""}
+
+Sections and their approximate weights:
+${sectionInfo.map(s => s.label + " (~" + s.weight + "%): " + s.positiveCount + " positive, " + s.negativeCount + " negative").join("\n")}
+${generalItems.length > 0 ? "General items: " + generalItems.length : ""}
+
+Selected positive feedback:
+${positives.map(i => "- " + i.label + ": " + i.explanation + (i.link ? " [Link: " + i.link + "]" : "")).join("\n") || "(none)"}
+
+Selected negative feedback:
+${negatives.map(i => "- " + i.label + ": " + i.explanation + (i.link ? " [Link: " + i.link + "]" : "")).join("\n") || "(none)"}
+
+Available tiers: ${tierList}
+
+Based on the balance of positive and negative feedback across the weighted sections, suggest the most appropriate tier. Respond with ONLY a JSON object (no markdown, no backticks):
+{"tier": "tier label", "comment": "your full comment to the student"}`;
+
+      const response = await fetch("/api/generate-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("API error:", response.status, errText);
+        showMsg("Error: " + response.status + ". Check console.");
+        setLoading(false);
+        return;
+      }
+
+      const result = await response.json();
+      const text = (result.content || []).map(c => c.text || "").join("");
+      const clean = text.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+
+      setGeneratedComment(parsed.comment || "");
+      const tierMatch = tiers.find(t => t.label.toLowerCase() === (parsed.tier || "").toLowerCase());
+      if (tierMatch) {
+        setSuggestedTier(tierMatch.label);
+        setSelectedTier(tierMatch.label);
+        setScore(String(Math.round((tierMatch.min + tierMatch.max) / 2)));
+      }
+      setStep("review");
+    } catch (err) {
+      console.error("Quick Grade AI error:", err);
+      showMsg("Error generating feedback. Try again.");
+    }
+    setLoading(false);
+  };
+
+  const selectTier = (tierLabel) => {
+    setSelectedTier(tierLabel);
+    const t = tiers.find(x => x.label === tierLabel);
+    if (t) setScore(String(Math.round((t.min + t.max) / 2)));
+  };
+
+  const saveQuickGrade = async () => {
+    if (!score) { showMsg("Enter a score"); return; }
+    const key = studentId + "-" + assignmentId;
+    const grades = data.grades || {};
+    const existing = grades[key] || {};
+    const newGrade = { ...existing, score: parseFloat(score), outOf: 100, comment: generatedComment, gradedTs: Date.now() };
+    const regradeRequests = { ...(data.regradeRequests || {}) };
+    delete regradeRequests[key];
+    const gradeNotifications = { ...(data.gradeNotifications || {}), [key]: { ts: Date.now() } };
+    const updated = { ...data, grades: { ...grades, [key]: newGrade }, regradeRequests, gradeNotifications };
+    await saveData(updated); setData(updated);
+    showMsg("Grade saved");
+    onClose();
+  };
+
+  // Render subsection items as toggle buttons
+  const renderSubItems = (subId) => {
+    const subItems = allItems.filter(i => i.sub === subId);
+    if (subItems.length === 0) return <div style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic", padding: "2px 0" }}>No items</div>;
+    return subItems.map(item => {
+      const isOn = selected.has(item.id);
+      const bg = isOn ? (item.positive ? GREEN : RED) : (item.positive ? "#ecfdf5" : "#fef2f2");
+      const color = isOn ? "#fff" : (item.positive ? "#065f46" : "#991b1b");
+      const border = isOn ? "transparent" : (item.positive ? "#a7f3d0" : "#fecaca");
+      return (
+        <button key={item.id} onClick={() => toggle(item.id)} style={{ ...pill, padding: "6px 12px", fontSize: 12, background: bg, color, border: "1.5px solid " + border, margin: "2px 4px 2px 0" }}>
+          {item.positive ? "+" : "-"} {item.label}
+        </button>
+      );
+    });
+  };
+
+  return (
+    <div style={{ ...crd, padding: 16, marginBottom: 12, border: "2px solid " + ACCENT }}>
+      {msg && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "#1e293b", color: "#fff", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, zIndex: 999 }}>{msg}</div>}
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>Quick Grade: {studentName}</div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{(data.assignments || []).find(a => a.id === assignmentId)?.name}</div>
+        </div>
+        <button onClick={onClose} style={pillInactive}>Close</button>
+      </div>
+
+      {/* Submission link */}
+      {sub && (
+        <div style={{ padding: "8px 10px", background: "#f9fafb", borderRadius: 8, marginBottom: 12 }}>
+          {sub.docUrl && <a href={sub.docUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: ACCENT, fontWeight: 500 }}>View Submission</a>}
+          {sub.notes && <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>"{sub.notes}"</div>}
+          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>Submitted {new Date(sub.ts).toLocaleString()}</div>
+        </div>
+      )}
+
+      {step === "select" && (
+        <div>
+          {/* Free form instructions to AI */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Say something to the student (optional)</div>
+            <textarea value={customNote} onChange={e => setCustomNote(e.target.value)} placeholder={"e.g. \"Let them know I'm here if they have questions\" or \"Great job picking this person\""} rows={2} style={{ ...inp, fontSize: 13, padding: "8px 10px", resize: "vertical" }} />
+            <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>This gets woven into the comment naturally. Say it however you want.</div>
+          </div>
+
+          {/* Sections with subsections and items */}
+          {sections.map(sec => (
+            <div key={sec.id} style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: "#111827", marginBottom: 6 }}>{sec.label} <span style={{ fontWeight: 500, color: TEXT_MUTED }}>(~{sec.weight}%)</span></div>
+              {(sec.subsections || []).map(sub => (
+                <div key={sub.id} style={{ marginBottom: 8, marginLeft: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{sub.label}</div>
+                  <div style={{ display: "flex", flexWrap: "wrap" }}>
+                    {renderSubItems(sub.id)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+
+          {/* General items */}
+          {allItems.filter(i => i.sub === "general").length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: "#111827", marginBottom: 6 }}>General</div>
+              <div style={{ display: "flex", flexWrap: "wrap" }}>
+                {renderSubItems("general")}
+              </div>
+            </div>
+          )}
+
+          {/* Add new item to rubric */}
+          {!addingItem ? (
+            <button onClick={() => setAddingItem(true)} style={{ ...pillInactive, fontSize: 11, marginBottom: 12 }}>+ Add new feedback item to rubric</button>
+          ) : (
+            <div style={{ padding: "10px 12px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 6 }}>New rubric item (saves for all students)</div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                <button onClick={() => setNewItemPositive(!newItemPositive)} style={{ ...pill, padding: "4px 10px", fontSize: 11, background: newItemPositive ? GREEN : RED, color: "#fff", flexShrink: 0 }}>{newItemPositive ? "+ Positive" : "- Negative"}</button>
+                <select value={newItemSub} onChange={e => setNewItemSub(e.target.value)} style={{ ...sel, fontSize: 12, padding: "4px 8px" }}>
+                  <option value="general">General</option>
+                  {allSubsections.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+              </div>
+              <input value={newItemLabel} onChange={e => setNewItemLabel(e.target.value)} placeholder="Button label (short)" style={{ ...inp, fontSize: 13, padding: "6px 8px", marginBottom: 4 }} />
+              <textarea value={newItemExplanation} onChange={e => setNewItemExplanation(e.target.value)} placeholder="Explanation for student..." rows={2} style={{ ...inp, fontSize: 13, padding: "6px 8px", resize: "vertical", marginBottom: 6 }} />
+              <div style={{ display: "flex", gap: 4 }}>
+                <button onClick={saveNewItemToRubric} disabled={!newItemLabel.trim()} style={{ ...pill, background: newItemLabel.trim() ? "#111827" : "#d1d5db", color: "#fff", flex: 1 }}>Save to Rubric</button>
+                <button onClick={() => { setAddingItem(false); setNewItemLabel(""); setNewItemExplanation(""); }} style={pillInactive}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button onClick={generateFeedback} disabled={loading || selected.size === 0} style={{ ...pill, background: selected.size > 0 ? "#111827" : "#d1d5db", color: "#fff", padding: "10px 20px", fontSize: 14 }}>
+              {loading ? "Generating..." : "Generate Feedback (" + selected.size + " selected)"}
+            </button>
+            <span style={{ fontSize: 12, color: TEXT_MUTED }}>{selected.size} item{selected.size !== 1 ? "s" : ""} selected</span>
+          </div>
+        </div>
+      )}
+
+      {step === "review" && (
+        <div>
+          {/* Tier selection */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 6 }}>
+              Tier {suggestedTier ? "(AI suggested: " + suggestedTier + ")" : ""}
+            </div>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              {tiers.map(t => (
+                <button key={t.label} onClick={() => selectTier(t.label)} style={{ ...pill, padding: "8px 14px", fontSize: 12, background: selectedTier === t.label ? "#111827" : "#f3f4f6", color: selectedTier === t.label ? "#fff" : "#4b5563", border: suggestedTier === t.label && selectedTier !== t.label ? "2px solid " + ACCENT : "2px solid transparent" }}>
+                  {t.label} ({t.min}-{t.max})
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Score */}
+          <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase" }}>Score</div>
+            <input type="number" value={score} onChange={e => setScore(e.target.value)} style={{ ...inp, width: 70, fontSize: 16, fontWeight: 900, padding: "6px 10px", textAlign: "center" }} />
+            <span style={{ fontSize: 13, color: TEXT_MUTED }}>/ 100</span>
+            {selectedTier && (() => {
+              const t = tiers.find(x => x.label === selectedTier);
+              const s = parseFloat(score);
+              if (t && (s < t.min || s > t.max)) return <span style={{ fontSize: 11, color: AMBER, fontWeight: 600 }}>Outside {selectedTier} range ({t.min}-{t.max})</span>;
+              return null;
+            })()}
+          </div>
+
+          {/* Comment preview */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", marginBottom: 4 }}>Comment (editable)</div>
+            <textarea value={generatedComment} onChange={e => setGeneratedComment(e.target.value)} rows={8} style={{ ...inp, fontSize: 13, padding: "10px 12px", resize: "vertical", lineHeight: 1.6 }} />
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={saveQuickGrade} style={{ ...pill, background: GREEN, color: "#fff", padding: "10px 20px", fontSize: 14, flex: 1 }}>Save Grade</button>
+            <button onClick={() => setStep("select")} style={{ ...pillInactive, padding: "10px 16px" }}>Back</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   const { theme } = useTheme("comm2-v1");
   const crd = themedInteriorCrd(theme, 0);
