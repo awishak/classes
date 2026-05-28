@@ -463,7 +463,8 @@ function computeParticipationGrade(data, sid) {
   const athEntries = log.filter(e => e.studentId === sid && ((e.source || "") === "Around the Horn" || (e.source || "") === "PTI"));
   const athEarned = athEntries.reduce((s, e) => s + e.amount, 0);
   const totalEarned = gameGradeEarned + fbEarned + athEarned;
-  const totalPossible = gameGradePossible + fbPossible;
+  const offset = typeof data.participationDenominatorOffset === "number" ? data.participationDenominatorOffset : 0;
+  const totalPossible = gameGradePossible + fbPossible + offset;
   const participationPct = totalPossible > 0 ? (totalEarned / totalPossible) : 0;
   const participationGrade = participationPct * 25;
   return { participationGrade, participationPct, totalEarned, totalPossible };
@@ -2671,7 +2672,8 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
     const athEarned = athEntries.reduce((s, e) => s + e.amount, 0);
 
     const totalEarned = gameGradeEarned + fbEarned + athEarned;
-    const totalPossible = gameGradePossible + fbPossible;
+    const offset = typeof data.participationDenominatorOffset === "number" ? data.participationDenominatorOffset : 0;
+    const totalPossible = gameGradePossible + fbPossible + offset;
     const participationPct = totalPossible > 0 ? (totalEarned / totalPossible) : 0;
     const participationGrade = participationPct * 25;
 
