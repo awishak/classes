@@ -424,6 +424,20 @@ function fmtDayDate(ts) {
 // Top-level participation grade computation — mirrors Gradebook's computeAutoParticipation.
 // AssignmentsView calls this to populate the participation row of the grades table.
 function computeParticipationGrade(data, sid) {
+  const override = (data.participationOverride || {})[sid];
+  if (override !== undefined && override !== null && override !== "") {
+    const val = Math.max(0, Math.min(25, parseFloat(override) || 0));
+    return {
+      gameGradeEarned: 0, gameGradePossible: 0,
+      totEarned: 0, totPossible: 0,
+      fbEarned: 0, fbPossible: 0,
+      athEarned: 0,
+      totalEarned: Math.round(val * 10) / 10, totalPossible: 25,
+      participationPct: val / 25,
+      participationGrade: Math.round(val * 10) / 10,
+      isOverride: true,
+    };
+  }
   const log = data.log || [];
   const weeklyGames = data.weeklyGames || {};
   const reboundGrades = data.reboundGrades || {};
@@ -487,6 +501,25 @@ function computeParticipationGrade(data, sid) {
     participationPct,
     participationGrade: Math.round(participationGrade * 10) / 10,
   };
+}
+
+// Local-state editor for the manual participation grade so typing doesn't
+// trigger a save on every keystroke (avoids cursor jump). Saves on button.
+function ParticipationOverrideEditor({ current, onSave, onClear }) {
+  const hasOverride = current !== undefined && current !== null && current !== "";
+  const [val, setVal] = useState(hasOverride ? String(current) : "");
+  return (
+    <div style={{ marginTop: 14, padding: "12px 14px", background: "#fff", borderRadius: 8, border: "1px solid " + BORDER_STRONG }}>
+      <div style={{ ...sectionLabel, marginBottom: 6 }}>Manual Participation Grade</div>
+      <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 10 }}>Overrides the auto grade. Out of 25, decimals allowed. Clear to revert to auto.</div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <input type="number" step="0.1" min="0" max="25" value={val} onChange={e => setVal(e.target.value)} placeholder="0-25" style={{ ...inp, width: 90, fontSize: 16, fontWeight: 700, padding: "8px 12px", textAlign: "center" }} />
+        <span style={{ fontSize: 14, color: TEXT_MUTED }}>/ 25</span>
+        <button onClick={() => onSave(val)} style={{ ...pill, background: GREEN, color: "#fff" }}>Save</button>
+        {hasOverride && <button onClick={() => { setVal(""); onClear(); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Clear</button>}
+      </div>
+    </div>
+  );
 }
 
 // Determine state for an assignment dot
@@ -1976,6 +2009,24 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   // Whether the In-Class row in the detail modal is expanded
   const [inClassExpanded, setInClassExpanded] = useState(true);
 
+  // Set or clear a manual participation grade (0-25, decimals allowed) for one
+  // student. Writes data.participationOverride[sid]. When set, both compute
+  // functions return it as the In-Class grade and ignore auto activity data.
+  const setParticipationOverride = async (sid, rawVal) => {
+    const v = parseFloat(rawVal);
+    if (isNaN(v)) return;
+    const val = Math.max(0, Math.min(25, v));
+    const updated = { ...data, participationOverride: { ...(data.participationOverride || {}), [sid]: val } };
+    await saveData(updated); setData(updated);
+  };
+
+  const clearParticipationOverride = async (sid) => {
+    const next = { ...(data.participationOverride || {}) };
+    delete next[sid];
+    const updated = { ...data, participationOverride: next };
+    await saveData(updated); setData(updated);
+  };
+
   // Apply a manual grade rebound for one student's weekly game. Writes
   // reboundGrades[sid + "-game-" + w] with type "makeup" so the gradebook reads
   // it uncapped.
@@ -2113,6 +2164,20 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   };
 
   const computeAutoParticipation = (sid) => {
+    const override = (data.participationOverride || {})[sid];
+    if (override !== undefined && override !== null && override !== "") {
+      const val = Math.max(0, Math.min(25, parseFloat(override) || 0));
+      return {
+        gameGradeEarned: 0, gameGradePossible: 0,
+        totEarned: 0, totPossible: 0,
+        fbEarned: 0, fbPossible: 0,
+        athEarned: 0,
+        totalEarned: Math.round(val * 10) / 10, totalPossible: 25,
+        participationPct: val / 25,
+        participationGrade: Math.round(val * 10) / 10,
+        isOverride: true,
+      };
+    }
     const log = data.log || [];
     const weeklyGames = data.weeklyGames || {};
     const reboundGrades = data.reboundGrades || {};
@@ -2533,7 +2598,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
                   <span style={{ display: "inline-block", marginRight: 6, transform: inClassExpanded ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", color: TEXT_MUTED }}>▸</span>
                   In-Class
                 </td>
-                <td style={{ padding: "12px 10px", fontSize: 12, color: TEXT_SECONDARY }}>Ongoing <span style={{ fontSize: 10, fontWeight: 700, color: GREEN, marginLeft: 4 }}>ONGOING</span></td>
+                <td style={{ padding: "12px 10px", fontSize: 12, color: TEXT_SECONDARY }}>{p.isOverride ? <span style={{ fontSize: 10, fontWeight: 700, color: ACCENT }}>MANUAL</span> : <>Ongoing <span style={{ fontSize: 10, fontWeight: 700, color: GREEN, marginLeft: 4 }}>ONGOING</span></>}</td>
                 <td style={{ padding: "12px 10px", fontSize: 13, textAlign: "right", color: TEXT_SECONDARY, fontVariantNumeric: "tabular-nums" }}>{partWeight}%</td>
                 <td style={{ padding: "12px 10px", fontSize: 13, fontWeight: 700, textAlign: "right", color: AMBER, fontVariantNumeric: "tabular-nums" }}>{inClassEarned} / {inClassPossible}</td>
                 <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 700, textAlign: "right", color: TEXT_PRIMARY, fontVariantNumeric: "tabular-nums" }}>{inClassContribution !== null ? inClassContribution + " pts" : "—"}</td>
@@ -2566,6 +2631,13 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
                       </div>
                       <div style={{ fontSize: 20, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>{inClassEarned}<span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>/{inClassPossible}</span></div>
                     </div>
+
+                    <ParticipationOverrideEditor
+                      key={sid}
+                      current={(data.participationOverride || {})[sid]}
+                      onSave={(v) => setParticipationOverride(sid, v)}
+                      onClear={() => clearParticipationOverride(sid)}
+                    />
 
                     {/* Game Score block */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 16, marginBottom: 8 }}>
