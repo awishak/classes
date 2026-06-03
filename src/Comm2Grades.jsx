@@ -426,15 +426,17 @@ function fmtDayDate(ts) {
 function computeParticipationGrade(data, sid) {
   const override = (data.participationOverride || {})[sid];
   if (override !== undefined && override !== null && override !== "") {
-    const val = Math.max(0, Math.min(25, parseFloat(override) || 0));
+    const val = Math.max(0, Math.min(10, parseFloat(override) || 0));
+    const partWeight = (data.assignments || DEFAULT_ASSIGNMENTS).find(a => a.id === "participation")?.weight || 25;
+    const pct = val / 10;
     return {
       gameGradeEarned: 0, gameGradePossible: 0,
       totEarned: 0, totPossible: 0,
       fbEarned: 0, fbPossible: 0,
       athEarned: 0,
-      totalEarned: Math.round(val * 10) / 10, totalPossible: 25,
-      participationPct: val / 25,
-      participationGrade: Math.round(val * 10) / 10,
+      totalEarned: Math.round(val * 10) / 10, totalPossible: 10,
+      participationPct: pct,
+      participationGrade: Math.round(pct * partWeight * 10) / 10,
       isOverride: true,
     };
   }
@@ -511,10 +513,10 @@ function ParticipationOverrideEditor({ current, onSave, onClear }) {
   return (
     <div style={{ marginTop: 14, padding: "12px 14px", background: "#fff", borderRadius: 8, border: "1px solid " + BORDER_STRONG }}>
       <div style={{ ...sectionLabel, marginBottom: 6 }}>Manual Participation Grade</div>
-      <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 10 }}>Overrides the auto grade. Out of 25, decimals allowed. Clear to revert to auto.</div>
+      <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 10 }}>Overrides the auto grade. Out of 10, decimals allowed. Clear to revert to auto.</div>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <input type="number" step="0.1" min="0" max="25" value={val} onChange={e => setVal(e.target.value)} placeholder="0-25" style={{ ...inp, width: 90, fontSize: 16, fontWeight: 700, padding: "8px 12px", textAlign: "center" }} />
-        <span style={{ fontSize: 14, color: TEXT_MUTED }}>/ 25</span>
+        <input type="number" step="0.1" min="0" max="10" value={val} onChange={e => setVal(e.target.value)} placeholder="0-10" style={{ ...inp, width: 90, fontSize: 16, fontWeight: 700, padding: "8px 12px", textAlign: "center" }} />
+        <span style={{ fontSize: 14, color: TEXT_MUTED }}>/ 10</span>
         <button onClick={() => onSave(val)} style={{ ...pill, background: GREEN, color: "#fff" }}>Save</button>
         {hasOverride && <button onClick={() => { setVal(""); onClear(); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Clear</button>}
       </div>
@@ -772,6 +774,16 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
     await saveData(updated); setData(updated); setEditId(null); setEditLocal(null); showMsg("Removed");
   };
 
+  // Toggle an assignment's hidden flag. Hidden assignments are excluded from the
+  // student view and from the grade entirely, but kept in data and still visible
+  // to admin in the editor and gradebook grid.
+  const toggleHidden = async (id) => {
+    if (id === "participation") return;
+    const willHide = !assignments.find(a => a.id === id)?.hidden;
+    const updated = { ...data, assignments: assignments.map(a => a.id === id ? { ...a, hidden: !a.hidden } : a) };
+    await saveData(updated); setData(updated); showMsg(willHide ? "Hidden from students" : "Shown to students");
+  };
+
   const defaultBlurb = "Here's how your grade works. There are four major assignments worth 75% of your grade, and a participation bucket worth the other 25%. The participation bucket is where the weekly game, This or That, Around the Horn, and Rotating Fishbowl all live.\n\nThe game leaderboard and your actual grade are two different things. They pull from some of the same activities but weight them differently. The weekly game is the biggest example: the game weights all question types equally (10 pts each), but your grade weights On Topic questions much more heavily (15 pts each) than Sports World questions (2.5 pts each). So if you want to climb the leaderboard, be good at everything. If you want a good grade, focus on the course material.\n\nThe top 5 on the leaderboard at the end of the quarter get automatic A's. That's real. Everything else, just do the work, show up, and engage.";
   const blurbText = data.assignmentsBlurb || defaultBlurb;
 
@@ -798,10 +810,10 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
   // Falls back to first missing (past-due, ungraded) assignment if nothing is upcoming.
   const todayMidnight = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
   const nextAssignment = (() => {
-    if (!studentId) return sortedAssignments.find(a => a.id !== "participation" && !!a.due) || null;
+    if (!studentId) return sortedAssignments.find(a => a.id !== "participation" && !a.hidden && !!a.due) || null;
     // First, anything with a due date today or in the future
     const upcoming = sortedAssignments.find(a => {
-      if (a.id === "participation") return false;
+      if (a.id === "participation" || a.hidden) return false;
       const dueDate = parseDueDate(a.due);
       if (!dueDate) return false;
       return dueDate.getTime() >= todayMidnight;
@@ -809,7 +821,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
     if (upcoming) return upcoming;
     // Otherwise, fall back to anything past-due but ungraded (missing/late state)
     return sortedAssignments.find(a => {
-      if (a.id === "participation") return false;
+      if (a.id === "participation" || a.hidden) return false;
       const state = getAssignmentState(a, data, studentId);
       return state === "missing" || state === "late";
     }) || null;
@@ -817,7 +829,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
 
   // ── Compute current grade including participation
   const computeCurrentGrade = () => {
-    const gradeAssignments = sortedAssignments.filter(a => a.id !== "participation");
+    const gradeAssignments = sortedAssignments.filter(a => a.id !== "participation" && !a.hidden);
     let weightGraded = 0;
     let weightedScore = 0;
     gradeAssignments.forEach(a => {
@@ -973,7 +985,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
           const partWeight = partRow?.weight || 25;
           const part = computeParticipationGrade(data, studentId);
           // Build rows for every assignment
-          const rows = sortedAssignments.map(a => {
+          const rows = sortedAssignments.filter(a => !a.hidden).map(a => {
             const isPart = a.id === "participation";
             const g = grades[studentId + "-" + a.id] || {};
             const sub = submissions[studentId + "-" + a.id];
@@ -1147,7 +1159,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
         {/* Assignments list — catalog of grades */}
         <div style={{ ...sectionLabel, marginBottom: 10 }}>All assignments</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {sortedAssignments.map(a => {
+          {(isAdmin ? sortedAssignments : sortedAssignments.filter(a => !a.hidden)).map(a => {
             const isEdit = isAdmin && editId === a.id;
             const isOpen = openId === a.id;
             const state = studentId ? getAssignmentState(a, data, studentId) : (a.id === "participation" ? "participation" : "upcoming");
@@ -1181,6 +1193,7 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                     </div>
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", alignItems: "center" }}>
                       {a.id !== "participation" && <button onClick={() => { if (window.confirm("Remove " + a.name + "?")) removeAssignment(a.id); }} style={{ ...pill, background: "#fef2f2", color: RED, marginRight: "auto" }}>Delete</button>}
+                      {a.id !== "participation" && <button onClick={() => toggleHidden(a.id)} style={{ ...pill, background: a.hidden ? AMBER + "1a" : "#f3f4f6", color: a.hidden ? AMBER : TEXT_SECONDARY }}>{a.hidden ? "Show to students" : "Hide from students"}</button>}
                       <button onClick={() => { setEditId(null); setEditLocal(null); }} style={pillInactive}>Cancel</button>
                       <button onClick={saveEdit} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff" }}>Save</button>
                     </div>
@@ -1211,7 +1224,10 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
                 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: a.id === "participation" ? TEAL + "1a" : ACCENT + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: a.id === "participation" ? TEAL : ACCENT, flexShrink: 0 }}>{a.weight}%</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{a.name}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>
+                      {a.name}
+                      {a.hidden && <span style={{ fontSize: 9, fontWeight: 800, color: AMBER, background: AMBER + "1a", padding: "2px 6px", borderRadius: 5, marginLeft: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Hidden</span>}
+                    </div>
                     <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>
                       {a.due ? "Due " + fmtDue(a.due, a.dueTime) : "Ongoing"}
                     </div>
@@ -2015,7 +2031,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   const setParticipationOverride = async (sid, rawVal) => {
     const v = parseFloat(rawVal);
     if (isNaN(v)) return;
-    const val = Math.max(0, Math.min(25, v));
+    const val = Math.max(0, Math.min(10, v));
     const updated = { ...data, participationOverride: { ...(data.participationOverride || {}), [sid]: val } };
     await saveData(updated); setData(updated);
   };
@@ -2166,15 +2182,17 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
   const computeAutoParticipation = (sid) => {
     const override = (data.participationOverride || {})[sid];
     if (override !== undefined && override !== null && override !== "") {
-      const val = Math.max(0, Math.min(25, parseFloat(override) || 0));
+      const val = Math.max(0, Math.min(10, parseFloat(override) || 0));
+      const partWeight = (data.assignments || DEFAULT_ASSIGNMENTS).find(a => a.id === "participation")?.weight || 25;
+      const pct = val / 10;
       return {
         gameGradeEarned: 0, gameGradePossible: 0,
         totEarned: 0, totPossible: 0,
         fbEarned: 0, fbPossible: 0,
         athEarned: 0,
-        totalEarned: Math.round(val * 10) / 10, totalPossible: 25,
-        participationPct: val / 25,
-        participationGrade: Math.round(val * 10) / 10,
+        totalEarned: Math.round(val * 10) / 10, totalPossible: 10,
+        participationPct: pct,
+        participationGrade: Math.round(pct * partWeight * 10) / 10,
         isOverride: true,
       };
     }
@@ -2407,6 +2425,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
     // Compute final grade % using same approach as AssignmentsView
     let weightGraded = 0, weightedScore = 0;
     regularAsgs.forEach(a => {
+      if (a.hidden) return;
       const g = grades[sid + "-" + a.id] || {};
       if (g.score !== undefined && g.score !== "") {
         weightGraded += a.weight;
@@ -2458,7 +2477,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
       return (
         <React.Fragment key={a.id}>
           <tr onClick={() => setExpandedAsgId(isExpanded ? null : a.id)} style={{ borderBottom: "1px solid " + BORDER, cursor: "pointer", background: isExpanded ? "#fafafa" : "transparent" }}>
-            <td style={{ padding: "12px 14px", fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{a.name}</td>
+            <td style={{ padding: "12px 14px", fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{a.name}{a.hidden && <span style={{ fontSize: 9, fontWeight: 800, color: AMBER, background: AMBER + "1a", padding: "2px 6px", borderRadius: 5, marginLeft: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Hidden</span>}</td>
             <td style={{ padding: "12px 10px", fontSize: 12, color: TEXT_SECONDARY }}>
               {dueText}
               {hasGrade && <div style={{ fontSize: 10, fontWeight: 700, color: GREEN, marginTop: 2 }}>GRADED</div>}
@@ -2693,6 +2712,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
 
     sorted.forEach(s => {
       gradeAssignments.forEach(a => {
+        if (a.hidden) return;
         const key = s.id + "-" + a.id;
         const g = grades[key] || {};
         const sub = submissions[key];
@@ -2755,7 +2775,7 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
             <div style={{ display: "flex", gap: 6 }}>
               {setView && <button onClick={() => setView("grading")} style={{ ...pill, fontSize: 11, padding: "4px 10px", background: "#eff6ff", color: ACCENT }}>Grading ({(() => {
                 let count = 0;
-                const ga = assignments.filter(a => a.id !== "participation");
+                const ga = assignments.filter(a => a.id !== "participation" && !a.hidden);
                 (data.students || []).filter(s => s.name !== ADMIN_NAME && s.name !== "Bruce Willis").forEach(s => {
                   ga.forEach(a => {
                     const k = s.id + "-" + a.id;
@@ -3080,7 +3100,7 @@ export function GradingInbox({ data, setData, userName }) {
 
   // Build inbox items
   const items = [];
-  const gradeAssignments = assignments.filter(a => a.id !== "participation");
+  const gradeAssignments = assignments.filter(a => a.id !== "participation" && !a.hidden);
 
   students.forEach(s => {
     gradeAssignments.forEach(a => {
