@@ -827,25 +827,29 @@ export function AssignmentsView({ data, setData, isAdmin, userName, setView }) {
     }) || null;
   })();
 
-  // ── Compute current grade including participation
+  // ── Compute current grade including participation, with participation scaled
+  // to match the proportion of assignments graded so far.
   const computeCurrentGrade = () => {
     const gradeAssignments = sortedAssignments.filter(a => a.id !== "participation" && !a.hidden);
-    let weightGraded = 0;
+    let gradedAsgWeight = 0;
     let weightedScore = 0;
     gradeAssignments.forEach(a => {
       const g = grades[studentId + "-" + a.id] || {};
       if (g.score !== undefined && g.score !== "") {
-        weightGraded += a.weight;
+        gradedAsgWeight += a.weight;
         weightedScore += (parseFloat(g.score) / (g.outOf || 100)) * a.weight;
       }
     });
-    // Include participation contribution only if a participation row exists in the assignments.
+    const totalAsgWeight = gradeAssignments.reduce((s, a) => s + a.weight, 0);
+    let weightGraded = gradedAsgWeight;
     const partRow = sortedAssignments.find(a => a.id === "participation");
     if (partRow) {
       const partWeight = partRow.weight || 25;
+      const partScaledWeight = totalAsgWeight > 0 ? partWeight * (gradedAsgWeight / totalAsgWeight) : 0;
       const part = computeParticipationGrade(data, studentId);
-      weightGraded += partWeight;
-      weightedScore += part.participationGrade;
+      const participationContribution = partWeight > 0 ? (part.participationGrade / partWeight) * partScaledWeight : 0;
+      weightGraded += partScaledWeight;
+      weightedScore += participationContribution;
     }
     const currentGrade = weightGraded > 0 ? Math.round(weightedScore / weightGraded * 1000) / 10 : null;
     const totalWeight = sortedAssignments.reduce((s, a) => s + a.weight, 0);
@@ -2422,19 +2426,21 @@ export function Gradebook({ data, setData, userName, isAdmin, setView }) {
     // Regular assignments (everything except participation)
     const regularAsgs = assignments.filter(a => a.id !== "participation");
 
-    // Compute final grade % using same approach as AssignmentsView
-    let weightGraded = 0, weightedScore = 0;
+    // Compute final grade %: participation scales with proportion of assignments graded.
+    let gradedAsgWeight = 0, weightedScore = 0, totalAsgWeight = 0;
     regularAsgs.forEach(a => {
       if (a.hidden) return;
+      totalAsgWeight += a.weight;
       const g = grades[sid + "-" + a.id] || {};
       if (g.score !== undefined && g.score !== "") {
-        weightGraded += a.weight;
+        gradedAsgWeight += a.weight;
         weightedScore += (parseFloat(g.score) / (g.outOf || 100)) * a.weight;
       }
     });
-    weightGraded += partWeight;
+    const partScaledWeight = totalAsgWeight > 0 ? partWeight * (gradedAsgWeight / totalAsgWeight) : 0;
     const participationPct = p.participationPct || 0;
-    weightedScore += participationPct * partWeight;
+    weightedScore += participationPct * partScaledWeight;
+    const weightGraded = gradedAsgWeight + partScaledWeight;
     const finalGradePct = weightGraded > 0 ? Math.round(weightedScore / weightGraded * 1000) / 10 : null;
 
     // Leaderboard total (game score)
