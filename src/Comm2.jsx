@@ -2717,6 +2717,38 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
       <Toast message={msg} />
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
         {renderNewsBanner()}
+
+        {/* Final Project submission card — pinned to top of home */}
+        <div style={{
+          background: ACCENT_LIGHT, border: "1px solid " + ACCENT, borderRadius: 14,
+          padding: 16, marginBottom: 14, fontFamily: F,
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: ACCENT, marginBottom: 6 }}>Final Project</div>
+          <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.5, marginBottom: 14 }}>
+            For your final project, please do <strong>2 things</strong>:
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginBottom: 7, lineHeight: 1.4 }}>
+                <strong>1.</strong> Submit your Google Doc on the assignment.
+              </div>
+              <button onClick={() => setView("assignments")} style={{
+                fontSize: 13, fontWeight: 600, padding: "8px 14px", borderRadius: 8,
+                border: "none", background: ACCENT, color: "#fff", cursor: "pointer", fontFamily: F,
+              }}>Go to "A Good Change Rd 2" &rarr;</button>
+            </div>
+            <div>
+              <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginBottom: 7, lineHeight: 1.4 }}>
+                <strong>2.</strong> Post a link to your recording on our discussion board.
+              </div>
+              <button onClick={() => setView("more")} style={{
+                fontSize: 13, fontWeight: 600, padding: "8px 14px", borderRadius: 8,
+                border: "none", background: ACCENT, color: "#fff", cursor: "pointer", fontFamily: F,
+              }}>Go to "Post your final videos here" &rarr;</button>
+            </div>
+          </div>
+        </div>
+
         {cards.map(renderCard)}
         <InstructorCard data={data} setData={setData} isAdmin={isAdmin} />
 
