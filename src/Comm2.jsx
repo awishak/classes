@@ -2741,7 +2741,7 @@ function HomeView({ data, setData, userName, isAdmin, setView }) {
               <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginBottom: 7, lineHeight: 1.4 }}>
                 <strong>2.</strong> Post a link to your recording on our discussion board.
               </div>
-              <button onClick={() => setView("more")} style={{
+              <button onClick={() => setView("boards")} style={{
                 fontSize: 13, fontWeight: 600, padding: "8px 14px", borderRadius: 8,
                 border: "none", background: ACCENT, color: "#fff", cursor: "pointer", fontFamily: F,
               }}>Go to "Post your final videos here" &rarr;</button>
@@ -3237,6 +3237,19 @@ function ClosedSurveyDetail({ survey, data, userName, isAdmin }) {
   );
 }
 
+/* ─── DISCUSSION BOARDS (standalone page) ─── */
+function BoardsPageView({ data, setData, isAdmin, userName }) {
+  const { theme } = useTheme(STORAGE_KEY);
+  return (
+    <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        <div style={{ ...sectionLabel, marginBottom: 10 }}>Discussion Boards</div>
+        <BoardsView data={data} setData={setData} isAdmin={isAdmin} userName={userName} storageKey={STORAGE_KEY} saveData={saveData} accent={ACCENT} />
+      </div>
+    </div>
+  );
+}
+
 /* ─── MORE ─── */
 function MoreView({ data, setData, isAdmin, userName }) {
   const { theme } = useTheme(STORAGE_KEY);
@@ -3453,7 +3466,7 @@ function ThemedComm2Wrapper({ data, isAdmin, isGuest, view, setView, displayName
       {/* Backwards-compat redirects */}
       {view === "leaderboard" && <ScheduleView data={data} setData={setData} isAdmin={effectiveAdmin} />}
       {view === "media" && <MoreView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
-      {view === "boards" && <MoreView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
+      {view === "boards" && <BoardsPageView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "mynotes" && <MoreView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "roster" && <MoreView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
       {view === "answer" && <ActivitiesView data={data} setData={setData} isAdmin={effectiveAdmin} userName={effectiveUserName} />}
