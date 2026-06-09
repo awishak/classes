@@ -902,12 +902,20 @@ export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveD
   };
 
   const linkify = (text) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const parts = text.split(urlRegex);
-    return parts.map((part, i) => urlRegex.test(part)
-      ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#2563eb", textDecoration: "none", wordBreak: "break-all" }}>{part}</a>
-      : part
-    );
+    // Split with a capturing group: URLs land at odd indices, plain text at even.
+    // This is deterministic, unlike calling a stateful /g regex's .test() in a loop.
+    return (text || "").split(/(https?:\/\/[^\s]+)/g).map((part, i) => {
+      if (i % 2 === 0) return part; // plain text
+      // Don't swallow trailing punctuation (e.g. a period ending a sentence).
+      const trail = (part.match(/[.,!?;:)\]}'"]+$/) || [""])[0];
+      const url = part.slice(0, part.length - trail.length);
+      return (
+        <span key={i}>
+          <a href={url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#2563eb", textDecoration: "underline", wordBreak: "break-all" }}>{url}</a>
+          {trail}
+        </span>
+      );
+    });
   };
 
   // Cast a vote on someone else's post (called "snap" in storage for backward compat).
@@ -996,7 +1004,7 @@ export function BoardsView({ data, setData, isAdmin, userName, storageKey, saveD
           <button onClick={() => { setViewingBoard(null); setEditingPostId(null); setComposing(null); }} style={{ ...pillInactive, marginBottom: 16 }}>Back to Boards</button>
           <div style={{ ...crd, padding: 20, marginBottom: 16 }}>
             <div style={{ fontSize: 20, fontWeight: 700, color: TEXT_PRIMARY, marginBottom: 6 }}>{board.title}</div>
-            <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{board.prompt}</div>
+            <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{linkify(board.prompt)}</div>
             <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 8 }}>{visibleFlat.length} response{visibleFlat.length !== 1 ? "s" : ""}</div>
             {isAdmin && (
               <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
