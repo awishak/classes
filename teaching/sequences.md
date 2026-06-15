@@ -28,8 +28,8 @@ The reference. Most persuasive structures are a variation of this.
 
 Your own named structures. Start with one, name it, define its slots, and reuse it. A good sequence is one you would happily run three weeks in a row.
 
-### Sequence 1 — The Throughline
-My default teaching shape. Monroe's bones, framed for learning instead of persuasion. Rename if a better name shows up.
+### Sequence 1 — The Motivated Sequence
+My default teaching shape. Monroe's bones, framed for learning instead of persuasion.
 
 1. `opener` — a seed that earns attention and points at today's concept without naming it yet.
 2. `problem` — the gap or tension: what doesn't work, what we can't yet explain, why the concept is needed.

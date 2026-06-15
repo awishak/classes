@@ -29,3 +29,11 @@ Slot vocabulary: `opener` `problem` `solution` `visualization` `call-to-action` 
 - **Source:** _origin TBD_
 
 A story about not judging someone too quickly. The turn: we have to extend that same patience to other cultures and people in our research. No single observation is enough; you triangulate across sources, methods, and perspectives before you conclude.
+
+### What are your goals for this class?
+- **Concept:** first-day onboarding
+- **Class:** any
+- **Slot:** opener, call-to-action
+- **Source:** first-day-of-class ritual
+
+On the first day, ask every student what their goals are for the class. Capture each student's answer and post it on their (instructor-only) student page, so their goals stay visible all quarter and frame how you read their work.
