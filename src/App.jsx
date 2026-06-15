@@ -4,6 +4,8 @@ import Comm4 from "./Comm4.jsx";
 import Comm2 from "./Comm2.jsx";
 import { TriviaPresenter as TriviaPresenter4 } from "./GameSystem4.jsx";
 import { TriviaPresenter as TriviaPresenter118 } from "./GameSystem.jsx";
+import ClassApp from "./engine/ClassApp.jsx";
+import comm999 from "./config/comm999.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 
@@ -151,6 +153,10 @@ export default function App() {
   if (presenterGameId && presenterClass) {
     if (presenterClass === "comm118") return <TriviaPresenter118 gameId={presenterGameId} classKey="comm118" />;
     return <TriviaPresenter4 gameId={presenterGameId} classKey="comm4" />;
+  }
+
+  if (path === "/comm999" || path === "/comm999/") {
+    return <ClassApp config={comm999} />;
   }
 
   if (path === "/comm118" || path === "/comm118/") {
