@@ -9,6 +9,7 @@ import { YouSummary, YouDetail } from "./YouCard.jsx";
 import { ScheduleSummary, ScheduleDetail } from "./ScheduleCard.jsx";
 import { RosterSummary, RosterDetail } from "./RosterCard.jsx";
 import { AssignmentsSummary, AssignmentsDetail } from "./AssignmentsCard.jsx";
+import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const TEXT_PRIMARY = "#111827";
@@ -39,6 +40,8 @@ const h2 = { fontSize: 22, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: 
 function summary(key, config, role, ctx) {
   const a = config.accent;
   switch (key) {
+    case "dayplan":
+      return { title: "Day Plan", body: <DayPlanSummary config={config} data={ctx.data} /> };
     case "you":
       return { title: "You", body: <YouSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> };
     case "assignments":
@@ -63,6 +66,9 @@ function summary(key, config, role, ctx) {
 // ─────────────────────────────────────────────────────────────
 function detail(key, config, role, ctx) {
   const a = config.accent;
+  if (key === "dayplan") {
+    return <DayPlanDetail config={config} data={ctx.data} update={ctx.update} />;
+  }
   if (key === "you") {
     return <YouDetail config={config} role={role} data={ctx.data} update={ctx.update} asStudent={ctx.asStudent} setAsStudent={ctx.setAsStudent} />;
   }
@@ -139,9 +145,13 @@ export default function ClassApp({ config }) {
     }
   }, [data, config]);
 
+  // Some cards are instructor-only (e.g. the day-planning surface) and never
+  // appear on the student home, regardless of the config toggle.
+  const INSTRUCTOR_ONLY = new Set(["dayplan"]);
   const enabledCards = Object.entries(config.cards || {})
     .filter(([, on]) => on)
-    .map(([k]) => k);
+    .map(([k]) => k)
+    .filter(k => role === "instructor" || !INSTRUCTOR_ONLY.has(k));
 
   const RoleToggle = (
     <div style={{ display: "flex", gap: 4, background: BG, padding: 3, borderRadius: 999, border: "1px solid " + BORDER }}>

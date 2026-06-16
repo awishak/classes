@@ -41,6 +41,7 @@ const comm999 = {
   // Every class ships ALL cards. Toggle them off per class from the admin page.
   // Order here is the order shown on the home grid.
   cards: {
+    dayplan: true, // instructor-only; never shown on the student home
     you: true,
     assignments: true,
     schedule: true,
@@ -107,6 +108,61 @@ const comm999 = {
         { id: "c2", name: "Evidence", points: 40 },
         { id: "c3", name: "Clarity", points: 20 },
       ],
+    },
+  ],
+
+  // ─── Sequences (lecture shapes) ───
+  // An ordered list of slots. The day-planning view walks these slot by slot.
+  // Mirrors teaching/sequences.md. defaultSequenceId is used for a fresh day.
+  defaultSequenceId: "motivated",
+  sequences: [
+    {
+      id: "motivated",
+      name: "The Motivated Sequence",
+      desc: "Default teaching shape. Monroe's bones, framed for learning.",
+      slots: [
+        { slot: "opener", note: "Earn attention and point at today's concept without naming it yet." },
+        { slot: "problem", note: "The gap or tension: what doesn't work, why the concept is needed." },
+        { slot: "solution", note: "The concept/method itself, taught plainly." },
+        { slot: "visualization", note: "Make it stick: a story or image where the concept does its work." },
+        { slot: "call-to-action", note: "What they should do, try, or notice before next class." },
+      ],
+    },
+    {
+      id: "monroe-classic",
+      name: "Monroe's Motivated Sequence",
+      desc: "The classic. Most persuasive structures are a variation of this.",
+      slots: [
+        { slot: "opener", note: "Attention. Earn the room." },
+        { slot: "problem", note: "Need. Show the gap, the tension, the cost of the status quo." },
+        { slot: "solution", note: "Satisfaction. Present the concept/method that resolves it." },
+        { slot: "visualization", note: "Visualization. Let them feel the world with the solution in it." },
+        { slot: "call-to-action", note: "Action. The concrete next move." },
+      ],
+    },
+  ],
+
+  // ─── Seeds (reusable stories/hooks) ───
+  // Mirrors teaching/seeds.md as structured data. slots/concept drive the
+  // day-planning suggestions. seeds.md stays the human writing scratchpad.
+  seeds: [
+    {
+      id: "s-triangulation",
+      title: "Don't judge too quickly",
+      concept: "triangulation",
+      classes: ["Comm 2", "any"],
+      slots: ["opener", "problem"],
+      source: "origin TBD",
+      body: "A story about not judging someone too quickly. The turn: we extend that same patience to other cultures and people in our research. No single observation is enough; you triangulate across sources, methods, and perspectives before you conclude.",
+    },
+    {
+      id: "s-goals",
+      title: "What are your goals for this class?",
+      concept: "first-day onboarding",
+      classes: ["any"],
+      slots: ["opener", "call-to-action"],
+      source: "first-day-of-class ritual",
+      body: "On the first day, ask every student what their goals are for the class. Capture each answer and post it on their (instructor-only) student page, so their goals stay visible all quarter and frame how you read their work.",
     },
   ],
 
