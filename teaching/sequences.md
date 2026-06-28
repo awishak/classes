@@ -28,13 +28,21 @@ The reference. Most persuasive structures are a variation of this.
 
 Your own named structures. Start with one, name it, define its slots, and reuse it. A good sequence is one you would happily run three weeks in a row.
 
-### Sequence 1 — The Motivated Sequence
-My default teaching shape. Monroe's bones, framed for learning instead of persuasion.
+### Sequence 1 — Connect / Explain / Move (default)
+My default teaching shape. Three beats. Tie them to the outcome, walk them past → present → future, then move them toward it. Each slot name is a verb you can run at the podium.
 
-1. `opener` — a seed that earns attention and points at today's concept without naming it yet.
-2. `problem` — the gap or tension: what doesn't work, what we can't yet explain, why the concept is needed.
-3. `solution` — the concept/method itself, taught plainly.
-4. `visualization` — make it stick: a story or image where the concept is doing its work.
-5. `call-to-action` — what they should now do, try, or notice before next class.
+1. `connect` — before any content, tie them to the outcome. They have to care it matters to *them* before they will spend attention.
+2. `explain` — the engine, in three:
+   - **past** — the known facts, the background, what is already true.
+   - **present** — why we are here today, what changed, what is at stake now.
+   - **future** — the outcome: what they get. Literal (you'll get $200) or a picture of the life it buys.
+3. `move` — get them to do the thing that moves them toward the outcome. (The choose-your-question close lives here.)
+
+### Sequence 2 — The Motivated Sequence (reference)
+Monroe's bones, framed for learning instead of persuasion. Kept as a reference shape; maps onto Connect / Explain / Move (opener → connect, problem/solution/visualization → explain, call-to-action → move).
+
+1. `connect` — a seed that earns attention and points at today's concept without naming it yet.
+2. `explain` — the gap, the concept, and a story where it does its work (past → present → future).
+3. `move` — what they should now do, try, or notice before next class.
 
 > _Add more sequences below as you find structures that work. The goal is a small set of trusted shapes, not many._

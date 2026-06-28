@@ -14,11 +14,11 @@ To keep seeds and sequences speaking the same language, they share one slot voca
 
 | Slot | What goes here |
 |------|----------------|
-| `opener` | grabs attention, earns the first 90 seconds |
-| `problem` | the tension, the gap, the thing that is broken or unknown |
-| `solution` | the concept / method / answer that resolves the problem |
-| `visualization` | make it vivid: a story, image, or "imagine if..." that lets them feel it |
-| `call-to-action` | what they should now do, try, or notice |
+| `connect` | tie them to the outcome before any content; make them care it matters to *them* |
+| `explain` | the engine, in three: **past** (known facts, background), **present** (why we're here, what's at stake now), **future** (the outcome, literal or pictured) |
+| `move` | get them to do the thing that moves them toward the outcome |
 | `example` | a concrete instance to anchor the concept (can sit in any sequence) |
+
+The Motivated Sequence's older terms still map cleanly: `opener` → `connect`, `problem` / `solution` / `visualization` → `explain`, `call-to-action` → `move`.
 
 A seed lists which slot type(s) it can fill. A sequence lists slots in order. Lecture prep becomes: choose a sequence, drop the right seeds into its slots.
