@@ -100,14 +100,41 @@ const comm999 = {
   // Each scored out of 100; weight is its percent of the final grade.
   // rubric criteria points should sum to 100. Empty rubric = free-form score.
   assignments: [
-    { id: "a1", title: "Intro post", due: "Sep 25", weight: 10, description: "Introduce yourself to the class in a short post.", instructionsUrl: "", rubric: [] },
     {
-      id: "a2", title: "First essay", due: "Oct 9", weight: 15, description: "A short argumentative essay on this unit's theme.", instructionsUrl: "",
+      id: "a3", title: "Work Meeting 1", due: "Oct 9", weight: 25,
+      description: "A four-person meeting that runs like a real work meeting. You are assigned a topic (e.g. A: multidimensional leadership theory, B: assessment, and so on) and write a three-page document (a 3-pager) on it. Post your 3-pager at least 24 hours before the meeting. In the 45-minute meeting you are asked questions about your own document AND about how your work connects to the other three people's documents. The meeting is recorded; you get an AI transcript and summary plus direct feedback from me, so you can see exactly what to sharpen for next time. The point is twofold: it mirrors what your professional life will actually be like, and it pushes you to become the expert on your topic while staying fluent in everyone else's. This is the first of two such meetings.",
+      instructionsUrl: "",
       rubric: [
-        { id: "c1", name: "Argument", points: 40 },
-        { id: "c2", name: "Evidence", points: 40 },
-        { id: "c3", name: "Clarity", points: 20 },
+        { id: "c1", name: "3-pager posted 24h early", points: 20 },
+        { id: "c2", name: "Depth on own topic", points: 40 },
+        { id: "c3", name: "Connections to others' work", points: 40 },
       ],
+    },
+    {
+      id: "a4", title: "Work Meeting 2", due: "Nov 6", weight: 25,
+      description: "The second four-person work meeting, same format as the first: post your 3-pager at least 24 hours ahead, then field questions on your own topic and on how it connects to the other three documents. Recorded with AI transcript, summary, and direct feedback. By now your topic should be deeper and the connections sharper.",
+      instructionsUrl: "",
+      rubric: [
+        { id: "c1", name: "3-pager posted 24h early", points: 20 },
+        { id: "c2", name: "Depth on own topic", points: 40 },
+        { id: "c3", name: "Connections to others' work", points: 40 },
+      ],
+    },
+    {
+      id: "a5", title: "Final Project", due: "Dec 4", weight: 25,
+      description: "Week 10. You work in topic groups — all the leadership-theory people together, all the assessment people together, and so on (AAA, BBB, CCC) — but each person turns in their own individual deliverable, in the same shape as the 3-pagers you wrote for the meetings. Same topic, shared work, individual product.",
+      instructionsUrl: "",
+      rubric: [
+        { id: "c1", name: "Depth and command of topic", points: 40 },
+        { id: "c2", name: "Synthesis across the term", points: 40 },
+        { id: "c3", name: "Clarity of the 3-pager", points: 20 },
+      ],
+    },
+    {
+      id: "a6", title: "Quizzes & Participation", due: "Ongoing", weight: 25,
+      description: "Four quizzes across the term, plus the participation points I award throughout the quarter (extra credit folds in here). This bucket rewards keeping up and showing up.",
+      instructionsUrl: "",
+      rubric: [],
     },
   ],
 
@@ -163,6 +190,15 @@ const comm999 = {
       slots: ["opener", "call-to-action"],
       source: "first-day-of-class ritual",
       body: "On the first day, ask every student what their goals are for the class. Capture each answer and post it on their (instructor-only) student page, so their goals stay visible all quarter and frame how you read their work.",
+    },
+    {
+      id: "s-the-gap",
+      title: "Ira Glass and the gap",
+      concept: "the gap (taste vs. ability)",
+      classes: ["any"],
+      slots: ["opener", "problem", "call-to-action"],
+      source: "Ira Glass on creative work",
+      body: "Show this every class. Ira Glass: when you start out your taste is good but your work isn't there yet, and the gap between the two is what makes people quit. The turn: the only way to close it is volume — do a lot of work, on a deadline, and your ability catches up to your taste. Frame the class as a machine for closing that gap.",
     },
   ],
 
