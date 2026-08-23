@@ -8,6 +8,7 @@ import ClassApp from "./engine/ClassApp.jsx";
 import Dashboard from "./engine/Dashboard.jsx";
 import ClassroomView from "./engine/ClassroomView.jsx";
 import AskPage from "./engine/AskPage.jsx";
+import PlanPage from "./PlanPage.jsx";
 import comm999 from "./config/comm999.js";
 import comm118cfg from "./config/comm118.js";
 
@@ -161,6 +162,10 @@ export default function App() {
   if (presenterGameId && presenterClass) {
     if (presenterClass === "comm118") return <TriviaPresenter118 gameId={presenterGameId} classKey="comm118" />;
     return <TriviaPresenter4 gameId={presenterGameId} classKey="comm4" />;
+  }
+
+  if (path === "/plan" || path === "/plan/") {
+    return <PlanPage />;
   }
 
   // Live teaching surfaces: /<class>/dashboard (me), /<class>/today (the room
