@@ -5,7 +5,15 @@ import Comm2 from "./Comm2.jsx";
 import { TriviaPresenter as TriviaPresenter4 } from "./GameSystem4.jsx";
 import { TriviaPresenter as TriviaPresenter118 } from "./GameSystem.jsx";
 import ClassApp from "./engine/ClassApp.jsx";
+import Dashboard from "./engine/Dashboard.jsx";
+import ClassroomView from "./engine/ClassroomView.jsx";
+import AskPage from "./engine/AskPage.jsx";
 import comm999 from "./config/comm999.js";
+import comm118cfg from "./config/comm118.js";
+
+// Classes that run on the shared engine. The live teaching surfaces
+// (/<class>/dashboard, /<class>/today, /<class>/ask) are resolved from here.
+const ENGINE = { comm999, comm118: comm118cfg };
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 
@@ -153,6 +161,16 @@ export default function App() {
   if (presenterGameId && presenterClass) {
     if (presenterClass === "comm118") return <TriviaPresenter118 gameId={presenterGameId} classKey="comm118" />;
     return <TriviaPresenter4 gameId={presenterGameId} classKey="comm4" />;
+  }
+
+  // Live teaching surfaces: /<class>/dashboard (me), /<class>/today (the room
+  // screen), /<class>/ask (where the room screen's QR sends students).
+  const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask)\/?$/);
+  if (live && ENGINE[live[1]]) {
+    const cfg = ENGINE[live[1]];
+    if (live[2] === "dashboard") return <Dashboard config={cfg} />;
+    if (live[2] === "today") return <ClassroomView config={cfg} />;
+    return <AskPage config={cfg} />;
   }
 
   if (path === "/comm999" || path === "/comm999/") {
