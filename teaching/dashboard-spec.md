@@ -40,6 +40,14 @@ boards) are driven from the dashboard; **third-party embeds** (Canva, YouTube,
 websites) are cast and then driven on the room machine, because we cannot reach
 inside someone else's frame.
 
+## Built on the evidence
+
+- **Live poll (Peer Instruction).** Ask, commit alone, argue, commit again, show what moved. Both rounds on the room screen, the first behind the second. Aim for a question a third to two thirds get right first time.
+- **Claims, not titles.** Nothing casts without one full sentence. "Rights fees have increased 45% over the last 10 years," not "Media rights." Written once, stored on the item.
+- **Time since they did anything.** Replaces the countdown to the bell. Resets on a poll, a pushed question, or an Around the Horn point. Amber at ten minutes.
+- **No bullets, ever.** The before/after boards hold ideas, one per screen, stepped through by hand.
+- **Around the Horn.** The seating chart as a popup over the dashboard. Drag to match the real room, tap to award points into the in-class bucket.
+
 ## Open
 
 - Which animations to keep. Five everyday, two reveals, all live to compare.

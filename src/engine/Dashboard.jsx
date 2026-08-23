@@ -16,6 +16,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useClassData } from "./store.js";
 import { useLive, ANIMS, BIG_ANIMS } from "./live.js";
 import { useQuestions } from "./questions.js";
+import { usePoll } from "./poll.js";
+import PollPanel, { oneSentence } from "./PollPanel.jsx";
+import HornBoard from "./HornBoard.jsx";
 import { allDays, currentDay, parseDay } from "./days.js";
 import { genId } from "../utils.jsx";
 
@@ -103,6 +106,53 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
   );
 }
 
+// Nothing goes up as a label. Before a thing can be cast it needs a claim —
+// one full sentence saying what it shows. "Media rights" is a topic; "Rights
+// fees have risen 45% in ten years" is what the room can actually read.
+function Castable({ kind, kindColor, title, sub, claim, live, accent, onCast, onDismiss, onSaveClaim }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(claim || "");
+  useEffect(() => { setDraft(claim || ""); }, [claim]);
+
+  const commit = () => {
+    const c = oneSentence(draft);
+    if (!c || c.split(" ").length < 3) return;
+    onSaveClaim(c);
+    onCast(c);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, border: "1px solid " + accent, borderRadius: 10, background: "#fff" }}>
+        <span style={{ ...label, color: accent }}>Say it in one sentence</span>
+        <div style={{ fontSize: 12.5, color: TEXT_MUTED }}>{title}</div>
+        <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+          placeholder="Rights fees have increased 45% over the last 10 years."
+          style={inputStyle} />
+        <div style={{ display: "flex", gap: 7 }}>
+          <button style={solid(accent)} onClick={commit}>Cast it</button>
+          <button style={mini} onClick={() => setEditing(false)}>Cancel</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <Item kind={kind} kindColor={kindColor} title={claim || title} sub={claim ? title : sub}
+        live={live} onDismiss={onDismiss}
+        onCast={() => { if (claim) onCast(claim); else setEditing(true); }} />
+      <button onClick={() => setEditing(true)}
+        style={{ alignSelf: "flex-start", background: "none", border: "none", padding: "0 0 0 11px",
+          color: TEXT_MUTED, fontFamily: F, fontSize: 12, cursor: "pointer" }}>
+        {claim ? "Edit the claim" : "Write the claim"}
+      </button>
+    </div>
+  );
+}
+
 const KIND_COLOR = { Deck: "#7c3aed", PDF: "#b91c1c", Web: "#0369a1", Video: "#b45309", Seed: "#9f1239", Ask: OK, Link: "#0369a1", Note: TEXT_MUTED };
 
 // Guess how a link should land on the screen. Anything we can embed, we embed;
@@ -122,41 +172,52 @@ function castFromLink(l) {
 // ─────────────────────────────────────────────────────────────
 // panels
 // ─────────────────────────────────────────────────────────────
-function NowPanel({ config, day, plan, seq, onSlot }) {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => { const t = setInterval(() => setNow(new Date()), 20000); return () => clearInterval(t); }, []);
+function NowPanel({ config, engagedAt, onEngaged, plan, seq, onSlot }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 20000); return () => clearInterval(t); }, []);
+
+  // The number that matters is not how long is left, it is how long since the
+  // room last had to produce something. Attention does not run down on a clock.
+  const since = engagedAt ? Math.floor((now - engagedAt) / 60000) : null;
+  const cold = since != null && since >= 10;
+
   const meets = config.meets || {};
   const mins = (hhmm) => { const [h, m] = (hhmm || "").split(":").map(Number); return isNaN(h) ? null : h * 60 + (m || 0); };
+  const d = new Date(now);
+  const cur = d.getHours() * 60 + d.getMinutes();
   const start = mins(meets.start), end = mins(meets.end);
-  const cur = now.getHours() * 60 + now.getMinutes();
   const inClass = start != null && end != null && cur >= start && cur <= end;
   const left = end != null ? Math.max(0, end - cur) : null;
-  const pct = (start != null && end != null && end > start) ? Math.min(100, Math.max(0, ((cur - start) / (end - start)) * 100)) : 0;
-  const slots = seq ? seq.slots.map(s => s.slot) : [];
+
+  const slots = seq ? seq.slots.map(x => x.slot) : [];
   const current = plan?.currentSlot;
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
-        <span style={{ fontFamily: MONO, fontSize: 32, fontWeight: 500, letterSpacing: "-.03em", lineHeight: 1, color: TEXT_PRIMARY }}>
-          {inClass ? left + " min" : (start != null ? "—" : "no times set")}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
+        <span style={{ fontFamily: MONO, fontSize: 32, fontWeight: 500, letterSpacing: "-.03em", lineHeight: 1,
+          color: cold ? WARN : TEXT_PRIMARY }}>
+          {since == null ? "—" : since + " min"}
         </span>
         <span style={{ fontFamily: MONO, fontSize: 12, color: TEXT_MUTED, paddingBottom: 3 }}>
-          {inClass ? "left · out at " + (meets.end || "") : (config.desc || "")}
+          since they did anything{inClass && left != null ? " · " + left + " min of class left" : ""}
         </span>
+        <button onClick={onEngaged} style={{ ...mini, marginLeft: "auto" }}>They just did something</button>
       </div>
-      <div style={{ height: 5, borderRadius: 3, background: SURFACE_2, overflow: "hidden" }}>
-        <i style={{ display: "block", height: "100%", width: pct + "%", background: config.accent, borderRadius: 3 }} />
-      </div>
+      {cold ? (
+        <Muted style={{ color: WARN }}>Ten minutes of listening. Ask them for something.</Muted>
+      ) : (
+        <Muted style={{ fontSize: 12 }}>Resets on a poll, a pushed question, or the button.</Muted>
+      )}
       {slots.length ? (
         <div style={{ display: "flex", gap: 5 }}>
-          {slots.map(s => {
-            const on = s === current;
+          {slots.map(x => {
+            const on = x === current;
             return (
-              <button key={s} onClick={() => onSlot(on ? null : s)}
+              <button key={x} onClick={() => onSlot(on ? null : x)}
                 style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5, background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
                 <i style={{ display: "block", height: 4, borderRadius: 2, background: on ? config.accent : BORDER }} />
-                <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: ".09em", textTransform: "uppercase", color: on ? config.accent : TEXT_MUTED, fontWeight: on ? 700 : 400 }}>{s}</span>
+                <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: ".09em", textTransform: "uppercase", color: on ? config.accent : TEXT_MUTED, fontWeight: on ? 700 : 400 }}>{x}</span>
               </button>
             );
           })}
@@ -166,7 +227,7 @@ function NowPanel({ config, day, plan, seq, onSlot }) {
   );
 }
 
-function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent }) {
+function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim }) {
   if (!plan || !seq) return <Muted>No plan for this day yet. Build it in Day Plan.</Muted>;
   const seedById = (id) => seeds.find(s => s.id === id);
   const slotItems = plan.slots || {};
@@ -186,16 +247,19 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent }) {
               const seed = it.seedId ? seedById(it.seedId) : null;
               const title = seed ? seed.title : (it.text || "Untitled");
               const body = it.bodyOverride || (seed ? seed.body : "");
-              const c = { type: "quote", tag: bucket.title || s.slot, title, cite: seed ? seed.concept : "", label: title };
               return (
                 <div key={it.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <Item kind={seed ? "Seed" : "Note"} kindColor={KIND_COLOR[seed ? "Seed" : "Note"]}
-                    title={title} sub={body ? body.slice(0, 70) : ""} live={liveLabel === title}
-                    onCast={() => castNow(c)} onDismiss={dismiss} />
+                  <Castable kind={seed ? "Seed" : "Note"} kindColor={KIND_COLOR[seed ? "Seed" : "Note"]}
+                    title={title} sub={body ? body.slice(0, 70) : ""} claim={it.claim} accent={accent}
+                    live={liveLabel === (it.claim || title)} onDismiss={dismiss}
+                    onSaveClaim={(c) => onClaim(s.slot, it.id, c)}
+                    onCast={(c) => castNow({ type: "quote", tag: bucket.title || s.slot, title: c, cite: seed ? seed.concept : "", label: c })} />
                   {(it.links || []).map(l => (
                     <div key={l.id} style={{ paddingLeft: 16 }}>
-                      <Item kind="Link" kindColor={KIND_COLOR.Link} title={l.label} sub={l.url}
-                        live={liveLabel === (l.label || l.url)} onCast={() => castNow(castFromLink(l))} onDismiss={dismiss} />
+                      <Castable kind="Link" kindColor={KIND_COLOR.Link} title={l.label} sub={l.url}
+                        claim={l.claim} accent={accent} live={liveLabel === (l.claim || l.label)} onDismiss={dismiss}
+                        onSaveClaim={(c) => onClaim(s.slot, it.id, c, l.id)}
+                        onCast={(c) => castNow({ ...castFromLink(l), title: c, label: c })} />
                     </div>
                   ))}
                 </div>
@@ -218,19 +282,20 @@ const SHELVES = [
   { id: "any", label: "Random", scope: "anything" },
 ];
 
-function StockedPanel({ shelves, onAdd, onRemove, castNow, dismiss, liveLabel, accent }) {
+function StockedPanel({ shelves, onAdd, onRemove, onClaim, castNow, dismiss, liveLabel, accent }) {
   return (
     <>
       {SHELVES.map(sh => (
         <Shelf key={sh.id} shelf={sh} items={shelves[sh.id] || []} accent={accent}
           onAdd={(item) => onAdd(sh.id, item)} onRemove={(id) => onRemove(sh.id, id)}
+          onClaim={(id, c) => onClaim(sh.id, id, c)}
           castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />
       ))}
     </>
   );
 }
 
-function Shelf({ shelf, items, onAdd, onRemove, castNow, dismiss, liveLabel, accent }) {
+function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveLabel, accent }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("Link");
   const [title, setTitle] = useState("");
@@ -251,10 +316,12 @@ function Shelf({ shelf, items, onAdd, onRemove, castNow, dismiss, liveLabel, acc
       {(items || []).map(s => (
         <div key={s.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Item kind={s.kind} kindColor={KIND_COLOR[s.kind]} title={s.title} sub={s.url}
-              live={liveLabel === s.title}
-              onCast={() => castNow(s.url ? castFromLink({ label: s.title, url: s.url }) : { type: "quote", tag: "Stocked", title: s.title, label: s.title })}
-              onDismiss={dismiss} />
+            <Castable kind={s.kind} kindColor={KIND_COLOR[s.kind]} title={s.title} sub={s.url}
+              claim={s.claim} accent={accent} live={liveLabel === (s.claim || s.title)} onDismiss={dismiss}
+              onSaveClaim={(c) => onClaim(s.id, c)}
+              onCast={(c) => castNow(s.url
+                ? { ...castFromLink({ label: s.title, url: s.url }), title: c, label: c }
+                : { type: "quote", tag: shelf.label, title: c, label: c })} />
           </div>
           <button onClick={() => onRemove(s.id)} title="Remove"
             style={{ ...mini, minHeight: 28, padding: "0 8px", color: TEXT_MUTED }}>✕</button>
@@ -350,21 +417,25 @@ function AttendancePanel({ students, marks, onMark }) {
 }
 
 // Pre-class and post-class boards. I always drive these by hand — the app
-// proposes lines from the schedule, I edit them, then I put them up.
-function BoardsPanel({ boards, proposals, onSave, castNow, dismiss, liveLabel, accent }) {
+// proposes, I edit, I decide when they go up. Never a bullet list: the screen
+// holds one idea at a time and I step through them.
+function BoardsPanel({ boards, proposals, onSave, castNow, dismiss, liveCast, accent }) {
   return (
     <>
       {["pre", "post"].map(which => {
-        const proposed = proposals[which];
         const saved = boards[which];
-        const board = saved || proposed;
+        const board = saved || proposals[which];
         const label = which === "pre" ? "Before class" : "After class";
+        const liveHere = liveCast?.type === "board" && liveCast.boardLabel === label;
         return (
           <BoardEditor key={which} label={label} board={board} isProposal={!saved} accent={accent}
-            onSave={(b) => onSave(which, b)}
-            onReset={() => onSave(which, null)}
-            live={liveLabel === label}
-            onCast={() => castNow({ type: "board", tag: label, title: board.title, lines: board.lines, showAsk: which === "pre", label })}
+            onSave={(b) => onSave(which, b)} onReset={() => onSave(which, null)}
+            liveIndex={liveHere ? liveCast.at : null}
+            onCast={(i) => castNow({
+              type: "board", tag: label, boardLabel: label, title: board.title,
+              idea: (board.ideas || [])[i] || "", at: i, count: (board.ideas || []).length,
+              showAsk: which === "pre", label: label + " · " + (i + 1),
+            })}
             onDismiss={dismiss} />
         );
       })}
@@ -372,21 +443,28 @@ function BoardsPanel({ boards, proposals, onSave, castNow, dismiss, liveLabel, a
   );
 }
 
-function BoardEditor({ label, board, isProposal, accent, onSave, onReset, live, onCast, onDismiss }) {
+function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIndex, onCast, onDismiss }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(board.title);
-  const [lines, setLines] = useState((board.lines || []).join("\n"));
-  useEffect(() => { setTitle(board.title); setLines((board.lines || []).join("\n")); }, [board.title, (board.lines || []).join("\n")]);
+  const [text, setText] = useState((board.ideas || []).join("\n"));
+  const ideasKey = (board.ideas || []).join("\n");
+  useEffect(() => { setTitle(board.title); setText(ideasKey); }, [board.title, ideasKey]);
+
+  const ideas = board.ideas || [];
+  const live = liveIndex != null;
 
   if (editing) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, border: "1px solid " + BORDER, borderRadius: 10 }}>
         <span style={label2}>{label}</span>
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Headline" style={inputStyle} />
-        <textarea value={lines} onChange={e => setLines(e.target.value)} placeholder="One bullet per line"
+        <textarea value={text} onChange={e => setText(e.target.value)} placeholder="One idea per line. Each one gets the screen to itself."
           style={{ ...inputStyle, minHeight: 96, resize: "vertical", lineHeight: 1.5, fontSize: 15 }} />
         <div style={{ display: "flex", gap: 7 }}>
-          <button style={solid(accent)} onClick={() => { onSave({ title, lines: lines.split("\n").map(l => l.trim()).filter(Boolean) }); setEditing(false); }}>Save</button>
+          <button style={solid(accent)} onClick={() => {
+            onSave({ title, ideas: text.split("\n").map(l => l.trim()).filter(Boolean) });
+            setEditing(false);
+          }}>Save</button>
           <button style={mini} onClick={() => setEditing(false)}>Cancel</button>
           {!isProposal ? <button style={{ ...mini, marginLeft: "auto", color: TEXT_MUTED }} onClick={() => { onReset(); setEditing(false); }}>Reset to proposed</button> : null}
         </div>
@@ -395,19 +473,36 @@ function BoardEditor({ label, board, isProposal, accent, onSave, onReset, live, 
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, border: "1px solid " + (live ? LIVE : BORDER), borderRadius: 10, background: live ? "rgba(225,29,72,.06)" : SURFACE_2 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 11,
+      border: "1px solid " + (live ? LIVE : BORDER), borderRadius: 10,
+      background: live ? "rgba(225,29,72,.06)" : SURFACE_2 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={label2}>{label}</span>
         {isProposal ? <span style={{ ...label2, color: accent, fontSize: 10 }}>proposed</span> : null}
         <button style={{ ...mini, minHeight: 26, padding: "0 9px", marginLeft: "auto", fontSize: 12 }} onClick={() => setEditing(true)}>Edit</button>
       </div>
       <div style={{ fontWeight: 600, fontSize: 15 }}>{board.title}</div>
-      <ul style={{ margin: 0, paddingLeft: 18, color: TEXT_SECONDARY, fontSize: 13.5, lineHeight: 1.5 }}>
-        {(board.lines || []).map((l, i) => <li key={i}>{l}</li>)}
-      </ul>
-      <button style={live ? { ...mini, borderColor: LIVE, color: LIVE } : solid(accent)} onClick={live ? onDismiss : onCast}>
-        {live ? "Take it down" : "Put it up"}
-      </button>
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        {ideas.map((idea, i) => (
+          <button key={i} onClick={() => (liveIndex === i ? onDismiss() : onCast(i))}
+            style={{ display: "flex", gap: 9, alignItems: "flex-start", textAlign: "left", cursor: "pointer",
+              background: liveIndex === i ? "rgba(225,29,72,.1)" : "#fff",
+              border: "1px solid " + (liveIndex === i ? LIVE : "transparent"),
+              borderRadius: 9, padding: "8px 10px", minHeight: 40, fontFamily: F, fontSize: 14, color: TEXT_PRIMARY }}>
+            <span style={{ ...label2, fontSize: 10, color: liveIndex === i ? LIVE : TEXT_MUTED, paddingTop: 2 }}>{i + 1}</span>
+            <span style={{ flex: 1, lineHeight: 1.4 }}>{idea}</span>
+            <span style={{ ...label2, fontSize: 9, color: liveIndex === i ? LIVE : "transparent", paddingTop: 3 }}>up</span>
+          </button>
+        ))}
+        {!ideas.length ? <Muted style={{ fontSize: 13 }}>No ideas yet. Edit to add some.</Muted> : null}
+      </div>
+      {live ? (
+        <div style={{ display: "flex", gap: 7 }}>
+          <button style={mini} disabled={liveIndex <= 0} onClick={() => onCast(liveIndex - 1)}>‹ Back</button>
+          <button style={mini} disabled={liveIndex >= ideas.length - 1} onClick={() => onCast(liveIndex + 1)}>Next ›</button>
+          <button style={{ ...mini, marginLeft: "auto", borderColor: LIVE, color: LIVE }} onClick={onDismiss}>Take it down</button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -522,13 +617,15 @@ function Picker({ title, opts, value, onPick, accent }) {
 // ─────────────────────────────────────────────────────────────
 // main
 // ─────────────────────────────────────────────────────────────
-const DEFAULT_ORDER = ["now", "flow", "boards", "stocked", "questions", "attendance", "scratch", "assignments"];
-const DEFAULT_SPANS = { now: "2", flow: "2", boards: "1", stocked: "1", questions: "1", attendance: "2", scratch: "1", assignments: "1" };
+const DEFAULT_ORDER = ["now", "poll", "flow", "boards", "stocked", "questions", "attendance", "scratch", "assignments"];
+const DEFAULT_SPANS = { now: "2", poll: "2", flow: "2", boards: "1", stocked: "1", questions: "1", attendance: "2", scratch: "1", assignments: "1" };
 
 export default function Dashboard({ config }) {
   const [data, update] = useClassData(config.storageKey);
   const [live, cast, push] = useLive(config.storageKey);
   const q = useQuestions(config.storageKey);
+  const P = usePoll(config.storageKey);
+  const [hornOpen, setHornOpen] = useState(false);
 
   const weeks = data?.schedule || config.scheduleWeeks || [];
   const days = allDays(weeks);
@@ -684,12 +781,34 @@ export default function Dashboard({ config }) {
     }
     return { ...prev, stocked: st };
   });
+  // A claim written once stays on the item, so the second time it is one click.
+  const saveFlowClaim = (slot, itemId, claim, linkId) => writeDay(d => {
+    const slots = { ...(d.slots || {}) };
+    const bucket = { ...(slots[slot] || {}) };
+    bucket.items = (bucket.items || []).map(it => {
+      if (it.id !== itemId) return it;
+      if (!linkId) return { ...it, claim };
+      return { ...it, links: (it.links || []).map(l => l.id === linkId ? { ...l, claim } : l) };
+    });
+    slots[slot] = bucket;
+    return { ...d, slots };
+  });
+  const saveStockClaim = (shelf, id, claim) =>
+    setShelf(shelf, list => list.map(x => x.id === id ? { ...x, claim } : x));
+
   const saveBoard = (which, board) => writeDay(d => ({ ...d, boards: { ...(d.boards || {}), [which]: board } }));
   const saveScratch = (v) => update(prev => ({ ...prev, scratch: { ...(prev.scratch || {}), [day]: v } }));
 
   const liveLabel = live?.cast?.label || null;
   const castNow = (payload) => cast(payload);
   const dismiss = () => cast(null);
+  const markEngaged = () => push({ engagedAt: Date.now() });
+
+  const setSeats = (seats) => update(prev => ({ ...prev, athSeats: seats }));
+  const awardHorn = (name, amount) => update(prev => ({
+    ...prev,
+    log: [...(prev.log || []), { id: genId(), student: name, amount, source: "Around the Horn", ts: Date.now(), date: day }],
+  }));
 
   // What the boards say unless I edit them. Built from the schedule so there is
   // always something on the screen worth reading.
@@ -700,7 +819,7 @@ export default function Dashboard({ config }) {
   const proposals = {
     pre: {
       title: weekTopic || config.name,
-      lines: [
+      ideas: [
         plan?.notes ? plan.notes : "We start at " + (config.meets?.start || "the top of the hour") + ".",
         ...weekItems.filter(i => i.type === "reading").map(i => "Have out: " + i.title),
         ...dueSoon.slice(0, 1).map(a => a.title + " is due " + a.due + "."),
@@ -708,7 +827,7 @@ export default function Dashboard({ config }) {
     },
     post: {
       title: "Coming up",
-      lines: [
+      ideas: [
         nextDay ? "Next class " + nextDay.date + (nextDay.topic ? " — " + nextDay.topic : "") + "." : "That's the last session on the calendar.",
         ...weekItems.filter(i => i.type !== "reading").map(i => i.title),
         ...dueSoon.map(a => a.title + " — due " + a.due + "."),
@@ -721,20 +840,28 @@ export default function Dashboard({ config }) {
   }
 
   const render = {
-    now: () => <NowPanel config={config} day={day} plan={plan} seq={seq} onSlot={(s) => writeDay(d => ({ ...d, currentSlot: s }))} />,
-    flow: () => <FlowPanel plan={plan} seq={seq} seeds={seeds} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} accent={config.accent} />,
+    now: () => <NowPanel config={config} plan={plan} seq={seq} engagedAt={live?.engagedAt}
+      onEngaged={markEngaged} onSlot={(x) => writeDay(d => ({ ...d, currentSlot: x }))} />,
+    poll: () => <PollPanel poll={P.poll} start={(qq, oo) => { P.start(qq, oo); markEngaged(); }}
+      setPhase={(ph) => { P.setPhase(ph); if (ph === "vote2") markEngaged(); }}
+      setCorrect={P.setCorrect} clear={() => { P.clear(); if (live?.cast?.type === "poll") cast(null); }}
+      roster={students.length} accent={config.accent}
+      onCast={() => cast({ type: "poll", label: "Live poll" })} />,
+    flow: () => <FlowPanel plan={plan} seq={seq} seeds={seeds} castNow={castNow} dismiss={dismiss}
+      liveLabel={liveLabel} accent={config.accent} onClaim={saveFlowClaim} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
-      castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} accent={config.accent} />,
+      castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     stocked: () => <StockedPanel shelves={shelves} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
-      accent={config.accent}
+      accent={config.accent} onClaim={saveStockClaim}
       onAdd={(sh, item) => setShelf(sh, list => [...list, item])}
       onRemove={(sh, id) => setShelf(sh, list => list.filter(x => x.id !== id))} />,
-    questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen} castNow={castNow} accent={config.accent} />,
+    questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
+      castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,
     attendance: () => <AttendancePanel students={students} marks={marks} onMark={mark} />,
     scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
   };
-  const TITLES = { now: "Now", flow: "Class Flow", boards: "Before & After", stocked: "Stocked", questions: "Questions", attendance: "Attendance", scratch: "Scratch Pad", assignments: "Assignments" };
+  const TITLES = { now: "Now", poll: "Poll", flow: "Class Flow", boards: "Before & After", stocked: "Stocked", questions: "Questions", attendance: "Attendance", scratch: "Scratch Pad", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
 
   return (
@@ -753,6 +880,7 @@ export default function Dashboard({ config }) {
             {days.map(d => <option key={d.date} value={d.date}>{d.date}{d.topic ? " · " + d.topic : ""}</option>)}
           </select>
         </div>
+        <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setHornOpen(true)}>Around the Horn</button>
         <a href="/plan" style={{ ...mini, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>The Brief</a>
         <a href={config.path} style={{ ...mini, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Class home</a>
       </header>
@@ -771,6 +899,11 @@ export default function Dashboard({ config }) {
           <Monitor config={config} live={live} cast={cast} push={push} />
         </div>
       </main>
+
+      {hornOpen ? (
+        <HornBoard students={students} seats={data.athSeats || {}} log={data.log || []} accent={config.accent}
+          onSeats={setSeats} onAward={(n, a) => { awardHorn(n, a); markEngaged(); }} onClose={() => setHornOpen(false)} />
+      ) : null}
 
       <div style={{ maxWidth: 1560, margin: "0 auto", padding: "0 20px 40px", fontSize: 12.5, color: TEXT_MUTED }}>
         {dayMeta?.topic ? dayMeta.topic + " · " : ""}Panel arrangement is saved to this browser. Everything else syncs to the class.

@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { useQuestions } from "./questions.js";
 import { useClassData } from "./store.js";
 import { sendSignInEmail, verifyEmailCode, emailFromRedirect, loadEmailMap, saveEmailName } from "./auth.js";
+import { usePoll, openRound } from "./poll.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const TEXT_PRIMARY = "#111827";
@@ -32,6 +33,7 @@ const byLast = (overrides) => (a, b) =>
 
 export default function AskPage({ config }) {
   const { add } = useQuestions(config.storageKey);
+  const { poll, vote } = usePoll(config.storageKey);
   const [data] = useClassData(config.storageKey);
   const REMEMBER = config.storageKey + "-user";
 
@@ -235,11 +237,44 @@ export default function AskPage({ config }) {
   }
 
   // ─── ask step ───
+  const round = openRound(poll);
+  const myVote = round ? (poll[round] || {})[who] : null;
+  const LETTERS = ["A", "B", "C", "D", "E"];
+
   return (
     <div style={wrap}>
       <div style={card}>
         <div style={{ fontSize: 13, color: TEXT_MUTED, fontWeight: 600 }}>{config.code} · {who}</div>
-        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, letterSpacing: "-.02em" }}>Ask me anything</h1>
+
+        {round ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: 16, borderRadius: 14,
+            border: "1px solid " + config.accent, background: "#fff" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: config.accent }}>
+              {poll.phase === "vote2" ? "Vote again" : "Vote"}
+            </div>
+            <div style={{ fontSize: 19, fontWeight: 600, lineHeight: 1.35, letterSpacing: "-.01em" }}>{poll.question}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {poll.options.map((o, i) => {
+                const mine = myVote === i;
+                return (
+                  <button key={i} onClick={() => vote(who, i)}
+                    style={{ ...input, minHeight: 56, textAlign: "left", cursor: "pointer", display: "flex",
+                      alignItems: "center", gap: 12, fontWeight: 500,
+                      background: mine ? config.accent : "#fff", color: mine ? "#fff" : TEXT_PRIMARY,
+                      border: "1px solid " + (mine ? config.accent : BORDER_STRONG) }}>
+                    <span style={{ fontWeight: 700, opacity: mine ? .85 : .5 }}>{LETTERS[i]}</span>
+                    <span>{o}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ fontSize: 13.5, color: TEXT_MUTED }}>
+              {myVote != null ? "Locked in. Change it any time before the floor closes." : "Pick one. Nobody sees who picked what."}
+            </div>
+          </div>
+        ) : null}
+
+        <h1 style={{ margin: round ? "8px 0 0" : 0, fontSize: round ? 21 : 28, fontWeight: 600, letterSpacing: "-.02em" }}>Ask me anything</h1>
         <textarea value={text} onChange={e => setText(e.target.value)} placeholder="What's your question?"
           style={{ ...input, minHeight: 130, resize: "vertical", lineHeight: 1.5 }} />
         <label style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 15, color: TEXT_SECONDARY, cursor: "pointer", minHeight: 44 }}>

@@ -49,21 +49,21 @@ const BUILT = [
   ["Casting", "", "Click anything on the dashboard and it lands on the room screen. Click it again and it comes back down. Cmd+B blacks the screen out, same key PowerPoint has used for twenty years."],
   ["Ask", "/comm118/ask", "Where the QR sends students. Two ways in: name and PIN, or an emailed sign-in link. Questions arrive on my dashboard, confidential by default, anonymous if they choose. I can push one back to the room screen."],
   ["Class engine", "", "One shared codebase renders any class from a config object. COMM 118 is thirty lines of identity on top of it. A new class is a new file, not a fork."],
+  ["Live poll", "", "Peer Instruction, end to end. Ask, they commit alone, close the floor, they argue, ask again, then the room screen shows both rounds with the first one behind the second. The shift is the point."],
+  ["Claims, not titles", "", "Nothing reaches the room screen as a label. Every cast needs one full sentence — \u201cRights fees have increased 45% over the last 10 years,\u201d not \u201cMedia rights.\u201d Written once, it stays on the item."],
+  ["Time since they did anything", "", "The Now panel counts minutes since the room last had to produce something, not minutes to the bell. It resets on a poll, a pushed question, or an Around the Horn point, and goes amber at ten."],
+  ["Around the Horn", "", "The room as it actually sits. Drag names into their seats, tap a seat to award points. Opens over the dashboard so it costs no panel space."],
 ];
 
 const NEXT = [
-  ["Live poll (Peer Instruction)", "Pose a question, everyone commits on their phone, show the spread, they argue, re-vote, show what changed.",
-   "The single strongest finding in the research. Mazur's cycle produces large conceptual gains, and questions where 35–70% get it right the first time generate the best argument. Every piece already exists: Ask is the student device, the room screen is live, the cast bus syncs."],
-  ["Time since they did anything", "Replace the countdown to 9:05 with a counter that resets whenever the room does something.",
-   "Wilson and Korn showed the ten-minute attention span is a myth built on secondary sources. Attention doesn't decay on a clock, it decays when nothing is asked. The honest number is not minutes elapsed."],
-  ["Claim, not title", "Make the cast field a full sentence. Not \"Media rights\" but \"The rights fee, not the ticket, is what the league actually sells.\"",
-   "Alley's assertion-evidence work: students recall a principle from a sentence headline better than the same principle inside a bullet list. The room screen already renders one big line — it is built for a claim and we are feeding it labels."],
-  ["Sweep-back opener", "Pull two or three questions from last week's day plans into a four-minute opening quiz.",
-   "Distributed practice and practice testing are the top two techniques across 242 studies and 169,000 participants. This is the cheapest possible way to run both."],
-  ["Fewer bullets on the boards", "Cap the pre/post boards at three lines, or reveal them one at a time.",
-   "Mayer's coherence and segmenting principles. I built those boards to take a bullet list, which is the pattern the evidence argues against."],
-  ["Around the Horn board", "The rotating in-class board gets its own panel and its own room screen, instead of living in my head.",
-   "It already carries participation weight in COMM 118. If it is graded it should be visible."],
+  ["Sweep-back opener", "Pull two or three questions from last week's day plans into a four-minute opening quiz. Parked for now.",
+   "Distributed practice and practice testing are the top two techniques across 242 studies and 169,000 participants. This is the cheapest possible way to run both, and the poll machinery it needs already exists."],
+  ["Fast grading flow", "One submission at a time: read the link, grade, comment, auto-advance.",
+   "The single biggest drag on the instructor side, and nothing about it is solved yet."],
+  ["Instructor-only student page", "Photo, where they're from, their stated goals, every grade and comment across the quarter.",
+   "Goals get captured on day one and then vanish. If they framed how I read the work all quarter, they should be in front of me while I read it."],
+  ["The AI day planner", "Given what's stocked, propose how to spend the fifty minutes, structured on a sequence.",
+   "Deliberately last. It is only worth building once the surfaces it would fill are settled, and they are still moving."],
 ];
 
 const RESEARCH = [
@@ -224,10 +224,9 @@ export default function PlanPage() {
           </p>
         </Section>
 
-        <Section id="next" eyebrow="Proposed" title="What I'd build next, and why">
+        <Section id="next" eyebrow="Still to come" title="What I'd build next, and why">
           <p style={p}>
-            These came out of reading what the evidence actually says about presenting and teaching. Each one is a
-            change to the software, not just advice.
+            The first round of these is built and live. What is left, in the order I would take it.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {NEXT.map(([t, what, why], i) => (
