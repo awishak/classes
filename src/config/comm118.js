@@ -22,9 +22,6 @@ const comm118 = {
   // Used by the Now panel to count down the minutes left in the session.
   meets: { start: "08:00", end: "09:05" },
 
-  // The Ask page gate.
-  emailDomain: "scu.edu",
-
   accent: "#9f1239",
   accentLight: "#fff1f2",
 

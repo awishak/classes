@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLive } from "./live.js";
 import { useClassData } from "./store.js";
 import { currentDay } from "./days.js";
+import QRCode from "./QRCode.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -73,17 +74,35 @@ function Content({ cast, config, plan }) {
         {plan?.notes ? (
           <div style={{ color: DIM, fontSize: "clamp(15px,1.7vw,24px)", maxWidth: "34ch", lineHeight: 1.45 }}>{plan.notes}</div>
         ) : null}
-        <div style={{ display: "flex", gap: "clamp(28px,5vw,72px)", marginTop: "3vh", flexWrap: "wrap", justifyContent: "center" }}>
-          <div style={{ textAlign: "left" }}>
-            <div style={{ fontSize: "clamp(15px,1.6vw,22px)", fontWeight: 500 }}>Ask me anything</div>
-            <div style={{ ...eyebrow, marginTop: 4, letterSpacing: ".06em" }}>{base.replace(/^https?:\/\//, "")}/ask</div>
-            <div style={{ color: DIM, fontSize: "clamp(12px,1.1vw,15px)", marginTop: 6 }}>Confidential. Anonymous if you want.</div>
-          </div>
-          <div style={{ textAlign: "left", borderLeft: "1px solid " + LINE, paddingLeft: "clamp(20px,3vw,44px)" }}>
-            <div style={{ fontSize: "clamp(15px,1.6vw,22px)", fontWeight: 500 }}>Class homepage</div>
-            <div style={{ ...eyebrow, marginTop: 4, letterSpacing: ".06em" }}>{base.replace(/^https?:\/\//, "")}</div>
-          </div>
+        <AskBlock base={base} />
+      </div>
+    );
+  }
+
+  if (cast.type === "black") {
+    return <div style={{ position: "absolute", inset: 0, background: "#000" }} />;
+  }
+
+  if (cast.type === "board") {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const lines = (cast.lines || []).filter(Boolean);
+    return (
+      <div style={{ ...wrap, justifyContent: "center", gap: "2vh" }}>
+        <div style={eyebrow}>{cast.tag || todayLabel()}</div>
+        <div style={{ fontSize: "clamp(28px,4.2vw,62px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.1 }}>
+          {cast.title}
         </div>
+        {lines.length ? (
+          <ul style={{ margin: "1vh 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "1.3vh" }}>
+            {lines.map((l, i) => (
+              <li key={i} style={{ display: "flex", gap: "0.8em", fontSize: "clamp(16px,2vw,30px)", lineHeight: 1.35, color: INK }}>
+                <span style={{ color: "#e11d48", flex: "none" }}>&#8226;</span>
+                <span>{l}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {cast.showAsk ? <AskBlock base={origin + config.path} compact /> : null}
       </div>
     );
   }
@@ -139,6 +158,24 @@ function Content({ cast, config, plan }) {
         <div style={{ color: DIM, fontSize: "clamp(15px,1.8vw,26px)", maxWidth: "42ch", lineHeight: 1.45 }}>{cast.body}</div>
       ) : null}
       {cast.url ? <div style={{ ...eyebrow, marginTop: "2vh", letterSpacing: ".06em" }}>{cast.url.replace(/^https?:\/\//, "")}</div> : null}
+    </div>
+  );
+}
+
+function AskBlock({ base, compact }) {
+  const px = compact ? 96 : 132;
+  return (
+    <div style={{ display: "flex", gap: "clamp(22px,3.4vw,52px)", marginTop: "2.5vh", alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+      <QRCode value={base + "/ask"} size={px} />
+      <div style={{ textAlign: "left" }}>
+        <div style={{ fontSize: "clamp(15px,1.6vw,22px)", fontWeight: 500 }}>Ask me anything</div>
+        <div style={{ ...eyebrow, marginTop: 4, letterSpacing: ".06em" }}>{base.replace(/^https?:\/\//, "")}/ask</div>
+        <div style={{ color: DIM, fontSize: "clamp(12px,1.1vw,15px)", marginTop: 6 }}>Confidential. Anonymous if you want.</div>
+      </div>
+      <div style={{ textAlign: "left", borderLeft: "1px solid " + LINE, paddingLeft: "clamp(18px,2.6vw,40px)" }}>
+        <div style={{ fontSize: "clamp(15px,1.6vw,22px)", fontWeight: 500 }}>Class homepage</div>
+        <div style={{ ...eyebrow, marginTop: 4, letterSpacing: ".06em" }}>{base.replace(/^https?:\/\//, "")}</div>
+      </div>
     </div>
   );
 }

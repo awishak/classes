@@ -19,7 +19,12 @@ Spec for the two new instructor surfaces in the LMS engine. Decisions captured f
 - **Questions are confidential, not anonymous** by default, with a student-side button to go anonymous. Instructor can push a question back to the classroom screen to answer in front of everyone.
 - **Attendance is instructor-taken.** No student self check-in.
 - **Panels are drag-and-arrange on a real grid.** Not fixed slots with on/off toggles. Drop things where I want them.
-- **Applies to any class.** Built into the engine, driven by config, like every other card.
+- **Applies to any class.** Everything here is engine code driven by a config object. Nothing is COMM 118 specific; a new class is a new config file.
+- **Every cast can be taken down.** Clicking a live row takes it back down (the unreveal), and the monitor has Idle, Black screen, and Take it down.
+- **Pre-class and post-class boards are always hand-driven.** The app proposes lines from the schedule; I edit them; I decide when they go up.
+- **Stocking is per week**, not per day.
+- **Students sign in with the existing accounts** — pick your name, enter your PIN (data.pins).
+- **The current beat is for me only.** It does not go to the room screen.
 
 ## Stocking + AI planning
 
@@ -27,8 +32,16 @@ Before a session I stock a pool for the day or unit: candidate links, potential 
 
 Then AI proposes the session: given five articles, two points I want to make, two questions, and an assignment on the horizon, it returns how to spend the 50 minutes, structured around my named sequences (see [sequences.md](sequences.md)).
 
+## Settled since
+
+There is a room machine at the podium, so classroom view runs there. Split for
+slide control: **things we render ourselves** (title cards, reveals, questions,
+boards) are driven from the dashboard; **third-party embeds** (Canva, YouTube,
+websites) are cast and then driven on the room machine, because we cannot reach
+inside someone else's frame.
+
 ## Open
 
-- Cast-only vs. drive-from-laptop for slide advance. Depends on whether the projector runs classroom view on a room machine or mirrors my laptop.
-- Which animations. Mockups first, then pick.
-- How students identify themselves for confidential questions.
+- Which animations to keep. Five everyday, two reveals, all live to compare.
+- The AI planner. Deliberately not started — this needs more work first.
+- Whether /comm118 itself should move onto the engine.

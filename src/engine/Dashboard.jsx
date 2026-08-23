@@ -37,6 +37,7 @@ const label = { fontFamily: MONO, fontSize: 11, fontWeight: 600, color: TEXT_MUT
 const mini = { minHeight: 34, padding: "0 12px", borderRadius: 8, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_SECONDARY, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
 const solid = (a) => ({ ...mini, background: a, borderColor: a, color: "#fff" });
 const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 9, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: 40, background: "#fff", color: TEXT_PRIMARY };
+const label2 = { fontFamily: MONO, fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
 const Muted = ({ children, style }) => <div style={{ fontSize: 14, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 
 const CSS = `
@@ -81,9 +82,10 @@ function Panel({ id, title, right, span, onDrag, onSize, children, refCb, draggi
 }
 
 // A castable row.
-function Item({ kind, kindColor, title, sub, live, onCast, accent }) {
+function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
   return (
-    <button className="dash-item" onClick={onCast}
+    <button className="dash-item" onClick={live && onDismiss ? onDismiss : onCast}
+      title={live ? "Take it back down" : "Send it to the room screen"}
       style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", cursor: "pointer",
         background: live ? "rgba(225,29,72,.07)" : SURFACE_2, border: "1px solid " + (live ? LIVE : "transparent"),
         borderRadius: 10, padding: "9px 11px", minHeight: TAP, fontFamily: F, transition: "background .14s, border-color .14s" }}>
@@ -95,7 +97,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, accent }) {
       </span>
       <span className="dash-go" style={{ flex: "none", fontFamily: MONO, fontSize: 10, letterSpacing: ".08em",
         color: live ? LIVE : TEXT_MUTED, fontWeight: live ? 700 : 400, opacity: live ? 1 : 0, transition: "opacity .14s" }}>
-        {live ? "LIVE" : "CAST →"}
+        {live ? "TAKE DOWN ×" : "CAST →"}
       </span>
     </button>
   );
@@ -164,7 +166,7 @@ function NowPanel({ config, day, plan, seq, onSlot }) {
   );
 }
 
-function FlowPanel({ plan, seq, seeds, castNow, liveLabel, accent }) {
+function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent }) {
   if (!plan || !seq) return <Muted>No plan for this day yet. Build it in Day Plan.</Muted>;
   const seedById = (id) => seeds.find(s => s.id === id);
   const slotItems = plan.slots || {};
@@ -189,11 +191,11 @@ function FlowPanel({ plan, seq, seeds, castNow, liveLabel, accent }) {
                 <div key={it.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <Item kind={seed ? "Seed" : "Note"} kindColor={KIND_COLOR[seed ? "Seed" : "Note"]}
                     title={title} sub={body ? body.slice(0, 70) : ""} live={liveLabel === title}
-                    onCast={() => castNow(c)} accent={accent} />
+                    onCast={() => castNow(c)} onDismiss={dismiss} />
                   {(it.links || []).map(l => (
                     <div key={l.id} style={{ paddingLeft: 16 }}>
                       <Item kind="Link" kindColor={KIND_COLOR.Link} title={l.label} sub={l.url}
-                        live={liveLabel === (l.label || l.url)} onCast={() => castNow(castFromLink(l))} accent={accent} />
+                        live={liveLabel === (l.label || l.url)} onCast={() => castNow(castFromLink(l))} onDismiss={dismiss} />
                     </div>
                   ))}
                 </div>
@@ -208,7 +210,7 @@ function FlowPanel({ plan, seq, seeds, castNow, liveLabel, accent }) {
 
 const STOCK_KINDS = ["Link", "Video", "PDF", "Deck", "Web", "Note"];
 
-function StockedPanel({ stocked, onAdd, onRemove, castNow, liveLabel, accent }) {
+function StockedPanel({ stocked, onAdd, onRemove, castNow, dismiss, liveLabel, accent, weekLabel }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("Link");
   const [title, setTitle] = useState("");
@@ -222,14 +224,14 @@ function StockedPanel({ stocked, onAdd, onRemove, castNow, liveLabel, accent }) 
 
   return (
     <>
-      <Muted>Loaded before class. Not in the plan — here if I need it.</Muted>
+      <Muted>Stocked for {weekLabel || "this week"}. Not in the plan — here if I need it.</Muted>
       {(stocked || []).map(s => (
         <div key={s.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <Item kind={s.kind} kindColor={KIND_COLOR[s.kind]} title={s.title} sub={s.url}
               live={liveLabel === s.title}
               onCast={() => castNow(s.url ? castFromLink({ label: s.title, url: s.url }) : { type: "quote", tag: "Stocked", title: s.title, label: s.title })}
-              accent={accent} />
+              onDismiss={dismiss} />
           </div>
           <button onClick={() => onRemove(s.id)} title="Remove"
             style={{ ...mini, minHeight: 28, padding: "0 8px", color: TEXT_MUTED }}>✕</button>
@@ -324,6 +326,69 @@ function AttendancePanel({ students, marks, onMark }) {
   );
 }
 
+// Pre-class and post-class boards. I always drive these by hand — the app
+// proposes lines from the schedule, I edit them, then I put them up.
+function BoardsPanel({ boards, proposals, onSave, castNow, dismiss, liveLabel, accent }) {
+  return (
+    <>
+      {["pre", "post"].map(which => {
+        const proposed = proposals[which];
+        const saved = boards[which];
+        const board = saved || proposed;
+        const label = which === "pre" ? "Before class" : "After class";
+        return (
+          <BoardEditor key={which} label={label} board={board} isProposal={!saved} accent={accent}
+            onSave={(b) => onSave(which, b)}
+            onReset={() => onSave(which, null)}
+            live={liveLabel === label}
+            onCast={() => castNow({ type: "board", tag: label, title: board.title, lines: board.lines, showAsk: which === "pre", label })}
+            onDismiss={dismiss} />
+        );
+      })}
+    </>
+  );
+}
+
+function BoardEditor({ label, board, isProposal, accent, onSave, onReset, live, onCast, onDismiss }) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(board.title);
+  const [lines, setLines] = useState((board.lines || []).join("\n"));
+  useEffect(() => { setTitle(board.title); setLines((board.lines || []).join("\n")); }, [board.title, (board.lines || []).join("\n")]);
+
+  if (editing) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, border: "1px solid " + BORDER, borderRadius: 10 }}>
+        <span style={label2}>{label}</span>
+        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Headline" style={inputStyle} />
+        <textarea value={lines} onChange={e => setLines(e.target.value)} placeholder="One bullet per line"
+          style={{ ...inputStyle, minHeight: 96, resize: "vertical", lineHeight: 1.5, fontSize: 15 }} />
+        <div style={{ display: "flex", gap: 7 }}>
+          <button style={solid(accent)} onClick={() => { onSave({ title, lines: lines.split("\n").map(l => l.trim()).filter(Boolean) }); setEditing(false); }}>Save</button>
+          <button style={mini} onClick={() => setEditing(false)}>Cancel</button>
+          {!isProposal ? <button style={{ ...mini, marginLeft: "auto", color: TEXT_MUTED }} onClick={() => { onReset(); setEditing(false); }}>Reset to proposed</button> : null}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, border: "1px solid " + (live ? LIVE : BORDER), borderRadius: 10, background: live ? "rgba(225,29,72,.06)" : SURFACE_2 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={label2}>{label}</span>
+        {isProposal ? <span style={{ ...label2, color: accent, fontSize: 10 }}>proposed</span> : null}
+        <button style={{ ...mini, minHeight: 26, padding: "0 9px", marginLeft: "auto", fontSize: 12 }} onClick={() => setEditing(true)}>Edit</button>
+      </div>
+      <div style={{ fontWeight: 600, fontSize: 15 }}>{board.title}</div>
+      <ul style={{ margin: 0, paddingLeft: 18, color: TEXT_SECONDARY, fontSize: 13.5, lineHeight: 1.5 }}>
+        {(board.lines || []).map((l, i) => <li key={i}>{l}</li>)}
+      </ul>
+      <button style={live ? { ...mini, borderColor: LIVE, color: LIVE } : solid(accent)} onClick={live ? onDismiss : onCast}>
+        {live ? "Take it down" : "Put it up"}
+      </button>
+    </div>
+  );
+}
+
 function ScratchPanel({ value, onSave }) {
   const [v, setV] = useState(value || "");
   useEffect(() => { setV(value || ""); }, [value]);
@@ -334,15 +399,14 @@ function ScratchPanel({ value, onSave }) {
   );
 }
 
-function AssignmentsPanel({ assignments, castNow, liveLabel, accent }) {
+function AssignmentsPanel({ assignments, castNow, dismiss, liveLabel }) {
   if (!assignments.length) return <Muted>No assignments yet.</Muted>;
   return (
     <>
       {assignments.map(a => (
         <Item key={a.id} kind="Reveal" kindColor={LIVE} title={a.title} sub={"Due " + a.due + (a.weight ? " · " + a.weight + "%" : "")}
-          live={liveLabel === a.title}
-          onCast={() => castNow({ type: "reveal", stamp: "Assignment", title: a.title, due: "Due " + a.due, big: true, label: a.title })}
-          accent={accent} />
+          live={liveLabel === a.title} onDismiss={dismiss}
+          onCast={() => castNow({ type: "reveal", stamp: "Assignment", title: a.title, due: "Due " + a.due, big: true, label: a.title })} />
       ))}
       <Muted style={{ fontSize: 12 }}>Reveals use the big animation.</Muted>
     </>
@@ -388,7 +452,14 @@ function Monitor({ config, live, cast, push }) {
       </div>
 
       <div style={{ display: "flex", gap: 8 }}>
-        <button style={{ ...mini, flex: 1 }} onClick={() => cast(null)}>Back to idle</button>
+        <button style={{ ...mini, flex: 1, ...(on ? {} : { borderColor: config.accent, color: config.accent }) }}
+          onClick={() => cast(null)}>Idle screen</button>
+        <button style={{ ...mini, flex: 1, ...(live?.cast?.type === "black" ? { background: "#111", borderColor: "#111", color: "#fff" } : {}) }}
+          onClick={() => cast({ type: "black", label: "Black screen" })}>Black screen</button>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button style={{ ...mini, flex: 1, ...(on ? { borderColor: LIVE, color: LIVE } : { opacity: .45 }) }}
+          disabled={!on} onClick={() => cast(null)}>Take it down</button>
         <a href={config.path + "/today"} target="_blank" rel="noreferrer" style={{ ...mini, flex: 1, textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
           Open room screen ↗
         </a>
@@ -428,8 +499,8 @@ function Picker({ title, opts, value, onPick, accent }) {
 // ─────────────────────────────────────────────────────────────
 // main
 // ─────────────────────────────────────────────────────────────
-const DEFAULT_ORDER = ["now", "flow", "stocked", "questions", "attendance", "scratch", "assignments"];
-const DEFAULT_SPANS = { now: "2", flow: "2", stocked: "1", questions: "1", attendance: "2", scratch: "1", assignments: "1" };
+const DEFAULT_ORDER = ["now", "flow", "boards", "stocked", "questions", "attendance", "scratch", "assignments"];
+const DEFAULT_SPANS = { now: "2", flow: "2", boards: "1", stocked: "1", questions: "1", attendance: "2", scratch: "1", assignments: "1" };
 
 export default function Dashboard({ config }) {
   const [data, update] = useClassData(config.storageKey);
@@ -447,7 +518,10 @@ export default function Dashboard({ config }) {
   const seeds = data?.seeds || config.seeds || [];
   const students = data?.students || config.students || [];
   const assignments = data?.assignments || config.assignments || [];
-  const stocked = (data?.stocked || {})[day] || [];
+  const week = days.find(d => d.date === day);
+  const weekId = week?.weekId || "w?";
+  const weekTopic = week?.topic || "";
+  const stocked = (data?.stocked || {})[weekId] || [];
   const marks = (data?.attendance || {})[day] || {};
   const dayMeta = days.find(d => d.date === day);
 
@@ -557,15 +631,43 @@ export default function Dashboard({ config }) {
     att[day] = { ...(att[day] || {}), [name]: state };
     return { ...prev, attendance: att };
   });
+  // Stocked things belong to the week, not one class day.
   const setStocked = (fn) => update(prev => {
     const st = { ...(prev.stocked || {}) };
-    st[day] = fn(st[day] || []);
+    st[weekId] = fn(st[weekId] || []);
     return { ...prev, stocked: st };
   });
+  const saveBoard = (which, board) => writeDay(d => ({ ...d, boards: { ...(d.boards || {}), [which]: board } }));
   const saveScratch = (v) => update(prev => ({ ...prev, scratch: { ...(prev.scratch || {}), [day]: v } }));
 
   const liveLabel = live?.cast?.label || null;
   const castNow = (payload) => cast(payload);
+  const dismiss = () => cast(null);
+
+  // What the boards say unless I edit them. Built from the schedule so there is
+  // always something on the screen worth reading.
+  const idx = days.findIndex(d => d.date === day);
+  const nextDay = idx >= 0 ? days[idx + 1] : null;
+  const weekItems = (weeks.find(w => w.id === weekId)?.items) || [];
+  const dueSoon = assignments.filter(a => a.due && a.due !== "Ongoing").slice(0, 2);
+  const proposals = {
+    pre: {
+      title: weekTopic || config.name,
+      lines: [
+        plan?.notes ? plan.notes : "We start at " + (config.meets?.start || "the top of the hour") + ".",
+        ...weekItems.filter(i => i.type === "reading").map(i => "Have out: " + i.title),
+        ...dueSoon.slice(0, 1).map(a => a.title + " is due " + a.due + "."),
+      ].filter(Boolean),
+    },
+    post: {
+      title: "Coming up",
+      lines: [
+        nextDay ? "Next class " + nextDay.date + (nextDay.topic ? " — " + nextDay.topic : "") + "." : "That's the last session on the calendar.",
+        ...weekItems.filter(i => i.type !== "reading").map(i => i.title),
+        ...dueSoon.map(a => a.title + " — due " + a.due + "."),
+      ].filter(Boolean),
+    },
+  };
 
   if (data === null || !day) {
     return <div style={{ minHeight: "100vh", background: BG, fontFamily: F, display: "grid", placeItems: "center", color: TEXT_MUTED }}>Loading…</div>;
@@ -573,15 +675,18 @@ export default function Dashboard({ config }) {
 
   const render = {
     now: () => <NowPanel config={config} day={day} plan={plan} seq={seq} onSlot={(s) => writeDay(d => ({ ...d, currentSlot: s }))} />,
-    flow: () => <FlowPanel plan={plan} seq={seq} seeds={seeds} castNow={castNow} liveLabel={liveLabel} accent={config.accent} />,
-    stocked: () => <StockedPanel stocked={stocked} castNow={castNow} liveLabel={liveLabel} accent={config.accent}
+    flow: () => <FlowPanel plan={plan} seq={seq} seeds={seeds} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} accent={config.accent} />,
+    boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
+      castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} accent={config.accent} />,
+    stocked: () => <StockedPanel stocked={stocked} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
+      accent={config.accent} weekLabel={weekTopic ? "“" + weekTopic + "”" : "this week"}
       onAdd={(s) => setStocked(list => [...list, s])} onRemove={(id) => setStocked(list => list.filter(x => x.id !== id))} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen} castNow={castNow} accent={config.accent} />,
     attendance: () => <AttendancePanel students={students} marks={marks} onMark={mark} />,
     scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch} />,
-    assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} liveLabel={liveLabel} accent={config.accent} />,
+    assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
   };
-  const TITLES = { now: "Now", flow: "Class Flow", stocked: "Stocked", questions: "Questions", attendance: "Attendance", scratch: "Scratch Pad", assignments: "Assignments" };
+  const TITLES = { now: "Now", flow: "Class Flow", boards: "Before & After", stocked: "Stocked", questions: "Questions", attendance: "Attendance", scratch: "Scratch Pad", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
 
   return (
