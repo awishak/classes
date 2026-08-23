@@ -37,6 +37,10 @@ const comm999 = {
   ],
   teams: null, // null = no teams; or [{ id, name }]
 
+  // Names that do not split on the last space. "Alexander Watanabe Eriksson"
+  // sorts under W, not E.
+  lastNameOverrides: {},
+
   // ─── Cards ───
   // Every class ships ALL cards. Toggle them off per class from the admin page.
   // Order here is the order shown on the home grid.

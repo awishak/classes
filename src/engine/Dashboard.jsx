@@ -210,7 +210,27 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent }) {
 
 const STOCK_KINDS = ["Link", "Video", "PDF", "Deck", "Web", "Note"];
 
-function StockedPanel({ stocked, onAdd, onRemove, castNow, dismiss, liveLabel, accent, weekLabel }) {
+// Three shelves, three lifetimes. Subtopic ideas are for today, topic ideas
+// last the week, and the random shelf is always there.
+const SHELVES = [
+  { id: "day", label: "Subtopic ideas", scope: "today" },
+  { id: "week", label: "Topic ideas", scope: "this week" },
+  { id: "any", label: "Random", scope: "anything" },
+];
+
+function StockedPanel({ shelves, onAdd, onRemove, castNow, dismiss, liveLabel, accent }) {
+  return (
+    <>
+      {SHELVES.map(sh => (
+        <Shelf key={sh.id} shelf={sh} items={shelves[sh.id] || []} accent={accent}
+          onAdd={(item) => onAdd(sh.id, item)} onRemove={(id) => onRemove(sh.id, id)}
+          castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />
+      ))}
+    </>
+  );
+}
+
+function Shelf({ shelf, items, onAdd, onRemove, castNow, dismiss, liveLabel, accent }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("Link");
   const [title, setTitle] = useState("");
@@ -223,9 +243,12 @@ function StockedPanel({ stocked, onAdd, onRemove, castNow, dismiss, liveLabel, a
   };
 
   return (
-    <>
-      <Muted>Stocked for {weekLabel || "this week"}. Not in the plan — here if I need it.</Muted>
-      {(stocked || []).map(s => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+        <span style={{ ...label, color: accent }}>{shelf.label}</span>
+        <span style={{ ...label, fontSize: 10 }}>{shelf.scope}</span>
+      </div>
+      {(items || []).map(s => (
         <div key={s.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <Item kind={s.kind} kindColor={KIND_COLOR[s.kind]} title={s.title} sub={s.url}
@@ -250,9 +273,9 @@ function StockedPanel({ stocked, onAdd, onRemove, castNow, dismiss, liveLabel, a
           </div>
         </div>
       ) : (
-        <button onClick={() => setOpen(true)} style={{ ...mini, alignSelf: "flex-start" }}>+ Stock something</button>
+        <button onClick={() => setOpen(true)} style={{ ...mini, alignSelf: "flex-start" }}>+ Add</button>
       )}
-    </>
+    </div>
   );
 }
 
@@ -521,11 +544,30 @@ export default function Dashboard({ config }) {
   const week = days.find(d => d.date === day);
   const weekId = week?.weekId || "w?";
   const weekTopic = week?.topic || "";
-  const stocked = (data?.stocked || {})[weekId] || [];
+  const stock = data?.stocked || {};
+  const shelves = {
+    day: (stock.day || {})[day] || [],
+    week: (stock.week || {})[weekId] || [],
+    any: stock.any || [],
+  };
   const marks = (data?.attendance || {})[day] || {};
   const dayMeta = days.find(d => d.date === day);
 
   useEffect(() => { document.title = config.code + " — Dashboard"; }, [config.code]);
+
+  // Cmd/Ctrl+B blacks the room screen out, and again brings it back.
+  const liveRef = useRef(null);
+  liveRef.current = live;
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.key !== "b" && e.key !== "B") || !(e.metaKey || e.ctrlKey)) return;
+      e.preventDefault();
+      const cur = liveRef.current?.cast;
+      cast(cur?.type === "black" ? null : { type: "black", label: "Black screen" });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [cast]);
 
   // ─── panel layout (my screen preference, so it lives in this browser) ───
   const LKEY = "dash:" + config.id;
@@ -631,10 +673,15 @@ export default function Dashboard({ config }) {
     att[day] = { ...(att[day] || {}), [name]: state };
     return { ...prev, attendance: att };
   });
-  // Stocked things belong to the week, not one class day.
-  const setStocked = (fn) => update(prev => {
+  // Each shelf lives at its own scope: today, this week, or the whole term.
+  const setShelf = (shelf, fn) => update(prev => {
     const st = { ...(prev.stocked || {}) };
-    st[weekId] = fn(st[weekId] || []);
+    if (shelf === "any") { st.any = fn(st.any || []); }
+    else {
+      const key = shelf === "day" ? day : weekId;
+      st[shelf] = { ...(st[shelf] || {}) };
+      st[shelf][key] = fn(st[shelf][key] || []);
+    }
     return { ...prev, stocked: st };
   });
   const saveBoard = (which, board) => writeDay(d => ({ ...d, boards: { ...(d.boards || {}), [which]: board } }));
@@ -678,9 +725,10 @@ export default function Dashboard({ config }) {
     flow: () => <FlowPanel plan={plan} seq={seq} seeds={seeds} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} accent={config.accent} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} accent={config.accent} />,
-    stocked: () => <StockedPanel stocked={stocked} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
-      accent={config.accent} weekLabel={weekTopic ? "“" + weekTopic + "”" : "this week"}
-      onAdd={(s) => setStocked(list => [...list, s])} onRemove={(id) => setStocked(list => list.filter(x => x.id !== id))} />,
+    stocked: () => <StockedPanel shelves={shelves} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
+      accent={config.accent}
+      onAdd={(sh, item) => setShelf(sh, list => [...list, item])}
+      onRemove={(sh, id) => setShelf(sh, list => list.filter(x => x.id !== id))} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen} castNow={castNow} accent={config.accent} />,
     attendance: () => <AttendancePanel students={students} marks={marks} onMark={mark} />,
     scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch} />,

@@ -23,12 +23,6 @@ const CSS = `
 @keyframes cv-riseOut{to{opacity:0;transform:translateY(-2vh)}}
 @keyframes cv-pushIn{from{transform:translateX(100%)}to{transform:none}}
 @keyframes cv-pushOut{to{transform:translateX(-32%);opacity:.3}}
-@keyframes cv-iris{from{clip-path:circle(0% at 50% 50%)}to{clip-path:circle(80% at 50% 50%)}}
-@keyframes cv-hold{to{opacity:1}}
-@keyframes cv-flipIn{from{transform:perspective(1600px) rotateY(88deg);opacity:0}60%{opacity:1}to{transform:perspective(1600px) rotateY(0);opacity:1}}
-@keyframes cv-flipOut{to{transform:perspective(1600px) rotateY(-88deg);opacity:0}}
-@keyframes cv-drop{0%{opacity:0;transform:scale(2.1);filter:blur(10px)}55%{opacity:1;filter:blur(0)}70%{transform:scale(.955)}85%{transform:scale(1.018)}100%{transform:scale(1)}}
-@keyframes cv-shake{10%,90%{transform:translateX(-3px)}20%,80%{transform:translateX(5px)}30%,50%,70%{transform:translateX(-8px)}40%,60%{transform:translateX(8px)}100%{transform:none}}
 @keyframes cv-spot{0%{opacity:0;clip-path:circle(0% at 50% 46%)}22%{opacity:1;clip-path:circle(9% at 50% 46%)}100%{opacity:1;clip-path:circle(98% at 50% 46%)}}
 @keyframes cv-beam{0%{opacity:0}25%{opacity:1}100%{opacity:0}}
 .cv-layer{position:absolute;inset:0;animation-fill-mode:both;animation-timing-function:cubic-bezier(.22,.9,.3,1);backface-visibility:hidden}
@@ -37,15 +31,8 @@ const CSS = `
 .cv-out-rise{animation:cv-riseOut .3s forwards}
 .cv-in-push{animation:cv-pushIn .5s}
 .cv-out-push{animation:cv-pushOut .5s forwards}
-.cv-in-iris{animation:cv-iris .62s}
-.cv-out-iris{animation:cv-hold .62s forwards}
-.cv-in-flip{animation:cv-flipIn .58s}
-.cv-out-flip{animation:cv-flipOut .34s forwards}
-.cv-in-drop{animation:cv-drop .78s cubic-bezier(.16,1.1,.3,1)}
-.cv-out-drop{animation:cv-riseOut .22s forwards}
 .cv-in-spot{animation:cv-spot 1.15s ease-out}
 .cv-out-spot{animation:cv-riseOut .2s forwards}
-.cv-shake{animation:cv-shake .42s .42s cubic-bezier(.36,.07,.19,.97)}
 .cv-beam{position:absolute;inset:0;z-index:4;pointer-events:none;animation:cv-beam 1.15s ease-out forwards;
   background:radial-gradient(circle at 50% 46%, rgba(255,241,243,.16), transparent 46%)}
 @media (prefers-reduced-motion:reduce){
@@ -207,19 +194,15 @@ export default function ClassroomView({ config }) {
     if (live.n === seen.current) return;
     const first = seen.current === -1;
     seen.current = live.n;
-    const anim = live.cast?.big ? (live.bigAnim || "drop") : (live.anim || "rise");
+    // Fall back if stored state still names an animation we have retired.
+    const KEEP = ["cut", "rise", "push", "spot"];
+    const want = live.cast?.big ? (live.bigAnim || "spot") : (live.anim || "rise");
+    const anim = KEEP.includes(want) ? want : (live.cast?.big ? "spot" : "rise");
     const use = first ? "cut" : anim;
     setLayers(prev => [
       ...prev.map(l => ({ ...l, phase: "out", anim: use })),
       { key: "l" + live.n + "-" + live.at, cast: live.cast, anim: use, phase: "in" },
     ]);
-    if (use === "drop" && stageRef.current) {
-      const el = stageRef.current;
-      el.classList.remove("cv-shake");
-      void el.offsetWidth;
-      el.classList.add("cv-shake");
-      setTimeout(() => el && el.classList.remove("cv-shake"), 900);
-    }
     if (use === "spot") setBeam(b => b + 1);
     // Drop outgoing layers once their exit has had time to run.
     const t = setTimeout(() => setLayers(prev => prev.filter(l => l.phase !== "out")), 1300);

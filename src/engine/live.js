@@ -13,21 +13,18 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 export const liveKey = (storageKey) => storageKey + "-live";
 
-export const EMPTY_LIVE = { cast: null, anim: "rise", bigAnim: "drop", n: 0, at: 0 };
+export const EMPTY_LIVE = { cast: null, anim: "rise", bigAnim: "spot", n: 0, at: 0 };
 
 // Everyday animations, in the order they appear in the picker.
 export const ANIMS = [
   { id: "cut", name: "Cut", hint: "No transition. Fastest, least distracting." },
   { id: "rise", name: "Rise", hint: "Lifts in from below. Quiet and quick." },
   { id: "push", name: "Push", hint: "Old slides out, new slides in. Like turning a page." },
-  { id: "iris", name: "Iris", hint: "Circular wipe from the center. Pulls eyes to the middle." },
-  { id: "flip", name: "Flip", hint: "The screen turns over. The theatrical one." },
 ];
 
 // Reserved for anything marked big (assignment reveals).
 export const BIG_ANIMS = [
-  { id: "drop", name: "Drop", hint: "Slams in oversized with a shake. Loud and short." },
-  { id: "spot", name: "Spotlight", hint: "Room goes dark, a beam opens. Slower burn." },
+  { id: "spot", name: "Spotlight", hint: "Room goes dark, a beam opens on it. The reveal." },
 ];
 
 export function useLive(storageKey) {
