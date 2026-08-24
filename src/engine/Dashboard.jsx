@@ -177,6 +177,39 @@ function Castable({ kind, kindColor, title, sub, url, claim, live, accent, onCas
   );
 }
 
+// The things we actually do in class. They are features, not content: a mode
+// the room goes into. Scheduled on a day in the week's items, run from Class
+// Flow. Around the Horn opens its own board; the rest announce themselves on
+// the room screen until they are built out.
+export const FEATURES = {
+  "Headlines": "Students bring real headlines. The room votes them into categories.",
+  "Game": "The weekly game. Six On Topic, four Sports World.",
+  "Fishbowl": "Rotating fishbowl on the assigned readings.",
+  "This or That": "Fast forced choice.",
+  "Around the Horn": "The seating board. Points for the room.",
+  "Team Trivia": "Teams, buzzers, the works.",
+};
+
+function FeatureRow({ name, live, accent, onRun, onDismiss }) {
+  const blurb = FEATURES[name] || "";
+  return (
+    <button onClick={live ? onDismiss : onRun}
+      style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", cursor: "pointer",
+        background: live ? "rgba(225,29,72,.07)" : "#fff", border: "1px solid " + (live ? LIVE : BORDER_STRONG),
+        borderRadius: 10, padding: "9px 12px", minHeight: TAP, fontFamily: F }}>
+      <span style={{ flex: "none", width: 7, height: 7, borderRadius: "50%", background: live ? LIVE : accent }} />
+      <span style={{ minWidth: 0, flex: 1 }}>
+        <b style={{ display: "block", fontWeight: 600, fontSize: 14.5, color: TEXT_PRIMARY }}>{name}</b>
+        <small style={{ color: TEXT_MUTED, fontSize: 12 }}>{blurb}</small>
+      </span>
+      <span style={{ flex: "none", fontFamily: MONO, fontSize: 10, letterSpacing: ".08em",
+        color: live ? LIVE : TEXT_MUTED, fontWeight: live ? 700 : 500 }}>
+        {live ? "RUNNING ×" : "RUN →"}
+      </span>
+    </button>
+  );
+}
+
 const KIND_COLOR = { Deck: "#7c3aed", PDF: "#b91c1c", Web: "#0369a1", Video: "#b45309", Seed: "#9f1239", Ask: OK, Link: "#0369a1", Note: TEXT_MUTED };
 
 // Whether a link can actually be framed. This has to be an allowlist: most of
