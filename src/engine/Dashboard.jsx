@@ -109,17 +109,17 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // Nothing goes up as a label. Before a thing can be cast it needs a claim —
 // one full sentence saying what it shows. "Media rights" is a topic; "Rights
 // fees have risen 45% in ten years" is what the room can actually read.
-function Castable({ kind, kindColor, title, sub, claim, live, accent, onCast, onDismiss, onSaveClaim }) {
+function Castable({ kind, kindColor, title, sub, url, claim, live, accent, onCast, onDismiss, onSaveClaim }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(claim || "");
   useEffect(() => { setDraft(claim || ""); }, [claim]);
 
-  const commit = () => {
+  const commit = (thenCast) => {
     const c = oneSentence(draft);
     if (!c || c.split(" ").length < 3) return;
     onSaveClaim(c);
-    onCast(c);
     setEditing(false);
+    if (thenCast) onCast(c);
   };
 
   if (editing) {
@@ -128,61 +128,52 @@ function Castable({ kind, kindColor, title, sub, claim, live, accent, onCast, on
         <span style={{ ...label, color: accent }}>Say it in one sentence</span>
         <div style={{ fontSize: 12.5, color: TEXT_MUTED }}>{title}</div>
         <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+          onKeyDown={e => { if (e.key === "Enter") commit(true); if (e.key === "Escape") setEditing(false); }}
           placeholder="Rights fees have increased 45% over the last 10 years."
           style={inputStyle} />
         <div style={{ display: "flex", gap: 7 }}>
-          <button style={solid(accent)} onClick={commit}>Cast it</button>
-          <button style={mini} onClick={() => setEditing(false)}>Cancel</button>
+          <button style={solid(accent)} onClick={() => commit(true)}>Save and cast</button>
+          <button style={mini} onClick={() => commit(false)}>Just save</button>
+          <button style={{ ...mini, marginLeft: "auto" }} onClick={() => setEditing(false)}>Cancel</button>
         </div>
       </div>
     );
   }
 
+  const act = { ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5 };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <Item kind={kind} kindColor={kindColor} title={claim || title} sub={claim ? title : sub}
-        live={live} onDismiss={onDismiss}
-        onCast={() => { if (claim) onCast(claim); else setEditing(true); }} />
-      <button onClick={() => setEditing(true)}
-        style={{ alignSelf: "flex-start", background: "none", border: "none", padding: "0 0 0 11px",
-          color: TEXT_MUTED, fontFamily: F, fontSize: 12, cursor: "pointer" }}>
-        {claim ? "Edit the claim" : "Write the claim"}
-      </button>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 11px", borderRadius: 10,
+      background: live ? "rgba(225,29,72,.07)" : SURFACE_2, border: "1px solid " + (live ? LIVE : "transparent") }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <span style={{ flex: "none", marginTop: 2, fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: ".08em",
+          textTransform: "uppercase", padding: "3px 6px", borderRadius: 5, background: "#fff",
+          border: "1px solid " + (kindColor || BORDER_STRONG), color: kindColor || TEXT_MUTED }}>{kind}</span>
+        <span style={{ minWidth: 0, flex: 1 }}>
+          <b style={{ display: "block", fontWeight: 500, fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.35 }}>{claim || title}</b>
+          {claim || sub ? (
+            <small style={{ color: TEXT_MUTED, fontSize: 12, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {claim ? title : sub}
+            </small>
+          ) : null}
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {url ? (
+          <a href={url} target="_blank" rel="noreferrer"
+            style={{ ...act, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Open here ↗</a>
+        ) : null}
+        {live ? (
+          <button style={{ ...act, borderColor: LIVE, color: LIVE }} onClick={onDismiss}>Take it down ×</button>
+        ) : (
+          <button style={{ ...act, borderColor: accent, color: accent }}
+            onClick={() => { if (claim) onCast(claim); else setEditing(true); }}>To the room →</button>
+        )}
+        <button style={{ ...act, marginLeft: "auto", color: TEXT_MUTED }} onClick={() => setEditing(true)}>
+          {claim ? "Claim" : "Write claim"}
+        </button>
+      </div>
     </div>
-  );
-}
-
-// The things we actually do in class. They are features, not content: a mode
-// the room goes into. Scheduled on a day in the week's items, run from Class
-// Flow. Around the Horn opens its own board; the rest announce themselves on
-// the room screen until they are built out.
-export const FEATURES = {
-  "Headlines": "Students bring real headlines. The room votes them into categories.",
-  "Game": "The weekly game. Six On Topic, four Sports World.",
-  "Fishbowl": "Rotating fishbowl on the assigned readings.",
-  "This or That": "Fast forced choice.",
-  "Around the Horn": "The seating board. Points for the room.",
-  "Team Trivia": "Teams, buzzers, the works.",
-};
-
-function FeatureRow({ name, live, accent, onRun, onDismiss }) {
-  const blurb = FEATURES[name] || "";
-  return (
-    <button onClick={live ? onDismiss : onRun}
-      style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", cursor: "pointer",
-        background: live ? "rgba(225,29,72,.07)" : "#fff", border: "1px solid " + (live ? LIVE : BORDER_STRONG),
-        borderRadius: 10, padding: "9px 12px", minHeight: TAP, fontFamily: F }}>
-      <span style={{ flex: "none", width: 7, height: 7, borderRadius: "50%", background: live ? LIVE : accent }} />
-      <span style={{ minWidth: 0, flex: 1 }}>
-        <b style={{ display: "block", fontWeight: 600, fontSize: 14.5, color: TEXT_PRIMARY }}>{name}</b>
-        <small style={{ color: TEXT_MUTED, fontSize: 12 }}>{blurb}</small>
-      </span>
-      <span style={{ flex: "none", fontFamily: MONO, fontSize: 10, letterSpacing: ".08em",
-        color: live ? LIVE : TEXT_MUTED, fontWeight: live ? 700 : 500 }}>
-        {live ? "RUNNING ×" : "RUN →"}
-      </span>
-    </button>
   );
 }
 
@@ -310,7 +301,7 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
                     onCast={(c) => castNow({ type: "quote", tag: bucket.title || s.slot, title: c, cite: seed ? seed.concept : "", label: c })} />
                   {(it.links || []).map(l => (
                     <div key={l.id} style={{ paddingLeft: 16 }}>
-                      <Castable kind="Link" kindColor={KIND_COLOR.Link} title={l.label} sub={l.url}
+                      <Castable kind="Link" kindColor={KIND_COLOR.Link} title={l.label} sub={l.url} url={l.url}
                         claim={l.claim} accent={accent} live={liveLabel === (l.claim || l.label)} onDismiss={dismiss}
                         onSaveClaim={(c) => onClaim(s.slot, it.id, c, l.id)}
                         onCast={(c) => castNow({ ...castFromLink(l), title: c, label: c })} />
@@ -370,7 +361,7 @@ function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveL
       {(items || []).map(s => (
         <div key={s.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Castable kind={s.kind} kindColor={KIND_COLOR[s.kind]} title={s.title} sub={s.url}
+            <Castable kind={s.kind} kindColor={KIND_COLOR[s.kind]} title={s.title} sub={s.url} url={s.url}
               claim={s.claim} accent={accent} live={liveLabel === (s.claim || s.title)} onDismiss={dismiss}
               onSaveClaim={(c) => onClaim(s.id, c)}
               onCast={(c) => castNow(s.url
