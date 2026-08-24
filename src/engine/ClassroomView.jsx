@@ -10,6 +10,7 @@ import { useClassData } from "./store.js";
 import { currentDay } from "./days.js";
 import QRCode from "./QRCode.jsx";
 import { usePoll, tally } from "./poll.js";
+import { useHeadlines, liveSession, activeItem, pickTally } from "./headlines.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -46,7 +47,7 @@ const CSS = `
 const eyebrow = { fontFamily: MONO, fontSize: "clamp(11px,1.1vw,15px)", letterSpacing: ".16em", textTransform: "uppercase", color: DIM };
 
 // ─── the content types a cast can be ───
-function Content({ cast, config, plan }) {
+function Content({ cast, config, plan, data }) {
   const pad = "clamp(28px,5vw,80px)";
   const wrap = { position: "absolute", inset: 0, display: "flex", flexDirection: "column", padding: pad, color: INK, fontFamily: F };
 
@@ -110,6 +111,10 @@ function Content({ cast, config, plan }) {
 
   if (cast.type === "poll") {
     return <PollScreen config={config} />;
+  }
+
+  if (cast.type === "headlines") {
+    return <HeadlinesScreen config={config} data={data} />;
   }
 
   if (cast.mode === "embed" && cast.url) {
@@ -235,6 +240,84 @@ function PollScreen({ config }) {
   );
 }
 
+// Headlines reads its own state so the bars fill as the room locks in.
+function HeadlinesScreen({ config, data }) {
+  const { hl } = useHeadlines(config.storageKey, { categories: data?.headlineCategories, concepts: config.concepts });
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const session = hl ? liveSession(hl) : null;
+  const item = hl ? activeItem(hl, session) : null;
+  const phase = session?.phase || "surface";
+
+  if (!hl || !session || !item) {
+    return (
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", textAlign: "center", gap: "2.4vh", padding: "clamp(28px,5vw,80px)", color: INK, fontFamily: F }}>
+        <div style={{ ...eyebrow, color: "#e11d48" }}>Right now</div>
+        <div style={{ fontSize: "clamp(38px,6.4vw,104px)", fontWeight: 700, letterSpacing: "-.04em", lineHeight: 1 }}>Headlines</div>
+        <div style={{ color: DIM, fontSize: "clamp(15px,1.9vw,28px)" }}>Bring me one. Scan to post it.</div>
+        <AskBlock base={origin + config.path} compact />
+      </div>
+    );
+  }
+
+  const Bars = ({ options, votes, real, nameOf }) => {
+    const { counts, voters } = pickTally(votes);
+    const ranked = [...options].filter(o => counts[o]).sort((a, b) => counts[b] - counts[a]).slice(0, 6);
+    if (!voters) return null;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.1vh" }}>
+        {ranked.map(o => {
+          const pct = Math.round((counts[o] / voters) * 100);
+          const isReal = (real || []).includes(o);
+          return (
+            <div key={o} style={{ display: "flex", alignItems: "center", gap: "clamp(10px,1.2vw,20px)" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "clamp(15px,1.7vw,26px)", fontWeight: isReal ? 700 : 400, color: isReal ? "#34d399" : INK }}>
+                  {nameOf ? nameOf(o) : o}{isReal ? " ✓" : ""}
+                </div>
+                <div style={{ height: "clamp(6px,.7vw,10px)", background: "#221e1c", borderRadius: 5, marginTop: "0.5vh", overflow: "hidden" }}>
+                  <i style={{ display: "block", height: "100%", width: pct + "%", background: isReal ? "#34d399" : "#e11d48" }} />
+                </div>
+              </div>
+              <span style={{ fontFamily: MONO, fontSize: "clamp(13px,1.4vw,20px)", color: DIM, width: "2.4em", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{counts[o]}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const concepts = hl.concepts || [];
+  const conceptName = (id) => (concepts.find(c => c.id === id) || {}).name || id;
+  const inCount = Object.keys((phase === "surface" ? session.votes : session.conceptVotes) || {}).length;
+
+  return (
+    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+      padding: "clamp(28px,5vw,80px)", color: INK, fontFamily: F, justifyContent: "center", gap: "2.4vh" }}>
+      <div style={{ ...eyebrow, color: "#e11d48" }}>
+        {phase === "surface" ? "What is this, on its face?" : phase === "concept" ? "Now — what is really going on?" : "Both reads"}
+      </div>
+      <div style={{ fontSize: "clamp(24px,3.4vw,52px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.2, maxWidth: "24ch" }}>
+        {item.text}
+      </div>
+      {item.submittedBy ? <div style={{ ...eyebrow, letterSpacing: ".08em" }}>{item.submittedBy}</div> : null}
+
+      {phase === "surface" ? <Bars options={hl.categories || []} votes={session.votes} /> : null}
+      {phase !== "surface" ? <Bars options={hl.categories || []} votes={session.votes} real={session.realCategories} /> : null}
+      {phase === "concept" ? <Bars options={concepts.map(c => c.id)} votes={session.conceptVotes} nameOf={conceptName} /> : null}
+      {phase === "done" ? <Bars options={concepts.map(c => c.id)} votes={session.conceptVotes} real={session.realConcepts} nameOf={conceptName} /> : null}
+
+      {phase !== "done" ? (
+        <div style={{ display: "flex", gap: "clamp(18px,2.6vw,40px)", alignItems: "center", marginTop: "1vh", flexWrap: "wrap" }}>
+          <QRCode value={origin + config.path + "/ask"} size={100} />
+          <div style={{ ...eyebrow, letterSpacing: ".06em" }}>{(origin + config.path).replace(/^https?:\/\//, "")}/ask</div>
+          <div style={{ marginLeft: "auto", fontFamily: MONO, fontSize: "clamp(20px,2.6vw,38px)", color: "#e11d48", fontVariantNumeric: "tabular-nums" }}>{inCount} in</div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function AskBlock({ base, compact }) {
   const px = compact ? 96 : 132;
   return (
@@ -319,7 +402,7 @@ export default function ClassroomView({ config }) {
         </div>
       ) : layers.map(l => (
         <div key={l.key} className={"cv-layer cv-" + (l.phase === "in" ? "in-" : "out-") + (reduced ? "cut" : l.anim)}>
-          <Content cast={l.cast} config={config} plan={plan} />
+          <Content cast={l.cast} config={config} plan={plan} data={data} />
         </div>
       ))}
       {beam > 0 && !reduced ? <div key={"beam" + beam} className="cv-beam" /> : null}

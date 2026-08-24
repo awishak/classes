@@ -53,6 +53,7 @@ const BUILT = [
   ["Claims, not titles", "", "Nothing reaches the room screen as a label. Every cast needs one full sentence — \u201cRights fees have increased 45% over the last 10 years,\u201d not \u201cMedia rights.\u201d Written once, it stays on the item."],
   ["Time since they did anything", "", "The Now panel counts minutes since the room last had to produce something, not minutes to the bell. It resets on a poll, a pushed question, or an Around the Horn point, and goes amber at ten."],
   ["Around the Horn", "", "The room as it actually sits. Drag names into their seats, tap a seat to award points. Opens over the dashboard so it costs no panel space."],
+  ["Headlines", "", "Rebuilt on the engine. Students post real headlines from the ask page; each one gets read twice — first for what it looks like on the surface, then for the course concept actually at work. The room screen fills as they lock in, and the gap between the two reads is the lesson."],
 ];
 
 const NEXT = [

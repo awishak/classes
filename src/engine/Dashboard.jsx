@@ -19,6 +19,8 @@ import { useQuestions } from "./questions.js";
 import { usePoll } from "./poll.js";
 import PollPanel, { oneSentence } from "./PollPanel.jsx";
 import HornBoard from "./HornBoard.jsx";
+import { useHeadlines } from "./headlines.js";
+import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay } from "./days.js";
 import { genId } from "../utils.jsx";
 
@@ -747,6 +749,8 @@ export default function Dashboard({ config }) {
   const q = useQuestions(config.storageKey);
   const P = usePoll(config.storageKey);
   const [hornOpen, setHornOpen] = useState(false);
+  const [hlOpen, setHlOpen] = useState(false);
+  const HL = useHeadlines(config.storageKey, { categories: data?.headlineCategories, concepts: config.concepts });
 
   const weeks = data?.schedule || config.scheduleWeeks || [];
   const days = allDays(weeks);
@@ -937,6 +941,7 @@ export default function Dashboard({ config }) {
 
   const runFeature = (name) => {
     if (name === "Around the Horn") { setHornOpen(true); markEngaged(); return; }
+    if (name === "Headlines") { setHlOpen(true); cast({ type: "headlines", label: "Headlines" }); markEngaged(); return; }
     cast({ type: "feature", title: name, body: FEATURES[name] || "", label: name });
     markEngaged();
   };
@@ -1016,6 +1021,7 @@ export default function Dashboard({ config }) {
             {days.map(d => <option key={d.date} value={d.date}>{d.date}{d.topic ? " · " + d.topic : ""}</option>)}
           </select>
         </div>
+        <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setHlOpen(true)}>Headlines</button>
         <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setHornOpen(true)}>Around the Horn</button>
         <a href="/plan" style={{ ...mini, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>The Brief</a>
         <a href={config.path} style={{ ...mini, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Class home</a>
@@ -1035,6 +1041,12 @@ export default function Dashboard({ config }) {
           <Monitor config={config} live={live} cast={cast} push={push} />
         </div>
       </main>
+
+      {hlOpen ? (
+        <HeadlinesBoard hl={HL.hl} api={HL} accent={config.accent}
+          onCast={() => { cast({ type: "headlines", label: "Headlines" }); markEngaged(); }}
+          onClose={() => setHlOpen(false)} />
+      ) : null}
 
       {hornOpen ? (
         <HornBoard students={students} seats={data.athSeats || {}} log={data.log || []} accent={config.accent}

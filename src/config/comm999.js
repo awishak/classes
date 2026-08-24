@@ -206,6 +206,61 @@ const comm999 = {
     },
   ],
 
+
+  // ─── Headlines concepts ───
+  // The deeper read: what course concept is actually at work in a headline.
+  concepts: [
+    {
+      id: "mythmaking", name: "Mythmaking / Hero Narrative",
+      desc: "How we construct larger-than-life stories around people and moments. We pick who becomes a legend and why.",
+      whyItMatters: "Narratives shape public memory. The stories we tell about athletes determine who gets celebrated and who gets forgotten. This is rhetorical power in action.",
+      whoItAffects: "Athletes whose legacies are simplified or distorted. Fans who internalize these narratives. Communities that build identity around hero figures.",
+      exampleAngles: "GOAT debates that ignore context. Retirement tributes that rewrite flawed careers. Comeback stories that erase the people who were hurt along the way.",
+    },
+    {
+      id: "crisis", name: "Crisis Communication / Accountability",
+      desc: "What happens when things go wrong publicly. Who speaks, what they say, how they try to recover.",
+      whyItMatters: "Public apologies and crisis responses reveal power dynamics. Who gets second chances and who doesn't is never random.",
+      whoItAffects: "The person in crisis, their organization, victims or affected parties, the public audience judging the response.",
+      exampleAngles: "Notes app apologies. Organizations distancing from individuals. The difference between accountability and PR strategy.",
+    },
+    {
+      id: "media", name: "Media Framing / Agenda Setting",
+      desc: "The media doesn't tell you what to think, it tells you what to think about. Who controls the story and how it gets shaped.",
+      whyItMatters: "Media framing determines which stories get oxygen and which get buried. Billions of dollars flow based on what gets covered and how.",
+      whoItAffects: "Athletes who lose control of their narrative. Audiences who only see what's selected for them. Communities whose stories are told by outsiders.",
+      exampleAngles: "How the same play gets framed differently for different quarterbacks. Streaming deals that reshape what sports you can even watch. Social media breaking the traditional media monopoly.",
+    },
+    {
+      id: "organizational", name: "Organizational Communication",
+      desc: "How institutions make decisions, manage conflict, and communicate with stakeholders. The business and structural side of sports.",
+      whyItMatters: "Organizations are communication systems. Every trade, contract, and policy change is a message about values and priorities.",
+      whoItAffects: "Players as labor. Fans as consumers. Cities as stakeholders. The people inside the organization who have to execute decisions they may not agree with.",
+      exampleAngles: "Franchise relocations and what they communicate to a city. CBA negotiations as organizational power struggles. How front offices communicate (or don't) with players about their futures.",
+    },
+    {
+      id: "identity", name: "Identity / Representation",
+      desc: "How sports shape and reflect who we think we are, who gets seen, and who gets left out.",
+      whyItMatters: "Sports are one of the most visible arenas for identity. Who plays, who coaches, who owns, who commentates, all of it communicates something about who belongs.",
+      whoItAffects: "Athletes navigating identity in public. Young people who see (or don't see) themselves represented. Communities whose identities are tied to teams.",
+      exampleAngles: "First openly gay/trans athletes and the discourse around them. Racial dynamics in coaching hires. National identity in international competition.",
+    },
+    {
+      id: "interpersonal", name: "Interpersonal Communication, Leadership, and Culture",
+      desc: "How people communicate within sports organizations. Coach-to-player, player-to-player, locker room culture, team rituals, pregame traditions. The human side of how teams function or fall apart.",
+      whyItMatters: "Culture is built through daily communication. What a coach says in the huddle, what teammates say behind closed doors, what rituals a team keeps, all of it creates or destroys trust.",
+      whoItAffects: "Players whose development depends on coaching relationships. Teams whose culture determines their ceiling. Leaders who set the tone through what they say and don't say.",
+      exampleAngles: "A coach's postgame comments about a player that change the relationship. Team traditions that build belonging vs hazing that destroys it. What gets said in the locker room that leaks to the press.",
+    },
+    {
+      id: "community", name: "Community, Belonging, and the Fabric of Society",
+      desc: "How sports are woven into the structure of our society. Civic identity, NIL and who gets paid, stadium deals that reshape cities, youth pipelines, fandom as community.",
+      whyItMatters: "Sports are not separate from society, they are society. The way we fund stadiums, compensate athletes, organize youth sports, and define fandom tells us what we value.",
+      whoItAffects: "Taxpayers funding stadiums. College athletes navigating NIL. Youth athletes and their families investing time and money. Communities that gain or lose teams.",
+      exampleAngles: "A city voting on a stadium deal. NIL changing who benefits from college sports. Youth travel sports pricing out lower-income families. What it means when your team leaves your city.",
+    },
+  ],
+
   // ─── Game ───
   game: { enabled: true, cats: ["On Topic", "General"], gradePts: { on_topic: 10, general: 10 } },
 

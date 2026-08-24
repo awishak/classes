@@ -48,6 +48,14 @@ inside someone else's frame.
 - **No bullets, ever.** The before/after boards hold ideas, one per screen, stepped through by hand.
 - **Around the Horn.** The seating chart as a popup over the dashboard. Drag to match the real room, tap to award points into the in-class bucket.
 
+## Features
+
+The things we do in class, run from Class Flow. They are modes, not content, so they need no claim.
+
+- **Headlines** — built. Students post headlines from the ask page; each is read twice, surface then concept. The 21 categories and the 7 course concepts both live in class data.
+- **Around the Horn** — built. Seating chart, points into the in-class bucket.
+- **Game, Fishbowl, This or That, Team Trivia** — registered; they announce themselves on the room screen and are not built out yet.
+
 ## Open
 
 - Which animations to keep. Five everyday, two reveals, all live to compare.

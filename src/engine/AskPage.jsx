@@ -11,6 +11,7 @@ import { useQuestions } from "./questions.js";
 import { useClassData } from "./store.js";
 import { sendSignInEmail, verifyEmailCode, emailFromRedirect, loadEmailMap, saveEmailName } from "./auth.js";
 import { usePoll, openRound } from "./poll.js";
+import { useHeadlines, liveSession, activeItem } from "./headlines.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const TEXT_PRIMARY = "#111827";
@@ -31,10 +32,77 @@ export const lastNameOf = (name, overrides) =>
 const byLast = (overrides) => (a, b) =>
   lastNameOf(a, overrides).localeCompare(lastNameOf(b, overrides)) || a.localeCompare(b);
 
+// Headlines from the student side: post one, then read the live one twice.
+function HeadlinesBlock({ config, HL, session, item, phase, who, which, picks }) {
+  const [text, setText] = useState("");
+  const [url, setUrl] = useState("");
+  const [local, setLocal] = useState(picks);
+  const [posted, setPosted] = useState(false);
+  useEffect(() => { setLocal(picks); }, [item?.id, phase]);
+
+  const concepts = HL.hl?.concepts || [];
+  const options = phase === "surface" ? (HL.hl?.categories || []) : concepts.map(c => c.id);
+  const nameOf = (o) => phase === "surface" ? o : ((concepts.find(c => c.id === o) || {}).name || o);
+  const toggle = (o) => setLocal(p => p.includes(o) ? p.filter(x => x !== o) : [...p, o]);
+
+  const box = { display: "flex", flexDirection: "column", gap: 12, padding: 16, borderRadius: 14,
+    border: "1px solid " + config.accent, background: "#fff" };
+  const eyebrow = { fontSize: 12, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: config.accent };
+
+  if (!item) {
+    return (
+      <div style={box}>
+        <div style={eyebrow}>Headlines</div>
+        <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5 }}>Post a sports headline you saw this week.</div>
+        <input value={text} onChange={e => setText(e.target.value)} placeholder="The headline" style={input} />
+        <input value={url} onChange={e => setUrl(e.target.value)} placeholder="Link (optional)" style={input} />
+        <button onClick={() => { if (!text.trim()) return; HL.submit(session.id, text, url, who); setText(""); setUrl(""); setPosted(true); setTimeout(() => setPosted(false), 3000); }}
+          disabled={!text.trim()} style={bigBtn(text.trim() ? config.accent : BORDER_STRONG)}>Post it</button>
+        {posted ? <div style={{ color: config.accent, fontWeight: 600 }}>Posted. Add another if you have one.</div> : null}
+      </div>
+    );
+  }
+
+  if (phase === "done") {
+    return (
+      <div style={box}>
+        <div style={eyebrow}>Headlines</div>
+        <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.35 }}>{item.text}</div>
+        <div style={{ fontSize: 15, color: TEXT_SECONDARY }}>Both reads are up on the screen.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={box}>
+      <div style={eyebrow}>{phase === "surface" ? "What is this, on its face?" : "What is really going on?"}</div>
+      <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.35 }}>{item.text}</div>
+      {item.url ? <a href={item.url} target="_blank" rel="noreferrer" style={{ color: config.accent, fontSize: 14 }}>Read it ↗</a> : null}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {options.map(o => {
+          const on = local.includes(o);
+          return (
+            <button key={o} onClick={() => toggle(o)}
+              style={{ ...input, width: "auto", minHeight: 44, padding: "0 14px", cursor: "pointer", fontSize: 15, fontWeight: 500,
+                background: on ? config.accent : "#fff", color: on ? "#fff" : TEXT_PRIMARY,
+                border: "1px solid " + (on ? config.accent : BORDER_STRONG) }}>{nameOf(o)}</button>
+          );
+        })}
+      </div>
+      <button onClick={() => HL.lockIn(session.id, who, local, which)} disabled={!local.length}
+        style={bigBtn(local.length ? config.accent : BORDER_STRONG)}>
+        {picks.length ? "Change my answer" : "Lock it in"}
+      </button>
+      <div style={{ fontSize: 13.5, color: TEXT_MUTED }}>Pick as many as apply.</div>
+    </div>
+  );
+}
+
 export default function AskPage({ config }) {
   const { add } = useQuestions(config.storageKey);
   const { poll, vote } = usePoll(config.storageKey);
   const [data] = useClassData(config.storageKey);
+  const HL = useHeadlines(config.storageKey, { categories: data?.headlineCategories, concepts: config.concepts });
   const REMEMBER = config.storageKey + "-user";
 
   const [who, setWho] = useState(null);
@@ -237,6 +305,11 @@ export default function AskPage({ config }) {
   }
 
   // ─── ask step ───
+  const hlSession = HL.hl ? liveSession(HL.hl) : null;
+  const hlItem = HL.hl ? activeItem(HL.hl, hlSession) : null;
+  const hlPhase = hlSession?.phase || "surface";
+  const which = hlPhase === "surface" ? "votes" : "conceptVotes";
+  const myHlPicks = (hlSession?.[which] || {})[who] || [];
   const round = openRound(poll);
   const myVote = round ? (poll[round] || {})[who] : null;
   const LETTERS = ["A", "B", "C", "D", "E"];
@@ -274,7 +347,12 @@ export default function AskPage({ config }) {
           </div>
         ) : null}
 
-        <h1 style={{ margin: round ? "8px 0 0" : 0, fontSize: round ? 21 : 28, fontWeight: 600, letterSpacing: "-.02em" }}>Ask me anything</h1>
+        {hlSession ? (
+          <HeadlinesBlock config={config} HL={HL} session={hlSession} item={hlItem} phase={hlPhase}
+            who={who} which={which} picks={myHlPicks} />
+        ) : null}
+
+        <h1 style={{ margin: (round || hlSession) ? "8px 0 0" : 0, fontSize: (round || hlSession) ? 21 : 28, fontWeight: 600, letterSpacing: "-.02em" }}>Ask me anything</h1>
         <textarea value={text} onChange={e => setText(e.target.value)} placeholder="What's your question?"
           style={{ ...input, minHeight: 130, resize: "vertical", lineHeight: 1.5 }} />
         <label style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 15, color: TEXT_SECONDARY, cursor: "pointer", minHeight: 44 }}>
