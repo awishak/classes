@@ -179,17 +179,43 @@ function Castable({ kind, kindColor, title, sub, url, claim, live, accent, onCas
 
 const KIND_COLOR = { Deck: "#7c3aed", PDF: "#b91c1c", Web: "#0369a1", Video: "#b45309", Seed: "#9f1239", Ask: OK, Link: "#0369a1", Note: TEXT_MUTED };
 
-// Guess how a link should land on the screen. Anything we can embed, we embed;
-// anything a site refuses to frame becomes a title card the room can read.
-const NO_EMBED = /(^|\.)(x\.com|twitter\.com|instagram\.com|facebook\.com|linkedin\.com|nytimes\.com|wsj\.com|espn\.com)$/i;
-function castFromLink(l) {
-  let host = "";
-  try { host = new URL(l.url).hostname.replace(/^www\./, ""); } catch { /* not a url */ }
-  const embeddable = !!host && !NO_EMBED.test(host);
+// Whether a link can actually be framed. This has to be an allowlist: most of
+// the web sends X-Frame-Options and an iframe that gets refused renders as a
+// black rectangle with no error we can catch. Anything not on the list becomes
+// a title card, which is a fine thing to project and never a broken one.
+const EMBED_HOSTS = /(^|\.)(docs\.google\.com|drive\.google\.com|canva\.com|youtube\.com|youtu\.be|vimeo\.com|loom\.com|figma\.com|desmos\.com|codepen\.io|wikipedia\.org|archive\.org)$/i;
+const EMBED_FILES = /\.(pdf|png|jpe?g|gif|webp|svg)(\?|#|$)/i;
+
+export function canEmbed(url) {
+  let u;
+  try { u = new URL(url); } catch { return false; }
+  if (typeof window !== "undefined" && u.origin === window.location.origin) return true;
+  if (EMBED_FILES.test(u.pathname)) return true;
+  return EMBED_HOSTS.test(u.hostname.replace(/^www\./, ""));
+}
+
+// YouTube only frames from its embed path.
+function framable(url) {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") return "https://www.youtube.com/embed" + u.pathname;
+    if (host === "youtube.com" && u.searchParams.get("v")) return "https://www.youtube.com/embed/" + u.searchParams.get("v");
+  } catch { /* leave it alone */ }
+  return url;
+}
+
+export function hostOf(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
+}
+
+function castFromLink(l, force) {
+  const host = hostOf(l.url);
+  const embed = force === "embed" || (force !== "card" && canEmbed(l.url));
   return {
-    type: "doc", kind: host || "Link", title: l.label || l.url, url: l.url,
-    mode: embeddable ? "embed" : "card", label: l.label || host || "Link",
-    body: embeddable ? "" : "Open it on the room machine: " + l.url,
+    type: "doc", kind: host || "Link", title: l.label || l.url,
+    url: embed ? framable(l.url) : l.url, openUrl: l.url,
+    mode: embed ? "embed" : "card", label: l.label || host || "Link",
   };
 }
 
@@ -580,6 +606,7 @@ function AssignmentsPanel({ assignments, castNow, dismiss, liveLabel }) {
 // live monitor: a real preview of what the room sees
 // ─────────────────────────────────────────────────────────────
 function Monitor({ config, live, cast, push }) {
+  const liveUrl = live?.cast?.openUrl || live?.cast?.url || "";
   const box = useRef(null);
   const [scale, setScale] = useState(0.3);
   useEffect(() => {
@@ -608,6 +635,22 @@ function Monitor({ config, live, cast, push }) {
         </span>
         <span style={{ marginLeft: "auto", color: TEXT_MUTED, flex: "none" }}>{since}</span>
       </div>
+
+      {liveUrl ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 10,
+          background: "#fff", border: "1px solid " + config.accent, flexWrap: "wrap" }}>
+          <a href={liveUrl} target="_blank" rel="noreferrer"
+            style={{ ...mini, borderColor: config.accent, color: config.accent, textDecoration: "none",
+              display: "inline-flex", alignItems: "center", flex: "none" }}>Open ↗</a>
+          <span style={{ minWidth: 0, flex: 1, fontFamily: MONO, fontSize: 11, color: TEXT_MUTED,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={liveUrl}>{hostOf(liveUrl)}</span>
+          <button style={{ ...mini, minHeight: 28, padding: "0 9px", fontSize: 11.5, flex: "none" }}
+            onClick={() => cast({ ...live.cast, mode: live.cast.mode === "embed" ? "card" : "embed",
+              url: live.cast.mode === "embed" ? liveUrl : framable(liveUrl) })}>
+            {live.cast.mode === "embed" ? "Show as card" : "Show the page"}
+          </button>
+        </div>
+      ) : null}
 
       <div ref={box} style={{ position: "relative", width: "100%", aspectRatio: "16/9", borderRadius: 12, overflow: "hidden", border: "1px solid " + BORDER_STRONG, background: "#0f0d0c" }}>
         <iframe src={config.path + "/today"} title="Classroom view"
