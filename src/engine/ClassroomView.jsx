@@ -96,6 +96,18 @@ function Content({ cast, config, plan }) {
     );
   }
 
+  if (cast.type === "feature") {
+    return (
+      <div style={{ ...wrap, alignItems: "center", justifyContent: "center", textAlign: "center", gap: "2.2vh" }}>
+        <div style={{ ...eyebrow, color: "#e11d48" }}>Right now</div>
+        <div style={{ fontSize: "clamp(38px,6.4vw,104px)", fontWeight: 700, letterSpacing: "-.04em", lineHeight: 1 }}>
+          {cast.title}
+        </div>
+        {cast.body ? <div style={{ color: DIM, fontSize: "clamp(15px,1.9vw,28px)", maxWidth: "34ch", lineHeight: 1.4 }}>{cast.body}</div> : null}
+      </div>
+    );
+  }
+
   if (cast.type === "poll") {
     return <PollScreen config={config} />;
   }

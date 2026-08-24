@@ -153,6 +153,39 @@ function Castable({ kind, kindColor, title, sub, claim, live, accent, onCast, on
   );
 }
 
+// The things we actually do in class. They are features, not content: a mode
+// the room goes into. Scheduled on a day in the week's items, run from Class
+// Flow. Around the Horn opens its own board; the rest announce themselves on
+// the room screen until they are built out.
+export const FEATURES = {
+  "Headlines": "Students bring real headlines. The room votes them into categories.",
+  "Game": "The weekly game. Six On Topic, four Sports World.",
+  "Fishbowl": "Rotating fishbowl on the assigned readings.",
+  "This or That": "Fast forced choice.",
+  "Around the Horn": "The seating board. Points for the room.",
+  "Team Trivia": "Teams, buzzers, the works.",
+};
+
+function FeatureRow({ name, live, accent, onRun, onDismiss }) {
+  const blurb = FEATURES[name] || "";
+  return (
+    <button onClick={live ? onDismiss : onRun}
+      style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", cursor: "pointer",
+        background: live ? "rgba(225,29,72,.07)" : "#fff", border: "1px solid " + (live ? LIVE : BORDER_STRONG),
+        borderRadius: 10, padding: "9px 12px", minHeight: TAP, fontFamily: F }}>
+      <span style={{ flex: "none", width: 7, height: 7, borderRadius: "50%", background: live ? LIVE : accent }} />
+      <span style={{ minWidth: 0, flex: 1 }}>
+        <b style={{ display: "block", fontWeight: 600, fontSize: 14.5, color: TEXT_PRIMARY }}>{name}</b>
+        <small style={{ color: TEXT_MUTED, fontSize: 12 }}>{blurb}</small>
+      </span>
+      <span style={{ flex: "none", fontFamily: MONO, fontSize: 10, letterSpacing: ".08em",
+        color: live ? LIVE : TEXT_MUTED, fontWeight: live ? 700 : 500 }}>
+        {live ? "RUNNING ×" : "RUN →"}
+      </span>
+    </button>
+  );
+}
+
 const KIND_COLOR = { Deck: "#7c3aed", PDF: "#b91c1c", Web: "#0369a1", Video: "#b45309", Seed: "#9f1239", Ask: OK, Link: "#0369a1", Note: TEXT_MUTED };
 
 // Guess how a link should land on the screen. Anything we can embed, we embed;
@@ -227,15 +260,36 @@ function NowPanel({ config, engagedAt, onEngaged, plan, seq, onSlot }) {
   );
 }
 
-function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim }) {
-  if (!plan || !seq) return <Muted>No plan for this day yet. Build it in Day Plan.</Muted>;
+function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature }) {
+  const featureBlock = features && features.length ? (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+      <div style={{ ...label, color: accent }}>Today we run</div>
+      {features.map(f => (
+        <FeatureRow key={f} name={f} accent={accent} live={liveLabel === f}
+          onRun={() => onFeature(f)} onDismiss={dismiss} />
+      ))}
+    </div>
+  ) : null;
+
+  if (!plan || !seq) return (
+    <>
+      {featureBlock}
+      <Muted>{featureBlock ? "No sequence built for this day yet — add one in Day Plan." : "No plan for this day yet. Build it in Day Plan."}</Muted>
+    </>
+  );
   const seedById = (id) => seeds.find(s => s.id === id);
   const slotItems = plan.slots || {};
   const any = seq.slots.some(s => (slotItems[s.slot]?.items || []).length);
-  if (!any) return <Muted>This day has a sequence but no content in it yet. Build it in Day Plan.</Muted>;
+  if (!any) return (
+    <>
+      {featureBlock}
+      <Muted>This day has a sequence but no content in it yet. Build it in Day Plan.</Muted>
+    </>
+  );
 
   return (
     <>
+      {featureBlock}
       {seq.slots.map(s => {
         const bucket = slotItems[s.slot] || {};
         const items = bucket.items || [];
@@ -650,6 +704,16 @@ export default function Dashboard({ config }) {
   const marks = (data?.attendance || {})[day] || {};
   const dayMeta = days.find(d => d.date === day);
 
+  // Features scheduled for this class day, in the order the week lists them.
+  const weekRow = weeks.find(w => w.id === weekId);
+  const dayName = ["Mon", "Wed", "Fri"][(weekRow?.dates || []).indexOf(day)] || "";
+  const features = [];
+  ((weekRow?.items) || []).forEach(it => {
+    if (it.type !== "activity") return;
+    if (it.date && dayName && it.date !== dayName) return;
+    if (!features.includes(it.title)) features.push(it.title);
+  });
+
   useEffect(() => { document.title = config.code + " — Dashboard"; }, [config.code]);
 
   // Cmd/Ctrl+B blacks the room screen out, and again brings it back.
@@ -804,6 +868,12 @@ export default function Dashboard({ config }) {
   const dismiss = () => cast(null);
   const markEngaged = () => push({ engagedAt: Date.now() });
 
+  const runFeature = (name) => {
+    if (name === "Around the Horn") { setHornOpen(true); markEngaged(); return; }
+    cast({ type: "feature", title: name, body: FEATURES[name] || "", label: name });
+    markEngaged();
+  };
+
   const setSeats = (seats) => update(prev => ({ ...prev, athSeats: seats }));
   const awardHorn = (name, amount) => update(prev => ({
     ...prev,
@@ -820,8 +890,7 @@ export default function Dashboard({ config }) {
     pre: {
       title: weekTopic || config.name,
       ideas: [
-        plan?.notes ? plan.notes : "We start at " + (config.meets?.start || "the top of the hour") + ".",
-        ...weekItems.filter(i => i.type === "reading").map(i => "Have out: " + i.title),
+        plan?.notes || "",
         ...dueSoon.slice(0, 1).map(a => a.title + " is due " + a.due + "."),
       ].filter(Boolean),
     },
@@ -829,7 +898,6 @@ export default function Dashboard({ config }) {
       title: "Coming up",
       ideas: [
         nextDay ? "Next class " + nextDay.date + (nextDay.topic ? " — " + nextDay.topic : "") + "." : "That's the last session on the calendar.",
-        ...weekItems.filter(i => i.type !== "reading").map(i => i.title),
         ...dueSoon.map(a => a.title + " — due " + a.due + "."),
       ].filter(Boolean),
     },
@@ -848,7 +916,8 @@ export default function Dashboard({ config }) {
       roster={students.length} accent={config.accent}
       onCast={() => cast({ type: "poll", label: "Live poll" })} />,
     flow: () => <FlowPanel plan={plan} seq={seq} seeds={seeds} castNow={castNow} dismiss={dismiss}
-      liveLabel={liveLabel} accent={config.accent} onClaim={saveFlowClaim} />,
+      liveLabel={liveLabel} accent={config.accent} onClaim={saveFlowClaim}
+      features={features} onFeature={runFeature} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     stocked: () => <StockedPanel shelves={shelves} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
