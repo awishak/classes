@@ -246,11 +246,11 @@ export function hostOf(url) {
 
 function castFromLink(l, force) {
   const host = hostOf(l.url);
-  const embed = force === "embed" || (force !== "card" && canEmbed(l.url));
+  const mode = force || (canEmbed(l.url) ? "embed" : "read");
   return {
     type: "doc", kind: host || "Link", title: l.label || l.url,
-    url: embed ? framable(l.url) : l.url, openUrl: l.url,
-    mode: embed ? "embed" : "card", label: l.label || host || "Link",
+    url: mode === "embed" ? framable(l.url) : l.url, openUrl: l.url,
+    mode, label: l.label || host || "Link",
   };
 }
 
@@ -679,11 +679,15 @@ function Monitor({ config, live, cast, push }) {
               display: "inline-flex", alignItems: "center", flex: "none" }}>Open ↗</a>
           <span style={{ minWidth: 0, flex: 1, fontFamily: MONO, fontSize: 11, color: TEXT_MUTED,
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={liveUrl}>{hostOf(liveUrl)}</span>
-          <button style={{ ...mini, minHeight: 28, padding: "0 9px", fontSize: 11.5, flex: "none" }}
-            onClick={() => cast({ ...live.cast, mode: live.cast.mode === "embed" ? "card" : "embed",
-              url: live.cast.mode === "embed" ? liveUrl : framable(liveUrl) })}>
-            {live.cast.mode === "embed" ? "Show as card" : "Show the page"}
-          </button>
+          <div style={{ display: "flex", gap: 4, flex: "none" }}>
+            {[["read", "Read"], ["embed", "Page"], ["card", "Card"]].map(([m, lbl]) => (
+              <button key={m} style={{ ...mini, minHeight: 28, padding: "0 9px", fontSize: 11.5,
+                ...(live.cast.mode === m ? { background: config.accent, borderColor: config.accent, color: "#fff" } : {}) }}
+                onClick={() => cast({ ...live.cast, mode: m, url: m === "embed" ? framable(liveUrl) : liveUrl })}>
+                {lbl}
+              </button>
+            ))}
+          </div>
         </div>
       ) : null}
 

@@ -128,6 +128,8 @@ const GRADE = [
 
 export default function PlanPage() {
   const nav = [
+    ["today", "Aug 23"],
+    ["tomorrow", "Next"],
     ["what", "What this is"],
     ["students", "For students"],
     ["me", "For me"],
@@ -155,6 +157,73 @@ export default function PlanPage() {
       </header>
 
       <main style={{ maxWidth: 980, margin: "0 auto", padding: "28px 24px 80px", display: "flex", flexDirection: "column", gap: 44 }}>
+
+        <Section id="today" eyebrow="Sunday, August 23" title="What we built">
+          <p style={p}>
+            One long session. The dashboard went from a mockup to something that runs a class, and COMM 118's
+            actual content came across from Spring.
+          </p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {[
+              ["The live poll", "Peer Instruction end to end. Ask, they commit alone, close the floor, they argue, ask again, and the room screen shows the second round with the first behind it. Students vote from the ask page."],
+              ["Claims, not titles", "Nothing reaches the room screen as a label. Every cast asks for one full sentence and keeps it."],
+              ["Headlines, rebuilt on the engine", "It turned out ClassTools in the old COMM 118 file was Headlines all along. Now engine code: post from the ask page, read each headline for the surface, then for the concept. The 21 categories came from Spring; the 7 course concepts are in the template config."],
+              ["Around the Horn", "The seating chart as a board over the dashboard. Drag names to match the room, tap to award points into the in-class bucket."],
+              ["Time since they did anything", "The Now panel stopped counting down to the bell and started counting up from the last time the room had to produce something."],
+              ["Features in Class Flow", "Headlines, Game, Fishbowl, This or That, Around the Horn, Team Trivia. Two are built; the rest announce themselves and are honest about it."],
+              ["Spring content ported", "85 library items, 83 of them readings with links. 6 assignments with weights and rubrics. 11 weeks with topics, 75 scheduled items, and every one of your prep notes. 50 trivia questions. Readings sit on the Subtopic shelf for the day they are assigned."],
+              ["Two doors on every link", "Open it here on my laptop, or send it to the room. Reading something is not projecting it."],
+              ["A real QR code", "Written from scratch, checked module for module against an independent encoder at every version and every mask."],
+              ["Email sign-in", "Students can sign in by name and PIN or by an emailed link, on the accounts the classes already have."],
+            ].map(([t, d]) => (
+              <div key={t} style={card}>
+                <h3 style={{ ...h3, margin: 0 }}>{t}</h3>
+                <div style={{ fontSize: 14.5, color: INK2, lineHeight: 1.55, marginTop: 5 }}>{d}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ ...card, borderColor: "#f3c6cd", background: SOFT }}>
+            <div style={{ ...label, color: ACCENT, marginBottom: 8 }}>What broke, and what it cost</div>
+            <ul style={{ margin: 0, paddingLeft: 20, color: INK2, fontSize: 14.5, lineHeight: 1.7 }}>
+              <li><b>The room screen was crashing on its idle board.</b> Two edits replaced spans of a file and swallowed the functions next to them. The build stayed green because an undeclared name is legal JavaScript until it runs. A check now runs before every build and fails on it.</li>
+              <li><b>Edits were being quietly eaten.</b> Every save comes back as a realtime event, and taking that echo rolled local state back to whatever the server had. Saves in flight now hold their ground.</li>
+              <li><b>The title card was talking to me in front of the class</b> — "open it on the room machine" and the raw URL, twice. The room gets the claim and the source now.</li>
+              <li><b>Casting an Atlantic piece put a black rectangle on the wall.</b> A refused iframe fails silently. Framing is now an allowlist, and anything else is read or carded.</li>
+              <li><b>I tripped Vercel's bot protection</b> polling the site after every deploy. That is on me and the polling has stopped.</li>
+            </ul>
+          </div>
+        </Section>
+
+        <Section id="tomorrow" eyebrow="Next session" title="Where to pick it up">
+          <p style={p}>In order. The first one blocks the most.</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {[
+              ["Load the Fall roster", "blocking",
+               "Attendance is marking template names. Around the Horn seats ten placeholders. The poll counts votes out of ten. Ask lists the wrong students. Nothing downstream is real until the roster is in, and I deliberately left Spring's thirty students behind rather than put last term's class on this term's sheet."],
+              ["Run the whole loop in a room", "before it matters",
+               "Dashboard on the laptop, room screen on the podium machine, a phone as a student. Open a poll, push a question, run Headlines, cast a reading. I have never watched any of this render — it is verified by build and by deployed bytes, not by eye."],
+              ["Decide what a feature owes the room", "design",
+               "Game, Fishbowl, This or That, and Team Trivia currently put their name on the wall. Headlines shows what a built one looks like. Which is next, and does it follow the Headlines shape — post, commit, reveal — or its own?"],
+              ["Sort out email at class scale", "decision",
+               "The built-in mailer sends a handful an hour. Twenty-five students signing in at once needs custom SMTP, which is a new service and therefore your call."],
+              ["The sweep-back opener", "parked, now cheap",
+               "Two or three questions from last week to open class. Retrieval and spacing are the two best-evidenced techniques there are, and the poll machinery it needs now exists."],
+              ["Fast grading", "the other half of the job",
+               "One submission at a time: read the link, grade, comment, auto-advance. Nothing about it is built, and it is the biggest drag on the instructor side."],
+            ].map(([t, tag, d], i) => (
+              <div key={t} style={card}>
+                <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap", marginBottom: 6 }}>
+                  <span style={{ ...label, color: ACCENT }}>{String(i + 1).padStart(2, "0")}</span>
+                  <h3 style={{ ...h3, margin: 0 }}>{t}</h3>
+                  <Pill tone={i === 0 ? "live" : ""}>{tag}</Pill>
+                </div>
+                <div style={{ fontSize: 14.5, color: INK2, lineHeight: 1.55 }}>{d}</div>
+              </div>
+            ))}
+          </div>
+        </Section>
 
         <Section id="what" eyebrow="The shape of it" title="One engine, two audiences, any class">
           <p style={p}>

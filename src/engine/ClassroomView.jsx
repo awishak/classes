@@ -117,6 +117,10 @@ function Content({ cast, config, plan, data }) {
     return <HeadlinesScreen config={config} data={data} />;
   }
 
+  if (cast.mode === "read" && (cast.openUrl || cast.url)) {
+    return <ReadScreen url={cast.openUrl || cast.url} claim={cast.title} kind={cast.kind} />;
+  }
+
   if (cast.mode === "embed" && cast.url) {
     return (
       <div style={{ position: "absolute", inset: 0, background: "#000" }}>
@@ -312,6 +316,64 @@ function HeadlinesScreen({ config, data }) {
           <QRCode value={origin + config.path + "/ask"} size={100} />
           <div style={{ ...eyebrow, letterSpacing: ".06em" }}>{(origin + config.path).replace(/^https?:\/\//, "")}/ask</div>
           <div style={{ marginLeft: "auto", fontFamily: MONO, fontSize: "clamp(20px,2.6vw,38px)", color: "#e11d48", fontVariantNumeric: "tabular-nums" }}>{inCount} in</div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// The page, fetched and set for the back row. Falls back to the title card if
+// the site gives us nothing — a paywall, or a page that builds itself in JS.
+function ReadScreen({ url, claim, kind }) {
+  const [state, setState] = useState({ loading: true });
+  useEffect(() => {
+    let alive = true;
+    setState({ loading: true });
+    fetch("/api/read?url=" + encodeURIComponent(url))
+      .then(r => r.json())
+      .then(d => { if (alive) setState({ loading: false, ...d }); })
+      .catch(() => { if (alive) setState({ loading: false, ok: false, reason: "Could not reach that page." }); });
+    return () => { alive = false; };
+  }, [url]);
+
+  const wrap = { position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+    padding: "clamp(28px,4.4vw,72px)", color: INK, fontFamily: F, gap: "1.8vh" };
+
+  if (state.loading) {
+    return <div style={{ ...wrap, alignItems: "center", justifyContent: "center" }}>
+      <div style={{ ...eyebrow }}>Reading it…</div>
+    </div>;
+  }
+
+  if (!state.ok) {
+    return (
+      <div style={{ ...wrap, justifyContent: "center", gap: "2.4vh" }}>
+        {kind ? <div style={{ ...eyebrow, color: "#e11d48" }}>{kind}</div> : null}
+        <div style={{ fontSize: "clamp(30px,4.6vw,70px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.1, maxWidth: "20ch" }}>{claim}</div>
+        <div style={{ color: DIM, fontSize: "clamp(14px,1.5vw,20px)" }}>{state.reason}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ ...wrap, overflow: "hidden" }}>
+      <div style={{ ...eyebrow, color: "#e11d48" }}>{state.site || kind}</div>
+      <div style={{ fontSize: "clamp(24px,3.2vw,48px)", fontWeight: 700, letterSpacing: "-.03em", lineHeight: 1.12, maxWidth: "26ch" }}>
+        {state.title}
+      </div>
+      <div style={{ display: "flex", gap: "clamp(18px,2.4vw,40px)", minHeight: 0, flex: 1 }}>
+        {state.image ? (
+          <img src={state.image} alt="" style={{ width: "34%", maxHeight: "100%", objectFit: "cover", borderRadius: 10, flex: "none" }} />
+        ) : null}
+        <div style={{ flex: 1, minWidth: 0, overflow: "hidden", display: "flex", flexDirection: "column", gap: "1.4vh" }}>
+          {(state.paragraphs || []).slice(0, 6).map((t, i) => (
+            <p key={i} style={{ margin: 0, fontSize: "clamp(15px,1.55vw,23px)", lineHeight: 1.45, color: i === 0 ? INK : DIM }}>{t}</p>
+          ))}
+        </div>
+      </div>
+      {claim ? (
+        <div style={{ borderTop: "1px solid " + LINE, paddingTop: "1.4vh", fontSize: "clamp(15px,1.7vw,26px)", fontWeight: 600, color: INK }}>
+          {claim}
         </div>
       ) : null}
     </div>

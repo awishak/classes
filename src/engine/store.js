@@ -26,6 +26,12 @@ export async function saveClass(key, data) {
 export function useClassData(key) {
   const [data, setData] = useState(null);
   const dataRef = useRef({});
+  // Every save comes back to us as a realtime event. Blindly taking that echo
+  // rolls local state back to whatever the server had, which quietly ate edits
+  // made while a write was still in flight — and writes are slow here, because
+  // the storage shim takes a daily backup before each one. So while we have
+  // writes outstanding, we already hold the newest state: ignore the echo.
+  const pending = useRef(0);
 
   useEffect(() => {
     let alive = true;
@@ -35,6 +41,7 @@ export function useClassData(key) {
       setData(dataRef.current);
     });
     const off = window.storage?.onUpdate?.(key, (val) => {
+      if (pending.current > 0) return;
       try {
         const d = JSON.parse(val);
         dataRef.current = d;
@@ -48,7 +55,8 @@ export function useClassData(key) {
     const next = mutator(dataRef.current || {});
     dataRef.current = next;
     setData({ ...next });
-    saveClass(key, next);
+    pending.current++;
+    Promise.resolve(saveClass(key, next)).finally(() => { pending.current--; });
   }, [key]);
 
   return [data, update];

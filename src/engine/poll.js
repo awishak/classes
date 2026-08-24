@@ -32,6 +32,7 @@ export function tally(votes, optionCount) {
 export function usePoll(storageKey) {
   const key = pollKey(storageKey);
   const [poll, setPoll] = useState(null);
+  const pending = useRef(0);
   const ref = useRef(EMPTY_POLL);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export function usePoll(storageKey) {
       } catch { if (alive) { ref.current = EMPTY_POLL; setPoll(EMPTY_POLL); } }
     })();
     const off = window.storage?.onUpdate?.(key, (val) => {
+      if (pending.current > 0) return;   // our own write coming back
       try { const v = { ...EMPTY_POLL, ...JSON.parse(val) }; ref.current = v; setPoll(v); } catch { /* ignore */ }
     });
     return () => { alive = false; if (off) off(); };
@@ -54,7 +56,8 @@ export function usePoll(storageKey) {
     const next = { ...ref.current, ...patch, at: Date.now() };
     ref.current = next;
     setPoll(next);
-    try { window.storage.set(key, JSON.stringify(next), true); } catch { /* ignore */ }
+    pending.current++;
+    Promise.resolve(window.storage.set(key, JSON.stringify(next), true)).catch(() => {}).finally(() => { pending.current--; });
     return next;
   }, [key]);
 

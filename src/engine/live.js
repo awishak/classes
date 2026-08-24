@@ -30,6 +30,7 @@ export const BIG_ANIMS = [
 export function useLive(storageKey) {
   const key = liveKey(storageKey);
   const [live, setLive] = useState(null); // null until first load
+  const pending = useRef(0);
   const ref = useRef(EMPTY_LIVE);
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export function useLive(storageKey) {
       }
     })();
     const off = window.storage?.onUpdate?.(key, (val) => {
+      if (pending.current > 0) return;   // our own write coming back
       try {
         const v = { ...EMPTY_LIVE, ...JSON.parse(val) };
         ref.current = v;
@@ -59,7 +61,8 @@ export function useLive(storageKey) {
     const next = { ...ref.current, ...patch, at: Date.now() };
     ref.current = next;
     setLive(next);
-    try { window.storage.set(key, JSON.stringify(next), true); } catch { /* ignore */ }
+    pending.current++;
+    Promise.resolve(window.storage.set(key, JSON.stringify(next), true)).catch(() => {}).finally(() => { pending.current--; });
   }, [key]);
 
   // cast(payload) — payload null clears the screen back to idle.

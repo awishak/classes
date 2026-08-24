@@ -12,6 +12,7 @@ export const questionsKey = (storageKey) => storageKey + "-questions";
 export function useQuestions(storageKey) {
   const key = questionsKey(storageKey);
   const [items, setItems] = useState(null);
+  const pending = useRef(0);
   const ref = useRef([]);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export function useQuestions(storageKey) {
       } catch { if (alive) { ref.current = []; setItems([]); } }
     })();
     const off = window.storage?.onUpdate?.(key, (val) => {
+      if (pending.current > 0) return;   // our own write coming back
       try {
         const v = JSON.parse(val);
         ref.current = v.items || [];
@@ -38,7 +40,8 @@ export function useQuestions(storageKey) {
   const write = useCallback((next) => {
     ref.current = next;
     setItems([...next]);
-    try { window.storage.set(key, JSON.stringify({ items: next }), true); } catch { /* ignore */ }
+    pending.current++;
+    Promise.resolve(window.storage.set(key, JSON.stringify({ items: next }), true)).catch(() => {}).finally(() => { pending.current--; });
   }, [key]);
 
   const add = useCallback((q) => {
