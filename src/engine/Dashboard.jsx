@@ -753,7 +753,7 @@ function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIn
 
 // Saving on blur meant a note written at 8:40 and never clicked away from was
 // gone at 9:05. It saves a second after the typing stops instead.
-function ScratchPanel({ value, onSave }) {
+function ScratchPanel({ value, onSave, dayNote, planHref, accent }) {
   const [v, setV] = useState(value || "");
   const [saved, setSaved] = useState(true);
   const boxRef = useRef(null);
@@ -778,6 +778,18 @@ function ScratchPanel({ value, onSave }) {
 
   return (
     <>
+      {/* Two different things, so they look different. The day note was written
+          when I planned the session; the box below is what I scribble during it. */}
+      {dayNote ? (
+        <div style={{ padding: 11, borderRadius: 10, background: SURFACE_2, border: "1px solid " + BORDER }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 5 }}>
+            <span style={{ ...label, color: accent }}>From the day plan</span>
+            <a className="dash-focus" href={planHref}
+              style={{ ...label, fontSize: 10, marginLeft: "auto", color: TEXT_MUTED, textDecoration: "none" }}>Edit →</a>
+          </div>
+          <div style={{ fontSize: 15, lineHeight: 1.5, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{dayNote}</div>
+        </div>
+      ) : null}
       <textarea ref={boxRef} value={v} onChange={e => setV(e.target.value)} onBlur={() => { seen.current = v; onSave(v); setSaved(true); }}
         placeholder="Notes to myself during class."
         style={{ ...inputStyle, minHeight: 130, resize: "vertical", lineHeight: 1.5, fontSize: 15 }} />
@@ -1370,10 +1382,12 @@ export default function Dashboard({ config }) {
   const weekItems = (weeks.find(w => w.id === weekId)?.items) || [];
   const dueSoon = assignments.filter(a => a.due && a.due !== "Ongoing").slice(0, 2);
   const proposals = {
+    // The day note is a note to myself, and proposing it here put it one click
+    // from the wall. The board proposes what the room should be reading instead.
     pre: {
       title: weekTopic || config.name,
       ideas: [
-        plan?.notes || "",
+        weekTopic ? "Today: " + weekTopic + "." : "",
         ...dueSoon.slice(0, 1).map(a => a.title + " is due " + a.due + "."),
       ].filter(Boolean),
     },
@@ -1484,7 +1498,8 @@ export default function Dashboard({ config }) {
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
       castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,
     attendance: () => <AttendancePanel students={students} marks={marks} onMark={mark} onReset={resetAttendance} />,
-    scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch} />,
+    scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch}
+      dayNote={plan?.notes} planHref={config.path + "/dayplan"} accent={config.accent} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
   };
   const TITLES = { todo: "To-Do", now: "Now", poll: "Poll", flow: "Class Flow", boards: "Before & After", stocked: "Stocked", questions: "Questions", attendance: "Attendance", scratch: "Scratch Pad", assignments: "Assignments" };

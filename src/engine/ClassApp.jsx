@@ -368,6 +368,21 @@ export default function ClassApp({ config, initialCard }) {
     </div>
   );
 
+  // In instructor view, the class page is where I already am when I realise I
+  // want to teach from it. These are the three teaching surfaces.
+  const TeachLinks = role === "instructor" ? (
+    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+      {[["/dashboard", "Dashboard"], ["/today", "Room screen"], ["/ask", "Ask"]].map(([suffix, name]) => (
+        <a key={suffix} className="ca-focus" href={config.path + suffix}
+          style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, padding: "0 14px", borderRadius: 999,
+            border: "1px solid " + (suffix === "/dashboard" ? a : BORDER_STRONG),
+            background: suffix === "/dashboard" ? a : "#fff",
+            color: suffix === "/dashboard" ? "#fff" : TEXT_SECONDARY,
+            fontSize: 15, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>{name}</a>
+      ))}
+    </div>
+  ) : null;
+
   const Logo = (
     <button className="ca-focus" onClick={() => go(null)}
       style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: F, textAlign: "left" }}>
@@ -457,6 +472,7 @@ export default function ClassApp({ config, initialCard }) {
             {Logo}
             {Nav}
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+              {TeachLinks}
               {signedIn ? (
                 <button className="ca-focus" onClick={signOut}
                   style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, color: TEXT_SECONDARY, cursor: "pointer", minHeight: TAP }}>
@@ -501,6 +517,11 @@ export default function ClassApp({ config, initialCard }) {
           {RoleToggle}
         </div>
       </div>
+
+      {TeachLinks ? (
+        <div style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "8px 16px",
+          display: "flex", gap: 6, overflowX: "auto" }}>{TeachLinks}</div>
+      ) : null}
 
       {/* content: grid OR full-screen takeover */}
       <div style={{ padding: 16 }}>

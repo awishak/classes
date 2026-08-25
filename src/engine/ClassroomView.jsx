@@ -11,6 +11,7 @@ import { currentDay } from "./days.js";
 import QRCode from "./QRCode.jsx";
 import { usePoll, tally } from "./poll.js";
 import { useHeadlines, liveSession, activeItem, pickTally } from "./headlines.js";
+import { ENGINE_LIST } from "../config/registry.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -42,6 +43,16 @@ const CSS = `
   [class*="cv-out-"]{display:none}
   .cv-beam{display:none}
 }
+
+/* The class switcher. This screen is a projector, so a permanent dropdown would
+   be a dropdown on the wall in front of thirty people. It behaves like video
+   player controls instead: it appears when the podium mouse moves and goes away
+   three seconds later. */
+.cv-controls{position:fixed;top:0;right:0;z-index:9;padding:14px 18px;display:flex;gap:10px;align-items:center;
+  opacity:0;transition:opacity .35s;pointer-events:none}
+.cv-controls.on{opacity:1;pointer-events:auto}
+.cv-controls select{font-family:${MONO};font-size:12px;letter-spacing:.08em;color:${DIM};
+  background:rgba(20,17,15,.9);border:1px solid ${LINE};border-radius:8px;padding:7px 9px;min-height:34px;cursor:pointer}
 `;
 
 const eyebrow = { fontFamily: MONO, fontSize: "clamp(11px,1.1vw,15px)", letterSpacing: ".16em", textTransform: "uppercase", color: DIM };
@@ -403,6 +414,40 @@ function todayLabel(d) {
   return day.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 }
 
+// Appears on movement at the podium, gone three seconds later.
+function Controls({ config }) {
+  const [on, setOn] = useState(false);
+  const timer = useRef(null);
+  useEffect(() => {
+    const wake = () => {
+      setOn(true);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setOn(false), 3000);
+    };
+    window.addEventListener("mousemove", wake);
+    window.addEventListener("keydown", wake);
+    return () => {
+      window.removeEventListener("mousemove", wake);
+      window.removeEventListener("keydown", wake);
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
+
+  return (
+    <div className={"cv-controls" + (on ? " on" : "")}>
+      <select value={config.id} aria-label="Class"
+        onChange={e => {
+          const next = ENGINE_LIST.find(c => c.id === e.target.value);
+          if (!next) return;
+          window.history.pushState({}, "", next.path + "/today");
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }}>
+        {ENGINE_LIST.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
+      </select>
+    </div>
+  );
+}
+
 export default function ClassroomView({ config }) {
   const [live] = useLive(config.storageKey);
   const [data] = useClassData(config.storageKey);
@@ -468,6 +513,7 @@ export default function ClassroomView({ config }) {
         </div>
       ))}
       {beam > 0 && !reduced ? <div key={"beam" + beam} className="cv-beam" /> : null}
+      <Controls config={config} />
     </div>
   );
 }
