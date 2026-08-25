@@ -12,11 +12,12 @@
 
 import { useState, useRef } from "react";
 import { genId } from "../utils.jsx";
+import { draftFeedback, textToHtml } from "./feedback.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const TEXT_PRIMARY = "#111827";
 const TEXT_SECONDARY = "#4b5563";
-const TEXT_MUTED = "#9ca3af";
+const TEXT_MUTED = "#646b75"; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
 const BORDER = "#eef0f2";
 const BORDER_STRONG = "#e5e7eb";
 const BG = "#fafaf9";
@@ -457,6 +458,9 @@ function GradeForm({ config, asg, name, log, draftHtml, onDraft, onSubmit, onSki
   const [rubric, setRubric] = useState(() => { const r = {}; (asg?.rubric || []).forEach(c => { r[c.id] = prev?.rubric?.[c.id] ?? ""; }); return r; });
   const [scoreDraft, setScoreDraft] = useState(prev && !hasRubric ? String(prev.score) : "");
   const editorRef = useRef(null);
+  const [drafting, setDrafting] = useState(false);
+  const [draftErr, setDraftErr] = useState("");
+  const [steer, setSteer] = useState("");
 
   const rubricScore = (asg?.rubric || []).reduce((s, c) => s + (Number(rubric[c.id]) || 0), 0);
 
@@ -469,6 +473,22 @@ function GradeForm({ config, asg, name, log, draftHtml, onDraft, onSubmit, onSki
     onSubmit({ grade: buildGrade(), commentHtml: currentComment(), advance });
     if (!advance && editorRef.current) editorRef.current.innerHTML = "";
   };
+  const draft = async () => {
+    setDrafting(true); setDraftErr("");
+    const r = await draftFeedback({
+      asg, name, log, rubric,
+      score: hasRubric ? rubricScore : (scoreDraft !== "" ? Number(scoreDraft) : null),
+      note: steer.trim(),
+    });
+    setDrafting(false);
+    if (!r.ok) { setDraftErr(r.error); return; }
+    const html = textToHtml(r.text);
+    if (editorRef.current) {
+      editorRef.current.innerHTML = html;
+      onDraft(html);
+    }
+  };
+
   const cantAccess = () => {
     const grade = { score: 0, rubric: hasRubric ? Object.fromEntries(asg.rubric.map(c => [c.id, 0])) : null };
     onSubmit({ grade, commentHtml: CANT_ACCESS_HTML, advance: true });
@@ -506,6 +526,24 @@ function GradeForm({ config, asg, name, log, draftHtml, onDraft, onSubmit, onSki
       <div style={{ marginTop: 16 }}>
         <div style={label}>Comment back</div>
         <RichEditor editorRef={editorRef} initialHtml={draftHtml} onDraft={onDraft} />
+      </div>
+
+      {/* Draft it, then edit it. Nothing here sends anything to the student. */}
+      <div style={{ marginTop: 12, padding: 12, border: "1px solid " + BORDER, borderRadius: 12, background: BG }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <Btn accent={a} ghost disabled={drafting} onClick={draft}>
+            {drafting ? "Drafting…" : "Draft a comment"}
+          </Btn>
+          <input value={steer} onChange={e => setSteer(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && !drafting) draft(); }}
+            placeholder="Anything you want it to say (optional)"
+            style={{ ...inputStyle, flex: 1, minWidth: 200, minHeight: 40 }} />
+        </div>
+        <Muted style={{ fontSize: 13, marginTop: 8 }}>
+          {draftErr
+            ? <span style={{ color: "#dc2626", fontWeight: 600 }}>{draftErr}</span>
+            : "Writes into the box above from the rubric you just scored and what they turned in. Read it and change it before you submit."}
+        </Muted>
       </div>
 
       <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>

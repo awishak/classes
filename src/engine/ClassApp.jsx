@@ -24,7 +24,7 @@ import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const TEXT_PRIMARY = "#111827";
 const TEXT_SECONDARY = "#4b5563";
-const TEXT_MUTED = "#9ca3af";
+const TEXT_MUTED = "#646b75"; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
 const BORDER = "#eef0f2";
 const BORDER_STRONG = "#e5e7eb";
 const BG = "#fafaf9";
@@ -362,7 +362,7 @@ export default function ClassApp({ config, initialCard }) {
     <div style={{ display: "flex", gap: 4, background: BG, padding: 3, borderRadius: 999, border: "1px solid " + BORDER }}>
       {["student", "instructor"].map(r => (
         <button key={r} className="ca-focus" onClick={() => pickRole(r)} aria-pressed={role === r}
-          style={{ fontSize: 14, fontWeight: 600, padding: "0 16px", minHeight: 38, display: "inline-flex", alignItems: "center", borderRadius: 999, cursor: "pointer",
+          style={{ fontSize: 14, fontWeight: 600, padding: "0 16px", minHeight: TAP, display: "inline-flex", alignItems: "center", borderRadius: 999, cursor: "pointer",
             border: "none", fontFamily: F, background: role === r ? a : "transparent", color: role === r ? "#fff" : TEXT_SECONDARY, textTransform: "capitalize" }}>{r}</button>
       ))}
     </div>

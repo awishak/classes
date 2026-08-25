@@ -6,7 +6,7 @@ import { parseDueDate, fmtDue, genId, gp, Toast } from "./utils.jsx";
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const TEXT_PRIMARY = "#111827";
 const TEXT_SECONDARY = "#4b5563";
-const TEXT_MUTED = "#9ca3af";
+const TEXT_MUTED = "#646b75"; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
 const BORDER = "#f3f4f6";
 const BORDER_STRONG = "#e5e7eb";
 const ACCENT = "#059669";

@@ -305,7 +305,7 @@ export default function AdminDash() {
       {/* Header */}
       <div style={{ background: "#18181b", padding: "24px 20px 20px", textAlign: "center" }}>
         <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>Admin Dashboard</div>
-        <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>Spring 2026 / All Classes</div>
+        <div style={{ fontSize: 13, color: "#646b75", marginTop: 4 }}>Spring 2026 / All Classes</div>
       </div>
 
       {/* Quick stats row */}

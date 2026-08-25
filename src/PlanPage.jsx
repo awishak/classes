@@ -9,7 +9,7 @@ const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
 const INK = "#111827";
 const INK2 = "#4b5563";
-const MUTED = "#9ca3af";
+const MUTED = "#646b75"; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
 const LINE = "#eef0f2";
 const LINE2 = "#e5e7eb";
 const BG = "#fafaf9";
@@ -46,6 +46,33 @@ const Pill = ({ children, tone }) => (
 // Newest first. One entry per working session: what changed, and what broke.
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
+  {
+    id: "aug25b", date: "Tuesday, August 25 \u00b7 later", title: "Drafting comments, and a design system with numbers behind it",
+    blurb: "Two jobs. The engine learned to draft grading comments, which the three old forked classes have been able to do for months. And the second UX pass stopped being a matter of taste: the palette was measured, and two of the numbers were bad.",
+    groups: [
+      { name: "Grading", items: [
+        ["Draft a comment, then edit it", "A button in the grade flow that reads the rubric as I just scored it, what the student turned in, and anything they said about it, and writes the comment into the editor. There is a one-line box next to it for \u201cmake sure it says this.\u201d It drafts and never submits \u2014 same deal as the day plan and the before/after boards. The app proposes, I decide."],
+        ["The prompt carries the voice", "Casual, warm, direct. Short sentences. A banned-word list. Plain text, no bullets. Lead with what worked, then what to sharpen, and when a rubric line lost points, say what would have earned them instead of restating the number. Style rules sit in the system prompt where they are identical for every student and can be cached."],
+        ["Claude Opus 5, and the endpoint learned to take a model", "The shared endpoint was pinned to a model from 2025 and had a 1000-token ceiling. Thinking is on by default on Opus 5 and comes out of that same ceiling, so a short cap would have cut the comment off mid-sentence. The engine asks for Opus 5 at low effort with room to finish; the three old grades files keep the exact defaults their wording was tuned against, until we decide to move them."],
+      ] },
+      { name: "The design system", items: [
+        ["The body text failed a contrast check, in 138 places", "The muted grey used for every secondary line in the app was #9ca3af, which is 2.54:1 against white. WCAG AA wants 4.5:1. Checking the replacement caught a second miss \u2014 the obvious #6b7280 clears white at 4.83 but only manages 4.36 on the sunk grey the dashboard rows sit on. It is now #646b75, checked against every background we actually use and passing all of them, across all seventeen files \u2014 the engine, the Brief, the landing page, and the three live Spring classes. Colour value only, nothing moved."],
+        ["Live stopped being a shade of red", "The class accent is #9f1239 and the on-the-projector red is #e11d48. Those are 1.71:1 apart, which is no distance at all across a room, and they mean completely different things. The fix is not a third red. Anything on the room screen now carries a filled badge that says LIVE with a pulsing dot, so colour is reinforcement rather than the whole message."],
+        ["Two hit-target floors, and a reason for each", "Apple's 44pt is a touch guideline and we took it because students are on phones. The dashboard is a trackpad under my hands where 44 everywhere pushes half the panels below the fold. So 44 stays on everything students touch, and the dashboard gets a 34px floor \u2014 which still raised the 26px and 28px buttons that had no defence. Auditing found exactly one real miss on a student screen: the role toggle, at 38."],
+        ["src/engine/tokens.js", "Seven type sizes where there were fourteen, a 4px spacing grid, and every colour with one fixed meaning and its contrast ratio written next to it. The reasoning for all three lives in the file, so the next component does not reinvent a fifteenth font size."],
+        ["Focus rings and reduced motion on the dashboard", "The room screen has honoured prefers-reduced-motion since it was built. The dashboard animates panels while dragging them and had never asked. Keyboard users also had no way to see where they were on that screen."],
+        ["Empty states that hand you the door", "\u201cNo plan for this day yet. Build it in Day Plan\u201d told me what was wrong and made me go find Day Plan. Now that every card has a URL, it is a link."],
+      ] },
+    ],
+    note: {
+      title: "Worth knowing",
+      lines: [
+        "The contrast fix touched the three live Spring classes too (Grades, Grades4, Comm2Grades, styles). Same one-line colour change, no layout change, and those are the classes with students in them right now.",
+        "The drafting call goes through the existing /api/generate-feedback on the key already in the environment. No new service and no new dependency.",
+        "Still nothing watched with eyes. The Chrome extension has not paired, so the draft button has never been clicked and the LIVE badge has never been seen.",
+      ],
+    },
+  },
   {
     id: "aug25", date: "Tuesday, August 25", title: "Twenty changes, ten a side",
     blurb: "A UX pass over both surfaces. The dashboard got faster to drive mid-class; the class site got a working nav, real URLs, and stopped showing every student everyone else's grade.",

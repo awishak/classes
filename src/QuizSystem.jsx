@@ -362,7 +362,7 @@ export function StudentQuizView({ data, setData, userName }) {
                   <div style={{ fontSize: 12, fontWeight: 700, color: correct ? "#10b981" : "#ef4444", marginLeft: "auto" }}>{correct ? "Correct" : "Incorrect"}</div>
                 </div>
                 {!correct && myAnswer !== undefined && (
-                  <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.4, marginTop: 4 }}>
+                  <div style={{ fontSize: 13, color: "#646b75", lineHeight: 1.4, marginTop: 4 }}>
                     You picked <strong style={{ color: "#ef4444" }}>{q.options[myAnswer]}</strong>, but the answer was <strong style={{ color: "#10b981" }}>{q.options[q.correct]}</strong>.
                   </div>
                 )}
@@ -407,7 +407,7 @@ export function StudentQuizView({ data, setData, userName }) {
               <div key={i} style={{ ...crd, padding: 12, marginBottom: 6, borderColor: correct ? "#bbf7d0" : "#fecaca" }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 4 }}>{q.prompt || "Question " + (i + 1)}</div>
                 {!correct && myAnswer !== undefined && (
-                  <div style={{ fontSize: 13, color: "#6b7280" }}>You picked <strong style={{ color: "#ef4444" }}>{q.options[myAnswer]}</strong>, but the answer was <strong style={{ color: "#10b981" }}>{q.options[q.correct]}</strong>.</div>
+                  <div style={{ fontSize: 13, color: "#646b75" }}>You picked <strong style={{ color: "#ef4444" }}>{q.options[myAnswer]}</strong>, but the answer was <strong style={{ color: "#10b981" }}>{q.options[q.correct]}</strong>.</div>
                 )}
                 {correct && <div style={{ fontSize: 13, color: "#10b981", fontWeight: 700 }}>Correct: {q.options[q.correct]}</div>}
                 {myAnswer === undefined && <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>No answer. Correct: <strong>{q.options[q.correct]}</strong></div>}

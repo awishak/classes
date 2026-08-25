@@ -28,7 +28,7 @@ const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
 const TEXT_PRIMARY = "#111827";
 const TEXT_SECONDARY = "#4b5563";
-const TEXT_MUTED = "#9ca3af";
+const TEXT_MUTED = "#646b75"; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
 const BORDER = "#eef0f2";
 const BORDER_STRONG = "#e5e7eb";
 const BG = "#fafaf9";
@@ -36,10 +36,11 @@ const SURFACE_2 = "#f4f3f1";
 const LIVE = "#e11d48";
 const OK = "#0f766e";
 const WARN = "#b45309";
-const TAP = 44;
+const TAP = 44;  // student-facing surfaces: students are on phones
+const HIT = 34;  // this screen: a trackpad under my hands, where density is the point
 
 const label = { fontFamily: MONO, fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
-const mini = { minHeight: 34, padding: "0 12px", borderRadius: 8, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_SECONDARY, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
+const mini = { minHeight: HIT, padding: "0 12px", borderRadius: 8, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_SECONDARY, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
 const solid = (a) => ({ ...mini, background: a, borderColor: a, color: "#fff" });
 const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 9, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: 40, background: "#fff", color: TEXT_PRIMARY };
 const label2 = { fontFamily: MONO, fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
@@ -55,7 +56,28 @@ const CSS = `
 .dash-ghost[data-span="2"]{grid-column:span 2}
 .dash-item:hover{background:#fff;border-color:${BORDER_STRONG}}
 .dash-item:hover .dash-go{opacity:1}
+
+/* Keyboard users had no idea where they were on this screen. */
+.dash-focus:focus-visible{outline:2px solid var(--dash-accent);outline-offset:2px;border-radius:8px}
+.dash-focus:focus:not(:focus-visible){outline:none}
+
+/* The class accent and the live red are 1.71:1 apart, which is no distance at
+   all. So live stops relying on colour: it says LIVE, and the dot pulses. */
+.dash-live{display:inline-flex;align-items:center;gap:5px;flex:none;
+  font-family:${MONO};font-size:9px;font-weight:700;letter-spacing:.1em;
+  padding:3px 7px;border-radius:5px;background:${LIVE};color:#fff}
+.dash-live i{display:block;width:5px;height:5px;border-radius:50%;background:#fff;animation:dashPulse 1.6s ease-in-out infinite}
+@keyframes dashPulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* The panel grid animates while being dragged and never asked about this. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+}
 `;
+
+// One badge, used everywhere something is on the room screen. The word carries
+// the meaning; the colour only reinforces it.
+const LiveTag = () => <span className="dash-live"><i />LIVE</span>;
 
 // ─────────────────────────────────────────────────────────────
 // small pieces
@@ -77,7 +99,7 @@ function Panel({ id, title, right, span, onDrag, onSize, children, refCb, draggi
         <Grip onPointerDown={onDrag} />
         <span style={{ ...label, color: TEXT_SECONDARY, marginRight: "auto" }}>{title}</span>
         {right}
-        <button onClick={onSize} style={{ ...mini, minHeight: 26, padding: "0 8px", fontFamily: MONO, fontSize: 10, color: TEXT_MUTED }}>
+        <button onClick={onSize} style={{ ...mini, minHeight: HIT, padding: "0 10px", fontFamily: MONO, fontSize: 10, color: TEXT_MUTED }}>
           {span === "2" ? "2×" : "1×"}
         </button>
       </div>
@@ -100,10 +122,10 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
         <b style={{ display: "block", fontWeight: 500, fontSize: 14, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</b>
         {sub ? <small style={{ color: TEXT_MUTED, fontSize: 12 }}>{sub}</small> : null}
       </span>
-      <span className="dash-go" style={{ flex: "none", fontFamily: MONO, fontSize: 10, letterSpacing: ".08em",
-        color: live ? LIVE : TEXT_MUTED, fontWeight: live ? 700 : 400, opacity: live ? 1 : 0, transition: "opacity .14s" }}>
-        {live ? "TAKE DOWN ×" : "CAST →"}
-      </span>
+      {live ? <LiveTag /> : (
+        <span className="dash-go" style={{ flex: "none", fontFamily: MONO, fontSize: 10, letterSpacing: ".08em",
+          color: TEXT_MUTED, fontWeight: 400, opacity: 0, transition: "opacity .14s" }}>CAST →</span>
+      )}
     </button>
   );
 }
@@ -142,7 +164,7 @@ function Castable({ kind, kindColor, title, sub, url, claim, live, accent, onCas
     );
   }
 
-  const act = { ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5 };
+  const act = { ...mini, minHeight: HIT, padding: "0 10px", fontSize: 12.5 };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 11px", borderRadius: 10,
@@ -151,6 +173,7 @@ function Castable({ kind, kindColor, title, sub, url, claim, live, accent, onCas
         <span style={{ flex: "none", marginTop: 2, fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: ".08em",
           textTransform: "uppercase", padding: "3px 6px", borderRadius: 5, background: "#fff",
           border: "1px solid " + (kindColor || BORDER_STRONG), color: kindColor || TEXT_MUTED }}>{kind}</span>
+        {live ? <LiveTag /> : null}
         <span style={{ minWidth: 0, flex: 1 }}>
           <b style={{ display: "block", fontWeight: 500, fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.35 }}>{claim || title}</b>
           {claim || sub ? (
@@ -204,10 +227,9 @@ function FeatureRow({ name, live, accent, onRun, onDismiss }) {
         <b style={{ display: "block", fontWeight: 600, fontSize: 14.5, color: TEXT_PRIMARY }}>{name}</b>
         <small style={{ color: TEXT_MUTED, fontSize: 12 }}>{blurb}</small>
       </span>
-      <span style={{ flex: "none", fontFamily: MONO, fontSize: 10, letterSpacing: ".08em",
-        color: live ? LIVE : TEXT_MUTED, fontWeight: live ? 700 : 500 }}>
-        {live ? "RUNNING ×" : "RUN →"}
-      </span>
+      {live ? <LiveTag /> : (
+        <span style={{ flex: "none", fontFamily: MONO, fontSize: 10, letterSpacing: ".08em", color: TEXT_MUTED, fontWeight: 500 }}>RUN →</span>
+      )}
     </button>
   );
 }
@@ -328,7 +350,13 @@ function NowPanel({ config, engagedAt, onEngaged, plan, seq, onSlot }) {
   );
 }
 
-function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature }) {
+const GoTo = ({ href, accent, children }) => (
+  <a className="dash-focus" href={href}
+    style={{ ...mini, borderColor: accent, color: accent, textDecoration: "none",
+      display: "inline-flex", alignItems: "center", alignSelf: "flex-start" }}>{children}</a>
+);
+
+function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref }) {
   const featureBlock = features && features.length ? (
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
       <div style={{ ...label, color: accent }}>Today we run</div>
@@ -342,7 +370,8 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
   if (!plan || !seq) return (
     <>
       {featureBlock}
-      <Muted>{featureBlock ? "No sequence built for this day yet — add one in Day Plan." : "No plan for this day yet. Build it in Day Plan."}</Muted>
+      <Muted>{featureBlock ? "No sequence built for this day yet." : "Nothing planned for this day yet."}</Muted>
+      <GoTo href={planHref} accent={accent}>Build it in Day Plan →</GoTo>
     </>
   );
   const seedById = (id) => seeds.find(s => s.id === id);
@@ -351,7 +380,8 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
   if (!any) return (
     <>
       {featureBlock}
-      <Muted>This day has a sequence but no content in it yet. Build it in Day Plan.</Muted>
+      <Muted>This day has a sequence with nothing in it yet.</Muted>
+      <GoTo href={planHref} accent={accent}>Fill the slots in Day Plan →</GoTo>
     </>
   );
 
@@ -446,7 +476,7 @@ function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveL
                 : { type: "quote", tag: shelf.label, title: c, label: c })} />
           </div>
           <button onClick={() => onRemove(s.id)} title="Remove"
-            style={{ ...mini, minHeight: 28, padding: "0 8px", color: TEXT_MUTED }}>✕</button>
+            style={{ ...mini, minHeight: HIT, padding: "0 10px", color: TEXT_MUTED }}>✕</button>
         </div>
       ))}
       {open ? (
@@ -551,7 +581,7 @@ function AttendancePanel({ students, marks, onMark, onReset }) {
     <>
       <div style={{ display: "flex", gap: 14, fontFamily: MONO, fontSize: 11, color: TEXT_MUTED, alignItems: "center" }}>
         {ATT_STATES.map(s => <span key={s}>{s} <b style={{ color: TEXT_PRIMARY }}>{count(s)}</b></span>)}
-        <button style={{ ...mini, minHeight: 28, padding: "0 9px", marginLeft: "auto", fontSize: 11.5 }}
+        <button style={{ ...mini, minHeight: HIT, padding: "0 10px", marginLeft: "auto", fontSize: 11.5 }}
           disabled={!marked} onClick={onReset} title="Put everyone back to here">Reset</button>
       </div>
       <div style={{ display: "flex", gap: 7 }}>
@@ -645,7 +675,7 @@ function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIn
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={label2}>{label}</span>
         {isProposal ? <span style={{ ...label2, color: accent, fontSize: 10 }}>proposed</span> : null}
-        <button style={{ ...mini, minHeight: 26, padding: "0 9px", marginLeft: "auto", fontSize: 12 }} onClick={() => setEditing(true)}>Edit</button>
+        <button style={{ ...mini, minHeight: HIT, padding: "0 10px", marginLeft: "auto", fontSize: 12 }} onClick={() => setEditing(true)}>Edit</button>
       </div>
       <div style={{ fontWeight: 600, fontSize: 15 }}>{board.title}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -927,7 +957,7 @@ function Monitor({ config, live, cast, push, recent, onRecast }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 12px", background: "#fff", border: "1px solid " + BORDER, borderRadius: 10, ...label, fontSize: 11 }}>
-        <span style={{ width: 8, height: 8, borderRadius: "50%", flex: "none", background: on ? LIVE : BORDER_STRONG }} />
+        {on ? <LiveTag /> : <span style={{ width: 8, height: 8, borderRadius: "50%", flex: "none", background: BORDER_STRONG }} />}
         <span style={{ color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {on ? (live.cast.label || live.cast.title) : "Idle screen"}
         </span>
@@ -944,7 +974,7 @@ function Monitor({ config, live, cast, push, recent, onRecast }) {
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={liveUrl}>{hostOf(liveUrl)}</span>
           <div style={{ display: "flex", gap: 4, flex: "none" }}>
             {[["read", "Read"], ["embed", "Page"], ["card", "Card"]].map(([m, lbl]) => (
-              <button key={m} style={{ ...mini, minHeight: 28, padding: "0 9px", fontSize: 11.5,
+              <button key={m} style={{ ...mini, minHeight: HIT, padding: "0 10px", fontSize: 11.5,
                 ...(live.cast.mode === m ? { background: config.accent, borderColor: config.accent, color: "#fff" } : {}) }}
                 onClick={() => cast({ ...live.cast, mode: m, url: m === "embed" ? framable(liveUrl) : liveUrl })}>
                 {lbl}
@@ -1370,7 +1400,7 @@ export default function Dashboard({ config }) {
       onCast={() => cast({ type: "poll", label: "Live poll" })} />,
     flow: () => <FlowPanel plan={plan} seq={seq} seeds={seeds} castNow={castNow} dismiss={dismiss}
       liveLabel={liveLabel} accent={config.accent} onClaim={saveFlowClaim}
-      features={features} onFeature={runFeature} />,
+      features={features} onFeature={runFeature} planHref={config.path + "/dayplan"} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     stocked: () => <StockedPanel shelves={shelves} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
@@ -1391,7 +1421,7 @@ export default function Dashboard({ config }) {
   const offDay = onDeck && day !== onDeck;
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY }}>
+    <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, "--dash-accent": config.accent }}>
       <style>{CSS}</style>
 
       <header style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "13px 22px", display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>

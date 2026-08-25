@@ -29,6 +29,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing prompt" });
     }
 
+    // The three older grades files (Grades, Grades4, Comm2Grades) call this with
+    // nothing but a prompt, and their wording was tuned against the model below.
+    // So the defaults stay exactly where they were, and a caller that wants
+    // something newer asks for it. The engine asks for Opus 5.
+    const model = body.model || "claude-sonnet-4-20250514";
+    const maxTokens = body.max_tokens || 1000;
+    const system = body.system || null;
+    const effort = body.effort || null;
+
     // Build messages array
     let content;
     if (body.image && body.mediaType) {
@@ -49,8 +58,10 @@ export default async function handler(req, res) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
+        model,
+        max_tokens: maxTokens,
+        ...(system ? { system } : {}),
+        ...(effort ? { output_config: { effort } } : {}),
         messages: [{ role: "user", content }],
       }),
     });

@@ -928,7 +928,7 @@ export function StudentAnswerView({ data, setData, userName }) {
                   <div style={{ fontSize: 10, color: "#9ca3af" }}>{GAME_CATS.find(c => c.id === q.category)?.label}</div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: correct ? GREEN : RED, marginLeft: "auto" }}>{correct ? "Correct" : "Incorrect"}</div>
                 </div>
-                {!correct && my !== undefined && <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>You picked <strong style={{ color: RED }}>{q.options[my]}</strong>, but the answer was <strong style={{ color: GREEN }}>{q.options[q.correct]}</strong>.</div>}
+                {!correct && my !== undefined && <div style={{ fontSize: 13, color: "#646b75", marginTop: 4 }}>You picked <strong style={{ color: RED }}>{q.options[my]}</strong>, but the answer was <strong style={{ color: GREEN }}>{q.options[q.correct]}</strong>.</div>}
                 {!correct && my === undefined && <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic", marginTop: 4 }}>No answer. Correct: <strong>{q.options[q.correct]}</strong></div>}
               </div>
             );
@@ -960,7 +960,7 @@ export function StudentAnswerView({ data, setData, userName }) {
               <div key={i} style={{ ...crd, padding: 12, marginBottom: 6, borderColor: correct ? "#bbf7d0" : "#fecaca" }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 4 }}>Question {i + 1}</div>
                 {correct && <div style={{ fontSize: 13, color: GREEN, fontWeight: 700 }}>Correct: {q.options[q.correct]}</div>}
-                {!correct && my !== undefined && <div style={{ fontSize: 13, color: "#6b7280" }}>You picked <strong style={{ color: RED }}>{q.options[my]}</strong>, but the answer was <strong style={{ color: GREEN }}>{q.options[q.correct]}</strong>.</div>}
+                {!correct && my !== undefined && <div style={{ fontSize: 13, color: "#646b75" }}>You picked <strong style={{ color: RED }}>{q.options[my]}</strong>, but the answer was <strong style={{ color: GREEN }}>{q.options[q.correct]}</strong>.</div>}
                 {my === undefined && <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>No answer. Correct: <strong>{q.options[q.correct]}</strong></div>}
               </div>
             );
@@ -1002,7 +1002,7 @@ export function StudentAnswerView({ data, setData, userName }) {
           <div style={{ fontSize: 48, fontWeight: 900, color: "#111827", marginBottom: 12 }}>Q{currentQ + 1}</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: correct ? GREEN : RED, marginBottom: 8 }}>{correct ? "Correct!" : "Incorrect"}</div>
           {!correct && myAnswer !== undefined && (
-            <div style={{ fontSize: 15, color: "#6b7280", marginBottom: 8 }}>
+            <div style={{ fontSize: 15, color: "#646b75", marginBottom: 8 }}>
               You picked <strong style={{ color: RED }}>{q.options[myAnswer]}</strong>. Answer: <strong style={{ color: GREEN }}>{q.options[q.correct]}</strong>
             </div>
           )}
@@ -1067,7 +1067,7 @@ export function StudentAnswerView({ data, setData, userName }) {
                 );
               })}
             </div>
-            {selected !== null && <button onClick={() => submitAnswer(actType, week, currentQ, selected)} disabled={saving} style={{ ...pill, fontSize: 14, padding: "12px 40px", background: saving ? "#6b7280" : "#111827", color: "#fff", fontWeight: 700, cursor: saving ? "wait" : "pointer", opacity: saving ? 0.85 : 1 }}>{saving ? "Saving..." : "Lock in answer"}</button>}
+            {selected !== null && <button onClick={() => submitAnswer(actType, week, currentQ, selected)} disabled={saving} style={{ ...pill, fontSize: 14, padding: "12px 40px", background: saving ? "#646b75" : "#111827", color: "#fff", fontWeight: 700, cursor: saving ? "wait" : "pointer", opacity: saving ? 0.85 : 1 }}>{saving ? "Saving..." : "Lock in answer"}</button>}
           </>
         )}
 
