@@ -10,6 +10,7 @@
 
 import { useState } from "react";
 import { genId } from "../utils.jsx";
+import { addSeedToDay, dayHasSeed } from "./dayplan.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const TEXT_PRIMARY = "#111827";
@@ -241,7 +242,7 @@ function ScheduleEditor({ config, data, update }) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {weeks.map((w, i) => (
-          <WeekEditor key={w.id} w={w} wIndex={i} accent={a} config={config} library={library}
+          <WeekEditor key={w.id} w={w} wIndex={i} accent={a} config={config} library={library} data={data} update={update}
             setWeekField={setWeekField} removeItem={removeItem} setItemDate={setItemDate}
             dropOnWeek={dropOnWeek} removeWeek={removeWeek} addNewToWeek={addNewToWeek} addExistingToWeek={addExistingToWeek} />
         ))}
@@ -306,7 +307,66 @@ function LibraryPicker({ library, accent, onPick, onCreate, onClose }) {
   );
 }
 
-function WeekEditor({ w, wIndex, accent, config, library, setWeekField, removeItem, setItemDate, dropOnWeek, removeWeek, addNewToWeek, addExistingToWeek }) {
+// A suggestion you cannot act on is decoration. These used to be plain spans:
+// the right seed, named, with no way to put it anywhere, so nothing ever
+// reached a day plan and nothing ever reached the dashboard. Now it asks which
+// day and drops the seed into the slot the seed itself asks for.
+function SeedSuggestion({ seed, week, accent, config, data, update }) {
+  const [picking, setPicking] = useState(false);
+  const [landed, setLanded] = useState(null);
+  const dates = week.dates || [];
+
+  const add = (date) => {
+    const slot = addSeedToDay(update, config, date, seed);
+    setPicking(false);
+    setLanded(slot ? { date, slot } : { date, slot: null });
+  };
+
+  const already = dates.filter(d => dayHasSeed(data, config, d, seed.id));
+
+  return (
+    <div style={{ border: "1px solid " + BORDER_STRONG, borderRadius: 12, padding: "10px 12px", background: "#fff" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span style={{ flex: 1, minWidth: 140, fontSize: 15, fontWeight: 600 }}>{seed.title}</span>
+        {seed.slots?.length ? (
+          <span style={{ ...label, fontSize: 11 }}>{seed.slots.join(" · ")}</span>
+        ) : null}
+        <button onClick={() => { setPicking(v => !v); setLanded(null); }}
+          style={{ minHeight: TAP, padding: "0 14px", borderRadius: 999, border: "1px solid " + accent,
+            background: "#fff", color: accent, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
+          {picking ? "Cancel" : "Add to a day"}
+        </button>
+      </div>
+
+      {seed.body ? <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 6 }}>{seed.body}</div> : null}
+
+      {picking ? (
+        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+          {dates.map(d => (
+            <button key={d} onClick={() => add(d)}
+              style={{ minHeight: TAP, padding: "0 16px", borderRadius: 999, border: "1px solid " + BORDER_STRONG,
+                background: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>{d}</button>
+          ))}
+          {!dates.length ? <Muted>This week has no dates yet.</Muted> : null}
+        </div>
+      ) : null}
+
+      {landed ? (
+        <div style={{ fontSize: 14, marginTop: 8, color: landed.slot ? "#0f766e" : "#b45309", fontWeight: 600 }}>
+          {landed.slot
+            ? "Added to " + landed.date + " in the " + landed.slot + " slot. It is on the dashboard now."
+            : "That day has no sequence to put it in. Pick one in Day Plan first."}
+        </div>
+      ) : null}
+
+      {!picking && !landed && already.length ? (
+        <div style={{ fontSize: 14, marginTop: 8, color: TEXT_MUTED }}>Already on {already.join(", ")}.</div>
+      ) : null}
+    </div>
+  );
+}
+
+function WeekEditor({ w, wIndex, accent, config, library, data, update, setWeekField, removeItem, setItemDate, dropOnWeek, removeWeek, addNewToWeek, addExistingToWeek }) {
   const [over, setOver] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [editHead, setEditHead] = useState(false);
@@ -433,8 +493,11 @@ function WeekEditor({ w, wIndex, accent, config, library, setWeekField, removeIt
 
         <div style={{ ...label, marginTop: 14 }}>Seed suggestions</div>
         {seeds.length > 0 ? (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
-            {seeds.map((s, i) => <span key={i} style={{ fontSize: 15, background: BG, border: "1px solid " + BORDER_STRONG, borderRadius: 999, padding: "6px 12px" }}>{s.title}</span>)}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
+            {seeds.map(s => (
+              <SeedSuggestion key={s.id} seed={s} week={w} accent={accent}
+                config={config} data={data} update={update} />
+            ))}
           </div>
         ) : <Muted style={{ marginTop: 6 }}>No matching seeds yet. Your seed library lives in teaching/seeds.md.</Muted>}
       </div>

@@ -21,6 +21,7 @@
 
 import { useState } from "react";
 import { genId } from "../utils.jsx";
+import { normSlot, blankDay, sequenceOptions, sequenceFor, dayPlanFor, FREEFORM } from "./dayplan.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const TEXT_PRIMARY = "#111827";
@@ -30,7 +31,6 @@ const BORDER = "#eef0f2";
 const BORDER_STRONG = "#e5e7eb";
 const BG = "#fafaf9";
 const TAP = 44;
-const FREEFORM = "freeform";
 
 const label = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
 const h2 = { fontSize: 22, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.02em" };
@@ -50,17 +50,6 @@ const getDayPlans = (data) => data?.dayPlans || {};
 const getSeeds = (data, config) => data?.seeds || config.seeds || [];
 const slotLabel = (s) => s.split("-").map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
 
-// Normalize a stored slot (which may be the old single-item shape) into
-// { title?, note?, items: [...] }.
-function normSlot(s) {
-  if (!s) return { items: [] };
-  if (Array.isArray(s.items)) return { title: s.title, note: s.note, items: s.items };
-  const { seedId, text, bodyOverride, links, title, note } = s;
-  const items = (seedId || text) ? [{ id: "legacy", seedId, text, bodyOverride, links: links || [] }] : [];
-  return { title, note, items };
-}
-
-// ─── drag payload helpers (native HTML5 DnD, matches ScheduleCard) ───
 const setDrag = (e, id) => e.dataTransfer.setData("text/plain", id);
 const getDrag = (e) => e.dataTransfer.getData("text/plain");
 
@@ -105,10 +94,6 @@ function candidatesFor(seeds, slot, topic, usedIds) {
 }
 
 // ─── day-plan read helpers ───
-const blankDay = (config) => ({ sequenceId: config.defaultSequenceId, slots: {}, blocks: [], slides: "", notes: "" });
-const dayPlanFor = (data, config, date) => ({ ...blankDay(config), ...(getDayPlans(data)[date] || {}) });
-const sequenceOptions = (config) => [...(config.sequences || []), { id: FREEFORM, name: "Freeform (no sequence)", slots: [] }];
-const sequenceFor = (config, id) => sequenceOptions(config).find(s => s.id === id) || sequenceOptions(config)[0] || { slots: [] };
 
 // ─────────────────────────────────────────────────────────────
 // SUMMARY (instructor home tile)

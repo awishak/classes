@@ -23,6 +23,7 @@ import { useHeadlines } from "./headlines.js";
 import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
+import { normSlot } from "./dayplan.js";
 import { genId } from "../utils.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -420,7 +421,7 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
   );
   const seedById = (id) => seeds.find(s => s.id === id);
   const slotItems = plan.slots || {};
-  const any = seq.slots.some(s => (slotItems[s.slot]?.items || []).length);
+  const any = seq.slots.some(s => normSlot(slotItems[s.slot]).items.length);
   if (!any) return (
     <>
       {slidesBlock}
@@ -436,8 +437,8 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
       {slidesBlock}
       {featureBlock}
       {seq.slots.map(s => {
-        const bucket = slotItems[s.slot] || {};
-        const items = bucket.items || [];
+        const bucket = normSlot(slotItems[s.slot]);
+        const items = bucket.items;
         if (!items.length) return null;
         return (
           <div key={s.slot} style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
@@ -835,7 +836,7 @@ function Horizon({ title, count, checks, accent, right }) {
 function TodoPanel({ plan, seq, features, boards, assignments, shelves, students, data, accent }) {
   // ─── today ───
   const slotItems = plan?.slots || {};
-  const flowItems = seq ? seq.slots.flatMap(sl => (slotItems[sl.slot]?.items) || []) : [];
+  const flowItems = seq ? seq.slots.flatMap(sl => normSlot(slotItems[sl.slot]).items) : [];
   const noClaim = flowItems.filter(it => !it.claim).length
     + flowItems.flatMap(it => it.links || []).filter(l => !l.claim).length;
   const stocked = (shelves.day || []).length + (shelves.week || []).length;
@@ -1328,8 +1329,11 @@ export default function Dashboard({ config }) {
   // A claim written once stays on the item, so the second time it is one click.
   const saveFlowClaim = (slot, itemId, claim, linkId) => writeDay(d => {
     const slots = { ...(d.slots || {}) };
-    const bucket = { ...(slots[slot] || {}) };
-    bucket.items = (bucket.items || []).map(it => {
+    // Through normSlot, because a slot still in the older single-item shape has
+    // no items array, and `(bucket.items || []).map` would have quietly written
+    // an empty one back over it.
+    const bucket = normSlot(slots[slot]);
+    bucket.items = bucket.items.map(it => {
       if (it.id !== itemId) return it;
       if (!linkId) return { ...it, claim };
       return { ...it, links: (it.links || []).map(l => l.id === linkId ? { ...l, claim } : l) };
@@ -1419,9 +1423,9 @@ export default function Dashboard({ config }) {
   const cmdTargets = [];
   features.forEach(f => cmdTargets.push({ key: "f:" + f, group: "Run", title: f, run: () => runFeature(f) }));
   (seq?.slots || []).forEach(sl => {
-    const bucket = slotBuckets[sl.slot] || {};
+    const bucket = normSlot(slotBuckets[sl.slot]);
     const tag = bucket.title || sl.slot;
-    (bucket.items || []).forEach(it => {
+    bucket.items.forEach(it => {
       const seed = it.seedId ? seeds.find(x => x.id === it.seedId) : null;
       const title = it.claim || (seed ? seed.title : it.text) || "Untitled";
       cmdTargets.push({ key: "i:" + it.id, group: tag, title,
@@ -1470,8 +1474,28 @@ export default function Dashboard({ config }) {
   cmdTargets.push({ key: "c:idle", group: "Screen", title: "Idle screen", run: () => cast(null) });
   cmdTargets.push({ key: "c:black", group: "Screen", title: "Black screen", run: () => cast({ type: "black", label: "Black screen" }) });
 
-  if (data === null || !day) {
+  if (data === null) {
     return <div style={{ minHeight: "100vh", background: BG, fontFamily: F, display: "grid", placeItems: "center", color: TEXT_MUTED }}>Loading…</div>;
+  }
+
+  // A brand-new class has no weeks yet, so there is no session to open on. The
+  // old code waited for a day that was never coming and sat on "Loading" for
+  // good.
+  if (!day) {
+    return (
+      <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, display: "grid", placeItems: "center", padding: 24 }}>
+        <div style={{ maxWidth: 420, textAlign: "center", display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
+          <span style={label}>{config.code}</span>
+          <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-.02em" }}>No sessions on the calendar yet</div>
+          <Muted>The dashboard runs one class session at a time, so it needs a schedule before there is anything to open. Add the weeks and their dates first.</Muted>
+          <a className="dash-focus" href={config.path + "/schedule"}
+            style={{ ...mini, minHeight: TAP, padding: "0 18px", borderColor: config.accent, color: config.accent,
+              textDecoration: "none", display: "inline-flex", alignItems: "center", fontSize: 15 }}>
+            Build the schedule →
+          </a>
+        </div>
+      </div>
+    );
   }
 
   const render = {
