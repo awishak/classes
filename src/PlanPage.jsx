@@ -63,12 +63,12 @@ const SESSIONS = [
         ["Focus rings and reduced motion on the dashboard", "The room screen has honoured prefers-reduced-motion since it was built. The dashboard animates panels while dragging them and had never asked. Keyboard users also had no way to see where they were on that screen."],
         ["Empty states that hand you the door", "\u201cNo plan for this day yet. Build it in Day Plan\u201d told me what was wrong and made me go find Day Plan. Now that every card has a URL, it is a link."],
       ] },
-    ],
       { name: "Then, in the same session", items: [
         ["COMM 999 opens straight onto the class UI again", "The sign-in I added earlier put a name-picker in front of the template class \u2014 the one I open to show somebody what this looks like. Nothing was lost, but the door hid the thing being shown, and the roster behind it is ten placeholder names. A config flag turns the gate off for the template. A real class leaves it on, because there the gate is what stops a student reading a classmate's grade."],
         ["The three live classes moved to Claude Opus 5", "All six call sites in Grades, Grades4 and Comm2Grades \u2014 including the ones that read a photo of handwritten grading notes \u2014 now name the model and carry enough headroom that thinking does not eat the answer. They all parse the response by taking text blocks and skipping everything else, so thinking blocks pass through harmlessly."],
         ["The type scale went in for real", "The engine was using twenty font sizes between 9 and 32. It now uses seven, plus 16. The 9px and 10px mono labels were below the floor our own design rule sets (nothing under about 12), so those came up. 16 stays exactly where it is on every input, because anything smaller makes iOS zoom the page when a student taps a field \u2014 that one is a functional requirement, not a taste."],
       ] },
+    ],
     note: {
       title: "Worth knowing",
       lines: [
