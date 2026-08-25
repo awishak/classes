@@ -1,14 +1,24 @@
 // ClassApp — the shared engine. It renders ANY class from a config object.
 // Nothing here is COMM-999-specific; all class data comes from `config`.
-// This is the new card-grid home (summary tiles on the left, full page on the
+// This is the card-grid home (summary tiles on the left, full page on the
 // right when you open one) plus a Student / Instructor view toggle.
+//
+// Students pick who they are and see only their own grade, their own work, and
+// their own messages. PINs are parked for now — the roster is not real yet, so
+// there is nothing worth locking. When the PINs land, the check goes back into
+// SignIn and the instructor toggle, and nothing else has to move.
+//
+// Every card is addressable: /comm999/assignments is a real URL you can send
+// someone, and the browser Back button does what it says.
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useClassData } from "./store.js";
+import { useLive } from "./live.js";
+import { usePoll } from "./poll.js";
 import { YouSummary, YouDetail } from "./YouCard.jsx";
 import { ScheduleSummary, ScheduleDetail } from "./ScheduleCard.jsx";
 import { RosterSummary, RosterDetail } from "./RosterCard.jsx";
-import { AssignmentsSummary, AssignmentsDetail } from "./AssignmentsCard.jsx";
+import { AssignmentsSummary, AssignmentsDetail, dueState, nextDue, ungradedCount } from "./AssignmentsCard.jsx";
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -18,13 +28,12 @@ const TEXT_MUTED = "#9ca3af";
 const BORDER = "#eef0f2";
 const BORDER_STRONG = "#e5e7eb";
 const BG = "#fafaf9";
-
-const NAV = ["Home", "Schedule", "Assignments", "Community", "More"];
+const LIVE = "#e11d48";
 
 // ─── small style helpers ───
 // Following Apple HIG: body text ~15-17px, labels no smaller than 12px,
 // interactive targets at least 44px tall, inputs >=16px (prevents iOS zoom).
-const TAP = 44; // minimum tap target, px
+const TAP = 44;
 const CARD_MAX = 380; // cards never grow wider than this (a phone-width card)
 const card = {
   background: "#fff", borderRadius: 16, padding: 20,
@@ -34,11 +43,29 @@ const card = {
 const label = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
 const h2 = { fontSize: 22, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.02em" };
 
+// Keyboard users could not see where they were. Everything focusable now says
+// so, and the skeleton tiles breathe while the class data is on its way.
+const CSS = `
+.ca-focus:focus-visible{outline:2px solid var(--ca-accent);outline-offset:2px;border-radius:10px}
+@keyframes caShimmer{0%{opacity:.55}50%{opacity:1}100%{opacity:.55}}
+.ca-skel{animation:caShimmer 1.4s ease-in-out infinite;background:#eceae7;border-radius:8px}
+@media (prefers-reduced-motion:reduce){.ca-skel{animation:none}}
+`;
+
+// Nav tabs map to real cards. "More" opens the cards that did not fit.
+const NAV = [
+  { id: "home", label: "Home", card: null },
+  { id: "schedule", label: "Schedule", card: "schedule" },
+  { id: "assignments", label: "Assignments", card: "assignments" },
+  { id: "community", label: "Community", card: "community" },
+  { id: "more", label: "More", card: "more" },
+];
+const NAV_CARDS = new Set(["schedule", "assignments", "community"]);
+
 // ─────────────────────────────────────────────────────────────
 // Card summaries (left grid). Each returns { title, body } given config + role.
 // ─────────────────────────────────────────────────────────────
 function summary(key, config, role, ctx) {
-  const a = config.accent;
   switch (key) {
     case "dayplan":
       return { title: "Day Plan", body: <DayPlanSummary config={config} data={ctx.data} /> };
@@ -49,7 +76,7 @@ function summary(key, config, role, ctx) {
     case "schedule":
       return { title: "Schedule", body: <ScheduleSummary config={config} data={ctx.data} /> };
     case "community":
-      return { title: "Community", body: <Muted>Nothing live right now.</Muted> };
+      return { title: "Community", body: <CommunitySummary config={config} live={ctx.live} poll={ctx.poll} /> };
     case "leaderboard":
       return { title: "Leaderboard", body: <Muted>In-class game standings.</Muted> };
     case "roster":
@@ -65,7 +92,6 @@ function summary(key, config, role, ctx) {
 // Card detail (right panel). Full page for the opened card.
 // ─────────────────────────────────────────────────────────────
 function detail(key, config, role, ctx) {
-  const a = config.accent;
   if (key === "dayplan") {
     return <DayPlanDetail config={config} data={ctx.data} update={ctx.update} />;
   }
@@ -87,30 +113,148 @@ function detail(key, config, role, ctx) {
       <Panel title="Your Instructor">
         <div style={{ fontWeight: 700, fontSize: 18 }}>{ins.name}</div>
         <div style={{ marginTop: 6, color: TEXT_SECONDARY }}>{ins.bio}</div>
+        {ins.email ? <a className="ca-focus" href={"mailto:" + ins.email} style={{ display: "inline-block", marginTop: 10, fontSize: 15, fontWeight: 600, color: config.accent }}>{ins.email}</a> : null}
       </Panel>
     );
   }
-  if (key === "community") return <Panel title="Community"><Muted>In-class games, discussion boards, and live activities will surface here when active.</Muted></Panel>;
+  if (key === "community") return <Panel title="Community"><CommunityDetail config={config} live={ctx.live} poll={ctx.poll} /></Panel>;
   if (key === "leaderboard") return <Panel title="Leaderboard"><Muted>In-class game leaderboard.</Muted></Panel>;
   return <Panel title={key}><Muted>Coming soon.</Muted></Panel>;
 }
 
 // ─── tiny presentational helpers ───
 const Muted = ({ children }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5 }}>{children}</div>;
-const Row = ({ children }) => <div style={{ display: "flex", gap: 14, alignItems: "center" }}>{children}</div>;
-const Avatar = ({ accent, big }) => (
-  <div style={{ width: big ? 72 : 48, height: big ? 72 : 48, borderRadius: "50%", background: accent + "22", border: "2px solid " + accent + "55", flexShrink: 0 }} />
-);
-const Btn = ({ children, accent }) => (
-  <span style={{ fontSize: 15, fontWeight: 600, padding: "0 18px", minHeight: TAP, display: "inline-flex", alignItems: "center", borderRadius: 999, cursor: "pointer",
-    border: "1px solid " + (accent || BORDER_STRONG), background: accent || "#fff", color: accent ? "#fff" : TEXT_PRIMARY }}>{children}</span>
-);
 const Panel = ({ title, children }) => (
   <div>
     <div style={{ ...h2, marginBottom: 16 }}>{title}</div>
     {children}
   </div>
 );
+
+// ─────────────────────────────────────────────────────────────
+// Community — what is actually happening right now
+// ─────────────────────────────────────────────────────────────
+// "Nothing live right now" was a lie whenever a poll was open. This reads the
+// same cast bus the room screen reads, so the card and the projector agree.
+function liveNow(config, live, poll) {
+  const out = [];
+  if (poll && (poll.phase === "vote1" || poll.phase === "vote2")) {
+    out.push({ id: "poll", title: "A poll is open", what: poll.question || "Vote on the question that is up.", href: config.path + "/ask" });
+  }
+  const c = live?.cast;
+  if (c?.type === "headlines") out.push({ id: "hl", title: "Headlines is running", what: "Post a headline and vote on the ones already up.", href: config.path + "/ask" });
+  if (c?.type === "feature") out.push({ id: "ft", title: c.title + " is running", what: c.body || "", href: config.path + "/today" });
+  return out;
+}
+
+function CommunitySummary({ config, live, poll }) {
+  const items = liveNow(config, live, poll);
+  if (!items.length) return <Muted>Nothing live right now.</Muted>;
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ width: 8, height: 8, borderRadius: "50%", background: LIVE, flexShrink: 0 }} />
+        <span style={{ fontWeight: 600 }}>{items[0].title}</span>
+      </div>
+      {items.length > 1 ? <Muted>and {items.length - 1} more</Muted> : null}
+    </div>
+  );
+}
+
+function CommunityDetail({ config, live, poll }) {
+  const items = liveNow(config, live, poll);
+  if (!items.length) return <Muted>In-class games, discussion boards, and live activities show up here while they are running.</Muted>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {items.map(it => (
+        <div key={it.id} style={{ border: "1px solid " + BORDER, borderRadius: 14, padding: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: LIVE, flexShrink: 0 }} />
+            <span style={{ fontWeight: 600, fontSize: 17 }}>{it.title}</span>
+          </div>
+          {it.what ? <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 6 }}>{it.what}</div> : null}
+          <a className="ca-focus" href={it.href} style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, fontSize: 15, fontWeight: 600, color: config.accent, textDecoration: "none" }}>Join in →</a>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Needs you — the answer to "what do I do now?"
+// ─────────────────────────────────────────────────────────────
+// The grid is a list of places. This is a list of actions, and it sits above
+// the grid because it is the only thing on the home page with a deadline.
+function needsYou(config, data, role, asStudent) {
+  const out = [];
+  if (role === "instructor") {
+    const n = ungradedCount(config, data);
+    if (n) out.push({ id: "grade", card: "assignments", text: n + " submission" + (n === 1 ? "" : "s") + " waiting to be graded" });
+    const waiting = (config.students || []).filter(s => {
+      const t = data?.threads?.[s.name] || [];
+      const last = t[t.length - 1];
+      return last && last.from === "student";
+    }).length;
+    if (waiting) out.push({ id: "inbox", card: "you", text: waiting + " student" + (waiting === 1 ? "" : "s") + " waiting on a reply" });
+    return out;
+  }
+  const thread = data?.threads?.[asStudent] || [];
+  const last = thread[thread.length - 1];
+  if (last && last.from === "instructor") out.push({ id: "note", card: "you", text: "A new note from " + (config.instructor?.name || "your instructor") });
+  const next = nextDue(config, data);
+  if (next) {
+    const d = dueState(next.due);
+    const submitted = ((data?.assignmentLog?.[next.id] || {})[asStudent] || []).some(e => e.type === "submission");
+    if (d && d.tone !== "calm" && !submitted) out.push({ id: "due", card: "assignments", text: next.title + " is " + d.text.toLowerCase(), tone: d.tone });
+  }
+  return out;
+}
+
+function NeedsYou({ items, accent, onOpen }) {
+  if (!items.length) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+      {items.map(it => (
+        <button key={it.id} className="ca-focus" onClick={() => onOpen(it.card)}
+          style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", cursor: "pointer",
+            background: it.tone === "late" ? "#fef2f2" : "#fff", border: "1px solid " + (it.tone === "late" ? "#fecaca" : accent + "55"),
+            borderLeft: "4px solid " + (it.tone === "late" ? LIVE : accent),
+            borderRadius: 12, padding: "12px 16px", minHeight: TAP, fontFamily: F }}>
+          <span style={{ flex: 1, fontSize: 15.5, fontWeight: 500, color: TEXT_PRIMARY }}>{it.text}</span>
+          <span style={{ flex: "none", fontSize: 14, fontWeight: 600, color: accent }}>open →</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Sign in
+// ─────────────────────────────────────────────────────────────
+// Same shape as the Ask page, same remembered key, so signing in on one gets
+// you into the other. Before this, a dropdown let anyone read any classmate's
+// grade and every message they had sent me.
+function SignIn({ config, data, onSignedIn }) {
+  const roster = (data?.students || config.students || []).map(s => s.name).filter(n => n !== config.testStudent);
+  return (
+    <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, display: "flex", justifyContent: "center", padding: "48px 20px" }}>
+      <style>{CSS}</style>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
+      <div style={{ width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ fontSize: 13, color: TEXT_MUTED, fontWeight: 600 }}>{config.code} · {config.name}</div>
+        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, letterSpacing: "-.02em" }}>Who are you?</h1>
+        <Muted>Pick your name to get to your grade, your assignments, and your messages.</Muted>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {roster.map(n => (
+            <button key={n} className="ca-focus" onClick={() => onSignedIn(n)}
+              style={{ ...card, minHeight: TAP, padding: "12px 16px", fontSize: 16, fontWeight: 500, border: "1px solid " + BORDER_STRONG }}>{n}</button>
+          ))}
+          {!roster.length ? <Muted>No roster yet.</Muted> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────
 // Main
@@ -126,15 +270,56 @@ function useIsDesktop() {
   return desktop;
 }
 
-export default function ClassApp({ config }) {
-  const [role, setRole] = useState("student"); // student | instructor
-  const [open, setOpen] = useState(null); // card key open as detail / takeover
+const Skeleton = ({ w, h }) => <div className="ca-skel" style={{ width: w, height: h }} />;
+
+function SkeletonTile() {
+  return (
+    <div style={{ ...card, cursor: "default", display: "flex", flexDirection: "column", gap: 10 }}>
+      <Skeleton w="38%" h={10} />
+      <Skeleton w="72%" h={18} />
+      <Skeleton w="52%" h={14} />
+    </div>
+  );
+}
+
+export default function ClassApp({ config, initialCard }) {
+  const REMEMBER = config.storageKey + "-user";
+  const ADMIN = config.storageKey + "-admin";
+
+  const [data, update] = useClassData(config.storageKey);
+  const [live] = useLive(config.storageKey);
+  const { poll } = usePoll(config.storageKey);
   const isDesktop = useIsDesktop();
   const a = config.accent;
 
-  const [data, update] = useClassData(config.storageKey);
-  const [asStudent, setAsStudent] = useState(config.testStudent || config.students?.[0]?.name || "");
-  const ctx = { data: data || {}, update, asStudent, setAsStudent };
+  // Remembered sign-ins, read on the first render so the sign-in screen never
+  // flashes at somebody who is already signed in. The student key is the one
+  // the Ask page writes, so a student who signed in to ask a question is in.
+  const remembered = () => { try { return localStorage.getItem(REMEMBER); } catch { return null; } };
+  const [role, setRole] = useState(() => { try { return localStorage.getItem(ADMIN) === "1" ? "instructor" : "student"; } catch { return "student"; } });
+  const [open, setOpen] = useState(initialCard || null);
+  const [signedIn, setSignedIn] = useState(remembered);
+  const [asStudent, setAsStudent] = useState(() => remembered() || config.testStudent || config.students?.[0]?.name || "");
+
+  // ─── the URL is the state ───
+  // /comm999/assignments is a link you can send someone, and Back goes back to
+  // the grid instead of leaving the site.
+  const go = useCallback((key) => {
+    setOpen(key);
+    const path = config.path + (key ? "/" + key : "");
+    if (window.location.pathname !== path) window.history.pushState({}, "", path);
+  }, [config.path]);
+
+  useEffect(() => {
+    const onPop = () => {
+      const rest = window.location.pathname.replace(config.path, "").replace(/^\/|\/$/g, "");
+      setOpen(rest || null);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [config.path]);
+
+  const ctx = { data: data || {}, update, asStudent, setAsStudent: role === "instructor" ? setAsStudent : null, live, poll };
 
   // Push updated seed content (schedule + library) to the store when the seed
   // version changes, without touching threads/profiles or other live data.
@@ -145,6 +330,8 @@ export default function ClassApp({ config }) {
     }
   }, [data, config]);
 
+  useEffect(() => { document.title = config.code + " · " + config.name; }, [config.code, config.name]);
+
   // Some cards are instructor-only (e.g. the day-planning surface) and never
   // appear on the student home, regardless of the config toggle.
   const INSTRUCTOR_ONLY = new Set(["dayplan"]);
@@ -152,19 +339,38 @@ export default function ClassApp({ config }) {
     .filter(([, on]) => on)
     .map(([k]) => k)
     .filter(k => role === "instructor" || !INSTRUCTOR_ONLY.has(k));
+  const moreCards = enabledCards.filter(k => !NAV_CARDS.has(k));
+
+  const signIn = (name) => {
+    try { localStorage.setItem(REMEMBER, name); } catch { /* private mode */ }
+    setSignedIn(name); setAsStudent(name);
+  };
+  const signOut = () => {
+    try { localStorage.removeItem(REMEMBER); localStorage.removeItem(ADMIN); } catch { /* private mode */ }
+    setSignedIn(null); setRole("student"); go(null);
+  };
+  const pickRole = (r) => {
+    try { if (r === "instructor") localStorage.setItem(ADMIN, "1"); else localStorage.removeItem(ADMIN); } catch { /* private mode */ }
+    setRole(r); go(null);
+  };
+
+  if (data !== null && role === "student" && !signedIn) {
+    return <SignIn config={config} data={data} onSignedIn={signIn} />;
+  }
 
   const RoleToggle = (
     <div style={{ display: "flex", gap: 4, background: BG, padding: 3, borderRadius: 999, border: "1px solid " + BORDER }}>
       {["student", "instructor"].map(r => (
-        <span key={r} onClick={() => { setRole(r); setOpen(null); }}
+        <button key={r} className="ca-focus" onClick={() => pickRole(r)} aria-pressed={role === r}
           style={{ fontSize: 14, fontWeight: 600, padding: "0 16px", minHeight: 38, display: "inline-flex", alignItems: "center", borderRadius: 999, cursor: "pointer",
-            background: role === r ? a : "transparent", color: role === r ? "#fff" : TEXT_SECONDARY, textTransform: "capitalize" }}>{r}</span>
+            border: "none", fontFamily: F, background: role === r ? a : "transparent", color: role === r ? "#fff" : TEXT_SECONDARY, textTransform: "capitalize" }}>{r}</button>
       ))}
     </div>
   );
 
   const Logo = (
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    <button className="ca-focus" onClick={() => go(null)}
+      style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: F, textAlign: "left" }}>
       <div style={{ width: 30, height: 30, borderRadius: 8, background: a, color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
         {config.code.split(" ")[1]}
       </div>
@@ -172,14 +378,22 @@ export default function ClassApp({ config }) {
         <div style={{ fontSize: 11, fontWeight: 700, color: a, textTransform: "uppercase", letterSpacing: "0.08em" }}>{config.code}</div>
         <div style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.1 }}>{config.name}</div>
       </div>
-    </div>
+    </button>
   );
+
+  // A card key can arrive from the address bar, so it gets the same check the
+  // grid does: unknown or not-yours falls back to the home grid.
+  const openKey = open && (open === "more" || enabledCards.includes(open)) ? open : null;
+
+  // Which nav tab is lit: the open card, or "More" when the open card is one
+  // that lives under it.
+  const activeNav = !openKey ? "home" : (NAV_CARDS.has(openKey) ? openKey : "more");
 
   const CardTile = (key) => {
     const s = summary(key, config, role, ctx);
     return (
-      <button key={key} onClick={() => setOpen(key)}
-        style={{ ...card, outline: open === key ? "2px solid " + a : "none" }}>
+      <button key={key} className="ca-focus" onClick={() => go(key)}
+        style={{ ...card, outline: openKey === key ? "2px solid " + a : "none" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{ ...label, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{s.title}</span>
           <span style={{ fontSize: 14, fontWeight: 600, color: a, whiteSpace: "nowrap", flexShrink: 0 }}>open →</span>
@@ -189,29 +403,81 @@ export default function ClassApp({ config }) {
     );
   };
 
+  const MorePage = (
+    <Panel title="More">
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {moreCards.map(CardTile)}
+      </div>
+    </Panel>
+  );
+
+  const detailFor = (key) => key === "more" ? MorePage : detail(key, config, role, ctx);
+
+  // Class is on the projector right now. Students following remotely get the
+  // same screen the room is looking at.
+  const roomLive = live?.cast && live.at && (Date.now() - live.at) < 3 * 60 * 60 * 1000;
+  const LiveBanner = roomLive ? (
+    <a className="ca-focus" href={config.path + "/today"}
+      style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none",
+        background: "#fff", border: "1px solid " + LIVE, borderRadius: 12, padding: "12px 16px", minHeight: TAP, marginBottom: 14 }}>
+      <span style={{ width: 8, height: 8, borderRadius: "50%", background: LIVE, flexShrink: 0 }} />
+      <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 600, color: TEXT_PRIMARY }}>Class is on the screen right now</span>
+      <span style={{ flex: "none", fontSize: 14, fontWeight: 600, color: LIVE }}>follow along →</span>
+    </a>
+  ) : null;
+
+  const actions = data === null ? [] : needsYou(config, data, role, asStudent);
+
+  const Nav = (
+    <nav style={{ display: "flex", gap: 2, marginLeft: 8 }}>
+      {NAV.map(n => {
+        const on = activeNav === n.id;
+        return (
+          <button key={n.id} className="ca-focus" onClick={() => go(n.card)} aria-current={on ? "page" : undefined}
+            style={{ fontSize: 15, fontWeight: on ? 600 : 500, color: on ? a : TEXT_SECONDARY, padding: "0 12px", minHeight: TAP,
+              display: "inline-flex", alignItems: "center", borderRadius: 8, cursor: "pointer", border: "none",
+              background: on ? a + "12" : "transparent", fontFamily: F }}>{n.label}</button>
+        );
+      })}
+    </nav>
+  );
+
+  const Grid = data === null
+    ? <>{[0, 1, 2, 3].map(i => <SkeletonTile key={i} />)}</>
+    : <>{enabledCards.map(CardTile)}</>;
+
   // ─── DESKTOP: top nav + side-by-side master/detail ───
   if (isDesktop) {
     return (
-      <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY }}>
+      <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, "--ca-accent": a }}>
+        <style>{CSS}</style>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
         <div style={{ background: "#fff", borderBottom: "1px solid " + BORDER, position: "sticky", top: 0, zIndex: 10 }}>
-          <div style={{ maxWidth: 1100, margin: "0 auto", padding: "14px 20px", display: "flex", alignItems: "center", gap: 20 }}>
+          <div style={{ maxWidth: 1240, margin: "0 auto", padding: "14px 20px", display: "flex", alignItems: "center", gap: 20 }}>
             {Logo}
-            <nav style={{ display: "flex", gap: 2, marginLeft: 8 }}>
-              {NAV.map(n => (
-                <span key={n} onClick={() => setOpen(null)} style={{ fontSize: 15, fontWeight: 500, color: TEXT_SECONDARY, padding: "0 12px", minHeight: TAP, display: "inline-flex", alignItems: "center", borderRadius: 8, cursor: "pointer" }}>{n}</span>
-              ))}
-            </nav>
-            <div style={{ marginLeft: "auto" }}>{RoleToggle}</div>
+            {Nav}
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+              {signedIn ? (
+                <button className="ca-focus" onClick={signOut}
+                  style={{ background: "none", border: "none", fontFamily: F, fontSize: 14, color: TEXT_SECONDARY, cursor: "pointer", minHeight: TAP }}>
+                  {signedIn.split(" ")[0]} · sign out
+                </button>
+              ) : null}
+              {RoleToggle}
+            </div>
           </div>
         </div>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 24, alignItems: "start" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12, maxWidth: CARD_MAX * 2 + 12 }}>
-            {enabledCards.map(CardTile)}
+          <div style={{ maxWidth: CARD_MAX * 2 + 12 }}>
+            {LiveBanner}
+            <NeedsYou items={actions} accent={a} onOpen={go} />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+              {Grid}
+            </div>
           </div>
           <div style={{ background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, padding: 24, minHeight: 400, position: "sticky", top: 80 }}>
-            {open
-              ? detail(open, config, role, ctx)
+            {openKey
+              ? detailFor(openKey)
               : <div style={{ color: TEXT_MUTED, fontSize: 16, paddingTop: 40, textAlign: "center" }}>Open a card to see its full page here.</div>}
           </div>
         </div>
@@ -222,14 +488,15 @@ export default function ClassApp({ config }) {
   // ─── MOBILE: single column, full-screen takeover, bottom tab bar ───
   const BAR_H = 72;
   return (
-    <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, paddingBottom: BAR_H + 12 }}>
+    <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, paddingBottom: BAR_H + 12, "--ca-accent": a }}>
+      <style>{CSS}</style>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
 
       {/* compact top bar */}
       <div style={{ background: "#fff", borderBottom: "1px solid " + BORDER, position: "sticky", top: 0, zIndex: 10 }}>
-        <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {open ? (
-            <button onClick={() => setOpen(null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 17, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: "0 4px 0 0" }}>← Back</button>
+        <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          {openKey ? (
+            <button className="ca-focus" onClick={() => go(null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 17, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: "0 4px 0 0" }}>← Back</button>
           ) : Logo}
           {RoleToggle}
         </div>
@@ -237,27 +504,41 @@ export default function ClassApp({ config }) {
 
       {/* content: grid OR full-screen takeover */}
       <div style={{ padding: 16 }}>
-        {open ? (
+        {openKey ? (
           <div style={{ background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, padding: 20 }}>
-            {detail(open, config, role, ctx)}
+            {detailFor(openKey)}
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {enabledCards.map(CardTile)}
-          </div>
+          <>
+            {LiveBanner}
+            <NeedsYou items={actions} accent={a} onOpen={go} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {Grid}
+            </div>
+            {signedIn ? (
+              <button className="ca-focus" onClick={signOut}
+                style={{ background: "none", border: "none", fontFamily: F, fontSize: 14, color: TEXT_MUTED, cursor: "pointer", minHeight: TAP, marginTop: 8 }}>
+                Signed in as {signedIn} · sign out
+              </button>
+            ) : null}
+          </>
         )}
       </div>
 
       {/* bottom tab bar */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BAR_H, background: "#fff", borderTop: "1px solid " + BORDER, display: "flex", zIndex: 20 }}>
-        {NAV.map(n => (
-          <button key={n} onClick={() => setOpen(null)}
-            style={{ flex: 1, minHeight: TAP, background: "none", border: "none", fontFamily: F, fontSize: 12, fontWeight: 600, color: n === "Home" && !open ? a : TEXT_SECONDARY, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: n === "Home" && !open ? a : "transparent" }} />
-            {n}
-          </button>
-        ))}
+        {NAV.map(n => {
+          const on = activeNav === n.id;
+          return (
+            <button key={n.id} className="ca-focus" onClick={() => go(n.card)} aria-current={on ? "page" : undefined}
+              style={{ flex: 1, minHeight: TAP, background: "none", border: "none", fontFamily: F, fontSize: 12, fontWeight: 600, color: on ? a : TEXT_SECONDARY, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: on ? a : "transparent" }} />
+              {n.label}
+            </button>
+          );
+        })}
       </div>
+
     </div>
   );
 }

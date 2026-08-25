@@ -276,6 +276,13 @@ function NowPanel({ config, engagedAt, onEngaged, plan, seq, onSlot }) {
 
   const slots = seq ? seq.slots.map(x => x.slot) : [];
   const current = plan?.currentSlot;
+  // How long the current slot has been running. A sequence is a budget, and
+  // the only way to notice you are eating the whole hour on the opener is to
+  // see the number while you are still in it.
+  const slotStarted = (plan?.slotAt || {})[current];
+  const inSlot = slotStarted ? Math.floor((now - slotStarted) / 60000) : null;
+  const fair = slots.length && left != null ? Math.round((left + (start != null ? cur - start : 0)) / slots.length) : null;
+  const over = fair != null && inSlot != null && inSlot > fair;
 
   return (
     <>
@@ -295,6 +302,7 @@ function NowPanel({ config, engagedAt, onEngaged, plan, seq, onSlot }) {
         <Muted style={{ fontSize: 12 }}>Resets on a poll, a pushed question, or the button.</Muted>
       )}
       {slots.length ? (
+        <>
         <div style={{ display: "flex", gap: 5 }}>
           {slots.map(x => {
             const on = x === current;
@@ -307,6 +315,14 @@ function NowPanel({ config, engagedAt, onEngaged, plan, seq, onSlot }) {
             );
           })}
         </div>
+        {current ? (
+          <Muted style={{ fontSize: 12, color: over ? WARN : TEXT_MUTED }}>
+            {inSlot == null ? "In " + current + "." : inSlot + " min in " + current + (fair != null ? " · " + fair + " min is an even share" : "")}
+          </Muted>
+        ) : (
+          <Muted style={{ fontSize: 12 }}>Tap a slot when you get to it. The clock starts there.</Muted>
+        )}
+        </>
       ) : null}
     </>
   );
@@ -452,14 +468,30 @@ function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveL
   );
 }
 
+// Three states, three tabs. An answered question is worth keeping — it is the
+// record of what the room did not understand — and an archived one still needs
+// a way back to open when it turns out to matter next week.
+const Q_TABS = [["open", "Open"], ["answered", "Answered"], ["archived", "Archived"]];
+
 function QuestionsPanel({ items, setState, archiveOpen, castNow, accent }) {
+  const [tab, setTab] = useState("open");
   if (items === null) return <Muted>Loading…</Muted>;
-  const open = items.filter(q => q.state === "open");
+  const open = items.filter(q => q.state === tab);
   const unanswered = items.filter(q => q.state === "archived").length;
+  const countOf = (st) => items.filter(q => q.state === st).length;
 
   return (
     <>
-      {open.length === 0 ? <Muted>Nothing from the room right now.</Muted> : null}
+      <div style={{ display: "flex", gap: 5 }}>
+        {Q_TABS.map(([k, lbl]) => (
+          <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
+            style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5,
+              ...(tab === k ? { background: accent, borderColor: accent, color: "#fff" } : {}) }}>
+            {lbl} {countOf(k) || ""}
+          </button>
+        ))}
+      </div>
+      {open.length === 0 ? <Muted>{tab === "open" ? "Nothing from the room right now." : "Nothing here."}</Muted> : null}
       {open.map(q => (
         <div key={q.id} style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, border: "1px solid " + BORDER, borderRadius: 10, background: SURFACE_2 }}>
           <div style={{ ...label, fontSize: 10, display: "flex", gap: 7, alignItems: "center" }}>
@@ -474,7 +506,12 @@ function QuestionsPanel({ items, setState, archiveOpen, castNow, accent }) {
               onClick={() => castNow({ type: "question", tag: "From the room", title: q.text, cite: q.anon ? "Anonymous" : (q.who || ""), label: "Question · " + (q.anon ? "anonymous" : q.who) })}>
               Push to screen
             </button>
-            <button style={mini} onClick={() => setState(q.id, "answered")}>Answered</button>
+            {q.state === "answered"
+              ? <button style={mini} onClick={() => setState(q.id, "open")}>Reopen</button>
+              : <button style={mini} onClick={() => setState(q.id, "answered")}>Answered</button>}
+            {q.state !== "archived"
+              ? <button style={{ ...mini, marginLeft: "auto", color: TEXT_MUTED }} onClick={() => setState(q.id, "archived")}>Later</button>
+              : null}
           </div>
         </div>
       ))}
@@ -495,16 +532,38 @@ const ATT_STYLE = {
   out: { bg: "#fff", bd: BORDER_STRONG, fg: TEXT_MUTED },
 };
 
-function AttendancePanel({ students, marks, onMark }) {
+// Everyone starts Here, so taking attendance is only ever about the exceptions.
+// Type a few letters to find someone, and once you have marked the room, flip to
+// Exceptions so the twenty-five people who showed up stop taking the space.
+function AttendancePanel({ students, marks, onMark, onReset }) {
+  const [q, setQ] = useState("");
+  const [only, setOnly] = useState(false);
   const stateOf = (n) => marks[n] || "here";
   const count = (s) => students.filter(st => stateOf(st.name) === s).length;
+  const lc = q.trim().toLowerCase();
+  const shown = students.filter(st => {
+    if (lc && !st.name.toLowerCase().includes(lc)) return false;
+    if (only && !lc && stateOf(st.name) === "here") return false;
+    return true;
+  });
+  const marked = students.filter(st => stateOf(st.name) !== "here").length;
   return (
     <>
-      <div style={{ display: "flex", gap: 14, fontFamily: MONO, fontSize: 11, color: TEXT_MUTED }}>
+      <div style={{ display: "flex", gap: 14, fontFamily: MONO, fontSize: 11, color: TEXT_MUTED, alignItems: "center" }}>
         {ATT_STATES.map(s => <span key={s}>{s} <b style={{ color: TEXT_PRIMARY }}>{count(s)}</b></span>)}
+        <button style={{ ...mini, minHeight: 28, padding: "0 9px", marginLeft: "auto", fontSize: 11.5 }}
+          disabled={!marked} onClick={onReset} title="Put everyone back to here">Reset</button>
+      </div>
+      <div style={{ display: "flex", gap: 7 }}>
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Find a name"
+          style={{ ...inputStyle, minHeight: 36, fontSize: 15 }} />
+        <button onClick={() => setOnly(v => !v)} aria-pressed={only}
+          style={{ ...mini, minHeight: 36, whiteSpace: "nowrap", ...(only ? { borderColor: WARN, color: WARN } : {}) }}>
+          Exceptions
+        </button>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-        {students.map(st => {
+        {shown.map(st => {
           const s = stateOf(st.name);
           const c = ATT_STYLE[s];
           return (
@@ -517,6 +576,7 @@ function AttendancePanel({ students, marks, onMark }) {
           );
         })}
       </div>
+      {!shown.length ? <Muted style={{ fontSize: 13 }}>{only ? "Nobody is marked. The whole room is here." : "No name matches that."}</Muted> : null}
       <Muted style={{ fontSize: 12 }}>Everyone starts here. Tap to cycle here → late → excused → out.</Muted>
     </>
   );
@@ -613,13 +673,140 @@ function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIn
   );
 }
 
+// Saving on blur meant a note written at 8:40 and never clicked away from was
+// gone at 9:05. It saves a second after the typing stops instead.
 function ScratchPanel({ value, onSave }) {
   const [v, setV] = useState(value || "");
-  useEffect(() => { setV(value || ""); }, [value]);
+  const [saved, setSaved] = useState(true);
+  const boxRef = useRef(null);
+  const seen = useRef(value || "");
+  useEffect(() => {
+    if (value === seen.current) return;
+    seen.current = value || "";
+    setV(value || "");
+  }, [value]);
+  useEffect(() => {
+    if (v === seen.current) return;
+    setSaved(false);
+    const t = setTimeout(() => { seen.current = v; onSave(v); setSaved(true); }, 900);
+    return () => clearTimeout(t);
+  }, [v, onSave]);
+
+  const stamp = () => {
+    const t = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    setV(prev => (prev && !prev.endsWith("\n") ? prev + "\n" : prev) + t + " — ");
+    boxRef.current?.focus();
+  };
+
   return (
-    <textarea value={v} onChange={e => setV(e.target.value)} onBlur={() => onSave(v)}
-      placeholder="Notes to myself during class. Saves when I click away."
-      style={{ ...inputStyle, minHeight: 130, resize: "vertical", lineHeight: 1.5, fontSize: 15 }} />
+    <>
+      <textarea ref={boxRef} value={v} onChange={e => setV(e.target.value)} onBlur={() => { seen.current = v; onSave(v); setSaved(true); }}
+        placeholder="Notes to myself during class."
+        style={{ ...inputStyle, minHeight: 130, resize: "vertical", lineHeight: 1.5, fontSize: 15 }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+        <button style={mini} onClick={stamp}>Stamp the time</button>
+        <Muted style={{ fontSize: 12, marginLeft: "auto" }}>{saved ? "Saved" : "Saving…"}</Muted>
+      </div>
+    </>
+  );
+}
+
+// The to-do panel. Two horizons, because they are two different jobs. TODAY is
+// what stops the next fifty minutes going wrong. COMING UP is the assignment on
+// the horizon, which is the work I put off until a student emails me about it.
+// Green is permission to stop reading the panel.
+function Line({ ok, children, tone }) {
+  return (
+    <div style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5, lineHeight: 1.4,
+      color: ok ? TEXT_MUTED : TEXT_PRIMARY }}>
+      <span style={{ flex: "none", width: 7, height: 7, borderRadius: "50%", marginTop: 5.5,
+        background: ok ? OK : (tone === "late" ? LIVE : WARN) }} />
+      <span>{children}</span>
+    </div>
+  );
+}
+
+function Horizon({ title, count, checks, accent, right }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0, flex: 1 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+        <span style={{ ...label, color: accent }}>{title}</span>
+        <span style={{ fontFamily: MONO, fontSize: 12, color: count ? WARN : OK }}>
+          {count ? count + " to do" : "clear"}
+        </span>
+        {right ? <span style={{ ...label, fontSize: 10, marginLeft: "auto", color: TEXT_MUTED }}>{right}</span> : null}
+      </div>
+      {checks.map((c, i) => <Line key={i} ok={c.ok} tone={c.tone}>{c.ok ? c.good : c.bad}</Line>)}
+      {!checks.length ? <Muted style={{ fontSize: 13 }}>Nothing on the calendar.</Muted> : null}
+    </div>
+  );
+}
+
+function TodoPanel({ plan, seq, features, boards, assignments, shelves, students, data, accent }) {
+  // ─── today ───
+  const slotItems = plan?.slots || {};
+  const flowItems = seq ? seq.slots.flatMap(sl => (slotItems[sl.slot]?.items) || []) : [];
+  const noClaim = flowItems.filter(it => !it.claim).length
+    + flowItems.flatMap(it => it.links || []).filter(l => !l.claim).length;
+  const stocked = (shelves.day || []).length + (shelves.week || []).length;
+
+  const today = [
+    { ok: !!plan && flowItems.length > 0, good: flowItems.length + " things in the flow", bad: "No content in the flow yet — build it in Day Plan" },
+    { ok: noClaim === 0, good: "Every item has its claim written", bad: noClaim + " item" + (noClaim === 1 ? "" : "s") + " will stop and ask for a claim mid-class" },
+    { ok: !!boards.pre, good: "Before-class board is written", bad: "Before-class board is still the proposed one" },
+    { ok: !!boards.post, good: "After-class board is written", bad: "After-class board is still the proposed one" },
+    { ok: stocked > 0, good: stocked + " stocked and ready to reach for", bad: "Nothing stocked for today or this week" },
+  ];
+
+  // ─── the assignment on the horizon ───
+  const dated = assignments.filter(a => a.due && a.due !== "Ongoing");
+  const now = Date.now();
+  const daysTo = (due) => {
+    const d = new Date(due + ", 2026");
+    if (isNaN(d)) return null;
+    return Math.ceil((new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).getTime() - now) / 86400000);
+  };
+  const upcoming = dated
+    .map(a => ({ a, days: daysTo(a.due) }))
+    .filter(x => x.days != null && x.days >= 0)
+    .sort((x, y) => x.days - y.days)[0];
+
+  let coming = [], comingTitle = "Coming up";
+  if (upcoming) {
+    const { a, days } = upcoming;
+    comingTitle = a.title;
+    const byStudent = data?.assignmentLog?.[a.id] || {};
+    const roster = students.length || 1;
+    const submitted = Object.keys(byStudent).filter(n => (byStudent[n] || []).some(e => e.type === "submission")).length;
+    const ungraded = Object.keys(byStudent).filter(n => {
+      const log = byStudent[n] || [];
+      const last = (t) => { for (let i = log.length - 1; i >= 0; i--) if (log[i].type === t) return log[i]; return null; };
+      const sub = last("submission"), g = last("grade");
+      return !!sub && (!g || sub.ts > g.ts);
+    }).length;
+
+    coming = [
+      { ok: days > 3, tone: days <= 1 ? "late" : "warn",
+        good: "Due " + a.due + ", " + days + " days out",
+        bad: days === 0 ? "Due today" : days === 1 ? "Due tomorrow" : "Due in " + days + " days" },
+      { ok: !!(a.instructionsUrl || a.description), good: "Instructions are posted", bad: "No instructions posted yet" },
+      { ok: !!a.closeAt, good: "Submissions close " + String(a.closeAt).slice(0, 10), bad: "No close date set, so late work lands silently" },
+      { ok: submitted >= roster, good: "All " + roster + " have submitted", bad: submitted + " of " + roster + " have submitted" },
+      { ok: ungraded === 0, good: "Nothing waiting to be graded", bad: ungraded + " submission" + (ungraded === 1 ? "" : "s") + " waiting to be graded" },
+    ];
+  }
+
+  const todayLeft = today.filter(c => !c.ok).length;
+  const comingLeft = coming.filter(c => !c.ok).length;
+
+  return (
+    <>
+      <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
+        <Horizon title="Today" count={todayLeft} checks={today} accent={accent}
+          right={features.length ? features.join(" · ") : ""} />
+        <Horizon title={comingTitle} count={comingLeft} checks={coming} accent={accent} />
+      </div>
+    </>
   );
 }
 
@@ -638,9 +825,85 @@ function AssignmentsPanel({ assignments, castNow, dismiss, liveLabel }) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// command bar
+// ─────────────────────────────────────────────────────────────
+// Mid-sentence, with the room watching, hunting for the right panel is the
+// worst thing this screen asks of me. One box over everything castable: three
+// letters, Enter, it is up. Cmd+K opens it.
+function CommandBar({ targets, accent, onClose }) {
+  const [q, setQ] = useState("");
+  const [i, setI] = useState(0);
+  const lc = q.trim().toLowerCase();
+  const hits = (lc ? targets.filter(t => (t.title + " " + t.group).toLowerCase().includes(lc)) : targets).slice(0, 9);
+  useEffect(() => { setI(0); }, [lc]);
+
+  const onKey = (e) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); setI(x => Math.min(x + 1, hits.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setI(x => Math.max(x - 1, 0)); }
+    else if (e.key === "Enter") { e.preventDefault(); const h = hits[i]; if (h) { h.run(); onClose(); } }
+    else if (e.key === "Escape") { e.preventDefault(); onClose(); }
+  };
+
+  return (
+    <div onMouseDown={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(23,19,16,.35)", display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "12vh 20px 20px" }}>
+      <div onMouseDown={e => e.stopPropagation()} role="dialog" aria-label="Cast something"
+        style={{ width: "100%", maxWidth: 620, background: "#fff", borderRadius: 16, border: "1px solid " + BORDER_STRONG, boxShadow: "0 24px 60px -20px rgba(23,19,16,.5)", overflow: "hidden" }}>
+        <input autoFocus value={q} onChange={e => setQ(e.target.value)} onKeyDown={onKey}
+          placeholder="Cast anything — type a few letters"
+          style={{ width: "100%", border: "none", borderBottom: "1px solid " + BORDER, outline: "none", padding: "16px 18px", fontFamily: F, fontSize: 18, color: TEXT_PRIMARY }} />
+        <div style={{ maxHeight: "46vh", overflowY: "auto" }}>
+          {hits.map((t, n) => (
+            <button key={t.key} onMouseEnter={() => setI(n)} onClick={() => { t.run(); onClose(); }}
+              style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", cursor: "pointer",
+                background: n === i ? accent + "12" : "#fff", border: "none", borderLeft: "3px solid " + (n === i ? accent : "transparent"),
+                padding: "11px 16px", minHeight: TAP, fontFamily: F }}>
+              <span style={{ flex: "none", fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase",
+                padding: "3px 6px", borderRadius: 5, border: "1px solid " + BORDER_STRONG, color: TEXT_MUTED }}>{t.group}</span>
+              <span style={{ minWidth: 0, flex: 1, fontSize: 15, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
+              {n === i ? <span style={{ flex: "none", fontFamily: MONO, fontSize: 10, color: accent, letterSpacing: ".08em" }}>ENTER</span> : null}
+            </button>
+          ))}
+          {!hits.length ? <div style={{ padding: "18px 18px 22px", fontSize: 15, color: TEXT_MUTED }}>Nothing matches that.</div> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Shortcuts only help if I can see them. Recall is what makes people stop using
+// them; this sheet turns it back into recognition.
+const SHORTCUTS = [
+  ["⌘ K", "Open the command bar and cast anything"],
+  ["Esc", "Take down whatever is on the room screen"],
+  ["⌘ B", "Black the room screen out, and again to bring it back"],
+  ["← →", "Step the board that is up, one idea at a time"],
+  ["⌘ /", "Show this list"],
+];
+
+function ShortcutSheet({ onClose }) {
+  return (
+    <div onMouseDown={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(23,19,16,.35)", display: "grid", placeItems: "center", padding: 20 }}>
+      <div onMouseDown={e => e.stopPropagation()} role="dialog" aria-label="Keyboard shortcuts"
+        style={{ width: "100%", maxWidth: 420, background: "#fff", borderRadius: 16, border: "1px solid " + BORDER_STRONG, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+        <span style={label}>Keyboard</span>
+        {SHORTCUTS.map(([k, what]) => (
+          <div key={k} style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
+            <kbd style={{ flex: "none", minWidth: 46, textAlign: "center", fontFamily: MONO, fontSize: 12, padding: "4px 7px", borderRadius: 6, border: "1px solid " + BORDER_STRONG, background: SURFACE_2, color: TEXT_PRIMARY }}>{k}</kbd>
+            <span style={{ fontSize: 14.5, lineHeight: 1.4 }}>{what}</span>
+          </div>
+        ))}
+        <button style={{ ...mini, alignSelf: "flex-start", marginTop: 4 }} onClick={onClose}>Close</button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 // live monitor: a real preview of what the room sees
 // ─────────────────────────────────────────────────────────────
-function Monitor({ config, live, cast, push }) {
+function Monitor({ config, live, cast, push, recent, onRecast }) {
   const liveUrl = live?.cast?.openUrl || live?.cast?.url || "";
   const box = useRef(null);
   const [scale, setScale] = useState(0.3);
@@ -710,6 +973,20 @@ function Monitor({ config, live, cast, push }) {
         </a>
       </div>
 
+      {recent.length ? (
+        <div style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+          <span style={label}>Put it back</span>
+          {recent.map(r => (
+            <button key={r.key} onClick={() => onRecast(r.payload)}
+              style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", textAlign: "left", cursor: "pointer",
+                background: SURFACE_2, border: "1px solid transparent", borderRadius: 9, padding: "8px 10px", minHeight: 38, fontFamily: F, fontSize: 13.5, color: TEXT_PRIMARY }}>
+              <span style={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.label}</span>
+              <span style={{ flex: "none", fontFamily: MONO, fontSize: 9.5, letterSpacing: ".08em", color: TEXT_MUTED }}>AGAIN →</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", gap: 12 }}>
         <Picker title="Everyday cast" opts={ANIMS} value={live?.anim || "rise"} onPick={v => push({ anim: v })} accent={config.accent} />
         <Picker title="Big reveal" opts={BIG_ANIMS} value={live?.bigAnim || "drop"} onPick={v => push({ bigAnim: v })} accent={config.accent} />
@@ -744,8 +1021,8 @@ function Picker({ title, opts, value, onPick, accent }) {
 // ─────────────────────────────────────────────────────────────
 // main
 // ─────────────────────────────────────────────────────────────
-const DEFAULT_ORDER = ["now", "poll", "flow", "boards", "stocked", "questions", "attendance", "scratch", "assignments"];
-const DEFAULT_SPANS = { now: "2", poll: "2", flow: "2", boards: "1", stocked: "1", questions: "1", attendance: "2", scratch: "1", assignments: "1" };
+const DEFAULT_ORDER = ["todo", "now", "poll", "flow", "boards", "stocked", "questions", "attendance", "scratch", "assignments"];
+const DEFAULT_SPANS = { todo: "2", now: "2", poll: "2", flow: "2", boards: "1", stocked: "1", questions: "1", attendance: "2", scratch: "1", assignments: "1" };
 
 export default function Dashboard({ config }) {
   const [data, update] = useClassData(config.storageKey);
@@ -754,6 +1031,12 @@ export default function Dashboard({ config }) {
   const P = usePoll(config.storageKey);
   const [hornOpen, setHornOpen] = useState(false);
   const [hlOpen, setHlOpen] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
+  const [keysOpen, setKeysOpen] = useState(false);
+  // What has been up today. Taking something down and wanting it back is the
+  // most common thing I do on this screen, and until now it meant finding the
+  // row again.
+  const [recent, setRecent] = useState([]);
   const HL = useHeadlines(config.storageKey, { categories: data?.headlineCategories, concepts: config.concepts });
 
   const weeks = data?.schedule || config.scheduleWeeks || [];
@@ -791,15 +1074,31 @@ export default function Dashboard({ config }) {
 
   useEffect(() => { document.title = config.code + " — Dashboard"; }, [config.code]);
 
-  // Cmd/Ctrl+B blacks the room screen out, and again brings it back.
+  // Keyboard, because during class my hands are the slow part. Nothing fires
+  // while I am typing into a field, so the claim editors keep working.
   const liveRef = useRef(null);
   liveRef.current = live;
+  const stepRef = useRef(null);
   useEffect(() => {
     const onKey = (e) => {
-      if ((e.key !== "b" && e.key !== "B") || !(e.metaKey || e.ctrlKey)) return;
-      e.preventDefault();
+      const t = e.target;
+      const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+      const mod = e.metaKey || e.ctrlKey;
       const cur = liveRef.current?.cast;
-      cast(cur?.type === "black" ? null : { type: "black", label: "Black screen" });
+
+      if (mod && (e.key === "k" || e.key === "K")) { e.preventDefault(); setKeysOpen(false); setCmdOpen(v => !v); return; }
+      if (mod && e.key === "/") { e.preventDefault(); setCmdOpen(false); setKeysOpen(v => !v); return; }
+      if (mod && (e.key === "b" || e.key === "B")) {
+        e.preventDefault();
+        cast(cur?.type === "black" ? null : { type: "black", label: "Black screen" });
+        return;
+      }
+      if (typing) return;
+      if (e.key === "Escape" && cur) { e.preventDefault(); cast(null); return; }
+      if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && cur?.type === "board" && stepRef.current) {
+        e.preventDefault();
+        stepRef.current(e.key === "ArrowRight" ? 1 : -1);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -809,6 +1108,10 @@ export default function Dashboard({ config }) {
   const LKEY = "dash:" + config.id;
   const [order, setOrder] = useState(DEFAULT_ORDER);
   const [spans, setSpans] = useState(DEFAULT_SPANS);
+  // A panel I am not using today is not neutral, it is one more thing to read
+  // past. Hidden ones come off the grid entirely.
+  const [hidden, setHidden] = useState([]);
+  const [panelMenu, setPanelMenu] = useState(false);
   useEffect(() => {
     try {
       const v = JSON.parse(localStorage.getItem(LKEY) || "null");
@@ -817,12 +1120,18 @@ export default function Dashboard({ config }) {
         setOrder([...kept, ...DEFAULT_ORDER.filter(id => !kept.includes(id))]);
       }
       if (v?.spans) setSpans({ ...DEFAULT_SPANS, ...v.spans });
+      if (Array.isArray(v?.hidden)) setHidden(v.hidden.filter(id => DEFAULT_ORDER.includes(id)));
     } catch { /* first run */ }
   }, [LKEY]);
-  const saveLayout = useCallback((o, s) => {
-    try { localStorage.setItem(LKEY, JSON.stringify({ order: o, spans: s })); } catch { /* private mode */ }
+  const saveLayout = useCallback((o, s, h) => {
+    try { localStorage.setItem(LKEY, JSON.stringify({ order: o, spans: s, hidden: h })); } catch { /* private mode */ }
   }, [LKEY]);
-  const toggleSpan = (id) => { const s = { ...spans, [id]: spans[id] === "2" ? "1" : "2" }; setSpans(s); saveLayout(order, s); };
+  const toggleSpan = (id) => { const s = { ...spans, [id]: spans[id] === "2" ? "1" : "2" }; setSpans(s); saveLayout(order, s, hidden); };
+  const toggleHidden = (id) => {
+    const h = hidden.includes(id) ? hidden.filter(x => x !== id) : [...hidden, id];
+    setHidden(h); saveLayout(order, spans, h);
+  };
+  const shown = order.filter(id => !hidden.includes(id));
 
   // ─── drag to rearrange ───
   const gridRef = useRef(null);
@@ -886,7 +1195,7 @@ export default function Dashboard({ config }) {
       }
       dragRef.current = null;
       setDragId(null);
-      saveLayout(orderRef.current, spans);
+      saveLayout(orderRef.current, spans, hidden);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
@@ -896,7 +1205,7 @@ export default function Dashboard({ config }) {
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
     };
-  }, [dragId, order, spans, saveLayout]);
+  }, [dragId, order, spans, hidden, saveLayout]);
 
   // ─── writes ───
   const writeDay = (fn) => update(prev => {
@@ -907,6 +1216,11 @@ export default function Dashboard({ config }) {
   const mark = (name, state) => update(prev => {
     const att = { ...(prev.attendance || {}) };
     att[day] = { ...(att[day] || {}), [name]: state };
+    return { ...prev, attendance: att };
+  });
+  const resetAttendance = () => update(prev => {
+    const att = { ...(prev.attendance || {}) };
+    att[day] = {};
     return { ...prev, attendance: att };
   });
   // Each shelf lives at its own scope: today, this week, or the whole term.
@@ -939,14 +1253,19 @@ export default function Dashboard({ config }) {
   const saveScratch = (v) => update(prev => ({ ...prev, scratch: { ...(prev.scratch || {}), [day]: v } }));
 
   const liveLabel = live?.cast?.label || null;
-  const castNow = (payload) => cast(payload);
+  const castNow = (payload) => {
+    cast(payload);
+    const name = payload?.label || payload?.title;
+    if (!name || payload.type === "black") return;
+    setRecent(prev => [{ key: name + ":" + Date.now(), label: name, payload }, ...prev.filter(r => r.label !== name)].slice(0, 5));
+  };
   const dismiss = () => cast(null);
   const markEngaged = () => push({ engagedAt: Date.now() });
 
   const runFeature = (name) => {
     if (name === "Around the Horn") { setHornOpen(true); markEngaged(); return; }
-    if (name === "Headlines") { setHlOpen(true); cast({ type: "headlines", label: "Headlines" }); markEngaged(); return; }
-    cast({ type: "feature", title: name, body: FEATURES[name] || "", label: name });
+    if (name === "Headlines") { setHlOpen(true); castNow({ type: "headlines", label: "Headlines" }); markEngaged(); return; }
+    castNow({ type: "feature", title: name, body: FEATURES[name] || "", label: name });
     markEngaged();
   };
 
@@ -979,13 +1298,71 @@ export default function Dashboard({ config }) {
     },
   };
 
+  // Arrow keys walk the board that is up. The board panel already knows how to
+  // do this; the keyboard needed the same move without the mouse.
+  const boardFor = (which) => (plan?.boards || {})[which] || proposals[which];
+  stepRef.current = (dir) => {
+    const c = liveRef.current?.cast;
+    if (!c || c.type !== "board") return;
+    const which = c.boardLabel === "Before class" ? "pre" : "post";
+    const b = boardFor(which);
+    const ideas = b?.ideas || [];
+    const i = (c.at || 0) + dir;
+    if (i < 0 || i >= ideas.length) return;
+    cast({ ...c, idea: ideas[i], at: i, count: ideas.length, label: c.boardLabel + " · " + (i + 1) });
+  };
+
+  // Everything the command bar can reach, in the order I would look for it.
+  const slotBuckets = plan?.slots || {};
+  const cmdTargets = [];
+  features.forEach(f => cmdTargets.push({ key: "f:" + f, group: "Run", title: f, run: () => runFeature(f) }));
+  (seq?.slots || []).forEach(sl => {
+    const bucket = slotBuckets[sl.slot] || {};
+    const tag = bucket.title || sl.slot;
+    (bucket.items || []).forEach(it => {
+      const seed = it.seedId ? seeds.find(x => x.id === it.seedId) : null;
+      const title = it.claim || (seed ? seed.title : it.text) || "Untitled";
+      cmdTargets.push({ key: "i:" + it.id, group: tag, title,
+        run: () => castNow({ type: "quote", tag, title, cite: seed ? seed.concept : "", label: title }) });
+      (it.links || []).forEach(l => {
+        const t = l.claim || l.label;
+        cmdTargets.push({ key: "l:" + l.id, group: "Link", title: t,
+          run: () => castNow({ ...castFromLink(l), title: t, label: t }) });
+      });
+    });
+  });
+  SHELVES.forEach(sh => (shelves[sh.id] || []).forEach(x => {
+    const t = x.claim || x.title;
+    cmdTargets.push({ key: "s:" + x.id, group: sh.label, title: t,
+      run: () => castNow(x.url
+        ? { ...castFromLink({ label: x.title, url: x.url }), title: t, label: t }
+        : { type: "quote", tag: sh.label, title: t, label: t }) });
+  }));
+  ["pre", "post"].forEach(which => {
+    const lbl = which === "pre" ? "Before class" : "After class";
+    const b = boardFor(which);
+    (b?.ideas || []).forEach((idea, i) => cmdTargets.push({ key: "b:" + which + i, group: lbl, title: idea,
+      run: () => castNow({ type: "board", tag: lbl, boardLabel: lbl, title: b.title, idea, at: i,
+        count: b.ideas.length, showAsk: which === "pre", label: lbl + " · " + (i + 1) }) }));
+  });
+  assignments.forEach(a => cmdTargets.push({ key: "a:" + a.id, group: "Reveal", title: a.title,
+    run: () => castNow({ type: "reveal", stamp: "Assignment", title: a.title, due: "Due " + a.due, big: true, label: a.title }) }));
+  (q.items || []).filter(x => x.state === "open").forEach(x => cmdTargets.push({ key: "q:" + x.id, group: "Question", title: x.text,
+    run: () => { castNow({ type: "question", tag: "From the room", title: x.text, cite: x.anon ? "Anonymous" : (x.who || ""), label: "Question · " + (x.anon ? "anonymous" : x.who) }); markEngaged(); } }));
+  cmdTargets.push({ key: "c:poll", group: "Screen", title: "Live poll", run: () => castNow({ type: "poll", label: "Live poll" }) });
+  cmdTargets.push({ key: "c:idle", group: "Screen", title: "Idle screen", run: () => cast(null) });
+  cmdTargets.push({ key: "c:black", group: "Screen", title: "Black screen", run: () => cast({ type: "black", label: "Black screen" }) });
+
   if (data === null || !day) {
     return <div style={{ minHeight: "100vh", background: BG, fontFamily: F, display: "grid", placeItems: "center", color: TEXT_MUTED }}>Loading…</div>;
   }
 
   const render = {
+    todo: () => <TodoPanel plan={plan} seq={seq} features={features} boards={plan?.boards || {}}
+      assignments={assignments} shelves={shelves} students={students} data={data} accent={config.accent} />,
     now: () => <NowPanel config={config} plan={plan} seq={seq} engagedAt={live?.engagedAt}
-      onEngaged={markEngaged} onSlot={(x) => writeDay(d => ({ ...d, currentSlot: x }))} />,
+      onEngaged={markEngaged}
+      onSlot={(x) => writeDay(d => ({ ...d, currentSlot: x, slotAt: x ? { ...(d.slotAt || {}), [x]: Date.now() } : (d.slotAt || {}) }))} />,
     poll: () => <PollPanel poll={P.poll} start={(qq, oo) => { P.start(qq, oo); markEngaged(); }}
       setPhase={(ph) => { P.setPhase(ph); if (ph === "vote2") markEngaged(); }}
       setCorrect={P.setCorrect} clear={() => { P.clear(); if (live?.cast?.type === "poll") cast(null); }}
@@ -1002,12 +1379,16 @@ export default function Dashboard({ config }) {
       onRemove={(sh, id) => setShelf(sh, list => list.filter(x => x.id !== id))} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
       castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,
-    attendance: () => <AttendancePanel students={students} marks={marks} onMark={mark} />,
+    attendance: () => <AttendancePanel students={students} marks={marks} onMark={mark} onReset={resetAttendance} />,
     scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
   };
-  const TITLES = { now: "Now", poll: "Poll", flow: "Class Flow", boards: "Before & After", stocked: "Stocked", questions: "Questions", attendance: "Attendance", scratch: "Scratch Pad", assignments: "Assignments" };
+  const TITLES = { todo: "To-Do", now: "Now", poll: "Poll", flow: "Class Flow", boards: "Before & After", stocked: "Stocked", questions: "Questions", attendance: "Attendance", scratch: "Scratch Pad", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
+  // Casting from the wrong session is silent and total: the room gets last
+  // Wednesday and nothing on this screen says so.
+  const onDeck = currentDay(weeks)?.date;
+  const offDay = onDeck && day !== onDeck;
 
   return (
     <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY }}>
@@ -1025,15 +1406,49 @@ export default function Dashboard({ config }) {
             {days.map(d => <option key={d.date} value={d.date}>{d.date}{d.topic ? " · " + d.topic : ""}</option>)}
           </select>
         </div>
+        <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setCmdOpen(true)}>Cast · ⌘K</button>
         <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setHlOpen(true)}>Headlines</button>
         <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setHornOpen(true)}>Around the Horn</button>
+        <div style={{ position: "relative" }}>
+          <button style={mini} onClick={() => setPanelMenu(v => !v)} aria-expanded={panelMenu}>Panels</button>
+          {panelMenu ? (
+            <>
+              <div onClick={() => setPanelMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+              <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 41, background: "#fff",
+                border: "1px solid " + BORDER_STRONG, borderRadius: 12, padding: 8, minWidth: 200,
+                boxShadow: "0 16px 36px -12px rgba(23,19,16,.32)", display: "flex", flexDirection: "column", gap: 2 }}>
+                {DEFAULT_ORDER.map(id => {
+                  const on = !hidden.includes(id);
+                  return (
+                    <button key={id} onClick={() => toggleHidden(id)}
+                      style={{ display: "flex", alignItems: "center", gap: 9, background: "none", border: "none", cursor: "pointer",
+                        padding: "0 8px", minHeight: 36, borderRadius: 8, fontFamily: F, fontSize: 14, textAlign: "left",
+                        color: on ? TEXT_PRIMARY : TEXT_MUTED }}>
+                      <span style={{ flex: "none", width: 8, height: 8, borderRadius: "50%", background: on ? config.accent : BORDER_STRONG }} />
+                      {TITLES[id]}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
+        </div>
+        <button style={mini} onClick={() => setKeysOpen(true)} title="Keyboard shortcuts">⌘/</button>
         <a href="/plan" style={{ ...mini, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>The Brief</a>
         <a href={config.path} style={{ ...mini, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Class home</a>
       </header>
 
+      {offDay ? (
+        <div style={{ background: "#fffbeb", borderBottom: "1px solid #fde68a", padding: "10px 22px",
+          display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", fontSize: 14, color: "#92400e" }}>
+          <span>You are on {day}. The session on deck is {onDeck}, and anything you cast goes to the room either way.</span>
+          <button style={{ ...mini, marginLeft: "auto", borderColor: WARN, color: WARN }} onClick={() => setDay(onDeck)}>Go to {onDeck}</button>
+        </div>
+      ) : null}
+
       <main style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 400px", gap: 20, padding: 20, alignItems: "start", maxWidth: 1560, margin: "0 auto" }}>
         <div className="dash-grid" ref={gridRef}>
-          {order.map(id => (
+          {shown.map(id => (
             <Panel key={id} id={id} title={TITLES[id] + (id === "questions" && openQ ? " · " + openQ : "")}
               span={spans[id]} onDrag={onDragStart(id)} onSize={() => toggleSpan(id)}
               dragging={dragId === id} refCb={setPanelRef(id)}>
@@ -1042,9 +1457,12 @@ export default function Dashboard({ config }) {
           ))}
         </div>
         <div style={{ position: "sticky", top: 20 }}>
-          <Monitor config={config} live={live} cast={cast} push={push} />
+          <Monitor config={config} live={live} cast={cast} push={push} recent={recent} onRecast={castNow} />
         </div>
       </main>
+
+      {cmdOpen ? <CommandBar targets={cmdTargets} accent={config.accent} onClose={() => setCmdOpen(false)} /> : null}
+      {keysOpen ? <ShortcutSheet onClose={() => setKeysOpen(false)} /> : null}
 
       {hlOpen ? (
         <HeadlinesBoard hl={HL.hl} api={HL} accent={config.accent}
@@ -1058,7 +1476,7 @@ export default function Dashboard({ config }) {
       ) : null}
 
       <div style={{ maxWidth: 1560, margin: "0 auto", padding: "0 20px 40px", fontSize: 12.5, color: TEXT_MUTED }}>
-        {dayMeta?.topic ? dayMeta.topic + " · " : ""}Panel arrangement is saved to this browser. Everything else syncs to the class.
+        {dayMeta?.topic ? dayMeta.topic + " · " : ""}Press ⌘K to cast anything, ⌘/ for the rest of the keyboard. Panel arrangement is saved to this browser; everything else syncs to the class.
       </div>
     </div>
   );

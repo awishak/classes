@@ -20,6 +20,8 @@ const TEXT_MUTED = "#9ca3af";
 const BORDER = "#eef0f2";
 const BORDER_STRONG = "#e5e7eb";
 const BG = "#fafaf9";
+const LATE = "#e11d48";
+const SOON = "#b45309";
 const TAP = 44;
 
 const label = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
@@ -85,11 +87,43 @@ function parseDue(s) { const d = s ? new Date(s + ", 2026") : null; return d && 
 function isLate(ts, due) { const d = parseDue(due); if (!d) return false; const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59); return ts > end.getTime(); }
 function fmtTime(ts) { try { return new Date(ts).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); } catch { return ""; } }
 function fmtClose(s) { try { return new Date(s).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); } catch { return s; } }
-function nextDue(assignments) {
+function nextDueOf(assignments) {
   const t0 = (() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime(); })();
   let best = null, diff0 = Infinity;
   assignments.forEach(a => { const d = parseDue(a.due); if (!d) return; const diff = d.getTime() - t0; if (diff >= 0 && diff < diff0) { diff0 = diff; best = a; } });
   return best || assignments[0] || null;
+}
+
+// A date on its own makes a student do the arithmetic, and the thing students
+// say most about every LMS they have used is that they could not tell what was
+// actually due. So say the number of days, and say it in a colour.
+export function dueState(due) {
+  if (!due || due === "Ongoing") return null;
+  const d = parseDue(due);
+  if (!d) return null;
+  const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).getTime();
+  const days = Math.ceil((end - Date.now()) / 86400000);
+  if (days < 0) { const n = -days; return { text: n === 1 ? "1 day past due" : n + " days past due", tone: "late" }; }
+  if (days === 0) return { text: "Due today", tone: "now" };
+  if (days === 1) return { text: "Due tomorrow", tone: "soon" };
+  if (days <= 7) return { text: "Due in " + days + " days", tone: "soon" };
+  return { text: "Due " + due, tone: "calm" };
+}
+
+export const dueColor = (tone) => tone === "late" ? LATE : (tone === "now" || tone === "soon") ? SOON : TEXT_MUTED;
+
+// Used by the home page to work out what needs doing.
+export const nextDue = (config, data) => nextDueOf(getAssignments(data, config));
+export const ungradedCount = (config, data) => ungradedQueue(getAssignments(data, config), data).length;
+
+function DueBadge({ due, weight }) {
+  const st = dueState(due);
+  const c = st ? dueColor(st.tone) : TEXT_MUTED;
+  return (
+    <span style={{ fontSize: 14, color: c, fontWeight: st && st.tone !== "calm" ? 700 : 400, flexShrink: 0 }}>
+      {st ? st.text : "Ongoing"}{weight != null ? " · " + weight + "%" : ""}
+    </span>
+  );
 }
 
 function Btn({ accent, onClick, children, disabled, ghost }) {
@@ -206,10 +240,17 @@ export function AssignmentsSummary({ config, data, role }) {
       ? <div><div style={{ fontSize: 22, fontWeight: 700, color: config.accent }}>{n}</div><Muted>to grade</Muted></div>
       : <Muted>Nothing to grade.</Muted>;
   }
-  const next = nextDue(assignments);
-  return next
-    ? <div><div style={{ fontWeight: 600 }}>{next.title}</div><Muted>Due {next.due} · {next.weight}%</Muted></div>
-    : <Muted>No upcoming assignments.</Muted>;
+  const next = nextDueOf(assignments);
+  if (!next) return <Muted>No upcoming assignments.</Muted>;
+  const st = dueState(next.due);
+  return (
+    <div>
+      <div style={{ fontWeight: 600 }}>{next.title}</div>
+      <div style={{ fontSize: 15, marginTop: 2, color: st ? dueColor(st.tone) : TEXT_MUTED, fontWeight: st && st.tone !== "calm" ? 700 : 400 }}>
+        {st ? st.text : "Ongoing"} · {next.weight}%
+      </div>
+    </div>
+  );
 }
 
 export function AssignmentsDetail({ config, role, data, update, asStudent }) {
@@ -258,7 +299,7 @@ function StudentAssignmentRow({ asg, accent, config, data, update, name }) {
     <div style={{ background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, padding: 18 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
         <div style={{ fontSize: 18, fontWeight: 600 }}>{asg.title}</div>
-        <div style={{ fontSize: 14, color: TEXT_MUTED, flexShrink: 0 }}>Due {asg.due} · {asg.weight}%</div>
+        <DueBadge due={asg.due} weight={asg.weight} />
       </div>
       {asg.description && <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 6 }}>{asg.description}</div>}
       {asg.instructionsUrl && <a href={asg.instructionsUrl} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 15, fontWeight: 600, color: accent }}>Assignment instructions</a>}

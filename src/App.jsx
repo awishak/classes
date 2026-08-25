@@ -16,6 +16,11 @@ import comm118cfg from "./config/comm118.js";
 // (/<class>/dashboard, /<class>/today, /<class>/ask) are resolved from here.
 const ENGINE = { comm999, comm118: comm118cfg };
 
+// Classes whose public hub is still the old forked file. Everything else on the
+// engine gets its card pages as real URLs: /comm999/assignments is a link you
+// can send a student.
+const LEGACY_HUBS = new Set(["comm118", "comm4", "comm2"]);
+
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 
 const TEXT_PRIMARY = "#111827";
@@ -178,8 +183,9 @@ export default function App() {
     return <AskPage config={cfg} />;
   }
 
-  if (path === "/comm999" || path === "/comm999/") {
-    return <ClassApp config={comm999} />;
+  const site = path.match(/^\/(comm\w+)(?:\/([a-z]+))?\/?$/);
+  if (site && ENGINE[site[1]] && !LEGACY_HUBS.has(site[1])) {
+    return <ClassApp config={ENGINE[site[1]]} initialCard={site[2] || null} />;
   }
 
   if (path === "/comm118" || path === "/comm118/") {

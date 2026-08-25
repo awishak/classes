@@ -42,25 +42,101 @@ const Pill = ({ children, tone }) => (
   }}>{children}</span>
 );
 
+// ─── the changelog ───
+// Newest first. One entry per working session: what changed, and what broke.
+// Add to the top of this array; the page takes care of the rest.
+const SESSIONS = [
+  {
+    id: "aug25", date: "Tuesday, August 25", title: "Twenty changes, ten a side",
+    blurb: "A UX pass over both surfaces. The dashboard got faster to drive mid-class; the class site got a working nav, real URLs, and stopped showing every student everyone else's grade.",
+    groups: [
+      { name: "The dashboard", items: [
+        ["A command bar on \u2318K", "One box over everything castable \u2014 flow items, all three stocked shelves, every line of both boards, assignment reveals, open questions, and the features scheduled for that day. Type three letters, press Enter, and the claim is on the room screen. Hunting for a panel mid-sentence was the worst thing this screen asked of me."],
+        ["The rest of the keyboard, written down", "Esc takes down whatever is up. Arrow keys step the board that is live. \u2318B still blacks the room out. \u2318/ shows all five, because a shortcut you have to remember is a shortcut you stop using. Nothing fires while I am typing in a field."],
+        ["The To-Do panel, on two horizons", "TODAY: does the flow have content, does every item have its claim written, are both boards written rather than proposed, is anything stocked. COMING UP: the next assignment \u2014 days out, instructions posted, close date set, how many have submitted, how many are waiting to be graded."],
+        ["A warning when I am on the wrong session", "An amber strip when the day picker is off the session on deck, with a one-click jump. Casting from the wrong day fails silently and completely: the room gets last Wednesday and nothing says so."],
+        ["Panels I can turn off", "A Panels menu hides any panel from the grid, saved per class alongside the order and the 1\u00d7/2\u00d7 width. A panel I am not using today still costs me a read."],
+        ["Put it back", "The last five things I cast sit under the monitor, one click to send again. Taking something down and wanting it back was the most common thing I do on that screen."],
+        ["Pacing inside Now", "Tapping a slot stamps the time, and the panel reads \u201c12 min in explain \u00b7 10 min is an even share,\u201d amber when I am over. The minutes-since number is about the room; this one is about me."],
+        ["Attendance built around the exceptions", "A find-a-name box, an Exceptions toggle that hides the twenty-five people who are simply here, and a Reset. Everyone starts Here, so the panel was showing thirty pills to find the two that mattered."],
+        ["The scratch pad saves while I type", "A second after I stop, plus a button that stamps the time on a new line. Saving on blur meant a note written at 8:40 and never clicked away from was gone at 9:05."],
+        ["Question triage", "Open / Answered / Archived with counts, Reopen on an answered one, and a Later button that files a question without calling it answered. An answered question is the record of what the room did not understand."],
+      ] },
+      { name: "The class site", items: [
+        ["The nav actually navigates", "Every top tab and every bottom-bar button called the same function and did nothing, with Home permanently lit. Schedule, Assignments and Community now open their cards, More holds the rest, and the active tab is real."],
+        ["Every card has a URL", "/comm999/assignments is a link I can paste into an email, and the Back button goes back to the grid instead of leaving the site. A card key typed into the address bar gets the same role check the grid does."],
+        ["Students see their own work only", "The Viewing as dropdown listed every classmate, and picking a name showed that person's grade and their entire private thread with me. Now you say who you are once and the site remembers, on the same key the ask page already writes."],
+        ["Due dates say how long you have", "\u201cDue today\u201d in amber, \u201cDue in 3 days,\u201d \u201c2 days past due\u201d in red, on the rows and on the home summary. A bare date makes the student do the arithmetic, and that is the loudest complaint in the LMS research."],
+        ["A needs-you strip above the grid", "For a student: a new note from me, or something coming due they have not turned in. For me: how many submissions are waiting and how many students are waiting on a reply. The grid is a list of places; this is a list of actions."],
+        ["A live banner when class is on the screen", "Reads the same cast bus the projector reads and links straight to the room screen, so a student following remotely needs nothing from me."],
+        ["The Community card tells the truth", "An open poll with its question, a running Headlines session, or whatever feature is cast, each with a way in. The card and the projector now agree."],
+        ["The grade shows its working", "The percent gains \u201con 50% of the course so far\u201d and a toggle listing every assignment, its weight, its score, and what is still outstanding, with a line saying the outstanding part is not counted against them."],
+        ["Keyboard and focus", "The nav items were spans with click handlers, which a keyboard could not reach at all. Everything interactive is a real button with a visible focus ring."],
+        ["Skeletons while the data loads", "Four shimmering tiles instead of a grid of cards claiming there are no messages and no assignments for the second before the class data arrives."],
+      ] },
+    ],
+    note: {
+      title: "Parked, on purpose",
+      lines: [
+        "PINs. The sign-in picks a name and stops there. The roster is not real yet, so there is nothing worth locking, and the check drops back into two places when the PINs exist.",
+        "The instructor toggle is still open to anyone who finds the page.",
+        "Nothing has been watched render. The Chrome extension was not connected, so all twenty changes are verified by build and by reading, not by eye.",
+      ],
+    },
+  },
+  {
+    id: "aug23", date: "Sunday, August 23", title: "The dashboard started running a class",
+    blurb: "One long session. The dashboard went from a mockup to something that runs a class, and COMM 118's actual content came across from Spring.",
+    groups: [
+      { name: "", items: [
+        ["The live poll", "Peer Instruction end to end. Ask, they commit alone, close the floor, they argue, ask again, and the room screen shows the second round with the first behind it. Students vote from the ask page."],
+        ["Claims, not titles", "Nothing reaches the room screen as a label. Every cast asks for one full sentence and keeps it."],
+        ["Headlines, rebuilt on the engine", "It turned out ClassTools in the old COMM 118 file was Headlines all along. Now engine code: post from the ask page, read each headline for the surface, then for the concept. The 21 categories came from Spring; the 7 course concepts are in the template config."],
+        ["Around the Horn", "The seating chart as a board over the dashboard. Drag names to match the room, tap to award points into the in-class bucket."],
+        ["Time since they did anything", "The Now panel stopped counting down to the bell and started counting up from the last time the room had to produce something."],
+        ["Features in Class Flow", "Headlines, Game, Fishbowl, This or That, Around the Horn, Team Trivia. Two are built; the rest announce themselves and are honest about it."],
+        ["Spring content ported", "85 library items, 83 of them readings with links. 6 assignments with weights and rubrics. 11 weeks with topics, 75 scheduled items, and every one of your prep notes. 50 trivia questions. Readings sit on the Subtopic shelf for the day they are assigned."],
+        ["Two doors on every link", "Open it here on my laptop, or send it to the room. Reading something is not projecting it."],
+        ["A real QR code", "Written from scratch, checked module for module against an independent encoder at every version and every mask."],
+        ["Email sign-in", "Students can sign in by name and PIN or by an emailed link, on the accounts the classes already have."],
+      ] },
+    ],
+    note: {
+      title: "What broke, and what it cost",
+      lines: [
+        "The room screen was crashing on its idle board. Two edits replaced spans of a file and swallowed the functions next to them. The build stayed green because an undeclared name is legal JavaScript until it runs. A check now runs before every build and fails on it.",
+        "Edits were being quietly eaten. Every save comes back as a realtime event, and taking that echo rolled local state back to whatever the server had. Saves in flight now hold their ground.",
+        "The title card was talking to me in front of the class \u2014 \u201copen it on the room machine\u201d and the raw URL, twice. The room gets the claim and the source now.",
+        "Casting an Atlantic piece put a black rectangle on the wall. A refused iframe fails silently. Framing is now an allowlist, and anything else is read or carded.",
+        "I tripped Vercel's bot protection polling the site after every deploy. That is on me and the polling has stopped.",
+      ],
+    },
+  },
+];
+
 // ─── what is built, and what is not ───
 const BUILT = [
   ["Dashboard", "/comm118/dashboard", "The surface I open to teach. Drag-to-arrange panels: Now, Class Flow, Before & After, Stocked, Questions, Attendance, Scratch Pad, Assignments. Arrangement saves per class."],
   ["Classroom View", "/comm118/today", "The room screen, one unlisted URL per class. Idle board with a live QR, cast content, blackout. F for fullscreen."],
   ["Casting", "", "Click anything on the dashboard and it lands on the room screen. Click it again and it comes back down. Cmd+B blacks the screen out, same key PowerPoint has used for twenty years."],
   ["Ask", "/comm118/ask", "Where the QR sends students. Two ways in: name and PIN, or an emailed sign-in link. Questions arrive on my dashboard, confidential by default, anonymous if they choose. I can push one back to the room screen."],
+  ["Grade flow", "/comm999", "One submission at a time: a queue across every assignment, the rubric scored criterion by criterion, a rich-text comment, a draft that survives a reload, submit-and-advance, skip, and a one-click \u201cI cannot access your link, resubmit within 24 hours.\u201d"],
   ["Class engine", "", "One shared codebase renders any class from a config object. COMM 118 is thirty lines of identity on top of it. A new class is a new file, not a fork."],
   ["Live poll", "", "Peer Instruction, end to end. Ask, they commit alone, close the floor, they argue, ask again, then the room screen shows both rounds with the first one behind the second. The shift is the point."],
   ["Claims, not titles", "", "Nothing reaches the room screen as a label. Every cast needs one full sentence — \u201cRights fees have increased 45% over the last 10 years,\u201d not \u201cMedia rights.\u201d Written once, it stays on the item."],
   ["Time since they did anything", "", "The Now panel counts minutes since the room last had to produce something, not minutes to the bell. It resets on a poll, a pushed question, or an Around the Horn point, and goes amber at ten."],
   ["Around the Horn", "", "The room as it actually sits. Drag names into their seats, tap a seat to award points. Opens over the dashboard so it costs no panel space."],
+  ["Command bar", "", "\u2318K on the dashboard opens one box over everything castable \u2014 flow items, stocked shelves, board lines, assignment reveals, open questions, the day's features. Three letters and Enter puts a claim on the wall. Esc takes it down, arrows step a board, \u2318/ lists the lot."],
+  ["To-Do panel", "", "Two horizons on the dashboard. Today: flow content, missing claims, unwritten boards, empty shelves. Coming up: the next assignment \u2014 days out, instructions, close date, who has submitted, what is waiting to be graded."],
+  ["Class site, addressable", "/comm999", "The card grid is real navigation now. Every card has a URL you can send someone, Back works, students say who they are once and see only their own grade and their own messages, and due dates read \u201cDue in 3 days\u201d rather than a date to do arithmetic on."],
   ["Headlines", "", "Rebuilt on the engine. Students post real headlines from the ask page; each one gets read twice — first for what it looks like on the surface, then for the course concept actually at work. The room screen fills as they lock in, and the gap between the two reads is the lesson."],
 ];
 
 const NEXT = [
   ["Sweep-back opener", "Pull two or three questions from last week's day plans into a four-minute opening quiz. Parked for now.",
    "Distributed practice and practice testing are the top two techniques across 242 studies and 169,000 participants. This is the cheapest possible way to run both, and the poll machinery it needs already exists."],
-  ["Fast grading flow", "One submission at a time: read the link, grade, comment, auto-advance.",
-   "The single biggest drag on the instructor side, and nothing about it is solved yet."],
+  ["AI-drafted feedback in the grade flow", "The engine grades one submission at a time already: queue, rubric, rich-text comment, saved drafts, submit-and-advance. Add the draft-my-comment button.",
+   "The old forked classes call /api/generate-feedback and the engine never learned to. It is the one piece of the fork worth carrying over, and the key is already wired."],
   ["Instructor-only student page", "Photo, where they're from, their stated goals, every grade and comment across the quarter.",
    "Goals get captured on day one and then vanish. If they framed how I read the work all quarter, they should be in front of me while I read it."],
   ["The AI day planner", "Given what's stocked, propose how to spend the fifty minutes, structured on a sequence.",
@@ -128,7 +204,7 @@ const GRADE = [
 
 export default function PlanPage() {
   const nav = [
-    ["today", "Aug 23"],
+    ["log", "Changelog"],
     ["tomorrow", "Next"],
     ["what", "What this is"],
     ["students", "For students"],
@@ -158,42 +234,45 @@ export default function PlanPage() {
 
       <main style={{ maxWidth: 980, margin: "0 auto", padding: "28px 24px 80px", display: "flex", flexDirection: "column", gap: 44 }}>
 
-        <Section id="today" eyebrow="Sunday, August 23" title="What we built">
+        <Section id="log" eyebrow="The changelog" title="What has changed, session by session">
           <p style={p}>
-            One long session. The dashboard went from a mockup to something that runs a class, and COMM 118's
-            actual content came across from Spring.
+            Newest first. Every working session lands here so I can look back and see what moved, and so I can
+            hand somebody the link and say here is what I have been making.
           </p>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {[
-              ["The live poll", "Peer Instruction end to end. Ask, they commit alone, close the floor, they argue, ask again, and the room screen shows the second round with the first behind it. Students vote from the ask page."],
-              ["Claims, not titles", "Nothing reaches the room screen as a label. Every cast asks for one full sentence and keeps it."],
-              ["Headlines, rebuilt on the engine", "It turned out ClassTools in the old COMM 118 file was Headlines all along. Now engine code: post from the ask page, read each headline for the surface, then for the concept. The 21 categories came from Spring; the 7 course concepts are in the template config."],
-              ["Around the Horn", "The seating chart as a board over the dashboard. Drag names to match the room, tap to award points into the in-class bucket."],
-              ["Time since they did anything", "The Now panel stopped counting down to the bell and started counting up from the last time the room had to produce something."],
-              ["Features in Class Flow", "Headlines, Game, Fishbowl, This or That, Around the Horn, Team Trivia. Two are built; the rest announce themselves and are honest about it."],
-              ["Spring content ported", "85 library items, 83 of them readings with links. 6 assignments with weights and rubrics. 11 weeks with topics, 75 scheduled items, and every one of your prep notes. 50 trivia questions. Readings sit on the Subtopic shelf for the day they are assigned."],
-              ["Two doors on every link", "Open it here on my laptop, or send it to the room. Reading something is not projecting it."],
-              ["A real QR code", "Written from scratch, checked module for module against an independent encoder at every version and every mask."],
-              ["Email sign-in", "Students can sign in by name and PIN or by an emailed link, on the accounts the classes already have."],
-            ].map(([t, d]) => (
-              <div key={t} style={card}>
-                <h3 style={{ ...h3, margin: 0 }}>{t}</h3>
-                <div style={{ fontSize: 14.5, color: INK2, lineHeight: 1.55, marginTop: 5 }}>{d}</div>
+          {SESSIONS.map((sn, si) => (
+            <div key={sn.id} id={sn.id} style={{ scrollMarginTop: 20, display: "flex", flexDirection: "column", gap: 14,
+              paddingTop: si ? 26 : 0, borderTop: si ? "1px solid " + LINE2 : "none" }}>
+              <div>
+                <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}>
+                  <div style={{ ...label, color: ACCENT }}>{sn.date}</div>
+                  {si === 0 ? <Pill tone="live">latest</Pill> : null}
+                </div>
+                <h3 style={{ ...h3, fontSize: 21, margin: "6px 0 0" }}>{sn.title}</h3>
+                <p style={{ ...p, margin: "8px 0 0" }}>{sn.blurb}</p>
               </div>
-            ))}
-          </div>
 
-          <div style={{ ...card, borderColor: "#f3c6cd", background: SOFT }}>
-            <div style={{ ...label, color: ACCENT, marginBottom: 8 }}>What broke, and what it cost</div>
-            <ul style={{ margin: 0, paddingLeft: 20, color: INK2, fontSize: 14.5, lineHeight: 1.7 }}>
-              <li><b>The room screen was crashing on its idle board.</b> Two edits replaced spans of a file and swallowed the functions next to them. The build stayed green because an undeclared name is legal JavaScript until it runs. A check now runs before every build and fails on it.</li>
-              <li><b>Edits were being quietly eaten.</b> Every save comes back as a realtime event, and taking that echo rolled local state back to whatever the server had. Saves in flight now hold their ground.</li>
-              <li><b>The title card was talking to me in front of the class</b> — "open it on the room machine" and the raw URL, twice. The room gets the claim and the source now.</li>
-              <li><b>Casting an Atlantic piece put a black rectangle on the wall.</b> A refused iframe fails silently. Framing is now an allowlist, and anything else is read or carded.</li>
-              <li><b>I tripped Vercel's bot protection</b> polling the site after every deploy. That is on me and the polling has stopped.</li>
-            </ul>
-          </div>
+              {sn.groups.map((g, gi) => (
+                <div key={gi} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {g.name ? <div style={{ ...label, color: INK2 }}>{g.name}</div> : null}
+                  {g.items.map(([t, d]) => (
+                    <div key={t} style={card}>
+                      <h3 style={{ ...h3, margin: 0 }}>{t}</h3>
+                      <div style={{ fontSize: 14.5, color: INK2, lineHeight: 1.55, marginTop: 5 }}>{d}</div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+
+              {sn.note ? (
+                <div style={{ ...card, borderColor: "#f3c6cd", background: SOFT }}>
+                  <div style={{ ...label, color: ACCENT, marginBottom: 8 }}>{sn.note.title}</div>
+                  <ul style={{ margin: 0, paddingLeft: 20, color: INK2, fontSize: 14.5, lineHeight: 1.7 }}>
+                    {sn.note.lines.map((l, i) => <li key={i}>{l}</li>)}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          ))}
         </Section>
 
         <Section id="tomorrow" eyebrow="Next session" title="Where to pick it up">
@@ -201,17 +280,21 @@ export default function PlanPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {[
               ["Load the Fall roster", "blocking",
-               "Attendance is marking template names. Around the Horn seats ten placeholders. The poll counts votes out of ten. Ask lists the wrong students. Nothing downstream is real until the roster is in, and I deliberately left Spring's thirty students behind rather than put last term's class on this term's sheet."],
-              ["Run the whole loop in a room", "before it matters",
-               "Dashboard on the laptop, room screen on the podium machine, a phone as a student. Open a poll, push a question, run Headlines, cast a reading. I have never watched any of this render — it is verified by build and by deployed bytes, not by eye."],
+               "Attendance is marking template names. Around the Horn seats ten placeholders. The poll counts votes out of ten. The class site signs students in against a ten-name list. Nothing downstream is real until the roster is in, and PINs cannot land before it either."],
+              ["Watch the whole loop render in a room", "never been seen",
+               "Dashboard on the laptop, room screen on the podium machine, a phone as a student. Open a poll, push a question, run Headlines, cast a reading, hit \u2318K. Every one of the last twenty changes is verified by build and by reading the code. None of it has been watched with eyes."],
+              ["Bring AI-drafted feedback into the engine", "biggest instructor win",
+               "The grade flow is already built \u2014 a queue, the rubric, a rich-text comment, drafts that survive a reload, submit-and-advance, and a one-click \u201cI cannot access your link.\u201d What it is missing is the draft-my-comment step that Grades.jsx, Grades4.jsx and Comm2Grades.jsx have had all along, calling /api/generate-feedback on the key that is already in the environment. Mostly wiring."],
+              ["PINs, once the roster is real", "after the roster",
+               "The sign-in picks a name and stops there on purpose. Two places take the check back: the student sign-in and the instructor toggle. Until then anyone with the link can open either view."],
+              ["Instructor-only student page", "the thing I actually want while grading",
+               "Photo, where they are from, their stated goals from day one, and every grade and comment across the quarter. Goals get captured on the first day and then vanish. If they frame how I read the work all quarter, they should be in front of me while I read it."],
               ["Decide what a feature owes the room", "design",
-               "Game, Fishbowl, This or That, and Team Trivia currently put their name on the wall. Headlines shows what a built one looks like. Which is next, and does it follow the Headlines shape — post, commit, reveal — or its own?"],
+               "Game, Fishbowl, This or That, and Team Trivia currently put their name on the wall. Headlines shows what a built one looks like. Which is next, and does it follow the Headlines shape \u2014 post, commit, reveal \u2014 or its own?"],
               ["Sort out email at class scale", "decision",
                "The built-in mailer sends a handful an hour. Twenty-five students signing in at once needs custom SMTP, which is a new service and therefore your call."],
               ["The sweep-back opener", "parked, now cheap",
                "Two or three questions from last week to open class. Retrieval and spacing are the two best-evidenced techniques there are, and the poll machinery it needs now exists."],
-              ["Fast grading", "the other half of the job",
-               "One submission at a time: read the link, grade, comment, auto-advance. Nothing about it is built, and it is the biggest drag on the instructor side."],
             ].map(([t, tag, d], i) => (
               <div key={t} style={card}>
                 <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap", marginBottom: 6 }}>
@@ -287,8 +370,8 @@ export default function PlanPage() {
             ))}
           </div>
           <p style={p}>
-            Still to come on the instructor side: the <b>fast grading flow</b> (a submission at a time, grade,
-            comment, auto-advance), the <b>instructor-only student page</b> (photo, where they're from, their stated
+            Still to come on the instructor side: <b>AI-drafted feedback</b> inside the grade flow (the old forked
+            classes have had it for months and the engine never learned it), the <b>instructor-only student page</b> (photo, where they're from, their stated
             goals, every grade and comment across the quarter), and the <b>AI day planner</b> — deliberately parked
             until the surfaces around it are right.
           </p>
