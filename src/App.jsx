@@ -9,12 +9,10 @@ import Dashboard from "./engine/Dashboard.jsx";
 import ClassroomView from "./engine/ClassroomView.jsx";
 import AskPage from "./engine/AskPage.jsx";
 import PlanPage from "./PlanPage.jsx";
-import comm999 from "./config/comm999.js";
-import comm118cfg from "./config/comm118.js";
+import { ENGINE } from "./config/registry.js";
 
-// Classes that run on the shared engine. The live teaching surfaces
-// (/<class>/dashboard, /<class>/today, /<class>/ask) are resolved from here.
-const ENGINE = { comm999, comm118: comm118cfg };
+// Classes that run on the shared engine live in config/registry.js, because the
+// Dashboard's class picker needs the same list and cannot import this file.
 
 // Classes whose public hub is still the old forked file. Everything else on the
 // engine gets its card pages as real URLs: /comm999/assignments is a link you
@@ -178,14 +176,14 @@ export default function App() {
   const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask)\/?$/);
   if (live && ENGINE[live[1]]) {
     const cfg = ENGINE[live[1]];
-    if (live[2] === "dashboard") return <Dashboard config={cfg} />;
-    if (live[2] === "today") return <ClassroomView config={cfg} />;
-    return <AskPage config={cfg} />;
+    if (live[2] === "dashboard") return <Dashboard key={cfg.id} config={cfg} />;
+    if (live[2] === "today") return <ClassroomView key={cfg.id} config={cfg} />;
+    return <AskPage key={cfg.id} config={cfg} />;
   }
 
   const site = path.match(/^\/(comm\w+)(?:\/([a-z]+))?\/?$/);
   if (site && ENGINE[site[1]] && !LEGACY_HUBS.has(site[1])) {
-    return <ClassApp config={ENGINE[site[1]]} initialCard={site[2] || null} />;
+    return <ClassApp key={site[1]} config={ENGINE[site[1]]} initialCard={site[2] || null} />;
   }
 
   if (path === "/comm118" || path === "/comm118/") {

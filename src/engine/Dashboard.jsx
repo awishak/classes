@@ -22,6 +22,7 @@ import HornBoard from "./HornBoard.jsx";
 import { useHeadlines } from "./headlines.js";
 import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay } from "./days.js";
+import { ENGINE_LIST } from "../config/registry.js";
 import { genId } from "../utils.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -356,7 +357,48 @@ const GoTo = ({ href, accent, children }) => (
       display: "inline-flex", alignItems: "center", alignSelf: "flex-start" }}>{children}</a>
 );
 
-function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref }) {
+function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim }) {
+  // The deck. Day Plan has had a slides field on every day since it was built
+  // and this screen never read it, which left three of the four things the
+  // dashboard exists to hold. It is a third-party embed, so it goes up and then
+  // gets driven on the room machine.
+  const slidesBlock = plan?.slides ? (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+      <div style={{ ...label, color: accent }}>Slides</div>
+      <Castable kind="Deck" kindColor={KIND_COLOR.Deck} title={hostOf(plan.slides) || "Slides"} sub={plan.slides}
+        url={plan.slides} claim={plan.slidesClaim} accent={accent}
+        live={liveLabel === (plan.slidesClaim || "Slides")} onDismiss={dismiss}
+        onSaveClaim={onSlidesClaim}
+        onCast={(c) => castNow({ ...castFromLink({ label: "Slides", url: plan.slides }), title: c, label: c })} />
+    </div>
+  ) : null;
+
+  // Freeform blocks. A day built without a sequence is entirely blocks, and
+  // until now that day showed up here as an empty panel.
+  const blocks = (plan?.blocks || []).filter(b => b.title || b.body || (b.links || []).length);
+  const blockBlock = blocks.length ? (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
+      <div style={{ ...label, color: accent }}>Blocks</div>
+      {blocks.map(b => (
+        <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <Castable kind="Note" kindColor={KIND_COLOR.Note} title={b.title || "Untitled block"}
+            sub={b.body ? b.body.slice(0, 70) : ""} claim={b.claim} accent={accent}
+            live={liveLabel === (b.claim || b.title)} onDismiss={dismiss}
+            onSaveClaim={(c) => onBlockClaim(b.id, c)}
+            onCast={(c) => castNow({ type: "quote", tag: "Block", title: c, label: c })} />
+          {(b.links || []).map(l => (
+            <div key={l.id} style={{ paddingLeft: 16 }}>
+              <Castable kind="Link" kindColor={KIND_COLOR.Link} title={l.label} sub={l.url} url={l.url}
+                claim={l.claim} accent={accent} live={liveLabel === (l.claim || l.label)} onDismiss={dismiss}
+                onSaveClaim={(c) => onBlockClaim(b.id, c, l.id)}
+                onCast={(c) => castNow({ ...castFromLink(l), title: c, label: c })} />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  ) : null;
+
   const featureBlock = features && features.length ? (
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
       <div style={{ ...label, color: accent }}>Today we run</div>
@@ -369,7 +411,9 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
 
   if (!plan || !seq) return (
     <>
+      {slidesBlock}
       {featureBlock}
+      {blockBlock}
       <Muted>{featureBlock ? "No sequence built for this day yet." : "Nothing planned for this day yet."}</Muted>
       <GoTo href={planHref} accent={accent}>Build it in Day Plan →</GoTo>
     </>
@@ -379,14 +423,17 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
   const any = seq.slots.some(s => (slotItems[s.slot]?.items || []).length);
   if (!any) return (
     <>
+      {slidesBlock}
       {featureBlock}
-      <Muted>This day has a sequence with nothing in it yet.</Muted>
+      {blockBlock}
+      {blockBlock ? null : <Muted>This day has a sequence with nothing in it yet.</Muted>}
       <GoTo href={planHref} accent={accent}>Fill the slots in Day Plan →</GoTo>
     </>
   );
 
   return (
     <>
+      {slidesBlock}
       {featureBlock}
       {seq.slots.map(s => {
         const bucket = slotItems[s.slot] || {};
@@ -420,6 +467,7 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
           </div>
         );
       })}
+      {blockBlock}
     </>
   );
 }
@@ -786,6 +834,7 @@ function TodoPanel({ plan, seq, features, boards, assignments, shelves, students
     { ok: !!boards.pre, good: "Before-class board is written", bad: "Before-class board is still the proposed one" },
     { ok: !!boards.post, good: "After-class board is written", bad: "After-class board is still the proposed one" },
     { ok: stocked > 0, good: stocked + " stocked and ready to reach for", bad: "Nothing stocked for today or this week" },
+    { ok: !!plan?.slides, good: "Slides are linked", bad: "No slides linked for this day" },
   ];
 
   // ─── the assignment on the horizon ───
@@ -1276,6 +1325,15 @@ export default function Dashboard({ config }) {
     slots[slot] = bucket;
     return { ...d, slots };
   });
+  const saveSlidesClaim = (claim) => writeDay(d => ({ ...d, slidesClaim: claim }));
+  const saveBlockClaim = (blockId, claim, linkId) => writeDay(d => ({
+    ...d,
+    blocks: (d.blocks || []).map(b => {
+      if (b.id !== blockId) return b;
+      if (!linkId) return { ...b, claim };
+      return { ...b, links: (b.links || []).map(l => l.id === linkId ? { ...l, claim } : l) };
+    }),
+  }));
   const saveStockClaim = (shelf, id, claim) =>
     setShelf(shelf, list => list.map(x => x.id === id ? { ...x, claim } : x));
 
@@ -1361,6 +1419,21 @@ export default function Dashboard({ config }) {
       });
     });
   });
+  if (plan?.slides) {
+    const t = plan.slidesClaim || "Slides";
+    cmdTargets.push({ key: "slides", group: "Slides", title: t,
+      run: () => castNow({ ...castFromLink({ label: "Slides", url: plan.slides }), title: t, label: t }) });
+  }
+  (plan?.blocks || []).forEach(b => {
+    const t = b.claim || b.title;
+    if (t) cmdTargets.push({ key: "bk:" + b.id, group: "Block", title: t,
+      run: () => castNow({ type: "quote", tag: "Block", title: t, label: t }) });
+    (b.links || []).forEach(l => {
+      const lt = l.claim || l.label;
+      if (lt) cmdTargets.push({ key: "bl:" + l.id, group: "Block link", title: lt,
+        run: () => castNow({ ...castFromLink(l), title: lt, label: lt }) });
+    });
+  });
   SHELVES.forEach(sh => (shelves[sh.id] || []).forEach(x => {
     const t = x.claim || x.title;
     cmdTargets.push({ key: "s:" + x.id, group: sh.label, title: t,
@@ -1400,7 +1473,8 @@ export default function Dashboard({ config }) {
       onCast={() => cast({ type: "poll", label: "Live poll" })} />,
     flow: () => <FlowPanel plan={plan} seq={seq} seeds={seeds} castNow={castNow} dismiss={dismiss}
       liveLabel={liveLabel} accent={config.accent} onClaim={saveFlowClaim}
-      features={features} onFeature={runFeature} planHref={config.path + "/dayplan"} />,
+      features={features} onFeature={runFeature} planHref={config.path + "/dayplan"}
+      onSlidesClaim={saveSlidesClaim} onBlockClaim={saveBlockClaim} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     stocked: () => <StockedPanel shelves={shelves} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
@@ -1428,6 +1502,18 @@ export default function Dashboard({ config }) {
         <div style={{ marginRight: "auto" }}>
           <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-.02em" }}>{config.code} · Dashboard</div>
           <div style={{ fontSize: 13, color: TEXT_MUTED }}>{config.name} · {config.desc}</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <span style={label}>Class</span>
+          <select value={config.id} onChange={e => {
+            const next = ENGINE_LIST.find(c => c.id === e.target.value);
+            if (!next) return;
+            window.history.pushState({}, "", next.path + "/dashboard");
+            window.dispatchEvent(new PopStateEvent("popstate"));
+          }}
+            style={{ ...inputStyle, minHeight: 36, fontSize: 15, width: "auto", padding: "6px 10px" }}>
+            {ENGINE_LIST.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
+          </select>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <span style={label}>Session</span>
