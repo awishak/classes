@@ -55,10 +55,12 @@ export const STATE = {
 };
 
 // ─── type ───
-// Seven steps. Before this the two main surfaces used fourteen sizes between
-// 9 and 32, most of them a half-pixel apart and none of them chosen.
+// Seven steps. The engine was using twenty sizes between 9 and 32, most of them
+// a half-pixel apart and none of them chosen. Note what is missing: 16. Inputs
+// stay at 16 because anything smaller makes iOS zoom the page on focus, so 16 is
+// a functional requirement rather than a step on a scale.
 export const TYPE = {
-  micro: 11,   // mono labels, uppercase eyebrows
+  micro: 12,   // label floor. The HIG rule we adopted says never below ~12.
   small: 13,   // secondary detail under a row
   body: 15,    // the default. Reading size.
   lead: 17,    // a row's own title

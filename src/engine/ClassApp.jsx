@@ -111,7 +111,7 @@ function detail(key, config, role, ctx) {
     const ins = config.instructor || {};
     return (
       <Panel title="Your Instructor">
-        <div style={{ fontWeight: 700, fontSize: 18 }}>{ins.name}</div>
+        <div style={{ fontWeight: 700, fontSize: 17 }}>{ins.name}</div>
         <div style={{ marginTop: 6, color: TEXT_SECONDARY }}>{ins.bio}</div>
         {ins.email ? <a className="ca-focus" href={"mailto:" + ins.email} style={{ display: "inline-block", marginTop: 10, fontSize: 15, fontWeight: 600, color: config.accent }}>{ins.email}</a> : null}
       </Panel>
@@ -220,8 +220,8 @@ function NeedsYou({ items, accent, onOpen }) {
             background: it.tone === "late" ? "#fef2f2" : "#fff", border: "1px solid " + (it.tone === "late" ? "#fecaca" : accent + "55"),
             borderLeft: "4px solid " + (it.tone === "late" ? LIVE : accent),
             borderRadius: 12, padding: "12px 16px", minHeight: TAP, fontFamily: F }}>
-          <span style={{ flex: 1, fontSize: 15.5, fontWeight: 500, color: TEXT_PRIMARY }}>{it.text}</span>
-          <span style={{ flex: "none", fontSize: 14, fontWeight: 600, color: accent }}>open →</span>
+          <span style={{ flex: 1, fontSize: 15, fontWeight: 500, color: TEXT_PRIMARY }}>{it.text}</span>
+          <span style={{ flex: "none", fontSize: 15, fontWeight: 600, color: accent }}>open →</span>
         </button>
       ))}
     </div>
@@ -354,7 +354,7 @@ export default function ClassApp({ config, initialCard }) {
     setRole(r); go(null);
   };
 
-  if (data !== null && role === "student" && !signedIn) {
+  if (data !== null && role === "student" && !signedIn && !config.openAccess) {
     return <SignIn config={config} data={data} onSignedIn={signIn} />;
   }
 
@@ -362,7 +362,7 @@ export default function ClassApp({ config, initialCard }) {
     <div style={{ display: "flex", gap: 4, background: BG, padding: 3, borderRadius: 999, border: "1px solid " + BORDER }}>
       {["student", "instructor"].map(r => (
         <button key={r} className="ca-focus" onClick={() => pickRole(r)} aria-pressed={role === r}
-          style={{ fontSize: 14, fontWeight: 600, padding: "0 16px", minHeight: TAP, display: "inline-flex", alignItems: "center", borderRadius: 999, cursor: "pointer",
+          style={{ fontSize: 15, fontWeight: 600, padding: "0 16px", minHeight: TAP, display: "inline-flex", alignItems: "center", borderRadius: 999, cursor: "pointer",
             border: "none", fontFamily: F, background: role === r ? a : "transparent", color: role === r ? "#fff" : TEXT_SECONDARY, textTransform: "capitalize" }}>{r}</button>
       ))}
     </div>
@@ -371,11 +371,11 @@ export default function ClassApp({ config, initialCard }) {
   const Logo = (
     <button className="ca-focus" onClick={() => go(null)}
       style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: F, textAlign: "left" }}>
-      <div style={{ width: 30, height: 30, borderRadius: 8, background: a, color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 30, height: 30, borderRadius: 8, background: a, color: "#fff", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
         {config.code.split(" ")[1]}
       </div>
       <div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: a, textTransform: "uppercase", letterSpacing: "0.08em" }}>{config.code}</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: a, textTransform: "uppercase", letterSpacing: "0.08em" }}>{config.code}</div>
         <div style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.1 }}>{config.name}</div>
       </div>
     </button>
@@ -396,7 +396,7 @@ export default function ClassApp({ config, initialCard }) {
         style={{ ...card, outline: openKey === key ? "2px solid " + a : "none" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{ ...label, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{s.title}</span>
-          <span style={{ fontSize: 14, fontWeight: 600, color: a, whiteSpace: "nowrap", flexShrink: 0 }}>open →</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: a, whiteSpace: "nowrap", flexShrink: 0 }}>open →</span>
         </div>
         {s.body}
       </button>
@@ -421,8 +421,8 @@ export default function ClassApp({ config, initialCard }) {
       style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none",
         background: "#fff", border: "1px solid " + LIVE, borderRadius: 12, padding: "12px 16px", minHeight: TAP, marginBottom: 14 }}>
       <span style={{ width: 8, height: 8, borderRadius: "50%", background: LIVE, flexShrink: 0 }} />
-      <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 600, color: TEXT_PRIMARY }}>Class is on the screen right now</span>
-      <span style={{ flex: "none", fontSize: 14, fontWeight: 600, color: LIVE }}>follow along →</span>
+      <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY }}>Class is on the screen right now</span>
+      <span style={{ flex: "none", fontSize: 15, fontWeight: 600, color: LIVE }}>follow along →</span>
     </a>
   ) : null;
 
@@ -459,7 +459,7 @@ export default function ClassApp({ config, initialCard }) {
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
               {signedIn ? (
                 <button className="ca-focus" onClick={signOut}
-                  style={{ background: "none", border: "none", fontFamily: F, fontSize: 14, color: TEXT_SECONDARY, cursor: "pointer", minHeight: TAP }}>
+                  style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, color: TEXT_SECONDARY, cursor: "pointer", minHeight: TAP }}>
                   {signedIn.split(" ")[0]} · sign out
                 </button>
               ) : null}
@@ -517,7 +517,7 @@ export default function ClassApp({ config, initialCard }) {
             </div>
             {signedIn ? (
               <button className="ca-focus" onClick={signOut}
-                style={{ background: "none", border: "none", fontFamily: F, fontSize: 14, color: TEXT_MUTED, cursor: "pointer", minHeight: TAP, marginTop: 8 }}>
+                style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, color: TEXT_MUTED, cursor: "pointer", minHeight: TAP, marginTop: 8 }}>
                 Signed in as {signedIn} · sign out
               </button>
             ) : null}

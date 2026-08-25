@@ -17,7 +17,7 @@ const LINE = "#eef0f2";
 const LINE2 = "#e5e7eb";
 const SURFACE_2 = "#f4f3f1";
 
-const label = { fontFamily: MONO, fontSize: 11, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
+const label = { fontFamily: MONO, fontSize: 12, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
 const mini = { minHeight: 34, padding: "0 12px", borderRadius: 8, border: "1px solid " + LINE2, background: "#fff", color: INK2, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
 
 const COLS = 8;
@@ -126,8 +126,8 @@ export default function HornBoard({ students, seats, log, accent, onSeats, onAwa
                       display: "flex", flexDirection: "column", gap: 6, opacity: dragging === name ? .4 : 1 }}>
                     <span style={{ width: 26, height: 26, borderRadius: "50%", flex: "none",
                       background: open ? "rgba(255,255,255,.22)" : SURFACE_2, color: open ? "#fff" : MUTED,
-                      display: "grid", placeItems: "center", fontSize: 10, fontWeight: 700, fontFamily: MONO }}>{initials}</span>
-                    <span style={{ fontSize: 13.5, fontWeight: 500, lineHeight: 1.25 }}>{first}<br />
+                      display: "grid", placeItems: "center", fontSize: 12, fontWeight: 700, fontFamily: MONO }}>{initials}</span>
+                    <span style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.25 }}>{first}<br />
                       <span style={{ color: open ? "rgba(255,255,255,.75)" : MUTED, fontSize: 12 }}>{name.split(" ").slice(1).join(" ")}</span>
                     </span>
                     <span style={{ marginTop: "auto", fontFamily: MONO, fontSize: 12, fontWeight: 600,

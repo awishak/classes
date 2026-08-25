@@ -1573,6 +1573,9 @@ The students in this class are: ${studentList}
 Match each note to the correct student name from the list above. Use the student's full name exactly as listed. If you can't read a name or match it, skip it. Only output the matched lines, nothing else.`,
           image: base64,
           mediaType: file.type || "image/jpeg",
+          model: "claude-opus-5",
+          max_tokens: 4000,
+          effort: "low",
         }),
       });
 
@@ -1782,7 +1785,7 @@ Based on the balance of positive and negative feedback across the weighted secti
       const response = await fetch("/api/generate-feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, model: "claude-opus-5", max_tokens: 4000, effort: "low" }),
       });
 
       if (!response.ok) {

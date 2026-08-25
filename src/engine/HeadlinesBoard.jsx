@@ -14,14 +14,14 @@ const LINE2 = "#e5e7eb";
 const SURFACE_2 = "#f4f3f1";
 const OK = "#0f766e";
 
-const label = { fontFamily: MONO, fontSize: 11, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
+const label = { fontFamily: MONO, fontSize: 12, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
 const mini = { minHeight: 34, padding: "0 12px", borderRadius: 8, border: "1px solid " + LINE2, background: "#fff", color: INK2, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
 const solid = (a) => ({ ...mini, background: a, borderColor: a, color: "#fff" });
 
 function Bars({ options, votes, real, accent, nameOf }) {
   const { counts, voters } = pickTally(votes);
   const ranked = [...options].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
-  if (!voters) return <div style={{ fontSize: 14, color: MUTED }}>Nobody has locked in yet.</div>;
+  if (!voters) return <div style={{ fontSize: 15, color: MUTED }}>Nobody has locked in yet.</div>;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <div style={label}>{voters} student{voters === 1 ? "" : "s"} in</div>
@@ -31,7 +31,7 @@ function Bars({ options, votes, real, accent, nameOf }) {
         return (
           <div key={o} style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, fontWeight: isReal ? 700 : 400, color: isReal ? OK : INK }}>
+              <div style={{ fontSize: 13, fontWeight: isReal ? 700 : 400, color: isReal ? OK : INK }}>
                 {nameOf ? nameOf(o) : o}{isReal ? " ✓" : ""}
               </div>
               <div style={{ height: 6, background: SURFACE_2, borderRadius: 3, marginTop: 3, overflow: "hidden" }}>
@@ -111,14 +111,14 @@ export default function HeadlinesBoard({ hl, api, accent, onClose, onCast }) {
                         border: "1px solid " + (item?.id === h.id ? accent : "transparent"),
                         borderRadius: 10, padding: "10px 12px", fontFamily: F }}>
                       <span style={{ flex: 1, minWidth: 0 }}>
-                        <b style={{ display: "block", fontWeight: 500, fontSize: 14.5, lineHeight: 1.35, color: INK }}>{h.text}</b>
+                        <b style={{ display: "block", fontWeight: 500, fontSize: 15, lineHeight: 1.35, color: INK }}>{h.text}</b>
                         <small style={{ color: MUTED, fontSize: 12 }}>{h.submittedBy || "—"}</small>
                       </span>
                       {h.url ? <a href={h.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
                         style={{ ...mini, minHeight: 28, padding: "0 9px", fontSize: 12, textDecoration: "none", flex: "none" }}>Open ↗</a> : null}
                     </button>
                   ))}
-                  {!pool.length ? <div style={{ fontSize: 14, color: MUTED }}>Waiting on submissions. They post from the ask page.</div> : null}
+                  {!pool.length ? <div style={{ fontSize: 15, color: MUTED }}>Waiting on submissions. They post from the ask page.</div> : null}
                 </div>
               </div>
 
@@ -128,7 +128,7 @@ export default function HeadlinesBoard({ hl, api, accent, onClose, onCast }) {
                     <div style={{ ...label, color: accent }}>
                       {phase === "surface" ? "Round one · the surface read" : phase === "concept" ? "Round two · the concept read" : "Both reads in"}
                     </div>
-                    <div style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.35, marginTop: 6 }}>{item.text}</div>
+                    <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.35, marginTop: 6 }}>{item.text}</div>
                   </div>
 
                   {phase === "surface" ? (
@@ -162,12 +162,12 @@ export default function HeadlinesBoard({ hl, api, accent, onClose, onCast }) {
                       <div style={{ borderTop: "1px solid " + LINE, paddingTop: 14 }}>
                         <Bars options={concepts.map(c => c.id)} votes={session.conceptVotes} real={session.realConcepts} accent={accent} nameOf={conceptName} />
                       </div>
-                      <div style={{ fontSize: 13.5, color: INK2 }}>Pick the next headline above to keep going.</div>
+                      <div style={{ fontSize: 13, color: INK2 }}>Pick the next headline above to keep going.</div>
                     </>
                   ) : null}
                 </div>
               ) : (
-                <div style={{ fontSize: 14, color: MUTED }}>Pick a headline to put it up.</div>
+                <div style={{ fontSize: 15, color: MUTED }}>Pick a headline to put it up.</div>
               )}
             </>
           )}

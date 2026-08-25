@@ -95,7 +95,7 @@ function InstructorRoster({ config, data }) {
               <Avatar profile={p} name={s.name} accent={a} />
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 16 }}>{s.name}</div>
-                {sub && <div style={{ fontSize: 14, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub}</div>}
+                {sub && <div style={{ fontSize: 15, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub}</div>}
               </div>
             </button>
           );
@@ -153,7 +153,7 @@ function StudentPage({ config, data, name, onBack }) {
                 {msgs.map(m => {
                   if (m.kind === "got_it" || m.kind === "confused" || m.kind === "meeting") {
                     const t = m.kind === "got_it" ? "Got it" : m.kind === "confused" ? "I'm confused" : "Requested a meeting";
-                    return <div key={m.id} style={{ fontSize: 14, color: TEXT_MUTED }}>• {t}</div>;
+                    return <div key={m.id} style={{ fontSize: 15, color: TEXT_MUTED }}>• {t}</div>;
                   }
                   return (
                     <div key={m.id} style={{ fontSize: 15, color: TEXT_PRIMARY }}>

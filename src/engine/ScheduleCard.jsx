@@ -150,10 +150,10 @@ function StudentSchedule({ config, data }) {
             <div key={w.id} id={"wk-" + w.id} style={{ background: "#fff", borderRadius: 16, border: "1.5px solid " + (isNow ? config.accent : config.accent + "66"), padding: 18, scrollMarginTop: 130 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
                 <span style={{ ...label, color: config.accent }}>{weekTag(w, wi)}</span>
-                {isNow && <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: config.accent, padding: "3px 10px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.06em" }}>This week</span>}
+                {isNow && <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: config.accent, padding: "3px 10px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.06em" }}>This week</span>}
               </div>
-              <div style={{ fontSize: 18, fontWeight: 600 }}>{w.topic || "Untitled week"}</div>
-              <div style={{ fontSize: 14, color: TEXT_MUTED, marginTop: 3 }}>{(w.dates || []).join(" · ")}</div>
+              <div style={{ fontSize: 17, fontWeight: 600 }}>{w.topic || "Untitled week"}</div>
+              <div style={{ fontSize: 15, color: TEXT_MUTED, marginTop: 3 }}>{(w.dates || []).join(" · ")}</div>
               {w.text && <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 10, whiteSpace: "pre-wrap" }}>{w.text}</div>}
               {(w.items || []).length > 0 && (
                 <div style={{ marginTop: 8 }}>
@@ -276,7 +276,7 @@ function LibraryPicker({ library, accent, onPick, onCreate, onClose }) {
         <input autoFocus value={q} onChange={e => setQ(e.target.value)}
           placeholder="Search library, or type /readings, /activities, /assignments"
           style={{ ...inputStyle, minHeight: 40 }} />
-        <button onClick={onClose} style={{ minHeight: 40, padding: "0 14px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_MUTED, fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Done</button>
+        <button onClick={onClose} style={{ minHeight: 40, padding: "0 14px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_MUTED, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Done</button>
       </div>
       <div style={{ maxHeight: 260, overflowY: "auto" }}>
         {results.length === 0 && <div style={{ padding: 14 }}><Muted>No matches.</Muted></div>}
@@ -286,19 +286,19 @@ function LibraryPicker({ library, accent, onPick, onCreate, onClose }) {
             <button key={li.id} onClick={() => onPick(li)}
               style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "#fff", border: "none", borderBottom: "1px solid " + BORDER, padding: "10px 12px", cursor: "pointer", fontFamily: F, minHeight: TAP }}>
               <Dot color={m.color} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: m.color, textTransform: "uppercase", width: 80, flexShrink: 0, letterSpacing: "0.04em" }}>{m.label}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: m.color, textTransform: "uppercase", width: 80, flexShrink: 0, letterSpacing: "0.04em" }}>{m.label}</span>
               <span style={{ flex: 1, minWidth: 0, fontSize: 15, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{li.title}</span>
-              <span style={{ color: accent, fontSize: 20, flexShrink: 0 }}>+</span>
+              <span style={{ color: accent, fontSize: 22, flexShrink: 0 }}>+</span>
             </button>
           );
         })}
       </div>
       {canCreate && (
         <div style={{ padding: 10, borderTop: "1px solid " + BORDER, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <span style={{ fontSize: 14, color: TEXT_MUTED }}>Create "{text}" as</span>
+          <span style={{ fontSize: 15, color: TEXT_MUTED }}>Create "{text}" as</span>
           {(typeFilter ? [typeFilter] : TYPES).map(t => (
             <button key={t} onClick={() => onCreate(t, text)}
-              style={{ minHeight: 36, padding: "0 14px", borderRadius: 999, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TYPE_META[t].color, fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{TYPE_META[t].label}</button>
+              style={{ minHeight: 36, padding: "0 14px", borderRadius: 999, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TYPE_META[t].color, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>{TYPE_META[t].label}</button>
           ))}
         </div>
       )}
@@ -342,9 +342,9 @@ function WeekEditor({ w, wIndex, accent, config, library, setWeekField, removeIt
       {editHead ? (
         <div>
           <input value={topicDraft} onChange={e => setTopicDraft(e.target.value)} autoFocus placeholder="Week topic"
-            style={{ ...inputStyle, fontSize: 18, fontWeight: 600, minHeight: 40, padding: "8px 10px" }} />
+            style={{ ...inputStyle, fontSize: 17, fontWeight: 600, minHeight: 40, padding: "8px 10px" }} />
           <input value={datesDraft} onChange={e => setDatesDraft(e.target.value)} placeholder="Sep 21, Sep 23, Sep 25"
-            style={{ ...inputStyle, fontSize: 14, minHeight: 38, padding: "6px 10px", marginTop: 6, color: TEXT_SECONDARY }} />
+            style={{ ...inputStyle, fontSize: 15, minHeight: 38, padding: "6px 10px", marginTop: 6, color: TEXT_SECONDARY }} />
           <textarea value={textDraft} onChange={e => setTextDraft(e.target.value)} placeholder="Free text for the week..."
             style={{ ...inputStyle, minHeight: 80, lineHeight: 1.5, resize: "vertical", marginTop: 8 }} />
           <button onClick={saveHead}
@@ -355,11 +355,11 @@ function WeekEditor({ w, wIndex, accent, config, library, setWeekField, removeIt
           <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ ...label, color: accent, marginBottom: 4 }}>{weekTag(w, wIndex)}</div>
-              <div style={{ fontSize: 19, fontWeight: 600, color: TEXT_PRIMARY }}>{w.topic || "Untitled week"}</div>
-              <div style={{ fontSize: 14, color: TEXT_MUTED, marginTop: 3 }}>{(w.dates || []).join(" · ") || "No dates set"}</div>
+              <div style={{ fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY }}>{w.topic || "Untitled week"}</div>
+              <div style={{ fontSize: 15, color: TEXT_MUTED, marginTop: 3 }}>{(w.dates || []).join(" · ") || "No dates set"}</div>
             </div>
             <button onClick={openEdit} title="Edit week"
-              style={{ minHeight: 40, padding: "0 14px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_SECONDARY, fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>Edit</button>
+              style={{ minHeight: 40, padding: "0 14px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_SECONDARY, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>Edit</button>
             <button onClick={() => removeWeek(w.id)} title="Remove week"
               style={{ minHeight: 40, minWidth: 40, borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_MUTED, cursor: "pointer", fontSize: 16 }}>✕</button>
           </div>
@@ -398,7 +398,7 @@ function WeekEditor({ w, wIndex, accent, config, library, setWeekField, removeIt
           onCreate={(type, title) => addNewToWeek(w.id, type, title)}
           onClose={() => setAddOpen(false)} />
       ) : (
-        <button onClick={() => setAddOpen(true)} style={{ marginTop: 10, background: "none", border: "none", color: accent, fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer", padding: 0 }}>+ Add item</button>
+        <button onClick={() => setAddOpen(true)} style={{ marginTop: 10, background: "none", border: "none", color: accent, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer", padding: 0 }}>+ Add item</button>
       )}
 
       {/* lesson plan — its own section, shown if present */}
@@ -428,13 +428,13 @@ function WeekEditor({ w, wIndex, accent, config, library, setWeekField, removeIt
           </div>
         ) : (
           <button onClick={openPlanEdit}
-            style={{ marginTop: 8, background: "none", border: "none", color: accent, fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer", padding: 0 }}>+ Add lesson plan</button>
+            style={{ marginTop: 8, background: "none", border: "none", color: accent, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer", padding: 0 }}>+ Add lesson plan</button>
         )}
 
         <div style={{ ...label, marginTop: 14 }}>Seed suggestions</div>
         {seeds.length > 0 ? (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
-            {seeds.map((s, i) => <span key={i} style={{ fontSize: 14, background: BG, border: "1px solid " + BORDER_STRONG, borderRadius: 999, padding: "6px 12px" }}>{s.title}</span>)}
+            {seeds.map((s, i) => <span key={i} style={{ fontSize: 15, background: BG, border: "1px solid " + BORDER_STRONG, borderRadius: 999, padding: "6px 12px" }}>{s.title}</span>)}
           </div>
         ) : <Muted style={{ marginTop: 6 }}>No matching seeds yet. Your seed library lives in teaching/seeds.md.</Muted>}
       </div>

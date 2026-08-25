@@ -14,7 +14,7 @@ const LINE2 = "#e5e7eb";
 const SURFACE_2 = "#f4f3f1";
 const OK = "#0f766e";
 
-const label = { fontFamily: MONO, fontSize: 11, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
+const label = { fontFamily: MONO, fontSize: 12, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
 const mini = { minHeight: 34, padding: "0 12px", borderRadius: 8, border: "1px solid " + LINE2, background: "#fff", color: INK2, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
 const solid = (a) => ({ ...mini, background: a, borderColor: a, color: "#fff" });
 const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 9, border: "1px solid " + LINE2, fontFamily: F, fontSize: 16, minHeight: 40, background: "#fff", color: INK };
@@ -35,7 +35,7 @@ export function Spread({ votes, options, accent, correct, compare }) {
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <span style={{ ...label, width: 14, color: right ? OK : MUTED }}>{LETTERS[i]}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, color: INK, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o}</div>
+              <div style={{ fontSize: 13, color: INK, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o}</div>
               <div style={{ position: "relative", height: 8, borderRadius: 4, background: SURFACE_2, overflow: "hidden" }}>
                 {wasPct != null ? <i style={{ position: "absolute", inset: 0, width: wasPct + "%", background: LINE2 }} /> : null}
                 <i style={{ position: "absolute", inset: 0, width: pct + "%", background: right ? OK : accent, opacity: right ? 1 : .85 }} />
@@ -64,7 +64,7 @@ export default function PollPanel({ poll, start, setPhase, setCorrect, clear, ro
   const [q, setQ] = useState("");
   const [opts, setOpts] = useState(["", "", ""]);
 
-  if (!poll) return <div style={{ fontSize: 14, color: MUTED }}>Loading…</div>;
+  if (!poll) return <div style={{ fontSize: 15, color: MUTED }}>Loading…</div>;
 
   const setOpt = (i, v) => setOpts(o => o.map((x, j) => j === i ? v : x));
   const clean = opts.map(o => o.trim()).filter(Boolean);
@@ -80,7 +80,7 @@ export default function PollPanel({ poll, start, setPhase, setCorrect, clear, ro
   if (poll.phase === "idle") {
     return (
       <>
-        <div style={{ fontSize: 14, color: MUTED, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 15, color: MUTED, lineHeight: 1.5 }}>
           Ask, let them commit alone, let them argue, ask again. Aim for a question a third to two thirds get right the first time.
         </div>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="The question, in one sentence" style={inputStyle} />

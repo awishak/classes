@@ -39,12 +39,12 @@ const WARN = "#b45309";
 const TAP = 44;  // student-facing surfaces: students are on phones
 const HIT = 34;  // this screen: a trackpad under my hands, where density is the point
 
-const label = { fontFamily: MONO, fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
+const label = { fontFamily: MONO, fontSize: 12, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
 const mini = { minHeight: HIT, padding: "0 12px", borderRadius: 8, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_SECONDARY, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
 const solid = (a) => ({ ...mini, background: a, borderColor: a, color: "#fff" });
 const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 9, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: 40, background: "#fff", color: TEXT_PRIMARY };
-const label2 = { fontFamily: MONO, fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
-const Muted = ({ children, style }) => <div style={{ fontSize: 14, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
+const label2 = { fontFamily: MONO, fontSize: 12, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
+const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 
 const CSS = `
 .dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-content:start}
@@ -99,7 +99,7 @@ function Panel({ id, title, right, span, onDrag, onSize, children, refCb, draggi
         <Grip onPointerDown={onDrag} />
         <span style={{ ...label, color: TEXT_SECONDARY, marginRight: "auto" }}>{title}</span>
         {right}
-        <button onClick={onSize} style={{ ...mini, minHeight: HIT, padding: "0 10px", fontFamily: MONO, fontSize: 10, color: TEXT_MUTED }}>
+        <button onClick={onSize} style={{ ...mini, minHeight: HIT, padding: "0 10px", fontFamily: MONO, fontSize: 12, color: TEXT_MUTED }}>
           {span === "2" ? "2×" : "1×"}
         </button>
       </div>
@@ -116,14 +116,14 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
       style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", cursor: "pointer",
         background: live ? "rgba(225,29,72,.07)" : SURFACE_2, border: "1px solid " + (live ? LIVE : "transparent"),
         borderRadius: 10, padding: "9px 11px", minHeight: TAP, fontFamily: F, transition: "background .14s, border-color .14s" }}>
-      <span style={{ flex: "none", fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase",
+      <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase",
         padding: "3px 6px", borderRadius: 5, background: "#fff", border: "1px solid " + (kindColor || BORDER_STRONG), color: kindColor || TEXT_MUTED }}>{kind}</span>
       <span style={{ minWidth: 0, flex: 1 }}>
-        <b style={{ display: "block", fontWeight: 500, fontSize: 14, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</b>
+        <b style={{ display: "block", fontWeight: 500, fontSize: 15, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</b>
         {sub ? <small style={{ color: TEXT_MUTED, fontSize: 12 }}>{sub}</small> : null}
       </span>
       {live ? <LiveTag /> : (
-        <span className="dash-go" style={{ flex: "none", fontFamily: MONO, fontSize: 10, letterSpacing: ".08em",
+        <span className="dash-go" style={{ flex: "none", fontFamily: MONO, fontSize: 12, letterSpacing: ".08em",
           color: TEXT_MUTED, fontWeight: 400, opacity: 0, transition: "opacity .14s" }}>CAST →</span>
       )}
     </button>
@@ -150,7 +150,7 @@ function Castable({ kind, kindColor, title, sub, url, claim, live, accent, onCas
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, border: "1px solid " + accent, borderRadius: 10, background: "#fff" }}>
         <span style={{ ...label, color: accent }}>Say it in one sentence</span>
-        <div style={{ fontSize: 12.5, color: TEXT_MUTED }}>{title}</div>
+        <div style={{ fontSize: 13, color: TEXT_MUTED }}>{title}</div>
         <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") commit(true); if (e.key === "Escape") setEditing(false); }}
           placeholder="Rights fees have increased 45% over the last 10 years."
@@ -164,18 +164,18 @@ function Castable({ kind, kindColor, title, sub, url, claim, live, accent, onCas
     );
   }
 
-  const act = { ...mini, minHeight: HIT, padding: "0 10px", fontSize: 12.5 };
+  const act = { ...mini, minHeight: HIT, padding: "0 10px", fontSize: 13 };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 11px", borderRadius: 10,
       background: live ? "rgba(225,29,72,.07)" : SURFACE_2, border: "1px solid " + (live ? LIVE : "transparent") }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-        <span style={{ flex: "none", marginTop: 2, fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: ".08em",
+        <span style={{ flex: "none", marginTop: 2, fontFamily: MONO, fontSize: 12, fontWeight: 600, letterSpacing: ".08em",
           textTransform: "uppercase", padding: "3px 6px", borderRadius: 5, background: "#fff",
           border: "1px solid " + (kindColor || BORDER_STRONG), color: kindColor || TEXT_MUTED }}>{kind}</span>
         {live ? <LiveTag /> : null}
         <span style={{ minWidth: 0, flex: 1 }}>
-          <b style={{ display: "block", fontWeight: 500, fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.35 }}>{claim || title}</b>
+          <b style={{ display: "block", fontWeight: 500, fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.35 }}>{claim || title}</b>
           {claim || sub ? (
             <small style={{ color: TEXT_MUTED, fontSize: 12, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {claim ? title : sub}
@@ -224,11 +224,11 @@ function FeatureRow({ name, live, accent, onRun, onDismiss }) {
         borderRadius: 10, padding: "9px 12px", minHeight: TAP, fontFamily: F }}>
       <span style={{ flex: "none", width: 7, height: 7, borderRadius: "50%", background: live ? LIVE : accent }} />
       <span style={{ minWidth: 0, flex: 1 }}>
-        <b style={{ display: "block", fontWeight: 600, fontSize: 14.5, color: TEXT_PRIMARY }}>{name}</b>
+        <b style={{ display: "block", fontWeight: 600, fontSize: 15, color: TEXT_PRIMARY }}>{name}</b>
         <small style={{ color: TEXT_MUTED, fontSize: 12 }}>{blurb}</small>
       </span>
       {live ? <LiveTag /> : (
-        <span style={{ flex: "none", fontFamily: MONO, fontSize: 10, letterSpacing: ".08em", color: TEXT_MUTED, fontWeight: 500 }}>RUN →</span>
+        <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, letterSpacing: ".08em", color: TEXT_MUTED, fontWeight: 500 }}>RUN →</span>
       )}
     </button>
   );
@@ -332,7 +332,7 @@ function NowPanel({ config, engagedAt, onEngaged, plan, seq, onSlot }) {
               <button key={x} onClick={() => onSlot(on ? null : x)}
                 style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5, background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
                 <i style={{ display: "block", height: 4, borderRadius: 2, background: on ? config.accent : BORDER }} />
-                <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: ".09em", textTransform: "uppercase", color: on ? config.accent : TEXT_MUTED, fontWeight: on ? 700 : 400 }}>{x}</span>
+                <span style={{ fontFamily: MONO, fontSize: 12, letterSpacing: ".09em", textTransform: "uppercase", color: on ? config.accent : TEXT_MUTED, fontWeight: on ? 700 : 400 }}>{x}</span>
               </button>
             );
           })}
@@ -463,7 +463,7 @@ function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveL
     <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
         <span style={{ ...label, color: accent }}>{shelf.label}</span>
-        <span style={{ ...label, fontSize: 10 }}>{shelf.scope}</span>
+        <span style={{ ...label, fontSize: 12 }}>{shelf.scope}</span>
       </div>
       {(items || []).map(s => (
         <div key={s.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -481,7 +481,7 @@ function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveL
       ))}
       {open ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-          <select value={kind} onChange={e => setKind(e.target.value)} style={{ ...inputStyle, fontSize: 14 }}>
+          <select value={kind} onChange={e => setKind(e.target.value)} style={{ ...inputStyle, fontSize: 15 }}>
             {STOCK_KINDS.map(k => <option key={k}>{k}</option>)}
           </select>
           <input value={title} onChange={e => setTitle(e.target.value)} placeholder="What is it" style={inputStyle} />
@@ -515,7 +515,7 @@ function QuestionsPanel({ items, setState, archiveOpen, castNow, accent }) {
       <div style={{ display: "flex", gap: 5 }}>
         {Q_TABS.map(([k, lbl]) => (
           <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
-            style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5,
+            style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 13,
               ...(tab === k ? { background: accent, borderColor: accent, color: "#fff" } : {}) }}>
             {lbl} {countOf(k) || ""}
           </button>
@@ -524,13 +524,13 @@ function QuestionsPanel({ items, setState, archiveOpen, castNow, accent }) {
       {open.length === 0 ? <Muted>{tab === "open" ? "Nothing from the room right now." : "Nothing here."}</Muted> : null}
       {open.map(q => (
         <div key={q.id} style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, border: "1px solid " + BORDER, borderRadius: 10, background: SURFACE_2 }}>
-          <div style={{ ...label, fontSize: 10, display: "flex", gap: 7, alignItems: "center" }}>
+          <div style={{ ...label, fontSize: 12, display: "flex", gap: 7, alignItems: "center" }}>
             {q.anon
               ? <span style={{ color: accent, border: "1px solid " + accent + "55", borderRadius: 4, padding: "1px 5px" }}>Anon</span>
               : <span>{q.who || "Unknown"}</span>}
             <span>{new Date(q.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
           </div>
-          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.45, color: TEXT_PRIMARY }}>{q.text}</p>
+          <p style={{ margin: 0, fontSize: 15, lineHeight: 1.45, color: TEXT_PRIMARY }}>{q.text}</p>
           <div style={{ display: "flex", gap: 7 }}>
             <button style={solid(accent)}
               onClick={() => castNow({ type: "question", tag: "From the room", title: q.text, cite: q.anon ? "Anonymous" : (q.who || ""), label: "Question · " + (q.anon ? "anonymous" : q.who) })}>
@@ -579,9 +579,9 @@ function AttendancePanel({ students, marks, onMark, onReset }) {
   const marked = students.filter(st => stateOf(st.name) !== "here").length;
   return (
     <>
-      <div style={{ display: "flex", gap: 14, fontFamily: MONO, fontSize: 11, color: TEXT_MUTED, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 14, fontFamily: MONO, fontSize: 12, color: TEXT_MUTED, alignItems: "center" }}>
         {ATT_STATES.map(s => <span key={s}>{s} <b style={{ color: TEXT_PRIMARY }}>{count(s)}</b></span>)}
-        <button style={{ ...mini, minHeight: HIT, padding: "0 10px", marginLeft: "auto", fontSize: 11.5 }}
+        <button style={{ ...mini, minHeight: HIT, padding: "0 10px", marginLeft: "auto", fontSize: 12 }}
           disabled={!marked} onClick={onReset} title="Put everyone back to here">Reset</button>
       </div>
       <div style={{ display: "flex", gap: 7 }}>
@@ -599,7 +599,7 @@ function AttendancePanel({ students, marks, onMark, onReset }) {
           return (
             <button key={st.name} onClick={() => onMark(st.name, ATT_STATES[(ATT_STATES.indexOf(s) + 1) % ATT_STATES.length])}
               style={{ border: "1px solid " + c.bd, background: c.bg, color: c.fg, borderRadius: 999, padding: "0 13px", minHeight: 34,
-                fontSize: 13.5, fontFamily: F, fontWeight: s === "out" ? 400 : 500, cursor: "pointer",
+                fontSize: 13, fontFamily: F, fontWeight: s === "out" ? 400 : 500, cursor: "pointer",
                 textDecoration: s === "out" ? "line-through" : "none", opacity: s === "out" ? .55 : 1 }}>
               {st.name}
             </button>
@@ -674,7 +674,7 @@ function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIn
       background: live ? "rgba(225,29,72,.06)" : SURFACE_2 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={label2}>{label}</span>
-        {isProposal ? <span style={{ ...label2, color: accent, fontSize: 10 }}>proposed</span> : null}
+        {isProposal ? <span style={{ ...label2, color: accent, fontSize: 12 }}>proposed</span> : null}
         <button style={{ ...mini, minHeight: HIT, padding: "0 10px", marginLeft: "auto", fontSize: 12 }} onClick={() => setEditing(true)}>Edit</button>
       </div>
       <div style={{ fontWeight: 600, fontSize: 15 }}>{board.title}</div>
@@ -684,10 +684,10 @@ function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIn
             style={{ display: "flex", gap: 9, alignItems: "flex-start", textAlign: "left", cursor: "pointer",
               background: liveIndex === i ? "rgba(225,29,72,.1)" : "#fff",
               border: "1px solid " + (liveIndex === i ? LIVE : "transparent"),
-              borderRadius: 9, padding: "8px 10px", minHeight: 40, fontFamily: F, fontSize: 14, color: TEXT_PRIMARY }}>
-            <span style={{ ...label2, fontSize: 10, color: liveIndex === i ? LIVE : TEXT_MUTED, paddingTop: 2 }}>{i + 1}</span>
+              borderRadius: 9, padding: "8px 10px", minHeight: 40, fontFamily: F, fontSize: 15, color: TEXT_PRIMARY }}>
+            <span style={{ ...label2, fontSize: 12, color: liveIndex === i ? LIVE : TEXT_MUTED, paddingTop: 2 }}>{i + 1}</span>
             <span style={{ flex: 1, lineHeight: 1.4 }}>{idea}</span>
-            <span style={{ ...label2, fontSize: 9, color: liveIndex === i ? LIVE : "transparent", paddingTop: 3 }}>up</span>
+            <span style={{ ...label2, fontSize: 12, color: liveIndex === i ? LIVE : "transparent", paddingTop: 3 }}>up</span>
           </button>
         ))}
         {!ideas.length ? <Muted style={{ fontSize: 13 }}>No ideas yet. Edit to add some.</Muted> : null}
@@ -747,7 +747,7 @@ function ScratchPanel({ value, onSave }) {
 // Green is permission to stop reading the panel.
 function Line({ ok, children, tone }) {
   return (
-    <div style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13.5, lineHeight: 1.4,
+    <div style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 13, lineHeight: 1.4,
       color: ok ? TEXT_MUTED : TEXT_PRIMARY }}>
       <span style={{ flex: "none", width: 7, height: 7, borderRadius: "50%", marginTop: 5.5,
         background: ok ? OK : (tone === "late" ? LIVE : WARN) }} />
@@ -764,7 +764,7 @@ function Horizon({ title, count, checks, accent, right }) {
         <span style={{ fontFamily: MONO, fontSize: 12, color: count ? WARN : OK }}>
           {count ? count + " to do" : "clear"}
         </span>
-        {right ? <span style={{ ...label, fontSize: 10, marginLeft: "auto", color: TEXT_MUTED }}>{right}</span> : null}
+        {right ? <span style={{ ...label, fontSize: 12, marginLeft: "auto", color: TEXT_MUTED }}>{right}</span> : null}
       </div>
       {checks.map((c, i) => <Line key={i} ok={c.ok} tone={c.tone}>{c.ok ? c.good : c.bad}</Line>)}
       {!checks.length ? <Muted style={{ fontSize: 13 }}>Nothing on the calendar.</Muted> : null}
@@ -881,17 +881,17 @@ function CommandBar({ targets, accent, onClose }) {
         style={{ width: "100%", maxWidth: 620, background: "#fff", borderRadius: 16, border: "1px solid " + BORDER_STRONG, boxShadow: "0 24px 60px -20px rgba(23,19,16,.5)", overflow: "hidden" }}>
         <input autoFocus value={q} onChange={e => setQ(e.target.value)} onKeyDown={onKey}
           placeholder="Cast anything — type a few letters"
-          style={{ width: "100%", border: "none", borderBottom: "1px solid " + BORDER, outline: "none", padding: "16px 18px", fontFamily: F, fontSize: 18, color: TEXT_PRIMARY }} />
+          style={{ width: "100%", border: "none", borderBottom: "1px solid " + BORDER, outline: "none", padding: "16px 18px", fontFamily: F, fontSize: 17, color: TEXT_PRIMARY }} />
         <div style={{ maxHeight: "46vh", overflowY: "auto" }}>
           {hits.map((t, n) => (
             <button key={t.key} onMouseEnter={() => setI(n)} onClick={() => { t.run(); onClose(); }}
               style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", cursor: "pointer",
                 background: n === i ? accent + "12" : "#fff", border: "none", borderLeft: "3px solid " + (n === i ? accent : "transparent"),
                 padding: "11px 16px", minHeight: TAP, fontFamily: F }}>
-              <span style={{ flex: "none", fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase",
+              <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase",
                 padding: "3px 6px", borderRadius: 5, border: "1px solid " + BORDER_STRONG, color: TEXT_MUTED }}>{t.group}</span>
               <span style={{ minWidth: 0, flex: 1, fontSize: 15, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
-              {n === i ? <span style={{ flex: "none", fontFamily: MONO, fontSize: 10, color: accent, letterSpacing: ".08em" }}>ENTER</span> : null}
+              {n === i ? <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, color: accent, letterSpacing: ".08em" }}>ENTER</span> : null}
             </button>
           ))}
           {!hits.length ? <div style={{ padding: "18px 18px 22px", fontSize: 15, color: TEXT_MUTED }}>Nothing matches that.</div> : null}
@@ -921,7 +921,7 @@ function ShortcutSheet({ onClose }) {
         {SHORTCUTS.map(([k, what]) => (
           <div key={k} style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
             <kbd style={{ flex: "none", minWidth: 46, textAlign: "center", fontFamily: MONO, fontSize: 12, padding: "4px 7px", borderRadius: 6, border: "1px solid " + BORDER_STRONG, background: SURFACE_2, color: TEXT_PRIMARY }}>{k}</kbd>
-            <span style={{ fontSize: 14.5, lineHeight: 1.4 }}>{what}</span>
+            <span style={{ fontSize: 15, lineHeight: 1.4 }}>{what}</span>
           </div>
         ))}
         <button style={{ ...mini, alignSelf: "flex-start", marginTop: 4 }} onClick={onClose}>Close</button>
@@ -956,7 +956,7 @@ function Monitor({ config, live, cast, push, recent, onRecast }) {
   const on = !!live?.cast;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 12px", background: "#fff", border: "1px solid " + BORDER, borderRadius: 10, ...label, fontSize: 11 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 12px", background: "#fff", border: "1px solid " + BORDER, borderRadius: 10, ...label, fontSize: 12 }}>
         {on ? <LiveTag /> : <span style={{ width: 8, height: 8, borderRadius: "50%", flex: "none", background: BORDER_STRONG }} />}
         <span style={{ color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {on ? (live.cast.label || live.cast.title) : "Idle screen"}
@@ -970,11 +970,11 @@ function Monitor({ config, live, cast, push, recent, onRecast }) {
           <a href={liveUrl} target="_blank" rel="noreferrer"
             style={{ ...mini, borderColor: config.accent, color: config.accent, textDecoration: "none",
               display: "inline-flex", alignItems: "center", flex: "none" }}>Open ↗</a>
-          <span style={{ minWidth: 0, flex: 1, fontFamily: MONO, fontSize: 11, color: TEXT_MUTED,
+          <span style={{ minWidth: 0, flex: 1, fontFamily: MONO, fontSize: 12, color: TEXT_MUTED,
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={liveUrl}>{hostOf(liveUrl)}</span>
           <div style={{ display: "flex", gap: 4, flex: "none" }}>
             {[["read", "Read"], ["embed", "Page"], ["card", "Card"]].map(([m, lbl]) => (
-              <button key={m} style={{ ...mini, minHeight: HIT, padding: "0 10px", fontSize: 11.5,
+              <button key={m} style={{ ...mini, minHeight: HIT, padding: "0 10px", fontSize: 12,
                 ...(live.cast.mode === m ? { background: config.accent, borderColor: config.accent, color: "#fff" } : {}) }}
                 onClick={() => cast({ ...live.cast, mode: m, url: m === "embed" ? framable(liveUrl) : liveUrl })}>
                 {lbl}
@@ -1009,9 +1009,9 @@ function Monitor({ config, live, cast, push, recent, onRecast }) {
           {recent.map(r => (
             <button key={r.key} onClick={() => onRecast(r.payload)}
               style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", textAlign: "left", cursor: "pointer",
-                background: SURFACE_2, border: "1px solid transparent", borderRadius: 9, padding: "8px 10px", minHeight: 38, fontFamily: F, fontSize: 13.5, color: TEXT_PRIMARY }}>
+                background: SURFACE_2, border: "1px solid transparent", borderRadius: 9, padding: "8px 10px", minHeight: 38, fontFamily: F, fontSize: 13, color: TEXT_PRIMARY }}>
               <span style={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.label}</span>
-              <span style={{ flex: "none", fontFamily: MONO, fontSize: 9.5, letterSpacing: ".08em", color: TEXT_MUTED }}>AGAIN →</span>
+              <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, letterSpacing: ".08em", color: TEXT_MUTED }}>AGAIN →</span>
             </button>
           ))}
         </div>
@@ -1020,7 +1020,7 @@ function Monitor({ config, live, cast, push, recent, onRecast }) {
       <div style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", gap: 12 }}>
         <Picker title="Everyday cast" opts={ANIMS} value={live?.anim || "rise"} onPick={v => push({ anim: v })} accent={config.accent} />
         <Picker title="Big reveal" opts={BIG_ANIMS} value={live?.bigAnim || "drop"} onPick={v => push({ bigAnim: v })} accent={config.accent} />
-        <Muted style={{ fontSize: 12.5 }}>
+        <Muted style={{ fontSize: 13 }}>
           {[...ANIMS, ...BIG_ANIMS].find(a => a.id === (live?.anim || "rise"))?.hint}
         </Muted>
       </div>
@@ -1037,7 +1037,7 @@ function Picker({ title, opts, value, onPick, accent }) {
           const on = o.id === value;
           return (
             <button key={o.id} onClick={() => onPick(o.id)} aria-pressed={on}
-              style={{ ...mini, fontFamily: MONO, fontSize: 11, letterSpacing: ".05em", textTransform: "uppercase",
+              style={{ ...mini, fontFamily: MONO, fontSize: 12, letterSpacing: ".05em", textTransform: "uppercase",
                 background: on ? accent : "#fff", borderColor: on ? accent : BORDER_STRONG, color: on ? "#fff" : TEXT_SECONDARY }}>
               {o.name}
             </button>
@@ -1432,7 +1432,7 @@ export default function Dashboard({ config }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <span style={label}>Session</span>
           <select value={day} onChange={e => setDay(e.target.value)}
-            style={{ ...inputStyle, minHeight: 36, fontSize: 14, width: "auto", padding: "6px 10px" }}>
+            style={{ ...inputStyle, minHeight: 36, fontSize: 15, width: "auto", padding: "6px 10px" }}>
             {days.map(d => <option key={d.date} value={d.date}>{d.date}{d.topic ? " · " + d.topic : ""}</option>)}
           </select>
         </div>
@@ -1452,7 +1452,7 @@ export default function Dashboard({ config }) {
                   return (
                     <button key={id} onClick={() => toggleHidden(id)}
                       style={{ display: "flex", alignItems: "center", gap: 9, background: "none", border: "none", cursor: "pointer",
-                        padding: "0 8px", minHeight: 36, borderRadius: 8, fontFamily: F, fontSize: 14, textAlign: "left",
+                        padding: "0 8px", minHeight: 36, borderRadius: 8, fontFamily: F, fontSize: 15, textAlign: "left",
                         color: on ? TEXT_PRIMARY : TEXT_MUTED }}>
                       <span style={{ flex: "none", width: 8, height: 8, borderRadius: "50%", background: on ? config.accent : BORDER_STRONG }} />
                       {TITLES[id]}
@@ -1470,7 +1470,7 @@ export default function Dashboard({ config }) {
 
       {offDay ? (
         <div style={{ background: "#fffbeb", borderBottom: "1px solid #fde68a", padding: "10px 22px",
-          display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", fontSize: 14, color: "#92400e" }}>
+          display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", fontSize: 15, color: "#92400e" }}>
           <span>You are on {day}. The session on deck is {onDeck}, and anything you cast goes to the room either way.</span>
           <button style={{ ...mini, marginLeft: "auto", borderColor: WARN, color: WARN }} onClick={() => setDay(onDeck)}>Go to {onDeck}</button>
         </div>
@@ -1505,7 +1505,7 @@ export default function Dashboard({ config }) {
           onSeats={setSeats} onAward={(n, a) => { awardHorn(n, a); markEngaged(); }} onClose={() => setHornOpen(false)} />
       ) : null}
 
-      <div style={{ maxWidth: 1560, margin: "0 auto", padding: "0 20px 40px", fontSize: 12.5, color: TEXT_MUTED }}>
+      <div style={{ maxWidth: 1560, margin: "0 auto", padding: "0 20px 40px", fontSize: 13, color: TEXT_MUTED }}>
         {dayMeta?.topic ? dayMeta.topic + " · " : ""}Press ⌘K to cast anything, ⌘/ for the rest of the keyboard. Panel arrangement is saved to this browser; everything else syncs to the class.
       </div>
     </div>

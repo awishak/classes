@@ -121,7 +121,7 @@ function DueBadge({ due, weight }) {
   const st = dueState(due);
   const c = st ? dueColor(st.tone) : TEXT_MUTED;
   return (
-    <span style={{ fontSize: 14, color: c, fontWeight: st && st.tone !== "calm" ? 700 : 400, flexShrink: 0 }}>
+    <span style={{ fontSize: 15, color: c, fontWeight: st && st.tone !== "calm" ? 700 : 400, flexShrink: 0 }}>
       {st ? st.text : "Ongoing"}{weight != null ? " · " + weight + "%" : ""}
     </span>
   );
@@ -194,11 +194,11 @@ function AssignmentLog({ asg, log, accent, studentName, actor, onLike, onDelete 
                     <div style={{ ...label, color: accent }}>Grade</div>
                     <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 2 }}>{fmtTime(e.ts)}</div>
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: accent, flexShrink: 0 }}>{e.score}/100</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: accent, flexShrink: 0 }}>{e.score}/100</div>
                 </div>
                 {asg.rubric?.length > 0 && e.rubric && (
                   <div style={{ marginTop: 8 }}>
-                    {asg.rubric.map(c => <div key={c.id} style={{ fontSize: 14, color: TEXT_SECONDARY }}>{c.name}: {e.rubric[c.id] ?? 0}/{c.points}</div>)}
+                    {asg.rubric.map(c => <div key={c.id} style={{ fontSize: 15, color: TEXT_SECONDARY }}>{c.name}: {e.rubric[c.id] ?? 0}/{c.points}</div>)}
                   </div>
                 )}
                 {e.html && <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + accent + "22" }}><RichText html={e.html} /></div>}
@@ -299,7 +299,7 @@ function StudentAssignmentRow({ asg, accent, config, data, update, name }) {
   return (
     <div style={{ background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, padding: 18 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
-        <div style={{ fontSize: 18, fontWeight: 600 }}>{asg.title}</div>
+        <div style={{ fontSize: 17, fontWeight: 600 }}>{asg.title}</div>
         <DueBadge due={asg.due} weight={asg.weight} />
       </div>
       {asg.description && <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 6 }}>{asg.description}</div>}
@@ -355,7 +355,7 @@ function InstructorAssignments({ config, data, update }) {
       <div style={{ display: "flex", gap: 4, background: BG, padding: 3, borderRadius: 999, border: "1px solid " + BORDER, width: "fit-content", marginBottom: 16 }}>
         {[["grade", "To grade"], ["manage", "Manage"]].map(([k, lbl]) => (
           <span key={k} onClick={() => setView(k)}
-            style={{ fontSize: 14, fontWeight: 600, padding: "8px 16px", borderRadius: 999, cursor: "pointer", background: view === k ? a : "transparent", color: view === k ? "#fff" : TEXT_SECONDARY }}>{lbl}</span>
+            style={{ fontSize: 15, fontWeight: 600, padding: "8px 16px", borderRadius: 999, cursor: "pointer", background: view === k ? a : "transparent", color: view === k ? "#fff" : TEXT_SECONDARY }}>{lbl}</span>
         ))}
       </div>
       {view === "grade"
@@ -374,8 +374,8 @@ function GradeHub({ config, data, assignments, onStart }) {
     <div>
       {needInstructions.length > 0 && (
         <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: 12, marginBottom: 16 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#b45309" }}>Reminders</div>
-          {needInstructions.map(x => <div key={x.id} style={{ fontSize: 14, color: "#92400e", marginTop: 4 }}>Post instructions for {x.title}</div>)}
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#b45309" }}>Reminders</div>
+          {needInstructions.map(x => <div key={x.id} style={{ fontSize: 15, color: "#92400e", marginTop: 4 }}>Post instructions for {x.title}</div>)}
         </div>
       )}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
@@ -441,7 +441,7 @@ function GradeFlow({ config, data, update, queue, onExit }) {
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
         <button onClick={onExit} style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, padding: 0 }}>← Exit</button>
-        <div style={{ fontSize: 14, color: TEXT_MUTED }}>{i + 1} of {queue.length}</div>
+        <div style={{ fontSize: 15, color: TEXT_MUTED }}>{i + 1} of {queue.length}</div>
       </div>
       <GradeForm key={aid + "|" + name} config={config} asg={asg} name={name} log={log} draftHtml={draft} onDraft={saveDraft} onSubmit={submit} onSkip={() => setI(i + 1)}
         onLike={(eid) => appreciate(update, aid, name, eid, "instructor")} onDelete={(eid) => deleteEvent(update, aid, name, eid)} />
@@ -498,7 +498,7 @@ function GradeForm({ config, asg, name, log, draftHtml, onDraft, onSubmit, onSki
     <div style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 16, padding: 18 }}>
       <div style={label}>{asg?.title} · {asg?.weight}%</div>
       <div style={{ fontSize: 22, fontWeight: 600, marginTop: 2 }}>{name}</div>
-      {prev && <div style={{ fontSize: 14, fontWeight: 600, color: a, marginTop: 2 }}>Current grade: {prev.score}/100 — change it below and Submit</div>}
+      {prev && <div style={{ fontSize: 15, fontWeight: 600, color: a, marginTop: 2 }}>Current grade: {prev.score}/100 — change it below and Submit</div>}
 
       <div style={{ marginTop: 14 }}><AssignmentLog asg={asg} log={log} accent={a} studentName={name} actor="instructor" onLike={onLike} onDelete={onDelete} /></div>
 
@@ -510,11 +510,11 @@ function GradeForm({ config, asg, name, log, draftHtml, onDraft, onSubmit, onSki
               <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div style={{ flex: 1, fontSize: 15 }}>{c.name}</div>
                 <input type="number" min="0" max={c.points} value={rubric[c.id]} onChange={e => setRubric(r => ({ ...r, [c.id]: e.target.value }))} style={{ ...inputStyle, width: 80, minHeight: 40, textAlign: "right" }} />
-                <div style={{ width: 44, fontSize: 14, color: TEXT_MUTED }}>/ {c.points}</div>
+                <div style={{ width: 44, fontSize: 15, color: TEXT_MUTED }}>/ {c.points}</div>
               </div>
             ))}
           </div>
-          <div style={{ marginTop: 10, fontSize: 18, fontWeight: 700, color: a }}>Score: {rubricScore}/100</div>
+          <div style={{ marginTop: 10, fontSize: 17, fontWeight: 700, color: a }}>Score: {rubricScore}/100</div>
         </div>
       ) : (
         <div style={{ marginTop: 16 }}>
@@ -551,7 +551,7 @@ function GradeForm({ config, asg, name, log, draftHtml, onDraft, onSubmit, onSki
         <Btn accent={a} ghost onClick={() => doSubmit(false)}>Submit</Btn>
         <Btn accent={a} ghost onClick={onSkip}>Skip</Btn>
       </div>
-      <button onClick={cantAccess} style={{ marginTop: 12, minHeight: TAP, padding: "0 16px", borderRadius: 10, border: "1px solid #fca5a5", background: "#fff", color: "#dc2626", fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+      <button onClick={cantAccess} style={{ marginTop: 12, minHeight: TAP, padding: "0 16px", borderRadius: 10, border: "1px solid #fca5a5", background: "#fff", color: "#dc2626", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
         Can't access link → 0 + resubmit notice
       </button>
     </div>
@@ -597,7 +597,7 @@ function ManageAssignments({ config, data, assignments, writeAssignments }) {
           <button key={asg.id} onClick={() => setEditing(asg.id)}
             style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER, borderRadius: 12, padding: 14, cursor: "pointer", fontFamily: F, minHeight: TAP }}>
             <div><div style={{ fontWeight: 600, fontSize: 16 }}>{asg.title}</div><Muted>Due {asg.due} · {asg.weight}% · {asg.rubric?.length ? asg.rubric.length + " criteria" : "free-form"}</Muted></div>
-            <span style={{ color: a, fontSize: 14, fontWeight: 600 }}>Edit</span>
+            <span style={{ color: a, fontSize: 15, fontWeight: 600 }}>Edit</span>
           </button>
         ))}
       </div>
@@ -656,7 +656,7 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
           </div>
         ))}
       </div>
-      <button onClick={() => setRubric(r => [...r, { id: genId(), name: "", points: 0 }])} style={{ marginTop: 8, background: "none", border: "none", color: a, fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer", padding: 0 }}>+ Add criterion</button>
+      <button onClick={() => setRubric(r => [...r, { id: genId(), name: "", points: 0 }])} style={{ marginTop: 8, background: "none", border: "none", color: a, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer", padding: 0 }}>+ Add criterion</button>
       <Muted style={{ marginTop: 6 }}>Leave the rubric empty to grade free-form (just a score out of 100).</Muted>
 
       <div style={{ display: "flex", gap: 8, marginTop: 18, alignItems: "center" }}>

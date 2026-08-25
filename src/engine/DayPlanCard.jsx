@@ -38,8 +38,8 @@ const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: 10, bord
 const selectStyle = { fontFamily: F, fontSize: 16, padding: "10px 14px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, minHeight: TAP, background: "#fff", color: TEXT_PRIMARY, maxWidth: "100%" };
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 const ghostBtn = { minHeight: 32, padding: "0 12px", borderRadius: 8, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_SECONDARY, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
-const linkBtn = (accent) => ({ background: "none", border: "none", color: accent, fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer", padding: 0 });
-const primaryBtn = (accent) => ({ minHeight: 40, padding: "0 16px", borderRadius: 10, border: "none", background: accent, color: "#fff", fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer" });
+const linkBtn = (accent) => ({ background: "none", border: "none", color: accent, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer", padding: 0 });
+const primaryBtn = (accent) => ({ minHeight: 40, padding: "0 16px", borderRadius: 10, border: "none", background: accent, color: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" });
 
 // per-card color palette (item cards can be tinted to color-code the flow)
 const ITEM_COLORS = ["#ef4444", "#f59e0b", "#eab308", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899"];
@@ -128,7 +128,7 @@ export function DayPlanSummary({ config, data }) {
     <div>
       <div style={{ fontSize: 13, fontWeight: 700, color: config.accent }}>Next class · {date}</div>
       <div style={{ fontWeight: 600, marginTop: 2 }}>{day?.topic || "Untitled"}</div>
-      <div style={{ fontSize: 14, color: TEXT_MUTED, marginTop: 4 }}>{detail}</div>
+      <div style={{ fontSize: 15, color: TEXT_MUTED, marginTop: 4 }}>{detail}</div>
     </div>
   );
 }
@@ -210,7 +210,7 @@ export function DayPlanDetail({ config, data, update, initialDate }) {
       {/* topic */}
       <div style={{ marginTop: 14, padding: 14, borderRadius: 12, background: a + "0c", border: "1px solid " + a + "33" }}>
         <div style={{ ...label, color: a }}>Topic</div>
-        <div style={{ fontSize: 18, fontWeight: 600, marginTop: 2 }}>{topic || "No topic set for this week"}</div>
+        <div style={{ fontSize: 17, fontWeight: 600, marginTop: 2 }}>{topic || "No topic set for this week"}</div>
         {seq.desc && <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 6 }}>{seq.name} · {seq.desc}</div>}
       </div>
 
@@ -284,8 +284,8 @@ function SlotRow({ index, slotDef, accent, slotData, seeds, topic, onSetHeader, 
           <span style={{ width: 22, height: 22, borderRadius: "50%", background: accent + "22", color: accent, fontSize: 12, fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{index + 1}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: customHeader ? TEXT_PRIMARY : accent, textTransform: customHeader ? "none" : "uppercase", letterSpacing: customHeader ? "normal" : "0.04em" }}>{headerTitle}</span>
-              {customHeader && <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", background: BG, border: "1px solid " + BORDER, borderRadius: 999, padding: "2px 8px" }}>{slotLabel(slot)}</span>}
+              <span style={{ fontSize: 15, fontWeight: 700, color: customHeader ? TEXT_PRIMARY : accent, textTransform: customHeader ? "none" : "uppercase", letterSpacing: customHeader ? "normal" : "0.04em" }}>{headerTitle}</span>
+              {customHeader && <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", background: BG, border: "1px solid " + BORDER, borderRadius: 999, padding: "2px 8px" }}>{slotLabel(slot)}</span>}
             </div>
             {headerNote && <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 4, lineHeight: 1.45 }}>{headerNote}</div>}
           </div>
@@ -330,7 +330,7 @@ function ItemCard({ item, accent, seed, onUpdate, onRemove, onSaveSeedBody }) {
           onCancel={() => setEditBody(false)} />
       ) : (
         <>
-          <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: seed ? 6 : 0, whiteSpace: "pre-wrap" }}>{shownBody}</div>
+          <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: seed ? 6 : 0, whiteSpace: "pre-wrap" }}>{shownBody}</div>
           {overridden && <div style={{ fontSize: 12, color: accent, marginTop: 6, fontWeight: 600 }}>Edited for this day</div>}
           <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
             <button onClick={() => setEditBody(true)} style={ghostBtn}>Edit text</button>
@@ -464,7 +464,7 @@ function AddToSlot({ slot, accent, seeds, topic, usedIds, startOpen, onAddSeed, 
                   <span style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY }}>{seed.title}</span>
                   <span style={{ display: "block", fontSize: 13, color: TEXT_MUTED, marginTop: 1 }}>{seed.concept}{score > 0 ? " · matches topic" : ""}</span>
                 </span>
-                <span style={{ color: accent, fontSize: 20, flexShrink: 0 }}>+</span>
+                <span style={{ color: accent, fontSize: 22, flexShrink: 0 }}>+</span>
               </button>
             ))}
           </div>
@@ -575,7 +575,7 @@ function BlockRow({ block, accent, onChange, onRemove, onDropBefore }) {
       style={{ borderRadius: 12, border: "1px solid " + (over ? accent : BORDER_STRONG), padding: 14, background: "#fff", boxShadow: over ? "0 -2px 0 " + accent : "none" }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <span draggable onDragStart={e => setDrag(e, block.id)} title="Drag to reorder"
-          style={{ cursor: "grab", color: TEXT_MUTED, fontSize: 18, padding: "0 4px", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
+          style={{ cursor: "grab", color: TEXT_MUTED, fontSize: 17, padding: "0 4px", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <input value={block.title} onChange={e => onChange({ title: e.target.value })} placeholder="Block title (e.g. Logistics, Hand back quizzes)"
           style={{ ...inputStyle, fontWeight: 600, minHeight: 40, padding: "8px 10px" }} />
         <button onClick={onRemove} title="Remove block"

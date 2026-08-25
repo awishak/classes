@@ -231,7 +231,7 @@ function ProfileForm({ student, initial, update, accent }) {
 
       <div style={{ marginTop: 20, display: "flex", gap: 12, alignItems: "center" }}>
         <SendBtn accent={a} onClick={save}>Save profile</SendBtn>
-        {saved && <span style={{ fontSize: 14, fontWeight: 600, color: "#059669" }}>Saved</span>}
+        {saved && <span style={{ fontSize: 15, fontWeight: 600, color: "#059669" }}>Saved</span>}
       </div>
     </div>
   );
@@ -256,11 +256,11 @@ function GradeBreakdown({ config, data, name, accent }) {
       <div style={label}>Current grade</div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
         <div style={{ fontSize: 32, fontWeight: 700, color: accent }}>{pct != null ? pct + "%" : "--"}</div>
-        <div style={{ fontSize: 14, color: TEXT_MUTED }}>
+        <div style={{ fontSize: 15, color: TEXT_MUTED }}>
           {pct != null ? "on " + share + "% of the course so far" : "nothing graded yet"}
         </div>
         <button onClick={() => setOpen(v => !v)}
-          style={{ background: "none", border: "none", color: accent, fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer", minHeight: TAP, marginLeft: "auto" }}>
+          style={{ background: "none", border: "none", color: accent, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer", minHeight: TAP, marginLeft: "auto" }}>
           {open ? "Hide the maths" : "How is this worked out?"}
         </button>
       </div>
@@ -281,7 +281,7 @@ function GradeBreakdown({ config, data, name, accent }) {
             );
           })}
           {outstanding.length ? (
-            <div style={{ padding: "10px 14px", borderTop: "1px solid " + BORDER, fontSize: 14, color: TEXT_MUTED, background: BG }}>
+            <div style={{ padding: "10px 14px", borderTop: "1px solid " + BORDER, fontSize: 15, color: TEXT_MUTED, background: BG }}>
               The {100 - share}% still outstanding is not counted against you. It is simply not graded yet.
             </div>
           ) : null}
@@ -400,7 +400,7 @@ function InstructorYou({ config, data, update }) {
               <div style={{ width: 40, height: 40, borderRadius: "50%", background: a + "22", border: "2px solid " + a + "55", flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 16 }}>{s.name}</div>
-                <div style={{ fontSize: 14, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</div>
+                <div style={{ fontSize: 15, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</div>
               </div>
               {waiting && <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: a, padding: "4px 10px", borderRadius: 999, flexShrink: 0 }}>Reply</span>}
             </button>

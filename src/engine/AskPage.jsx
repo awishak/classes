@@ -77,7 +77,7 @@ function HeadlinesBlock({ config, HL, session, item, phase, who, which, picks })
     <div style={box}>
       <div style={eyebrow}>{phase === "surface" ? "What is this, on its face?" : "What is really going on?"}</div>
       <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.35 }}>{item.text}</div>
-      {item.url ? <a href={item.url} target="_blank" rel="noreferrer" style={{ color: config.accent, fontSize: 14 }}>Read it ↗</a> : null}
+      {item.url ? <a href={item.url} target="_blank" rel="noreferrer" style={{ color: config.accent, fontSize: 15 }}>Read it ↗</a> : null}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {options.map(o => {
           const on = local.includes(o);
@@ -93,7 +93,7 @@ function HeadlinesBlock({ config, HL, session, item, phase, who, which, picks })
         style={bigBtn(local.length ? config.accent : BORDER_STRONG)}>
         {picks.length ? "Change my answer" : "Lock it in"}
       </button>
-      <div style={{ fontSize: 13.5, color: TEXT_MUTED }}>Pick as many as apply.</div>
+      <div style={{ fontSize: 13, color: TEXT_MUTED }}>Pick as many as apply.</div>
     </div>
   );
 }
@@ -196,7 +196,7 @@ export default function AskPage({ config }) {
       <div style={wrap}>
         <div style={card}>
           {header}
-          <div style={{ fontSize: 20, fontWeight: 600 }}>{picking}</div>
+          <div style={{ fontSize: 22, fontWeight: 600 }}>{picking}</div>
           {needsPin ? (
             <>
               <input autoFocus type="password" inputMode="numeric" maxLength={6} value={pin}
@@ -248,7 +248,7 @@ export default function AskPage({ config }) {
           </div>
           {error ? <div style={{ color: RED, fontWeight: 500 }}>{error}</div> : null}
           <button onClick={() => { setMode(null); setError(""); setLinkSent(false); }}
-            style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 14, cursor: "pointer", textAlign: "left", padding: 0 }}>
+            style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 15, cursor: "pointer", textAlign: "left", padding: 0 }}>
             ← Other ways in
           </button>
         </div>
@@ -295,7 +295,7 @@ export default function AskPage({ config }) {
           </div>
           {!verified ? (
             <button onClick={() => setMode(null)}
-              style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 14, cursor: "pointer", textAlign: "left", padding: 0 }}>
+              style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 15, cursor: "pointer", textAlign: "left", padding: 0 }}>
               ← Other ways in
             </button>
           ) : null}
@@ -325,7 +325,7 @@ export default function AskPage({ config }) {
             <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: config.accent }}>
               {poll.phase === "vote2" ? "Vote again" : "Vote"}
             </div>
-            <div style={{ fontSize: 19, fontWeight: 600, lineHeight: 1.35, letterSpacing: "-.01em" }}>{poll.question}</div>
+            <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.35, letterSpacing: "-.01em" }}>{poll.question}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {poll.options.map((o, i) => {
                 const mine = myVote === i;
@@ -341,7 +341,7 @@ export default function AskPage({ config }) {
                 );
               })}
             </div>
-            <div style={{ fontSize: 13.5, color: TEXT_MUTED }}>
+            <div style={{ fontSize: 13, color: TEXT_MUTED }}>
               {myVote != null ? "Locked in. Change it any time before the floor closes." : "Pick one. Nobody sees who picked what."}
             </div>
           </div>
@@ -362,7 +362,7 @@ export default function AskPage({ config }) {
         <button onClick={send} disabled={!text.trim()} style={bigBtn(text.trim() ? config.accent : BORDER_STRONG)}>Send</button>
         {sent ? <div style={{ color: config.accent, fontWeight: 600, fontSize: 15 }}>Sent. Ask another any time.</div> : null}
         <button onClick={() => { setWho(null); setPicking(null); setMode(null); setVerified(null); try { localStorage.removeItem(REMEMBER); } catch { /* private mode */ } }}
-          style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 14, cursor: "pointer", textAlign: "left", padding: 0, marginTop: 4 }}>
+          style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 15, cursor: "pointer", textAlign: "left", padding: 0, marginTop: 4 }}>
           Not {who}?
         </button>
       </div>

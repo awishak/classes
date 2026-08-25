@@ -20,6 +20,12 @@ const comm999 = {
   storageKey: "comm999-v1",
   adminPin: "999999",
 
+  // This is the template class — the one I open to show somebody what the app
+  // looks like. The sign-in on a real class stops a student reading a
+  // classmate's grade; here the roster is ten placeholder names, so the door
+  // only hides the thing I am trying to show. A real class leaves this off.
+  openAccess: true,
+
   // ─── People ───
   // Goals get filled in on day one (first-day "what are your goals" seed).
   testStudent: "Zack Girgis",
