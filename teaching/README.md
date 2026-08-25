@@ -1,9 +1,10 @@
 # Teaching
 
-Three living docs that work together.
+Four living docs that work together.
 
 - **[improvement-list.md](improvement-list.md)** — running backlog of ideas to improve teaching flow, class administration, and this LMS. Dump freely, groom occasionally.
 - **[seeds.md](seeds.md)** — the seed library. Small stories / examples / hooks that are fun to talk about, each tagged by the concept it teaches.
+- **[debates.md](debates.md)** — ethical debates. Three questions per topic (should / could / would), with sources. Students pick one, split into three groups, then come back together.
 - **[sequences.md](sequences.md)** — named lecture structures. Each sequence is a list of slots. You build a lecture by picking a sequence and filling its slots with seeds.
 
 ## How they click together

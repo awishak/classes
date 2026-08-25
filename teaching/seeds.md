@@ -61,3 +61,19 @@ An 83-point game in a meaningless game was a farce, and yet more entertaining th
 - **Source:** end-of-class ritual
 
 End class by handing them the choice. Either the surprise version — "Hmm, maybe I shouldn't do this... do you all want a challenging question?" — or put easy / challenging / nerd questions on the board and let students pick which one to discuss. The turn: the choice lets them aim their own attention at what they came for, while giving quiet cover to anyone who didn't get it (picking "easy" reads as preference, not confession). The surprise framing manufactures stakes on a no-stakes question. You read the room by what they reach for.
+
+### Popcorn and movie times
+- **Concept:** precision
+- **Class:** any
+- **Slot:** connect, explain
+- **Source:** microwave popcorn bag vs. theater listings
+
+Start with popcorn. Then movie times in theaters. It's really about the clock, but the topic is precision.
+
+### Should / Could / Would (ethical debate)
+- **Concept:** ethical debate / applied judgment
+- **Class:** any
+- **Slot:** connect, move
+- **Source:** ethics-debate ritual
+
+Three ethical questions on the day's topic, one of each kind, each with a source or two attached. **Should** asks what ought to happen. **Could** is a prediction: where does this go, and how fast. **Would** is personal: if the chance landed in front of you, what do you do. Put all three on the board, let students split into three groups by the question they picked, then come back together and hear all three out. The turn: the three kinds pull different students forward. The policy student takes *should*, the futurist takes *could*, and *would* catches the one who's actually going to face the decision at work in four years. And because they picked, they argue harder, and you learn what the room cares about by watching where they go. Works cold at the top of class or as a punctuation mark after a story. Pairs with [choose your question](#choose-your-question-easy--challenging--nerd).
