@@ -580,31 +580,12 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
     </div>
   ) : null;
 
-  if (!plan || !seq) return (
-    <>
-      {seqPicker}
-      {slidesBlock}
-      {unplannedBlock}
-      {featureBlock}
-      {blockBlock}
-      <Muted>Nothing planned for <b style={{ color: TEXT_PRIMARY }}>{where}</b> yet.</Muted>
-      <GoTo href={planHref} accent={accent}>Build it in Day Plan →</GoTo>
-    </>
-  );
-  const seedById = (id) => seeds.find(s => s.id === id);
-  const slotItems = plan.slots || {};
-  const any = seq.slots.some(s => normSlot(slotItems[s.slot]).items.length);
-  if (!any) return (
-    <>
-      {seqPicker}
-      {slidesBlock}
-      {unplannedBlock}
-      {featureBlock}
-      {blockBlock}
-      {blockBlock ? null : <Muted><b style={{ color: TEXT_PRIMARY }}>{where}</b> has a sequence with nothing in it yet.</Muted>}
-      <GoTo href={planHref} accent={accent}>Fill the slots in Day Plan →</GoTo>
-    </>
-  );
+  // No early return for an empty day. A day with nothing in it is the day I
+  // have opened this panel to build, so the slots have to be on screen with
+  // their Add buttons whether or not anything is in them yet.
+  const anyContent = seq
+    ? seq.slots.some(x => normSlot(slotItems[x.slot]).items.length)
+    : false;
 
   return (
     <>
@@ -612,7 +593,7 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
       {slidesBlock}
       {unplannedBlock}
       {featureBlock}
-      {seq.slots.map(s => {
+      {(seq?.slots || []).map(s => {
         const bucket = normSlot(slotItems[s.slot]);
         const items = bucket.items;
         const usedSeeds = new Set(seq.slots.flatMap(x => normSlot(slotItems[x.slot]).items).map(x => x.seedId).filter(Boolean));
@@ -661,6 +642,14 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
         );
       })}
       {blockBlock}
+      {!anyContent && !blockBlock ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
+          <Muted style={{ fontSize: 13 }}>
+            Nothing in <b style={{ color: TEXT_PRIMARY }}>{where}</b> yet. Add to a slot above, or build it out on the full page.
+          </Muted>
+          <GoTo href={planHref} accent={accent}>Open Day Plan →</GoTo>
+        </div>
+      ) : null}
     </>
   );
 }
