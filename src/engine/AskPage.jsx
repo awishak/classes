@@ -10,7 +10,7 @@ import { useState, useEffect } from "react";
 import { useQuestions } from "./questions.js";
 import { useClassData } from "./store.js";
 import { sendSignInEmail, verifyEmailCode, emailFromRedirect, loadEmailMap, saveEmailName } from "./auth.js";
-import { usePoll, openRound } from "./poll.js";
+import { usePoll, openRound, isFreeForm } from "./poll.js";
 import { useHeadlines, liveSession, activeItem } from "./headlines.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -94,6 +94,21 @@ function HeadlinesBlock({ config, HL, session, item, phase, who, which, picks })
         {picks.length ? "Change my answer" : "Lock it in"}
       </button>
       <div style={{ fontSize: 13, color: TEXT_MUTED }}>Pick as many as apply.</div>
+    </div>
+  );
+}
+
+function FreeAnswer({ who, vote, accent, mine }) {
+  const [text, setText] = useState(typeof mine === "string" ? mine : "");
+  const [sent, setSent] = useState(typeof mine === "string");
+  const send = () => { if (!text.trim()) return; vote(who, text.trim()); setSent(true); };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <textarea value={text} onChange={e => { setText(e.target.value); setSent(false); }}
+        placeholder="In your own words" rows={3}
+        style={{ ...input, minHeight: 96, lineHeight: 1.5, resize: "vertical" }} />
+      <button onClick={send} disabled={!text.trim()}
+        style={{ ...bigBtn(text.trim() ? accent : "#d1d5db") }}>{sent ? "Sent \u2014 send again to change it" : "Send"}</button>
     </div>
   );
 }
@@ -326,6 +341,9 @@ export default function AskPage({ config }) {
               {poll.phase === "vote2" ? "Vote again" : "Vote"}
             </div>
             <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.35, letterSpacing: "-.01em" }}>{poll.question}</div>
+            {isFreeForm(poll) ? (
+              <FreeAnswer who={who} vote={vote} accent={config.accent} mine={myVote} />
+            ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {poll.options.map((o, i) => {
                 const mine = myVote === i;
@@ -341,8 +359,11 @@ export default function AskPage({ config }) {
                 );
               })}
             </div>
+            )}
             <div style={{ fontSize: 13, color: TEXT_MUTED }}>
-              {myVote != null ? "Locked in. Change it any time before the floor closes." : "Pick one. Nobody sees who picked what."}
+              {isFreeForm(poll)
+                ? "Your name is on this one, so I can follow it up."
+                : myVote != null ? "Locked in. Change it any time before the floor closes." : "Pick one. Nobody sees who picked what."}
             </div>
           </div>
         ) : null}

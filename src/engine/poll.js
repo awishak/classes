@@ -18,13 +18,26 @@ export const pollKey = (storageKey) => storageKey + "-poll";
 
 export const EMPTY_POLL = { id: null, question: "", options: [], phase: "idle", r1: {}, r2: {}, correct: null, at: 0 };
 
+// No options means they write their own answer.
+export const isFreeForm = (poll) => !((poll?.options || []).length);
+
 // Which round a vote lands in, or null when the floor is closed.
 export const openRound = (poll) =>
   poll?.phase === "vote1" ? "r1" : poll?.phase === "vote2" ? "r2" : null;
 
+// What people wrote, most repeated first, with who said it.
+export function written(votes) {
+  const out = [];
+  Object.entries(votes || {}).forEach(([who, v]) => {
+    if (typeof v !== "string" || !v.trim()) return;
+    out.push({ who, text: v.trim() });
+  });
+  return out;
+}
+
 export function tally(votes, optionCount) {
   const counts = new Array(optionCount).fill(0);
-  Object.values(votes || {}).forEach(i => { if (i >= 0 && i < optionCount) counts[i]++; });
+  Object.values(votes || {}).forEach(i => { if (typeof i === "number" && i >= 0 && i < optionCount) counts[i]++; });
   const total = counts.reduce((a, b) => a + b, 0);
   return { counts, total };
 }
@@ -71,10 +84,13 @@ export function usePoll(storageKey) {
 
   // One vote per student per round; changing your mind before the round closes
   // is fine, and is part of the point.
-  const vote = useCallback((student, optionIndex) => {
+  // An answer is an option index on a normal poll and the student's own words
+  // on a free-form one. Both go in the same place; the reader tells them apart
+  // by type rather than by asking the poll.
+  const vote = useCallback((student, answer) => {
     const round = openRound(ref.current);
     if (!round) return false;
-    write({ [round]: { ...(ref.current[round] || {}), [student]: optionIndex } });
+    write({ [round]: { ...(ref.current[round] || {}), [student]: answer } });
     return true;
   }, [write]);
 

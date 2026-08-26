@@ -9,7 +9,7 @@ import { useLive } from "./live.js";
 import { useClassData } from "./store.js";
 import { currentDay } from "./days.js";
 import QRCode from "./QRCode.jsx";
-import { usePoll, tally } from "./poll.js";
+import { usePoll, tally, written, isFreeForm } from "./poll.js";
 import { useHeadlines, liveSession, activeItem, pickTally } from "./headlines.js";
 import { ENGINE_LIST } from "../config/registry.js";
 
@@ -211,6 +211,23 @@ function PollScreen({ config }) {
         {poll.question}
       </div>
 
+      {isFreeForm(poll) ? (
+        // No options to draw bars for. While the floor is open the room sees
+        // the count and nothing else, because seeing the answers is how you
+        // stop writing your own. Once it closes, they all go up.
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.2vh", marginTop: "1vh" }}>
+          {voting ? (
+            <div style={{ fontFamily: MONO, fontSize: "clamp(28px,5vw,72px)", color: DIM }}>{inCount} in</div>
+          ) : (
+            written({ ...poll.r1, ...poll.r2 }).slice(0, 8).map((r, i) => (
+              <div key={i} style={{ fontSize: "clamp(16px,1.9vw,30px)", lineHeight: 1.35, color: INK }}>
+                {r.text}
+                <span style={{ color: DIM, fontSize: "0.7em" }}>{"  \u2014 " + r.who}</span>
+              </div>
+            ))
+          )}
+        </div>
+      ) : (
       <div style={{ display: "flex", flexDirection: "column", gap: "1.5vh", marginTop: "1vh" }}>
         {poll.options.map((o, i) => {
           const pct = t && t.total ? Math.round((t.counts[i] / t.total) * 100) : null;
@@ -238,6 +255,7 @@ function PollScreen({ config }) {
           );
         })}
       </div>
+      )}
 
       {voting ? (
         <div style={{ display: "flex", gap: "clamp(20px,3vw,44px)", alignItems: "center", marginTop: "2vh", flexWrap: "wrap" }}>

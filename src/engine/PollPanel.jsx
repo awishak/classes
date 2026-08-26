@@ -2,7 +2,7 @@
 // room screen shows the question and, at the end, what moved between rounds.
 
 import { useState } from "react";
-import { tally } from "./poll.js";
+import { tally, written, isFreeForm } from "./poll.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -22,6 +22,22 @@ const LETTERS = ["A", "B", "C", "D", "E"];
 
 // A spread of votes as bars. `compare` draws the first round behind as a ghost
 // so the shift between rounds is the thing you actually see.
+export function Wrote({ votes }) {
+  const rows = written(votes);
+  if (!rows.length) return <div style={{ fontSize: 15, color: MUTED }}>Nothing in yet.</div>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {rows.map((r, i) => (
+        <div key={i} style={{ padding: "8px 10px", borderRadius: 9, background: "#f4f3f1" }}>
+          <div style={{ fontSize: 14.5, lineHeight: 1.4, color: INK, wordBreak: "break-word" }}>{r.text}</div>
+          <div style={{ ...label, fontSize: 11, marginTop: 3 }}>{r.who}</div>
+        </div>
+      ))}
+      <div style={{ ...label, fontSize: 11 }}>{rows.length} in</div>
+    </div>
+  );
+}
+
 export function Spread({ votes, options, accent, correct, compare }) {
   const { counts, total } = tally(votes, options.length);
   const base = compare ? tally(compare, options.length) : null;
@@ -63,15 +79,19 @@ export function oneSentence(text) {
 export default function PollPanel({ poll, start, setPhase, setCorrect, clear, roster, accent, onCast }) {
   const [q, setQ] = useState("");
   const [opts, setOpts] = useState(["", "", ""]);
+  // Peer Instruction wants options, because the second vote only means
+  // something if there is something to move between. "What was the muddiest
+  // point" wants their words instead.
+  const [freeForm, setFreeForm] = useState(false);
 
   if (!poll) return <div style={{ fontSize: 15, color: MUTED }}>Loading…</div>;
 
   const setOpt = (i, v) => setOpts(o => o.map((x, j) => j === i ? v : x));
   const clean = opts.map(o => o.trim()).filter(Boolean);
-  const canStart = q.trim().length > 3 && clean.length >= 2;
+  const canStart = q.trim().length > 3 && (freeForm || clean.length >= 2);
 
   const begin = () => {
-    start(oneSentence(q), clean);
+    start(oneSentence(q), freeForm ? [] : clean);
     onCast();
     setQ(""); setOpts(["", "", ""]);
   };
@@ -109,11 +129,13 @@ export default function PollPanel({ poll, start, setPhase, setCorrect, clear, ro
 
       {poll.phase === "done" ? (
         <>
-          <div style={label}>Second vote, first vote behind it</div>
-          <Spread votes={poll.r2} compare={poll.r1} options={poll.options} accent={accent} correct={poll.correct} />
+          <div style={label}>{isFreeForm(poll) ? "What they wrote" : "Second vote, first vote behind it"}</div>
+          {isFreeForm(poll)
+            ? <Wrote votes={{ ...poll.r1, ...poll.r2 }} />
+            : <Spread votes={poll.r2} compare={poll.r1} options={poll.options} accent={accent} correct={poll.correct} />}
         </>
       ) : (
-        <Spread votes={votes} options={poll.options} accent={accent}
+        isFreeForm(poll) ? <Wrote votes={votes} /> : <Spread votes={votes} options={poll.options} accent={accent}
           correct={poll.phase === "discuss" ? poll.correct : null} />
       )}
 

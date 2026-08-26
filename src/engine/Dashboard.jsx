@@ -610,6 +610,77 @@ function AfterTheMain({ accent }) {
 // they are blocks like anything else: droppable into a day, editable, and I can
 // add to them. Seeded rather than left empty, because the one empty state that
 // reliably stops people starting is a blank box with a plus on it.
+function IdeasPanel({ blocks, accent, slots, onPick, onAdd, onEdit, onRemove, onDuplicate }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [placing, setPlacing] = useState(null);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const moves = (blocks || []).filter(b => (b.tags || []).includes("teaching move"));
+
+  const startEdit = (b) => { setEditing(b.id); setTitle(b.title); setBody(b.body || ""); setOpen(false); };
+  const commit = () => {
+    if (!title.trim()) return;
+    if (editing) onEdit(editing, title.trim(), body.trim());
+    else onAdd(title.trim(), body.trim());
+    setTitle(""); setBody(""); setEditing(null); setOpen(false);
+  };
+  const cancel = () => { setTitle(""); setBody(""); setEditing(null); setOpen(false); };
+
+  const form = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, border: "1px solid " + accent, background: "#fff" }}>
+      <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="What is it called" style={inputStyle} />
+      <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="How it runs"
+        style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical" }} />
+      <div style={{ display: "flex", gap: 7 }}>
+        <button style={solid(accent)} onClick={commit}>{editing ? "Save" : "Keep it"}</button>
+        <button style={mini} onClick={cancel}>Cancel</button>
+      </div>
+    </div>
+  );
+
+  const tool = { ...mini, minHeight: 26, padding: "0 8px", fontSize: 12, color: TEXT_MUTED };
+
+  return (
+    <>
+      {moves.map(b => editing === b.id ? <div key={b.id}>{form}</div> : (
+        <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "9px 11px",
+          borderRadius: 10, background: SURFACE_2 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
+            <span style={{ flex: "none", marginTop: 5, width: 7, height: 7, borderRadius: "50%", background: typeOf("activity").color }} />
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <b style={{ display: "block", fontWeight: 600, fontSize: 14, color: TEXT_PRIMARY }}>{b.title}</b>
+              {b.body ? <small style={{ color: TEXT_MUTED, fontSize: 12.5, lineHeight: 1.4, display: "block" }}>{b.body}</small> : null}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            <button className="dash-focus" style={{ ...tool, borderColor: accent, color: accent }}
+              onClick={() => setPlacing(placing === b.id ? null : b.id)}>{placing === b.id ? "Cancel" : "Add to a section"}</button>
+            <button className="dash-focus" style={tool} onClick={() => startEdit(b)}>Edit</button>
+            <button className="dash-focus" style={tool} onClick={() => onDuplicate(b)}>Duplicate</button>
+            <button className="dash-focus" style={{ ...tool, marginLeft: "auto" }} onClick={() => onRemove(b.id)}>Delete</button>
+          </div>
+          {placing === b.id ? (
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              <span style={{ ...label, fontSize: 12, alignSelf: "center" }}>Into</span>
+              {(slots || []).map(sl => (
+                <button key={sl} className="dash-focus" style={{ ...tool, minHeight: HIT }}
+                  onClick={() => { onPick(sl, b); setPlacing(null); }}>{sl}</button>
+              ))}
+              <button className="dash-focus" style={{ ...tool, minHeight: HIT }}
+                onClick={() => { onPick("__after", b); setPlacing(null); }}>after the main section</button>
+            </div>
+          ) : null}
+        </div>
+      ))}
+      {open && !editing ? form : (
+        <button className="dash-focus" style={{ ...mini, alignSelf: "flex-start" }} onClick={() => setOpen(true)}>+ Add an idea</button>
+      )}
+      <Muted style={{ fontSize: 12 }}>Kept with me rather than with a class, so they are in all of them.</Muted>
+    </>
+  );
+}
+
 function Suggestions({ blocks, accent, onPick, onAdd }) {
   const [open, setOpen] = useState(false);
   const [more, setMore] = useState(false);
@@ -842,9 +913,9 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
         return (
           <div key={s.slot} style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              overrideTitle
+              {overrideTitle
                 ? <span style={{ ...label, color: accent }}>{overrideTitle}</span>
-                : <SlotName slot={s.slot} title={bucket.title} accent={accent} onSave={(t) => onSetSlotTitle(s.slot, t)} />
+                : <SlotName slot={s.slot} title={bucket.title} accent={accent} onSave={(t) => onSetSlotTitle(s.slot, t)} />}
               <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
                 onClick={() => setAdding(adding === s.slot ? null : s.slot)}>{adding === s.slot ? "Close" : "+ Add"}</button>
             </div>
@@ -907,7 +978,6 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
         onAdd={onAddReading} onRemove={onRemoveReading} blocks={blocks2} onPickBlock={onPickReading} />
       <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />
       {renderSlot({ slot: EXTRA.coming }, "Also coming up")}
-      <Suggestions blocks={blocks2} accent={accent} onPick={(b) => onPickBlock(EXTRA.after, b)} onAdd={onAddIdea} />
       {blockBlock}
       {freeform ? addBlockRow : null}
       {!anyContent && !blockBlock && !freeform ? (
@@ -1619,11 +1689,11 @@ function Picker({ title, opts, value, onPick, accent }) {
 // what this screen is for. Everything else supports that. Attendance and the
 // engagement clock are useful and they were competing for the top of the page
 // with the thing I actually came here to do.
-const DEFAULT_ORDER = ["flow", "todo", "stocked", "boards", "questions", "scratch", "poll", "now", "attendance", "assignments"];
+const DEFAULT_ORDER = ["flow", "todo", "ideas", "boards", "questions", "scratch", "poll", "now", "attendance", "assignments"];
 // Open on what I came here for. The rest keep their bar so I know they are
 // there, and one click brings any of them back.
-const DEFAULT_COLLAPSED = ["boards", "poll", "questions", "attendance", "now"];
-const DEFAULT_SPANS = { flow: "2", todo: "2", stocked: "1", boards: "1", questions: "1", scratch: "1", poll: "2", now: "1", attendance: "2", assignments: "1" };
+const DEFAULT_COLLAPSED = ["ideas", "boards", "poll", "questions", "attendance", "now"];
+const DEFAULT_SPANS = { flow: "2", todo: "2", ideas: "1", boards: "1", questions: "1", scratch: "1", poll: "2", now: "1", attendance: "2", assignments: "1" };
 
 export default function Dashboard({ config }) {
   const [data, update] = useClassData(config.storageKey);
@@ -1937,6 +2007,19 @@ export default function Dashboard({ config }) {
     };
   });
 
+  const editIdea = (id, title, body) => updateShared(prev => ({
+    ...prev, blocks: { ...(prev.blocks || {}), [id]: { ...(prev.blocks || {})[id], title, body } },
+  }));
+  const removeIdea = (id) => updateShared(prev => {
+    const blocks = { ...(prev.blocks || {}) };
+    delete blocks[id];
+    return { ...prev, blocks };
+  });
+  const duplicateIdea = (b) => updateShared(prev => {
+    const id = genId();
+    return { ...prev, blocks: { ...(prev.blocks || {}), [id]: { ...b, id, title: b.title + " (copy)", scheduled: [] } } };
+  });
+
   const pickBlock = (slot, b) => {
     addFlowItem(slot, { blockId: b.id });
     stampScheduled(writeTo(b.id), b.id, day);
@@ -2137,16 +2220,8 @@ export default function Dashboard({ config }) {
       onAddIdea={addIdea} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
-    stocked: () => <StockedPanel shelves={shelves} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
-      accent={config.accent} onClaim={saveStockClaim}
-      slots={(seq?.slots || []).map(x => x.slot)}
-      onToFlow={(slot, item) => addFlowItem(slot, {
-        text: item.claim || item.title,
-        claim: item.claim,
-        links: item.url ? [{ id: genId(), label: item.title, url: item.url }] : [],
-      })}
-      onAdd={(sh, item) => setShelf(sh, list => [...list, item])}
-      onRemove={(sh, id) => setShelf(sh, list => list.filter(x => x.id !== id))} />,
+    ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent} slots={(seq?.slots || []).map(x => x.slot)}
+      onPick={pickBlock} onAdd={addIdea} onEdit={editIdea} onRemove={removeIdea} onDuplicate={duplicateIdea} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
       castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,
     attendance: () => <AttendancePanel students={students} marks={marks} onMark={mark} onReset={resetAttendance} />,
@@ -2156,7 +2231,7 @@ export default function Dashboard({ config }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
   };
-  const TITLES = { todo: "To-Do", now: "Class Clock", poll: "Poll", flow: "Class Flow", boards: "Before & After", stocked: "Stocked", questions: "Questions", attendance: "Attendance", scratch: "Notes", assignments: "Assignments" };
+  const TITLES = { todo: "To-Do", now: "Class Clock", poll: "Class Poll", flow: "Class Flow", boards: "Before & After", ideas: "Ideas", questions: "Student Questions", attendance: "Attendance", scratch: "Notes", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   // Casting from the wrong session is silent and total: the room gets last
   // Wednesday and nothing on this screen says so.
