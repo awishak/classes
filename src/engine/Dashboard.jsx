@@ -150,7 +150,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // Nothing goes up as a label. Before a thing can be cast it needs a headline —
 // one full sentence saying what it shows. "Media rights" is a topic; "Rights
 // fees have risen 45% in ten years" is what the room can actually read.
-function Castable({ kind, kindColor, title, sub, url, claim, live, accent, onCast, onDismiss, onSaveClaim }) {
+function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(claim || "");
   useEffect(() => { setDraft(claim || ""); }, [claim]);
@@ -189,38 +189,33 @@ function Castable({ kind, kindColor, title, sub, url, claim, live, accent, onCas
 
   const act = { ...mini, minHeight: HIT, padding: "0 10px", fontSize: 13 };
 
+  // The name of the thing comes first and gets the left edge to itself. What
+  // kind of thing it is and what I can do with it follow, on the same line,
+  // because they are answers to questions I only ask after reading the name.
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 11px", borderRadius: 10,
+    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "8px 11px", borderRadius: 10,
       background: live ? "rgba(225,29,72,.07)" : SURFACE_2, border: "1px solid " + (live ? LIVE : "transparent") }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-        <span style={{ flex: "none", marginTop: 2, fontFamily: MONO, fontSize: 12, fontWeight: 600, letterSpacing: ".08em",
-          textTransform: "uppercase", padding: "3px 6px", borderRadius: 5, background: "#fff",
-          border: "1px solid " + (kindColor || BORDER_STRONG), color: kindColor || TEXT_MUTED }}>{kind}</span>
-        {live ? <LiveTag /> : null}
-        <span style={{ minWidth: 0, flex: 1 }}>
-          <b style={{ display: "block", fontWeight: 500, fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.35 }}>{claim || title}</b>
-          {claim || sub ? (
-            <small style={{ color: TEXT_MUTED, fontSize: 12, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {claim ? title : sub}
-            </small>
-          ) : null}
-        </span>
-      </div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {url ? (
-          <a href={url} target="_blank" rel="noreferrer"
-            style={{ ...act, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Open here ↗</a>
-        ) : null}
-        {live ? (
-          <button style={{ ...act, borderColor: LIVE, color: LIVE }} onClick={onDismiss}>Take it down ×</button>
-        ) : (
-          <button style={{ ...act, borderColor: accent, color: accent }}
-            onClick={() => { if (claim) onCast(claim); else setEditing(true); }}>To the room →</button>
-        )}
-        <button style={{ ...act, marginLeft: "auto", color: TEXT_MUTED }} onClick={() => setEditing(true)}>
-          {claim ? "Headline" : "Write headline"}
-        </button>
-      </div>
+      <b style={{ flex: "1 1 min(100%, 14rem)", minWidth: 0, fontWeight: 500, fontSize: 15,
+        color: TEXT_PRIMARY, lineHeight: 1.35, wordBreak: "break-word" }}>{claim || title}</b>
+
+      <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, fontWeight: 600, letterSpacing: ".08em",
+        textTransform: "uppercase", padding: "3px 6px", borderRadius: 5, background: "#fff",
+        border: "1px solid " + (kindColor || BORDER_STRONG), color: kindColor || TEXT_MUTED }}>{kind}</span>
+      {live ? <LiveTag /> : null}
+
+      {url ? (
+        <a className="dash-focus" href={url} target="_blank" rel="noreferrer"
+          style={{ ...act, flex: "none", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Open ↗</a>
+      ) : null}
+      {live ? (
+        <button className="dash-focus" style={{ ...act, flex: "none", borderColor: LIVE, color: LIVE }} onClick={onDismiss}>Take it down ×</button>
+      ) : (
+        <button className="dash-focus" style={{ ...act, flex: "none", borderColor: accent, color: accent }}
+          onClick={() => { if (claim) onCast(claim); else setEditing(true); }}>To the room →</button>
+      )}
+      <button className="dash-focus" style={{ ...act, flex: "none", color: TEXT_MUTED }} onClick={() => setEditing(true)}>
+        {claim ? "Headline" : "Write headline"}
+      </button>
     </div>
   );
 }
@@ -811,7 +806,7 @@ function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove,
         return (
         <div key={it.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Castable kind={typeLabel(it.type)} kindColor={TYPE_COLOR[it.type] || TYPE_COLOR.reading} title={it.title} sub={it.url} url={it.url}
+            <Castable kind={typeLabel(it.type)} kindColor={TYPE_COLOR[it.type] || TYPE_COLOR.reading} title={it.title} url={it.url}
               claim={headline} accent={accent} live={liveLabel === (headline || it.title)} onDismiss={dismiss}
               onSaveClaim={(c) => onClaim(it.id, c, blk?.id)}
               onCast={(c) => castNow(it.url
@@ -890,7 +885,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   const slidesBlock = plan?.slides ? (
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
       <div style={{ ...label, color: accent }}>Slides</div>
-      <Castable kind="Deck" kindColor={KIND_COLOR.Deck} title={hostOf(plan.slides) || "Slides"} sub={plan.slides}
+      <Castable kind="Deck" kindColor={KIND_COLOR.Deck} title={hostOf(plan.slides) || "Slides"}
         url={plan.slides} claim={plan.slidesClaim} accent={accent}
         live={liveLabel === (plan.slidesClaim || "Slides")} onDismiss={dismiss}
         onSaveClaim={onSlidesClaim}
@@ -931,14 +926,13 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
               onUp={() => onMoveBlock(b.id, -1)} onDown={() => onMoveBlock(b.id, 1)}
               onRemove={() => onRemoveBlock(b.id)} />
           </div>
-          <Castable kind="Note" kindColor={KIND_COLOR.Note} title={b.title || "Untitled block"}
-            sub={b.body ? b.body.slice(0, 70) : ""} claim={b.claim} accent={accent}
+          <Castable kind="Note" kindColor={KIND_COLOR.Note} title={b.title || "Untitled block"} claim={b.claim} accent={accent}
             live={liveLabel === (b.claim || b.title)} onDismiss={dismiss}
             onSaveClaim={(c) => onBlockClaim(b.id, c)}
             onCast={(c) => castNow({ type: "quote", tag: "Block", title: c, label: c })} />
           {(b.links || []).map(l => (
             <div key={l.id} style={{ paddingLeft: 16 }}>
-              <Castable kind="Link" kindColor={KIND_COLOR.Link} title={l.label} sub={l.url} url={l.url}
+              <Castable kind="Link" kindColor={KIND_COLOR.Link} title={l.label} url={l.url}
                 claim={l.claim} accent={accent} live={liveLabel === (l.claim || l.label)} onDismiss={dismiss}
                 onSaveClaim={(c) => onBlockClaim(b.id, c, l.id)}
                 onCast={(c) => castNow({ ...castFromLink(l), title: c, label: c })} />
@@ -1035,7 +1029,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                   <Castable
                     kind={blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
                     kindColor={blk ? typeOf(blk.type).color : KIND_COLOR[seed ? "Seed" : "Note"]}
-                    title={title} sub={body ? body.slice(0, 70) : ""}
+                    title={title}
                     url={blk?.url || ""}
                     claim={blk ? blk.headline : it.claim} accent={accent}
                     live={liveLabel === ((blk ? blk.headline : it.claim) || title)} onDismiss={dismiss}
@@ -1045,7 +1039,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                       : { type: "quote", tag: bucket.title || s.slot, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c })} />
                   {(it.links || []).map(l => (
                     <div key={l.id} style={{ paddingLeft: 16 }}>
-                      <Castable kind="Link" kindColor={KIND_COLOR.Link} title={l.label} sub={l.url} url={l.url}
+                      <Castable kind="Link" kindColor={KIND_COLOR.Link} title={l.label} url={l.url}
                         claim={l.claim} accent={accent} live={liveLabel === (l.claim || l.label)} onDismiss={dismiss}
                         onSaveClaim={(c) => onClaim(s.slot, it.id, c, l.id)}
                         onCast={(c) => castNow({ ...castFromLink(l), title: c, label: c })} />
@@ -1145,7 +1139,7 @@ function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveL
         <div key={s.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Castable kind={s.kind} kindColor={KIND_COLOR[s.kind]} title={s.title} sub={s.url} url={s.url}
+            <Castable kind={s.kind} kindColor={KIND_COLOR[s.kind]} title={s.title} url={s.url}
               claim={s.claim} accent={accent} live={liveLabel === (s.claim || s.title)} onDismiss={dismiss}
               onSaveClaim={(c) => onClaim(s.id, c)}
               onCast={(c) => castNow(s.url
