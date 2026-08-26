@@ -606,26 +606,82 @@ function AfterTheMain({ accent }) {
 // The day's readings, and the schedule is the same list. What I put here is
 // what students see under that date, and what was already assigned for that
 // date is already here — one answer to "what is assigned", not two.
+// Ten teaching moves live in the shared repository tagged "teaching move", so
+// they are blocks like anything else: droppable into a day, editable, and I can
+// add to them. Seeded rather than left empty, because the one empty state that
+// reliably stops people starting is a blank box with a plus on it.
+function Suggestions({ blocks, accent, onPick, onAdd }) {
+  const [open, setOpen] = useState(false);
+  const [more, setMore] = useState(false);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const moves = (blocks || []).filter(b => (b.tags || []).includes("teaching move"));
+  const shown = more ? moves : moves.slice(0, 5);
+  const keep = () => { if (!title.trim()) return; onAdd(title.trim(), body.trim()); setTitle(""); setBody(""); setOpen(false); };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ ...label, color: accent }}>Ideas</span>
+        <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
+          onClick={() => setOpen(v => !v)}>{open ? "Close" : "+ Add"}</button>
+      </div>
+      {shown.map(b => (
+        <button key={b.id} className="dash-focus" onClick={() => onPick(b)}
+          style={{ display: "flex", alignItems: "flex-start", gap: 9, textAlign: "left", cursor: "pointer",
+            background: SURFACE_2, border: "1px solid transparent", borderRadius: 9, padding: "8px 11px",
+            minHeight: HIT, fontFamily: F }}>
+          <span style={{ flex: "none", marginTop: 5, width: 7, height: 7, borderRadius: "50%", background: typeOf("activity").color }} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <b style={{ display: "block", fontWeight: 600, fontSize: 14, color: TEXT_PRIMARY }}>{b.title}</b>
+            {b.body ? <small style={{ color: TEXT_MUTED, fontSize: 12.5, lineHeight: 1.4, display: "block" }}>{b.body}</small> : null}
+          </span>
+        </button>
+      ))}
+      {moves.length > 5 ? (
+        <button className="dash-focus" style={{ ...mini, alignSelf: "flex-start" }} onClick={() => setMore(v => !v)}>
+          {more ? "Fewer" : (moves.length - 5) + " more"}
+        </button>
+      ) : null}
+      {open ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, border: "1px solid " + accent, background: "#fff" }}>
+          <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="What is it called" style={inputStyle} />
+          <input value={body} onChange={e => setBody(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") keep(); }} placeholder="How it runs" style={inputStyle} />
+          <button style={solid(accent)} onClick={keep}>Keep it</button>
+        </div>
+      ) : null}
+      <Muted style={{ fontSize: 12 }}>Kept with me rather than with a class, so they are in all of them. Clicking one puts it in the day.</Muted>
+    </div>
+  );
+}
+
+const EXTRA = { after: "__after", coming: "__coming" };
+
+const MEDIA_KINDS = [["reading", "Reading"], ["video", "Video"], ["podcast", "Podcast"]];
+export const MEDIA_SET = new Set(["reading", "video", "podcast"]);
+
 function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, blocks, onPickBlock }) {
   const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState("reading");
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const commit = () => {
     if (!title.trim() && !url.trim()) return;
-    onAdd({ type: "reading", title: title.trim() || hostOf(url) || "Reading", url: url.trim() });
+    onAdd({ type: kind, title: title.trim() || hostOf(url) || "Untitled", url: url.trim() });
     setTitle(""); setUrl(""); setOpen(false);
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ ...label, color: accent }}>Readings for this day</span>
+        <span style={{ ...label, color: accent }}>Readings and media</span>
         <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
           onClick={() => setOpen(v => !v)}>{open ? "Close" : "+ Add"}</button>
       </div>
       {items.map(it => (
         <div key={it.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Castable kind="Reading" kindColor={TYPE_COLOR.reading} title={it.title} sub={it.url} url={it.url}
+            <Castable kind={typeLabel(it.type)} kindColor={TYPE_COLOR[it.type] || TYPE_COLOR.reading} title={it.title} sub={it.url} url={it.url}
               claim={it.claim} accent={accent} live={liveLabel === (it.claim || it.title)} onDismiss={dismiss}
               onSaveClaim={() => {}}
               onCast={(c) => castNow(it.url
@@ -644,6 +700,13 @@ function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove,
               onPick={(b) => { onPickBlock(b); setOpen(false); }} />
           ) : null}
           <div style={{ ...label, paddingTop: 4 }}>or a new one</div>
+          <div style={{ display: "flex", gap: 5 }}>
+            {MEDIA_KINDS.map(([k, lbl]) => (
+              <button key={k} onClick={() => setKind(k)} aria-pressed={kind === k}
+                style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5,
+                  ...(kind === k ? { background: accent, borderColor: accent, color: "#fff" } : {}) }}>{lbl}</button>
+            ))}
+          </div>
           <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" style={inputStyle} />
           <input value={title} onChange={e => setTitle(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") commit(); }} placeholder="What to call it" style={inputStyle} />
@@ -674,7 +737,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea }) {
   const [adding, setAdding] = useState(null);
   const [addingBlock, setAddingBlock] = useState(false);
   const [blockDraft, setBlockDraft] = useState("");
@@ -770,20 +833,18 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
     ? seq.slots.some(x => normSlot(slotItems[x.slot]).items.length)
     : false;
 
-  return (
-    <>
-      {seqPicker}
-      {slidesBlock}
-      {unplannedBlock}
-      {featureBlock}
-      {(seq?.slots || []).map(s => {
+  // The extra zones are slots with reserved keys, so they get the library
+  // picker, notes, links, reordering and removal without a line of new code.
+  const renderSlot = (s, overrideTitle) => {
         const bucket = normSlot(slotItems[s.slot]);
         const items = bucket.items;
-        const usedSeeds = new Set(seq.slots.flatMap(x => normSlot(slotItems[x.slot]).items).map(x => x.seedId).filter(Boolean));
+        const usedSeeds = new Set((seq?.slots || []).flatMap(x => normSlot(slotItems[x.slot]).items).map(x => x.seedId).filter(Boolean));
         return (
           <div key={s.slot} style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <SlotName slot={s.slot} title={bucket.title} accent={accent} onSave={(t) => onSetSlotTitle(s.slot, t)} />
+              overrideTitle
+                ? <span style={{ ...label, color: accent }}>{overrideTitle}</span>
+                : <SlotName slot={s.slot} title={bucket.title} accent={accent} onSave={(t) => onSetSlotTitle(s.slot, t)} />
               <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
                 onClick={() => setAdding(adding === s.slot ? null : s.slot)}>{adding === s.slot ? "Close" : "+ Add"}</button>
             </div>
@@ -831,11 +892,22 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
             })}
           </div>
         );
-      })}
+  };
+
+  return (
+    <>
+      {seqPicker}
+      {slidesBlock}
+      {unplannedBlock}
+      {featureBlock}
+      {(seq?.slots || []).map(s => renderSlot(s))}
       <AfterTheMain accent={accent} />
+      {renderSlot({ slot: EXTRA.after }, "After the main section")}
       <Readings items={readings || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
         onAdd={onAddReading} onRemove={onRemoveReading} blocks={blocks2} onPickBlock={onPickReading} />
       <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />
+      {renderSlot({ slot: EXTRA.coming }, "Also coming up")}
+      <Suggestions blocks={blocks2} accent={accent} onPick={(b) => onPickBlock(EXTRA.after, b)} onAdd={onAddIdea} />
       {blockBlock}
       {freeform ? addBlockRow : null}
       {!anyContent && !blockBlock && !freeform ? (
@@ -1843,7 +1915,7 @@ export default function Dashboard({ config }) {
 
   // The day's readings ARE the schedule's readings. One list, written from
   // whichever screen I happen to be on.
-  const readings = scheduledFor(weeks, day).filter(it => it.type === "reading");
+  const readings = scheduledFor(weeks, day).filter(it => MEDIA_SET.has(it.type));
   const comingRows = comingUp(assignments, day, 21);
   const addReading = (item) => addScheduleItem(update, config, day, item);
   const dropReading = (id) => removeScheduleItem(update, config, id);
@@ -1851,6 +1923,19 @@ export default function Dashboard({ config }) {
     addScheduleItem(update, config, day, { type: "reading", title: b.title, url: b.url, blockId: b.id });
     stampScheduled(writeTo(b.id), b.id, day);
   };
+
+  // A new idea is a block kept with me, so it turns up in every class.
+  const addIdea = (title, body) => updateShared(prev => {
+    const id = genId();
+    return {
+      ...prev,
+      blocks: { ...(prev.blocks || {}), [id]: {
+        id, type: "activity", title, body, url: "", headline: "",
+        children: [], tags: ["teaching move"], concept: "", source: "", refId: "",
+        created: new Date().toISOString().slice(0, 10), scheduled: [],
+      } },
+    };
+  });
 
   const pickBlock = (slot, b) => {
     addFlowItem(slot, { blockId: b.id });
@@ -2048,7 +2133,8 @@ export default function Dashboard({ config }) {
       onAddBlock={addBlock} onRemoveBlock={removeBlock}
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
-      onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading} />,
+      onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
+      onAddIdea={addIdea} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     stocked: () => <StockedPanel shelves={shelves} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}

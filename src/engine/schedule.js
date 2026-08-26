@@ -144,6 +144,8 @@ export function comingUp(assignments, date, withinDays) {
 // same on both screens.
 export const TYPE_COLOR = {
   reading: "#2563eb",
+  video: "#b45309",
+  podcast: "#7c3aed",
   assignment: "#d97706",
   activity: "#059669",
 };
