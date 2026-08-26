@@ -834,8 +834,8 @@ function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, planHref, sc
     <>
       {/* Two different things, so they look different. The day note was written
           when I planned the session; the box below is what I scribble during it. */}
-      <Note from="This week" body={weekPlan} href={schedHref} accent={accent} />
-      <Note from="On the schedule" body={weekText} href={schedHref} accent={accent} />
+      <Note from="Lesson plan" body={weekPlan} href={schedHref} accent={accent} />
+      <Note from="Notes for students" body={weekText} href={schedHref} accent={accent} />
       <Note from="From the day plan" body={dayNote} href={planHref} accent={accent} />
       <textarea ref={boxRef} value={v} onChange={e => setV(e.target.value)} onBlur={() => { seen.current = v; onSave(v); setSaved(true); }}
         placeholder="Notes to myself during class."

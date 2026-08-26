@@ -405,8 +405,9 @@ function WeekEditor({ w, wIndex, accent, config, library, data, update, setWeekF
             style={{ ...inputStyle, fontSize: 17, fontWeight: 600, minHeight: 40, padding: "8px 10px" }} />
           <input value={datesDraft} onChange={e => setDatesDraft(e.target.value)} placeholder="Sep 21, Sep 23, Sep 25"
             style={{ ...inputStyle, fontSize: 15, minHeight: 38, padding: "6px 10px", marginTop: 6, color: TEXT_SECONDARY }} />
-          <textarea value={textDraft} onChange={e => setTextDraft(e.target.value)} placeholder="Free text for the week..."
-            style={{ ...inputStyle, minHeight: 80, lineHeight: 1.5, resize: "vertical", marginTop: 8 }} />
+          <div style={{ ...label, marginTop: 12 }}>Notes for students</div>
+          <textarea value={textDraft} onChange={e => setTextDraft(e.target.value)} placeholder="They read this on the schedule."
+            style={{ ...inputStyle, minHeight: 80, lineHeight: 1.5, resize: "vertical", marginTop: 6 }} />
           <button onClick={saveHead}
             style={{ marginTop: 10, minHeight: TAP, padding: "0 18px", borderRadius: 10, border: "none", background: accent, color: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Save</button>
         </div>
