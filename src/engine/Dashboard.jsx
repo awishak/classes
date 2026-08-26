@@ -646,12 +646,15 @@ function SlotName({ slot, title, accent, onSave }) {
   );
 }
 
-function RowTools({ onUp, onDown, onRemove, first, last }) {
+function RowTools({ onUp, onDown, onRemove, onMoveTo, first, last }) {
   const t = { ...mini, minHeight: 26, padding: "0 7px", fontSize: 12, color: TEXT_MUTED };
   return (
     <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
       <button className="dash-focus" style={{ ...t, opacity: first ? .3 : 1 }} disabled={first} onClick={onUp} title="Move up">↑</button>
       <button className="dash-focus" style={{ ...t, opacity: last ? .3 : 1 }} disabled={last} onClick={onDown} title="Move down">↓</button>
+      {onMoveTo ? (
+        <button className="dash-focus" style={t} onClick={onMoveTo} title="Move it to another section, or another day">Move</button>
+      ) : null}
       <button className="dash-focus" style={t} onClick={onRemove} title="Remove from the plan">✕</button>
     </div>
   );
@@ -786,6 +789,10 @@ function Suggestions({ blocks, accent, onPick, onAdd }) {
 }
 
 const EXTRA = { after: "__after", coming: "__coming" };
+// A section I make myself is a slot with a key of its own, so it gets the
+// library picker, notes, links, reordering and the rest for free.
+const SECTION_PREFIX = "sec-";
+const isSection = (k) => k.startsWith(SECTION_PREFIX);
 
 const MEDIA_KINDS = [["reading", "Reading"], ["video", "Video"], ["podcast", "Podcast"]];
 export const MEDIA_SET = new Set(["reading", "video", "podcast"]);
@@ -870,9 +877,10 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onMoveTo }) {
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
+  const [moving, setMoving] = useState(null);
   const [addingBlock, setAddingBlock] = useState(false);
   const [blockDraft, setBlockDraft] = useState("");
   const unplannedBlock = <Unplanned items={loose || []} accent={accent} onAdd={(it) => setPlacing(it)} castNow={castNow} />;
@@ -915,7 +923,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
               if (e.key === "Enter" && blockDraft.trim()) { onAddBlock(blockDraft.trim()); setBlockDraft(""); setAddingBlock(false); }
               if (e.key === "Escape") { setBlockDraft(""); setAddingBlock(false); }
             }}
-            placeholder="What happens here" style={inputStyle} />
+            placeholder="What to call the section" style={inputStyle} />
           <button style={solid(accent)} onClick={() => { if (blockDraft.trim()) { onAddBlock(blockDraft.trim()); setBlockDraft(""); setAddingBlock(false); } }}>Add</button>
         </div>
       ) : (
@@ -970,8 +978,12 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   // They keep their content and say where it came from, so switching to
   // freeform and back loses nothing either way.
   const named = new Set((seq?.slots || []).map(x => x.slot));
+  // Sections I made always render, empty or not, because an empty one is where
+  // the next thing goes. Anything else unnamed shows only if it holds something.
+  const mySections = Object.keys(slotItems).filter(isSection)
+    .map(k => [k, normSlot(slotItems[k]).title || "Untitled section"]);
   const orphanSlots = Object.keys(slotItems)
-    .filter(k => !named.has(k) && k !== EXTRA.after && k !== EXTRA.coming)
+    .filter(k => !named.has(k) && !isSection(k) && k !== EXTRA.after && k !== EXTRA.coming)
     .filter(k => normSlot(slotItems[k]).items.length)
     .map(k => [k, normSlot(slotItems[k]).title || k]);
 
@@ -990,6 +1002,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   // Every section this day has, named the way the panel names them.
   const sectionList = [
     ...(seq?.slots || []).map(x => [x.slot, normSlot(slotItems[x.slot]).title || x.slot]),
+    ...Object.keys(slotItems).filter(isSection).map(k => [k, normSlot(slotItems[k]).title || "Untitled section"]),
     [EXTRA.after, "After the main section"],
     [EXTRA.coming, "Coming up"],
   ];
@@ -1031,6 +1044,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                     <RowTools first={i === 0} last={i === items.length - 1}
                       onUp={() => onMoveItem(s.slot, it.id, -1)}
                       onDown={() => onMoveItem(s.slot, it.id, 1)}
+                      onMoveTo={() => setMoving({ from: s.slot, id: it.id })}
                       onRemove={() => onRemoveItem(s.slot, it.id)} />
                   </div>
                   <Castable
@@ -1065,6 +1079,10 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
         <PlaceMenu slots={sectionList} days={days || []} today={today} accent={accent}
           onPlace={(date, slot) => onAddScheduled(placing, slot, date)} onClose={() => setPlacing(null)} />
       ) : null}
+      {moving ? (
+        <PlaceMenu slots={sectionList} days={days || []} today={today} accent={accent}
+          onPlace={(date, slot) => onMoveTo(moving.from, moving.id, slot, date)} onClose={() => setMoving(null)} />
+      ) : null}
       {seqPicker}
       {slidesBlock}
       {unplannedBlock}
@@ -1072,8 +1090,9 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
       {(seq?.slots || []).map(s => renderSlot(s))}
       {orphanSlots.map(([slot, title]) => renderSlot({ slot }, title))}
       {foldRow}
+      {mySections.map(([slot, title]) => renderSlot({ slot }, title))}
       {freeform ? blockBlock : null}
-      {freeform ? addBlockRow : null}
+      {addBlockRow}
       <AfterTheMain accent={accent} />
       {renderSlot({ slot: EXTRA.after }, " ")}
       <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
@@ -2147,6 +2166,33 @@ export default function Dashboard({ config }) {
     slots[slot] = { ...bucket, items };
     return { ...d, slots };
   });
+  // Move a row to another section, and to another day if I want. It leaves
+  // where it was and arrives intact — same id, same headline, same pointer at
+  // whatever block it came from.
+  const moveItemTo = (fromSlot, itemId, toSlot, date) => {
+    const on = date || day;
+    let carried = null;
+    writeDay(d => {
+      const slots = { ...(d.slots || {}) };
+      const from = normSlot(slots[fromSlot]);
+      carried = from.items.find(x => x.id === itemId) || null;
+      if (!carried) return d;
+      slots[fromSlot] = { ...from, items: from.items.filter(x => x.id !== itemId) };
+      if (on === day) {
+        const to = normSlot(slots[toSlot]);
+        slots[toSlot] = { ...to, items: [...to.items, carried] };
+      }
+      return { ...d, slots };
+    });
+    if (carried && on !== day) {
+      writeDayOn(on, d => {
+        const slots = { ...(d.slots || {}) };
+        const to = normSlot(slots[toSlot]);
+        return { ...d, slots: { ...slots, [toSlot]: { ...to, items: [...to.items, carried] } } };
+      });
+    }
+  };
+
   const setSequence = (id) => writeDay(d => ({ ...d, sequenceId: id }));
   // Everything a class can reach: its own blocks and the ones that are mine.
   const blocks2 = allBlocks(data, shared);
@@ -2227,7 +2273,11 @@ export default function Dashboard({ config }) {
     return { ...d, slots };
   });
 
-  const addBlock = (title) => writeDay(d => ({ ...d, blocks: [...(d.blocks || []), { id: genId(), title, body: "", links: [] }] }));
+  // A section is a slot with its own key, not a row.
+  const addBlock = (title) => writeDay(d => ({
+    ...d,
+    slots: { ...(d.slots || {}), ["sec-" + genId()]: { title, items: [] } },
+  }));
   const removeBlock = (id) => writeDay(d => ({ ...d, blocks: (d.blocks || []).filter(b => b.id !== id) }));
   const moveBlock = (id, dir) => writeDay(d => {
     const list = [...(d.blocks || [])];
@@ -2432,7 +2482,7 @@ export default function Dashboard({ config }) {
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
-      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} />,
+      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onMoveTo={moveItemTo} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     readings: () => <Readings items={readings} accent={config.accent} castNow={castNow} dismiss={dismiss}
