@@ -23,7 +23,7 @@ import { useHeadlines } from "./headlines.js";
 import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
-import { normSlot } from "./dayplan.js";
+import { normSlot, sequenceOptions, sequenceFor } from "./dayplan.js";
 import { unplanned, addScheduleItemToDay, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
 
@@ -133,7 +133,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
   );
 }
 
-// Nothing goes up as a label. Before a thing can be cast it needs a claim —
+// Nothing goes up as a label. Before a thing can be cast it needs a headline —
 // one full sentence saying what it shows. "Media rights" is a topic; "Rights
 // fees have risen 45% in ten years" is what the room can actually read.
 function Castable({ kind, kindColor, title, sub, url, claim, live, accent, onCast, onDismiss, onSaveClaim }) {
@@ -198,7 +198,7 @@ function Castable({ kind, kindColor, title, sub, url, claim, live, accent, onCas
             onClick={() => { if (claim) onCast(claim); else setEditing(true); }}>To the room →</button>
         )}
         <button style={{ ...act, marginLeft: "auto", color: TEXT_MUTED }} onClick={() => setEditing(true)}>
-          {claim ? "Claim" : "Write claim"}
+          {claim ? "Headline" : "Write headline"}
         </button>
       </div>
     </div>
@@ -517,8 +517,10 @@ function RowTools({ onUp, onDown, onRemove, first, last }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock }) {
   const [adding, setAdding] = useState(null);
+  const [addingBlock, setAddingBlock] = useState(false);
+  const [blockDraft, setBlockDraft] = useState("");
   const unplannedBlock = <Unplanned items={loose || []} accent={accent} onAdd={onAddScheduled} castNow={castNow} />;
   const seqPicker = (sequences || []).length > 1 ? (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -547,11 +549,33 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   // Freeform blocks. A day built without a sequence is entirely blocks, and
   // until now that day showed up here as an empty panel.
   const blocks = (plan?.blocks || []).filter(b => b.title || b.body || (b.links || []).length);
+  const freeform = !(seq?.slots || []).length;
+  const addBlockRow = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
+      <div style={{ ...label, color: accent }}>Blocks</div>
+      {addingBlock ? (
+        <div style={{ display: "flex", gap: 7 }}>
+          <input autoFocus value={blockDraft} onChange={e => setBlockDraft(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter" && blockDraft.trim()) { onAddBlock(blockDraft.trim()); setBlockDraft(""); setAddingBlock(false); }
+              if (e.key === "Escape") { setBlockDraft(""); setAddingBlock(false); }
+            }}
+            placeholder="What happens here" style={inputStyle} />
+          <button style={solid(accent)} onClick={() => { if (blockDraft.trim()) { onAddBlock(blockDraft.trim()); setBlockDraft(""); setAddingBlock(false); } }}>Add</button>
+        </div>
+      ) : (
+        <button className="dash-focus" style={{ ...mini, alignSelf: "flex-start" }} onClick={() => setAddingBlock(true)}>+ Add block</button>
+      )}
+    </div>
+  );
   const blockBlock = blocks.length ? (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
       <div style={{ ...label, color: accent }}>Blocks</div>
       {blocks.map(b => (
         <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <RowTools first last onUp={() => {}} onDown={() => {}} onRemove={() => onRemoveBlock(b.id)} />
+          </div>
           <Castable kind="Note" kindColor={KIND_COLOR.Note} title={b.title || "Untitled block"}
             sub={b.body ? b.body.slice(0, 70) : ""} claim={b.claim} accent={accent}
             live={liveLabel === (b.claim || b.title)} onDismiss={dismiss}
@@ -644,7 +668,8 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
         );
       })}
       {blockBlock}
-      {!anyContent && !blockBlock ? (
+      {freeform ? addBlockRow : null}
+      {!anyContent && !blockBlock && !freeform ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
           <Muted style={{ fontSize: 13 }}>
             Nothing in <b style={{ color: TEXT_PRIMARY }}>{where}</b> yet. Add to a slot above, or build it out on the full page.
@@ -661,26 +686,35 @@ const STOCK_KINDS = ["Link", "Video", "PDF", "Deck", "Web", "Note"];
 // Three shelves, three lifetimes. Subtopic ideas are for today, topic ideas
 // last the week, and the random shelf is always there.
 const SHELVES = [
-  { id: "day", label: "Subtopic ideas", scope: "today" },
-  { id: "week", label: "Topic ideas", scope: "this week" },
-  { id: "any", label: "Random", scope: "anything" },
+  { id: "day", label: "Subtopic ideas", scope: "today", hint: "For this session specifically." },
+  { id: "week", label: "Topic ideas", scope: "this week", hint: "Good for any day this week. Follows the week, not the date." },
+  { id: "any", label: "Random", scope: "anything", hint: "No home yet. Anything I want to hand to a class eventually." },
 ];
 
-export function StockedPanel({ shelves, onAdd, onRemove, onClaim, castNow, dismiss, liveLabel, accent }) {
+export function StockedPanel({ shelves, onAdd, onRemove, onClaim, castNow, dismiss, liveLabel, accent, onToFlow, slots }) {
+  const empty = SHELVES.every(sh => !(shelves[sh.id] || []).length);
   return (
     <>
+      {empty ? (
+        <Muted style={{ fontSize: 13 }}>
+          Things I might reach for, kept until I do. Add one below, or send a line across from the Notes panel.
+          Anything here can go to the room screen or into the day.
+        </Muted>
+      ) : null}
       {SHELVES.map(sh => (
         <Shelf key={sh.id} shelf={sh} items={shelves[sh.id] || []} accent={accent}
           onAdd={(item) => onAdd(sh.id, item)} onRemove={(id) => onRemove(sh.id, id)}
           onClaim={(id, c) => onClaim(sh.id, id, c)}
-          castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />
+          castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
+          onToFlow={onToFlow} slots={slots} />
       ))}
     </>
   );
 }
 
-function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveLabel, accent }) {
+function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveLabel, accent, onToFlow, slots }) {
   const [open, setOpen] = useState(false);
+  const [toFlow, setToFlow] = useState(null);
   const [kind, setKind] = useState("Link");
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
@@ -697,8 +731,10 @@ function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveL
         <span style={{ ...label, color: accent }}>{shelf.label}</span>
         <span style={{ ...label, fontSize: 12 }}>{shelf.scope}</span>
       </div>
+      {(items || []).length ? null : <Muted style={{ fontSize: 12.5 }}>{shelf.hint}</Muted>}
       {(items || []).map(s => (
-        <div key={s.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <div key={s.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <Castable kind={s.kind} kindColor={KIND_COLOR[s.kind]} title={s.title} sub={s.url} url={s.url}
               claim={s.claim} accent={accent} live={liveLabel === (s.claim || s.title)} onDismiss={dismiss}
@@ -707,8 +743,24 @@ function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveL
                 ? { ...castFromLink({ label: s.title, url: s.url }), title: c, label: c }
                 : { type: "quote", tag: shelf.label, title: c, label: c })} />
           </div>
-          <button onClick={() => onRemove(s.id)} title="Remove"
-            style={{ ...mini, minHeight: HIT, padding: "0 10px", color: TEXT_MUTED }}>✕</button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <button className="dash-focus" onClick={() => setToFlow(toFlow === s.id ? null : s.id)}
+              title="Put it in today's plan"
+              style={{ ...mini, minHeight: HIT, padding: "0 10px", borderColor: accent, color: accent }}>→</button>
+            <button className="dash-focus" onClick={() => onRemove(s.id)} title="Remove"
+              style={{ ...mini, minHeight: HIT, padding: "0 10px", color: TEXT_MUTED }}>✕</button>
+          </div>
+        </div>
+        {toFlow === s.id ? (
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", paddingLeft: 4, paddingBottom: 6 }}>
+            <span style={{ ...label, fontSize: 12, alignSelf: "center" }}>Into</span>
+            {(slots || []).map(sl => (
+              <button key={sl} className="dash-focus" style={{ ...mini, minHeight: HIT, padding: "0 10px", fontSize: 12.5 }}
+                onClick={() => { onToFlow(sl, s); setToFlow(null); }}>{sl}</button>
+            ))}
+            {!(slots || []).length ? <Muted style={{ fontSize: 12.5 }}>This day has no slots to put it in.</Muted> : null}
+          </div>
+        ) : null}
         </div>
       ))}
       {open ? (
@@ -958,7 +1010,7 @@ function Note({ from, body, href, accent, scope }) {
 // Everything written about this day, above the box I scribble in during it.
 // Three of these were being written in two different editors and none of them
 // reached this screen.
-export function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, planHref, schedHref, accent, day }) {
+export function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, planHref, schedHref, accent, day, onStock }) {
   const [v, setV] = useState(value || "");
   const [saved, setSaved] = useState(true);
   const boxRef = useRef(null);
@@ -991,8 +1043,17 @@ export function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, planH
       <textarea ref={boxRef} value={v} onChange={e => setV(e.target.value)} onBlur={() => { seen.current = v; onSave(v); setSaved(true); }}
         placeholder="Notes to myself during class."
         style={{ ...inputStyle, minHeight: 130, resize: "vertical", lineHeight: 1.5, fontSize: 15 }} />
-      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
         <button style={mini} onClick={stamp}>Stamp the time</button>
+        {onStock ? (
+          <button className="dash-focus" style={{ ...mini, borderColor: accent, color: accent }}
+            title="Put the last line on a shelf"
+            onClick={() => {
+              const lines = v.split("\n").map(x => x.trim()).filter(Boolean);
+              const last = lines[lines.length - 1];
+              if (last) onStock(last);
+            }}>Stock the last line</button>
+        ) : null}
         <Muted style={{ fontSize: 12, marginLeft: "auto" }}>{saved ? "Saved" : "Saving…"}</Muted>
       </div>
     </>
@@ -1040,7 +1101,7 @@ export function TodoPanel({ plan, seq, features, boards, assignments, shelves, s
 
   const today = [
     { ok: !!plan && flowItems.length > 0, good: flowItems.length + " things in the flow", bad: "No content in the flow yet — build it in Day Plan" },
-    { ok: noClaim === 0, good: "Every item has its claim written", bad: noClaim + " item" + (noClaim === 1 ? "" : "s") + " will stop and ask for a claim mid-class" },
+    { ok: noClaim === 0, good: "Every item has its headline written", bad: noClaim + " item" + (noClaim === 1 ? "" : "s") + " will stop and ask for a headline mid-class" },
     { ok: !!boards.pre, good: "Before-class board is written", bad: "Before-class board is still the proposed one" },
     { ok: !!boards.post, good: "After-class board is written", bad: "After-class board is still the proposed one" },
     { ok: stocked > 0, good: stocked + " stocked and ready to reach for", bad: "Nothing stocked for today or this week" },
@@ -1341,8 +1402,12 @@ export default function Dashboard({ config }) {
   useEffect(() => { if (!day && days.length) setDay(currentDay(weeks)?.date || days[0].date); }, [days.length]);
 
   const plan = (data?.dayPlans || {})[day] || null;
-  const seqs = config.sequences || [];
-  const seq = seqs.find(s => s.id === (plan?.sequenceId || config.defaultSequenceId)) || seqs[0] || null;
+  // sequenceOptions adds Freeform, which config.sequences does not carry, so
+  // the picker never offered it. sequenceFor also stops a day already set to
+  // freeform falling through find() to seqs[0] and being drawn as the Motivated
+  // Sequence, which is what it was doing.
+  const seqs = sequenceOptions(config);
+  const seq = sequenceFor(config, plan?.sequenceId || config.defaultSequenceId);
   const seeds = data?.seeds || config.seeds || [];
   const students = data?.students || config.students || [];
   const assignments = data?.assignments || config.assignments || [];
@@ -1534,7 +1599,7 @@ export default function Dashboard({ config }) {
     }
     return { ...prev, stocked: st };
   });
-  // A claim written once stays on the item, so the second time it is one click.
+  // A headline written once stays on the item, so the second time it is one click.
   const saveFlowClaim = (slot, itemId, claim, linkId) => writeDay(d => {
     const slots = { ...(d.slots || {}) };
     // Through normSlot, because a slot still in the older single-item shape has
@@ -1573,6 +1638,8 @@ export default function Dashboard({ config }) {
     return { ...d, slots };
   });
   const setSequence = (id) => writeDay(d => ({ ...d, sequenceId: id }));
+  const addBlock = (title) => writeDay(d => ({ ...d, blocks: [...(d.blocks || []), { id: genId(), title, body: "", links: [] }] }));
+  const removeBlock = (id) => writeDay(d => ({ ...d, blocks: (d.blocks || []).filter(b => b.id !== id) }));
   const setSlotTitle = (slot, title) => writeDay(d => {
     const slots = { ...(d.slots || {}) };
     slots[slot] = { ...normSlot(slots[slot]), title };
@@ -1754,11 +1821,18 @@ export default function Dashboard({ config }) {
       onSlidesClaim={saveSlidesClaim} onBlockClaim={saveBlockClaim} where={config.code + " · " + day}
       loose={looseItems} onAddScheduled={(it, slot) => addScheduleItemToDay(update, config, day, it, slot)}
       onAddItem={addFlowItem} onRemoveItem={removeFlowItem} onMoveItem={moveFlowItem}
-      onSetSequence={setSequence} onSetSlotTitle={setSlotTitle} sequences={seqs} />,
+      onSetSequence={setSequence} onSetSlotTitle={setSlotTitle} sequences={seqs}
+      onAddBlock={addBlock} onRemoveBlock={removeBlock} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     stocked: () => <StockedPanel shelves={shelves} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
       accent={config.accent} onClaim={saveStockClaim}
+      slots={(seq?.slots || []).map(x => x.slot)}
+      onToFlow={(slot, item) => addFlowItem(slot, {
+        text: item.claim || item.title,
+        claim: item.claim,
+        links: item.url ? [{ id: genId(), label: item.title, url: item.url }] : [],
+      })}
       onAdd={(sh, item) => setShelf(sh, list => [...list, item])}
       onRemove={(sh, id) => setShelf(sh, list => list.filter(x => x.id !== id))} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
@@ -1766,7 +1840,8 @@ export default function Dashboard({ config }) {
     attendance: () => <AttendancePanel students={students} marks={marks} onMark={mark} onReset={resetAttendance} />,
     scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch}
       dayNote={plan?.notes} weekPlan={weekRow?.plan} weekText={weekRow?.text}
-      planHref={config.path + "/dayplan"} schedHref={config.path + "/schedule"} accent={config.accent} day={day} />,
+      planHref={config.path + "/dayplan"} schedHref={config.path + "/schedule"} accent={config.accent} day={day}
+      onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
   };
   const TITLES = { todo: "To-Do", now: "Now", poll: "Poll", flow: "Class Flow", boards: "Before & After", stocked: "Stocked", questions: "Questions", attendance: "Attendance", scratch: "Notes", assignments: "Assignments" };

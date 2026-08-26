@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useClassData } from "./store.js";
+import { ENGINE_LIST } from "../config/registry.js";
 import { useLive } from "./live.js";
 import { usePoll } from "./poll.js";
 import { YouSummary, YouDetail } from "./YouCard.jsx";
@@ -372,6 +373,17 @@ export default function ClassApp({ config, initialCard }) {
   // want to teach from it. These are the three teaching surfaces.
   const TeachLinks = role === "instructor" ? (
     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+      <select className="ca-focus" value={config.id} aria-label="Class"
+        onChange={e => {
+          const next = ENGINE_LIST.find(c => c.id === e.target.value);
+          if (!next) return;
+          window.history.pushState({}, "", next.path);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }}
+        style={{ fontFamily: F, fontSize: 15, fontWeight: 600, minHeight: TAP, padding: "0 10px",
+          borderRadius: 999, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY, cursor: "pointer" }}>
+        {ENGINE_LIST.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
+      </select>
       {[["/dashboard", "Dashboard"], ["/today", "Room screen"], ["/ask", "Ask"]].map(([suffix, name]) => (
         <a key={suffix} className="ca-focus" href={config.path + suffix}
           style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, padding: "0 14px", borderRadius: 999,

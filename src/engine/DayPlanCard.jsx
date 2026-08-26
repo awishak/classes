@@ -19,10 +19,10 @@
 // config. Seeds are store-backed (data.seeds overrides config.seeds) so they can
 // be edited and created in-app, like the schedule.
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { genId } from "../utils.jsx";
 import { normSlot, blankDay, sequenceOptions, sequenceFor, dayPlanFor, FREEFORM } from "./dayplan.js";
-import { scheduledFor, plannedItemIds, addScheduleItemToDay, TYPE_COLOR, typeLabel } from "./schedule.js";
+import { scheduledFor, plannedItemIds, addScheduleItemToDay, weekOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const TEXT_PRIMARY = "#111827";
@@ -202,6 +202,8 @@ export function DayPlanDetail({ config, data, update, initialDate }) {
 
       <OnTheSchedule config={config} data={data} update={update} date={date} accent={a} slots={seq.slots.map(x => x.slot)} />
 
+      <DayNotes config={config} data={data} date={date} accent={a} />
+
       {/* slides + notes — top of the day, explicit Save (remounts per day) */}
       <SlidesNotes key={date} plan={plan} accent={a}
         onSave={(slides, notes) => writeDay(d => ({ ...d, slides, notes }))} />
@@ -253,6 +255,35 @@ export function DayPlanDetail({ config, data, update, initialDate }) {
 // day plan could not see it, so the reading sat on one screen and the plan for
 // that day sat on another. This is that list, under the topic, with a way into
 // a slot for each one.
+function DayNotes({ config, data, date, accent }) {
+  const weeks = data?.schedule || config.scheduleWeeks || [];
+  const week = weekOf(weeks, date);
+  const plan = (data?.dayPlans || {})[date] || {};
+  const rows = [
+    ["Today", date, plan.notes],
+    ["Lesson plan", "this week", week?.plan],
+    ["Notes for students", "this week", week?.text],
+  ].filter(r => (r[2] || "").trim());
+  if (!rows.length) return null;
+
+  return (
+    <div style={{ marginTop: 14, padding: 14, borderRadius: 12, border: "1px solid " + BORDER_STRONG, background: "#fff" }}>
+      <div style={{ ...label, marginBottom: 8 }}>Notes for this day</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {rows.map(([from, scope, body]) => (
+          <div key={from} style={{ padding: 11, borderRadius: 10, background: BG, border: "1px solid " + BORDER }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+              <span style={{ ...label, color: accent }}>{from}</span>
+              <span style={{ ...label, fontSize: 11 }}>{scope}</span>
+            </div>
+            <div style={{ fontSize: 15, lineHeight: 1.5, color: TEXT_PRIMARY, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{body}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function OnTheSchedule({ config, data, update, date, accent, slots }) {
   const [picking, setPicking] = useState(null);
   const weeks = data?.schedule || config.scheduleWeeks || [];
@@ -609,6 +640,35 @@ function SlidesNotes({ plan, accent, onSave }) {
 // ─── a freeform titled block in the day flow (drag the handle to reorder) ───
 function BlockRow({ block, accent, onChange, onRemove, onDropBefore }) {
   const [over, setOver] = useState(false);
+  // Typing is local; the store hears about it once the typing stops. Before
+  // this every keystroke fired a save, each one preceded by a daily-backup
+  // check, and an echo of an older save landed in the gap and put the earlier
+  // text back. That is what "it will not save" looked like.
+  const [title, setTitle] = useState(block.title || "");
+  const [body, setBody] = useState(block.body || "");
+  const sent = useRef({ title: block.title || "", body: block.body || "" });
+
+  useEffect(() => {
+    if (block.title !== sent.current.title) { sent.current.title = block.title || ""; setTitle(block.title || ""); }
+    if (block.body !== sent.current.body) { sent.current.body = block.body || ""; setBody(block.body || ""); }
+  }, [block.title, block.body]);
+
+  useEffect(() => {
+    if (title === sent.current.title) return;
+    const t = setTimeout(() => { sent.current.title = title; onChange({ title }); }, 600);
+    return () => clearTimeout(t);
+  }, [title]);
+
+  useEffect(() => {
+    if (body === sent.current.body) return;
+    const t = setTimeout(() => { sent.current.body = body; onChange({ body }); }, 600);
+    return () => clearTimeout(t);
+  }, [body]);
+
+  const flush = () => {
+    if (title !== sent.current.title) { sent.current.title = title; onChange({ title }); }
+    if (body !== sent.current.body) { sent.current.body = body; onChange({ body }); }
+  };
   return (
     <div
       onDragOver={e => { e.preventDefault(); setOver(true); }}
@@ -618,12 +678,12 @@ function BlockRow({ block, accent, onChange, onRemove, onDropBefore }) {
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <span draggable onDragStart={e => setDrag(e, block.id)} title="Drag to reorder"
           style={{ cursor: "grab", color: TEXT_MUTED, fontSize: 17, padding: "0 4px", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
-        <input value={block.title} onChange={e => onChange({ title: e.target.value })} placeholder="Block title (e.g. Logistics, Hand back quizzes)"
+        <input value={title} onChange={e => setTitle(e.target.value)} onBlur={flush} placeholder="Block title (e.g. Logistics, Hand back quizzes)"
           style={{ ...inputStyle, fontWeight: 600, minHeight: 40, padding: "8px 10px" }} />
         <button onClick={onRemove} title="Remove block"
           style={{ minHeight: 40, minWidth: 40, borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_MUTED, cursor: "pointer", fontSize: 16, flexShrink: 0 }}>✕</button>
       </div>
-      <textarea value={block.body} onChange={e => onChange({ body: e.target.value })} placeholder="What happens here..."
+      <textarea value={body} onChange={e => setBody(e.target.value)} onBlur={flush} placeholder="What happens here..."
         style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical", marginTop: 8 }} />
       <LinksEditor links={block.links} accent={accent} onChange={(links) => onChange({ links })} />
     </div>

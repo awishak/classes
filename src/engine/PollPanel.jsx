@@ -51,7 +51,7 @@ export function Spread({ votes, options, accent, correct, compare }) {
   );
 }
 
-// Enforced everywhere a claim is written: one sentence, nothing after it.
+// Enforced everywhere a headline is written: one sentence, nothing after it.
 export function oneSentence(text) {
   const t = (text || "").trim().replace(/\s+/g, " ");
   if (!t) return "";
