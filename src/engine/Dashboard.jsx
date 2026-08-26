@@ -122,7 +122,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
       <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase",
         padding: "3px 6px", borderRadius: 5, background: "#fff", border: "1px solid " + (kindColor || BORDER_STRONG), color: kindColor || TEXT_MUTED }}>{kind}</span>
       <span style={{ minWidth: 0, flex: 1 }}>
-        <b style={{ display: "block", fontWeight: 500, fontSize: 15, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</b>
+        <b style={{ display: "block", fontWeight: 500, fontSize: 15, color: TEXT_PRIMARY, overflow: "hidden", wordBreak: "break-word", lineHeight: 1.4 }}>{title}</b>
         {sub ? <small style={{ color: TEXT_MUTED, fontSize: 12 }}>{sub}</small> : null}
       </span>
       {live ? <LiveTag /> : (
@@ -373,7 +373,7 @@ function Unplanned({ items, accent, onAdd, castNow }) {
           <span style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: TYPE_COLOR[it.type] || TEXT_MUTED }} />
           <span style={{ fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase",
             color: TYPE_COLOR[it.type] || TEXT_MUTED }}>{typeLabel(it.type)}</span>
-          <span style={{ flex: 1, minWidth: 110, fontSize: 14, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.title}</span>
+          <span style={{ flex: 1, minWidth: 110, fontSize: 14, color: TEXT_PRIMARY, overflow: "hidden", wordBreak: "break-word", lineHeight: 1.4 }}>{it.title}</span>
           {it.loose ? <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", color: TEXT_MUTED }}>THIS WEEK</span> : null}
           {it.url ? (
             <a href={it.url} target="_blank" rel="noreferrer" className="dash-focus"
@@ -787,7 +787,27 @@ function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIn
 
 // Saving on blur meant a note written at 8:40 and never clicked away from was
 // gone at 9:05. It saves a second after the typing stops instead.
-function ScratchPanel({ value, onSave, dayNote, planHref, accent }) {
+// A small read-only note with a way back to where it was written.
+function Note({ from, body, href, accent }) {
+  if (!body) return null;
+  return (
+    <div style={{ padding: 11, borderRadius: 10, background: SURFACE_2, border: "1px solid " + BORDER }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 5 }}>
+        <span style={{ ...label, color: accent }}>{from}</span>
+        {href ? (
+          <a className="dash-focus" href={href}
+            style={{ ...label, fontSize: 10, marginLeft: "auto", color: TEXT_MUTED, textDecoration: "none" }}>Edit →</a>
+        ) : null}
+      </div>
+      <div style={{ fontSize: 15, lineHeight: 1.5, color: TEXT_PRIMARY, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{body}</div>
+    </div>
+  );
+}
+
+// Everything written about this day, above the box I scribble in during it.
+// Three of these were being written in two different editors and none of them
+// reached this screen.
+function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, planHref, schedHref, accent }) {
   const [v, setV] = useState(value || "");
   const [saved, setSaved] = useState(true);
   const boxRef = useRef(null);
@@ -814,16 +834,9 @@ function ScratchPanel({ value, onSave, dayNote, planHref, accent }) {
     <>
       {/* Two different things, so they look different. The day note was written
           when I planned the session; the box below is what I scribble during it. */}
-      {dayNote ? (
-        <div style={{ padding: 11, borderRadius: 10, background: SURFACE_2, border: "1px solid " + BORDER }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 5 }}>
-            <span style={{ ...label, color: accent }}>From the day plan</span>
-            <a className="dash-focus" href={planHref}
-              style={{ ...label, fontSize: 10, marginLeft: "auto", color: TEXT_MUTED, textDecoration: "none" }}>Edit →</a>
-          </div>
-          <div style={{ fontSize: 15, lineHeight: 1.5, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{dayNote}</div>
-        </div>
-      ) : null}
+      <Note from="This week" body={weekPlan} href={schedHref} accent={accent} />
+      <Note from="On the schedule" body={weekText} href={schedHref} accent={accent} />
+      <Note from="From the day plan" body={dayNote} href={planHref} accent={accent} />
       <textarea ref={boxRef} value={v} onChange={e => setV(e.target.value)} onBlur={() => { seen.current = v; onSave(v); setSaved(true); }}
         placeholder="Notes to myself during class."
         style={{ ...inputStyle, minHeight: 130, resize: "vertical", lineHeight: 1.5, fontSize: 15 }} />
@@ -988,7 +1001,7 @@ function CommandBar({ targets, accent, onClose }) {
                 padding: "11px 16px", minHeight: TAP, fontFamily: F }}>
               <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase",
                 padding: "3px 6px", borderRadius: 5, border: "1px solid " + BORDER_STRONG, color: TEXT_MUTED }}>{t.group}</span>
-              <span style={{ minWidth: 0, flex: 1, fontSize: 15, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
+              <span style={{ minWidth: 0, flex: 1, fontSize: 15, color: TEXT_PRIMARY, overflow: "hidden", wordBreak: "break-word", lineHeight: 1.4 }}>{t.title}</span>
               {n === i ? <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, color: accent, letterSpacing: ".08em" }}>ENTER</span> : null}
             </button>
           ))}
@@ -1056,7 +1069,7 @@ function Monitor({ config, live, cast, push, recent, onRecast }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 12px", background: "#fff", border: "1px solid " + BORDER, borderRadius: 10, ...label, fontSize: 12 }}>
         {on ? <LiveTag /> : <span style={{ width: 8, height: 8, borderRadius: "50%", flex: "none", background: BORDER_STRONG }} />}
-        <span style={{ color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span style={{ color: TEXT_PRIMARY, overflow: "hidden", wordBreak: "break-word", lineHeight: 1.4 }}>
           {on ? (live.cast.label || live.cast.title) : "Idle screen"}
         </span>
         <span style={{ marginLeft: "auto", color: TEXT_MUTED, flex: "none" }}>{since}</span>
@@ -1108,7 +1121,7 @@ function Monitor({ config, live, cast, push, recent, onRecast }) {
             <button key={r.key} onClick={() => onRecast(r.payload)}
               style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", textAlign: "left", cursor: "pointer",
                 background: SURFACE_2, border: "1px solid transparent", borderRadius: 9, padding: "8px 10px", minHeight: 38, fontFamily: F, fontSize: 13, color: TEXT_PRIMARY }}>
-              <span style={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.label}</span>
+              <span style={{ minWidth: 0, flex: 1, overflow: "hidden", wordBreak: "break-word", lineHeight: 1.4 }}>{r.label}</span>
               <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, letterSpacing: ".08em", color: TEXT_MUTED }}>AGAIN →</span>
             </button>
           ))}
@@ -1565,10 +1578,11 @@ export default function Dashboard({ config }) {
       castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,
     attendance: () => <AttendancePanel students={students} marks={marks} onMark={mark} onReset={resetAttendance} />,
     scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch}
-      dayNote={plan?.notes} planHref={config.path + "/dayplan"} accent={config.accent} />,
+      dayNote={plan?.notes} weekPlan={weekRow?.plan} weekText={weekRow?.text}
+      planHref={config.path + "/dayplan"} schedHref={config.path + "/schedule"} accent={config.accent} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
   };
-  const TITLES = { todo: "To-Do", now: "Now", poll: "Poll", flow: "Class Flow", boards: "Before & After", stocked: "Stocked", questions: "Questions", attendance: "Attendance", scratch: "Scratch Pad", assignments: "Assignments" };
+  const TITLES = { todo: "To-Do", now: "Now", poll: "Poll", flow: "Class Flow", boards: "Before & After", stocked: "Stocked", questions: "Questions", attendance: "Attendance", scratch: "Notes", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   // Casting from the wrong session is silent and total: the room gets last
   // Wednesday and nothing on this screen says so.
