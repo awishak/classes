@@ -788,7 +788,7 @@ const EXTRA = { after: "__after", coming: "__coming" };
 const MEDIA_KINDS = [["reading", "Reading"], ["video", "Video"], ["podcast", "Podcast"]];
 export const MEDIA_SET = new Set(["reading", "video", "podcast"]);
 
-function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, blocks, onPickBlock }) {
+function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, blocks, onPickBlock, blockOf }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("reading");
   const [title, setTitle] = useState("");
@@ -805,12 +805,15 @@ function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove,
         <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
           onClick={() => setOpen(v => !v)}>{open ? "Close" : "+ Add"}</button>
       </div>
-      {items.map(it => (
+      {items.map(it => {
+        const blk = it.libId && blockOf ? blockOf(it.libId) : null;
+        const headline = blk ? blk.headline : it.claim;
+        return (
         <div key={it.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <Castable kind={typeLabel(it.type)} kindColor={TYPE_COLOR[it.type] || TYPE_COLOR.reading} title={it.title} sub={it.url} url={it.url}
-              claim={it.claim} accent={accent} live={liveLabel === (it.claim || it.title)} onDismiss={dismiss}
-              onSaveClaim={(c) => onClaim(it.id, c)}
+              claim={headline} accent={accent} live={liveLabel === (headline || it.title)} onDismiss={dismiss}
+              onSaveClaim={(c) => onClaim(it.id, c, blk?.id)}
               onCast={(c) => castNow(it.url
                 ? { ...castFromLink({ label: it.title, url: it.url }), title: c, label: c }
                 : { type: "quote", tag: "Reading", title: c, label: c })} />
@@ -818,7 +821,8 @@ function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove,
           <button className="dash-focus" onClick={() => onRemove(it.id)} title="Take it off the schedule too"
             style={{ ...mini, minHeight: HIT, padding: "0 10px", color: TEXT_MUTED }}>✕</button>
         </div>
-      ))}
+        );
+      })}
       {!items.length && !open ? <Muted style={{ fontSize: 13 }}>Nothing assigned for this day.</Muted> : null}
       {open ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, border: "1px solid " + accent, background: "#fff" }}>
@@ -2422,7 +2426,10 @@ export default function Dashboard({ config }) {
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     readings: () => <Readings items={readings} accent={config.accent} castNow={castNow} dismiss={dismiss}
       liveLabel={liveLabel} onAdd={addReading} onRemove={dropReading}
-      onClaim={(id, c) => setScheduleItemClaim(update, config, id, c)}
+      blockOf={blockOf}
+      onClaim={(id, c, blockId) => (blockId
+        ? setBlockHeadline(blockId, c)
+        : setScheduleItemClaim(update, config, id, c))}
       blocks={blocks2} onPickBlock={pickReading} />,
     ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent}
       sections={sections} days={days} today={day}
