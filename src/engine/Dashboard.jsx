@@ -387,8 +387,108 @@ function Unplanned({ items, accent, onAdd, castNow }) {
   );
 }
 
-function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled }) {
+// Building the day is the job this screen exists for, so it happens here
+// rather than on another page. Three ways in, because that is all a slot ever
+// holds: something I say, something from the seed library, or something to open.
+function AddToFlow({ slot, seeds, used, accent, onAdd, onClose }) {
+  const [mode, setMode] = useState("note");
+  const [text, setText] = useState("");
+  const [url, setUrl] = useState("");
+  const [q, setQ] = useState("");
+
+  const lc = q.trim().toLowerCase();
+  const hits = seeds
+    .filter(sd => !used.has(sd.id))
+    .filter(sd => !lc || (sd.title + " " + (sd.concept || "")).toLowerCase().includes(lc))
+    .slice(0, 6);
+
+  const addNote = () => { if (!text.trim()) return; onAdd({ text: text.trim() }); setText(""); onClose(); };
+  const addLink = () => {
+    if (!url.trim()) return;
+    onAdd({ text: text.trim() || hostOf(url) || "Link", links: [{ id: genId(), label: text.trim() || hostOf(url) || "Link", url: url.trim() }] });
+    setText(""); setUrl(""); onClose();
+  };
+
+  const tab = (m, lbl) => (
+    <button key={m} onClick={() => setMode(m)} aria-pressed={mode === m}
+      style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5,
+        ...(mode === m ? { background: accent, borderColor: accent, color: "#fff" } : {}) }}>{lbl}</button>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, border: "1px solid " + accent, background: "#fff" }}>
+      <div style={{ display: "flex", gap: 5 }}>
+        {tab("note", "Note")}{tab("seed", "Seed")}{tab("link", "Link")}
+        <button style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5, marginLeft: "auto", color: TEXT_MUTED }} onClick={onClose}>Cancel</button>
+      </div>
+
+      {mode === "note" ? (
+        <input autoFocus value={text} onChange={e => setText(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") addNote(); if (e.key === "Escape") onClose(); }}
+          placeholder="What goes here" style={inputStyle} />
+      ) : null}
+
+      {mode === "link" ? (
+        <>
+          <input autoFocus value={url} onChange={e => setUrl(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") addLink(); if (e.key === "Escape") onClose(); }}
+            placeholder="https://…" style={inputStyle} />
+          <input value={text} onChange={e => setText(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") addLink(); }}
+            placeholder="What to call it (optional)" style={inputStyle} />
+        </>
+      ) : null}
+
+      {mode === "seed" ? (
+        <>
+          <input autoFocus value={q} onChange={e => setQ(e.target.value)}
+            onKeyDown={e => { if (e.key === "Escape") onClose(); }}
+            placeholder="Search the seed library" style={inputStyle} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {hits.map(sd => (
+              <button key={sd.id} onClick={() => { onAdd({ seedId: sd.id }); onClose(); }}
+                style={{ display: "flex", alignItems: "center", gap: 8, textAlign: "left", cursor: "pointer",
+                  background: SURFACE_2, border: "1px solid transparent", borderRadius: 9, padding: "8px 10px",
+                  minHeight: HIT, fontFamily: F, fontSize: 13.5, color: TEXT_PRIMARY }}>
+                <span style={{ flex: 1, wordBreak: "break-word", lineHeight: 1.35 }}>{sd.title}</span>
+                {sd.concept ? <span style={{ ...label, fontSize: 10, flex: "none" }}>{sd.concept}</span> : null}
+              </button>
+            ))}
+            {!hits.length ? <Muted style={{ fontSize: 13 }}>Nothing in the library matches that.</Muted> : null}
+          </div>
+        </>
+      ) : null}
+
+      {mode === "note" ? <button style={solid(accent)} onClick={addNote}>Add</button> : null}
+      {mode === "link" ? <button style={solid(accent)} onClick={addLink}>Add</button> : null}
+    </div>
+  );
+}
+
+// Move and remove, on the row itself.
+function RowTools({ onUp, onDown, onRemove, first, last }) {
+  const t = { ...mini, minHeight: 26, padding: "0 7px", fontSize: 12, color: TEXT_MUTED };
+  return (
+    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+      <button className="dash-focus" style={{ ...t, opacity: first ? .3 : 1 }} disabled={first} onClick={onUp} title="Move up">↑</button>
+      <button className="dash-focus" style={{ ...t, opacity: last ? .3 : 1 }} disabled={last} onClick={onDown} title="Move down">↓</button>
+      <button className="dash-focus" style={t} onClick={onRemove} title="Remove from the plan">✕</button>
+    </div>
+  );
+}
+
+function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, sequences }) {
+  const [adding, setAdding] = useState(null);
   const unplannedBlock = <Unplanned items={loose || []} accent={accent} onAdd={onAddScheduled} castNow={castNow} />;
+  const seqPicker = (sequences || []).length > 1 ? (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <span style={label}>Shape</span>
+      <select value={seq?.id || ""} onChange={e => onSetSequence(e.target.value)}
+        style={{ ...inputStyle, minHeight: HIT, fontSize: 13.5, width: "auto", padding: "4px 8px" }}>
+        {sequences.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+      </select>
+    </div>
+  ) : null;
   // The deck. Day Plan has had a slides field on every day since it was built
   // and this screen never read it, which left three of the four things the
   // dashboard exists to hold. It is a third-party embed, so it goes up and then
@@ -442,6 +542,7 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
 
   if (!plan || !seq) return (
     <>
+      {seqPicker}
       {slidesBlock}
       {unplannedBlock}
       {featureBlock}
@@ -455,6 +556,7 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
   const any = seq.slots.some(s => normSlot(slotItems[s.slot]).items.length);
   if (!any) return (
     <>
+      {seqPicker}
       {slidesBlock}
       {unplannedBlock}
       {featureBlock}
@@ -466,22 +568,38 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
 
   return (
     <>
+      {seqPicker}
       {slidesBlock}
       {unplannedBlock}
       {featureBlock}
       {seq.slots.map(s => {
         const bucket = normSlot(slotItems[s.slot]);
         const items = bucket.items;
-        if (!items.length) return null;
+        const usedSeeds = new Set(seq.slots.flatMap(x => normSlot(slotItems[x.slot]).items).map(x => x.seedId).filter(Boolean));
         return (
           <div key={s.slot} style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
-            <div style={{ ...label, color: accent }}>{bucket.title || s.slot}</div>
-            {items.map(it => {
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ ...label, color: accent }}>{bucket.title || s.slot}</span>
+              <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
+                onClick={() => setAdding(adding === s.slot ? null : s.slot)}>{adding === s.slot ? "Close" : "+ Add"}</button>
+            </div>
+            {adding === s.slot ? (
+              <AddToFlow slot={s.slot} seeds={seeds} used={usedSeeds} accent={accent}
+                onAdd={(item) => onAddItem(s.slot, item)} onClose={() => setAdding(null)} />
+            ) : null}
+            {!items.length && adding !== s.slot ? <Muted style={{ fontSize: 13 }}>Empty.</Muted> : null}
+            {items.map((it, i) => {
               const seed = it.seedId ? seedById(it.seedId) : null;
               const title = seed ? seed.title : (it.text || "Untitled");
               const body = it.bodyOverride || (seed ? seed.body : "");
               return (
                 <div key={it.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <RowTools first={i === 0} last={i === items.length - 1}
+                      onUp={() => onMoveItem(s.slot, it.id, -1)}
+                      onDown={() => onMoveItem(s.slot, it.id, 1)}
+                      onRemove={() => onRemoveItem(s.slot, it.id)} />
+                  </div>
                   <Castable kind={seed ? "Seed" : "Note"} kindColor={KIND_COLOR[seed ? "Seed" : "Note"]}
                     title={title} sub={body ? body.slice(0, 70) : ""} claim={it.claim} accent={accent}
                     live={liveLabel === (it.claim || title)} onDismiss={dismiss}
@@ -1163,8 +1281,12 @@ function Picker({ title, opts, value, onPick, accent }) {
 // ─────────────────────────────────────────────────────────────
 // main
 // ─────────────────────────────────────────────────────────────
-const DEFAULT_ORDER = ["todo", "now", "poll", "flow", "boards", "stocked", "questions", "attendance", "scratch", "assignments"];
-const DEFAULT_SPANS = { todo: "2", now: "2", poll: "2", flow: "2", boards: "1", stocked: "1", questions: "1", attendance: "2", scratch: "1", assignments: "1" };
+// Class Flow first and full width, because building the day and casting it is
+// what this screen is for. Everything else supports that. Attendance and the
+// engagement clock are useful and they were competing for the top of the page
+// with the thing I actually came here to do.
+const DEFAULT_ORDER = ["flow", "todo", "stocked", "boards", "questions", "scratch", "poll", "now", "attendance", "assignments"];
+const DEFAULT_SPANS = { flow: "2", todo: "2", stocked: "1", boards: "1", questions: "1", scratch: "1", poll: "2", now: "1", attendance: "2", assignments: "1" };
 
 export default function Dashboard({ config }) {
   const [data, update] = useClassData(config.storageKey);
@@ -1395,6 +1517,31 @@ export default function Dashboard({ config }) {
     slots[slot] = bucket;
     return { ...d, slots };
   });
+  const addFlowItem = (slot, item) => writeDay(d => {
+    const slots = { ...(d.slots || {}) };
+    const bucket = normSlot(slots[slot]);
+    slots[slot] = { ...bucket, items: [...bucket.items, { id: genId(), ...item }] };
+    return { ...d, slots };
+  });
+  const removeFlowItem = (slot, itemId) => writeDay(d => {
+    const slots = { ...(d.slots || {}) };
+    const bucket = normSlot(slots[slot]);
+    slots[slot] = { ...bucket, items: bucket.items.filter(it => it.id !== itemId) };
+    return { ...d, slots };
+  });
+  const moveFlowItem = (slot, itemId, dir) => writeDay(d => {
+    const slots = { ...(d.slots || {}) };
+    const bucket = normSlot(slots[slot]);
+    const items = [...bucket.items];
+    const i = items.findIndex(it => it.id === itemId);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= items.length) return d;
+    [items[i], items[j]] = [items[j], items[i]];
+    slots[slot] = { ...bucket, items };
+    return { ...d, slots };
+  });
+  const setSequence = (id) => writeDay(d => ({ ...d, sequenceId: id }));
+
   const saveSlidesClaim = (claim) => writeDay(d => ({ ...d, slidesClaim: claim }));
   const saveBlockClaim = (blockId, claim, linkId) => writeDay(d => ({
     ...d,
@@ -1568,7 +1715,9 @@ export default function Dashboard({ config }) {
       liveLabel={liveLabel} accent={config.accent} onClaim={saveFlowClaim}
       features={features} onFeature={runFeature} planHref={config.path + "/dayplan"}
       onSlidesClaim={saveSlidesClaim} onBlockClaim={saveBlockClaim} where={config.code + " · " + day}
-      loose={looseItems} onAddScheduled={(it) => addScheduleItemToDay(update, config, day, it)} />,
+      loose={looseItems} onAddScheduled={(it) => addScheduleItemToDay(update, config, day, it)}
+      onAddItem={addFlowItem} onRemoveItem={removeFlowItem} onMoveItem={moveFlowItem}
+      onSetSequence={setSequence} sequences={seqs} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     stocked: () => <StockedPanel shelves={shelves} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
@@ -1632,6 +1781,12 @@ export default function Dashboard({ config }) {
               <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 41, background: "#fff",
                 border: "1px solid " + BORDER_STRONG, borderRadius: 12, padding: 8, minWidth: 200,
                 boxShadow: "0 16px 36px -12px rgba(23,19,16,.32)", display: "flex", flexDirection: "column", gap: 2 }}>
+                <button onClick={() => {
+                  setOrder(DEFAULT_ORDER); setSpans(DEFAULT_SPANS); setHidden([]);
+                  saveLayout(DEFAULT_ORDER, DEFAULT_SPANS, []);
+                  setPanelMenu(false);
+                }}
+                  style={{ ...mini, minHeight: HIT, margin: "2px 4px 6px", justifyContent: "center" }}>Reset arrangement</button>
                 {DEFAULT_ORDER.map(id => {
                   const on = !hidden.includes(id);
                   return (
