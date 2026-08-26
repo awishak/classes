@@ -50,7 +50,7 @@ const label2 = { fontFamily: MONO, fontSize: 12, fontWeight: 600, color: TEXT_MU
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 
 const CSS = `
-.dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-content:start}
+.dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-content:start;align-items:start}
 @media (max-width:700px){.dash-grid{grid-template-columns:minmax(0,1fr)}.dash-panel[data-span="2"]{grid-column:span 1 !important}}
 .dash-panel[data-span="2"]{grid-column:span 2}
 .dash-panel.dragging{position:fixed;z-index:60;pointer-events:none;transform:rotate(-1deg);

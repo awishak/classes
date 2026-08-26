@@ -327,7 +327,14 @@ export default function ClassApp({ config, initialCard }) {
   useEffect(() => {
     if (!data || !config.seedVersion) return;
     if (data.seedVersion !== config.seedVersion) {
-      update(prev => ({ ...prev, schedule: config.scheduleWeeks, library: config.library, seedVersion: config.seedVersion }));
+      // Seed from config, but NEVER overwrite real content with an empty one.
+      // A class whose term lives in its store carries an empty scheduleWeeks on
+      // purpose, and this effect wiped eleven weeks of COMM 2 by pushing that
+      // empty array over the top of them.
+      const patch = { seedVersion: config.seedVersion };
+      if ((config.scheduleWeeks || []).length) patch.schedule = config.scheduleWeeks;
+      if ((config.library || []).length) patch.library = config.library;
+      update(prev => ({ ...prev, ...patch }));
     }
   }, [data, config]);
 
