@@ -857,7 +857,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold }) {
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
   const [addingBlock, setAddingBlock] = useState(false);
@@ -891,6 +891,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   // until now that day showed up here as an empty panel.
   const blocks = (plan?.blocks || []).filter(b => b.title || b.body || (b.links || []).length);
   const freeform = !(seq?.slots || []).length;
+
   const addBlockRow = (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
       <div style={{ ...label, color: accent }}>Sections</div>
@@ -958,7 +959,18 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   const orphanSlots = Object.keys(slotItems)
     .filter(k => !named.has(k) && k !== EXTRA.after && k !== EXTRA.coming)
     .filter(k => normSlot(slotItems[k]).items.length)
-    .map(k => [k, (normSlot(slotItems[k]).title || k) + " · from another shape"]);
+    .map(k => [k, normSlot(slotItems[k]).title || k]);
+
+  // Folding merges the orphans into one list rather than converting them into
+  // something else. Every item keeps its id, its headline and its link back to
+  // a block; only the headers go.
+  const foldRow = freeform && orphanSlots.length > 1 ? (
+    <button className="dash-focus" style={{ ...mini, alignSelf: "flex-start", borderColor: accent, color: accent }}
+      onClick={() => onFold(orphanSlots.map(([k]) => k))}>
+      Fold {orphanSlots.length} sections into one
+    </button>
+  ) : null;
+
 
 
   // Every section this day has, named the way the panel names them.
@@ -1045,10 +1057,9 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
       {featureBlock}
       {(seq?.slots || []).map(s => renderSlot(s))}
       {orphanSlots.map(([slot, title]) => renderSlot({ slot }, title))}
+      {foldRow}
       <AfterTheMain accent={accent} />
       {renderSlot({ slot: EXTRA.after }, " ")}
-      <Readings items={readings || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
-        onAdd={onAddReading} onRemove={onRemoveReading} blocks={blocks2} onPickBlock={onPickReading} />
       <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
         extra={renderSlot({ slot: EXTRA.coming }, " ")} />
       {blockBlock}
@@ -1803,11 +1814,11 @@ function Picker({ title, opts, value, onPick, accent }) {
 // what this screen is for. Everything else supports that. Attendance and the
 // engagement clock are useful and they were competing for the top of the page
 // with the thing I actually came here to do.
-const DEFAULT_ORDER = ["flow", "todo", "ideas", "boards", "questions", "scratch", "poll", "now", "attendance", "assignments"];
+const DEFAULT_ORDER = ["flow", "todo", "readings", "ideas", "boards", "questions", "scratch", "poll", "now", "attendance", "assignments"];
 // Open on what I came here for. The rest keep their bar so I know they are
 // there, and one click brings any of them back.
 const DEFAULT_COLLAPSED = ["ideas", "boards", "poll", "questions", "attendance", "now"];
-const DEFAULT_SPANS = { flow: "2", todo: "2", ideas: "1", boards: "1", questions: "1", scratch: "1", poll: "2", now: "1", attendance: "2", assignments: "1" };
+const DEFAULT_SPANS = { flow: "2", todo: "2", readings: "1", ideas: "1", boards: "1", questions: "1", scratch: "1", poll: "2", now: "1", attendance: "2", assignments: "1" };
 
 export default function Dashboard({ config }) {
   const [data, update] = useClassData(config.storageKey);
@@ -2161,6 +2172,17 @@ export default function Dashboard({ config }) {
     blocks: { ...(prev.blocks || {}), [id]: { ...(prev.blocks || {})[id], headline } },
   }));
 
+  // Merge several slots into one. Nothing is converted or rewritten — the
+  // items move across as they are, references and headlines intact.
+  const foldSlots = (keys) => writeDay(d => {
+    const slots = { ...(d.slots || {}) };
+    const merged = keys.flatMap(k => normSlot(slots[k]).items);
+    keys.forEach(k => { delete slots[k]; });
+    const into = normSlot(slots.__flat);
+    slots.__flat = { ...into, title: "The day", items: [...into.items, ...merged] };
+    return { ...d, slots };
+  });
+
   const addBlock = (title) => writeDay(d => ({ ...d, blocks: [...(d.blocks || []), { id: genId(), title, body: "", links: [] }] }));
   const removeBlock = (id) => writeDay(d => ({ ...d, blocks: (d.blocks || []).filter(b => b.id !== id) }));
   const setSlotTitle = (slot, title) => writeDay(d => {
@@ -2358,9 +2380,12 @@ export default function Dashboard({ config }) {
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
-      onAddIdea={addIdea} days={days} today={day} />,
+      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
+    readings: () => <Readings items={readings} accent={config.accent} castNow={castNow} dismiss={dismiss}
+      liveLabel={liveLabel} onAdd={addReading} onRemove={dropReading}
+      blocks={blocks2} onPickBlock={pickReading} />,
     ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent}
       sections={sections} days={days} today={day}
       onPick={pickBlock} onAdd={addIdea} onEdit={editIdea} onRemove={removeIdea} onDuplicate={duplicateIdea} />,
@@ -2375,7 +2400,7 @@ export default function Dashboard({ config }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
   };
-  const TITLES = { todo: "To-Do", now: "Class Clock", poll: "Class Poll", flow: "Class Flow", boards: "Before & After", ideas: "Ideas", questions: "Student Questions", attendance: "Attendance", scratch: "Notes", assignments: "Assignments" };
+  const TITLES = { todo: "To-Do", now: "Class Clock", poll: "Class Poll", flow: "Class Flow", boards: "Before & After", readings: "Readings & Media", ideas: "Ideas", questions: "Student Questions", attendance: "Attendance", scratch: "Notes", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   // Casting from the wrong session is silent and total: the room gets last
   // Wednesday and nothing on this screen says so.
