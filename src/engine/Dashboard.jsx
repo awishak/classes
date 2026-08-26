@@ -504,8 +504,9 @@ function LibraryPick({ blocks, accent, onPick }) {
   );
 }
 
-function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAddScheduled, blocks, onPickBlock }) {
+function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAddScheduled, blocks, onPickBlock, days, today }) {
   const [mode, setMode] = useState(blocks?.length ? "lib" : "note");
+  const [day, setDay] = useState(today);
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
   const [q, setQ] = useState("");
@@ -576,7 +577,18 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
       ) : null}
 
       {mode === "lib" ? (
-        <LibraryPick blocks={blocks} accent={accent} onPick={(b) => { onPickBlock(slot, b); onClose(); }} />
+        <>
+          <LibraryPick blocks={blocks} accent={accent} onPick={(b) => { if (day === today) { onPickBlock(slot, b); onClose(); } else { onPickBlock(slot, b, day); onClose(); } }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ ...label, fontSize: 12 }}>Onto</span>
+            <select value={day} onChange={e => setDay(e.target.value)}
+              style={{ ...inputStyle, minHeight: HIT, width: "auto", fontSize: 13.5, padding: "4px 8px" }}>
+              {(days || []).map(d => (
+                <option key={d.date} value={d.date}>{d.date === today ? "This day · " + d.date : d.date}</option>
+              ))}
+            </select>
+          </div>
+        </>
       ) : null}
 
       {mode === "sched" ? (
@@ -654,7 +666,7 @@ function AfterTheMain({ accent }) {
 // they are blocks like anything else: droppable into a day, editable, and I can
 // add to them. Seeded rather than left empty, because the one empty state that
 // reliably stops people starting is a blank box with a plus on it.
-function IdeasPanel({ blocks, accent, slots, onPick, onAdd, onEdit, onRemove, onDuplicate }) {
+function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAdd, onEdit, onRemove, onDuplicate }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -705,15 +717,8 @@ function IdeasPanel({ blocks, accent, slots, onPick, onAdd, onEdit, onRemove, on
             <button className="dash-focus" style={{ ...tool, marginLeft: "auto" }} onClick={() => onRemove(b.id)}>Delete</button>
           </div>
           {placing === b.id ? (
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-              <span style={{ ...label, fontSize: 12, alignSelf: "center" }}>Into</span>
-              {(slots || []).map(sl => (
-                <button key={sl} className="dash-focus" style={{ ...tool, minHeight: HIT }}
-                  onClick={() => { onPick(sl, b); setPlacing(null); }}>{sl}</button>
-              ))}
-              <button className="dash-focus" style={{ ...tool, minHeight: HIT }}
-                onClick={() => { onPick("__after", b); setPlacing(null); }}>after the main section</button>
-            </div>
+            <PlaceMenu slots={sections || []} days={days || []} today={today} accent={accent}
+              onPlace={(date, slot) => onPick(slot, b, date)} onClose={() => setPlacing(null)} />
           ) : null}
         </div>
       ))}
@@ -976,7 +981,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
               <AddToFlow slot={s.slot} seeds={seeds} used={usedSeeds} accent={accent}
                 onAdd={(item) => onAddItem(s.slot, item)} onClose={() => setAdding(null)}
                 scheduled={loose} onAddScheduled={onAddScheduled}
-                blocks={blocks2} onPickBlock={onPickBlock} />
+                blocks={blocks2} onPickBlock={onPickBlock} days={days} today={today} />
             ) : null}
             {!items.length && adding !== s.slot ? <Muted style={{ fontSize: 13 }}>Empty.</Muted> : null}
             {items.map((it, i) => {
@@ -1358,19 +1363,44 @@ function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIn
 // Saving on blur meant a note written at 8:40 and never clicked away from was
 // gone at 9:05. It saves a second after the typing stops instead.
 // A small read-only note with a way back to where it was written.
-function Note({ from, body, href, accent, scope }) {
-  if (!body) return null;
+// Editing a note meant leaving for another page and coming back. These are two
+// textareas; they can be edited where they are read.
+function Note({ from, body, accent, scope, onSave, placeholder }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(body || "");
+  useEffect(() => { setDraft(body || ""); }, [body]);
+
+  if (!body && !editing) {
+    return onSave ? (
+      <button className="dash-focus" style={{ ...mini, alignSelf: "flex-start" }} onClick={() => setEditing(true)}>+ {from}</button>
+    ) : null;
+  }
+  const commit = () => { onSave(draft); setEditing(false); };
+  const cancel = () => { setDraft(body || ""); setEditing(false); };
+
   return (
-    <div style={{ padding: 11, borderRadius: 10, background: SURFACE_2, border: "1px solid " + BORDER }}>
+    <div style={{ padding: 11, borderRadius: 10, background: SURFACE_2, border: "1px solid " + (editing ? accent : BORDER) }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 5 }}>
         <span style={{ ...label, color: accent }}>{from}</span>
-        {scope ? <span style={{ ...label, fontSize: 10 }}>{scope}</span> : null}
-        {href ? (
-          <a className="dash-focus" href={href}
-            style={{ ...label, fontSize: 10, marginLeft: "auto", color: TEXT_MUTED, textDecoration: "none" }}>Edit →</a>
+        {scope ? <span style={{ ...label, fontSize: 12 }}>{scope}</span> : null}
+        {onSave && !editing ? (
+          <button className="dash-focus" onClick={() => setEditing(true)}
+            style={{ ...label, fontSize: 12, marginLeft: "auto", color: TEXT_MUTED, background: "none", border: "none", cursor: "pointer" }}>Edit</button>
         ) : null}
       </div>
-      <div style={{ fontSize: 15, lineHeight: 1.5, color: TEXT_PRIMARY, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{body}</div>
+      {editing ? (
+        <>
+          <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === "Escape") cancel(); }} placeholder={placeholder}
+            style={{ ...inputStyle, minHeight: 92, lineHeight: 1.5, resize: "vertical", fontSize: 15 }} />
+          <div style={{ display: "flex", gap: 7, marginTop: 7 }}>
+            <button style={solid(accent)} onClick={commit}>Save</button>
+            <button style={mini} onClick={cancel}>Cancel</button>
+          </div>
+        </>
+      ) : (
+        <div style={{ fontSize: 15, lineHeight: 1.5, color: TEXT_PRIMARY, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{body}</div>
+      )}
     </div>
   );
 }
@@ -1378,7 +1408,7 @@ function Note({ from, body, href, accent, scope }) {
 // Everything written about this day, above the box I scribble in during it.
 // Three of these were being written in two different editors and none of them
 // reached this screen.
-export function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, planHref, schedHref, accent, day, onStock }) {
+export function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, accent, day, onStock, onSaveDayNote, onSaveWeekPlan, onSaveWeekText }) {
   const [v, setV] = useState(value || "");
   const [saved, setSaved] = useState(true);
   const boxRef = useRef(null);
@@ -1405,9 +1435,12 @@ export function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, planH
     <>
       {/* Two different things, so they look different. The day note was written
           when I planned the session; the box below is what I scribble during it. */}
-      <Note from="Today" scope={day} body={dayNote} href={planHref} accent={accent} />
-      <Note from="Lesson plan" scope="this week" body={weekPlan} href={schedHref} accent={accent} />
-      <Note from="Notes for students" scope="this week" body={weekText} href={schedHref} accent={accent} />
+      <Note from="Today" scope={day} body={dayNote} accent={accent} onSave={onSaveDayNote}
+        placeholder="What this day is for, in my words." />
+      <Note from="Lesson plan" scope="this week" body={weekPlan} accent={accent} onSave={onSaveWeekPlan}
+        placeholder="How the week runs." />
+      <Note from="Notes for students" scope="this week" body={weekText} accent={accent} onSave={onSaveWeekText}
+        placeholder="They read this on the schedule." />
       <textarea ref={boxRef} value={v} onChange={e => setV(e.target.value)} onBlur={() => { seen.current = v; onSave(v); setSaved(true); }}
         placeholder="Notes to myself during class."
         style={{ ...inputStyle, minHeight: 130, resize: "vertical", lineHeight: 1.5, fontSize: 15 }} />
@@ -1970,11 +2003,12 @@ export default function Dashboard({ config }) {
   }, [dragId, order, spans, hidden, collapsed, saveLayout]);
 
   // ─── writes ───
-  const writeDay = (fn) => update(prev => {
+  const writeDayOn = (date, fn) => update(prev => {
     const plans = { ...(prev.dayPlans || {}) };
-    plans[day] = fn(plans[day] || {});
+    plans[date] = fn(plans[date] || {});
     return { ...prev, dayPlans: plans };
   });
+  const writeDay = (fn) => writeDayOn(day, fn);
   const mark = (name, state) => update(prev => {
     const att = { ...(prev.attendance || {}) };
     att[day] = { ...(att[day] || {}), [name]: state };
@@ -2079,9 +2113,24 @@ export default function Dashboard({ config }) {
     return { ...prev, blocks: { ...(prev.blocks || {}), [id]: { ...b, id, title: b.title + " (copy)", scheduled: [] } } };
   });
 
-  const pickBlock = (slot, b) => {
-    addFlowItem(slot, { blockId: b.id });
-    stampScheduled(writeTo(b.id), b.id, day);
+  // Named sections for this day, shared by every chooser on the screen.
+  const sections = [
+    ...((sequenceFor(config, plan?.sequenceId || config.defaultSequenceId).slots) || [])
+      .map(x => [x.slot, normSlot((plan?.slots || {})[x.slot]).title || x.slot]),
+    ["__after", "After the main section"],
+    ["__coming", "Also coming up"],
+  ];
+
+  // A block can be placed on any day, not just the one I am looking at.
+  const pickBlock = (slot, b, date) => {
+    const on = date || day;
+    writeDayOn(on, d => {
+      const slots = { ...(d.slots || {}) };
+      const bucket = normSlot(slots[slot]);
+      slots[slot] = { ...bucket, items: [...bucket.items, { id: genId(), blockId: b.id }] };
+      return { ...d, slots };
+    });
+    stampScheduled(writeTo(b.id), b.id, on);
   };
   const setBlockHeadline = (id, headline) => writeTo(id)(prev => ({
     ...prev,
@@ -2109,6 +2158,15 @@ export default function Dashboard({ config }) {
     setShelf(shelf, list => list.map(x => x.id === id ? { ...x, claim } : x));
 
   const saveBoard = (which, board) => writeDay(d => ({ ...d, boards: { ...(d.boards || {}), [which]: board } }));
+  const saveDayNote = (notes) => writeDay(d => ({ ...d, notes }));
+  const writeWeekField = (field, val) => update(prev => ({
+    ...prev,
+    schedule: (prev.schedule || config.scheduleWeeks || [])
+      .map(w => w.id === weekId ? { ...w, [field]: val } : w),
+  }));
+  const saveWeekPlan = (v) => writeWeekField("plan", v);
+  const saveWeekText = (v) => writeWeekField("text", v);
+
   const saveScratch = (v) => update(prev => ({ ...prev, scratch: { ...(prev.scratch || {}), [day]: v } }));
 
   const liveLabel = live?.cast?.label || null;
@@ -2279,14 +2337,16 @@ export default function Dashboard({ config }) {
       onAddIdea={addIdea} days={days} today={day} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
-    ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent} slots={(seq?.slots || []).map(x => x.slot)}
+    ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent}
+      sections={sections} days={days} today={day}
       onPick={pickBlock} onAdd={addIdea} onEdit={editIdea} onRemove={removeIdea} onDuplicate={duplicateIdea} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
       castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,
     attendance: () => <AttendancePanel students={students} marks={marks} onMark={mark} onReset={resetAttendance} />,
     scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch}
       dayNote={plan?.notes} weekPlan={weekRow?.plan} weekText={weekRow?.text}
-      planHref={config.path + "/dayplan"} schedHref={config.path + "/schedule"} accent={config.accent} day={day}
+      accent={config.accent} day={day}
+      onSaveDayNote={saveDayNote} onSaveWeekPlan={saveWeekPlan} onSaveWeekText={saveWeekText}
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
   };
