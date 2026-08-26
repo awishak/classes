@@ -788,12 +788,13 @@ function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIn
 // Saving on blur meant a note written at 8:40 and never clicked away from was
 // gone at 9:05. It saves a second after the typing stops instead.
 // A small read-only note with a way back to where it was written.
-function Note({ from, body, href, accent }) {
+function Note({ from, body, href, accent, scope }) {
   if (!body) return null;
   return (
     <div style={{ padding: 11, borderRadius: 10, background: SURFACE_2, border: "1px solid " + BORDER }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 5 }}>
         <span style={{ ...label, color: accent }}>{from}</span>
+        {scope ? <span style={{ ...label, fontSize: 10 }}>{scope}</span> : null}
         {href ? (
           <a className="dash-focus" href={href}
             style={{ ...label, fontSize: 10, marginLeft: "auto", color: TEXT_MUTED, textDecoration: "none" }}>Edit →</a>
@@ -807,7 +808,7 @@ function Note({ from, body, href, accent }) {
 // Everything written about this day, above the box I scribble in during it.
 // Three of these were being written in two different editors and none of them
 // reached this screen.
-function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, planHref, schedHref, accent }) {
+function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, planHref, schedHref, accent, day }) {
   const [v, setV] = useState(value || "");
   const [saved, setSaved] = useState(true);
   const boxRef = useRef(null);
@@ -834,9 +835,9 @@ function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, planHref, sc
     <>
       {/* Two different things, so they look different. The day note was written
           when I planned the session; the box below is what I scribble during it. */}
-      <Note from="Lesson plan" body={weekPlan} href={schedHref} accent={accent} />
-      <Note from="Notes for students" body={weekText} href={schedHref} accent={accent} />
-      <Note from="From the day plan" body={dayNote} href={planHref} accent={accent} />
+      <Note from="Today" scope={day} body={dayNote} href={planHref} accent={accent} />
+      <Note from="Lesson plan" scope="this week" body={weekPlan} href={schedHref} accent={accent} />
+      <Note from="Notes for students" scope="this week" body={weekText} href={schedHref} accent={accent} />
       <textarea ref={boxRef} value={v} onChange={e => setV(e.target.value)} onBlur={() => { seen.current = v; onSave(v); setSaved(true); }}
         placeholder="Notes to myself during class."
         style={{ ...inputStyle, minHeight: 130, resize: "vertical", lineHeight: 1.5, fontSize: 15 }} />
@@ -1579,7 +1580,7 @@ export default function Dashboard({ config }) {
     attendance: () => <AttendancePanel students={students} marks={marks} onMark={mark} onReset={resetAttendance} />,
     scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch}
       dayNote={plan?.notes} weekPlan={weekRow?.plan} weekText={weekRow?.text}
-      planHref={config.path + "/dayplan"} schedHref={config.path + "/schedule"} accent={config.accent} />,
+      planHref={config.path + "/dayplan"} schedHref={config.path + "/schedule"} accent={config.accent} day={day} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
   };
   const TITLES = { todo: "To-Do", now: "Now", poll: "Poll", flow: "Class Flow", boards: "Before & After", stocked: "Stocked", questions: "Questions", attendance: "Attendance", scratch: "Notes", assignments: "Assignments" };
