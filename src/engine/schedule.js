@@ -118,6 +118,14 @@ export function addScheduleItem(update, config, date, item) {
   return id;
 }
 
+// A headline written on a scheduled thing has to go somewhere, and the item on
+// the week is where it lives.
+export const setScheduleItemClaim = (update, config, itemId, claim) => update(prev => ({
+  ...prev,
+  schedule: (prev.schedule || config.scheduleWeeks || [])
+    .map(w => ({ ...w, items: (w.items || []).map(i => i.id === itemId ? { ...i, claim } : i) })),
+}));
+
 export const removeScheduleItem = (update, config, itemId) => update(prev => ({
   ...prev,
   schedule: (prev.schedule || config.scheduleWeeks || [])

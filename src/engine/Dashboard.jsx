@@ -25,7 +25,7 @@ import { allDays, currentDay, parseDay } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { normSlot, sequenceOptions, sequenceFor } from "./dayplan.js";
 import { SHARED_KEY, TYPES, typeOf, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
-import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
+import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, setScheduleItemClaim, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -52,7 +52,7 @@ const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_M
 
 const CSS = `
 .dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;row-gap:0;align-content:start;align-items:start;grid-auto-rows:8px}
-@media (max-width:700px){.dash-grid{grid-template-columns:minmax(0,1fr)}.dash-panel[data-span="2"]{grid-column:span 1 !important}}
+@media (max-width:700px){.dash-grid{column-gap:10px}}
 .dash-panel[data-span="2"]{grid-column:span 2}
 .dash-panel.dragging{position:fixed;z-index:60;pointer-events:none;transform:rotate(-1deg);
   box-shadow:0 12px 32px -8px rgba(23,19,16,.35);opacity:.97}
@@ -155,9 +155,14 @@ function Castable({ kind, kindColor, title, sub, url, claim, live, accent, onCas
   const [draft, setDraft] = useState(claim || "");
   useEffect(() => { setDraft(claim || ""); }, [claim]);
 
+  const [why, setWhy] = useState("");
   const commit = (thenCast) => {
     const c = oneSentence(draft);
-    if (!c || c.split(" ").length < 3) return;
+    // It used to return here and say nothing, so a two-word headline looked
+    // like a broken button.
+    if (!c) { setWhy("Write the headline first."); return; }
+    if (c.split(" ").length < 3) { setWhy("A headline is a sentence. Three words at least."); return; }
+    setWhy("");
     onSaveClaim(c);
     setEditing(false);
     if (thenCast) onCast(c);
@@ -172,10 +177,11 @@ function Castable({ kind, kindColor, title, sub, url, claim, live, accent, onCas
           onKeyDown={e => { if (e.key === "Enter") commit(true); if (e.key === "Escape") setEditing(false); }}
           placeholder="Rights fees have increased 45% over the last 10 years."
           style={inputStyle} />
+        {why ? <div style={{ fontSize: 13, fontWeight: 600, color: WARN }}>{why}</div> : null}
         <div style={{ display: "flex", gap: 7 }}>
           <button style={solid(accent)} onClick={() => commit(true)}>Save and cast</button>
           <button style={mini} onClick={() => commit(false)}>Just save</button>
-          <button style={{ ...mini, marginLeft: "auto" }} onClick={() => setEditing(false)}>Cancel</button>
+          <button style={{ ...mini, marginLeft: "auto" }} onClick={() => { setWhy(""); setEditing(false); }}>Cancel</button>
         </div>
       </div>
     );
@@ -782,7 +788,7 @@ const EXTRA = { after: "__after", coming: "__coming" };
 const MEDIA_KINDS = [["reading", "Reading"], ["video", "Video"], ["podcast", "Podcast"]];
 export const MEDIA_SET = new Set(["reading", "video", "podcast"]);
 
-function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, blocks, onPickBlock }) {
+function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, blocks, onPickBlock }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("reading");
   const [title, setTitle] = useState("");
@@ -804,7 +810,7 @@ function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove,
           <div style={{ flex: 1, minWidth: 0 }}>
             <Castable kind={typeLabel(it.type)} kindColor={TYPE_COLOR[it.type] || TYPE_COLOR.reading} title={it.title} sub={it.url} url={it.url}
               claim={it.claim} accent={accent} live={liveLabel === (it.claim || it.title)} onDismiss={dismiss}
-              onSaveClaim={() => {}}
+              onSaveClaim={(c) => onClaim(it.id, c)}
               onCast={(c) => castNow(it.url
                 ? { ...castFromLink({ label: it.title, url: it.url }), title: c, label: c }
                 : { type: "quote", tag: "Reading", title: c, label: c })} />
@@ -1059,12 +1065,13 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
       {(seq?.slots || []).map(s => renderSlot(s))}
       {orphanSlots.map(([slot, title]) => renderSlot({ slot }, title))}
       {foldRow}
+      {freeform ? blockBlock : null}
+      {freeform ? addBlockRow : null}
       <AfterTheMain accent={accent} />
       {renderSlot({ slot: EXTRA.after }, " ")}
       <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
         extra={renderSlot({ slot: EXTRA.coming }, " ")} />
-      {blockBlock}
-      {freeform ? addBlockRow : null}
+      {freeform ? null : blockBlock}
       {!anyContent && !blockBlock && !freeform ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
           <Muted style={{ fontSize: 13 }}>
@@ -2415,6 +2422,7 @@ export default function Dashboard({ config }) {
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     readings: () => <Readings items={readings} accent={config.accent} castNow={castNow} dismiss={dismiss}
       liveLabel={liveLabel} onAdd={addReading} onRemove={dropReading}
+      onClaim={(id, c) => setScheduleItemClaim(update, config, id, c)}
       blocks={blocks2} onPickBlock={pickReading} />,
     ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent}
       sections={sections} days={days} today={day}
