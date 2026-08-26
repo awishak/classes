@@ -868,7 +868,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold }) {
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
   const [addingBlock, setAddingBlock] = useState(false);
@@ -924,10 +924,12 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   const blockBlock = blocks.length ? (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
       <div style={{ ...label, color: accent }}>Sections</div>
-      {blocks.map(b => (
+      {blocks.map((b, i) => (
         <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <RowTools first last onUp={() => {}} onDown={() => {}} onRemove={() => onRemoveBlock(b.id)} />
+            <RowTools first={i === 0} last={i === blocks.length - 1}
+              onUp={() => onMoveBlock(b.id, -1)} onDown={() => onMoveBlock(b.id, 1)}
+              onRemove={() => onRemoveBlock(b.id)} />
           </div>
           <Castable kind="Note" kindColor={KIND_COLOR.Note} title={b.title || "Untitled block"}
             sub={b.body ? b.body.slice(0, 70) : ""} claim={b.claim} accent={accent}
@@ -2226,6 +2228,14 @@ export default function Dashboard({ config }) {
 
   const addBlock = (title) => writeDay(d => ({ ...d, blocks: [...(d.blocks || []), { id: genId(), title, body: "", links: [] }] }));
   const removeBlock = (id) => writeDay(d => ({ ...d, blocks: (d.blocks || []).filter(b => b.id !== id) }));
+  const moveBlock = (id, dir) => writeDay(d => {
+    const list = [...(d.blocks || [])];
+    const i = list.findIndex(b => b.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return d;
+    [list[i], list[j]] = [list[j], list[i]];
+    return { ...d, blocks: list };
+  });
   const setSlotTitle = (slot, title) => writeDay(d => {
     const slots = { ...(d.slots || {}) };
     slots[slot] = { ...normSlot(slots[slot]), title };
@@ -2417,7 +2427,7 @@ export default function Dashboard({ config }) {
       loose={looseItems} onAddScheduled={(it, slot, date) => addScheduleItemToDay(update, config, date || day, it, slot)}
       onAddItem={addFlowItem} onRemoveItem={removeFlowItem} onMoveItem={moveFlowItem}
       onSetSequence={setSequence} onSetSlotTitle={setSlotTitle} sequences={seqs}
-      onAddBlock={addBlock} onRemoveBlock={removeBlock}
+      onAddBlock={addBlock} onRemoveBlock={removeBlock} onMoveBlock={moveBlock}
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}

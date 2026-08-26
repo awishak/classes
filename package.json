@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/check-refs.mjs && npm run smoke && vite build",
+    "build": "npm run check && npm run smoke && vite build",
     "preview": "vite preview",
-    "check": "node scripts/check-refs.mjs",
+    "check": "node scripts/check-refs.mjs && node scripts/check-handlers.mjs",
     "smoke": "esbuild scripts/smoke.jsx --bundle --platform=node --format=esm --packages=external --jsx=automatic --outfile=node_modules/.smoke.mjs --log-level=error --loader:.js=jsx && node node_modules/.smoke.mjs"
   },
   "dependencies": {
