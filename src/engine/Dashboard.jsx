@@ -646,27 +646,22 @@ function SlotName({ slot, title, accent, onSave }) {
   );
 }
 
-function RowTools({ onUp, onDown, onRemove, onMoveTo, first, last }) {
-  const t = { ...mini, minHeight: 26, padding: "0 7px", fontSize: 12, color: TEXT_MUTED };
+// Up, down, Move and a cross was four controls on every row to do two things.
+// Dragging covers reordering and moving between sections in one gesture, and
+// removing is rare and permanent enough to live behind a right-click.
+function RowMenu({ at, onRemove, onClose }) {
+  if (!at) return null;
+  const x = typeof window !== "undefined" ? Math.min(at.x, window.innerWidth - 190) : at.x;
   return (
-    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-      <button className="dash-focus" style={{ ...t, opacity: first ? .3 : 1 }} disabled={first} onClick={onUp} title="Move up">↑</button>
-      <button className="dash-focus" style={{ ...t, opacity: last ? .3 : 1 }} disabled={last} onClick={onDown} title="Move down">↓</button>
-      {onMoveTo ? (
-        <button className="dash-focus" style={t} onClick={onMoveTo} title="Move it to another section, or another day">Move</button>
-      ) : null}
-      <button className="dash-focus" style={t} onClick={onRemove} title="Remove from the plan">✕</button>
-    </div>
-  );
-}
-
-// Where the taught part of the class ends. Everything under this line is the
-// stuff around it rather than the lesson.
-function AfterTheMain({ accent }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 14, marginTop: 4 }}>
-      <span style={{ flex: "none", ...label, color: accent }}>After the main section</span>
-      <i style={{ flex: 1, height: 1, background: BORDER_STRONG }} />
+    <div onMouseDown={onClose} onContextMenu={e => { e.preventDefault(); onClose(); }}
+      style={{ position: "fixed", inset: 0, zIndex: 75 }}>
+      <div onMouseDown={e => e.stopPropagation()}
+        style={{ position: "fixed", left: x, top: at.y, background: "#fff", border: "1px solid " + BORDER_STRONG,
+          borderRadius: 10, boxShadow: "0 12px 30px -10px rgba(23,19,16,.4)", padding: 5, minWidth: 170 }}>
+        <button className="dash-focus" onClick={() => { onRemove(); onClose(); }}
+          style={{ ...mini, width: "100%", minHeight: HIT, borderColor: "transparent", color: LIVE,
+            justifyContent: "flex-start", padding: "0 12px" }}>Take it out of the day</button>
+      </div>
     </div>
   );
 }
@@ -788,7 +783,6 @@ function Suggestions({ blocks, accent, onPick, onAdd }) {
   );
 }
 
-const EXTRA = { after: "__after", coming: "__coming" };
 // A section I make myself is a slot with a key of its own, so it gets the
 // library picker, notes, links, reordering and the rest for free.
 const SECTION_PREFIX = "sec-";
@@ -877,10 +871,21 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onMoveTo }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove }) {
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
-  const [moving, setMoving] = useState(null);
+  const [rowMenu, setRowMenu] = useState(null);
+  const [overSlot, setOverSlot] = useState(null);
+  const [overRow, setOverRow] = useState(null);
+
+  // Dropping on a row puts it before that row; dropping on the section puts it
+  // at the end. One gesture, both jobs.
+  const drop = (e, toSlot, beforeId) => {
+    let from;
+    try { from = JSON.parse(e.dataTransfer.getData("text/plain")); } catch { return; }
+    if (!from?.id || (from.slot === toSlot && from.id === beforeId)) return;
+    onDragMove(from.slot, from.id, toSlot, beforeId);
+  };
   const [addingBlock, setAddingBlock] = useState(false);
   const [blockDraft, setBlockDraft] = useState("");
   const unplannedBlock = <Unplanned items={loose || []} accent={accent} onAdd={(it) => setPlacing(it)} castNow={castNow} />;
@@ -914,10 +919,9 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   const freeform = !(seq?.slots || []).length;
 
   const addBlockRow = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
-      <div style={{ ...label, color: accent }}>Sections</div>
+    <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
       {addingBlock ? (
-        <div style={{ display: "flex", gap: 7 }}>
+        <div style={{ display: "flex", gap: 7, flex: 1 }}>
           <input autoFocus value={blockDraft} onChange={e => setBlockDraft(e.target.value)}
             onKeyDown={e => {
               if (e.key === "Enter" && blockDraft.trim()) { onAddBlock(blockDraft.trim()); setBlockDraft(""); setAddingBlock(false); }
@@ -927,19 +931,19 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
           <button style={solid(accent)} onClick={() => { if (blockDraft.trim()) { onAddBlock(blockDraft.trim()); setBlockDraft(""); setAddingBlock(false); } }}>Add</button>
         </div>
       ) : (
-        <button className="dash-focus" style={{ ...mini, alignSelf: "flex-start" }} onClick={() => setAddingBlock(true)}>+ Add section</button>
+        <button className="dash-focus" style={{ ...mini, borderColor: accent, color: accent }}
+          onClick={() => setAddingBlock(true)}>+ New section</button>
       )}
     </div>
   );
   const blockBlock = blocks.length ? (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
-      <div style={{ ...label, color: accent }}>Sections</div>
+      <div style={{ ...label, color: accent }}>From an earlier version</div>
       {blocks.map((b, i) => (
         <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <RowTools first={i === 0} last={i === blocks.length - 1}
-              onUp={() => onMoveBlock(b.id, -1)} onDown={() => onMoveBlock(b.id, 1)}
-              onRemove={() => onRemoveBlock(b.id)} />
+            <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 7px", fontSize: 12, color: TEXT_MUTED }}
+              onClick={() => onRemoveBlock(b.id)} title="Remove">Remove</button>
           </div>
           <Castable kind="Note" kindColor={KIND_COLOR.Note} title={b.title || "Untitled block"} claim={b.claim} accent={accent}
             live={liveLabel === (b.claim || b.title)} onDismiss={dismiss}
@@ -983,7 +987,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   const mySections = Object.keys(slotItems).filter(isSection)
     .map(k => [k, normSlot(slotItems[k]).title || "Untitled section"]);
   const orphanSlots = Object.keys(slotItems)
-    .filter(k => !named.has(k) && !isSection(k) && k !== EXTRA.after && k !== EXTRA.coming)
+    .filter(k => !named.has(k) && !isSection(k))
     .filter(k => normSlot(slotItems[k]).items.length)
     .map(k => [k, normSlot(slotItems[k]).title || k]);
 
@@ -1003,8 +1007,6 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   const sectionList = [
     ...(seq?.slots || []).map(x => [x.slot, normSlot(slotItems[x.slot]).title || x.slot]),
     ...Object.keys(slotItems).filter(isSection).map(k => [k, normSlot(slotItems[k]).title || "Untitled section"]),
-    [EXTRA.after, "After the main section"],
-    [EXTRA.coming, "Coming up"],
   ];
 
   const anyContent = seq
@@ -1018,7 +1020,12 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
         const items = bucket.items;
         const usedSeeds = new Set((seq?.slots || []).flatMap(x => normSlot(slotItems[x.slot]).items).map(x => x.seedId).filter(Boolean));
         return (
-          <div key={s.slot} style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
+          <div key={s.slot}
+            onDragOver={e => { e.preventDefault(); setOverSlot(s.slot); }}
+            onDragLeave={() => setOverSlot(null)}
+            onDrop={e => { e.preventDefault(); setOverSlot(null); drop(e, s.slot); }}
+            style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER,
+              background: overSlot === s.slot ? accent + "0c" : "transparent", borderRadius: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {overrideTitle
                 ? <span style={{ ...label, color: accent }}>{overrideTitle}</span>
@@ -1039,14 +1046,14 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
               const title = blk ? (blk.title || "Untitled") : seed ? seed.title : (it.text || "Untitled");
               const body = blk ? blk.body : (it.bodyOverride || (seed ? seed.body : ""));
               return (
-                <div key={it.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <RowTools first={i === 0} last={i === items.length - 1}
-                      onUp={() => onMoveItem(s.slot, it.id, -1)}
-                      onDown={() => onMoveItem(s.slot, it.id, 1)}
-                      onMoveTo={() => setMoving({ from: s.slot, id: it.id })}
-                      onRemove={() => onRemoveItem(s.slot, it.id)} />
-                  </div>
+                <div key={it.id} draggable
+                  onDragStart={e => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", JSON.stringify({ slot: s.slot, id: it.id })); }}
+                  onDragOver={e => { e.preventDefault(); e.stopPropagation(); setOverRow(it.id); }}
+                  onDragLeave={() => setOverRow(null)}
+                  onDrop={e => { e.preventDefault(); e.stopPropagation(); setOverRow(null); drop(e, s.slot, it.id); }}
+                  onContextMenu={e => { e.preventDefault(); setRowMenu({ x: e.clientX, y: e.clientY, slot: s.slot, id: it.id }); }}
+                  style={{ display: "flex", flexDirection: "column", gap: 6, cursor: "grab",
+                    borderTop: "2px solid " + (overRow === it.id ? accent : "transparent") }}>
                   <Castable
                     kind={blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
                     kindColor={blk ? typeOf(blk.type).color : KIND_COLOR[seed ? "Seed" : "Note"]}
@@ -1075,29 +1082,22 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
 
   return (
     <>
+      <RowMenu at={rowMenu} onRemove={() => onRemoveItem(rowMenu.slot, rowMenu.id)} onClose={() => setRowMenu(null)} />
       {placing ? (
         <PlaceMenu slots={sectionList} days={days || []} today={today} accent={accent}
           onPlace={(date, slot) => onAddScheduled(placing, slot, date)} onClose={() => setPlacing(null)} />
-      ) : null}
-      {moving ? (
-        <PlaceMenu slots={sectionList} days={days || []} today={today} accent={accent}
-          onPlace={(date, slot) => onMoveTo(moving.from, moving.id, slot, date)} onClose={() => setMoving(null)} />
       ) : null}
       {seqPicker}
       {slidesBlock}
       {unplannedBlock}
       {featureBlock}
+      {addBlockRow}
       {(seq?.slots || []).map(s => renderSlot(s))}
       {orphanSlots.map(([slot, title]) => renderSlot({ slot }, title))}
       {foldRow}
       {mySections.map(([slot, title]) => renderSlot({ slot }, title))}
-      {freeform ? blockBlock : null}
-      {addBlockRow}
-      <AfterTheMain accent={accent} />
-      {renderSlot({ slot: EXTRA.after }, " ")}
-      <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
-        extra={renderSlot({ slot: EXTRA.coming }, " ")} />
-      {freeform ? null : blockBlock}
+      {blockBlock}
+      <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />
       {!anyContent && !blockBlock && !freeform ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
           <Muted style={{ fontSize: 13 }}>
@@ -2169,6 +2169,24 @@ export default function Dashboard({ config }) {
   // Move a row to another section, and to another day if I want. It leaves
   // where it was and arrives intact — same id, same headline, same pointer at
   // whatever block it came from.
+  // Dropped on a row it lands before that row; dropped on a section it lands at
+  // the end. Reordering inside a section and moving between them are the same
+  // write, which is why one gesture can do both.
+  const dragMove = (fromSlot, itemId, toSlot, beforeId) => writeDay(d => {
+    const slots = { ...(d.slots || {}) };
+    const from = normSlot(slots[fromSlot]);
+    const carried = from.items.find(x => x.id === itemId);
+    if (!carried) return d;
+    const fromItems = from.items.filter(x => x.id !== itemId);
+    slots[fromSlot] = { ...from, items: fromItems };
+    const to = normSlot(slots[toSlot]);
+    const toItems = toSlot === fromSlot ? fromItems : [...to.items];
+    const at = beforeId ? toItems.findIndex(x => x.id === beforeId) : -1;
+    if (at < 0) toItems.push(carried); else toItems.splice(at, 0, carried);
+    slots[toSlot] = { ...to, items: toItems };
+    return { ...d, slots };
+  });
+
   const moveItemTo = (fromSlot, itemId, toSlot, date) => {
     const on = date || day;
     let carried = null;
@@ -2242,8 +2260,6 @@ export default function Dashboard({ config }) {
   const sections = [
     ...((sequenceFor(config, plan?.sequenceId || config.defaultSequenceId).slots) || [])
       .map(x => [x.slot, normSlot((plan?.slots || {})[x.slot]).title || x.slot]),
-    ["__after", "After the main section"],
-    ["__coming", "Coming up"],
   ];
 
   // A block can be placed on any day, not just the one I am looking at.
@@ -2482,7 +2498,7 @@ export default function Dashboard({ config }) {
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
-      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onMoveTo={moveItemTo} />,
+      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     readings: () => <Readings items={readings} accent={config.accent} castNow={castNow} dismiss={dismiss}
