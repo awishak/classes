@@ -623,26 +623,91 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
 
 // Move and remove, on the row itself.
 // A slot's name is the sequence's word for it until I give it a better one.
-function SlotName({ slot, title, accent, onSave }) {
+// The name is a menu: rename it, or take the whole section out. A sequence's
+// own slots can be renamed but not removed, because they belong to the shape
+// of the day rather than to me.
+// Merge two, and say plainly which way round it goes before doing it. Whichever
+// sits higher up the day keeps its name; the other one empties into it and goes.
+function MergeMenu({ sections, accent, onMerge, onClose }) {
+  const [a, setA] = useState(sections[0]?.[0] || "");
+  const [b, setB] = useState(sections[1]?.[0] || "");
+  const idx = (k) => sections.findIndex(x => x[0] === k);
+  const name = (k) => (sections.find(x => x[0] === k) || [])[1] || k;
+  const ok = a && b && a !== b;
+  const top = ok ? (idx(a) < idx(b) ? a : b) : null;
+  const bottom = ok ? (top === a ? b : a) : null;
+
+  const pick = (val, set, other) => (
+    <select value={val} onChange={e => set(e.target.value)}
+      style={{ ...inputStyle, minHeight: HIT, fontSize: 14, width: "100%" }}>
+      {sections.map(([k, n]) => <option key={k} value={k} disabled={k === other}>{n}</option>)}
+    </select>
+  );
+
+  return (
+    <div onMouseDown={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(23,19,16,.3)", display: "grid", placeItems: "center", padding: 20 }}>
+      <div onMouseDown={e => e.stopPropagation()} role="dialog" aria-label="Merge two sections"
+        style={{ width: "100%", maxWidth: 400, background: "#fff", borderRadius: 16, border: "1px solid " + BORDER_STRONG,
+          boxShadow: "0 24px 60px -20px rgba(23,19,16,.5)", padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
+        <span style={label}>Merge two sections</span>
+        {pick(a, setA, b)}
+        {pick(b, setB, a)}
+        <Muted style={{ fontSize: 13.5 }}>
+          {ok
+            ? "Everything in " + JSON.stringify(name(bottom)) + " moves into " + JSON.stringify(name(top)) + ", and " + JSON.stringify(name(bottom)) + " goes."
+            : "Pick two different sections."}
+        </Muted>
+        <div style={{ display: "flex", gap: 7 }}>
+          <button className="dash-focus" style={ok ? solid(accent) : { ...mini, opacity: .45 }} disabled={!ok}
+            onClick={() => { onMerge(top, bottom); onClose(); }}>Merge</button>
+          <button className="dash-focus" style={mini} onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SlotName({ slot, title, accent, onSave, onDelete, count }) {
   const [editing, setEditing] = useState(false);
+  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(title || "");
   useEffect(() => { setDraft(title || ""); }, [title]);
 
   if (editing) {
     const commit = () => { onSave(draft.trim() || undefined); setEditing(false); };
     return (
-      <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
-        onBlur={commit}
+      <input autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
         onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setDraft(title || ""); setEditing(false); } }}
         placeholder={slot}
         style={{ ...inputStyle, minHeight: 28, fontSize: 13, padding: "2px 8px", width: "auto", flex: 1 }} />
     );
   }
+
   return (
-    <button className="dash-focus" onClick={() => setEditing(true)} title="Rename this slot"
-      style={{ ...label, color: accent, background: "none", border: "none", padding: 0, cursor: "text", textAlign: "left" }}>
-      {title || slot}
-    </button>
+    <span style={{ position: "relative" }}>
+      <button className="dash-focus" onClick={() => setOpen(v => !v)} title="Rename or remove"
+        style={{ ...label, color: accent, background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
+        {title || slot}
+      </button>
+      {open ? (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 60 }} />
+          <div style={{ position: "absolute", left: 0, top: "calc(100% + 5px)", zIndex: 61, background: "#fff",
+            border: "1px solid " + BORDER_STRONG, borderRadius: 10, padding: 5, minWidth: 190,
+            boxShadow: "0 12px 30px -10px rgba(23,19,16,.4)", display: "flex", flexDirection: "column", gap: 2 }}>
+            <button className="dash-focus" onClick={() => { setOpen(false); setEditing(true); }}
+              style={{ ...mini, minHeight: HIT, borderColor: "transparent", justifyContent: "flex-start", padding: "0 12px" }}>Rename</button>
+            {onDelete ? (
+              <button className="dash-focus" onClick={() => { setOpen(false); onDelete(); }}
+                style={{ ...mini, minHeight: HIT, borderColor: "transparent", color: LIVE, justifyContent: "flex-start", padding: "0 12px" }}>
+                Delete{count ? " · takes " + count + " with it" : ""}
+              </button>
+            ) : null}
+          </div>
+        </>
+      ) : null}
+    </span>
   );
 }
 
@@ -871,10 +936,11 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections }) {
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
   const [rowMenu, setRowMenu] = useState(null);
+  const [merging, setMerging] = useState(false);
   const [overSlot, setOverSlot] = useState(null);
   const [overRow, setOverRow] = useState(null);
 
@@ -918,24 +984,6 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   const blocks = (plan?.blocks || []).filter(b => b.title || b.body || (b.links || []).length);
   const freeform = !(seq?.slots || []).length;
 
-  const addBlockRow = (
-    <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
-      {addingBlock ? (
-        <div style={{ display: "flex", gap: 7, flex: 1 }}>
-          <input autoFocus value={blockDraft} onChange={e => setBlockDraft(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === "Enter" && blockDraft.trim()) { onAddBlock(blockDraft.trim()); setBlockDraft(""); setAddingBlock(false); }
-              if (e.key === "Escape") { setBlockDraft(""); setAddingBlock(false); }
-            }}
-            placeholder="What to call the section" style={inputStyle} />
-          <button style={solid(accent)} onClick={() => { if (blockDraft.trim()) { onAddBlock(blockDraft.trim()); setBlockDraft(""); setAddingBlock(false); } }}>Add</button>
-        </div>
-      ) : (
-        <button className="dash-focus" style={{ ...mini, borderColor: accent, color: accent }}
-          onClick={() => setAddingBlock(true)}>+ New section</button>
-      )}
-    </div>
-  );
   const blockBlock = blocks.length ? (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
       <div style={{ ...label, color: accent }}>From an earlier version</div>
@@ -1009,6 +1057,30 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
     ...Object.keys(slotItems).filter(isSection).map(k => [k, normSlot(slotItems[k]).title || "Untitled section"]),
   ];
 
+  const addBlockRow = (
+    <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+      {addingBlock ? (
+        <div style={{ display: "flex", gap: 7, flex: 1 }}>
+          <input autoFocus value={blockDraft} onChange={e => setBlockDraft(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter" && blockDraft.trim()) { onAddBlock(blockDraft.trim()); setBlockDraft(""); setAddingBlock(false); }
+              if (e.key === "Escape") { setBlockDraft(""); setAddingBlock(false); }
+            }}
+            placeholder="What to call the section" style={inputStyle} />
+          <button style={solid(accent)} onClick={() => { if (blockDraft.trim()) { onAddBlock(blockDraft.trim()); setBlockDraft(""); setAddingBlock(false); } }}>Add</button>
+        </div>
+      ) : (
+        <>
+          <button className="dash-focus" style={{ ...mini, borderColor: accent, color: accent }}
+            onClick={() => setAddingBlock(true)}>+ New section</button>
+          {sectionList.length > 1 ? (
+            <button className="dash-focus" style={mini} onClick={() => setMerging(true)}>Merge sections</button>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+
   const anyContent = seq
     ? seq.slots.some(x => normSlot(slotItems[x.slot]).items.length)
     : false;
@@ -1029,7 +1101,9 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {overrideTitle
                 ? <span style={{ ...label, color: accent }}>{overrideTitle}</span>
-                : <SlotName slot={s.slot} title={bucket.title} accent={accent} onSave={(t) => onSetSlotTitle(s.slot, t)} />}
+                : <SlotName slot={s.slot} title={bucket.title} accent={accent} count={items.length}
+                    onSave={(t) => onSetSlotTitle(s.slot, t)}
+                    onDelete={named.has(s.slot) ? null : () => onDeleteSection(s.slot)} />}
               <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
                 onClick={() => setAdding(adding === s.slot ? null : s.slot)}>{adding === s.slot ? "Close" : "+ Add"}</button>
             </div>
@@ -1083,6 +1157,10 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   return (
     <>
       <RowMenu at={rowMenu} onRemove={() => onRemoveItem(rowMenu.slot, rowMenu.id)} onClose={() => setRowMenu(null)} />
+      {merging ? (
+        <MergeMenu sections={sectionList} accent={accent}
+          onMerge={(top, bottom) => onMergeSections(top, bottom)} onClose={() => setMerging(false)} />
+      ) : null}
       {placing ? (
         <PlaceMenu slots={sectionList} days={days || []} today={today} accent={accent}
           onPlace={(date, slot) => onAddScheduled(placing, slot, date)} onClose={() => setPlacing(null)} />
@@ -2211,6 +2289,23 @@ export default function Dashboard({ config }) {
     }
   };
 
+  const deleteSection = (slot) => writeDay(d => {
+    const slots = { ...(d.slots || {}) };
+    delete slots[slot];
+    return { ...d, slots };
+  });
+
+  // The one higher up the day keeps its name; the other empties into it and
+  // goes. Items move across as they are, so nothing is rewritten on the way.
+  const mergeSections = (top, bottom) => writeDay(d => {
+    const slots = { ...(d.slots || {}) };
+    const a = normSlot(slots[top]);
+    const b = normSlot(slots[bottom]);
+    slots[top] = { ...a, items: [...a.items, ...b.items] };
+    delete slots[bottom];
+    return { ...d, slots };
+  });
+
   const setSequence = (id) => writeDay(d => ({ ...d, sequenceId: id }));
   // Everything a class can reach: its own blocks and the ones that are mine.
   const blocks2 = allBlocks(data, shared);
@@ -2498,7 +2593,7 @@ export default function Dashboard({ config }) {
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
-      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} />,
+      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMergeSections={mergeSections} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     readings: () => <Readings items={readings} accent={config.accent} castNow={castNow} dismiss={dismiss}
