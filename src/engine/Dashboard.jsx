@@ -51,7 +51,7 @@ const label2 = { fontFamily: MONO, fontSize: 12, fontWeight: 600, color: TEXT_MU
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 
 const CSS = `
-.dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-content:start;align-items:start}
+.dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;row-gap:0;align-content:start;align-items:start;grid-auto-rows:8px}
 @media (max-width:700px){.dash-grid{grid-template-columns:minmax(0,1fr)}.dash-panel[data-span="2"]{grid-column:span 1 !important}}
 .dash-panel[data-span="2"]{grid-column:span 2}
 .dash-panel.dragging{position:fixed;z-index:60;pointer-events:none;transform:rotate(-1deg);
@@ -95,10 +95,11 @@ function Grip({ onPointerDown }) {
   );
 }
 
-function Panel({ id, title, right, span, onDrag, onSize, children, refCb, dragging, collapsed, onCollapse }) {
+function Panel({ id, title, right, span, onDrag, onSize, children, refCb, dragging, collapsed, onCollapse, rows }) {
   return (
     <section ref={refCb} className={"dash-panel" + (dragging ? " dragging" : "")} data-id={id} data-span={span}
-      style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+      style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, display: "flex", flexDirection: "column",
+        overflow: "hidden", minWidth: 0, ...(rows && !dragging ? { gridRowEnd: "span " + rows } : {}) }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px",
         borderBottom: collapsed ? "none" : "1px solid " + BORDER }}>
         <Grip onPointerDown={onDrag} />
@@ -1971,6 +1972,35 @@ export default function Dashboard({ config }) {
     if (!refSetters.current[id]) refSetters.current[id] = (el) => { panelRefs.current[id] = el; };
     return refSetters.current[id];
   }, []);
+
+  // ─── masonry ───
+  // Each panel spans however many 8px rows its content needs, so it packs
+  // straight under the one above rather than lining up with its neighbour.
+  const ROW = 8, GAP = 16;
+  const [spanRows, setSpanRows] = useState({});
+  const measure = useCallback(() => {
+    const next = {};
+    Object.entries(panelRefs.current).forEach(([id, el]) => {
+      if (!el || el.classList.contains("dragging")) return;
+      const h = el.getBoundingClientRect().height;
+      if (h) next[id] = Math.ceil((h + GAP) / ROW);
+    });
+    setSpanRows(prev => {
+      const same = Object.keys(next).length === Object.keys(prev).length
+        && Object.keys(next).every(k => prev[k] === next[k]);
+      return same ? prev : { ...prev, ...next };
+    });
+  }, []);
+
+  useEffect(() => {
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => measure());
+    Object.values(panelRefs.current).forEach(el => { if (el) ro.observe(el); });
+    measure();
+    window.addEventListener("resize", measure);
+    return () => { ro.disconnect(); window.removeEventListener("resize", measure); };
+  });
+
   const orderRef = useRef(DEFAULT_ORDER);
   useEffect(() => { orderRef.current = order; }, [order]);
   const dragRef = useRef(null);
@@ -2501,6 +2531,7 @@ export default function Dashboard({ config }) {
             <Panel key={id} id={id} title={TITLES[id] + (id === "questions" && openQ ? " · " + openQ : "")}
               span={spans[id]} onDrag={onDragStart(id)} onSize={() => toggleSpan(id)}
               collapsed={collapsed.includes(id)} onCollapse={() => toggleCollapsed(id)}
+              rows={spanRows[id]}
               dragging={dragId === id} refCb={setPanelRef(id)}>
               {render[id]()}
             </Panel>
