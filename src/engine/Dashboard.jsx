@@ -583,6 +583,8 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
   // No early return for an empty day. A day with nothing in it is the day I
   // have opened this panel to build, so the slots have to be on screen with
   // their Add buttons whether or not anything is in them yet.
+  const seedById = (id) => seeds.find(x => x.id === id);
+  const slotItems = plan?.slots || {};
   const anyContent = seq
     ? seq.slots.some(x => normSlot(slotItems[x.slot]).items.length)
     : false;
