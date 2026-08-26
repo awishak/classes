@@ -25,7 +25,7 @@ import { allDays, currentDay, parseDay } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { normSlot, sequenceOptions, sequenceFor } from "./dayplan.js";
 import { SHARED_KEY, TYPES, typeOf, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
-import { unplanned, addScheduleItemToDay, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
+import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -592,7 +592,89 @@ function RowTools({ onUp, onDown, onRemove, first, last }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline }) {
+// Where the taught part of the class ends. Everything under this line is the
+// stuff around it rather than the lesson.
+function AfterTheMain({ accent }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 14, marginTop: 4 }}>
+      <span style={{ flex: "none", ...label, color: accent }}>After the main section</span>
+      <i style={{ flex: 1, height: 1, background: BORDER_STRONG }} />
+    </div>
+  );
+}
+
+// The day's readings, and the schedule is the same list. What I put here is
+// what students see under that date, and what was already assigned for that
+// date is already here — one answer to "what is assigned", not two.
+function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, blocks, onPickBlock }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [url, setUrl] = useState("");
+  const commit = () => {
+    if (!title.trim() && !url.trim()) return;
+    onAdd({ type: "reading", title: title.trim() || hostOf(url) || "Reading", url: url.trim() });
+    setTitle(""); setUrl(""); setOpen(false);
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ ...label, color: accent }}>Readings for this day</span>
+        <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
+          onClick={() => setOpen(v => !v)}>{open ? "Close" : "+ Add"}</button>
+      </div>
+      {items.map(it => (
+        <div key={it.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Castable kind="Reading" kindColor={TYPE_COLOR.reading} title={it.title} sub={it.url} url={it.url}
+              claim={it.claim} accent={accent} live={liveLabel === (it.claim || it.title)} onDismiss={dismiss}
+              onSaveClaim={() => {}}
+              onCast={(c) => castNow(it.url
+                ? { ...castFromLink({ label: it.title, url: it.url }), title: c, label: c }
+                : { type: "quote", tag: "Reading", title: c, label: c })} />
+          </div>
+          <button className="dash-focus" onClick={() => onRemove(it.id)} title="Take it off the schedule too"
+            style={{ ...mini, minHeight: HIT, padding: "0 10px", color: TEXT_MUTED }}>✕</button>
+        </div>
+      ))}
+      {!items.length && !open ? <Muted style={{ fontSize: 13 }}>Nothing assigned for this day.</Muted> : null}
+      {open ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, border: "1px solid " + accent, background: "#fff" }}>
+          {blocks?.length ? (
+            <LibraryPick blocks={blocks.filter(b => b.type === "link")} accent={accent}
+              onPick={(b) => { onPickBlock(b); setOpen(false); }} />
+          ) : null}
+          <div style={{ ...label, paddingTop: 4 }}>or a new one</div>
+          <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" style={inputStyle} />
+          <input value={title} onChange={e => setTitle(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") commit(); }} placeholder="What to call it" style={inputStyle} />
+          <button style={solid(accent)} onClick={commit}>Assign it</button>
+        </div>
+      ) : null}
+      <Muted style={{ fontSize: 12 }}>Students see these under this date on the schedule.</Muted>
+    </div>
+  );
+}
+
+// What is landing soon. Not something I build — something the schedule already
+// knows and this screen should say out loud before the room leaves.
+function ComingUp({ rows, accent, castNow, dismiss, liveLabel }) {
+  if (!rows.length) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
+      <div style={{ ...label, color: accent }}>Coming up</div>
+      {rows.map(({ a, days }) => (
+        <Item key={a.id} kind={days === 0 ? "Today" : days === 1 ? "Tomorrow" : "In " + days + "d"}
+          kindColor={days <= 1 ? LIVE : days <= 7 ? WARN : TEXT_MUTED}
+          title={a.title} sub={"Due " + a.due + (a.weight ? " · " + a.weight + "%" : "")}
+          live={liveLabel === a.title} onDismiss={dismiss}
+          onCast={() => castNow({ type: "reveal", stamp: "Assignment", title: a.title, due: "Due " + a.due, big: true, label: a.title })} />
+      ))}
+      <Muted style={{ fontSize: 12 }}>From the assignments. Casting one uses the big reveal.</Muted>
+    </div>
+  );
+}
+
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading }) {
   const [adding, setAdding] = useState(null);
   const [addingBlock, setAddingBlock] = useState(false);
   const [blockDraft, setBlockDraft] = useState("");
@@ -750,6 +832,10 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
           </div>
         );
       })}
+      <AfterTheMain accent={accent} />
+      <Readings items={readings || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
+        onAdd={onAddReading} onRemove={onRemoveReading} blocks={blocks2} onPickBlock={onPickReading} />
+      <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />
       {blockBlock}
       {freeform ? addBlockRow : null}
       {!anyContent && !blockBlock && !freeform ? (
@@ -1755,6 +1841,17 @@ export default function Dashboard({ config }) {
   // has to change in the shared store or the next class would not see it.
   const writeTo = (id) => ((data?.blocks || {})[id] ? update : updateShared);
 
+  // The day's readings ARE the schedule's readings. One list, written from
+  // whichever screen I happen to be on.
+  const readings = scheduledFor(weeks, day).filter(it => it.type === "reading");
+  const comingRows = comingUp(assignments, day, 21);
+  const addReading = (item) => addScheduleItem(update, config, day, item);
+  const dropReading = (id) => removeScheduleItem(update, config, id);
+  const pickReading = (b) => {
+    addScheduleItem(update, config, day, { type: "reading", title: b.title, url: b.url, blockId: b.id });
+    stampScheduled(writeTo(b.id), b.id, day);
+  };
+
   const pickBlock = (slot, b) => {
     addFlowItem(slot, { blockId: b.id });
     stampScheduled(writeTo(b.id), b.id, day);
@@ -1949,7 +2046,9 @@ export default function Dashboard({ config }) {
       onAddItem={addFlowItem} onRemoveItem={removeFlowItem} onMoveItem={moveFlowItem}
       onSetSequence={setSequence} onSetSlotTitle={setSlotTitle} sequences={seqs}
       onAddBlock={addBlock} onRemoveBlock={removeBlock}
-      blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline} />,
+      blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
+      readings={readings} comingRows={comingRows}
+      onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     stocked: () => <StockedPanel shelves={shelves} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}

@@ -93,6 +93,53 @@ export function addScheduleItemToDay(update, config, date, item, slot) {
   return landed;
 }
 
+// The other direction. Everything above reads the schedule into the day; this
+// writes back out to it, so a reading I put on Wednesday while building the
+// class is a reading the students see on Wednesday. Same store, same field the
+// Schedule editor writes, so there is one answer to "what is assigned".
+export function addScheduleItem(update, config, date, item) {
+  const wd = weekdayOf(date);
+  const id = "f-" + genId();
+  update(prev => {
+    const weeks = prev.schedule || config.scheduleWeeks || [];
+    const week = weeks.find(w => (w.dates || []).includes(date));
+    if (!week) return prev;
+    return {
+      ...prev,
+      schedule: weeks.map(w => w.id !== week.id ? w : {
+        ...w,
+        items: [...(w.items || []), {
+          id, libId: item.blockId || "", type: item.type || "reading",
+          title: item.title || "", url: item.url || "", date: wd,
+        }],
+      }),
+    };
+  });
+  return id;
+}
+
+export const removeScheduleItem = (update, config, itemId) => update(prev => ({
+  ...prev,
+  schedule: (prev.schedule || config.scheduleWeeks || [])
+    .map(w => ({ ...w, items: (w.items || []).filter(i => i.id !== itemId) })),
+}));
+
+// Assignments worth flagging on a given day: due on or after it, soonest first,
+// and only the ones close enough to be worth saying out loud.
+export function comingUp(assignments, date, withinDays) {
+  const from = new Date(date + ", 2026");
+  if (isNaN(from)) return [];
+  const t0 = from.getTime();
+  return (assignments || [])
+    .map(a => {
+      const d = new Date((a.due || "") + ", 2026");
+      if (isNaN(d)) return null;
+      return { a, days: Math.round((d.getTime() - t0) / 86400000) };
+    })
+    .filter(x => x && x.days >= 0 && x.days <= (withinDays || 21))
+    .sort((x, y) => x.days - y.days);
+}
+
 // A dot colour per kind, matching the Schedule card so the same thing looks the
 // same on both screens.
 export const TYPE_COLOR = {
