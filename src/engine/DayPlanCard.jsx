@@ -22,6 +22,7 @@
 import { useState } from "react";
 import { genId } from "../utils.jsx";
 import { normSlot, blankDay, sequenceOptions, sequenceFor, dayPlanFor, FREEFORM } from "./dayplan.js";
+import { scheduledFor, plannedItemIds, addScheduleItemToDay, TYPE_COLOR, typeLabel } from "./schedule.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const TEXT_PRIMARY = "#111827";
@@ -199,6 +200,8 @@ export function DayPlanDetail({ config, data, update, initialDate }) {
         {seq.desc && <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 6 }}>{seq.name} · {seq.desc}</div>}
       </div>
 
+      <OnTheSchedule config={config} data={data} update={update} date={date} accent={a} slots={seq.slots.map(x => x.slot)} />
+
       {/* slides + notes — top of the day, explicit Save (remounts per day) */}
       <SlidesNotes key={date} plan={plan} accent={a}
         onSave={(slides, notes) => writeDay(d => ({ ...d, slides, notes }))} />
@@ -246,6 +249,60 @@ export function DayPlanDetail({ config, data, update, initialDate }) {
 // ─────────────────────────────────────────────────────────────
 // SLOT (a section that holds a list of items)
 // ─────────────────────────────────────────────────────────────
+// The schedule already knows a reading is assigned on Wednesday. Until now the
+// day plan could not see it, so the reading sat on one screen and the plan for
+// that day sat on another. This is that list, under the topic, with a way into
+// a slot for each one.
+function OnTheSchedule({ config, data, update, date, accent, slots }) {
+  const [picking, setPicking] = useState(null);
+  const weeks = data?.schedule || config.scheduleWeeks || [];
+  const items = scheduledFor(weeks, date);
+  if (!items.length) return null;
+
+  const have = plannedItemIds(data, config, date);
+
+  return (
+    <div style={{ marginTop: 14, padding: 14, borderRadius: 12, border: "1px solid " + BORDER_STRONG, background: "#fff" }}>
+      <div style={{ ...label, marginBottom: 8 }}>On the schedule for {date}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {items.map(it => {
+          const inPlan = have.has(it.id);
+          const open = picking === it.id;
+          return (
+            <div key={it.id} style={{ border: "1px solid " + BORDER, borderRadius: 10, padding: "9px 11px", background: inPlan ? BG : "#fff" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: TYPE_COLOR[it.type] || TEXT_MUTED }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: TYPE_COLOR[it.type] || TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".04em" }}>{typeLabel(it.type)}</span>
+                <span style={{ flex: 1, minWidth: 120, fontSize: 15, color: TEXT_PRIMARY }}>{it.title}</span>
+                {it.loose ? <span style={{ ...label, fontSize: 11 }}>this week</span> : null}
+                {inPlan ? (
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#0f766e" }}>In the plan</span>
+                ) : (
+                  <button onClick={() => setPicking(open ? null : it.id)}
+                    style={{ minHeight: 36, padding: "0 12px", borderRadius: 999, border: "1px solid " + accent,
+                      background: "#fff", color: accent, fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                    {open ? "Cancel" : "Add"}
+                  </button>
+                )}
+              </div>
+              {open ? (
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 9 }}>
+                  {slots.map(sl => (
+                    <button key={sl} onClick={() => { addScheduleItemToDay(update, config, date, it, sl); setPicking(null); }}
+                      style={{ minHeight: 36, padding: "0 12px", borderRadius: 999, border: "1px solid " + BORDER_STRONG,
+                        background: "#fff", fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{sl}</button>
+                  ))}
+                  {!slots.length ? <Muted style={{ fontSize: 14 }}>This day has no sequence to add it to.</Muted> : null}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function SlotRow({ index, slotDef, accent, slotData, seeds, topic, onSetHeader, onResetHeader, onAddSeed, onAddText, onCreateSeed, onUpdateItem, onRemoveItem, onSaveSeedBody }) {
   const [editHeader, setEditHeader] = useState(false);
   const slot = slotDef.slot;

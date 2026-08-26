@@ -24,6 +24,7 @@ import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { normSlot } from "./dayplan.js";
+import { unplanned, addScheduleItemToDay, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -358,7 +359,36 @@ const GoTo = ({ href, accent, children }) => (
       display: "inline-flex", alignItems: "center", alignSelf: "flex-start" }}>{children}</a>
 );
 
-function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where }) {
+// On the schedule for today, and not in the flow. A reading assigned for
+// Wednesday used to exist only on the schedule screen, so on Wednesday morning
+// this panel had never heard of it.
+function Unplanned({ items, accent, onAdd, castNow }) {
+  if (!items.length) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+      <div style={{ ...label, color: WARN }}>On the schedule, not in the flow</div>
+      {items.map(it => (
+        <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap",
+          background: "rgba(180,83,9,.07)", border: "1px solid rgba(180,83,9,.3)", borderRadius: 10, padding: "8px 11px", minHeight: TAP }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: TYPE_COLOR[it.type] || TEXT_MUTED }} />
+          <span style={{ fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase",
+            color: TYPE_COLOR[it.type] || TEXT_MUTED }}>{typeLabel(it.type)}</span>
+          <span style={{ flex: 1, minWidth: 110, fontSize: 14, color: TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.title}</span>
+          {it.loose ? <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", color: TEXT_MUTED }}>THIS WEEK</span> : null}
+          {it.url ? (
+            <a href={it.url} target="_blank" rel="noreferrer" className="dash-focus"
+              style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Open ↗</a>
+          ) : null}
+          <button className="dash-focus" style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5, borderColor: accent, color: accent }}
+            onClick={() => onAdd(it)}>Add to the flow</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled }) {
+  const unplannedBlock = <Unplanned items={loose || []} accent={accent} onAdd={onAddScheduled} castNow={castNow} />;
   // The deck. Day Plan has had a slides field on every day since it was built
   // and this screen never read it, which left three of the four things the
   // dashboard exists to hold. It is a third-party embed, so it goes up and then
@@ -413,6 +443,7 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
   if (!plan || !seq) return (
     <>
       {slidesBlock}
+      {unplannedBlock}
       {featureBlock}
       {blockBlock}
       <Muted>Nothing planned for <b style={{ color: TEXT_PRIMARY }}>{where}</b> yet.</Muted>
@@ -425,6 +456,7 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
   if (!any) return (
     <>
       {slidesBlock}
+      {unplannedBlock}
       {featureBlock}
       {blockBlock}
       {blockBlock ? null : <Muted><b style={{ color: TEXT_PRIMARY }}>{where}</b> has a sequence with nothing in it yet.</Muted>}
@@ -435,6 +467,7 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
   return (
     <>
       {slidesBlock}
+      {unplannedBlock}
       {featureBlock}
       {seq.slots.map(s => {
         const bucket = normSlot(slotItems[s.slot]);
@@ -833,7 +866,7 @@ function Horizon({ title, count, checks, accent, right }) {
   );
 }
 
-function TodoPanel({ plan, seq, features, boards, assignments, shelves, students, data, accent, where }) {
+function TodoPanel({ plan, seq, features, boards, assignments, shelves, students, data, accent, where, loose }) {
   // ─── today ───
   const slotItems = plan?.slots || {};
   const flowItems = seq ? seq.slots.flatMap(sl => normSlot(slotItems[sl.slot]).items) : [];
@@ -848,6 +881,9 @@ function TodoPanel({ plan, seq, features, boards, assignments, shelves, students
     { ok: !!boards.post, good: "After-class board is written", bad: "After-class board is still the proposed one" },
     { ok: stocked > 0, good: stocked + " stocked and ready to reach for", bad: "Nothing stocked for today or this week" },
     { ok: !!plan?.slides, good: "Slides are linked", bad: "No slides linked for this day" },
+    { ok: (loose || []).length === 0,
+      good: "Everything on the schedule is in the flow",
+      bad: (loose || []).length + " thing" + ((loose || []).length === 1 ? "" : "s") + " on the schedule are not in the flow" },
   ];
 
   // ─── the assignment on the horizon ───
@@ -1156,13 +1192,17 @@ export default function Dashboard({ config }) {
 
   // Features scheduled for this class day, in the order the week lists them.
   const weekRow = weeks.find(w => w.id === weekId);
-  const dayName = ["Mon", "Wed", "Fri"][(weekRow?.dates || []).indexOf(day)] || "";
+  // Derived from the date rather than its position in the week, which was only
+  // ever right for a class meeting Monday, Wednesday and Friday in that order.
+  const dayName = weekdayOf(day);
   const features = [];
   ((weekRow?.items) || []).forEach(it => {
     if (it.type !== "activity") return;
     if (it.date && dayName && it.date !== dayName) return;
     if (!features.includes(it.title)) features.push(it.title);
   });
+
+  const looseItems = unplanned(data, config, day);
 
   useEffect(() => { document.title = config.code + " — Dashboard"; }, [config.code]);
 
@@ -1501,7 +1541,7 @@ export default function Dashboard({ config }) {
   const render = {
     todo: () => <TodoPanel plan={plan} seq={seq} features={features} boards={plan?.boards || {}}
       assignments={assignments} shelves={shelves} students={students} data={data} accent={config.accent}
-      where={config.code + " · " + day} />,
+      where={config.code + " · " + day} loose={looseItems} />,
     now: () => <NowPanel config={config} plan={plan} seq={seq} engagedAt={live?.engagedAt}
       onEngaged={markEngaged}
       onSlot={(x) => writeDay(d => ({ ...d, currentSlot: x, slotAt: x ? { ...(d.slotAt || {}), [x]: Date.now() } : (d.slotAt || {}) }))} />,
@@ -1513,7 +1553,8 @@ export default function Dashboard({ config }) {
     flow: () => <FlowPanel plan={plan} seq={seq} seeds={seeds} castNow={castNow} dismiss={dismiss}
       liveLabel={liveLabel} accent={config.accent} onClaim={saveFlowClaim}
       features={features} onFeature={runFeature} planHref={config.path + "/dayplan"}
-      onSlidesClaim={saveSlidesClaim} onBlockClaim={saveBlockClaim} where={config.code + " · " + day} />,
+      onSlidesClaim={saveSlidesClaim} onBlockClaim={saveBlockClaim} where={config.code + " · " + day}
+      loose={looseItems} onAddScheduled={(it) => addScheduleItemToDay(update, config, day, it)} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     stocked: () => <StockedPanel shelves={shelves} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
