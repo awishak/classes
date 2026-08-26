@@ -375,7 +375,51 @@ const GoTo = ({ href, accent, children }) => (
 // On the schedule for today, and not in the flow. A reading assigned for
 // Wednesday used to exist only on the schedule screen, so on Wednesday morning
 // this panel had never heard of it.
-export function Unplanned({ items, accent, onAdd, castNow }) {
+export // Where a thing goes, asked properly: which section, and which day. Days
+// matter because half of what turns up on today's schedule is really for the
+// next one, and moving it should not mean going to find that day first.
+function PlaceMenu({ slots, days, today, accent, onPlace, onClose }) {
+  const i = days.findIndex(d => d.date === today);
+  const next = i >= 0 ? days[i + 1] : null;
+  const [date, setDate] = useState(today);
+  const quick = [[today, "This day"], ...(next ? [[next.date, "Next class"]] : [])];
+
+  return (
+    <div onMouseDown={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(23,19,16,.3)", display: "grid", placeItems: "center", padding: 20 }}>
+      <div onMouseDown={e => e.stopPropagation()} role="dialog" aria-label="Where does it go"
+        style={{ width: "100%", maxWidth: 420, background: "#fff", borderRadius: 16, border: "1px solid " + BORDER_STRONG,
+          boxShadow: "0 24px 60px -20px rgba(23,19,16,.5)", padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+        <span style={label}>Which day</span>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {quick.map(([d, lbl]) => (
+            <button key={d} onClick={() => setDate(d)} aria-pressed={date === d}
+              style={{ ...mini, minHeight: HIT, ...(date === d ? { background: accent, borderColor: accent, color: "#fff" } : {}) }}>
+              {lbl} · {d}
+            </button>
+          ))}
+          <select value={date} onChange={e => setDate(e.target.value)}
+            style={{ ...inputStyle, minHeight: HIT, width: "auto", fontSize: 13.5, padding: "4px 8px" }}>
+            {days.map(d => <option key={d.date} value={d.date}>{d.date}{d.topic ? " · " + d.topic : ""}</option>)}
+          </select>
+        </div>
+
+        <span style={{ ...label, paddingTop: 4 }}>Which section</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {slots.map(([slot, lbl]) => (
+            <button key={slot} className="dash-focus" onClick={() => { onPlace(date, slot); onClose(); }}
+              style={{ ...mini, minHeight: TAP, justifyContent: "flex-start", textAlign: "left", padding: "0 14px", fontSize: 14.5 }}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+        <button style={{ ...mini, alignSelf: "flex-start" }} onClick={onClose}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+function Unplanned({ items, accent, onAdd, castNow }) {
   if (!items.length) return null;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
@@ -393,7 +437,7 @@ export function Unplanned({ items, accent, onAdd, castNow }) {
               style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Open ↗</a>
           ) : null}
           <button className="dash-focus" style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5, borderColor: accent, color: accent }}
-            onClick={() => onAdd(it)}>Add to the flow</button>
+            onClick={() => onAdd(it)}>Add</button>
         </div>
       ))}
     </div>
@@ -808,11 +852,12 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today }) {
   const [adding, setAdding] = useState(null);
+  const [placing, setPlacing] = useState(null);
   const [addingBlock, setAddingBlock] = useState(false);
   const [blockDraft, setBlockDraft] = useState("");
-  const unplannedBlock = <Unplanned items={loose || []} accent={accent} onAdd={onAddScheduled} castNow={castNow} />;
+  const unplannedBlock = <Unplanned items={loose || []} accent={accent} onAdd={(it) => setPlacing(it)} castNow={castNow} />;
   const seqPicker = (sequences || []).length > 1 ? (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span style={label}>Shape</span>
@@ -900,6 +945,14 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   // their Add buttons whether or not anything is in them yet.
   const seedById = (id) => seeds.find(x => x.id === id);
   const slotItems = plan?.slots || {};
+
+  // Every section this day has, named the way the panel names them.
+  const sectionList = [
+    ...(seq?.slots || []).map(x => [x.slot, normSlot(slotItems[x.slot]).title || x.slot]),
+    [EXTRA.after, "After the main section"],
+    [EXTRA.coming, "Also coming up"],
+  ];
+
   const anyContent = seq
     ? seq.slots.some(x => normSlot(slotItems[x.slot]).items.length)
     : false;
@@ -967,6 +1020,10 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
 
   return (
     <>
+      {placing ? (
+        <PlaceMenu slots={sectionList} days={days || []} today={today} accent={accent}
+          onPlace={(date, slot) => onAddScheduled(placing, slot, date)} onClose={() => setPlacing(null)} />
+      ) : null}
       {seqPicker}
       {slidesBlock}
       {unplannedBlock}
@@ -1752,7 +1809,9 @@ export default function Dashboard({ config }) {
     if (!features.includes(it.title)) features.push(it.title);
   });
 
-  const looseItems = unplanned(data, config, day);
+  // Readings and media is where a reading lives, so it must not also appear
+  // under "on the schedule, not in the flow". A thing gets one home on a day.
+  const looseItems = unplanned(data, config, day).filter(it => !MEDIA_SET.has(it.type));
 
   useEffect(() => { document.title = config.code + " — Dashboard"; }, [config.code]);
 
@@ -2210,14 +2269,14 @@ export default function Dashboard({ config }) {
       liveLabel={liveLabel} accent={config.accent} onClaim={saveFlowClaim}
       features={features} onFeature={runFeature} planHref={config.path + "/dayplan"}
       onSlidesClaim={saveSlidesClaim} onBlockClaim={saveBlockClaim} where={config.code + " · " + day}
-      loose={looseItems} onAddScheduled={(it, slot) => addScheduleItemToDay(update, config, day, it, slot)}
+      loose={looseItems} onAddScheduled={(it, slot, date) => addScheduleItemToDay(update, config, date || day, it, slot)}
       onAddItem={addFlowItem} onRemoveItem={removeFlowItem} onMoveItem={moveFlowItem}
       onSetSequence={setSequence} onSetSlotTitle={setSlotTitle} sequences={seqs}
       onAddBlock={addBlock} onRemoveBlock={removeBlock}
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
-      onAddIdea={addIdea} />,
+      onAddIdea={addIdea} days={days} today={day} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent} slots={(seq?.slots || []).map(x => x.slot)}

@@ -64,6 +64,8 @@ const SESSIONS = [
         ["Empty states that hand you the door", "\u201cNo plan for this day yet. Build it in Day Plan\u201d told me what was wrong and made me go find Day Plan. Now that every card has a URL, it is a link."],
       ] },
       { name: "Then, in the same session", items: [
+        ["One home per thing, per day", "A reading was showing under Readings and media AND under on-the-schedule-not-in-the-flow, because it was both at once: assigned for the day, and not in a slot. Readings and media is where a reading lives, so it comes out of the other list. Oct 7 went from five things needing attention to two, and the two are the activities that really were unplaced."],
+        ["Add asks where, including which day", "It said add to the flow and dropped things into whatever slot came first. Now it opens a chooser: every section this day has, by the name I gave it, and the day \u2014 this one, the next class, or any other on the calendar. Half of what turns up on today's schedule is really for the next one, and moving it should not mean going to find that day first."],
         ["Ideas has a panel of its own", "Collapsed by default, and each idea can be edited, duplicated, deleted, or dropped into a named section \u2014 it asks which one rather than guessing. It was in Class Flow, which was the wrong home: it is the one thing on that panel not about the day I am looking at."],
         ["Stocked is gone", "All 54 things on its shelves are blocks now, and two holding pens for the same job is one too many. Its data is still in the store, untouched, in case that turns out to be wrong."],
         ["Class Poll and Student Questions", "Poll and Questions were doing a poor job of saying whose they were."],
