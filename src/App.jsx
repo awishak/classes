@@ -11,6 +11,7 @@ import AskPage from "./engine/AskPage.jsx";
 import PlanPage from "./PlanPage.jsx";
 import { ENGINE, currentClasses, archivedClasses } from "./config/registry.js";
 import InstructorLinks from "./InstructorLinks.jsx";
+import InstructorGate from "./InstructorGate.jsx";
 
 // Classes that run on the shared engine live in config/registry.js, because the
 // Dashboard's class picker needs the same list and cannot import this file.
@@ -166,7 +167,13 @@ export default function App() {
   const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask)\/?$/);
   if (live && ENGINE[live[1]]) {
     const cfg = ENGINE[live[1]];
-    if (live[2] === "dashboard") return <Dashboard key={cfg.id} config={cfg} />;
+    if (live[2] === "dashboard") {
+      return (
+        <InstructorGate what={cfg.code + " Dashboard"}>
+          <Dashboard key={cfg.id} config={cfg} />
+        </InstructorGate>
+      );
+    }
     if (live[2] === "today") return <ClassroomView key={cfg.id} config={cfg} />;
     return <AskPage key={cfg.id} config={cfg} />;
   }
