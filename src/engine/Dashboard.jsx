@@ -24,6 +24,7 @@ import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { normSlot, sequenceOptions, sequenceFor } from "./dayplan.js";
+import { SHARED_KEY, TYPES, typeOf, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
 import { unplanned, addScheduleItemToDay, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
 
@@ -402,8 +403,65 @@ export function Unplanned({ items, accent, onAdd, castNow }) {
 // Building the day is the job this screen exists for, so it happens here
 // rather than on another page. Three ways in, because that is all a slot ever
 // holds: something I say, something from the seed library, or something to open.
-function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAddScheduled }) {
-  const [mode, setMode] = useState("note");
+// The repository, where I am standing. Three hundred blocks is more than a
+// list, so it filters by what it is, what it is about, and the words in it —
+// facets rather than folders, because a reading is a link AND about identity
+// AND from last spring, and a folder makes you pick one.
+function LibraryPick({ blocks, accent, onPick }) {
+  const [q, setQ] = useState("");
+  const [type, setType] = useState("");
+  const [topic, setTopic] = useState("");
+  const f = facets(blocks);
+  const hits = sortBlocks(blocks.filter(b => matches(b, { text: q, type, topic })), "created").slice(0, 40);
+
+  const chip = (on, label, onClick, color) => (
+    <button key={label} onClick={onClick} aria-pressed={on}
+      style={{ ...mini, minHeight: 30, padding: "0 9px", fontSize: 12.5,
+        ...(on ? { background: color || accent, borderColor: color || accent, color: "#fff" } : {}) }}>{label}</button>
+  );
+
+  return (
+    <>
+      <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Search everything"
+        style={inputStyle} />
+      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+        {chip(!type, "All", () => setType(""))}
+        {f.types.map(t => chip(type === t.id, t.label, () => setType(type === t.id ? "" : t.id), t.color))}
+      </div>
+      {f.topics.length ? (
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+          {f.topics.slice(0, 12).map(t => chip(topic === t, t, () => setTopic(topic === t ? "" : t)))}
+        </div>
+      ) : null}
+      <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 300, overflowY: "auto" }}>
+        {hits.map(b => {
+          const t = typeOf(b.type);
+          return (
+            <button key={b.id} className="dash-focus" onClick={() => onPick(b)}
+              style={{ display: "flex", alignItems: "flex-start", gap: 8, textAlign: "left", cursor: "pointer",
+                background: SURFACE_2, border: "1px solid transparent", borderRadius: 9, padding: "8px 10px",
+                minHeight: HIT, fontFamily: F, fontSize: 13.5, color: TEXT_PRIMARY }}>
+              <span style={{ flex: "none", marginTop: 3, width: 7, height: 7, borderRadius: "50%", background: t.color }} />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", wordBreak: "break-word", lineHeight: 1.35 }}>{b.headline || b.title}</span>
+                {b.children?.length ? <small style={{ color: TEXT_MUTED, fontSize: 12 }}>{b.children.length} inside</small> : null}
+                {b.tags?.length ? <small style={{ color: TEXT_MUTED, fontSize: 12, display: "block" }}>{b.tags.slice(0, 3).join(" · ")}</small> : null}
+              </span>
+              <span style={{ ...label, fontSize: 12, flex: "none" }}>{t.label}</span>
+            </button>
+          );
+        })}
+        {!hits.length ? <Muted style={{ fontSize: 13 }}>Nothing in the repository matches that.</Muted> : null}
+      </div>
+      <Muted style={{ fontSize: 12 }}>
+        {blocks.length} blocks. Adding one links to it rather than copying it, so editing it later changes it here too.
+      </Muted>
+    </>
+  );
+}
+
+function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAddScheduled, blocks, onPickBlock }) {
+  const [mode, setMode] = useState(blocks?.length ? "lib" : "note");
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
   const [q, setQ] = useState("");
@@ -430,7 +488,8 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, border: "1px solid " + accent, background: "#fff" }}>
       <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-        {tab("note", "Note")}{tab("seed", "Seed")}{tab("link", "Link")}
+        {blocks?.length ? tab("lib", "Library " + blocks.length) : null}
+        {tab("note", "Note")}{tab("link", "Link")}
         {(scheduled || []).length ? tab("sched", "Schedule " + scheduled.length) : null}
         <button style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5, marginLeft: "auto", color: TEXT_MUTED }} onClick={onClose}>Cancel</button>
       </div>
@@ -470,6 +529,10 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
             {!hits.length ? <Muted style={{ fontSize: 13 }}>Nothing in the library matches that.</Muted> : null}
           </div>
         </>
+      ) : null}
+
+      {mode === "lib" ? (
+        <LibraryPick blocks={blocks} accent={accent} onPick={(b) => { onPickBlock(slot, b); onClose(); }} />
       ) : null}
 
       {mode === "sched" ? (
@@ -529,7 +592,7 @@ function RowTools({ onUp, onDown, onRemove, first, last }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline }) {
   const [adding, setAdding] = useState(null);
   const [addingBlock, setAddingBlock] = useState(false);
   const [blockDraft, setBlockDraft] = useState("");
@@ -564,7 +627,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   const freeform = !(seq?.slots || []).length;
   const addBlockRow = (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
-      <div style={{ ...label, color: accent }}>Blocks</div>
+      <div style={{ ...label, color: accent }}>Sections</div>
       {addingBlock ? (
         <div style={{ display: "flex", gap: 7 }}>
           <input autoFocus value={blockDraft} onChange={e => setBlockDraft(e.target.value)}
@@ -576,13 +639,13 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
           <button style={solid(accent)} onClick={() => { if (blockDraft.trim()) { onAddBlock(blockDraft.trim()); setBlockDraft(""); setAddingBlock(false); } }}>Add</button>
         </div>
       ) : (
-        <button className="dash-focus" style={{ ...mini, alignSelf: "flex-start" }} onClick={() => setAddingBlock(true)}>+ Add block</button>
+        <button className="dash-focus" style={{ ...mini, alignSelf: "flex-start" }} onClick={() => setAddingBlock(true)}>+ Add section</button>
       )}
     </div>
   );
   const blockBlock = blocks.length ? (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
-      <div style={{ ...label, color: accent }}>Blocks</div>
+      <div style={{ ...label, color: accent }}>Sections</div>
       {blocks.map(b => (
         <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -645,13 +708,15 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
             {adding === s.slot ? (
               <AddToFlow slot={s.slot} seeds={seeds} used={usedSeeds} accent={accent}
                 onAdd={(item) => onAddItem(s.slot, item)} onClose={() => setAdding(null)}
-                scheduled={loose} onAddScheduled={onAddScheduled} />
+                scheduled={loose} onAddScheduled={onAddScheduled}
+                blocks={blocks2} onPickBlock={onPickBlock} />
             ) : null}
             {!items.length && adding !== s.slot ? <Muted style={{ fontSize: 13 }}>Empty.</Muted> : null}
             {items.map((it, i) => {
+              const blk = it.blockId ? blockOf(it.blockId) : null;
               const seed = it.seedId ? seedById(it.seedId) : null;
-              const title = seed ? seed.title : (it.text || "Untitled");
-              const body = it.bodyOverride || (seed ? seed.body : "");
+              const title = blk ? (blk.title || "Untitled") : seed ? seed.title : (it.text || "Untitled");
+              const body = blk ? blk.body : (it.bodyOverride || (seed ? seed.body : ""));
               return (
                 <div key={it.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -660,11 +725,17 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                       onDown={() => onMoveItem(s.slot, it.id, 1)}
                       onRemove={() => onRemoveItem(s.slot, it.id)} />
                   </div>
-                  <Castable kind={seed ? "Seed" : "Note"} kindColor={KIND_COLOR[seed ? "Seed" : "Note"]}
-                    title={title} sub={body ? body.slice(0, 70) : ""} claim={it.claim} accent={accent}
-                    live={liveLabel === (it.claim || title)} onDismiss={dismiss}
-                    onSaveClaim={(c) => onClaim(s.slot, it.id, c)}
-                    onCast={(c) => castNow({ type: "quote", tag: bucket.title || s.slot, title: c, cite: seed ? seed.concept : "", label: c })} />
+                  <Castable
+                    kind={blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
+                    kindColor={blk ? typeOf(blk.type).color : KIND_COLOR[seed ? "Seed" : "Note"]}
+                    title={title} sub={body ? body.slice(0, 70) : ""}
+                    url={blk?.url || ""}
+                    claim={blk ? blk.headline : it.claim} accent={accent}
+                    live={liveLabel === ((blk ? blk.headline : it.claim) || title)} onDismiss={dismiss}
+                    onSaveClaim={(c) => (blk ? onBlockHeadline(blk.id, c) : onClaim(s.slot, it.id, c))}
+                    onCast={(c) => castNow(blk?.url
+                      ? { ...castFromLink({ label: blk.title, url: blk.url }), title: c, label: c }
+                      : { type: "quote", tag: bucket.title || s.slot, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c })} />
                   {(it.links || []).map(l => (
                     <div key={l.id} style={{ paddingLeft: 16 }}>
                       <Castable kind="Link" kindColor={KIND_COLOR.Link} title={l.label} sub={l.url} url={l.url}
@@ -1398,6 +1469,9 @@ const DEFAULT_SPANS = { flow: "2", todo: "2", stocked: "1", boards: "1", questio
 
 export default function Dashboard({ config }) {
   const [data, update] = useClassData(config.storageKey);
+  // Blocks that belong to me rather than to any one class. Same store shape,
+  // its own key, and every class sees it.
+  const [shared, updateShared] = useClassData(SHARED_KEY);
   const [live, cast, push] = useLive(config.storageKey);
   const q = useQuestions(config.storageKey);
   const P = usePoll(config.storageKey);
@@ -1674,6 +1748,22 @@ export default function Dashboard({ config }) {
     return { ...d, slots };
   });
   const setSequence = (id) => writeDay(d => ({ ...d, sequenceId: id }));
+  // Everything a class can reach: its own blocks and the ones that are mine.
+  const blocks2 = allBlocks(data, shared);
+  const blockOf = (id) => blockById(data, shared, id);
+  // A block belongs to one store, and a shared block edited from inside a class
+  // has to change in the shared store or the next class would not see it.
+  const writeTo = (id) => ((data?.blocks || {})[id] ? update : updateShared);
+
+  const pickBlock = (slot, b) => {
+    addFlowItem(slot, { blockId: b.id });
+    stampScheduled(writeTo(b.id), b.id, day);
+  };
+  const setBlockHeadline = (id, headline) => writeTo(id)(prev => ({
+    ...prev,
+    blocks: { ...(prev.blocks || {}), [id]: { ...(prev.blocks || {})[id], headline } },
+  }));
+
   const addBlock = (title) => writeDay(d => ({ ...d, blocks: [...(d.blocks || []), { id: genId(), title, body: "", links: [] }] }));
   const removeBlock = (id) => writeDay(d => ({ ...d, blocks: (d.blocks || []).filter(b => b.id !== id) }));
   const setSlotTitle = (slot, title) => writeDay(d => {
@@ -1858,7 +1948,8 @@ export default function Dashboard({ config }) {
       loose={looseItems} onAddScheduled={(it, slot) => addScheduleItemToDay(update, config, day, it, slot)}
       onAddItem={addFlowItem} onRemoveItem={removeFlowItem} onMoveItem={moveFlowItem}
       onSetSequence={setSequence} onSetSlotTitle={setSlotTitle} sequences={seqs}
-      onAddBlock={addBlock} onRemoveBlock={removeBlock} />,
+      onAddBlock={addBlock} onRemoveBlock={removeBlock}
+      blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     stocked: () => <StockedPanel shelves={shelves} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
