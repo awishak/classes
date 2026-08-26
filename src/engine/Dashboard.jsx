@@ -840,8 +840,7 @@ function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove,
 
 // What is landing soon. Not something I build — something the schedule already
 // knows and this screen should say out loud before the room leaves.
-function ComingUp({ rows, accent, castNow, dismiss, liveLabel }) {
-  if (!rows.length) return null;
+function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
       <div style={{ ...label, color: accent }}>Coming up</div>
@@ -852,7 +851,8 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel }) {
           live={liveLabel === a.title} onDismiss={dismiss}
           onCast={() => castNow({ type: "reveal", stamp: "Assignment", title: a.title, due: "Due " + a.due, big: true, label: a.title })} />
       ))}
-      <Muted style={{ fontSize: 12 }}>From the assignments. Casting one uses the big reveal.</Muted>
+      {rows.length ? <Muted style={{ fontSize: 12 }}>From the assignments. Casting one uses the big reveal.</Muted> : null}
+      {extra}
     </div>
   );
 }
@@ -951,11 +951,21 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   const seedById = (id) => seeds.find(x => x.id === id);
   const slotItems = plan?.slots || {};
 
+  // Slots holding something that the sequence in front of me does not name.
+  // They keep their content and say where it came from, so switching to
+  // freeform and back loses nothing either way.
+  const named = new Set((seq?.slots || []).map(x => x.slot));
+  const orphanSlots = Object.keys(slotItems)
+    .filter(k => !named.has(k) && k !== EXTRA.after && k !== EXTRA.coming)
+    .filter(k => normSlot(slotItems[k]).items.length)
+    .map(k => [k, (normSlot(slotItems[k]).title || k) + " · from another shape"]);
+
+
   // Every section this day has, named the way the panel names them.
   const sectionList = [
     ...(seq?.slots || []).map(x => [x.slot, normSlot(slotItems[x.slot]).title || x.slot]),
     [EXTRA.after, "After the main section"],
-    [EXTRA.coming, "Also coming up"],
+    [EXTRA.coming, "Coming up"],
   ];
 
   const anyContent = seq
@@ -1034,12 +1044,13 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
       {unplannedBlock}
       {featureBlock}
       {(seq?.slots || []).map(s => renderSlot(s))}
+      {orphanSlots.map(([slot, title]) => renderSlot({ slot }, title))}
       <AfterTheMain accent={accent} />
-      {renderSlot({ slot: EXTRA.after }, "After the main section")}
+      {renderSlot({ slot: EXTRA.after }, " ")}
       <Readings items={readings || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
         onAdd={onAddReading} onRemove={onRemoveReading} blocks={blocks2} onPickBlock={onPickReading} />
-      <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />
-      {renderSlot({ slot: EXTRA.coming }, "Also coming up")}
+      <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
+        extra={renderSlot({ slot: EXTRA.coming }, " ")} />
       {blockBlock}
       {freeform ? addBlockRow : null}
       {!anyContent && !blockBlock && !freeform ? (
@@ -1408,7 +1419,10 @@ function Note({ from, body, accent, scope, onSave, placeholder }) {
 // Everything written about this day, above the box I scribble in during it.
 // Three of these were being written in two different editors and none of them
 // reached this screen.
-export function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, accent, day, onStock, onSaveDayNote, onSaveWeekPlan, onSaveWeekText }) {
+export function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, accent, day, onStock, onSaveDayNote, onSaveWeekPlan, onSaveWeekText, days, noteFor }) {
+  const [noteDay, setNoteDay] = useState(day);
+  useEffect(() => { setNoteDay(day); }, [day]);
+  const readNote = noteFor || (() => dayNote || "");
   const [v, setV] = useState(value || "");
   const [saved, setSaved] = useState(true);
   const boxRef = useRef(null);
@@ -1435,7 +1449,17 @@ export function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, accen
     <>
       {/* Two different things, so they look different. The day note was written
           when I planned the session; the box below is what I scribble during it. */}
-      <Note from="Today" scope={day} body={dayNote} accent={accent} onSave={onSaveDayNote}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ ...label, color: accent }}>Day note for</span>
+        <select value={noteDay} onChange={e => setNoteDay(e.target.value)}
+          style={{ ...inputStyle, minHeight: HIT, width: "auto", fontSize: 13.5, padding: "4px 8px" }}>
+          {(days || []).map(d => (
+            <option key={d.date} value={d.date}>{d.date === day ? "This day · " + d.date : d.date}</option>
+          ))}
+        </select>
+      </div>
+      <Note key={noteDay} from={noteDay === day ? "Today" : noteDay} scope={noteDay === day ? day : "another day"}
+        body={noteDay === day ? dayNote : readNote(noteDay)} accent={accent} onSave={(v) => onSaveDayNote(v, noteDay)}
         placeholder="What this day is for, in my words." />
       <Note from="Lesson plan" scope="this week" body={weekPlan} accent={accent} onSave={onSaveWeekPlan}
         placeholder="How the week runs." />
@@ -2118,7 +2142,7 @@ export default function Dashboard({ config }) {
     ...((sequenceFor(config, plan?.sequenceId || config.defaultSequenceId).slots) || [])
       .map(x => [x.slot, normSlot((plan?.slots || {})[x.slot]).title || x.slot]),
     ["__after", "After the main section"],
-    ["__coming", "Also coming up"],
+    ["__coming", "Coming up"],
   ];
 
   // A block can be placed on any day, not just the one I am looking at.
@@ -2158,7 +2182,7 @@ export default function Dashboard({ config }) {
     setShelf(shelf, list => list.map(x => x.id === id ? { ...x, claim } : x));
 
   const saveBoard = (which, board) => writeDay(d => ({ ...d, boards: { ...(d.boards || {}), [which]: board } }));
-  const saveDayNote = (notes) => writeDay(d => ({ ...d, notes }));
+  const saveDayNote = (notes, on) => writeDayOn(on || day, d => ({ ...d, notes }));
   const writeWeekField = (field, val) => update(prev => ({
     ...prev,
     schedule: (prev.schedule || config.scheduleWeeks || [])
@@ -2347,6 +2371,7 @@ export default function Dashboard({ config }) {
       dayNote={plan?.notes} weekPlan={weekRow?.plan} weekText={weekRow?.text}
       accent={config.accent} day={day}
       onSaveDayNote={saveDayNote} onSaveWeekPlan={saveWeekPlan} onSaveWeekText={saveWeekText}
+      days={days} noteFor={(d) => ((data.dayPlans || {})[d] || {}).notes || ""}
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
   };
