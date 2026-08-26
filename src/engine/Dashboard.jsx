@@ -282,7 +282,7 @@ function castFromLink(l, force) {
 // ─────────────────────────────────────────────────────────────
 // panels
 // ─────────────────────────────────────────────────────────────
-function NowPanel({ config, engagedAt, onEngaged, plan, seq, onSlot }) {
+export function NowPanel({ config, engagedAt, onEngaged, plan, seq, onSlot }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 20000); return () => clearInterval(t); }, []);
 
@@ -362,7 +362,7 @@ const GoTo = ({ href, accent, children }) => (
 // On the schedule for today, and not in the flow. A reading assigned for
 // Wednesday used to exist only on the schedule screen, so on Wednesday morning
 // this panel had never heard of it.
-function Unplanned({ items, accent, onAdd, castNow }) {
+export function Unplanned({ items, accent, onAdd, castNow }) {
   if (!items.length) return null;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
@@ -517,7 +517,7 @@ function RowTools({ onUp, onDown, onRemove, first, last }) {
   );
 }
 
-function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences }) {
   const [adding, setAdding] = useState(null);
   const unplannedBlock = <Unplanned items={loose || []} accent={accent} onAdd={onAddScheduled} castNow={castNow} />;
   const seqPicker = (sequences || []).length > 1 ? (
@@ -666,7 +666,7 @@ const SHELVES = [
   { id: "any", label: "Random", scope: "anything" },
 ];
 
-function StockedPanel({ shelves, onAdd, onRemove, onClaim, castNow, dismiss, liveLabel, accent }) {
+export function StockedPanel({ shelves, onAdd, onRemove, onClaim, castNow, dismiss, liveLabel, accent }) {
   return (
     <>
       {SHELVES.map(sh => (
@@ -735,7 +735,7 @@ function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveL
 // a way back to open when it turns out to matter next week.
 const Q_TABS = [["open", "Open"], ["answered", "Answered"], ["archived", "Archived"]];
 
-function QuestionsPanel({ items, setState, archiveOpen, castNow, accent }) {
+export function QuestionsPanel({ items, setState, archiveOpen, castNow, accent }) {
   const [tab, setTab] = useState("open");
   if (items === null) return <Muted>Loading…</Muted>;
   const open = items.filter(q => q.state === tab);
@@ -797,7 +797,7 @@ const ATT_STYLE = {
 // Everyone starts Here, so taking attendance is only ever about the exceptions.
 // Type a few letters to find someone, and once you have marked the room, flip to
 // Exceptions so the twenty-five people who showed up stop taking the space.
-function AttendancePanel({ students, marks, onMark, onReset }) {
+export function AttendancePanel({ students, marks, onMark, onReset }) {
   const [q, setQ] = useState("");
   const [only, setOnly] = useState(false);
   const stateOf = (n) => marks[n] || "here";
@@ -847,7 +847,7 @@ function AttendancePanel({ students, marks, onMark, onReset }) {
 // Pre-class and post-class boards. I always drive these by hand — the app
 // proposes, I edit, I decide when they go up. Never a bullet list: the screen
 // holds one idea at a time and I step through them.
-function BoardsPanel({ boards, proposals, onSave, castNow, dismiss, liveCast, accent }) {
+export function BoardsPanel({ boards, proposals, onSave, castNow, dismiss, liveCast, accent }) {
   return (
     <>
       {["pre", "post"].map(which => {
@@ -958,7 +958,7 @@ function Note({ from, body, href, accent, scope }) {
 // Everything written about this day, above the box I scribble in during it.
 // Three of these were being written in two different editors and none of them
 // reached this screen.
-function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, planHref, schedHref, accent, day }) {
+export function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, planHref, schedHref, accent, day }) {
   const [v, setV] = useState(value || "");
   const [saved, setSaved] = useState(true);
   const boxRef = useRef(null);
@@ -1030,7 +1030,7 @@ function Horizon({ title, count, checks, accent, right }) {
   );
 }
 
-function TodoPanel({ plan, seq, features, boards, assignments, shelves, students, data, accent, where, loose }) {
+export function TodoPanel({ plan, seq, features, boards, assignments, shelves, students, data, accent, where, loose }) {
   // ─── today ───
   const slotItems = plan?.slots || {};
   const flowItems = seq ? seq.slots.flatMap(sl => normSlot(slotItems[sl.slot]).items) : [];
@@ -1102,7 +1102,7 @@ function TodoPanel({ plan, seq, features, boards, assignments, shelves, students
   );
 }
 
-function AssignmentsPanel({ assignments, castNow, dismiss, liveLabel }) {
+export function AssignmentsPanel({ assignments, castNow, dismiss, liveLabel }) {
   if (!assignments.length) return <Muted>No assignments yet.</Muted>;
   return (
     <>
@@ -1122,7 +1122,7 @@ function AssignmentsPanel({ assignments, castNow, dismiss, liveLabel }) {
 // Mid-sentence, with the room watching, hunting for the right panel is the
 // worst thing this screen asks of me. One box over everything castable: three
 // letters, Enter, it is up. Cmd+K opens it.
-function CommandBar({ targets, accent, onClose }) {
+export function CommandBar({ targets, accent, onClose }) {
   const [q, setQ] = useState("");
   const [i, setI] = useState(0);
   const lc = q.trim().toLowerCase();
@@ -1195,7 +1195,7 @@ function ShortcutSheet({ onClose }) {
 // ─────────────────────────────────────────────────────────────
 // live monitor: a real preview of what the room sees
 // ─────────────────────────────────────────────────────────────
-function Monitor({ config, live, cast, push, recent, onRecast }) {
+export function Monitor({ config, live, cast, push, recent, onRecast }) {
   const liveUrl = live?.cast?.openUrl || live?.cast?.url || "";
   const box = useRef(null);
   const [scale, setScale] = useState(0.3);
