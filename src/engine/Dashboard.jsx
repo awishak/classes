@@ -94,19 +94,31 @@ function Grip({ onPointerDown }) {
   );
 }
 
-function Panel({ id, title, right, span, onDrag, onSize, children, refCb, dragging }) {
+function Panel({ id, title, right, span, onDrag, onSize, children, refCb, dragging, collapsed, onCollapse }) {
   return (
     <section ref={refCb} className={"dash-panel" + (dragging ? " dragging" : "")} data-id={id} data-span={span}
       style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "1px solid " + BORDER }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px",
+        borderBottom: collapsed ? "none" : "1px solid " + BORDER }}>
         <Grip onPointerDown={onDrag} />
-        <span style={{ ...label, color: TEXT_SECONDARY, marginRight: "auto" }}>{title}</span>
-        {right}
-        <button onClick={onSize} style={{ ...mini, minHeight: HIT, padding: "0 10px", fontFamily: MONO, fontSize: 12, color: TEXT_MUTED }}>
-          {span === "2" ? "2×" : "1×"}
+        <button className="dash-focus" onClick={onCollapse}
+          title={collapsed ? "Open this panel" : "Collapse to the bar"} aria-expanded={!collapsed}
+          style={{ ...label, color: TEXT_SECONDARY, marginRight: "auto", background: "none", border: "none",
+            padding: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, minHeight: HIT, textAlign: "left" }}>
+          <span style={{ display: "inline-block", fontSize: 11, color: TEXT_MUTED, width: 9,
+            transform: collapsed ? "rotate(-90deg)" : "none", transition: "transform .15s" }}>▾</span>
+          {title}
         </button>
+        {collapsed ? null : right}
+        {collapsed ? null : (
+          <button onClick={onSize} style={{ ...mini, minHeight: HIT, padding: "0 10px", fontFamily: MONO, fontSize: 12, color: TEXT_MUTED }}>
+            {span === "2" ? "2×" : "1×"}
+          </button>
+        )}
       </div>
-      <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>{children}</div>
+      {collapsed ? null : (
+        <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>{children}</div>
+      )}
     </section>
   );
 }
@@ -1379,6 +1391,9 @@ function Picker({ title, opts, value, onPick, accent }) {
 // engagement clock are useful and they were competing for the top of the page
 // with the thing I actually came here to do.
 const DEFAULT_ORDER = ["flow", "todo", "stocked", "boards", "questions", "scratch", "poll", "now", "attendance", "assignments"];
+// Open on what I came here for. The rest keep their bar so I know they are
+// there, and one click brings any of them back.
+const DEFAULT_COLLAPSED = ["boards", "poll", "questions", "attendance", "now"];
 const DEFAULT_SPANS = { flow: "2", todo: "2", stocked: "1", boards: "1", questions: "1", scratch: "1", poll: "2", now: "1", attendance: "2", assignments: "1" };
 
 export default function Dashboard({ config }) {
@@ -1470,31 +1485,52 @@ export default function Dashboard({ config }) {
   }, [cast]);
 
   // ─── panel layout (my screen preference, so it lives in this browser) ───
-  const LKEY = "dash:" + config.id;
+  // One arrangement, not one per class. How I like the screen laid out is a
+  // fact about me, not about COMM 118, and rearranging it once should hold
+  // everywhere. The old per-class keys get read once to seed this, so the
+  // arrangement I already had is not thrown away.
+  const LKEY = "dash:view";
   const [order, setOrder] = useState(DEFAULT_ORDER);
   const [spans, setSpans] = useState(DEFAULT_SPANS);
   // A panel I am not using today is not neutral, it is one more thing to read
   // past. Hidden ones come off the grid entirely.
   const [hidden, setHidden] = useState([]);
+  const [collapsed, setCollapsed] = useState(DEFAULT_COLLAPSED);
   const [panelMenu, setPanelMenu] = useState(false);
   useEffect(() => {
     try {
-      const v = JSON.parse(localStorage.getItem(LKEY) || "null");
-      if (v?.order) {
+      // The global view, or the arrangement I already had on any one class,
+      // whichever exists. A per-class layout is read once and then never again.
+      let v = JSON.parse(localStorage.getItem(LKEY) || "null");
+      if (!v) {
+        for (const c of ENGINE_LIST) {
+          const old = JSON.parse(localStorage.getItem("dash:" + c.id) || "null");
+          if (old?.order) { v = old; break; }
+        }
+      }
+      if (!v) return;
+      if (v.order) {
         const kept = v.order.filter(id => DEFAULT_ORDER.includes(id));
         setOrder([...kept, ...DEFAULT_ORDER.filter(id => !kept.includes(id))]);
       }
-      if (v?.spans) setSpans({ ...DEFAULT_SPANS, ...v.spans });
-      if (Array.isArray(v?.hidden)) setHidden(v.hidden.filter(id => DEFAULT_ORDER.includes(id)));
+      if (v.spans) setSpans({ ...DEFAULT_SPANS, ...v.spans });
+      if (Array.isArray(v.hidden)) setHidden(v.hidden.filter(id => DEFAULT_ORDER.includes(id)));
+      if (Array.isArray(v.collapsed)) setCollapsed(v.collapsed.filter(id => DEFAULT_ORDER.includes(id)));
     } catch { /* first run */ }
   }, [LKEY]);
-  const saveLayout = useCallback((o, s, h) => {
-    try { localStorage.setItem(LKEY, JSON.stringify({ order: o, spans: s, hidden: h })); } catch { /* private mode */ }
+
+  const saveLayout = useCallback((o, s, h, c) => {
+    try { localStorage.setItem(LKEY, JSON.stringify({ order: o, spans: s, hidden: h, collapsed: c })); } catch { /* private mode */ }
   }, [LKEY]);
-  const toggleSpan = (id) => { const s = { ...spans, [id]: spans[id] === "2" ? "1" : "2" }; setSpans(s); saveLayout(order, s, hidden); };
+
+  const toggleSpan = (id) => { const s = { ...spans, [id]: spans[id] === "2" ? "1" : "2" }; setSpans(s); saveLayout(order, s, hidden, collapsed); };
   const toggleHidden = (id) => {
     const h = hidden.includes(id) ? hidden.filter(x => x !== id) : [...hidden, id];
-    setHidden(h); saveLayout(order, spans, h);
+    setHidden(h); saveLayout(order, spans, h, collapsed);
+  };
+  const toggleCollapsed = (id) => {
+    const c = collapsed.includes(id) ? collapsed.filter(x => x !== id) : [...collapsed, id];
+    setCollapsed(c); saveLayout(order, spans, hidden, c);
   };
   const shown = order.filter(id => !hidden.includes(id));
 
@@ -1560,7 +1596,7 @@ export default function Dashboard({ config }) {
       }
       dragRef.current = null;
       setDragId(null);
-      saveLayout(orderRef.current, spans, hidden);
+      saveLayout(orderRef.current, spans, hidden, collapsed);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
@@ -1570,7 +1606,7 @@ export default function Dashboard({ config }) {
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
     };
-  }, [dragId, order, spans, hidden, saveLayout]);
+  }, [dragId, order, spans, hidden, collapsed, saveLayout]);
 
   // ─── writes ───
   const writeDay = (fn) => update(prev => {
@@ -1844,7 +1880,7 @@ export default function Dashboard({ config }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
   };
-  const TITLES = { todo: "To-Do", now: "Now", poll: "Poll", flow: "Class Flow", boards: "Before & After", stocked: "Stocked", questions: "Questions", attendance: "Attendance", scratch: "Notes", assignments: "Assignments" };
+  const TITLES = { todo: "To-Do", now: "Class Clock", poll: "Poll", flow: "Class Flow", boards: "Before & After", stocked: "Stocked", questions: "Questions", attendance: "Attendance", scratch: "Notes", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   // Casting from the wrong session is silent and total: the room gets last
   // Wednesday and nothing on this screen says so.
@@ -1894,21 +1930,32 @@ export default function Dashboard({ config }) {
                 border: "1px solid " + BORDER_STRONG, borderRadius: 12, padding: 8, minWidth: 200,
                 boxShadow: "0 16px 36px -12px rgba(23,19,16,.32)", display: "flex", flexDirection: "column", gap: 2 }}>
                 <button onClick={() => {
-                  setOrder(DEFAULT_ORDER); setSpans(DEFAULT_SPANS); setHidden([]);
-                  saveLayout(DEFAULT_ORDER, DEFAULT_SPANS, []);
+                  setOrder(DEFAULT_ORDER); setSpans(DEFAULT_SPANS); setHidden([]); setCollapsed(DEFAULT_COLLAPSED);
+                  saveLayout(DEFAULT_ORDER, DEFAULT_SPANS, [], DEFAULT_COLLAPSED);
                   setPanelMenu(false);
                 }}
                   style={{ ...mini, minHeight: HIT, margin: "2px 4px 6px", justifyContent: "center" }}>Reset arrangement</button>
+                <div style={{ ...label, fontSize: 12, padding: "2px 8px 6px", color: TEXT_MUTED }}>
+                  Dot toggles on the grid · arrow collapses
+                </div>
                 {DEFAULT_ORDER.map(id => {
                   const on = !hidden.includes(id);
+                  const shut = collapsed.includes(id);
                   return (
-                    <button key={id} onClick={() => toggleHidden(id)}
-                      style={{ display: "flex", alignItems: "center", gap: 9, background: "none", border: "none", cursor: "pointer",
-                        padding: "0 8px", minHeight: 36, borderRadius: 8, fontFamily: F, fontSize: 15, textAlign: "left",
-                        color: on ? TEXT_PRIMARY : TEXT_MUTED }}>
-                      <span style={{ flex: "none", width: 8, height: 8, borderRadius: "50%", background: on ? config.accent : BORDER_STRONG }} />
-                      {TITLES[id]}
-                    </button>
+                    <div key={id} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <button className="dash-focus" onClick={() => toggleHidden(id)}
+                        style={{ display: "flex", alignItems: "center", gap: 9, background: "none", border: "none", cursor: "pointer",
+                          padding: "0 8px", minHeight: 36, borderRadius: 8, fontFamily: F, fontSize: 15, textAlign: "left",
+                          flex: 1, color: on ? TEXT_PRIMARY : TEXT_MUTED }}>
+                        <span style={{ flex: "none", width: 8, height: 8, borderRadius: "50%", background: on ? config.accent : BORDER_STRONG }} />
+                        {TITLES[id]}
+                      </button>
+                      <button className="dash-focus" onClick={() => toggleCollapsed(id)} disabled={!on}
+                        title={shut ? "Open it" : "Collapse it"}
+                        style={{ background: "none", border: "none", cursor: on ? "pointer" : "default", minHeight: 36, width: 30,
+                          color: TEXT_MUTED, opacity: on ? 1 : .3, fontSize: 11,
+                          transform: shut ? "rotate(-90deg)" : "none" }}>▾</button>
+                    </div>
                   );
                 })}
               </div>
@@ -1933,6 +1980,7 @@ export default function Dashboard({ config }) {
           {shown.map(id => (
             <Panel key={id} id={id} title={TITLES[id] + (id === "questions" && openQ ? " · " + openQ : "")}
               span={spans[id]} onDrag={onDragStart(id)} onSize={() => toggleSpan(id)}
+              collapsed={collapsed.includes(id)} onCollapse={() => toggleCollapsed(id)}
               dragging={dragId === id} refCb={setPanelRef(id)}>
               {render[id]()}
             </Panel>
