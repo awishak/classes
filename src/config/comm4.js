@@ -21,6 +21,9 @@ const comm4 = {
   accentLight: "#ecfdf5",
 
   storageKey: "comm4-f26-v1",
+
+  // Shows on the public landing page.
+  listed: true,
   adminPin: "444444",
 
   openAccess: true,

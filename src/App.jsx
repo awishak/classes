@@ -9,7 +9,7 @@ import Dashboard from "./engine/Dashboard.jsx";
 import ClassroomView from "./engine/ClassroomView.jsx";
 import AskPage from "./engine/AskPage.jsx";
 import PlanPage from "./PlanPage.jsx";
-import { ENGINE } from "./config/registry.js";
+import { ENGINE, ENGINE_LIST } from "./config/registry.js";
 
 // Classes that run on the shared engine live in config/registry.js, because the
 // Dashboard's class picker needs the same list and cannot import this file.
@@ -17,7 +17,7 @@ import { ENGINE } from "./config/registry.js";
 // Classes whose public hub is still the old forked file. Everything else on the
 // engine gets its card pages as real URLs: /comm999/assignments is a link you
 // can send a student.
-const LEGACY_HUBS = new Set(["comm118", "comm4", "comm2"]);
+const LEGACY_HUBS = new Set(["comm118"]);
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 
@@ -29,38 +29,10 @@ const BORDER_STRONG = "#e5e7eb";
 
 const sectionLabel = { fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.12em", fontFamily: F };
 
-const CLASSES = [
-  {
-    id: "comm118",
-    path: "/comm118",
-    name: "Communication and Sport",
-    code: "COMM 118",
-    quarter: "Spring 2026",
-    desc: "MWF 8:00 to 9:05 am · Vari 128",
-    color: "#9f1239",
-    ready: true,
-  },
-  {
-    id: "comm2",
-    path: "/comm2",
-    name: "Public Speaking",
-    code: "COMM 2",
-    quarter: "Spring 2026",
-    desc: "MWF 9:15 to 10:20 am · Vari 128",
-    color: "#2563eb",
-    ready: true,
-  },
-  {
-    id: "comm4",
-    path: "/comm4",
-    name: "Approaches to Communication Research",
-    code: "COMM 4",
-    quarter: "Spring 2026",
-    desc: "MWF 11:45 am to 12:50 pm · Lucas 207",
-    color: "#059669",
-    ready: true,
-  },
-];
+// The landing page reads the registry, so a class appears on the front door by
+// existing rather than by being typed out here a second time. `listed` is what
+// decides; the template and the empty placeholder stay off.
+const listedClasses = () => ENGINE_LIST.filter(c => c.listed);
 
 function LandingPage() {
   const navigate = (path) => {
@@ -80,27 +52,16 @@ function LandingPage() {
           <div style={{ fontSize: 14, color: TEXT_SECONDARY, marginTop: 4 }}>Department of Communication</div>
         </div>
 
-        {/* Class cards */}
-        <div style={{ ...sectionLabel, marginBottom: 10 }}>Spring 2026</div>
+        {/* Class cards, grouped by term */}
+        {Object.entries(listedClasses().reduce((acc, c) => {
+          (acc[c.quarter] = acc[c.quarter] || []).push(c);
+          return acc;
+        }, {})).map(([quarter, classes]) => (
+        <div key={quarter} style={{ marginBottom: 22 }}>
+        <div style={{ ...sectionLabel, marginBottom: 10 }}>{quarter}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {CLASSES.map(c => {
+          {classes.map(c => {
             const codeShort = c.code.split(" ")[1];
-            if (!c.ready) {
-              return (
-                <div key={c.id} style={{ background: "#fff", borderRadius: 14, padding: "14px 16px", border: "1px solid " + BORDER, opacity: 0.55, fontFamily: F }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 11, background: "#e4e4e7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span style={{ color: "#a1a1aa", fontSize: 13, fontWeight: 700, letterSpacing: "-0.02em" }}>{codeShort}</span>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 9, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>{c.code}</div>
-                      <div style={{ fontSize: 16, fontWeight: 500, color: TEXT_MUTED, lineHeight: 1.25, letterSpacing: "-0.01em" }}>{c.name}</div>
-                      <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 3 }}>Coming soon</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
             return (
               <button
                 key={c.id}
@@ -112,11 +73,11 @@ function LandingPage() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 11, background: c.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 11, background: c.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <span style={{ color: "#fff", fontSize: 14, fontWeight: 700, letterSpacing: "-0.02em" }}>{codeShort}</span>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: c.color, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>{c.code}</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: c.accent, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>{c.code}</div>
                     <div style={{ fontSize: 17, fontWeight: 500, color: TEXT_PRIMARY, lineHeight: 1.25, letterSpacing: "-0.01em" }}>{c.name}</div>
                     <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 3 }}>{c.desc}</div>
                   </div>
@@ -130,6 +91,8 @@ function LandingPage() {
             );
           })}
         </div>
+        </div>
+        ))}
 
         <div style={{ textAlign: "center", marginTop: 32, fontSize: 11, color: TEXT_MUTED }}>
           aishak@scu.edu
@@ -181,6 +144,16 @@ export default function App() {
     return <AskPage key={cfg.id} config={cfg} />;
   }
 
+  // The old forked hubs. COMM 2 and COMM 4 handed their public URL to the
+  // engine, and these still hold a term of grading and game data, so they keep
+  // an address rather than falling out of the app.
+  const LEGACY_PAGE = { comm2: Comm2, comm4: Comm4, comm118: Comm118 };
+  const legacy = path.match(/^\/(comm\w+)\/legacy\/?$/);
+  if (legacy && LEGACY_PAGE[legacy[1]]) {
+    const Page = LEGACY_PAGE[legacy[1]];
+    return <Page />;
+  }
+
   const site = path.match(/^\/(comm\w+)(?:\/([a-z]+))?\/?$/);
   if (site && ENGINE[site[1]] && !LEGACY_HUBS.has(site[1])) {
     return <ClassApp key={site[1]} config={ENGINE[site[1]]} initialCard={site[2] || null} />;
@@ -188,14 +161,6 @@ export default function App() {
 
   if (path === "/comm118" || path === "/comm118/") {
     return <Comm118 />;
-  }
-
-  if (path === "/comm4" || path === "/comm4/") {
-    return <Comm4 />;
-  }
-
-  if (path === "/comm2" || path === "/comm2/") {
-    return <Comm2 />;
   }
 
   return <LandingPage />;

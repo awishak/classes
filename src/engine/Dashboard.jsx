@@ -358,7 +358,7 @@ const GoTo = ({ href, accent, children }) => (
       display: "inline-flex", alignItems: "center", alignSelf: "flex-start" }}>{children}</a>
 );
 
-function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim }) {
+function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where }) {
   // The deck. Day Plan has had a slides field on every day since it was built
   // and this screen never read it, which left three of the four things the
   // dashboard exists to hold. It is a third-party embed, so it goes up and then
@@ -415,7 +415,7 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
       {slidesBlock}
       {featureBlock}
       {blockBlock}
-      <Muted>{featureBlock ? "No sequence built for this day yet." : "Nothing planned for this day yet."}</Muted>
+      <Muted>Nothing planned for <b style={{ color: TEXT_PRIMARY }}>{where}</b> yet.</Muted>
       <GoTo href={planHref} accent={accent}>Build it in Day Plan →</GoTo>
     </>
   );
@@ -427,7 +427,7 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
       {slidesBlock}
       {featureBlock}
       {blockBlock}
-      {blockBlock ? null : <Muted>This day has a sequence with nothing in it yet.</Muted>}
+      {blockBlock ? null : <Muted><b style={{ color: TEXT_PRIMARY }}>{where}</b> has a sequence with nothing in it yet.</Muted>}
       <GoTo href={planHref} accent={accent}>Fill the slots in Day Plan →</GoTo>
     </>
   );
@@ -833,7 +833,7 @@ function Horizon({ title, count, checks, accent, right }) {
   );
 }
 
-function TodoPanel({ plan, seq, features, boards, assignments, shelves, students, data, accent }) {
+function TodoPanel({ plan, seq, features, boards, assignments, shelves, students, data, accent, where }) {
   // ─── today ───
   const slotItems = plan?.slots || {};
   const flowItems = seq ? seq.slots.flatMap(sl => normSlot(slotItems[sl.slot]).items) : [];
@@ -894,7 +894,7 @@ function TodoPanel({ plan, seq, features, boards, assignments, shelves, students
   return (
     <>
       <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
-        <Horizon title="Today" count={todayLeft} checks={today} accent={accent}
+        <Horizon title={where} count={todayLeft} checks={today} accent={accent}
           right={features.length ? features.join(" · ") : ""} />
         <Horizon title={comingTitle} count={comingLeft} checks={coming} accent={accent} />
       </div>
@@ -1500,7 +1500,8 @@ export default function Dashboard({ config }) {
 
   const render = {
     todo: () => <TodoPanel plan={plan} seq={seq} features={features} boards={plan?.boards || {}}
-      assignments={assignments} shelves={shelves} students={students} data={data} accent={config.accent} />,
+      assignments={assignments} shelves={shelves} students={students} data={data} accent={config.accent}
+      where={config.code + " · " + day} />,
     now: () => <NowPanel config={config} plan={plan} seq={seq} engagedAt={live?.engagedAt}
       onEngaged={markEngaged}
       onSlot={(x) => writeDay(d => ({ ...d, currentSlot: x, slotAt: x ? { ...(d.slotAt || {}), [x]: Date.now() } : (d.slotAt || {}) }))} />,
@@ -1512,7 +1513,7 @@ export default function Dashboard({ config }) {
     flow: () => <FlowPanel plan={plan} seq={seq} seeds={seeds} castNow={castNow} dismiss={dismiss}
       liveLabel={liveLabel} accent={config.accent} onClaim={saveFlowClaim}
       features={features} onFeature={runFeature} planHref={config.path + "/dayplan"}
-      onSlidesClaim={saveSlidesClaim} onBlockClaim={saveBlockClaim} />,
+      onSlidesClaim={saveSlidesClaim} onBlockClaim={saveBlockClaim} where={config.code + " · " + day} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     stocked: () => <StockedPanel shelves={shelves} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
@@ -1539,7 +1540,10 @@ export default function Dashboard({ config }) {
 
       <header style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "13px 22px", display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ marginRight: "auto" }}>
-          <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-.02em" }}>{config.code} · Dashboard</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-.02em", color: config.accent }}>{config.code}</span>
+            <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-.02em" }}>Dashboard</span>
+          </div>
           <div style={{ fontSize: 13, color: TEXT_MUTED }}>{config.name} · {config.desc}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>

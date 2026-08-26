@@ -22,6 +22,9 @@ const comm3 = {
   accentLight: "#f5f3ff",
 
   storageKey: "comm3-f26-v1",
+
+  // Kept off the public landing page until this is a real class.
+  listed: false,
   adminPin: "333333",
   openAccess: true,
 

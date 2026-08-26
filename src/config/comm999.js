@@ -18,6 +18,9 @@ const comm999 = {
 
   // ─── Storage & auth ───
   storageKey: "comm999-v1",
+
+  // Kept off the public landing page until this is a real class.
+  listed: false,
   adminPin: "999999",
 
   // This is the template class — the one I open to show somebody what the app

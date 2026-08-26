@@ -26,6 +26,9 @@ const comm118 = {
   accentLight: "#fff1f2",
 
   storageKey: "comm118-f26-v1",
+
+  // Shows on the public landing page.
+  listed: true,
 };
 
 export default comm118;
