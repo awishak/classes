@@ -187,35 +187,42 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
     );
   }
 
-  const act = { ...mini, minHeight: HIT, padding: "0 10px", fontSize: 13 };
+  // The name, then what it is, then the two things I do with it. Nothing else.
+  // A fourth control was what stopped the name having the left edge to itself,
+  // so opening a link here moved onto the name rather than disappearing.
+  const sq = { ...mini, flex: "none", minHeight: HIT, minWidth: HIT, padding: "0 8px",
+    display: "inline-flex", alignItems: "center", justifyContent: "center" };
 
-  // The name of the thing comes first and gets the left edge to itself. What
-  // kind of thing it is and what I can do with it follow, on the same line,
-  // because they are answers to questions I only ask after reading the name.
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "8px 11px", borderRadius: 10,
+    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10,
       background: live ? "rgba(225,29,72,.07)" : SURFACE_2, border: "1px solid " + (live ? LIVE : "transparent") }}>
-      <b style={{ flex: "1 1 min(100%, 14rem)", minWidth: 0, fontWeight: 500, fontSize: 15,
-        color: TEXT_PRIMARY, lineHeight: 1.35, wordBreak: "break-word" }}>{claim || title}</b>
+      {url ? (
+        // Two doors on every link, without a fourth control on the row: the
+        // name opens it here on my laptop, the red arrow puts it on the wall.
+        <a className="dash-focus" href={url} target="_blank" rel="noreferrer" title={"Open here · " + url}
+          style={{ flex: 1, minWidth: 0, fontWeight: 500, fontSize: 15, color: TEXT_PRIMARY,
+            lineHeight: 1.35, wordBreak: "break-word", textDecoration: "none", borderBottom: "1px solid " + BORDER_STRONG }}>
+          {claim || title}
+        </a>
+      ) : (
+        <b style={{ flex: 1, minWidth: 0, fontWeight: 500, fontSize: 15, color: TEXT_PRIMARY,
+          lineHeight: 1.35, wordBreak: "break-word" }}>{claim || title}</b>
+      )}
 
       <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, fontWeight: 600, letterSpacing: ".08em",
         textTransform: "uppercase", padding: "3px 6px", borderRadius: 5, background: "#fff",
         border: "1px solid " + (kindColor || BORDER_STRONG), color: kindColor || TEXT_MUTED }}>{kind}</span>
-      {live ? <LiveTag /> : null}
 
-      {url ? (
-        <a className="dash-focus" href={url} target="_blank" rel="noreferrer"
-          style={{ ...act, flex: "none", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Open ↗</a>
-      ) : null}
       {live ? (
-        <button className="dash-focus" style={{ ...act, flex: "none", borderColor: LIVE, color: LIVE }} onClick={onDismiss}>Take it down ×</button>
+        <button className="dash-focus" style={{ ...sq, borderColor: LIVE, color: LIVE, background: "rgba(225,29,72,.1)" }}
+          title="Take it back down" onClick={onDismiss}>×</button>
       ) : (
-        <button className="dash-focus" style={{ ...act, flex: "none", borderColor: accent, color: accent }}
-          onClick={() => { if (claim) onCast(claim); else setEditing(true); }}>To the room →</button>
+        <button className="dash-focus" style={{ ...sq, borderColor: LIVE, color: LIVE, fontSize: 17, lineHeight: 1 }}
+          title="Put it on the room screen"
+          onClick={() => { if (claim) onCast(claim); else setEditing(true); }}>→</button>
       )}
-      <button className="dash-focus" style={{ ...act, flex: "none", color: TEXT_MUTED }} onClick={() => setEditing(true)}>
-        {claim ? "Headline" : "Write headline"}
-      </button>
+      <button className="dash-focus" style={{ ...sq, color: TEXT_MUTED, fontSize: 12.5 }}
+        title={claim ? "Edit the headline" : "Write the headline"} onClick={() => setEditing(true)}>Edit</button>
     </div>
   );
 }
