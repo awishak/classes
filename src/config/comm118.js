@@ -27,8 +27,8 @@ const comm118 = {
 
   storageKey: "comm118-f26-v1",
 
-  // Shows on the public landing page.
-  listed: true,
+  // "current" | "archived" — what the front page does with it.
+  status: "current",
 };
 
 export default comm118;

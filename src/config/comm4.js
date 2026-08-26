@@ -22,8 +22,8 @@ const comm4 = {
 
   storageKey: "comm4-f26-v1",
 
-  // Shows on the public landing page.
-  listed: true,
+  // "current" | "archived" — what the front page does with it.
+  status: "archived",
   adminPin: "444444",
 
   openAccess: true,

@@ -23,8 +23,8 @@ const comm2 = {
 
   storageKey: "comm2-f26-v1",
 
-  // Shows on the public landing page.
-  listed: true,
+  // "current" | "archived" — what the front page does with it.
+  status: "archived",
   adminPin: "222222",
 
   // Roster and schedule come across when the Fall list lands. Until then this

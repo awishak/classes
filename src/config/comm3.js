@@ -1,4 +1,4 @@
-// COMM 3 — empty. A class with nothing in it yet.
+// COMM 3 — Digital Storytelling. Schedule, roster and assignments to come.
 //
 // This is the one to copy when a new class turns up: it takes the engine's
 // shape from the template and then clears out everything that was COMM 999's
@@ -12,7 +12,7 @@ const comm3 = {
   id: "comm3",
   path: "/comm3",
   code: "COMM 3",
-  name: "Untitled Class",
+  name: "Digital Storytelling",
   quarter: "Fall 2026",
   desc: "Days and room TBD",
 
@@ -23,8 +23,8 @@ const comm3 = {
 
   storageKey: "comm3-f26-v1",
 
-  // Kept off the public landing page until this is a real class.
-  listed: false,
+  // "current" | "archived" — what the front page does with it.
+  status: "current",
   adminPin: "333333",
   openAccess: true,
 

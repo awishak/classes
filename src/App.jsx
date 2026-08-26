@@ -9,7 +9,8 @@ import Dashboard from "./engine/Dashboard.jsx";
 import ClassroomView from "./engine/ClassroomView.jsx";
 import AskPage from "./engine/AskPage.jsx";
 import PlanPage from "./PlanPage.jsx";
-import { ENGINE, ENGINE_LIST } from "./config/registry.js";
+import { ENGINE, currentClasses, archivedClasses } from "./config/registry.js";
+import InstructorLinks from "./InstructorLinks.jsx";
 
 // Classes that run on the shared engine live in config/registry.js, because the
 // Dashboard's class picker needs the same list and cannot import this file.
@@ -17,7 +18,9 @@ import { ENGINE, ENGINE_LIST } from "./config/registry.js";
 // Classes whose public hub is still the old forked file. Everything else on the
 // engine gets its card pages as real URLs: /comm999/assignments is a link you
 // can send a student.
-const LEGACY_HUBS = new Set(["comm118"]);
+// Every class is on the engine. The old forked hubs keep an address at
+// /<class>/legacy, because they hold a term of grading and game data.
+const LEGACY_HUBS = new Set();
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 
@@ -27,75 +30,95 @@ const TEXT_MUTED = "#646b75"; // 4.85:1 at worst, on every background we use. #9
 const BORDER = "#f3f4f6";
 const BORDER_STRONG = "#e5e7eb";
 
-const sectionLabel = { fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.12em", fontFamily: F };
+const TAP_L = 44;
+const sectionLabel = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.12em", fontFamily: F };
 
-// The landing page reads the registry, so a class appears on the front door by
-// existing rather than by being typed out here a second time. `listed` is what
-// decides; the template and the empty placeholder stay off.
-const listedClasses = () => ENGINE_LIST.filter(c => c.listed);
+// The front page reads the registry, so a class appears by existing rather than
+// by being typed out here a second time. Current classes get the page; the rest
+// live behind Archives. The teaching links at the bottom are gated to me.
+function ClassCard({ c, navigate, dim }) {
+  const codeShort = c.code.split(" ")[1];
+  return (
+    <button onClick={() => navigate(c.path)}
+      style={{ background: "#fff", borderRadius: 14, padding: "14px 16px", border: "1px solid " + BORDER_STRONG,
+        cursor: "pointer", fontFamily: F, width: "100%", textAlign: "left", opacity: dim ? 0.72 : 1 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 11, background: c.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <span style={{ color: "#fff", fontSize: 15, fontWeight: 700, letterSpacing: "-0.02em" }}>{codeShort}</span>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: c.accent, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>{c.code}</div>
+          <div style={{ fontSize: 17, fontWeight: 500, color: TEXT_PRIMARY, lineHeight: 1.25, letterSpacing: "-0.01em" }}>{c.name}</div>
+          <div style={{ fontSize: 13, color: TEXT_SECONDARY, marginTop: 3 }}>{c.desc}</div>
+        </div>
+        <span style={{ fontSize: 13, fontWeight: 500, padding: "8px 14px", borderRadius: 8,
+          border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY, flexShrink: 0 }}>Open</span>
+      </div>
+    </button>
+  );
+}
+
+const shell = { minHeight: "100vh", background: "#fafaf9", fontFamily: F };
+const column = { maxWidth: 560, margin: "0 auto", padding: "60px 20px 60px" };
+const fonts = <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />;
+
+const navigate = (path) => {
+  window.history.pushState({}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+};
 
 function LandingPage() {
-  const navigate = (path) => {
-    window.history.pushState({}, "", path);
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  };
+  const current = currentClasses();
+  const archived = archivedClasses();
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fafaf9", fontFamily: F }}>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
-      <div style={{ maxWidth: 560, margin: "0 auto", padding: "60px 20px 60px" }}>
-
-        {/* Centered plain-text header */}
+    <div style={shell}>
+      {fonts}
+      <div style={column}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 10 }}>Santa Clara University</div>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>Santa Clara University</div>
           <div style={{ fontSize: 28, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.02em", lineHeight: 1.15 }}>Andrew Ishak</div>
-          <div style={{ fontSize: 14, color: TEXT_SECONDARY, marginTop: 4 }}>Department of Communication</div>
+          <div style={{ fontSize: 15, color: TEXT_SECONDARY, marginTop: 4 }}>Department of Communication</div>
         </div>
 
-        {/* Class cards, grouped by term */}
-        {Object.entries(listedClasses().reduce((acc, c) => {
-          (acc[c.quarter] = acc[c.quarter] || []).push(c);
-          return acc;
-        }, {})).map(([quarter, classes]) => (
-        <div key={quarter} style={{ marginBottom: 22 }}>
-        <div style={{ ...sectionLabel, marginBottom: 10 }}>{quarter}</div>
+        <div style={{ ...sectionLabel, marginBottom: 10 }}>Classes</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {classes.map(c => {
-            const codeShort = c.code.split(" ")[1];
-            return (
-              <button
-                key={c.id}
-                onClick={() => navigate(c.path)}
-                style={{
-                  background: "#fff", borderRadius: 14, padding: "14px 16px",
-                  border: "1px solid " + BORDER_STRONG,
-                  cursor: "pointer", fontFamily: F, width: "100%", textAlign: "left",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 11, background: c.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <span style={{ color: "#fff", fontSize: 14, fontWeight: 700, letterSpacing: "-0.02em" }}>{codeShort}</span>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: c.accent, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>{c.code}</div>
-                    <div style={{ fontSize: 17, fontWeight: 500, color: TEXT_PRIMARY, lineHeight: 1.25, letterSpacing: "-0.01em" }}>{c.name}</div>
-                    <div style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 3 }}>{c.desc}</div>
-                  </div>
-                  <span style={{
-                    fontSize: 12, fontWeight: 500, padding: "6px 12px", borderRadius: 8,
-                    border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY,
-                    flexShrink: 0,
-                  }}>Open</span>
-                </div>
-              </button>
-            );
-          })}
+          {current.map(c => <ClassCard key={c.id} c={c} navigate={navigate} />)}
+          {!current.length ? <div style={{ fontSize: 15, color: TEXT_MUTED }}>No classes running right now.</div> : null}
         </div>
-        </div>
-        ))}
 
-        <div style={{ textAlign: "center", marginTop: 32, fontSize: 11, color: TEXT_MUTED }}>
+        {archived.length ? (
+          <button onClick={() => navigate("/archive")}
+            style={{ marginTop: 14, width: "100%", minHeight: TAP_L, background: "none", border: "1px solid " + BORDER_STRONG,
+              borderRadius: 14, cursor: "pointer", fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_SECONDARY,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            Archived classes <span style={{ color: TEXT_MUTED, fontWeight: 400 }}>({archived.length})</span> →
+          </button>
+        ) : null}
+
+        <InstructorLinks />
+
+        <div style={{ textAlign: "center", marginTop: 28, fontSize: 13, color: TEXT_MUTED }}>
           aishak@scu.edu
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ArchivePage() {
+  const archived = archivedClasses();
+  return (
+    <div style={shell}>
+      {fonts}
+      <div style={column}>
+        <button onClick={() => navigate("/")}
+          style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_SECONDARY,
+            cursor: "pointer", minHeight: TAP_L, padding: 0, marginBottom: 8 }}>← Andrew Ishak</button>
+        <div style={{ fontSize: 28, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.02em", marginBottom: 4 }}>Archived classes</div>
+        <div style={{ fontSize: 15, color: TEXT_SECONDARY, marginBottom: 22 }}>Terms that have finished, and the template every class is built from.</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {archived.map(c => <ClassCard key={c.id} c={c} navigate={navigate} dim />)}
         </div>
       </div>
     </div>
@@ -134,6 +157,10 @@ export default function App() {
     return <PlanPage />;
   }
 
+  if (path === "/archive" || path === "/archive/") {
+    return <ArchivePage />;
+  }
+
   // Live teaching surfaces: /<class>/dashboard (me), /<class>/today (the room
   // screen), /<class>/ask (where the room screen's QR sends students).
   const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask)\/?$/);
@@ -157,10 +184,6 @@ export default function App() {
   const site = path.match(/^\/(comm\w+)(?:\/([a-z]+))?\/?$/);
   if (site && ENGINE[site[1]] && !LEGACY_HUBS.has(site[1])) {
     return <ClassApp key={site[1]} config={ENGINE[site[1]]} initialCard={site[2] || null} />;
-  }
-
-  if (path === "/comm118" || path === "/comm118/") {
-    return <Comm118 />;
   }
 
   return <LandingPage />;
