@@ -390,7 +390,7 @@ function Unplanned({ items, accent, onAdd, castNow }) {
 // Building the day is the job this screen exists for, so it happens here
 // rather than on another page. Three ways in, because that is all a slot ever
 // holds: something I say, something from the seed library, or something to open.
-function AddToFlow({ slot, seeds, used, accent, onAdd, onClose }) {
+function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAddScheduled }) {
   const [mode, setMode] = useState("note");
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
@@ -417,8 +417,9 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, border: "1px solid " + accent, background: "#fff" }}>
-      <div style={{ display: "flex", gap: 5 }}>
+      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
         {tab("note", "Note")}{tab("seed", "Seed")}{tab("link", "Link")}
+        {(scheduled || []).length ? tab("sched", "Schedule " + scheduled.length) : null}
         <button style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5, marginLeft: "auto", color: TEXT_MUTED }} onClick={onClose}>Cancel</button>
       </div>
 
@@ -459,6 +460,21 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose }) {
         </>
       ) : null}
 
+      {mode === "sched" ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          {(scheduled || []).map(it => (
+            <button key={it.id} onClick={() => { onAddScheduled(it, slot); onClose(); }}
+              style={{ display: "flex", alignItems: "center", gap: 8, textAlign: "left", cursor: "pointer",
+                background: SURFACE_2, border: "1px solid transparent", borderRadius: 9, padding: "8px 10px",
+                minHeight: HIT, fontFamily: F, fontSize: 13.5, color: TEXT_PRIMARY }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", flex: "none", background: TYPE_COLOR[it.type] || TEXT_MUTED }} />
+              <span style={{ flex: 1, wordBreak: "break-word", lineHeight: 1.35 }}>{it.title}</span>
+              <span style={{ ...label, fontSize: 10, flex: "none" }}>{typeLabel(it.type)}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {mode === "note" ? <button style={solid(accent)} onClick={addNote}>Add</button> : null}
       {mode === "link" ? <button style={solid(accent)} onClick={addLink}>Add</button> : null}
     </div>
@@ -466,6 +482,30 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose }) {
 }
 
 // Move and remove, on the row itself.
+// A slot's name is the sequence's word for it until I give it a better one.
+function SlotName({ slot, title, accent, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(title || "");
+  useEffect(() => { setDraft(title || ""); }, [title]);
+
+  if (editing) {
+    const commit = () => { onSave(draft.trim() || undefined); setEditing(false); };
+    return (
+      <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setDraft(title || ""); setEditing(false); } }}
+        placeholder={slot}
+        style={{ ...inputStyle, minHeight: 28, fontSize: 13, padding: "2px 8px", width: "auto", flex: 1 }} />
+    );
+  }
+  return (
+    <button className="dash-focus" onClick={() => setEditing(true)} title="Rename this slot"
+      style={{ ...label, color: accent, background: "none", border: "none", padding: 0, cursor: "text", textAlign: "left" }}>
+      {title || slot}
+    </button>
+  );
+}
+
 function RowTools({ onUp, onDown, onRemove, first, last }) {
   const t = { ...mini, minHeight: 26, padding: "0 7px", fontSize: 12, color: TEXT_MUTED };
   return (
@@ -477,7 +517,7 @@ function RowTools({ onUp, onDown, onRemove, first, last }) {
   );
 }
 
-function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, sequences }) {
+function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences }) {
   const [adding, setAdding] = useState(null);
   const unplannedBlock = <Unplanned items={loose || []} accent={accent} onAdd={onAddScheduled} castNow={castNow} />;
   const seqPicker = (sequences || []).length > 1 ? (
@@ -579,13 +619,14 @@ function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onCl
         return (
           <div key={s.slot} style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ ...label, color: accent }}>{bucket.title || s.slot}</span>
+              <SlotName slot={s.slot} title={bucket.title} accent={accent} onSave={(t) => onSetSlotTitle(s.slot, t)} />
               <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
                 onClick={() => setAdding(adding === s.slot ? null : s.slot)}>{adding === s.slot ? "Close" : "+ Add"}</button>
             </div>
             {adding === s.slot ? (
               <AddToFlow slot={s.slot} seeds={seeds} used={usedSeeds} accent={accent}
-                onAdd={(item) => onAddItem(s.slot, item)} onClose={() => setAdding(null)} />
+                onAdd={(item) => onAddItem(s.slot, item)} onClose={() => setAdding(null)}
+                scheduled={loose} onAddScheduled={onAddScheduled} />
             ) : null}
             {!items.length && adding !== s.slot ? <Muted style={{ fontSize: 13 }}>Empty.</Muted> : null}
             {items.map((it, i) => {
@@ -1541,6 +1582,11 @@ export default function Dashboard({ config }) {
     return { ...d, slots };
   });
   const setSequence = (id) => writeDay(d => ({ ...d, sequenceId: id }));
+  const setSlotTitle = (slot, title) => writeDay(d => {
+    const slots = { ...(d.slots || {}) };
+    slots[slot] = { ...normSlot(slots[slot]), title };
+    return { ...d, slots };
+  });
 
   const saveSlidesClaim = (claim) => writeDay(d => ({ ...d, slidesClaim: claim }));
   const saveBlockClaim = (blockId, claim, linkId) => writeDay(d => ({
@@ -1715,9 +1761,9 @@ export default function Dashboard({ config }) {
       liveLabel={liveLabel} accent={config.accent} onClaim={saveFlowClaim}
       features={features} onFeature={runFeature} planHref={config.path + "/dayplan"}
       onSlidesClaim={saveSlidesClaim} onBlockClaim={saveBlockClaim} where={config.code + " · " + day}
-      loose={looseItems} onAddScheduled={(it) => addScheduleItemToDay(update, config, day, it)}
+      loose={looseItems} onAddScheduled={(it, slot) => addScheduleItemToDay(update, config, day, it, slot)}
       onAddItem={addFlowItem} onRemoveItem={removeFlowItem} onMoveItem={moveFlowItem}
-      onSetSequence={setSequence} sequences={seqs} />,
+      onSetSequence={setSequence} onSetSlotTitle={setSlotTitle} sequences={seqs} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     stocked: () => <StockedPanel shelves={shelves} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
