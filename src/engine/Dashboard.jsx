@@ -185,10 +185,28 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-src:hover{background:${BORDER_STRONG};color:#171310}
 /* My note under a reading. Quiet until there is one, and indented to the
    width of the number chip so it hangs off the thing it is about. */
-.dash-note{display:block;width:calc(100% - 35px);margin-left:35px;text-align:left;background:none;
-  border:none;padding:1px 6px 4px;border-radius:8px;cursor:text;font-family:${F};font-size:13px;
+.dash-note{display:block;width:100%;text-align:left;background:none;
+  border:none;padding:2px 7px;border-radius:8px;cursor:text;font-family:${F};font-size:12.5px;
   line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
 .dash-note:hover{background:${SURFACE_2}}
+/* A reading card. The words get the whole width; the link and the buttons sit
+   along the bottom where a card's actions belong. */
+.read-card{border-radius:12px;background:${SURFACE_2};overflow:hidden}
+.read-body{display:flex;flex-direction:column;gap:2px;padding:8px 8px 4px}
+.read-head{display:block;width:100%;text-align:left;background:none;border:none;padding:2px 7px;
+  border-radius:8px;cursor:text;font-family:${F};font-size:13px;font-weight:600;line-height:1.4;
+  letter-spacing:-.005em;overflow-wrap:anywhere}
+.read-head:hover{background:#fff}
+.read-title{display:block;padding:1px 7px 2px;font-size:12px;line-height:1.45;color:${TEXT_SECONDARY};
+  overflow-wrap:anywhere}
+.read-dot{float:left;margin:5px 6px 0 0;width:7px;height:7px;border-radius:50%}
+.read-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 10px 8px;
+  border-top:1px solid rgba(23,19,16,.06)}
+.read-src{margin-right:auto;font-family:${F};font-size:12px;color:${TEXT_MUTED};text-decoration:none;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.read-src:hover{color:#171310;text-decoration:underline}
+.read-flag{font-family:${MONO};font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:${TEXT_MUTED};background:rgba(23,19,16,.06);border-radius:999px;padding:2px 8px}
 .flow-tools{display:flex;gap:4px;flex:none;opacity:0;transition:opacity .12s}
 .flow-row:hover .flow-tools,.flow-row:focus-within .flow-tools,.flow-row.live .flow-tools,
 .flow-row.picked .flow-tools{opacity:1}
@@ -332,7 +350,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // Nothing goes up as a label. Before a thing can be cast it needs a headline —
 // one full sentence saying what it shows. "Media rights" is a topic; "Rights
 // fees have risen 45% in ten years" is what the room can actually read.
-function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, shared, done, next, onTick }) {
+function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, shared, done, next, onTick, assigned, onAssign }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(claim || "");
   useEffect(() => { setDraft(claim || ""); }, [claim]);
@@ -399,6 +417,15 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
       ) : null}
 
       <span className="flow-tools">
+        {onAssign ? (
+          <button className="dash-focus" onClick={onAssign} aria-pressed={assigned}
+            title={assigned ? "Assigned \u2014 students see it under today's date. Click to unassign."
+              : "Not assigned. Click to put it on today's readings."}
+            style={{ ...sq, minWidth: "auto", padding: "0 9px", fontSize: 12,
+              ...(assigned ? { background: accent, borderColor: accent, color: "#fff" } : { color: TEXT_MUTED }) }}>
+            {assigned ? "Assigned" : "Assign"}
+          </button>
+        ) : null}
         {live ? (
           <button className="dash-focus" style={{ ...sq, borderColor: LIVE, color: LIVE }}
             title="Take it back down" onClick={onDismiss}>×</button>
@@ -1110,6 +1137,71 @@ const looksLikeUrl = (t) => /^https?:\/\/\S+$/i.test((t || "").trim());
 const MEDIA_KINDS = [["reading", "Reading"], ["video", "Video"], ["podcast", "Podcast"]];
 export const MEDIA_SET = new Set(["reading", "video", "podcast"]);
 
+// A reading is its own card, not a row.
+//
+// Through the shared row it had to fight a number chip, a source pill and
+// three buttons for the same line, so a long title came out four characters
+// wide. It gets the card now: my headline for it, then the headline it came
+// with, then my note, all of them the full width and none of them shouting.
+// The link and the buttons go along the bottom, which is where a card's
+// actions belong and where they stop stealing width from the words.
+function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadline, onNote, onRemove, inFlow }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(headline || "");
+  useEffect(() => { setDraft(headline || ""); }, [headline]);
+  const commit = (thenCast) => {
+    const c = oneSentence(draft);
+    if (!c) return;
+    onHeadline(c);
+    setEditing(false);
+    if (thenCast) onCast(c);
+  };
+  const color = TYPE_COLOR[item.type] || TYPE_COLOR.reading;
+  const btn = { ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5 };
+
+  return (
+    <div className="read-card">
+      <div className="read-body">
+        {editing ? (
+          <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") commit(true); if (e.key === "Escape") { setDraft(headline || ""); setEditing(false); } }}
+            placeholder="Say in one sentence what it is for"
+            style={{ ...inputStyle, minHeight: 32, fontSize: 13, padding: "4px 8px" }} />
+        ) : (
+          <button className="dash-focus read-head" onClick={() => setEditing(true)}
+            title={headline ? "Edit my headline" : "Write a headline for it"}
+            style={{ color: headline ? TEXT_PRIMARY : TEXT_MUTED }}>
+            {headline || "+ a headline for it"}
+          </button>
+        )}
+        <div className="read-title">
+          <span className="read-dot" style={{ background: color }} />
+          {item.title}
+        </div>
+        <ReadingNote value={item.note || ""} accent={accent} onSave={onNote} />
+      </div>
+
+      <div className="read-foot">
+        {item.url ? (
+          <a className="dash-focus read-src" href={item.url} target="_blank" rel="noopener noreferrer"
+            title={"Open " + item.url + " in a new tab"}>{hostOf(item.url)} ↗</a>
+        ) : <span />}
+        {inFlow ? <span className="read-flag" title="It is also a row in the flow today">in the flow</span> : null}
+        {live ? (
+          <button className="dash-focus" style={{ ...btn, borderColor: LIVE, color: LIVE }}
+            title="Take it back down" onClick={onDismiss}>× Take it down</button>
+        ) : (
+          <button className="dash-focus" style={{ ...btn, borderColor: LIVE, color: LIVE }}
+            title="Put it on the room screen"
+            onClick={() => { if (headline) onCast(headline); else setEditing(true); }}>→ Cast</button>
+        )}
+        <button className="dash-focus" style={{ ...btn, color: TEXT_MUTED }} onClick={onRemove}
+          title="Unassign it — take it off today's readings">Unassign</button>
+      </div>
+    </div>
+  );
+}
+
 // Why I picked it. Mine, not the room's.
 //
 // The headline is the sentence that goes up on the screen. This is the other
@@ -1141,7 +1233,7 @@ function ReadingNote({ value, accent, onSave }) {
   );
 }
 
-export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, onNote, blocks, onPickBlock, blockOf }) {
+export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, onNote, inFlow, blocks, onPickBlock, blockOf }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("reading");
   const [title, setTitle] = useState("");
@@ -1154,7 +1246,7 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ ...label, color: accent }}>Readings and media</span>
+        <span style={{ ...label, color: accent }}>Today's readings</span>
         <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
           onClick={() => setOpen(v => !v)}>{open ? "Close" : "+ Add"}</button>
       </div>
@@ -1162,21 +1254,13 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
         const blk = it.libId && blockOf ? blockOf(it.libId) : null;
         const headline = it.claim || (blk ? blk.headline : "");
         return (
-        <div key={it.id} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <Castable kind={typeLabel(it.type)} kindColor={TYPE_COLOR[it.type] || TYPE_COLOR.reading} title={it.title} url={it.url}
-                claim={headline} accent={accent} live={liveLabel === (headline || it.title)} onDismiss={dismiss}
-                onSaveClaim={(c) => onClaim(it.id, c)}
-                onCast={(c) => castNow(it.url
-                  ? { ...castFromLink({ label: it.title, url: it.url }), title: c, label: c }
-                  : { type: "quote", tag: "Reading", title: c, label: c })} />
-            </div>
-            <button className="dash-focus" onClick={() => onRemove(it.id)} title="Take it off the schedule too"
-              style={{ ...mini, minHeight: HIT, padding: "0 10px", color: TEXT_MUTED }}>✕</button>
-          </div>
-          <ReadingNote value={it.note || ""} accent={accent} onSave={(v) => onNote(it.id, v)} />
-        </div>
+        <ReadingCard key={it.id} item={it} headline={headline} accent={accent}
+          live={liveLabel === (headline || it.title)} onDismiss={dismiss}
+          onHeadline={(c) => onClaim(it.id, c)} onNote={(v) => onNote(it.id, v)}
+          onRemove={() => onRemove(it.id)} inFlow={inFlow?.has(it.id)}
+          onCast={(c) => castNow(it.url
+            ? { ...castFromLink({ label: it.title, url: it.url }), title: c, label: c }
+            : { type: "quote", tag: "Reading", title: c, label: c })} />
         );
       })}
       {!items.length && !open ? (
@@ -1204,7 +1288,6 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
           <button style={solid(accent)} onClick={commit}>Assign it</button>
         </div>
       ) : null}
-      <Muted style={{ fontSize: 12 }}>Students see these under this date on the schedule.</Muted>
     </div>
   );
 }
@@ -1227,7 +1310,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -1460,6 +1543,8 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                     claim={it.claim || (blk ? blk.headline : "")} accent={accent}
                     live={liveLabel === ((it.claim || (blk ? blk.headline : "")) || title)} onDismiss={dismiss}
                     onSaveClaim={(c) => onClaim(s.slot, it.id, c)}
+                    assigned={onToggleAssigned ? !!isAssigned(it) : null}
+                    onAssign={onToggleAssigned ? () => onToggleAssigned(it) : null}
                     onCast={(c) => castNow(blk?.url
                       ? { ...castFromLink({ label: blk.title, url: blk.url }), title: c, label: c }
                       : { type: "quote", tag: bucket.title || s.slot, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c })} />
@@ -3019,12 +3104,44 @@ export default function Dashboard({ config }) {
   // The day's readings ARE the schedule's readings. One list, written from
   // whichever screen I happen to be on.
   const readings = scheduledFor(weeks, day).filter(it => MEDIA_SET.has(it.type));
+  // Which of today's readings also have a row in the flow. Matched on the
+  // schedule item id where the row came from the schedule, and on the block
+  // otherwise, because a reading picked out of the library carries libId.
+  const flowSched = new Set();
+  Object.values(plan?.slots || {}).forEach(b => normSlot(b).items.forEach(it => {
+    if (it.schedItemId) flowSched.add(it.schedItemId);
+    if (it.blockId) flowSched.add("b:" + it.blockId);
+  }));
+  const readingInFlow = new Set(readings
+    .filter(r => flowSched.has(r.id) || (r.libId && flowSched.has("b:" + r.libId)))
+    .map(r => r.id));
   const comingRows = comingUp(assignments, day, 21);
   const addReading = (item) => addScheduleItem(update, config, day, item);
   const dropReading = (id) => removeScheduleItem(update, config, id);
   const pickReading = (b) => {
     addScheduleItem(update, config, day, { type: "reading", title: b.title, url: b.url, blockId: b.id });
     stampScheduled(writeTo(b.id), b.id, day);
+  };
+
+  // Assigned, or not, for a row that is already in the flow.
+  //
+  // These were one choice before: a thing was either on today's readings or in
+  // the run of show, never both, so a reading I meant to talk about quietly
+  // stopped being a reading students were told to do. They are two facts about
+  // one thing, and this is the second one.
+  const assignedIdFor = (it) => {
+    const blk = it.blockId ? blockOf(it.blockId) : null;
+    const hit = readings.find(r => r.id === it.schedItemId || (it.blockId && r.libId === it.blockId)
+      || (blk?.url && r.url === blk.url));
+    return hit ? hit.id : null;
+  };
+  const toggleAssigned = (it) => {
+    const id = assignedIdFor(it);
+    if (id) { removeScheduleItem(update, config, id); return; }
+    const blk = it.blockId ? blockOf(it.blockId) : null;
+    const title = (blk?.title || it.text || it.claim || "Untitled").trim();
+    addScheduleItem(update, config, day, { type: "reading", title, url: blk?.url || "", blockId: it.blockId || "" });
+    if (it.blockId) stampScheduled(writeTo(it.blockId), it.blockId, day);
   };
 
   // A new idea is a block kept with me, so it turns up in every class.
@@ -3314,6 +3431,7 @@ export default function Dashboard({ config }) {
       onAddBlock={addBlock} onRemoveBlock={removeBlock} onMoveBlock={moveBlock}
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
+      isAssigned={(it) => !!assignedIdFor(it)} onToggleAssigned={toggleAssigned}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
       onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMergeSections={mergeSections} onSelect={setPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
       doneSet={doneSet} onTick={tickItem} />,
@@ -3323,7 +3441,7 @@ export default function Dashboard({ config }) {
       liveLabel={liveLabel} onAdd={addReading} onRemove={dropReading}
       blockOf={blockOf}
       onClaim={(id, c) => setScheduleItemClaim(update, config, id, c)}
-      onNote={(id, n) => setScheduleItemNote(update, config, id, n)}
+      onNote={(id, n) => setScheduleItemNote(update, config, id, n)} inFlow={readingInFlow}
       blocks={blocks2} onPickBlock={pickReading} />,
     ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent}
       sections={sections} days={days} today={day}

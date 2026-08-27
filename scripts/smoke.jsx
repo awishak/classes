@@ -118,14 +118,14 @@ const longRead = [{ id: "r1", type: "reading", url: "https://www.nytimes.com/ath
   title: "Cardinals-Cubs: Michael Busch Nearly Hits for the Cycle", claim: "" }];
 cases.push(["Readings, long title", <Readings items={longRead} accent={cfg0.accent} castNow={noop}
   dismiss={noop} liveLabel={null} onAdd={noop} onRemove={noop} onClaim={noop} blocks={[]}
-  onPickBlock={noop} onNote={noop} blockOf={() => null} />, "flow-src"]);
+  onPickBlock={noop} onNote={noop} inFlow={new Set()} blockOf={() => null} />, "read-src"]);
 cases.push(["Readings, empty", <Readings items={[]} accent={cfg0.accent} castNow={noop}
   dismiss={noop} liveLabel={null} onAdd={noop} onRemove={noop} onClaim={noop} blocks={[]}
-  onPickBlock={noop} onNote={noop} blockOf={() => null} />]);
+  onPickBlock={noop} onNote={noop} inFlow={new Set()} blockOf={() => null} />]);
 cases.push(["Readings, with my note", <Readings accent={cfg0.accent} castNow={noop} dismiss={noop}
   liveLabel={null} onAdd={noop} onRemove={noop} onClaim={noop} onNote={noop} blocks={[]}
   onPickBlock={noop} blockOf={() => null}
-  items={[{ ...longRead[0], note: "Good on the money side. Pairs with week 4." }]} />, "dash-note"]);
+  items={[{ ...longRead[0], note: "Good on the money side. Pairs with week 4." }]} />, "read-card"]);
 cases.push(["Ideas", <IdeasPanel blocks={[{ id: "b", type: "activity", title: "An idea", body: "How it runs",
   tags: ["teaching move"], children: [] }]} accent={cfg0.accent} sections={[]} days={[]} today="Sep 1"
   onPick={noop} onAdd={noop} onEdit={noop} onRemove={noop} onDuplicate={noop} />]);
