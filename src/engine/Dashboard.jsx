@@ -424,7 +424,7 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
           <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); commit(false); }
               if (e.key === "Escape") { setWhy(""); setEditing(false); } }}
-            placeholder="Rights fees have increased 45% over the last 10 years."
+            placeholder="Headline"
             style={{ ...inputStyle, paddingRight: 40 }} />
           <Confirm onClick={() => commit(false)} title="Save this headline" />
         </div>
@@ -620,11 +620,7 @@ export function NowPanel({ config, engagedAt, onEngaged, plan, seq, onSlot }) {
         </span>
         <button onClick={onEngaged} style={{ ...mini, marginLeft: "auto" }}>They just did something</button>
       </div>
-      {cold ? (
-        <Muted style={{ color: WARN }}>Ten minutes of listening. Ask them for something.</Muted>
-      ) : (
-        <Muted style={{ fontSize: 12 }}>Resets on a poll, a pushed question, or the button.</Muted>
-      )}
+      {cold ? <Muted style={{ color: WARN }}>Ten minutes of listening.</Muted> : null}
       {slots.length ? (
         <>
         <div style={{ display: "flex", gap: 5 }}>
@@ -643,9 +639,7 @@ export function NowPanel({ config, engagedAt, onEngaged, plan, seq, onSlot }) {
           <Muted style={{ fontSize: 12, color: over ? WARN : TEXT_MUTED }}>
             {inSlot == null ? "In " + current + "." : inSlot + " min in " + current + (fair != null ? " · " + fair + " min is an even share" : "")}
           </Muted>
-        ) : (
-          <Muted style={{ fontSize: 12 }}>Tap a slot on the way in. The clock starts there.</Muted>
-        )}
+        ) : null}
         </>
       ) : null}
     </>
@@ -850,7 +844,7 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
         <>
           <input autoFocus value={text} onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") quick(); if (e.key === "Escape") onClose(); }}
-            placeholder="Type a line, or paste a link" style={inputStyle} />
+            placeholder="A line, or a link" style={inputStyle} />
           <Muted style={{ fontSize: 12 }}>
             {looksLikeUrl(text) ? "A web address goes in as a link." : "Paste a web address and the row becomes a link."}
           </Muted>
@@ -864,7 +858,7 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
             placeholder="https://…" style={inputStyle} />
           <input value={text} onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") addLink(); }}
-            placeholder="What to call it (optional)" style={inputStyle} />
+            placeholder="Name (optional)" style={inputStyle} />
         </>
       ) : null}
 
@@ -872,7 +866,7 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
         <>
           <input autoFocus value={q} onChange={e => setQ(e.target.value)}
             onKeyDown={e => { if (e.key === "Escape") onClose(); }}
-            placeholder="Search the seed library" style={inputStyle} />
+            placeholder="Search seeds" style={inputStyle} />
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             {hits.map(sd => (
               <button key={sd.id} onClick={() => { onAdd({ seedId: sd.id }); onClose(); }}
@@ -1002,21 +996,28 @@ function SlotName({ slot, title, accent, onSave, onDelete, count, tally }) {
   if (editing) {
     const commit = () => { onSave(draft.trim() || undefined); setEditing(false); };
     return (
-      <input autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
-        onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setDraft(title || ""); setEditing(false); } }}
-        placeholder={slot}
-        style={{ ...inputStyle, minHeight: 28, fontSize: 13, padding: "2px 8px", width: "auto", flex: 1 }} />
+      <span className="read-field" style={{ flex: 1, minWidth: 120 }}>
+        <input autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
+          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); commit(); }
+            if (e.key === "Escape") { setDraft(title || ""); setEditing(false); } }}
+          placeholder={slot}
+          style={{ ...inputStyle, minHeight: 34, fontSize: 13, padding: "2px 38px 2px 8px", width: "100%" }} />
+        <Confirm onClick={commit} title="Save the name" />
+      </span>
     );
   }
 
   return (
     <span style={{ position: "relative" }}>
-      <button onClick={() => setOpen(v => !v)} title="Rename or delete this section"
-        aria-haspopup="menu" aria-expanded={open} className="dash-focus flow-pill">
+      <button onClick={() => setEditing(true)} onContextMenu={e => { e.preventDefault(); setOpen(true); }}
+        title="Rename this section. Right-click for more."
+        className="dash-focus flow-pill">
         {title || slot}
         {tally ? <span style={{ fontFamily: MONO, fontSize: 11.5, color: TEXT_MUTED, fontWeight: 500 }}>{tally}</span> : null}
-        <span style={{ fontSize: 9, opacity: .65 }}>▾</span>
       </button>
+      <button onClick={() => setOpen(v => !v)} aria-haspopup="menu" aria-expanded={open}
+        title="More for this section" className="dash-focus flow-pill"
+        style={{ padding: "5px 8px", marginLeft: 3 }}>▾</button>
       {open ? (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 60 }} />
@@ -1090,7 +1091,7 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
 
   const form = (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, border: "1px solid " + accent, background: "#fff" }}>
-      <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="What is it called" style={inputStyle} />
+      <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="Name" style={inputStyle} />
       <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="How it runs"
         style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical" }} />
       <div style={{ display: "flex", gap: 7 }}>
@@ -1216,7 +1217,7 @@ function Suggestions({ blocks, accent, onPick, onAdd }) {
       ) : null}
       {open ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, border: "1px solid " + accent, background: "#fff" }}>
-          <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="What is it called" style={inputStyle} />
+          <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="Name" style={inputStyle} />
           <input value={body} onChange={e => setBody(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") keep(); }} placeholder="How it runs" style={inputStyle} />
           <button style={solid(accent)} onClick={keep}>Keep the block</button>
@@ -1321,7 +1322,7 @@ function ReadingNote({ value, accent, onSave }) {
         <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
           onKeyDown={e => { if (e.key === "Escape") { setDraft(value); setEditing(false); }
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit(); }}
-          placeholder="What I like about this reading, what I use it for\u2026"
+          placeholder="My note"
           style={{ ...inputStyle, minHeight: 62, fontSize: 13, lineHeight: 1.45, resize: "vertical",
             paddingRight: 40 }} />
         <Confirm onClick={commit} bottom title="Save this note" />
@@ -1407,7 +1408,7 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
           </div>
           <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" style={inputStyle} />
           <input value={title} onChange={e => setTitle(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") commit(); }} placeholder="What to call this reading" style={inputStyle} />
+            onKeyDown={e => { if (e.key === "Enter") commit(); }} placeholder="Title" style={inputStyle} />
           <button style={solid(accent)} onClick={commit}>Assign this reading</button>
         </div>
       ) : null}
@@ -1596,7 +1597,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
               if (e.key === "Enter" && blockDraft.trim()) { onAddBlock(blockDraft.trim()); setBlockDraft(""); setAddingBlock(false); }
               if (e.key === "Escape") { setBlockDraft(""); setAddingBlock(false); }
             }}
-            placeholder="What to call the section" style={inputStyle} />
+            placeholder="Section name" style={inputStyle} />
           <button style={solid(accent)} onClick={() => { if (blockDraft.trim()) { onAddBlock(blockDraft.trim()); setBlockDraft(""); setAddingBlock(false); } }}>Add</button>
         </div>
       ) : (
@@ -1752,7 +1753,7 @@ export function StockedPanel({ shelves, onAdd, onRemove, onClaim, castNow, dismi
       {empty ? (
         <Muted style={{ fontSize: 13 }}>
           Things I might reach for, kept until I do. Add one below, or send a line across from the Notes panel.
-          Anything here can go to the room screen or into the day.
+          
         </Muted>
       ) : null}
       {SHELVES.map(sh => (
@@ -1822,7 +1823,7 @@ function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveL
           <select value={kind} onChange={e => setKind(e.target.value)} style={{ ...inputStyle, fontSize: 15 }}>
             {STOCK_KINDS.map(k => <option key={k}>{k}</option>)}
           </select>
-          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="What is this block" style={inputStyle} />
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Name" style={inputStyle} />
           <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://… (optional)" style={inputStyle} />
           <div style={{ display: "flex", gap: 7 }}>
             <button onClick={add} style={solid(accent)}>Add</button>
@@ -1945,7 +1946,7 @@ export function AttendancePanel({ students, marks, onMark, onReset }) {
         })}
       </div>
       {!shown.length ? <Muted style={{ fontSize: 13 }}>{only ? "Nobody is marked. The whole room is here." : "No name matches your search."}</Muted> : null}
-      <Muted style={{ fontSize: 12 }}>Everyone starts here. Tap to cycle here → late → excused → out.</Muted>
+      <Muted style={{ fontSize: 12 }}>Everyone starts here.</Muted>
     </>
   );
 }
@@ -1992,7 +1993,7 @@ function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIn
       <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, background: SURFACE_2 }}>
         <span style={label2}>{label}</span>
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Headline" style={inputStyle} />
-        <textarea value={text} onChange={e => setText(e.target.value)} placeholder="One idea per line. Each one gets the screen to itself."
+        <textarea value={text} onChange={e => setText(e.target.value)} placeholder="One idea per line"
           style={{ ...inputStyle, minHeight: 96, resize: "vertical", lineHeight: 1.5, fontSize: 15 }} />
         <div style={{ display: "flex", gap: 7 }}>
           <button style={solid(accent)} onClick={() => {
@@ -2028,7 +2029,7 @@ function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIn
             <span style={{ ...label2, fontSize: 12, color: liveIndex === i ? LIVE : "transparent", paddingTop: 3 }}>up</span>
           </button>
         ))}
-        {!ideas.length ? <Muted style={{ fontSize: 13 }}>No ideas yet. Edit to add some.</Muted> : null}
+        {!ideas.length ? <Muted style={{ fontSize: 13 }}>No ideas yet.</Muted> : null}
       </div>
       {live ? (
         <div style={{ display: "flex", gap: 7 }}>
@@ -2130,13 +2131,13 @@ export function ScratchPanel({ value, onSave, dayNote, weekPlan, weekText, accen
       </div>
       <Note key={noteDay} from={noteDay === day ? "Today" : noteDay} scope={noteDay === day ? day : "another day"}
         body={noteDay === day ? dayNote : readNote(noteDay)} accent={accent} onSave={(v) => onSaveDayNote(v, noteDay)}
-        placeholder="What this day is for, in my words." />
+        placeholder="This day" />
       <Note from="Lesson plan" scope="this week" body={weekPlan} accent={accent} onSave={onSaveWeekPlan}
-        placeholder="How the week runs." />
+        placeholder="The week" />
       <Note from="Notes for students" scope="this week" body={weekText} accent={accent} onSave={onSaveWeekText}
-        placeholder="They read this on the schedule." />
+        placeholder="What students see" />
       <textarea ref={boxRef} value={v} onChange={e => setV(e.target.value)} onBlur={() => { seen.current = v; onSave(v); setSaved(true); }}
-        placeholder="Notes to myself during class."
+        placeholder="Notes"
         style={{ ...inputStyle, minHeight: 130, resize: "vertical", lineHeight: 1.5, fontSize: 15 }} />
       <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
         <button style={mini} onClick={stamp}>Stamp the time</button>
@@ -2301,7 +2302,7 @@ export function CommandBar({ targets, accent, onClose }) {
       <div onMouseDown={e => e.stopPropagation()} role="dialog" aria-label="Cast something"
         style={{ width: "100%", maxWidth: 620, background: "#fff", borderRadius: 16, border: "1px solid " + BORDER_STRONG, boxShadow: "0 24px 60px -20px rgba(23,19,16,.5)", overflow: "hidden" }}>
         <input autoFocus value={q} onChange={e => setQ(e.target.value)} onKeyDown={onKey}
-          placeholder="Cast anything. Type a few letters."
+          placeholder="Cast anything"
           style={{ width: "100%", border: "none", borderBottom: "1px solid " + BORDER, outline: "none", padding: "16px 18px", fontFamily: F, fontSize: 17, color: TEXT_PRIMARY }} />
         <div style={{ maxHeight: "46vh", overflowY: "auto" }}>
           {hits.map((t, n) => (
@@ -2406,10 +2407,13 @@ function NoteSheet({ sections, notes, scratch, accent, onAdd, onClose }) {
   const already = [notes, scratch].filter(x => (x || "").trim());
   return (
     <Sheet title="A new note" sub="It goes into the flow as a row" onClose={onClose} width={620}>
-      <textarea autoFocus value={text} onChange={e => setText(e.target.value)}
-        onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit(); }}
-        placeholder="What I want to say"
-        style={{ ...inputStyle, minHeight: 90, fontSize: 15, lineHeight: 1.5, resize: "vertical" }} />
+      <span className="read-field">
+        <textarea autoFocus value={text} onChange={e => setText(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit(); }}
+          placeholder="The note"
+          style={{ ...inputStyle, minHeight: 90, fontSize: 15, lineHeight: 1.5, resize: "vertical", paddingRight: 42 }} />
+        <Confirm onClick={commit} bottom title="Add the note" />
+      </span>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span style={label}>Into</span>
         <select value={slot} onChange={e => setSlot(e.target.value)}
@@ -2744,7 +2748,7 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
         </div>
       ))}
 
-      {!rows.length && !block?.url ? <Muted style={{ fontSize: 13 }}>Nothing on this one yet beyond its name.</Muted> : null}
+      {!rows.length && !block?.url ? <Muted style={{ fontSize: 13 }}>Nothing here yet.</Muted> : null}
     </div>
   );
 }
@@ -2944,7 +2948,7 @@ function Picker({ title, opts, value, onPick, accent }) {
 // To-do is not on a rail either. It is a list I check once, when I sit down to
 // look at a day — so it opens off the day itself, by clicking the session up in
 // the band, which is the thing it is a to-do list ABOUT.
-const MATERIAL = ["ideas", "readings", "scratch", "assignments"];
+const MATERIAL = ["ideas", "readings", "assignments"];
 const LIVE_RAIL = ["questions", "poll"];
 // Starting widths. Flow takes whatever is left, so it is the one column that
 // never needs a number. Both ends are draggable and the drag is remembered.
@@ -2972,6 +2976,7 @@ export default function Dashboard({ config }) {
   const [todoOpen, setTodoOpen] = useState(false);
   const [colorsOpen, setColorsOpen] = useState(false);
   const [boardsOpen, setBoardsOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
   // Dragging a reading into the flow: does it stay assigned, or move?
   // Two facts about one reading, so which one the drag changes is mine to say.
   const [dragKeeps, setDragKeeps] = useState(true);
@@ -3711,6 +3716,7 @@ export default function Dashboard({ config }) {
   cmdTargets.push({ key: "c:idle", group: "Screen", title: "Idle screen", run: () => cast(null) });
   cmdTargets.push({ key: "o:hl", group: "Open", title: "Headlines board", run: () => setHlOpen(true) });
   cmdTargets.push({ key: "o:be", group: "Open", title: "Write the Enter and Exit boards", run: () => setBoardsOpen(true) });
+  cmdTargets.push({ key: "o:notes", group: "Open", title: "My notes for this day", run: () => setNotesOpen(true) });
   cmdTargets.push({ key: "o:col", group: "Open", title: "Colours", run: () => setColorsOpen(true) });
   cmdTargets.push({ key: "o:here", group: "Open", title: "Who is here", run: () => setHereOpen(true) });
   cmdTargets.push({ key: "o:todo", group: "Open", title: "Still to do", run: () => setTodoOpen(true) });
@@ -3729,7 +3735,7 @@ export default function Dashboard({ config }) {
         <div style={{ maxWidth: 420, textAlign: "center", display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
           <span style={label}>{config.code}</span>
           <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-.02em" }}>No sessions on the calendar yet</div>
-          <Muted>The dashboard runs one class session at a time, so it needs a schedule before there is anything to open. Add the weeks and their dates first.</Muted>
+          <Muted>This class has no dates yet.</Muted>
           <a className="dash-focus" href={config.path + "/schedule"}
             style={{ ...mini, minHeight: TAP, padding: "0 18px", borderColor: config.accent, color: config.accent,
               textDecoration: "none", display: "inline-flex", alignItems: "center", fontSize: 15 }}>
@@ -3947,6 +3953,12 @@ export default function Dashboard({ config }) {
       {hereOpen ? (
         <Sheet title="Who is here" sub={config.code + " \u00b7 " + day} onClose={() => setHereOpen(false)}>
           <AttendancePanel students={students} marks={marks} onMark={mark} onReset={resetAttendance} />
+        </Sheet>
+      ) : null}
+
+      {notesOpen ? (
+        <Sheet title="My notes" sub={config.code + " \u00b7 " + day} onClose={() => setNotesOpen(false)}>
+          {render.scratch()}
         </Sheet>
       ) : null}
 
