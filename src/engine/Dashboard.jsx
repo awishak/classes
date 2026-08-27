@@ -30,13 +30,13 @@ import { genId } from "../utils.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
-const TEXT_PRIMARY = "#111827";
-const TEXT_SECONDARY = "#4b5563";
-const TEXT_MUTED = "#646b75"; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
-const BORDER = "#eef0f2";
-const BORDER_STRONG = "#e5e7eb";
+const TEXT_PRIMARY = "#1c1917";
+const TEXT_SECONDARY = "#57534e";
+const TEXT_MUTED = "#6b655f"; // warm, and 5.4:1 on white — comfortably past AA.
+const BORDER = "#f0edea";
+const BORDER_STRONG = "#e3ded8";
 const BG = "#fafaf9";
-const SURFACE_2 = "#f4f3f1";
+const SURFACE_2 = "#f6f4f1";
 const LIVE = "#e11d48";
 const OK = "#0f766e";
 const WARN = "#b45309";
@@ -86,8 +86,13 @@ const CSS = `
 .flow-row.picked{background:${SURFACE_2};border-left-color:var(--dash-accent)}
 .flow-row.live{border-left-color:${LIVE} !important;background:rgba(225,29,72,.07)}
 .flow-row.over{box-shadow:inset 0 2px 0 var(--dash-accent)}
-.flow-num{flex:none;min-width:18px;text-align:right;font-family:${MONO};font-size:12px;
-  color:${TEXT_MUTED};font-variant-numeric:tabular-nums}
+/* The number carries the colour of what the row is, filled rather than as a
+   stub on the edge — one chip per kind, the same chip everywhere it appears. */
+.flow-num{flex:none;width:22px;height:22px;border-radius:6px;display:inline-flex;
+  align-items:center;justify-content:center;font-family:${MONO};font-size:11.5px;font-weight:600;
+  color:#fff;font-variant-numeric:tabular-nums}
+.flow-words{flex:1;min-width:0;font-size:16px;line-height:1.4;letter-spacing:-.006em;
+  word-break:break-word;background:none;border:none;padding:0;text-align:left;cursor:pointer}
 .flow-tools{display:flex;gap:4px;flex:none;opacity:0;transition:opacity .12s}
 .flow-row:hover .flow-tools,.flow-row:focus-within .flow-tools,.flow-row.live .flow-tools,
 .flow-row.picked .flow-tools{opacity:1}
@@ -103,8 +108,8 @@ const CSS = `
 
 /* Keyboard users had no idea where they were on this screen. */
 .dash-focus:focus-visible{outline:2px solid var(--dash-accent);outline-offset:2px;border-radius:8px}
-.dash-comfortable{--row-h:38px}
-.dash-compact{--row-h:30px}
+.dash-comfortable{--row-h:44px}
+.dash-compact{--row-h:34px}
 .dash-focus:focus:not(:focus-visible){outline:none}
 
 /* The class accent and the live red are 1.71:1 apart, which is no distance at
@@ -239,13 +244,11 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
 
   return (
     <div className={"flow-row" + (live ? " live" : "") + (picked ? " picked" : "")}>
-      <span className="flow-num" title={kind}>{num || ""}</span>
+      <span className="flow-num" title={kind}
+        style={{ background: kindColor || TEXT_MUTED }}>{num || ""}</span>
 
-      <button className="dash-focus" onClick={onSelect} title="What is this?"
-        style={{ flex: 1, minWidth: 0, fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.4, wordBreak: "break-word",
-          background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer", fontFamily: F }}>
-        {words}
-      </button>
+      <button className="dash-focus flow-words" onClick={onSelect} title="What is this?"
+        style={{ color: TEXT_PRIMARY, fontFamily: F }}>{words}</button>
 
       {shared ? (
         <span title="From the library — editing its headline changes it everywhere it is used"
@@ -1866,6 +1869,7 @@ const SHORTCUTS = [
   ["← →", "Step the board that is up, one idea at a time"],
   ["K J", "Walk down and up the run of show"],
   ["Enter", "Put the row I am on up on the room screen"],
+  ["⌘ E", "Teaching only — hide everything but the flow and the screen"],
   ["⌘ /", "Show this list"],
 ];
 
@@ -1915,7 +1919,7 @@ export function Monitor({ config, live, cast, push, recent, onRecast, info }) {
   const on = !!live?.cast;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 12px", background: SURFACE_2, borderRadius: 10, ...label, fontSize: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", background: SURFACE_2, borderRadius: 10, ...label, fontSize: 13 }}>
         {on ? <LiveTag /> : <span style={{ width: 8, height: 8, borderRadius: "50%", flex: "none", background: BORDER_STRONG }} />}
         <span style={{ color: TEXT_PRIMARY, overflow: "hidden", wordBreak: "break-word", lineHeight: 1.4 }}>
           {on ? (live.cast.label || live.cast.title) : "Idle screen"}
@@ -1925,7 +1929,7 @@ export function Monitor({ config, live, cast, push, recent, onRecast, info }) {
 
       {liveUrl ? (
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 10,
-          background: "#fff", border: "1px solid " + config.accent, flexWrap: "wrap" }}>
+          background: SURFACE_2, flexWrap: "wrap" }}>
           <a href={liveUrl} target="_blank" rel="noreferrer"
             style={{ ...mini, borderColor: config.accent, color: config.accent, textDecoration: "none",
               display: "inline-flex", alignItems: "center", flex: "none" }}>Open ↗</a>
@@ -2046,6 +2050,47 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
   );
 }
 
+function Snapshot({ config, day, topic, live, done, total, since, cold, onTakeDown }) {
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  return (
+    <div style={{ background: "#fff", borderRadius: 16, padding: "16px 20px", display: "flex",
+      alignItems: "center", gap: 22, flexWrap: "wrap",
+      boxShadow: "0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.045)" }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: config.accent }}>{day}</div>
+        <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-.022em", lineHeight: 1.15,
+          color: TEXT_PRIMARY, wordBreak: "break-word" }}>{topic || config.name}</div>
+      </div>
+
+      <div style={{ flex: "1 1 200px", minWidth: 140 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: TEXT_MUTED, marginBottom: 5 }}>
+          <span>{total ? done + " of " + total + " done" : "Nothing planned yet"}</span>
+          <span style={{ color: cold ? WARN : TEXT_MUTED }}>
+            {since == null ? "" : since + " min since they did anything"}
+          </span>
+        </div>
+        <div style={{ height: 6, borderRadius: 3, background: SURFACE_2, overflow: "hidden" }}>
+          <i style={{ display: "block", height: "100%", width: pct + "%", background: config.accent, transition: "width .3s" }} />
+        </div>
+      </div>
+
+      {live ? (
+        <button className="dash-focus" onClick={onTakeDown}
+          style={{ display: "flex", alignItems: "center", gap: 9, maxWidth: 340, minHeight: TAP,
+            background: "rgba(225,29,72,.08)", border: "1px solid " + LIVE, borderRadius: 12,
+            padding: "8px 13px", cursor: "pointer", fontFamily: F, textAlign: "left" }}>
+          <LiveTag />
+          <span style={{ minWidth: 0, fontSize: 14.5, color: TEXT_PRIMARY, overflow: "hidden",
+            textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{live}</span>
+          <span style={{ flex: "none", fontSize: 13, color: LIVE, fontWeight: 600 }}>take it down</span>
+        </button>
+      ) : (
+        <span style={{ fontSize: 14, color: TEXT_MUTED }}>Nothing on the room screen.</span>
+      )}
+    </div>
+  );
+}
+
 function Picker({ title, opts, value, onPick, accent }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
@@ -2160,6 +2205,7 @@ export default function Dashboard({ config }) {
       const cur = liveRef.current?.cast;
 
       if (mod && (e.key === "k" || e.key === "K")) { e.preventDefault(); setKeysOpen(false); setCmdOpen(v => !v); return; }
+      if (mod && (e.key === "e" || e.key === "E")) { e.preventDefault(); setFocus(v => !v); return; }
       if (mod && e.key === "/") { e.preventDefault(); setCmdOpen(false); setKeysOpen(v => !v); return; }
       if (mod && (e.key === "b" || e.key === "B")) {
         e.preventDefault();
@@ -2204,6 +2250,7 @@ export default function Dashboard({ config }) {
   const [hidden, setHidden] = useState([]);
   const [collapsed, setCollapsed] = useState(DEFAULT_COLLAPSED);
   const [dense, setDense] = useState(false);
+  const [focus, setFocus] = useState(false);
   const [panelMenu, setPanelMenu] = useState(false);
   useEffect(() => {
     try {
@@ -2241,7 +2288,8 @@ export default function Dashboard({ config }) {
     const c = collapsed.includes(id) ? collapsed.filter(x => x !== id) : [...collapsed, id];
     setCollapsed(c); saveLayout(order, spans, hidden, c, dense);
   };
-  const shown = order.filter(id => !hidden.includes(id));
+  const shown = order.filter(id => !hidden.includes(id))
+    .filter(id => !focus || id === "flow" || id === "readings");
 
   // ─── drag to rearrange ───
   const gridRef = useRef(null);
@@ -2815,6 +2863,10 @@ export default function Dashboard({ config }) {
   };
   const TITLES = { todo: "To-Do", now: "Class Clock", poll: "Class Poll", flow: "Class Flow", boards: "Before & After", readings: "Readings & Media", ideas: "Ideas", questions: "Student Questions", attendance: "Attendance", scratch: "Notes", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
+  // How far through the day I am, counted off the flow rather than the clock.
+  const flowCount = Object.values(plan?.slots || {}).reduce((n, b) => n + normSlot(b).items.length, 0);
+  const castCount = Math.min(flowCount, recent.length);
+  const sinceMin = live?.engagedAt ? Math.floor((Date.now() - live.engagedAt) / 60000) : null;
   // Casting from the wrong session is silent and total: the room gets last
   // Wednesday and nothing on this screen says so.
   const onDeck = currentDay(weeks)?.date;
@@ -2826,12 +2878,9 @@ export default function Dashboard({ config }) {
       <style>{CSS}</style>
 
       <header style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "13px 22px", display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
-        <div style={{ marginRight: "auto" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-.02em", color: config.accent }}>{config.code}</span>
-            <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-.02em" }}>Dashboard</span>
-          </div>
-          <div style={{ fontSize: 13, color: TEXT_MUTED }}>{config.name} · {config.desc}</div>
+        <div style={{ marginRight: "auto", display: "flex", alignItems: "baseline", gap: 9, minWidth: 0 }}>
+          <span style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-.02em", color: config.accent }}>{config.code}</span>
+          <span style={{ fontSize: 14, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{config.desc}</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <span style={label}>Class</span>
@@ -2900,6 +2949,8 @@ export default function Dashboard({ config }) {
             </>
           ) : null}
         </div>
+        <button className="dash-focus" style={{ ...mini, ...(focus ? { background: config.accent, borderColor: config.accent, color: "#fff" } : {}) }}
+          onClick={() => setFocus(v => !v)} aria-pressed={focus} title="Teaching only · ⌘E">Teaching</button>
         <button style={mini} onClick={() => setKeysOpen(true)} title="Keyboard shortcuts">⌘/</button>
         <a href="/plan" style={{ ...mini, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>The Brief</a>
         <a href={config.path} style={{ ...mini, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Class home</a>
@@ -2914,6 +2965,11 @@ export default function Dashboard({ config }) {
       ) : null}
 
       <main style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 400px", gap: 20, padding: 20, alignItems: "start", maxWidth: 1560, margin: "0 auto" }}>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <Snapshot config={config} day={day} topic={dayMeta?.topic} live={liveLabel}
+            done={castCount} total={flowCount} since={sinceMin} cold={sinceMin != null && sinceMin >= 10}
+            onTakeDown={() => cast(null)} />
+        </div>
         <div className="dash-grid" ref={gridRef}>
           {shown.map(id => (
             <Panel key={id} id={id} title={TITLES[id] + (id === "questions" && openQ ? " · " + openQ : "")}

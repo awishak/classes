@@ -155,6 +155,6 @@ export const TYPE_COLOR = {
   video: "#b45309",
   podcast: "#7c3aed",
   assignment: "#d97706",
-  activity: "#059669",
+  activity: "#047857",
 };
 export const typeLabel = (t) => (t || "item").charAt(0).toUpperCase() + (t || "item").slice(1);

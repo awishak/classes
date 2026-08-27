@@ -24,7 +24,7 @@ const TAP = 44;
 const TYPE_META = {
   reading: { color: "#2563eb", label: "Reading" },
   assignment: { color: "#d97706", label: "Assignment" },
-  activity: { color: "#059669", label: "Activity" },
+  activity: { color: "#047857", label: "Activity" },
 };
 const TYPES = ["reading", "assignment", "activity"];
 const Dot = ({ color }) => <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, display: "inline-block" }} />;
