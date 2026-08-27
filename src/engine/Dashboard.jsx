@@ -125,14 +125,23 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .dash-rail-tabs::-webkit-scrollbar{display:none}
 .dash-tab{flex:1 1 auto;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 11px;border:none;border-radius:10px;background:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:500;color:#5b6068;transition:background .14s,color .14s,box-shadow .14s}
 .dash-tab:hover{color:#171310}
-.dash-tab.on{background:#fff;color:var(--tab-hue,var(--dash-accent,#171310));font-weight:600;
-  box-shadow:0 1px 3px rgba(23,19,16,.13),inset 0 0 0 1px rgba(23,19,16,.05)}
-.dash-tab.on::after{content:"";position:absolute;left:11px;right:11px;bottom:3px;height:2px;border-radius:2px;
-  background:var(--tab-hue,var(--dash-accent))}
 .dash-tab{position:relative}
+.dash-tab.on{background:var(--tab-hue,var(--dash-accent,#171310));color:#fff;font-weight:600;
+  box-shadow:0 1px 3px rgba(23,19,16,.18)}
+.dash-tab.on:hover{color:#fff;filter:brightness(1.08)}
+/* The closed tabs carry a dot of their own colour, so the rail says what is on
+   it without every tab shouting. */
+.dash-tab::before{content:"";width:7px;height:7px;border-radius:50%;flex:none;
+  background:var(--tab-hue,transparent);opacity:.75}
+.dash-tab.on::before{background:rgba(255,255,255,.65);opacity:1}
+.dash-tab-k{opacity:.55}
+.dash-tab.on .dash-tab-k{color:#fff;opacity:.7}
 .dash-tab-k{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:#9aa0a6;opacity:.75}
 .dash-tab.on .dash-tab-k{color:inherit;opacity:.45}
-.dash-tab-n{min-width:19px;height:19px;padding:0 5px;border-radius:10px;color:#fff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center}
+.dash-tab-n{min-width:19px;height:19px;padding:0 5px;border-radius:10px;color:#fff;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:600;
+  display:inline-flex;align-items:center;justify-content:center}
+.dash-tab.on .dash-tab-n{background:rgba(255,255,255,.28)!important;color:#fff}
 .dash-rail-body{flex:1 1 auto;overflow-y:auto;min-height:0;padding-bottom:6px;--words:var(--fs,15px)}
 .dash-rail-body::-webkit-scrollbar{width:9px}
 .dash-rail-body::-webkit-scrollbar-thumb{background:rgba(23,19,16,.16);border-radius:5px}
@@ -1415,7 +1424,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
     if (!from) return;
     // From the Material column, or out of Today's readings. Neither carries a
     // slot, because neither was ever in the flow.
-    if (!from.slot && (from.blockId || from.title)) { onPickBlock(toSlot, from); return; }
+    if (!from.slot && (from.blockId || from.title)) { onPickBlock(toSlot, from, null, beforeId); return; }
     if (!from.id || (from.slot === toSlot && from.id === beforeId)) return;
     onDragMove(from.slot, from.id, toSlot, beforeId);
   };
@@ -2408,7 +2417,7 @@ function ClassMenu({ config }) {
 
 // How the screen is laid out. Set rarely, so it does not need to be on the bar
 // at the same weight as the buttons I press in front of people.
-function ViewMenu({ railOpen, onRail, dense, onDense, onReset, onKeys }) {
+function ViewMenu({ railOpen, onRail, dense, onDense, onReset, onKeys, dragKeeps, onDragKeeps }) {
   return (
     <DropMenu label="View" width={230}
       trigger={(open, toggle) => (
@@ -2420,6 +2429,14 @@ function ViewMenu({ railOpen, onRail, dense, onDense, onReset, onKeys }) {
         <kbd style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: TEXT_MUTED }}>\\</kbd>
       </button>
       <button className="dash-focus" onClick={onDense} style={menuRow}>{dense ? "Comfortable rows" : "Compact rows"}</button>
+      <button className="dash-focus" onClick={onDragKeeps} style={menuRow} aria-pressed={dragKeeps}>
+        <span style={{ flex: "none", width: 26, height: 15, borderRadius: 999, position: "relative",
+          background: dragKeeps ? "var(--dash-accent)" : BORDER_STRONG, transition: "background .14s" }}>
+          <i style={{ position: "absolute", top: 2, left: dragKeeps ? 13 : 2, width: 11, height: 11,
+            borderRadius: "50%", background: "#fff", transition: "left .14s" }} />
+        </span>
+        Dragging a reading into the Flow keeps it assigned
+      </button>
       <button className="dash-focus" onClick={onReset} style={menuRow}>Reset the columns</button>
       <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
       <button className="dash-focus" onClick={onKeys} style={menuRow}>
@@ -2852,6 +2869,9 @@ export default function Dashboard({ config }) {
   const [hereOpen, setHereOpen] = useState(false);
   const [todoOpen, setTodoOpen] = useState(false);
   const [colorsOpen, setColorsOpen] = useState(false);
+  // Dragging a reading into the flow: does it stay assigned, or move?
+  // Two facts about one reading, so which one the drag changes is mine to say.
+  const [dragKeeps, setDragKeeps] = useState(true);
   const [hlOpen, setHlOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
@@ -3012,14 +3032,15 @@ export default function Dashboard({ config }) {
       if (typeof v.railOpen === "boolean") setRailOpen(v.railOpen);
       if (v.cols && typeof v.cols.material === "number" && typeof v.cols.live === "number") setCols(v.cols);
       if (typeof v.dense === "boolean") setDense(v.dense);
+      if (typeof v.dragKeeps === "boolean") setDragKeeps(v.dragKeeps);
     } catch { /* first run */ }
   }, [LKEY]);
   // The keyboard handler is bound once and closes over whatever the rails were
   // on the first render, so the pickers read the current values off a ref
   // instead of off that closure. Without it, pressing 1 saved the right rail
   // back to whatever tab it had when the page loaded.
-  const railRef = useRef({ prep: "ideas", room: "questions", railOpen: true, dense: false, cols: COL });
-  railRef.current = { prep, room, railOpen, dense, cols };
+  const railRef = useRef({ prep: "ideas", room: "questions", railOpen: true, dense: false, cols: COL, dragKeeps: true });
+  railRef.current = { prep, room, railOpen, dense, cols, dragKeeps };
   const saveRails = useCallback((patch) => {
     const v = { ...railRef.current, ...patch };
     railRef.current = v;
@@ -3028,8 +3049,9 @@ export default function Dashboard({ config }) {
     if (v.railOpen !== railOpen) setRailOpen(v.railOpen);
     if (v.dense !== dense) setDense(v.dense);
     if (v.cols !== cols) setCols(v.cols);
+    if (v.dragKeeps !== dragKeeps) setDragKeeps(v.dragKeeps);
     try { localStorage.setItem(LKEY, JSON.stringify(v)); } catch { /* private mode */ }
-  }, [LKEY, prep, room, railOpen, dense, cols]);
+  }, [LKEY, prep, room, railOpen, dense, cols, dragKeeps]);
   const railSave = useRef(saveRails);
   railSave.current = saveRails;
   // Dragging a seam. The width is written straight onto the grid while the
@@ -3356,7 +3378,7 @@ export default function Dashboard({ config }) {
   // {blockId}. A reading dragged out of Today's readings may have no block
   // behind it at all, only a title and a link, so the row carries the words
   // and a pointer back to the schedule item.
-  const pickBlock = (slot, b, date) => {
+  const pickBlock = (slot, b, date, beforeId) => {
     const on = date || day;
     const blockId = b.id || b.blockId || "";
     const row = blockId
@@ -3369,10 +3391,18 @@ export default function Dashboard({ config }) {
     writeDayOn(on, d => {
       const slots = { ...(d.slots || {}) };
       const bucket = normSlot(slots[slot]);
-      slots[slot] = { ...bucket, items: [...bucket.items, row] };
+      // Drop above the row the pointer was over. Without a row under the
+      // pointer, or with one that is not in this section, it goes on the end.
+      const at = beforeId ? bucket.items.findIndex(x => x.id === beforeId) : -1;
+      const items = at < 0 ? [...bucket.items, row]
+        : [...bucket.items.slice(0, at), row, ...bucket.items.slice(at)];
+      slots[slot] = { ...bucket, items };
       return { ...d, slots };
     });
     if (blockId) stampScheduled(writeTo(blockId), blockId, on);
+    // Dragging a reading into the flow copies it by default, so it stays on
+    // today's readings as well. Turned off, the drag moves it instead.
+    if (b.schedItemId && !railRef.current.dragKeeps) removeScheduleItem(update, config, b.schedItemId);
   };
   const setBlockHeadline = (id, headline) => writeTo(id)(prev => ({
     ...prev,
@@ -3712,6 +3742,7 @@ export default function Dashboard({ config }) {
         </div>
 
         <ViewMenu railOpen={railOpen} onRail={toggleRail} dense={dense} onDense={() => setDenseAnd(!dense)}
+          dragKeeps={dragKeeps} onDragKeeps={() => railSave.current({ dragKeeps: !railRef.current.dragKeeps })}
           onReset={() => railSave.current({ cols: COL, railOpen: true, dense: false })}
           onKeys={() => setKeysOpen(true)} />
 
