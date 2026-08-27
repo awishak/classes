@@ -51,9 +51,37 @@ const label2 = { fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, letterSpaci
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 
 const CSS = `
+.dash-band{background:#fff;border-radius:18px;display:flex;flex-direction:column;
+  box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.045)}
+.dash-band-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.dash-topic{margin:0;flex:1 1 240px;min-width:0;font-weight:600;letter-spacing:-.03em;line-height:1.1;color:#171310;word-break:break-word}
+.dash-week{flex:none;min-height:38px;padding:0 13px;border-radius:11px;border:1px solid rgba(23,19,16,.12);background:#fff;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;color:#171310}
+.dash-week:hover{background:rgba(23,19,16,.04)}
+.dash-step{flex:none;width:30px;min-height:38px;border-radius:10px;border:none;background:none;cursor:pointer;font-size:17px;color:#5b6068}
+.dash-step:hover:not(:disabled){background:rgba(23,19,16,.05)}
+.dash-step:disabled{opacity:.25;cursor:default}
+.dash-days{display:flex;gap:6px;flex:1 1 auto;min-width:0}
+.dash-day{flex:1 1 0;min-width:74px;min-height:44px;border-radius:12px;cursor:pointer;font-family:inherit;text-align:left;
+  padding:5px 10px;display:flex;flex-direction:column;gap:1px;border:1.5px solid transparent;background:rgba(23,19,16,.035);color:#171310}
+.dash-day[data-on="0"]:hover{background:rgba(23,19,16,.07)}
+.dash-prog{flex:0 1 190px;min-width:150px}
+.dash-next{display:flex;align-items:center;gap:11px;flex:none;max-width:360px;min-height:46px;border:none;border-radius:13px;padding:7px 15px;cursor:pointer;font-family:inherit;text-align:left;color:#fff}
+.dash-next:hover{filter:brightness(1.07)}
+.dash-jump{position:absolute;left:0;top:calc(100% + 6px);z-index:51;background:#fff;border:1px solid rgba(23,19,16,.14);
+  border-radius:14px;padding:6px;width:330px;max-height:60vh;overflow-y:auto;box-shadow:0 18px 44px -14px rgba(23,19,16,.35)}
+.dash-jump-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;cursor:pointer;
+  padding:8px 9px;border-radius:10px;font-family:inherit;min-height:48px}
+.dash-jump-row:hover{background:rgba(23,19,16,.05)}
+.dash-jump-row[data-on="1"]{background:rgba(23,19,16,.06)}
+.dash-jump-n{flex:none;width:26px;height:26px;border-radius:8px;border:1px solid rgba(23,19,16,.14);display:inline-flex;
+  align-items:center;justify-content:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#5b6068}
+.dash-jump-has{flex:none;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#5b6068;
+  background:rgba(23,19,16,.06);border-radius:9px;padding:2px 7px}
 .dash-stage{display:grid;grid-template-columns:300px minmax(0,1fr) 400px;gap:16px;padding:14px 18px 26px;align-items:start;max-width:1760px;margin:0 auto}
 .dash-stage[data-rail="shut"]{grid-template-columns:minmax(0,1fr) 400px}
 .dash-stage[data-teach="on"]{grid-template-columns:minmax(0,1fr) 440px}
+.dash-stage[data-wide="1"]{grid-template-columns:minmax(420px,0.9fr) minmax(0,1fr)}
+.dash-stage[data-wide="1"] .dash-room{display:none}
 @media (max-width:1500px){.dash-stage{grid-template-columns:270px minmax(0,1fr) 360px}}
 @media (max-width:1240px){.dash-stage,.dash-stage[data-rail="shut"],.dash-stage[data-teach="on"]{grid-template-columns:minmax(0,1fr)}
   .dash-rail{position:static!important;max-height:none!important}
@@ -83,7 +111,16 @@ const CSS = `
 .dash-chrome{opacity:0;transition:opacity .12s}
 .dash-panel:hover .dash-chrome,.dash-panel:focus-within .dash-chrome{opacity:1}
 @media (hover:none){.dash-chrome{opacity:1}}
-.dash-item:hover{background:#fff;border-color:${BORDER_STRONG}}
+.dash-item:hover{background:#fff;border-color:${BORDER_STRONG};
+  box-shadow:0 2px 6px -2px rgba(23,19,16,.13)}
+.dash-item{transition:background .14s,border-color .14s,box-shadow .14s}
+/* An empty panel should hand me the next move rather than describe the hole.
+   Dashed, quiet, and the full width of the card so it reads as a place to
+   click and not as a sentence. */
+.dash-empty{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;
+  padding:12px 14px;border:1.5px dashed ${BORDER_STRONG};border-radius:12px;background:none;
+  cursor:pointer;font-family:${F};font-size:14px;color:${TEXT_MUTED};text-align:center;line-height:1.35}
+.dash-empty:hover{background:rgba(23,19,16,.03)}
 .dash-item:hover .dash-go{opacity:1}
 
 /* Class Flow. A border round every row made it read as a spreadsheet, so the
@@ -117,21 +154,31 @@ const CSS = `
 
 /* The heading recedes. Colour on this screen means live or means press me, and
    a heading is neither. */
-.flow-sec{display:flex;flex-direction:column;gap:1px;padding-top:20px}
+.flow-sec{display:flex;flex-direction:column;gap:1px;padding-top:18px;position:relative;
+  padding-left:13px;border-radius:12px}
+.flow-sec::before{content:"";position:absolute;left:3px;top:24px;bottom:6px;width:3px;border-radius:2px;
+  background:var(--sec);opacity:.5}
+.flow-sec:hover::before{opacity:.95}
 .flow-sec-head{display:flex;align-items:center;gap:8px;padding:2px 4px 6px;
   position:sticky;top:0;z-index:2;background:#fff}
-.flow-pill{display:inline-flex;align-items:center;gap:7px;background:${SURFACE_2};
+.flow-pill{display:inline-flex;align-items:center;gap:7px;background:color-mix(in srgb,var(--sec) 13%,#fff);
   border-radius:999px;padding:5px 12px;border:none;cursor:pointer;font-family:${F};
-  font-size:12.5px;font-weight:600;color:${TEXT_SECONDARY};letter-spacing:0}
-.flow-pill:hover{background:${BORDER_STRONG}}
+  font-size:12.5px;font-weight:600;color:var(--sec);letter-spacing:0}
+.flow-pill:hover{background:color-mix(in srgb,var(--sec) 22%,#fff)}
+@supports not (color:color-mix(in srgb,red 10%,#fff)){
+  .flow-pill{background:${SURFACE_2};color:${TEXT_SECONDARY}}}
 .flow-sec .flow-add{opacity:0;transition:opacity .12s}
 .flow-sec:hover .flow-add,.flow-sec:focus-within .flow-add{opacity:1}
 @media (hover:none){.flow-tools,.flow-sec .flow-add{opacity:1}}
 
 /* Keyboard users had no idea where they were on this screen. */
 .dash-focus:focus-visible{outline:2px solid var(--dash-accent);outline-offset:2px;border-radius:8px}
-.dash-comfortable{--row-h:44px}
-.dash-compact{--row-h:34px}
+.dash-comfortable{--row-h:44px;--gap:11px;--pad:16px;--fs:15px;--topic:26px;--card:16px}
+.dash-compact{--row-h:33px;--gap:6px;--pad:11px;--fs:14px;--topic:20px;--card:12px}
+.dash-panel{border-radius:var(--card,16px)}
+.flow-row{font-size:var(--fs,15px)}
+.dash-band{padding:var(--pad,16px) calc(var(--pad,16px) + 4px);gap:var(--gap,11px)}
+.dash-topic{font-size:var(--topic,26px)}
 .dash-focus:focus:not(:focus-visible){outline:none}
 
 /* The class accent and the live red are 1.71:1 apart, which is no distance at
@@ -179,9 +226,10 @@ function Panel({ id, title, right, children, flush }) {
 // particular thing, and four open panels means scrolling to find which. The
 // count rides on the tab so a rail can say "three people are asking" without
 // being opened, which is the whole reason the old collapsed bars existed.
-function Rail({ tabs, active, onPick, accent, children, side }) {
+function Rail({ tabs, active, onPick, accent, children, side, wide, onWide, className }) {
   return (
-    <div className="dash-rail" style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 10,
+    <div className={"dash-rail" + (className ? " " + className : "")}
+      style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 10,
       position: "sticky", top: 14, maxHeight: "calc(100vh - 28px)" }}>
       <div role="tablist" aria-label={side} className="dash-rail-tabs">
         {tabs.map(t => {
@@ -195,6 +243,11 @@ function Rail({ tabs, active, onPick, accent, children, side }) {
             </button>
           );
         })}
+        {onWide ? (
+          <button className="dash-focus dash-tab" onClick={onWide} aria-pressed={wide}
+            title={wide ? "Narrow it back" : "Widen it — enough room to actually read"}
+            style={{ flex: "none", padding: "0 9px", fontSize: 13 }}>{wide ? "\u00bb" : "\u00ab"}</button>
+        ) : null}
       </div>
       <div className="dash-rail-body">{children}</div>
     </div>
@@ -764,6 +817,28 @@ function MergeMenu({ sections, accent, onMerge, onClose }) {
   );
 }
 
+// A stable colour per section, taken from its own name.
+//
+// Skylight gives everyone in the house a colour and never changes it, which is
+// why a week on their wall is legible from across a kitchen without reading a
+// word. A section does the same job here: same words, same colour, every week,
+// so a nine-row day resolves into three blocks at a glance rather than nine
+// identical lines. Eight hues, far enough apart to tell apart, all at one
+// lightness so none of them shouts over the others.
+// Each hue carries its own lightness rather than sharing one, because at a
+// single lightness the greens and cyans come out pale: 158, 190 and 96 landed
+// at 3.4, 4.1 and 3.4 against white, all of them under the 4.5 line. These
+// eight are each darkened until they clear it, and the check is in
+// scripts/check-contrast.mjs so they cannot drift back.
+const SEC = [[212, 42], [340, 42], [158, 30], [30, 38], [268, 42], [190, 34], [8, 42], [96, 30]];
+export function secColor(key) {
+  let h = 0;
+  for (let i = 0; i < (key || "").length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  const [hue, l] = SEC[h % SEC.length];
+  return "hsl(" + hue + " 62% " + l + "%)";
+}
+export const SEC_ALL = SEC;
+
 function SlotName({ slot, title, accent, onSave, onDelete, count, tally }) {
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState(false);
@@ -975,13 +1050,13 @@ function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove,
       </div>
       {items.map(it => {
         const blk = it.libId && blockOf ? blockOf(it.libId) : null;
-        const headline = blk ? blk.headline : it.claim;
+        const headline = it.claim || (blk ? blk.headline : "");
         return (
         <div key={it.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <Castable kind={typeLabel(it.type)} kindColor={TYPE_COLOR[it.type] || TYPE_COLOR.reading} title={it.title} url={it.url}
               claim={headline} accent={accent} live={liveLabel === (headline || it.title)} onDismiss={dismiss}
-              onSaveClaim={(c) => onClaim(it.id, c, blk?.id)}
+              onSaveClaim={(c) => onClaim(it.id, c)}
               onCast={(c) => castNow(it.url
                 ? { ...castFromLink({ label: it.title, url: it.url }), title: c, label: c }
                 : { type: "quote", tag: "Reading", title: c, label: c })} />
@@ -991,7 +1066,11 @@ function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove,
         </div>
         );
       })}
-      {!items.length && !open ? <Muted style={{ fontSize: 13 }}>Nothing assigned for this day.</Muted> : null}
+      {!items.length && !open ? (
+        <button className="dash-focus dash-empty" onClick={() => setOpen(true)} style={{ borderColor: accent + "55", color: accent }}>
+          + Assign a reading or a video for this day
+        </button>
+      ) : null}
       {open ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, border: "1px solid " + accent, background: "#fff" }}>
           {blocks?.length ? (
@@ -1030,7 +1109,6 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
           live={liveLabel === a.title} onDismiss={dismiss}
           onCast={() => castNow({ type: "reveal", stamp: "Assignment", title: a.title, due: "Due " + a.due, big: true, label: a.title })} />
       ))}
-      {rows.length ? <Muted style={{ fontSize: 12 }}>From the assignments. Casting one uses the big reveal.</Muted> : null}
       {extra}
     </div>
   );
@@ -1220,7 +1298,8 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
             onDragOver={e => { e.preventDefault(); setOverSlot(s.slot); }}
             onDragLeave={() => setOverSlot(null)}
             onDrop={e => { e.preventDefault(); setOverSlot(null); drop(e, s.slot); }}
-            style={{ background: overSlot === s.slot ? accent + "0c" : "transparent", borderRadius: 8 }}>
+            style={{ "--sec": secColor(bucket.title || s.slot),
+              background: overSlot === s.slot ? accent + "0c" : "transparent" }}>
             <div className="flow-sec-head">
               {overrideTitle
                 ? <span className="flow-pill" style={{ cursor: "default" }}>{overrideTitle}</span>
@@ -1259,9 +1338,9 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                     kindColor={blk ? typeOf(blk.type).color : KIND_COLOR[seed ? "Seed" : "Note"]}
                     title={title}
                     url={blk?.url || ""}
-                    claim={blk ? blk.headline : it.claim} accent={accent}
-                    live={liveLabel === ((blk ? blk.headline : it.claim) || title)} onDismiss={dismiss}
-                    onSaveClaim={(c) => (blk ? onBlockHeadline(blk.id, c) : onClaim(s.slot, it.id, c))}
+                    claim={it.claim || (blk ? blk.headline : "")} accent={accent}
+                    live={liveLabel === ((it.claim || (blk ? blk.headline : "")) || title)} onDismiss={dismiss}
+                    onSaveClaim={(c) => onClaim(s.slot, it.id, c)}
                     onCast={(c) => castNow(blk?.url
                       ? { ...castFromLink({ label: blk.title, url: blk.url }), title: c, label: c }
                       : { type: "quote", tag: bucket.title || s.slot, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c })} />
@@ -1837,16 +1916,19 @@ export function TodoPanel({ plan, seq, features, boards, assignments, shelves, s
   );
 }
 
-export function AssignmentsPanel({ assignments, castNow, dismiss, liveLabel }) {
-  if (!assignments.length) return <Muted>No assignments yet.</Muted>;
+export function AssignmentsPanel({ assignments, castNow, dismiss, liveLabel, path }) {
+  if (!assignments.length) return (
+    <a className="dash-focus dash-empty" href={path ? path + "/assignments" : "#"}
+      style={{ textDecoration: "none" }}>+ Set up the assignments for this class</a>
+  );
   return (
     <>
       {assignments.map(a => (
-        <Item key={a.id} kind="Reveal" kindColor={LIVE} title={a.title} sub={"Due " + a.due + (a.weight ? " · " + a.weight + "%" : "")}
+        <Item key={a.id} kind={a.due && a.due !== "Ongoing" ? a.due : "Due"} kindColor={TEXT_MUTED} title={a.title}
+          sub={a.weight ? a.weight + "% of the grade" : ""}
           live={liveLabel === a.title} onDismiss={dismiss}
           onCast={() => castNow({ type: "reveal", stamp: "Assignment", title: a.title, due: "Due " + a.due, big: true, label: a.title })} />
       ))}
-      <Muted style={{ fontSize: 12 }}>Reveals use the big animation.</Muted>
     </>
   );
 }
@@ -2090,109 +2172,120 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
   );
 }
 
-function WeekStrip({ days, day, onPick, counts, accent, today }) {
+// The band across the top. One row, three jobs, and nothing on it is said
+// again somewhere else on the screen.
+//
+// The old one carried the topic, four ambient counts, a progress bar, two
+// clocks, an up-next button and a live readout, and Andrew's verdict was that
+// it was not that helpful — which is what a strip says when everything on it
+// is also somewhere better. The counts live on the rail tabs now, next to the
+// thing you would actually do about them. What is left is what nothing else
+// can tell me: which session I am on, what it is about, how far in I am, and
+// what goes up next.
+function DayBand({ days, day, onPick, counts, accent, today, topic, name, done, total, since, cold, left, upNext, onCastNext, onReset }) {
+  const [jump, setJump] = useState(false);
   const i = days.findIndex(d => d.date === day);
-  const week = days.filter(d => d.weekId === days[i]?.weekId);
-  const wi = days.findIndex(d => d.weekId === week[0]?.weekId);
-  const prev = days[wi - 1], nextWeek = days.find((d, n) => n > wi && d.weekId !== week[0]?.weekId);
-
-  const chip = (d) => {
-    const on = d.date === day;
-    const n = counts[d.date] || 0;
-    const isToday = d.date === today;
-    return (
-      <button key={d.date} className="dash-focus" onClick={() => onPick(d.date)}
-        style={{ flex: "1 1 0", minWidth: 82, minHeight: 62, borderRadius: 14, cursor: "pointer",
-          fontFamily: F, textAlign: "left", padding: "8px 11px", display: "flex", flexDirection: "column", gap: 3,
-          border: "1.5px solid " + (on ? accent : "transparent"),
-          background: on ? accent + "10" : SURFACE_2, color: TEXT_PRIMARY }}>
-        <span style={{ fontSize: 12.5, fontWeight: 600, color: on ? accent : TEXT_MUTED }}>
-          {d.date}{isToday ? " · today" : ""}
-        </span>
-        <span style={{ fontSize: 12, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {n ? n + (n === 1 ? " thing" : " things") : "nothing yet"}
-        </span>
-      </button>
-    );
+  const weekId = days[i]?.weekId;
+  const week = days.filter(d => d.weekId === weekId);
+  const weekIds = [...new Set(days.map(d => d.weekId))];
+  const wn = weekIds.indexOf(weekId);
+  const stepWeek = (dir) => {
+    const t = weekIds[wn + dir];
+    if (t) onPick(days.find(d => d.weekId === t).date);
   };
-
-  return (
-    <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
-      <button className="dash-focus" disabled={!prev} onClick={() => prev && onPick(prev.date)}
-        style={{ ...mini, minWidth: 34, opacity: prev ? 1 : .3 }} title="The class before">‹</button>
-      {week.map(chip)}
-      <button className="dash-focus" disabled={!nextWeek} onClick={() => nextWeek && onPick(nextWeek.date)}
-        style={{ ...mini, minWidth: 34, opacity: nextWeek ? 1 : .3 }} title="Next week">›</button>
-    </div>
-  );
-}
-
-function Snapshot({ config, day, topic, live, done, total, since, cold, left, onTakeDown, onReset, upNext, onCastNext, chips }) {
   const pct = total ? Math.round((done / total) * 100) : 0;
-  return (
-    <div style={{ background: "#fff", borderRadius: 16, padding: "16px 20px", display: "flex",
-      alignItems: "center", gap: 22, flexWrap: "wrap",
-      boxShadow: "0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.045)" }}>
-      <div style={{ minWidth: 0, flex: "1 1 240px" }}>
-        <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.08,
-          color: TEXT_PRIMARY, wordBreak: "break-word" }}>{topic || config.name}</div>
-        <div style={{ display: "flex", gap: 7, marginTop: 8, flexWrap: "wrap" }}>
-          {(chips || []).map(([k, v]) => (
-            <span key={k} style={{ fontSize: 12.5, color: TEXT_MUTED, background: SURFACE_2,
-              borderRadius: 999, padding: "3px 10px", whiteSpace: "nowrap" }}>{v} {k}</span>
-          ))}
-        </div>
-      </div>
+  const countOf = (id) => days.filter(d => d.weekId === id).reduce((n, d) => n + (counts[d.date] || 0), 0);
+  const todayWeek = days.find(d => d.date === today)?.weekId;
 
-      <div style={{ flex: "1 1 200px", minWidth: 140 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 12.5, color: TEXT_MUTED, marginBottom: 5 }}>
-          <span>
-            {total ? done + " of " + total + " done" : "Nothing planned yet"}
+  return (
+    <div className="dash-band">
+      <div className="dash-band-row">
+        {/* the week, and the way out of this week. Stepping one at a time is
+            fine for next Tuesday and useless for week nine, which is most of
+            what planning is. */}
+        <div style={{ position: "relative", flex: "none" }}>
+          <button className="dash-focus dash-week" onClick={() => setJump(v => !v)} aria-expanded={jump}
+            aria-haspopup="menu" title="Jump to any week of the term">
+            Week {wn + 1}<span style={{ opacity: .5, fontSize: 10, marginLeft: 5 }}>▾</span>
+          </button>
+          {jump ? (
+            <>
+              <div onClick={() => setJump(false)} style={{ position: "fixed", inset: 0, zIndex: 50 }} />
+              <div role="menu" className="dash-jump">
+                {weekIds.map((id, n) => {
+                  const wd = days.filter(d => d.weekId === id);
+                  const on = id === weekId;
+                  const has = countOf(id);
+                  const past = todayWeek ? n < weekIds.indexOf(todayWeek) : false;
+                  return (
+                    <button key={id} className="dash-focus dash-jump-row" data-on={on ? "1" : "0"}
+                      onClick={() => { onPick(wd[0].date); setJump(false); }}>
+                      <span className="dash-jump-n" style={on ? { background: accent, color: "#fff", borderColor: accent } : undefined}>{n + 1}</span>
+                      <span style={{ minWidth: 0, flex: 1 }}>
+                        <b style={{ display: "block", fontWeight: 500, fontSize: 14.5, color: past ? TEXT_MUTED : TEXT_PRIMARY,
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{wd[0]?.topic || "Untitled week"}</b>
+                        <small style={{ color: TEXT_MUTED, fontSize: 12 }}>{wd.map(d => d.date).join(" · ")}</small>
+                      </span>
+                      {has ? <span className="dash-jump-has">{has}</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        <button className="dash-focus dash-step" disabled={wn <= 0} onClick={() => stepWeek(-1)} title="The week before">‹</button>
+        <div className="dash-days">
+          {week.map(d => {
+            const on = d.date === day;
+            const n = counts[d.date] || 0;
+            return (
+              <button key={d.date} className="dash-focus dash-day" data-on={on ? "1" : "0"} onClick={() => onPick(d.date)}
+                style={on ? { borderColor: accent, background: accent + "0f" } : undefined}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: on ? accent : TEXT_PRIMARY }}>
+                  {d.date}{d.date === today ? " · today" : ""}
+                </span>
+                <span style={{ fontSize: 11.5, color: TEXT_MUTED }}>{n ? n + (n === 1 ? " thing" : " things") : "empty"}</span>
+              </button>
+            );
+          })}
+        </div>
+        <button className="dash-focus dash-step" disabled={wn >= weekIds.length - 1} onClick={() => stepWeek(1)} title="Next week">›</button>
+
+        <div className="dash-prog">
+          <div style={{ display: "flex", gap: 8, alignItems: "baseline", fontSize: 12.5, color: TEXT_MUTED, whiteSpace: "nowrap" }}>
+            <span>{total ? done + " of " + total : "nothing planned"}</span>
+            {left != null ? <span>{left} min left</span> : null}
+            {since != null ? <span style={{ color: cold ? WARN : TEXT_MUTED }}>{since} min quiet</span> : null}
             {total && done ? (
               <button className="dash-focus" onClick={onReset}
                 style={{ background: "none", border: "none", color: TEXT_MUTED, cursor: "pointer",
-                  fontFamily: F, fontSize: 12.5, textDecoration: "underline", padding: "0 0 0 8px" }}>start over</button>
+                  fontFamily: F, fontSize: 12.5, textDecoration: "underline", padding: 0 }}>reset</button>
             ) : null}
-          </span>
-          <span style={{ color: cold ? WARN : TEXT_MUTED, whiteSpace: "nowrap" }}>
-            {[since == null ? "" : since + " min since they did anything",
-              left == null ? "" : left + " min left"].filter(Boolean).join(" · ")}
-          </span>
-        </div>
-        <div style={{ height: 6, borderRadius: 3, background: SURFACE_2, overflow: "hidden" }}>
-          <i style={{ display: "block", height: "100%", width: pct + "%", background: config.accent, transition: "width .3s" }} />
+          </div>
+          <div style={{ height: 5, borderRadius: 3, background: SURFACE_2, overflow: "hidden", marginTop: 4 }}>
+            <i style={{ display: "block", height: "100%", width: pct + "%", background: accent, transition: "width .3s" }} />
+          </div>
         </div>
       </div>
 
-      {!live && upNext ? (
-        <button className="dash-focus" onClick={onCastNext}
-          style={{ display: "flex", alignItems: "center", gap: 12, maxWidth: 380, minHeight: 62,
-            background: config.accent, border: "none", borderRadius: 14, padding: "10px 16px",
-            cursor: "pointer", fontFamily: F, textAlign: "left", color: "#fff" }}>
-          <span style={{ minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 12, opacity: .85, fontWeight: 600 }}>Up next</span>
-            <span style={{ display: "block", fontSize: 15.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{upNext}</span>
-          </span>
-          <span style={{ flex: "none", fontSize: 20, lineHeight: 1 }}>→</span>
-        </button>
-      ) : null}
-
-      {live ? (
-        <button className="dash-focus" onClick={onTakeDown}
-          style={{ display: "flex", alignItems: "center", gap: 9, maxWidth: 340, minHeight: TAP,
-            background: "rgba(225,29,72,.08)", border: "1px solid " + LIVE, borderRadius: 12,
-            padding: "8px 13px", cursor: "pointer", fontFamily: F, textAlign: "left" }}>
-          <LiveTag />
-          <span style={{ minWidth: 0, fontSize: 14.5, color: TEXT_PRIMARY, overflow: "hidden",
-            textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{live}</span>
-          <span style={{ flex: "none", fontSize: 13, color: LIVE, fontWeight: 600 }}>take it down</span>
-        </button>
-      ) : (
-        <span style={{ fontSize: 14, color: TEXT_MUTED }}>Nothing on the room screen.</span>
-      )}
+      <div className="dash-band-row" style={{ alignItems: "flex-end" }}>
+        <h1 className="dash-topic">{topic || name}</h1>
+        {upNext ? (
+          <button className="dash-focus dash-next" onClick={onCastNext} style={{ background: accent }}>
+            <span style={{ minWidth: 0 }}>
+              <span style={{ display: "block", fontSize: 11.5, opacity: .85, fontWeight: 600, letterSpacing: ".04em", textTransform: "uppercase" }}>Up next</span>
+              <span style={{ display: "block", fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{upNext}</span>
+            </span>
+            <span style={{ flex: "none", fontSize: 19, lineHeight: 1 }}>→</span>
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }
+
 
 function Picker({ title, opts, value, onPick, accent }) {
   return (
@@ -2374,6 +2467,7 @@ export default function Dashboard({ config }) {
   const [prep, setPrep] = useState("ideas");
   const [room, setRoom] = useState("questions");
   const [railOpen, setRailOpen] = useState(true);
+  const [wide, setWide] = useState(false);
   const [dense, setDense] = useState(false);
   const [focus, setFocus] = useState(false);
   useEffect(() => {
@@ -2383,6 +2477,7 @@ export default function Dashboard({ config }) {
       if (PREP.includes(v.prep)) setPrep(v.prep);
       if (LIVE_RAIL.includes(v.room)) setRoom(v.room);
       if (typeof v.railOpen === "boolean") setRailOpen(v.railOpen);
+      if (typeof v.wide === "boolean") setWide(v.wide);
       if (typeof v.dense === "boolean") setDense(v.dense);
     } catch { /* first run */ }
   }, [LKEY]);
@@ -2390,8 +2485,8 @@ export default function Dashboard({ config }) {
   // on the first render, so the pickers read the current values off a ref
   // instead of off that closure. Without it, pressing 1 saved the right rail
   // back to whatever tab it had when the page loaded.
-  const railRef = useRef({ prep: "ideas", room: "questions", railOpen: true, dense: false });
-  railRef.current = { prep, room, railOpen, dense };
+  const railRef = useRef({ prep: "ideas", room: "questions", railOpen: true, dense: false, wide: false });
+  railRef.current = { prep, room, railOpen, dense, wide };
   const saveRails = useCallback((patch) => {
     const v = { ...railRef.current, ...patch };
     railRef.current = v;
@@ -2399,8 +2494,9 @@ export default function Dashboard({ config }) {
     if (v.room !== room) setRoom(v.room);
     if (v.railOpen !== railOpen) setRailOpen(v.railOpen);
     if (v.dense !== dense) setDense(v.dense);
+    if (v.wide !== wide) setWide(v.wide);
     try { localStorage.setItem(LKEY, JSON.stringify(v)); } catch { /* private mode */ }
-  }, [LKEY, prep, room, railOpen, dense]);
+  }, [LKEY, prep, room, railOpen, dense, wide]);
   const railSave = useRef(saveRails);
   railSave.current = saveRails;
   const pickPrep = (id) => railSave.current({ prep: id, railOpen: true });
@@ -2866,9 +2962,7 @@ export default function Dashboard({ config }) {
     readings: () => <Readings items={readings} accent={config.accent} castNow={castNow} dismiss={dismiss}
       liveLabel={liveLabel} onAdd={addReading} onRemove={dropReading}
       blockOf={blockOf}
-      onClaim={(id, c, blockId) => (blockId
-        ? setBlockHeadline(blockId, c)
-        : setScheduleItemClaim(update, config, id, c))}
+      onClaim={(id, c) => setScheduleItemClaim(update, config, id, c)}
       blocks={blocks2} onPickBlock={pickReading} />,
     ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent}
       sections={sections} days={days} today={day}
@@ -2882,7 +2976,7 @@ export default function Dashboard({ config }) {
       onSaveDayNote={saveDayNote} onSaveWeekPlan={saveWeekPlan} onSaveWeekText={saveWeekText}
       days={days} noteFor={(d) => ((data.dayPlans || {})[d] || {}).notes || ""}
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
-    assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
+    assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} path={config.path} />,
   };
   const TITLES = { todo: "To-do", poll: "Poll", flow: "Class Flow", boards: "Boards", readings: "Readings", ideas: "Ideas", questions: "Asking", attendance: "Here", scratch: "Notes", assignments: "Assigned" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
@@ -2923,10 +3017,7 @@ export default function Dashboard({ config }) {
     const cur = n.getHours() * 60 + n.getMinutes();
     return cur >= st && cur <= en ? en - cur : null;
   })();
-  // Casting from the wrong session is silent and total: the room gets last
-  // Wednesday and nothing on this screen says so.
   const onDeck = currentDay(weeks)?.date;
-  const offDay = onDeck && day !== onDeck;
 
   return (
     <div className={dense ? "dash-compact" : "dash-comfortable"}
@@ -2967,29 +3058,21 @@ export default function Dashboard({ config }) {
         <a href={config.path} style={{ ...mini, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Class home</a>
       </header>
 
-      {offDay ? (
-        <div style={{ background: "#fffbeb", borderBottom: "1px solid #fde68a", padding: "10px 22px",
-          display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", fontSize: 15, color: "#92400e" }}>
-          <span>You are on {day}. The session on deck is {onDeck}, and anything you cast goes to the room either way.</span>
-          <button style={{ ...mini, marginLeft: "auto", borderColor: WARN, color: WARN }} onClick={() => setDay(onDeck)}>Go to {onDeck}</button>
-        </div>
-      ) : null}
 
-      <div style={{ padding: "14px 18px 0", maxWidth: 1760, margin: "0 auto", display: "flex", flexDirection: "column", gap: 12 }}>
-        <WeekStrip days={days} day={day} onPick={setDay} counts={dayCounts} accent={config.accent} today={onDeck} />
-        <Snapshot config={config} day={day} topic={dayMeta?.topic} live={liveLabel}
-          upNext={upNextWords} onCastNext={castNext}
-          chips={[["in the day", flowCount], ["here", students.length - Object.values(marks).filter(v => v === "out").length],
-                  ["asking", openQ], ["assigned", readings.length]].filter(([, v]) => v)}
+      <div style={{ padding: "14px 18px 0", maxWidth: 1760, margin: "0 auto" }}>
+        <DayBand days={days} day={day} onPick={setDay} counts={dayCounts} accent={config.accent} today={onDeck}
+          topic={dayMeta?.topic} name={config.name}
           done={castCount} total={flowCount} since={sinceMin} cold={sinceMin != null && sinceMin >= 10}
-          left={minsLeft} onTakeDown={() => cast(null)}
+          left={minsLeft} upNext={liveLabel ? "" : upNextWords} onCastNext={castNext}
           onReset={() => writeDay(d => ({ ...d, done: [] }), "starting the day over")} />
       </div>
 
-      <main className="dash-stage" data-rail={railOpen ? "open" : "shut"} data-teach={focus ? "on" : "off"}>
+      <main className="dash-stage" data-rail={railOpen ? "open" : "shut"} data-teach={focus ? "on" : "off"}
+        data-wide={wide && railOpen && !focus ? "1" : "0"}>
         {railOpen && !focus ? (
           <Rail side="Before class" tabs={PREP.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: i + 1 }))}
-            active={prep} onPick={pickPrep} accent={config.accent}>
+            active={prep} onPick={pickPrep} accent={config.accent}
+            wide={wide} onWide={() => railSave.current({ wide: !railRef.current.wide })}>
             <Panel id={prep} title={null}>{render[prep]()}</Panel>
           </Rail>
         ) : null}
@@ -3003,7 +3086,7 @@ export default function Dashboard({ config }) {
           ) : null}
         </div>
 
-        <Rail side="During class" tabs={LIVE_RAIL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: PREP.length + i + 1 }))}
+        <Rail side="During class" className="dash-room" tabs={LIVE_RAIL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: PREP.length + i + 1 }))}
           active={room} onPick={pickRoom} accent={config.accent}>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <Monitor config={config} live={live} cast={cast} push={push} recent={recent} onRecast={castNow}
