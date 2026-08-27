@@ -1439,7 +1439,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, dayNotes, scratchText, onNest }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -1707,7 +1707,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
     <>
       <RowMenu at={rowMenu} onRemove={() => onRemoveItem(rowMenu.slot, rowMenu.id)} onClose={() => setRowMenu(null)} />
       {noting ? (
-        <NoteSheet sections={sectionList} notes={dayNotes} scratch={scratchText} accent={accent}
+        <NoteSheet sections={sectionList} sources={noteSources} accent={accent}
           onAdd={(slot, text) => onAddItem(slot, { text })} onClose={() => setNoting(false)} />
       ) : null}
 
@@ -2401,7 +2401,7 @@ function ColorsSheet({ colors, onPick, onReset, onClose }) {
 // Writing the next note with no sight of the last four is how the same thought
 // gets written three times. Everything I have written for this day sits under
 // the box, so the new one answers what is already there.
-function NoteSheet({ sections, notes, scratch, accent, onAdd, onClose }) {
+function NoteSheet({ sections, sources, accent, onAdd, onClose }) {
   const [text, setText] = useState("");
   const [slot, setSlot] = useState(sections[0]?.[0] || "");
   const commit = () => {
@@ -2410,7 +2410,11 @@ function NoteSheet({ sections, notes, scratch, accent, onAdd, onClose }) {
     onAdd(slot, t);
     onClose();
   };
-  const already = [notes, scratch].filter(x => (x || "").trim());
+  // Everything already written for this day, wherever it lives. The first
+  // version read two day-level fields, and both were empty on every day of
+  // every class, because what I actually write goes on the WEEK. So it asks
+  // for all of them and says which is which.
+  const already = (sources || []).filter(x => (x.body || "").trim());
   return (
     <Sheet title="A new note" sub="It goes into the flow as a row" onClose={onClose} width={620}>
       <span className="read-field">
@@ -2430,11 +2434,14 @@ function NoteSheet({ sections, notes, scratch, accent, onAdd, onClose }) {
       </div>
 
       {already.length ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
-          <span style={{ ...label, color: accent }}>What I already wrote for this day</span>
-          {already.map((t, i) => (
-            <div key={i} style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.5, color: TEXT_SECONDARY,
-              background: SURFACE_2, borderRadius: 10, padding: "10px 12px" }}>{t}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
+          <span style={{ ...label, color: accent }}>What I already wrote</span>
+          {already.map(x => (
+            <div key={x.from} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <span style={{ ...label, fontSize: 11 }}>{x.from}</span>
+              <div style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.5, color: TEXT_SECONDARY,
+                background: SURFACE_2, borderRadius: 10, padding: "10px 12px" }}>{x.body}</div>
+            </div>
           ))}
         </div>
       ) : (
@@ -3776,7 +3783,17 @@ export default function Dashboard({ config }) {
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
       isAssigned={(it) => !!assignedIdFor(it)} onToggleAssigned={toggleAssigned} hue={hueOf}
-      dayNotes={plan?.notes} scratchText={(data.scratch || {})[day]} onNest={nestItem}
+      noteSources={[
+        { from: "This day", body: plan?.notes },
+        { from: "Scratch, " + day, body: (data.scratch || {})[day] },
+        { from: "How this week runs", body: weekRow?.plan },
+        { from: "What students see this week", body: weekRow?.text },
+        { from: "Notes already in the flow",
+          body: Object.values(plan?.slots || {})
+            .flatMap(b => normSlot(b).items)
+            .filter(it => !it.blockId && (it.text || "").trim())
+            .map(it => "\u00b7 " + it.text.trim()).join("\n") },
+      ]} onNest={nestItem}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
       onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMergeSections={mergeSections} onSelect={setPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
       doneSet={doneSet} onTick={tickItem} />,
