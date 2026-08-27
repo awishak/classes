@@ -167,7 +167,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // Nothing goes up as a label. Before a thing can be cast it needs a headline —
 // one full sentence saying what it shows. "Media rights" is a topic; "Rights
 // fees have risen 45% in ten years" is what the room can actually read.
-function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num }) {
+function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(claim || "");
   useEffect(() => { setDraft(claim || ""); }, [claim]);
@@ -217,14 +217,11 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
         fontWeight: 600, color: kindColor || TEXT_MUTED, fontVariantNumeric: "tabular-nums",
         textAlign: "right" }}>{num || ""}</span>
 
-      {url ? (
-        <a className="dash-focus" href={url} target="_blank" rel="noreferrer" title={"Open here · " + url}
-          style={{ flex: 1, minWidth: 0, fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.4,
-            wordBreak: "break-word", textDecoration: "none" }}>{words}</a>
-      ) : (
-        <span style={{ flex: 1, minWidth: 0, fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.4,
-          wordBreak: "break-word" }}>{words}</span>
-      )}
+      <button className="dash-focus" onClick={onSelect} title="What is this?"
+        style={{ flex: 1, minWidth: 0, fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.4, wordBreak: "break-word",
+          background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer", fontFamily: F }}>
+        {words}
+      </button>
 
       <span className="flow-tools">
         {live ? (
@@ -954,7 +951,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect }) {
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
   const [rowMenu, setRowMenu] = useState(null);
@@ -1158,6 +1155,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                   style={{ display: "flex", flexDirection: "column", gap: 2,
                     borderTop: "2px solid " + (overRow === it.id ? accent : "transparent") }}>
                   <Castable num={numberOf[it.id]}
+                    onSelect={() => onSelect({ blockId: it.blockId, item: it, where: bucket.title || s.slot })}
                     kind={blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
                     kindColor={blk ? typeOf(blk.type).color : KIND_COLOR[seed ? "Seed" : "Note"]}
                     title={title}
@@ -1833,7 +1831,8 @@ function ShortcutSheet({ onClose }) {
 // ─────────────────────────────────────────────────────────────
 // live monitor: a real preview of what the room sees
 // ─────────────────────────────────────────────────────────────
-export function Monitor({ config, live, cast, push, recent, onRecast }) {
+export function Monitor({ config, live, cast, push, recent, onRecast, info }) {
+  const [anims, setAnims] = useState(false);
   const liveUrl = live?.cast?.openUrl || live?.cast?.url || "";
   const box = useRef(null);
   const [scale, setScale] = useState(0.3);
@@ -1917,13 +1916,72 @@ export function Monitor({ config, live, cast, push, recent, onRecast }) {
         </div>
       ) : null}
 
-      <div style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", gap: 12 }}>
-        <Picker title="Everyday cast" opts={ANIMS} value={live?.anim || "rise"} onPick={v => push({ anim: v })} accent={config.accent} />
-        <Picker title="Big reveal" opts={BIG_ANIMS} value={live?.bigAnim || "drop"} onPick={v => push({ bigAnim: v })} accent={config.accent} />
-        <Muted style={{ fontSize: 13 }}>
-          {[...ANIMS, ...BIG_ANIMS].find(a => a.id === (live?.anim || "rise"))?.hint}
-        </Muted>
+      {info}
+
+      {/* How things arrive on the screen is a decision I make once a term, so it
+          stops taking the best space on the panel and sits behind a control. */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button className="dash-focus" style={{ ...mini, minHeight: 28, padding: "0 10px", fontSize: 12 }}
+          onClick={() => setAnims(v => !v)} aria-expanded={anims}>Transitions</button>
       </div>
+      {anims ? (
+        <div style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", gap: 12 }}>
+          <Picker title="Everyday cast" opts={ANIMS} value={live?.anim || "rise"} onPick={v => push({ anim: v })} accent={config.accent} />
+          <Picker title="Big reveal" opts={BIG_ANIMS} value={live?.bigAnim || "drop"} onPick={v => push({ bigAnim: v })} accent={config.accent} />
+          <Muted style={{ fontSize: 13 }}>
+            {[...ANIMS, ...BIG_ANIMS].find(a => a.id === (live?.anim || "rise"))?.hint}
+          </Muted>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// Everything the app knows about the thing I just clicked. It sits where the
+// transition pickers were, because what a block is turns out to matter far more
+// often than how it slides in.
+function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
+  if (!block && !item) return null;
+  const t = block ? typeOf(block.type) : null;
+  const rows = [
+    ["Headline", block ? block.headline : item?.claim],
+    ["What it says", block?.body],
+    ["Concept", block?.concept],
+    ["Source", block?.source],
+    ["Tags", (block?.tags || []).join(" · ")],
+    ["Made", block?.created],
+    ["Used on", (block?.scheduled || []).join(" · ")],
+    ["In", where],
+    ["Holds", block?.children?.length ? block.children.length + " inside" : ""],
+  ].filter(([, v]) => (v || "").toString().trim());
+
+  return (
+    <div style={{ background: "#fff", border: "1px solid " + accent, borderRadius: 14, padding: 14,
+      display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+        <span style={{ ...label, color: accent }}>{t ? t.label : "Note"}</span>
+        <button className="dash-focus" onClick={onClose}
+          style={{ ...label, fontSize: 12, marginLeft: "auto", color: TEXT_MUTED, background: "none", border: "none", cursor: "pointer" }}>Close</button>
+      </div>
+
+      <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.3, letterSpacing: "-.01em", wordBreak: "break-word" }}>
+        {block ? block.title : (item?.text || "Untitled")}
+      </div>
+
+      {block?.url ? (
+        <a className="dash-focus" href={block.url} target="_blank" rel="noreferrer"
+          style={{ ...mini, minHeight: HIT, borderColor: accent, color: accent, textDecoration: "none",
+            display: "inline-flex", alignItems: "center", alignSelf: "flex-start" }}>Open here ↗</a>
+      ) : null}
+
+      {rows.map(([k, v]) => (
+        <div key={k}>
+          <div style={{ ...label, fontSize: 12 }}>{k}</div>
+          <div style={{ fontSize: 14.5, lineHeight: 1.5, color: TEXT_PRIMARY, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{v}</div>
+        </div>
+      ))}
+
+      {!rows.length && !block?.url ? <Muted style={{ fontSize: 13 }}>Nothing on this one yet beyond its name.</Muted> : null}
     </div>
   );
 }
@@ -1977,6 +2035,8 @@ export default function Dashboard({ config }) {
   // most common thing I do on this screen, and until now it meant finding the
   // row again.
   const [recent, setRecent] = useState([]);
+  // What I last clicked on in the flow, so the sidebar can say what it is.
+  const [picked, setPicked] = useState(null);
   const HL = useHeadlines(config.storageKey, { categories: data?.headlineCategories, concepts: config.concepts });
 
   const weeks = data?.schedule || config.scheduleWeeks || [];
@@ -2648,7 +2708,7 @@ export default function Dashboard({ config }) {
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
-      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMergeSections={mergeSections} />,
+      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMergeSections={mergeSections} onSelect={setPicked} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     readings: () => <Readings items={readings} accent={config.accent} castNow={castNow} dismiss={dismiss}
@@ -2784,7 +2844,11 @@ export default function Dashboard({ config }) {
           ))}
         </div>
         <div style={{ position: "sticky", top: 20 }}>
-          <Monitor config={config} live={live} cast={cast} push={push} recent={recent} onRecast={castNow} />
+          <Monitor config={config} live={live} cast={cast} push={push} recent={recent} onRecast={castNow}
+            info={picked ? (
+              <BlockInfo block={picked.blockId ? blockOf(picked.blockId) : null} item={picked.item}
+                where={picked.where} accent={config.accent} onClose={() => setPicked(null)} />
+            ) : null} />
         </div>
       </main>
 
