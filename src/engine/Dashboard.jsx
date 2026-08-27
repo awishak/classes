@@ -51,6 +51,19 @@ const label2 = { fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, letterSpaci
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 
 const CSS = `
+/* The class tools, joined. They do the same kind of thing at the same moment,
+   so they read as one control with four faces rather than four strangers. */
+.dash-seg{display:inline-flex;flex:none;border-radius:12px;overflow:hidden;border:1px solid var(--seg);background:#fff}
+.dash-seg button{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 13px;border:none;
+  border-left:1px solid color-mix(in srgb,var(--seg) 35%,#fff);background:none;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:500;color:var(--seg);white-space:nowrap}
+.dash-seg button:first-child{border-left:none}
+.dash-seg button:hover{background:color-mix(in srgb,var(--seg) 10%,#fff)}
+.dash-seg kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;opacity:.7;
+  border:none;background:none;padding:0}
+@supports not (color:color-mix(in srgb,red 10%,#fff)){
+  .dash-seg button{border-left-color:rgba(23,19,16,.12)}
+  .dash-seg button:hover{background:rgba(23,19,16,.05)}}
 .dash-band{background:#fff;border-radius:18px;display:flex;flex-direction:column;
   box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.045)}
 .dash-band-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
@@ -937,6 +950,11 @@ function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAdd, onEd
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [placing, setPlacing] = useState(null);
+  // One idea open at a time. A list of ideas is something I scan for the one I
+  // want, and every one of them showing how it runs plus four buttons turned a
+  // twelve-idea list into a page of scrolling. The title is the list; the rest
+  // is what I asked for when I clicked.
+  const [shown, setShown] = useState(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const moves = (blocks || []).filter(b => (b.tags || []).includes("teaching move"));
@@ -967,16 +985,22 @@ function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAdd, onEd
   return (
     <>
       {moves.map(b => editing === b.id ? <div key={b.id}>{form}</div> : (
-        <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "9px 11px",
-          borderRadius: 10, background: SURFACE_2 }}>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
-            <span style={{ flex: "none", marginTop: 5, width: 7, height: 7, borderRadius: "50%", background: typeOf("activity").color }} />
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <b style={{ display: "block", fontWeight: 600, fontSize: 14, color: TEXT_PRIMARY }}>{b.title}</b>
-              {b.body ? <small style={{ color: TEXT_MUTED, fontSize: 12.5, lineHeight: 1.4, display: "block" }}>{b.body}</small> : null}
-            </span>
-          </div>
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+        <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "3px 4px 6px",
+          borderRadius: 10, background: shown === b.id ? SURFACE_2 : "transparent" }}>
+          <button className="dash-focus" onClick={() => { setShown(shown === b.id ? null : b.id); setPlacing(null); }}
+            aria-expanded={shown === b.id}
+            style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", minHeight: 38, padding: "4px 7px",
+              background: "none", border: "none", borderRadius: 9, cursor: "pointer", fontFamily: F, textAlign: "left" }}>
+            <span style={{ flex: "none", width: 7, height: 7, borderRadius: "50%", background: typeOf("activity").color }} />
+            <b style={{ flex: 1, minWidth: 0, fontWeight: 600, fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.35 }}>{b.title}</b>
+            <span style={{ flex: "none", fontSize: 10, color: TEXT_MUTED, transform: shown === b.id ? "none" : "rotate(-90deg)", transition: "transform .14s" }}>▾</span>
+          </button>
+          {shown !== b.id ? null : (
+          <>
+          {b.body ? (
+            <small style={{ color: TEXT_MUTED, fontSize: 12.5, lineHeight: 1.45, display: "block", padding: "0 7px 2px 23px", whiteSpace: "pre-wrap" }}>{b.body}</small>
+          ) : null}
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", padding: "0 7px 0 23px" }}>
             <button className="dash-focus" style={{ ...tool, borderColor: accent, color: accent }}
               onClick={() => setPlacing(placing === b.id ? null : b.id)}>{placing === b.id ? "Cancel" : "Add to a section"}</button>
             <button className="dash-focus" style={tool} onClick={() => startEdit(b)}>Edit</button>
@@ -987,6 +1011,8 @@ function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAdd, onEd
             <PlaceMenu slots={sections || []} days={days || []} today={today} accent={accent}
               onPlace={(date, slot) => onPick(slot, b, date)} onClose={() => setPlacing(null)} />
           ) : null}
+          </>
+          )}
         </div>
       ))}
       {open && !editing ? form : (
@@ -2022,6 +2048,93 @@ const SHORTCUTS = [
 // Taking the roll is one of them: it happens once, at the start, and it wants
 // the whole width while it is happening. As one of five tabs on a rail it was
 // both permanently in the way and too narrow to use.
+// A little menu that hangs off a button. Both header menus are the same shape,
+// so they are the same component.
+function DropMenu({ trigger, label, width, children }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span style={{ position: "relative", flex: "none" }}>
+      {trigger(open, () => setOpen(v => !v))}
+      {open ? (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 70 }} />
+          <div role="menu" aria-label={label} onClick={() => setOpen(false)}
+            style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 71, background: "#fff",
+              border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 6, width: width || 240,
+              boxShadow: "0 18px 44px -14px rgba(23,19,16,.35)", display: "flex", flexDirection: "column", gap: 1 }}>
+            {children}
+          </div>
+        </>
+      ) : null}
+    </span>
+  );
+}
+
+const menuRow = {
+  display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "none",
+  border: "none", cursor: "pointer", padding: "0 10px", minHeight: 40, borderRadius: 9,
+  fontFamily: F, fontSize: 14.5, color: TEXT_PRIMARY, textDecoration: "none",
+};
+
+// Everything under the class name is a way out of this class, which is what
+// they have in common and why they were wrong scattered along the bar as if
+// they were actions.
+function ClassMenu({ config }) {
+  const go = (href) => () => {
+    window.history.pushState({}, "", href);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+  return (
+    <DropMenu label="This class" width={250}
+      trigger={(open, toggle) => (
+        <button className="dash-focus" onClick={toggle} aria-expanded={open} aria-haspopup="menu"
+          style={{ display: "inline-flex", alignItems: "baseline", gap: 6, background: "none", border: "none",
+            cursor: "pointer", padding: "4px 8px", borderRadius: 10, minHeight: 36, fontFamily: F,
+            fontSize: 19, fontWeight: 700, letterSpacing: "-.02em", color: config.accent }}>
+          {config.code}<span style={{ fontSize: 10, opacity: .55 }}>▾</span>
+        </button>
+      )}>
+      <span style={{ ...label, padding: "6px 10px 4px" }}>Go to</span>
+      <a className="dash-focus" href={config.path} style={menuRow}>Class home</a>
+      <a className="dash-focus" href={config.path + "/schedule"} style={menuRow}>The schedule</a>
+      <a className="dash-focus" href="/plan" style={menuRow}>The Brief</a>
+      <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
+      <span style={{ ...label, padding: "2px 10px 4px" }}>Another class</span>
+      {ENGINE_LIST.filter(c => c.id !== config.id).map(c => (
+        <button key={c.id} className="dash-focus" onClick={go(c.path + "/dashboard")} style={menuRow}>
+          <span style={{ flex: "none", width: 8, height: 8, borderRadius: "50%", background: c.accent }} />
+          <b style={{ fontWeight: 600 }}>{c.code}</b>
+          <span style={{ minWidth: 0, color: TEXT_MUTED, fontSize: 13, overflow: "hidden",
+            textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.desc}</span>
+        </button>
+      ))}
+    </DropMenu>
+  );
+}
+
+// How the screen is laid out. Set rarely, so it does not need to be on the bar
+// at the same weight as the buttons I press in front of people.
+function ViewMenu({ railOpen, onRail, dense, onDense, onReset, onKeys }) {
+  return (
+    <DropMenu label="View" width={230}
+      trigger={(open, toggle) => (
+        <button className="dash-focus" onClick={toggle} aria-expanded={open} aria-haspopup="menu"
+          style={{ ...mini, minHeight: 36 }}>View<span style={{ fontSize: 9, opacity: .55, marginLeft: 5 }}>▾</span></button>
+      )}>
+      <button className="dash-focus" onClick={onRail} style={menuRow}>
+        {railOpen ? "Hide the Material column" : "Show the Material column"}
+        <kbd style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: TEXT_MUTED }}>\\</kbd>
+      </button>
+      <button className="dash-focus" onClick={onDense} style={menuRow}>{dense ? "Comfortable rows" : "Compact rows"}</button>
+      <button className="dash-focus" onClick={onReset} style={menuRow}>Reset the columns</button>
+      <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
+      <button className="dash-focus" onClick={onKeys} style={menuRow}>
+        Keyboard<kbd style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: TEXT_MUTED }}>⌘/</kbd>
+      </button>
+    </DropMenu>
+  );
+}
+
 export function Sheet({ title, sub, onClose, children, width }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
@@ -3144,41 +3257,34 @@ export default function Dashboard({ config }) {
       style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, "--dash-accent": config.accent }}>
       <style>{CSS}</style>
 
-      <header style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "13px 22px", display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
-        <div style={{ marginRight: "auto", display: "flex", alignItems: "baseline", gap: 9, minWidth: 0 }}>
-          <span style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-.02em", color: config.accent }}>{config.code}</span>
-          <span style={{ fontSize: 14, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{config.desc}</span>
+      {/* Four groups, and the grouping is what each control IS.
+          The class tools are the things I press with the room watching, so they
+          sit together and look alike. The view switches are things I set once
+          and then forget, so they go behind one menu instead of competing for
+          the same attention. The ways out of this class live under the class
+          name, because that is what they all are. Teaching stays out on its
+          own — it is the one switch I hit at the moment class starts. */}
+      <header style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "10px 20px",
+        display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <ClassMenu config={config} />
+        <span style={{ marginRight: "auto", fontSize: 14, color: TEXT_MUTED, minWidth: 0,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{config.desc}</span>
+
+        <div className="dash-seg" style={{ "--seg": config.accent }}>
+          <button className="dash-focus" onClick={() => setCmdOpen(true)}>Cast<kbd>⌘K</kbd></button>
+          <button className="dash-focus" onClick={() => setHlOpen(true)}>Headlines</button>
+          <button className="dash-focus" onClick={() => setHornOpen(true)}>Around the Horn</button>
+          <button className="dash-focus" onClick={() => setHereOpen(true)}>
+            Here{students.length ? <kbd>{students.length - outCount}/{students.length}</kbd> : null}
+          </button>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span style={label}>Class</span>
-          <select value={config.id} onChange={e => {
-            const next = ENGINE_LIST.find(c => c.id === e.target.value);
-            if (!next) return;
-            window.history.pushState({}, "", next.path + "/dashboard");
-            window.dispatchEvent(new PopStateEvent("popstate"));
-          }}
-            style={{ ...inputStyle, minHeight: 36, fontSize: 15, width: "auto", padding: "6px 10px" }}>
-            {ENGINE_LIST.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
-          </select>
-        </div>
-        <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setCmdOpen(true)}>Cast · ⌘K</button>
-        <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setHlOpen(true)}>Headlines</button>
-        <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setHornOpen(true)}>Around the Horn</button>
-        <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setHereOpen(true)}>
-          Here{outCount ? " · " + (students.length - outCount) + "/" + students.length : ""}
-        </button>
-        <button className="dash-focus" style={{ ...mini, ...(railOpen ? {} : { background: "rgba(23,19,16,.06)" }) }}
-          onClick={toggleRail} aria-pressed={!railOpen} title="Show or hide the prep rail">
-          {railOpen ? "Hide prep" : "Show prep"}
-        </button>
-        <button className="dash-focus" style={mini} onClick={() => setDenseAnd(!dense)}>
-          {dense ? "Comfortable" : "Compact"}
-        </button>
-        <button className="dash-focus" style={{ ...mini, ...(focus ? { background: config.accent, borderColor: config.accent, color: "#fff" } : {}) }}
+
+        <ViewMenu railOpen={railOpen} onRail={toggleRail} dense={dense} onDense={() => setDenseAnd(!dense)}
+          onReset={() => railSave.current({ cols: COL, railOpen: true, dense: false })}
+          onKeys={() => setKeysOpen(true)} />
+
+        <button className="dash-focus" style={{ ...mini, minHeight: 36, ...(focus ? { background: config.accent, borderColor: config.accent, color: "#fff" } : {}) }}
           onClick={() => setFocus(v => !v)} aria-pressed={focus} title="Teaching only · ⌘E">Teaching</button>
-        <button style={mini} onClick={() => setKeysOpen(true)} title="Keyboard shortcuts">⌘/</button>
-        <a href="/plan" style={{ ...mini, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>The Brief</a>
-        <a href={config.path} style={{ ...mini, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Class home</a>
       </header>
 
 
