@@ -61,6 +61,23 @@ const CSS = `
 .dash-item:hover{background:#fff;border-color:${BORDER_STRONG}}
 .dash-item:hover .dash-go{opacity:1}
 
+/* Class Flow. A border round every row made it read as a spreadsheet, so the
+   rows have neither a border nor a fill and space does the separating instead.
+   The controls stay out of the way until the pointer is on the row — and until
+   the keyboard is, which is the half of that pattern people forget. */
+.flow-row{display:flex;align-items:center;gap:10px;padding:7px 6px;border-radius:8px;
+  border-left:3px solid transparent;cursor:grab}
+.flow-row:hover{background:${SURFACE_2}}
+.flow-row.live{border-left-color:${LIVE};background:rgba(225,29,72,.06)}
+.flow-row.over{border-top:2px solid var(--dash-accent);border-radius:0}
+.flow-tools{display:flex;gap:4px;flex:none;opacity:0;transition:opacity .12s}
+.flow-row:hover .flow-tools,.flow-row:focus-within .flow-tools,.flow-row.live .flow-tools{opacity:1}
+.flow-sec{display:flex;flex-direction:column;gap:2px;padding-top:18px}
+.flow-sec-head{display:flex;align-items:center;gap:8px;padding:0 6px 4px}
+.flow-sec .flow-add{opacity:0;transition:opacity .12s}
+.flow-sec:hover .flow-add,.flow-sec:focus-within .flow-add{opacity:1}
+@media (hover:none){.flow-tools,.flow-sec .flow-add{opacity:1}}
+
 /* Keyboard users had no idea where they were on this screen. */
 .dash-focus:focus-visible{outline:2px solid var(--dash-accent);outline-offset:2px;border-radius:8px}
 .dash-focus:focus:not(:focus-visible){outline:none}
@@ -187,42 +204,39 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
     );
   }
 
-  // The name, then what it is, then the two things I do with it. Nothing else.
-  // A fourth control was what stopped the name having the left edge to itself,
-  // so opening a link here moved onto the name rather than disappearing.
-  const sq = { ...mini, flex: "none", minHeight: HIT, minWidth: HIT, padding: "0 8px",
-    display: "inline-flex", alignItems: "center", justifyContent: "center" };
+  // A dot for what it is, then the words. A bordered badge on every row was
+  // three lines of chrome saying something a coloured dot says as well, and the
+  // words are what I am actually reading.
+  const sq = { ...mini, flex: "none", minHeight: 30, minWidth: 30, padding: "0 7px",
+    display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12.5 };
+  const words = claim || title;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10,
-      background: live ? "rgba(225,29,72,.07)" : SURFACE_2, border: "1px solid " + (live ? LIVE : "transparent") }}>
+    <div className={"flow-row" + (live ? " live" : "")}>
+      <span title={kind} style={{ flex: "none", width: 8, height: 8, borderRadius: "50%",
+        background: kindColor || BORDER_STRONG }} />
+
       {url ? (
-        // Two doors on every link, without a fourth control on the row: the
-        // name opens it here on my laptop, the red arrow puts it on the wall.
         <a className="dash-focus" href={url} target="_blank" rel="noreferrer" title={"Open here · " + url}
-          style={{ flex: 1, minWidth: 0, fontWeight: 500, fontSize: 15, color: TEXT_PRIMARY,
-            lineHeight: 1.35, wordBreak: "break-word", textDecoration: "none", borderBottom: "1px solid " + BORDER_STRONG }}>
-          {claim || title}
-        </a>
+          style={{ flex: 1, minWidth: 0, fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.4,
+            wordBreak: "break-word", textDecoration: "none" }}>{words}</a>
       ) : (
-        <b style={{ flex: 1, minWidth: 0, fontWeight: 500, fontSize: 15, color: TEXT_PRIMARY,
-          lineHeight: 1.35, wordBreak: "break-word" }}>{claim || title}</b>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.4,
+          wordBreak: "break-word" }}>{words}</span>
       )}
 
-      <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, fontWeight: 600, letterSpacing: ".08em",
-        textTransform: "uppercase", padding: "3px 6px", borderRadius: 5, background: "#fff",
-        border: "1px solid " + (kindColor || BORDER_STRONG), color: kindColor || TEXT_MUTED }}>{kind}</span>
-
-      {live ? (
-        <button className="dash-focus" style={{ ...sq, borderColor: LIVE, color: LIVE, background: "rgba(225,29,72,.1)" }}
-          title="Take it back down" onClick={onDismiss}>×</button>
-      ) : (
-        <button className="dash-focus" style={{ ...sq, borderColor: LIVE, color: LIVE, fontSize: 17, lineHeight: 1 }}
-          title="Put it on the room screen"
-          onClick={() => { if (claim) onCast(claim); else setEditing(true); }}>→</button>
-      )}
-      <button className="dash-focus" style={{ ...sq, color: TEXT_MUTED, fontSize: 12.5 }}
-        title={claim ? "Edit the headline" : "Write the headline"} onClick={() => setEditing(true)}>Edit</button>
+      <span className="flow-tools">
+        {live ? (
+          <button className="dash-focus" style={{ ...sq, borderColor: LIVE, color: LIVE }}
+            title="Take it back down" onClick={onDismiss}>×</button>
+        ) : (
+          <button className="dash-focus" style={{ ...sq, borderColor: LIVE, color: LIVE, fontSize: 16, lineHeight: 1 }}
+            title="Put it on the room screen"
+            onClick={() => { if (claim) onCast(claim); else setEditing(true); }}>→</button>
+        )}
+        <button className="dash-focus" style={{ ...sq, color: TEXT_MUTED }}
+          title={claim ? "Edit the headline" : "Write the headline"} onClick={() => setEditing(true)}>Edit</button>
+      </span>
     </div>
   );
 }
@@ -686,9 +700,12 @@ function SlotName({ slot, title, accent, onSave, onDelete, count }) {
 
   return (
     <span style={{ position: "relative" }}>
-      <button className="dash-focus" onClick={() => setOpen(v => !v)} title="Rename or remove"
-        style={{ ...label, color: accent, background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
+      <button className="dash-focus" onClick={() => setOpen(v => !v)} title="Rename or delete this section"
+        aria-haspopup="menu" aria-expanded={open}
+        style={{ ...label, color: accent, background: "none", border: "none", padding: 0, cursor: "pointer",
+          textAlign: "left", display: "inline-flex", alignItems: "center", gap: 5 }}>
         {title || slot}
+        <span style={{ fontSize: 9, opacity: .65 }}>▾</span>
       </button>
       {open ? (
         <>
@@ -1092,19 +1109,18 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
         const items = bucket.items;
         const usedSeeds = new Set((seq?.slots || []).flatMap(x => normSlot(slotItems[x.slot]).items).map(x => x.seedId).filter(Boolean));
         return (
-          <div key={s.slot}
+          <div key={s.slot} className="flow-sec"
             onDragOver={e => { e.preventDefault(); setOverSlot(s.slot); }}
             onDragLeave={() => setOverSlot(null)}
             onDrop={e => { e.preventDefault(); setOverSlot(null); drop(e, s.slot); }}
-            style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER,
-              background: overSlot === s.slot ? accent + "0c" : "transparent", borderRadius: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            style={{ background: overSlot === s.slot ? accent + "0c" : "transparent", borderRadius: 8 }}>
+            <div className="flow-sec-head">
               {overrideTitle
                 ? <span style={{ ...label, color: accent }}>{overrideTitle}</span>
                 : <SlotName slot={s.slot} title={bucket.title} accent={accent} count={items.length}
                     onSave={(t) => onSetSlotTitle(s.slot, t)}
                     onDelete={named.has(s.slot) ? null : () => onDeleteSection(s.slot)} />}
-              <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
+              <button className="dash-focus flow-add" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
                 onClick={() => setAdding(adding === s.slot ? null : s.slot)}>{adding === s.slot ? "Close" : "+ Add"}</button>
             </div>
             {adding === s.slot ? (
@@ -1113,7 +1129,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                 scheduled={loose} onAddScheduled={onAddScheduled}
                 blocks={blocks2} onPickBlock={onPickBlock} days={days} today={today} />
             ) : null}
-            {!items.length && adding !== s.slot ? <Muted style={{ fontSize: 13 }}>Empty.</Muted> : null}
+            {!items.length && adding !== s.slot ? <Muted style={{ fontSize: 13, padding: "2px 6px" }}>Empty.</Muted> : null}
             {items.map((it, i) => {
               const blk = it.blockId ? blockOf(it.blockId) : null;
               const seed = it.seedId ? seedById(it.seedId) : null;
@@ -1126,7 +1142,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                   onDragLeave={() => setOverRow(null)}
                   onDrop={e => { e.preventDefault(); e.stopPropagation(); setOverRow(null); drop(e, s.slot, it.id); }}
                   onContextMenu={e => { e.preventDefault(); setRowMenu({ x: e.clientX, y: e.clientY, slot: s.slot, id: it.id }); }}
-                  style={{ display: "flex", flexDirection: "column", gap: 6, cursor: "grab",
+                  style={{ display: "flex", flexDirection: "column", gap: 2,
                     borderTop: "2px solid " + (overRow === it.id ? accent : "transparent") }}>
                   <Castable
                     kind={blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
@@ -2179,12 +2195,25 @@ export default function Dashboard({ config }) {
   }, [dragId, order, spans, hidden, collapsed, saveLayout]);
 
   // ─── writes ───
-  const writeDayOn = (date, fn) => update(prev => {
+  const [undo, setUndo] = useState(null);
+  const writeDayOn = (date, fn, what) => update(prev => {
     const plans = { ...(prev.dayPlans || {}) };
+    const before = plans[date];
     plans[date] = fn(plans[date] || {});
+    if (plans[date] !== before) setUndo({ date, plan: before, what: what || "that" });
     return { ...prev, dayPlans: plans };
   });
-  const writeDay = (fn) => writeDayOn(day, fn);
+  const doUndo = () => {
+    if (!undo) return;
+    const { date, plan } = undo;
+    setUndo(null);
+    update(prev => {
+      const plans = { ...(prev.dayPlans || {}) };
+      if (plan === undefined) delete plans[date]; else plans[date] = plan;
+      return { ...prev, dayPlans: plans };
+    });
+  };
+  const writeDay = (fn, what) => writeDayOn(day, fn, what);
   const mark = (name, state) => update(prev => {
     const att = { ...(prev.attendance || {}) };
     att[day] = { ...(att[day] || {}), [name]: state };
@@ -2232,7 +2261,7 @@ export default function Dashboard({ config }) {
     const bucket = normSlot(slots[slot]);
     slots[slot] = { ...bucket, items: bucket.items.filter(it => it.id !== itemId) };
     return { ...d, slots };
-  });
+  }, "taking that out");
   const moveFlowItem = (slot, itemId, dir) => writeDay(d => {
     const slots = { ...(d.slots || {}) };
     const bucket = normSlot(slots[slot]);
@@ -2293,7 +2322,7 @@ export default function Dashboard({ config }) {
     const slots = { ...(d.slots || {}) };
     delete slots[slot];
     return { ...d, slots };
-  });
+  }, "deleting that section");
 
   // The one higher up the day keeps its name; the other empties into it and
   // goes. Items move across as they are, so nothing is rewritten on the way.
@@ -2304,7 +2333,7 @@ export default function Dashboard({ config }) {
     slots[top] = { ...a, items: [...a.items, ...b.items] };
     delete slots[bottom];
     return { ...d, slots };
-  });
+  }, "that merge");
 
   const setSequence = (id) => writeDay(d => ({ ...d, sequenceId: id }));
   // Everything a class can reach: its own blocks and the ones that are mine.
@@ -2716,6 +2745,10 @@ export default function Dashboard({ config }) {
         <div className="dash-grid" ref={gridRef}>
           {shown.map(id => (
             <Panel key={id} id={id} title={TITLES[id] + (id === "questions" && openQ ? " · " + openQ : "")}
+              right={id === "flow" && undo ? (
+                <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, borderColor: WARN, color: WARN }}
+                  onClick={doUndo}>Undo {undo.what}</button>
+              ) : null}
               span={spans[id]} onDrag={onDragStart(id)} onSize={() => toggleSpan(id)}
               collapsed={collapsed.includes(id)} onCollapse={() => toggleCollapsed(id)}
               rows={spanRows[id]}
