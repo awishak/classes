@@ -176,8 +176,13 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-row.done .flow-num{opacity:.4}
 .flow-row.done .flow-words{color:${TEXT_MUTED};text-decoration:line-through;text-decoration-thickness:1px}
 .flow-row.next{box-shadow:inset 0 0 0 1.5px var(--dash-accent)}
-.flow-words{flex:1;min-width:0;font-size:16px;line-height:1.4;letter-spacing:-.006em;
-  word-break:break-word;background:none;border:none;padding:0;text-align:left;cursor:pointer}
+.flow-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px;padding:4px 0}
+.flow-words{display:block;width:100%;font-size:16px;line-height:1.35;letter-spacing:-.006em;
+  overflow-wrap:anywhere;background:none;border:none;padding:0;text-align:left;cursor:pointer}
+.flow-src{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;font-size:12px;
+  color:#5b6068;text-decoration:none;border-radius:999px;padding:1px 7px;background:${SURFACE_2};
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flow-src:hover{background:${BORDER_STRONG};color:#171310}
 .flow-tools{display:flex;gap:4px;flex:none;opacity:0;transition:opacity .12s}
 .flow-row:hover .flow-tools,.flow-row:focus-within .flow-tools,.flow-row.live .flow-tools,
 .flow-row.picked .flow-tools{opacity:1}
@@ -372,13 +377,15 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
         title={done ? "Not done after all" : "Done — tick it off"}
         style={{ background: done ? TEXT_MUTED : (kindColor || TEXT_MUTED) }}>{done ? "✓" : (num || "")}</button>
 
-      <button className="dash-focus flow-words" onClick={onSelect} title="What is this?"
-        style={{ color: TEXT_PRIMARY, fontFamily: F }}>{words}</button>
-
-      {url ? (
-        <span style={{ flex: "none", fontSize: 12, color: TEXT_MUTED, padding: "2px 7px",
-          background: SURFACE_2, borderRadius: 999, whiteSpace: "nowrap" }}>{hostOf(url)}</span>
-      ) : null}
+      <span className="flow-main">
+        <button className="dash-focus flow-words" onClick={onSelect} title="What is this?"
+          style={{ color: TEXT_PRIMARY, fontFamily: F }}>{words}</button>
+        {url ? (
+          <a className="dash-focus flow-src" href={url} target="_blank" rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()} title={"Open " + url + " in a new tab"}
+            style={{ fontFamily: F }}>{hostOf(url)} ↗</a>
+        ) : null}
+      </span>
 
       {shared ? (
         <span title="From the library — editing its headline changes it everywhere it is used"
@@ -960,7 +967,7 @@ function RowMenu({ at, onRemove, onClose }) {
 // they are blocks like anything else: droppable into a day, editable, and I can
 // add to them. Seeded rather than left empty, because the one empty state that
 // reliably stops people starting is a blank box with a plus on it.
-function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAdd, onEdit, onRemove, onDuplicate }) {
+export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAdd, onEdit, onRemove, onDuplicate }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -1097,7 +1104,7 @@ const looksLikeUrl = (t) => /^https?:\/\/\S+$/i.test((t || "").trim());
 const MEDIA_KINDS = [["reading", "Reading"], ["video", "Video"], ["podcast", "Podcast"]];
 export const MEDIA_SET = new Set(["reading", "video", "podcast"]);
 
-function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, blocks, onPickBlock, blockOf }) {
+export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, blocks, onPickBlock, blockOf }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("reading");
   const [title, setTitle] = useState("");
@@ -1689,7 +1696,7 @@ export function BoardsPanel({ boards, proposals, onSave, castNow, dismiss, liveC
       {["pre", "post"].map(which => {
         const saved = boards[which];
         const board = saved || proposals[which];
-        const label = which === "pre" ? "Before class" : "After class";
+        const label = which === "pre" ? "Enter" : "Exit";
         const liveHere = liveCast?.type === "board" && liveCast.boardLabel === label;
         return (
           <BoardEditor key={which} label={label} board={board} isProposal={!saved} accent={accent}
@@ -1919,16 +1926,16 @@ function Horizon({ title, count, checks, accent, right }) {
 export function TodoPanel({ plan, seq, features, boards, assignments, shelves, students, data, accent, where, loose }) {
   // ─── today ───
   const slotItems = plan?.slots || {};
-  const flowItems = seq ? seq.slots.flatMap(sl => normSlot(slotItems[sl.slot]).items) : [];
+  const flowItems = Object.values(slotItems).flatMap(b => normSlot(b).items);
   const noClaim = flowItems.filter(it => !it.claim).length
     + flowItems.flatMap(it => it.links || []).filter(l => !l.claim).length;
   const stocked = (shelves.day || []).length + (shelves.week || []).length;
 
   const today = [
-    { ok: !!plan && flowItems.length > 0, good: flowItems.length + " things in the flow", bad: "No content in the flow yet — build it in Day Plan" },
+    { ok: !!plan && flowItems.length > 0, good: flowItems.length + " things in the flow", bad: "Nothing in the flow yet" },
     { ok: noClaim === 0, good: "Every item has its headline written", bad: noClaim + " item" + (noClaim === 1 ? "" : "s") + " will stop and ask for a headline mid-class" },
-    { ok: !!boards.pre, good: "Before-class board is written", bad: "Before-class board is still the proposed one" },
-    { ok: !!boards.post, good: "After-class board is written", bad: "After-class board is still the proposed one" },
+    { ok: !!boards.pre, good: "The Enter board is written", bad: "The Enter board is still the proposed one" },
+    { ok: !!boards.post, good: "The Exit board is written", bad: "The Exit board is still the proposed one" },
     { ok: stocked > 0, good: stocked + " stocked and ready to reach for", bad: "Nothing stocked for today or this week" },
     { ok: !!plan?.slides, good: "Slides are linked", bad: "No slides linked for this day" },
     { ok: (loose || []).length === 0,
@@ -2370,7 +2377,37 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
 // thing you would actually do about them. What is left is what nothing else
 // can tell me: which session I am on, what it is about, how far in I am, and
 // what goes up next.
-function DayBand({ days, day, onPick, onOpenDay, counts, accent, today, topic, name, done, total, since, cold, left, upNext, onCastNext, onReset }) {
+// The topic, editable where it sits. Click it, type, Enter. No punctuation is
+// added and none is required.
+function EditableTopic({ value, placeholder, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value || "");
+  useEffect(() => { setDraft(value || ""); }, [value]);
+  if (editing) {
+    const commit = () => { onSave(draft.trim()); setEditing(false); };
+    return (
+      <input autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
+        onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setDraft(value || ""); setEditing(false); } }}
+        placeholder={placeholder} aria-label="What this week is about"
+        className="dash-topic"
+        style={{ fontFamily: F, fontWeight: 600, letterSpacing: "-.03em", color: TEXT_PRIMARY,
+          border: "none", borderBottom: "2px solid " + BORDER_STRONG, background: "none",
+          outline: "none", padding: "0 0 2px", width: "100%" }} />
+    );
+  }
+  return (
+    <h1 className="dash-topic">
+      <button className="dash-focus" onClick={() => setEditing(true)} title="Rename what this week is about"
+        style={{ background: "none", border: "none", padding: "0 4px 0 0", margin: 0, cursor: "text",
+          font: "inherit", letterSpacing: "inherit", color: value ? TEXT_PRIMARY : TEXT_MUTED,
+          textAlign: "left", width: "100%", borderRadius: 6 }}>
+        {value || placeholder}
+      </button>
+    </h1>
+  );
+}
+
+function DayBand({ days, day, onPick, onOpenDay, counts, accent, today, topic, name, onTopic, done, total, since, cold, left, upNext, onCastNext, onReset }) {
   const [jump, setJump] = useState(false);
   const i = days.findIndex(d => d.date === day);
   const weekId = days[i]?.weekId;
@@ -2461,7 +2498,7 @@ function DayBand({ days, day, onPick, onOpenDay, counts, accent, today, topic, n
       </div>
 
       <div className="dash-band-row" style={{ alignItems: "flex-end" }}>
-        <h1 className="dash-topic">{topic || name}</h1>
+        <EditableTopic value={topic} placeholder={name} onSave={onTopic} />
         {upNext ? (
           <button className="dash-focus dash-next" onClick={onCastNext} style={{ background: accent }}>
             <span style={{ minWidth: 0 }}>
@@ -3063,6 +3100,11 @@ export default function Dashboard({ config }) {
   }));
   const saveWeekPlan = (v) => writeWeekField("plan", v);
   const saveWeekText = (v) => writeWeekField("text", v);
+  // The big line at the top is the WEEK's topic, which is why it reads oddly
+  // on a day that is about something else, and why it came over from the old
+  // hub with a full stop on the end. It is editable in place now, and nothing
+  // punctuates it — a topic is a label, not a sentence.
+  const saveWeekTopic = (v) => writeWeekField("topic", v);
 
   const saveScratch = (v) => update(prev => ({ ...prev, scratch: { ...(prev.scratch || {}), [day]: v } }));
 
@@ -3122,7 +3164,7 @@ export default function Dashboard({ config }) {
   stepRef.current = (dir) => {
     const c = liveRef.current?.cast;
     if (!c || c.type !== "board") return;
-    const which = c.boardLabel === "Before class" ? "pre" : "post";
+    const which = c.boardLabel === "Enter" ? "pre" : "post";
     const b = boardFor(which);
     const ideas = b?.ideas || [];
     const i = (c.at || 0) + dir;
@@ -3172,7 +3214,7 @@ export default function Dashboard({ config }) {
         : { type: "quote", tag: sh.label, title: t, label: t }) });
   }));
   ["pre", "post"].forEach(which => {
-    const lbl = which === "pre" ? "Before class" : "After class";
+    const lbl = which === "pre" ? "Enter" : "Exit";
     const b = boardFor(which);
     (b?.ideas || []).forEach((idea, i) => cmdTargets.push({ key: "b:" + which + i, group: lbl, title: idea,
       run: () => castNow({ type: "board", tag: lbl, boardLabel: lbl, title: b.title, idea, at: i,
@@ -3255,7 +3297,7 @@ export default function Dashboard({ config }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} path={config.path} />,
   };
-  const TITLES = { todo: "To-do", poll: "Poll", flow: "Class Flow", boards: "Boards", readings: "Readings", ideas: "Ideas", questions: "Asking", attendance: "Here", scratch: "Notes", assignments: "Assigned" };
+  const TITLES = { todo: "To-do", poll: "Poll", flow: "Class Flow", boards: "Enter/Exit", readings: "Readings", ideas: "Ideas", questions: "Asking", attendance: "Here", scratch: "Notes", assignments: "Assigned" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   const outCount = Object.values(marks).filter(v => v === "out").length;
   // How far through the day I am, counted off the flow rather than the clock.
@@ -3335,7 +3377,7 @@ export default function Dashboard({ config }) {
 
       <div style={{ padding: "14px 18px 0", maxWidth: 1760, margin: "0 auto" }}>
         <DayBand days={days} day={day} onPick={setDay} onOpenDay={() => setTodoOpen(true)} counts={dayCounts} accent={config.accent} today={onDeck}
-          topic={dayMeta?.topic} name={config.name}
+          topic={dayMeta?.topic} name={config.name} onTopic={saveWeekTopic}
           done={castCount} total={flowCount} since={sinceMin} cold={sinceMin != null && sinceMin >= 10}
           left={minsLeft} upNext={liveLabel ? "" : upNextWords} onCastNext={castNext}
           onReset={() => writeDay(d => ({ ...d, done: [] }), "starting the day over")} />

@@ -14,7 +14,7 @@ import "./smoke-globals.js";
 import { renderToString } from "react-dom/server";
 import Dashboard, {
   FlowPanel, TodoPanel, NowPanel, ScratchPanel, AttendancePanel, QuestionsPanel,
-  BoardsPanel, StockedPanel, AssignmentsPanel, CommandBar,
+  BoardsPanel, StockedPanel, AssignmentsPanel, CommandBar, Readings, IdeasPanel,
 } from "../src/engine/Dashboard.jsx";
 import ClassroomView from "../src/engine/ClassroomView.jsx";
 import ClassApp from "../src/engine/ClassApp.jsx";
@@ -112,6 +112,19 @@ cases.push(["Questions", <QuestionsPanel items={[{ id: "q", text: "why", who: "A
 cases.push(["Before & After", <BoardsPanel boards={{}} proposals={{ pre: { title: "t", ideas: ["a"] }, post: { title: "t", ideas: ["b"] } }} onSave={noop} castNow={noop} dismiss={noop} liveCast={null} accent={cfg0.accent} />]);
 cases.push(["Stocked", <StockedPanel shelves={{ day: [{ id: "s1", kind: "Link", title: "t", url: "https://e.com" }], week: [], any: [] }} onAdd={noop} onRemove={noop} onClaim={noop} castNow={noop} dismiss={noop} liveLabel={null} accent={cfg0.accent} />]);
 cases.push(["Assignments", <AssignmentsPanel assignments={cfg0.assignments || []} castNow={noop} dismiss={noop} liveLabel={null} />]);
+// The rail panels, with a reading that has a long title and a URL — the shape
+// that was rendering one word per line.
+const longRead = [{ id: "r1", type: "reading", url: "https://www.nytimes.com/athletic/1/x/",
+  title: "Cardinals-Cubs: Michael Busch Nearly Hits for the Cycle", claim: "" }];
+cases.push(["Readings, long title", <Readings items={longRead} accent={cfg0.accent} castNow={noop}
+  dismiss={noop} liveLabel={null} onAdd={noop} onRemove={noop} onClaim={noop} blocks={[]}
+  onPickBlock={noop} blockOf={() => null} />, "flow-src"]);
+cases.push(["Readings, empty", <Readings items={[]} accent={cfg0.accent} castNow={noop}
+  dismiss={noop} liveLabel={null} onAdd={noop} onRemove={noop} onClaim={noop} blocks={[]}
+  onPickBlock={noop} blockOf={() => null} />]);
+cases.push(["Ideas", <IdeasPanel blocks={[{ id: "b", type: "activity", title: "An idea", body: "How it runs",
+  tags: ["teaching move"], children: [] }]} accent={cfg0.accent} sections={[]} days={[]} today="Sep 1"
+  onPick={noop} onAdd={noop} onEdit={noop} onRemove={noop} onDuplicate={noop} />]);
 cases.push(["Command bar", <CommandBar targets={[{ key: "k", group: "g", title: "t", run: noop }]} accent={cfg0.accent} onClose={noop} />]);
 
 cases.push(["The Brief", <PlanPage />]);
