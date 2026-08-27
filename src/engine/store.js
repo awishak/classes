@@ -23,8 +23,19 @@ export async function saveClass(key, data) {
 
 // Returns [data, update]. data is null until first load.
 // update(mutator) applies mutator(prev) -> next, saves, and updates state.
+// The last data we saw for a key, held for the life of the page.
+//
+// Without it, every trip back to a class I was on ten seconds ago is a spinner
+// while the fetch goes out again, and switching between two classes flashes
+// one on every switch. With it the screen comes up on what it had and the
+// fetch quietly replaces it. It also means the whole dashboard can be rendered
+// without effects, which is what the smoke test needs — the panels alone were
+// never the part that broke.
+const WARM = new Map();
+export const warmClassData = (key, data) => { WARM.set(key, data); };
+
 export function useClassData(key) {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(() => WARM.get(key) || null);
   const dataRef = useRef({});
   // Every save comes back to us as a realtime event. Blindly taking that echo
   // rolls local state back to whatever the server had, which quietly ate edits
@@ -35,9 +46,12 @@ export function useClassData(key) {
 
   useEffect(() => {
     let alive = true;
+    const warm = WARM.get(key);
+    if (warm) dataRef.current = warm;
     loadClass(key).then(d => {
       if (!alive) return;
       dataRef.current = d || {};
+      WARM.set(key, dataRef.current);
       setData(dataRef.current);
     });
     const off = window.storage?.onUpdate?.(key, (val) => {
@@ -54,6 +68,7 @@ export function useClassData(key) {
   const update = useCallback((mutator) => {
     const next = mutator(dataRef.current || {});
     dataRef.current = next;
+    WARM.set(key, next);
     setData({ ...next });
     pending.current++;
     Promise.resolve(saveClass(key, next)).finally(() => { pending.current--; });

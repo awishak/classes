@@ -51,9 +51,26 @@ const label2 = { fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, letterSpaci
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 
 const CSS = `
-.dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;row-gap:0;align-content:start;align-items:start;grid-auto-rows:8px}
-@media (max-width:700px){.dash-grid{column-gap:10px}}
-.dash-panel[data-span="2"]{grid-column:span 2}
+.dash-stage{display:grid;grid-template-columns:300px minmax(0,1fr) 400px;gap:16px;padding:14px 18px 26px;align-items:start;max-width:1760px;margin:0 auto}
+.dash-stage[data-rail="shut"]{grid-template-columns:minmax(0,1fr) 400px}
+.dash-stage[data-teach="on"]{grid-template-columns:minmax(0,1fr) 440px}
+@media (max-width:1500px){.dash-stage{grid-template-columns:270px minmax(0,1fr) 360px}}
+@media (max-width:1240px){.dash-stage,.dash-stage[data-rail="shut"],.dash-stage[data-teach="on"]{grid-template-columns:minmax(0,1fr)}
+  .dash-rail{position:static!important;max-height:none!important}
+  .dash-rail-body{overflow:visible;max-height:none}}
+.dash-rail-tabs{display:flex;gap:4px;background:rgba(23,19,16,.045);border-radius:13px;padding:4px;overflow-x:auto;scrollbar-width:none}
+.dash-rail-tabs::-webkit-scrollbar{display:none}
+.dash-tab{flex:1 1 auto;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 11px;border:none;border-radius:10px;background:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:500;color:#5b6068;transition:background .14s,color .14s,box-shadow .14s}
+.dash-tab:hover{color:#171310}
+.dash-tab.on{background:#fff;color:var(--dash-accent,#171310);font-weight:600;box-shadow:0 1px 3px rgba(23,19,16,.13),inset 0 0 0 1px rgba(23,19,16,.05)}
+.dash-tab-k{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:#9aa0a6;opacity:.75}
+.dash-tab.on .dash-tab-k{color:inherit;opacity:.45}
+.dash-tab-n{min-width:19px;height:19px;padding:0 5px;border-radius:10px;color:#fff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center}
+.dash-rail-body{overflow-y:auto;overscroll-behavior:contain;min-height:0;padding-bottom:2px}
+.dash-rail-body::-webkit-scrollbar{width:9px}
+.dash-rail-body::-webkit-scrollbar-thumb{background:rgba(23,19,16,.16);border-radius:5px}
+
+
 
 /* A card is a surface, not a box. The border round every one of them, the rule
    under every header and the grip sitting out in the open added up to more
@@ -66,10 +83,6 @@ const CSS = `
 .dash-chrome{opacity:0;transition:opacity .12s}
 .dash-panel:hover .dash-chrome,.dash-panel:focus-within .dash-chrome{opacity:1}
 @media (hover:none){.dash-chrome{opacity:1}}
-.dash-panel.dragging{position:fixed;z-index:60;pointer-events:none;transform:rotate(-1deg);
-  box-shadow:0 12px 32px -8px rgba(23,19,16,.35);opacity:.97}
-.dash-ghost{border:1.5px dashed ${BORDER_STRONG};border-radius:14px;background:rgba(0,0,0,.02)}
-.dash-ghost[data-span="2"]{grid-column:span 2}
 .dash-item:hover{background:#fff;border-color:${BORDER_STRONG}}
 .dash-item:hover .dash-go{opacity:1}
 
@@ -142,43 +155,49 @@ const LiveTag = () => <span className="dash-live"><i />LIVE</span>;
 // ─────────────────────────────────────────────────────────────
 // small pieces
 // ─────────────────────────────────────────────────────────────
-function Grip({ onPointerDown }) {
+
+// A panel now sits where it sits. No grip, no size button, no collapse arrow —
+// the rail decides what is showing, so the panel only has to be the panel.
+function Panel({ id, title, right, children, flush }) {
   return (
-    <span onPointerDown={onPointerDown} role="button" tabIndex={0} aria-label="Drag panel"
-      style={{ cursor: "grab", touchAction: "none", display: "flex", flexDirection: "column", gap: 2.5, padding: "8px 5px", borderRadius: 5 }}>
-      {[0, 1, 2].map(i => <i key={i} style={{ display: "block", width: 11, height: 1.5, background: BORDER_STRONG, borderRadius: 1 }} />)}
-    </span>
+    <section className="dash-panel" data-id={id} style={{ minWidth: 0 }}>
+      {title ? (
+        <div className="dash-head">
+          <h2 style={{ margin: 0, marginRight: "auto", fontFamily: F, fontSize: 15, fontWeight: 600,
+            color: TEXT_PRIMARY, letterSpacing: "-.01em", minHeight: HIT, display: "flex", alignItems: "center" }}>{title}</h2>
+          {right}
+        </div>
+      ) : null}
+      <div style={{ padding: flush ? 0 : (title ? "0 16px 16px" : 16), display: "flex", flexDirection: "column", gap: 11, minWidth: 0 }}>{children}</div>
+    </section>
   );
 }
 
-function Panel({ id, title, right, span, onDrag, onSize, children, refCb, dragging, collapsed, onCollapse, rows }) {
+// A rail: one column, a row of tabs at the top, one panel under them.
+//
+// Tabs rather than a stack because a rail is a place I look when I want one
+// particular thing, and four open panels means scrolling to find which. The
+// count rides on the tab so a rail can say "three people are asking" without
+// being opened, which is the whole reason the old collapsed bars existed.
+function Rail({ tabs, active, onPick, accent, children, side }) {
   return (
-    <section ref={refCb} className={"dash-panel" + (dragging ? " dragging" : "")} data-id={id} data-span={span}
-      style={{ minWidth: 0, ...(rows && !dragging ? { gridRowEnd: "span " + rows } : {}) }}>
-      <div className="dash-head">
-        <button className="dash-focus" onClick={onCollapse}
-          title={collapsed ? "Open this panel" : "Collapse to the bar"} aria-expanded={!collapsed}
-          style={{ marginRight: "auto", background: "none", border: "none", padding: 0, cursor: "pointer",
-            display: "inline-flex", alignItems: "center", gap: 8, minHeight: HIT, textAlign: "left",
-            fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-.01em" }}>
-          <span style={{ display: "inline-block", fontSize: 11, color: TEXT_MUTED, width: 9,
-            transform: collapsed ? "rotate(-90deg)" : "none", transition: "transform .15s" }}>▾</span>
-          {title}
-        </button>
-        {collapsed ? null : right}
-        {collapsed ? null : (
-          <span className="dash-chrome" style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
-            <button onClick={onSize} style={{ ...mini, minHeight: 28, padding: "0 9px", fontFamily: MONO, fontSize: 12, color: TEXT_MUTED }}>
-              {span === "2" ? "2×" : "1×"}
+    <div className="dash-rail" style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 10,
+      position: "sticky", top: 14, maxHeight: "calc(100vh - 28px)" }}>
+      <div role="tablist" aria-label={side} className="dash-rail-tabs">
+        {tabs.map(t => {
+          const on = t.id === active;
+          return (
+            <button key={t.id} role="tab" aria-selected={on} className={"dash-tab dash-focus" + (on ? " on" : "")}
+              onClick={() => onPick(t.id)} title={t.label + " \u00b7 press " + t.hot}>
+              <span className="dash-tab-k">{t.hot}</span>
+              {t.label}
+              {t.count ? <span className="dash-tab-n" style={{ background: on ? accent : BORDER_STRONG }}>{t.count}</span> : null}
             </button>
-            <Grip onPointerDown={onDrag} />
-          </span>
-        )}
+          );
+        })}
       </div>
-      {collapsed ? null : (
-        <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 11, minWidth: 0 }}>{children}</div>
-      )}
-    </section>
+      <div className="dash-rail-body">{children}</div>
+    </div>
   );
 }
 
@@ -1888,7 +1907,9 @@ const SHORTCUTS = [
   ["← →", "Step the board that is up, one idea at a time"],
   ["K J", "Walk down and up the run of show"],
   ["Enter", "Put the row I am on up on the room screen"],
-  ["⌘ E", "Teaching only — hide everything but the flow and the screen"],
+  ["⌘ E", "Teaching only — shut the prep rail and give the day the room"],
+  ["1-9", "Jump straight to a tab, left rail then right"],
+  ["\\", "Show or hide the prep rail"],
   ["⌘ /", "Show this list"],
 ];
 
@@ -2200,11 +2221,21 @@ function Picker({ title, opts, value, onPick, accent }) {
 // what this screen is for. Everything else supports that. Attendance and the
 // engagement clock are useful and they were competing for the top of the page
 // with the thing I actually came here to do.
-const DEFAULT_ORDER = ["flow", "readings", "todo", "ideas", "boards", "questions", "scratch", "poll", "attendance", "assignments"];
-// Open on what I came here for. The rest keep their bar so I know they are
-// there, and one click brings any of them back.
-const DEFAULT_COLLAPSED = ["todo", "ideas", "boards", "poll", "questions", "attendance"];
-const DEFAULT_SPANS = { flow: "2", todo: "2", readings: "1", ideas: "1", boards: "1", questions: "1", scratch: "1", poll: "2", attendance: "2", assignments: "1" };
+// Two rails and a middle, and the split is the job rather than the software.
+//
+// Everything I do on this screen is one of two things. Before class I am
+// pulling material together: ideas, readings, what is assigned, what is left
+// to do. During class I am running the room: what is on the screen, who is
+// asking, who is here, what I am writing down. Those are different jobs, they
+// happen at different times, and the old grid mixed them into one wall of ten
+// draggable boxes that I then had to arrange myself.
+//
+// So: PREP on the left, LIVE on the right, THE DAY down the middle and never
+// anywhere else. One tab open per rail, because a rail showing four things at
+// once is the grid again. Teaching mode shuts the prep rail, since mid-class I
+// am not gathering material, and the day takes the room it leaves.
+const PREP = ["ideas", "readings", "assignments", "todo"];
+const LIVE_RAIL = ["questions", "poll", "attendance", "scratch", "boards"];
 
 export default function Dashboard({ config }) {
   const [data, update] = useClassData(config.storageKey);
@@ -2229,8 +2260,14 @@ export default function Dashboard({ config }) {
 
   const weeks = data?.schedule || config.scheduleWeeks || [];
   const days = allDays(weeks);
-  const [day, setDay] = useState(null);
-  useEffect(() => { if (!day && days.length) setDay(currentDay(weeks)?.date || days[0].date); }, [days.length]);
+  // The session I picked, or the one on deck if I have not picked. Derived
+  // rather than set in an effect: the effect version rendered once with no day
+  // at all, which is a frame of "No sessions on the calendar yet" on a class
+  // that has eleven weeks of them.
+  const [picked_, setPicked_] = useState(null);
+  const day = (picked_ && days.some(d => d.date === picked_)) ? picked_
+    : (currentDay(weeks)?.date || days[0]?.date || null);
+  const setDay = setPicked_;
 
   const plan = (data?.dayPlans || {})[day] || null;
   // sequenceOptions adds Freeform, which config.sequences does not carry, so
@@ -2288,6 +2325,15 @@ export default function Dashboard({ config }) {
 
       if (mod && (e.key === "k" || e.key === "K")) { e.preventDefault(); setKeysOpen(false); setCmdOpen(v => !v); return; }
       if (mod && (e.key === "e" || e.key === "E")) { e.preventDefault(); setFocus(v => !v); return; }
+      // The rails, by number. 1-4 is the prep side, 5-9 the live side, in the
+      // order the tabs are drawn, so the number IS the tab I can see.
+      if (!typing && !mod && /^[1-9]$/.test(e.key)) {
+        const n = Number(e.key) - 1;
+        if (n < PREP.length) { e.preventDefault(); pickPrep(PREP[n]); return; }
+        const m = n - PREP.length;
+        if (m < LIVE_RAIL.length) { e.preventDefault(); pickRoom(LIVE_RAIL[m]); return; }
+      }
+      if (!typing && !mod && e.key === "\\") { e.preventDefault(); toggleRail(); return; }
       if (mod && e.key === "/") { e.preventDefault(); setCmdOpen(false); setKeysOpen(v => !v); return; }
       if (mod && (e.key === "b" || e.key === "B")) {
         e.preventDefault();
@@ -2319,162 +2365,48 @@ export default function Dashboard({ config }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [cast]);
 
-  // ─── panel layout (my screen preference, so it lives in this browser) ───
-  // One arrangement, not one per class. How I like the screen laid out is a
-  // fact about me, not about COMM 118, and rearranging it once should hold
-  // everywhere. The old per-class keys get read once to seed this, so the
-  // arrangement I already had is not thrown away.
-  const LKEY = "dash:view";
-  const [order, setOrder] = useState(DEFAULT_ORDER);
-  const [spans, setSpans] = useState(DEFAULT_SPANS);
-  // A panel I am not using today is not neutral, it is one more thing to read
-  // past. Hidden ones come off the grid entirely.
-  const [hidden, setHidden] = useState([]);
-  const [collapsed, setCollapsed] = useState(DEFAULT_COLLAPSED);
+  // ─── the rails (my screen preference, so it lives in this browser) ───
+  // Which tab is open in each rail, and whether the prep rail is showing at
+  // all. That is the whole of it now. No order, no spans, no hiding, no
+  // dragging — every one of those existed because the grid could not say
+  // where a thing belonged, and the rails can.
+  const LKEY = "dash:rails";
+  const [prep, setPrep] = useState("ideas");
+  const [room, setRoom] = useState("questions");
+  const [railOpen, setRailOpen] = useState(true);
   const [dense, setDense] = useState(false);
   const [focus, setFocus] = useState(false);
-  const [panelMenu, setPanelMenu] = useState(false);
   useEffect(() => {
     try {
-      // The global view, or the arrangement I already had on any one class,
-      // whichever exists. A per-class layout is read once and then never again.
-      let v = JSON.parse(localStorage.getItem(LKEY) || "null");
-      if (!v) {
-        for (const c of ENGINE_LIST) {
-          const old = JSON.parse(localStorage.getItem("dash:" + c.id) || "null");
-          if (old?.order) { v = old; break; }
-        }
-      }
+      const v = JSON.parse(localStorage.getItem(LKEY) || "null");
       if (!v) return;
-      if (v.order) {
-        const kept = v.order.filter(id => DEFAULT_ORDER.includes(id));
-        setOrder([...kept, ...DEFAULT_ORDER.filter(id => !kept.includes(id))]);
-      }
-      if (v.spans) setSpans({ ...DEFAULT_SPANS, ...v.spans });
-      if (Array.isArray(v.hidden)) setHidden(v.hidden.filter(id => DEFAULT_ORDER.includes(id)));
-      if (Array.isArray(v.collapsed)) setCollapsed(v.collapsed.filter(id => DEFAULT_ORDER.includes(id)));
+      if (PREP.includes(v.prep)) setPrep(v.prep);
+      if (LIVE_RAIL.includes(v.room)) setRoom(v.room);
+      if (typeof v.railOpen === "boolean") setRailOpen(v.railOpen);
       if (typeof v.dense === "boolean") setDense(v.dense);
     } catch { /* first run */ }
   }, [LKEY]);
-
-  const saveLayout = useCallback((o, s, h, c, dn) => {
-    try { localStorage.setItem(LKEY, JSON.stringify({ order: o, spans: s, hidden: h, collapsed: c, dense: dn })); } catch { /* private mode */ }
-  }, [LKEY]);
-
-  const toggleSpan = (id) => { const s = { ...spans, [id]: spans[id] === "2" ? "1" : "2" }; setSpans(s); saveLayout(order, s, hidden, collapsed, dense); };
-  const toggleHidden = (id) => {
-    const h = hidden.includes(id) ? hidden.filter(x => x !== id) : [...hidden, id];
-    setHidden(h); saveLayout(order, spans, h, collapsed, dense);
-  };
-  const toggleCollapsed = (id) => {
-    const c = collapsed.includes(id) ? collapsed.filter(x => x !== id) : [...collapsed, id];
-    setCollapsed(c); saveLayout(order, spans, hidden, c, dense);
-  };
-  const shown = order.filter(id => !hidden.includes(id))
-    .filter(id => !focus || id === "flow" || id === "readings");
-
-  // ─── drag to rearrange ───
-  const gridRef = useRef(null);
-  const panelRefs = useRef({});
-  const refSetters = useRef({});
-  const setPanelRef = useCallback((id) => {
-    if (!refSetters.current[id]) refSetters.current[id] = (el) => { panelRefs.current[id] = el; };
-    return refSetters.current[id];
-  }, []);
-
-  // ─── masonry ───
-  // Each panel spans however many 8px rows its content needs, so it packs
-  // straight under the one above rather than lining up with its neighbour.
-  const ROW = 8, GAP = 16;
-  const [spanRows, setSpanRows] = useState({});
-  const measure = useCallback(() => {
-    const next = {};
-    Object.entries(panelRefs.current).forEach(([id, el]) => {
-      if (!el || el.classList.contains("dragging")) return;
-      const h = el.getBoundingClientRect().height;
-      if (h) next[id] = Math.ceil((h + GAP) / ROW);
-    });
-    setSpanRows(prev => {
-      const same = Object.keys(next).length === Object.keys(prev).length
-        && Object.keys(next).every(k => prev[k] === next[k]);
-      return same ? prev : { ...prev, ...next };
-    });
-  }, []);
-
-  useEffect(() => {
-    if (typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => measure());
-    Object.values(panelRefs.current).forEach(el => { if (el) ro.observe(el); });
-    measure();
-    window.addEventListener("resize", measure);
-    return () => { ro.disconnect(); window.removeEventListener("resize", measure); };
-  });
-
-  const orderRef = useRef(DEFAULT_ORDER);
-  useEffect(() => { orderRef.current = order; }, [order]);
-  const dragRef = useRef(null);
-  const [dragId, setDragId] = useState(null);
-
-  const onDragStart = (id) => (e) => {
-    if (e.button) return;
-    const el = panelRefs.current[id];
-    if (!el) return;
-    e.preventDefault();
-    const r = el.getBoundingClientRect();
-    dragRef.current = { id, dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, h: r.height };
-    el.style.width = r.width + "px"; el.style.height = r.height + "px";
-    el.style.left = r.left + "px"; el.style.top = r.top + "px";
-    setDragId(id);
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-  };
-
-  useEffect(() => {
-    if (!dragId) return;
-    const move = (e) => {
-      const d = dragRef.current; if (!d) return;
-      const el = panelRefs.current[d.id]; if (!el) return;
-      el.style.left = (e.clientX - d.dx) + "px";
-      el.style.top = (e.clientY - d.dy) + "px";
-      // Which panel is the pointer over?
-      let overId = null;
-      order.forEach(id => {
-        if (id === d.id) return;
-        const p = panelRefs.current[id]; if (!p) return;
-        const r = p.getBoundingClientRect();
-        if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
-          overId = id + (e.clientY > r.top + r.height / 2 ? ":after" : ":before");
-        }
-      });
-      if (!overId) return;
-      const [tid, side] = overId.split(":");
-      setOrder(prev => {
-        const rest = prev.filter(x => x !== d.id);
-        const to = rest.indexOf(tid) + (side === "after" ? 1 : 0);
-        const next = [...rest.slice(0, to), d.id, ...rest.slice(to)];
-        if (next.join() === prev.join()) return prev;
-        orderRef.current = next;
-        return next;
-      });
-    };
-    const up = () => {
-      const d = dragRef.current;
-      if (d) {
-        const el = panelRefs.current[d.id];
-        if (el) { el.style.width = ""; el.style.height = ""; el.style.left = ""; el.style.top = ""; }
-      }
-      dragRef.current = null;
-      setDragId(null);
-      saveLayout(orderRef.current, spans, hidden, collapsed, dense);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", up);
-    return () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", up);
-    };
-  }, [dragId, order, spans, hidden, collapsed, saveLayout]);
+  // The keyboard handler is bound once and closes over whatever the rails were
+  // on the first render, so the pickers read the current values off a ref
+  // instead of off that closure. Without it, pressing 1 saved the right rail
+  // back to whatever tab it had when the page loaded.
+  const railRef = useRef({ prep: "ideas", room: "questions", railOpen: true, dense: false });
+  railRef.current = { prep, room, railOpen, dense };
+  const saveRails = useCallback((patch) => {
+    const v = { ...railRef.current, ...patch };
+    railRef.current = v;
+    if (v.prep !== prep) setPrep(v.prep);
+    if (v.room !== room) setRoom(v.room);
+    if (v.railOpen !== railOpen) setRailOpen(v.railOpen);
+    if (v.dense !== dense) setDense(v.dense);
+    try { localStorage.setItem(LKEY, JSON.stringify(v)); } catch { /* private mode */ }
+  }, [LKEY, prep, room, railOpen, dense]);
+  const railSave = useRef(saveRails);
+  railSave.current = saveRails;
+  const pickPrep = (id) => railSave.current({ prep: id, railOpen: true });
+  const pickRoom = (id) => railSave.current({ room: id });
+  const toggleRail = () => railSave.current({ railOpen: !railRef.current.railOpen });
+  const setDenseAnd = (d) => railSave.current({ dense: d });
 
   // ─── writes ───
   const [undo, setUndo] = useState(null);
@@ -2952,7 +2884,7 @@ export default function Dashboard({ config }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
   };
-  const TITLES = { todo: "To-Do", poll: "Class Poll", flow: "Class Flow", boards: "Before & After", readings: "Readings & Media", ideas: "Ideas", questions: "Student Questions", attendance: "Attendance", scratch: "Notes", assignments: "Assignments" };
+  const TITLES = { todo: "To-do", poll: "Poll", flow: "Class Flow", boards: "Boards", readings: "Readings", ideas: "Ideas", questions: "Asking", attendance: "Here", scratch: "Notes", assignments: "Assigned" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   // How far through the day I am, counted off the flow rather than the clock.
   const flowCount = Object.values(plan?.slots || {}).reduce((n, b) => n + normSlot(b).items.length, 0);
@@ -2965,6 +2897,17 @@ export default function Dashboard({ config }) {
     const pl = (data?.dayPlans || {})[d.date];
     dayCounts[d.date] = Object.values(pl?.slots || {}).reduce((n, b) => n + normSlot(b).items.length, 0);
   });
+  // What each tab is worth opening for. A count is a reason to look, so only
+  // the ones that carry news get one: people waiting on an answer, ideas I have
+  // not placed, readings set for today. A total that never moves is furniture.
+  const RAIL_N = {
+    questions: openQ,
+    readings: readings.length,
+    assignments: assignments.length,
+    attendance: Object.values(marks).filter(v => v === "out").length,
+    poll: P.poll?.phase && P.poll.phase !== "idle" ? "\u25cf" : 0,
+    ideas: 0, todo: 0, scratch: 0, boards: 0,
+  };
   const upNextRow = (flowOrderRef.current || []).find(r => !doneSet.has(r.id));
   const upNextWords = upNextRow ? (() => {
     const b = upNextRow.blockId ? blockOf(upNextRow.blockId) : null;
@@ -3010,51 +2953,13 @@ export default function Dashboard({ config }) {
         <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setCmdOpen(true)}>Cast · ⌘K</button>
         <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setHlOpen(true)}>Headlines</button>
         <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setHornOpen(true)}>Around the Horn</button>
-        <div style={{ position: "relative" }}>
-          <button style={mini} onClick={() => setPanelMenu(v => !v)} aria-expanded={panelMenu}>Panels</button>
-          {panelMenu ? (
-            <>
-              <div onClick={() => setPanelMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-              <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 41, background: "#fff",
-                border: "1px solid " + BORDER_STRONG, borderRadius: 12, padding: 8, minWidth: 200,
-                boxShadow: "0 16px 36px -12px rgba(23,19,16,.32)", display: "flex", flexDirection: "column", gap: 2 }}>
-                <button onClick={() => {
-                  setOrder(DEFAULT_ORDER); setSpans(DEFAULT_SPANS); setHidden([]); setCollapsed(DEFAULT_COLLAPSED); setDense(false);
-                  saveLayout(DEFAULT_ORDER, DEFAULT_SPANS, [], DEFAULT_COLLAPSED, false);
-                  setPanelMenu(false);
-                }}
-                  style={{ ...mini, minHeight: HIT, margin: "2px 4px 6px", justifyContent: "center" }}>Reset arrangement</button>
-                <button className="dash-focus" onClick={() => { const d = !dense; setDense(d); saveLayout(order, spans, hidden, collapsed, d); }}
-                  style={{ ...mini, minHeight: HIT, margin: "2px 4px", justifyContent: "center" }}>
-                  {dense ? "Comfortable rows" : "Compact rows"}
-                </button>
-                <div style={{ ...label, fontSize: 12, padding: "6px 8px 6px", color: TEXT_MUTED }}>
-                  Dot toggles on the grid · arrow collapses
-                </div>
-                {DEFAULT_ORDER.map(id => {
-                  const on = !hidden.includes(id);
-                  const shut = collapsed.includes(id);
-                  return (
-                    <div key={id} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <button className="dash-focus" onClick={() => toggleHidden(id)}
-                        style={{ display: "flex", alignItems: "center", gap: 9, background: "none", border: "none", cursor: "pointer",
-                          padding: "0 8px", minHeight: 36, borderRadius: 8, fontFamily: F, fontSize: 15, textAlign: "left",
-                          flex: 1, color: on ? TEXT_PRIMARY : TEXT_MUTED }}>
-                        <span style={{ flex: "none", width: 8, height: 8, borderRadius: "50%", background: on ? config.accent : BORDER_STRONG }} />
-                        {TITLES[id]}
-                      </button>
-                      <button className="dash-focus" onClick={() => toggleCollapsed(id)} disabled={!on}
-                        title={shut ? "Open it" : "Collapse it"}
-                        style={{ background: "none", border: "none", cursor: on ? "pointer" : "default", minHeight: 36, width: 30,
-                          color: TEXT_MUTED, opacity: on ? 1 : .3, fontSize: 11,
-                          transform: shut ? "rotate(-90deg)" : "none" }}>▾</button>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          ) : null}
-        </div>
+        <button className="dash-focus" style={{ ...mini, ...(railOpen ? {} : { background: "rgba(23,19,16,.06)" }) }}
+          onClick={toggleRail} aria-pressed={!railOpen} title="Show or hide the prep rail">
+          {railOpen ? "Hide prep" : "Show prep"}
+        </button>
+        <button className="dash-focus" style={mini} onClick={() => setDenseAnd(!dense)}>
+          {dense ? "Comfortable" : "Compact"}
+        </button>
         <button className="dash-focus" style={{ ...mini, ...(focus ? { background: config.accent, borderColor: config.accent, color: "#fff" } : {}) }}
           onClick={() => setFocus(v => !v)} aria-pressed={focus} title="Teaching only · ⌘E">Teaching</button>
         <button style={mini} onClick={() => setKeysOpen(true)} title="Keyboard shortcuts">⌘/</button>
@@ -3070,39 +2975,45 @@ export default function Dashboard({ config }) {
         </div>
       ) : null}
 
-      <main style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 400px", gap: 20, padding: 20, alignItems: "start", maxWidth: 1560, margin: "0 auto" }}>
-        <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", gap: 12 }}>
-          <WeekStrip days={days} day={day} onPick={setDay} counts={dayCounts} accent={config.accent} today={onDeck} />
-          <Snapshot config={config} day={day} topic={dayMeta?.topic} live={liveLabel}
-            upNext={upNextWords} onCastNext={castNext}
-            chips={[["in the day", flowCount], ["here", students.length - Object.values(marks).filter(v => v === "out").length],
-                    ["asking", openQ], ["assigned", readings.length]].filter(([, v]) => v)}
-            done={castCount} total={flowCount} since={sinceMin} cold={sinceMin != null && sinceMin >= 10}
-            left={minsLeft} onTakeDown={() => cast(null)}
-            onReset={() => writeDay(d => ({ ...d, done: [] }), "starting the day over")} />
+      <div style={{ padding: "14px 18px 0", maxWidth: 1760, margin: "0 auto", display: "flex", flexDirection: "column", gap: 12 }}>
+        <WeekStrip days={days} day={day} onPick={setDay} counts={dayCounts} accent={config.accent} today={onDeck} />
+        <Snapshot config={config} day={day} topic={dayMeta?.topic} live={liveLabel}
+          upNext={upNextWords} onCastNext={castNext}
+          chips={[["in the day", flowCount], ["here", students.length - Object.values(marks).filter(v => v === "out").length],
+                  ["asking", openQ], ["assigned", readings.length]].filter(([, v]) => v)}
+          done={castCount} total={flowCount} since={sinceMin} cold={sinceMin != null && sinceMin >= 10}
+          left={minsLeft} onTakeDown={() => cast(null)}
+          onReset={() => writeDay(d => ({ ...d, done: [] }), "starting the day over")} />
+      </div>
+
+      <main className="dash-stage" data-rail={railOpen ? "open" : "shut"} data-teach={focus ? "on" : "off"}>
+        {railOpen && !focus ? (
+          <Rail side="Before class" tabs={PREP.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: i + 1 }))}
+            active={prep} onPick={pickPrep} accent={config.accent}>
+            <Panel id={prep} title={null}>{render[prep]()}</Panel>
+          </Rail>
+        ) : null}
+
+        <div style={{ minWidth: 0 }}>
+          <Panel id="flow" title={null}>{render.flow()}</Panel>
+          {undo ? (
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+              <button className="dash-focus" style={{ ...mini, borderColor: WARN, color: WARN }} onClick={doUndo}>Undo {undo.what}</button>
+            </div>
+          ) : null}
         </div>
-        <div className="dash-grid" ref={gridRef}>
-          {shown.map(id => (
-            <Panel key={id} id={id} title={TITLES[id] + (id === "questions" && openQ ? " · " + openQ : "")}
-              right={id === "flow" && undo ? (
-                <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, borderColor: WARN, color: WARN }}
-                  onClick={doUndo}>Undo {undo.what}</button>
-              ) : null}
-              span={spans[id]} onDrag={onDragStart(id)} onSize={() => toggleSpan(id)}
-              collapsed={collapsed.includes(id)} onCollapse={() => toggleCollapsed(id)}
-              rows={spanRows[id]}
-              dragging={dragId === id} refCb={setPanelRef(id)}>
-              {render[id]()}
-            </Panel>
-          ))}
-        </div>
-        <div style={{ position: "sticky", top: 20 }}>
-          <Monitor config={config} live={live} cast={cast} push={push} recent={recent} onRecast={castNow}
-            info={picked ? (
-              <BlockInfo block={picked.blockId ? blockOf(picked.blockId) : null} item={picked.item}
-                where={picked.where} accent={config.accent} onClose={() => setPicked(null)} />
-            ) : null} />
-        </div>
+
+        <Rail side="During class" tabs={LIVE_RAIL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: PREP.length + i + 1 }))}
+          active={room} onPick={pickRoom} accent={config.accent}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Monitor config={config} live={live} cast={cast} push={push} recent={recent} onRecast={castNow}
+              info={picked ? (
+                <BlockInfo block={picked.blockId ? blockOf(picked.blockId) : null} item={picked.item}
+                  where={picked.where} accent={config.accent} onClose={() => setPicked(null)} />
+              ) : null} />
+            <Panel id={room} title={null}>{render[room]()}</Panel>
+          </div>
+        </Rail>
       </main>
 
       {cmdOpen ? <CommandBar targets={cmdTargets} accent={config.accent} onClose={() => setCmdOpen(false)} /> : null}

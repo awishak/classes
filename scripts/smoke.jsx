@@ -22,13 +22,59 @@ import AskPage from "../src/engine/AskPage.jsx";
 import PlanPage from "../src/PlanPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
 import { ENGINE_LIST } from "../src/config/registry.js";
+import { warmClassData } from "../src/engine/store.js";
+import { SHARED_KEY } from "../src/engine/blocks.js";
+
+// Warm every class's store BEFORE anything renders, so <Dashboard/> gets past
+// its loading gate and the body actually runs. Until now it did not: the whole
+// component above the panels — layout, rails, counts, every derived value —
+// was untested, and that is exactly where the crashes have come from.
+//
+// Two shapes per class, because an empty day and a full one take different
+// paths through almost every one of those derived values.
+const stocked = { day: [], week: [], any: [] };
+// The ported classes keep their weeks in the store rather than in config, so
+// a config-only warm gives them no schedule and the dashboard correctly shows
+// "no sessions" — correct, and useless as a test. Every class gets a schedule
+// here, its own where it has one.
+const weeksOf = (cfg) => (cfg.scheduleWeeks?.length ? cfg.scheduleWeeks
+  : [{ id: "w1", topic: "A week", dates: ["Sep 1", "Sep 3"], text: "", plan: "", slides: "", items: [] }]);
+const dayOf = (cfg) => weeksOf(cfg)[0].dates[0];
+const warmShapes = (cfg, full) => ({
+  courseTitle: cfg.desc || "",
+  schedule: weeksOf(cfg),
+  library: cfg.library || [],
+  assignments: cfg.assignments || [],
+  students: cfg.students || [],
+  stocked,
+  blocks: full ? { wb1: { id: "wb1", type: "link", title: "A block", body: "b", url: "https://example.com",
+    headline: "A headline.", children: [], tags: ["t"], concept: "c", source: "", refId: "",
+    created: "2026-08-01", scheduled: [dayOf(cfg)] } } : {},
+  dayPlans: full ? { [dayOf(cfg)]: {
+    sequenceId: "motivated", notes: "a day note", slides: "https://docs.google.com/x", slidesClaim: "The deck.",
+    done: [], boards: {},
+    slots: { opener: { title: "Open", items: [
+      { id: "i1", text: "A note", claim: "A claim.", links: [{ id: "l1", label: "Read", url: "https://example.com" }] },
+      { id: "i2", blockId: "wb1" },
+    ] } },
+    blocks: [{ id: "b1", title: "A block", body: "body", links: [] }],
+  } } : {},
+  scratch: full ? { [dayOf(cfg)]: "scratch" } : {},
+});
 
 const cases = [];
 for (const cfg of ENGINE_LIST) {
-  cases.push([cfg.code + " dashboard", <Dashboard config={cfg} />]);
+  warmClassData(SHARED_KEY, { blocks: {} });
+  warmClassData(cfg.storageKey, warmShapes(cfg, false));
+  cases.push([cfg.code + " dashboard, empty day", <Dashboard config={cfg} />, "dash-stage"]);
   cases.push([cfg.code + " room screen", <ClassroomView config={cfg} />]);
   cases.push([cfg.code + " class site", <ClassApp config={cfg} />]);
   cases.push([cfg.code + " ask page", <AskPage config={cfg} />]);
+}
+// and again with a day that has things on it
+for (const cfg of ENGINE_LIST) {
+  warmClassData(cfg.storageKey, warmShapes(cfg, true));
+  cases.push([cfg.code + " dashboard, full day", <Dashboard config={cfg} />, "dash-stage"]);
 }
 // Rendering <Dashboard/> alone only reaches its loading screen, because the
 // store load happens in an effect and effects do not run here. The panels are
@@ -71,10 +117,19 @@ cases.push(["Command bar", <CommandBar targets={[{ key: "k", group: "g", title: 
 cases.push(["The Brief", <PlanPage />]);
 cases.push(["Instructor links", <InstructorLinks />]);
 
+// A surface can render clean and still be the loading screen — that is how the
+// first version of this test passed code that was crashing in production. So a
+// case may name a string its output MUST contain, and a dashboard names the
+// stage: if the layout is not in the markup, the body did not run and the pass
+// is worth nothing.
 let failed = 0;
-for (const [name, el] of cases) {
+for (const [name, el, must] of cases) {
   try {
-    renderToString(el);
+    const html = renderToString(el);
+    if (must && !html.includes(must)) {
+      failed++;
+      console.error("  FAIL  " + name + ": rendered, but never reached " + JSON.stringify(must) + " \u2014 it stopped short.");
+    }
   } catch (err) {
     failed++;
     console.error("  FAIL  " + name + ": " + err.message);
