@@ -43,17 +43,29 @@ const WARN = "#b45309";
 const TAP = 44;  // student-facing surfaces: students are on phones
 const HIT = 34;  // this screen: a trackpad under my hands, where density is the point
 
-const label = { fontFamily: MONO, fontSize: 12, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
+const label = { fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, letterSpacing: 0 };
 const mini = { minHeight: HIT, padding: "0 12px", borderRadius: 8, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_SECONDARY, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
 const solid = (a) => ({ ...mini, background: a, borderColor: a, color: "#fff" });
 const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 9, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: 40, background: "#fff", color: TEXT_PRIMARY };
-const label2 = { fontFamily: MONO, fontSize: 12, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
+const label2 = { fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, letterSpacing: 0 };
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 
 const CSS = `
 .dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;row-gap:0;align-content:start;align-items:start;grid-auto-rows:8px}
 @media (max-width:700px){.dash-grid{column-gap:10px}}
 .dash-panel[data-span="2"]{grid-column:span 2}
+
+/* A card is a surface, not a box. The border round every one of them, the rule
+   under every header and the grip sitting out in the open added up to more
+   lines than content. A soft edge and space carry it, and the handles come
+   back when the pointer is on the card. */
+.dash-panel{background:#fff;border-radius:14px;overflow:hidden;
+  box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.045)}
+.dash-panel:hover{box-shadow:0 2px 8px -2px rgba(23,19,16,.09),0 0 0 1px rgba(23,19,16,.08)}
+.dash-head{display:flex;align-items:center;gap:8px;padding:12px 16px 10px}
+.dash-chrome{opacity:0;transition:opacity .12s}
+.dash-panel:hover .dash-chrome,.dash-panel:focus-within .dash-chrome{opacity:1}
+@media (hover:none){.dash-chrome{opacity:1}}
 .dash-panel.dragging{position:fixed;z-index:60;pointer-events:none;transform:rotate(-1deg);
   box-shadow:0 12px 32px -8px rgba(23,19,16,.35);opacity:.97}
 .dash-ghost{border:1.5px dashed ${BORDER_STRONG};border-radius:14px;background:rgba(0,0,0,.02)}
@@ -119,7 +131,7 @@ const LiveTag = () => <span className="dash-live"><i />LIVE</span>;
 function Grip({ onPointerDown }) {
   return (
     <span onPointerDown={onPointerDown} role="button" tabIndex={0} aria-label="Drag panel"
-      style={{ cursor: "grab", touchAction: "none", display: "flex", flexDirection: "column", gap: 2.5, padding: "6px 3px", marginLeft: -3, borderRadius: 5 }}>
+      style={{ cursor: "grab", touchAction: "none", display: "flex", flexDirection: "column", gap: 2.5, padding: "8px 5px", borderRadius: 5 }}>
       {[0, 1, 2].map(i => <i key={i} style={{ display: "block", width: 11, height: 1.5, background: BORDER_STRONG, borderRadius: 1 }} />)}
     </span>
   );
@@ -128,28 +140,29 @@ function Grip({ onPointerDown }) {
 function Panel({ id, title, right, span, onDrag, onSize, children, refCb, dragging, collapsed, onCollapse, rows }) {
   return (
     <section ref={refCb} className={"dash-panel" + (dragging ? " dragging" : "")} data-id={id} data-span={span}
-      style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, display: "flex", flexDirection: "column",
-        overflow: "hidden", minWidth: 0, ...(rows && !dragging ? { gridRowEnd: "span " + rows } : {}) }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px",
-        borderBottom: collapsed ? "none" : "1px solid " + BORDER }}>
-        <Grip onPointerDown={onDrag} />
+      style={{ minWidth: 0, ...(rows && !dragging ? { gridRowEnd: "span " + rows } : {}) }}>
+      <div className="dash-head">
         <button className="dash-focus" onClick={onCollapse}
           title={collapsed ? "Open this panel" : "Collapse to the bar"} aria-expanded={!collapsed}
-          style={{ ...label, color: TEXT_SECONDARY, marginRight: "auto", background: "none", border: "none",
-            padding: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, minHeight: HIT, textAlign: "left" }}>
+          style={{ marginRight: "auto", background: "none", border: "none", padding: 0, cursor: "pointer",
+            display: "inline-flex", alignItems: "center", gap: 8, minHeight: HIT, textAlign: "left",
+            fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-.01em" }}>
           <span style={{ display: "inline-block", fontSize: 11, color: TEXT_MUTED, width: 9,
             transform: collapsed ? "rotate(-90deg)" : "none", transition: "transform .15s" }}>▾</span>
           {title}
         </button>
         {collapsed ? null : right}
         {collapsed ? null : (
-          <button onClick={onSize} style={{ ...mini, minHeight: HIT, padding: "0 10px", fontFamily: MONO, fontSize: 12, color: TEXT_MUTED }}>
-            {span === "2" ? "2×" : "1×"}
-          </button>
+          <span className="dash-chrome" style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
+            <button onClick={onSize} style={{ ...mini, minHeight: 28, padding: "0 9px", fontFamily: MONO, fontSize: 12, color: TEXT_MUTED }}>
+              {span === "2" ? "2×" : "1×"}
+            </button>
+            <Grip onPointerDown={onDrag} />
+          </span>
         )}
       </div>
       {collapsed ? null : (
-        <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>{children}</div>
+        <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 11, minWidth: 0 }}>{children}</div>
       )}
     </section>
   );
@@ -225,8 +238,7 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
   const words = claim || title;
 
   return (
-    <div className={"flow-row" + (live ? " live" : "") + (picked ? " picked" : "")}
-      style={live || picked ? undefined : { borderLeftColor: kindColor || "transparent" }}>
+    <div className={"flow-row" + (live ? " live" : "") + (picked ? " picked" : "")}>
       <span className="flow-num" title={kind}>{num || ""}</span>
 
       <button className="dash-focus" onClick={onSelect} title="What is this?"
@@ -1387,7 +1399,7 @@ export function QuestionsPanel({ items, setState, archiveOpen, castNow, accent }
       </div>
       {open.length === 0 ? <Muted>{tab === "open" ? "Nothing from the room right now." : "Nothing here."}</Muted> : null}
       {open.map(q => (
-        <div key={q.id} style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, border: "1px solid " + BORDER, borderRadius: 10, background: SURFACE_2 }}>
+        <div key={q.id} style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, background: SURFACE_2 }}>
           <div style={{ ...label, fontSize: 12, display: "flex", gap: 7, alignItems: "center" }}>
             {q.anon
               ? <span style={{ color: accent, border: "1px solid " + accent + "55", borderRadius: 4, padding: "1px 5px" }}>Anon</span>
@@ -1515,7 +1527,7 @@ function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIn
 
   if (editing) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, border: "1px solid " + BORDER, borderRadius: 10 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, background: SURFACE_2 }}>
         <span style={label2}>{label}</span>
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Headline" style={inputStyle} />
         <textarea value={text} onChange={e => setText(e.target.value)} placeholder="One idea per line. Each one gets the screen to itself."
@@ -1852,7 +1864,7 @@ const SHORTCUTS = [
   ["Esc", "Take down whatever is on the room screen"],
   ["⌘ B", "Black the room screen out, and again to bring it back"],
   ["← →", "Step the board that is up, one idea at a time"],
-  ["J K", "Walk down and up the run of show"],
+  ["K J", "Walk down and up the run of show"],
   ["Enter", "Put the row I am on up on the room screen"],
   ["⌘ /", "Show this list"],
 ];
@@ -1903,7 +1915,7 @@ export function Monitor({ config, live, cast, push, recent, onRecast, info }) {
   const on = !!live?.cast;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 12px", background: "#fff", border: "1px solid " + BORDER, borderRadius: 10, ...label, fontSize: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 12px", background: SURFACE_2, borderRadius: 10, ...label, fontSize: 12 }}>
         {on ? <LiveTag /> : <span style={{ width: 8, height: 8, borderRadius: "50%", flex: "none", background: BORDER_STRONG }} />}
         <span style={{ color: TEXT_PRIMARY, overflow: "hidden", wordBreak: "break-word", lineHeight: 1.4 }}>
           {on ? (live.cast.label || live.cast.title) : "Idle screen"}
@@ -1951,7 +1963,7 @@ export function Monitor({ config, live, cast, push, recent, onRecast, info }) {
       </div>
 
       {recent.length ? (
-        <div style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ background: SURFACE_2, borderRadius: 12, padding: 13, display: "flex", flexDirection: "column", gap: 8 }}>
           <span style={label}>Put it back</span>
           {recent.map(r => (
             <button key={r.key} onClick={() => onRecast(r.payload)}
@@ -1973,7 +1985,7 @@ export function Monitor({ config, live, cast, push, recent, onRecast, info }) {
           onClick={() => setAnims(v => !v)} aria-expanded={anims}>Transitions</button>
       </div>
       {anims ? (
-        <div style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ background: SURFACE_2, borderRadius: 12, padding: 13, display: "flex", flexDirection: "column", gap: 12 }}>
           <Picker title="Everyday cast" opts={ANIMS} value={live?.anim || "rise"} onPick={v => push({ anim: v })} accent={config.accent} />
           <Picker title="Big reveal" opts={BIG_ANIMS} value={live?.bigAnim || "drop"} onPick={v => push({ bigAnim: v })} accent={config.accent} />
           <Muted style={{ fontSize: 13 }}>
@@ -2160,7 +2172,7 @@ export default function Dashboard({ config }) {
       // way the eye does and Enter puts the thing I am on up on the wall.
       const flat = flowOrderRef.current || [];
       if (flat.length && (e.key === "j" || e.key === "k" || e.key === "ArrowDown" || e.key === "ArrowUp")) {
-        const down = e.key === "j" || e.key === "ArrowDown";
+        const down = e.key === "k" || e.key === "ArrowDown";
         e.preventDefault();
         const at = flat.findIndex(x => x.id === pickedRef.current?.id);
         const next = flat[Math.max(0, Math.min(flat.length - 1, at < 0 ? 0 : at + (down ? 1 : -1)))];
