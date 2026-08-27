@@ -35,6 +35,7 @@ const LIVE = "#e11d48";
 // Following Apple HIG: body text ~15-17px, labels no smaller than 12px,
 // interactive targets at least 44px tall, inputs >=16px (prevents iOS zoom).
 const TAP = 44;
+const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
 const CARD_MAX = 380; // cards never grow wider than this (a phone-width card)
 const card = {
   background: "#fff", borderRadius: 16, padding: 20,
@@ -135,6 +136,87 @@ const Panel = ({ title, children }) => (
 // ─────────────────────────────────────────────────────────────
 // Community — what is actually happening right now
 // ─────────────────────────────────────────────────────────────
+// Whatever is on the projector, with a way in.
+//
+// A student walking into class opens the class page and sees a grid of cards,
+// none of which is the thing the room is looking at this second. So the thing
+// on the screen comes to the top and brings its own door: a board prompt asks
+// to be answered, a reading asks to be opened, an assignment asks to be read,
+// a poll asks for a vote. The prompt itself is the headline, because a box
+// saying "a discussion board is running" is a box that makes you go find the
+// question.
+export function onScreenNow(config, live, poll) {
+  const c = live?.cast;
+  const ask = config.path + "/ask";
+  const room = config.path + "/today";
+
+  if (poll && (poll.phase === "vote1" || poll.phase === "vote2")) {
+    return { kind: "Poll", title: poll.question || "A poll is open", cta: "Vote now", href: ask };
+  }
+  if (!c) return null;
+
+  if (c.type === "board") {
+    return { kind: c.boardLabel || "Discussion",
+      title: c.idea || c.title || "A discussion is open",
+      cta: "Add to the discussion", href: ask };
+  }
+  if (c.type === "headlines") {
+    return { kind: "Headlines", title: "Bring a headline to the room", cta: "Post a headline", href: ask };
+  }
+  if (c.type === "poll") {
+    return { kind: "Poll", title: c.label || "A poll is open", cta: "Vote now", href: ask };
+  }
+  if (c.type === "question") {
+    return { kind: "Question", title: c.title || c.label || "A question is up", cta: "Answer the question", href: ask };
+  }
+  if (c.type === "reveal") {
+    return { kind: "Assignment", title: c.title || "An assignment", sub: c.due || "",
+      cta: "Read the assignment", href: config.path };
+  }
+  if (c.type === "feature") {
+    return { kind: c.title || "Activity", title: c.body || c.title || "An activity is running",
+      cta: "Join in", href: room };
+  }
+  const url = c.openUrl || c.url || "";
+  if (url) {
+    return { kind: c.tag || "Reading", title: c.title || c.label || "A reading", cta: "Open the reading", href: url, external: true };
+  }
+  if (c.type === "quote" && (c.title || c.label)) {
+    return { kind: c.tag || "On the screen", title: c.title || c.label, cta: "Follow along", href: room };
+  }
+  return null;
+}
+
+export function OnScreenNow({ config, live, poll }) {
+  const it = onScreenNow(config, live, poll);
+  if (!it) return null;
+  const accent = config.accent;
+  return (
+    <section aria-label="On the screen right now"
+      style={{ background: "#fff", border: "2px solid " + accent, borderRadius: 16, padding: "18px 20px",
+        marginBottom: 16, display: "flex", flexDirection: "column", gap: 12,
+        boxShadow: "0 6px 22px -12px rgba(23,19,16,.35)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+        <span style={{ width: 9, height: 9, borderRadius: "50%", background: LIVE, flexShrink: 0 }} />
+        <span style={{ fontFamily: MONO, fontSize: 11.5, fontWeight: 600, letterSpacing: ".1em",
+          textTransform: "uppercase", color: LIVE }}>On the screen now</span>
+        <span style={{ fontFamily: MONO, fontSize: 11.5, letterSpacing: ".08em", textTransform: "uppercase",
+          color: TEXT_MUTED, marginLeft: "auto" }}>{it.kind}</span>
+      </div>
+      <h2 style={{ margin: 0, fontSize: "clamp(20px,3.2vw,27px)", fontWeight: 600, letterSpacing: "-.025em",
+        lineHeight: 1.2, color: TEXT_PRIMARY, wordBreak: "break-word" }}>{it.title}</h2>
+      {it.sub ? <div style={{ fontSize: 14, color: TEXT_MUTED }}>{it.sub}</div> : null}
+      <a className="ca-focus" href={it.href}
+        {...(it.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 8,
+          minHeight: TAP, padding: "0 20px", borderRadius: 12, background: accent, color: "#fff",
+          fontSize: 16, fontWeight: 600, textDecoration: "none" }}>
+        {it.cta} <span aria-hidden="true">→</span>
+      </a>
+    </section>
+  );
+}
+
 // "Nothing live right now" was a lie whenever a poll was open. This reads the
 // same cast bus the room screen reads, so the card and the projector agree.
 function liveNow(config, live, poll) {
@@ -450,7 +532,10 @@ export default function ClassApp({ config, initialCard }) {
   // Class is on the projector right now. Students following remotely get the
   // same screen the room is looking at.
   const roomLive = live?.cast && live.at && (Date.now() - live.at) < 3 * 60 * 60 * 1000;
-  const LiveBanner = roomLive ? (
+  // The thing on the projector, with its own door, above everything else. The
+  // old banner said class was on and made you go looking; this says what is on.
+  const onNow = roomLive ? onScreenNow(config, live, poll) : null;
+  const LiveBanner = onNow ? <OnScreenNow config={config} live={live} poll={poll} /> : roomLive ? (
     <a className="ca-focus" href={config.path + "/today"}
       style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none",
         background: "#fff", border: "1px solid " + LIVE, borderRadius: 12, padding: "12px 16px", minHeight: TAP, marginBottom: 14 }}>

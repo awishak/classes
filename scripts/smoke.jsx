@@ -17,7 +17,7 @@ import Dashboard, {
   BoardsPanel, StockedPanel, AssignmentsPanel, CommandBar, Readings, IdeasPanel,
 } from "../src/engine/Dashboard.jsx";
 import ClassroomView from "../src/engine/ClassroomView.jsx";
-import ClassApp from "../src/engine/ClassApp.jsx";
+import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import AskPage from "../src/engine/AskPage.jsx";
 import PlanPage from "../src/PlanPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
@@ -135,6 +135,24 @@ cases.push(["Ideas", <IdeasPanel blocks={[{ id: "b", type: "activity", title: "A
   onPick={noop} onAdd={noop} onEdit={noop} onRemove={noop} onDuplicate={noop} />]);
 cases.push(["Command bar", <CommandBar targets={[{ key: "k", group: "g", title: "t", run: noop }]} accent={cfg0.accent} onClose={noop} />]);
 
+// The box at the top of the class page, one case per thing that can be on the
+// projector, because each one produces a different door.
+{
+  const c0 = ENGINE_LIST[0];
+  const NOW = [
+    ["a discussion prompt", { type: "board", boardLabel: "Enter", idea: "What would you read more about?" }, null],
+    ["an article", { type: "reading", title: "A reading", openUrl: "https://example.com", tag: "Reading" }, null],
+    ["an assignment", { type: "reveal", title: "Media Diary", due: "Due Oct 9" }, null],
+    ["a game", { type: "feature", title: "Team Trivia", body: "Teams and buzzers." }, null],
+    ["headlines", { type: "headlines" }, null],
+    ["a poll", null, { phase: "vote1", question: "Which one?" }],
+    ["a quote", { type: "quote", tag: "The hook", title: "Rights fees are up." }, null],
+  ];
+  for (const [what, cast, poll] of NOW) {
+    cases.push(["On the screen now, " + what,
+      <OnScreenNow config={c0} live={cast ? { cast, at: 1 } : null} poll={poll} />, "On the screen now"]);
+  }
+}
 cases.push(["The Brief", <PlanPage />]);
 cases.push(["Instructor links", <InstructorLinks />]);
 
