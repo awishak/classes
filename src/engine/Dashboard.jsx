@@ -192,6 +192,17 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 /* A reading card. The words get the whole width; the link and the buttons sit
    along the bottom where a card's actions belong. */
 .read-card{border-radius:12px;background:${SURFACE_2};overflow:hidden}
+/* A field with its own confirm. The tick sits inside the box against the right
+   edge, and the field carries padding so the words never run under the tick. */
+.read-field{position:relative;display:block;width:100%}
+.read-field input,.read-field textarea{width:100%;display:block}
+.read-tick{position:absolute;right:7px;top:50%;transform:translateY(-50%);
+  width:26px;height:26px;border-radius:50%;border:none;cursor:pointer;padding:0;
+  display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;
+  background:var(--dash-accent,#171310);color:#fff;transition:transform .12s,filter .12s}
+.read-tick:hover{transform:translateY(-50%) scale(1.09);filter:brightness(1.1)}
+.read-tick:disabled{opacity:.35;cursor:default}
+.read-tick[style*="bottom"]:hover{transform:scale(1.09)}
 .read-body{display:flex;flex-direction:column;gap:2px;padding:8px 8px 4px}
 .read-head{display:block;width:100%;text-align:left;background:none;border:none;padding:2px 7px;
   border-radius:8px;cursor:text;font-family:${F};font-size:13px;font-weight:600;line-height:1.4;
@@ -1149,9 +1160,13 @@ function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadli
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(headline || "");
   useEffect(() => { setDraft(headline || ""); }, [headline]);
+  const [why, setWhy] = useState("");
   const commit = (thenCast) => {
     const c = oneSentence(draft);
-    if (!c) return;
+    // It used to return here and say nothing, so on a short headline the field
+    // looked broken. Say what is wrong instead.
+    if (!c) { setWhy("Write the headline first."); return; }
+    setWhy("");
     onHeadline(c);
     setEditing(false);
     if (thenCast) onCast(c);
@@ -1163,10 +1178,16 @@ function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadli
     <div className="read-card">
       <div className="read-body">
         {editing ? (
-          <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") commit(true); if (e.key === "Escape") { setDraft(headline || ""); setEditing(false); } }}
-            placeholder="Say in one sentence what it is for"
-            style={{ ...inputStyle, minHeight: 32, fontSize: 13, padding: "4px 8px" }} />
+          <div className="read-field">
+            <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+              onBlur={() => { if (draft.trim() && draft.trim() !== (headline || "")) commit(false); else setEditing(false); }}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); commit(false); }
+                if (e.key === "Escape") { setDraft(headline || ""); setWhy(""); setEditing(false); } }}
+              placeholder="Say in one sentence what this reading is for"
+              style={{ ...inputStyle, minHeight: 36, fontSize: 13, padding: "4px 40px 4px 8px" }} />
+            <Confirm onClick={() => commit(false)} title="Save this headline" />
+            {why ? <div style={{ fontSize: 12, fontWeight: 600, color: WARN, padding: "3px 2px 0" }}>{why}</div> : null}
+          </div>
         ) : (
           <button className="dash-focus read-head" onClick={() => setEditing(true)}
             title={headline ? "Edit my headline" : "Write a headline for this reading"}
@@ -1202,6 +1223,27 @@ function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadli
   );
 }
 
+// A field with a way to say "done" inside the box.
+//
+// The headline field had no visible confirm and no onBlur, so clicking away
+// threw the text out, and the only way to save was a keypress nobody had been
+// told about. Worse, commit returned silently when the sentence was too short,
+// so on a two-word headline the field simply did nothing at all.
+//
+// A round tick sits inside the field. Enter still works, Escape still cancels,
+// and clicking away still saves, but none of that has to be known.
+function Confirm({ onClick, disabled, title, bottom }) {
+  return (
+    <button type="button" className="dash-focus read-tick" disabled={disabled}
+      title={title || "Save"} aria-label={title || "Save"}
+      // mousedown fires before blur, and preventing the default keeps focus in
+      // the field so the blur handler does not race the click.
+      onMouseDown={e => e.preventDefault()}
+      onClick={onClick}
+      style={bottom ? { bottom: 8, top: "auto", transform: "none" } : undefined}>✓</button>
+  );
+}
+
 // Why I picked it. Mine, not the room's.
 //
 // The headline is the sentence that goes up on the screen. This is the other
@@ -1216,12 +1258,15 @@ function ReadingNote({ value, accent, onSave }) {
   const commit = () => { onSave(draft.trim()); setEditing(false); };
   if (editing) {
     return (
-      <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
-        onKeyDown={e => { if (e.key === "Escape") { setDraft(value); setEditing(false); }
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit(); }}
-        placeholder="What I like about this reading, what I use it for\u2026"
-        style={{ ...inputStyle, minHeight: 58, fontSize: 13, lineHeight: 1.45, resize: "vertical",
-          marginLeft: 35, width: "calc(100% - 35px)" }} />
+      <div className="read-field">
+        <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
+          onKeyDown={e => { if (e.key === "Escape") { setDraft(value); setEditing(false); }
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit(); }}
+          placeholder="What I like about this reading, what I use it for\u2026"
+          style={{ ...inputStyle, minHeight: 62, fontSize: 13, lineHeight: 1.45, resize: "vertical",
+            paddingRight: 40 }} />
+        <Confirm onClick={commit} bottom title="Save this note" />
+      </div>
     );
   }
   return (
