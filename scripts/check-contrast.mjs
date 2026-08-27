@@ -26,5 +26,21 @@ for (const [hue, l] of SEC) {
   const ratio = 1.05 / (L + 0.05);
   if (ratio < AA) { bad++; console.error(`  FAIL  hue ${hue} at ${l}% is ${ratio.toFixed(2)}:1 on white, under ${AA}`); }
 }
-if (bad) { console.error(`check-contrast: ${bad} section colour(s) below AA.`); process.exit(1); }
-console.log(`check-contrast: ${SEC.length} section colours, all at or above ${AA}:1`);
+
+// ─── the palette ───
+// Every swatch carries WHITE text, and that is the whole reason the light tier
+// of each hue is only as light as it is. A genuinely light yellow with white on
+// it cannot be read, so the palette does not contain one. This recomputes all
+// twenty and fails the build if any drops under the line.
+const pal = readFileSync(new URL("../src/engine/colors.js", import.meta.url), "utf8");
+const swatches = [...pal.matchAll(/name: "([^"]+)",\s+hex: "(#[0-9a-f]{6})"/g)];
+if (!swatches.length) { console.error("check-contrast: no swatches found in colors.js"); process.exit(1); }
+for (const [, name, hex] of swatches) {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  const ratio = 1.05 / (L + 0.05);          // white text sitting on this swatch
+  if (ratio < AA) { bad++; console.error(`  FAIL  ${name} ${hex} gives white text ${ratio.toFixed(2)}:1, under ${AA}`); }
+}
+
+if (bad) { console.error(`check-contrast: ${bad} colour(s) below AA.`); process.exit(1); }
+console.log(`check-contrast: ${SEC.length} section colours and ${swatches.length} palette swatches, all at or above ${AA}:1`);

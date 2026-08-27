@@ -25,8 +25,13 @@ import { allDays, currentDay, parseDay } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { normSlot, sequenceOptions, sequenceFor } from "./dayplan.js";
 import { SHARED_KEY, TYPES, typeOf, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
+import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors } from "./colors.js";
 import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, setScheduleItemClaim, setScheduleItemNote, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
+
+// One fallback for every component that takes a `hue`, so a panel rendered on
+// its own never has to know that colours exist.
+const defaultHue = (type) => colorOfType(null, type);
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -120,7 +125,11 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .dash-rail-tabs::-webkit-scrollbar{display:none}
 .dash-tab{flex:1 1 auto;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 11px;border:none;border-radius:10px;background:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:500;color:#5b6068;transition:background .14s,color .14s,box-shadow .14s}
 .dash-tab:hover{color:#171310}
-.dash-tab.on{background:#fff;color:var(--dash-accent,#171310);font-weight:600;box-shadow:0 1px 3px rgba(23,19,16,.13),inset 0 0 0 1px rgba(23,19,16,.05)}
+.dash-tab.on{background:#fff;color:var(--tab-hue,var(--dash-accent,#171310));font-weight:600;
+  box-shadow:0 1px 3px rgba(23,19,16,.13),inset 0 0 0 1px rgba(23,19,16,.05)}
+.dash-tab.on::after{content:"";position:absolute;left:11px;right:11px;bottom:3px;height:2px;border-radius:2px;
+  background:var(--tab-hue,var(--dash-accent))}
+.dash-tab{position:relative}
 .dash-tab-k{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:#9aa0a6;opacity:.75}
 .dash-tab.on .dash-tab-k{color:inherit;opacity:.45}
 .dash-tab-n{min-width:19px;height:19px;padding:0 5px;border-radius:10px;color:#fff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center}
@@ -210,7 +219,8 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .read-head:hover{background:#fff}
 .read-title{display:block;padding:1px 7px 2px;font-size:12px;line-height:1.45;color:${TEXT_SECONDARY};
   overflow-wrap:anywhere}
-.read-dot{float:left;margin:5px 6px 0 0;width:7px;height:7px;border-radius:50%}
+.read-kind{float:left;margin:2px 7px 0 0;padding:1px 7px;border-radius:999px;color:#fff;
+  font-family:${MONO};font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
 .read-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 10px 8px;
   border-top:1px solid rgba(23,19,16,.06)}
 .read-src{margin-right:auto;font-family:${F};font-size:12px;color:${TEXT_MUTED};text-decoration:none;
@@ -323,10 +333,11 @@ function Rail({ tabs, active, onPick, accent, children, side, className }) {
           const on = t.id === active;
           return (
             <button key={t.id} role="tab" aria-selected={on} className={"dash-tab dash-focus" + (on ? " on" : "")}
-              onClick={() => onPick(t.id)} title={t.label + " \u00b7 press " + t.hot}>
+              onClick={() => onPick(t.id)} title={t.label + " \u00b7 press " + t.hot}
+              style={t.hue ? { "--tab-hue": t.hue } : undefined}>
               <span className="dash-tab-k">{t.hot}</span>
               {t.label}
-              {t.count ? <span className="dash-tab-n" style={{ background: on ? accent : BORDER_STRONG }}>{t.count}</span> : null}
+              {t.count ? <span className="dash-tab-n" style={{ background: t.hue || (on ? accent : BORDER_STRONG) }}>{t.count}</span> : null}
             </button>
           );
         })}
@@ -344,8 +355,8 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
       style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", cursor: "pointer",
         background: live ? "rgba(225,29,72,.07)" : SURFACE_2, border: "1px solid " + (live ? LIVE : "transparent"),
         borderRadius: 10, padding: "9px 11px", minHeight: TAP, fontFamily: F, transition: "background .14s, border-color .14s" }}>
-      <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase",
-        padding: "3px 6px", borderRadius: 5, background: "#fff", border: "1px solid " + (kindColor || BORDER_STRONG), color: kindColor || TEXT_MUTED }}>{kind}</span>
+      <span style={{ flex: "none", fontFamily: MONO, fontSize: 11.5, fontWeight: 600, letterSpacing: ".07em", textTransform: "uppercase",
+        padding: "3px 8px", borderRadius: 999, background: kindColor || TEXT_MUTED, color: "#fff" }}>{kind}</span>
       <span style={{ minWidth: 0, flex: 1 }}>
         <b style={{ display: "block", fontWeight: 500, fontSize: 15, color: TEXT_PRIMARY, overflow: "hidden", wordBreak: "break-word", lineHeight: 1.4 }}>{title}</b>
         {sub ? <small style={{ color: TEXT_MUTED, fontSize: 12 }}>{sub}</small> : null}
@@ -689,7 +700,7 @@ function Unplanned({ items, accent, onAdd, castNow }) {
 // list, so it filters by what it is, what it is about, and the words in it —
 // facets rather than folders, because a reading is a link AND about identity
 // AND from last spring, and a folder makes you pick one.
-function LibraryPick({ blocks, accent, onPick }) {
+function LibraryPick({ blocks, accent, onPick, hue = defaultHue }) {
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
   const [topic, setTopic] = useState("");
@@ -730,13 +741,15 @@ function LibraryPick({ blocks, accent, onPick }) {
               style={{ display: "flex", alignItems: "flex-start", gap: 8, textAlign: "left", cursor: "grab",
                 background: SURFACE_2, border: "1px solid transparent", borderRadius: 9, padding: "8px 10px",
                 minHeight: HIT, fontFamily: F, fontSize: 13.5, color: TEXT_PRIMARY }}>
-              <span style={{ flex: "none", marginTop: 3, width: 7, height: 7, borderRadius: "50%", background: t.color }} />
+              <span style={{ flex: "none", marginTop: 1, padding: "1px 7px", borderRadius: 999,
+                background: hue(b.type), color: "#fff", fontSize: 10.5, fontWeight: 600,
+                letterSpacing: ".03em", textTransform: "uppercase" }}>{t.label}</span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: "block", wordBreak: "break-word", lineHeight: 1.35 }}>{b.headline || b.title}</span>
                 {b.children?.length ? <small style={{ color: TEXT_MUTED, fontSize: 12 }}>{b.children.length} inside</small> : null}
                 {b.tags?.length ? <small style={{ color: TEXT_MUTED, fontSize: 12, display: "block" }}>{b.tags.slice(0, 3).join(" · ")}</small> : null}
               </span>
-              <span style={{ ...label, fontSize: 12, flex: "none" }}>{t.label}</span>
+
             </button>
           );
         })}
@@ -1015,7 +1028,7 @@ function RowMenu({ at, onRemove, onClose }) {
 // they are blocks like anything else: droppable into a day, editable, and I can
 // add to them. Seeded rather than left empty, because the one empty state that
 // reliably stops people starting is a blank box with a plus on it.
-export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAdd, onEdit, onRemove, onDuplicate }) {
+export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAdd, onEdit, onRemove, onDuplicate, hue = defaultHue }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -1064,7 +1077,8 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
             title="Drag this idea into a section of the flow, or click to read how the idea runs"
             style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", minHeight: 38, padding: "4px 7px",
               background: "none", border: "none", borderRadius: 9, cursor: "pointer", fontFamily: F, textAlign: "left" }}>
-            <span style={{ flex: "none", width: 7, height: 7, borderRadius: "50%", background: typeOf("activity").color }} />
+            <span style={{ flex: "none", padding: "1px 7px", borderRadius: 999, background: hue("activity"),
+              color: "#fff", fontSize: 10.5, fontWeight: 600, letterSpacing: ".03em", textTransform: "uppercase" }}>Idea</span>
             <b style={{ flex: 1, minWidth: 0, fontWeight: 600, fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.35 }}>{b.title}</b>
             <span style={{ flex: "none", fontSize: 10, color: TEXT_MUTED, transform: shown === b.id ? "none" : "rotate(-90deg)", transition: "transform .14s" }}>▾</span>
           </button>
@@ -1160,7 +1174,7 @@ export const MEDIA_SET = new Set(["reading", "video", "podcast"]);
 // with, then my note, all of them the full width and none of them shouting.
 // The link and the buttons go along the bottom, which is where a card's
 // actions belong and where they stop stealing width from the words.
-function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadline, onNote, onRemove, inFlow }) {
+function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadline, onNote, onRemove, inFlow, hue = defaultHue }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(headline || "");
   useEffect(() => { setDraft(headline || ""); }, [headline]);
@@ -1175,7 +1189,7 @@ function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadli
     setEditing(false);
     if (thenCast) onCast(c);
   };
-  const color = TYPE_COLOR[item.type] || TYPE_COLOR.reading;
+  const color = hue ? hue(item.type === "reading" ? "link" : item.type) : (TYPE_COLOR[item.type] || TYPE_COLOR.reading);
   const btn = { ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5 };
 
   return (
@@ -1204,7 +1218,7 @@ function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadli
           </button>
         )}
         <div className="read-title">
-          <span className="read-dot" style={{ background: color }} />
+          <span className="read-kind" style={{ background: color }}>{typeLabel(item.type)}</span>
           {item.title}
         </div>
         <ReadingNote value={item.note || ""} accent={accent} onSave={onNote} />
@@ -1286,7 +1300,7 @@ function ReadingNote({ value, accent, onSave }) {
   );
 }
 
-export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, onNote, inFlow, onDropIn, blocks, onPickBlock, blockOf }) {
+export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, onNote, inFlow, onDropIn, hue = defaultHue, blocks, onPickBlock, blockOf }) {
   const [over, setOver] = useState(false);
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("reading");
@@ -1324,7 +1338,7 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
         const blk = it.libId && blockOf ? blockOf(it.libId) : null;
         const headline = it.claim || (blk ? blk.headline : "");
         return (
-        <ReadingCard key={it.id} item={it} headline={headline} accent={accent}
+        <ReadingCard key={it.id} item={it} headline={headline} accent={accent} hue={hue}
           live={liveLabel === (headline || it.title)} onDismiss={dismiss}
           onHeadline={(c) => onClaim(it.id, c)} onNote={(v) => onNote(it.id, v)}
           onRemove={() => onRemove(it.id)} inFlow={inFlow?.has(it.id)}
@@ -1341,7 +1355,7 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
       {open ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, border: "1px solid " + accent, background: "#fff" }}>
           {blocks?.length ? (
-            <LibraryPick blocks={blocks.filter(b => b.type === "link")} accent={accent}
+            <LibraryPick blocks={blocks.filter(b => b.type === "link")} accent={accent} hue={hue}
               onPick={(b) => { onPickBlock(b); setOpen(false); }} />
           ) : null}
           <div style={{ ...label, paddingTop: 4 }}>or a new one</div>
@@ -1380,7 +1394,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -1609,7 +1623,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                     done={doneSet.has(it.id)} next={nextId === it.id} onTick={() => onTick(it.id)}
                     onSelect={() => onSelect({ blockId: it.blockId, item: it, where: bucket.title || s.slot, id: it.id })}
                     kind={blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
-                    kindColor={blk ? typeOf(blk.type).color : KIND_COLOR[seed ? "Seed" : "Note"]}
+                    kindColor={blk ? hue(blk.type) : hue(seed ? "story" : "note")}
                     title={title}
                     url={blk?.url || ""}
                     claim={it.claim || (blk ? blk.headline : "")} accent={accent}
@@ -2271,6 +2285,58 @@ const SHORTCUTS = [
   ["⌘ /", "Show this list"],
 ];
 
+// Pick the colour of each sort of thing.
+//
+// Every swatch takes white text, because a light yellow with white on it
+// cannot be read. That is the reason the light tier of each hue is only as
+// light as it is: the build checks all twenty against white and fails on any
+// that drop under 4.5:1.
+function ColorsSheet({ colors, onPick, onReset, onClose }) {
+  const [open, setOpen] = useState(KINDS[0].id);
+  return (
+    <Sheet title="Colours" sub="One colour per sort of thing, used everywhere" onClose={onClose} width={640}>
+      {KINDS.map(k => {
+        const hex = colorOfKind(colors, k.id);
+        const showing = open === k.id;
+        return (
+          <div key={k.id} style={{ borderRadius: 12, background: showing ? SURFACE_2 : "transparent", padding: showing ? 10 : 0 }}>
+            <button className="dash-focus" onClick={() => setOpen(showing ? "" : k.id)} aria-expanded={showing}
+              style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", minHeight: 46,
+                background: "none", border: "none", cursor: "pointer", fontFamily: F, textAlign: "left",
+                padding: "0 6px", borderRadius: 9 }}>
+              <span style={{ flex: "none", minWidth: 108, height: 30, borderRadius: 9, background: hex,
+                color: "#fff", fontSize: 13, fontWeight: 600, display: "inline-flex", alignItems: "center",
+                justifyContent: "center", letterSpacing: "-.01em" }}>{k.label}</span>
+              <span style={{ flex: 1, fontSize: 14, color: TEXT_MUTED }}>
+                {PALETTE.find(x => x.hex === hex)?.name || hex}
+              </span>
+              <span style={{ flex: "none", fontSize: 10, color: TEXT_MUTED,
+                transform: showing ? "none" : "rotate(-90deg)" }}>\u25be</span>
+            </button>
+            {showing ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: "10px 6px 2px" }}>
+                {PALETTE.map(sw => (
+                  <button key={sw.id} className="dash-focus" onClick={() => onPick(k.id, sw.id)}
+                    title={sw.name} aria-label={sw.name} aria-pressed={sw.hex === hex}
+                    style={{ width: 40, height: 40, borderRadius: 11, background: sw.hex, cursor: "pointer",
+                      border: sw.hex === hex ? "3px solid " + TEXT_PRIMARY : "3px solid transparent",
+                      color: "#fff", fontSize: 15, lineHeight: 1, display: "inline-flex",
+                      alignItems: "center", justifyContent: "center" }}>
+                    {sw.hex === hex ? "\u2713" : ""}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+      <button className="dash-focus" style={{ ...mini, alignSelf: "flex-start", marginTop: 6 }} onClick={onReset}>
+        Back to the defaults
+      </button>
+    </Sheet>
+  );
+}
+
 // A panel lifted out over everything, for the things I do standing up.
 //
 // Taking the roll is one of them: it happens once, at the start, and it wants
@@ -2785,6 +2851,7 @@ export default function Dashboard({ config }) {
   const [hornOpen, setHornOpen] = useState(false);
   const [hereOpen, setHereOpen] = useState(false);
   const [todoOpen, setTodoOpen] = useState(false);
+  const [colorsOpen, setColorsOpen] = useState(false);
   const [hlOpen, setHlOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
@@ -2828,6 +2895,10 @@ export default function Dashboard({ config }) {
     any: stock.any || [],
   };
   const marks = (data?.attendance || {})[day] || {};
+  // My colours, out of the shared store so they hold across every class.
+  const colors = readColors(shared);
+  const hueOf = (type) => colorOfType(colors, type);
+  const hueOfKind = (kind) => colorOfKind(colors, kind);
   const dayMeta = days.find(d => d.date === day);
 
   // Features scheduled for this class day, in the order the week lists them.
@@ -3486,6 +3557,10 @@ export default function Dashboard({ config }) {
     run: () => { castNow({ type: "question", tag: "From the room", title: x.text, cite: x.anon ? "Anonymous" : (x.who || ""), label: "Question · " + (x.anon ? "anonymous" : x.who) }); markEngaged(); } }));
   cmdTargets.push({ key: "c:poll", group: "Screen", title: "Live poll", run: () => castNow({ type: "poll", label: "Live poll" }) });
   cmdTargets.push({ key: "c:idle", group: "Screen", title: "Idle screen", run: () => cast(null) });
+  cmdTargets.push({ key: "o:hl", group: "Open", title: "Headlines board", run: () => setHlOpen(true) });
+  cmdTargets.push({ key: "o:col", group: "Open", title: "Colours", run: () => setColorsOpen(true) });
+  cmdTargets.push({ key: "o:here", group: "Open", title: "Who is here", run: () => setHereOpen(true) });
+  cmdTargets.push({ key: "o:todo", group: "Open", title: "Still to do", run: () => setTodoOpen(true) });
   cmdTargets.push({ key: "c:black", group: "Screen", title: "Black screen", run: () => cast({ type: "black", label: "Black screen" }) });
 
   if (data === null) {
@@ -3534,7 +3609,7 @@ export default function Dashboard({ config }) {
       onAddBlock={addBlock} onRemoveBlock={removeBlock} onMoveBlock={moveBlock}
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
-      isAssigned={(it) => !!assignedIdFor(it)} onToggleAssigned={toggleAssigned}
+      isAssigned={(it) => !!assignedIdFor(it)} onToggleAssigned={toggleAssigned} hue={hueOf}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
       onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMergeSections={mergeSections} onSelect={setPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
       doneSet={doneSet} onTick={tickItem} />,
@@ -3545,9 +3620,9 @@ export default function Dashboard({ config }) {
       blockOf={blockOf}
       onClaim={(id, c) => setScheduleItemClaim(update, config, id, c)}
       onNote={(id, n) => setScheduleItemNote(update, config, id, n)} inFlow={readingInFlow}
-      onDropIn={assignDropped}
+      onDropIn={assignDropped} hue={hueOf}
       blocks={blocks2} onPickBlock={pickReading} />,
-    ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent}
+    ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent} hue={hueOf}
       sections={sections} days={days} today={day}
       onPick={pickBlock} onAdd={addIdea} onEdit={editIdea} onRemove={removeIdea} onDuplicate={duplicateIdea} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
@@ -3560,7 +3635,7 @@ export default function Dashboard({ config }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} path={config.path} />,
   };
-  const TITLES = { todo: "To-do", poll: "Poll", flow: "Class Flow", boards: "Enter/Exit", readings: "Readings", ideas: "Ideas", questions: "Asking", attendance: "Here", scratch: "Notes", assignments: "Assigned" };
+  const TITLES = { todo: "To-do", poll: "Poll", flow: "Class Flow", boards: "Enter/Exit", readings: "Readings", ideas: "Ideas", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   const outCount = Object.values(marks).filter(v => v === "out").length;
   // How far through the day I am, counted off the flow rather than the clock.
@@ -3577,6 +3652,13 @@ export default function Dashboard({ config }) {
   // What each tab is worth opening for. A count is a reason to look, so only
   // the ones that carry news get one: people waiting on an answer, ideas I have
   // not placed, readings set for today. A total that never moves is furniture.
+  // Which colour each tab wears. The keys are the panels; the values are the
+  // kinds I set in the Colours sheet.
+  const TAB_HUE = {
+    readings: hueOfKind("readings"), ideas: hueOfKind("ideas"), scratch: hueOfKind("notes"),
+    assignments: hueOfKind("assignments"), questions: hueOfKind("questions"),
+    poll: hueOfKind("polls"), boards: hueOfKind("boards"), todo: "",
+  };
   const RAIL_N = {
     questions: openQ,
     readings: readings.length,
@@ -3622,7 +3704,7 @@ export default function Dashboard({ config }) {
 
         <div className="dash-seg" style={{ "--seg": config.accent }}>
           <button className="dash-focus" onClick={() => setCmdOpen(true)}>Cast<kbd>⌘K</kbd></button>
-          <button className="dash-focus" onClick={() => setHlOpen(true)}>Headlines</button>
+          <button className="dash-focus" onClick={() => setColorsOpen(true)}>Colours</button>
           <button className="dash-focus" onClick={() => setHornOpen(true)}>Around the Horn</button>
           <button className="dash-focus" onClick={() => setHereOpen(true)}>
             Here{students.length ? <kbd>{students.length - outCount}/{students.length}</kbd> : null}
@@ -3650,7 +3732,7 @@ export default function Dashboard({ config }) {
         style={{ gridTemplateColumns: gridFor(cols, railOpen, focus) }}>
         {railOpen && !focus ? (
           <>
-            <Rail side="Materials" tabs={MATERIAL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: i + 1 }))}
+            <Rail side="Materials" tabs={MATERIAL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: i + 1, hue: TAB_HUE[id] }))}
               active={prep} onPick={pickPrep} accent={config.accent}>
               <Panel id={prep} title={null}>{render[prep]()}</Panel>
             </Rail>
@@ -3670,7 +3752,7 @@ export default function Dashboard({ config }) {
 
         <Seam which="live" onDown={startSeam("live")} label="Live" />
 
-        <Rail side="Live" className="dash-room" tabs={LIVE_RAIL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: MATERIAL.length + i + 1 }))}
+        <Rail side="Live" className="dash-room" tabs={LIVE_RAIL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: MATERIAL.length + i + 1, hue: TAB_HUE[id] }))}
           active={room} onPick={pickRoom} accent={config.accent}>
           <div className="dash-room-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <Monitor config={config} live={live} cast={cast} push={push} recent={recent} onRecast={castNow}
@@ -3701,6 +3783,12 @@ export default function Dashboard({ config }) {
         <Sheet title="Who is here" sub={config.code + " \u00b7 " + day} onClose={() => setHereOpen(false)}>
           <AttendancePanel students={students} marks={marks} onMark={mark} onReset={resetAttendance} />
         </Sheet>
+      ) : null}
+
+      {colorsOpen ? (
+        <ColorsSheet colors={colors} onClose={() => setColorsOpen(false)}
+          onPick={(kind, sw) => writeColor(updateShared, kind, sw)}
+          onReset={() => resetColors(updateShared)} />
       ) : null}
 
       {todoOpen ? (
