@@ -167,7 +167,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // Nothing goes up as a label. Before a thing can be cast it needs a headline —
 // one full sentence saying what it shows. "Media rights" is a topic; "Rights
 // fees have risen 45% in ten years" is what the room can actually read.
-function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim }) {
+function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(claim || "");
   useEffect(() => { setDraft(claim || ""); }, [claim]);
@@ -204,17 +204,18 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
     );
   }
 
-  // A dot for what it is, then the words. A bordered badge on every row was
-  // three lines of chrome saying something a coloured dot says as well, and the
-  // words are what I am actually reading.
+  // The number says where I am in the day, and its colour says what the thing
+  // is. One mark doing both jobs, where there used to be a bordered badge and
+  // a dot.
   const sq = { ...mini, flex: "none", minHeight: 30, minWidth: 30, padding: "0 7px",
     display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12.5 };
   const words = claim || title;
 
   return (
     <div className={"flow-row" + (live ? " live" : "")}>
-      <span title={kind} style={{ flex: "none", width: 8, height: 8, borderRadius: "50%",
-        background: kindColor || BORDER_STRONG }} />
+      <span title={kind} style={{ flex: "none", minWidth: 20, fontFamily: MONO, fontSize: 12,
+        fontWeight: 600, color: kindColor || TEXT_MUTED, fontVariantNumeric: "tabular-nums",
+        textAlign: "right" }}>{num || ""}</span>
 
       {url ? (
         <a className="dash-focus" href={url} target="_blank" rel="noreferrer" title={"Open here · " + url}
@@ -972,6 +973,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   const [addingBlock, setAddingBlock] = useState(false);
   const [blockDraft, setBlockDraft] = useState("");
   const unplannedBlock = <Unplanned items={loose || []} accent={accent} onAdd={(it) => setPlacing(it)} castNow={castNow} />;
+
   const seqPicker = (sequences || []).length > 1 ? (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span style={label}>Shape</span>
@@ -1055,6 +1057,17 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
     .filter(k => !named.has(k) && !isSection(k))
     .filter(k => normSlot(slotItems[k]).items.length)
     .map(k => [k, normSlot(slotItems[k]).title || k]);
+
+  const numberOf = (() => {
+    const map = {};
+    let n = 0;
+    [...(seq?.slots || []).map(x => x.slot),
+     ...mySections.map(([k]) => k),
+     ...orphanSlots.map(([k]) => k)].forEach(k => {
+      normSlot(slotItems[k]).items.forEach(it => { map[it.id] = ++n; });
+    });
+    return map;
+  })();
 
   // Folding merges the orphans into one list rather than converting them into
   // something else. Every item keeps its id, its headline and its link back to
@@ -1144,7 +1157,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                   onContextMenu={e => { e.preventDefault(); setRowMenu({ x: e.clientX, y: e.clientY, slot: s.slot, id: it.id }); }}
                   style={{ display: "flex", flexDirection: "column", gap: 2,
                     borderTop: "2px solid " + (overRow === it.id ? accent : "transparent") }}>
-                  <Castable
+                  <Castable num={numberOf[it.id]}
                     kind={blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
                     kindColor={blk ? typeOf(blk.type).color : KIND_COLOR[seed ? "Seed" : "Note"]}
                     title={title}
@@ -2381,10 +2394,23 @@ export default function Dashboard({ config }) {
   });
 
   // Named sections for this day, shared by every chooser on the screen.
-  const sections = [
-    ...((sequenceFor(config, plan?.sequenceId || config.defaultSequenceId).slots) || [])
-      .map(x => [x.slot, normSlot((plan?.slots || {})[x.slot]).title || x.slot]),
-  ];
+  // Every section the day has, in the order Class Flow draws them: the
+  // sequence's own, then the ones I made, then anything left over from a
+  // sequence change. The same list the flow uses, so a chooser opened anywhere
+  // offers the same places.
+  const daySections = (() => {
+    const sl = plan?.slots || {};
+    const seqSlots = (sequenceFor(config, plan?.sequenceId || config.defaultSequenceId).slots) || [];
+    const named = new Set(seqSlots.map(x => x.slot));
+    const mine = Object.keys(sl).filter(k => k.startsWith("sec-"));
+    const left = Object.keys(sl).filter(k => !named.has(k) && !k.startsWith("sec-") && normSlot(sl[k]).items.length);
+    return [
+      ...seqSlots.map(x => [x.slot, normSlot(sl[x.slot]).title || x.slot]),
+      ...mine.map(k => [k, normSlot(sl[k]).title || "Untitled section"]),
+      ...left.map(k => [k, normSlot(sl[k]).title || k]),
+    ];
+  })();
+  const sections = daySections;
 
   // A block can be placed on any day, not just the one I am looking at.
   const pickBlock = (slot, b, date) => {
