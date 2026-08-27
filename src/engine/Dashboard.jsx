@@ -392,7 +392,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // Nothing goes up as a label. Before a thing can be cast it needs a headline —
 // one full sentence saying what it shows. "Media rights" is a topic; "Rights
 // fees have risen 45% in ten years" is what the room can actually read.
-function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, shared, done, next, onTick, assigned, onAssign }) {
+function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(claim || "");
   useEffect(() => { setDraft(claim || ""); }, [claim]);
@@ -449,7 +449,7 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
 
       <span className="flow-main">
         <button className="dash-focus flow-words" onClick={onSelect} title="Open the details"
-          style={{ color: TEXT_PRIMARY, fontFamily: F }}>{words}</button>
+          style={{ fontFamily: F }}>{words}</button>
         {url ? (
           <a className="dash-focus flow-src" href={url} target="_blank" rel="noopener noreferrer"
             onClick={e => e.stopPropagation()} title={"Open " + url + " in a new tab"}
@@ -459,28 +459,40 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
 
       {shared ? (
         <span title="From the library. Editing this headline changes every place the block appears."
-          style={{ flex: "none", ...label, fontSize: 11, color: TEXT_MUTED }}>·</span>
+          style={{ flex: "none", ...label, fontSize: 11, color: "rgba(255,255,255,.7)" }}>·</span>
       ) : null}
 
       <span className="flow-tools">
+        {onNest ? (
+          <>
+            {depth > 0 ? (
+              <button className="dash-focus" style={{ ...sq, minWidth: "auto", padding: "0 8px" }}
+                title="Pull this row back out" onClick={() => onNest(-1)}>\u2190</button>
+            ) : null}
+            {canNest && depth < 1 ? (
+              <button className="dash-focus" style={{ ...sq, minWidth: "auto", padding: "0 8px" }}
+                title="Tuck this row under the one above" onClick={() => onNest(1)}>\u2192</button>
+            ) : null}
+          </>
+        ) : null}
         {onAssign ? (
           <button className="dash-focus" onClick={onAssign} aria-pressed={assigned}
             title={assigned ? "Assigned. Students see this reading under today's date. Click to unassign."
               : "Click to put this reading on today's readings."}
             style={{ ...sq, minWidth: "auto", padding: "0 9px", fontSize: 12,
-              ...(assigned ? { background: accent, borderColor: accent, color: "#fff" } : { color: TEXT_MUTED }) }}>
+              ...(assigned ? { background: "rgba(255,255,255,.9)", color: "var(--row)" } : {}) }}>
             {assigned ? "Assigned" : "Assign"}
           </button>
         ) : null}
         {live ? (
-          <button className="dash-focus" style={{ ...sq, borderColor: LIVE, color: LIVE }}
+          <button className="dash-focus" style={{ ...sq }}
             title="Take it back down" onClick={onDismiss}>×</button>
         ) : (
-          <button className="dash-focus" style={{ ...sq, borderColor: LIVE, color: LIVE, fontSize: 16, lineHeight: 1 }}
+          <button className="dash-focus" style={{ ...sq, fontSize: 16, lineHeight: 1 }}
             title="Put it on the room screen"
             onClick={() => { if (claim) onCast(claim); else setEditing(true); }}>→</button>
         )}
-        <button className="dash-focus" style={{ ...sq, color: TEXT_MUTED }}
+        <button className="dash-focus" style={{ ...sq }}
           title={claim ? "Edit the headline" : "Write the headline"} onClick={() => setEditing(true)}>Edit</button>
       </span>
     </div>
@@ -1228,24 +1240,9 @@ export const MEDIA_SET = new Set(["reading", "video", "podcast"]);
 // with, then my note, all of them the full width and none of them shouting.
 // The link and the buttons go along the bottom, which is where a card's
 // actions belong and where they stop stealing width from the words.
-function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadline, onNote, onRemove, inFlow, hue = defaultHue }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(headline || "");
-  useEffect(() => { setDraft(headline || ""); }, [headline]);
-  const [why, setWhy] = useState("");
-  const commit = (thenCast) => {
-    const c = oneSentence(draft);
-    // It used to return here and say nothing, so on a short headline the field
-    // looked broken. Say what is wrong instead.
-    if (!c) { setWhy("Write the headline first."); return; }
-    setWhy("");
-    onHeadline(c);
-    setEditing(false);
-    if (thenCast) onCast(c);
-  };
+function ReadingCard({ item, accent, live, onCast, onDismiss, onNote, onRemove, inFlow, hue }) {
   const color = hue ? hue(item.type === "reading" ? "link" : item.type) : (TYPE_COLOR[item.type] || TYPE_COLOR.reading);
   const btn = { ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5 };
-
   return (
     <div className="read-card" draggable
       onDragStart={e => { e.dataTransfer.effectAllowed = "copy";
@@ -1253,24 +1250,6 @@ function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadli
           title: item.title, url: item.url || "" })); }}
       title="Drag this reading into a section of the flow">
       <div className="read-body">
-        {editing ? (
-          <div className="read-field">
-            <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
-              onBlur={() => { if (draft.trim() && draft.trim() !== (headline || "")) commit(false); else setEditing(false); }}
-              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); commit(false); }
-                if (e.key === "Escape") { setDraft(headline || ""); setWhy(""); setEditing(false); } }}
-              placeholder="Say in one sentence what this reading is for"
-              style={{ ...inputStyle, minHeight: 36, fontSize: 13, padding: "4px 40px 4px 8px" }} />
-            <Confirm onClick={() => commit(false)} title="Save this headline" />
-            {why ? <div style={{ fontSize: 12, fontWeight: 600, color: WARN, padding: "3px 2px 0" }}>{why}</div> : null}
-          </div>
-        ) : (
-          <button className="dash-focus read-head" onClick={() => setEditing(true)}
-            title={headline ? "Edit my headline" : "Write a headline for this reading"}
-            style={{ color: headline ? TEXT_PRIMARY : TEXT_MUTED }}>
-            {headline || "+ a headline for this reading"}
-          </button>
-        )}
         <div className="read-title">
           <span className="read-kind" style={{ background: color }}>{typeLabel(item.type)}</span>
           {item.title}
@@ -1281,16 +1260,15 @@ function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadli
       <div className="read-foot">
         {item.url ? (
           <a className="dash-focus read-src" href={item.url} target="_blank" rel="noopener noreferrer"
-            title={"Open " + item.url + " in a new tab"}>{hostOf(item.url)} ↗</a>
+            title={"Open " + item.url + " in a new tab"}>{hostOf(item.url)} \u2197</a>
         ) : <span />}
         {inFlow ? <span className="read-flag" title="This reading also has a row in the flow today">in the flow</span> : null}
         {live ? (
           <button className="dash-focus" style={{ ...btn, borderColor: LIVE, color: LIVE }}
-            title="Take it back down" onClick={onDismiss}>× Take it down</button>
+            title="Take it back down" onClick={onDismiss}>\u00d7 Take it down</button>
         ) : (
           <button className="dash-focus" style={{ ...btn, borderColor: LIVE, color: LIVE }}
-            title="Put it on the room screen"
-            onClick={() => { if (headline) onCast(headline); else setEditing(true); }}>→ Cast</button>
+            title="Put this on the room screen" onClick={() => onCast(item.title)}>\u2192 Cast</button>
         )}
         <button className="dash-focus" style={{ ...btn, color: TEXT_MUTED }} onClick={onRemove}
           title="Take this off today's readings">Unassign</button>
@@ -1389,15 +1367,17 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
           onClick={() => setOpen(v => !v)}>{open ? "Close" : "+ Add"}</button>
       </div>
       {items.map(it => {
-        const blk = it.libId && blockOf ? blockOf(it.libId) : null;
-        const headline = it.claim || (blk ? blk.headline : "");
+        // The article already has a headline, written by whoever wrote it.
+        // Writing a second one over the top was work for no gain; my own note
+        // is where what I think about it belongs.
         return (
-        <ReadingCard key={it.id} item={it} headline={headline} accent={accent} hue={hue}
-          live={liveLabel === (headline || it.title)} onDismiss={dismiss}
-          onHeadline={(c) => onClaim(it.id, c)} onNote={(v) => onNote(it.id, v)}
+        <ReadingCard key={it.id} item={it} accent={accent} hue={hue}
+          live={liveLabel === it.title} onDismiss={dismiss}
+          onNote={(v) => onNote(it.id, v)}
           onRemove={() => onRemove(it.id)} inFlow={inFlow?.has(it.id)}
           onCast={(c) => castNow(it.url
-            ? { ...castFromLink({ label: it.title, url: it.url }), title: c, label: c }
+            ? { ...castFromLink({ label: it.title, url: it.url }), title: c, label: c,
+                openUrl: it.url, linkLabel: hostOf(it.url) }
             : { type: "quote", tag: "Reading", title: c, label: c })} />
         );
       })}
@@ -1448,7 +1428,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, dayNotes, scratchText, onNest, boards, boardProposals, onSaveBoard, liveCast }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -1474,8 +1454,19 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
     onDragMove(from.slot, from.id, toSlot, beforeId);
   };
   const [addingBlock, setAddingBlock] = useState(false);
+  const [noting, setNoting] = useState(false);
   const [blockDraft, setBlockDraft] = useState("");
   const unplannedBlock = <Unplanned items={loose || []} accent={accent} onAdd={(it) => setPlacing(it)} castNow={castNow} />;
+
+  // Enter and Exit, the two boards that bracket the day, written and saved
+  // right here.
+  const boardsBlock = onSaveBoard ? (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
+      <div style={{ ...label, color: hue("board") }}>Enter and Exit</div>
+      <BoardsPanel boards={boards || {}} proposals={boardProposals || {}} onSave={onSaveBoard}
+        castNow={castNow} dismiss={dismiss} liveCast={liveCast} accent={accent} />
+    </div>
+  ) : null;
 
   const seqPicker = (sequences || []).length > 1 ? (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1620,6 +1611,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
           {sectionList.length > 1 ? (
             <button className="dash-focus" style={mini} onClick={() => setMerging(true)}>Merge sections</button>
           ) : null}
+          <button className="dash-focus" style={mini} onClick={() => setNoting(true)}>+ New note</button>
         </>
       )}
     </div>
@@ -1672,6 +1664,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                   onDrop={e => { e.preventDefault(); e.stopPropagation(); setOverRow(null); drop(e, s.slot, it.id); }}
                   onContextMenu={e => { e.preventDefault(); setRowMenu({ x: e.clientX, y: e.clientY, slot: s.slot, id: it.id }); }}
                   style={{ display: "flex", flexDirection: "column", gap: 2,
+                    marginLeft: (it.depth || 0) * 26,
                     borderTop: "2px solid " + (overRow === it.id ? accent : "transparent") }}>
                   <Castable num={numberOf[it.id]} picked={pickedId === it.id} shared={!!it.blockId}
                     done={doneSet.has(it.id)} next={nextId === it.id} onTick={() => onTick(it.id)}
@@ -1685,6 +1678,9 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                     onSaveClaim={(c) => onClaim(s.slot, it.id, c)}
                     assigned={onToggleAssigned ? !!isAssigned(it) : null}
                     onAssign={onToggleAssigned ? () => onToggleAssigned(it) : null}
+                    depth={it.depth || 0}
+                    canNest={i > 0 && (it.depth || 0) <= (normSlot(slotItems[s.slot]).items[i - 1].depth || 0)}
+                    onNest={onNest ? (dir) => onNest(s.slot, it.id, dir) : null}
                     onCast={(c) => (it.feature && onFeature
                       ? onFeature(it.feature)
                       : castNow(blk?.url
@@ -1708,6 +1704,11 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   return (
     <>
       <RowMenu at={rowMenu} onRemove={() => onRemoveItem(rowMenu.slot, rowMenu.id)} onClose={() => setRowMenu(null)} />
+      {noting ? (
+        <NoteSheet sections={sectionList} notes={dayNotes} scratch={scratchText} accent={accent}
+          onAdd={(slot, text) => onAddItem(slot, { text })} onClose={() => setNoting(false)} />
+      ) : null}
+
       {merging ? (
         <MergeMenu sections={sectionList} accent={accent}
           onMerge={(top, bottom) => onMergeSections(top, bottom)} onClose={() => setMerging(false)} />
@@ -1717,6 +1718,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
           onPlace={(date, slot) => onAddScheduled(placing, slot, date)} onClose={() => setPlacing(null)} />
       ) : null}
       {seqPicker}
+      {boardsBlock}
       {slidesBlock}
       {unplannedBlock}
       {featureBlock}
@@ -2393,6 +2395,51 @@ function ColorsSheet({ colors, onPick, onReset, onClose }) {
   );
 }
 
+// Write a note into the day, with the notes I already have in front of me.
+//
+// Writing the next note with no sight of the last four is how the same thought
+// gets written three times. Everything I have written for this day sits under
+// the box, so the new one answers what is already there.
+function NoteSheet({ sections, notes, scratch, accent, onAdd, onClose }) {
+  const [text, setText] = useState("");
+  const [slot, setSlot] = useState(sections[0]?.[0] || "");
+  const commit = () => {
+    const t = text.trim();
+    if (!t || !slot) return;
+    onAdd(slot, t);
+    onClose();
+  };
+  const already = [notes, scratch].filter(x => (x || "").trim());
+  return (
+    <Sheet title="A new note" sub="It goes into the flow as a row" onClose={onClose} width={620}>
+      <textarea autoFocus value={text} onChange={e => setText(e.target.value)}
+        onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit(); }}
+        placeholder="What I want to say"
+        style={{ ...inputStyle, minHeight: 90, fontSize: 15, lineHeight: 1.5, resize: "vertical" }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span style={label}>Into</span>
+        <select value={slot} onChange={e => setSlot(e.target.value)}
+          style={{ ...inputStyle, minHeight: HIT, fontSize: 14, width: "auto", padding: "4px 8px" }}>
+          {sections.map(([k, name]) => <option key={k} value={k}>{name}</option>)}
+        </select>
+        <button style={{ ...solid(accent), marginLeft: "auto" }} onClick={commit}>Add the note</button>
+      </div>
+
+      {already.length ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
+          <span style={{ ...label, color: accent }}>What I already wrote for this day</span>
+          {already.map((t, i) => (
+            <div key={i} style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.5, color: TEXT_SECONDARY,
+              background: SURFACE_2, borderRadius: 10, padding: "10px 12px" }}>{t}</div>
+          ))}
+        </div>
+      ) : (
+        <Muted style={{ fontSize: 13, paddingTop: 10 }}>Nothing written for this day yet.</Muted>
+      )}
+    </Sheet>
+  );
+}
+
 // A panel lifted out over everything, for the things I do standing up.
 //
 // Taking the roll is one of them: it happens once, at the start, and it wants
@@ -2890,7 +2937,7 @@ function Picker({ title, opts, value, onPick, accent }) {
 // look at a day — so it opens off the day itself, by clicking the session up in
 // the band, which is the thing it is a to-do list ABOUT.
 const MATERIAL = ["ideas", "readings", "scratch", "assignments"];
-const LIVE_RAIL = ["questions", "poll", "boards"];
+const LIVE_RAIL = ["questions", "poll"];
 // Starting widths. Flow takes whatever is left, so it is the one column that
 // never needs a number. Both ends are draggable and the drag is remembered.
 const COL = { material: 300, live: 400 };
@@ -3484,6 +3531,22 @@ export default function Dashboard({ config }) {
     [list[i], list[j]] = [list[j], list[i]];
     return { ...d, blocks: list };
   });
+  // Push a row under the one above it, or pull it back out. Only a row with
+  // something above it can be pushed in, so an outline cannot start indented.
+  const nestItem = (slot, itemId, dir) => writeDay(d => {
+    const slots = { ...(d.slots || {}) };
+    const bucket = normSlot(slots[slot]);
+    const at = bucket.items.findIndex(x => x.id === itemId);
+    if (at < 0) return d;
+    const cur = bucket.items[at].depth || 0;
+    const above = at > 0 ? (bucket.items[at - 1].depth || 0) : -1;
+    const next = Math.max(0, Math.min(dir > 0 ? cur + 1 : cur - 1, above + 1, 1));
+    if (next === cur) return d;
+    bucket.items = bucket.items.map((x, i) => i === at ? { ...x, depth: next } : x);
+    slots[slot] = bucket;
+    return { ...d, slots };
+  }, "nesting a row");
+
   const setSlotTitle = (slot, title) => writeDay(d => {
     const slots = { ...(d.slots || {}) };
     slots[slot] = { ...normSlot(slots[slot]), title };
@@ -3690,6 +3753,8 @@ export default function Dashboard({ config }) {
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
       isAssigned={(it) => !!assignedIdFor(it)} onToggleAssigned={toggleAssigned} hue={hueOf}
+      dayNotes={plan?.notes} scratchText={(data.scratch || {})[day]} onNest={nestItem}
+      boards={plan?.boards || {}} boardProposals={proposals} onSaveBoard={saveBoard} liveCast={live?.cast}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
       onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMergeSections={mergeSections} onSelect={setPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
       doneSet={doneSet} onTick={tickItem} />,

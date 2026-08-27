@@ -375,11 +375,17 @@ function ReadScreen({ url, claim, kind }) {
   }
 
   if (!state.ok) {
+    // The page could not be read, which is exactly when the link matters most.
     return (
       <div style={{ ...wrap, justifyContent: "center", gap: "2.4vh" }}>
         {kind ? <div style={{ ...eyebrow, color: "#e11d48" }}>{kind}</div> : null}
         <div style={{ fontSize: "clamp(30px,4.6vw,70px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.1, maxWidth: "20ch" }}>{claim}</div>
         <div style={{ color: DIM, fontSize: "clamp(14px,1.5vw,20px)" }}>{state.reason}</div>
+        <a href={url} target="_blank" rel="noopener noreferrer"
+          style={{ alignSelf: "flex-start", fontSize: "clamp(14px,1.5vw,22px)", fontWeight: 600, color: "#e11d48",
+            textDecoration: "none", border: "2px solid #e11d48", borderRadius: 999, padding: "0.6vh clamp(14px,1.6vw,24px)" }}>
+          Open the page \u2197
+        </a>
       </div>
     );
   }
@@ -400,14 +406,23 @@ function ReadScreen({ url, claim, kind }) {
           ))}
         </div>
       </div>
-      {claim ? (
-        <div style={{ borderTop: "1px solid " + LINE, paddingTop: "1.4vh", fontSize: "clamp(15px,1.7vw,26px)", fontWeight: 600, color: INK }}>
-          {claim}
-        </div>
-      ) : null}
+      <div style={{ borderTop: "1px solid " + LINE, paddingTop: "1.4vh", display: "flex",
+        alignItems: "baseline", gap: "clamp(14px,2vw,32px)", flexWrap: "wrap" }}>
+        {claim ? (
+          <div style={{ flex: 1, minWidth: 0, fontSize: "clamp(15px,1.7vw,26px)", fontWeight: 600, color: INK }}>{claim}</div>
+        ) : <span style={{ flex: 1 }} />}
+        <a href={url} target="_blank" rel="noopener noreferrer" className="room-link"
+          style={{ flex: "none", fontSize: "clamp(13px,1.35vw,20px)", fontWeight: 600, color: "#e11d48",
+            textDecoration: "none", border: "2px solid #e11d48", borderRadius: 999,
+            padding: "0.5vh clamp(12px,1.4vw,22px)", whiteSpace: "nowrap" }}>
+          Open {hostOf(url)} \u2197
+        </a>
+      </div>
     </div>
   );
 }
+
+const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return "the page"; } };
 
 function AskBlock({ base, compact }) {
   const px = compact ? 96 : 132;
