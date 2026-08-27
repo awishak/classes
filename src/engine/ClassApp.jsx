@@ -158,7 +158,7 @@ export function onScreenNow(config, live, poll) {
   if (c.type === "board") {
     return { kind: c.boardLabel || "Discussion",
       title: c.idea || c.title || "A discussion is open",
-      cta: "Add to the discussion", href: ask };
+      cta: "Add to the discussion", href: config.path + "/board" };
   }
   if (c.type === "headlines") {
     return { kind: "Headlines", title: "Bring a headline to the room", cta: "Post a headline", href: ask };

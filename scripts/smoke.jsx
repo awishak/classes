@@ -18,6 +18,7 @@ import Dashboard, {
 } from "../src/engine/Dashboard.jsx";
 import ClassroomView from "../src/engine/ClassroomView.jsx";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
+import BoardPage from "../src/engine/BoardPage.jsx";
 import AskPage from "../src/engine/AskPage.jsx";
 import PlanPage from "../src/PlanPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
@@ -153,6 +154,7 @@ cases.push(["Command bar", <CommandBar targets={[{ key: "k", group: "g", title: 
       <OnScreenNow config={c0} live={cast ? { cast, at: 1 } : null} poll={poll} />, "On the screen now"]);
   }
 }
+cases.push(["Discussion board", <BoardPage config={cfg0} />]);
 cases.push(["The Brief", <PlanPage />]);
 cases.push(["Instructor links", <InstructorLinks />]);
 

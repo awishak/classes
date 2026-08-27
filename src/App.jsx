@@ -7,6 +7,7 @@ import { TriviaPresenter as TriviaPresenter118 } from "./GameSystem.jsx";
 import ClassApp from "./engine/ClassApp.jsx";
 import Dashboard from "./engine/Dashboard.jsx";
 import ClassroomView from "./engine/ClassroomView.jsx";
+import BoardPage from "./engine/BoardPage.jsx";
 import AskPage from "./engine/AskPage.jsx";
 import PlanPage from "./PlanPage.jsx";
 import { ENGINE, currentClasses, archivedClasses } from "./config/registry.js";
@@ -164,7 +165,7 @@ export default function App() {
 
   // Live teaching surfaces: /<class>/dashboard (me), /<class>/today (the room
   // screen), /<class>/ask (where the room screen's QR sends students).
-  const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask)\/?$/);
+  const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask|board)\/?$/);
   if (live && ENGINE[live[1]]) {
     const cfg = ENGINE[live[1]];
     if (live[2] === "dashboard") {
@@ -175,6 +176,7 @@ export default function App() {
       );
     }
     if (live[2] === "today") return <ClassroomView key={cfg.id} config={cfg} />;
+    if (live[2] === "board") return <BoardPage key={cfg.id} config={cfg} />;
     return <AskPage key={cfg.id} config={cfg} />;
   }
 

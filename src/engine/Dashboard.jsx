@@ -26,6 +26,7 @@ import { ENGINE_LIST } from "../config/registry.js";
 import { normSlot, sequenceOptions, sequenceFor } from "./dayplan.js";
 import { SHARED_KEY, TYPES, typeOf, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
 import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors } from "./colors.js";
+import { useBoards } from "./boards.js";
 import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, setScheduleItemClaim, setScheduleItemNote, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
 
@@ -2975,6 +2976,7 @@ export default function Dashboard({ config }) {
   const [shared, updateShared] = useClassData(SHARED_KEY);
   const [live, cast, push] = useLive(config.storageKey);
   const q = useQuestions(config.storageKey);
+  const DB = useBoards(config.storageKey);
   const P = usePoll(config.storageKey);
   const [hornOpen, setHornOpen] = useState(false);
   const [hereOpen, setHereOpen] = useState(false);
@@ -3927,6 +3929,8 @@ export default function Dashboard({ config }) {
               boardHue={hueOfKind("boards")} onBoard={(which) => {
                 const b = boardFor(which);
                 const lbl = which === "pre" ? "Enter" : "Exit";
+                const prompt = (b?.ideas || [])[0] || b?.title || lbl;
+                DB.open(prompt);   // so the first student to arrive finds a thread
                 castNow({ type: "board", tag: lbl, boardLabel: lbl, title: b?.title || lbl,
                   idea: (b?.ideas || [])[0] || "", at: 0, count: (b?.ideas || []).length,
                   showAsk: which === "pre", label: lbl + " \u00b7 1" });
