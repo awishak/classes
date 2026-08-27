@@ -384,10 +384,14 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
       <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, border: "1px solid " + accent, borderRadius: 10, background: "#fff" }}>
         <span style={{ ...label, color: accent }}>Say it in one sentence</span>
         <div style={{ fontSize: 13, color: TEXT_MUTED }}>{title}</div>
-        <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") commit(true); if (e.key === "Escape") setEditing(false); }}
-          placeholder="Rights fees have increased 45% over the last 10 years."
-          style={inputStyle} />
+        <div className="read-field">
+          <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); commit(false); }
+              if (e.key === "Escape") { setWhy(""); setEditing(false); } }}
+            placeholder="Rights fees have increased 45% over the last 10 years."
+            style={{ ...inputStyle, paddingRight: 40 }} />
+          <Confirm onClick={() => commit(false)} title="Save this headline" />
+        </div>
         {why ? <div style={{ fontSize: 13, fontWeight: 600, color: WARN }}>{why}</div> : null}
         <div style={{ display: "flex", gap: 7 }}>
           <button style={solid(accent)} onClick={() => commit(true)}>Save and cast</button>
@@ -1175,7 +1179,11 @@ function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadli
   const btn = { ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5 };
 
   return (
-    <div className="read-card">
+    <div className="read-card" draggable
+      onDragStart={e => { e.dataTransfer.effectAllowed = "copy";
+        e.dataTransfer.setData("text/plain", JSON.stringify({ blockId: item.libId || "", schedItemId: item.id,
+          title: item.title, url: item.url || "" })); }}
+      title="Drag this reading into a section of the flow">
       <div className="read-body">
         {editing ? (
           <div className="read-field">
@@ -1278,7 +1286,8 @@ function ReadingNote({ value, accent, onSave }) {
   );
 }
 
-export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, onNote, inFlow, blocks, onPickBlock, blockOf }) {
+export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, onNote, inFlow, onDropIn, blocks, onPickBlock, blockOf }) {
+  const [over, setOver] = useState(false);
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("reading");
   const [title, setTitle] = useState("");
@@ -1288,8 +1297,24 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
     onAdd({ type: kind, title: title.trim() || hostOf(url) || "Untitled", url: url.trim() });
     setTitle(""); setUrl(""); setOpen(false);
   };
+  // Dropping onto this panel assigns whatever was dragged, so a block can go
+  // from the library to today's readings the same way a row goes into a
+  // section of the flow. One gesture, two places to land.
+  const takeDrop = (e) => {
+    e.preventDefault();
+    setOver(false);
+    if (!onDropIn) return;
+    let from;
+    try { from = JSON.parse(e.dataTransfer.getData("text/plain")); } catch { return; }
+    if (from?.blockId || from?.title) onDropIn(from);
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
+    <div onDragOver={e => { if (onDropIn) { e.preventDefault(); setOver(true); } }}
+      onDragLeave={() => setOver(false)} onDrop={takeDrop}
+      style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10,
+        borderTop: "1px solid " + BORDER, borderRadius: 10,
+        outline: over ? "2px dashed " + accent : "none", outlineOffset: 4 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ ...label, color: accent }}>Today's readings</span>
         <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
@@ -1374,7 +1399,9 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
     let from;
     try { from = JSON.parse(e.dataTransfer.getData("text/plain")); } catch { return; }
     if (!from) return;
-    if (from.blockId && !from.slot) { onPickBlock(toSlot, { id: from.blockId }); return; }
+    // From the Material column, or out of Today's readings. Neither carries a
+    // slot, because neither was ever in the flow.
+    if (!from.slot && (from.blockId || from.title)) { onPickBlock(toSlot, from); return; }
     if (!from.id || (from.slot === toSlot && from.id === beforeId)) return;
     onDragMove(from.slot, from.id, toSlot, beforeId);
   };
@@ -3168,6 +3195,22 @@ export default function Dashboard({ config }) {
     stampScheduled(writeTo(b.id), b.id, day);
   };
 
+  // Something has been dragged onto Today's readings. It came either from the
+  // Material column, carrying a block id, or out of the flow, carrying the row
+  // it belongs to. Either way the job is the same: put it on today's date, and
+  // do nothing if it is already there.
+  const assignDropped = (from) => {
+    const blk = from.blockId ? blockOf(from.blockId) : null;
+    const url = from.url || blk?.url || "";
+    const title = (blk?.title || from.title || "").trim();
+    if (!title) return;
+    const already = readings.some(r => (from.blockId && r.libId === from.blockId)
+      || (url && r.url === url) || r.title === title);
+    if (already) return;
+    addScheduleItem(update, config, day, { type: "reading", title, url, blockId: from.blockId || "" });
+    if (from.blockId) stampScheduled(writeTo(from.blockId), from.blockId, day);
+  };
+
   // Assigned, or not, for a row that is already in the flow.
   //
   // These were one choice before: a thing was either on today's readings or in
@@ -3235,15 +3278,30 @@ export default function Dashboard({ config }) {
   const sections = daySections;
 
   // A block can be placed on any day, not just the one I am looking at.
+  // Put something into a section of the flow.
+  //
+  // Three things arrive here and they are not the same shape. A block picked
+  // out of the library is {id}. A block dragged from the Material column is
+  // {blockId}. A reading dragged out of Today's readings may have no block
+  // behind it at all, only a title and a link, so the row carries the words
+  // and a pointer back to the schedule item.
   const pickBlock = (slot, b, date) => {
     const on = date || day;
+    const blockId = b.id || b.blockId || "";
+    const row = blockId
+      ? { id: genId(), blockId }
+      : { id: genId(), text: (b.title || "").trim(),
+          links: b.url ? [{ id: genId(), label: b.title || hostOf(b.url), url: b.url }] : [],
+          schedItemId: b.schedItemId || "" };
+    if (!blockId && !row.text) return;
+    if (b.schedItemId) row.schedItemId = b.schedItemId;
     writeDayOn(on, d => {
       const slots = { ...(d.slots || {}) };
       const bucket = normSlot(slots[slot]);
-      slots[slot] = { ...bucket, items: [...bucket.items, { id: genId(), blockId: b.id }] };
+      slots[slot] = { ...bucket, items: [...bucket.items, row] };
       return { ...d, slots };
     });
-    stampScheduled(writeTo(b.id), b.id, on);
+    if (blockId) stampScheduled(writeTo(blockId), blockId, on);
   };
   const setBlockHeadline = (id, headline) => writeTo(id)(prev => ({
     ...prev,
@@ -3487,6 +3545,7 @@ export default function Dashboard({ config }) {
       blockOf={blockOf}
       onClaim={(id, c) => setScheduleItemClaim(update, config, id, c)}
       onNote={(id, n) => setScheduleItemNote(update, config, id, n)} inFlow={readingInFlow}
+      onDropIn={assignDropped}
       blocks={blocks2} onPickBlock={pickReading} />,
     ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent}
       sections={sections} days={days} today={day}

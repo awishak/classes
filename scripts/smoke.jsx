@@ -118,10 +118,10 @@ const longRead = [{ id: "r1", type: "reading", url: "https://www.nytimes.com/ath
   title: "Cardinals-Cubs: Michael Busch Nearly Hits for the Cycle", claim: "" }];
 cases.push(["Readings, long title", <Readings items={longRead} accent={cfg0.accent} castNow={noop}
   dismiss={noop} liveLabel={null} onAdd={noop} onRemove={noop} onClaim={noop} blocks={[]}
-  onPickBlock={noop} onNote={noop} inFlow={new Set()} blockOf={() => null} />, "read-src"]);
+  onPickBlock={noop} onNote={noop} inFlow={new Set()} onDropIn={noop} blockOf={() => null} />, "read-src"]);
 cases.push(["Readings, empty", <Readings items={[]} accent={cfg0.accent} castNow={noop}
   dismiss={noop} liveLabel={null} onAdd={noop} onRemove={noop} onClaim={noop} blocks={[]}
-  onPickBlock={noop} onNote={noop} inFlow={new Set()} blockOf={() => null} />]);
+  onPickBlock={noop} onNote={noop} inFlow={new Set()} onDropIn={noop} blockOf={() => null} />]);
 cases.push(["Readings, with my note", <Readings accent={cfg0.accent} castNow={noop} dismiss={noop}
   liveLabel={null} onAdd={noop} onRemove={noop} onClaim={noop} onNote={noop} blocks={[]}
   onPickBlock={noop} blockOf={() => null}
