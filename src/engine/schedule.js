@@ -126,6 +126,17 @@ export const setScheduleItemClaim = (update, config, itemId, claim) => update(pr
     .map(w => ({ ...w, items: (w.items || []).map(i => i.id === itemId ? { ...i, claim } : i) })),
 }));
 
+// What I think of it, which is not what the room sees.
+//
+// The headline is the one sentence that goes up on the screen. A note is for
+// me: why this reading, what it is good for, the thing I meant to say about it
+// and will not remember in eleven weeks. Two different jobs, so two fields.
+export const setScheduleItemNote = (update, config, itemId, note) => update(prev => ({
+  ...prev,
+  schedule: (prev.schedule || config.scheduleWeeks || [])
+    .map(w => ({ ...w, items: (w.items || []).map(i => i.id === itemId ? { ...i, note } : i) })),
+}));
+
 export const removeScheduleItem = (update, config, itemId) => update(prev => ({
   ...prev,
   schedule: (prev.schedule || config.scheduleWeeks || [])

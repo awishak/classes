@@ -25,7 +25,7 @@ import { allDays, currentDay, parseDay } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { normSlot, sequenceOptions, sequenceFor } from "./dayplan.js";
 import { SHARED_KEY, TYPES, typeOf, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
-import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, setScheduleItemClaim, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
+import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, setScheduleItemClaim, setScheduleItemNote, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -124,7 +124,7 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .dash-tab-k{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:#9aa0a6;opacity:.75}
 .dash-tab.on .dash-tab-k{color:inherit;opacity:.45}
 .dash-tab-n{min-width:19px;height:19px;padding:0 5px;border-radius:10px;color:#fff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center}
-.dash-rail-body{flex:1 1 auto;overflow-y:auto;min-height:0;padding-bottom:6px}
+.dash-rail-body{flex:1 1 auto;overflow-y:auto;min-height:0;padding-bottom:6px;--words:var(--fs,15px)}
 .dash-rail-body::-webkit-scrollbar{width:9px}
 .dash-rail-body::-webkit-scrollbar-thumb{background:rgba(23,19,16,.16);border-radius:5px}
 
@@ -177,12 +177,18 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-row.done .flow-words{color:${TEXT_MUTED};text-decoration:line-through;text-decoration-thickness:1px}
 .flow-row.next{box-shadow:inset 0 0 0 1.5px var(--dash-accent)}
 .flow-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px;padding:4px 0}
-.flow-words{display:block;width:100%;font-size:16px;line-height:1.35;letter-spacing:-.006em;
+.flow-words{display:block;width:100%;font-size:var(--words,16px);line-height:1.35;letter-spacing:-.006em;
   overflow-wrap:anywhere;background:none;border:none;padding:0;text-align:left;cursor:pointer}
 .flow-src{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;font-size:12px;
   color:#5b6068;text-decoration:none;border-radius:999px;padding:1px 7px;background:${SURFACE_2};
   max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .flow-src:hover{background:${BORDER_STRONG};color:#171310}
+/* My note under a reading. Quiet until there is one, and indented to the
+   width of the number chip so it hangs off the thing it is about. */
+.dash-note{display:block;width:calc(100% - 35px);margin-left:35px;text-align:left;background:none;
+  border:none;padding:1px 6px 4px;border-radius:8px;cursor:text;font-family:${F};font-size:13px;
+  line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.dash-note:hover{background:${SURFACE_2}}
 .flow-tools{display:flex;gap:4px;flex:none;opacity:0;transition:opacity .12s}
 .flow-row:hover .flow-tools,.flow-row:focus-within .flow-tools,.flow-row.live .flow-tools,
 .flow-row.picked .flow-tools{opacity:1}
@@ -1104,7 +1110,38 @@ const looksLikeUrl = (t) => /^https?:\/\/\S+$/i.test((t || "").trim());
 const MEDIA_KINDS = [["reading", "Reading"], ["video", "Video"], ["podcast", "Podcast"]];
 export const MEDIA_SET = new Set(["reading", "video", "podcast"]);
 
-export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, blocks, onPickBlock, blockOf }) {
+// Why I picked it. Mine, not the room's.
+//
+// The headline is the sentence that goes up on the screen. This is the other
+// thing — what this reading is good for, the point I meant to make with it,
+// the reason it is on this day and not another. In eleven weeks I will not
+// remember, and the headline is the wrong place to put it because the headline
+// is public.
+function ReadingNote({ value, accent, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  useEffect(() => { setDraft(value); }, [value]);
+  const commit = () => { onSave(draft.trim()); setEditing(false); };
+  if (editing) {
+    return (
+      <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
+        onKeyDown={e => { if (e.key === "Escape") { setDraft(value); setEditing(false); }
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit(); }}
+        placeholder="What I like about it, what it is for\u2026"
+        style={{ ...inputStyle, minHeight: 58, fontSize: 13, lineHeight: 1.45, resize: "vertical",
+          marginLeft: 35, width: "calc(100% - 35px)" }} />
+    );
+  }
+  return (
+    <button className="dash-focus dash-note" onClick={() => setEditing(true)}
+      title={value ? "Edit my note" : "Say why this one"}
+      style={{ color: value ? TEXT_SECONDARY : TEXT_MUTED }}>
+      {value || "+ note"}
+    </button>
+  );
+}
+
+export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, onNote, blocks, onPickBlock, blockOf }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("reading");
   const [title, setTitle] = useState("");
@@ -1125,17 +1162,20 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
         const blk = it.libId && blockOf ? blockOf(it.libId) : null;
         const headline = it.claim || (blk ? blk.headline : "");
         return (
-        <div key={it.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <Castable kind={typeLabel(it.type)} kindColor={TYPE_COLOR[it.type] || TYPE_COLOR.reading} title={it.title} url={it.url}
-              claim={headline} accent={accent} live={liveLabel === (headline || it.title)} onDismiss={dismiss}
-              onSaveClaim={(c) => onClaim(it.id, c)}
-              onCast={(c) => castNow(it.url
-                ? { ...castFromLink({ label: it.title, url: it.url }), title: c, label: c }
-                : { type: "quote", tag: "Reading", title: c, label: c })} />
+        <div key={it.id} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <Castable kind={typeLabel(it.type)} kindColor={TYPE_COLOR[it.type] || TYPE_COLOR.reading} title={it.title} url={it.url}
+                claim={headline} accent={accent} live={liveLabel === (headline || it.title)} onDismiss={dismiss}
+                onSaveClaim={(c) => onClaim(it.id, c)}
+                onCast={(c) => castNow(it.url
+                  ? { ...castFromLink({ label: it.title, url: it.url }), title: c, label: c }
+                  : { type: "quote", tag: "Reading", title: c, label: c })} />
+            </div>
+            <button className="dash-focus" onClick={() => onRemove(it.id)} title="Take it off the schedule too"
+              style={{ ...mini, minHeight: HIT, padding: "0 10px", color: TEXT_MUTED }}>✕</button>
           </div>
-          <button className="dash-focus" onClick={() => onRemove(it.id)} title="Take it off the schedule too"
-            style={{ ...mini, minHeight: HIT, padding: "0 10px", color: TEXT_MUTED }}>✕</button>
+          <ReadingNote value={it.note || ""} accent={accent} onSave={(v) => onNote(it.id, v)} />
         </div>
         );
       })}
@@ -3283,6 +3323,7 @@ export default function Dashboard({ config }) {
       liveLabel={liveLabel} onAdd={addReading} onRemove={dropReading}
       blockOf={blockOf}
       onClaim={(id, c) => setScheduleItemClaim(update, config, id, c)}
+      onNote={(id, n) => setScheduleItemNote(update, config, id, n)}
       blocks={blocks2} onPickBlock={pickReading} />,
     ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent}
       sections={sections} days={days} today={day}
