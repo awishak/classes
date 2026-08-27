@@ -1433,7 +1433,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, dayNotes, scratchText, onNest, boards, boardProposals, onSaveBoard, liveCast }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, dayNotes, scratchText, onNest }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -1462,16 +1462,6 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   const [noting, setNoting] = useState(false);
   const [blockDraft, setBlockDraft] = useState("");
   const unplannedBlock = <Unplanned items={loose || []} accent={accent} onAdd={(it) => setPlacing(it)} castNow={castNow} />;
-
-  // Enter and Exit, the two boards that bracket the day, written and saved
-  // right here.
-  const boardsBlock = onSaveBoard ? (
-    <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
-      <div style={{ ...label, color: hue("board") }}>Enter and Exit</div>
-      <BoardsPanel boards={boards || {}} proposals={boardProposals || {}} onSave={onSaveBoard}
-        castNow={castNow} dismiss={dismiss} liveCast={liveCast} accent={accent} />
-    </div>
-  ) : null;
 
   const seqPicker = (sequences || []).length > 1 ? (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1723,7 +1713,6 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
           onPlace={(date, slot) => onAddScheduled(placing, slot, date)} onClose={() => setPlacing(null)} />
       ) : null}
       {seqPicker}
-      {boardsBlock}
       {slidesBlock}
       {unplannedBlock}
       {featureBlock}
@@ -2591,7 +2580,7 @@ function ShortcutSheet({ onClose }) {
 // ─────────────────────────────────────────────────────────────
 // live monitor: a real preview of what the room sees
 // ─────────────────────────────────────────────────────────────
-export function Monitor({ config, live, cast, push, recent, onRecast, info }) {
+export function Monitor({ config, live, cast, push, recent, onRecast, info, onBoard, boardHue }) {
   const [anims, setAnims] = useState(false);
   const liveUrl = live?.cast?.openUrl || live?.cast?.url || "";
   const box = useRef(null);
@@ -2647,6 +2636,20 @@ export function Monitor({ config, live, cast, push, recent, onRecast, info }) {
         <iframe src={config.path + "/today"} title="Classroom view"
           style={{ width: 1280, height: 720, border: "none", transform: "scale(" + scale + ")", transformOrigin: "top left", position: "absolute", top: 0, left: 0 }} />
       </div>
+
+      {onBoard ? (
+        <div style={{ display: "flex", gap: 8 }}>
+          {["pre", "post"].map(which => {
+            const label = which === "pre" ? "Enter" : "Exit";
+            const up = live?.cast?.type === "board" && live.cast.boardLabel === label;
+            return (
+              <button key={which} className="dash-focus"
+                style={{ ...mini, flex: 1, ...(up ? { background: boardHue, borderColor: boardHue, color: "#fff" } : { borderColor: boardHue, color: boardHue }) }}
+                onClick={() => onBoard(which)}>{label} screen</button>
+            );
+          })}
+        </div>
+      ) : null}
 
       <div style={{ display: "flex", gap: 8 }}>
         <button style={{ ...mini, flex: 1, ...(on ? {} : { borderColor: config.accent, color: config.accent }) }}
@@ -2968,6 +2971,7 @@ export default function Dashboard({ config }) {
   const [hereOpen, setHereOpen] = useState(false);
   const [todoOpen, setTodoOpen] = useState(false);
   const [colorsOpen, setColorsOpen] = useState(false);
+  const [boardsOpen, setBoardsOpen] = useState(false);
   // Dragging a reading into the flow: does it stay assigned, or move?
   // Two facts about one reading, so which one the drag changes is mine to say.
   const [dragKeeps, setDragKeeps] = useState(true);
@@ -3706,6 +3710,7 @@ export default function Dashboard({ config }) {
   cmdTargets.push({ key: "c:poll", group: "Screen", title: "Live poll", run: () => castNow({ type: "poll", label: "Live poll" }) });
   cmdTargets.push({ key: "c:idle", group: "Screen", title: "Idle screen", run: () => cast(null) });
   cmdTargets.push({ key: "o:hl", group: "Open", title: "Headlines board", run: () => setHlOpen(true) });
+  cmdTargets.push({ key: "o:be", group: "Open", title: "Write the Enter and Exit boards", run: () => setBoardsOpen(true) });
   cmdTargets.push({ key: "o:col", group: "Open", title: "Colours", run: () => setColorsOpen(true) });
   cmdTargets.push({ key: "o:here", group: "Open", title: "Who is here", run: () => setHereOpen(true) });
   cmdTargets.push({ key: "o:todo", group: "Open", title: "Still to do", run: () => setTodoOpen(true) });
@@ -3759,7 +3764,6 @@ export default function Dashboard({ config }) {
       readings={readings} comingRows={comingRows}
       isAssigned={(it) => !!assignedIdFor(it)} onToggleAssigned={toggleAssigned} hue={hueOf}
       dayNotes={plan?.notes} scratchText={(data.scratch || {})[day]} onNest={nestItem}
-      boards={plan?.boards || {}} boardProposals={proposals} onSaveBoard={saveBoard} liveCast={live?.cast}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
       onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMergeSections={mergeSections} onSelect={setPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
       doneSet={doneSet} onTick={tickItem} />,
@@ -3909,6 +3913,14 @@ export default function Dashboard({ config }) {
           active={room} onPick={pickRoom} accent={config.accent}>
           <div className="dash-room-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <Monitor config={config} live={live} cast={cast} push={push} recent={recent} onRecast={castNow}
+              boardHue={hueOfKind("boards")} onBoard={(which) => {
+                const b = boardFor(which);
+                const lbl = which === "pre" ? "Enter" : "Exit";
+                castNow({ type: "board", tag: lbl, boardLabel: lbl, title: b?.title || lbl,
+                  idea: (b?.ideas || [])[0] || "", at: 0, count: (b?.ideas || []).length,
+                  showAsk: which === "pre", label: lbl + " \u00b7 1" });
+                markEngaged();
+              }}
               info={picked ? (
                 <BlockInfo block={picked.blockId ? blockOf(picked.blockId) : null} item={picked.item}
                   where={picked.where} accent={config.accent} onClose={() => setPicked(null)} />
@@ -3935,6 +3947,12 @@ export default function Dashboard({ config }) {
       {hereOpen ? (
         <Sheet title="Who is here" sub={config.code + " \u00b7 " + day} onClose={() => setHereOpen(false)}>
           <AttendancePanel students={students} marks={marks} onMark={mark} onReset={resetAttendance} />
+        </Sheet>
+      ) : null}
+
+      {boardsOpen ? (
+        <Sheet title="Enter and Exit" sub={config.code + " \u00b7 " + day} onClose={() => setBoardsOpen(false)}>
+          {render.boards()}
         </Sheet>
       ) : null}
 
