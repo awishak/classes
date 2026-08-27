@@ -77,13 +77,25 @@ const CSS = `
   align-items:center;justify-content:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#5b6068}
 .dash-jump-has{flex:none;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#5b6068;
   background:rgba(23,19,16,.06);border-radius:9px;padding:2px 7px}
-.dash-stage{display:grid;grid-template-columns:300px minmax(0,1fr) 400px;gap:16px;padding:14px 18px 26px;align-items:start;max-width:1760px;margin:0 auto}
-.dash-stage[data-rail="shut"]{grid-template-columns:minmax(0,1fr) 400px}
-.dash-stage[data-teach="on"]{grid-template-columns:minmax(0,1fr) 440px}
-.dash-stage[data-wide="1"]{grid-template-columns:minmax(420px,0.9fr) minmax(0,1fr)}
-.dash-stage[data-wide="1"] .dash-room{display:none}
-@media (max-width:1500px){.dash-stage{grid-template-columns:270px minmax(0,1fr) 360px}}
-@media (max-width:1240px){.dash-stage,.dash-stage[data-rail="shut"],.dash-stage[data-teach="on"]{grid-template-columns:minmax(0,1fr)}
+.dash-stage{display:grid;gap:0;padding:14px 18px 26px;align-items:start;max-width:1760px;margin:0 auto}
+/* The seam between two columns. Invisible until the pointer is near it, then a
+   line you can grab. Sixteen pixels wide so it is catchable, drawn as three so
+   it is not a gutter. */
+.dash-seam{align-self:stretch;width:16px;cursor:col-resize;position:relative;touch-action:none;
+  background:none;border:none;padding:0}
+.dash-seam::after{content:"";position:absolute;left:50%;transform:translateX(-50%);top:8px;bottom:8px;width:3px;
+  border-radius:2px;background:rgba(23,19,16,.12);opacity:0;transition:opacity .13s}
+.dash-seam:hover::after,.dash-seam:focus-visible::after,.dash-seam[data-drag="1"]::after{opacity:1}
+.dash-seam[data-drag="1"]::after{background:var(--dash-accent,#171310)}
+body[data-resizing="1"]{cursor:col-resize;user-select:none}
+
+/* Too narrow for three. Live goes full width UNDER the flow rather than away —
+   the room preview is the one thing on this screen that must never be the
+   thing that gets hidden to make room. */
+@media (max-width:1240px){.dash-stage{grid-template-columns:minmax(0,1fr)!important}
+  .dash-seam{display:none}
+  .dash-room{grid-column:1/-1}
+  .dash-room .dash-room-body{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,1fr);gap:12px;align-items:start}
   .dash-rail{position:static!important;max-height:none!important}
   .dash-rail-body{overflow:visible;max-height:none}}
 .dash-rail-tabs{display:flex;gap:4px;background:rgba(23,19,16,.045);border-radius:13px;padding:4px;overflow-x:auto;scrollbar-width:none}
@@ -226,7 +238,22 @@ function Panel({ id, title, right, children, flush }) {
 // particular thing, and four open panels means scrolling to find which. The
 // count rides on the tab so a rail can say "three people are asking" without
 // being opened, which is the whole reason the old collapsed bars existed.
-function Rail({ tabs, active, onPick, accent, children, side, wide, onWide, className }) {
+// The seam between two columns. A button, so the keyboard gets it too: arrows
+// nudge by 24px, which is enough to be worth pressing and small enough to aim.
+function Seam({ which, onDown, label }) {
+  return (
+    <button className="dash-seam" onPointerDown={onDown} data-drag="0"
+      aria-label={"Resize the " + label + " column"} title={"Drag to resize " + label}
+      onKeyDown={e => {
+        if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+        e.preventDefault();
+        const dir = e.key === "ArrowRight" ? 1 : -1;
+        window.dispatchEvent(new CustomEvent("dash:nudge", { detail: { which, dir } }));
+      }} />
+  );
+}
+
+function Rail({ tabs, active, onPick, accent, children, side, className }) {
   return (
     <div className={"dash-rail" + (className ? " " + className : "")}
       style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 10,
@@ -243,11 +270,6 @@ function Rail({ tabs, active, onPick, accent, children, side, wide, onWide, clas
             </button>
           );
         })}
-        {onWide ? (
-          <button className="dash-focus dash-tab" onClick={onWide} aria-pressed={wide}
-            title={wide ? "Narrow it back" : "Widen it — enough room to actually read"}
-            style={{ flex: "none", padding: "0 9px", fontSize: 13 }}>{wide ? "\u00bb" : "\u00ab"}</button>
-        ) : null}
       </div>
       <div className="dash-rail-body">{children}</div>
     </div>
@@ -1995,6 +2017,35 @@ const SHORTCUTS = [
   ["⌘ /", "Show this list"],
 ];
 
+// A panel lifted out over everything, for the things I do standing up.
+//
+// Taking the roll is one of them: it happens once, at the start, and it wants
+// the whole width while it is happening. As one of five tabs on a rail it was
+// both permanently in the way and too narrow to use.
+export function Sheet({ title, sub, onClose, children, width }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [onClose]);
+  return (
+    <div onMouseDown={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(23,19,16,.38)",
+        display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "7vh 20px 20px" }}>
+      <div onMouseDown={e => e.stopPropagation()} role="dialog" aria-label={title}
+        style={{ width: "100%", maxWidth: width || 760, maxHeight: "82vh", background: "#fff", borderRadius: 18,
+          boxShadow: "0 26px 64px -20px rgba(23,19,16,.5)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, padding: "16px 20px 12px", borderBottom: "1px solid " + BORDER }}>
+          <h2 style={{ margin: 0, fontFamily: F, fontSize: 19, fontWeight: 600, letterSpacing: "-.02em", color: TEXT_PRIMARY }}>{title}</h2>
+          {sub ? <span style={{ fontSize: 13.5, color: TEXT_MUTED }}>{sub}</span> : null}
+          <button className="dash-focus" style={{ ...mini, marginLeft: "auto" }} onClick={onClose}>Done · Esc</button>
+        </div>
+        <div style={{ padding: 20, overflowY: "auto", display: "flex", flexDirection: "column", gap: 11 }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
 function ShortcutSheet({ onClose }) {
   return (
     <div onMouseDown={onClose}
@@ -2327,8 +2378,25 @@ function Picker({ title, opts, value, onPick, accent }) {
 // anywhere else. One tab open per rail, because a rail showing four things at
 // once is the grid again. Teaching mode shuts the prep rail, since mid-class I
 // am not gathering material, and the day takes the room it leaves.
-const PREP = ["ideas", "readings", "assignments", "todo"];
-const LIVE_RAIL = ["questions", "poll", "attendance", "scratch", "boards"];
+// Material, Flow, Live.
+//
+// Attendance is not on the Live rail any more. Taking the roll is a thing I do
+// once, standing up, at the start — not a tab I want to be one of five. It is a
+// button at the top that opens over everything, the way Around the Horn does.
+const MATERIAL = ["ideas", "readings", "assignments", "todo"];
+const LIVE_RAIL = ["questions", "poll", "scratch", "boards"];
+// Starting widths. Flow takes whatever is left, so it is the one column that
+// never needs a number. Both ends are draggable and the drag is remembered.
+const COL = { material: 300, live: 400 };
+const COL_MIN = { material: 230, live: 320 };
+const COL_MAX = { material: 760, live: 620 };
+// Flow is always the middle and always takes the remainder, so it is the only
+// column with no number of its own. The seams are 16px each and count as
+// columns of the grid.
+const gridFor = (cols, railOpen, teaching) => {
+  const mat = railOpen && !teaching ? cols.material + "px 16px " : "";
+  return mat + "minmax(0,1fr) 16px " + cols.live + "px";
+};
 
 export default function Dashboard({ config }) {
   const [data, update] = useClassData(config.storageKey);
@@ -2339,6 +2407,7 @@ export default function Dashboard({ config }) {
   const q = useQuestions(config.storageKey);
   const P = usePoll(config.storageKey);
   const [hornOpen, setHornOpen] = useState(false);
+  const [hereOpen, setHereOpen] = useState(false);
   const [hlOpen, setHlOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
@@ -2422,8 +2491,8 @@ export default function Dashboard({ config }) {
       // order the tabs are drawn, so the number IS the tab I can see.
       if (!typing && !mod && /^[1-9]$/.test(e.key)) {
         const n = Number(e.key) - 1;
-        if (n < PREP.length) { e.preventDefault(); pickPrep(PREP[n]); return; }
-        const m = n - PREP.length;
+        if (n < MATERIAL.length) { e.preventDefault(); pickPrep(MATERIAL[n]); return; }
+        const m = n - MATERIAL.length;
         if (m < LIVE_RAIL.length) { e.preventDefault(); pickRoom(LIVE_RAIL[m]); return; }
       }
       if (!typing && !mod && e.key === "\\") { e.preventDefault(); toggleRail(); return; }
@@ -2467,17 +2536,19 @@ export default function Dashboard({ config }) {
   const [prep, setPrep] = useState("ideas");
   const [room, setRoom] = useState("questions");
   const [railOpen, setRailOpen] = useState(true);
-  const [wide, setWide] = useState(false);
+  const [cols, setCols] = useState(COL);
   const [dense, setDense] = useState(false);
   const [focus, setFocus] = useState(false);
+  const focusRef = useRef(false);
+  focusRef.current = focus;
   useEffect(() => {
     try {
       const v = JSON.parse(localStorage.getItem(LKEY) || "null");
       if (!v) return;
-      if (PREP.includes(v.prep)) setPrep(v.prep);
+      if (MATERIAL.includes(v.prep)) setPrep(v.prep);
       if (LIVE_RAIL.includes(v.room)) setRoom(v.room);
       if (typeof v.railOpen === "boolean") setRailOpen(v.railOpen);
-      if (typeof v.wide === "boolean") setWide(v.wide);
+      if (v.cols && typeof v.cols.material === "number" && typeof v.cols.live === "number") setCols(v.cols);
       if (typeof v.dense === "boolean") setDense(v.dense);
     } catch { /* first run */ }
   }, [LKEY]);
@@ -2485,8 +2556,8 @@ export default function Dashboard({ config }) {
   // on the first render, so the pickers read the current values off a ref
   // instead of off that closure. Without it, pressing 1 saved the right rail
   // back to whatever tab it had when the page loaded.
-  const railRef = useRef({ prep: "ideas", room: "questions", railOpen: true, dense: false, wide: false });
-  railRef.current = { prep, room, railOpen, dense, wide };
+  const railRef = useRef({ prep: "ideas", room: "questions", railOpen: true, dense: false, cols: COL });
+  railRef.current = { prep, room, railOpen, dense, cols };
   const saveRails = useCallback((patch) => {
     const v = { ...railRef.current, ...patch };
     railRef.current = v;
@@ -2494,11 +2565,61 @@ export default function Dashboard({ config }) {
     if (v.room !== room) setRoom(v.room);
     if (v.railOpen !== railOpen) setRailOpen(v.railOpen);
     if (v.dense !== dense) setDense(v.dense);
-    if (v.wide !== wide) setWide(v.wide);
+    if (v.cols !== cols) setCols(v.cols);
     try { localStorage.setItem(LKEY, JSON.stringify(v)); } catch { /* private mode */ }
-  }, [LKEY, prep, room, railOpen, dense, wide]);
+  }, [LKEY, prep, room, railOpen, dense, cols]);
   const railSave = useRef(saveRails);
   railSave.current = saveRails;
+  // Dragging a seam. The width is written straight onto the grid while the
+  // pointer moves — going through React state for every pointermove made the
+  // whole stage re-render sixty times a second — and only committed to storage
+  // on release.
+  const stageRef = useRef(null);
+  const dragCol = useRef(null);
+  const startSeam = (which) => (e) => {
+    e.preventDefault();
+    dragCol.current = { which, x: e.clientX, from: railRef.current.cols[which] };
+    document.body.dataset.resizing = "1";
+    e.currentTarget.dataset.drag = "1";
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+  useEffect(() => {
+    const move = (e) => {
+      const d = dragCol.current;
+      if (!d) return;
+      // Material grows to the right, Live grows to the left.
+      const delta = d.which === "material" ? e.clientX - d.x : d.x - e.clientX;
+      const w = Math.max(COL_MIN[d.which], Math.min(COL_MAX[d.which], d.from + delta));
+      d.next = w;
+      const el = stageRef.current;
+      if (el) el.style.gridTemplateColumns = gridFor({ ...railRef.current.cols, [d.which]: w },
+        railRef.current.railOpen, focusRef.current);
+    };
+    const up = () => {
+      const d = dragCol.current;
+      document.body.dataset.resizing = "0";
+      document.querySelectorAll('[data-drag="1"]').forEach(n => { n.dataset.drag = "0"; });
+      dragCol.current = null;
+      if (d && d.next != null) railSave.current({ cols: { ...railRef.current.cols, [d.which]: d.next } });
+    };
+    const nudge = (e) => {
+      const { which, dir } = e.detail;
+      const from = railRef.current.cols[which];
+      const w = Math.max(COL_MIN[which], Math.min(COL_MAX[which], from + dir * 24));
+      railSave.current({ cols: { ...railRef.current.cols, [which]: w } });
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    window.addEventListener("dash:nudge", nudge);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      window.removeEventListener("dash:nudge", nudge);
+    };
+  }, []);
+
   const pickPrep = (id) => railSave.current({ prep: id, railOpen: true });
   const pickRoom = (id) => railSave.current({ room: id });
   const toggleRail = () => railSave.current({ railOpen: !railRef.current.railOpen });
@@ -2969,7 +3090,6 @@ export default function Dashboard({ config }) {
       onPick={pickBlock} onAdd={addIdea} onEdit={editIdea} onRemove={removeIdea} onDuplicate={duplicateIdea} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
       castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,
-    attendance: () => <AttendancePanel students={students} marks={marks} onMark={mark} onReset={resetAttendance} />,
     scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch}
       dayNote={plan?.notes} weekPlan={weekRow?.plan} weekText={weekRow?.text}
       accent={config.accent} day={day}
@@ -2980,6 +3100,7 @@ export default function Dashboard({ config }) {
   };
   const TITLES = { todo: "To-do", poll: "Poll", flow: "Class Flow", boards: "Boards", readings: "Readings", ideas: "Ideas", questions: "Asking", attendance: "Here", scratch: "Notes", assignments: "Assigned" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
+  const outCount = Object.values(marks).filter(v => v === "out").length;
   // How far through the day I am, counted off the flow rather than the clock.
   const flowCount = Object.values(plan?.slots || {}).reduce((n, b) => n + normSlot(b).items.length, 0);
   const doneSet = new Set(plan?.done || []);
@@ -2998,7 +3119,6 @@ export default function Dashboard({ config }) {
     questions: openQ,
     readings: readings.length,
     assignments: assignments.length,
-    attendance: Object.values(marks).filter(v => v === "out").length,
     poll: P.poll?.phase && P.poll.phase !== "idle" ? "\u25cf" : 0,
     ideas: 0, todo: 0, scratch: 0, boards: 0,
   };
@@ -3044,6 +3164,9 @@ export default function Dashboard({ config }) {
         <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setCmdOpen(true)}>Cast · ⌘K</button>
         <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setHlOpen(true)}>Headlines</button>
         <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setHornOpen(true)}>Around the Horn</button>
+        <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setHereOpen(true)}>
+          Here{outCount ? " · " + (students.length - outCount) + "/" + students.length : ""}
+        </button>
         <button className="dash-focus" style={{ ...mini, ...(railOpen ? {} : { background: "rgba(23,19,16,.06)" }) }}
           onClick={toggleRail} aria-pressed={!railOpen} title="Show or hide the prep rail">
           {railOpen ? "Hide prep" : "Show prep"}
@@ -3067,14 +3190,16 @@ export default function Dashboard({ config }) {
           onReset={() => writeDay(d => ({ ...d, done: [] }), "starting the day over")} />
       </div>
 
-      <main className="dash-stage" data-rail={railOpen ? "open" : "shut"} data-teach={focus ? "on" : "off"}
-        data-wide={wide && railOpen && !focus ? "1" : "0"}>
+      <main ref={stageRef} className="dash-stage" data-rail={railOpen ? "open" : "shut"} data-teach={focus ? "on" : "off"}
+        style={{ gridTemplateColumns: gridFor(cols, railOpen, focus) }}>
         {railOpen && !focus ? (
-          <Rail side="Before class" tabs={PREP.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: i + 1 }))}
-            active={prep} onPick={pickPrep} accent={config.accent}
-            wide={wide} onWide={() => railSave.current({ wide: !railRef.current.wide })}>
-            <Panel id={prep} title={null}>{render[prep]()}</Panel>
-          </Rail>
+          <>
+            <Rail side="Material" tabs={MATERIAL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: i + 1 }))}
+              active={prep} onPick={pickPrep} accent={config.accent}>
+              <Panel id={prep} title={null}>{render[prep]()}</Panel>
+            </Rail>
+            <Seam which="material" onDown={startSeam("material")} label="Material" />
+          </>
         ) : null}
 
         <div style={{ minWidth: 0 }}>
@@ -3086,9 +3211,11 @@ export default function Dashboard({ config }) {
           ) : null}
         </div>
 
-        <Rail side="During class" className="dash-room" tabs={LIVE_RAIL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: PREP.length + i + 1 }))}
+        <Seam which="live" onDown={startSeam("live")} label="Live" />
+
+        <Rail side="Live" className="dash-room" tabs={LIVE_RAIL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: MATERIAL.length + i + 1 }))}
           active={room} onPick={pickRoom} accent={config.accent}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="dash-room-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <Monitor config={config} live={live} cast={cast} push={push} recent={recent} onRecast={castNow}
               info={picked ? (
                 <BlockInfo block={picked.blockId ? blockOf(picked.blockId) : null} item={picked.item}
@@ -3111,6 +3238,12 @@ export default function Dashboard({ config }) {
       {hornOpen ? (
         <HornBoard students={students} seats={data.athSeats || {}} log={data.log || []} accent={config.accent}
           onSeats={setSeats} onAward={(n, a) => { awardHorn(n, a); markEngaged(); }} onClose={() => setHornOpen(false)} />
+      ) : null}
+
+      {hereOpen ? (
+        <Sheet title="Who is here" sub={config.code + " \u00b7 " + day} onClose={() => setHereOpen(false)}>
+          <AttendancePanel students={students} marks={marks} onMark={mark} onReset={resetAttendance} />
+        </Sheet>
       ) : null}
 
       <div style={{ maxWidth: 1560, margin: "0 auto", padding: "0 20px 40px", fontSize: 13, color: TEXT_MUTED }}>
