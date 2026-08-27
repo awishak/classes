@@ -179,28 +179,39 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
    measuring each row. A calendar reads well because every entry is the same
    shape and the colour is on one edge. */
 .flow-row{display:flex;align-items:center;gap:11px;min-height:var(--row-h);
-  padding:0 10px 0 7px;border-radius:12px;border-left:3px solid transparent;cursor:grab}
-.flow-row:hover{background:${SURFACE_2}}
-.flow-row.picked{background:${SURFACE_2};border-left-color:var(--dash-accent)}
-.flow-row.live{border-left-color:${LIVE} !important;background:rgba(225,29,72,.07)}
-.flow-row.over{box-shadow:inset 0 2px 0 var(--dash-accent)}
+  padding:2px 10px 2px 8px;border-radius:12px;cursor:grab;color:#fff;
+  background:var(--row,#5b6068);transition:filter .13s,box-shadow .13s}
+.flow-row:hover{filter:brightness(1.1)}
+/* Selected, up on the screen, or next. Each is a ring rather than a fill,
+   because the fill is already saying what the row is. */
+.flow-row.picked{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--dash-accent)}
+.flow-row.live{box-shadow:0 0 0 2px #fff,0 0 0 4px ${LIVE}}
+.flow-row.next{box-shadow:0 0 0 2px #fff,0 0 0 3px var(--dash-accent)}
+.flow-row.over{box-shadow:inset 0 3px 0 #fff}
+.flow-row.done{filter:saturate(.25) brightness(1.28)}
+.flow-row.done:hover{filter:saturate(.4) brightness(1.2)}
 /* The number carries the colour of what the row is, filled rather than as a
    stub on the edge — one chip per kind, the same chip everywhere it appears. */
-.flow-num{flex:none;width:24px;height:24px;border-radius:8px;display:inline-flex;
+/* The number sits on the bar rather than carrying the colour itself. */
+.flow-num{flex:none;width:25px;height:25px;border-radius:8px;display:inline-flex;
   align-items:center;justify-content:center;font-family:${MONO};font-size:12px;font-weight:600;
   color:#fff;font-variant-numeric:tabular-nums;border:none;cursor:pointer;padding:0;
-  transition:transform .12s,opacity .12s}
-.flow-num:hover{transform:scale(1.12)}
-.flow-row.done .flow-num{opacity:.4}
-.flow-row.done .flow-words{color:${TEXT_MUTED};text-decoration:line-through;text-decoration-thickness:1px}
-.flow-row.next{box-shadow:inset 0 0 0 1.5px var(--dash-accent)}
+  background:rgba(255,255,255,.22)!important;transition:transform .12s,background .12s}
+.flow-num:hover{transform:scale(1.12);background:rgba(255,255,255,.36)!important}
+.flow-row.done .flow-num{color:#fff}
+.flow-row.done .flow-words{text-decoration:line-through;text-decoration-thickness:1.5px;opacity:.85}
 .flow-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px;padding:4px 0}
 .flow-words{display:block;width:100%;font-size:var(--words,16px);line-height:1.35;letter-spacing:-.006em;
-  overflow-wrap:anywhere;background:none;border:none;padding:0;text-align:left;cursor:pointer}
+  overflow-wrap:anywhere;background:none;border:none;padding:0;text-align:left;cursor:pointer;color:#fff}
 .flow-src{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;font-size:12px;
-  color:#5b6068;text-decoration:none;border-radius:999px;padding:1px 7px;background:${SURFACE_2};
-  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.flow-src:hover{background:${BORDER_STRONG};color:#171310}
+  color:rgba(255,255,255,.88);text-decoration:none;border-radius:999px;padding:1px 7px;
+  background:rgba(255,255,255,.18);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flow-src:hover{background:rgba(255,255,255,.3);color:#fff}
+/* The tools ride on the bar, so they are white on the colour rather than
+   bordered boxes fighting it. */
+.flow-row .flow-tools button{background:rgba(255,255,255,.18)!important;border-color:transparent!important;
+  color:#fff!important}
+.flow-row .flow-tools button:hover{background:rgba(255,255,255,.34)!important}
 /* My note under a reading. Quiet until there is one, and indented to the
    width of the number chip so it hangs off the thing it is about. */
 .dash-note{display:block;width:100%;text-align:left;background:none;
@@ -431,10 +442,10 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
 
   return (
     <div className={"flow-row" + (live ? " live" : "") + (picked ? " picked" : "")
-      + (done ? " done" : "") + (next ? " next" : "")}>
+      + (done ? " done" : "") + (next ? " next" : "")}
+      style={{ "--row": kindColor || TEXT_MUTED }}>
       <button className="flow-num dash-focus" onClick={onTick}
-        title={done ? "Put this row back on the list" : "Tick this row off"}
-        style={{ background: done ? TEXT_MUTED : (kindColor || TEXT_MUTED) }}>{done ? "✓" : (num || "")}</button>
+        title={done ? "Put this row back on the list" : "Tick this row off"}>{done ? "✓" : (num || "")}</button>
 
       <span className="flow-main">
         <button className="dash-focus flow-words" onClick={onSelect} title="Open the details"
@@ -1037,7 +1048,8 @@ function RowMenu({ at, onRemove, onClose }) {
 // they are blocks like anything else: droppable into a day, editable, and I can
 // add to them. Seeded rather than left empty, because the one empty state that
 // reliably stops people starting is a blank box with a plus on it.
-export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAdd, onEdit, onRemove, onDuplicate, hue = defaultHue }) {
+export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAdd, onEdit, onRemove, onDuplicate,
+  hue = defaultHue, features = [], onRunFeature, featureBlurb, onPlaceFeature }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -1112,8 +1124,41 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
         </div>
       ))}
       {open && !editing ? form : (
-        <button className="dash-focus" style={{ ...mini, alignSelf: "flex-start" }} onClick={() => setOpen(true)}>+ Add an idea</button>
+        <button className="dash-focus" style={{ ...mini, alignSelf: "flex-start" }} onClick={() => setOpen(true)}>+ Add an activity</button>
       )}
+
+      {features.length ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
+          <span style={{ ...label, color: accent }}>The room does these</span>
+          {features.map(name => (
+            <div key={name} style={{ display: "flex", flexDirection: "column", gap: 4,
+              padding: "3px 4px 5px", borderRadius: 10, background: placing === name ? SURFACE_2 : "transparent" }}>
+              <div className="flow-row" style={{ "--row": hue("activity"), cursor: "grab" }} draggable
+                onDragStart={e => { e.dataTransfer.effectAllowed = "copy";
+                  e.dataTransfer.setData("text/plain", JSON.stringify({ feature: name, title: name })); }}
+                title={featureBlurb ? featureBlurb(name) : name}>
+                <button className="dash-focus flow-words" style={{ fontFamily: F }}
+                  onClick={() => setPlacing(placing === name ? null : name)}>{name}</button>
+                <span className="flow-tools" style={{ opacity: 1 }}>
+                  <button className="dash-focus" style={{ ...tool, minHeight: 26 }}
+                    onClick={() => setPlacing(placing === name ? null : name)}>
+                    {placing === name ? "Cancel" : "Add"}
+                  </button>
+                  {onRunFeature ? (
+                    <button className="dash-focus" style={{ ...tool, minHeight: 26 }}
+                      onClick={() => onRunFeature(name)} title="Run it now">Run</button>
+                  ) : null}
+                </span>
+              </div>
+              {placing === name ? (
+                <PlaceMenu slots={sections || []} days={days || []} today={today} accent={accent}
+                  onPlace={(date, slot) => { onPlaceFeature(slot, name, date); setPlacing(null); }}
+                  onClose={() => setPlacing(null)} />
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
       <Muted style={{ fontSize: 12 }}>Kept with me rather than with a class, so every class has these.</Muted>
     </>
   );
@@ -1631,8 +1676,8 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                   <Castable num={numberOf[it.id]} picked={pickedId === it.id} shared={!!it.blockId}
                     done={doneSet.has(it.id)} next={nextId === it.id} onTick={() => onTick(it.id)}
                     onSelect={() => onSelect({ blockId: it.blockId, item: it, where: bucket.title || s.slot, id: it.id })}
-                    kind={blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
-                    kindColor={blk ? hue(blk.type) : hue(seed ? "story" : "note")}
+                    kind={it.feature ? "Activity" : blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
+                    kindColor={it.feature ? hue("activity") : blk ? hue(blk.type) : hue(seed ? "story" : "note")}
                     title={title}
                     url={blk?.url || ""}
                     claim={it.claim || (blk ? blk.headline : "")} accent={accent}
@@ -1640,9 +1685,11 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                     onSaveClaim={(c) => onClaim(s.slot, it.id, c)}
                     assigned={onToggleAssigned ? !!isAssigned(it) : null}
                     onAssign={onToggleAssigned ? () => onToggleAssigned(it) : null}
-                    onCast={(c) => castNow(blk?.url
-                      ? { ...castFromLink({ label: blk.title, url: blk.url }), title: c, label: c }
-                      : { type: "quote", tag: bucket.title || s.slot, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c })} />
+                    onCast={(c) => (it.feature && onFeature
+                      ? onFeature(it.feature)
+                      : castNow(blk?.url
+                        ? { ...castFromLink({ label: blk.title, url: blk.url }), title: c, label: c }
+                        : { type: "quote", tag: bucket.title || s.slot, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c }))} />
                   {(it.links || []).map(l => (
                     <div key={l.id} style={{ paddingLeft: 16 }}>
                       <Castable kind="Link" kindColor={KIND_COLOR.Link} title={l.label} url={l.url}
@@ -3165,12 +3212,12 @@ export default function Dashboard({ config }) {
     slots[slot] = bucket;
     return { ...d, slots };
   });
-  const addFlowItem = (slot, item) => writeDay(d => {
+  const addFlowItem = (slot, item, date) => writeDayOn(date || day, d => {
     const slots = { ...(d.slots || {}) };
     const bucket = normSlot(slots[slot]);
     slots[slot] = { ...bucket, items: [...bucket.items, { id: genId(), ...item }] };
     return { ...d, slots };
-  });
+  }, "adding to the flow");
   const removeFlowItem = (slot, itemId) => writeDay(d => {
     const slots = { ...(d.slots || {}) };
     const bucket = normSlot(slots[slot]);
@@ -3386,6 +3433,9 @@ export default function Dashboard({ config }) {
       : { id: genId(), text: (b.title || "").trim(),
           links: b.url ? [{ id: genId(), label: b.title || hostOf(b.url), url: b.url }] : [],
           schedItemId: b.schedItemId || "" };
+    // Headlines and the games are not blocks, so a dropped one carries the
+    // feature name and the row runs it rather than casting words.
+    if (b.feature) row.feature = b.feature;
     if (!blockId && !row.text) return;
     if (b.schedItemId) row.schedItemId = b.schedItemId;
     writeDayOn(on, d => {
@@ -3653,6 +3703,8 @@ export default function Dashboard({ config }) {
       onDropIn={assignDropped} hue={hueOf}
       blocks={blocks2} onPickBlock={pickReading} />,
     ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent} hue={hueOf}
+      features={Object.keys(FEATURES)} onRunFeature={runFeature} featureBlurb={(n) => FEATURES[n] || ""}
+      onPlaceFeature={(slot, name, date) => addFlowItem(slot, { text: name, feature: name }, date)}
       sections={sections} days={days} today={day}
       onPick={pickBlock} onAdd={addIdea} onEdit={editIdea} onRemove={removeIdea} onDuplicate={duplicateIdea} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
@@ -3665,7 +3717,7 @@ export default function Dashboard({ config }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} path={config.path} />,
   };
-  const TITLES = { todo: "To-do", poll: "Poll", flow: "Class Flow", boards: "Enter/Exit", readings: "Readings", ideas: "Ideas", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Assignments" };
+  const TITLES = { todo: "To-do", poll: "Poll", flow: "Class Flow", boards: "Enter/Exit", readings: "Readings", ideas: "Activities", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   const outCount = Object.values(marks).filter(v => v === "out").length;
   // How far through the day I am, counted off the flow rather than the clock.
