@@ -191,7 +191,7 @@ function ProfileForm({ student, initial, update, accent }) {
             <input type="file" accept="image/*" onChange={onPhoto} style={{ display: "none" }} />
           </label>
         </div>
-        <Muted>If you don't already have one, please choose a picture where your face is clearly visible.</Muted>
+        <Muted>If you need a new photo, please choose one where your face is clearly visible.</Muted>
       </FieldRow>
 
       <FieldRow title="About me">
@@ -335,7 +335,7 @@ function StudentYou({ config, data, update, asStudent, setAsStudent }) {
       </div>
 
       <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <GhostBtn accent={a} onClick={() => status("got_it")}>Got it</GhostBtn>
+        <GhostBtn accent={a} onClick={() => status("got_it")}>Done</GhostBtn>
         <GhostBtn accent={a} onClick={() => status("confused")}>I'm confused</GhostBtn>
         <GhostBtn accent={a} href={config.instructor?.schedulingLink || undefined} onClick={() => status("meeting")}>Make a meeting</GhostBtn>
       </div>
@@ -387,7 +387,7 @@ function InstructorYou({ config, data, update }) {
 
   return (
     <div>
-      <div style={h2}>You — Inbox</div>
+      <div style={h2}>You · Inbox</div>
       <Muted>Every message a student sends lands here. Tap a student to read and reply.</Muted>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
         {sorted.map(s => {

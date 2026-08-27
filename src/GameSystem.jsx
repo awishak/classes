@@ -1200,7 +1200,7 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
               <div style={{ ...sectionLabel }}>Teams ({teams.length})</div>
               <button onClick={addTeam} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12, padding: "5px 12px" }}>+ Add Team</button>
             </div>
-            <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 10 }}>Drag students between Sitting Out and team boxes. Past answers stay credited to whichever team submitted them.</div>
+            <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 10 }}>Drag students between Sitting Out and team boxes. An answer stays credited to the team that submitted the answer.</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
               {/* Sitting Out + Unassigned column */}
               <div onDragOver={onEditDragOver} onDrop={onEditDrop("sitting", null)} style={{ background: "#f9fafb", border: "2px dashed " + BORDER, borderRadius: 10, padding: 10, minHeight: 120 }}>
@@ -1285,7 +1285,7 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
         {inProgressQs.length > 0 && (
           <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 6, flexWrap: "wrap" }}>
-              <div style={{ ...sectionLabel }}>{openQs.length > 0 ? "Open Round" : "Locked — Grade Answers"}</div>
+              <div style={{ ...sectionLabel }}>{openQs.length > 0 ? "Open Round" : "Locked · Grade Answers"}</div>
               <div style={{ display: "flex", gap: 6 }}>
                 {openQs.length > 0 && (
                   <button onClick={lockRound} style={{ ...pill, background: "#d97706", color: "#fff", fontSize: 12 }}>Lock {openQs.length} question{openQs.length !== 1 ? "s" : ""}</button>

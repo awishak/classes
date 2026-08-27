@@ -47,7 +47,7 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
-    id: "aug25b", date: "Tuesday, August 25 \u00b7 later", title: "Drafting comments, and a design system with numbers behind it",
+    id: "aug25b", date: "Tuesday, August 25 \u00b7 later", title: "Drafting comments, and a design system with numbers behind the choices",
     blurb: "Two jobs. The engine learned to draft grading comments, which the three old forked classes have been able to do for months. And the second UX pass stopped being a matter of taste: the palette was measured, and two of the numbers were bad.",
     groups: [
       { name: "Grading", items: [
@@ -64,6 +64,7 @@ const SESSIONS = [
         ["Empty states that hand you the door", "\u201cNo plan for this day yet. Build it in Day Plan\u201d told me what was wrong and made me go find Day Plan. Now that every card has a URL, it is a link."],
       ] },
       { name: "Then, in the same session", items: [
+        ["The build checks the voice now", "Andrew asked whether I had read his voice doc before writing \u201c+ a headline for it.\u201d I had not. That string ends a clause on a bare \u201cit,\u201d which is the rule with the longest corrections log in the doc, and UI copy gets the same pass as body text. Two of his rules are mechanical, so scripts/check-voice.mjs enforces both on every string that reaches a screen: no clause closing on it, this, that, one or them, and no em dashes in words a reader sees. The first version scanned props and JSX text and walked straight past the very string that prompted it, because that string lives in a fallback expression. It reads those too now, and all four shapes are tested by planting the violation and confirming the build fails. Thirty-two lines across the app were rewritten to clear the check, most of them older than this session."],
         ["A reading is a card, and assigned is a toggle", "Through the shared row a reading had to fight a number chip, a source pill and three buttons for one line, so a long title came out four characters wide. It gets its own card: my headline at 13px, the headline it came with at 12px under it, then my note \u2014 all of them the full width. The link and the buttons moved to the bottom, which is where a card\u2019s actions belong and where they stop stealing width from the words. And being assigned is now separate from being in the flow. They were one choice before, so a reading I meant to talk about quietly stopped being one students were told to do. A flow row carries an Assign toggle; a card in Today\u2019s Readings says when it is also in the flow. Two facts about one thing, and I set each."],
         ["One type scale, and a note per reading", "The row title was pinned at 16px while everything around it read from the density scale, so in a 300px rail it was a title two sizes bigger than the panel holding it. It reads from the scale now: full size down the Flow, where I am reading while standing, and rail size in a rail. And every reading takes a note \u2014 what I like about it, what it is for, why it sits on this day. The headline is the sentence that goes up on the screen and is public; the note is mine, and in eleven weeks it is the part I will not remember."],
         ["The flow IS the day plan", "To-do was counting only the slots the SEQUENCE names, so anything in a section I made myself did not exist to it \u2014 which is how it came to tell me the day was empty while the flow in front of me was full. It counts the day plan now, all of it, and the wording that pointed at a separate Day Plan page is gone. There is one day plan and the flow is it."],
@@ -306,7 +307,7 @@ const FORMATS = [
 
 const FALL = [
   { w: 1, dates: "Sep 21 · 23 · 25", topic: "Class introduction · What is the central purpose of pro sports?",
-    from: "Spring wk 1", note: "Gambling and changing American values. First-day goals seed — capture what every student wants out of the class." },
+    from: "Spring wk 1", note: "Gambling and changing American values. First-day goals seed. Capture what every student wants out of the class." },
   { w: 2, dates: "Sep 28 · 30 · Oct 2", topic: "What makes sports worth caring about?",
     from: "Spring wk 2", note: "Textbook ch. 1–2. First Weekly Game." },
   { w: 3, dates: "Oct 5 · 7 · 9", topic: "Athletes as celebrities",
@@ -318,7 +319,7 @@ const FALL = [
     from: "Spring wk 5", note: "What makes football the ultimate TV show, and which sports are ripe for growth?",
     due: "Intersections Proposal · Oct 23 · 5%" },
   { w: 6, dates: "Oct 26 · 28 · 30", topic: "Identity",
-    from: "Spring wk 6", note: "Required plus recommended readings — softball, winter sport, Norway. Guest questions collected in advance." },
+    from: "Spring wk 6", note: "Required plus recommended readings: softball, winter sport, Norway. Guest questions collected in advance." },
   { w: 7, dates: "Nov 2 · 4 · 6", topic: "Sports and politics",
     from: "Spring wk 7", note: "Fishbowl, any reading. Nationalism, the anthem, the military. Team Trivia.",
     due: "Intersections Submission · Nov 6 · 20%" },
@@ -625,7 +626,7 @@ export default function PlanPage() {
             <ul style={{ margin: 0, paddingLeft: 20, color: INK2, fontSize: 14.5, lineHeight: 1.7 }}>
               <li>Confirm the textbook edition. Last spring the 4th and 5th editions had different chapter numbers and it caused problems twice.</li>
               <li>Check Nov 11 against the campus calendar.</li>
-              <li>Fall roster is not loaded — the engine is still carrying the ten-name template list.</li>
+              <li>Fall roster is not loaded. The engine is still carrying the ten-name template list.</li>
               <li>Decide whether the Interview Assignment stays at 5%; it was the smallest grade item and the earliest real signal about who's in the room.</li>
             </ul>
           </div>

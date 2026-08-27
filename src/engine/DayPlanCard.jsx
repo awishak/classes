@@ -239,7 +239,7 @@ export function DayPlanDetail({ config, data, update, initialDate }) {
           ))}
         </div>
         {seq.slots.length === 0 && (plan.blocks || []).length === 0 && (
-          <Muted style={{ marginBottom: 10 }}>Freeform day — add blocks to build the flow.</Muted>
+          <Muted style={{ marginBottom: 10 }}>Freeform day. Add blocks to build the flow.</Muted>
         )}
         <button onClick={addBlock}
           style={{ marginTop: (plan.blocks || []).length ? 12 : 0, minHeight: TAP, padding: "0 16px", borderRadius: 999, border: "1px dashed " + BORDER_STRONG, background: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_SECONDARY, cursor: "pointer" }}>+ Add block</button>

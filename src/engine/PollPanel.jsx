@@ -129,7 +129,7 @@ export default function PollPanel({ poll, start, setPhase, setCorrect, clear, ro
 
       {poll.phase === "done" ? (
         <>
-          <div style={label}>{isFreeForm(poll) ? "What they wrote" : "Second vote, first vote behind it"}</div>
+          <div style={label}>{isFreeForm(poll) ? "What they wrote" : "Second vote, with the first vote behind"}</div>
           {isFreeForm(poll)
             ? <Wrote votes={{ ...poll.r1, ...poll.r2 }} />
             : <Spread votes={poll.r2} compare={poll.r1} options={poll.options} accent={accent} correct={poll.correct} />}
@@ -162,7 +162,7 @@ export default function PollPanel({ poll, start, setPhase, setCorrect, clear, ro
         {poll.phase === "discuss" ? <button style={solid(accent)} onClick={() => setPhase("vote2")}>Ask again</button> : null}
         {poll.phase === "vote2" ? <button style={solid(accent)} onClick={() => setPhase("done")}>Show what moved</button> : null}
         {poll.phase === "done" ? <button style={solid(accent)} onClick={clear}>New question</button> : null}
-        {poll.phase !== "done" ? <button style={mini} onClick={clear}>Drop it</button> : null}
+        {poll.phase !== "done" ? <button style={mini} onClick={clear}>Drop the poll</button> : null}
       </div>
     </>
   );

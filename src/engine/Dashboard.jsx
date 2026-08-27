@@ -398,11 +398,11 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
     <div className={"flow-row" + (live ? " live" : "") + (picked ? " picked" : "")
       + (done ? " done" : "") + (next ? " next" : "")}>
       <button className="flow-num dash-focus" onClick={onTick}
-        title={done ? "Not done after all" : "Done — tick it off"}
+        title={done ? "Put this row back on the list" : "Tick this row off"}
         style={{ background: done ? TEXT_MUTED : (kindColor || TEXT_MUTED) }}>{done ? "✓" : (num || "")}</button>
 
       <span className="flow-main">
-        <button className="dash-focus flow-words" onClick={onSelect} title="What is this?"
+        <button className="dash-focus flow-words" onClick={onSelect} title="Open the details"
           style={{ color: TEXT_PRIMARY, fontFamily: F }}>{words}</button>
         {url ? (
           <a className="dash-focus flow-src" href={url} target="_blank" rel="noopener noreferrer"
@@ -412,15 +412,15 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
       </span>
 
       {shared ? (
-        <span title="From the library — editing its headline changes it everywhere it is used"
+        <span title="From the library. Editing this headline changes every place the block appears."
           style={{ flex: "none", ...label, fontSize: 11, color: TEXT_MUTED }}>·</span>
       ) : null}
 
       <span className="flow-tools">
         {onAssign ? (
           <button className="dash-focus" onClick={onAssign} aria-pressed={assigned}
-            title={assigned ? "Assigned \u2014 students see it under today's date. Click to unassign."
-              : "Not assigned. Click to put it on today's readings."}
+            title={assigned ? "Assigned. Students see this reading under today's date. Click to unassign."
+              : "Click to put this reading on today's readings."}
             style={{ ...sq, minWidth: "auto", padding: "0 9px", fontSize: 12,
               ...(assigned ? { background: accent, borderColor: accent, color: "#fff" } : { color: TEXT_MUTED }) }}>
             {assigned ? "Assigned" : "Assign"}
@@ -581,7 +581,7 @@ export function NowPanel({ config, engagedAt, onEngaged, plan, seq, onSlot }) {
             {inSlot == null ? "In " + current + "." : inSlot + " min in " + current + (fair != null ? " · " + fair + " min is an even share" : "")}
           </Muted>
         ) : (
-          <Muted style={{ fontSize: 12 }}>Tap a slot when you get to it. The clock starts there.</Muted>
+          <Muted style={{ fontSize: 12 }}>Tap a slot on the way in. The clock starts there.</Muted>
         )}
         </>
       ) : null}
@@ -711,7 +711,7 @@ function LibraryPick({ blocks, accent, onPick }) {
               draggable
               onDragStart={e => { e.dataTransfer.effectAllowed = "copy";
                 e.dataTransfer.setData("text/plain", JSON.stringify({ blockId: b.id })); }}
-              title="Click to add it, or drag it straight into the flow"
+              title="Click to add this block, or drag it straight into the flow"
               style={{ display: "flex", alignItems: "flex-start", gap: 8, textAlign: "left", cursor: "grab",
                 background: SURFACE_2, border: "1px solid transparent", borderRadius: 9, padding: "8px 10px",
                 minHeight: HIT, fontFamily: F, fontSize: 13.5, color: TEXT_PRIMARY }}>
@@ -725,7 +725,7 @@ function LibraryPick({ blocks, accent, onPick }) {
             </button>
           );
         })}
-        {!hits.length ? <Muted style={{ fontSize: 13 }}>Nothing in the repository matches that.</Muted> : null}
+        {!hits.length ? <Muted style={{ fontSize: 13 }}>Nothing in the repository matches your search.</Muted> : null}
       </div>
       <Muted style={{ fontSize: 12 }}>
         {blocks.length} blocks. Adding one links to it rather than copying it, so editing it later changes it here too.
@@ -787,7 +787,7 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
             onKeyDown={e => { if (e.key === "Enter") quick(); if (e.key === "Escape") onClose(); }}
             placeholder="Type a line, or paste a link" style={inputStyle} />
           <Muted style={{ fontSize: 12 }}>
-            {looksLikeUrl(text) ? "That is a link, so it goes in as one." : "Paste a web address and it goes in as a link."}
+            {looksLikeUrl(text) ? "A web address goes in as a link." : "Paste a web address and the row becomes a link."}
           </Muted>
         </>
       ) : null}
@@ -818,7 +818,7 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
                 {sd.concept ? <span style={{ ...label, fontSize: 10, flex: "none" }}>{sd.concept}</span> : null}
               </button>
             ))}
-            {!hits.length ? <Muted style={{ fontSize: 13 }}>Nothing in the library matches that.</Muted> : null}
+            {!hits.length ? <Muted style={{ fontSize: 13 }}>Nothing in the library matches your search.</Muted> : null}
           </div>
         </>
       ) : null}
@@ -963,7 +963,7 @@ function SlotName({ slot, title, accent, onSave, onDelete, count, tally }) {
             {onDelete ? (
               <button className="dash-focus" onClick={() => { setOpen(false); onDelete(); }}
                 style={{ ...mini, minHeight: HIT, borderColor: "transparent", color: LIVE, justifyContent: "flex-start", padding: "0 12px" }}>
-                Delete{count ? " · takes " + count + " with it" : ""}
+                Delete{count ? " \u00b7 takes " + count + " rows too" : ""}
               </button>
             ) : null}
           </div>
@@ -1028,7 +1028,7 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
       <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="How it runs"
         style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical" }} />
       <div style={{ display: "flex", gap: 7 }}>
-        <button style={solid(accent)} onClick={commit}>{editing ? "Save" : "Keep it"}</button>
+        <button style={solid(accent)} onClick={commit}>{editing ? "Save" : "Keep the idea"}</button>
         <button style={mini} onClick={cancel}>Cancel</button>
       </div>
     </div>
@@ -1046,7 +1046,7 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
             draggable
             onDragStart={e => { e.dataTransfer.effectAllowed = "copy";
               e.dataTransfer.setData("text/plain", JSON.stringify({ blockId: b.id })); }}
-            title="Drag it into a section of the flow, or click to open it"
+            title="Drag this idea into a section of the flow, or click to read how the idea runs"
             style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", minHeight: 38, padding: "4px 7px",
               background: "none", border: "none", borderRadius: 9, cursor: "pointer", fontFamily: F, textAlign: "left" }}>
             <span style={{ flex: "none", width: 7, height: 7, borderRadius: "50%", background: typeOf("activity").color }} />
@@ -1076,7 +1076,7 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
       {open && !editing ? form : (
         <button className="dash-focus" style={{ ...mini, alignSelf: "flex-start" }} onClick={() => setOpen(true)}>+ Add an idea</button>
       )}
-      <Muted style={{ fontSize: 12 }}>Kept with me rather than with a class, so they are in all of them.</Muted>
+      <Muted style={{ fontSize: 12 }}>Kept with me rather than with a class, so every class has these.</Muted>
     </>
   );
 }
@@ -1119,10 +1119,10 @@ function Suggestions({ blocks, accent, onPick, onAdd }) {
           <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="What is it called" style={inputStyle} />
           <input value={body} onChange={e => setBody(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") keep(); }} placeholder="How it runs" style={inputStyle} />
-          <button style={solid(accent)} onClick={keep}>Keep it</button>
+          <button style={solid(accent)} onClick={keep}>Keep the block</button>
         </div>
       ) : null}
-      <Muted style={{ fontSize: 12 }}>Kept with me rather than with a class, so they are in all of them. Clicking one puts it in the day.</Muted>
+      <Muted style={{ fontSize: 12 }}>Kept with me rather than with a class, so every class has these. Clicking a seed puts the seed in the day.</Muted>
     </div>
   );
 }
@@ -1169,9 +1169,9 @@ function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadli
             style={{ ...inputStyle, minHeight: 32, fontSize: 13, padding: "4px 8px" }} />
         ) : (
           <button className="dash-focus read-head" onClick={() => setEditing(true)}
-            title={headline ? "Edit my headline" : "Write a headline for it"}
+            title={headline ? "Edit my headline" : "Write a headline for this reading"}
             style={{ color: headline ? TEXT_PRIMARY : TEXT_MUTED }}>
-            {headline || "+ a headline for it"}
+            {headline || "+ a headline for this reading"}
           </button>
         )}
         <div className="read-title">
@@ -1186,7 +1186,7 @@ function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadli
           <a className="dash-focus read-src" href={item.url} target="_blank" rel="noopener noreferrer"
             title={"Open " + item.url + " in a new tab"}>{hostOf(item.url)} ↗</a>
         ) : <span />}
-        {inFlow ? <span className="read-flag" title="It is also a row in the flow today">in the flow</span> : null}
+        {inFlow ? <span className="read-flag" title="This reading also has a row in the flow today">in the flow</span> : null}
         {live ? (
           <button className="dash-focus" style={{ ...btn, borderColor: LIVE, color: LIVE }}
             title="Take it back down" onClick={onDismiss}>× Take it down</button>
@@ -1196,7 +1196,7 @@ function ReadingCard({ item, headline, accent, live, onCast, onDismiss, onHeadli
             onClick={() => { if (headline) onCast(headline); else setEditing(true); }}>→ Cast</button>
         )}
         <button className="dash-focus" style={{ ...btn, color: TEXT_MUTED }} onClick={onRemove}
-          title="Unassign it — take it off today's readings">Unassign</button>
+          title="Take this off today's readings">Unassign</button>
       </div>
     </div>
   );
@@ -1219,14 +1219,14 @@ function ReadingNote({ value, accent, onSave }) {
       <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
         onKeyDown={e => { if (e.key === "Escape") { setDraft(value); setEditing(false); }
           if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit(); }}
-        placeholder="What I like about it, what it is for\u2026"
+        placeholder="What I like about this reading, what I use it for\u2026"
         style={{ ...inputStyle, minHeight: 58, fontSize: 13, lineHeight: 1.45, resize: "vertical",
           marginLeft: 35, width: "calc(100% - 35px)" }} />
     );
   }
   return (
     <button className="dash-focus dash-note" onClick={() => setEditing(true)}
-      title={value ? "Edit my note" : "Say why this one"}
+      title={value ? "Edit my note" : "Say why this reading is here"}
       style={{ color: value ? TEXT_SECONDARY : TEXT_MUTED }}>
       {value || "+ note"}
     </button>
@@ -1284,8 +1284,8 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
           </div>
           <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" style={inputStyle} />
           <input value={title} onChange={e => setTitle(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") commit(); }} placeholder="What to call it" style={inputStyle} />
-          <button style={solid(accent)} onClick={commit}>Assign it</button>
+            onKeyDown={e => { if (e.key === "Enter") commit(); }} placeholder="What to call this reading" style={inputStyle} />
+          <button style={solid(accent)} onClick={commit}>Assign this reading</button>
         </div>
       ) : null}
     </div>
@@ -1684,7 +1684,7 @@ function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveL
           <select value={kind} onChange={e => setKind(e.target.value)} style={{ ...inputStyle, fontSize: 15 }}>
             {STOCK_KINDS.map(k => <option key={k}>{k}</option>)}
           </select>
-          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="What is it" style={inputStyle} />
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="What is this block" style={inputStyle} />
           <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://… (optional)" style={inputStyle} />
           <div style={{ display: "flex", gap: 7 }}>
             <button onClick={add} style={solid(accent)}>Add</button>
@@ -1806,7 +1806,7 @@ export function AttendancePanel({ students, marks, onMark, onReset }) {
           );
         })}
       </div>
-      {!shown.length ? <Muted style={{ fontSize: 13 }}>{only ? "Nobody is marked. The whole room is here." : "No name matches that."}</Muted> : null}
+      {!shown.length ? <Muted style={{ fontSize: 13 }}>{only ? "Nobody is marked. The whole room is here." : "No name matches your search."}</Muted> : null}
       <Muted style={{ fontSize: 12 }}>Everyone starts here. Tap to cycle here → late → excused → out.</Muted>
     </>
   );
@@ -2059,13 +2059,13 @@ export function TodoPanel({ plan, seq, features, boards, assignments, shelves, s
   const today = [
     { ok: !!plan && flowItems.length > 0, good: flowItems.length + " things in the flow", bad: "Nothing in the flow yet" },
     { ok: noClaim === 0, good: "Every item has its headline written", bad: noClaim + " item" + (noClaim === 1 ? "" : "s") + " will stop and ask for a headline mid-class" },
-    { ok: !!boards.pre, good: "The Enter board is written", bad: "The Enter board is still the proposed one" },
-    { ok: !!boards.post, good: "The Exit board is written", bad: "The Exit board is still the proposed one" },
+    { ok: !!boards.pre, good: "The Enter board is written", bad: "You have not written the Enter board yet" },
+    { ok: !!boards.post, good: "The Exit board is written", bad: "You have not written the Exit board yet" },
     { ok: stocked > 0, good: stocked + " stocked and ready to reach for", bad: "Nothing stocked for today or this week" },
     { ok: !!plan?.slides, good: "Slides are linked", bad: "No slides linked for this day" },
     { ok: (loose || []).length === 0,
-      good: "Everything on the schedule is in the flow",
-      bad: (loose || []).length + " thing" + ((loose || []).length === 1 ? "" : "s") + " on the schedule are not in the flow" },
+      good: "Everything on the schedule has a row in the flow",
+      bad: (loose || []).length + " thing" + ((loose || []).length === 1 ? "" : "s") + " on the schedule still need a row in the flow" },
   ];
 
   // ─── the assignment on the horizon ───
@@ -2163,7 +2163,7 @@ export function CommandBar({ targets, accent, onClose }) {
       <div onMouseDown={e => e.stopPropagation()} role="dialog" aria-label="Cast something"
         style={{ width: "100%", maxWidth: 620, background: "#fff", borderRadius: 16, border: "1px solid " + BORDER_STRONG, boxShadow: "0 24px 60px -20px rgba(23,19,16,.5)", overflow: "hidden" }}>
         <input autoFocus value={q} onChange={e => setQ(e.target.value)} onKeyDown={onKey}
-          placeholder="Cast anything — type a few letters"
+          placeholder="Cast anything. Type a few letters."
           style={{ width: "100%", border: "none", borderBottom: "1px solid " + BORDER, outline: "none", padding: "16px 18px", fontFamily: F, fontSize: 17, color: TEXT_PRIMARY }} />
         <div style={{ maxHeight: "46vh", overflowY: "auto" }}>
           {hits.map((t, n) => (
@@ -2177,7 +2177,7 @@ export function CommandBar({ targets, accent, onClose }) {
               {n === i ? <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, color: accent, letterSpacing: ".08em" }}>ENTER</span> : null}
             </button>
           ))}
-          {!hits.length ? <div style={{ padding: "18px 18px 22px", fontSize: 15, color: TEXT_MUTED }}>Nothing matches that.</div> : null}
+          {!hits.length ? <div style={{ padding: "18px 18px 22px", fontSize: 15, color: TEXT_MUTED }}>Nothing matches your search.</div> : null}
         </div>
       </div>
     </div>
@@ -2193,9 +2193,9 @@ const SHORTCUTS = [
   ["← →", "Step the board that is up, one idea at a time"],
   ["K J", "Walk down and up the run of show"],
   ["Enter", "Put the row I am on up on the room screen"],
-  ["⌘ E", "Teaching only — shut the prep rail and give the day the room"],
+  ["⌘ E", "Teaching only. Shuts the Materials column and gives the day the room."],
   ["1-9", "Jump straight to a tab, left rail then right"],
-  ["\\", "Show or hide the prep rail"],
+  ["\\", "Show or hide the Materials column"],
   ["⌘ /", "Show this list"],
 ];
 
@@ -2278,7 +2278,7 @@ function ViewMenu({ railOpen, onRail, dense, onDense, onReset, onKeys }) {
           style={{ ...mini, minHeight: 36 }}>View<span style={{ fontSize: 9, opacity: .55, marginLeft: 5 }}>▾</span></button>
       )}>
       <button className="dash-focus" onClick={onRail} style={menuRow}>
-        {railOpen ? "Hide the Material column" : "Show the Material column"}
+        {railOpen ? "Hide the Materials column" : "Show the Materials column"}
         <kbd style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: TEXT_MUTED }}>\\</kbd>
       </button>
       <button className="dash-focus" onClick={onDense} style={menuRow}>{dense ? "Comfortable rows" : "Compact rows"}</button>
@@ -3530,7 +3530,7 @@ export default function Dashboard({ config }) {
           onKeys={() => setKeysOpen(true)} />
 
         <button className="dash-focus" style={{ ...mini, minHeight: 36, ...(focus ? { background: config.accent, borderColor: config.accent, color: "#fff" } : {}) }}
-          onClick={() => setFocus(v => !v)} aria-pressed={focus} title="Teaching only · ⌘E">Teaching</button>
+          onClick={() => setFocus(v => !v)} aria-pressed={focus} title="Teaching only. Shuts the Materials column and gives the day the room. ⌘E">Teaching</button>
       </header>
 
 

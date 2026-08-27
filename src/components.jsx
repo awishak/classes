@@ -280,7 +280,7 @@ export function BioView({
               </>
             ) : (
               <div style={{ textAlign: "center", padding: "20px 0", color: TEXT_MUTED, fontSize: 13 }}>
-                {canEdit ? "No bio yet. Click edit to add one." : "This person hasn't filled out their bio yet."}
+                {canEdit ? "No bio yet. Click edit to write one line." : "This person hasn't filled out their bio yet."}
               </div>
             )}
             {canEdit && <button onClick={() => { setForm({ ...bio }); setEditing(true); }} style={{ ...pillInactive, width: "100%", marginTop: 12, padding: "10px 0" }}>Edit Bio</button>}
@@ -1445,7 +1445,7 @@ export function ToDoView({ data, setData, userName, isAdmin, storageKey, saveDat
         )}
 
         {todos.length === 0 && reboundTodos.length === 0 && !adding && (
-          <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No to-dos yet. Click "+ Add To-Do" to create one.</div>
+          <div style={{ ...crd, padding: 20, textAlign: "center", color: TEXT_MUTED, fontSize: 14 }}>No to-dos yet. Click "+ Add To-Do" to write the first.</div>
         )}
       </div>
     </div>

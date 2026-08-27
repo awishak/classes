@@ -7,9 +7,10 @@
     "dev": "vite",
     "build": "npm run check && npm run smoke && vite build",
     "preview": "vite preview",
-    "check": "node scripts/check-refs.mjs && node scripts/check-handlers.mjs && node scripts/check-contrast.mjs",
+    "check": "node scripts/check-refs.mjs && node scripts/check-handlers.mjs && node scripts/check-contrast.mjs && node scripts/check-voice.mjs",
     "smoke": "esbuild scripts/smoke.jsx --bundle --platform=node --format=esm --packages=external --jsx=automatic --outfile=node_modules/.smoke.mjs --log-level=error --loader:.js=jsx && node node_modules/.smoke.mjs",
-    "contrast": "node scripts/check-contrast.mjs"
+    "contrast": "node scripts/check-contrast.mjs",
+    "voice": "node scripts/check-voice.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

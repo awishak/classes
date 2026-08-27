@@ -287,7 +287,7 @@ function HeadlinesScreen({ config, data }) {
         justifyContent: "center", textAlign: "center", gap: "2.4vh", padding: "clamp(28px,5vw,80px)", color: INK, fontFamily: F }}>
         <div style={{ ...eyebrow, color: "#e11d48" }}>Right now</div>
         <div style={{ fontSize: "clamp(38px,6.4vw,104px)", fontWeight: 700, letterSpacing: "-.04em", lineHeight: 1 }}>Headlines</div>
-        <div style={{ color: DIM, fontSize: "clamp(15px,1.9vw,28px)" }}>Bring me one. Scan to post it.</div>
+        <div style={{ color: DIM, fontSize: "clamp(15px,1.9vw,28px)" }}>Bring me a question. Scan the code to post yours.</div>
         <AskBlock base={origin + config.path} compact />
       </div>
     );
@@ -328,7 +328,7 @@ function HeadlinesScreen({ config, data }) {
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
       padding: "clamp(28px,5vw,80px)", color: INK, fontFamily: F, justifyContent: "center", gap: "2.4vh" }}>
       <div style={{ ...eyebrow, color: "#e11d48" }}>
-        {phase === "surface" ? "What is this, on its face?" : phase === "concept" ? "Now — what is really going on?" : "Both reads"}
+        {phase === "surface" ? "What does the headline say, on its face?" : phase === "concept" ? "Now, what is going on underneath?" : "Both reads"}
       </div>
       <div style={{ fontSize: "clamp(24px,3.4vw,52px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.2, maxWidth: "24ch" }}>
         {item.text}

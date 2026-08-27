@@ -235,7 +235,7 @@ function ScheduleEditor({ config, data, update }) {
 
   return (
     <div>
-      <div style={{ ...h2, marginBottom: 6 }}>Schedule — Planning</div>
+      <div style={{ ...h2, marginBottom: 6 }}>Schedule · Planning</div>
       <Muted style={{ marginBottom: 16 }}>On a week, tap + Add item to search your library (or type /readings, /activities, /assignments). Reorder items by dragging.</Muted>
 
       <WeekNav weeks={weeks} accent={a} />
@@ -432,7 +432,7 @@ function WeekEditor({ w, wIndex, accent, config, library, data, update, setWeekF
       <div onDragOver={e => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
         onDrop={e => { setOver(false); dropOnWeek(w.id, null, e); }}
         style={{ marginTop: 12, borderRadius: 12, border: "1.5px dashed " + (over ? accent : BORDER), padding: 10, background: over ? accent + "0c" : "transparent" }}>
-        {(w.items || []).length === 0 && <Muted style={{ textAlign: "center", padding: "8px 0" }}>No items yet — use + Add item</Muted>}
+        {(w.items || []).length === 0 && <Muted style={{ textAlign: "center", padding: "8px 0" }}>No items yet. Use + Add item.</Muted>}
         {(w.items || []).map(it => {
           const m = TYPE_META[it.type] || {};
           return (

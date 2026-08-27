@@ -57,8 +57,8 @@ function HeadlinesBlock({ config, HL, session, item, phase, who, which, picks })
         <input value={text} onChange={e => setText(e.target.value)} placeholder="The headline" style={input} />
         <input value={url} onChange={e => setUrl(e.target.value)} placeholder="Link (optional)" style={input} />
         <button onClick={() => { if (!text.trim()) return; HL.submit(session.id, text, url, who); setText(""); setUrl(""); setPosted(true); setTimeout(() => setPosted(false), 3000); }}
-          disabled={!text.trim()} style={bigBtn(text.trim() ? config.accent : BORDER_STRONG)}>Post it</button>
-        {posted ? <div style={{ color: config.accent, fontWeight: 600 }}>Posted. Add another if you have one.</div> : null}
+          disabled={!text.trim()} style={bigBtn(text.trim() ? config.accent : BORDER_STRONG)}>Post the question</button>
+        {posted ? <div style={{ color: config.accent, fontWeight: 600 }}>Posted. Add another question any time.</div> : null}
       </div>
     );
   }
@@ -75,7 +75,7 @@ function HeadlinesBlock({ config, HL, session, item, phase, who, which, picks })
 
   return (
     <div style={box}>
-      <div style={eyebrow}>{phase === "surface" ? "What is this, on its face?" : "What is really going on?"}</div>
+      <div style={eyebrow}>{phase === "surface" ? "What does the headline say, on its face?" : "What is really going on?"}</div>
       <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.35 }}>{item.text}</div>
       {item.url ? <a href={item.url} target="_blank" rel="noreferrer" style={{ color: config.accent, fontSize: 15 }}>Read it ↗</a> : null}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -108,7 +108,7 @@ function FreeAnswer({ who, vote, accent, mine }) {
         placeholder="In your own words" rows={3}
         style={{ ...input, minHeight: 96, lineHeight: 1.5, resize: "vertical" }} />
       <button onClick={send} disabled={!text.trim()}
-        style={{ ...bigBtn(text.trim() ? accent : "#d1d5db") }}>{sent ? "Sent \u2014 send again to change it" : "Send"}</button>
+        style={{ ...bigBtn(text.trim() ? accent : "#d1d5db") }}>{sent ? "Sent. Send again to change your answer." : "Send"}</button>
     </div>
   );
 }
@@ -362,8 +362,8 @@ export default function AskPage({ config }) {
             )}
             <div style={{ fontSize: 13, color: TEXT_MUTED }}>
               {isFreeForm(poll)
-                ? "Your name is on this one, so I can follow it up."
-                : myVote != null ? "Locked in. Change it any time before the floor closes." : "Pick one. Nobody sees who picked what."}
+                ? "Your name is on this question, so I can follow up with you."
+                : myVote != null ? "Locked in. Change it any time before the floor closes." : "Pick an answer. Nobody sees who picked what."}
             </div>
           </div>
         ) : null}
