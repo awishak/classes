@@ -128,7 +128,7 @@ export function DayPlanDetail({ config, data, update, initialDate }) {
   const days = allDays(weeks);
   const [date, setDate] = useState(initialDate || defaultDay(weeks) || (days[0] && days[0].date) || "");
 
-  if (!days.length) return <div><div style={{ ...h2, marginBottom: 12 }}>Day Plan</div><Muted>No class days scheduled yet. Add dates in the Schedule.</Muted></div>;
+  if (!days.length) return <div><div style={{ ...h2, marginBottom: 12 }}>Day Plan</div><Muted>No class days scheduled.</Muted></div>;
 
   const day = days.find(d => d.date === date) || days[0];
   const topic = day.topic;
@@ -175,7 +175,7 @@ export function DayPlanDetail({ config, data, update, initialDate }) {
   return (
     <div>
       <div style={{ ...h2, marginBottom: 4 }}>Day Plan</div>
-      <Muted style={{ marginBottom: 14 }}>Build the day. Stack seeds and text in each section, edit anything for the day, attach links.</Muted>
+      <Muted style={{ marginBottom: 14 }}></Muted>
 
       {/* day + sequence pickers */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
@@ -239,7 +239,7 @@ export function DayPlanDetail({ config, data, update, initialDate }) {
           ))}
         </div>
         {seq.slots.length === 0 && (plan.blocks || []).length === 0 && (
-          <Muted style={{ marginBottom: 10 }}>Freeform day. Add blocks to build the flow.</Muted>
+          <Muted style={{ marginBottom: 10 }}>Freeform day.</Muted>
         )}
         <button onClick={addBlock}
           style={{ marginTop: (plan.blocks || []).length ? 12 : 0, minHeight: TAP, padding: "0 16px", borderRadius: 999, border: "1px dashed " + BORDER_STRONG, background: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_SECONDARY, cursor: "pointer" }}>+ Add block</button>
@@ -512,7 +512,7 @@ function AddToSlot({ slot, accent, seeds, topic, usedIds, startOpen, onAddSeed, 
       <div style={{ marginTop: 10 }}>
         <input value={seedTitle} onChange={e => setSeedTitle(e.target.value)} autoFocus placeholder="Seed title"
           style={{ ...inputStyle, fontWeight: 600 }} />
-        <textarea value={seedBody} onChange={e => setSeedBody(e.target.value)} placeholder="The hook itself, in a sentence or two..."
+        <textarea value={seedBody} onChange={e => setSeedBody(e.target.value)} placeholder="The hook"
           style={{ ...inputStyle, minHeight: 80, lineHeight: 1.5, resize: "vertical", marginTop: 8 }} />
         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
           <button onClick={() => { if (seedTitle.trim()) { onCreateSeed({ title: seedTitle, body: seedBody, concept: "" }); close(); } }} style={primaryBtn(accent)}>Create & add</button>
@@ -607,10 +607,10 @@ function SlidesNotes({ plan, accent, onSave }) {
     return (
       <div style={{ marginTop: 14, padding: 14, borderRadius: 12, border: "1px solid " + BORDER_STRONG, background: "#fff" }}>
         <div style={label}>Slides</div>
-        <input value={slides} onChange={e => setSlides(e.target.value)} placeholder="Slides link (https://...)"
+        <input value={slides} onChange={e => setSlides(e.target.value)} placeholder="Slides link"
           style={{ ...inputStyle, marginTop: 6 }} />
         <div style={{ ...label, marginTop: 14 }}>Day notes</div>
-        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Scratch notes for the whole day..."
+        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes"
           style={{ ...inputStyle, minHeight: 80, lineHeight: 1.5, resize: "vertical", marginTop: 6 }} />
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
           <button onClick={() => { onSave(slides.trim(), notes); setEditing(false); }} style={{ ...primaryBtn(accent), minHeight: TAP }}>Save</button>
@@ -678,12 +678,12 @@ function BlockRow({ block, accent, onChange, onRemove, onDropBefore }) {
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <span draggable onDragStart={e => setDrag(e, block.id)} title="Drag to reorder"
           style={{ cursor: "grab", color: TEXT_MUTED, fontSize: 17, padding: "0 4px", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
-        <input value={title} onChange={e => setTitle(e.target.value)} onBlur={flush} placeholder="Block title (e.g. Logistics, Hand back quizzes)"
+        <input value={title} onChange={e => setTitle(e.target.value)} onBlur={flush} placeholder="Block title"
           style={{ ...inputStyle, fontWeight: 600, minHeight: 40, padding: "8px 10px" }} />
         <button onClick={onRemove} title="Remove block"
           style={{ minHeight: 40, minWidth: 40, borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_MUTED, cursor: "pointer", fontSize: 16, flexShrink: 0 }}>✕</button>
       </div>
-      <textarea value={body} onChange={e => setBody(e.target.value)} onBlur={flush} placeholder="What happens here..."
+      <textarea value={body} onChange={e => setBody(e.target.value)} onBlur={flush} placeholder="What happens"
         style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical", marginTop: 8 }} />
       <LinksEditor links={block.links} accent={accent} onChange={(links) => onChange({ links })} />
     </div>

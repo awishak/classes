@@ -164,7 +164,7 @@ function CommunitySummary({ config, live, poll }) {
 
 function CommunityDetail({ config, live, poll }) {
   const items = liveNow(config, live, poll);
-  if (!items.length) return <Muted>In-class games, discussion boards, and live activities show up here while they are running.</Muted>;
+  if (!items.length) return <Muted>Games, boards and live activities appear here while they run.</Muted>;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {items.map(it => (

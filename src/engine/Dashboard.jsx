@@ -397,7 +397,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // Nothing goes up as a label. Before a thing can be cast it needs a headline —
 // one full sentence saying what it shows. "Media rights" is a topic; "Rights
 // fees have risen 45% in ten years" is what the room can actually read.
-function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest }) {
+function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(claim || "");
   useEffect(() => { setDraft(claim || ""); }, [claim]);
@@ -499,6 +499,10 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
         )}
         <button className="dash-focus" style={{ ...sq }}
           title={claim ? "Edit the headline" : "Write the headline"} onClick={() => setEditing(true)}>Edit</button>
+        {onRemove ? (
+          <button className="dash-focus" style={{ ...sq, minWidth: "auto", padding: "0 9px", fontSize: 12 }}
+            title="Take this row off the day" onClick={onRemove}>Remove</button>
+        ) : null}
       </span>
     </div>
   );
@@ -1223,7 +1227,7 @@ function Suggestions({ blocks, accent, onPick, onAdd }) {
           <button style={solid(accent)} onClick={keep}>Keep the block</button>
         </div>
       ) : null}
-      <Muted style={{ fontSize: 12 }}>Kept with me rather than with a class, so every class has these. Clicking a seed puts the seed in the day.</Muted>
+      <Muted style={{ fontSize: 12 }}>Kept with me rather than with a class, so every class has these.</Muted>
     </div>
   );
 }
@@ -1677,6 +1681,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                     depth={it.depth || 0}
                     canNest={i > 0 && (it.depth || 0) <= (normSlot(slotItems[s.slot]).items[i - 1].depth || 0)}
                     onNest={onNest ? (dir) => onNest(s.slot, it.id, dir) : null}
+                    onRemove={() => onRemoveItem(s.slot, it.id)}
                     onCast={(c) => (it.feature && onFeature
                       ? onFeature(it.feature)
                       : castNow(blk?.url

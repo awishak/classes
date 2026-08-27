@@ -388,7 +388,7 @@ function InstructorYou({ config, data, update }) {
   return (
     <div>
       <div style={h2}>You · Inbox</div>
-      <Muted>Every message a student sends lands here. Tap a student to read and reply.</Muted>
+      <Muted>Every message a student sends lands here.</Muted>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
         {sorted.map(s => {
           const m = lastMsg(data, s.name);

@@ -236,7 +236,6 @@ function ScheduleEditor({ config, data, update }) {
   return (
     <div>
       <div style={{ ...h2, marginBottom: 6 }}>Schedule · Planning</div>
-      <Muted style={{ marginBottom: 16 }}>On a week, tap + Add item to search your library (or type /readings, /activities, /assignments). Reorder items by dragging.</Muted>
 
       <WeekNav weeks={weeks} accent={a} />
 
@@ -275,7 +274,7 @@ function LibraryPicker({ library, accent, onPick, onCreate, onClose }) {
     <div style={{ marginTop: 10, border: "1px solid " + BORDER_STRONG, borderRadius: 12, background: "#fff", overflow: "hidden" }}>
       <div style={{ display: "flex", gap: 8, padding: 10, borderBottom: "1px solid " + BORDER }}>
         <input autoFocus value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Search library, or type /readings, /activities, /assignments"
+          placeholder="Search the library"
           style={{ ...inputStyle, minHeight: 40 }} />
         <button onClick={onClose} style={{ minHeight: 40, padding: "0 14px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_MUTED, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Done</button>
       </div>
@@ -406,7 +405,7 @@ function WeekEditor({ w, wIndex, accent, config, library, data, update, setWeekF
           <input value={datesDraft} onChange={e => setDatesDraft(e.target.value)} placeholder="Sep 21, Sep 23, Sep 25"
             style={{ ...inputStyle, fontSize: 15, minHeight: 38, padding: "6px 10px", marginTop: 6, color: TEXT_SECONDARY }} />
           <div style={{ ...label, marginTop: 12 }}>Notes for students</div>
-          <textarea value={textDraft} onChange={e => setTextDraft(e.target.value)} placeholder="They read this on the schedule."
+          <textarea value={textDraft} onChange={e => setTextDraft(e.target.value)} placeholder="What students see"
             style={{ ...inputStyle, minHeight: 80, lineHeight: 1.5, resize: "vertical", marginTop: 6 }} />
           <button onClick={saveHead}
             style={{ marginTop: 10, minHeight: TAP, padding: "0 18px", borderRadius: 10, border: "none", background: accent, color: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Save</button>
@@ -432,7 +431,7 @@ function WeekEditor({ w, wIndex, accent, config, library, data, update, setWeekF
       <div onDragOver={e => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
         onDrop={e => { setOver(false); dropOnWeek(w.id, null, e); }}
         style={{ marginTop: 12, borderRadius: 12, border: "1.5px dashed " + (over ? accent : BORDER), padding: 10, background: over ? accent + "0c" : "transparent" }}>
-        {(w.items || []).length === 0 && <Muted style={{ textAlign: "center", padding: "8px 0" }}>No items yet. Use + Add item.</Muted>}
+        {(w.items || []).length === 0 && <Muted style={{ textAlign: "center", padding: "8px 0" }}>No items yet.</Muted>}
         {(w.items || []).map(it => {
           const m = TYPE_META[it.type] || {};
           return (
@@ -474,9 +473,9 @@ function WeekEditor({ w, wIndex, accent, config, library, data, update, setWeekF
 
         {editPlan ? (
           <div style={{ marginTop: 10 }}>
-            <textarea value={planDraft} onChange={e => setPlanDraft(e.target.value)} autoFocus placeholder="What this week / day looks like..."
+            <textarea value={planDraft} onChange={e => setPlanDraft(e.target.value)} autoFocus placeholder="The week"
               style={{ ...inputStyle, minHeight: 96, lineHeight: 1.5, resize: "vertical" }} />
-            <input value={slidesDraft} onChange={e => setSlidesDraft(e.target.value)} placeholder="Slides link (https://...)"
+            <input value={slidesDraft} onChange={e => setSlidesDraft(e.target.value)} placeholder="Slides link"
               style={{ ...inputStyle, marginTop: 8 }} />
             <button onClick={savePlan}
               style={{ marginTop: 10, minHeight: TAP, padding: "0 18px", borderRadius: 10, border: "none", background: accent, color: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Save</button>
@@ -500,7 +499,7 @@ function WeekEditor({ w, wIndex, accent, config, library, data, update, setWeekF
                 config={config} data={data} update={update} />
             ))}
           </div>
-        ) : <Muted style={{ marginTop: 6 }}>No matching seeds yet. Your seed library lives in teaching/seeds.md.</Muted>}
+        ) : <Muted style={{ marginTop: 6 }}>No matching seeds.</Muted>}
       </div>
     </div>
   );

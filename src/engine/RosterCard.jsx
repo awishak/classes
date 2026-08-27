@@ -82,7 +82,7 @@ function InstructorRoster({ config, data }) {
   return (
     <div>
       <div style={{ ...h2, marginBottom: 6 }}>Roster</div>
-      <Muted style={{ marginBottom: 12 }}>Private to you. Tap a student for their full page.</Muted>
+      <Muted style={{ marginBottom: 12 }}>Private to you.</Muted>
       <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search students"
         style={{ width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: TAP, marginBottom: 12 }} />
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

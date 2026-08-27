@@ -317,8 +317,8 @@ function StudentAssignmentRow({ asg, accent, config, data, update, name }) {
         ) : adding || !hasSubmitted ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={label}>Submit a link</div>
-            <input value={link} onChange={e => setLink(e.target.value)} placeholder="Paste a link (Google Doc, video, ...)" style={inputStyle} />
-            <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Add a note with your link (optional)" style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical" }} />
+            <input value={link} onChange={e => setLink(e.target.value)} placeholder="A link" style={inputStyle} />
+            <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="A note (optional)" style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical" }} />
             <Muted style={{ color: "#b45309" }}>Please ensure that {email} has access to your link.</Muted>
             {asg.closeAt && <Muted>Submissions close {fmtClose(asg.closeAt)}.</Muted>}
             <div><Btn accent={accent} onClick={submit} disabled={!link.trim() && !note.trim()}>Submit link</Btn></div>
@@ -331,7 +331,7 @@ function StudentAssignmentRow({ asg, accent, config, data, update, name }) {
       {/* post a comment */}
       <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid " + BORDER }}>
         <div style={label}>Add a comment</div>
-        <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Ask a question or leave a note for your instructor" style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical", marginTop: 8 }} />
+        <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="A question, or a note" style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical", marginTop: 8 }} />
         <div style={{ marginTop: 8 }}><Btn accent={accent} ghost onClick={postComment} disabled={!comment.trim()}>Post comment</Btn></div>
       </div>
     </div>
@@ -382,7 +382,6 @@ function GradeHub({ config, data, assignments, onStart }) {
         <div><span style={{ fontSize: 22, fontWeight: 700, color: a }}>{all.length}</span> <span style={{ color: TEXT_SECONDARY }}>to grade</span></div>
         {all.length > 0 && <Btn accent={a} onClick={() => onStart(all)}>Grade all</Btn>}
       </div>
-      <Muted style={{ marginBottom: 8 }}>Tap an assignment to open its full roster (review or regrade anyone), or Grade (N) for just the ungraded.</Muted>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {assignments.map(asg => {
           const total = Object.keys(data?.assignmentLog?.[asg.id] || {}).filter(n => logOf(data, asg.id, n).some(e => e.type === "submission")).length;
@@ -536,7 +535,7 @@ function GradeForm({ config, asg, name, log, draftHtml, onDraft, onSubmit, onSki
           </Btn>
           <input value={steer} onChange={e => setSteer(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && !drafting) draft(); }}
-            placeholder="Anything you want it to say (optional)"
+            placeholder="A note (optional)"
             style={{ ...inputStyle, flex: 1, minWidth: 200, minHeight: 40 }} />
         </div>
         <Muted style={{ fontSize: 13, marginTop: 8 }}>
@@ -644,7 +643,7 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
       <input value={instructionsUrl} onChange={e => setInstructionsUrl(e.target.value)} placeholder="https://..." style={{ ...inputStyle, marginTop: 6 }} />
       <div style={fieldL}>Submissions close (optional)</div>
       <input type="datetime-local" value={closeAt} onChange={e => setCloseAt(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} />
-      <Muted style={{ marginTop: 6 }}>After this time students can't submit (they can still comment).</Muted>
+      <Muted style={{ marginTop: 6 }}>Comments stay open after the deadline.</Muted>
 
       <div style={{ ...fieldL }}>Rubric {rubric.length > 0 && "(" + rubricTotal + "/100)"}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
@@ -657,7 +656,7 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
         ))}
       </div>
       <button onClick={() => setRubric(r => [...r, { id: genId(), name: "", points: 0 }])} style={{ marginTop: 8, background: "none", border: "none", color: a, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer", padding: 0 }}>+ Add criterion</button>
-      <Muted style={{ marginTop: 6 }}>Leave the rubric empty to grade free-form (just a score out of 100).</Muted>
+      <Muted style={{ marginTop: 6 }}>No rubric means a score out of 100.</Muted>
 
       <div style={{ display: "flex", gap: 8, marginTop: 18, alignItems: "center" }}>
         <Btn accent={a} onClick={save} disabled={!title.trim()}>Save</Btn>
