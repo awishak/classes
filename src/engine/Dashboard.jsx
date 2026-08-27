@@ -105,8 +105,12 @@ const CSS = `
 /* The heading recedes. Colour on this screen means live or means press me, and
    a heading is neither. */
 .flow-sec{display:flex;flex-direction:column;gap:1px;padding-top:20px}
-.flow-sec-head{display:flex;align-items:center;gap:8px;padding:0 6px 5px;
+.flow-sec-head{display:flex;align-items:center;gap:8px;padding:2px 4px 6px;
   position:sticky;top:0;z-index:2;background:#fff}
+.flow-pill{display:inline-flex;align-items:center;gap:7px;background:${SURFACE_2};
+  border-radius:999px;padding:5px 12px;border:none;cursor:pointer;font-family:${F};
+  font-size:12.5px;font-weight:600;color:${TEXT_SECONDARY};letter-spacing:0}
+.flow-pill:hover{background:${BORDER_STRONG}}
 .flow-sec .flow-add{opacity:0;transition:opacity .12s}
 .flow-sec:hover .flow-add,.flow-sec:focus-within .flow-add{opacity:1}
 @media (hover:none){.flow-tools,.flow-sec .flow-add{opacity:1}}
@@ -243,8 +247,8 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
   // The number says where I am in the day, and its colour says what the thing
   // is. One mark doing both jobs, where there used to be a bordered badge and
   // a dot.
-  const sq = { ...mini, flex: "none", minHeight: 30, minWidth: 30, padding: "0 7px",
-    display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12.5 };
+  const sq = { ...mini, flex: "none", minHeight: 34, minWidth: 34, padding: "0 9px",
+    display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13 };
   const words = claim || title;
 
   return (
@@ -759,10 +763,8 @@ function SlotName({ slot, title, accent, onSave, onDelete, count, tally }) {
 
   return (
     <span style={{ position: "relative" }}>
-      <button className="dash-focus" onClick={() => setOpen(v => !v)} title="Rename or delete this section"
-        aria-haspopup="menu" aria-expanded={open}
-        style={{ ...label, color: TEXT_SECONDARY, background: "none", border: "none", padding: 0, cursor: "pointer",
-          textAlign: "left", display: "inline-flex", alignItems: "center", gap: 5 }}>
+      <button onClick={() => setOpen(v => !v)} title="Rename or delete this section"
+        aria-haspopup="menu" aria-expanded={open} className="dash-focus flow-pill">
         {title || slot}
         {tally ? <span style={{ fontFamily: MONO, fontSize: 11.5, color: TEXT_MUTED, fontWeight: 500 }}>{tally}</span> : null}
         <span style={{ fontSize: 9, opacity: .65 }}>▾</span>
@@ -1202,7 +1204,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
             style={{ background: overSlot === s.slot ? accent + "0c" : "transparent", borderRadius: 8 }}>
             <div className="flow-sec-head">
               {overrideTitle
-                ? <span style={{ ...label, color: TEXT_MUTED }}>{overrideTitle}</span>
+                ? <span className="flow-pill" style={{ cursor: "default" }}>{overrideTitle}</span>
                 : <SlotName slot={s.slot} title={bucket.title} accent={accent} count={items.length}
                     tally={items.length ? items.filter(x => doneSet.has(x.id)).length + "/" + items.length : ""}
                     onSave={(t) => onSetSlotTitle(s.slot, t)}
@@ -2067,16 +2069,58 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
   );
 }
 
-function Snapshot({ config, day, topic, live, done, total, since, cold, left, onTakeDown, onReset }) {
+function WeekStrip({ days, day, onPick, counts, accent, today }) {
+  const i = days.findIndex(d => d.date === day);
+  const week = days.filter(d => d.weekId === days[i]?.weekId);
+  const wi = days.findIndex(d => d.weekId === week[0]?.weekId);
+  const prev = days[wi - 1], nextWeek = days.find((d, n) => n > wi && d.weekId !== week[0]?.weekId);
+
+  const chip = (d) => {
+    const on = d.date === day;
+    const n = counts[d.date] || 0;
+    const isToday = d.date === today;
+    return (
+      <button key={d.date} className="dash-focus" onClick={() => onPick(d.date)}
+        style={{ flex: "1 1 0", minWidth: 82, minHeight: 62, borderRadius: 14, cursor: "pointer",
+          fontFamily: F, textAlign: "left", padding: "8px 11px", display: "flex", flexDirection: "column", gap: 3,
+          border: "1.5px solid " + (on ? accent : "transparent"),
+          background: on ? accent + "10" : SURFACE_2, color: TEXT_PRIMARY }}>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: on ? accent : TEXT_MUTED }}>
+          {d.date}{isToday ? " · today" : ""}
+        </span>
+        <span style={{ fontSize: 12, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {n ? n + (n === 1 ? " thing" : " things") : "nothing yet"}
+        </span>
+      </button>
+    );
+  };
+
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+      <button className="dash-focus" disabled={!prev} onClick={() => prev && onPick(prev.date)}
+        style={{ ...mini, minWidth: 34, opacity: prev ? 1 : .3 }} title="The class before">‹</button>
+      {week.map(chip)}
+      <button className="dash-focus" disabled={!nextWeek} onClick={() => nextWeek && onPick(nextWeek.date)}
+        style={{ ...mini, minWidth: 34, opacity: nextWeek ? 1 : .3 }} title="Next week">›</button>
+    </div>
+  );
+}
+
+function Snapshot({ config, day, topic, live, done, total, since, cold, left, onTakeDown, onReset, upNext, onCastNext, chips }) {
   const pct = total ? Math.round((done / total) * 100) : 0;
   return (
     <div style={{ background: "#fff", borderRadius: 16, padding: "16px 20px", display: "flex",
       alignItems: "center", gap: 22, flexWrap: "wrap",
       boxShadow: "0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.045)" }}>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: config.accent }}>{day}</div>
-        <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-.022em", lineHeight: 1.15,
+      <div style={{ minWidth: 0, flex: "1 1 240px" }}>
+        <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.08,
           color: TEXT_PRIMARY, wordBreak: "break-word" }}>{topic || config.name}</div>
+        <div style={{ display: "flex", gap: 7, marginTop: 8, flexWrap: "wrap" }}>
+          {(chips || []).map(([k, v]) => (
+            <span key={k} style={{ fontSize: 12.5, color: TEXT_MUTED, background: SURFACE_2,
+              borderRadius: 999, padding: "3px 10px", whiteSpace: "nowrap" }}>{v} {k}</span>
+          ))}
+        </div>
       </div>
 
       <div style={{ flex: "1 1 200px", minWidth: 140 }}>
@@ -2098,6 +2142,19 @@ function Snapshot({ config, day, topic, live, done, total, since, cold, left, on
           <i style={{ display: "block", height: "100%", width: pct + "%", background: config.accent, transition: "width .3s" }} />
         </div>
       </div>
+
+      {!live && upNext ? (
+        <button className="dash-focus" onClick={onCastNext}
+          style={{ display: "flex", alignItems: "center", gap: 12, maxWidth: 380, minHeight: 62,
+            background: config.accent, border: "none", borderRadius: 14, padding: "10px 16px",
+            cursor: "pointer", fontFamily: F, textAlign: "left", color: "#fff" }}>
+          <span style={{ minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 12, opacity: .85, fontWeight: 600 }}>Up next</span>
+            <span style={{ display: "block", fontSize: 15.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{upNext}</span>
+          </span>
+          <span style={{ flex: "none", fontSize: 20, lineHeight: 1 }}>→</span>
+        </button>
+      ) : null}
 
       {live ? (
         <button className="dash-focus" onClick={onTakeDown}
@@ -2143,11 +2200,11 @@ function Picker({ title, opts, value, onPick, accent }) {
 // what this screen is for. Everything else supports that. Attendance and the
 // engagement clock are useful and they were competing for the top of the page
 // with the thing I actually came here to do.
-const DEFAULT_ORDER = ["flow", "todo", "readings", "ideas", "boards", "questions", "scratch", "poll", "now", "attendance", "assignments"];
+const DEFAULT_ORDER = ["flow", "readings", "todo", "ideas", "boards", "questions", "scratch", "poll", "attendance", "assignments"];
 // Open on what I came here for. The rest keep their bar so I know they are
 // there, and one click brings any of them back.
-const DEFAULT_COLLAPSED = ["ideas", "boards", "poll", "questions", "attendance", "now"];
-const DEFAULT_SPANS = { flow: "2", todo: "2", readings: "1", ideas: "1", boards: "1", questions: "1", scratch: "1", poll: "2", now: "1", attendance: "2", assignments: "1" };
+const DEFAULT_COLLAPSED = ["todo", "ideas", "boards", "poll", "questions", "attendance"];
+const DEFAULT_SPANS = { flow: "2", todo: "2", readings: "1", ideas: "1", boards: "1", questions: "1", scratch: "1", poll: "2", attendance: "2", assignments: "1" };
 
 export default function Dashboard({ config }) {
   const [data, update] = useClassData(config.storageKey);
@@ -2895,12 +2952,25 @@ export default function Dashboard({ config }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />,
   };
-  const TITLES = { todo: "To-Do", now: "Class Clock", poll: "Class Poll", flow: "Class Flow", boards: "Before & After", readings: "Readings & Media", ideas: "Ideas", questions: "Student Questions", attendance: "Attendance", scratch: "Notes", assignments: "Assignments" };
+  const TITLES = { todo: "To-Do", poll: "Class Poll", flow: "Class Flow", boards: "Before & After", readings: "Readings & Media", ideas: "Ideas", questions: "Student Questions", attendance: "Attendance", scratch: "Notes", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   // How far through the day I am, counted off the flow rather than the clock.
   const flowCount = Object.values(plan?.slots || {}).reduce((n, b) => n + normSlot(b).items.length, 0);
   const doneSet = new Set(plan?.done || []);
   const castCount = doneSet.size;
+  // What sits on each day of the week, so the strip can say so without making
+  // me open one to find out.
+  const dayCounts = {};
+  days.forEach(d => {
+    const pl = (data?.dayPlans || {})[d.date];
+    dayCounts[d.date] = Object.values(pl?.slots || {}).reduce((n, b) => n + normSlot(b).items.length, 0);
+  });
+  const upNextRow = (flowOrderRef.current || []).find(r => !doneSet.has(r.id));
+  const upNextWords = upNextRow ? (() => {
+    const b = upNextRow.blockId ? blockOf(upNextRow.blockId) : null;
+    return (b ? b.headline || b.title : upNextRow.item?.claim || upNextRow.item?.text) || "";
+  })() : "";
+  const castNext = () => { if (upNextRow?.cast) upNextRow.cast(); };
   const sinceMin = live?.engagedAt ? Math.floor((Date.now() - live.engagedAt) / 60000) : null;
   const minsLeft = (() => {
     const m = (hhmm) => { const [h, x] = (hhmm || "").split(":").map(Number); return isNaN(h) ? null : h * 60 + (x || 0); };
@@ -2935,13 +3005,6 @@ export default function Dashboard({ config }) {
           }}
             style={{ ...inputStyle, minHeight: 36, fontSize: 15, width: "auto", padding: "6px 10px" }}>
             {ENGINE_LIST.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
-          </select>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span style={label}>Session</span>
-          <select value={day} onChange={e => setDay(e.target.value)}
-            style={{ ...inputStyle, minHeight: 36, fontSize: 15, width: "auto", padding: "6px 10px" }}>
-            {days.map(d => <option key={d.date} value={d.date}>{d.date}{d.topic ? " · " + d.topic : ""}</option>)}
           </select>
         </div>
         <button style={{ ...mini, borderColor: config.accent, color: config.accent }} onClick={() => setCmdOpen(true)}>Cast · ⌘K</button>
@@ -3008,8 +3071,12 @@ export default function Dashboard({ config }) {
       ) : null}
 
       <main style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 400px", gap: 20, padding: 20, alignItems: "start", maxWidth: 1560, margin: "0 auto" }}>
-        <div style={{ gridColumn: "1 / -1" }}>
+        <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", gap: 12 }}>
+          <WeekStrip days={days} day={day} onPick={setDay} counts={dayCounts} accent={config.accent} today={onDeck} />
           <Snapshot config={config} day={day} topic={dayMeta?.topic} live={liveLabel}
+            upNext={upNextWords} onCastNext={castNext}
+            chips={[["in the day", flowCount], ["here", students.length - Object.values(marks).filter(v => v === "out").length],
+                    ["asking", openQ], ["assigned", readings.length]].filter(([, v]) => v)}
             done={castCount} total={flowCount} since={sinceMin} cold={sinceMin != null && sinceMin >= 10}
             left={minsLeft} onTakeDown={() => cast(null)}
             onReset={() => writeDay(d => ({ ...d, done: [] }), "starting the day over")} />
