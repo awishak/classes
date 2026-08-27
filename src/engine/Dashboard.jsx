@@ -65,21 +65,34 @@ const CSS = `
    rows have neither a border nor a fill and space does the separating instead.
    The controls stay out of the way until the pointer is on the row — and until
    the keyboard is, which is the half of that pattern people forget. */
-.flow-row{display:flex;align-items:center;gap:10px;padding:7px 6px;border-radius:8px;
-  border-left:3px solid transparent;cursor:grab}
+/* One rhythm down the whole flow, so the eye can run the list instead of
+   measuring each row. A calendar reads well because every entry is the same
+   shape and the colour is on one edge. */
+.flow-row{display:flex;align-items:center;gap:11px;min-height:var(--row-h);
+  padding:0 8px 0 5px;border-radius:8px;border-left:3px solid transparent;cursor:grab}
 .flow-row:hover{background:${SURFACE_2}}
-.flow-row.live{border-left-color:${LIVE};background:rgba(225,29,72,.06)}
-.flow-row.over{border-top:2px solid var(--dash-accent);border-radius:0}
+.flow-row.picked{background:${SURFACE_2};border-left-color:var(--dash-accent)}
+.flow-row.live{border-left-color:${LIVE} !important;background:rgba(225,29,72,.07)}
+.flow-row.over{box-shadow:inset 0 2px 0 var(--dash-accent)}
+.flow-num{flex:none;min-width:18px;text-align:right;font-family:${MONO};font-size:12px;
+  color:${TEXT_MUTED};font-variant-numeric:tabular-nums}
 .flow-tools{display:flex;gap:4px;flex:none;opacity:0;transition:opacity .12s}
-.flow-row:hover .flow-tools,.flow-row:focus-within .flow-tools,.flow-row.live .flow-tools{opacity:1}
-.flow-sec{display:flex;flex-direction:column;gap:2px;padding-top:18px}
-.flow-sec-head{display:flex;align-items:center;gap:8px;padding:0 6px 4px}
+.flow-row:hover .flow-tools,.flow-row:focus-within .flow-tools,.flow-row.live .flow-tools,
+.flow-row.picked .flow-tools{opacity:1}
+
+/* The heading recedes. Colour on this screen means live or means press me, and
+   a heading is neither. */
+.flow-sec{display:flex;flex-direction:column;gap:1px;padding-top:20px}
+.flow-sec-head{display:flex;align-items:center;gap:8px;padding:0 6px 5px;
+  position:sticky;top:0;z-index:2;background:#fff}
 .flow-sec .flow-add{opacity:0;transition:opacity .12s}
 .flow-sec:hover .flow-add,.flow-sec:focus-within .flow-add{opacity:1}
 @media (hover:none){.flow-tools,.flow-sec .flow-add{opacity:1}}
 
 /* Keyboard users had no idea where they were on this screen. */
 .dash-focus:focus-visible{outline:2px solid var(--dash-accent);outline-offset:2px;border-radius:8px}
+.dash-comfortable{--row-h:38px}
+.dash-compact{--row-h:30px}
 .dash-focus:focus:not(:focus-visible){outline:none}
 
 /* The class accent and the live red are 1.71:1 apart, which is no distance at
@@ -167,7 +180,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // Nothing goes up as a label. Before a thing can be cast it needs a headline —
 // one full sentence saying what it shows. "Media rights" is a topic; "Rights
 // fees have risen 45% in ten years" is what the room can actually read.
-function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect }) {
+function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, shared }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(claim || "");
   useEffect(() => { setDraft(claim || ""); }, [claim]);
@@ -212,16 +225,20 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
   const words = claim || title;
 
   return (
-    <div className={"flow-row" + (live ? " live" : "")}>
-      <span title={kind} style={{ flex: "none", minWidth: 20, fontFamily: MONO, fontSize: 12,
-        fontWeight: 600, color: kindColor || TEXT_MUTED, fontVariantNumeric: "tabular-nums",
-        textAlign: "right" }}>{num || ""}</span>
+    <div className={"flow-row" + (live ? " live" : "") + (picked ? " picked" : "")}
+      style={live || picked ? undefined : { borderLeftColor: kindColor || "transparent" }}>
+      <span className="flow-num" title={kind}>{num || ""}</span>
 
       <button className="dash-focus" onClick={onSelect} title="What is this?"
         style={{ flex: 1, minWidth: 0, fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.4, wordBreak: "break-word",
           background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer", fontFamily: F }}>
         {words}
       </button>
+
+      {shared ? (
+        <span title="From the library — editing its headline changes it everywhere it is used"
+          style={{ flex: "none", ...label, fontSize: 11, color: TEXT_MUTED }}>·</span>
+      ) : null}
 
       <span className="flow-tools">
         {live ? (
@@ -539,6 +556,18 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
     .slice(0, 6);
 
   const addNote = () => { if (!text.trim()) return; onAdd({ text: text.trim() }); setText(""); onClose(); };
+  // One box. Paste a web address and it arrives as a link; type words and it
+  // arrives as a note. Choosing which beforehand was a tab I did not need.
+  const quick = () => {
+    const t = text.trim();
+    if (!t) return;
+    if (looksLikeUrl(t)) {
+      onAdd({ text: hostOf(t) || "Link", links: [{ id: genId(), label: hostOf(t) || "Link", url: t }] });
+    } else {
+      onAdd({ text: t });
+    }
+    setText(""); onClose();
+  };
   const addLink = () => {
     if (!url.trim()) return;
     onAdd({ text: text.trim() || hostOf(url) || "Link", links: [{ id: genId(), label: text.trim() || hostOf(url) || "Link", url: url.trim() }] });
@@ -555,15 +584,20 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
     <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, border: "1px solid " + accent, background: "#fff" }}>
       <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
         {blocks?.length ? tab("lib", "Library " + blocks.length) : null}
-        {tab("note", "Note")}{tab("link", "Link")}
+        {tab("note", "Add")}
         {(scheduled || []).length ? tab("sched", "Schedule " + scheduled.length) : null}
         <button style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5, marginLeft: "auto", color: TEXT_MUTED }} onClick={onClose}>Cancel</button>
       </div>
 
       {mode === "note" ? (
-        <input autoFocus value={text} onChange={e => setText(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") addNote(); if (e.key === "Escape") onClose(); }}
-          placeholder="What goes here" style={inputStyle} />
+        <>
+          <input autoFocus value={text} onChange={e => setText(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") quick(); if (e.key === "Escape") onClose(); }}
+            placeholder="Type a line, or paste a link" style={inputStyle} />
+          <Muted style={{ fontSize: 12 }}>
+            {looksLikeUrl(text) ? "That is a link, so it goes in as one." : "Paste a web address and it goes in as a link."}
+          </Muted>
+        </>
       ) : null}
 
       {mode === "link" ? (
@@ -627,7 +661,7 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
         </div>
       ) : null}
 
-      {mode === "note" ? <button style={solid(accent)} onClick={addNote}>Add</button> : null}
+      {mode === "note" ? <button style={solid(accent)} onClick={quick}>Add</button> : null}
       {mode === "link" ? <button style={solid(accent)} onClick={addLink}>Add</button> : null}
     </div>
   );
@@ -700,7 +734,7 @@ function SlotName({ slot, title, accent, onSave, onDelete, count }) {
     <span style={{ position: "relative" }}>
       <button className="dash-focus" onClick={() => setOpen(v => !v)} title="Rename or delete this section"
         aria-haspopup="menu" aria-expanded={open}
-        style={{ ...label, color: accent, background: "none", border: "none", padding: 0, cursor: "pointer",
+        style={{ ...label, color: TEXT_SECONDARY, background: "none", border: "none", padding: 0, cursor: "pointer",
           textAlign: "left", display: "inline-flex", alignItems: "center", gap: 5 }}>
         {title || slot}
         <span style={{ fontSize: 9, opacity: .65 }}>▾</span>
@@ -868,6 +902,8 @@ function Suggestions({ blocks, accent, onPick, onAdd }) {
 const SECTION_PREFIX = "sec-";
 const isSection = (k) => k.startsWith(SECTION_PREFIX);
 
+const looksLikeUrl = (t) => /^https?:\/\/\S+$/i.test((t || "").trim());
+
 const MEDIA_KINDS = [["reading", "Reading"], ["video", "Video"], ["podcast", "Podcast"]];
 export const MEDIA_SET = new Set(["reading", "video", "podcast"]);
 
@@ -951,7 +987,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder }) {
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
   const [rowMenu, setRowMenu] = useState(null);
@@ -1055,16 +1091,26 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
     .filter(k => normSlot(slotItems[k]).items.length)
     .map(k => [k, normSlot(slotItems[k]).title || k]);
 
+  const flatRows = [];
   const numberOf = (() => {
     const map = {};
     let n = 0;
     [...(seq?.slots || []).map(x => x.slot),
      ...mySections.map(([k]) => k),
      ...orphanSlots.map(([k]) => k)].forEach(k => {
-      normSlot(slotItems[k]).items.forEach(it => { map[it.id] = ++n; });
+      normSlot(slotItems[k]).items.forEach(it => {
+        map[it.id] = ++n;
+        const b = it.blockId ? blockOf(it.blockId) : null;
+        const words = (b ? b.headline || b.title : it.claim || it.text) || "";
+        flatRows.push({ id: it.id, blockId: it.blockId, item: it, where: normSlot(slotItems[k]).title || k,
+          cast: words ? () => castNow(b?.url
+            ? { ...castFromLink({ label: b.title, url: b.url }), title: words, label: words }
+            : { type: "quote", tag: normSlot(slotItems[k]).title || k, title: words, label: words }) : null });
+      });
     });
     return map;
   })();
+  useEffect(() => { if (onOrder) onOrder(flatRows); });
 
   // Folding merges the orphans into one list rather than converting them into
   // something else. Every item keeps its id, its headline and its link back to
@@ -1126,7 +1172,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
             style={{ background: overSlot === s.slot ? accent + "0c" : "transparent", borderRadius: 8 }}>
             <div className="flow-sec-head">
               {overrideTitle
-                ? <span style={{ ...label, color: accent }}>{overrideTitle}</span>
+                ? <span style={{ ...label, color: TEXT_MUTED }}>{overrideTitle}</span>
                 : <SlotName slot={s.slot} title={bucket.title} accent={accent} count={items.length}
                     onSave={(t) => onSetSlotTitle(s.slot, t)}
                     onDelete={named.has(s.slot) ? null : () => onDeleteSection(s.slot)} />}
@@ -1154,8 +1200,8 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                   onContextMenu={e => { e.preventDefault(); setRowMenu({ x: e.clientX, y: e.clientY, slot: s.slot, id: it.id }); }}
                   style={{ display: "flex", flexDirection: "column", gap: 2,
                     borderTop: "2px solid " + (overRow === it.id ? accent : "transparent") }}>
-                  <Castable num={numberOf[it.id]}
-                    onSelect={() => onSelect({ blockId: it.blockId, item: it, where: bucket.title || s.slot })}
+                  <Castable num={numberOf[it.id]} picked={pickedId === it.id} shared={!!it.blockId}
+                    onSelect={() => onSelect({ blockId: it.blockId, item: it, where: bucket.title || s.slot, id: it.id })}
                     kind={blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
                     kindColor={blk ? typeOf(blk.type).color : KIND_COLOR[seed ? "Seed" : "Note"]}
                     title={title}
@@ -1806,6 +1852,8 @@ const SHORTCUTS = [
   ["Esc", "Take down whatever is on the room screen"],
   ["⌘ B", "Black the room screen out, and again to bring it back"],
   ["← →", "Step the board that is up, one idea at a time"],
+  ["J K", "Walk down and up the run of show"],
+  ["Enter", "Put the row I am on up on the room screen"],
   ["⌘ /", "Show this list"],
 ];
 
@@ -2037,6 +2085,7 @@ export default function Dashboard({ config }) {
   const [recent, setRecent] = useState([]);
   // What I last clicked on in the flow, so the sidebar can say what it is.
   const [picked, setPicked] = useState(null);
+  const pickedSync = picked;
   const HL = useHeadlines(config.storageKey, { categories: data?.headlineCategories, concepts: config.concepts });
 
   const weeks = data?.schedule || config.scheduleWeeks || [];
@@ -2089,6 +2138,8 @@ export default function Dashboard({ config }) {
   const liveRef = useRef(null);
   liveRef.current = live;
   const stepRef = useRef(null);
+  const flowOrderRef = useRef([]);
+  const pickedRef = useRef(null);
   useEffect(() => {
     const onKey = (e) => {
       const t = e.target;
@@ -2104,6 +2155,20 @@ export default function Dashboard({ config }) {
         return;
       }
       if (typing) return;
+
+      // Walking the run of show. The order is the numbering, so j and k go the
+      // way the eye does and Enter puts the thing I am on up on the wall.
+      const flat = flowOrderRef.current || [];
+      if (flat.length && (e.key === "j" || e.key === "k" || e.key === "ArrowDown" || e.key === "ArrowUp")) {
+        const down = e.key === "j" || e.key === "ArrowDown";
+        e.preventDefault();
+        const at = flat.findIndex(x => x.id === pickedRef.current?.id);
+        const next = flat[Math.max(0, Math.min(flat.length - 1, at < 0 ? 0 : at + (down ? 1 : -1)))];
+        if (next) setPicked(next);
+        return;
+      }
+      if (e.key === "Enter" && pickedRef.current?.cast) { e.preventDefault(); pickedRef.current.cast(); return; }
+
       if (e.key === "Escape" && cur) { e.preventDefault(); cast(null); return; }
       if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && cur?.type === "board" && stepRef.current) {
         e.preventDefault();
@@ -2126,6 +2191,7 @@ export default function Dashboard({ config }) {
   // past. Hidden ones come off the grid entirely.
   const [hidden, setHidden] = useState([]);
   const [collapsed, setCollapsed] = useState(DEFAULT_COLLAPSED);
+  const [dense, setDense] = useState(false);
   const [panelMenu, setPanelMenu] = useState(false);
   useEffect(() => {
     try {
@@ -2146,21 +2212,22 @@ export default function Dashboard({ config }) {
       if (v.spans) setSpans({ ...DEFAULT_SPANS, ...v.spans });
       if (Array.isArray(v.hidden)) setHidden(v.hidden.filter(id => DEFAULT_ORDER.includes(id)));
       if (Array.isArray(v.collapsed)) setCollapsed(v.collapsed.filter(id => DEFAULT_ORDER.includes(id)));
+      if (typeof v.dense === "boolean") setDense(v.dense);
     } catch { /* first run */ }
   }, [LKEY]);
 
-  const saveLayout = useCallback((o, s, h, c) => {
-    try { localStorage.setItem(LKEY, JSON.stringify({ order: o, spans: s, hidden: h, collapsed: c })); } catch { /* private mode */ }
+  const saveLayout = useCallback((o, s, h, c, dn) => {
+    try { localStorage.setItem(LKEY, JSON.stringify({ order: o, spans: s, hidden: h, collapsed: c, dense: dn })); } catch { /* private mode */ }
   }, [LKEY]);
 
-  const toggleSpan = (id) => { const s = { ...spans, [id]: spans[id] === "2" ? "1" : "2" }; setSpans(s); saveLayout(order, s, hidden, collapsed); };
+  const toggleSpan = (id) => { const s = { ...spans, [id]: spans[id] === "2" ? "1" : "2" }; setSpans(s); saveLayout(order, s, hidden, collapsed, dense); };
   const toggleHidden = (id) => {
     const h = hidden.includes(id) ? hidden.filter(x => x !== id) : [...hidden, id];
-    setHidden(h); saveLayout(order, spans, h, collapsed);
+    setHidden(h); saveLayout(order, spans, h, collapsed, dense);
   };
   const toggleCollapsed = (id) => {
     const c = collapsed.includes(id) ? collapsed.filter(x => x !== id) : [...collapsed, id];
-    setCollapsed(c); saveLayout(order, spans, hidden, c);
+    setCollapsed(c); saveLayout(order, spans, hidden, c, dense);
   };
   const shown = order.filter(id => !hidden.includes(id));
 
@@ -2255,7 +2322,7 @@ export default function Dashboard({ config }) {
       }
       dragRef.current = null;
       setDragId(null);
-      saveLayout(orderRef.current, spans, hidden, collapsed);
+      saveLayout(orderRef.current, spans, hidden, collapsed, dense);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
@@ -2543,6 +2610,8 @@ export default function Dashboard({ config }) {
 
   const saveScratch = (v) => update(prev => ({ ...prev, scratch: { ...(prev.scratch || {}), [day]: v } }));
 
+  pickedRef.current = picked;
+
   const liveLabel = live?.cast?.label || null;
   const castNow = (payload) => {
     cast(payload);
@@ -2708,7 +2777,7 @@ export default function Dashboard({ config }) {
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
-      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMergeSections={mergeSections} onSelect={setPicked} />,
+      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMergeSections={mergeSections} onSelect={setPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     readings: () => <Readings items={readings} accent={config.accent} castNow={castNow} dismiss={dismiss}
@@ -2740,7 +2809,8 @@ export default function Dashboard({ config }) {
   const offDay = onDeck && day !== onDeck;
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, "--dash-accent": config.accent }}>
+    <div className={dense ? "dash-compact" : "dash-comfortable"}
+      style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, "--dash-accent": config.accent }}>
       <style>{CSS}</style>
 
       <header style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "13px 22px", display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
@@ -2782,12 +2852,16 @@ export default function Dashboard({ config }) {
                 border: "1px solid " + BORDER_STRONG, borderRadius: 12, padding: 8, minWidth: 200,
                 boxShadow: "0 16px 36px -12px rgba(23,19,16,.32)", display: "flex", flexDirection: "column", gap: 2 }}>
                 <button onClick={() => {
-                  setOrder(DEFAULT_ORDER); setSpans(DEFAULT_SPANS); setHidden([]); setCollapsed(DEFAULT_COLLAPSED);
-                  saveLayout(DEFAULT_ORDER, DEFAULT_SPANS, [], DEFAULT_COLLAPSED);
+                  setOrder(DEFAULT_ORDER); setSpans(DEFAULT_SPANS); setHidden([]); setCollapsed(DEFAULT_COLLAPSED); setDense(false);
+                  saveLayout(DEFAULT_ORDER, DEFAULT_SPANS, [], DEFAULT_COLLAPSED, false);
                   setPanelMenu(false);
                 }}
                   style={{ ...mini, minHeight: HIT, margin: "2px 4px 6px", justifyContent: "center" }}>Reset arrangement</button>
-                <div style={{ ...label, fontSize: 12, padding: "2px 8px 6px", color: TEXT_MUTED }}>
+                <button className="dash-focus" onClick={() => { const d = !dense; setDense(d); saveLayout(order, spans, hidden, collapsed, d); }}
+                  style={{ ...mini, minHeight: HIT, margin: "2px 4px", justifyContent: "center" }}>
+                  {dense ? "Comfortable rows" : "Compact rows"}
+                </button>
+                <div style={{ ...label, fontSize: 12, padding: "6px 8px 6px", color: TEXT_MUTED }}>
                   Dot toggles on the grid · arrow collapses
                 </div>
                 {DEFAULT_ORDER.map(id => {
