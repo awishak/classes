@@ -41,12 +41,12 @@ const LIVE = "#e11d48";
 const OK = "#0f766e";
 const WARN = "#b45309";
 const TAP = 44;  // student-facing surfaces: students are on phones
-const HIT = 34;  // this screen: a trackpad under my hands, where density is the point
+const HIT = 36;  // this screen: a trackpad under my hands, where density is the point
 
 const label = { fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, letterSpacing: 0 };
-const mini = { minHeight: HIT, padding: "0 12px", borderRadius: 8, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_SECONDARY, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
+const mini = { minHeight: HIT, padding: "0 13px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_SECONDARY, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
 const solid = (a) => ({ ...mini, background: a, borderColor: a, color: "#fff" });
-const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 9, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: 40, background: "#fff", color: TEXT_PRIMARY };
+const inputStyle = { width: "100%", padding: "10px 13px", borderRadius: 11, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: 40, background: "#fff", color: TEXT_PRIMARY };
 const label2 = { fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, letterSpacing: 0 };
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 
@@ -59,7 +59,7 @@ const CSS = `
    under every header and the grip sitting out in the open added up to more
    lines than content. A soft edge and space carry it, and the handles come
    back when the pointer is on the card. */
-.dash-panel{background:#fff;border-radius:14px;overflow:hidden;
+.dash-panel{background:#fff;border-radius:18px;overflow:hidden;
   box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.045)}
 .dash-panel:hover{box-shadow:0 2px 8px -2px rgba(23,19,16,.09),0 0 0 1px rgba(23,19,16,.08)}
 .dash-head{display:flex;align-items:center;gap:8px;padding:12px 16px 10px}
@@ -81,16 +81,21 @@ const CSS = `
    measuring each row. A calendar reads well because every entry is the same
    shape and the colour is on one edge. */
 .flow-row{display:flex;align-items:center;gap:11px;min-height:var(--row-h);
-  padding:0 8px 0 5px;border-radius:8px;border-left:3px solid transparent;cursor:grab}
+  padding:0 10px 0 7px;border-radius:12px;border-left:3px solid transparent;cursor:grab}
 .flow-row:hover{background:${SURFACE_2}}
 .flow-row.picked{background:${SURFACE_2};border-left-color:var(--dash-accent)}
 .flow-row.live{border-left-color:${LIVE} !important;background:rgba(225,29,72,.07)}
 .flow-row.over{box-shadow:inset 0 2px 0 var(--dash-accent)}
 /* The number carries the colour of what the row is, filled rather than as a
    stub on the edge — one chip per kind, the same chip everywhere it appears. */
-.flow-num{flex:none;width:22px;height:22px;border-radius:6px;display:inline-flex;
-  align-items:center;justify-content:center;font-family:${MONO};font-size:11.5px;font-weight:600;
-  color:#fff;font-variant-numeric:tabular-nums}
+.flow-num{flex:none;width:24px;height:24px;border-radius:8px;display:inline-flex;
+  align-items:center;justify-content:center;font-family:${MONO};font-size:12px;font-weight:600;
+  color:#fff;font-variant-numeric:tabular-nums;border:none;cursor:pointer;padding:0;
+  transition:transform .12s,opacity .12s}
+.flow-num:hover{transform:scale(1.12)}
+.flow-row.done .flow-num{opacity:.4}
+.flow-row.done .flow-words{color:${TEXT_MUTED};text-decoration:line-through;text-decoration-thickness:1px}
+.flow-row.next{box-shadow:inset 0 0 0 1.5px var(--dash-accent)}
 .flow-words{flex:1;min-width:0;font-size:16px;line-height:1.4;letter-spacing:-.006em;
   word-break:break-word;background:none;border:none;padding:0;text-align:left;cursor:pointer}
 .flow-tools{display:flex;gap:4px;flex:none;opacity:0;transition:opacity .12s}
@@ -198,7 +203,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // Nothing goes up as a label. Before a thing can be cast it needs a headline —
 // one full sentence saying what it shows. "Media rights" is a topic; "Rights
 // fees have risen 45% in ten years" is what the room can actually read.
-function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, shared }) {
+function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, shared, done, next, onTick }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(claim || "");
   useEffect(() => { setDraft(claim || ""); }, [claim]);
@@ -243,12 +248,19 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
   const words = claim || title;
 
   return (
-    <div className={"flow-row" + (live ? " live" : "") + (picked ? " picked" : "")}>
-      <span className="flow-num" title={kind}
-        style={{ background: kindColor || TEXT_MUTED }}>{num || ""}</span>
+    <div className={"flow-row" + (live ? " live" : "") + (picked ? " picked" : "")
+      + (done ? " done" : "") + (next ? " next" : "")}>
+      <button className="flow-num dash-focus" onClick={onTick}
+        title={done ? "Not done after all" : "Done — tick it off"}
+        style={{ background: done ? TEXT_MUTED : (kindColor || TEXT_MUTED) }}>{done ? "✓" : (num || "")}</button>
 
       <button className="dash-focus flow-words" onClick={onSelect} title="What is this?"
         style={{ color: TEXT_PRIMARY, fontFamily: F }}>{words}</button>
+
+      {url ? (
+        <span style={{ flex: "none", fontSize: 12, color: TEXT_MUTED, padding: "2px 7px",
+          background: SURFACE_2, borderRadius: 999, whiteSpace: "nowrap" }}>{hostOf(url)}</span>
+      ) : null}
 
       {shared ? (
         <span title="From the library — editing its headline changes it everywhere it is used"
@@ -729,7 +741,7 @@ function MergeMenu({ sections, accent, onMerge, onClose }) {
   );
 }
 
-function SlotName({ slot, title, accent, onSave, onDelete, count }) {
+function SlotName({ slot, title, accent, onSave, onDelete, count, tally }) {
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(title || "");
@@ -752,6 +764,7 @@ function SlotName({ slot, title, accent, onSave, onDelete, count }) {
         style={{ ...label, color: TEXT_SECONDARY, background: "none", border: "none", padding: 0, cursor: "pointer",
           textAlign: "left", display: "inline-flex", alignItems: "center", gap: 5 }}>
         {title || slot}
+        {tally ? <span style={{ fontFamily: MONO, fontSize: 11.5, color: TEXT_MUTED, fontWeight: 500 }}>{tally}</span> : null}
         <span style={{ fontSize: 9, opacity: .65 }}>▾</span>
       </button>
       {open ? (
@@ -1002,7 +1015,8 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick }) {
+  const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
   const [rowMenu, setRowMenu] = useState(null);
@@ -1126,6 +1140,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
     return map;
   })();
   useEffect(() => { if (onOrder) onOrder(flatRows); });
+  const nextId = (flatRows.find(r => !doneSet.has(r.id)) || {}).id;
 
   // Folding merges the orphans into one list rather than converting them into
   // something else. Every item keeps its id, its headline and its link back to
@@ -1189,6 +1204,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
               {overrideTitle
                 ? <span style={{ ...label, color: TEXT_MUTED }}>{overrideTitle}</span>
                 : <SlotName slot={s.slot} title={bucket.title} accent={accent} count={items.length}
+                    tally={items.length ? items.filter(x => doneSet.has(x.id)).length + "/" + items.length : ""}
                     onSave={(t) => onSetSlotTitle(s.slot, t)}
                     onDelete={named.has(s.slot) ? null : () => onDeleteSection(s.slot)} />}
               <button className="dash-focus flow-add" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
@@ -1216,6 +1232,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                   style={{ display: "flex", flexDirection: "column", gap: 2,
                     borderTop: "2px solid " + (overRow === it.id ? accent : "transparent") }}>
                   <Castable num={numberOf[it.id]} picked={pickedId === it.id} shared={!!it.blockId}
+                    done={doneSet.has(it.id)} next={nextId === it.id} onTick={() => onTick(it.id)}
                     onSelect={() => onSelect({ blockId: it.blockId, item: it, where: bucket.title || s.slot, id: it.id })}
                     kind={blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
                     kindColor={blk ? typeOf(blk.type).color : KIND_COLOR[seed ? "Seed" : "Note"]}
@@ -2050,7 +2067,7 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
   );
 }
 
-function Snapshot({ config, day, topic, live, done, total, since, cold, onTakeDown }) {
+function Snapshot({ config, day, topic, live, done, total, since, cold, left, onTakeDown, onReset }) {
   const pct = total ? Math.round((done / total) * 100) : 0;
   return (
     <div style={{ background: "#fff", borderRadius: 16, padding: "16px 20px", display: "flex",
@@ -2063,10 +2080,18 @@ function Snapshot({ config, day, topic, live, done, total, since, cold, onTakeDo
       </div>
 
       <div style={{ flex: "1 1 200px", minWidth: 140 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: TEXT_MUTED, marginBottom: 5 }}>
-          <span>{total ? done + " of " + total + " done" : "Nothing planned yet"}</span>
-          <span style={{ color: cold ? WARN : TEXT_MUTED }}>
-            {since == null ? "" : since + " min since they did anything"}
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 12.5, color: TEXT_MUTED, marginBottom: 5 }}>
+          <span>
+            {total ? done + " of " + total + " done" : "Nothing planned yet"}
+            {total && done ? (
+              <button className="dash-focus" onClick={onReset}
+                style={{ background: "none", border: "none", color: TEXT_MUTED, cursor: "pointer",
+                  fontFamily: F, fontSize: 12.5, textDecoration: "underline", padding: "0 0 0 8px" }}>start over</button>
+            ) : null}
+          </span>
+          <span style={{ color: cold ? WARN : TEXT_MUTED, whiteSpace: "nowrap" }}>
+            {[since == null ? "" : since + " min since they did anything",
+              left == null ? "" : left + " min left"].filter(Boolean).join(" · ")}
           </span>
         </div>
         <div style={{ height: 6, borderRadius: 3, background: SURFACE_2, overflow: "hidden" }}>
@@ -2535,6 +2560,14 @@ export default function Dashboard({ config }) {
     return { ...d, slots };
   }, "that merge");
 
+  // Done lives on the day, so it survives a reload and clears itself when I
+  // move to the next class.
+  const tickItem = (id) => writeDay(d => {
+    const done = new Set(d.done || []);
+    if (done.has(id)) done.delete(id); else done.add(id);
+    return { ...d, done: [...done] };
+  }, "that tick");
+
   const setSequence = (id) => writeDay(d => ({ ...d, sequenceId: id }));
   // Everything a class can reach: its own blocks and the ones that are mine.
   const blocks2 = allBlocks(data, shared);
@@ -2837,7 +2870,8 @@ export default function Dashboard({ config }) {
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
-      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMergeSections={mergeSections} onSelect={setPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }} />,
+      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMergeSections={mergeSections} onSelect={setPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
+      doneSet={doneSet} onTick={tickItem} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
     readings: () => <Readings items={readings} accent={config.accent} castNow={castNow} dismiss={dismiss}
@@ -2865,8 +2899,17 @@ export default function Dashboard({ config }) {
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   // How far through the day I am, counted off the flow rather than the clock.
   const flowCount = Object.values(plan?.slots || {}).reduce((n, b) => n + normSlot(b).items.length, 0);
-  const castCount = Math.min(flowCount, recent.length);
+  const doneSet = new Set(plan?.done || []);
+  const castCount = doneSet.size;
   const sinceMin = live?.engagedAt ? Math.floor((Date.now() - live.engagedAt) / 60000) : null;
+  const minsLeft = (() => {
+    const m = (hhmm) => { const [h, x] = (hhmm || "").split(":").map(Number); return isNaN(h) ? null : h * 60 + (x || 0); };
+    const st = m(config.meets?.start), en = m(config.meets?.end);
+    if (st == null || en == null) return null;
+    const n = new Date();
+    const cur = n.getHours() * 60 + n.getMinutes();
+    return cur >= st && cur <= en ? en - cur : null;
+  })();
   // Casting from the wrong session is silent and total: the room gets last
   // Wednesday and nothing on this screen says so.
   const onDeck = currentDay(weeks)?.date;
@@ -2968,7 +3011,8 @@ export default function Dashboard({ config }) {
         <div style={{ gridColumn: "1 / -1" }}>
           <Snapshot config={config} day={day} topic={dayMeta?.topic} live={liveLabel}
             done={castCount} total={flowCount} since={sinceMin} cold={sinceMin != null && sinceMin >= 10}
-            onTakeDown={() => cast(null)} />
+            left={minsLeft} onTakeDown={() => cast(null)}
+            onReset={() => writeDay(d => ({ ...d, done: [] }), "starting the day over")} />
         </div>
         <div className="dash-grid" ref={gridRef}>
           {shown.map(id => (
