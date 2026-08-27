@@ -111,6 +111,11 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
   .dash-room .dash-room-body{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,1fr);gap:12px;align-items:start}
   .dash-rail{position:static!important;max-height:none!important}
   .dash-rail-body{overflow:visible;max-height:none}}
+/* Each column says what it is. Three columns that look alike need naming once
+   at the top, not explaining every time. Quiet enough to disappear after the
+   first week and there when someone else sits down. */
+.dash-col{margin:0 0 0 3px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
+  font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:#8a9098}
 .dash-rail-tabs{display:flex;gap:4px;background:rgba(23,19,16,.045);border-radius:13px;padding:4px;overflow-x:auto;scrollbar-width:none}
 .dash-rail-tabs::-webkit-scrollbar{display:none}
 .dash-tab{flex:1 1 auto;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 11px;border:none;border-radius:10px;background:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:500;color:#5b6068;transition:background .14s,color .14s,box-shadow .14s}
@@ -119,7 +124,7 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .dash-tab-k{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:#9aa0a6;opacity:.75}
 .dash-tab.on .dash-tab-k{color:inherit;opacity:.45}
 .dash-tab-n{min-width:19px;height:19px;padding:0 5px;border-radius:10px;color:#fff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center}
-.dash-rail-body{overflow-y:auto;overscroll-behavior:contain;min-height:0;padding-bottom:2px}
+.dash-rail-body{flex:1 1 auto;overflow-y:auto;min-height:0;padding-bottom:6px}
 .dash-rail-body::-webkit-scrollbar{width:9px}
 .dash-rail-body::-webkit-scrollbar-thumb{background:rgba(23,19,16,.16);border-radius:5px}
 
@@ -269,8 +274,10 @@ function Seam({ which, onDown, label }) {
 function Rail({ tabs, active, onPick, accent, children, side, className }) {
   return (
     <div className={"dash-rail" + (className ? " " + className : "")}
-      style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 10,
-      position: "sticky", top: 14, maxHeight: "calc(100vh - 28px)" }}>
+      style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 8,
+        position: "sticky", top: "calc(var(--head-h, 58px) + 14px)",
+        maxHeight: "calc(100vh - var(--head-h, 58px) - 28px)" }}>
+      <h2 className="dash-col">{side}</h2>
       <div role="tablist" aria-label={side} className="dash-rail-tabs">
         {tabs.map(t => {
           const on = t.id === active;
@@ -649,16 +656,23 @@ function LibraryPick({ blocks, accent, onPick }) {
         {f.types.map(t => chip(type === t.id, t.label, () => setType(type === t.id ? "" : t.id), t.color))}
       </div>
       {f.topics.length ? (
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          {f.topics.slice(0, 12).map(t => chip(topic === t, t, () => setTopic(topic === t ? "" : t)))}
-        </div>
+        <select value={topic} onChange={e => setTopic(e.target.value)}
+          aria-label="Filter by topic"
+          style={{ ...inputStyle, minHeight: 34, fontSize: 13, padding: "4px 8px" }}>
+          <option value="">Any topic ({f.topics.length})</option>
+          {f.topics.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
       ) : null}
       <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 300, overflowY: "auto" }}>
         {hits.map(b => {
           const t = typeOf(b.type);
           return (
             <button key={b.id} className="dash-focus" onClick={() => onPick(b)}
-              style={{ display: "flex", alignItems: "flex-start", gap: 8, textAlign: "left", cursor: "pointer",
+              draggable
+              onDragStart={e => { e.dataTransfer.effectAllowed = "copy";
+                e.dataTransfer.setData("text/plain", JSON.stringify({ blockId: b.id })); }}
+              title="Click to add it, or drag it straight into the flow"
+              style={{ display: "flex", alignItems: "flex-start", gap: 8, textAlign: "left", cursor: "grab",
                 background: SURFACE_2, border: "1px solid transparent", borderRadius: 9, padding: "8px 10px",
                 minHeight: HIT, fontFamily: F, fontSize: 13.5, color: TEXT_PRIMARY }}>
               <span style={{ flex: "none", marginTop: 3, width: 7, height: 7, borderRadius: "50%", background: t.color }} />
@@ -989,6 +1003,10 @@ function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAdd, onEd
           borderRadius: 10, background: shown === b.id ? SURFACE_2 : "transparent" }}>
           <button className="dash-focus" onClick={() => { setShown(shown === b.id ? null : b.id); setPlacing(null); }}
             aria-expanded={shown === b.id}
+            draggable
+            onDragStart={e => { e.dataTransfer.effectAllowed = "copy";
+              e.dataTransfer.setData("text/plain", JSON.stringify({ blockId: b.id })); }}
+            title="Drag it into a section of the flow, or click to open it"
             style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", minHeight: 38, padding: "4px 7px",
               background: "none", border: "none", borderRadius: 9, cursor: "pointer", fontFamily: F, textAlign: "left" }}>
             <span style={{ flex: "none", width: 7, height: 7, borderRadius: "50%", background: typeOf("activity").color }} />
@@ -1173,10 +1191,16 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
 
   // Dropping on a row puts it before that row; dropping on the section puts it
   // at the end. One gesture, both jobs.
+  // Two kinds of thing get dropped here. A row already in the flow carries its
+  // slot and moves; anything dragged out of the Material column carries a
+  // blockId and no slot, and gets placed. Same drop targets for both, because
+  // from where I am sitting it is the same gesture.
   const drop = (e, toSlot, beforeId) => {
     let from;
     try { from = JSON.parse(e.dataTransfer.getData("text/plain")); } catch { return; }
-    if (!from?.id || (from.slot === toSlot && from.id === beforeId)) return;
+    if (!from) return;
+    if (from.blockId && !from.slot) { onPickBlock(toSlot, { id: from.blockId }); return; }
+    if (!from.id || (from.slot === toSlot && from.id === beforeId)) return;
     onDragMove(from.slot, from.id, toSlot, beforeId);
   };
   const [addingBlock, setAddingBlock] = useState(false);
@@ -2346,7 +2370,7 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
 // thing you would actually do about them. What is left is what nothing else
 // can tell me: which session I am on, what it is about, how far in I am, and
 // what goes up next.
-function DayBand({ days, day, onPick, counts, accent, today, topic, name, done, total, since, cold, left, upNext, onCastNext, onReset }) {
+function DayBand({ days, day, onPick, onOpenDay, counts, accent, today, topic, name, done, total, since, cold, left, upNext, onCastNext, onReset }) {
   const [jump, setJump] = useState(false);
   const i = days.findIndex(d => d.date === day);
   const weekId = days[i]?.weekId;
@@ -2405,7 +2429,9 @@ function DayBand({ days, day, onPick, counts, accent, today, topic, name, done, 
             const on = d.date === day;
             const n = counts[d.date] || 0;
             return (
-              <button key={d.date} className="dash-focus dash-day" data-on={on ? "1" : "0"} onClick={() => onPick(d.date)}
+              <button key={d.date} className="dash-focus dash-day" data-on={on ? "1" : "0"}
+                title={on ? "What is left to do for " + d.date : "Go to " + d.date}
+                onClick={() => (on ? onOpenDay(d.date) : onPick(d.date))}
                 style={on ? { borderColor: accent, background: accent + "0f" } : undefined}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: on ? accent : TEXT_PRIMARY }}>
                   {d.date}{d.date === today ? " · today" : ""}
@@ -2496,8 +2522,11 @@ function Picker({ title, opts, value, onPick, accent }) {
 // Attendance is not on the Live rail any more. Taking the roll is a thing I do
 // once, standing up, at the start — not a tab I want to be one of five. It is a
 // button at the top that opens over everything, the way Around the Horn does.
-const MATERIAL = ["ideas", "readings", "assignments", "todo"];
-const LIVE_RAIL = ["questions", "poll", "scratch", "boards"];
+// To-do is not on a rail either. It is a list I check once, when I sit down to
+// look at a day — so it opens off the day itself, by clicking the session up in
+// the band, which is the thing it is a to-do list ABOUT.
+const MATERIAL = ["ideas", "readings", "scratch", "assignments"];
+const LIVE_RAIL = ["questions", "poll", "boards"];
 // Starting widths. Flow takes whatever is left, so it is the one column that
 // never needs a number. Both ends are draggable and the drag is remembered.
 const COL = { material: 300, live: 400 };
@@ -2521,6 +2550,7 @@ export default function Dashboard({ config }) {
   const P = usePoll(config.storageKey);
   const [hornOpen, setHornOpen] = useState(false);
   const [hereOpen, setHereOpen] = useState(false);
+  const [todoOpen, setTodoOpen] = useState(false);
   const [hlOpen, setHlOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
@@ -2654,6 +2684,20 @@ export default function Dashboard({ config }) {
   const [focus, setFocus] = useState(false);
   const focusRef = useRef(false);
   focusRef.current = focus;
+
+  // The header is pinned, and the rails stick under it. Its height is not a
+  // constant — it wraps on a narrow window — so a guessed offset put the rail
+  // tabs behind it exactly when the window was small enough for that to hurt.
+  const headRef = useRef(null);
+  useEffect(() => {
+    const el = headRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const set = () => document.documentElement.style.setProperty("--head-h", el.offsetHeight + "px");
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    set();
+    return () => ro.disconnect();
+  }, []);
   useEffect(() => {
     try {
       const v = JSON.parse(localStorage.getItem(LKEY) || "null");
@@ -3264,8 +3308,9 @@ export default function Dashboard({ config }) {
           the same attention. The ways out of this class live under the class
           name, because that is what they all are. Teaching stays out on its
           own — it is the one switch I hit at the moment class starts. */}
-      <header style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "10px 20px",
-        display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+      <header ref={headRef} style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "10px 20px",
+        display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap",
+        position: "sticky", top: 0, zIndex: 30 }}>
         <ClassMenu config={config} />
         <span style={{ marginRight: "auto", fontSize: 14, color: TEXT_MUTED, minWidth: 0,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{config.desc}</span>
@@ -3289,7 +3334,7 @@ export default function Dashboard({ config }) {
 
 
       <div style={{ padding: "14px 18px 0", maxWidth: 1760, margin: "0 auto" }}>
-        <DayBand days={days} day={day} onPick={setDay} counts={dayCounts} accent={config.accent} today={onDeck}
+        <DayBand days={days} day={day} onPick={setDay} onOpenDay={() => setTodoOpen(true)} counts={dayCounts} accent={config.accent} today={onDeck}
           topic={dayMeta?.topic} name={config.name}
           done={castCount} total={flowCount} since={sinceMin} cold={sinceMin != null && sinceMin >= 10}
           left={minsLeft} upNext={liveLabel ? "" : upNextWords} onCastNext={castNext}
@@ -3300,7 +3345,7 @@ export default function Dashboard({ config }) {
         style={{ gridTemplateColumns: gridFor(cols, railOpen, focus) }}>
         {railOpen && !focus ? (
           <>
-            <Rail side="Material" tabs={MATERIAL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: i + 1 }))}
+            <Rail side="Materials" tabs={MATERIAL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: i + 1 }))}
               active={prep} onPick={pickPrep} accent={config.accent}>
               <Panel id={prep} title={null}>{render[prep]()}</Panel>
             </Rail>
@@ -3308,7 +3353,8 @@ export default function Dashboard({ config }) {
           </>
         ) : null}
 
-        <div style={{ minWidth: 0 }}>
+        <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+          <h2 className="dash-col">Flow</h2>
           <Panel id="flow" title={null}>{render.flow()}</Panel>
           {undo ? (
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
@@ -3349,6 +3395,12 @@ export default function Dashboard({ config }) {
       {hereOpen ? (
         <Sheet title="Who is here" sub={config.code + " \u00b7 " + day} onClose={() => setHereOpen(false)}>
           <AttendancePanel students={students} marks={marks} onMark={mark} onReset={resetAttendance} />
+        </Sheet>
+      ) : null}
+
+      {todoOpen ? (
+        <Sheet title="Still to do" sub={config.code + " \u00b7 " + day} onClose={() => setTodoOpen(false)}>
+          {render.todo()}
         </Sheet>
       ) : null}
 
