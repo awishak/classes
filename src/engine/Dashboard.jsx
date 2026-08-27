@@ -180,7 +180,12 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
    shape and the colour is on one edge. */
 .flow-row{display:flex;align-items:center;gap:11px;min-height:var(--row-h);
   padding:2px 10px 2px 8px;border-radius:12px;cursor:grab;color:#fff;
-  background:var(--row,#5b6068);transition:filter .13s,box-shadow .13s}
+  background:var(--row,#5b6068);transition:filter .13s,box-shadow .13s;position:relative}
+/* A tucked row draws the elbow back to the row it sits under, so the outline
+   reads as an outline rather than as a row that drifted right. */
+.flow-nested::before{content:"";position:absolute;left:-17px;top:-6px;bottom:50%;width:9px;
+  border-left:2px solid rgba(23,19,16,.18);border-bottom:2px solid rgba(23,19,16,.18);
+  border-bottom-left-radius:6px}
 .flow-row:hover{filter:brightness(1.1)}
 /* Selected, up on the screen, or next. Each is a ring rather than a fill,
    because the fill is already saying what the row is. */
@@ -442,7 +447,7 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
 
   return (
     <div className={"flow-row" + (live ? " live" : "") + (picked ? " picked" : "")
-      + (done ? " done" : "") + (next ? " next" : "")}
+      + (done ? " done" : "") + (next ? " next" : "") + (depth ? " flow-nested" : "")}
       style={{ "--row": kindColor || TEXT_MUTED }}>
       <button className="flow-num dash-focus" onClick={onTick}
         title={done ? "Put this row back on the list" : "Tick this row off"}>{done ? "✓" : (num || "")}</button>
@@ -466,12 +471,12 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
         {onNest ? (
           <>
             {depth > 0 ? (
-              <button className="dash-focus" style={{ ...sq, minWidth: "auto", padding: "0 8px" }}
-                title="Pull this row back out" onClick={() => onNest(-1)}>\u2190</button>
+              <button className="dash-focus" style={{ ...sq, minWidth: "auto", padding: "0 9px", fontSize: 12 }}
+                title="Move this row back out to its own level" onClick={() => onNest(-1)}>Outdent</button>
             ) : null}
             {canNest && depth < 1 ? (
-              <button className="dash-focus" style={{ ...sq, minWidth: "auto", padding: "0 8px" }}
-                title="Tuck this row under the one above" onClick={() => onNest(1)}>\u2192</button>
+              <button className="dash-focus" style={{ ...sq, minWidth: "auto", padding: "0 9px", fontSize: 12 }}
+                title="Tuck this row under the row above" onClick={() => onNest(1)}>Indent</button>
             ) : null}
           </>
         ) : null}
@@ -1260,15 +1265,15 @@ function ReadingCard({ item, accent, live, onCast, onDismiss, onNote, onRemove, 
       <div className="read-foot">
         {item.url ? (
           <a className="dash-focus read-src" href={item.url} target="_blank" rel="noopener noreferrer"
-            title={"Open " + item.url + " in a new tab"}>{hostOf(item.url)} \u2197</a>
+            title={"Open " + item.url + " in a new tab"}>{hostOf(item.url)} ↗</a>
         ) : <span />}
         {inFlow ? <span className="read-flag" title="This reading also has a row in the flow today">in the flow</span> : null}
         {live ? (
           <button className="dash-focus" style={{ ...btn, borderColor: LIVE, color: LIVE }}
-            title="Take it back down" onClick={onDismiss}>\u00d7 Take it down</button>
+            title="Take it back down" onClick={onDismiss}>× Take it down</button>
         ) : (
           <button className="dash-focus" style={{ ...btn, borderColor: LIVE, color: LIVE }}
-            title="Put this on the room screen" onClick={() => onCast(item.title)}>\u2192 Cast</button>
+            title="Put this on the room screen" onClick={() => onCast(item.title)}>→ Cast</button>
         )}
         <button className="dash-focus" style={{ ...btn, color: TEXT_MUTED }} onClick={onRemove}
           title="Take this off today's readings">Unassign</button>
@@ -1964,7 +1969,7 @@ export function BoardsPanel({ boards, proposals, onSave, castNow, dismiss, liveC
     <>
       {["pre", "post"].map(which => {
         const saved = boards[which];
-        const board = saved || proposals[which];
+        const board = saved || proposals[which] || { title: which === "pre" ? "Enter" : "Exit", ideas: [] };
         const label = which === "pre" ? "Enter" : "Exit";
         const liveHere = liveCast?.type === "board" && liveCast.boardLabel === label;
         return (
@@ -2369,7 +2374,7 @@ function ColorsSheet({ colors, onPick, onReset, onClose }) {
                 {PALETTE.find(x => x.hex === hex)?.name || hex}
               </span>
               <span style={{ flex: "none", fontSize: 10, color: TEXT_MUTED,
-                transform: showing ? "none" : "rotate(-90deg)" }}>\u25be</span>
+                transform: showing ? "none" : "rotate(-90deg)" }}>▾</span>
             </button>
             {showing ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: "10px 6px 2px" }}>
