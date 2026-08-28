@@ -73,16 +73,22 @@ const CSS = `
 .dash-band{background:#fff;border-radius:18px;display:flex;flex-direction:column;
   box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.045)}
 .dash-band-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.dash-topic{margin:0 0 8px;min-width:0;font-weight:600;letter-spacing:-.03em;line-height:1.15;color:#171310;word-break:break-word;font-size:var(--topic,26px)}
+.dash-topic-wrap{display:flex;flex-direction:column;gap:1px;padding:2px 2px 10px;
+  border-bottom:1px solid rgba(23,19,16,.08);margin-bottom:2px}
+.dash-topic-meta{display:flex;align-items:center;gap:8px;min-height:20px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;color:#8a9098}
+.dash-topic{margin:0;min-width:0;font-weight:600;letter-spacing:-.03em;line-height:1.15;
+  color:#171310;word-break:break-word;font-size:var(--topic,26px)}
 .dash-topic-edit{background:none;border:none;padding:2px 6px 2px 0;margin:0;cursor:text;font:inherit;
   letter-spacing:inherit;text-align:left;width:100%;border-radius:8px;position:relative}
 .dash-topic-edit:hover{background:rgba(23,19,16,.045);padding-left:6px}
 /* The line is the week topic and has been editable since it was built, and it
    never said so, so it got asked about twice. */
-.dash-topic-clear{margin-left:6px;vertical-align:middle;min-height:24px;padding:0 9px;border-radius:8px;
-  border:1px solid rgba(23,19,16,.14);background:#fff;cursor:pointer;font-family:inherit;font-size:12px;
-  color:#5b6068;opacity:0;transition:opacity .13s}
-.dash-topic:hover .dash-topic-clear,.dash-topic-clear:focus-visible{opacity:1}
+.dash-topic-clear{min-height:18px;padding:0 7px;border-radius:6px;border:1px solid rgba(23,19,16,.14);
+  background:#fff;cursor:pointer;font-family:inherit;font-size:10px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:#5b6068;opacity:0;transition:opacity .13s}
+.dash-topic-wrap:hover .dash-topic-clear,.dash-topic-clear:focus-visible{opacity:1}
 @media (hover:none){.dash-topic-clear{opacity:1}}
 .dash-topic-hint{display:inline-block;margin-left:10px;vertical-align:middle;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#8a9098;
@@ -2850,7 +2856,7 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
 // what goes up next.
 // The topic, editable where it sits. Click it, type, Enter. No punctuation is
 // added and none is required.
-function EditableTopic({ value, placeholder, onSave, own, fromWeek, from, span, nth, onClear }) {
+function EditableTopic({ value, placeholder, onSave, own, fromWeek, from, span, nth, date, onClear }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value || "");
   useEffect(() => { setDraft(value || ""); }, [value]);
@@ -2859,15 +2865,28 @@ function EditableTopic({ value, placeholder, onSave, own, fromWeek, from, span, 
     return (
       <input autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
         onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setDraft(value || ""); setEditing(false); } }}
-        placeholder={placeholder} aria-label="What this week is about"
+        placeholder={placeholder} aria-label="What this day is called"
         className="dash-topic"
         style={{ fontFamily: F, fontWeight: 600, letterSpacing: "-.03em", color: TEXT_PRIMARY,
           border: "none", borderBottom: "2px solid " + BORDER_STRONG, background: "none",
           outline: "none", padding: "0 0 2px", width: "100%" }} />
     );
   }
+  const meta = span > 1
+    ? "Day " + nth + " of " + span + (own ? ", named here" : from && from !== date ? ", from " + from : "")
+    : own ? "This day" : "The week";
   return (
-    <h1 className="dash-topic">
+    <div className="dash-topic-wrap">
+      <div className="dash-topic-meta">
+        <span>{meta}</span>
+        {own && onClear ? (
+          <button className="dash-focus dash-topic-clear" onClick={onClear}
+            title={span > 1
+              ? "Drop this title. These " + span + " days go back to whatever came before."
+              : "Drop this title and go back to whatever came before."}>clear</button>
+        ) : null}
+      </div>
+      <h1 className="dash-topic">
       <button className="dash-focus dash-topic-edit" onClick={() => setEditing(true)}
         title={fromWeek
           ? "This day has no title of its own, so it shows the week topic. Click to name this day, and the name carries forward until you name another day."
@@ -2876,19 +2895,10 @@ function EditableTopic({ value, placeholder, onSave, own, fromWeek, from, span, 
             : "Carried forward from " + from + ". Click to start a new title here."}
         style={{ color: value ? TEXT_PRIMARY : TEXT_MUTED }}>
         {value || placeholder}
-        <span className="dash-topic-hint">
-          {fromWeek ? "the week \u00b7 name this day"
-            : span > 1 ? "day " + nth + " of " + span + " \u00b7 rename"
-            : "this day \u00b7 rename"}
-        </span>
+        <span className="dash-topic-hint">rename</span>
       </button>
-      {own && onClear ? (
-        <button className="dash-focus dash-topic-clear" onClick={onClear}
-          title={span > 1
-            ? "Drop this title. These " + span + " days go back to whatever came before."
-            : "Drop this title and go back to whatever came before."}>clear</button>
-      ) : null}
-    </h1>
+      </h1>
+    </div>
   );
 }
 
@@ -4047,11 +4057,13 @@ export default function Dashboard({ config }) {
 
         <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
           <h2 className="dash-col">Flow</h2>
-          <EditableTopic value={dayTitle.title} placeholder={config.name} onSave={saveDayTitle}
-            own={dayTitle.own} fromWeek={dayTitle.fromWeek} from={dayTitle.from}
-            span={dayTitle.span} nth={dayTitle.nth}
-            onClear={dayTitle.own ? () => saveDayTitle("") : null} />
-          <Panel id="flow" title={null}>{render.flow()}</Panel>
+          <Panel id="flow" title={null}>
+            <EditableTopic value={dayTitle.title} placeholder={config.name} onSave={saveDayTitle}
+              own={dayTitle.own} fromWeek={dayTitle.fromWeek} from={dayTitle.from} date={day}
+              span={dayTitle.span} nth={dayTitle.nth}
+              onClear={dayTitle.own ? () => saveDayTitle("") : null} />
+            {render.flow()}
+          </Panel>
           {undo ? (
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
               <button className="dash-focus" style={{ ...mini, borderColor: WARN, color: WARN }} onClick={doUndo}>Undo {undo.what}</button>
