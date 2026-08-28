@@ -39,18 +39,25 @@ export function dayTitles(weeks, dayPlans) {
       fromWeek: !carried,
     };
   });
-  // How many days each title covers, and where this day sits inside the run.
-  const runs = {};
+  // How far a title reaches, counted by what a day SAYS rather than by where
+  // the words came from.
+  //
+  // Grouping by source looked right and read wrong: a title written on the
+  // second day of a week whose topic is the same words made the first day
+  // show that title and sit outside the run, so the screen said day 1 of 30
+  // on the second day and nothing at all on the first. Two days showing the
+  // same words are the same run, however each one got them.
+  const runs = [];
   days.forEach(d => {
-    const k = out[d.date].from || "week:" + d.weekId;
-    (runs[k] = runs[k] || []).push(d.date);
+    const last = runs[runs.length - 1];
+    if (last && last.title === out[d.date].title) last.dates.push(d.date);
+    else runs.push({ title: out[d.date].title, dates: [d.date] });
   });
-  days.forEach(d => {
-    const k = out[d.date].from || "week:" + d.weekId;
-    out[d.date].span = runs[k].length;
-    out[d.date].nth = runs[k].indexOf(d.date) + 1;
-    out[d.date].dates = runs[k];
-  });
+  runs.forEach(run => run.dates.forEach((date, i) => {
+    out[date].span = run.dates.length;
+    out[date].nth = i + 1;
+    out[date].dates = run.dates;
+  }));
   return out;
 }
 
