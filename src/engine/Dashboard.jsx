@@ -73,7 +73,7 @@ const CSS = `
 .dash-band{background:#fff;border-radius:18px;display:flex;flex-direction:column;
   box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.045)}
 .dash-band-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.dash-topic{margin:0;flex:1 1 240px;min-width:0;font-weight:600;letter-spacing:-.03em;line-height:1.1;color:#171310;word-break:break-word}
+.dash-topic{margin:0 0 8px;min-width:0;font-weight:600;letter-spacing:-.03em;line-height:1.15;color:#171310;word-break:break-word;font-size:var(--topic,26px)}
 .dash-topic-edit{background:none;border:none;padding:2px 6px 2px 0;margin:0;cursor:text;font:inherit;
   letter-spacing:inherit;text-align:left;width:100%;border-radius:8px;position:relative}
 .dash-topic-edit:hover{background:rgba(23,19,16,.045);padding-left:6px}
@@ -2892,7 +2892,7 @@ function EditableTopic({ value, placeholder, onSave, own, fromWeek, from, span, 
   );
 }
 
-function DayBand({ days, day, onPick, onOpenDay, counts, accent, today, topic, name, onTopic, titleOwn, titleFromWeek, titleFrom, titleSpan, titleNth, onClearTitle, done, total, since, cold, left, upNext, upNextHue, onCastNext, onReset }) {
+function DayBand({ days, day, onPick, onOpenDay, counts, accent, today, done, total, since, cold, left, upNext, upNextHue, onCastNext, onReset }) {
   const [jump, setJump] = useState(false);
   const i = days.findIndex(d => d.date === day);
   const weekId = days[i]?.weekId;
@@ -2983,9 +2983,7 @@ function DayBand({ days, day, onPick, onOpenDay, counts, accent, today, topic, n
       </div>
 
       <div className="dash-band-row" style={{ alignItems: "flex-end" }}>
-        <EditableTopic value={topic} placeholder={name} onSave={onTopic}
-          own={titleOwn} fromWeek={titleFromWeek} from={titleFrom} span={titleSpan} nth={titleNth}
-          onClear={onClearTitle} />
+        <span style={{ flex: 1 }} />
         {upNext ? (
           <button className="dash-focus dash-next" onClick={onCastNext} style={{ background: upNextHue || accent }}>
             <span style={{ minWidth: 0 }}>
@@ -4030,10 +4028,6 @@ export default function Dashboard({ config }) {
 
       <div style={{ padding: "14px 18px 0", maxWidth: 1760, margin: "0 auto" }}>
         <DayBand days={days} day={day} onPick={setDay} onOpenDay={() => setTodoOpen(true)} counts={dayCounts} accent={config.accent} today={onDeck}
-          topic={dayTitle.title} name={config.name} onTopic={saveDayTitle}
-          titleOwn={dayTitle.own} titleFromWeek={dayTitle.fromWeek} titleFrom={dayTitle.from}
-          titleSpan={dayTitle.span} titleNth={dayTitle.nth}
-          onClearTitle={dayTitle.own ? () => saveDayTitle("") : null}
           done={castCount} total={flowCount} since={sinceMin} cold={sinceMin != null && sinceMin >= 10}
           left={minsLeft} upNext={liveLabel ? "" : upNextWords} upNextHue={upNextHue} onCastNext={castNext}
           onReset={() => writeDay(d => ({ ...d, done: [] }), "starting the day over")} />
@@ -4053,6 +4047,10 @@ export default function Dashboard({ config }) {
 
         <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
           <h2 className="dash-col">Flow</h2>
+          <EditableTopic value={dayTitle.title} placeholder={config.name} onSave={saveDayTitle}
+            own={dayTitle.own} fromWeek={dayTitle.fromWeek} from={dayTitle.from}
+            span={dayTitle.span} nth={dayTitle.nth}
+            onClear={dayTitle.own ? () => saveDayTitle("") : null} />
           <Panel id="flow" title={null}>{render.flow()}</Panel>
           {undo ? (
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
