@@ -25,7 +25,7 @@ import { allDays, currentDay, parseDay } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { normSlot, sequenceOptions, sequenceFor } from "./dayplan.js";
 import { SHARED_KEY, TYPES, typeOf, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
-import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors } from "./colors.js";
+import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor } from "./colors.js";
 import { useBoards } from "./boards.js";
 import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, setScheduleItemClaim, setScheduleItemNote, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
@@ -1008,7 +1008,7 @@ export function secColor(key) {
 }
 export const SEC_ALL = SEC;
 
-function SlotName({ slot, title, accent, onSave, onDelete, count, tally }) {
+function SlotName({ slot, title, accent, onSave, onDelete, onColor, count, tally }) {
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(title || "");
@@ -1045,6 +1045,24 @@ function SlotName({ slot, title, accent, onSave, onDelete, count, tally }) {
             boxShadow: "0 12px 30px -10px rgba(23,19,16,.4)", display: "flex", flexDirection: "column", gap: 2 }}>
             <button className="dash-focus" onClick={() => { setOpen(false); setEditing(true); }}
               style={{ ...mini, minHeight: HIT, borderColor: "transparent", justifyContent: "flex-start", padding: "0 12px" }}>Rename</button>
+            {onColor ? (
+              <>
+                <span style={{ ...label, fontSize: 11, padding: "8px 12px 4px" }}>Colour</span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "0 8px 6px", maxWidth: 214 }}>
+                  {PALETTE.map(sw => (
+                    <button key={sw.id} className="dash-focus" title={sw.name} aria-label={sw.name}
+                      onClick={() => { onColor(sw.id); setOpen(false); }}
+                      style={{ width: 22, height: 22, borderRadius: 7, background: sw.hex, cursor: "pointer",
+                        border: "2px solid transparent", padding: 0 }} />
+                  ))}
+                  <button className="dash-focus" title="Back to the colour from the name"
+                    onClick={() => { onColor(""); setOpen(false); }}
+                    style={{ minHeight: 22, padding: "0 8px", borderRadius: 7, background: "#fff",
+                      border: "1px solid " + BORDER_STRONG, cursor: "pointer", fontFamily: F,
+                      fontSize: 11, color: TEXT_MUTED }}>auto</button>
+                </div>
+              </>
+            ) : null}
             {onDelete ? (
               <button className="dash-focus" onClick={() => { setOpen(false); onDelete(); }}
                 style={{ ...mini, minHeight: HIT, borderColor: "transparent", color: LIVE, justifyContent: "flex-start", padding: "0 12px" }}>
@@ -1454,7 +1472,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -1648,13 +1666,14 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
             onDragOver={e => { e.preventDefault(); setOverSlot(s.slot); }}
             onDragLeave={() => setOverSlot(null)}
             onDrop={e => { e.preventDefault(); setOverSlot(null); drop(e, s.slot); }}
-            style={{ "--sec": secColor(bucket.title || s.slot),
+            style={{ "--sec": secHue(bucket.title || s.slot),
               background: overSlot === s.slot ? accent + "0c" : "transparent" }}>
             <div className="flow-sec-head">
               <SlotName slot={s.slot} title={bucket.title || overrideTitle} accent={accent} count={items.length}
                 tally={items.length ? items.filter(x => doneSet.has(x.id)).length + "/" + items.length : ""}
                 onSave={(t) => onSetSlotTitle(s.slot, t)}
-                onDelete={named.has(s.slot) ? null : () => onDeleteSection(s.slot)} />
+                onDelete={named.has(s.slot) ? null : () => onDeleteSection(s.slot)}
+                onColor={onSectionColor ? (sw) => onSectionColor(bucket.title || overrideTitle || s.slot, sw) : null} />
               <button className="dash-focus flow-add" onClick={() => setAdding(adding === s.slot ? null : s.slot)}>
                 {adding === s.slot ? "Close" : "+ Add"}
               </button>
@@ -3824,6 +3843,8 @@ export default function Dashboard({ config }) {
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
       isAssigned={(it) => !!assignedIdFor(it)} onToggleAssigned={toggleAssigned} hue={hueOf}
+      secHue={(name) => sectionColor(shared, name, secColor(name))}
+      onSectionColor={(name, sw) => writeSectionColor(updateShared, name, sw)}
       noteSources={[
         { from: "This day", body: plan?.notes, onSave: (v) => saveDayNote(v) },
         { from: "Scratch, " + day, body: (data.scratch || {})[day] },

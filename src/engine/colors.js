@@ -70,6 +70,24 @@ export const colorOfKind = (colors, kind) =>
   swatch((colors || DEFAULTS)[kind] || DEFAULTS[kind])?.hex || "#5b6068";
 export const colorOfType = (colors, type) => colorOfKind(colors, kindOfType(type));
 
+// A section's colour, if I picked one.
+//
+// Kept by the section's NAME rather than by the day, so "The hook" is the same
+// colour every week I use it, which is the whole reason the generated ones
+// were hashed off the name in the first place. No pick means the hash still
+// decides, so nothing has to be chosen for the flow to read.
+export const sectionColor = (shared, name, fallback) => {
+  const id = (shared?.colors?.sections || {})[(name || "").trim().toLowerCase()];
+  return (id && swatch(id)?.hex) || fallback;
+};
+
+export const writeSectionColor = (updateShared, name, swatchId) => updateShared(prev => {
+  const key = (name || "").trim().toLowerCase();
+  const sections = { ...((prev.colors || {}).sections || {}) };
+  if (swatchId) sections[key] = swatchId; else delete sections[key];
+  return { ...prev, colors: { ...(prev.colors || {}), sections } };
+});
+
 export const writeColor = (updateShared, kind, swatchId) => updateShared(prev => ({
   ...prev,
   colors: { ...(prev.colors || {}), [kind]: swatchId },
