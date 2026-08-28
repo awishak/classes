@@ -15,6 +15,7 @@ import { renderToString } from "react-dom/server";
 import Dashboard, {
   FlowPanel, TodoPanel, NowPanel, ScratchPanel, AttendancePanel, QuestionsPanel,
   BoardsPanel, StockedPanel, AssignmentsPanel, CommandBar, Readings, IdeasPanel,
+  ColorsSheet, NoteSheet, ShortcutSheet,
 } from "../src/engine/Dashboard.jsx";
 import ClassroomView from "../src/engine/ClassroomView.jsx";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
@@ -134,6 +135,18 @@ cases.push(["Readings, with my note", <Readings accent={cfg0.accent} castNow={no
 cases.push(["Ideas", <IdeasPanel blocks={[{ id: "b", type: "activity", title: "An idea", body: "How it runs",
   tags: ["teaching move"], children: [] }]} accent={cfg0.accent} sections={[]} days={[]} today="Sep 1"
   onPick={noop} onAdd={noop} onEdit={noop} onRemove={noop} onDuplicate={noop} />]);
+// Every sheet that opens over the screen. None of them was rendered here, and
+// that is exactly how ColorsSheet shipped using an accent prop it never took:
+// the build was green and the button threw the moment it was pressed.
+cases.push(["Look sheet", <ColorsSheet colors={{}} fonts={{}} bold={false} accent={cfg0.accent}
+  onPick={noop} onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Column headings"]);
+cases.push(["Look sheet, with choices", <ColorsSheet colors={{ readings: "purple-deep" }}
+  fonts={{ cols: "fraunces", sections: "grotesk", rows: "georgia" }} bold accent={cfg0.accent}
+  onPick={noop} onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Fraunces"]);
+cases.push(["Note sheet", <NoteSheet sections={[["opener", "The hook"]]} accent={cfg0.accent}
+  sources={[{ from: "This day", body: "a note", onSave: noop }, { from: "The week", body: "", onSave: noop }]}
+  onAdd={noop} onClose={noop} />, "A new note"]);
+cases.push(["Shortcut sheet", <ShortcutSheet onClose={noop} />]);
 cases.push(["Command bar", <CommandBar targets={[{ key: "k", group: "g", title: "t", run: noop }]} accent={cfg0.accent} onClose={noop} />]);
 
 // The box at the top of the class page, one case per thing that can be on the

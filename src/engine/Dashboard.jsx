@@ -2366,7 +2366,7 @@ const SHORTCUTS = [
 // cannot be read. That is the reason the light tier of each hue is only as
 // light as it is: the build checks all twenty against white and fails on any
 // that drop under 4.5:1.
-function ColorsSheet({ colors, fonts, bold, onPick, onFont, onBold, onReset, onClose }) {
+export function ColorsSheet({ colors, fonts, bold, accent, onPick, onFont, onBold, onReset, onClose }) {
   const [open, setOpen] = useState(KINDS[0].id);
   return (
     <Sheet title="Look" sub="Colour and type, kept with me and used in every class" onClose={onClose} width={680}>
@@ -2484,7 +2484,7 @@ function SourceNote({ from, body, onSave, accent, oneLine }) {
   );
 }
 
-function NoteSheet({ sections, sources, accent, onAdd, onClose }) {
+export function NoteSheet({ sections, sources, accent, onAdd, onClose }) {
   const [text, setText] = useState("");
   const [slot, setSlot] = useState(sections[0]?.[0] || "");
   const commit = () => {
@@ -2655,7 +2655,7 @@ export function Sheet({ title, sub, onClose, children, width }) {
   );
 }
 
-function ShortcutSheet({ onClose }) {
+export function ShortcutSheet({ onClose }) {
   return (
     <div onMouseDown={onClose}
       style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(23,19,16,.35)", display: "grid", placeItems: "center", padding: 20 }}>
@@ -4069,7 +4069,7 @@ export default function Dashboard({ config }) {
       ) : null}
 
       {colorsOpen ? (
-        <ColorsSheet colors={colors} fonts={fonts} bold={boldRows} onClose={() => setColorsOpen(false)}
+        <ColorsSheet colors={colors} fonts={fonts} bold={boldRows} accent={config.accent} onClose={() => setColorsOpen(false)}
           onPick={(kind, sw) => writeColor(updateShared, kind, sw)}
           onFont={(slot, f) => writeFont(updateShared, slot, f)}
           onBold={(v) => writeBold(updateShared, v)}
