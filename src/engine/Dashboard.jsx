@@ -21,7 +21,7 @@ import PollPanel, { oneSentence } from "./PollPanel.jsx";
 import HornBoard from "./HornBoard.jsx";
 import { useHeadlines } from "./headlines.js";
 import HeadlinesBoard from "./HeadlinesBoard.jsx";
-import { allDays, currentDay, parseDay } from "./days.js";
+import { allDays, currentDay, parseDay, dayTitles } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { normSlot, sequenceOptions, sequenceFor } from "./dayplan.js";
 import { SHARED_KEY, TYPES, typeOf, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
@@ -79,6 +79,11 @@ const CSS = `
 .dash-topic-edit:hover{background:rgba(23,19,16,.045);padding-left:6px}
 /* The line is the week topic and has been editable since it was built, and it
    never said so, so it got asked about twice. */
+.dash-topic-clear{margin-left:6px;vertical-align:middle;min-height:24px;padding:0 9px;border-radius:8px;
+  border:1px solid rgba(23,19,16,.14);background:#fff;cursor:pointer;font-family:inherit;font-size:12px;
+  color:#5b6068;opacity:0;transition:opacity .13s}
+.dash-topic:hover .dash-topic-clear,.dash-topic-clear:focus-visible{opacity:1}
+@media (hover:none){.dash-topic-clear{opacity:1}}
 .dash-topic-hint{display:inline-block;margin-left:10px;vertical-align:middle;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#8a9098;
   opacity:0;transition:opacity .13s;white-space:nowrap}
@@ -2436,7 +2441,7 @@ function ColorsSheet({ colors, onPick, onReset, onClose }) {
 // the box, so the new one answers what is already there.
 // One of the places a note already lives. The ones I can write to open when I
 // click them; the rest are there to read.
-function SourceNote({ from, body, onSave, accent }) {
+function SourceNote({ from, body, onSave, accent, oneLine }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(body || "");
   useEffect(() => { setDraft(body || ""); }, [body]);
@@ -2446,11 +2451,18 @@ function SourceNote({ from, body, onSave, accent }) {
       <span style={{ ...label, fontSize: 11 }}>{from}</span>
       {editing ? (
         <span className="read-field">
-          <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
-            onKeyDown={e => { if (e.key === "Escape") { setDraft(body || ""); setEditing(false); }
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit(); }}
-            style={{ ...inputStyle, minHeight: 130, fontSize: 14, lineHeight: 1.5, resize: "vertical", paddingRight: 42 }} />
-          <Confirm onClick={commit} bottom title="Save" />
+          {oneLine ? (
+            <input autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
+              onKeyDown={e => { if (e.key === "Escape") { setDraft(body || ""); setEditing(false); }
+                if (e.key === "Enter") { e.preventDefault(); commit(); } }}
+              style={{ ...inputStyle, minHeight: 38, fontSize: 14, paddingRight: 42 }} />
+          ) : (
+            <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
+              onKeyDown={e => { if (e.key === "Escape") { setDraft(body || ""); setEditing(false); }
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit(); }}
+              style={{ ...inputStyle, minHeight: 130, fontSize: 14, lineHeight: 1.5, resize: "vertical", paddingRight: 42 }} />
+          )}
+          <Confirm onClick={commit} bottom={!oneLine} title="Save" />
         </span>
       ) : onSave ? (
         <button className="dash-focus" onClick={() => setEditing(true)} title={"Edit \u2014 " + from}
@@ -2478,7 +2490,7 @@ function NoteSheet({ sections, sources, accent, onAdd, onClose }) {
   // version read two day-level fields, and both were empty on every day of
   // every class, because what I actually write goes on the WEEK. So it asks
   // for all of them and says which is which.
-  const already = (sources || []).filter(x => (x.body || "").trim());
+  const already = (sources || []).filter(x => (x.body || "").trim() || x.onSave);
   return (
     <Sheet title="A new note" sub="It goes into the flow as a row" onClose={onClose} width={620}>
       <span className="read-field">
@@ -2501,7 +2513,7 @@ function NoteSheet({ sections, sources, accent, onAdd, onClose }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
           <span style={{ ...label, color: accent }}>What I already wrote</span>
           {already.map(x => (
-            <SourceNote key={x.from} from={x.from} body={x.body} onSave={x.onSave} accent={accent} />
+            <SourceNote key={x.from} from={x.from} body={x.body} onSave={x.onSave} oneLine={x.oneLine} accent={accent} />
           ))}
         </div>
       ) : (
@@ -2838,7 +2850,7 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
 // what goes up next.
 // The topic, editable where it sits. Click it, type, Enter. No punctuation is
 // added and none is required.
-function EditableTopic({ value, placeholder, onSave }) {
+function EditableTopic({ value, placeholder, onSave, own, fromWeek, from, span, nth, onClear }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value || "");
   useEffect(() => { setDraft(value || ""); }, [value]);
@@ -2857,16 +2869,30 @@ function EditableTopic({ value, placeholder, onSave }) {
   return (
     <h1 className="dash-topic">
       <button className="dash-focus dash-topic-edit" onClick={() => setEditing(true)}
-        title="What this week is about. Click to rename the week; every day of the week says the same."
+        title={fromWeek
+          ? "This day has no title of its own, so it shows the week topic. Click to name this day, and the name carries forward until you name another day."
+          : own
+            ? (span > 1 ? "This title starts here and covers " + span + " class days." : "This title belongs to this day.")
+            : "Carried forward from " + from + ". Click to start a new title here."}
         style={{ color: value ? TEXT_PRIMARY : TEXT_MUTED }}>
         {value || placeholder}
-        <span className="dash-topic-hint">this week · rename</span>
+        <span className="dash-topic-hint">
+          {fromWeek ? "the week \u00b7 name this day"
+            : span > 1 ? "day " + nth + " of " + span + " \u00b7 rename"
+            : "this day \u00b7 rename"}
+        </span>
       </button>
+      {own && onClear ? (
+        <button className="dash-focus dash-topic-clear" onClick={onClear}
+          title={span > 1
+            ? "Drop this title. These " + span + " days go back to whatever came before."
+            : "Drop this title and go back to whatever came before."}>clear</button>
+      ) : null}
     </h1>
   );
 }
 
-function DayBand({ days, day, onPick, onOpenDay, counts, accent, today, topic, name, onTopic, done, total, since, cold, left, upNext, upNextHue, onCastNext, onReset }) {
+function DayBand({ days, day, onPick, onOpenDay, counts, accent, today, topic, name, onTopic, titleOwn, titleFromWeek, titleFrom, titleSpan, titleNth, onClearTitle, done, total, since, cold, left, upNext, upNextHue, onCastNext, onReset }) {
   const [jump, setJump] = useState(false);
   const i = days.findIndex(d => d.date === day);
   const weekId = days[i]?.weekId;
@@ -2957,7 +2983,9 @@ function DayBand({ days, day, onPick, onOpenDay, counts, accent, today, topic, n
       </div>
 
       <div className="dash-band-row" style={{ alignItems: "flex-end" }}>
-        <EditableTopic value={topic} placeholder={name} onSave={onTopic} />
+        <EditableTopic value={topic} placeholder={name} onSave={onTopic}
+          own={titleOwn} fromWeek={titleFromWeek} from={titleFrom} span={titleSpan} nth={titleNth}
+          onClear={onClearTitle} />
         {upNext ? (
           <button className="dash-focus dash-next" onClick={onCastNext} style={{ background: upNextHue || accent }}>
             <span style={{ minWidth: 0 }}>
@@ -3105,6 +3133,12 @@ export default function Dashboard({ config }) {
 
   // Features scheduled for this class day, in the order the week lists them.
   const weekRow = weeks.find(w => w.id === weekId);
+  // What each day is called. A title starts where I write it and carries
+  // forward until the next one, so one title can cover two days, or a week and
+  // a half, without me setting where it ends.
+  const titles = dayTitles(weeks, data?.dayPlans);
+  const dayTitle = titles[day] || { title: dayMeta?.topic || "", own: false, fromWeek: true, span: 1, nth: 1 };
+  const saveDayTitle = (v) => writeDay(d => ({ ...d, title: v.trim() }), "renaming the day");
   // Derived from the date rather than its position in the week, which was only
   // ever right for a class meeting Monday, Wednesday and Friday in that order.
   const dayName = weekdayOf(day);
@@ -3848,6 +3882,7 @@ export default function Dashboard({ config }) {
       noteSources={[
         { from: "This day", body: plan?.notes, onSave: (v) => saveDayNote(v) },
         { from: "Scratch, " + day, body: (data.scratch || {})[day] },
+        { from: "What this week is called", body: weekRow?.topic, onSave: saveWeekTopic, oneLine: true },
         { from: "How this week runs", body: weekRow?.plan, onSave: saveWeekPlan },
         { from: "What students see this week", body: weekRow?.text, onSave: saveWeekText },
         { from: "Notes already in the flow",
@@ -3995,7 +4030,10 @@ export default function Dashboard({ config }) {
 
       <div style={{ padding: "14px 18px 0", maxWidth: 1760, margin: "0 auto" }}>
         <DayBand days={days} day={day} onPick={setDay} onOpenDay={() => setTodoOpen(true)} counts={dayCounts} accent={config.accent} today={onDeck}
-          topic={dayMeta?.topic} name={config.name} onTopic={saveWeekTopic}
+          topic={dayTitle.title} name={config.name} onTopic={saveDayTitle}
+          titleOwn={dayTitle.own} titleFromWeek={dayTitle.fromWeek} titleFrom={dayTitle.from}
+          titleSpan={dayTitle.span} titleNth={dayTitle.nth}
+          onClearTitle={dayTitle.own ? () => saveDayTitle("") : null}
           done={castCount} total={flowCount} since={sinceMin} cold={sinceMin != null && sinceMin >= 10}
           left={minsLeft} upNext={liveLabel ? "" : upNextWords} upNextHue={upNextHue} onCastNext={castNext}
           onReset={() => writeDay(d => ({ ...d, done: [] }), "starting the day over")} />
