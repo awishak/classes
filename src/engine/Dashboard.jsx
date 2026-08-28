@@ -278,19 +278,22 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 /* A section heads the rows under it, so it is a bar like the rows rather than
    a chip, which was a third visual language sitting between the cards and the
    coloured bars. */
-.flow-sec-head{display:flex;align-items:center;gap:6px;margin:0 0 5px;padding:2px 6px 2px 10px;
-  min-height:34px;border-radius:10px;background:var(--sec);color:#fff}
-.flow-name{flex:0 1 auto;min-width:0;background:none;border:none;padding:2px 4px;border-radius:7px;
-  cursor:text;font-family:${F};font-size:14px;font-weight:600;letter-spacing:-.01em;color:#fff;
-  text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.flow-name:hover{background:rgba(255,255,255,.2)}
-.flow-tally{flex:none;font-family:${MONO};font-size:11.5px;font-weight:500;color:rgba(255,255,255,.75)}
+/* Two full-colour bars stacked is a wall. The rows carry the fill, so the
+   header is a plain rule with the section colour in the words, which reads as
+   a heading rather than as a second row. */
+.flow-sec-head{display:flex;align-items:center;gap:6px;margin:0 0 6px;padding:0 4px 6px 0;
+  min-height:32px;border-bottom:1px solid rgba(23,19,16,.09)}
+.flow-name{flex:0 1 auto;min-width:0;background:none;border:none;padding:3px 6px;border-radius:7px;
+  cursor:text;font-family:${F};font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--sec);
+  text-transform:uppercase;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flow-name:hover{background:rgba(23,19,16,.05)}
+.flow-tally{flex:none;font-family:${MONO};font-size:11.5px;font-weight:500;color:#8a9098}
 .flow-more{flex:none;min-width:26px;min-height:26px;border:none;border-radius:8px;background:none;
-  cursor:pointer;color:rgba(255,255,255,.75);font-size:10px;padding:0}
-.flow-more:hover{background:rgba(255,255,255,.22);color:#fff}
-.flow-add{margin-left:auto;flex:none;min-height:26px;padding:0 10px;border:none;border-radius:8px;
-  background:rgba(255,255,255,.2);color:#fff;cursor:pointer;font-family:${F};font-size:12.5px;font-weight:500}
-.flow-add:hover{background:rgba(255,255,255,.34)}
+  cursor:pointer;color:#8a9098;font-size:10px;padding:0}
+.flow-more:hover{background:rgba(23,19,16,.06);color:#171310}
+.flow-add{margin-left:auto;flex:none;min-height:26px;padding:0 10px;border:1px solid rgba(23,19,16,.14);
+  border-radius:8px;background:#fff;color:#5b6068;cursor:pointer;font-family:${F};font-size:12.5px;font-weight:500}
+.flow-add:hover{background:rgba(23,19,16,.04);color:#171310}
 .flow-sec .flow-add{opacity:0;transition:opacity .12s}
 .flow-sec:hover .flow-add,.flow-sec:focus-within .flow-add{opacity:1}
 @media (hover:none){.flow-tools,.flow-sec .flow-add{opacity:1}}
@@ -1026,11 +1029,12 @@ function SlotName({ slot, title, accent, onSave, onDelete, count, tally }) {
   }
 
   return (
-    <span style={{ position: "relative", display: "contents" }}>
+    <>
       <button onClick={() => setEditing(true)} onContextMenu={e => { e.preventDefault(); setOpen(true); }}
         title="Rename this section. Right-click for more."
         className="dash-focus flow-name">{title || slot}</button>
       {tally ? <span className="flow-tally">{tally}</span> : null}
+      <span style={{ position: "relative", flex: "none", display: "inline-flex" }}>
       <button onClick={() => setOpen(v => !v)} aria-haspopup="menu" aria-expanded={open}
         title="More for this section" className="dash-focus flow-more">▾</button>
       {open ? (
@@ -1044,13 +1048,14 @@ function SlotName({ slot, title, accent, onSave, onDelete, count, tally }) {
             {onDelete ? (
               <button className="dash-focus" onClick={() => { setOpen(false); onDelete(); }}
                 style={{ ...mini, minHeight: HIT, borderColor: "transparent", color: LIVE, justifyContent: "flex-start", padding: "0 12px" }}>
-                Delete{count ? " \u00b7 takes " + count + " rows too" : ""}
+                {count ? "Delete the section and its " + count + (count === 1 ? " row" : " rows") : "Delete the section"}
               </button>
             ) : null}
           </div>
         </>
       ) : null}
-    </span>
+      </span>
+    </>
   );
 }
 
