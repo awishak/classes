@@ -74,6 +74,16 @@ const CSS = `
   box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.045)}
 .dash-band-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .dash-topic{margin:0;flex:1 1 240px;min-width:0;font-weight:600;letter-spacing:-.03em;line-height:1.1;color:#171310;word-break:break-word}
+.dash-topic-edit{background:none;border:none;padding:2px 6px 2px 0;margin:0;cursor:text;font:inherit;
+  letter-spacing:inherit;text-align:left;width:100%;border-radius:8px;position:relative}
+.dash-topic-edit:hover{background:rgba(23,19,16,.045);padding-left:6px}
+/* The line is the week topic and has been editable since it was built, and it
+   never said so, so it got asked about twice. */
+.dash-topic-hint{display:inline-block;margin-left:10px;vertical-align:middle;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#8a9098;
+  opacity:0;transition:opacity .13s;white-space:nowrap}
+.dash-topic-edit:hover .dash-topic-hint,.dash-topic-edit:focus-visible .dash-topic-hint{opacity:1}
+@media (hover:none){.dash-topic-hint{opacity:1}}
 .dash-week{flex:none;min-height:38px;padding:0 13px;border-radius:11px;border:1px solid rgba(23,19,16,.12);background:#fff;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;color:#171310}
 .dash-week:hover{background:rgba(23,19,16,.04)}
 .dash-step{flex:none;width:30px;min-height:38px;border-radius:10px;border:none;background:none;cursor:pointer;font-size:17px;color:#5b6068}
@@ -2401,6 +2411,37 @@ function ColorsSheet({ colors, onPick, onReset, onClose }) {
 // Writing the next note with no sight of the last four is how the same thought
 // gets written three times. Everything I have written for this day sits under
 // the box, so the new one answers what is already there.
+// One of the places a note already lives. The ones I can write to open when I
+// click them; the rest are there to read.
+function SourceNote({ from, body, onSave, accent }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(body || "");
+  useEffect(() => { setDraft(body || ""); }, [body]);
+  const commit = () => { onSave(draft); setEditing(false); };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <span style={{ ...label, fontSize: 11 }}>{from}</span>
+      {editing ? (
+        <span className="read-field">
+          <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
+            onKeyDown={e => { if (e.key === "Escape") { setDraft(body || ""); setEditing(false); }
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit(); }}
+            style={{ ...inputStyle, minHeight: 130, fontSize: 14, lineHeight: 1.5, resize: "vertical", paddingRight: 42 }} />
+          <Confirm onClick={commit} bottom title="Save" />
+        </span>
+      ) : onSave ? (
+        <button className="dash-focus" onClick={() => setEditing(true)} title={"Edit \u2014 " + from}
+          style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.5, color: TEXT_SECONDARY, textAlign: "left",
+            background: SURFACE_2, border: "1px solid transparent", borderRadius: 10, padding: "10px 12px",
+            cursor: "text", fontFamily: F, width: "100%" }}>{body}</button>
+      ) : (
+        <div style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.5, color: TEXT_SECONDARY,
+          background: SURFACE_2, borderRadius: 10, padding: "10px 12px" }}>{body}</div>
+      )}
+    </div>
+  );
+}
+
 function NoteSheet({ sections, sources, accent, onAdd, onClose }) {
   const [text, setText] = useState("");
   const [slot, setSlot] = useState(sections[0]?.[0] || "");
@@ -2437,11 +2478,7 @@ function NoteSheet({ sections, sources, accent, onAdd, onClose }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
           <span style={{ ...label, color: accent }}>What I already wrote</span>
           {already.map(x => (
-            <div key={x.from} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <span style={{ ...label, fontSize: 11 }}>{x.from}</span>
-              <div style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.5, color: TEXT_SECONDARY,
-                background: SURFACE_2, borderRadius: 10, padding: "10px 12px" }}>{x.body}</div>
-            </div>
+            <SourceNote key={x.from} from={x.from} body={x.body} onSave={x.onSave} accent={accent} />
           ))}
         </div>
       ) : (
@@ -2796,17 +2833,17 @@ function EditableTopic({ value, placeholder, onSave }) {
   }
   return (
     <h1 className="dash-topic">
-      <button className="dash-focus" onClick={() => setEditing(true)} title="Rename what this week is about"
-        style={{ background: "none", border: "none", padding: "0 4px 0 0", margin: 0, cursor: "text",
-          font: "inherit", letterSpacing: "inherit", color: value ? TEXT_PRIMARY : TEXT_MUTED,
-          textAlign: "left", width: "100%", borderRadius: 6 }}>
+      <button className="dash-focus dash-topic-edit" onClick={() => setEditing(true)}
+        title="What this week is about. Click to rename the week; every day of the week says the same."
+        style={{ color: value ? TEXT_PRIMARY : TEXT_MUTED }}>
         {value || placeholder}
+        <span className="dash-topic-hint">this week · rename</span>
       </button>
     </h1>
   );
 }
 
-function DayBand({ days, day, onPick, onOpenDay, counts, accent, today, topic, name, onTopic, done, total, since, cold, left, upNext, onCastNext, onReset }) {
+function DayBand({ days, day, onPick, onOpenDay, counts, accent, today, topic, name, onTopic, done, total, since, cold, left, upNext, upNextHue, onCastNext, onReset }) {
   const [jump, setJump] = useState(false);
   const i = days.findIndex(d => d.date === day);
   const weekId = days[i]?.weekId;
@@ -2899,7 +2936,7 @@ function DayBand({ days, day, onPick, onOpenDay, counts, accent, today, topic, n
       <div className="dash-band-row" style={{ alignItems: "flex-end" }}>
         <EditableTopic value={topic} placeholder={name} onSave={onTopic} />
         {upNext ? (
-          <button className="dash-focus dash-next" onClick={onCastNext} style={{ background: accent }}>
+          <button className="dash-focus dash-next" onClick={onCastNext} style={{ background: upNextHue || accent }}>
             <span style={{ minWidth: 0 }}>
               <span style={{ display: "block", fontSize: 11.5, opacity: .85, fontWeight: 600, letterSpacing: ".04em", textTransform: "uppercase" }}>Up next</span>
               <span style={{ display: "block", fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{upNext}</span>
@@ -3784,10 +3821,10 @@ export default function Dashboard({ config }) {
       readings={readings} comingRows={comingRows}
       isAssigned={(it) => !!assignedIdFor(it)} onToggleAssigned={toggleAssigned} hue={hueOf}
       noteSources={[
-        { from: "This day", body: plan?.notes },
+        { from: "This day", body: plan?.notes, onSave: (v) => saveDayNote(v) },
         { from: "Scratch, " + day, body: (data.scratch || {})[day] },
-        { from: "How this week runs", body: weekRow?.plan },
-        { from: "What students see this week", body: weekRow?.text },
+        { from: "How this week runs", body: weekRow?.plan, onSave: saveWeekPlan },
+        { from: "What students see this week", body: weekRow?.text, onSave: saveWeekText },
         { from: "Notes already in the flow",
           body: Object.values(plan?.slots || {})
             .flatMap(b => normSlot(b).items)
@@ -3852,12 +3889,36 @@ export default function Dashboard({ config }) {
     poll: P.poll?.phase && P.poll.phase !== "idle" ? "\u25cf" : 0,
     ideas: 0, todo: 0, scratch: 0, boards: 0,
   };
-  const upNextRow = (flowOrderRef.current || []).find(r => !doneSet.has(r.id));
+  // The order the flow is drawn in: the sequence's slots, then the sections I
+  // made, then anything left over. Worked out here rather than read off a ref
+  // the Flow fills while it renders, because on the first paint that ref is
+  // empty and the button was simply missing until something re-rendered.
+  const flowOrder = (() => {
+    const slots = plan?.slots || {};
+    const named = new Set((seq?.slots || []).map(x => x.slot));
+    const keys = [
+      ...(seq?.slots || []).map(x => x.slot),
+      ...Object.keys(slots).filter(k => isSection(k)),
+      ...Object.keys(slots).filter(k => !named.has(k) && !isSection(k)),
+    ];
+    const out = [];
+    keys.forEach(k => normSlot(slots[k]).items.forEach(it => out.push({ id: it.id, slot: k, item: it, blockId: it.blockId })));
+    return out;
+  })();
+  const upNextRow = flowOrder.find(r => !doneSet.has(r.id));
   const upNextWords = upNextRow ? (() => {
     const b = upNextRow.blockId ? blockOf(upNextRow.blockId) : null;
     return (b ? b.headline || b.title : upNextRow.item?.claim || upNextRow.item?.text) || "";
   })() : "";
-  const castNext = () => { if (upNextRow?.cast) upNextRow.cast(); };
+  const upNextHue = upNextRow ? (() => {
+    const b = upNextRow.blockId ? blockOf(upNextRow.blockId) : null;
+    return hueOf(upNextRow.item?.feature ? "activity" : b ? b.type : "note");
+  })() : "";
+  const castNext = () => {
+    if (!upNextRow) return;
+    const live = (flowOrderRef.current || []).find(r => r.id === upNextRow.id);
+    if (live?.cast) live.cast();
+  };
   const sinceMin = live?.engagedAt ? Math.floor((Date.now() - live.engagedAt) / 60000) : null;
   const minsLeft = (() => {
     const m = (hhmm) => { const [h, x] = (hhmm || "").split(":").map(Number); return isNaN(h) ? null : h * 60 + (x || 0); };
@@ -3911,7 +3972,7 @@ export default function Dashboard({ config }) {
         <DayBand days={days} day={day} onPick={setDay} onOpenDay={() => setTodoOpen(true)} counts={dayCounts} accent={config.accent} today={onDeck}
           topic={dayMeta?.topic} name={config.name} onTopic={saveWeekTopic}
           done={castCount} total={flowCount} since={sinceMin} cold={sinceMin != null && sinceMin >= 10}
-          left={minsLeft} upNext={liveLabel ? "" : upNextWords} onCastNext={castNext}
+          left={minsLeft} upNext={liveLabel ? "" : upNextWords} upNextHue={upNextHue} onCastNext={castNext}
           onReset={() => writeDay(d => ({ ...d, done: [] }), "starting the day over")} />
       </div>
 
