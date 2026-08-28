@@ -275,14 +275,22 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-sec::before{content:"";position:absolute;left:3px;top:24px;bottom:6px;width:3px;border-radius:2px;
   background:var(--sec);opacity:.5}
 .flow-sec:hover::before{opacity:.95}
-.flow-sec-head{display:flex;align-items:center;gap:8px;padding:2px 4px 6px;
-  position:sticky;top:0;z-index:2;background:#fff}
-.flow-pill{display:inline-flex;align-items:center;gap:7px;background:color-mix(in srgb,var(--sec) 13%,#fff);
-  border-radius:999px;padding:5px 12px;border:none;cursor:pointer;font-family:${F};
-  font-size:12.5px;font-weight:600;color:var(--sec);letter-spacing:0}
-.flow-pill:hover{background:color-mix(in srgb,var(--sec) 22%,#fff)}
-@supports not (color:color-mix(in srgb,red 10%,#fff)){
-  .flow-pill{background:${SURFACE_2};color:${TEXT_SECONDARY}}}
+/* A section heads the rows under it, so it is a bar like the rows rather than
+   a chip, which was a third visual language sitting between the cards and the
+   coloured bars. */
+.flow-sec-head{display:flex;align-items:center;gap:6px;margin:0 0 5px;padding:2px 6px 2px 10px;
+  min-height:34px;border-radius:10px;background:var(--sec);color:#fff}
+.flow-name{flex:0 1 auto;min-width:0;background:none;border:none;padding:2px 4px;border-radius:7px;
+  cursor:text;font-family:${F};font-size:14px;font-weight:600;letter-spacing:-.01em;color:#fff;
+  text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flow-name:hover{background:rgba(255,255,255,.2)}
+.flow-tally{flex:none;font-family:${MONO};font-size:11.5px;font-weight:500;color:rgba(255,255,255,.75)}
+.flow-more{flex:none;min-width:26px;min-height:26px;border:none;border-radius:8px;background:none;
+  cursor:pointer;color:rgba(255,255,255,.75);font-size:10px;padding:0}
+.flow-more:hover{background:rgba(255,255,255,.22);color:#fff}
+.flow-add{margin-left:auto;flex:none;min-height:26px;padding:0 10px;border:none;border-radius:8px;
+  background:rgba(255,255,255,.2);color:#fff;cursor:pointer;font-family:${F};font-size:12.5px;font-weight:500}
+.flow-add:hover{background:rgba(255,255,255,.34)}
 .flow-sec .flow-add{opacity:0;transition:opacity .12s}
 .flow-sec:hover .flow-add,.flow-sec:focus-within .flow-add{opacity:1}
 @media (hover:none){.flow-tools,.flow-sec .flow-add{opacity:1}}
@@ -472,11 +480,6 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
             style={{ fontFamily: F }}>{hostOf(url)} ↗</a>
         ) : null}
       </span>
-
-      {shared ? (
-        <span title="From the library. Editing this headline changes every place the block appears."
-          style={{ flex: "none", ...label, fontSize: 11, color: "rgba(255,255,255,.7)" }}>·</span>
-      ) : null}
 
       <span className="flow-tools">
         {onNest ? (
@@ -1011,7 +1014,7 @@ function SlotName({ slot, title, accent, onSave, onDelete, count, tally }) {
   if (editing) {
     const commit = () => { onSave(draft.trim() || undefined); setEditing(false); };
     return (
-      <span className="read-field" style={{ flex: 1, minWidth: 120 }}>
+      <span className="read-field" style={{ flex: "1 1 auto", minWidth: 120 }}>
         <input autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
           onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); commit(); }
             if (e.key === "Escape") { setDraft(title || ""); setEditing(false); } }}
@@ -1023,16 +1026,13 @@ function SlotName({ slot, title, accent, onSave, onDelete, count, tally }) {
   }
 
   return (
-    <span style={{ position: "relative" }}>
+    <span style={{ position: "relative", display: "contents" }}>
       <button onClick={() => setEditing(true)} onContextMenu={e => { e.preventDefault(); setOpen(true); }}
         title="Rename this section. Right-click for more."
-        className="dash-focus flow-pill">
-        {title || slot}
-        {tally ? <span style={{ fontFamily: MONO, fontSize: 11.5, color: TEXT_MUTED, fontWeight: 500 }}>{tally}</span> : null}
-      </button>
+        className="dash-focus flow-name">{title || slot}</button>
+      {tally ? <span className="flow-tally">{tally}</span> : null}
       <button onClick={() => setOpen(v => !v)} aria-haspopup="menu" aria-expanded={open}
-        title="More for this section" className="dash-focus flow-pill"
-        style={{ padding: "5px 8px", marginLeft: 3 }}>▾</button>
+        title="More for this section" className="dash-focus flow-more">▾</button>
       {open ? (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 60 }} />
@@ -1646,14 +1646,13 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
             style={{ "--sec": secColor(bucket.title || s.slot),
               background: overSlot === s.slot ? accent + "0c" : "transparent" }}>
             <div className="flow-sec-head">
-              {overrideTitle
-                ? <span className="flow-pill" style={{ cursor: "default" }}>{overrideTitle}</span>
-                : <SlotName slot={s.slot} title={bucket.title} accent={accent} count={items.length}
-                    tally={items.length ? items.filter(x => doneSet.has(x.id)).length + "/" + items.length : ""}
-                    onSave={(t) => onSetSlotTitle(s.slot, t)}
-                    onDelete={named.has(s.slot) ? null : () => onDeleteSection(s.slot)} />}
-              <button className="dash-focus flow-add" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
-                onClick={() => setAdding(adding === s.slot ? null : s.slot)}>{adding === s.slot ? "Close" : "+ Add"}</button>
+              <SlotName slot={s.slot} title={bucket.title || overrideTitle} accent={accent} count={items.length}
+                tally={items.length ? items.filter(x => doneSet.has(x.id)).length + "/" + items.length : ""}
+                onSave={(t) => onSetSlotTitle(s.slot, t)}
+                onDelete={named.has(s.slot) ? null : () => onDeleteSection(s.slot)} />
+              <button className="dash-focus flow-add" onClick={() => setAdding(adding === s.slot ? null : s.slot)}>
+                {adding === s.slot ? "Close" : "+ Add"}
+              </button>
             </div>
             {adding === s.slot ? (
               <AddToFlow slot={s.slot} seeds={seeds} used={usedSeeds} accent={accent}
