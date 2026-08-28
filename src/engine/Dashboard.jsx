@@ -27,6 +27,7 @@ import { normSlot, sequenceOptions, sequenceFor } from "./dayplan.js";
 import { SHARED_KEY, TYPES, typeOf, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
 import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor } from "./colors.js";
 import { useBoards } from "./boards.js";
+import { FACES, SLOTS, readFonts, fontVars, writeFont, resetFonts, readBold, writeBold } from "./fonts.js";
 import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, setScheduleItemClaim, setScheduleItemNote, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
 
@@ -70,53 +71,15 @@ const CSS = `
 @supports not (color:color-mix(in srgb,red 10%,#fff)){
   .dash-seg button{border-left-color:rgba(23,19,16,.12)}
   .dash-seg button:hover{background:rgba(23,19,16,.05)}}
-.dash-band{background:#fff;border-radius:18px;display:flex;flex-direction:column;
-  box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.045)}
-.dash-band-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.dash-topic-wrap{display:flex;flex-direction:column;gap:1px;padding:2px 2px 10px;
-  border-bottom:1px solid rgba(23,19,16,.08);margin-bottom:2px}
-.dash-topic-meta{display:flex;align-items:center;gap:8px;min-height:20px;
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;font-weight:600;
-  letter-spacing:.1em;text-transform:uppercase;color:#8a9098}
-.dash-topic{margin:0;min-width:0;font-weight:600;letter-spacing:-.03em;line-height:1.15;
-  color:#171310;word-break:break-word;font-size:var(--topic,26px)}
-.dash-topic-edit{background:none;border:none;padding:2px 6px 2px 0;margin:0;cursor:text;font:inherit;
-  letter-spacing:inherit;text-align:left;width:100%;border-radius:8px;position:relative}
-.dash-topic-edit:hover{background:rgba(23,19,16,.045);padding-left:6px}
-/* The line is the week topic and has been editable since it was built, and it
-   never said so, so it got asked about twice. */
-.dash-topic-clear{min-height:18px;padding:0 7px;border-radius:6px;border:1px solid rgba(23,19,16,.14);
-  background:#fff;cursor:pointer;font-family:inherit;font-size:10px;font-weight:600;letter-spacing:.08em;
-  text-transform:uppercase;color:#5b6068;opacity:0;transition:opacity .13s}
-.dash-topic-wrap:hover .dash-topic-clear,.dash-topic-clear:focus-visible{opacity:1}
-@media (hover:none){.dash-topic-clear{opacity:1}}
-.dash-topic-hint{display:inline-block;margin-left:10px;vertical-align:middle;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#8a9098;
-  opacity:0;transition:opacity .13s;white-space:nowrap}
-.dash-topic-edit:hover .dash-topic-hint,.dash-topic-edit:focus-visible .dash-topic-hint{opacity:1}
-@media (hover:none){.dash-topic-hint{opacity:1}}
-.dash-week{flex:none;min-height:38px;padding:0 13px;border-radius:11px;border:1px solid rgba(23,19,16,.12);background:#fff;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;color:#171310}
-.dash-week:hover{background:rgba(23,19,16,.04)}
-.dash-step{flex:none;width:30px;min-height:38px;border-radius:10px;border:none;background:none;cursor:pointer;font-size:17px;color:#5b6068}
-.dash-step:hover:not(:disabled){background:rgba(23,19,16,.05)}
-.dash-step:disabled{opacity:.25;cursor:default}
-.dash-days{display:flex;gap:6px;flex:1 1 auto;min-width:0}
-.dash-day{flex:1 1 0;min-width:74px;min-height:44px;border-radius:12px;cursor:pointer;font-family:inherit;text-align:left;
-  padding:5px 10px;display:flex;flex-direction:column;gap:1px;border:1.5px solid transparent;background:rgba(23,19,16,.035);color:#171310}
-.dash-day[data-on="0"]:hover{background:rgba(23,19,16,.07)}
-.dash-prog{flex:0 1 190px;min-width:150px}
-.dash-next{display:flex;align-items:center;gap:11px;flex:none;max-width:360px;min-height:46px;border:none;border-radius:13px;padding:7px 15px;cursor:pointer;font-family:inherit;text-align:left;color:#fff}
-.dash-next:hover{filter:brightness(1.07)}
-.dash-jump{position:absolute;left:0;top:calc(100% + 6px);z-index:51;background:#fff;border:1px solid rgba(23,19,16,.14);
-  border-radius:14px;padding:6px;width:330px;max-height:60vh;overflow-y:auto;box-shadow:0 18px 44px -14px rgba(23,19,16,.35)}
-.dash-jump-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;cursor:pointer;
-  padding:8px 9px;border-radius:10px;font-family:inherit;min-height:48px}
-.dash-jump-row:hover{background:rgba(23,19,16,.05)}
-.dash-jump-row[data-on="1"]{background:rgba(23,19,16,.06)}
-.dash-jump-n{flex:none;width:26px;height:26px;border-radius:8px;border:1px solid rgba(23,19,16,.14);display:inline-flex;
-  align-items:center;justify-content:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#5b6068}
-.dash-jump-has{flex:none;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#5b6068;
-  background:rgba(23,19,16,.06);border-radius:9px;padding:2px 7px}
+/* The date button, and the dates inside it. */
+.dash-datebtn{display:inline-flex;align-items:center;gap:8px;flex:none;min-height:36px;padding:0 12px;
+  border-radius:11px;border:1px solid rgba(23,19,16,.12);background:#fff;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:600;color:#171310}
+.dash-datebtn:hover{background:rgba(23,19,16,.04)}
+.dash-datebtn-day{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;font-weight:500;color:#5b6068}
+.dash-datechip{min-height:30px;padding:0 10px;border-radius:9px;border:1px solid rgba(23,19,16,.12);
+  background:#fff;cursor:pointer;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#171310}
+.dash-datechip:hover{background:rgba(23,19,16,.05)}
 .dash-stage{display:grid;gap:0;padding:14px 18px 26px;align-items:start;max-width:1760px;margin:0 auto}
 /* The seam between two columns. Invisible until the pointer is near it, then a
    line you can grab. Sixteen pixels wide so it is catchable, drawn as three so
@@ -141,7 +104,7 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 /* Each column says what it is. Three columns that look alike need naming once
    at the top, not explaining every time. Quiet enough to disappear after the
    first week and there when someone else sits down. */
-.dash-col{margin:0 0 0 3px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
+.dash-col{margin:0 0 0 3px;font-family:var(--font-col,ui-monospace,SFMono-Regular,Menlo,monospace);font-size:11px;
   font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:#8a9098}
 .dash-rail-tabs{display:flex;gap:4px;background:rgba(23,19,16,.045);border-radius:13px;padding:4px;overflow-x:auto;scrollbar-width:none}
 .dash-rail-tabs::-webkit-scrollbar{display:none}
@@ -229,7 +192,8 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-row.done .flow-words{text-decoration:line-through;text-decoration-thickness:1.5px;opacity:.85}
 .flow-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px;padding:4px 0}
 .flow-words{display:block;width:100%;font-size:var(--words,16px);line-height:1.35;letter-spacing:-.006em;
-  overflow-wrap:anywhere;background:none;border:none;padding:0;text-align:left;cursor:pointer;color:#fff}
+  overflow-wrap:anywhere;background:none;border:none;padding:0;text-align:left;cursor:pointer;color:#fff;
+  font-family:var(--font-row,${F});font-weight:var(--row-weight,400)}
 .flow-src{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;font-size:12px;
   color:rgba(255,255,255,.88);text-decoration:none;border-radius:999px;padding:1px 7px;
   background:rgba(255,255,255,.18);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -264,9 +228,9 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
   border-radius:8px;cursor:text;font-family:${F};font-size:13px;font-weight:600;line-height:1.4;
   letter-spacing:-.005em;overflow-wrap:anywhere}
 .read-head:hover{background:#fff}
-.read-title{display:block;padding:1px 7px 2px;font-size:12px;line-height:1.45;color:${TEXT_SECONDARY};
-  overflow-wrap:anywhere}
-.read-kind{float:left;margin:2px 7px 0 0;padding:1px 7px;border-radius:999px;color:#fff;
+.read-title{display:block;padding:2px 7px 4px;font-size:15.5px;line-height:1.35;color:${TEXT_PRIMARY};
+  font-weight:500;letter-spacing:-.008em;overflow-wrap:anywhere;font-family:var(--font-row,${F})}
+.read-kind{flex:none;padding:2px 8px;border-radius:999px;color:#fff;
   font-family:${MONO};font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
 .read-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 10px 8px;
   border-top:1px solid rgba(23,19,16,.06)}
@@ -295,7 +259,7 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-sec-head{display:flex;align-items:center;gap:6px;margin:0 0 6px;padding:0 4px 6px 0;
   min-height:32px;border-bottom:1px solid rgba(23,19,16,.09)}
 .flow-name{flex:0 1 auto;min-width:0;background:none;border:none;padding:3px 6px;border-radius:7px;
-  cursor:text;font-family:${F};font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--sec);
+  cursor:text;font-family:var(--font-sec,${F});font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--sec);
   text-transform:uppercase;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .flow-name:hover{background:rgba(23,19,16,.05)}
 .flow-tally{flex:none;font-family:${MONO};font-size:11.5px;font-weight:500;color:#8a9098}
@@ -1305,18 +1269,16 @@ function ReadingCard({ item, accent, live, onCast, onDismiss, onNote, onRemove, 
           title: item.title, url: item.url || "" })); }}
       title="Drag this reading into a section of the flow">
       <div className="read-body">
-        <div className="read-title">
-          <span className="read-kind" style={{ background: color }}>{typeLabel(item.type)}</span>
-          {item.title}
-        </div>
+        <div className="read-title">{item.title}</div>
         <ReadingNote value={item.note || ""} accent={accent} onSave={onNote} />
       </div>
 
       <div className="read-foot">
+        <span className="read-kind" style={{ background: color }}>{typeLabel(item.type)}</span>
         {item.url ? (
           <a className="dash-focus read-src" href={item.url} target="_blank" rel="noopener noreferrer"
             title={"Open " + item.url + " in a new tab"}>{hostOf(item.url)} ↗</a>
-        ) : <span />}
+        ) : <span style={{ marginRight: "auto" }} />}
         {inFlow ? <span className="read-flag" title="This reading also has a row in the flow today">in the flow</span> : null}
         {live ? (
           <button className="dash-focus" style={{ ...btn, borderColor: LIVE, color: LIVE }}
@@ -1513,15 +1475,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   const [blockDraft, setBlockDraft] = useState("");
   const unplannedBlock = <Unplanned items={loose || []} accent={accent} onAdd={(it) => setPlacing(it)} castNow={castNow} />;
 
-  const seqPicker = (sequences || []).length > 1 ? (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <span style={label}>Shape</span>
-      <select value={seq?.id || ""} onChange={e => onSetSequence(e.target.value)}
-        style={{ ...inputStyle, minHeight: HIT, fontSize: 13.5, width: "auto", padding: "4px 8px" }}>
-        {sequences.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
-      </select>
-    </div>
-  ) : null;
+  const seqPicker = null;
   // The deck. Day Plan has had a slides field on every day since it was built
   // and this screen never read it, which left three of the four things the
   // dashboard exists to hold. It is a third-party embed, so it goes up and then
@@ -1638,7 +1592,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
   ];
 
   const addBlockRow = (
-    <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
       {addingBlock ? (
         <div style={{ display: "flex", gap: 7, flex: 1 }}>
           <input autoFocus value={blockDraft} onChange={e => setBlockDraft(e.target.value)}
@@ -1651,12 +1605,31 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
         </div>
       ) : (
         <>
-          <button className="dash-focus" style={{ ...mini, borderColor: accent, color: accent }}
+          {(sequences || []).length > 1 ? (
+            <DropMenu label="Structure" width={230} side="left"
+              trigger={(open, toggle) => (
+                <button className="dash-focus" style={{ ...mini, minHeight: 30 }} onClick={toggle}
+                  aria-expanded={open} aria-haspopup="menu">
+                  Structure<span style={{ opacity: .5, fontSize: 9, marginLeft: 5 }}>▾</span>
+                </button>
+              )}>
+              {sequences.map(x => (
+                <button key={x.id} className="dash-focus" onClick={() => onSetSequence(x.id)}
+                  style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", textAlign: "left",
+                    background: "none", border: "none", cursor: "pointer", padding: "0 10px", minHeight: 38,
+                    borderRadius: 8, fontFamily: F, fontSize: 14,
+                    color: x.id === seq?.id ? accent : TEXT_PRIMARY, fontWeight: x.id === seq?.id ? 600 : 400 }}>
+                  {x.name}
+                </button>
+              ))}
+            </DropMenu>
+          ) : null}
+          <button className="dash-focus" style={{ ...mini, minHeight: 30, borderColor: accent, color: accent }}
             onClick={() => setAddingBlock(true)}>+ New section</button>
           {sectionList.length > 1 ? (
-            <button className="dash-focus" style={mini} onClick={() => setMerging(true)}>Merge sections</button>
+            <button className="dash-focus" style={{ ...mini, minHeight: 30 }} onClick={() => setMerging(true)}>Merge sections</button>
           ) : null}
-          <button className="dash-focus" style={mini} onClick={() => setNoting(true)}>+ New note</button>
+          <button className="dash-focus" style={{ ...mini, minHeight: 30 }} onClick={() => setNoting(true)}>+ New note</button>
         </>
       )}
     </div>
@@ -1681,7 +1654,6 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
               background: overSlot === s.slot ? accent + "0c" : "transparent" }}>
             <div className="flow-sec-head">
               <SlotName slot={s.slot} title={bucket.title || overrideTitle} accent={accent} count={items.length}
-                tally={items.length ? items.filter(x => doneSet.has(x.id)).length + "/" + items.length : ""}
                 onSave={(t) => onSetSlotTitle(s.slot, t)}
                 onDelete={named.has(s.slot) ? null : () => onDeleteSection(s.slot)}
                 onColor={onSectionColor ? (sw) => onSectionColor(bucket.title || overrideTitle || s.slot, sw) : null} />
@@ -2394,10 +2366,10 @@ const SHORTCUTS = [
 // cannot be read. That is the reason the light tier of each hue is only as
 // light as it is: the build checks all twenty against white and fails on any
 // that drop under 4.5:1.
-function ColorsSheet({ colors, onPick, onReset, onClose }) {
+function ColorsSheet({ colors, fonts, bold, onPick, onFont, onBold, onReset, onClose }) {
   const [open, setOpen] = useState(KINDS[0].id);
   return (
-    <Sheet title="Colours" sub="One colour per sort of thing, used everywhere" onClose={onClose} width={640}>
+    <Sheet title="Look" sub="Colour and type, kept with me and used in every class" onClose={onClose} width={680}>
       {KINDS.map(k => {
         const hex = colorOfKind(colors, k.id);
         const showing = open === k.id;
@@ -2433,6 +2405,35 @@ function ColorsSheet({ colors, onPick, onReset, onClose }) {
           </div>
         );
       })}
+      <div style={{ paddingTop: 14, borderTop: "1px solid " + BORDER, display: "flex", flexDirection: "column", gap: 10 }}>
+        <span style={{ ...label, color: accent }}>Type</span>
+        {SLOTS.map(sl => (
+          <div key={sl.id} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ minWidth: 132, fontSize: 14, color: TEXT_SECONDARY }}>{sl.label}</span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {FACES.map(f => (
+                <button key={f.id} className="dash-focus" onClick={() => onFont(sl.id, f.id)}
+                  aria-pressed={fonts[sl.id] === f.id}
+                  style={{ ...mini, minHeight: 32, padding: "0 11px", fontFamily: f.stack, fontSize: 13.5,
+                    ...(fonts[sl.id] === f.id ? { background: accent, borderColor: accent, color: "#fff" } : {}) }}>
+                  {f.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+        <button className="dash-focus" onClick={() => onBold(!bold)} aria-pressed={bold}
+          style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none",
+            cursor: "pointer", padding: "0 2px", minHeight: 38, fontFamily: F, fontSize: 14, color: TEXT_PRIMARY }}>
+          <span style={{ flex: "none", width: 26, height: 15, borderRadius: 999, position: "relative",
+            background: bold ? accent : BORDER_STRONG, transition: "background .14s" }}>
+            <i style={{ position: "absolute", top: 2, left: bold ? 13 : 2, width: 11, height: 11,
+              borderRadius: "50%", background: "#fff", transition: "left .14s" }} />
+          </span>
+          Bold the rows
+        </button>
+      </div>
+
       <button className="dash-focus" style={{ ...mini, alignSelf: "flex-start", marginTop: 6 }} onClick={onReset}>
         Back to the defaults
       </button>
@@ -2536,7 +2537,7 @@ function NoteSheet({ sections, sources, accent, onAdd, onClose }) {
 // both permanently in the way and too narrow to use.
 // A little menu that hangs off a button. Both header menus are the same shape,
 // so they are the same component.
-function DropMenu({ trigger, label, width, children }) {
+function DropMenu({ trigger, label, width, children, side }) {
   const [open, setOpen] = useState(false);
   return (
     <span style={{ position: "relative", flex: "none" }}>
@@ -2545,7 +2546,8 @@ function DropMenu({ trigger, label, width, children }) {
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 70 }} />
           <div role="menu" aria-label={label} onClick={() => setOpen(false)}
-            style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 71, background: "#fff",
+            style={{ position: "absolute", ...(side === "left" ? { left: 0 } : { right: 0 }),
+              top: "calc(100% + 6px)", zIndex: 71, background: "#fff",
               border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 6, width: width || 240,
               boxShadow: "0 18px 44px -14px rgba(23,19,16,.35)", display: "flex", flexDirection: "column", gap: 1 }}>
             {children}
@@ -2571,7 +2573,7 @@ function ClassMenu({ config }) {
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
   return (
-    <DropMenu label="This class" width={250}
+    <DropMenu label="This class" width={250} side="left"
       trigger={(open, toggle) => (
         <button className="dash-focus" onClick={toggle} aria-expanded={open} aria-haspopup="menu"
           style={{ display: "inline-flex", alignItems: "baseline", gap: 6, background: "none", border: "none",
@@ -2856,7 +2858,7 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
 // what goes up next.
 // The topic, editable where it sits. Click it, type, Enter. No punctuation is
 // added and none is required.
-function EditableTopic({ value, placeholder, onSave, own, fromWeek, from, span, nth, date, onClear }) {
+function EditableTopic({ value, placeholder, onSave, own, weekLabel, weekday, span, nth, onClear }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value || "");
   useEffect(() => { setDraft(value || ""); }, [value]);
@@ -2872,9 +2874,7 @@ function EditableTopic({ value, placeholder, onSave, own, fromWeek, from, span, 
           outline: "none", padding: "0 0 2px", width: "100%" }} />
     );
   }
-  const meta = span > 1
-    ? "Day " + nth + " of " + span + (own ? ", named here" : from && from !== date ? ", from " + from : "")
-    : own ? "This day" : "The week";
+  const meta = [weekLabel, weekday].filter(Boolean).join(", ");
   return (
     <div className="dash-topic-wrap">
       <div className="dash-topic-meta">
@@ -2888,11 +2888,9 @@ function EditableTopic({ value, placeholder, onSave, own, fromWeek, from, span, 
       </div>
       <h1 className="dash-topic">
       <button className="dash-focus dash-topic-edit" onClick={() => setEditing(true)}
-        title={fromWeek
-          ? "This day has no title of its own, so it shows the week topic. Click to name this day, and the name carries forward until you name another day."
-          : own
-            ? (span > 1 ? "This title starts here and covers " + span + " class days." : "This title belongs to this day.")
-            : "Carried forward from " + from + ". Click to start a new title here."}
+        title={own
+          ? (span > 1 ? "This title starts here and covers " + span + " class days." : "The title for this day.")
+          : "Click to name this day. The name carries forward until you name another day."}
         style={{ color: value ? TEXT_PRIMARY : TEXT_MUTED }}>
         {value || placeholder}
         <span className="dash-topic-hint">rename</span>
@@ -2902,109 +2900,52 @@ function EditableTopic({ value, placeholder, onSave, own, fromWeek, from, span, 
   );
 }
 
-function DayBand({ days, day, onPick, onOpenDay, counts, accent, today, done, total, since, cold, left, upNext, upNextHue, onCastNext, onReset }) {
-  const [jump, setJump] = useState(false);
+// The week, and the way to any other day.
+//
+// The band it replaces carried a row of day chips, a progress bar and two
+// clocks across the whole width, and almost none of that was worth the space
+// it took. What is left is the one thing I actually do with it: get to a
+// different day. Every date in the term is one click away.
+function DateButton({ days, day, onPick, accent, today, counts }) {
   const i = days.findIndex(d => d.date === day);
-  const weekId = days[i]?.weekId;
-  const week = days.filter(d => d.weekId === weekId);
   const weekIds = [...new Set(days.map(d => d.weekId))];
-  const wn = weekIds.indexOf(weekId);
-  const stepWeek = (dir) => {
-    const t = weekIds[wn + dir];
-    if (t) onPick(days.find(d => d.weekId === t).date);
-  };
-  const pct = total ? Math.round((done / total) * 100) : 0;
-  const countOf = (id) => days.filter(d => d.weekId === id).reduce((n, d) => n + (counts[d.date] || 0), 0);
-  const todayWeek = days.find(d => d.date === today)?.weekId;
-
+  const wn = weekIds.indexOf(days[i]?.weekId);
   return (
-    <div className="dash-band">
-      <div className="dash-band-row">
-        {/* the week, and the way out of this week. Stepping one at a time is
-            fine for next Tuesday and useless for week nine, which is most of
-            what planning is. */}
-        <div style={{ position: "relative", flex: "none" }}>
-          <button className="dash-focus dash-week" onClick={() => setJump(v => !v)} aria-expanded={jump}
-            aria-haspopup="menu" title="Jump to any week of the term">
-            Week {wn + 1}<span style={{ opacity: .5, fontSize: 10, marginLeft: 5 }}>▾</span>
-          </button>
-          {jump ? (
-            <>
-              <div onClick={() => setJump(false)} style={{ position: "fixed", inset: 0, zIndex: 50 }} />
-              <div role="menu" className="dash-jump">
-                {weekIds.map((id, n) => {
-                  const wd = days.filter(d => d.weekId === id);
-                  const on = id === weekId;
-                  const has = countOf(id);
-                  const past = todayWeek ? n < weekIds.indexOf(todayWeek) : false;
-                  return (
-                    <button key={id} className="dash-focus dash-jump-row" data-on={on ? "1" : "0"}
-                      onClick={() => { onPick(wd[0].date); setJump(false); }}>
-                      <span className="dash-jump-n" style={on ? { background: accent, color: "#fff", borderColor: accent } : undefined}>{n + 1}</span>
-                      <span style={{ minWidth: 0, flex: 1 }}>
-                        <b style={{ display: "block", fontWeight: 500, fontSize: 14.5, color: past ? TEXT_MUTED : TEXT_PRIMARY,
-                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{wd[0]?.topic || "Untitled week"}</b>
-                        <small style={{ color: TEXT_MUTED, fontSize: 12 }}>{wd.map(d => d.date).join(" · ")}</small>
-                      </span>
-                      {has ? <span className="dash-jump-has">{has}</span> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          ) : null}
-        </div>
-
-        <button className="dash-focus dash-step" disabled={wn <= 0} onClick={() => stepWeek(-1)} title="The week before">‹</button>
-        <div className="dash-days">
-          {week.map(d => {
-            const on = d.date === day;
-            const n = counts[d.date] || 0;
-            return (
-              <button key={d.date} className="dash-focus dash-day" data-on={on ? "1" : "0"}
-                title={on ? "What is left to do for " + d.date : "Go to " + d.date}
-                onClick={() => (on ? onOpenDay(d.date) : onPick(d.date))}
-                style={on ? { borderColor: accent, background: accent + "0f" } : undefined}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: on ? accent : TEXT_PRIMARY }}>
-                  {d.date}{d.date === today ? " · today" : ""}
-                </span>
-                <span style={{ fontSize: 11.5, color: TEXT_MUTED }}>{n ? n + (n === 1 ? " thing" : " things") : "empty"}</span>
-              </button>
-            );
-          })}
-        </div>
-        <button className="dash-focus dash-step" disabled={wn >= weekIds.length - 1} onClick={() => stepWeek(1)} title="Next week">›</button>
-
-        <div className="dash-prog">
-          <div style={{ display: "flex", gap: 8, alignItems: "baseline", fontSize: 12.5, color: TEXT_MUTED, whiteSpace: "nowrap" }}>
-            <span>{total ? done + " of " + total : "nothing planned"}</span>
-            {left != null ? <span>{left} min left</span> : null}
-            {since != null ? <span style={{ color: cold ? WARN : TEXT_MUTED }}>{since} min quiet</span> : null}
-            {total && done ? (
-              <button className="dash-focus" onClick={onReset}
-                style={{ background: "none", border: "none", color: TEXT_MUTED, cursor: "pointer",
-                  fontFamily: F, fontSize: 12.5, textDecoration: "underline", padding: 0 }}>reset</button>
-            ) : null}
+    <DropMenu label="Which day" width={330} side="left"
+      trigger={(open, toggle) => (
+        <button className="dash-focus dash-datebtn" onClick={toggle} aria-expanded={open}
+          aria-haspopup="menu" title="Go to another day">
+          Week {wn + 1}
+          <span className="dash-datebtn-day">{day}</span>
+          <span style={{ opacity: .5, fontSize: 10 }}>▾</span>
+        </button>
+      )}>
+      {weekIds.map((id, n) => {
+        const wd = days.filter(d => d.weekId === id);
+        const here = id === days[i]?.weekId;
+        return (
+          <div key={id} style={{ padding: "5px 8px 7px" }}>
+            <div style={{ ...label, fontSize: 11, paddingBottom: 4,
+              color: here ? accent : TEXT_MUTED }}>
+              Week {n + 1}{wd[0]?.topic ? " · " + wd[0].topic : ""}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {wd.map(d => {
+                const on = d.date === day;
+                const has = (counts || {})[d.date] || 0;
+                return (
+                  <button key={d.date} className="dash-focus dash-datechip" onClick={() => onPick(d.date)}
+                    title={has ? has + (has === 1 ? " thing on this day" : " things on this day") : "Nothing on this day yet"}
+                    style={on ? { background: accent, borderColor: accent, color: "#fff" } : undefined}>
+                    {d.date}{d.date === today ? " ·" : ""}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div style={{ height: 5, borderRadius: 3, background: SURFACE_2, overflow: "hidden", marginTop: 4 }}>
-            <i style={{ display: "block", height: "100%", width: pct + "%", background: accent, transition: "width .3s" }} />
-          </div>
-        </div>
-      </div>
-
-      <div className="dash-band-row" style={{ alignItems: "flex-end" }}>
-        <span style={{ flex: 1 }} />
-        {upNext ? (
-          <button className="dash-focus dash-next" onClick={onCastNext} style={{ background: upNextHue || accent }}>
-            <span style={{ minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: 11.5, opacity: .85, fontWeight: 600, letterSpacing: ".04em", textTransform: "uppercase" }}>Up next</span>
-              <span style={{ display: "block", fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{upNext}</span>
-            </span>
-            <span style={{ flex: "none", fontSize: 19, lineHeight: 1 }}>→</span>
-          </button>
-        ) : null}
-      </div>
-    </div>
+        );
+      })}
+    </DropMenu>
   );
 }
 
@@ -3135,6 +3076,8 @@ export default function Dashboard({ config }) {
   const marks = (data?.attendance || {})[day] || {};
   // My colours, out of the shared store so they hold across every class.
   const colors = readColors(shared);
+  const fonts = readFonts(shared);
+  const boldRows = readBold(shared);
   const hueOf = (type) => colorOfType(colors, type);
   const hueOfKind = (kind) => colorOfKind(colors, kind);
   const dayMeta = days.find(d => d.date === day);
@@ -3146,6 +3089,14 @@ export default function Dashboard({ config }) {
   // a half, without me setting where it ends.
   const titles = dayTitles(weeks, data?.dayPlans);
   const dayTitle = titles[day] || { title: dayMeta?.topic || "", own: false, fromWeek: true, span: 1, nth: 1 };
+  // "Week 1, Monday", which is what I would say out loud about a class day.
+  const weekLabel = (() => {
+    const ids = [...new Set(days.map(d => d.weekId))];
+    const n = ids.indexOf(dayMeta?.weekId);
+    return n >= 0 ? "Week " + (n + 1) : "";
+  })();
+  const FULLDAY = { Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday", Sun: "Sunday" };
+  const weekdayFull = FULLDAY[weekdayOf(day)] || weekdayOf(day) || "";
   const saveDayTitle = (v) => writeDay(d => ({ ...d, title: v.trim() }), "renaming the day");
   // Derived from the date rather than its position in the week, which was only
   // ever right for a class meeting Monday, Wednesday and Friday in that order.
@@ -3833,7 +3784,7 @@ export default function Dashboard({ config }) {
   cmdTargets.push({ key: "o:hl", group: "Open", title: "Headlines board", run: () => setHlOpen(true) });
   cmdTargets.push({ key: "o:be", group: "Open", title: "Write the Enter and Exit boards", run: () => setBoardsOpen(true) });
   cmdTargets.push({ key: "o:notes", group: "Open", title: "My notes for this day", run: () => setNotesOpen(true) });
-  cmdTargets.push({ key: "o:col", group: "Open", title: "Colours", run: () => setColorsOpen(true) });
+  cmdTargets.push({ key: "o:col", group: "Open", title: "Colour and type", run: () => setColorsOpen(true) });
   cmdTargets.push({ key: "o:here", group: "Open", title: "Who is here", run: () => setHereOpen(true) });
   cmdTargets.push({ key: "o:todo", group: "Open", title: "Still to do", run: () => setTodoOpen(true) });
   cmdTargets.push({ key: "c:black", group: "Screen", title: "Black screen", run: () => cast({ type: "black", label: "Black screen" }) });
@@ -4000,7 +3951,8 @@ export default function Dashboard({ config }) {
 
   return (
     <div className={dense ? "dash-compact" : "dash-comfortable"}
-      style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, "--dash-accent": config.accent }}>
+      style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY,
+        "--dash-accent": config.accent, "--row-weight": boldRows ? 600 : 400, ...fontVars(fonts) }}>
       <style>{CSS}</style>
 
       {/* Four groups, and the grouping is what each control IS.
@@ -4014,34 +3966,22 @@ export default function Dashboard({ config }) {
         display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap",
         position: "sticky", top: 0, zIndex: 30 }}>
         <ClassMenu config={config} />
+        <DateButton days={days} day={day} onPick={setDay} accent={config.accent} today={onDeck} counts={dayCounts} />
         <span style={{ marginRight: "auto", fontSize: 14, color: TEXT_MUTED, minWidth: 0,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{config.desc}</span>
 
         <div className="dash-seg" style={{ "--seg": config.accent }}>
           <button className="dash-focus" onClick={() => setCmdOpen(true)}>Cast<kbd>⌘K</kbd></button>
-          <button className="dash-focus" onClick={() => setColorsOpen(true)}>Colours</button>
+          <button className="dash-focus" onClick={() => setColorsOpen(true)}>Look</button>
           <button className="dash-focus" onClick={() => setHornOpen(true)}>Around the Horn</button>
           <button className="dash-focus" onClick={() => setHereOpen(true)}>
             Here{students.length ? <kbd>{students.length - outCount}/{students.length}</kbd> : null}
           </button>
         </div>
 
-        <ViewMenu railOpen={railOpen} onRail={toggleRail} dense={dense} onDense={() => setDenseAnd(!dense)}
-          dragKeeps={dragKeeps} onDragKeeps={() => railSave.current({ dragKeeps: !railRef.current.dragKeeps })}
-          onReset={() => railSave.current({ cols: COL, railOpen: true, dense: false })}
-          onKeys={() => setKeysOpen(true)} />
-
-        <button className="dash-focus" style={{ ...mini, minHeight: 36, ...(focus ? { background: config.accent, borderColor: config.accent, color: "#fff" } : {}) }}
-          onClick={() => setFocus(v => !v)} aria-pressed={focus} title="Teaching only. Shuts the Materials column and gives the day the room. ⌘E">Teaching</button>
       </header>
 
 
-      <div style={{ padding: "14px 18px 0", maxWidth: 1760, margin: "0 auto" }}>
-        <DayBand days={days} day={day} onPick={setDay} onOpenDay={() => setTodoOpen(true)} counts={dayCounts} accent={config.accent} today={onDeck}
-          done={castCount} total={flowCount} since={sinceMin} cold={sinceMin != null && sinceMin >= 10}
-          left={minsLeft} upNext={liveLabel ? "" : upNextWords} upNextHue={upNextHue} onCastNext={castNext}
-          onReset={() => writeDay(d => ({ ...d, done: [] }), "starting the day over")} />
-      </div>
 
       <main ref={stageRef} className="dash-stage" data-rail={railOpen ? "open" : "shut"} data-teach={focus ? "on" : "off"}
         style={{ gridTemplateColumns: gridFor(cols, railOpen, focus) }}>
@@ -4059,7 +3999,7 @@ export default function Dashboard({ config }) {
           <h2 className="dash-col">Flow</h2>
           <Panel id="flow" title={null}>
             <EditableTopic value={dayTitle.title} placeholder={config.name} onSave={saveDayTitle}
-              own={dayTitle.own} fromWeek={dayTitle.fromWeek} from={dayTitle.from} date={day}
+              own={dayTitle.own} weekLabel={weekLabel} weekday={weekdayFull}
               span={dayTitle.span} nth={dayTitle.nth}
               onClear={dayTitle.own ? () => saveDayTitle("") : null} />
             {render.flow()}
@@ -4129,9 +4069,11 @@ export default function Dashboard({ config }) {
       ) : null}
 
       {colorsOpen ? (
-        <ColorsSheet colors={colors} onClose={() => setColorsOpen(false)}
+        <ColorsSheet colors={colors} fonts={fonts} bold={boldRows} onClose={() => setColorsOpen(false)}
           onPick={(kind, sw) => writeColor(updateShared, kind, sw)}
-          onReset={() => resetColors(updateShared)} />
+          onFont={(slot, f) => writeFont(updateShared, slot, f)}
+          onBold={(v) => writeBold(updateShared, v)}
+          onReset={() => { resetColors(updateShared); resetFonts(updateShared); }} />
       ) : null}
 
       {todoOpen ? (
