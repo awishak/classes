@@ -163,7 +163,7 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 /* One rhythm down the whole flow, so the eye can run the list instead of
    measuring each row. A calendar reads well because every entry is the same
    shape and the colour is on one edge. */
-.flow-row{display:flex;align-items:center;gap:11px;min-height:var(--row-h);
+.flow-row{display:flex;align-items:center;gap:11px;min-height:var(--row-h);flex-wrap:wrap;
   padding:2px 10px 2px 8px;border-radius:12px;cursor:grab;color:#fff;
   background:var(--row,#5b6068);transition:filter .13s,box-shadow .13s;position:relative}
 /* A tucked row draws the elbow back to the row it sits under, so the outline
@@ -190,7 +190,7 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-num:hover{transform:scale(1.12);background:rgba(255,255,255,.36)!important}
 .flow-row.done .flow-num{color:#fff}
 .flow-row.done .flow-words{text-decoration:line-through;text-decoration-thickness:1.5px;opacity:.85}
-.flow-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px;padding:4px 0}
+.flow-main{flex:1 1 140px;min-width:0;display:flex;flex-direction:column;gap:1px;padding:4px 0}
 .flow-words{display:block;width:100%;font-size:var(--words,16px);line-height:1.35;letter-spacing:-.006em;
   overflow-wrap:anywhere;background:none;border:none;padding:0;text-align:left;cursor:pointer;color:#fff;
   font-family:var(--font-row,${F});font-weight:var(--row-weight,400)}
@@ -239,6 +239,15 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .read-src:hover{color:#171310;text-decoration:underline}
 .read-flag{font-family:${MONO};font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
   color:${TEXT_MUTED};background:rgba(23,19,16,.06);border-radius:999px;padding:2px 8px}
+/* Everything a row can do, hanging off its number. */
+.flow-rowmenu{position:absolute;left:0;top:calc(100% + 6px);z-index:61;background:#fff;
+  border:1px solid rgba(23,19,16,.14);border-radius:12px;padding:5px;min-width:236px;
+  box-shadow:0 16px 38px -12px rgba(23,19,16,.42);display:flex;flex-direction:column;gap:1px}
+.flow-rowmenu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  background:none;border:none;cursor:pointer;padding:0 10px;min-height:38px;border-radius:8px;
+  font-family:${F};font-size:14px;color:${TEXT_PRIMARY}}
+.flow-rowmenu button:hover{background:rgba(23,19,16,.05)}
+.flow-rowmenu-k{flex:none;width:18px;text-align:center;font-size:13px;color:${TEXT_MUTED}}
 .flow-tools{display:flex;gap:4px;flex:none;opacity:0;transition:opacity .12s}
 .flow-row:hover .flow-tools,.flow-row:focus-within .flow-tools,.flow-row.live .flow-tools,
 .flow-row.picked .flow-tools{opacity:1}
@@ -396,6 +405,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // fees have risen 45% in ten years" is what the room can actually read.
 function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove }) {
   const [editing, setEditing] = useState(false);
+  const [menu, setMenu] = useState(false);
   const [draft, setDraft] = useState(claim || "");
   useEffect(() => { setDraft(claim || ""); }, [claim]);
 
@@ -446,8 +456,51 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
     <div className={"flow-row" + (live ? " live" : "") + (picked ? " picked" : "")
       + (done ? " done" : "") + (next ? " next" : "") + (depth ? " flow-nested" : "")}
       style={{ "--row": kindColor || TEXT_MUTED }}>
-      <button className="flow-num dash-focus" onClick={onTick}
-        title={done ? "Put this row back on the list" : "Tick this row off"}>{done ? "✓" : (num || "")}</button>
+      {/* Everything a row can do, behind the number it already had.
+          Five buttons on the right squeezed the words into a column of their
+          own on a narrow card, and four of the five are things I do while
+          planning rather than while teaching. The number opens them; the one
+          thing I press with the room watching stays out on its own. */}
+      <span style={{ position: "relative", flex: "none" }}>
+        <button className="flow-num dash-focus" onClick={() => setMenu(v => !v)}
+          aria-haspopup="menu" aria-expanded={menu}
+          title="What to do with this row">{done ? "\u2713" : (num || "")}</button>
+        {menu ? (
+          <>
+            <div onClick={() => setMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 60 }} />
+            <div role="menu" className="flow-rowmenu">
+              <button className="dash-focus" onClick={() => { setMenu(false); onTick(); }}>
+                <span className="flow-rowmenu-k">{done ? "\u21ba" : "\u2713"}</span>
+                {done ? "Put it back on the list" : "Done"}
+              </button>
+              {onNest && depth > 0 ? (
+                <button className="dash-focus" onClick={() => { setMenu(false); onNest(-1); }}>
+                  <span className="flow-rowmenu-k">←</span>Move back out
+                </button>
+              ) : null}
+              {onNest && canNest && depth < 1 ? (
+                <button className="dash-focus" onClick={() => { setMenu(false); onNest(1); }}>
+                  <span className="flow-rowmenu-k">→</span>Tuck under the row above
+                </button>
+              ) : null}
+              <button className="dash-focus" onClick={() => { setMenu(false); setEditing(true); }}>
+                <span className="flow-rowmenu-k">✎</span>{claim ? "Edit the headline" : "Write the headline"}
+              </button>
+              {onAssign ? (
+                <button className="dash-focus" onClick={() => { setMenu(false); onAssign(); }}>
+                  <span className="flow-rowmenu-k">{assigned ? "\u2713" : "+"}</span>
+                  {assigned ? "Take off today's readings" : "Put on today's readings"}
+                </button>
+              ) : null}
+              {onRemove ? (
+                <button className="dash-focus" style={{ color: LIVE }} onClick={() => { setMenu(false); onRemove(); }}>
+                  <span className="flow-rowmenu-k">×</span>Take off the day
+                </button>
+              ) : null}
+            </div>
+          </>
+        ) : null}
+      </span>
 
       <span className="flow-main">
         <button className="dash-focus flow-words" onClick={onSelect} title="Open the details"
@@ -455,32 +508,11 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
         {url ? (
           <a className="dash-focus flow-src" href={url} target="_blank" rel="noopener noreferrer"
             onClick={e => e.stopPropagation()} title={"Open " + url + " in a new tab"}
-            style={{ fontFamily: F }}>{hostOf(url)} ↗</a>
+            style={{ fontFamily: F }}>{hostOf(url)} \u2197</a>
         ) : null}
       </span>
 
       <span className="flow-tools">
-        {onNest ? (
-          <>
-            {depth > 0 ? (
-              <button className="dash-focus" style={{ ...sq, minWidth: "auto", padding: "0 9px", fontSize: 12 }}
-                title="Move this row back out to its own level" onClick={() => onNest(-1)}>Outdent</button>
-            ) : null}
-            {canNest && depth < 1 ? (
-              <button className="dash-focus" style={{ ...sq, minWidth: "auto", padding: "0 9px", fontSize: 12 }}
-                title="Tuck this row under the row above" onClick={() => onNest(1)}>Indent</button>
-            ) : null}
-          </>
-        ) : null}
-        {onAssign ? (
-          <button className="dash-focus" onClick={onAssign} aria-pressed={assigned}
-            title={assigned ? "Assigned. Students see this reading under today's date. Click to unassign."
-              : "Click to put this reading on today's readings."}
-            style={{ ...sq, minWidth: "auto", padding: "0 9px", fontSize: 12,
-              ...(assigned ? { background: "rgba(255,255,255,.9)", color: "var(--row)" } : {}) }}>
-            {assigned ? "Assigned" : "Assign"}
-          </button>
-        ) : null}
         {live ? (
           <button className="dash-focus" style={{ ...sq }}
             title="Take it back down" onClick={onDismiss}>×</button>
@@ -489,12 +521,6 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
             title="Put it on the room screen"
             onClick={() => { if (claim) onCast(claim); else setEditing(true); }}>→</button>
         )}
-        <button className="dash-focus" style={{ ...sq }}
-          title={claim ? "Edit the headline" : "Write the headline"} onClick={() => setEditing(true)}>Edit</button>
-        {onRemove ? (
-          <button className="dash-focus" style={{ ...sq, minWidth: "auto", padding: "0 9px", fontSize: 12 }}
-            title="Take this row off the day" onClick={onRemove}>Remove</button>
-        ) : null}
       </span>
     </div>
   );
