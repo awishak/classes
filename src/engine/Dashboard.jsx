@@ -137,7 +137,7 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
    under every header and the grip sitting out in the open added up to more
    lines than content. A soft edge and space carry it, and the handles come
    back when the pointer is on the card. */
-.dash-panel{background:#fff;border-radius:18px;overflow:hidden;
+.dash-panel{background:#fff;border-radius:18px;
   box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.045)}
 .dash-panel:hover{box-shadow:0 2px 8px -2px rgba(23,19,16,.09),0 0 0 1px rgba(23,19,16,.08)}
 .dash-head{display:flex;align-items:center;gap:8px;padding:12px 16px 10px}
@@ -166,20 +166,24 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-row{display:flex;align-items:center;gap:11px;min-height:var(--row-h);flex-wrap:wrap;
   padding:2px 10px 2px 8px;border-radius:12px;cursor:grab;color:#fff;
   background:var(--row,#5b6068);transition:filter .13s,box-shadow .13s;position:relative}
-/* A tucked row draws the elbow back to the row it sits under, so the outline
+/* A nested row draws the elbow back to the row it sits under, so the outline
    reads as an outline rather than as a row that drifted right. */
 .flow-nested::before{content:"";position:absolute;left:-17px;top:-6px;bottom:50%;width:9px;
   border-left:2px solid rgba(23,19,16,.18);border-bottom:2px solid rgba(23,19,16,.18);
   border-bottom-left-radius:6px}
-.flow-row:hover{filter:brightness(1.1)}
+.flow-row:hover{background:color-mix(in srgb,#fff 12%,var(--row,#5b6068))}
+@supports not (color:color-mix(in srgb,red 10%,#fff)){.flow-row:hover{opacity:.9}}
 /* Selected, up on the screen, or next. Each is a ring rather than a fill,
    because the fill is already saying what the row is. */
 .flow-row.picked{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--dash-accent)}
 .flow-row.live{box-shadow:0 0 0 2px #fff,0 0 0 4px ${LIVE}}
 .flow-row.next{box-shadow:0 0 0 2px #fff,0 0 0 3px var(--dash-accent)}
 .flow-row.over{box-shadow:inset 0 3px 0 #fff}
-.flow-row.done{filter:saturate(.25) brightness(1.28)}
-.flow-row.done:hover{filter:saturate(.4) brightness(1.2)}
+.flow-row.done{background:color-mix(in srgb,#fff 74%,var(--row,#5b6068))}
+.flow-row.done:hover{background:color-mix(in srgb,#fff 66%,var(--row,#5b6068))}
+@supports not (color:color-mix(in srgb,red 10%,#fff)){.flow-row.done{opacity:.42}}
+/* A row with its menu open sits above the rows after it. */
+.flow-row[data-menu="1"]{z-index:70}
 /* The number carries the colour of what the row is, filled rather than as a
    stub on the edge — one chip per kind, the same chip everywhere it appears. */
 /* The number sits on the bar rather than carrying the colour itself. */
@@ -455,6 +459,7 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
   return (
     <div className={"flow-row" + (live ? " live" : "") + (picked ? " picked" : "")
       + (done ? " done" : "") + (next ? " next" : "") + (depth ? " flow-nested" : "")}
+      data-menu={menu ? "1" : "0"}
       style={{ "--row": kindColor || TEXT_MUTED }}>
       {/* Everything a row can do, behind the number it already had.
           Five buttons on the right squeezed the words into a column of their
@@ -480,7 +485,7 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
               ) : null}
               {onNest && canNest && depth < 1 ? (
                 <button className="dash-focus" onClick={() => { setMenu(false); onNest(1); }}>
-                  <span className="flow-rowmenu-k">→</span>Tuck under the row above
+                  <span className="flow-rowmenu-k">→</span>Nest under the row above
                 </button>
               ) : null}
               <button className="dash-focus" onClick={() => { setMenu(false); setEditing(true); }}>
