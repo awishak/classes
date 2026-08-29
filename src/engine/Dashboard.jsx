@@ -60,23 +60,26 @@ const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_M
 const CSS = `
 /* The class tools, joined. They do the same kind of thing at the same moment,
    so they read as one control with four faces rather than four strangers. */
-.dash-seg{display:inline-flex;flex:none;border-radius:12px;overflow:hidden;border:1px solid var(--seg);background:#fff}
-.dash-seg button{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 13px;border:none;
-  border-left:1px solid color-mix(in srgb,var(--seg) 35%,#fff);background:none;cursor:pointer;
-  font-family:inherit;font-size:14px;font-weight:500;color:var(--seg);white-space:nowrap}
-.dash-seg button:first-child{border-left:none}
-.dash-seg button:hover{background:color-mix(in srgb,var(--seg) 10%,#fff)}
-.dash-seg kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;opacity:.7;
-  border:none;background:none;padding:0}
-@supports not (color:color-mix(in srgb,red 10%,#fff)){
-  .dash-seg button{border-left-color:rgba(23,19,16,.12)}
-  .dash-seg button:hover{background:rgba(23,19,16,.05)}}
-/* The date button, and the dates inside it. */
-.dash-datebtn{display:inline-flex;align-items:center;gap:8px;flex:none;min-height:36px;padding:0 12px;
+/* Everything on the bar is this shape. */
+.dash-bar{display:inline-flex;align-items:center;gap:7px;flex:none;min-height:36px;padding:0 13px;
   border-radius:11px;border:1px solid rgba(23,19,16,.12);background:#fff;cursor:pointer;
-  font-family:inherit;font-size:14px;font-weight:600;color:#171310}
-.dash-datebtn:hover{background:rgba(23,19,16,.04)}
-.dash-datebtn-day{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;font-weight:500;color:#5b6068}
+  font-family:inherit;font-size:14px;font-weight:500;color:#171310;text-decoration:none;white-space:nowrap}
+.dash-bar:hover{background:rgba(23,19,16,.045)}
+.dash-bar kbd,.dash-bar .dash-bar-sub{font-family:${MONO};font-size:11.5px;font-weight:500;
+  color:${TEXT_MUTED};border:none;background:none;padding:0}
+.dash-bar-caret{font-size:10px;opacity:.5}
+.dash-bar-name{font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--dash-accent)}
+.dash-seg{display:inline-flex;flex:none;border-radius:11px;overflow:hidden;border:1px solid rgba(23,19,16,.12);background:#fff}
+.dash-seg button{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 13px;border:none;
+  border-left:1px solid rgba(23,19,16,.12);background:none;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:500;color:#171310;white-space:nowrap}
+.dash-seg button:first-child{border-left:none}
+.dash-seg button:hover{background:rgba(23,19,16,.045)}
+.dash-seg kbd{font-family:${MONO};font-size:11.5px;font-weight:500;color:${TEXT_MUTED};
+  border:none;background:none;padding:0}
+
+/* The date button, and the dates inside it. */
+
 .dash-datechip{min-height:30px;padding:0 10px;border-radius:9px;border:1px solid rgba(23,19,16,.12);
   background:#fff;cursor:pointer;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#171310}
 .dash-datechip:hover{background:rgba(23,19,16,.05)}
@@ -2606,11 +2609,9 @@ function ClassMenu({ config }) {
   return (
     <DropMenu label="This class" width={250} side="left"
       trigger={(open, toggle) => (
-        <button className="dash-focus" onClick={toggle} aria-expanded={open} aria-haspopup="menu"
-          style={{ display: "inline-flex", alignItems: "baseline", gap: 6, background: "none", border: "none",
-            cursor: "pointer", padding: "4px 8px", borderRadius: 10, minHeight: 36, fontFamily: F,
-            fontSize: 19, fontWeight: 700, letterSpacing: "-.02em", color: config.accent }}>
-          {config.code}<span style={{ fontSize: 10, opacity: .55 }}>▾</span>
+        <button className="dash-focus dash-bar" onClick={toggle} aria-expanded={open} aria-haspopup="menu">
+          <span className="dash-bar-name">{config.code}</span>
+          <span className="dash-bar-caret">▾</span>
         </button>
       )}>
       <span style={{ ...label, padding: "6px 10px 4px" }}>Go to</span>
@@ -2945,11 +2946,11 @@ function DateButton({ days, day, onPick, accent, today, counts }) {
   return (
     <DropMenu label="Which day" width={330} side="left"
       trigger={(open, toggle) => (
-        <button className="dash-focus dash-datebtn" onClick={toggle} aria-expanded={open}
+        <button className="dash-focus dash-bar" onClick={toggle} aria-expanded={open}
           aria-haspopup="menu" title="Go to another day">
           Week {wn + 1}
-          <span className="dash-datebtn-day">{day}</span>
-          <span style={{ opacity: .5, fontSize: 10 }}>▾</span>
+          <span className="dash-bar-sub">{day}</span>
+          <span className="dash-bar-caret">▾</span>
         </button>
       )}>
       {weekIds.map((id, n) => {
@@ -4006,7 +4007,7 @@ export default function Dashboard({ config }) {
             what I do before any of the rest of them. */}
         <DateButton days={days} day={day} onPick={setDay} accent={config.accent} today={onDeck} counts={dayCounts} />
 
-        <div className="dash-seg" style={{ "--seg": config.accent }}>
+        <div className="dash-seg">
           <button className="dash-focus" onClick={() => setCmdOpen(true)}>Cast<kbd>⌘K</kbd></button>
           <button className="dash-focus" onClick={() => setColorsOpen(true)}>Look</button>
           <button className="dash-focus" onClick={() => setHornOpen(true)}>Around the Horn</button>
@@ -4015,8 +4016,7 @@ export default function Dashboard({ config }) {
           </button>
         </div>
 
-        <a className="dash-focus" href="/repo" style={{ ...mini, minHeight: 36, textDecoration: "none",
-          display: "inline-flex", alignItems: "center" }}>Repo</a>
+        <a className="dash-focus dash-bar" href="/repo">Repo</a>
 
       </header>
 
