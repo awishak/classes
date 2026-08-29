@@ -3999,9 +3999,12 @@ export default function Dashboard({ config }) {
         display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap",
         position: "sticky", top: 0, zIndex: 30 }}>
         <ClassMenu config={config} />
-        <DateButton days={days} day={day} onPick={setDay} accent={config.accent} today={onDeck} counts={dayCounts} />
         <span style={{ marginRight: "auto", fontSize: 14, color: TEXT_MUTED, minWidth: 0,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{config.desc}</span>
+
+        {/* The day picker leads the controls on the right: picking a day is
+            what I do before any of the rest of them. */}
+        <DateButton days={days} day={day} onPick={setDay} accent={config.accent} today={onDeck} counts={dayCounts} />
 
         <div className="dash-seg" style={{ "--seg": config.accent }}>
           <button className="dash-focus" onClick={() => setCmdOpen(true)}>Cast<kbd>⌘K</kbd></button>
@@ -4011,6 +4014,9 @@ export default function Dashboard({ config }) {
             Here{students.length ? <kbd>{students.length - outCount}/{students.length}</kbd> : null}
           </button>
         </div>
+
+        <a className="dash-focus" href="/repo" style={{ ...mini, minHeight: 36, textDecoration: "none",
+          display: "inline-flex", alignItems: "center" }}>Repo</a>
 
       </header>
 
