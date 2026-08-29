@@ -26,9 +26,14 @@ const files = [];
 let bad = 0;
 for (const file of files) {
   readFileSync(file, "utf8").split("\n").forEach((line, i) => {
-    // Every run of plain text between tags on this line.
-    for (const m of line.matchAll(/>([^<>{}]+)</g)) {
-      const text = m[1];
+    // Every run of text between tags on this line.
+    //
+    // A run can hold a JSX expression, and an escape inside one of those is
+    // correct JavaScript. So the expressions come out and whatever is left is
+    // the literal text. The first version simply skipped any run containing a
+    // brace, which is how `{hostOf(url)} \\u2197` shipped and printed itself.
+    for (const m of line.matchAll(/>((?:[^<>]|\{[^{}]*\})+)</g)) {
+      const text = m[1].replace(/\{[^{}]*\}/g, " ");
       if (!/\\u[0-9a-fA-F]{4}|\\n|\\t/.test(text)) continue;
       bad++;
       console.error(`  ${file.replace(ROOT, "src/")}:${i + 1}  an escape in JSX text renders as its own characters`);

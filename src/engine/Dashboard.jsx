@@ -70,6 +70,215 @@ const CSS = `
 .dash-bar-caret{font-size:10px;opacity:.5}
 .dash-bar-gap{flex:1 1 auto;min-width:8px}
 .dash-bar-name{font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--dash-accent)}
+/* The date button, and the dates inside it. */
+.dash-datechip{min-height:30px;padding:0 10px;border-radius:9px;border:1px solid rgba(23,19,16,.12);
+  background:#fff;cursor:pointer;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#171310}
+.dash-datechip:hover{background:rgba(23,19,16,.05)}
+.dash-stage{display:grid;gap:0;padding:14px 18px 26px;align-items:start;max-width:1760px;margin:0 auto}
+/* The seam between two columns. Invisible until the pointer is near it, then a
+   line you can grab. Sixteen pixels wide so it is catchable, drawn as three so
+   it is not a gutter. */
+.dash-seam{align-self:stretch;width:16px;cursor:col-resize;position:relative;touch-action:none;
+  background:none;border:none;padding:0}
+.dash-seam::after{content:"";position:absolute;left:50%;transform:translateX(-50%);top:8px;bottom:8px;width:3px;
+  border-radius:2px;background:rgba(23,19,16,.12);opacity:0;transition:opacity .13s}
+.dash-seam:hover::after,.dash-seam:focus-visible::after,.dash-seam[data-drag="1"]::after{opacity:1}
+.dash-seam[data-drag="1"]::after{background:var(--dash-accent,#171310)}
+body[data-resizing="1"]{cursor:col-resize;user-select:none}
+/* Too narrow for three. Live goes full width UNDER the flow rather than away —
+   the room preview is the one thing on this screen that must never be the
+   thing that gets hidden to make room. */
+@media (max-width:1240px){.dash-stage{grid-template-columns:minmax(0,1fr)!important}
+  .dash-seam{display:none}
+  .dash-room{grid-column:1/-1}
+  .dash-room .dash-room-body{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,1fr);gap:12px;align-items:start}
+  .dash-rail{position:static!important;max-height:none!important}
+  .dash-rail-body{overflow:visible;max-height:none}}
+/* Each column says what it is. Three columns that look alike need naming once
+   at the top, not explaining every time. Quiet enough to disappear after the
+   first week and there when someone else sits down. */
+.dash-col{margin:0 0 0 3px;font-family:var(--font-col,ui-monospace,SFMono-Regular,Menlo,monospace);font-size:11px;
+  font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:#8a9098}
+.dash-rail-tabs{display:flex;gap:4px;background:rgba(23,19,16,.045);border-radius:13px;padding:4px;overflow-x:auto;scrollbar-width:none}
+.dash-rail-tabs::-webkit-scrollbar{display:none}
+.dash-tab{flex:1 1 auto;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 11px;border:none;border-radius:10px;background:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:500;color:#5b6068;transition:background .14s,color .14s,box-shadow .14s}
+.dash-tab:hover{color:#171310}
+.dash-tab{position:relative}
+.dash-tab.on{background:var(--tab-hue,var(--dash-accent,#171310));color:#fff;font-weight:600;
+  box-shadow:0 1px 3px rgba(23,19,16,.18)}
+.dash-tab.on:hover{color:#fff;filter:brightness(1.08)}
+/* The closed tabs carry a dot of their own colour, so the rail says what is on
+   it without every tab shouting. */
+.dash-tab::before{content:"";width:7px;height:7px;border-radius:50%;flex:none;
+  background:var(--tab-hue,transparent);opacity:.75}
+.dash-tab.on::before{background:rgba(255,255,255,.65);opacity:1}
+.dash-tab-k{opacity:.55}
+.dash-tab.on .dash-tab-k{color:#fff;opacity:.7}
+.dash-tab-k{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:#9aa0a6;opacity:.75}
+.dash-tab.on .dash-tab-k{color:inherit;opacity:.45}
+.dash-tab-n{min-width:19px;height:19px;padding:0 5px;border-radius:10px;color:#fff;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:600;
+  display:inline-flex;align-items:center;justify-content:center}
+.dash-tab.on .dash-tab-n{background:rgba(255,255,255,.28)!important;color:#fff}
+.dash-rail-body{flex:1 1 auto;overflow-y:auto;min-height:0;padding-bottom:6px;--words:var(--fs,15px)}
+.dash-rail-body::-webkit-scrollbar{width:9px}
+.dash-rail-body::-webkit-scrollbar-thumb{background:rgba(23,19,16,.16);border-radius:5px}
+/* A card is a surface, not a box. The border round every one of them, the rule
+   under every header and the grip sitting out in the open added up to more
+   lines than content. A soft edge and space carry it, and the handles come
+   back when the pointer is on the card. */
+.dash-panel{background:#fff;border-radius:18px;
+  box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.045)}
+.dash-panel:hover{box-shadow:0 2px 8px -2px rgba(23,19,16,.09),0 0 0 1px rgba(23,19,16,.08)}
+.dash-head{display:flex;align-items:center;gap:8px;padding:12px 16px 10px}
+.dash-chrome{opacity:0;transition:opacity .12s}
+.dash-panel:hover .dash-chrome,.dash-panel:focus-within .dash-chrome{opacity:1}
+@media (hover:none){.dash-chrome{opacity:1}}
+.dash-item:hover{background:#fff;border-color:${BORDER_STRONG};
+  box-shadow:0 2px 6px -2px rgba(23,19,16,.13)}
+.dash-item{transition:background .14s,border-color .14s,box-shadow .14s}
+/* An empty panel should hand me the next move rather than describe the hole.
+   Dashed, quiet, and the full width of the card so it reads as a place to
+   click and not as a sentence. */
+.dash-empty{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;
+  padding:12px 14px;border:1.5px dashed ${BORDER_STRONG};border-radius:12px;background:none;
+  cursor:pointer;font-family:${F};font-size:14px;color:${TEXT_MUTED};text-align:center;line-height:1.35}
+.dash-empty:hover{background:rgba(23,19,16,.03)}
+.dash-item:hover .dash-go{opacity:1}
+/* Class Flow. A border round every row made it read as a spreadsheet, so the
+   rows have neither a border nor a fill and space does the separating instead.
+   The controls stay out of the way until the pointer is on the row — and until
+   the keyboard is, which is the half of that pattern people forget. */
+/* One rhythm down the whole flow, so the eye can run the list instead of
+   measuring each row. A calendar reads well because every entry is the same
+   shape and the colour is on one edge. */
+.flow-row{display:flex;align-items:center;gap:11px;min-height:var(--row-h);flex-wrap:wrap;
+  padding:2px 10px 2px 8px;border-radius:12px;cursor:grab;color:#fff;
+  background:var(--row,#5b6068);transition:filter .13s,box-shadow .13s;position:relative}
+/* A nested row draws the elbow back to the row it sits under, so the outline
+   reads as an outline rather than as a row that drifted right. */
+.flow-nested::before{content:"";position:absolute;left:-17px;top:-6px;bottom:50%;width:9px;
+  border-left:2px solid rgba(23,19,16,.18);border-bottom:2px solid rgba(23,19,16,.18);
+  border-bottom-left-radius:6px}
+.flow-row:hover{background:color-mix(in srgb,#fff 12%,var(--row,#5b6068))}
+@supports not (color:color-mix(in srgb,red 10%,#fff)){.flow-row:hover{opacity:.9}}
+/* Selected, up on the screen, or next. Each is a ring rather than a fill,
+   because the fill is already saying what the row is. */
+.flow-row.picked{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--dash-accent)}
+.flow-row.live{box-shadow:0 0 0 2px #fff,0 0 0 4px ${LIVE}}
+.flow-row.next{box-shadow:0 0 0 2px #fff,0 0 0 3px var(--dash-accent)}
+.flow-row.over{box-shadow:inset 0 3px 0 #fff}
+.flow-row.done{background:color-mix(in srgb,#fff 74%,var(--row,#5b6068))}
+.flow-row.done:hover{background:color-mix(in srgb,#fff 66%,var(--row,#5b6068))}
+@supports not (color:color-mix(in srgb,red 10%,#fff)){.flow-row.done{opacity:.42}}
+/* A row with its menu open sits above the rows after it. */
+.flow-row[data-menu="1"]{z-index:70}
+/* The number carries the colour of what the row is, filled rather than as a
+   stub on the edge — one chip per kind, the same chip everywhere it appears. */
+/* The number sits on the bar rather than carrying the colour itself. */
+.flow-num{flex:none;width:25px;height:25px;border-radius:8px;display:inline-flex;
+  align-items:center;justify-content:center;font-family:${MONO};font-size:12px;font-weight:600;
+  color:#fff;font-variant-numeric:tabular-nums;border:none;cursor:pointer;padding:0;
+  background:rgba(255,255,255,.22)!important;transition:transform .12s,background .12s}
+.flow-num:hover{transform:scale(1.12);background:rgba(255,255,255,.36)!important}
+.flow-row.done .flow-num{color:#fff}
+.flow-row.done .flow-words{text-decoration:line-through;text-decoration-thickness:1.5px;opacity:.85}
+.flow-main{flex:1 1 140px;min-width:0;display:flex;flex-direction:column;gap:1px;padding:4px 0}
+.flow-words{display:block;width:100%;font-size:var(--words,16px);line-height:1.35;letter-spacing:-.006em;
+  overflow-wrap:anywhere;background:none;border:none;padding:0;text-align:left;cursor:pointer;color:#fff;
+  font-family:var(--font-row,${F});font-weight:var(--row-weight,400)}
+.flow-src{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;font-size:12px;
+  color:rgba(255,255,255,.88);text-decoration:none;border-radius:999px;padding:1px 7px;
+  background:rgba(255,255,255,.18);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flow-src:hover{background:rgba(255,255,255,.3);color:#fff}
+/* The tools ride on the bar, so they are white on the colour rather than
+   bordered boxes fighting it. */
+.flow-row .flow-tools button{background:rgba(255,255,255,.18)!important;border-color:transparent!important;
+  color:#fff!important}
+.flow-row .flow-tools button:hover{background:rgba(255,255,255,.34)!important}
+/* My note under a reading. Quiet until there is one, and indented to the
+   width of the number chip so it hangs off the thing it is about. */
+.dash-note{display:block;width:100%;text-align:left;background:none;
+  border:none;padding:2px 7px;border-radius:8px;cursor:text;font-family:${F};font-size:12.5px;
+  line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.dash-note:hover{background:${SURFACE_2}}
+/* A reading card. The words get the whole width; the link and the buttons sit
+   along the bottom where a card's actions belong. */
+.read-card{border-radius:12px;background:${SURFACE_2};overflow:hidden}
+/* A field with its own confirm. The tick sits inside the box against the right
+   edge, and the field carries padding so the words never run under the tick. */
+.read-field{position:relative;display:block;width:100%}
+.read-field input,.read-field textarea{width:100%;display:block}
+.read-tick{position:absolute;right:7px;top:50%;transform:translateY(-50%);
+  width:26px;height:26px;border-radius:50%;border:none;cursor:pointer;padding:0;
+  display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;
+  background:var(--dash-accent,#171310);color:#fff;transition:transform .12s,filter .12s}
+.read-tick:hover{transform:translateY(-50%) scale(1.09);filter:brightness(1.1)}
+.read-tick:disabled{opacity:.35;cursor:default}
+.read-tick[style*="bottom"]:hover{transform:scale(1.09)}
+.read-body{display:flex;flex-direction:column;gap:2px;padding:8px 8px 4px}
+.read-head{display:block;width:100%;text-align:left;background:none;border:none;padding:2px 7px;
+  border-radius:8px;cursor:text;font-family:${F};font-size:13px;font-weight:600;line-height:1.4;
+  letter-spacing:-.005em;overflow-wrap:anywhere}
+.read-head:hover{background:#fff}
+.read-title{display:block;padding:2px 7px 4px;font-size:15.5px;line-height:1.35;color:${TEXT_PRIMARY};
+  font-weight:500;letter-spacing:-.008em;overflow-wrap:anywhere;font-family:var(--font-row,${F})}
+.read-kind{flex:none;padding:2px 8px;border-radius:999px;color:#fff;
+  font-family:${MONO};font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.read-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 10px 8px;
+  border-top:1px solid rgba(23,19,16,.06)}
+.read-src{margin-right:auto;font-family:${F};font-size:12px;color:${TEXT_MUTED};text-decoration:none;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.read-src:hover{color:#171310;text-decoration:underline}
+.read-flag{font-family:${MONO};font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:${TEXT_MUTED};background:rgba(23,19,16,.06);border-radius:999px;padding:2px 8px}
+/* Everything a row can do, hanging off its number. */
+.flow-rowmenu{position:absolute;left:0;top:calc(100% + 6px);z-index:61;background:#fff;
+  border:1px solid rgba(23,19,16,.14);border-radius:12px;padding:5px;min-width:236px;
+  box-shadow:0 16px 38px -12px rgba(23,19,16,.42);display:flex;flex-direction:column;gap:1px}
+.flow-rowmenu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  background:none;border:none;cursor:pointer;padding:0 10px;min-height:38px;border-radius:8px;
+  font-family:${F};font-size:14px;color:${TEXT_PRIMARY}}
+.flow-rowmenu button:hover{background:rgba(23,19,16,.05)}
+.flow-rowmenu-k{flex:none;width:18px;text-align:center;font-size:13px;color:${TEXT_MUTED}}
+.flow-tools{display:flex;gap:4px;flex:none;opacity:0;transition:opacity .12s}
+.flow-row:hover .flow-tools,.flow-row:focus-within .flow-tools,.flow-row.live .flow-tools,
+.flow-row.picked .flow-tools{opacity:1}
+/* The heading recedes. Colour on this screen means live or means press me, and
+   a heading is neither. */
+.flow-sec{display:flex;flex-direction:column;gap:1px;padding-top:18px;position:relative;
+  padding-left:13px;border-radius:12px}
+.flow-sec::before{content:"";position:absolute;left:3px;top:24px;bottom:6px;width:3px;border-radius:2px;
+  background:var(--sec);opacity:.5}
+.flow-sec:hover::before{opacity:.95}
+/* A section heads the rows under it, so it is a bar like the rows rather than
+   a chip, which was a third visual language sitting between the cards and the
+   coloured bars. */
+/* Two full-colour bars stacked is a wall. The rows carry the fill, so the
+   header is a plain rule with the section colour in the words, which reads as
+   a heading rather than as a second row. */
+.flow-sec-head{display:flex;align-items:center;gap:6px;margin:0 0 6px;padding:0 4px 6px 0;
+  min-height:32px;border-bottom:1px solid rgba(23,19,16,.09)}
+.flow-name{flex:0 1 auto;min-width:0;background:none;border:none;padding:3px 6px;border-radius:7px;
+  cursor:text;font-family:var(--font-sec,${F});font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--sec);
+  text-transform:uppercase;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flow-name:hover{background:rgba(23,19,16,.05)}
+.flow-tally{flex:none;font-family:${MONO};font-size:11.5px;font-weight:500;color:#8a9098}
+.flow-more{flex:none;min-width:26px;min-height:26px;border:none;border-radius:8px;background:none;
+  cursor:pointer;color:#8a9098;font-size:10px;padding:0}
+.flow-more:hover{background:rgba(23,19,16,.06);color:#171310}
+.flow-add{margin-left:auto;flex:none;min-height:26px;padding:0 10px;border:1px solid rgba(23,19,16,.14);
+  border-radius:8px;background:#fff;color:#5b6068;cursor:pointer;font-family:${F};font-size:12.5px;font-weight:500}
+.flow-add:hover{background:rgba(23,19,16,.04);color:#171310}
+.flow-sec .flow-add{opacity:0;transition:opacity .12s}
+.flow-sec:hover .flow-add,.flow-sec:focus-within .flow-add{opacity:1}
+@media (hover:none){.flow-tools,.flow-sec .flow-add{opacity:1}}
+/* Keyboard users had no idea where they were on this screen. */
+.dash-focus:focus-visible{outline:2px solid var(--dash-accent);outline-offset:2px;border-radius:8px}
+.dash-comfortable{--row-h:44px;--gap:11px;--pad:16px;--fs:15px;--topic:26px;--card:16px}
+.dash-compact{--row-h:33px;--gap:6px;--pad:11px;--fs:14px;--topic:20px;--card:12px}
+.dash-panel{border-radius:var(--card,16px)}
+.flow-row{font-size:var(--fs,15px)}
 .dash-band{padding:var(--pad,16px) calc(var(--pad,16px) + 4px);gap:var(--gap,11px)}
 .dash-topic{font-size:var(--topic,26px)}
 .dash-focus:focus:not(:focus-visible){outline:none}
@@ -291,7 +500,7 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
         {url ? (
           <a className="dash-focus flow-src" href={url} target="_blank" rel="noopener noreferrer"
             onClick={e => e.stopPropagation()} title={"Open " + url + " in a new tab"}
-            style={{ fontFamily: F }}>{hostOf(url)} \u2197</a>
+            style={{ fontFamily: F }}>{hostOf(url)} ↗</a>
         ) : null}
       </span>
 
