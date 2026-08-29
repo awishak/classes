@@ -8,6 +8,7 @@ import ClassApp from "./engine/ClassApp.jsx";
 import Dashboard from "./engine/Dashboard.jsx";
 import ClassroomView from "./engine/ClassroomView.jsx";
 import BoardPage from "./engine/BoardPage.jsx";
+import RepoPage from "./engine/RepoPage.jsx";
 import AskPage from "./engine/AskPage.jsx";
 import PlanPage from "./PlanPage.jsx";
 import { ENGINE, currentClasses, archivedClasses } from "./config/registry.js";
@@ -161,6 +162,15 @@ export default function App() {
 
   if (path === "/archive" || path === "/archive/") {
     return <ArchivePage />;
+  }
+
+  // Everything I have, across every class, behind the same gate as a dashboard.
+  if (path === "/repo" || path === "/repo/") {
+    return (
+      <InstructorGate what="Repository">
+        <RepoPage />
+      </InstructorGate>
+    );
   }
 
   // Live teaching surfaces: /<class>/dashboard (me), /<class>/today (the room

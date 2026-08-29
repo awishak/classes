@@ -20,6 +20,7 @@ import Dashboard, {
 import ClassroomView from "../src/engine/ClassroomView.jsx";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
+import RepoPage from "../src/engine/RepoPage.jsx";
 import AskPage from "../src/engine/AskPage.jsx";
 import PlanPage from "../src/PlanPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
@@ -168,6 +169,7 @@ cases.push(["Command bar", <CommandBar targets={[{ key: "k", group: "g", title: 
   }
 }
 cases.push(["Discussion board", <BoardPage config={cfg0} />]);
+cases.push(["Repository", <RepoPage />]);
 cases.push(["The Brief", <PlanPage />]);
 cases.push(["Instructor links", <InstructorLinks />]);
 
