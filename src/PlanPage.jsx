@@ -48,7 +48,7 @@ const Pill = ({ children, tone }) => (
 const SESSIONS = [
   {
     id: "aug31", date: "Monday, August 31", title: "The repository became a table, and learned to write",
-    blurb: "The repository could show me everything and change nothing. Now it is rows rather than cards, every heading sorts, an edit made there lands in every class that uses the block, and a thing can go onto a day without opening a dashboard.",
+    blurb: "The repository could show me everything and change nothing. Now the repository is rows rather than cards, every heading sorts, an edit made there lands in every class that uses the block, a thing can go onto a day without opening a dashboard, and the page wears type of its own choosing.",
     groups: [
       { name: "Rows instead of cards", items: [
         ["One row a thing, one column a field", "Thing, Kind, Where, Used, Tags, Made. Cards are good for browsing a dozen things and bad for reading four hundred: a card puts every field on its own line, so nothing lines up and the eye starts over on every card. The kind colour moved to the left edge of the row, so the colour coding survives at table density."],
@@ -62,9 +62,16 @@ const SESSIONS = [
         ["Put a thing on a day, from here", "Pick a class, a day grouped under its week, and a section of the day. Into the flow adds a row pointing at the block and stamps the date on the block; onto the readings writes to the week the students see, the same field the Schedule editor writes. Underneath, everywhere the block already turns up, each line a link to that dashboard."],
         ["Every write goes to the store the block belongs to", "The page hands each store the same update shape the rest of the engine takes, which is why blocks.js and schedule.js work here unchanged. The stores are held beside React state as well, so a place and the stamp that follows it never land on stale data."],
       ] },
+      { name: "The heading row, and type of its own", items: [
+        ["The headings were out of line with the rows the headings name", "A row's first cell carries a 4px colour edge and 10px of padding; the heading cell carried 12px of padding and no edge, so every heading sat two pixels left of its own column. The heading cells now carry the same edge, drawn transparent."],
+        ["The sort arrow was shoving the words sideways", "The arrow only drew on the sorted column while the gap was always there, so headings moved as the sort moved. The arrow now always sits in the row: faint when the column is idle, solid up or down when the column is doing the sorting."],
+        ["Cramped headings, and a hover that lied", "11px uppercase in a 38px button, under the 44px floor, now 12px in a 44px button. And a hovered row was painted the same grey as the heading row, so two bands on screen claimed to be the heading. Hover went lighter."],
+        ["The heading row was stuck to a number", "It stuck at 57px, which was the page header's height on a wide window. Narrow the window, the header wraps to two lines, and the heading row sticks in the wrong place. The page measures the header now and re-measures on resize."],
+        ["A font chooser, and the choice is the repository's own", "Type in the header opens three slots: column headings, the words in a row, everything else, each face drawn in itself, plus heavier rows and a reset. The dashboard's slots live at shared.fonts and these live at shared.repoFonts, so dressing the filing cabinet never changes how a class looks while it is being taught. Both are in the shared store, so the choice follows me and not a class."],
+      ] },
       { name: "The build", items: [
-        ["The smoke test was passing on a loading screen", "The repository case rendered the page, the page renders a loading line until the stores arrive, and a loading line proves nothing. The row, the open panel and the placer are rendered directly now, four cases, each naming a string the output has to contain. 58 surfaces to 63."],
-        ["The stylesheet floor went up", "check-css guards the page against another accidental deletion. The floor moved from 30 rules to 60, against the 74 the page now has."],
+        ["The smoke test was passing on a loading screen", "The repository case rendered the page, the page renders a loading line until the stores arrive, and a loading line proves nothing. The row, the open panel, the placer and the type sheet are rendered directly now, six cases, each naming a string the output has to contain. 58 surfaces to 65."],
+        ["The stylesheet floor went up twice", "check-css guards the page against another accidental deletion. The floor moved from 30 rules to 75, against the 86 the page now has."],
       ] },
     ],
     note: {

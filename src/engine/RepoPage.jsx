@@ -30,7 +30,8 @@ import { TYPES, typeOf, SHARED_KEY, makeBlock, writeBlock, deleteBlock, stampSch
 import { colorOfType, readColors } from "./colors.js";
 import { normSlot, blankDay } from "./dayplan.js";
 import { weekdayOf, slotsOf, addScheduleItem } from "./schedule.js";
-import { readFonts, fontVars } from "./fonts.js";
+import { FACES, REPO_SLOTS, readRepoFonts, repoFontVars, writeRepoFont, resetRepoFonts,
+  readRepoBold, writeRepoBold } from "./fonts.js";
 import { genId } from "../utils.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -62,7 +63,13 @@ export default function RepoPage() {
   const [tag, setTag] = useState("");
   const [sort, setSort] = useState({ col: "used", dir: "desc" });
   const [adding, setAdding] = useState(false);
+  const [typing, setTyping] = useState(false);
   const [openId, setOpenId] = useState("");
+  // The heading row sticks under the page header, so it has to know how tall
+  // the page header is. Hard-coding the height was wrong the moment the header
+  // wrapped to two lines, which is what a narrow window does to it.
+  const [headH, setHeadH] = useState(57);
+  const headRef = useRef(null);
 
   // The stores, held outside React as well, because a write reads the newest
   // state and then saves. Reading it off state would mean a save built on
@@ -70,6 +77,13 @@ export default function RepoPage() {
   const ref = useRef({});
 
   useEffect(() => { document.title = "Repository"; }, []);
+
+  useEffect(() => {
+    const measure = () => setHeadH(headRef.current?.offsetHeight || 57);
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
 
   // Every class, and the shelf that belongs to me rather than to a class.
   useEffect(() => {
@@ -88,7 +102,8 @@ export default function RepoPage() {
   }, []);
 
   const colors = readColors(stores?.shared);
-  const fonts = readFonts(stores?.shared);
+  const fonts = readRepoFonts(stores?.shared);
+  const bold = readRepoBold(stores?.shared);
   const hue = (t) => colorOfType(colors, t);
 
   const keyOf = (target) =>
@@ -266,14 +281,17 @@ export default function RepoPage() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT, ...fontVars(fonts) }}>
+    <div className={"repo-page" + (bold ? " repo-bold" : "")}
+      style={{ minHeight: "100vh", background: BG, color: TEXT,
+        "--repo-top": headH + "px", ...repoFontVars(fonts) }}>
       <style>{CSS}</style>
 
-      <header className="repo-head">
+      <header className="repo-head" ref={headRef}>
         <div className="repo-head-in">
           <a href="/" className="repo-back">← All classes</a>
           <h1 className="repo-title">Repository</h1>
           <span className="repo-count">{items.length} things</span>
+          <button className="repo-focus repo-chip repo-type" onClick={() => setTyping(!typing)} aria-pressed={typing}>Type</button>
           <button className="repo-focus repo-add" onClick={() => setAdding(true)}>+ Add</button>
         </div>
       </header>
@@ -302,6 +320,13 @@ export default function RepoPage() {
           </div>
         </div>
 
+        {typing ? (
+          <TypeSheet fonts={fonts} bold={bold} onClose={() => setTyping(false)}
+            onFont={(slot, f) => writeRepoFont(writeTo("shared"), slot, f)}
+            onBold={on => writeRepoBold(writeTo("shared"), on)}
+            onReset={() => resetRepoFonts(writeTo("shared"))} />
+        ) : null}
+
         {adding ? <AddForm onAdd={addBlock} onClose={() => setAdding(false)} hue={hue} /> : null}
 
         {hits.length ? (
@@ -312,9 +337,12 @@ export default function RepoPage() {
                   {COLS.map(c => (
                     <th key={c.id} className={"repo-th repo-th-" + c.id} scope="col"
                       aria-sort={sort.col === c.id ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
-                      <button className="repo-focus repo-sort" onClick={() => bySort(c.id)}>
+                      <button className="repo-focus repo-sort" onClick={() => bySort(c.id)}
+                        aria-label={"Sort by " + c.name}>
                         {c.name}
-                        <span className="repo-arrow">{sort.col === c.id ? (sort.dir === "asc" ? "↑" : "↓") : ""}</span>
+                        <span className={"repo-arrow" + (sort.col === c.id ? " repo-arrow-on" : "")}>
+                          {sort.col === c.id ? (sort.dir === "asc" ? "↑" : "↓") : "↕"}
+                        </span>
                       </button>
                     </th>
                   ))}
@@ -551,6 +579,44 @@ export function Place({ block, planOf, stores, onPlace, onAssign }) {
   );
 }
 
+// The repository's own type. The dashboard has had a chooser since the day I
+// said I hated the font on the flow; this is the same eight faces on a screen
+// that is doing a different job, so the choice is its own rather than shared
+// with the dashboard. Each face is drawn in itself, because the name of a font
+// tells me nothing about reading four hundred rows of it.
+export function TypeSheet({ fonts, bold, onFont, onBold, onReset, onClose }) {
+  return (
+    <div className="repo-type-sheet">
+      <div className="repo-row">
+        <span className="repo-label">Type, on this page only</span>
+        <button className="repo-focus repo-chip" onClick={onReset} style={{ marginLeft: "auto" }}>Put the type back</button>
+        <button className="repo-focus repo-chip" onClick={onClose}>Done</button>
+      </div>
+      {REPO_SLOTS.map(sl => (
+        <div key={sl.id} className="repo-type-row">
+          <span className="repo-type-name">{sl.label}</span>
+          <div className="repo-row">
+            {FACES.map(f => (
+              <button key={f.id} className="repo-focus repo-face" onClick={() => onFont(sl.id, f.id)}
+                aria-pressed={fonts[sl.id] === f.id} style={{ fontFamily: f.stack }}
+                data-on={fonts[sl.id] === f.id ? "yes" : "no"}>
+                {f.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div className="repo-type-row">
+        <span className="repo-type-name">Heavier rows</span>
+        <button className="repo-focus repo-chip" onClick={() => onBold(!bold)} aria-pressed={bold}
+          style={bold ? { background: TEXT, borderColor: TEXT, color: "#fff" } : undefined}>
+          {bold ? "On" : "Off"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AddForm({ onAdd, onClose, hue }) {
   const [type, setType] = useState("link");
   const [target, setTarget] = useState("shared");
@@ -600,14 +666,16 @@ const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); 
 
 const CSS = `
 .repo-focus:focus-visible{outline:2.5px solid #171310;outline-offset:2px;border-radius:8px}
+.repo-page{font-family:var(--repo-ui,${F})}
 .repo-head{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid ${BORDER}}
 .repo-head-in{max-width:1240px;margin:0 auto;padding:12px 20px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
 .repo-back{font-size:14px;color:${MUTED};text-decoration:none}
 .repo-back:hover{color:${TEXT}}
 .repo-title{margin:0;font-size:20px;font-weight:700;letter-spacing:-.02em}
 .repo-count{font-family:${MONO};font-size:12px;color:${MUTED}}
-.repo-add{margin-left:auto;min-height:36px;padding:0 15px;border-radius:11px;border:none;background:${TEXT};
+.repo-add{min-height:36px;padding:0 15px;border-radius:11px;border:none;background:${TEXT};
   color:#fff;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600}
+.repo-type{margin-left:auto;min-height:36px}
 .repo-add:hover{opacity:.88}
 .repo-body{max-width:1240px;margin:0 auto;padding:18px 20px 60px;display:flex;flex-direction:column;gap:14px}
 .repo-search{width:100%;min-height:56px;padding:0 18px;border-radius:14px;border:1px solid ${BORDER};
@@ -629,22 +697,32 @@ const CSS = `
 .repo-sheet{background:#fff;border-radius:14px;overflow:hidden;
   box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.07)}
 .repo-table{width:100%;border-collapse:collapse;table-layout:auto}
-.repo-th{text-align:left;padding:0;background:${SURFACE};border-bottom:1px solid ${BORDER};
-  position:sticky;top:57px;z-index:5}
-.repo-sort{display:flex;align-items:center;gap:5px;width:100%;min-height:38px;padding:0 12px;background:none;
-  border:none;cursor:pointer;font-family:${MONO};font-size:11px;font-weight:600;letter-spacing:.09em;
-  text-transform:uppercase;color:${MUTED}}
+/* The heading row sticks under the page header, at whatever height the page
+   header actually is. Its cells carry the same 4px edge and padding the rows
+   carry, so a heading sits over the words the heading names instead of two
+   pixels to the left of them. */
+.repo-th{text-align:left;padding:0 12px;background:${SURFACE};border-bottom:1px solid ${BORDER};
+  position:sticky;top:var(--repo-top,57px);z-index:5;box-shadow:0 1px 0 ${BORDER}}
+.repo-th-title{border-left:4px solid transparent;padding-left:10px}
+.repo-sort{display:flex;align-items:center;gap:7px;width:100%;min-height:${TAP}px;padding:0;background:none;
+  border:none;cursor:pointer;font-family:var(--repo-col,${MONO});font-size:12px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;color:${MUTED};white-space:nowrap}
 .repo-sort:hover{color:${TEXT}}
-.repo-arrow{font-size:11px;color:${TEXT}}
+/* The arrow is always in the row, so sorting a column never nudges its
+   heading sideways. Off means faint, not absent. */
+.repo-arrow{font-size:12px;color:${MUTED};opacity:.35}
+.repo-arrow-on{color:${TEXT};opacity:1}
 .repo-th-used,.repo-th-made,.repo-th-kind,.repo-th-where{width:1%;white-space:nowrap}
+.repo-th-tags{width:18%}
 .repo-tr{border-bottom:1px solid rgba(23,19,16,.07)}
-.repo-tr:hover{background:${SURFACE}}
+.repo-tr:hover{background:rgba(23,19,16,.035)}
 .repo-tr-open{background:${SURFACE}}
 .repo-td{padding:4px 12px;vertical-align:middle;font-size:14px;color:${SECOND}}
 .repo-td-title{border-left:4px solid var(--kind);padding-left:10px}
 .repo-words{display:flex;gap:8px;align-items:baseline;width:100%;min-height:${TAP}px;text-align:left;
-  background:none;border:none;padding:0;cursor:pointer;font-family:var(--font-row,${F});font-size:15.5px;
+  background:none;border:none;padding:0;cursor:pointer;font-family:var(--repo-row,${F});font-size:15.5px;
   font-weight:500;line-height:1.35;letter-spacing:-.008em;color:${TEXT};overflow-wrap:anywhere}
+.repo-bold .repo-words{font-weight:700}
 .repo-words:hover{color:var(--kind)}
 .repo-caret{color:${MUTED};font-size:11px}
 .repo-sub{display:block;font-size:12.5px;font-weight:400;line-height:1.4;color:${MUTED}}
@@ -694,6 +772,14 @@ const CSS = `
 .repo-empty{margin:30px 0;font-size:16px;color:${MUTED}}
 .repo-add-form{background:#fff;border:1px solid ${TEXT};border-radius:14px;padding:14px;
   display:flex;flex-direction:column;gap:8px}
+.repo-type-sheet{background:#fff;border:1px solid ${TEXT};border-radius:14px;padding:13px 14px;
+  display:flex;flex-direction:column;gap:11px}
+.repo-type-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.repo-type-name{min-width:150px;font-size:14px;color:${SECOND}}
+.repo-face{min-height:38px;padding:0 13px;border-radius:10px;border:1px solid ${BORDER};background:#fff;
+  cursor:pointer;font-size:14px;color:${TEXT}}
+.repo-face:hover{border-color:${TEXT}}
+.repo-face[data-on="yes"]{background:${TEXT};border-color:${TEXT};color:#fff}
 
 @media (max-width: 820px){
   .repo-detail{grid-template-columns:1fr}

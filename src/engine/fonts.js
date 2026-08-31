@@ -50,3 +50,37 @@ export const resetFonts = (updateShared) => updateShared(prev => ({ ...prev, fon
 // Row text can be heavier without changing the face.
 export const readBold = (shared) => !!shared?.boldRows;
 export const writeBold = (updateShared, on) => updateShared(prev => ({ ...prev, boldRows: !!on }));
+
+// ─── the repository's own type ───
+//
+// Andrew asked for a font chooser on the repository, and for the choice to be
+// the repository's rather than the dashboard's. The two screens are doing
+// different jobs: the three slots above dress a class while it is being
+// taught, and the repository is a filing cabinet with four hundred rows in it,
+// where what I want is a face I can read down a column. Same eight faces, a
+// separate choice, kept in the shared store beside the other choice so the
+// choice follows me and not a class.
+export const REPO_SLOTS = [
+  { id: "cols", label: "Column headings", fallback: "mono", css: "--repo-col" },
+  { id: "rows", label: "The words in a row", fallback: "outfit", css: "--repo-row" },
+  { id: "page", label: "Everything else", fallback: "outfit", css: "--repo-ui" },
+];
+
+export const DEFAULT_REPO_FONTS = Object.fromEntries(REPO_SLOTS.map(s => [s.id, s.fallback]));
+
+export const readRepoFonts = (shared) => ({ ...DEFAULT_REPO_FONTS, ...(shared?.repoFonts || {}) });
+
+export const repoFontVars = (fonts) => Object.fromEntries(REPO_SLOTS.map(s => {
+  const id = (fonts || DEFAULT_REPO_FONTS)[s.id] || DEFAULT_REPO_FONTS[s.id];
+  return [s.css, face(id)?.stack || face(DEFAULT_REPO_FONTS[s.id]).stack];
+}));
+
+export const writeRepoFont = (updateShared, slot, faceId) => updateShared(prev => ({
+  ...prev,
+  repoFonts: { ...(prev.repoFonts || {}), [slot]: faceId },
+}));
+
+export const resetRepoFonts = (updateShared) => updateShared(prev => ({ ...prev, repoFonts: {} }));
+
+export const readRepoBold = (shared) => !!shared?.repoBoldRows;
+export const writeRepoBold = (updateShared, on) => updateShared(prev => ({ ...prev, repoBoldRows: !!on }));

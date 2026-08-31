@@ -20,13 +20,15 @@ import Dashboard, {
 import ClassroomView from "../src/engine/ClassroomView.jsx";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
-import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace } from "../src/engine/RepoPage.jsx";
+import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
+  TypeSheet as RepoType } from "../src/engine/RepoPage.jsx";
 import AskPage from "../src/engine/AskPage.jsx";
 import PlanPage from "../src/PlanPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
 import { ENGINE_LIST } from "../src/config/registry.js";
 import { warmClassData } from "../src/engine/store.js";
 import { SHARED_KEY } from "../src/engine/blocks.js";
+import { DEFAULT_REPO_FONTS } from "../src/engine/fonts.js";
 
 // Warm every class's store BEFORE anything renders, so <Dashboard/> gets past
 // its loading gate and the body actually runs. Until now it did not: the whole
@@ -193,6 +195,10 @@ cases.push(["Repository", <RepoPage />]);
     onSave={noop} onDelete={noop} onPlace={noop} onAssign={noop} />, "Put the block on a day"]);
   cases.push(["Repository placer", <RepoPlace block={blk} planOf={planOf} stores={stores}
     onPlace={noop} onAssign={noop} />, "Into the flow"]);
+  cases.push(["Repository type sheet", <RepoType fonts={DEFAULT_REPO_FONTS} bold={false}
+    onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Column headings"]);
+  cases.push(["Repository type sheet, chosen", <RepoType fonts={{ cols: "fraunces", rows: "grotesk", page: "plex" }}
+    bold onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Heavier rows"]);
 }
 cases.push(["The Brief", <PlanPage />]);
 cases.push(["Instructor links", <InstructorLinks />]);
