@@ -9,6 +9,7 @@ import Dashboard from "./engine/Dashboard.jsx";
 import ClassroomView from "./engine/ClassroomView.jsx";
 import BoardPage from "./engine/BoardPage.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
+import RepoIdeas from "./engine/RepoIdeas.jsx";
 import AskPage from "./engine/AskPage.jsx";
 import PlanPage from "./PlanPage.jsx";
 import { ENGINE, currentClasses, archivedClasses } from "./config/registry.js";
@@ -162,6 +163,15 @@ export default function App() {
 
   if (path === "/archive" || path === "/archive/") {
     return <ArchivePage />;
+  }
+
+  // The backlog for the repository, behind the same gate as the repository.
+  if (path === "/repo/ideas" || path === "/repo/ideas/") {
+    return (
+      <InstructorGate what="Ideas for the repository">
+        <RepoIdeas />
+      </InstructorGate>
+    );
   }
 
   // Everything I have, across every class, behind the same gate as a dashboard.

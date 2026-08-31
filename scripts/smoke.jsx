@@ -22,6 +22,7 @@ import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType } from "../src/engine/RepoPage.jsx";
+import RepoIdeas, { Idea } from "../src/engine/RepoIdeas.jsx";
 import AskPage from "../src/engine/AskPage.jsx";
 import PlanPage from "../src/PlanPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
@@ -200,6 +201,9 @@ cases.push(["Repository", <RepoPage />]);
   cases.push(["Repository type sheet, chosen", <RepoType fonts={{ cols: "fraunces", rows: "grotesk", page: "plex" }}
     bold onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Heavier rows"]);
 }
+cases.push(["Ideas for the repository", <RepoIdeas />, "Merge the duplicates"]);
+cases.push(["One idea", <Idea idea={{ n: 7, group: "reuse", size: "small", first: true,
+  title: "Last used", what: "A last-used column.", why: "A count cannot say when." }} />, "Start here"]);
 cases.push(["The Brief", <PlanPage />]);
 cases.push(["Instructor links", <InstructorLinks />]);
 

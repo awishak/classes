@@ -306,7 +306,8 @@ export default function RepoPage() {
           <a href="/" className="repo-back">← All classes</a>
           <h1 className="repo-title">Repository</h1>
           <span className="repo-count">{items.length} things</span>
-          <button className="repo-focus repo-chip repo-type" onClick={() => setTyping(!typing)} aria-pressed={typing}>Type</button>
+          <a className="repo-focus repo-chip repo-ideas" href="/repo/ideas">Ideas</a>
+          <button className="repo-focus repo-chip" onClick={() => setTyping(!typing)} aria-pressed={typing}>Type</button>
           <button className="repo-focus repo-add" onClick={() => setAdding(true)}>+ Add</button>
         </div>
       </header>
@@ -690,7 +691,7 @@ const CSS = `
 .repo-count{font-family:${MONO};font-size:12px;color:${MUTED}}
 .repo-add{min-height:36px;padding:0 15px;border-radius:11px;border:none;background:${TEXT};
   color:#fff;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600}
-.repo-type{margin-left:auto;min-height:36px}
+.repo-ideas{margin-left:auto;min-height:36px;display:inline-flex;align-items:center;text-decoration:none}
 .repo-add:hover{opacity:.88}
 .repo-body{max-width:1240px;margin:0 auto;padding:18px 20px 60px;display:flex;flex-direction:column;gap:14px}
 .repo-search{width:100%;min-height:56px;padding:0 18px;border-radius:14px;border:1px solid ${BORDER};

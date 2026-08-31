@@ -70,6 +70,10 @@ const SESSIONS = [
         ["Edges that stayed behind", "A collapsed border belongs to the table, not to the row, so a stuck heading row lost its bottom edge, and a row with no ground of its own showed through the heading row it passed under. Separate borders, edges on the cells, white on the rows."],
         ["A font chooser, and the choice is the repository's own", "Type in the header opens three slots: column headings, the words in a row, everything else, each face drawn in itself, plus heavier rows and a reset. The dashboard's slots live at shared.fonts and these live at shared.repoFonts, so dressing the filing cabinet never changes how a class looks while it is being taught. Both are in the shared store, so the choice follows me and not a class."],
       ] },
+      { name: "A backlog, at /repo/ideas", items: [
+        ["Twenty ways the repository could be better, on a page", "Read out of the code rather than invented: the porting script, the day plans, the schedule writers, and the unfinished list in HANDOFF. Four groups. Make the data true, reuse rather than storage, move faster through the list, hold more and edit without fear. Each idea says what the change is, why the change earns a session, and how big the session is."],
+        ["Numbered, because a backlog is for pointing at", "A list said out loud in a conversation is gone when the conversation is cleared. A list at a URL survives, and the numbers mean the next session starts by naming numbers instead of re-deriving what the numbers meant. Where I would start: 1, 2, 5, 11, 19."],
+      ] },
       { name: "The build", items: [
         ["The smoke test was passing on a loading screen", "The repository case rendered the page, the page renders a loading line until the stores arrive, and a loading line proves nothing. The row, the open panel, the placer and the type sheet are rendered directly now, six cases, each naming a string the output has to contain. 58 surfaces to 65."],
         ["The stylesheet floor went up twice", "check-css guards the page against another accidental deletion. The floor moved from 30 rules to 75, against the 86 the page now has."],
