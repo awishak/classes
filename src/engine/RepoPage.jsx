@@ -78,12 +78,27 @@ export default function RepoPage() {
 
   useEffect(() => { document.title = "Repository"; }, []);
 
+  // Measured, and measured again whenever the header changes height.
+  //
+  // The first version of this ran once on mount, and on mount there is no
+  // header to measure: the page is still showing the loading line, so the ref
+  // is null and the fallback of 57px is what stuck. The number was never right
+  // afterwards either, because opening Type or Add makes the header no taller
+  // but narrowing the window wraps the header onto two lines. So it waits for
+  // the stores to land, and a ResizeObserver watches the header from then on.
   useEffect(() => {
-    const measure = () => setHeadH(headRef.current?.offsetHeight || 57);
+    const el = headRef.current;
+    if (!el) return;
+    const measure = () => setHeadH(el.offsetHeight || 57);
     measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
+    if (typeof ResizeObserver !== "function") {
+      window.addEventListener("resize", measure);
+      return () => window.removeEventListener("resize", measure);
+    }
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [stores]);
 
   // Every class, and the shelf that belongs to me rather than to a class.
   useEffect(() => {
@@ -694,15 +709,27 @@ const CSS = `
 
 /* The sheet. One row a thing, one column a field, so the eye runs down a
    column instead of starting over on every card. */
-.repo-sheet{background:#fff;border-radius:14px;overflow:hidden;
+/* No overflow on the sheet. An ancestor with overflow:hidden becomes the
+   scrollport a sticky child sticks inside, and this sheet never scrolls, so
+   the heading row had nothing to stick to and scrolled away with everything
+   else. The corners are rounded on the cells instead of clipped on the box. */
+.repo-sheet{background:#fff;border-radius:14px;
   box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.07)}
-.repo-table{width:100%;border-collapse:collapse;table-layout:auto}
+/* Separate rather than collapse, because a collapsed border belongs to the
+   table and stays behind when the heading row sticks, which leaves the stuck
+   row with no bottom edge. */
+.repo-table{width:100%;border-collapse:separate;border-spacing:0;table-layout:auto}
+.repo-table thead th:first-child{border-top-left-radius:14px}
+.repo-table thead th:last-child{border-top-right-radius:14px}
+.repo-table tr:last-child td:first-child{border-bottom-left-radius:14px}
+.repo-table tr:last-child td:last-child{border-bottom-right-radius:14px}
 /* The heading row sticks under the page header, at whatever height the page
    header actually is. Its cells carry the same 4px edge and padding the rows
    carry, so a heading sits over the words the heading names instead of two
    pixels to the left of them. */
 .repo-th{text-align:left;padding:0 12px;background:${SURFACE};border-bottom:1px solid ${BORDER};
-  position:sticky;top:var(--repo-top,57px);z-index:5;box-shadow:0 1px 0 ${BORDER}}
+  position:sticky;top:var(--repo-top,57px);z-index:8;
+  box-shadow:0 1px 0 ${BORDER},0 6px 10px -8px rgba(23,19,16,.28)}
 .repo-th-title{border-left:4px solid transparent;padding-left:10px}
 .repo-sort{display:flex;align-items:center;gap:7px;width:100%;min-height:${TAP}px;padding:0;background:none;
   border:none;cursor:pointer;font-family:var(--repo-col,${MONO});font-size:12px;font-weight:600;
@@ -714,7 +741,11 @@ const CSS = `
 .repo-arrow-on{color:${TEXT};opacity:1}
 .repo-th-used,.repo-th-made,.repo-th-kind,.repo-th-where{width:1%;white-space:nowrap}
 .repo-th-tags{width:18%}
-.repo-tr{border-bottom:1px solid rgba(23,19,16,.07)}
+/* With border-spacing the edge has to sit on the cell: a border on a tr is
+   not painted at all. The white is not decoration either, it is what stops a
+   row showing through the heading row it passes under. */
+.repo-tr{background:#fff}
+.repo-tr .repo-td{border-bottom:1px solid rgba(23,19,16,.07)}
 .repo-tr:hover{background:rgba(23,19,16,.035)}
 .repo-tr-open{background:${SURFACE}}
 .repo-td{padding:4px 12px;vertical-align:middle;font-size:14px;color:${SECOND}}
