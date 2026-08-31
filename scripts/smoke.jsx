@@ -20,7 +20,7 @@ import Dashboard, {
 import ClassroomView from "../src/engine/ClassroomView.jsx";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
-import RepoPage from "../src/engine/RepoPage.jsx";
+import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace } from "../src/engine/RepoPage.jsx";
 import AskPage from "../src/engine/AskPage.jsx";
 import PlanPage from "../src/PlanPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
@@ -170,6 +170,30 @@ cases.push(["Command bar", <CommandBar targets={[{ key: "k", group: "g", title: 
 }
 cases.push(["Discussion board", <BoardPage config={cfg0} />]);
 cases.push(["Repository", <RepoPage />]);
+// The page itself is behind a load, so a server render of the page stops at
+// the loading line. The rows are the part that can throw, so they get rendered
+// on their own, with the shape the index actually builds: a block, the class
+// that owns the block, and everywhere the block turns up.
+{
+  const blk = {
+    id: "b1", type: "link", title: "Why We Bet", headline: "The house always knows.",
+    url: "https://example.com/bet", body: "How the odds get set.", tags: ["betting", "money", "media", "law"],
+    concept: "Framing", source: "The Atlantic", created: "2026-08-01",
+    owner: cfg0, target: cfg0.id,
+    uses: [{ cls: cfg0, date: "Sep 23", section: "opener" }, { cls: cfg0, date: "Sep 25", section: "Assigned" }],
+  };
+  const bare = { ...blk, id: "b2", headline: "", owner: null, target: "shared", tags: [], uses: [] };
+  const hue = () => "#0369a1";
+  const planOf = (c, date) => ({ sequenceId: c.defaultSequenceId, slots: {}, blocks: [], slides: "", notes: "", date });
+  const stores = { [cfg0.id]: {}, shared: {} };
+  const table = (row) => <table><tbody>{row}</tbody></table>;
+  cases.push(["Repository row", table(<RepoRow block={blk} hue={hue} open={false} onOpen={noop} onTag={noop} />), "Why We Bet"]);
+  cases.push(["Repository row, never used", table(<RepoRow block={bare} hue={hue} open onOpen={noop} onTag={noop} />), "Never"]);
+  cases.push(["Repository open row", <RepoDetail block={blk} hue={hue} planOf={planOf} stores={stores}
+    onSave={noop} onDelete={noop} onPlace={noop} onAssign={noop} />, "Put the block on a day"]);
+  cases.push(["Repository placer", <RepoPlace block={blk} planOf={planOf} stores={stores}
+    onPlace={noop} onAssign={noop} />, "Into the flow"]);
+}
 cases.push(["The Brief", <PlanPage />]);
 cases.push(["Instructor links", <InstructorLinks />]);
 

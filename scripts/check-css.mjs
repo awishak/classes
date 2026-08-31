@@ -14,7 +14,7 @@ import { readFileSync } from "node:fs";
 
 const FLOORS = [
   { file: "src/engine/Dashboard.jsx", name: "CSS", min: 120 },
-  { file: "src/engine/RepoPage.jsx", name: "CSS", min: 30 },
+  { file: "src/engine/RepoPage.jsx", name: "CSS", min: 60 },
 ];
 
 let bad = 0;

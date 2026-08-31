@@ -47,6 +47,36 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "aug31", date: "Monday, August 31", title: "The repository became a table, and learned to write",
+    blurb: "The repository could show me everything and change nothing. Now it is rows rather than cards, every heading sorts, an edit made there lands in every class that uses the block, and a thing can go onto a day without opening a dashboard.",
+    groups: [
+      { name: "Rows instead of cards", items: [
+        ["One row a thing, one column a field", "Thing, Kind, Where, Used, Tags, Made. Cards are good for browsing a dozen things and bad for reading four hundred: a card puts every field on its own line, so nothing lines up and the eye starts over on every card. The kind colour moved to the left edge of the row, so the colour coding survives at table density."],
+        ["Every heading sorts", "Click a heading to sort by that column, click again to turn the order round, and the arrow says which column is holding the order. A tie falls back to the words, so a re-sort never shuffles the rows that matched equally."],
+        ["Search reads where a thing was taught", "A class code or a date in the search box now finds everything that ran then, because the places a block turns up are searched alongside the words on the block."],
+        ["The filter bar stopped hiding half of itself", "Sort and the match count were nested inside the tag filter, so a store with nothing tagged lost both controls. The tag menu hides on its own now, and nothing else goes with it."],
+      ] },
+      { name: "Writing from the repository", items: [
+        ["Fix the words once", "Open a row and the panel underneath edits the block: kind, title, headline, link, body, concept, source, tags. A block is stored once and referenced everywhere, so the save lands in every class using the block, and the page says so."],
+        ["Delete says what will go blank", "Two steps, and the confirm counts the days the block sits on. Deleting something used on nine days should not look like deleting something used on none."],
+        ["Put a thing on a day, from here", "Pick a class, a day grouped under its week, and a section of the day. Into the flow adds a row pointing at the block and stamps the date on the block; onto the readings writes to the week the students see, the same field the Schedule editor writes. Underneath, everywhere the block already turns up, each line a link to that dashboard."],
+        ["Every write goes to the store the block belongs to", "The page hands each store the same update shape the rest of the engine takes, which is why blocks.js and schedule.js work here unchanged. The stores are held beside React state as well, so a place and the stamp that follows it never land on stale data."],
+      ] },
+      { name: "The build", items: [
+        ["The smoke test was passing on a loading screen", "The repository case rendered the page, the page renders a loading line until the stores arrive, and a loading line proves nothing. The row, the open panel and the placer are rendered directly now, four cases, each naming a string the output has to contain. 58 surfaces to 63."],
+        ["The stylesheet floor went up", "check-css guards the page against another accidental deletion. The floor moved from 30 rules to 60, against the 74 the page now has."],
+      ] },
+    ],
+    note: {
+      title: "Parked, on purpose",
+      lines: [
+        "Deleting a block still leaves the day-plan rows that point at the deleted block, exactly as the dashboard leaves them. Making the repository the one writer that tidies up is defensible and was not decided today.",
+        "Nothing was watched with eyes. All of the above is verified by the build and by reading, which is how the last few sessions have gone too.",
+        "Friday\u2019s session never got an entry here, so the repository landing at /repo and the top-bar work are in the commits and not in The Brief.",
+      ],
+    },
+  },
+  {
     id: "aug25b", date: "Tuesday, August 25 \u00b7 later", title: "Drafting comments, and a design system with numbers behind the choices",
     blurb: "Two jobs. The engine learned to draft grading comments, which the three old forked classes have been able to do for months. And the second UX pass stopped being a matter of taste: the palette was measured, and two of the numbers were bad.",
     groups: [
