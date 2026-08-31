@@ -6,7 +6,7 @@
 // plus a decision the table has no room for.
 
 import { useState } from "react";
-import { typeOf } from "./blocks.js";
+import { typeOf, SHARED_LABEL } from "./blocks.js";
 
 export function Duplicates({ clusters, hue, onMerge }) {
   if (!clusters.length) {
@@ -30,7 +30,7 @@ function Cluster({ cluster, hue, onMerge }) {
   const [done, setDone] = useState("");
   const survivor = cluster.blocks.find(b => b.id === keep) || cluster.blocks[0];
   const moving = cluster.blocks.filter(b => b.id !== keep).reduce((n, b) => n + b.uses.length, 0);
-  const homeName = toShared ? "Mine" : (survivor.owner ? survivor.owner.code : "Mine");
+  const homeName = toShared || !survivor.owner ? SHARED_LABEL : survivor.owner.code;
   const risky = cluster.spans && !toShared && survivor.owner;
 
   return (
@@ -53,7 +53,7 @@ function Cluster({ cluster, hue, onMerge }) {
             </span>
             <span className="repo-kind" style={{ background: hue(b.type) }}>{typeOf(b.type).label}</span>
             <span className="repo-owner" style={{ color: b.owner ? b.owner.accent : undefined }}>
-              {b.owner ? b.owner.code : "Mine"}
+              {b.owner ? b.owner.code : SHARED_LABEL}
             </span>
             <span className="repo-copy-n">{b.uses.length ? b.uses.length + " used" : "never used"}</span>
             <span className="repo-copy-n">{b.created || ""}</span>
@@ -65,8 +65,8 @@ function Cluster({ cluster, hue, onMerge }) {
         <span className="repo-label">Keep the survivor with</span>
         <select className="repo-select" value={toShared ? "shared" : "home"} aria-label="Where the survivor lives"
           onChange={e => { setToShared(e.target.value === "shared"); setDone(""); }}>
-          <option value="shared">Me, so every class can reach the block</option>
-          <option value="home">{survivor.owner ? survivor.owner.code : "Me"}, where the copy already is</option>
+          <option value="shared">{SHARED_LABEL}, so every class can reach the block</option>
+          <option value="home">{survivor.owner ? survivor.owner.code : SHARED_LABEL}, where the copy already is</option>
         </select>
         <button className="repo-focus repo-save" onClick={() => setDone(onMerge(cluster, keep, toShared))}>
           Merge {cluster.blocks.length} into one

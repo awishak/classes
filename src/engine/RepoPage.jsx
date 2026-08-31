@@ -26,7 +26,8 @@
 import { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { loadClass, saveClass } from "./store.js";
 import { ENGINE_LIST } from "../config/registry.js";
-import { TYPES, typeOf, SHARED_KEY, makeBlock, writeBlock, deleteBlock, stampScheduled } from "./blocks.js";
+import { TYPES, typeOf, SHARED_KEY, SHARED_LABEL, makeBlock, writeBlock,
+  deleteBlock, stampScheduled } from "./blocks.js";
 import { colorOfType, readColors } from "./colors.js";
 import { normSlot, blankDay } from "./dayplan.js";
 import { findDuplicates, findLooseEnds, applyMerge,
@@ -57,7 +58,7 @@ const TAP = 44;
 // the better tool for the job the column was doing.
 const COLS = [
   { id: "title", name: "Item", sort: b => (b.headline || b.title || "").toLowerCase() },
-  { id: "where", name: "Where", sort: b => (b.owner ? b.owner.code : "Mine") },
+  { id: "where", name: "Class", sort: b => (b.owner ? b.owner.code : SHARED_LABEL) },
   { id: "used",  name: "Used",  sort: b => b.uses.length, num: true },
   { id: "tags",  name: "Tags",  sort: b => (b.tags || []).join(" ") },
   { id: "made",  name: "Made",  sort: b => String(b.created || "") },
@@ -304,7 +305,7 @@ export default function RepoPage() {
     const targets = Object.keys(patches);
     if (!targets.length) return "Nothing to merge.";
     targets.forEach(t => writeTo(t)(() => patches[t]));
-    const where = home === "shared" ? "Mine" : (ENGINE_LIST.find(c => c.id === home) || {}).code;
+    const where = home === "shared" ? SHARED_LABEL : (ENGINE_LIST.find(c => c.id === home) || {}).code;
     return "Merged " + losers + " away, " + repointed + " pointed at the survivor, kept with " + where + ".";
   };
 
@@ -370,7 +371,7 @@ export default function RepoPage() {
           <div className="repo-row">
             {chip(!where, "Every class", () => setWhere(""))}
             {ENGINE_LIST.map(c => chip(where === c.id, c.code, () => setWhere(where === c.id ? "" : c.id), c.accent))}
-            {chip(where === "shared", "Mine", () => setWhere(where === "shared" ? "" : "shared"))}
+            {chip(where === "shared", SHARED_LABEL, () => setWhere(where === "shared" ? "" : "shared"))}
             {tags.length ? (
               <select className="repo-select" value={tag} onChange={e => setTag(e.target.value)} aria-label="Filter by tag">
                 <option value="">Any tag ({tags.length})</option>
@@ -465,7 +466,7 @@ export function Row({ block, hue, open, onOpen, onTag }) {
       <td className="repo-td repo-td-where">
         {block.owner
           ? <span className="repo-owner" style={{ color: block.owner.accent }}>{block.owner.code}</span>
-          : <span className="repo-owner">Mine</span>}
+          : <span className="repo-owner">{SHARED_LABEL}</span>}
       </td>
       <td className="repo-td repo-td-used">
         {block.uses.length ? (
@@ -718,7 +719,7 @@ function AddForm({ onAdd, onClose, hue }) {
       <div className="repo-row" style={{ alignItems: "center" }}>
         <span className="repo-label">Keep it with</span>
         <select className="repo-select" value={target} onChange={e => setTarget(e.target.value)} aria-label="Which store">
-          <option value="shared">Me, so every class can reach the item</option>
+          <option value="shared">{SHARED_LABEL}, so every class can reach the item</option>
           {ENGINE_LIST.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
         </select>
         <button className="repo-focus repo-save" onClick={commit}>Add to the repository</button>

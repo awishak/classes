@@ -87,6 +87,10 @@ const SESSIONS = [
         ["The kind moved next to the title", "Reading down a Kind column tells me nothing, and a kind sitting against its own title tells me what I am looking at without my eye moving. So the pill went into the first cell and the column went away. Filtering by kind is still the chips over the table, which was always the better tool for the job the column was doing."],
         ["Thing became Item", "A column heading is a word I read four hundred times."],
       ] },
+      { name: "Two more names", items: [
+        ["Where became Class, and Mine became Shared", "Where is a question the column was answering with a class name, so the column may as well say Class. And under a heading that says Class, Mine is a category error: the answer to which class is not a person. Shared says what the shelf actually is, which is the material every class can reach."],
+        ["The name now lives in one place", "Mine was typed out by hand in eight places across three files, which is how a one-word rename becomes a hunt. SHARED_LABEL sits next to SHARED_KEY in blocks.js, and the table, the chips, the add form, the merge chooser and the terminal report all read the label from there."],
+      ] },
       { name: "The build", items: [
         ["The smoke test was passing on a loading screen", "The repository case rendered the page, the page renders a loading line until the stores arrive, and a loading line proves nothing. The row, the open panel, the placer and the type sheet are rendered directly now, six cases, each naming a string the output has to contain. 58 surfaces to 65."],
         ["The stylesheet floor went up twice", "check-css guards the page against another accidental deletion. The floor moved from 30 rules to 75, against the 86 the page now has."],

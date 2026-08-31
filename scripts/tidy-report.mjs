@@ -13,7 +13,7 @@
 import { readFileSync } from "node:fs";
 import { findDuplicates, findLooseEnds } from "../src/engine/tidy.js";
 import { ENGINE_LIST } from "../src/config/registry.js";
-import { SHARED_KEY } from "../src/engine/blocks.js";
+import { SHARED_KEY, SHARED_LABEL } from "../src/engine/blocks.js";
 import { normSlot } from "../src/engine/dayplan.js";
 import { weekdayOf } from "../src/engine/schedule.js";
 
@@ -47,7 +47,7 @@ Object.values(stores.shared.blocks || {}).forEach(b => items.push({ ...b, owner:
 console.log("");
 console.log("  " + items.length + " blocks across " + ENGINE_LIST.length + " classes and the shared shelf");
 for (const c of ENGINE_LIST) console.log("     " + c.code.padEnd(10) + Object.keys(stores[c.id].blocks || {}).length);
-console.log("     " + "Mine".padEnd(10) + Object.keys(stores.shared.blocks || {}).length);
+console.log("     " + SHARED_LABEL.padEnd(10) + Object.keys(stores.shared.blocks || {}).length);
 
 const clusters = findDuplicates(items);
 const copies = clusters.reduce((n, c) => n + c.blocks.length - 1, 0);
@@ -58,7 +58,7 @@ console.log("     " + clusters.filter(c => c.on === "link").length + " matched o
             clusters.filter(c => c.on === "title").length + " on the title alone");
 clusters.slice(0, 12).forEach(c => {
   console.log("     " + String(c.blocks.length) + "x  " + (c.blocks[0].title || "").slice(0, 52).padEnd(54) +
-              c.blocks.map(b => (b.owner ? b.owner.code : "Mine")).join(" + ") + (c.spans ? "   <- crosses" : ""));
+              c.blocks.map(b => (b.owner ? b.owner.code : SHARED_LABEL)).join(" + ") + (c.spans ? "   <- crosses" : ""));
 });
 if (clusters.length > 12) console.log("     and " + (clusters.length - 12) + " more groups");
 

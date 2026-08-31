@@ -18,6 +18,9 @@ import { genId } from "../utils.jsx";
 
 export const SHARED_KEY = "ishak-blocks-v1";
 export const SHARED_OWNER = "ishak";
+// What the shared shelf is called on a screen. It was written out by hand in
+// eight places, which is how a one-word rename turns into a hunt.
+export const SHARED_LABEL = "Shared";
 
 // The building blocks, in the order they are offered.
 export const TYPES = [
