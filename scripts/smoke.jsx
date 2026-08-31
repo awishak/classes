@@ -23,7 +23,9 @@ import BoardPage from "../src/engine/BoardPage.jsx";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType } from "../src/engine/RepoPage.jsx";
 import RepoIdeas, { Idea } from "../src/engine/RepoIdeas.jsx";
-import { Duplicates, LooseEnds } from "../src/engine/RepoTidy.jsx";
+import { Duplicates, LooseEnds, Tags, Links } from "../src/engine/RepoTidy.jsx";
+import { tagIndex, lookalikes, retagPatches, normTag } from "../src/engine/tags.js";
+import { linkables, verdict, linkPatches } from "../src/engine/links.js";
 import { findDuplicates, findLooseEnds, applyMerge } from "../src/engine/tidy.js";
 import AskPage from "../src/engine/AskPage.jsx";
 import PlanPage from "../src/PlanPage.jsx";
@@ -246,6 +248,54 @@ cases.push(["Repository", <RepoPage />]);
   if (!kept || kept.tags.join() !== "a,b") { console.error("  FAIL  tidy merge: tags did not union, got " + (kept && kept.tags)); failedEarly++; }
   if (gone) { console.error("  FAIL  tidy merge: the loser is still on a shelf"); failedEarly++; }
   if ((after.shared.merged || []).length !== 1) { console.error("  FAIL  tidy merge: no tombstone kept"); failedEarly++; }
+
+  // Tags, on an index with the same word filed three ways.
+  const tagged = [
+    { id: "t1", type: "link", title: "One", tags: ["framing", "Sport"], owner: cfg0, target: cfg0.id, uses: [] },
+    { id: "t2", type: "link", title: "Two", tags: ["Framing", "sport"], owner: null, target: "shared", uses: [] },
+    { id: "t3", type: "link", title: "Three", tags: ["framing"], owner: cfg0, target: cfg0.id, uses: [] },
+  ];
+  const tix = tagIndex(tagged);
+  const alike = lookalikes(tix);
+  if (tix.length !== 4) { console.error("  FAIL  tags: expected 4 tags, got " + tix.length); failedEarly++; }
+  if (tix[0].tag !== "framing" || tix[0].n !== 2) { console.error("  FAIL  tags: most used first is wrong"); failedEarly++; }
+  if (alike.length !== 2) { console.error("  FAIL  tags: expected 2 lookalike groups, got " + alike.length); failedEarly++; }
+  if (normTag(" Framing. ") !== "framing") { console.error("  FAIL  tags: normTag"); failedEarly++; }
+
+  // A rename onto a tag a block already carries must not leave the block
+  // holding the same tag twice.
+  const tagStores = { [cfg0.id]: { blocks: { t1: { id: "t1", tags: ["framing", "Sport"] } } }, shared: { blocks: { t2: { id: "t2", tags: ["Framing", "sport"] } } } };
+  const rp = retagPatches({ stores: tagStores, classes: [cfg0], from: "Framing", to: "framing" });
+  if (rp.shared.blocks.t2.tags.join() !== "framing,sport") { console.error("  FAIL  tags rename: got " + rp.shared.blocks.t2.tags.join()); failedEarly++; }
+  const dp = retagPatches({ stores: tagStores, classes: [cfg0], from: "Sport", to: "" });
+  if (dp[cfg0.id].blocks.t1.tags.join() !== "framing") { console.error("  FAIL  tags delete: got " + dp[cfg0.id].blocks.t1.tags.join()); failedEarly++; }
+  const merged2 = retagPatches({ stores: { a: { blocks: { x: { id: "x", tags: ["a", "b"] } } } }, classes: [{ id: "a" }], from: "a", to: "b" });
+  if (merged2.a.blocks.x.tags.join() !== "b") { console.error("  FAIL  tags merge: got " + merged2.a.blocks.x.tags.join()); failedEarly++; }
+
+  cases.push(["Repository tags", <Tags index={tix} alike={alike} onRetag={noop} />, "The same word"]);
+  cases.push(["Repository tags, none", <Tags index={[]} alike={[]} onRetag={noop} />, "No tags anywhere"]);
+
+  // Links, with one of each answer.
+  const linked = [
+    { id: "L1", title: "Fine one", url: "https://a.com/x", link: { at: "2026-08-31", status: 200, to: "" }, owner: cfg0, target: cfg0.id, uses: [] },
+    { id: "L2", title: "Dead one", url: "https://b.com/y", link: { at: "2026-08-31", status: 404, to: "" }, owner: null, target: "shared", uses: [] },
+    { id: "L3", title: "Moved one", url: "https://c.com/z", link: { at: "2026-08-31", status: 200, to: "https://c.com/new" }, owner: cfg0, target: cfg0.id, uses: [] },
+    { id: "L4", title: "Never checked", url: "https://d.com", owner: cfg0, target: cfg0.id, uses: [] },
+    { id: "L5", title: "No link at all", url: "", owner: cfg0, target: cfg0.id, uses: [] },
+  ];
+  if (linkables(linked).length !== 4) { console.error("  FAIL  links: linkables counted wrong"); failedEarly++; }
+  if (!verdict(linked[1].link).bad) { console.error("  FAIL  links: a 404 is not bad news"); failedEarly++; }
+  if (verdict(linked[0].link).bad) { console.error("  FAIL  links: a 200 read as bad"); failedEarly++; }
+  if (!verdict(linked[3].link).dim) { console.error("  FAIL  links: unchecked did not read as unchecked"); failedEarly++; }
+  const lp = linkPatches({ stores: { [cfg0.id]: { blocks: { L1: { id: "L1" } } }, shared: { blocks: { L2: { id: "L2" } } } },
+    classes: [cfg0], results: { L1: { at: "x", status: 200 }, L2: { at: "x", status: 404 } }, index: linked });
+  if (lp[cfg0.id].blocks.L1.link.status !== 200 || lp.shared.blocks.L2.link.status !== 404) {
+    console.error("  FAIL  links: results did not land on the right stores"); failedEarly++; }
+
+  cases.push(["Repository links", <Links blocks={linkables(linked)} busy={false} done={0} total={0}
+    onCheck={noop} onlyBad={false} setOnlyBad={noop} />, "Check all 4"]);
+  cases.push(["Repository links, checking", <Links blocks={linkables(linked)} busy done={8} total={40}
+    onCheck={noop} onlyBad setOnlyBad={noop} />, "Checking 8 of 40"]);
 
   cases.push(["Repository type sheet, chosen", <RepoType fonts={{ cols: "fraunces", rows: "grotesk", page: "plex" }}
     bold onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Heavier rows"]);

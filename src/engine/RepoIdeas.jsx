@@ -43,16 +43,16 @@ const GROUPS = [
 
 const IDEAS = [
   // ─── make the data true ───
-  { n: 1, group: "true", size: "big", first: true, title: "Merge the duplicates",
+  { n: 1, done: "31 Aug", group: "true", size: "big", first: true, title: "Merge the duplicates",
     what: "Find near-matches on the link and on a normalised title, show the pair side by side, and merge into one block with every use repointed at the survivor.",
     why: "The porting script deduped inside a class and never across classes, so the same article can sit in five stores at once. Merging is what makes stored once true for everything that arrived before the rule existed." },
-  { n: 2, group: "true", size: "medium", first: true, title: "Find the loose ends",
+  { n: 2, done: "31 Aug", group: "true", size: "medium", first: true, title: "Find the loose ends",
     what: "A filter for schedule items whose libId points at no block, and flow rows whose blockId resolves to nothing.",
     why: "Deleting a block already leaves rows pointing at nothing, and the repository is the only surface that reads every store, so the repository is the only place the breakage can show." },
-  { n: 3, group: "true", size: "medium", title: "Manage the tags",
+  { n: 3, done: "31 Aug", group: "true", size: "medium", title: "Manage the tags",
     what: "Rename a tag everywhere at once, merge two tags into a single tag, and delete a tag that turned out to mean nothing.",
     why: "Tags are free text, so framing and Framing are two different tags today. A facet that lies is worse than no facet, because a filter that hides half the matches is invisible when the filter is wrong." },
-  { n: 4, group: "true", size: "medium", title: "Check the links",
+  { n: 4, done: "31 Aug", group: "true", size: "medium", title: "Check the links",
     what: "Walk every URL on the shelf, flag what returns a 404 or redirects somewhere else entirely, and put the flag in the row.",
     why: "A dead link gets discovered in front of a room, which is the worst available moment for the discovery." },
   { n: 5, group: "true", size: "small", first: true, title: "A health strip across the top",
@@ -114,11 +114,14 @@ const IDEAS = [
 export default function RepoIdeas() {
   const [size, setSize] = useState("");
   const [only, setOnly] = useState(false);
+  const [hideDone, setHideDone] = useState(false);
 
   useEffect(() => { document.title = "Ideas for the repository"; }, []);
 
-  const shown = IDEAS.filter(i => (!size || i.size === size) && (!only || i.first));
-  const firsts = IDEAS.filter(i => i.first).map(i => i.n).join(", ");
+  const shown = IDEAS.filter(i =>
+    (!size || i.size === size) && (!only || i.first) && (!hideDone || !i.done));
+  const firsts = IDEAS.filter(i => i.first && !i.done).map(i => i.n).join(", ");
+  const built = IDEAS.filter(i => i.done);
 
   const chip = (on, text, onClick, color) => (
     <button key={text} className="ri-focus ri-chip" onClick={onClick} aria-pressed={on}
@@ -135,7 +138,7 @@ export default function RepoIdeas() {
         <div className="ri-head-in">
           <a href="/repo" className="ri-back">← Repository</a>
           <h1 className="ri-title">Twenty ways to make the repository better</h1>
-          <span className="ri-count">{shown.length} of {IDEAS.length}</span>
+          <span className="ri-count">{built.length} of {IDEAS.length} built</span>
         </div>
       </header>
 
@@ -149,10 +152,11 @@ export default function RepoIdeas() {
         <div className="ri-picks">
           <span className="ri-label">Where I would start</span>
           <p className="ri-picks-text">
-            <b>{firsts}</b>. The first two are about the material being wrong rather than the page being thin,
-            and every other idea on this page is worth more once the material is clean. Five is an afternoon and
-            makes the mess visible. Eleven is what makes fixing four hundred rows possible at all. Nineteen is
-            the one that makes me trust editing from here.
+            {firsts ? <><b>{firsts}</b>. </> : null}
+            Five is an afternoon and makes the rest of the mess visible. Eleven is what makes fixing four
+            hundred rows possible at all. Nineteen is what makes me trust editing a block that nine days
+            depend on. The four already built came first because each one was about the material being wrong
+            rather than the page being thin.
           </p>
         </div>
 
@@ -161,6 +165,7 @@ export default function RepoIdeas() {
           {SIZES.map(s => chip(size === s.id, s.name + " " + IDEAS.filter(i => i.size === s.id).length,
             () => { setSize(size === s.id ? "" : s.id); }, s.hex))}
           {chip(only, "Where I would start", () => setOnly(!only))}
+          {built.length ? chip(hideDone, "Hide the " + built.length + " built", () => setHideDone(!hideDone), "#047857") : null}
         </div>
 
         {GROUPS.map(g => {
@@ -195,13 +200,18 @@ export default function RepoIdeas() {
 export function Idea({ idea }) {
   const s = sizeOf(idea.size);
   return (
-    <article className={"ri-idea" + (idea.first ? " ri-idea-first" : "")} id={"i" + idea.n}>
+    <article className={"ri-idea" + (idea.first && !idea.done ? " ri-idea-first" : "")
+      + (idea.done ? " ri-idea-done" : "")} id={"i" + idea.n}>
       <div className="ri-num">{String(idea.n).padStart(2, "0")}</div>
       <div className="ri-idea-body">
         <div className="ri-idea-top">
           <h3 className="ri-idea-title">{idea.title}</h3>
-          <span className="ri-size" style={{ background: s.hex }}>{s.name}</span>
-          {idea.first ? <span className="ri-flag">Start here</span> : null}
+          {idea.done ? <span className="ri-built">Built {idea.done}</span> : (
+            <>
+              <span className="ri-size" style={{ background: s.hex }}>{s.name}</span>
+              {idea.first ? <span className="ri-flag">Start here</span> : null}
+            </>
+          )}
         </div>
         <p className="ri-what">{idea.what}</p>
         <p className="ri-why"><span className="ri-why-tag">Why</span>{idea.why}</p>
@@ -236,6 +246,14 @@ const CSS = `
   box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.06)}
 .ri-idea:hover{box-shadow:0 3px 12px -3px rgba(23,19,16,.13),0 0 0 1px rgba(23,19,16,.09)}
 .ri-idea-first{border-left:4px solid #047857;padding-left:12px}
+/* Built means struck through and stepped back, still readable, because the
+   reason an idea was worth doing is worth keeping after the doing. */
+.ri-idea-done{background:#f7f6f4;box-shadow:0 0 0 1px rgba(23,19,16,.05)}
+.ri-idea-done .ri-idea-title{text-decoration:line-through;text-decoration-thickness:1.5px;color:${MUTED}}
+.ri-idea-done .ri-num{text-decoration:line-through}
+.ri-idea-done .ri-what,.ri-idea-done .ri-why{color:#7c8189}
+.ri-built{font-family:${MONO};font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:#fff;background:#047857;border-radius:999px;padding:3px 9px;white-space:nowrap}
 .ri-num{flex:none;font-family:${MONO};font-size:20px;font-weight:600;color:${BORDER};line-height:1.2;min-width:34px}
 .ri-idea-body{display:flex;flex-direction:column;gap:6px;min-width:0}
 .ri-idea-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}

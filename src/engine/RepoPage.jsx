@@ -27,12 +27,14 @@ import { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { loadClass, saveClass } from "./store.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { TYPES, typeOf, SHARED_KEY, SHARED_LABEL, makeBlock, writeBlock,
-  deleteBlock, stampScheduled } from "./blocks.js";
+  deleteBlock, stampScheduled, todayStamp } from "./blocks.js";
 import { colorOfType, readColors } from "./colors.js";
 import { normSlot, blankDay } from "./dayplan.js";
 import { findDuplicates, findLooseEnds, applyMerge,
   dropFlowRow, dropWeekItem, unlinkWeekItem, blockFromWeekItem } from "./tidy.js";
-import { Duplicates, LooseEnds } from "./RepoTidy.jsx";
+import { Duplicates, LooseEnds, Tags, Links } from "./RepoTidy.jsx";
+import { tagIndex, lookalikes, retagPatches } from "./tags.js";
+import { linkables, checkAll, linkPatches } from "./links.js";
 import { weekdayOf, slotsOf, addScheduleItem } from "./schedule.js";
 import { FACES, REPO_SLOTS, readRepoFonts, repoFontVars, writeRepoFont, resetRepoFonts,
   readRepoBold, writeRepoBold } from "./fonts.js";
@@ -73,7 +75,9 @@ export default function RepoPage() {
   const [sort, setSort] = useState({ col: "used", dir: "desc" });
   const [adding, setAdding] = useState(false);
   const [typing, setTyping] = useState(false);
-  const [lens, setLens] = useState("");   // "", "dupes", "loose"
+  const [lens, setLens] = useState("");   // "", "dupes", "loose", "tags", "links"
+  const [checking, setChecking] = useState(null);   // {done, total} while the links are walked
+  const [onlyBad, setOnlyBad] = useState(false);
   const [openId, setOpenId] = useState("");
   // The heading row sticks under the page header, so it has to know how tall
   // the page header is. Hard-coding the height was wrong the moment the header
@@ -223,6 +227,10 @@ export default function RepoPage() {
   const dupes = useMemo(() => findDuplicates(items), [items]);
   const loose = useMemo(() => (stores ? findLooseEnds(stores, ENGINE_LIST) : []), [stores]);
 
+  const tags2 = useMemo(() => tagIndex(items), [items]);
+  const alike = useMemo(() => lookalikes(tags2), [tags2]);
+  const linky = useMemo(() => linkables(items), [items]);
+
   const counts = useMemo(() => {
     const c = {};
     items.forEach(b => { c[b.type] = (c[b.type] || 0) + 1; });
@@ -309,6 +317,24 @@ export default function RepoPage() {
     return "Merged " + losers + " away, " + repointed + " pointed at the survivor, kept with " + where + ".";
   };
 
+  // One walk per store for a tag, because a tag lives on blocks in every store
+  // at once and a rename that only reached one store is a tag split in two.
+  const retag = (from, to) => {
+    const patches = retagPatches({ stores: ref.current, classes: ENGINE_LIST, from, to });
+    Object.entries(patches).forEach(([target, data]) => writeTo(target)(() => data));
+  };
+
+  // The answers land as they arrive so the page fills in, and the writing
+  // happens once at the end rather than three hundred times.
+  const checkLinks = async () => {
+    if (checking) return;
+    setChecking({ done: 0, total: linky.length });
+    const results = await checkAll(linky, (_, done, total) => setChecking({ done, total }), todayStamp());
+    const patches = linkPatches({ stores: ref.current, classes: ENGINE_LIST, results, index: items });
+    Object.entries(patches).forEach(([target, data]) => writeTo(target)(() => data));
+    setChecking(null);
+  };
+
   const dropEnd = (le) => writeTo(le.cls.id)(prev =>
     le.kind === "flow" ? dropFlowRow(prev, le) : dropWeekItem(prev, le.cls, le));
 
@@ -367,6 +393,10 @@ export default function RepoPage() {
               () => setLens(lens === "dupes" ? "" : "dupes"), "#b45309")}
             {chip(lens === "loose", "Loose ends " + loose.length,
               () => setLens(lens === "loose" ? "" : "loose"), "#9f1239")}
+            {chip(lens === "tags", "Tags " + tags2.length,
+              () => setLens(lens === "tags" ? "" : "tags"), "#7c3aed")}
+            {chip(lens === "links", "Links " + linky.length,
+              () => setLens(lens === "links" ? "" : "links"), "#0369a1")}
           </div>
           <div className="repo-row">
             {chip(!where, "Every class", () => setWhere(""))}
@@ -394,6 +424,11 @@ export default function RepoPage() {
         {lens === "dupes" ? <Duplicates clusters={dupes} hue={hue} onMerge={mergeCluster} /> : null}
         {lens === "loose" ? (
           <LooseEnds ends={loose} onDrop={dropEnd} onUnlink={unlinkEnd} onMakeBlock={makeBlockFrom} />
+        ) : null}
+        {lens === "tags" ? <Tags index={tags2} alike={alike} onRetag={retag} /> : null}
+        {lens === "links" ? (
+          <Links blocks={linky} busy={!!checking} done={checking?.done || 0} total={checking?.total || 0}
+            onCheck={checkLinks} onlyBad={onlyBad} setOnlyBad={setOnlyBad} />
         ) : null}
 
         {lens ? null : hits.length ? (
@@ -882,6 +917,14 @@ const CSS = `
 .repo-copy-n{font-family:${MONO};font-size:11px;color:${MUTED};white-space:nowrap}
 .repo-plan{margin:0;font-size:14px;line-height:1.55;color:${SECOND}}
 .repo-end-words{font-family:var(--repo-row,${F});font-size:15px;color:${TEXT};overflow-wrap:anywhere}
+.repo-alike{background:${SURFACE};border-radius:12px;padding:11px 13px;display:flex;flex-direction:column;gap:8px}
+.repo-alike-tag{font-size:13.5px;color:${SECOND};background:#fff;border:1px solid ${BORDER};
+  border-radius:999px;padding:4px 11px}
+.repo-alike-keep{border-color:${TEXT};color:${TEXT};font-weight:600}
+.repo-tag-in{min-width:160px;max-width:240px;min-height:38px;font-size:14px}
+.repo-verdict{font-family:${MONO};font-size:11.5px;color:${SECOND};white-space:nowrap}
+.repo-verdict-bad{color:#9f1239;font-weight:600}
+.repo-verdict-good{color:#047857}
 .repo-type-sheet{background:#fff;border:1px solid ${TEXT};border-radius:14px;padding:13px 14px;
   display:flex;flex-direction:column;gap:11px}
 .repo-type-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}

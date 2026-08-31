@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import { typeOf, SHARED_LABEL } from "./blocks.js";
+import { verdict, isBad, hostOf } from "./links.js";
 
 export function Duplicates({ clusters, hue, onMerge }) {
   if (!clusters.length) {
@@ -158,5 +159,165 @@ function End({ le, onDrop, onUnlink, onMakeBlock }) {
         </div>
       </td>
     </tr>
+  );
+}
+
+// ─── tags ───
+// The same word filed three ways comes first, because those are the groups
+// where the filter is quietly lying about how much it found.
+export function Tags({ index, alike, onRetag }) {
+  if (!index.length) {
+    return <p className="repo-empty">No tags anywhere yet. Add a few from a row and they turn up here.</p>;
+  }
+  return (
+    <div className="repo-lens">
+      <p className="repo-lens-say">
+        Every tag on the shelf, most used first. Renaming a tag onto a tag that already exists merges the two,
+        which is why there is one control rather than two. Clearing the box deletes the tag from every block
+        carrying the tag, and nothing else about the block changes.
+      </p>
+
+      {alike.length ? (
+        <div className="repo-alike">
+          <span className="repo-label">The same word, filed more than one way</span>
+          {alike.map(g => (
+            <div key={g.key} className="repo-row">
+              {g.tags.map((t, i) => (
+                <span key={t.tag} className={"repo-alike-tag" + (i ? "" : " repo-alike-keep")}>
+                  {t.tag} <b>{t.n}</b>
+                </span>
+              ))}
+              <button className="repo-focus repo-save"
+                onClick={() => g.tags.slice(1).forEach(t => onRetag(t.tag, g.tags[0].tag))}>
+                Fold into {g.tags[0].tag}
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="repo-sheet">
+        <table className="repo-table">
+          <thead>
+            <tr>
+              <th className="repo-th" scope="col"><span className="repo-sort">Tag</span></th>
+              <th className="repo-th" scope="col"><span className="repo-sort">On</span></th>
+              <th className="repo-th" scope="col"><span className="repo-sort">Class</span></th>
+              <th className="repo-th" scope="col"><span className="repo-sort">Rename, merge or clear</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {index.map(t => <TagRow key={t.tag} entry={t} onRetag={onRetag} />)}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function TagRow({ entry, onRetag }) {
+  const [value, setValue] = useState(entry.tag);
+  const [sure, setSure] = useState(false);
+  const changed = value.trim() !== entry.tag;
+  const gone = !value.trim();
+  return (
+    <tr className="repo-tr">
+      <td className="repo-td repo-td-title"><span className="repo-end-words">{entry.tag}</span></td>
+      <td className="repo-td repo-td-used"><b>{entry.n}</b> block{entry.n === 1 ? "" : "s"}</td>
+      <td className="repo-td repo-td-where"><span className="repo-owner">{entry.where.join(", ")}</span></td>
+      <td className="repo-td">
+        <div className="repo-row">
+          <input className="repo-input repo-tag-in" value={value} aria-label={"Rename the tag " + entry.tag}
+            onChange={e => { setValue(e.target.value); setSure(false); }} />
+          {gone ? (
+            sure ? (
+              <>
+                <button className="repo-focus repo-danger" onClick={() => onRetag(entry.tag, "")}>Yes, clear the tag</button>
+                <button className="repo-focus repo-chip" onClick={() => { setValue(entry.tag); setSure(false); }}>Keep the tag</button>
+              </>
+            ) : (
+              <button className="repo-focus repo-chip repo-del" onClick={() => setSure(true)}>
+                Clear from {entry.n}
+              </button>
+            )
+          ) : changed ? (
+            <button className="repo-focus repo-save" onClick={() => onRetag(entry.tag, value.trim())}>
+              Apply to {entry.n}
+            </button>
+          ) : null}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+// ─── links ───
+export function Links({ blocks, busy, done, total, onCheck, onlyBad, setOnlyBad }) {
+  const shown = onlyBad ? blocks.filter(isBad) : blocks;
+  const bad = blocks.filter(isBad).length;
+  const checked = blocks.filter(b => b.link?.at).length;
+  return (
+    <div className="repo-lens">
+      <p className="repo-lens-say">
+        Every item carrying a web address. The checking runs on the server, because a browser cannot see the
+        status of a fetch to somebody else's site. An answer is kept on the block, so what was found today is
+        still here tomorrow.
+      </p>
+      <p className="repo-lens-say">
+        Read <b>Refused</b> with care. A paywall, a login wall or a site that turns robots away answers a
+        checker with 403 while serving the page perfectly well to a person. Open one before deciding the
+        reading is gone. <b>Gone</b> and <b>No answer</b> are the two worth trusting.
+      </p>
+      <div className="repo-row">
+        <button className="repo-focus repo-save" onClick={onCheck} disabled={busy}>
+          {busy ? "Checking " + done + " of " + total + "…" : "Check all " + blocks.length}
+        </button>
+        <span className="repo-said">{checked} checked, {bad} broken</span>
+        {bad ? (
+          <button className="repo-focus repo-chip" onClick={() => setOnlyBad(!onlyBad)} aria-pressed={onlyBad}
+            style={onlyBad ? { background: "#9f1239", borderColor: "#9f1239", color: "#fff" } : undefined}>
+            Only the broken ones
+          </button>
+        ) : null}
+      </div>
+      <div className="repo-sheet">
+        <table className="repo-table">
+          <thead>
+            <tr>
+              <th className="repo-th" scope="col"><span className="repo-sort">Item</span></th>
+              <th className="repo-th" scope="col"><span className="repo-sort">Class</span></th>
+              <th className="repo-th" scope="col"><span className="repo-sort">Goes to</span></th>
+              <th className="repo-th" scope="col"><span className="repo-sort">Answer</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map(b => {
+              const v = verdict(b.link);
+              return (
+                <tr key={b.id} className="repo-tr">
+                  <td className="repo-td repo-td-title"><span className="repo-end-words">{b.title || b.headline || "Untitled"}</span></td>
+                  <td className="repo-td repo-td-where">
+                    <span className="repo-owner" style={{ color: b.owner ? b.owner.accent : undefined }}>
+                      {b.owner ? b.owner.code : SHARED_LABEL}
+                    </span>
+                  </td>
+                  <td className="repo-td repo-td-made">
+                    <a className="repo-focus repo-link" href={b.url} target="_blank" rel="noopener noreferrer">
+                      {hostOf(b.url) || b.url}
+                    </a>
+                  </td>
+                  <td className="repo-td">
+                    <span className={"repo-verdict" + (v.bad ? " repo-verdict-bad" : v.good ? " repo-verdict-good" : "")}>
+                      {v.word}
+                    </span>
+                    {b.link?.to ? <span className="repo-key">{hostOf(b.link.to)}</span> : null}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
