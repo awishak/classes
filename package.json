@@ -10,7 +10,8 @@
     "check": "node scripts/check-refs.mjs && node scripts/check-handlers.mjs && node scripts/check-contrast.mjs && node scripts/check-voice.mjs && node scripts/check-jsx-text.mjs && node scripts/check-css.mjs",
     "smoke": "esbuild scripts/smoke.jsx --bundle --platform=node --format=esm --packages=external --jsx=automatic --outfile=node_modules/.smoke.mjs --log-level=error --loader:.js=jsx && node node_modules/.smoke.mjs",
     "contrast": "node scripts/check-contrast.mjs",
-    "voice": "node scripts/check-voice.mjs"
+    "voice": "node scripts/check-voice.mjs",
+    "tidy": "esbuild scripts/tidy-report.mjs --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.tidy-report.mjs --log-level=error --loader:.js=jsx --loader:.jsx=jsx && node node_modules/.tidy-report.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

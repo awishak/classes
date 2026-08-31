@@ -29,6 +29,9 @@ import { ENGINE_LIST } from "../config/registry.js";
 import { TYPES, typeOf, SHARED_KEY, makeBlock, writeBlock, deleteBlock, stampScheduled } from "./blocks.js";
 import { colorOfType, readColors } from "./colors.js";
 import { normSlot, blankDay } from "./dayplan.js";
+import { findDuplicates, findLooseEnds, applyMerge,
+  dropFlowRow, dropWeekItem, unlinkWeekItem, blockFromWeekItem } from "./tidy.js";
+import { Duplicates, LooseEnds } from "./RepoTidy.jsx";
 import { weekdayOf, slotsOf, addScheduleItem } from "./schedule.js";
 import { FACES, REPO_SLOTS, readRepoFonts, repoFontVars, writeRepoFont, resetRepoFonts,
   readRepoBold, writeRepoBold } from "./fonts.js";
@@ -64,6 +67,7 @@ export default function RepoPage() {
   const [sort, setSort] = useState({ col: "used", dir: "desc" });
   const [adding, setAdding] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [lens, setLens] = useState("");   // "", "dupes", "loose"
   const [openId, setOpenId] = useState("");
   // The heading row sticks under the page header, so it has to know how tall
   // the page header is. Hard-coding the height was wrong the moment the header
@@ -210,6 +214,9 @@ export default function RepoPage() {
     return out;
   }, [items, q, kind, where, tag, sort]);
 
+  const dupes = useMemo(() => findDuplicates(items), [items]);
+  const loose = useMemo(() => (stores ? findLooseEnds(stores, ENGINE_LIST) : []), [stores]);
+
   const counts = useMemo(() => {
     const c = {};
     items.forEach(b => { c[b.type] = (c[b.type] || 0) + 1; });
@@ -283,6 +290,32 @@ export default function RepoPage() {
     return cls.code + ", " + date + ", assigned";
   };
 
+  // ─── tidying ───
+  // The merge is worked out whole and then written, one store at a time, so a
+  // half-done merge is not a state the stores can be left in by a slow save.
+  const mergeCluster = (cluster, survivorId, toShared) => {
+    const { patches, repointed, home, losers } = applyMerge({
+      stores: ref.current, classes: ENGINE_LIST, cluster, survivorId, toShared });
+    const targets = Object.keys(patches);
+    if (!targets.length) return "Nothing to merge.";
+    targets.forEach(t => writeTo(t)(() => patches[t]));
+    const where = home === "shared" ? "Mine" : (ENGINE_LIST.find(c => c.id === home) || {}).code;
+    return "Merged " + losers + " away, " + repointed + " pointed at the survivor, kept with " + where + ".";
+  };
+
+  const dropEnd = (le) => writeTo(le.cls.id)(prev =>
+    le.kind === "flow" ? dropFlowRow(prev, le) : dropWeekItem(prev, le.cls, le));
+
+  const unlinkEnd = (le) => writeTo(le.cls.id)(prev => unlinkWeekItem(prev, le.cls, le));
+
+  // The repair worth making. A week item already holds the words and the link,
+  // so the block it was standing in for can simply be made.
+  const makeBlockFrom = (le) => {
+    const kind = le.type === "assignment" ? "assignment" : le.type === "activity" ? "activity" : "link";
+    const block = makeBlock({ type: kind, title: le.words || hostOf(le.url) || "Untitled", url: le.url || "" });
+    writeTo(le.cls.id)(prev => blockFromWeekItem(prev, le.cls, le, block));
+  };
+
   if (!stores) {
     return <div style={{ minHeight: "100vh", background: BG, fontFamily: F, display: "grid",
       placeItems: "center", color: MUTED }}>Reading everything…</div>;
@@ -323,6 +356,13 @@ export default function RepoPage() {
               chip(kind === t.id, t.label + " " + counts[t.id], () => setKind(kind === t.id ? "" : t.id), hue(t.id)))}
           </div>
           <div className="repo-row">
+            {chip(!lens, "The whole shelf", () => setLens(""))}
+            {chip(lens === "dupes", "Duplicates " + dupes.length,
+              () => setLens(lens === "dupes" ? "" : "dupes"), "#b45309")}
+            {chip(lens === "loose", "Loose ends " + loose.length,
+              () => setLens(lens === "loose" ? "" : "loose"), "#9f1239")}
+          </div>
+          <div className="repo-row">
             {chip(!where, "Every class", () => setWhere(""))}
             {ENGINE_LIST.map(c => chip(where === c.id, c.code, () => setWhere(where === c.id ? "" : c.id), c.accent))}
             {chip(where === "shared", "Mine", () => setWhere(where === "shared" ? "" : "shared"))}
@@ -345,7 +385,12 @@ export default function RepoPage() {
 
         {adding ? <AddForm onAdd={addBlock} onClose={() => setAdding(false)} hue={hue} /> : null}
 
-        {hits.length ? (
+        {lens === "dupes" ? <Duplicates clusters={dupes} hue={hue} onMerge={mergeCluster} /> : null}
+        {lens === "loose" ? (
+          <LooseEnds ends={loose} onDrop={dropEnd} onUnlink={unlinkEnd} onMakeBlock={makeBlockFrom} />
+        ) : null}
+
+        {lens ? null : hits.length ? (
           <div className="repo-sheet">
             <table className="repo-table">
               <thead>
@@ -804,6 +849,28 @@ const CSS = `
 .repo-empty{margin:30px 0;font-size:16px;color:${MUTED}}
 .repo-add-form{background:#fff;border:1px solid ${TEXT};border-radius:14px;padding:14px;
   display:flex;flex-direction:column;gap:8px}
+/* The lenses. A cluster is a decision, so a cluster is a card with the copies
+   inside and the consequence written underneath. */
+.repo-lens{display:flex;flex-direction:column;gap:12px}
+.repo-lens-say{margin:0;font-size:15px;line-height:1.6;color:${MUTED};max-width:76ch}
+.repo-cluster{background:#fff;border-radius:14px;padding:13px 15px;display:flex;flex-direction:column;gap:10px;
+  box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.06);border-left:4px solid var(--kind)}
+.repo-cluster-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.repo-key{font-family:${MONO};font-size:11.5px;color:${SECOND};background:${SURFACE};border-radius:7px;
+  padding:2px 7px;overflow-wrap:anywhere}
+.repo-flagged{font-family:${MONO};font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:#b45309;border:1px solid #b45309;border-radius:999px;padding:2px 8px;margin-left:6px}
+.repo-copies{display:flex;flex-direction:column;gap:5px}
+.repo-copy{display:flex;align-items:center;gap:10px;min-height:${TAP}px;padding:5px 9px;border-radius:11px;
+  border:1px solid ${BORDER};cursor:pointer}
+.repo-copy:hover{border-color:${TEXT}}
+.repo-copy-on{border-color:${TEXT};background:${SURFACE}}
+.repo-copy input{width:19px;height:19px;flex:none;accent-color:${TEXT};cursor:pointer}
+.repo-copy-words{flex:1;min-width:0;font-family:var(--repo-row,${F});font-size:15px;line-height:1.35;
+  color:${TEXT};overflow-wrap:anywhere}
+.repo-copy-n{font-family:${MONO};font-size:11px;color:${MUTED};white-space:nowrap}
+.repo-plan{margin:0;font-size:14px;line-height:1.55;color:${SECOND}}
+.repo-end-words{font-family:var(--repo-row,${F});font-size:15px;color:${TEXT};overflow-wrap:anywhere}
 .repo-type-sheet{background:#fff;border:1px solid ${TEXT};border-radius:14px;padding:13px 14px;
   display:flex;flex-direction:column;gap:11px}
 .repo-type-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}

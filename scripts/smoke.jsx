@@ -23,6 +23,8 @@ import BoardPage from "../src/engine/BoardPage.jsx";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType } from "../src/engine/RepoPage.jsx";
 import RepoIdeas, { Idea } from "../src/engine/RepoIdeas.jsx";
+import { Duplicates, LooseEnds } from "../src/engine/RepoTidy.jsx";
+import { findDuplicates, findLooseEnds, applyMerge } from "../src/engine/tidy.js";
 import AskPage from "../src/engine/AskPage.jsx";
 import PlanPage from "../src/PlanPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
@@ -87,6 +89,7 @@ for (const cfg of ENGINE_LIST) {
 // where the work is, so they get rendered with props directly — an empty day
 // and a populated one, since today's crash only appeared on one of those.
 const noop = () => {};
+let failedEarly = 0;
 const seq = { id: "s", name: "Test", slots: [{ slot: "opener" }, { slot: "problem" }] };
 const emptyPlan = { sequenceId: "s", slots: {}, blocks: [] };
 const fullPlan = {
@@ -198,6 +201,52 @@ cases.push(["Repository", <RepoPage />]);
     onPlace={noop} onAssign={noop} />, "Into the flow"]);
   cases.push(["Repository type sheet", <RepoType fonts={DEFAULT_REPO_FONTS} bold={false}
     onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Column headings"]);
+  // The lenses, on an index built the way the page builds one: the same
+  // reading in two classes, and a day pointing at a block that is gone.
+  const dupA = { ...blk, id: "d1", owner: cfg0, target: cfg0.id, uses: [{ cls: cfg0, date: "Sep 23", section: "opener" }] };
+  const dupB = { ...blk, id: "d2", headline: "", title: "why we bet", owner: ENGINE_LIST[1], target: ENGINE_LIST[1].id, uses: [] };
+  const dupC = { ...blk, id: "d3", url: "", title: "A Hook With No Link", owner: null, target: "shared", uses: [] };
+  const clusters = findDuplicates([dupA, dupB, dupC, { ...dupC, id: "d4", owner: cfg0, target: cfg0.id, uses: [] }]);
+  if (clusters.length !== 2) { console.error("  FAIL  tidy: expected 2 clusters, got " + clusters.length); failedEarly++; }
+  cases.push(["Repository duplicates", <Duplicates clusters={clusters} hue={hue} onMerge={() => ""} />, "copies"]);
+  cases.push(["Repository duplicates, none", <Duplicates clusters={[]} hue={hue} onMerge={() => ""} />, "No copies"]);
+
+  const looseStores = { [cfg0.id]: {
+    blocks: {},
+    dayPlans: { "Sep 23": { slots: { opener: { title: "Opener", items: [{ id: "x1", blockId: "gone" }] } } } },
+    schedule: [{ id: "w1", dates: ["Sep 21", "Sep 23"], items: [{ id: "s1", libId: "r1", title: "Why We Bet", url: "https://e.com", date: "Wed" }] }],
+    library: [{ id: "r1", type: "reading", title: "Why We Bet" }],
+  }, shared: {} };
+  const ends = findLooseEnds(looseStores, [cfg0]);
+  if (ends.length !== 2) { console.error("  FAIL  tidy: expected 2 loose ends, got " + ends.length); failedEarly++; }
+  cases.push(["Repository loose ends", <LooseEnds ends={ends} onDrop={noop} onUnlink={noop} onMakeBlock={noop} />, "Make a block"]);
+  cases.push(["Repository loose ends, none", <LooseEnds ends={[]} onDrop={noop} onUnlink={noop} onMakeBlock={noop} />, "Nothing dangling"]);
+
+  // The merge itself, on stores rather than on a screen: the loser leaves, the
+  // day that pointed at the loser points at the survivor, and the loser is
+  // kept whole in the merged list.
+  const mStores = {
+    [cfg0.id]: { blocks: { d1: { id: "d1", type: "link", title: "Why We Bet", url: "https://e.com/bet", tags: ["a"] } },
+      dayPlans: { "Sep 23": { slots: { opener: { items: [{ id: "r", blockId: "d2" }] } } } },
+      schedule: [{ id: "w1", dates: ["Sep 23"], items: [{ id: "s", libId: "d2", title: "t", date: "Wed" }] }] },
+    shared: { blocks: { d2: { id: "d2", type: "link", title: "Why We Bet", url: "https://e.com/bet", headline: "Kept.", tags: ["b"] } } },
+  };
+  const cl = findDuplicates([
+    { ...mStores[cfg0.id].blocks.d1, owner: cfg0, target: cfg0.id, uses: [] },
+    { ...mStores.shared.blocks.d2, owner: null, target: "shared", uses: [{ cls: cfg0, date: "Sep 23", section: "opener" }] },
+  ])[0];
+  const merged = applyMerge({ stores: mStores, classes: [cfg0], cluster: cl, survivorId: "d1", toShared: true });
+  const after = merged.patches;
+  const row = after[cfg0.id].dayPlans["Sep 23"].slots.opener.items[0];
+  const kept = after.shared.blocks.d1;
+  const gone = after[cfg0.id].blocks.d1 || after.shared.blocks.d2;
+  if (row.blockId !== "d1") { console.error("  FAIL  tidy merge: the day still points at " + row.blockId); failedEarly++; }
+  if (after[cfg0.id].schedule[0].items[0].libId !== "d1") { console.error("  FAIL  tidy merge: the week was not repointed"); failedEarly++; }
+  if (!kept || kept.headline !== "Kept.") { console.error("  FAIL  tidy merge: the headline did not fold across"); failedEarly++; }
+  if (!kept || kept.tags.join() !== "a,b") { console.error("  FAIL  tidy merge: tags did not union, got " + (kept && kept.tags)); failedEarly++; }
+  if (gone) { console.error("  FAIL  tidy merge: the loser is still on a shelf"); failedEarly++; }
+  if ((after.shared.merged || []).length !== 1) { console.error("  FAIL  tidy merge: no tombstone kept"); failedEarly++; }
+
   cases.push(["Repository type sheet, chosen", <RepoType fonts={{ cols: "fraunces", rows: "grotesk", page: "plex" }}
     bold onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Heavier rows"]);
 }
@@ -212,7 +261,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
 // case may name a string its output MUST contain, and a dashboard names the
 // stage: if the layout is not in the markup, the body did not run and the pass
 // is worth nothing.
-let failed = 0;
+let failed = failedEarly;
 for (const [name, el, must] of cases) {
   try {
     const html = renderToString(el);
