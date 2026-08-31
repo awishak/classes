@@ -82,6 +82,11 @@ const SESSIONS = [
         ["5 loose ends, all in the template class", "Week items in COMM 999 still pointing at the library the engine had before blocks existed, because link-readings only ever ran on three stores. A week item carries its own title and link, so the repair is to make the block the item was standing in for, on a button."],
         ["npm run tidy", "The same two functions run against the live stores from the terminal, read only, so the size of the problem is a number before the tool for the problem gets used. 334 blocks across five classes and the shared shelf."],
       ] },
+      { name: "Three small ones, asked for by eye", items: [
+        ["A Link is an Article", "The kind is what the thing is, and Link described the field rather than the thing. The id underneath stays link, because every stored block, every flow row and every filter is keyed on the id and only the label reaches a screen, so nothing had to be migrated to rename the kind."],
+        ["The kind moved next to the title", "Reading down a Kind column tells me nothing, and a kind sitting against its own title tells me what I am looking at without my eye moving. So the pill went into the first cell and the column went away. Filtering by kind is still the chips over the table, which was always the better tool for the job the column was doing."],
+        ["Thing became Item", "A column heading is a word I read four hundred times."],
+      ] },
       { name: "The build", items: [
         ["The smoke test was passing on a loading screen", "The repository case rendered the page, the page renders a loading line until the stores arrive, and a loading line proves nothing. The row, the open panel, the placer and the type sheet are rendered directly now, six cases, each naming a string the output has to contain. 58 surfaces to 65."],
         ["The stylesheet floor went up twice", "check-css guards the page against another accidental deletion. The floor moved from 30 rules to 75, against the 86 the page now has."],

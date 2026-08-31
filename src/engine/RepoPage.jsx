@@ -49,9 +49,14 @@ const TAP = 44;
 
 // The columns, in the order they read. `sort` is what the column sorts on, so
 // clicking a heading sorts by the thing the heading names.
+// The kind used to have a column of its own, and a column is the wrong shape
+// for a label that belongs to the words: reading down a Kind column tells me
+// nothing, while a kind sitting against its own title tells me what I am
+// looking at without moving my eye. So the pill moved next to the words and
+// the column went. Filtering by kind is the chips above the table, which is
+// the better tool for the job the column was doing.
 const COLS = [
-  { id: "title", name: "Thing", sort: b => (b.headline || b.title || "").toLowerCase() },
-  { id: "kind",  name: "Kind",  sort: b => typeOf(b.type).label },
+  { id: "title", name: "Item", sort: b => (b.headline || b.title || "").toLowerCase() },
   { id: "where", name: "Where", sort: b => (b.owner ? b.owner.code : "Mine") },
   { id: "used",  name: "Used",  sort: b => b.uses.length, num: true },
   { id: "tags",  name: "Tags",  sort: b => (b.tags || []).join(" ") },
@@ -450,13 +455,13 @@ export function Row({ block, hue, open, onOpen, onTag }) {
       <td className="repo-td repo-td-title">
         <button className="repo-focus repo-words" onClick={onOpen} aria-expanded={open}>
           <span className="repo-caret">{open ? "▾" : "▸"}</span>
-          <span>
-            {words || "Untitled"}
+          <span className="repo-words-in">
+            <span>{words || "Untitled"}</span>
+            <span className="repo-kind">{t.label}</span>
             {sub ? <span className="repo-sub">{sub}</span> : null}
           </span>
         </button>
       </td>
-      <td className="repo-td repo-td-kind"><span className="repo-kind">{t.label}</span></td>
       <td className="repo-td repo-td-where">
         {block.owner
           ? <span className="repo-owner" style={{ color: block.owner.accent }}>{block.owner.code}</span>
@@ -785,7 +790,7 @@ const CSS = `
    heading sideways. Off means faint, not absent. */
 .repo-arrow{font-size:12px;color:${MUTED};opacity:.35}
 .repo-arrow-on{color:${TEXT};opacity:1}
-.repo-th-used,.repo-th-made,.repo-th-kind,.repo-th-where{width:1%;white-space:nowrap}
+.repo-th-used,.repo-th-made,.repo-th-where{width:1%;white-space:nowrap}
 .repo-th-tags{width:18%}
 /* With border-spacing the edge has to sit on the cell: a border on a tr is
    not painted at all. The white is not decoration either, it is what stops a
@@ -802,9 +807,14 @@ const CSS = `
 .repo-bold .repo-words{font-weight:700}
 .repo-words:hover{color:var(--kind)}
 .repo-caret{color:${MUTED};font-size:11px}
+/* The words and the kind on one line, so the kind wraps with the title it
+   belongs to rather than sitting in a column of its own. */
+.repo-words-in{display:block;min-width:0}
+.repo-words-in > span:first-child{margin-right:8px}
 .repo-sub{display:block;font-size:12.5px;font-weight:400;line-height:1.4;color:${MUTED}}
-.repo-kind{font-family:${MONO};font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
-  color:#fff;background:var(--kind);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.repo-kind{display:inline-block;vertical-align:2px;font-family:${MONO};font-size:10px;font-weight:600;
+  letter-spacing:.09em;text-transform:uppercase;color:#fff;background:var(--kind);border-radius:999px;
+  padding:3px 9px;white-space:nowrap}
 .repo-owner{font-family:${MONO};font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:${MUTED}}
 .repo-td-used,.repo-td-where,.repo-td-made{white-space:nowrap}
 .repo-uses{font-family:${MONO};font-size:11.5px;color:${SECOND};background:none;border:none;padding:4px 0;
