@@ -26,9 +26,11 @@
 import { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { loadClass, saveClass } from "./store.js";
 import { ENGINE_LIST } from "../config/registry.js";
-import { TYPES, typeOf, SHARED_KEY, SHARED_LABEL, makeBlock, writeBlock,
+import { typeOf, allTypes, registerTypes, SHARED_KEY, SHARED_LABEL, makeBlock, writeBlock,
   deleteBlock, stampScheduled, todayStamp } from "./blocks.js";
-import { colorOfType, readColors } from "./colors.js";
+import { colorOfType, readColors, writeTypeColor } from "./colors.js";
+import { readTypes, readAdded, readLabels, addType, renameType, resetName, dropType,
+  countTypes, orphanTypes } from "./types.js";
 import { normSlot, blankDay, sectionsOf } from "./dayplan.js";
 import { findDuplicates, findLooseEnds, applyMerge,
   dropFlowRow, dropWeekItem, unlinkWeekItem, blockFromWeekItem } from "./tidy.js";
@@ -44,7 +46,7 @@ import { tagPatches, typePatches, sharePatches, wouldShare, tagsAcross } from ".
 import { SEEDS } from "../config/seed-library.js";
 import { newSeeds, seedPatch } from "./seeds.js";
 import { roomKeys, roomItems, roomCounts, blockFromRoom } from "./room.js";
-import { Seeds, Room } from "./RepoMore.jsx";
+import { Seeds, Room, Kinds } from "./RepoMore.jsx";
 import { genId } from "../utils.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -191,6 +193,11 @@ export default function RepoPage() {
   }, [lens, room]);
 
   const colors = readColors(stores?.shared);
+  // The kinds he has added and renamed, handed to blocks.js so that typeOf
+  // says the right word everywhere, including the dozen call sites that have
+  // no business loading a store to answer what a block is called.
+  const kinds = readTypes(stores?.shared);
+  registerTypes({ added: readAdded(stores?.shared), labels: readLabels(stores?.shared) });
   const fonts = readRepoFonts(stores?.shared);
   const bold = readRepoBold(stores?.shared);
   const hue = (t) => colorOfType(colors, t);
@@ -499,6 +506,14 @@ export default function RepoPage() {
     return done + " assigned, " + cls.code + " on " + date;
   };
 
+  // Every block carrying one kind, moved onto another. The same patch builder
+  // the bulk bar uses, over the whole shelf rather than over a selection, which
+  // is what rescues blocks left behind by a kind that was deleted.
+  const retypeAll = (from, to) => {
+    const ids = items.filter(b => b.type === from).map(b => b.id);
+    writeAll(typePatches({ stores: ref.current, classes: ENGINE_LIST, ids, type: to }));
+  };
+
   // ─── saved views ───
   const views = readViews(stores?.shared);
   const pinned = viewFor(views, f);
@@ -573,7 +588,7 @@ export default function RepoPage() {
         <div className="repo-filters">
           <div className="repo-row">
             {chip(!kind, "Everything", () => set({ kind: "" }))}
-            {TYPES.filter(t => counts[t.id]).map(t =>
+            {kinds.filter(t => counts[t.id]).map(t =>
               chip(kind === t.id, t.label + " " + counts[t.id], () => set({ kind: kind === t.id ? "" : t.id }), hue(t.id)))}
           </div>
           <div className="repo-row">
@@ -590,6 +605,8 @@ export default function RepoPage() {
               () => set({ lens: lens === "seeds" ? "" : "seeds" }), "#9f1239")}
             {chip(lens === "room", "What the room made" + (room ? " " + room.length : ""),
               () => set({ lens: lens === "room" ? "" : "room" }), "#0f766e")}
+            {chip(lens === "kinds", "Kinds " + kinds.length,
+              () => set({ lens: lens === "kinds" ? "" : "kinds" }), "#4b5563")}
           </div>
           <div className="repo-row">
             {chip(!where, "Every class", () => set({ where: "" }))}
@@ -626,6 +643,15 @@ export default function RepoPage() {
         {lens === "links" ? (
           <Links blocks={linky} busy={!!checking} done={checking?.done || 0} total={checking?.total || 0}
             onCheck={checkLinks} onlyBad={onlyBad} setOnlyBad={setOnlyBad} />
+        ) : null}
+        {lens === "kinds" ? (
+          <Kinds types={kinds} counts={counts} orphans={orphanTypes(items, kinds)} hue={hue}
+            onAdd={(label, hint) => addType(writeTo("shared"), label, hint)}
+            onRename={(id, label) => renameType(writeTo("shared"), id, label)}
+            onReset={id => resetName(writeTo("shared"), id)}
+            onColor={(id, sw) => writeTypeColor(writeTo("shared"), id, sw)}
+            onDrop={id => dropType(writeTo("shared"), id)}
+            onRetype={(from, to) => retypeAll(from, to)} />
         ) : null}
         {lens === "seeds" ? (
           <Seeds seeds={SEEDS} fresh={fresh} onBring={s => bringSeeds([s])} onBringAll={() => bringSeeds(fresh)} />
@@ -780,7 +806,7 @@ export function Bulk({ n, rows, planOf, stores, onTag, onType, onShare, onClear,
       </div>
       <div className="repo-row">
         <span className="repo-label">Change the kind</span>
-        {TYPES.map(t => (
+        {allTypes().map(t => (
           <button key={t.id} className="repo-focus repo-chip"
             onClick={() => { onType(t.id); setSaid(n + " now " + t.label.toLowerCase()); }}>
             {t.label}
@@ -882,7 +908,7 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
     <div className="repo-detail">
       <div className="repo-pane">
         <div className="repo-row">
-          {TYPES.map(t => (
+          {allTypes().map(t => (
             <button key={t.id} className="repo-focus repo-chip" onClick={() => set("type", t.id)}
               aria-pressed={draft.type === t.id}
               style={draft.type === t.id ? { background: hue(t.id), borderColor: hue(t.id), color: "#fff" } : undefined}>
@@ -1077,7 +1103,7 @@ function AddForm({ onAdd, onClose, hue }) {
   return (
     <div className="repo-add-form">
       <div className="repo-row">
-        {TYPES.map(t => (
+        {allTypes().map(t => (
           <button key={t.id} className="repo-focus repo-chip" onClick={() => setType(t.id)}
             aria-pressed={type === t.id}
             style={type === t.id ? { background: hue(t.id), borderColor: hue(t.id), color: "#fff" } : undefined}>
@@ -1261,6 +1287,14 @@ const CSS = `
   box-shadow:0 10px 30px -12px rgba(23,19,16,.4)}
 .repo-bulk-n{font-family:${MONO};font-size:12px;font-weight:600;letter-spacing:.06em;
   text-transform:uppercase;color:${TEXT}}
+
+/* The kinds sheet: a row per kind, and the palette under whichever one is
+   being coloured. */
+.repo-kind-add{display:flex;gap:7px;flex-wrap:wrap;align-items:center;background:#fff;border:1px solid ${TEXT};
+  border-radius:14px;padding:11px 13px}
+.repo-kind-add .repo-input{flex:1;min-width:180px}
+.repo-swatch{width:34px;height:34px;border-radius:9px;border:1px solid rgba(23,19,16,.18);cursor:pointer}
+.repo-swatch:hover{transform:scale(1.08)}
 
 /* A post, a question, a headline: the room's own rows. */
 .repo-post{font-size:14.5px;line-height:1.5;color:${SECOND};padding:3px 0;overflow-wrap:anywhere}

@@ -24,7 +24,8 @@ import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay, dayTitles } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { normSlot, sequenceOptions, sequenceFor, sectionsOf } from "./dayplan.js";
-import { SHARED_KEY, TYPES, typeOf, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
+import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
+import { readAdded, readLabels } from "./types.js";
 import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor } from "./colors.js";
 import { useBoards } from "./boards.js";
 import { FACES, SLOTS, readFonts, fontVars, writeFont, resetFonts, readBold, writeBold } from "./fonts.js";
@@ -3104,6 +3105,9 @@ export default function Dashboard({ config }) {
   const marks = (data?.attendance || {})[day] || {};
   // My colours, out of the shared store so they hold across every class.
   const colors = readColors(shared);
+  // And the kinds I have added or renamed in the repository, so a block that
+  // is a Video here says Video rather than falling back to its id.
+  registerTypes({ added: readAdded(shared), labels: readLabels(shared) });
   const fonts = readFonts(shared);
   const boldRows = readBold(shared);
   const hueOf = (type) => colorOfType(colors, type);

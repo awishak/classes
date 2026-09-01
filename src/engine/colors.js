@@ -68,7 +68,21 @@ export const readColors = (shared) => ({ ...DEFAULTS, ...(shared?.colors || {}) 
 // one step further back.
 export const colorOfKind = (colors, kind) =>
   swatch((colors || DEFAULTS)[kind] || DEFAULTS[kind])?.hex || "#5b6068";
-export const colorOfType = (colors, type) => colorOfKind(colors, kindOfType(type));
+
+// A block type can carry a colour of its own, which is what a kind Andrew
+// added needs: the nine above are the ones the code ships with, and a kind he
+// invented answers to none of them. A colour set on the type wins, so he can
+// also pull one built-in kind out of the group it shares a colour with.
+export const colorOfType = (colors, type) => {
+  const own = ((colors || {}).types || {})[type];
+  return (own && swatch(own)?.hex) || colorOfKind(colors, kindOfType(type));
+};
+
+export const writeTypeColor = (updateShared, type, swatchId) => updateShared(prev => {
+  const types = { ...((prev.colors || {}).types || {}) };
+  if (swatchId) types[type] = swatchId; else delete types[type];
+  return { ...prev, colors: { ...(prev.colors || {}), types } };
+});
 
 // A section's colour, if I picked one.
 //

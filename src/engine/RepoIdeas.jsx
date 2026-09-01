@@ -106,6 +106,9 @@ const IDEAS = [
   { n: 19, group: "more", size: "medium", first: true, title: "Undo, on a block",
     what: "Keep the previous words on the block, and offer to put the words back for the rest of the session.",
     why: "An edit here rewrites a block used on nine days at once, with no history and no way back. Editing has to feel safe before editing gets used." },
+  { n: 21, group: "reuse", size: "medium", first: true, title: "Build a game out of the shelf",
+    what: "In the game editor, search the repository for question blocks and drop them into a round, instead of typing every question into a box.",
+    why: "Every quiz question I have ever written is already on the shelf, ported in with the game it came from kept as a set, and the game editor cannot see any of it. So the questions are searchable and unusable at the same time, and the next game gets typed from scratch." },
   { n: 20, group: "more", size: "small", title: "Take everything out",
     what: "Export the whole shelf as JSON and as markdown, one file, on a button.",
     why: "Insurance against the store, and the only thing that makes years of material portable if the engine ever changes shape." },
@@ -137,7 +140,7 @@ export default function RepoIdeas() {
       <header className="ri-head">
         <div className="ri-head-in">
           <a href="/repo" className="ri-back">← Repository</a>
-          <h1 className="ri-title">Twenty ways to make the repository better</h1>
+          <h1 className="ri-title">Ways to make the repository better</h1>
           <span className="ri-count">{built.length} of {IDEAS.length} built</span>
         </div>
       </header>

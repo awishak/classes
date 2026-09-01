@@ -22,7 +22,11 @@ import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk } from "../src/engine/RepoPage.jsx";
-import { Seeds as RepoSeeds, Room as RepoRoom } from "../src/engine/RepoMore.jsx";
+import { Seeds as RepoSeeds, Room as RepoRoom, Kinds as RepoKinds } from "../src/engine/RepoMore.jsx";
+import { readTypes, readAdded, addType, renameType, resetName, dropType, idForLabel, orphanTypes }
+  from "../src/engine/types.js";
+import { registerTypes, typeOf, allTypes } from "../src/engine/blocks.js";
+import { colorOfType, writeTypeColor } from "../src/engine/colors.js";
 import { readFilters, filterQuery, isStep, viewWords, readViews, saveView, dropView, viewFor, BLANK }
   from "../src/engine/views.js";
 import { tagPatches, typePatches, sharePatches, wouldShare, tagsAcross } from "../src/engine/bulk.js";
@@ -338,6 +342,66 @@ cases.push(["Repository", <RepoPage />]);
 
   cases.push(["Repository type sheet, chosen", <RepoType fonts={{ cols: "fraunces", rows: "grotesk", page: "plex" }}
     bold onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Heavier rows"]);
+
+  // ─── the kinds, as a list Andrew edits ───
+  // Eight kinds shipped in the code, and eight is a guess about how one person
+  // files their material. A kind he adds has to reach every reader, including
+  // the dozen call sites that only ever call typeOf.
+  let kindStore = {};
+  const kindUpdate = (m) => { kindStore = m(kindStore); };
+  addType(kindUpdate, "Video", "Something to watch.");
+  addType(kindUpdate, "Video");
+  const added = readAdded(kindStore);
+  if (added.length !== 2) { console.error("  FAIL  kinds: adding two kinds made " + added.length); failedEarly++; }
+  if (added[0].id !== "video" || added[1].id !== "video-2") {
+    console.error("  FAIL  kinds: the ids came out as " + added.map(t => t.id).join()); failedEarly++; }
+  if (idForLabel("Article", []) !== "article") { console.error("  FAIL  kinds: a plain name made a bad id"); failedEarly++; }
+  if (idForLabel("Note", []) !== "note-2") { console.error("  FAIL  kinds: a name clashing with a built-in kind was not numbered"); failedEarly++; }
+
+  renameType(kindUpdate, "link", "Reading");
+  const renamed = readTypes(kindStore);
+  if ((renamed.find(t => t.id === "link") || {}).label !== "Reading") {
+    console.error("  FAIL  kinds: renaming a built-in kind did not take"); failedEarly++; }
+  if (renamed.length !== 10) { console.error("  FAIL  kinds: the whole list came to " + renamed.length); failedEarly++; }
+  renameType(kindUpdate, "video", "Watch");
+  if ((readAdded(kindStore)[0] || {}).label !== "Watch") { console.error("  FAIL  kinds: renaming an added kind did not take"); failedEarly++; }
+
+  // Every reader goes through typeOf, so the registry is what makes a renamed
+  // kind say the new word on the dashboard as well as here.
+  registerTypes({ added: readAdded(kindStore), labels: kindStore.typeLabels });
+  if (typeOf("link").label !== "Reading") { console.error("  FAIL  kinds: typeOf still says " + typeOf("link").label); failedEarly++; }
+  if (typeOf("video").label !== "Watch") { console.error("  FAIL  kinds: typeOf does not know an added kind"); failedEarly++; }
+  if (allTypes().length !== 10) { console.error("  FAIL  kinds: the registry holds " + allTypes().length); failedEarly++; }
+  // A kind deleted while blocks still carry it says the id back rather than
+  // calling the block a Note.
+  if (typeOf("gone").label !== "gone") { console.error("  FAIL  kinds: a kind with no name became " + typeOf("gone").label); failedEarly++; }
+
+  writeTypeColor(kindUpdate, "video", "purple-mid");
+  if (colorOfType(kindStore.colors, "video") !== "#6e30b5") {
+    console.error("  FAIL  kinds: an added kind got the colour " + colorOfType(kindStore.colors, "video")); failedEarly++; }
+  if (colorOfType(kindStore.colors, "link") !== colorOfType({}, "link")) {
+    console.error("  FAIL  kinds: colouring one kind moved another"); failedEarly++; }
+
+  dropType(kindUpdate, "note");
+  if (readTypes(kindStore).length !== 10) { console.error("  FAIL  kinds: a built-in kind was deleted"); failedEarly++; }
+  dropType(kindUpdate, "video-2");
+  if (readAdded(kindStore).length !== 1) { console.error("  FAIL  kinds: deleting an added kind left " + readAdded(kindStore).length); failedEarly++; }
+  resetName(kindUpdate, "link");
+  if ((readTypes(kindStore).find(t => t.id === "link") || {}).label !== "Article") {
+    console.error("  FAIL  kinds: putting a built-in name back did not take"); failedEarly++; }
+
+  const strays = orphanTypes([{ type: "video" }, { type: "gone" }, { type: "gone" }], readTypes(kindStore));
+  if (strays.length !== 1 || strays[0].n !== 2) { console.error("  FAIL  kinds: the blocks with no kind were miscounted"); failedEarly++; }
+
+  cases.push(["Repository kinds", <RepoKinds types={readTypes(kindStore)} counts={{ link: 12, video: 1 }}
+    orphans={strays} hue={hue} onAdd={noop} onRename={noop} onReset={noop} onColor={noop} onDrop={noop}
+    onRetype={noop} />, "Add the kind"]);
+  cases.push(["Repository kinds, none added", <RepoKinds types={readTypes({})} counts={{}} orphans={[]}
+    hue={hue} onAdd={noop} onRename={noop} onReset={noop} onColor={noop} onDrop={noop} onRetype={noop} />,
+    "Put the name back"]);
+  // Left as the page found it, so no later case renders against a shelf that
+  // has a Watch kind on it.
+  registerTypes({});
 
   // ─── the filters, as an address and as a saved view ───
   const asked = { ...BLANK, q: "betting", kind: "link", where: cfg0.id, tag: "framing" };

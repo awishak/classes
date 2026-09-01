@@ -34,7 +34,38 @@ export const TYPES = [
   { id: "set",        label: "Set",        color: "#4b5563", hint: "A group of the above, kept together." },
 ];
 
-export const typeOf = (id) => TYPES.find(t => t.id === id) || TYPES[0];
+// ─── the kinds Andrew added, and the ones he renamed ───
+//
+// The eight above are what the code knows how to do things with. The list of
+// kinds a person wants is longer and is nobody's business but his: a video is
+// not an article, and Article was called Link until he said otherwise.
+//
+// Custom kinds live in the shared store, and they are also held here, because
+// typeOf is called from a dozen places that have no business loading a store to
+// answer what a block is called. The repository and the dashboard both hand
+// this the shared store's version as they render, which is idempotent and
+// derived from state either way. Nothing here is the source of truth; the
+// shared store is, and this is the copy every reader can reach.
+let ADDED = [];
+let RENAMED = {};
+
+export function registerTypes({ added, labels } = {}) {
+  ADDED = (added || []).filter(t => t && t.id);
+  RENAMED = labels || {};
+}
+
+export const allTypes = () => [
+  ...TYPES.map(t => (RENAMED[t.id] ? { ...t, label: RENAMED[t.id] } : t)),
+  ...ADDED,
+];
+
+// An id with no kind behind it is a kind that was deleted while blocks still
+// carried it. Saying the id back is worth more than calling the block a Note,
+// which is what a silent fallback to the first kind did.
+export const typeOf = (id) => {
+  if (!id) return TYPES[0];
+  return allTypes().find(t => t.id === id) || { id, label: id, color: "#646b75", hint: "" };
+};
 
 // Today, as the schedule writes dates. Passed in so nothing here reaches for a
 // clock of its own.
@@ -92,7 +123,7 @@ export function facets(blocks) {
   return {
     topics: [...topics].sort(),
     concepts: [...concepts].sort(),
-    types: TYPES.filter(t => types.has(t.id)),
+    types: allTypes().filter(t => types.has(t.id)),
   };
 }
 

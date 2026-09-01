@@ -47,6 +47,31 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep1", date: "Tuesday, September 1", title: "The kinds are his now",
+    blurb: "Eight kinds shipped in the code, and eight is a guess about how one person files their material. Rename any of them, add as many as you want, colour each one, and delete one you added. Plus the fix for a button that said a day had no sections while the dashboard was drawing four.",
+    groups: [
+      { name: "Kinds, as a list rather than a constant", items: [
+        ["Rename any of the eight", "Article was called Link until I said otherwise, and the fix was a deploy. A renamed built-in kind keeps its id, so every stored block, every filter and every flow row is untouched and only the word on the screen changes. The name can be put back to the one in the code."],
+        ["Add your own", "Video, Reading, whatever the material actually is. A new kind gets an id made from the name, a colour off the same twenty-swatch palette the rest of the app uses, and a line saying what the kind holds. It shows up in the chips over the table, in the add form, in the open row and in the bulk bar."],
+        ["A kind you added can go, once nothing is in it", "The count sits next to every kind, because that number is the whole question when deciding whether the kind was a good idea. A kind still holding blocks says so instead of offering a delete that would strand them."],
+        ["Blocks left holding a kind that is gone", "They say the id they were given rather than quietly calling themselves Notes, and the sheet offers to move the lot onto a kind that exists. That is the same patch builder the bulk bar uses, pointed at the whole shelf."],
+        ["A kind you add is a label and a colour", "The eight built-in ids do work elsewhere: an assignment goes onto the readings as an assignment, a set holds the blocks inside it, a board holds posts. A kind you invent is a filing category, which is what a kind is most of the time anyway."],
+        ["Every reader says the new word", "typeOf is called from a dozen places that have no business loading a store to answer what a block is called, so the repository and the dashboard hand the shared store's list to blocks.js as they render. The shared store stays the source of truth; the list in the module is the copy every reader can reach."],
+      ] },
+      { name: "Into the flow, fixed twice", items: [
+        ["The button said a day had no sections while the dashboard drew four", "The repository asked the day's sequence which sections a day has, and four of the five classes have no sequences in their config at all. A section made by hand on a day is a `sec-` key, and a slot holding items is a section whatever put it there. The dashboard already knew that and worked it out inline; sectionsOf now lives in dayplan.js and both readers call the same function."],
+        ["And it said where a block landed in keys", "A reading that went into a section made by hand came back as \u201cin sec-m4x9q2\u201d. It says the name of the section now."],
+      ] },
+    ],
+    note: {
+      title: "Asked and not answered",
+      lines: [
+        "Every quiz question I have ever written is on the shelf, ported in as a question block with the game it came from kept as a set. The game editor still cannot see any of it, so the questions are searchable and unusable at the same time. That is idea 21 on the backlog and it was not started today.",
+        "Nothing was watched with eyes, as usual: the repository is behind the PIN, so this is the build, the checks, 87 smoke surfaces, and a grep of the deployed bundle.",
+      ],
+    },
+  },
+  {
     id: "aug31b", date: "Monday, August 31 \u00b7 later", title: "Five numbers off the backlog, and the repository learned what the room made",
     blurb: "Andrew named 11, 13, 14, 16 and 17. So a filter set is now an address I can send myself and a view I can pin, a decision made once lands on forty rows at a time, the seed library arrives as blocks, and the posts, questions, headlines and polls the students made are searchable for the first time.",
     groups: [
