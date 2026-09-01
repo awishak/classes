@@ -23,7 +23,7 @@ import { useHeadlines } from "./headlines.js";
 import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay, dayTitles } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
-import { normSlot, sequenceOptions, sequenceFor } from "./dayplan.js";
+import { normSlot, sequenceOptions, sequenceFor, sectionsOf } from "./dayplan.js";
 import { SHARED_KEY, TYPES, typeOf, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
 import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor } from "./colors.js";
 import { useBoards } from "./boards.js";
@@ -3559,18 +3559,9 @@ export default function Dashboard({ config }) {
   // sequence's own, then the ones I made, then anything left over from a
   // sequence change. The same list the flow uses, so a chooser opened anywhere
   // offers the same places.
-  const daySections = (() => {
-    const sl = plan?.slots || {};
-    const seqSlots = (sequenceFor(config, plan?.sequenceId || config.defaultSequenceId).slots) || [];
-    const named = new Set(seqSlots.map(x => x.slot));
-    const mine = Object.keys(sl).filter(k => k.startsWith("sec-"));
-    const left = Object.keys(sl).filter(k => !named.has(k) && !k.startsWith("sec-") && normSlot(sl[k]).items.length);
-    return [
-      ...seqSlots.map(x => [x.slot, normSlot(sl[x.slot]).title || x.slot]),
-      ...mine.map(k => [k, normSlot(sl[k]).title || "Untitled section"]),
-      ...left.map(k => [k, normSlot(sl[k]).title || k]),
-    ];
-  })();
+  // The sections this day actually has, worked out in dayplan.js so the
+  // repository's placer and the flow agree about what a day is made of.
+  const daySections = sectionsOf(config, plan);
   const sections = daySections;
 
   // A block can be placed on any day, not just the one I am looking at.

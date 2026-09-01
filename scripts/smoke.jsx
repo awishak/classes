@@ -40,6 +40,7 @@ import PlanPage from "../src/PlanPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
 import { ENGINE_LIST } from "../src/config/registry.js";
 import { warmClassData } from "../src/engine/store.js";
+import { sectionsOf } from "../src/engine/dayplan.js";
 import { SHARED_KEY } from "../src/engine/blocks.js";
 import { DEFAULT_REPO_FONTS } from "../src/engine/fonts.js";
 
@@ -213,6 +214,32 @@ cases.push(["Repository", <RepoPage />]);
     onSave={noop} onDelete={noop} onPlace={noop} onAssign={noop} />, "Put the block on a day"]);
   cases.push(["Repository placer", <RepoPlace block={blk} planOf={planOf} stores={stores}
     onPlace={noop} onAssign={noop} />, "Into the flow"]);
+
+  // ─── the sections a day actually has ───
+  // Four of the five classes have no sequences in their config, so reading a
+  // day's sections off the sequence alone said "no sections to land in" while
+  // the dashboard was drawing four sections on that same day. A section made
+  // by hand, and any slot holding something, is a section.
+  const noSeq = { id: "noseq", code: "COMM 0", sequences: [], defaultSequenceId: "" };
+  const handMade = { sequenceId: "", slots: {
+    "sec-1": { title: "The hook", items: [] },
+    opener: { title: "Left over", items: [{ id: "i1", text: "A note" }] },
+    empty: { title: "Nothing in here", items: [] },
+  } };
+  const found = sectionsOf(noSeq, handMade);
+  if (found.length !== 2) { console.error("  FAIL  sections: found " + found.length + " of the two real sections"); failedEarly++; }
+  if (found[0][1] !== "The hook") { console.error("  FAIL  sections: the section is called " + found[0][1]); failedEarly++; }
+  if (found.some(([k]) => k === "empty")) { console.error("  FAIL  sections: an empty slot counted as a section"); failedEarly++; }
+  if (sectionsOf(noSeq, { slots: {} }).length) { console.error("  FAIL  sections: a day with nothing on it claimed a section"); failedEarly++; }
+  // The template class has a sequence, and the sequence still leads.
+  const seqDay = sectionsOf(ENGINE_LIST.find(c => (c.sequences || []).length) || cfg0, { slots: {} });
+  if (!seqDay.length) { console.error("  FAIL  sections: a class with a sequence lost its sections"); failedEarly++; }
+  // The placer names the sections rather than their keys.
+  const planWithSections = () => handMade;
+  cases.push(["Repository placer, a day with hand-made sections",
+    <RepoPlace block={blk} planOf={planWithSections} stores={{ [ENGINE_LIST[0].id]: {
+      schedule: [{ id: "w1", topic: "A week", dates: ["Sep 1"] }] } }}
+      onPlace={noop} onAssign={noop} />, "Into the flow"]);
   cases.push(["Repository type sheet", <RepoType fonts={DEFAULT_REPO_FONTS} bold={false}
     onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Column headings"]);
   // The lenses, on an index built the way the page builds one: the same

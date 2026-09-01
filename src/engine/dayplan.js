@@ -36,6 +36,32 @@ export const sequenceFor = (config, id) =>
 export const dayPlanFor = (data, config, date) =>
   ({ ...blankDay(config), ...((data?.dayPlans || {})[date] || {}) });
 
+// Every section a day actually has, as [slot, what the section is called].
+//
+// A sequence is one source of sections and not the only one. Four of the five
+// classes have no sequences in their config at all, so reading the sections off
+// the sequence alone says a day has nowhere to land while the dashboard is
+// drawing four sections on that same day. The sections made by hand on the day
+// are the `sec-` keys, and a slot holding items is a section whatever put it
+// there.
+//
+// The Dashboard worked this out inline and the repository asked the sequence,
+// which is the same disagreement between two readers of one shape that this
+// file was made to end. One reader now.
+export function sectionsOf(config, plan) {
+  const sl = plan?.slots || {};
+  const seqSlots = sequenceFor(config, plan?.sequenceId || config.defaultSequenceId).slots || [];
+  const named = new Set(seqSlots.map(x => x.slot));
+  const mine = Object.keys(sl).filter(k => k.startsWith("sec-"));
+  const left = Object.keys(sl).filter(k =>
+    !named.has(k) && !k.startsWith("sec-") && normSlot(sl[k]).items.length);
+  return [
+    ...seqSlots.map(x => [x.slot, normSlot(sl[x.slot]).title || x.slot]),
+    ...mine.map(k => [k, normSlot(sl[k]).title || "Untitled section"]),
+    ...left.map(k => [k, normSlot(sl[k]).title || k]),
+  ];
+}
+
 // Which slot a seed wants: the first one it declares that this day's sequence
 // actually has, otherwise the front of the sequence.
 export function slotForSeed(config, plan, seed) {

@@ -29,13 +29,13 @@ import { ENGINE_LIST } from "../config/registry.js";
 import { TYPES, typeOf, SHARED_KEY, SHARED_LABEL, makeBlock, writeBlock,
   deleteBlock, stampScheduled, todayStamp } from "./blocks.js";
 import { colorOfType, readColors } from "./colors.js";
-import { normSlot, blankDay } from "./dayplan.js";
+import { normSlot, blankDay, sectionsOf } from "./dayplan.js";
 import { findDuplicates, findLooseEnds, applyMerge,
   dropFlowRow, dropWeekItem, unlinkWeekItem, blockFromWeekItem } from "./tidy.js";
 import { Duplicates, LooseEnds, Tags, Links } from "./RepoTidy.jsx";
 import { tagIndex, lookalikes, retagPatches } from "./tags.js";
 import { linkables, checkAll, linkPatches } from "./links.js";
-import { weekdayOf, slotsOf, addScheduleItem } from "./schedule.js";
+import { weekdayOf, addScheduleItem } from "./schedule.js";
 import { FACES, REPO_SLOTS, readRepoFonts, repoFontVars, writeRepoFont, resetRepoFonts,
   readRepoBold, writeRepoBold } from "./fonts.js";
 import { readFilters, filterQuery, isStep, isBlank, viewWords,
@@ -331,7 +331,7 @@ export default function RepoPage() {
     writeTo(cls.id)(prev => {
       const plans = { ...(prev.dayPlans || {}) };
       const day = { ...blankDay(cls), ...(plans[date] || {}) };
-      const target = slot || slotsOf(cls, day)[0];
+      const target = slot || (sectionsOf(cls, day)[0] || [])[0];
       if (!target) { landed = "none"; return prev; }
       const slots = { ...(day.slots || {}) };
       const bucket = normSlot(slots[target]);
@@ -341,7 +341,7 @@ export default function RepoPage() {
       landed = target;
       return { ...prev, dayPlans: plans };
     });
-    if (landed === "none") return "That day has no sections to land in.";
+    if (landed === "none") return "That day has no sections yet. Make one on the dashboard first.";
     if (!landed) return "Already on that day.";
     stampScheduled(writeTo(row.target), row.id, date);
     return cls.code + ", " + date + ", in " + landed;
@@ -462,7 +462,7 @@ export default function RepoPage() {
     writeTo(cls.id)(prev => {
       const plans = { ...(prev.dayPlans || {}) };
       const day = { ...blankDay(cls), ...(plans[date] || {}) };
-      const target = slot || slotsOf(cls, day)[0];
+      const target = slot || (sectionsOf(cls, day)[0] || [])[0];
       if (!target) { landed = "none"; return prev; }
       const slots = { ...(day.slots || {}) };
       const bucket = normSlot(slots[target]);
@@ -475,7 +475,7 @@ export default function RepoPage() {
       plans[date] = { ...day, slots };
       return { ...prev, dayPlans: plans };
     });
-    if (landed === "none") return "That day has no sections to land in.";
+    if (landed === "none") return "That day has no sections yet. Make one on the dashboard first.";
     if (!added) return "All " + chosen.length + " are on that day already.";
     stampMany(chosen, date);
     return added + " into " + landed + ", " + cls.code + " on " + date;
@@ -964,7 +964,9 @@ export function Place({ block, what, planOf, stores, onPlace, onAssign }) {
 
   const cls = ENGINE_LIST.find(c => c.id === clsId) || ENGINE_LIST[0];
   const weeks = (stores[clsId] || {}).schedule || cls.scheduleWeeks || [];
-  const slots = date ? slotsOf(cls, planOf(cls, date)) : [];
+  // What the day is actually made of, names and all: a section made by hand on
+  // the day counts, and four of the five classes have no sequence at all.
+  const slots = date ? sectionsOf(cls, planOf(cls, date)) : [];
 
   return (
     <div className="repo-place">
@@ -987,7 +989,7 @@ export function Place({ block, what, planOf, stores, onPlace, onAssign }) {
           <select className="repo-select" value={slot} aria-label="Which section of the day"
             onChange={e => setSlot(e.target.value)}>
             <option value="">First section</option>
-            {slots.map(s => <option key={s} value={s}>{s}</option>)}
+            {slots.map(([key, name]) => <option key={key} value={key}>{name}</option>)}
           </select>
         ) : null}
       </div>
@@ -1000,6 +1002,9 @@ export function Place({ block, what, planOf, stores, onPlace, onAssign }) {
         </button>
         {said ? <span className="repo-said">{said}</span> : null}
         {!weeks.length ? <span className="repo-warn">{cls.code} has no weeks on the schedule yet.</span> : null}
+        {date && !slots.length ? (
+          <span className="repo-warn">That day has no sections yet. Make one on the dashboard first.</span>
+        ) : null}
       </div>
     </div>
   );
