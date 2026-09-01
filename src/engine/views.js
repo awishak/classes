@@ -75,7 +75,7 @@ export function viewWords(f, { classes, label, sharedLabel } = {}) {
 }
 
 const LENS_WORDS = {
-  dupes: "duplicates", loose: "loose ends", tags: "tags",
+  dupes: "duplicates", loose: "loose ends", tags: "tags", types: "the types",
   links: "links", seeds: "the seed library", room: "what the room made",
 };
 

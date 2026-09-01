@@ -22,7 +22,7 @@ import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk } from "../src/engine/RepoPage.jsx";
-import { Seeds as RepoSeeds, Room as RepoRoom, Kinds as RepoKinds } from "../src/engine/RepoMore.jsx";
+import { Seeds as RepoSeeds, Room as RepoRoom, BlockTypes as RepoTypes } from "../src/engine/RepoMore.jsx";
 import { readTypes, readAdded, addType, renameType, resetName, dropType, idForLabel, orphanTypes }
   from "../src/engine/types.js";
 import { registerTypes, typeOf, allTypes } from "../src/engine/blocks.js";
@@ -393,10 +393,10 @@ cases.push(["Repository", <RepoPage />]);
   const strays = orphanTypes([{ type: "video" }, { type: "gone" }, { type: "gone" }], readTypes(kindStore));
   if (strays.length !== 1 || strays[0].n !== 2) { console.error("  FAIL  kinds: the blocks with no kind were miscounted"); failedEarly++; }
 
-  cases.push(["Repository kinds", <RepoKinds types={readTypes(kindStore)} counts={{ link: 12, video: 1 }}
+  cases.push(["Repository types", <RepoTypes types={readTypes(kindStore)} counts={{ link: 12, video: 1 }}
     orphans={strays} hue={hue} onAdd={noop} onRename={noop} onReset={noop} onColor={noop} onDrop={noop}
-    onRetype={noop} />, "Add the kind"]);
-  cases.push(["Repository kinds, none added", <RepoKinds types={readTypes({})} counts={{}} orphans={[]}
+    onRetype={noop} />, "Add the type"]);
+  cases.push(["Repository types, none added", <RepoTypes types={readTypes({})} counts={{}} orphans={[]}
     hue={hue} onAdd={noop} onRename={noop} onReset={noop} onColor={noop} onDrop={noop} onRetype={noop} />,
     "Put the name back"]);
   // Left as the page found it, so no later case renders against a shelf that

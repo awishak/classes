@@ -46,7 +46,7 @@ import { tagPatches, typePatches, sharePatches, wouldShare, tagsAcross } from ".
 import { SEEDS } from "../config/seed-library.js";
 import { newSeeds, seedPatch } from "./seeds.js";
 import { roomKeys, roomItems, roomCounts, blockFromRoom } from "./room.js";
-import { Seeds, Room, Kinds } from "./RepoMore.jsx";
+import { Seeds, Room, BlockTypes } from "./RepoMore.jsx";
 import { genId } from "../utils.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -576,7 +576,7 @@ export default function RepoPage() {
           <h1 className="repo-title">Repository</h1>
           <span className="repo-count">{items.length} things</span>
           <a className="repo-focus repo-chip repo-ideas" href="/repo/ideas">Ideas</a>
-          <button className="repo-focus repo-chip" onClick={() => setTyping(!typing)} aria-pressed={typing}>Type</button>
+          <button className="repo-focus repo-chip" onClick={() => setTyping(!typing)} aria-pressed={typing}>Fonts</button>
           <button className="repo-focus repo-add" onClick={() => setAdding(true)}>+ Add</button>
         </div>
       </header>
@@ -590,6 +590,8 @@ export default function RepoPage() {
             {chip(!kind, "Everything", () => set({ kind: "" }))}
             {kinds.filter(t => counts[t.id]).map(t =>
               chip(kind === t.id, t.label + " " + counts[t.id], () => set({ kind: kind === t.id ? "" : t.id }), hue(t.id)))}
+            {chip(lens === "types", "Edit the types",
+              () => set({ lens: lens === "types" ? "" : "types" }), "#4b5563")}
           </div>
           <div className="repo-row">
             {chip(!lens, "The whole shelf", () => set({ lens: "" }))}
@@ -605,8 +607,6 @@ export default function RepoPage() {
               () => set({ lens: lens === "seeds" ? "" : "seeds" }), "#9f1239")}
             {chip(lens === "room", "What the room made" + (room ? " " + room.length : ""),
               () => set({ lens: lens === "room" ? "" : "room" }), "#0f766e")}
-            {chip(lens === "kinds", "Kinds " + kinds.length,
-              () => set({ lens: lens === "kinds" ? "" : "kinds" }), "#4b5563")}
           </div>
           <div className="repo-row">
             {chip(!where, "Every class", () => set({ where: "" }))}
@@ -644,8 +644,8 @@ export default function RepoPage() {
           <Links blocks={linky} busy={!!checking} done={checking?.done || 0} total={checking?.total || 0}
             onCheck={checkLinks} onlyBad={onlyBad} setOnlyBad={setOnlyBad} />
         ) : null}
-        {lens === "kinds" ? (
-          <Kinds types={kinds} counts={counts} orphans={orphanTypes(items, kinds)} hue={hue}
+        {lens === "types" ? (
+          <BlockTypes types={kinds} counts={counts} orphans={orphanTypes(items, kinds)} hue={hue}
             onAdd={(label, hint) => addType(writeTo("shared"), label, hint)}
             onRename={(id, label) => renameType(writeTo("shared"), id, label)}
             onReset={id => resetName(writeTo("shared"), id)}
@@ -805,7 +805,7 @@ export function Bulk({ n, rows, planOf, stores, onTag, onType, onShare, onClear,
         </button>
       </div>
       <div className="repo-row">
-        <span className="repo-label">Change the kind</span>
+        <span className="repo-label">Change the type</span>
         {allTypes().map(t => (
           <button key={t.id} className="repo-focus repo-chip"
             onClick={() => { onType(t.id); setSaid(n + " now " + t.label.toLowerCase()); }}>

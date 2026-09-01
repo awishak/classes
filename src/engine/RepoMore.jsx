@@ -16,14 +16,14 @@ import { BUILT_IN } from "./types.js";
 import { PALETTE } from "./colors.js";
 import { hostOf } from "./links.js";
 
-// The kinds a block can be, as a list Andrew edits.
+// The types a block can be, as a list Andrew edits.
 //
-// Eight kinds shipped in the code and eight is a guess about how one person
+// Eight types shipped in the code and eight is a guess about how one person
 // files their material. So: rename any of them, add his own, colour each one,
-// and delete one he added. A kind holding blocks says how many, because that
-// number is the whole question when he is deciding whether the kind was a good
+// and delete one he added. A type holding blocks says how many, because that
+// number is the whole question when he is deciding whether the type was a good
 // idea.
-export function Kinds({ types, counts, orphans, hue, onAdd, onRename, onReset, onColor, onDrop, onRetype }) {
+export function BlockTypes({ types, counts, orphans, hue, onAdd, onRename, onReset, onColor, onDrop, onRetype }) {
   const [naming, setNaming] = useState("");
   const [hint, setHint] = useState("");
   const [open, setOpen] = useState("");
@@ -32,20 +32,20 @@ export function Kinds({ types, counts, orphans, hue, onAdd, onRename, onReset, o
     <div className="repo-lens">
       <p className="repo-lens-say">
         What a block can be. The eight the code ships with can be renamed and recoloured, and the ones you add are
-        yours to name, colour and delete. A kind you add is a label and a colour, which is what a filing category is:
+        yours to name, colour and delete. A type you add is a label and a colour, which is what a filing category is:
         the eight built-in ids do work elsewhere, so an assignment goes onto the readings as an assignment and a set
         holds the blocks inside it.
       </p>
 
       <div className="repo-kind-add">
-        <input className="repo-input repo-tag-in" value={naming} placeholder="A new kind, say Video"
-          aria-label="The name of a new kind" onChange={e => setNaming(e.target.value)}
+        <input className="repo-input repo-tag-in" value={naming} placeholder="A new type, say Video"
+          aria-label="The name of a new type" onChange={e => setNaming(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter" && naming.trim()) { onAdd(naming, hint); setNaming(""); setHint(""); } }} />
-        <input className="repo-input" value={hint} placeholder="What the kind holds, in a few words"
-          aria-label="What the new kind holds" onChange={e => setHint(e.target.value)} />
+        <input className="repo-input" value={hint} placeholder="What the type holds, in a few words"
+          aria-label="What the new type holds" onChange={e => setHint(e.target.value)} />
         <button className="repo-focus repo-save" disabled={!naming.trim()}
           onClick={() => { onAdd(naming, hint); setNaming(""); setHint(""); }}>
-          Add the kind
+          Add the type
         </button>
       </div>
 
@@ -54,7 +54,7 @@ export function Kinds({ types, counts, orphans, hue, onAdd, onRename, onReset, o
           <div className="repo-cluster-top">
             <span className="repo-kind">{t.label}</span>
             <input className="repo-input repo-tag-in" defaultValue={t.label} key={t.label}
-              aria-label={"What to call the " + t.label + " kind"}
+              aria-label={"What to call the " + t.label + " type"}
               onKeyDown={e => { if (e.key === "Enter") onRename(t.id, e.target.value); }}
               onBlur={e => { if (e.target.value.trim() && e.target.value !== t.label) onRename(t.id, e.target.value); }} />
             <span className="repo-copy-n">{counts[t.id] ? counts[t.id] + " on the shelf" : "nothing yet"}</span>
@@ -66,7 +66,7 @@ export function Kinds({ types, counts, orphans, hue, onAdd, onRename, onReset, o
             {BUILT_IN.has(t.id) ? (
               <button className="repo-focus repo-chip" onClick={() => onReset(t.id)}>Put the name back</button>
             ) : counts[t.id] ? (
-              <span className="repo-warn">Move the blocks off this kind to delete the kind</span>
+              <span className="repo-warn">Move the blocks off this type to delete the type</span>
             ) : (
               <button className="repo-focus repo-chip repo-del" onClick={() => onDrop(t.id)}>Delete</button>
             )}
@@ -90,17 +90,17 @@ export function Kinds({ types, counts, orphans, hue, onAdd, onRename, onReset, o
       {orphans.length ? (
         <section className="repo-cluster" style={{ "--kind": "#9f1239" }}>
           <div className="repo-cluster-top">
-            <span className="repo-kind">Kinds with no name</span>
+            <span className="repo-kind">Types with no name</span>
           </div>
           <p className="repo-plan">
-            Blocks carrying a kind that no longer exists. They still say the id they were given, and they can be
-            moved to a kind that does exist.
+            Blocks carrying a type that no longer exists. They still say the id they were given, and they can be
+            moved to a type that does exist.
           </p>
           {orphans.map(o => (
             <div key={o.id} className="repo-row">
               <code className="repo-key">{o.id}</code>
               <span className="repo-copy-n">{o.n} blocks</span>
-              <select className="repo-select" value="" aria-label={"Move the " + o.n + " blocks to another kind"}
+              <select className="repo-select" value="" aria-label={"Move the " + o.n + " blocks to another type"}
                 onChange={e => { if (e.target.value) onRetype(o.id, e.target.value); }}>
                 <option value="">Move them to</option>
                 {types.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
