@@ -326,8 +326,15 @@ export default function RepoPage() {
   // Put a block into a section of a day, the way the dashboard does when I drag
   // one in: the row holds a pointer to the block rather than a copy of the
   // words, so editing the block still changes what the room sees.
+  // The name of the section, not the key of the section: a section made by hand
+  // on a day has a key like sec-m4x9q2, and a line saying a reading landed in
+  // sec-m4x9q2 tells me nothing about where the reading went.
+  const nameOf = (cls, day, slot) =>
+    (sectionsOf(cls, day).find(([k]) => k === slot) || [])[1] || slot;
+
   const placeOnDay = (row, cls, date, slot) => {
     let landed = "";
+    let name = "";
     writeTo(cls.id)(prev => {
       const plans = { ...(prev.dayPlans || {}) };
       const day = { ...blankDay(cls), ...(plans[date] || {}) };
@@ -339,12 +346,13 @@ export default function RepoPage() {
       slots[target] = { ...bucket, items: [...bucket.items, { id: genId(), blockId: row.id }] };
       plans[date] = { ...day, slots };
       landed = target;
+      name = nameOf(cls, day, target);
       return { ...prev, dayPlans: plans };
     });
     if (landed === "none") return "That day has no sections yet. Make one on the dashboard first.";
     if (!landed) return "Already on that day.";
     stampScheduled(writeTo(row.target), row.id, date);
-    return cls.code + ", " + date + ", in " + landed;
+    return cls.code + ", " + date + ", in " + name;
   };
 
   // The other destination: the week's assigned list, which is what students
@@ -458,6 +466,7 @@ export default function RepoPage() {
   const bulkPlace = (cls, date, slot) => {
     if (!chosen.length) return "Nothing is selected.";
     let landed = "";
+    let name = "";
     let added = 0;
     writeTo(cls.id)(prev => {
       const plans = { ...(prev.dayPlans || {}) };
@@ -471,6 +480,7 @@ export default function RepoPage() {
       if (!rows.length) return prev;
       added = rows.length;
       landed = target;
+      name = nameOf(cls, day, target);
       slots[target] = { ...bucket, items: [...bucket.items, ...rows] };
       plans[date] = { ...day, slots };
       return { ...prev, dayPlans: plans };
@@ -478,7 +488,7 @@ export default function RepoPage() {
     if (landed === "none") return "That day has no sections yet. Make one on the dashboard first.";
     if (!added) return "All " + chosen.length + " are on that day already.";
     stampMany(chosen, date);
-    return added + " into " + landed + ", " + cls.code + " on " + date;
+    return added + " into " + name + ", " + cls.code + " on " + date;
   };
 
   const bulkAssign = (cls, date) => {
