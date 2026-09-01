@@ -21,7 +21,10 @@ import ClassroomView from "../src/engine/ClassroomView.jsx";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
-  TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk } from "../src/engine/RepoPage.jsx";
+  TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
+  Steps as RepoSteps } from "../src/engine/RepoPage.jsx";
+import { FLAGS, healthCounts, carries, allClear } from "../src/engine/health.js";
+import { remember, undoPatches, pushEntry, sayEntry, LIMIT } from "../src/engine/undo.js";
 import { Seeds as RepoSeeds, Room as RepoRoom, BlockTypes as RepoTypes } from "../src/engine/RepoMore.jsx";
 import { readTypes, readAdded, addType, renameType, resetName, dropType, idForLabel, orphanTypes }
   from "../src/engine/types.js";
@@ -343,55 +346,120 @@ cases.push(["Repository", <RepoPage />]);
   cases.push(["Repository type sheet, chosen", <RepoType fonts={{ cols: "fraunces", rows: "grotesk", page: "plex" }}
     bold onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Heavier rows"]);
 
-  // ─── the kinds, as a list Andrew edits ───
-  // Eight kinds shipped in the code, and eight is a guess about how one person
-  // files their material. A kind he adds has to reach every reader, including
+  // ─── what is wrong with the shelf ───
+  const shelf = [
+    { id: "h1", type: "link", title: "Tagged and used", headline: "A headline.", url: "https://a.com",
+      tags: ["framing"], uses: [{ cls: cfg0, date: "Sep 1", section: "opener" }], link: { at: "x", status: 200 } },
+    { id: "h2", type: "link", title: "Bare", headline: "", url: "", tags: [], uses: [] },
+    { id: "h3", type: "note", title: "A note with no link, which is fine", headline: "Said.", url: "",
+      tags: ["framing"], uses: [{ cls: cfg0, date: "Sep 1", section: "opener" }] },
+    { id: "h4", type: "link", title: "Dead", headline: "Gone.", url: "https://b.com", tags: ["x"],
+      uses: [{ cls: cfg0, date: "Sep 1", section: "opener" }], link: { at: "x", status: 404 } },
+  ];
+  const hc = healthCounts(shelf);
+  if (hc.untagged !== 1) { console.error("  FAIL  health: counted " + hc.untagged + " untagged"); failedEarly++; }
+  if (hc.nohead !== 1) { console.error("  FAIL  health: counted " + hc.nohead + " with no headline"); failedEarly++; }
+  // A note with no link is not a fault; an article with no link is.
+  if (hc.nolink !== 1) { console.error("  FAIL  health: counted " + hc.nolink + " articles with no link"); failedEarly++; }
+  if (hc.never !== 1) { console.error("  FAIL  health: counted " + hc.never + " never used"); failedEarly++; }
+  if (hc.broken !== 1) { console.error("  FAIL  health: counted " + hc.broken + " broken links"); failedEarly++; }
+  if (shelf.filter(b => carries(b, "untagged")).length !== 1) { console.error("  FAIL  health: the untagged filter caught the wrong rows"); failedEarly++; }
+  // An id from a stale address hides nothing rather than emptying the table.
+  if (shelf.filter(b => carries(b, "nonsense")).length !== shelf.length) { console.error("  FAIL  health: an unknown flag emptied the shelf"); failedEarly++; }
+  if (allClear(hc)) { console.error("  FAIL  health: a shelf with five faults called itself clear"); failedEarly++; }
+  if (!allClear(healthCounts([shelf[0]]))) { console.error("  FAIL  health: a clean shelf still claimed a fault"); failedEarly++; }
+  if (FLAGS.length !== 5) { console.error("  FAIL  health: " + FLAGS.length + " numbers rather than five"); failedEarly++; }
+
+  cases.push(["Repository health", <RepoHealth counts={hc} flag="" onFlag={noop} />, "Never used"]);
+  cases.push(["Repository health, one pressed", <RepoHealth counts={hc} flag="untagged" onFlag={noop} />, "Untagged"]);
+  cases.push(["Repository health, all clear", <RepoHealth counts={healthCounts([shelf[0]])} flag="" onFlag={noop} />,
+    "Nothing is missing"]);
+
+  // ─── the way back ───
+  // The photograph is taken before the change and written straight over the
+  // top, only on the blocks it holds, so an edit made to another block in
+  // between survives.
+  const undoStores = {
+    [cfg0.id]: { blocks: { u1: { id: "u1", type: "link", title: "Before", tags: ["a"] },
+      u2: { id: "u2", type: "note", title: "Untouched" } } },
+    shared: { blocks: {} },
+  };
+  const step = remember({ stores: undoStores, classes: [cfg0], ids: ["u1", "u3"], what: "Edited Before" });
+  if (step.before.length !== 2) { console.error("  FAIL  undo: the photograph holds " + step.before.length); failedEarly++; }
+  if (step.before[1].block !== null) { console.error("  FAIL  undo: a block that does not exist was photographed as one that does"); failedEarly++; }
+  if (sayEntry(step) !== "Edited Before, 2 blocks") { console.error("  FAIL  undo: the line says " + sayEntry(step)); failedEarly++; }
+
+  // The change: u1 edited and moved to the shared shelf, u3 created there.
+  const changed = {
+    [cfg0.id]: { blocks: { u2: undoStores[cfg0.id].blocks.u2 } },
+    shared: { blocks: { u1: { id: "u1", type: "story", title: "After", tags: [] }, u3: { id: "u3", title: "New" } } },
+  };
+  const restored = undoPatches({ stores: changed, classes: [cfg0], entry: step });
+  if (restored[cfg0.id].blocks.u1.title !== "Before") { console.error("  FAIL  undo: the block did not come home"); failedEarly++; }
+  if (restored.shared.blocks.u1) { console.error("  FAIL  undo: the moved block was left on the shared shelf as well"); failedEarly++; }
+  if (restored.shared.blocks.u3) { console.error("  FAIL  undo: a block made by the change survived the undo"); failedEarly++; }
+  if (!restored[cfg0.id].blocks.u2) { console.error("  FAIL  undo: a block nobody touched was thrown away"); failedEarly++; }
+
+  let stack = [];
+  stack = pushEntry(stack, step);
+  stack = pushEntry(stack, remember({ stores: undoStores, classes: [cfg0], ids: [], what: "Nothing" }));
+  if (stack.length !== 1) { console.error("  FAIL  undo: a change touching no blocks went on the stack"); failedEarly++; }
+  for (let i = 0; i < LIMIT + 5; i++) stack = pushEntry(stack, { ...step, what: "Step " + i });
+  if (stack.length !== LIMIT) { console.error("  FAIL  undo: the stack grew to " + stack.length); failedEarly++; }
+  if (stack[0].what !== "Step " + (LIMIT + 4)) { console.error("  FAIL  undo: the newest step is not on top"); failedEarly++; }
+
+  cases.push(["Repository steps", <RepoSteps steps={[step]} onBack={noop} />, "Put it back"]);
+  cases.push(["Repository steps, none", <RepoSteps steps={[]} onBack={noop} />]);
+
+  // ─── the types, as a list Andrew edits ───
+  // Eight types shipped in the code, and eight is a guess about how one person
+  // files their material. A type he adds has to reach every reader, including
   // the dozen call sites that only ever call typeOf.
   let kindStore = {};
   const kindUpdate = (m) => { kindStore = m(kindStore); };
   addType(kindUpdate, "Video", "Something to watch.");
   addType(kindUpdate, "Video");
   const added = readAdded(kindStore);
-  if (added.length !== 2) { console.error("  FAIL  kinds: adding two kinds made " + added.length); failedEarly++; }
+  if (added.length !== 2) { console.error("  FAIL  types: adding two kinds made " + added.length); failedEarly++; }
   if (added[0].id !== "video" || added[1].id !== "video-2") {
-    console.error("  FAIL  kinds: the ids came out as " + added.map(t => t.id).join()); failedEarly++; }
-  if (idForLabel("Article", []) !== "article") { console.error("  FAIL  kinds: a plain name made a bad id"); failedEarly++; }
-  if (idForLabel("Note", []) !== "note-2") { console.error("  FAIL  kinds: a name clashing with a built-in kind was not numbered"); failedEarly++; }
+    console.error("  FAIL  types: the ids came out as " + added.map(t => t.id).join()); failedEarly++; }
+  if (idForLabel("Article", []) !== "article") { console.error("  FAIL  types: a plain name made a bad id"); failedEarly++; }
+  if (idForLabel("Note", []) !== "note-2") { console.error("  FAIL  types: a name clashing with a built-in kind was not numbered"); failedEarly++; }
 
   renameType(kindUpdate, "link", "Reading");
   const renamed = readTypes(kindStore);
   if ((renamed.find(t => t.id === "link") || {}).label !== "Reading") {
-    console.error("  FAIL  kinds: renaming a built-in kind did not take"); failedEarly++; }
-  if (renamed.length !== 10) { console.error("  FAIL  kinds: the whole list came to " + renamed.length); failedEarly++; }
+    console.error("  FAIL  types: renaming a built-in kind did not take"); failedEarly++; }
+  if (renamed.length !== 10) { console.error("  FAIL  types: the whole list came to " + renamed.length); failedEarly++; }
   renameType(kindUpdate, "video", "Watch");
-  if ((readAdded(kindStore)[0] || {}).label !== "Watch") { console.error("  FAIL  kinds: renaming an added kind did not take"); failedEarly++; }
+  if ((readAdded(kindStore)[0] || {}).label !== "Watch") { console.error("  FAIL  types: renaming an added kind did not take"); failedEarly++; }
 
   // Every reader goes through typeOf, so the registry is what makes a renamed
   // kind say the new word on the dashboard as well as here.
   registerTypes({ added: readAdded(kindStore), labels: kindStore.typeLabels });
-  if (typeOf("link").label !== "Reading") { console.error("  FAIL  kinds: typeOf still says " + typeOf("link").label); failedEarly++; }
-  if (typeOf("video").label !== "Watch") { console.error("  FAIL  kinds: typeOf does not know an added kind"); failedEarly++; }
-  if (allTypes().length !== 10) { console.error("  FAIL  kinds: the registry holds " + allTypes().length); failedEarly++; }
+  if (typeOf("link").label !== "Reading") { console.error("  FAIL  types: typeOf still says " + typeOf("link").label); failedEarly++; }
+  if (typeOf("video").label !== "Watch") { console.error("  FAIL  types: typeOf does not know an added kind"); failedEarly++; }
+  if (allTypes().length !== 10) { console.error("  FAIL  types: the registry holds " + allTypes().length); failedEarly++; }
   // A kind deleted while blocks still carry it says the id back rather than
   // calling the block a Note.
-  if (typeOf("gone").label !== "gone") { console.error("  FAIL  kinds: a kind with no name became " + typeOf("gone").label); failedEarly++; }
+  if (typeOf("gone").label !== "gone") { console.error("  FAIL  types: a kind with no name became " + typeOf("gone").label); failedEarly++; }
 
   writeTypeColor(kindUpdate, "video", "purple-mid");
   if (colorOfType(kindStore.colors, "video") !== "#6e30b5") {
-    console.error("  FAIL  kinds: an added kind got the colour " + colorOfType(kindStore.colors, "video")); failedEarly++; }
+    console.error("  FAIL  types: an added kind got the colour " + colorOfType(kindStore.colors, "video")); failedEarly++; }
   if (colorOfType(kindStore.colors, "link") !== colorOfType({}, "link")) {
-    console.error("  FAIL  kinds: colouring one kind moved another"); failedEarly++; }
+    console.error("  FAIL  types: colouring one kind moved another"); failedEarly++; }
 
   dropType(kindUpdate, "note");
-  if (readTypes(kindStore).length !== 10) { console.error("  FAIL  kinds: a built-in kind was deleted"); failedEarly++; }
+  if (readTypes(kindStore).length !== 10) { console.error("  FAIL  types: a built-in kind was deleted"); failedEarly++; }
   dropType(kindUpdate, "video-2");
-  if (readAdded(kindStore).length !== 1) { console.error("  FAIL  kinds: deleting an added kind left " + readAdded(kindStore).length); failedEarly++; }
+  if (readAdded(kindStore).length !== 1) { console.error("  FAIL  types: deleting an added kind left " + readAdded(kindStore).length); failedEarly++; }
   resetName(kindUpdate, "link");
   if ((readTypes(kindStore).find(t => t.id === "link") || {}).label !== "Article") {
-    console.error("  FAIL  kinds: putting a built-in name back did not take"); failedEarly++; }
+    console.error("  FAIL  types: putting a built-in name back did not take"); failedEarly++; }
 
   const strays = orphanTypes([{ type: "video" }, { type: "gone" }, { type: "gone" }], readTypes(kindStore));
-  if (strays.length !== 1 || strays[0].n !== 2) { console.error("  FAIL  kinds: the blocks with no kind were miscounted"); failedEarly++; }
+  if (strays.length !== 1 || strays[0].n !== 2) { console.error("  FAIL  types: the blocks with no kind were miscounted"); failedEarly++; }
 
   cases.push(["Repository types", <RepoTypes types={readTypes(kindStore)} counts={{ link: 12, video: 1 }}
     orphans={strays} hue={hue} onAdd={noop} onRename={noop} onReset={noop} onColor={noop} onDrop={noop}
@@ -419,13 +487,13 @@ cases.push(["Repository", <RepoPage />]);
   if (!said.includes("Article") || !said.includes(cfg0.code)) {
     console.error("  FAIL  views: a view described itself as " + said); failedEarly++; }
 
-  let shelf = { repoViews: [] };
-  const shelfUpdate = (m) => { shelf = m(shelf); };
+  let pinboard = { repoViews: [] };
+  const shelfUpdate = (m) => { pinboard = m(pinboard); };
   saveView(shelfUpdate, { id: "v1", name: "Untagged readings", filters: asked });
-  if (readViews(shelf).length !== 1) { console.error("  FAIL  views: pinning kept nothing"); failedEarly++; }
-  if (!viewFor(readViews(shelf), asked)) { console.error("  FAIL  views: the pinned question was not recognised"); failedEarly++; }
+  if (readViews(pinboard).length !== 1) { console.error("  FAIL  views: pinning kept nothing"); failedEarly++; }
+  if (!viewFor(readViews(pinboard), asked)) { console.error("  FAIL  views: the pinned question was not recognised"); failedEarly++; }
   dropView(shelfUpdate, "v1");
-  if (readViews(shelf).length) { console.error("  FAIL  views: unpinning kept the view"); failedEarly++; }
+  if (readViews(pinboard).length) { console.error("  FAIL  views: unpinning kept the view"); failedEarly++; }
 
   cases.push(["Repository views", <RepoViews views={[{ id: "v1", name: "Untagged readings", filters: asked }]}
     pinned={null} blank={false} naming={null} here={asked} say={() => "COMM 1"} onGo={noop} onName={noop}

@@ -12,12 +12,12 @@
 // read and write the same seven fields.
 //
 // The names in the address are the names I would type by hand: q, kind, class,
-// tag, lens, sort, dir. `class` rather than `where`, because the chip row says
+// tag, flag, lens, sort, dir. `class` rather than `where`, because the chip row says
 // Class and an address nobody can guess is an address nobody writes.
 
 // Everything a question about the shelf is made of, and what each field is
 // when nobody has answered it.
-export const BLANK = { q: "", kind: "", where: "", tag: "", lens: "", col: "used", dir: "desc" };
+export const BLANK = { q: "", kind: "", where: "", tag: "", flag: "", lens: "", col: "used", dir: "desc" };
 
 const FIELDS = Object.keys(BLANK);
 
@@ -29,6 +29,7 @@ export const readFilters = (search) => {
     kind: p.get("kind") || "",
     where: p.get("class") || "",
     tag: p.get("tag") || "",
+    flag: p.get("flag") || "",
     lens: p.get("lens") || "",
     col: p.get("sort") || BLANK.col,
     dir: dir === "asc" || dir === "desc" ? dir : BLANK.dir,
@@ -44,6 +45,7 @@ export const filterQuery = (f) => {
   put("kind", f.kind, "");
   put("class", f.where, "");
   put("tag", f.tag, "");
+  put("flag", f.flag, "");
   put("lens", f.lens, "");
   put("sort", f.col, BLANK.col);
   put("dir", f.dir, BLANK.dir);
@@ -59,7 +61,7 @@ export const isBlank = (f) => sameFilters(f, BLANK);
 // putting in the history, and a chip is. Back should undo the chip I just
 // pressed rather than the last keystroke of a word I typed.
 export const isStep = (a, b) =>
-  ["kind", "where", "tag", "lens"].some(k => (a?.[k] || "") !== (b?.[k] || ""));
+  ["kind", "where", "tag", "flag", "lens"].some(k => (a?.[k] || "") !== (b?.[k] || ""));
 
 // What a filter set is asking, in words, for the name of a saved view and for
 // the label on the chip. Reads left to right the way the filter bar does.
@@ -69,10 +71,17 @@ export function viewWords(f, { classes, label, sharedLabel } = {}) {
   if (f.where === "shared") bits.push(sharedLabel || "Shared");
   else if (f.where) bits.push(((classes || []).find(c => c.id === f.where) || {}).code || f.where);
   if (f.tag) bits.push("tagged " + f.tag);
+  if (f.flag) bits.push(FLAG_WORDS[f.flag] || f.flag);
   if ((f.q || "").trim()) bits.push("“" + f.q.trim() + "”");
   if (f.lens) bits.push(LENS_WORDS[f.lens] || f.lens);
   return bits.length ? bits.join(" · ") : "The whole shelf";
 }
+
+// The health numbers, as the words a saved view is named with.
+const FLAG_WORDS = {
+  untagged: "untagged", nohead: "with no headline", nolink: "with no link",
+  never: "never used", broken: "with a broken link",
+};
 
 const LENS_WORDS = {
   dupes: "duplicates", loose: "loose ends", tags: "tags", types: "the types",

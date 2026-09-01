@@ -47,6 +47,36 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep1b", date: "Tuesday, September 1 \u00b7 later", title: "What is wrong with the shelf, and a way back from every fix",
+    blurb: "Two off the backlog, and they belong together. Five numbers across the top say what is wrong with the repository and each number is a filter. And every change made here can be put back, which the shelf needed the moment one press started retagging four hundred rows.",
+    groups: [
+      { name: "The health strip, idea 5", items: [
+        ["Five numbers, and each number is a filter", "Untagged, no headline, articles with no link, never used, link broken. The page could always say what I have; saying what is wrong with what I have took a filter, a sort, a scroll and counting in my head, which is a question I therefore never asked."],
+        ["A count I can act on", "Press the number and only the rows the number is about are left. Press it, select every match on the heading checkbox, tag the lot in the bulk bar: that loop is what finally fixes four hundred rows of tags, and half of the loop shipped yesterday."],
+        ["The numbers describe what I am looking at", "The strip counts inside whatever the class, type and tag filters have already left on screen, so filtering to COMM 118 and reading a number about the whole shelf cannot happen."],
+        ["A note with no link is not a fault", "Only articles are counted for a missing link, because a story or a note was never going to have one. A fault the tool invents is a number I learn to ignore."],
+        ["A clean shelf says so in a sentence", "Five zeroes is a worse way to say nothing is wrong than saying nothing is wrong."],
+      ] },
+      { name: "A way back, idea 19", items: [
+        ["Every change is photographed first", "The blocks a change is about to touch are held as they are, in the tab, before the change lands. Putting them back is the photograph written straight over the top. Edits, deletes, the whole bulk bar, a tag renamed across every store, the seeds, and anything kept from the room."],
+        ["Surgical rather than wholesale", "Restoring a store as it was would throw away every other change made since, including one made in another tab. Only the blocks in the photograph are written, so an edit made to a different block in between survives an undo of this one."],
+        ["A move to the shared shelf comes back too", "The photograph holds where a block lived as well as what it said, so undoing a move takes the block out of the shared store and puts it back with its class. A block the change created is taken away again, because it was nowhere before."],
+        ["It says what it will put back", "Edited Why We Bet. Tagged betting, 40 blocks. Putting one headline back and putting four hundred tags back should not read the same, so the count is in the line."],
+        ["Twenty steps, and they die with the tab", "A change I made last Tuesday is not something a button can put back, and pretending otherwise would mean keeping every version of every block forever to buy a button I would press twice a year. The offer is for the rest of the visit, and the page says as much."],
+      ] },
+      { name: "The build", items: [
+        ["87 surfaces to 92", "The strip in three states, the way back in two, plus the counting itself: an article with no link counts and a note with no link does not, an unknown flag in a stale address hides nothing rather than emptying the table, and the photograph puts a moved block home while taking away one the change created."],
+      ] },
+    ],
+    note: {
+      title: "What is next",
+      lines: [
+        "Idea 21, the one Andrew found himself: every quiz question he has ever written is on the shelf, ported in with the game it came from kept as a set, and the game editor cannot see any of the questions. It is the last one marked start here.",
+        "Placing a block on a day is still outside the way back. A photograph of a day plan is a different shape from a photograph of a block, and taking a row off a day is two presses on the dashboard.",
+      ],
+    },
+  },
+  {
     id: "sep1", date: "Tuesday, September 1", title: "The types are his now",
     blurb: "Eight types shipped in the code, and eight is a guess about how one person files their material. Rename any of them, add as many as you want, colour each one, and delete one you added. Plus the fix for a button that said a day had no sections while the dashboard was drawing four.",
     groups: [

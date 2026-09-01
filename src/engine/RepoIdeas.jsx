@@ -55,7 +55,7 @@ const IDEAS = [
   { n: 4, done: "31 Aug", group: "true", size: "medium", title: "Check the links",
     what: "Walk every URL on the shelf, flag what returns a 404 or redirects somewhere else entirely, and put the flag in the row.",
     why: "A dead link gets discovered in front of a room, which is the worst available moment for the discovery." },
-  { n: 5, group: "true", size: "small", first: true, title: "A health strip across the top",
+  { n: 5, done: "1 Sep", group: "true", size: "small", first: true, title: "A health strip across the top",
     what: "Five numbers: untagged, no headline, no link, never used, link broken. Each number a filter.",
     why: "The repository should be the page that tells me what is wrong with the repository, rather than a page I have to interrogate." },
 
@@ -103,7 +103,7 @@ const IDEAS = [
   { n: 18, group: "more", size: "medium", title: "Bring material in in bulk",
     what: "Paste a list of links, or drop a markdown file, and get blocks with titles and hosts filled in.",
     why: "Adding one thing at a time sets the ceiling on how much of my material ever reaches the repository, and the material outside the repository is the material I forget I have." },
-  { n: 19, group: "more", size: "medium", first: true, title: "Undo, on a block",
+  { n: 19, done: "1 Sep", group: "more", size: "medium", first: true, title: "Undo, on a block",
     what: "Keep the previous words on the block, and offer to put the words back for the rest of the session.",
     why: "An edit here rewrites a block used on nine days at once, with no history and no way back. Editing has to feel safe before editing gets used." },
   { n: 21, group: "reuse", size: "medium", first: true, title: "Build a game out of the shelf",
@@ -156,10 +156,10 @@ export default function RepoIdeas() {
           <span className="ri-label">Where I would start</span>
           <p className="ri-picks-text">
             {firsts ? <><b>{firsts}</b>. </> : null}
-            Five is an afternoon and makes the rest of the mess visible. Nineteen is what makes me trust
-            editing a block that nine days depend on. The nine already built came first for two reasons: four
-            of them were about the material being wrong, and the rest were about the distance between wanting
-            a thing and having the thing placed.
+            Twenty-one is the one Andrew found himself: every quiz question he has ever written is on the
+            shelf and the game editor cannot see any of the questions. The eleven already built came in three
+            waves. First the material being wrong, then the distance between wanting a thing and having the
+            thing placed, then the safety net the fast bulk work needed.
           </p>
         </div>
 

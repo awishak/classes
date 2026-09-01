@@ -31,6 +31,8 @@ import { typeOf, allTypes, registerTypes, SHARED_KEY, SHARED_LABEL, makeBlock, w
 import { colorOfType, readColors, writeTypeColor } from "./colors.js";
 import { readTypes, readAdded, readLabels, addType, renameType, resetName, dropType,
   countTypes, orphanTypes } from "./types.js";
+import { FLAGS, carries, healthCounts, allClear } from "./health.js";
+import { remember, undoPatches, pushEntry, sayEntry } from "./undo.js";
 import { normSlot, blankDay, sectionsOf } from "./dayplan.js";
 import { findDuplicates, findLooseEnds, applyMerge,
   dropFlowRow, dropWeekItem, unlinkWeekItem, blockFromWeekItem } from "./tidy.js";
@@ -82,7 +84,7 @@ export default function RepoPage() {
   // I can send it to myself, out of a saved view when I ask it again, and back
   // off the address bar when Back is pressed.
   const [f, setF] = useState(() => readFilters(window.location.search));
-  const { q, kind, where, tag, lens } = f;
+  const { q, kind, where, tag, flag, lens } = f;
   const set = (patch) => setF(prev => ({ ...prev, ...patch }));
   const [adding, setAdding] = useState(false);
   const [typing, setTyping] = useState(false);
@@ -93,6 +95,9 @@ export default function RepoPage() {
   // view worth keeping.
   const [picked, setPicked] = useState(() => new Set());
   const [naming, setNaming] = useState(null);
+  // Everything I have changed this visit, newest first, each one holding the
+  // blocks as they were before the change.
+  const [steps, setSteps] = useState([]);
   // What the room made, read only when I ask for it. Twenty more fetches on a
   // page I open to find one article is a page that got slower for nothing.
   const [room, setRoom] = useState(null);
@@ -272,6 +277,7 @@ export default function RepoPage() {
       if (where === "shared" && b.owner) return false;
       if (where && where !== "shared" && b.owner?.id !== where) return false;
       if (tag && !(b.tags || []).includes(tag)) return false;
+      if (flag && !carries(b, flag)) return false;
       if (!text) return true;
       // The places a thing was taught are worth searching as well, so a class
       // code or a date finds everything that ran then.
@@ -289,7 +295,17 @@ export default function RepoPage() {
       return (by ? by * sign : 0) || (a.title || "").localeCompare(b.title || "");
     });
     return out;
-  }, [items, q, kind, where, tag, f.col, f.dir]);
+  }, [items, q, kind, where, tag, flag, f.col, f.dir]);
+
+  // The health numbers count what the other filters have already left on
+  // screen, so the strip describes what I am looking at rather than the shelf.
+  const health = useMemo(() => healthCounts(items.filter(b => {
+    if (kind && b.type !== kind) return false;
+    if (where === "shared" && b.owner) return false;
+    if (where && where !== "shared" && b.owner?.id !== where) return false;
+    if (tag && !(b.tags || []).includes(tag)) return false;
+    return true;
+  })), [items, kind, where, tag]);
 
   const dupes = useMemo(() => findDuplicates(items), [items]);
   const loose = useMemo(() => (stores ? findLooseEnds(stores, ENGINE_LIST) : []), [stores]);
@@ -309,9 +325,25 @@ export default function RepoPage() {
     : { ...prev, col, dir: col === "used" || col === "made" ? "desc" : "asc" });
 
   // ─── writing ───
+  //
+  // Every write that touches blocks photographs them first. Nothing here is
+  // written to a store: the photograph is the blocks as they are, held in the
+  // tab, and putting them back is the photograph written over the top.
+  const keep = (what, ids) =>
+    setSteps(prev => pushEntry(prev, remember({ stores: ref.current, classes: ENGINE_LIST, ids, what })));
+
+  const stepBack = () => {
+    const entry = steps[0];
+    if (!entry) return;
+    const patches = undoPatches({ stores: ref.current, classes: ENGINE_LIST, entry });
+    Object.entries(patches).forEach(([target, data]) => writeTo(target)(() => data));
+    setSteps(prev => prev.slice(1));
+  };
+
   const addBlock = (target, patch) => {
     if (!keyOf(target)) return;
     const block = makeBlock(patch);
+    keep("Added " + (block.title || "a block"), [block.id]);
     writeBlock(writeTo(target), block);
     setAdding(false);
     setOpenId(block.id);
@@ -319,10 +351,12 @@ export default function RepoPage() {
 
   const saveBlock = (row, patch) => {
     const { owner, target, uses, ...block } = row;
+    keep("Edited " + (row.title || "a block"), [row.id]);
     writeBlock(writeTo(target), { ...block, ...patch });
   };
 
   const removeBlock = (row) => {
+    keep("Deleted " + (row.title || "a block"), [row.id]);
     deleteBlock(writeTo(row.target), row.id);
     setOpenId("");
   };
@@ -395,6 +429,8 @@ export default function RepoPage() {
   // One walk per store for a tag, because a tag lives on blocks in every store
   // at once and a rename that only reached one store is a tag split in two.
   const retag = (from, to) => {
+    keep(to ? "Renamed the tag " + from : "Removed the tag " + from,
+      items.filter(b => (b.tags || []).includes(from)).map(b => b.id));
     const patches = retagPatches({ stores: ref.current, classes: ENGINE_LIST, from, to });
     Object.entries(patches).forEach(([target, data]) => writeTo(target)(() => data));
   };
@@ -443,14 +479,19 @@ export default function RepoPage() {
   });
 
   const bulkTag = (add, remove) => {
+    keep(add?.length ? "Tagged " + add.join(", ") : "Took off " + (remove || []).join(", "), [...picked]);
     const patches = tagPatches({ stores: ref.current, classes: ENGINE_LIST, ids: [...picked], add, remove });
     writeAll(patches);
     return Object.keys(patches).length;
   };
-  const bulkType = (type) =>
+  const bulkType = (type) => {
+    keep("Made them " + typeOf(type).label.toLowerCase(), [...picked]);
     writeAll(typePatches({ stores: ref.current, classes: ENGINE_LIST, ids: [...picked], type }));
-  const bulkShare = () =>
+  };
+  const bulkShare = () => {
+    keep("Moved to " + SHARED_LABEL, [...picked]);
     writeAll(sharePatches({ stores: ref.current, classes: ENGINE_LIST, ids: [...picked] }));
+  };
 
   // One write per store rather than one per block, which matters at forty
   // rows: every save here carries the whole store and takes a backup first.
@@ -511,6 +552,7 @@ export default function RepoPage() {
   // is what rescues blocks left behind by a kind that was deleted.
   const retypeAll = (from, to) => {
     const ids = items.filter(b => b.type === from).map(b => b.id);
+    keep("Moved everything filed as " + from, ids);
     writeAll(typePatches({ stores: ref.current, classes: ENGINE_LIST, ids, type: to }));
   };
 
@@ -527,6 +569,8 @@ export default function RepoPage() {
   const fresh = newSeeds(SEEDS, items);
   const bringSeeds = (list) => {
     if (!list.length) return;
+    keep("Brought in " + (list.length === 1 ? list[0].title : list.length + " seeds"),
+      list.map(x => seedPatch(x).id));
     writeTo("shared")(prev => {
       const blocks = { ...(prev.blocks || {}) };
       list.forEach(seed => {
@@ -548,7 +592,9 @@ export default function RepoPage() {
     return !text || it.words.includes(text);
   });
   const keepRoom = (item) => {
-    writeBlock(writeTo(item.cls.id), makeBlock(blockFromRoom(item)));
+    const made = makeBlock(blockFromRoom(item));
+    keep("Kept " + (item.title || "something the room made"), [made.id]);
+    writeBlock(writeTo(item.cls.id), made);
     setRoomKept(prev => new Set(prev).add(item.key));
   };
 
@@ -585,6 +631,8 @@ export default function RepoPage() {
         <input className="repo-search" value={q} onChange={e => set({ q: e.target.value })}
           placeholder="Search everything" aria-label="Search the repository" autoFocus />
 
+        <Health counts={health} flag={flag} onFlag={id => set({ flag: flag === id ? "" : id, lens: "" })} />
+
         <div className="repo-filters">
           <div className="repo-row">
             {chip(!kind, "Everything", () => set({ kind: "" }))}
@@ -620,6 +668,7 @@ export default function RepoPage() {
             ) : null}
             <span className="repo-hits">{hits.length} {hits.length === 1 ? "match" : "matches"}</span>
           </div>
+          <Steps steps={steps} onBack={stepBack} />
           <Views views={views} pinned={pinned} blank={isBlank(f)} naming={naming} say={sayView} here={f}
             onGo={v => { setF({ ...BLANK, ...v.filters }); setNaming(null); }}
             onName={setNaming} onPin={pinView} onDrop={id => dropView(writeTo("shared"), id)}
@@ -717,6 +766,53 @@ export default function RepoPage() {
             onPlace={bulkPlace} onAssign={bulkAssign} />
         ) : null}
       </div>
+    </div>
+  );
+}
+
+// What is wrong with the shelf, in five numbers, each one a filter.
+//
+// The page could always say what I have. Saying what is wrong with what I have
+// took a filter, a sort, a scroll and counting in my head, which is a question
+// I therefore never asked. Now the answer is across the top, and pressing a
+// number leaves only the rows the number is about, which is what turns a count
+// into an afternoon of fixing.
+export function Health({ counts, flag, onFlag }) {
+  if (allClear(counts)) {
+    return <p className="repo-clear">Nothing is missing a tag, a headline or a link, and everything has been used.</p>;
+  }
+  return (
+    <div className="repo-health">
+      {FLAGS.map(x => (
+        <button key={x.id} className="repo-focus repo-heart" onClick={() => onFlag(x.id)}
+          aria-pressed={flag === x.id} disabled={!counts[x.id]}
+          style={flag === x.id ? { borderColor: x.hex, background: x.hex, color: "#fff" } : { borderColor: counts[x.id] ? x.hex : undefined }}>
+          <span className="repo-heart-n" style={flag === x.id ? undefined : { color: counts[x.id] ? x.hex : MUTED }}>
+            {counts[x.id]}
+          </span>
+          <span className="repo-heart-what">{x.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// The way back from the last thing I did.
+//
+// An edit rewrites a block that nine days point at, and one press of the bulk
+// bar retags four hundred rows. The stack lives in the tab, so this offers to
+// put things back for the rest of the visit and makes no promise about
+// tomorrow.
+export function Steps({ steps, onBack }) {
+  if (!steps.length) return null;
+  return (
+    <div className="repo-row repo-steps">
+      <span className="repo-label">Just now</span>
+      <span className="repo-steps-what">{sayEntry(steps[0])}</span>
+      <button className="repo-focus repo-chip" onClick={onBack}>Put it back</button>
+      <span className="repo-verdict">
+        {steps.length === 1 ? "1 change this visit" : steps.length + " changes this visit"}
+      </span>
     </div>
   );
 }
@@ -1287,6 +1383,21 @@ const CSS = `
   box-shadow:0 10px 30px -12px rgba(23,19,16,.4)}
 .repo-bulk-n{font-family:${MONO};font-size:12px;font-weight:600;letter-spacing:.06em;
   text-transform:uppercase;color:${TEXT}}
+
+/* The health strip. Five numbers, each a filter, big enough to read from
+   across the desk and dim when the number is zero. */
+.repo-health{display:flex;flex-wrap:wrap;gap:7px}
+.repo-heart{display:flex;align-items:baseline;gap:8px;min-height:${TAP}px;padding:0 14px;border-radius:12px;
+  border:1px solid ${BORDER};background:#fff;cursor:pointer;font-family:inherit;font-size:13.5px;color:${SECOND}}
+.repo-heart:hover:not(:disabled){box-shadow:0 2px 8px -3px rgba(23,19,16,.25)}
+.repo-heart:disabled{opacity:.5;cursor:default}
+.repo-heart-n{font-family:${MONO};font-size:19px;font-weight:600;letter-spacing:-.02em}
+.repo-heart-what{white-space:nowrap}
+.repo-clear{margin:0;font-size:15px;color:#047857}
+
+/* The way back. */
+.repo-steps{background:#fff;border-radius:12px;padding:7px 11px;box-shadow:0 0 0 1px rgba(23,19,16,.07)}
+.repo-steps-what{font-size:14px;color:${TEXT};overflow-wrap:anywhere}
 
 /* The kinds sheet: a row per kind, and the palette under whichever one is
    being coloured. */
