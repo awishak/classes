@@ -47,6 +47,30 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep1c", date: "Tuesday, September 1 \u00b7 evening", title: "The game editor can see the shelf",
+    blurb: "157 quiz questions have been sitting in the repository since the port, searchable and unusable at the same time, because the game editor knew nothing about blocks. Now a week of Team Trivia or a weekly game gets built by picking, and the right answers the port dropped are back on the questions.",
+    groups: [
+      { name: "Idea 21, from a question Andrew asked", items: [
+        ["From the repository, inside the game editor", "A panel in the weekly game editor and in Team Trivia setup. Search every question you have written, tick the ones you want, and they land in the game in the shape that editor saves: an option and a right answer for the weekly game, a question and an expected answer for trivia."],
+        ["A whole set at once", "The porting script kept each old game as a set holding its questions, and those sets were doing nothing. Week 7 Trivia, or Weekly Game week 2, comes back as the ten questions it was, on one press. Look shows what is inside before you commit."],
+        ["The right answers are back", "The port flattened what it knew into a sentence, Options: a · b · c · d, and dropped which one was right along with the category the question scored under. So 83 questions across COMM 118 and COMM 4 have had their answers written back onto the block from the old games, which still knew all of it. The other 74 never had an answer recorded, mostly trivia questions Andrew answers out loud."],
+        ["Blocks that were never repaired still work", "A question with no structure on it is read back out of the flattened sentence, so its options arrive and only the right answer is missing. The picker says so on the row rather than letting it be found later in a live game."],
+        ["A category that does not exist stays out", "COMM 118 scores On Topic and Sports World, COMM 4 scores On Reading and Extra. A question arriving from the shared shelf carrying the wrong vocabulary would land in a menu with no such option, so the category only comes across when the editor has one by that name."],
+      ] },
+      { name: "The build", items: [
+        ["92 surfaces to 94", "The picker in both shapes, plus the reading underneath: a set coming back whole, the flattened sentence parsed, a question with no right answer refusing to call itself ready, and the category guard."],
+        ["Two forked files, one panel", "COMM 118 and COMM 4 run their games from parallel forks of the same 4,000-line file. The panel lives in the engine and both files import it, so the next change to it happens once."],
+      ] },
+    ],
+    note: {
+      title: "What is left",
+      lines: [
+        "COMM 2 runs its games from a third file with a different shape, and the picker is not in it yet.",
+        "The backlog has nine left and nothing marked start here. Six of the nine are an hour each: last used, used alongside, a preview of the headline, a link to a block, density, and taking everything out as a file.",
+      ],
+    },
+  },
+  {
     id: "sep1b", date: "Tuesday, September 1 \u00b7 later", title: "What is wrong with the shelf, and a way back from every fix",
     blurb: "Two off the backlog, and they belong together. Five numbers across the top say what is wrong with the repository and each number is a filter. And every change made here can be put back, which the shelf needed the moment one press started retagging four hundred rows.",
     groups: [

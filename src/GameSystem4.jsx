@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useTheme, themedInteriorCrd, themedHeadingFont } from "./styles.jsx";
 import { genId, gp, Toast } from "./utils.jsx";
+import QuestionPicker from "./engine/QuestionPicker.jsx";
+import comm4cfg from "./config/comm4.js";
 
 const F = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const ACCENT = "#9f1239";
@@ -461,6 +463,7 @@ function TriviaSetup({ game, students, rosterTeams, pool, onPoolUpdate, onSave, 
   const crd = themedInteriorCrd(theme, 0);
   const [dragSrc, setDragSrc] = useState(null);
   const [showPool, setShowPool] = useState(false);
+  const [showShelf, setShowShelf] = useState(false);
   const [poolSelection, setPoolSelection] = useState(new Set());
 
   const poolList = pool || [];
@@ -676,9 +679,16 @@ function TriviaSetup({ game, students, rosterTeams, pool, onPoolUpdate, onSave, 
             <div style={{ ...sectionLabel }}>Questions ({questions.length})</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <button onClick={() => setShowPool(!showPool)} style={{ ...pillInactive, fontSize: 11, padding: "5px 10px" }}>{showPool ? "Hide" : "View"} pool ({poolList.length})</button>
+              <button onClick={() => setShowShelf(!showShelf)} style={{ ...pillInactive, fontSize: 11, padding: "5px 10px" }}>{showShelf ? "Hide" : "From"} the repository</button>
               <button onClick={addQ} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12, padding: "5px 12px" }}>+ Add Question</button>
             </div>
           </div>
+
+          {showShelf && (
+            <QuestionPicker storageKey={comm4cfg.storageKey} mode="free"
+              onAdd={qs => onSave({ questions: [...(game.questions || []), ...qs] })}
+              onClose={() => setShowShelf(false)} />
+          )}
 
           {/* Pool panel */}
           {showPool && (
@@ -1556,6 +1566,7 @@ function ReviewAnswers({ type, week, data, setData }) {
 }
 
 function GameEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack, msg }) {
+  const [picking, setPicking] = useState(false);
   const { theme } = useTheme("comm4-v1");
   const crd = themedInteriorCrd(theme, 0);
   const [questions, setQuestions] = useState(JSON.parse(JSON.stringify(initial)));
@@ -1586,6 +1597,15 @@ function GameEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack,
           <div style={{ width: 60 }} />
         </div>
         {scored && <div style={{ textAlign: "center", fontSize: 13, color: GREEN, fontWeight: 700, marginBottom: 12, padding: 8, background: "#ecfdf5", borderRadius: 8 }}>Scored</div>}
+        <button onClick={() => setPicking(!picking)} style={{ ...pillInactive, width: "100%", marginBottom: 10 }}>
+          {picking ? "Hide the repository" : "Pick questions from the repository"}
+        </button>
+        {picking ? (
+          <QuestionPicker storageKey={comm4cfg.storageKey} mode="choice" category="on_topic"
+            categories={GAME_CATS.map(c => c.id)}
+            onAdd={qs => setQuestions([...questions, ...qs])}
+            onClose={() => setPicking(false)} />
+        ) : null}
         {questions.map((q, i) => (
           <div key={i} style={{ ...crd, padding: 14, marginBottom: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>

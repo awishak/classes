@@ -26,6 +26,9 @@ import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
 import { FLAGS, healthCounts, carries, allClear } from "../src/engine/health.js";
 import { remember, undoPatches, pushEntry, sayEntry, LIMIT } from "../src/engine/undo.js";
 import { Seeds as RepoSeeds, Room as RepoRoom, BlockTypes as RepoTypes } from "../src/engine/RepoMore.jsx";
+import QuestionPicker from "../src/engine/QuestionPicker.jsx";
+import { bankOf, questionOf, parseOptions, parseAnswer, searchBank, isReady, asChoice, asFree }
+  from "../src/engine/qbank.js";
 import { readTypes, readAdded, addType, renameType, resetName, dropType, idForLabel, orphanTypes }
   from "../src/engine/types.js";
 import { registerTypes, typeOf, allTypes } from "../src/engine/blocks.js";
@@ -345,6 +348,57 @@ cases.push(["Repository", <RepoPage />]);
 
   cases.push(["Repository type sheet, chosen", <RepoType fonts={{ cols: "fraunces", rows: "grotesk", page: "plex" }}
     bold onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Heavier rows"]);
+
+  // ─── a game built out of the shelf ───
+  // Every quiz question Andrew has written is a block, and each old game is a
+  // set holding its questions. The porting script flattened the options into a
+  // sentence and dropped which one was right, so both readings have to work:
+  // the structure where a repair put it back, and the sentence where nothing
+  // did.
+  const qStore = { blocks: {
+    qq1: { id: "qq1", type: "question", title: "What does libero mean in Italian?",
+      body: "Answer: Free, liberty", tags: ["team trivia"] },
+    qq2: { id: "qq2", type: "question", title: "What earned the Spurs a fine?",
+      body: "Options: He complained · He sat his best players · He bet on the game · He tanked",
+      q: { options: ["He complained", "He sat his best players", "He bet on the game", "He tanked"],
+        correct: 1, answer: "", category: "on_topic" }, tags: ["weekly game"] },
+    qq3: { id: "qq3", type: "question", title: "An old one with no answer kept",
+      body: "Options: One · Two · Three", tags: ["weekly game"] },
+    gs1: { id: "gs1", type: "set", title: "Weekly Game, week 2", children: ["qq2", "qq3"], tags: ["weekly game"] },
+    nb1: { id: "nb1", type: "note", title: "Not a question at all" },
+  } };
+  const shelfBank = bankOf(qStore, { blocks: {} });
+  if (shelfBank.questions.length !== 3) { console.error("  FAIL  qbank: read " + shelfBank.questions.length + " questions"); failedEarly++; }
+  if (shelfBank.sets.length !== 1 || shelfBank.sets[0].items.length !== 2) {
+    console.error("  FAIL  qbank: a set did not come back holding its questions"); failedEarly++; }
+  if (parseOptions("Options: a · b · c").length !== 3) { console.error("  FAIL  qbank: the flattened options did not read back"); failedEarly++; }
+  if (parseAnswer("Answer: Free, liberty") !== "Free, liberty") { console.error("  FAIL  qbank: the flattened answer did not read back"); failedEarly++; }
+  const structured = questionOf(qStore.blocks.qq2);
+  if (structured.correct !== 1) { console.error("  FAIL  qbank: the right answer was lost"); failedEarly++; }
+  if (!isReady(structured)) { console.error("  FAIL  qbank: a question with options and an answer is not ready"); failedEarly++; }
+  if (isReady(questionOf(qStore.blocks.qq3))) { console.error("  FAIL  qbank: a question with no right answer called itself ready"); failedEarly++; }
+  if (searchBank(shelfBank.questions, "libero").length !== 1) { console.error("  FAIL  qbank: the search missed"); failedEarly++; }
+  if (searchBank(shelfBank.questions, "").length !== 3) { console.error("  FAIL  qbank: an empty search hid rows"); failedEarly++; }
+
+  const choice = asChoice(structured, "off_topic", ["on_topic", "sports_world"]);
+  if (choice.options.length !== 4 || choice.correct !== 1 || choice.category !== "on_topic") {
+    console.error("  FAIL  qbank: a question arrived at the weekly game editor wrong"); failedEarly++; }
+  // The two classes score under different names, so a category the editor does
+  // not have falls back rather than landing in a select with no such option.
+  if (asChoice(structured, "extra", ["on_topic2", "extra"]).category !== "extra") {
+    console.error("  FAIL  qbank: a category the editor does not have came across anyway"); failedEarly++; }
+  // A question with two options still fills four boxes, because that editor
+  // draws four and an undefined option would render as nothing at all.
+  if (asChoice(questionOf(qStore.blocks.qq1), "on_topic").options.length !== 4) {
+    console.error("  FAIL  qbank: the option boxes came up short"); failedEarly++; }
+  const free = asFree(questionOf(qStore.blocks.qq1));
+  if (free.expectedAnswer !== "Free, liberty" || !free.id) {
+    console.error("  FAIL  qbank: a question arrived at Team Trivia wrong"); failedEarly++; }
+
+  cases.push(["Question picker", <QuestionPicker storageKey="x" mode="choice" category="on_topic"
+    onAdd={noop} onClose={noop} />, "From the repository"]);
+  cases.push(["Question picker, free answers", <QuestionPicker storageKey="x" mode="free"
+    onAdd={noop} onClose={noop} />, "Search every question you have written"]);
 
   // ─── what is wrong with the shelf ───
   const shelf = [

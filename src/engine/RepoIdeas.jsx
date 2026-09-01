@@ -106,7 +106,7 @@ const IDEAS = [
   { n: 19, done: "1 Sep", group: "more", size: "medium", first: true, title: "Undo, on a block",
     what: "Keep the previous words on the block, and offer to put the words back for the rest of the session.",
     why: "An edit here rewrites a block used on nine days at once, with no history and no way back. Editing has to feel safe before editing gets used." },
-  { n: 21, group: "reuse", size: "medium", first: true, title: "Build a game out of the shelf",
+  { n: 21, done: "1 Sep", group: "reuse", size: "medium", first: true, title: "Build a game out of the shelf",
     what: "In the game editor, search the repository for question blocks and drop them into a round, instead of typing every question into a box.",
     why: "Every quiz question I have ever written is already on the shelf, ported in with the game it came from kept as a set, and the game editor cannot see any of it. So the questions are searchable and unusable at the same time, and the next game gets typed from scratch." },
   { n: 20, group: "more", size: "small", title: "Take everything out",
@@ -156,10 +156,10 @@ export default function RepoIdeas() {
           <span className="ri-label">Where I would start</span>
           <p className="ri-picks-text">
             {firsts ? <><b>{firsts}</b>. </> : null}
-            Twenty-one is the one Andrew found himself: every quiz question he has ever written is on the
-            shelf and the game editor cannot see any of the questions. The eleven already built came in three
-            waves. First the material being wrong, then the distance between wanting a thing and having the
-            thing placed, then the safety net the fast bulk work needed.
+            Nothing is marked start here any more. The twelve already built came in four waves: the material
+            being wrong, then the distance between wanting a thing and having the thing placed, then the
+            safety net the fast bulk work needed, then the shelf handing its questions back to a game. What is
+            left is the nine below, and six of them are an hour each.
           </p>
         </div>
 
