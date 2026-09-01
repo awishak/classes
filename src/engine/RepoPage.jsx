@@ -687,14 +687,22 @@ export default function RepoPage() {
               eight chips that never changes is a row I stopped reading; the
               menu says which type is chosen without spending a line saying so. */}
           <div className="repo-row">
-            <select className="repo-select repo-pick-type" value={kind} aria-label="Which type"
+            {/* Type and tag are the same question asked about two facets, so
+                they are the same control twice, side by side. Editing the
+                types moved in with editing the tags, under Housekeeping, which
+                is where managing a facet belongs rather than beside the filter
+                for it. */}
+            <select className="repo-select repo-choose" value={kind} aria-label="Which type"
               onChange={e => set({ kind: e.target.value })}>
               <option value="">Choose type ({items.length})</option>
               {kinds.filter(t => counts[t.id]).map(t =>
                 <option key={t.id} value={t.id}>{t.label} ({counts[t.id]})</option>)}
             </select>
-            <button className="repo-focus repo-chip" onClick={() => set({ lens: lens === "types" ? "" : "types" })}
-              aria-pressed={lens === "types"}>Edit</button>
+            <select className="repo-select repo-choose" value={tag} aria-label="Which tag"
+              onChange={e => set({ tag: e.target.value })} disabled={!tags.length}>
+              <option value="">Choose tag ({tags.length})</option>
+              {tags.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
 
             {/* One menu for what the page is showing: the table, the table
                 narrowed to a fault worth fixing, or a lens that answers a
@@ -726,6 +734,7 @@ export default function RepoPage() {
                 <option value="lens:dupes">Duplicates ({dupes.length})</option>
                 <option value="lens:loose">Loose ends ({loose.length})</option>
                 <option value="lens:tags">Tags ({tags2.length})</option>
+                <option value="lens:types">Types ({kinds.length})</option>
                 <option value="lens:links">Links ({linky.length})</option>
               </optgroup>
             </select>
@@ -737,12 +746,6 @@ export default function RepoPage() {
             {chip(!where, "Every class", () => set({ where: "" }))}
             {ENGINE_LIST.map(c => chip(where === c.id, c.code, () => set({ where: where === c.id ? "" : c.id }), c.accent))}
             {chip(where === "shared", SHARED_LABEL, () => set({ where: where === "shared" ? "" : "shared" }))}
-            {tags.length ? (
-              <select className="repo-select" value={tag} onChange={e => set({ tag: e.target.value })} aria-label="Filter by tag">
-                <option value="">Choose tag ({tags.length})</option>
-                {tags.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            ) : null}
             <span className="repo-hits">{hits.length} {hits.length === 1 ? "match" : "matches"}</span>
           </div>
           <Steps steps={steps} onBack={stepBack} />
@@ -1533,7 +1536,9 @@ const CSS = `
 /* The two menus that say what the page is showing. Wide enough for the longest
    option, because a menu that clips its own words is a menu I have to open to
    read. */
-.repo-pick-type{min-height:${TAP}px;font-size:15px;padding:0 10px;font-weight:500}
+.repo-choose{min-height:${TAP}px;font-size:15px;padding:0 10px;font-weight:500;
+  min-width:min(46vw,190px);max-width:min(46vw,190px)}
+.repo-choose:disabled{opacity:.5}
 .repo-pick-show{min-height:${TAP}px;font-size:15px;padding:0 10px;max-width:min(100%,320px)}
 
 /* The term, day by day. A day is a card, the nearest one is marked, and a day
