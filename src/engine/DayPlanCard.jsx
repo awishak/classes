@@ -145,7 +145,7 @@ export function DayPlanDetail({ config, data, initialDate, blockOf, date, onDate
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
         <div style={h2}>Day Plan</div>
-        <select value={day.date} onChange={e => onDate && onDate(e.target.value)} aria-label="Which day"
+        <select value={day.date} onChange={e => onDate && onDate(e.target.value)} aria-label="Choose date"
           style={{ ...selectStyle, marginLeft: "auto" }}>
           {days.map(d => <option key={d.date} value={d.date}>{d.date}{d.topic ? " · " + d.topic : ""}</option>)}
         </select>

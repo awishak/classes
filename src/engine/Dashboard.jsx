@@ -771,9 +771,9 @@ function LibraryPick({ blocks, accent, onPick, hue = defaultHue }) {
       </div>
       {f.topics.length ? (
         <select value={topic} onChange={e => setTopic(e.target.value)}
-          aria-label="Filter by topic"
+          aria-label="Choose topic"
           style={{ ...inputStyle, minHeight: 34, fontSize: 13, padding: "4px 8px" }}>
-          <option value="">Any topic ({f.topics.length})</option>
+          <option value="">Choose topic ({f.topics.length})</option>
           {f.topics.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
       ) : null}
@@ -2907,7 +2907,7 @@ function EditableTopic({ value, placeholder, onSave, own, weekLabel, weekday, sp
     return (
       <input autoFocus value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
         onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setDraft(value || ""); setEditing(false); } }}
-        placeholder={placeholder} aria-label="What this day is called"
+        placeholder={placeholder} aria-label="Day title"
         className="dash-topic"
         style={{ fontFamily: F, fontWeight: 600, letterSpacing: "-.03em", color: TEXT_PRIMARY,
           border: "none", borderBottom: "2px solid " + BORDER_STRONG, background: "none",
