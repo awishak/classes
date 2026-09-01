@@ -93,15 +93,16 @@ export function searchBank(list, text) {
 // in the shape that editor already saves.
 //
 // Four option boxes, because the weekly editor draws four and an option that
-// is not there would render as nothing at all. The category only comes across
-// when the editor being filled in has a category by that name: the two classes
-// score under different names, and a question off the shared shelf could
-// arrive carrying either.
-export const asChoice = (q, fallbackCategory, allowed) => ({
+// is not there would render as nothing at all.
+//
+// No category. Andrew took categories off the quizzes on 1 September and every
+// question is worth ten now, and a question carrying an old category is scored
+// the old way, so bringing a category across from a block written last year
+// would quietly make an imported question worth fifteen.
+export const asChoice = (q) => ({
   text: q.text,
   options: [0, 1, 2, 3].map(i => q.options[i] || ""),
   correct: Number.isInteger(q.correct) ? q.correct : 0,
-  category: (!allowed || allowed.includes(q.category)) && q.category ? q.category : fallbackCategory,
 });
 
 export const asFree = (q) => ({

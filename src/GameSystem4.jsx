@@ -22,11 +22,27 @@ const sectionLabel = { fontSize: 10, fontWeight: 500, color: "#9ca3af", textTran
 const inp = { background: "#fff", border: "2px solid #e5e7eb", borderRadius: 12, padding: "10px 12px", color: "#111827", fontFamily: F, fontSize: 14, fontWeight: 500, outline: "none", width: "100%", boxSizing: "border-box" };
 const sel = { ...inp, width: "auto" };
 
+// Kept for reading the games played before 1 September, whose questions still
+// carry a category. Nothing writes one any more.
 const GAME_CATS = [
   { id: "on_topic", label: "On Reading" },
   { id: "extra", label: "Extra" },
 ];
+// What a right answer is worth towards the grade.
+//
+// Every question used to be filed under a category and the category set the
+// points: 15 for the main one, 2.5 for the other, six and four of them adding
+// up to a hundred. Andrew took the categories off the quizzes on 1 September,
+// so a question is a question and each one is worth ten.
+//
+// The old numbers stay for the games that were played under them. A question
+// carrying a category was written when categories were the rule and is scored
+// the way it was scored at the time; a question with no category is a new one
+// and is worth ten. That is what makes the change apply to games from now on
+// without moving a grade anybody already has.
 const GAME_GRADE_PTS = { on_topic: 15, extra: 2.5 };
+const FLAT_GRADE_PTS = 10;
+const gradePtsOf = (q) => (q && q.category ? (GAME_GRADE_PTS[q.category] || 0) : FLAT_GRADE_PTS);
 const GAME_PTS = 10;
 const OPT_COLORS = [
   { bg: "#dc2626", light: "#fef2f2" },
@@ -58,9 +74,8 @@ function shuffleTeams(students, log, teams) {
 }
 
 function emptyGame() {
-  return Array.from({ length: 10 }).map((_, i) => ({
+  return Array.from({ length: 10 }).map(() => ({
     text: "", options: ["", "", "", ""], correct: 0,
-    category: i < 6 ? "on_topic" : "extra",
   }));
 }
 
@@ -1601,8 +1616,7 @@ function GameEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack,
           {picking ? "Hide the repository" : "Pick questions from the repository"}
         </button>
         {picking ? (
-          <QuestionPicker storageKey={comm4cfg.storageKey} mode="choice" category="on_topic"
-            categories={GAME_CATS.map(c => c.id)}
+          <QuestionPicker storageKey={comm4cfg.storageKey} mode="choice"
             onAdd={qs => setQuestions([...questions, ...qs])}
             onClose={() => setPicking(false)} />
         ) : null}
@@ -1614,10 +1628,7 @@ function GameEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack,
                 <button onClick={() => moveQ(i, i + 1)} disabled={i === questions.length - 1} style={{ background: "none", border: "none", cursor: i === questions.length - 1 ? "default" : "pointer", color: i === questions.length - 1 ? "#e5e7eb" : "#9ca3af", fontSize: 12, padding: 0, lineHeight: 1 }}>&#9660;</button>
               </div>
               <div style={{ width: 28, height: 28, borderRadius: 8, background: "#111827", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 900, flexShrink: 0 }}>{i + 1}</div>
-              <select value={q.category} onChange={e => updateQ(i, "category", e.target.value)} style={{ ...sel, fontSize: 12, padding: "4px 8px" }}>
-                {GAME_CATS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
-              <div style={{ fontSize: 10, color: "#9ca3af" }}>Game: {GAME_PTS}pts / Grade: {GAME_GRADE_PTS[q.category]}pts</div>
+              <div style={{ fontSize: 10, color: "#9ca3af" }}>Game: {GAME_PTS}pts / Grade: {gradePtsOf(q)}pts</div>
             </div>
             <input value={q.text} onChange={e => updateQ(i, "text", e.target.value)} placeholder="Question text (your reference only)" style={{ ...inp, fontSize: 12, padding: "6px 10px", marginBottom: 6 }} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
@@ -2299,7 +2310,7 @@ export function StudentAnswerView({ data, setData, userName }) {
           {qs.map((q, qi) => {
             const my = sid ? responses[sid + "-" + qi] : undefined;
             const isCorrect = my === q.correct;
-            if (isCorrect) { gameTotal += GAME_PTS; gradeTotal += GAME_GRADE_PTS[q.category] || 0; }
+            if (isCorrect) { gameTotal += GAME_PTS; gradeTotal += gradePtsOf(q); }
             const counts = (q.options || []).map(() => 0);
             let totalAnswered = 0;
             playedStudents.forEach(s => {
@@ -2314,7 +2325,7 @@ export function StudentAnswerView({ data, setData, userName }) {
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
                   <div style={{ width: 28, height: 28, borderRadius: 7, background: "#9f123915", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: "#9f1239", flexShrink: 0 }}>{qi + 1}</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 10, color: "#9ca3af", textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>{GAME_CATS.find(c => c.id === q.category)?.label}</div>
+                    {q.category && <div style={{ fontSize: 10, color: "#9ca3af", textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>{GAME_CATS.find(c => c.id === q.category)?.label}</div>}
                     <div style={{ fontSize: 14, fontWeight: 600, color: "#111827", lineHeight: 1.4 }}>{q.text || q.prompt || "(no text)"}</div>
                   </div>
                 </div>
@@ -3729,7 +3740,7 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
       for (let q = 0; q < (game.questions || []).length; q++) {
         if (game.responses?.[s.id + "-" + q] === game.questions[q].correct) {
           gamePts += GAME_PTS;
-          gradePts += GAME_GRADE_PTS[game.questions[q].category] || 0;
+          gradePts += gradePtsOf(game.questions[q]);
         }
       }
       return { gamePts, gradePts, gradePercent: Math.round(gradePts / 100 * 100), responded: Object.keys(game.responses || {}).some(k => k.startsWith(s.id)) };

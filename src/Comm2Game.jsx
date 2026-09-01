@@ -20,12 +20,19 @@ const sectionLabel = { fontSize: 11, fontWeight: 600, color: TEXT_MUTED, textTra
 const inp = { background: "#fff", border: "1.5px solid " + BORDER, borderRadius: 10, padding: "10px 14px", color: "#18181b", fontFamily: F, fontSize: 15, fontWeight: 400, outline: "none", width: "100%", boxSizing: "border-box" };
 const sel = { ...inp, width: "auto" };
 
+// Kept for reading the games played before 1 September, whose questions still
+// carry a category. Nothing writes one any more.
 const GAME_CATS = [
   { id: "on_topic", label: "On Topic" },
   { id: "general", label: "General" },
 ];
 const GAME_PTS = 10;
+// A right answer is worth ten. Categories came off the quizzes on
+// 1 September; both of the two here were already worth ten, so nothing about
+// the scoring in this class changes, only the chooser nobody needed.
 const GAME_GRADE_PTS = { on_topic: 10, general: 10 };
+const FLAT_GRADE_PTS = 10;
+const gradePtsOf = (q) => (q && q.category ? (GAME_GRADE_PTS[q.category] || 0) : FLAT_GRADE_PTS);
 const OPT_COLORS = [
   { bg: "#dc2626", light: "#fef2f2" },
   { bg: "#2563eb", light: "#eff6ff" },
@@ -40,7 +47,6 @@ async function saveData(data) { try { await window.storage.set("comm2-v1", JSON.
 function emptyGame() {
   return Array.from({ length: 10 }).map((_, i) => ({
     text: "", options: ["", "", "", ""], correct: 0,
-    category: i < 6 ? "on_topic" : "general",
   }));
 }
 
@@ -356,10 +362,7 @@ function GameEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack,
                 <button onClick={() => moveQ(i, i + 1)} disabled={i === questions.length - 1} style={{ background: "none", border: "none", cursor: i === questions.length - 1 ? "default" : "pointer", color: i === questions.length - 1 ? "#e5e7eb" : "#9ca3af", fontSize: 12, padding: 0, lineHeight: 1 }}>&#9660;</button>
               </div>
               <div style={{ width: 28, height: 28, borderRadius: 8, background: "#111827", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 900, flexShrink: 0 }}>{i + 1}</div>
-              <select value={q.category} onChange={e => updateQ(i, "category", e.target.value)} style={{ ...sel, fontSize: 12, padding: "4px 8px" }}>
-                {GAME_CATS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
-              <div style={{ fontSize: 10, color: "#9ca3af" }}>Game: {GAME_PTS}pts / Grade: {GAME_GRADE_PTS[q.category]}pts</div>
+              <div style={{ fontSize: 10, color: "#9ca3af" }}>Game: {GAME_PTS}pts / Grade: {gradePtsOf(q)}pts</div>
             </div>
             <input value={q.text} onChange={e => updateQ(i, "text", e.target.value)} placeholder="Question text (your reference only)" style={{ ...inp, fontSize: 12, padding: "6px 10px", marginBottom: 6 }} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
@@ -925,7 +928,7 @@ export function StudentAnswerView({ data, setData, userName }) {
               <div key={i} style={{ ...crd, padding: 12, marginBottom: 6, borderColor: correct ? "#bbf7d0" : "#fecaca" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   <div style={{ width: 24, height: 24, borderRadius: 6, background: correct ? GREEN : RED, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 900, flexShrink: 0 }}>{i + 1}</div>
-                  <div style={{ fontSize: 10, color: "#9ca3af" }}>{GAME_CATS.find(c => c.id === q.category)?.label}</div>
+                  {q.category && <div style={{ fontSize: 10, color: "#9ca3af" }}>{GAME_CATS.find(c => c.id === q.category)?.label}</div>}
                   <div style={{ fontSize: 12, fontWeight: 700, color: correct ? GREEN : RED, marginLeft: "auto" }}>{correct ? "Correct" : "Incorrect"}</div>
                 </div>
                 {!correct && my !== undefined && <div style={{ fontSize: 13, color: "#646b75", marginTop: 4 }}>You picked <strong style={{ color: RED }}>{q.options[my]}</strong>, but the answer was <strong style={{ color: GREEN }}>{q.options[q.correct]}</strong>.</div>}
@@ -1196,7 +1199,7 @@ export function ReboundPanel({ data, setData, activityType, week, isAdmin, userN
       for (let q = 0; q < (game.questions || []).length; q++) {
         if (game.responses?.[s.id + "-" + q] === game.questions[q].correct) {
           gamePts += GAME_PTS;
-          gradePts += GAME_GRADE_PTS[game.questions[q].category] || 0;
+          gradePts += gradePtsOf(game.questions[q]);
         }
       }
       return { gamePts, gradePts, gradePercent: Math.round(gradePts / 100 * 100), responded: Object.keys(game.responses || {}).some(k => k.startsWith(s.id)) };

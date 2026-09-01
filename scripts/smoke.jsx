@@ -384,22 +384,22 @@ cases.push(["Repository", <RepoPage />]);
   if (searchBank(shelfBank.questions, "libero").length !== 1) { console.error("  FAIL  qbank: the search missed"); failedEarly++; }
   if (searchBank(shelfBank.questions, "").length !== 3) { console.error("  FAIL  qbank: an empty search hid rows"); failedEarly++; }
 
-  const choice = asChoice(structured, "off_topic", ["on_topic", "sports_world"]);
-  if (choice.options.length !== 4 || choice.correct !== 1 || choice.category !== "on_topic") {
+  const choice = asChoice(structured);
+  if (choice.options.length !== 4 || choice.correct !== 1) {
     console.error("  FAIL  qbank: a question arrived at the weekly game editor wrong"); failedEarly++; }
-  // The two classes score under different names, so a category the editor does
-  // not have falls back rather than landing in a select with no such option.
-  if (asChoice(structured, "extra", ["on_topic2", "extra"]).category !== "extra") {
-    console.error("  FAIL  qbank: a category the editor does not have came across anyway"); failedEarly++; }
+  // No category comes across. Every new question is worth ten, and a question
+  // carrying an old category is scored the old way, so importing one with a
+  // category on it would quietly make it worth fifteen.
+  if (choice.category) { console.error("  FAIL  qbank: a category came across onto a new question"); failedEarly++; }
   // A question with two options still fills four boxes, because that editor
   // draws four and an undefined option would render as nothing at all.
-  if (asChoice(questionOf(qStore.blocks.qq1), "on_topic").options.length !== 4) {
+  if (asChoice(questionOf(qStore.blocks.qq1)).options.length !== 4) {
     console.error("  FAIL  qbank: the option boxes came up short"); failedEarly++; }
   const free = asFree(questionOf(qStore.blocks.qq1));
   if (free.expectedAnswer !== "Free, liberty" || !free.id) {
     console.error("  FAIL  qbank: a question arrived at Team Trivia wrong"); failedEarly++; }
 
-  cases.push(["Question picker", <QuestionPicker storageKey="x" mode="choice" category="on_topic"
+  cases.push(["Question picker", <QuestionPicker storageKey="x" mode="choice"
     onAdd={noop} onClose={noop} />, "From the repository"]);
   cases.push(["Question picker, free answers", <QuestionPicker storageKey="x" mode="free"
     onAdd={noop} onClose={noop} />, "Search every question you have written"]);

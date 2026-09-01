@@ -39,6 +39,8 @@ const GROUPS = [
     why: "Four hundred rows is a working surface, not a page to read. Everything here is about the distance between wanting a thing and having the thing placed." },
   { id: "more", name: "Hold more, and edit without fear",
     why: "The page calls itself a repository of everything and currently holds blocks. And an edit here rewrites a block used on nine days, with no way back." },
+  { id: "one", name: "One foundation for every class",
+    why: "The engine is the foundation every class runs on in fall 2026. What is still outside the engine is still forked three ways, and a fork is a change made three times or, more often, once." },
 ];
 
 const IDEAS = [
@@ -109,6 +111,9 @@ const IDEAS = [
   { n: 21, done: "1 Sep", group: "reuse", size: "medium", first: true, title: "Build a game out of the shelf",
     what: "In the game editor, search the repository for question blocks and drop them into a round, instead of typing every question into a box.",
     why: "Every quiz question I have ever written is already on the shelf, ported in with the game it came from kept as a set, and the game editor cannot see any of it. So the questions are searchable and unusable at the same time, and the next game gets typed from scratch." },
+  { n: 22, group: "one", size: "big", first: true, title: "The game system moves into the engine",
+    what: "One weekly game, one Team Trivia, one This or That round, all of them living in the engine and read by every class, with the three forked copies retired.",
+    why: "COMM 118 and COMM 4 run their games from parallel forks of the same four thousand lines and COMM 2 runs a third, so every fix lands three times and usually lands once. Every class is on the engine for fall 2026 except the games, and the games are the last thing keeping the old hubs alive." },
   { n: 20, group: "more", size: "small", title: "Take everything out",
     what: "Export the whole shelf as JSON and as markdown, one file, on a button.",
     why: "Insurance against the store, and the only thing that makes years of material portable if the engine ever changes shape." },
@@ -156,10 +161,10 @@ export default function RepoIdeas() {
           <span className="ri-label">Where I would start</span>
           <p className="ri-picks-text">
             {firsts ? <><b>{firsts}</b>. </> : null}
-            Nothing is marked start here any more. The twelve already built came in four waves: the material
-            being wrong, then the distance between wanting a thing and having the thing placed, then the
-            safety net the fast bulk work needed, then the shelf handing its questions back to a game. What is
-            left is the nine below, and six of them are an hour each.
+            Twenty-two is the fall: every class runs on the engine except the games, and the games are still
+            three forks of the same four thousand lines. The twelve already built came in four waves: the
+            material being wrong, then the distance between wanting a thing and having the thing placed, then
+            the safety net the fast bulk work needed, then the shelf handing its questions back to a game.
           </p>
         </div>
 

@@ -47,6 +47,35 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep1d", date: "Tuesday, September 1 \u00b7 night", title: "Ten points a question, a sticker, and a button where the ticks are",
+    blurb: "Categories are off the quizzes and every question is worth ten. A block can be picked out and wears the drawing of Andrew giving two thumbs up. And clearing forty ticks now happens where the ticks are.",
+    groups: [
+      { name: "Ten points a question", items: [
+        ["The chooser is gone from all three game editors", "A question used to be filed under a category and the category set the points: 15 for the main one, 2.5 for the other, six and four adding to a hundred. Andrew: get rid of categories for the quizzes, 10 pts each."],
+        ["Nothing already graded moved", "A question carrying a category was written when categories were the rule and is still scored the way it was scored at the time. A question with no category is a new one and is worth ten. That is what applies the change to games from now on without touching a grade anybody has."],
+        ["Four places compute that number, not one", "Each game file scores a live game and recomputes a student's total, and each class hub keeps its own copy of the table for the gradebook. A new question missing from the table would have scored zero in the gradebook while looking right on the game screen."],
+        ["An imported question arrives with no category", "The picker brings a question off the shelf without the category the block still carries, because a question written last year arriving into a new game would otherwise be quietly worth fifteen."],
+      ] },
+      { name: "The sticker", items: [
+        ["Picked out, like a chef's recommendation", "Andrew asked to highlight particular items and sent a drawing of himself giving two thumbs up. A block can be picked out and a picked block wears him. One press on any row, or the whole selection at once."],
+        ["The flag lives on the block", "So the sticker follows the block into every class using it, undoes like every other write here, filters from a chip beside the types, and sits in the address as pick=yes so a saved view can hold the picks."],
+        ["The drawing is a file, not a build", "Served from /chef.png so it can be swapped without a deploy. Until the file is there a picked row draws the word in a badge, because a missing image renders as a broken-image icon and that is worse than no sticker."],
+      ] },
+      { name: "The clear button", items: [
+        ["Left of the tick-everything box", "Andrew: there should be a clear button, like clear my check markers, maybe to the left of the top checkmark. Clearing forty ticks belonged where the ticks are rather than only in a bar at the bottom of a four hundred row list. It fades out when nothing is ticked, so the heading never moves."],
+      ] },
+      { name: "And the fall", items: [
+        ["One foundation, written down at last", "Every class runs on the engine in fall 2026. What is left outside the engine is the game system, forked three ways across nine thousand lines, so every fix lands three times and usually lands once. That is idea 22 on the backlog, and it is the last big thing."],
+      ] },
+    ],
+    note: {
+      title: "Waiting on Andrew",
+      lines: [
+        "chef.png. Save the drawing to public/chef.png and every picked row wears it, with no further deploy.",
+      ],
+    },
+  },
+  {
     id: "sep1c", date: "Tuesday, September 1 \u00b7 evening", title: "The game editor can see the shelf",
     blurb: "157 quiz questions have been sitting in the repository since the port, searchable and unusable at the same time, because the game editor knew nothing about blocks. Now a week of Team Trivia or a weekly game gets built by picking, and the right answers the port dropped are back on the questions.",
     groups: [

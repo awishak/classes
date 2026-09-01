@@ -22,7 +22,7 @@ const MUTED = "#646b75";
 const LINE = "#e5e7eb";
 const GREEN = "#047857";
 
-export default function QuestionPicker({ storageKey, mode, category, categories, onAdd, onClose }) {
+export default function QuestionPicker({ storageKey, mode, onAdd, onClose }) {
   const [bank, setBank] = useState(null);
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState(() => new Set());
@@ -44,7 +44,7 @@ export default function QuestionPicker({ storageKey, mode, category, categories,
       s.title.toLowerCase().includes(t) || s.items.some(i => i.text.toLowerCase().includes(t)));
   }, [bank, q]);
 
-  const shape = (one) => (mode === "free" ? asFree(one) : asChoice(one, category, categories));
+  const shape = (one) => (mode === "free" ? asFree(one) : asChoice(one));
 
   const addPicked = () => {
     const chosen = hits.filter(x => picked.has(x.id));

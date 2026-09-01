@@ -233,6 +233,13 @@ Planned Makeup: You told me about your absence ahead of time and I asked you to 
 Unannounced Absence: You missed without notice. By default, no makeup is available.`;
 
 const HOME_GRADE_PTS = { on_topic: 10, general: 10 };
+// A right answer is worth ten now. Categories came off the quizzes on
+// 1 September, and a question written before then still carries one and is
+// still scored the way it was scored at the time, so no grade already
+// recorded moves.
+const FLAT_GRADE_PTS = 10;
+const homeGradePts = (q) => (q && q.category ? (HOME_GRADE_PTS[q.category] || 0) : FLAT_GRADE_PTS);
+
 
 function InstructorCard({ data, setData, isAdmin }) {
   const ic = data.instructorCard || {};
@@ -2103,7 +2110,7 @@ function HomeReboundBox({ data, setData, studentId }) {
         const game = act;
         let gp = 0;
         for (let q = 0; q < (game.questions || []).length; q++) {
-          if (game.responses?.[studentId + "-" + q] === game.questions[q].correct) gp += (HOME_GRADE_PTS[game.questions[q].category] || 0);
+          if (game.responses?.[studentId + "-" + q] === game.questions[q].correct) gp += homeGradePts(game.questions[q]);
         }
         gradePercent = Math.round(gp / max * 1000) / 10;
       } else if (type === "tot") {
