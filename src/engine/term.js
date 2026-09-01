@@ -14,8 +14,9 @@
 //   the day plan   what the room does, in sections, in order
 //   the schedule   what the students were told to read or hand in
 //
-// Read-only. Every write still happens where the writing belongs, on the
-// dashboard and in the schedule editor.
+// Reading only. The writing a term needs from here is adding something to a
+// day and taking something off a day, and both go through the writers the rest
+// of the page already uses.
 
 import { normSlot, dayPlanFor, sectionsOf } from "./dayplan.js";
 import { weekdayOf } from "./schedule.js";
@@ -28,11 +29,12 @@ const weeksOf = (store, cls) => store?.schedule || cls.scheduleWeeks || [];
 const weekName = (w, i) => (/final/i.test(w.topic || "") ? "Finals Week" : "Week " + (i + 1));
 
 // One row on a day, whatever the row points at.
-function rowOf(it, { blockOf, seeds }) {
+function rowOf(it, { blockOf, seeds, slot }) {
   const block = it.blockId && blockOf ? blockOf(it.blockId) : null;
   const seed = it.seedId ? (seeds || []).find(s => s.id === it.seedId) : null;
   return {
     id: it.id,
+    slot,
     words: it.claim || block?.headline || block?.title || seed?.title || it.text || "Untitled",
     kind: it.feature ? "Activity" : block ? typeOf(block.type).label : seed ? "Seed" : "Note",
     type: block?.type || "note",
@@ -58,13 +60,14 @@ export function termOf({ cls, store, blockOf }) {
       const sections = sectionsOf(cls, plan)
         .map(([slot, name]) => {
           const bucket = normSlot(plan.slots[slot]);
-          return { slot, name: bucket.title || name, items: bucket.items.map(it => rowOf(it, { blockOf, seeds })) };
+          return { slot, name: bucket.title || name,
+            items: bucket.items.map(it => rowOf(it, { blockOf, seeds, slot })) };
         })
         .filter(s => s.items.length);
       const assigned = (w.items || [])
         .filter(it => !it.date || it.date === wd)
         .map(it => ({
-          id: it.id, words: it.title || "Untitled", type: it.type || "reading",
+          id: it.id, weekId: w.id, words: it.title || "Untitled", type: it.type || "reading",
           url: it.url || "", blockId: it.libId || it.blockId || "",
           pick: !!(blockOf && blockOf(it.libId || it.blockId)?.pick),
           loose: !it.date,

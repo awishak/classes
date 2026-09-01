@@ -352,6 +352,20 @@ export default function RepoPage() {
   const addOnDay = (date, slot, row) =>
     (slot === ASSIGNED ? assignOnDay(row, termCls, date) : placeOnDay(row, termCls, date, slot));
 
+  // Off this day, still on the shelf.
+  //
+  // A row on a day is a pointer at a block, so taking the row away leaves the
+  // block where it is, with every other day that uses it untouched. Two shapes
+  // to remove: a row in a section of the day plan, and an item on the week the
+  // students read. Both writers already exist; nothing here is new except
+  // being able to reach them from the term.
+  const offTheDay = (date, row) => {
+    writeTo(termCls.id)(prev => (row.weekId
+      ? dropWeekItem(prev, termCls, { weekId: row.weekId, itemId: row.id })
+      : dropFlowRow(prev, { date, slot: row.slot, itemId: row.id })));
+    return (row.words || "The row") + " is off " + date + ", still on the shelf";
+  };
+
   const makeOnDay = (date, slot, patch) => {
     const words = (patch.title || "").trim() || hostOf(patch.url || "") || "Untitled";
     const block = makeBlock({ type: "link", ...patch, title: words });
@@ -845,7 +859,7 @@ export default function RepoPage() {
                     openId={openId} onOpen={id => setOpenId(openId === id ? "" : id)}
                     onTag={t => set({ tag: t })} pickedSet={picked} onPick={pickOne}
                     onStar={b => pickOut(b, !b.pick)}
-                    shelf={termShelf} onAdd={addOnDay} onMake={makeOnDay}
+                    shelf={termShelf} onAdd={addOnDay} onMake={makeOnDay} onOff={offTheDay}
                     detail={b => (
                       <Detail key={b.id} block={b} hue={hue} planOf={planOf} stores={stores}
                         onSave={p => saveBlock(b, p)} onDelete={() => removeBlock(b)}
@@ -987,9 +1001,11 @@ export function Steps({ steps, onBack }) {
 // A week item that points at nothing on the shelf still gets a line, because
 // leaving it out would make the schedule say the day is emptier than it is.
 export function Term({ days, here, rowOf, hue, openId, onOpen, onTag, pickedSet, onPick, onStar, detail,
-  shelf, onAdd, onMake }) {
+  shelf, onAdd, onMake, onOff }) {
   const span = COLS.length + 1;
   const [adding, setAdding] = useState("");
+  const [said, setSaid] = useState("");
+  const takeOff = (date, row) => setSaid(onOff(date, row));
   const open = (b) => (openId === b.id ? (
     <tr className="repo-detail-row">
       <td colSpan={span} style={{ "--kind": hue(b.type) }}>{detail(b)}</td>
@@ -998,6 +1014,9 @@ export function Term({ days, here, rowOf, hue, openId, onOpen, onTag, pickedSet,
 
   return (
     <>
+      {said ? (
+        <tr className="repo-said-row"><td colSpan={span}><span className="repo-said">{said}</span></td></tr>
+      ) : null}
       {days.map(d => (
         <Fragment key={d.weekId + d.date}>
           <tr className={"repo-dayhead" + (d.date === here ? " repo-dayhead-here" : "")}>
@@ -1032,12 +1051,16 @@ export function Term({ days, here, rowOf, hue, openId, onOpen, onTag, pickedSet,
               <tr className="repo-sechead"><td colSpan={span}>{sec.name}</td></tr>
               {sec.items.map(it => {
                 const b = it.blockId ? rowOf(it.blockId) : null;
-                if (!b) return <PlainRow key={it.id} words={it.words} kind={it.kind} span={span} />;
+                if (!b) {
+                  return <PlainRow key={it.id} words={it.words} kind={it.kind} span={span}
+                    onOff={onOff ? () => takeOff(d.date, it) : null} />;
+                }
                 return (
                   <Fragment key={it.id}>
                     <Row block={b} hue={hue} open={openId === b.id} onTag={onTag}
                       picked={pickedSet.has(b.id)} onPick={() => onPick(b.id)}
-                      onStar={() => onStar(b)} onOpen={() => onOpen(b.id)} />
+                      onStar={() => onStar(b)} onOpen={() => onOpen(b.id)}
+                      onOff={onOff ? () => takeOff(d.date, { ...it, words: b.headline || b.title }) : null} />
                     {open(b)}
                   </Fragment>
                 );
@@ -1052,13 +1075,15 @@ export function Term({ days, here, rowOf, hue, openId, onOpen, onTag, pickedSet,
                 const b = it.blockId ? rowOf(it.blockId) : null;
                 if (!b) {
                   return <PlainRow key={it.id} words={it.words} kind={it.type} span={span}
-                    note={it.loose ? "no day yet" : ""} />;
+                    note={it.loose ? "no day yet" : ""}
+                    onOff={onOff ? () => takeOff(d.date, it) : null} />;
                 }
                 return (
                   <Fragment key={it.id}>
                     <Row block={b} hue={hue} open={openId === b.id} onTag={onTag}
                       picked={pickedSet.has(b.id)} onPick={() => onPick(b.id)}
-                      onStar={() => onStar(b)} onOpen={() => onOpen(b.id)} />
+                      onStar={() => onStar(b)} onOpen={() => onOpen(b.id)}
+                      onOff={onOff ? () => takeOff(d.date, { ...it, words: b.headline || b.title }) : null} />
                     {open(b)}
                   </Fragment>
                 );
@@ -1150,7 +1175,7 @@ export function DayAdd({ day, shelf, onAdd, onMake, hue }) {
 
 // A row on a day that points at nothing on the shelf: words typed straight
 // into the plan, or a week item that was never made into a block.
-function PlainRow({ words, kind, note, span }) {
+function PlainRow({ words, kind, note, span, onOff }) {
   return (
     <tr className="repo-tr repo-tr-plain">
       <td className="repo-td repo-td-pick" />
@@ -1159,6 +1184,10 @@ function PlainRow({ words, kind, note, span }) {
           <span className="repo-plain-words">{words}</span>
           <span className="repo-owner">{kind}</span>
           {note ? <span className="repo-copy-n">{note}</span> : null}
+          {onOff ? (
+            <button className="repo-focus repo-off" onClick={onOff}
+              title="Take this off the day">Off the day</button>
+          ) : null}
         </div>
       </td>
     </tr>
@@ -1265,11 +1294,13 @@ export function Bulk({ n, rows, planOf, stores, onTag, onType, onShare, onClear,
         <button className="repo-focus repo-chip" onClick={() => setPlacing(!placing)} aria-pressed={placing}>
           Put the selection on a day
         </button>
-        <button className="repo-focus repo-chip" onClick={() => { onStar(true); setSaid(n + " picked out"); }}>
-          Pick them out
+        <button className="repo-focus repo-chip"
+          onClick={() => { onStar(true); setSaid(n + " are Drew's Picks"); }}>
+          Add Drew's Pick
         </button>
-        <button className="repo-focus repo-chip" onClick={() => { onStar(false); setSaid("Stickers off " + n); }}>
-          Take the stickers off
+        <button className="repo-focus repo-chip"
+          onClick={() => { onStar(false); setSaid("Drew's Pick off " + n); }}>
+          Remove Drew's Pick
         </button>
         {said ? <span className="repo-said">{said}</span> : null}
       </div>
@@ -1307,7 +1338,7 @@ export function Sticker({ on, onToggle }) {
   );
 }
 
-export function Row({ block, hue, open, onOpen, onTag, picked, onPick, onStar }) {
+export function Row({ block, hue, open, onOpen, onTag, picked, onPick, onStar, onOff }) {
   const t = typeOf(block.type);
   const color = hue(block.type);
   const words = block.headline || block.title;
@@ -1332,6 +1363,11 @@ export function Row({ block, hue, open, onOpen, onTag, picked, onPick, onStar })
             </span>
           </button>
           <Sticker on={block.pick} onToggle={() => onStar && onStar()} />
+          {onOff ? (
+            <button className="repo-focus repo-off" onClick={onOff}
+              title="Take this off the day. The block stays on the shelf."
+              aria-label="Take this off the day">Off the day</button>
+          ) : null}
         </span>
       </td>
       <td className="repo-td repo-td-where">
@@ -1810,6 +1846,13 @@ const CSS = `
 .repo-dayhead-date{font-family:${MONO};font-size:15px;font-weight:600;color:${TEXT}}
 .repo-dayhead-topic{font-size:15px;color:${SECOND}}
 .repo-dayadd{margin-left:auto}
+/* Taking a row off a day. Quiet until the pointer is on the row, because it is
+   a thing I do occasionally and read past constantly. */
+.repo-off{flex:none;min-height:${TAP}px;padding:0 8px;border:none;background:none;cursor:pointer;
+  font-family:${MONO};font-size:11px;letter-spacing:.04em;color:${MUTED};opacity:0}
+.repo-tr:hover .repo-off,.repo-tr-plain:hover .repo-off,.repo-off:focus-visible{opacity:1}
+.repo-off:hover{color:#9f1239}
+.repo-said-row td{padding:8px 12px;background:#f2fbf6}
 .repo-addrow td{background:#fff;border-bottom:1px solid ${BORDER};padding:12px 14px}
 .repo-dayadd-panel{display:flex;flex-direction:column;gap:8px}
 .repo-addhit{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:4px 0;

@@ -535,6 +535,16 @@ cases.push(["Repository", <RepoPage />]);
     onAdd={() => ""} onMake={() => ""} />, "The readings students see"]);
   cases.push(["Add to a day, a day with no sections", <RepoDayAdd day={termDays[1]} shelf={[]} hue={hue}
     onAdd={() => ""} onMake={() => ""} />, "Make it and add it"]);
+  // Off the day, still on the shelf. A row on a day is a pointer at a block, so
+  // taking the row away leaves the block and every other day using it alone.
+  cases.push(["The term, with a way off the day", termTable(
+    <RepoTerm days={termDays} here="" rowOf={id => termIndexed[id] || null} hue={hue} openId="" onOpen={noop}
+      onTag={noop} pickedSet={new Set()} onPick={noop} onStar={noop} detail={() => null}
+      shelf={[]} onAdd={() => ""} onMake={() => ""} onOff={() => ""} />), "Off the day"]);
+  // and the shelf's own rows have no such button, because a row there is not
+  // on a day at all.
+  cases.push(["Repository row, no day to come off", table(<RepoRow block={blk} hue={hue} open={false}
+    onOpen={noop} onTag={noop} picked={false} onPick={noop} onStar={noop} />), "Why We Bet"]);
   cases.push(["The term, with an add button", termTable(
     <RepoTerm days={termDays} here="" rowOf={() => null} hue={hue} openId="" onOpen={noop} onTag={noop}
       pickedSet={new Set()} onPick={noop} onStar={noop} detail={() => null}
@@ -727,7 +737,7 @@ cases.push(["Repository", <RepoPage />]);
 
   cases.push(["Repository bulk bar", <RepoBulk n={2} rows={picked} planOf={planOf} stores={stores}
     onTag={noop} onType={noop} onShare={noop} onClear={noop} onStar={noop} onPlace={() => ""}
-    onAssign={() => ""} />, "Pick them out"]);
+    onAssign={() => ""} />, "Add Drew&#x27;s Pick"]);
 
   // ─── the seed library ───
   const md = "## Seeds\n\n### A seed with a turn\n- **Concept:** framing / stakes\n- **Class:** Comm 2 / any\n"
