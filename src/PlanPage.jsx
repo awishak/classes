@@ -47,6 +47,29 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep1e", date: "Tuesday, September 1 \u00b7 late", title: "The Day Plan card is a mirror of the dashboard",
+    blurb: "The card was a second place to build a day, and it understood the model the engine had before blocks existed. So it drew a block placed from the repository as an empty card, and it wrote to the same store the dashboard writes. Now the dashboard builds the day and the card reads it.",
+    groups: [
+      { name: "One writer, one reader", items: [
+        ["Flow is called the Day Plan", "Andrew: in dashboard, change flow to dayplan and then mirror it there. The panel, the column heading and every line of copy that said flow now say day plan, so the surface I build on and the card that shows the result share a name."],
+        ["The card mirrors what the dashboard draws", "Same store, same sections in the same order, same rows. A row says whatever it points at: the headline of a block, the title of a seed, or the words typed straight in. Ticked rows are struck through, nested rows are indented, links are links, and a picked block wears the sticker."],
+        ["691 lines to 240", "Everything the card could do that the dashboard does better is gone: the second editor, the seed creator, the per-item colour picker, the drag-to-reorder. What is left is the day, and a link through to the dashboard to change it."],
+        ["The empty cards are gone", "Nine block rows in COMM 118 rendered as cards with no title and no body, because the card only understood seeds and typed text. It resolves a block now, which is what everything is made of."],
+      ] },
+      { name: "A correction", items: [
+        ["Every class does have sequences", "This morning I said four of the five classes have no sequences in their config at all, and wrote that into the code, the commit and The Brief. Wrong: each class spreads the template class, so each one inherits the same two sequences. The bug was real and the fix was right, and the cause is a day set to Freeform, which has none of a sequence's slots and only the sections made by hand on the day. The comment in dayplan.js and the entry from this morning have both been corrected."],
+        ["A test found it", "The new day-plan case built a day on COMM 118 and got six sections where the story said one. A claim about the data that nothing checks is a claim that stays wrong."],
+      ] },
+    ],
+    note: {
+      title: "Left alone",
+      lines: [
+        "The card stays instructor-only. Making the day plan something students read is a different decision and was not made today.",
+        "Assignments still cannot be picked, because an assignment is not a block. The refId field on an assignment block has never been filled in.",
+      ],
+    },
+  },
+  {
     id: "sep1d", date: "Tuesday, September 1 \u00b7 night", title: "Ten points a question, a sticker, and a button where the ticks are",
     blurb: "Categories are off the quizzes and every question is worth ten. A block can be picked out and wears the drawing of Andrew giving two thumbs up. And clearing forty ticks now happens where the ticks are.",
     groups: [
@@ -143,7 +166,7 @@ const SESSIONS = [
         ["Edit the types sits with the type filters", "The chip opens the sheet from the row of type chips it belongs to, rather than down among the lenses. And the header button that dresses the page now says Fonts, because two buttons called Type on one page is one too many."],
       ] },
       { name: "Into the flow, fixed twice", items: [
-        ["The button said a day had no sections while the dashboard drew four", "The repository asked the day's sequence which sections a day has, and four of the five classes have no sequences in their config at all. A section made by hand on a day is a `sec-` key, and a slot holding items is a section whatever put it there. The dashboard already knew that and worked it out inline; sectionsOf now lives in dayplan.js and both readers call the same function."],
+        ["The button said a day had no sections while the dashboard drew four", "The repository asked the day's sequence which sections a day has. A day set to Freeform has none of a sequence's slots, and neither does a day left over from a sequence that changed, so the answer was none while the dashboard was drawing the sections made by hand on that same day. A section made by hand is a `sec-` key, and a slot holding items is a section whatever put it there. The dashboard already knew that and worked it out inline; sectionsOf now lives in dayplan.js and both readers call the same function. The first version of this entry said four of the five classes have no sequences at all, which is wrong: every class inherits the template's two."],
         ["And it said where a block landed in keys", "A reading that went into a section made by hand came back as \u201cin sec-m4x9q2\u201d. It says the name of the section now."],
       ] },
     ],

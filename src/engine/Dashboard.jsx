@@ -147,7 +147,7 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
   cursor:pointer;font-family:${F};font-size:14px;color:${TEXT_MUTED};text-align:center;line-height:1.35}
 .dash-empty:hover{background:rgba(23,19,16,.03)}
 .dash-item:hover .dash-go{opacity:1}
-/* Class Flow. A border round every row made it read as a spreadsheet, so the
+/* The day plan. A border round every row made it read as a spreadsheet, so the
    rows have neither a border nor a fill and space does the separating instead.
    The controls stay out of the way until the pointer is on the row — and until
    the keyboard is, which is the half of that pattern people forget. */
@@ -785,7 +785,7 @@ function LibraryPick({ blocks, accent, onPick, hue = defaultHue }) {
               draggable
               onDragStart={e => { e.dataTransfer.effectAllowed = "copy";
                 e.dataTransfer.setData("text/plain", JSON.stringify({ blockId: b.id })); }}
-              title="Click to add this block, or drag it straight into the flow"
+              title="Click to add this block, or drag it straight into the day plan"
               style={{ display: "flex", alignItems: "flex-start", gap: 8, textAlign: "left", cursor: "grab",
                 background: SURFACE_2, border: "1px solid transparent", borderRadius: 9, padding: "8px 10px",
                 minHeight: HIT, fontFamily: F, fontSize: 13.5, color: TEXT_PRIMARY }}>
@@ -1148,7 +1148,7 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
             draggable
             onDragStart={e => { e.dataTransfer.effectAllowed = "copy";
               e.dataTransfer.setData("text/plain", JSON.stringify({ blockId: b.id })); }}
-            title="Drag this idea into a section of the flow, or click to read how the idea runs"
+            title="Drag this idea into a section of the day plan, or click to read how the idea runs"
             style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", minHeight: 38, padding: "4px 7px",
               background: "none", border: "none", borderRadius: 9, cursor: "pointer", fontFamily: F, textAlign: "left" }}>
             <span style={{ flex: "none", padding: "1px 7px", borderRadius: 999, background: hue("activity"),
@@ -1289,7 +1289,7 @@ function ReadingCard({ item, accent, live, onCast, onDismiss, onNote, onRemove, 
       onDragStart={e => { e.dataTransfer.effectAllowed = "copy";
         e.dataTransfer.setData("text/plain", JSON.stringify({ blockId: item.libId || "", schedItemId: item.id,
           title: item.title, url: item.url || "" })); }}
-      title="Drag this reading into a section of the flow">
+      title="Drag this reading into a section of the day plan">
       <div className="read-body">
         <div className="read-title">{item.title}</div>
         <ReadingNote value={item.note || ""} accent={accent} onSave={onNote} />
@@ -1302,7 +1302,7 @@ function ReadingCard({ item, accent, live, onCast, onDismiss, onNote, onRemove, 
           <a className="dash-focus read-src" href={item.url} target="_blank" rel="noopener noreferrer"
             title={"Open " + item.url + " in a new tab"}>{hostOf(item.url)} ↗</a>
         ) : <span style={{ marginRight: "auto" }} />}
-        {inFlow ? <span className="read-flag" title="This reading also has a row in the flow today">in the flow</span> : null}
+        {inFlow ? <span className="read-flag" title="This reading also has a row in the day plan today">on the day plan</span> : null}
         {live ? (
           <button className="dash-focus" style={{ ...btn, borderColor: LIVE, color: LIVE }}
             title="Take it back down" onClick={onDismiss}>× Take it down</button>
@@ -2245,15 +2245,15 @@ export function TodoPanel({ plan, seq, features, boards, assignments, shelves, s
   const stocked = (shelves.day || []).length + (shelves.week || []).length;
 
   const today = [
-    { ok: !!plan && flowItems.length > 0, good: flowItems.length + " things in the flow", bad: "Nothing in the flow yet" },
+    { ok: !!plan && flowItems.length > 0, good: flowItems.length + " things on the day plan", bad: "Nothing on the day plan yet" },
     { ok: noClaim === 0, good: "Every item has its headline written", bad: noClaim + " item" + (noClaim === 1 ? "" : "s") + " will stop and ask for a headline mid-class" },
     { ok: !!boards.pre, good: "The Enter board is written", bad: "You have not written the Enter board yet" },
     { ok: !!boards.post, good: "The Exit board is written", bad: "You have not written the Exit board yet" },
     { ok: stocked > 0, good: stocked + " stocked and ready to reach for", bad: "Nothing stocked for today or this week" },
     { ok: !!plan?.slides, good: "Slides are linked", bad: "No slides linked for this day" },
     { ok: (loose || []).length === 0,
-      good: "Everything on the schedule has a row in the flow",
-      bad: (loose || []).length + " thing" + ((loose || []).length === 1 ? "" : "s") + " on the schedule still need a row in the flow" },
+      good: "Everything on the schedule has a row on the day plan",
+      bad: (loose || []).length + " thing" + ((loose || []).length === 1 ? "" : "s") + " on the schedule still need a row on the day plan" },
   ];
 
   // ─── the assignment on the horizon ───
@@ -2526,7 +2526,7 @@ export function NoteSheet({ sections, sources, accent, onAdd, onClose }) {
   // for all of them and says which is which.
   const already = (sources || []).filter(x => (x.body || "").trim() || x.onSave);
   return (
-    <Sheet title="A new note" sub="It goes into the flow as a row" onClose={onClose} width={620}>
+    <Sheet title="A new note" sub="It goes onto the day plan as a row" onClose={onClose} width={620}>
       <span className="read-field">
         <textarea autoFocus value={text} onChange={e => setText(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit(); }}
@@ -3012,7 +3012,7 @@ function Picker({ title, opts, value, onPick, accent }) {
 // ─────────────────────────────────────────────────────────────
 // main
 // ─────────────────────────────────────────────────────────────
-// Class Flow first and full width, because building the day and casting it is
+// The day plan first and full width, because building the day and casting it is
 // what this screen is for. Everything else supports that. Attendance and the
 // engagement clock are useful and they were competing for the top of the page
 // with the thing I actually came here to do.
@@ -3387,7 +3387,7 @@ export default function Dashboard({ config }) {
     const bucket = normSlot(slots[slot]);
     slots[slot] = { ...bucket, items: [...bucket.items, { id: genId(), ...item }] };
     return { ...d, slots };
-  }, "adding to the flow");
+  }, "adding to the day plan");
   const removeFlowItem = (slot, itemId) => writeDay(d => {
     const slots = { ...(d.slots || {}) };
     const bucket = normSlot(slots[slot]);
@@ -3569,7 +3569,7 @@ export default function Dashboard({ config }) {
   });
 
   // Named sections for this day, shared by every chooser on the screen.
-  // Every section the day has, in the order Class Flow draws them: the
+  // Every section the day has, in the order the day plan draws them: the
   // sequence's own, then the ones I made, then anything left over from a
   // sequence change. The same list the flow uses, so a chooser opened anywhere
   // offers the same places.
@@ -3878,7 +3878,7 @@ export default function Dashboard({ config }) {
         { from: "What this week is called", body: weekRow?.topic, onSave: saveWeekTopic, oneLine: true },
         { from: "How this week runs", body: weekRow?.plan, onSave: saveWeekPlan },
         { from: "What students see this week", body: weekRow?.text, onSave: saveWeekText },
-        { from: "Notes already in the flow",
+        { from: "Notes already on the day plan",
           body: Object.values(plan?.slots || {})
             .flatMap(b => normSlot(b).items)
             .filter(it => !it.blockId && (it.text || "").trim())
@@ -3911,7 +3911,7 @@ export default function Dashboard({ config }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} path={config.path} />,
   };
-  const TITLES = { todo: "To-do", poll: "Poll", flow: "Class Flow", boards: "Enter/Exit", readings: "Readings", ideas: "Activities", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Assignments" };
+  const TITLES = { todo: "To-do", poll: "Poll", flow: "Day Plan", boards: "Enter/Exit", readings: "Readings", ideas: "Activities", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   const outCount = Object.values(marks).filter(v => v === "out").length;
   // How far through the day I am, counted off the flow rather than the clock.
@@ -4033,7 +4033,7 @@ export default function Dashboard({ config }) {
         ) : null}
 
         <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-          <h2 className="dash-col">Flow</h2>
+          <h2 className="dash-col">Day Plan</h2>
           <Panel id="flow" title={null}>
             <EditableTopic value={dayTitle.title} placeholder={config.name} onSave={saveDayTitle}
               own={dayTitle.own} weekLabel={weekLabel} weekday={weekdayFull}

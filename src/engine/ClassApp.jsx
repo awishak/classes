@@ -71,7 +71,7 @@ const NAV_CARDS = new Set(["schedule", "assignments", "community"]);
 function summary(key, config, role, ctx) {
   switch (key) {
     case "dayplan":
-      return { title: "Day Plan", body: <DayPlanSummary config={config} data={ctx.data} /> };
+      return { title: "Day Plan", body: <DayPlanSummary config={config} data={ctx.data} blockOf={ctx.blockOf} /> };
     case "you":
       return { title: "You", body: <YouSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> };
     case "assignments":
@@ -96,7 +96,8 @@ function summary(key, config, role, ctx) {
 // ─────────────────────────────────────────────────────────────
 function detail(key, config, role, ctx) {
   if (key === "dayplan") {
-    return <DayPlanDetail config={config} data={ctx.data} update={ctx.update} />;
+    return <DayPlanDetail config={config} data={ctx.data} blockOf={ctx.blockOf}
+      date={ctx.day} onDate={ctx.setDay} />;
   }
   if (key === "you") {
     return <YouDetail config={config} role={role} data={ctx.data} update={ctx.update} asStudent={ctx.asStudent} setAsStudent={ctx.setAsStudent} />;
@@ -386,6 +387,9 @@ export default function ClassApp({ config, initialCard }) {
   const remembered = () => { try { return localStorage.getItem(REMEMBER); } catch { return null; } };
   const [role, setRole] = useState(() => { try { return localStorage.getItem(ADMIN) === "1" ? "instructor" : "student"; } catch { return "student"; } });
   const [open, setOpen] = useState(initialCard || null);
+  // Which day the Day Plan card is showing, held here so the card itself can
+  // stay a mirror with no state of its own.
+  const [day, setDay] = useState("");
   const [signedIn, setSignedIn] = useState(remembered);
   const [asStudent, setAsStudent] = useState(() => remembered() || config.testStudent || config.students?.[0]?.name || "");
 
@@ -408,7 +412,7 @@ export default function ClassApp({ config, initialCard }) {
   }, [config.path]);
 
   const ctx = { data: data || {}, update, asStudent, setAsStudent: role === "instructor" ? setAsStudent : null, live, poll,
-    blockOf: (id) => (id ? blockById(data, shared, id) : null) };
+    blockOf: (id) => (id ? blockById(data, shared, id) : null), day, setDay };
 
   // Push updated seed content (schedule + library) to the store when the seed
   // version changes, without touching threads/profiles or other live data.

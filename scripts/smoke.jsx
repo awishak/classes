@@ -20,6 +20,8 @@ import Dashboard, {
 import ClassroomView from "../src/engine/ClassroomView.jsx";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
+import { DayPlanSummary, DayPlanDetail, rowsOf, countRows } from "../src/engine/DayPlanCard.jsx";
+import { FREEFORM } from "../src/engine/dayplan.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
   Steps as RepoSteps, Sticker as RepoSticker } from "../src/engine/RepoPage.jsx";
@@ -209,6 +211,44 @@ cases.push(["Andrew's pick, on a row", <PickMark size={20} />, "chef.png"]);
 // Matched on the escaped form, because an apostrophe reaches the page as
 // &#x27; and a case that never matches is a case that proves nothing.
 cases.push(["Andrew's pick, on the wall", <PickMark size={80} label />, PICK_LABEL.replace("'", "&#x27;")]);
+// ─── the Day Plan card, mirroring the dashboard ───
+// The card used to understand seeds and typed snippets and nothing else, so a
+// block placed from the repository drew an empty card. It reads the same
+// sections the dashboard draws now, with whatever a row points at resolved.
+{
+  const cfgD = ENGINE_LIST[0];
+  const dayDate = weeksOf(cfgD)[0].dates[0];
+  const mirrorData = {
+    schedule: weeksOf(cfgD),
+    blocks: { mb1: { id: "mb1", type: "link", title: "Why We Bet", headline: "The house always knows.",
+      url: "https://example.com/bet", pick: true } },
+    dayPlans: { [dayDate]: { sequenceId: FREEFORM, done: ["i2"], notes: "Open on the headline.",
+      slots: { "sec-1": { title: "The hook", items: [
+        { id: "i1", blockId: "mb1" },
+        { id: "i2", text: "A typed line", depth: 1 },
+        { id: "i3", seedId: "sd1" },
+      ] } } } },
+    seeds: [{ id: "sd1", title: "A seed", body: "How the seed runs" }],
+  };
+  const blockOfM = (id) => mirrorData.blocks[id] || null;
+  const plan = mirrorData.dayPlans[dayDate];
+  const secs = rowsOf({ config: cfgD, data: mirrorData, plan, blockOf: blockOfM });
+  if (secs.length !== 1) { console.error("  FAIL  day plan: " + secs.length + " sections out of one"); failedEarly++; }
+  if (countRows(secs) !== 3) { console.error("  FAIL  day plan: " + countRows(secs) + " rows out of three"); failedEarly++; }
+  const [r1, r2, r3] = secs[0].items;
+  // A block row says what the block says, which is the whole point: the old
+  // card rendered it with no title at all.
+  if (r1.words !== "The house always knows.") { console.error("  FAIL  day plan: a block row says " + JSON.stringify(r1.words)); failedEarly++; }
+  if (!r1.pick) { console.error("  FAIL  day plan: a picked block lost its sticker"); failedEarly++; }
+  if (r1.kind !== "Article") { console.error("  FAIL  day plan: a block row is filed as " + r1.kind); failedEarly++; }
+  if (r2.words !== "A typed line" || !r2.done || r2.depth !== 1) { console.error("  FAIL  day plan: a typed row came back wrong"); failedEarly++; }
+  if (r3.words !== "A seed" || r3.body !== "How the seed runs") { console.error("  FAIL  day plan: a seed row came back wrong"); failedEarly++; }
+  cases.push(["Day Plan card", <DayPlanDetail config={cfgD} data={mirrorData} blockOf={blockOfM} date={dayDate} />,
+    "The house always knows."]);
+  cases.push(["Day Plan card, a day with nothing on it", <DayPlanDetail config={cfgD}
+    data={{ schedule: weeksOf(cfgD) }} blockOf={() => null} />, "Day Plan"]);
+  cases.push(["Day Plan tile", <DayPlanSummary config={cfgD} data={mirrorData} blockOf={blockOfM} />, "Next class"]);
+}
 cases.push(["Discussion board", <BoardPage config={cfg0} />]);
 cases.push(["Repository", <RepoPage />]);
 // The page itself is behind a load, so a server render of the page stops at
@@ -244,10 +284,11 @@ cases.push(["Repository", <RepoPage />]);
     onPlace={noop} onAssign={noop} />, "Into the flow"]);
 
   // ─── the sections a day actually has ───
-  // Four of the five classes have no sequences in their config, so reading a
-  // day's sections off the sequence alone said "no sections to land in" while
-  // the dashboard was drawing four sections on that same day. A section made
-  // by hand, and any slot holding something, is a section.
+  // A day set to Freeform has none of a sequence's slots, and every class
+  // inherits the same two sequences from the template, so reading a day's
+  // sections off the sequence alone said "no sections to land in" while the
+  // dashboard was drawing the sections made by hand on that same day. A
+  // section made by hand, and any slot holding something, is a section.
   const noSeq = { id: "noseq", code: "COMM 0", sequences: [], defaultSequenceId: "" };
   const handMade = { sequenceId: "", slots: {
     "sec-1": { title: "The hook", items: [] },

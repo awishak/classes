@@ -38,11 +38,12 @@ export const dayPlanFor = (data, config, date) =>
 
 // Every section a day actually has, as [slot, what the section is called].
 //
-// A sequence is one source of sections and not the only one. Four of the five
-// classes have no sequences in their config at all, so reading the sections off
-// the sequence alone says a day has nowhere to land while the dashboard is
-// drawing four sections on that same day. The sections made by hand on the day
-// are the `sec-` keys, and a slot holding items is a section whatever put it
+// A sequence is one source of sections and not the only one. A day set to
+// Freeform has none of a sequence's slots, and a day whose sequence has been
+// changed keeps whatever the old sequence left behind, so reading the sections
+// off the sequence alone says a day has nowhere to land while the dashboard is
+// drawing sections on that same day. The sections made by hand on the day are
+// the `sec-` keys, and a slot holding items is a section whatever put it
 // there.
 //
 // The Dashboard worked this out inline and the repository asked the sequence,
