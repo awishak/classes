@@ -704,13 +704,13 @@ export default function RepoPage() {
           <span className="repo-count">{items.length} things</span>
           <a className="repo-focus repo-chip repo-ideas" href="/repo/ideas">Ideas</a>
           <button className="repo-focus repo-chip" onClick={() => setTyping(!typing)} aria-pressed={typing}>Fonts</button>
-          <button className="repo-focus repo-add" onClick={() => setAdding(true)}>+ Add</button>
+          <button className="repo-focus repo-add" onClick={() => setAdding(true)}>Add item</button>
         </div>
       </header>
 
       <div className="repo-body">
         <input className="repo-search" value={q} onChange={e => set({ q: e.target.value })}
-          placeholder="Search everything" aria-label="Search the repository" autoFocus />
+          placeholder="Search all items" aria-label="Search all items" autoFocus />
 
         {flag ? (
           <Health counts={health} flag={flag} onFlag={id => set({ flag: flag === id ? "" : id, lens: "" })} />
@@ -726,13 +726,13 @@ export default function RepoPage() {
                 types moved in with editing the tags, under Housekeeping, which
                 is where managing a facet belongs rather than beside the filter
                 for it. */}
-            <select className="repo-select repo-choose" value={kind} aria-label="Which type"
+            <select className="repo-select repo-choose" value={kind} aria-label="Choose type"
               onChange={e => set({ kind: e.target.value })}>
               <option value="">Choose type ({items.length})</option>
               {kinds.filter(t => counts[t.id]).map(t =>
                 <option key={t.id} value={t.id}>{t.label} ({counts[t.id]})</option>)}
             </select>
-            <select className="repo-select repo-choose" value={tag} aria-label="Which tag"
+            <select className="repo-select repo-choose" value={tag} aria-label="Choose tag"
               onChange={e => set({ tag: e.target.value })} disabled={!tags.length}>
               <option value="">Choose tag ({tags.length})</option>
               {tags.map(t => <option key={t} value={t}>{t}</option>)}
@@ -743,7 +743,7 @@ export default function RepoPage() {
                 question a table cannot. The health numbers used to sit across
                 the top all day, and a number I am not acting on today is a
                 number I stop seeing. */}
-            <select className="repo-select repo-pick-show" aria-label="What to show"
+            <select className="repo-select repo-pick-show" aria-label="Choose view"
               value={lens ? "lens:" + lens : flag ? "flag:" + flag : ""}
               onChange={e => {
                 const v = e.target.value;
@@ -776,7 +776,7 @@ export default function RepoPage() {
               () => set({ pick: pick ? "" : "yes" }), "#b45309") : null}
           </div>
           <div className="repo-row">
-            {chip(!where, "Every class", () => set({ where: "" }))}
+            {chip(!where, "All classes", () => set({ where: "" }))}
             {ENGINE_LIST.map(c => chip(where === c.id, c.code, () => set({ where: where === c.id ? "" : c.id }), c.accent))}
             {chip(where === "shared", SHARED_LABEL, () => set({ where: where === "shared" ? "" : "shared" }))}
             <Toggle on={lens === "schedule"} color="#0f766e" label="Schedule by day"
@@ -884,11 +884,11 @@ export default function RepoPage() {
                           row list. */}
                       <button className={"repo-focus repo-unpick" + (picked.size ? "" : " repo-unpick-off")}
                         onClick={unpick} disabled={!picked.size}
-                        aria-label={picked.size ? "Clear the " + picked.size + " ticks" : "Nothing is ticked"}
-                        title="Clear the ticks">×</button>
+                        aria-label={picked.size ? "Clear selection, " + picked.size + " chosen" : "Nothing chosen"}
+                        title="Clear selection">×</button>
                       <label className="repo-pick-all">
                         <input type="checkbox" checked={hits.length > 0 && hits.every(b => picked.has(b.id))}
-                          onChange={pickAll} aria-label={"Select all " + hits.length + " matches"} />
+                          onChange={pickAll} aria-label={"Select all " + hits.length + " items"} />
                       </label>
                     </span>
                   </th>
@@ -999,7 +999,7 @@ export function Steps({ steps, onBack }) {
     <div className="repo-row repo-steps">
       <span className="repo-label">Just now</span>
       <span className="repo-steps-what">{sayEntry(steps[0])}</span>
-      <button className="repo-focus repo-chip" onClick={onBack}>Put it back</button>
+      <button className="repo-focus repo-chip" onClick={onBack}>Undo</button>
       <span className="repo-verdict">
         {steps.length === 1 ? "1 change this visit" : steps.length + " changes this visit"}
       </span>
@@ -1140,7 +1140,7 @@ export function DayAdd({ day, shelf, onAdd, onMake, hue }) {
       .join(" ").toLowerCase().includes(text)).slice(0, 8);
 
   const where = (
-    <select className="repo-select" value={slot} aria-label="Where on the day it goes"
+    <select className="repo-select" value={slot} aria-label="Choose section"
       onChange={e => setSlot(e.target.value)}>
       {day.sections.map(sec => <option key={sec.slot} value={sec.slot}>{sec.name}</option>)}
       <option value="__assigned">The readings students see</option>
@@ -1156,8 +1156,8 @@ export function DayAdd({ day, shelf, onAdd, onMake, hue }) {
       </div>
 
       <div className="repo-row">
-        <input className="repo-input" value={q} autoFocus placeholder="Search everything on the shelf"
-          aria-label="Find something already on the shelf" onChange={e => setQ(e.target.value)} />
+        <input className="repo-input" value={q} autoFocus placeholder="Search all items"
+          aria-label="Search all items" onChange={e => setQ(e.target.value)} />
       </div>
 
       {hits.length ? (
@@ -1173,11 +1173,11 @@ export function DayAdd({ day, shelf, onAdd, onMake, hue }) {
       ) : text ? <p className="repo-unused">Nothing on the shelf matches those words.</p> : null}
 
       <div className="repo-row">
-        <span className="repo-label">Or a new reading</span>
+        <span className="repo-label">Add new item</span>
         <input className="repo-input repo-tag-in" value={url} placeholder="https://…"
-          aria-label="The link for a new reading" onChange={e => setUrl(e.target.value)} />
-        <input className="repo-input repo-tag-in" value={title} placeholder="What it is called"
-          aria-label="The title for a new reading" onChange={e => setTitle(e.target.value)}
+          aria-label="Link" onChange={e => setUrl(e.target.value)} />
+        <input className="repo-input repo-tag-in" value={title} placeholder="Title"
+          aria-label="Title" onChange={e => setTitle(e.target.value)}
           onKeyDown={e => {
             if (e.key !== "Enter" || (!url.trim() && !title.trim())) return;
             setSaid(onMake(day.date, slot, { url: url.trim(), title: title.trim() }));
@@ -1186,7 +1186,7 @@ export function DayAdd({ day, shelf, onAdd, onMake, hue }) {
         <button className="repo-focus repo-save" disabled={!url.trim() && !title.trim()}
           onClick={() => { setSaid(onMake(day.date, slot, { url: url.trim(), title: title.trim() }));
             setUrl(""); setTitle(""); }}>
-          Make it and add it
+          Add new item
         </button>
       </div>
     </div>
@@ -1238,17 +1238,17 @@ export function Views({ views, pinned, blank, naming, here, say, onGo, onName, o
       {blank ? null : pinned ? (
         <span className="repo-verdict repo-verdict-good">Pinned as {pinned.name}</span>
       ) : naming === null ? (
-        <button className="repo-focus repo-chip" onClick={() => onName(say(here))}>Pin this view</button>
+        <button className="repo-focus repo-chip" onClick={() => onName(say(here))}>Pin view</button>
       ) : (
         <>
           <input className="repo-input repo-tag-in" value={naming} autoFocus
-            onChange={e => onName(e.target.value)} aria-label="A name for this view"
+            onChange={e => onName(e.target.value)} aria-label="Name view"
             onKeyDown={e => { if (e.key === "Enter") onPin(naming); if (e.key === "Escape") onName(null); }} />
-          <button className="repo-focus repo-save" onClick={() => onPin(naming)}>Pin it</button>
+          <button className="repo-focus repo-save" onClick={() => onPin(naming)}>Pin view</button>
           <button className="repo-focus repo-chip" onClick={() => onName(null)}>Cancel</button>
         </>
       )}
-      {blank ? null : <button className="repo-focus repo-chip" onClick={onClear}>Clear the filters</button>}
+      {blank ? null : <button className="repo-focus repo-chip" onClick={onClear}>Clear filters</button>}
     </div>
   );
 }
@@ -1283,27 +1283,27 @@ export function Bulk({ n, rows, planOf, stores, onTag, onType, onShare, onClear,
     <div className="repo-bulk">
       <div className="repo-row">
         <span className="repo-bulk-n">{n + " selected"}</span>
-        <input className="repo-input repo-tag-in" value={adding} placeholder="Add a tag"
-          aria-label="A tag for everything selected" onChange={e => setAdding(e.target.value)}
+        <input className="repo-input repo-tag-in" value={adding} placeholder="Add tag"
+          aria-label="Add tag" onChange={e => setAdding(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") addTag(); }} />
-        <button className="repo-focus repo-save" disabled={!adding.trim()} onClick={addTag}>Add the tag</button>
+        <button className="repo-focus repo-save" disabled={!adding.trim()} onClick={addTag}>Add tag</button>
         {carried.length ? (
-          <select className="repo-select" value="" aria-label="Take a tag away"
+          <select className="repo-select" value="" aria-label="Remove tag"
             onChange={e => {
               if (!e.target.value) return;
               onTag([], [e.target.value]);
               setSaid(e.target.value + " taken off " + n + " " + (n === 1 ? "block" : "blocks"));
             }}>
-            <option value="">Take a tag away</option>
+            <option value="">Remove tag</option>
             {carried.map(t => <option key={t.tag} value={t.tag}>{t.tag} ({t.n})</option>)}
           </select>
         ) : null}
         <button className="repo-focus repo-chip" onClick={onClear} style={{ marginLeft: "auto" }}>
-          Clear the selection
+          Clear selection
         </button>
       </div>
       <div className="repo-row">
-        <span className="repo-label">Change the type</span>
+        <span className="repo-label">Change type</span>
         {allTypes().map(t => (
           <button key={t.id} className="repo-focus repo-chip"
             onClick={() => { onType(t.id); setSaid(n + " now " + t.label.toLowerCase()); }}>
@@ -1317,15 +1317,15 @@ export function Bulk({ n, rows, planOf, stores, onTag, onType, onShare, onClear,
           {owned ? "Move " + owned + " to " + SHARED_LABEL : "All of them are on " + SHARED_LABEL + " already"}
         </button>
         <button className="repo-focus repo-chip" onClick={() => setPlacing(!placing)} aria-pressed={placing}>
-          Put the selection on a day
+          Add to class
         </button>
         <Toggle on={allPicked} color="#047857" label="Drew's Pick"
-          title={allPicked ? "Take the sticker off everything selected" : "Put the sticker on everything selected"}
+          title={allPicked ? "Remove Drew's Pick from all chosen" : "Add Drew's Pick to all chosen"}
           onClick={() => { onStar(!allPicked); setSaid(allPicked ? "Drew's Pick off " + n : n + " are Drew's Picks"); }} />
         {said ? <span className="repo-said">{said}</span> : null}
       </div>
       {placing ? (
-        <Place what={"Put the " + n + " selected on a day"} planOf={planOf} stores={stores}
+        <Place what={"Add " + n + " to class"} planOf={planOf} stores={stores}
           onPlace={onPlace} onAssign={onAssign} />
       ) : null}
     </div>
@@ -1453,7 +1453,7 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
           <input className="repo-input" value={draft.title} onChange={e => set("title", e.target.value)} />
         </label>
         <label className="repo-field">
-          <span className="repo-label">Headline, what the room reads</span>
+          <span className="repo-label">Display title</span>
           <input className="repo-input" value={draft.headline} onChange={e => set("headline", e.target.value)} />
         </label>
         <label className="repo-field">
@@ -1479,7 +1479,7 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
           <input className="repo-input" value={draft.tags} onChange={e => set("tags", e.target.value)} />
         </label>
         <div className="repo-row">
-          <button className="repo-focus repo-save" onClick={commit}>Save the changes</button>
+          <button className="repo-focus repo-save" onClick={commit}>Save changes</button>
           {saved ? <span className="repo-said">Saved everywhere the block is used.</span> : null}
           {block.url ? (
             <a className="repo-focus repo-link" href={block.url} target="_blank" rel="noopener noreferrer">
@@ -1488,8 +1488,8 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
           ) : null}
           {sure ? (
             <>
-              <button className="repo-focus repo-danger" onClick={onDelete}>Yes, delete</button>
-              <button className="repo-focus repo-chip" onClick={() => setSure(false)}>Keep the block</button>
+              <button className="repo-focus repo-danger" onClick={onDelete}>Confirm delete</button>
+              <button className="repo-focus repo-chip" onClick={() => setSure(false)}>Keep item</button>
               <span className="repo-warn">
                 {block.uses.length
                   ? "This block is on " + block.uses.length + " days and will go blank on each one."
@@ -1505,7 +1505,7 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
       <div className="repo-pane repo-pane-side">
         <Place block={block} planOf={planOf} stores={stores} onPlace={onPlace} onAssign={onAssign} />
         <div className="repo-where">
-          <span className="repo-label">Everywhere the block turns up</span>
+          <span className="repo-label">Locations</span>
           {block.uses.length ? (
             <ul className="repo-list">
               {block.uses.map((u, i) => (
@@ -1516,7 +1516,7 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
                 </li>
               ))}
             </ul>
-          ) : <p className="repo-unused">Never used. Put the block on a day above.</p>}
+          ) : <p className="repo-unused">Never used. Add this to a class above.</p>}
         </div>
       </div>
     </div>
@@ -1538,15 +1538,15 @@ export function Place({ block, what, planOf, stores, onPlace, onAssign }) {
 
   return (
     <div className="repo-place">
-      <span className="repo-label">{what || "Put the block on a day"}</span>
+      <span className="repo-label">{what || "Add this to class"}</span>
       <div className="repo-row">
-        <select className="repo-select" value={clsId} aria-label="Which class"
+        <select className="repo-select" value={clsId} aria-label="Choose class"
           onChange={e => { setClsId(e.target.value); setDate(""); setSlot(""); setSaid(""); }}>
           {ENGINE_LIST.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
         </select>
-        <select className="repo-select" value={date} aria-label="Which day" disabled={!weeks.length}
+        <select className="repo-select" value={date} aria-label="Choose date" disabled={!weeks.length}
           onChange={e => { setDate(e.target.value); setSlot(""); setSaid(""); }}>
-          <option value="">Which day</option>
+          <option value="">Choose date</option>
           {weeks.map((w, i) => (
             <optgroup key={w.id || i} label={"Week " + (i + 1) + (w.topic ? " · " + w.topic : "")}>
               {(w.dates || []).map(d => <option key={d} value={d}>{d}</option>)}
@@ -1554,7 +1554,7 @@ export function Place({ block, what, planOf, stores, onPlace, onAssign }) {
           ))}
         </select>
         {slots.length ? (
-          <select className="repo-select" value={slot} aria-label="Which section of the day"
+          <select className="repo-select" value={slot} aria-label="Choose section"
             onChange={e => setSlot(e.target.value)}>
             <option value="">First section</option>
             {slots.map(([key, name]) => <option key={key} value={key}>{name}</option>)}
@@ -1563,10 +1563,10 @@ export function Place({ block, what, planOf, stores, onPlace, onAssign }) {
       </div>
       <div className="repo-row">
         <button className="repo-focus repo-save" disabled={!date} onClick={() => setSaid(onPlace(cls, date, slot))}>
-          Into the flow
+          Add to day plan
         </button>
         <button className="repo-focus repo-chip" disabled={!date} onClick={() => setSaid(onAssign(cls, date))}>
-          Onto the readings
+          Add to readings
         </button>
         {said ? <span className="repo-said">{said}</span> : null}
         {!weeks.length ? <span className="repo-warn">{cls.code} has no weeks on the schedule yet.</span> : null}
@@ -1588,7 +1588,7 @@ export function TypeSheet({ fonts, bold, onFont, onBold, onReset, onClose }) {
     <div className="repo-type-sheet">
       <div className="repo-row">
         <span className="repo-label">Type, on this page only</span>
-        <button className="repo-focus repo-chip" onClick={onReset} style={{ marginLeft: "auto" }}>Put the type back</button>
+        <button className="repo-focus repo-chip" onClick={onReset} style={{ marginLeft: "auto" }}>Reset name</button>
         <button className="repo-focus repo-chip" onClick={onClose}>Done</button>
       </div>
       {REPO_SLOTS.map(sl => (
@@ -1649,12 +1649,12 @@ function AddForm({ onAdd, onClose, hue }) {
         placeholder="Anything worth keeping alongside" />
       <input className="repo-input" value={tags} onChange={e => setTags(e.target.value)} placeholder="Tags, separated by commas" />
       <div className="repo-row" style={{ alignItems: "center" }}>
-        <span className="repo-label">Keep it with</span>
-        <select className="repo-select" value={target} onChange={e => setTarget(e.target.value)} aria-label="Which store">
+        <span className="repo-label">Choose shelf</span>
+        <select className="repo-select" value={target} onChange={e => setTarget(e.target.value)} aria-label="Choose shelf">
           <option value="shared">{SHARED_LABEL}, so every class can reach the item</option>
           {ENGINE_LIST.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
         </select>
-        <button className="repo-focus repo-save" onClick={commit}>Add to the repository</button>
+        <button className="repo-focus repo-save" onClick={commit}>Add item</button>
         <button className="repo-focus repo-chip" onClick={onClose}>Cancel</button>
       </div>
     </div>

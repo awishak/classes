@@ -282,9 +282,9 @@ cases.push(["Repository", <RepoPage />]);
   cases.push(["Repository row, never used", table(<RepoRow block={bare} hue={hue} open onOpen={noop} onTag={noop}
     picked={false} onPick={noop} />), "Never"]);
   cases.push(["Repository open row", <RepoDetail block={blk} hue={hue} planOf={planOf} stores={stores}
-    onSave={noop} onDelete={noop} onPlace={noop} onAssign={noop} />, "Put the block on a day"]);
+    onSave={noop} onDelete={noop} onPlace={noop} onAssign={noop} />, "Add this to class"]);
   cases.push(["Repository placer", <RepoPlace block={blk} planOf={planOf} stores={stores}
-    onPlace={noop} onAssign={noop} />, "Into the flow"]);
+    onPlace={noop} onAssign={noop} />, "Add to day plan"]);
 
   // ─── the sections a day actually has ───
   // A day set to Freeform has none of a sequence's slots, and every class
@@ -311,7 +311,7 @@ cases.push(["Repository", <RepoPage />]);
   cases.push(["Repository placer, a day with hand-made sections",
     <RepoPlace block={blk} planOf={planWithSections} stores={{ [ENGINE_LIST[0].id]: {
       schedule: [{ id: "w1", topic: "A week", dates: ["Sep 1"] }] } }}
-      onPlace={noop} onAssign={noop} />, "Into the flow"]);
+      onPlace={noop} onAssign={noop} />, "Add to day plan"]);
   cases.push(["Repository type sheet", <RepoType fonts={DEFAULT_REPO_FONTS} bold={false}
     onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Column headings"]);
   // The lenses, on an index built the way the page builds one: the same
@@ -350,7 +350,7 @@ cases.push(["Repository", <RepoPage />]);
   }, shared: {} };
   const ends = findLooseEnds(looseStores, [cfg0]);
   if (ends.length !== 2) { console.error("  FAIL  tidy: expected 2 loose ends, got " + ends.length); failedEarly++; }
-  cases.push(["Repository loose ends", <LooseEnds ends={ends} onDrop={noop} onUnlink={noop} onMakeBlock={noop} />, "Make a block"]);
+  cases.push(["Repository loose ends", <LooseEnds ends={ends} onDrop={noop} onUnlink={noop} onMakeBlock={noop} />, "Add item"]);
   cases.push(["Repository loose ends, none", <LooseEnds ends={[]} onDrop={noop} onUnlink={noop} onMakeBlock={noop} />, "Nothing dangling"]);
 
   // The merge itself, on stores rather than on a screen: the loser leaves, the
@@ -422,7 +422,7 @@ cases.push(["Repository", <RepoPage />]);
     console.error("  FAIL  links: results did not land on the right stores"); failedEarly++; }
 
   cases.push(["Repository links", <Links blocks={linkables(linked)} busy={false} done={0} total={0}
-    onCheck={noop} onlyBad={false} setOnlyBad={noop} />, "Check all 4"]);
+    onCheck={noop} onlyBad={false} setOnlyBad={noop} />, "Check 4 links"]);
   cases.push(["Repository links, checking", <Links blocks={linkables(linked)} busy done={8} total={40}
     onCheck={noop} onlyBad setOnlyBad={noop} />, "Checking 8 of 40"]);
 
@@ -534,7 +534,7 @@ cases.push(["Repository", <RepoPage />]);
   cases.push(["Add to a day", <RepoDayAdd day={termDays[0]} shelf={[termIndexed.tb1]} hue={hue}
     onAdd={() => ""} onMake={() => ""} />, "The readings students see"]);
   cases.push(["Add to a day, a day with no sections", <RepoDayAdd day={termDays[1]} shelf={[]} hue={hue}
-    onAdd={() => ""} onMake={() => ""} />, "Make it and add it"]);
+    onAdd={() => ""} onMake={() => ""} />, "Add new item"]);
   // Off the day, still on the shelf. A row on a day is a pointer at a block, so
   // taking the row away leaves the block and every other day using it alone.
   cases.push(["The term, with a way off the day", termTable(
@@ -616,7 +616,7 @@ cases.push(["Repository", <RepoPage />]);
   if (stack.length !== LIMIT) { console.error("  FAIL  undo: the stack grew to " + stack.length); failedEarly++; }
   if (stack[0].what !== "Step " + (LIMIT + 4)) { console.error("  FAIL  undo: the newest step is not on top"); failedEarly++; }
 
-  cases.push(["Repository steps", <RepoSteps steps={[step]} onBack={noop} />, "Put it back"]);
+  cases.push(["Repository steps", <RepoSteps steps={[step]} onBack={noop} />, "Undo"]);
   cases.push(["Repository steps, none", <RepoSteps steps={[]} onBack={noop} />]);
 
   // ─── the types, as a list Andrew edits ───
@@ -671,10 +671,10 @@ cases.push(["Repository", <RepoPage />]);
 
   cases.push(["Repository types", <RepoTypes types={readTypes(kindStore)} counts={{ link: 12, video: 1 }}
     orphans={strays} hue={hue} onAdd={noop} onRename={noop} onReset={noop} onColor={noop} onDrop={noop}
-    onRetype={noop} />, "Add the type"]);
+    onRetype={noop} />, "Add type"]);
   cases.push(["Repository types, none added", <RepoTypes types={readTypes({})} counts={{}} orphans={[]}
     hue={hue} onAdd={noop} onRename={noop} onReset={noop} onColor={noop} onDrop={noop} onRetype={noop} />,
-    "Put the name back"]);
+    "Reset name"]);
   // Left as the page found it, so no later case renders against a shelf that
   // has a Watch kind on it.
   registerTypes({});
@@ -707,9 +707,9 @@ cases.push(["Repository", <RepoPage />]);
 
   cases.push(["Repository views", <RepoViews views={[{ id: "v1", name: "Untagged readings", filters: asked }]}
     pinned={null} blank={false} naming={null} here={asked} say={() => "COMM 1"} onGo={noop} onName={noop}
-    onPin={noop} onDrop={noop} onClear={noop} />, "Pin this view"]);
+    onPin={noop} onDrop={noop} onClear={noop} />, "Pin view"]);
   cases.push(["Repository views, naming one", <RepoViews views={[]} pinned={null} blank={false} naming="A name"
-    here={asked} say={() => "COMM 1"} onGo={noop} onName={noop} onPin={noop} onDrop={noop} onClear={noop} />, "Pin it"]);
+    here={asked} say={() => "COMM 1"} onGo={noop} onName={noop} onPin={noop} onDrop={noop} onClear={noop} />, "Pin view"]);
 
   // ─── many rows at once ───
   const bulkStores = {
@@ -767,9 +767,9 @@ cases.push(["Repository", <RepoPage />]);
   }
   if (!SEEDS.length) { console.error("  FAIL  seeds: the generated library is empty"); failedEarly++; }
   cases.push(["Repository seeds", <RepoSeeds seeds={SEEDS} fresh={SEEDS} onBring={noop} onBringAll={noop} />,
-    "Bring in the " + SEEDS.length + " that are new"]);
+    "Add " + SEEDS.length + " seeds"]);
   cases.push(["Repository seeds, all in", <RepoSeeds seeds={SEEDS} fresh={[]} onBring={noop} onBringAll={noop} />,
-    "Every seed is already a block"]);
+    "All seeds added"]);
 
   // ─── what the room made ───
   const roomRaw = {

@@ -39,14 +39,14 @@ export function BlockTypes({ types, counts, orphans, hue, onAdd, onRename, onRes
       </p>
 
       <div className="repo-kind-add">
-        <input className="repo-input repo-tag-in" value={naming} placeholder="A new type, say Video"
-          aria-label="The name of a new type" onChange={e => setNaming(e.target.value)}
+        <input className="repo-input repo-tag-in" value={naming} placeholder="New type"
+          aria-label="New type" onChange={e => setNaming(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter" && naming.trim()) { onAdd(naming, hint); setNaming(""); setHint(""); } }} />
-        <input className="repo-input" value={hint} placeholder="What the type holds, in a few words"
-          aria-label="What the new type holds" onChange={e => setHint(e.target.value)} />
+        <input className="repo-input" value={hint} placeholder="What it holds"
+          aria-label="What it holds" onChange={e => setHint(e.target.value)} />
         <button className="repo-focus repo-save" disabled={!naming.trim()}
           onClick={() => { onAdd(naming, hint); setNaming(""); setHint(""); }}>
-          Add the type
+          Add type
         </button>
       </div>
 
@@ -65,7 +65,7 @@ export function BlockTypes({ types, counts, orphans, hue, onAdd, onRename, onRes
               Colour
             </button>
             {BUILT_IN.has(t.id) ? (
-              <button className="repo-focus repo-chip" onClick={() => onReset(t.id)}>Put the name back</button>
+              <button className="repo-focus repo-chip" onClick={() => onReset(t.id)}>Reset name</button>
             ) : counts[t.id] ? (
               <span className="repo-warn">Move the blocks off this type to delete the type</span>
             ) : (
@@ -81,7 +81,7 @@ export function BlockTypes({ types, counts, orphans, hue, onAdd, onRename, onRes
                   onClick={() => { onColor(t.id, sw.id); setOpen(""); }} />
               ))}
               <button className="repo-focus repo-chip" onClick={() => { onColor(t.id, ""); setOpen(""); }}>
-                Put the colour back
+                Reset colour
               </button>
             </div>
           ) : null}
@@ -101,9 +101,9 @@ export function BlockTypes({ types, counts, orphans, hue, onAdd, onRename, onRes
             <div key={o.id} className="repo-row">
               <code className="repo-key">{o.id}</code>
               <span className="repo-copy-n">{o.n} blocks</span>
-              <select className="repo-select" value="" aria-label={"Move the " + o.n + " blocks to another type"}
+              <select className="repo-select" value="" aria-label="Choose type"
                 onChange={e => { if (e.target.value) onRetype(o.id, e.target.value); }}>
-                <option value="">Move them to</option>
+                <option value="">Choose type</option>
                 {types.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
               </select>
             </div>
@@ -129,7 +129,7 @@ export function Seeds({ seeds, fresh, onBring, onBringAll }) {
       </p>
       <div className="repo-row">
         <button className="repo-focus repo-save" disabled={!fresh.length} onClick={onBringAll}>
-          {fresh.length ? "Bring in the " + fresh.length + " that are new" : "Every seed is already a block"}
+          {fresh.length ? "Add " + fresh.length + " seeds" : "All seeds added"}
         </button>
         <span className="repo-verdict">{seeds.length} in the library, {seeds.length - fresh.length} on the shelf</span>
       </div>
@@ -138,7 +138,7 @@ export function Seeds({ seeds, fresh, onBring, onBringAll }) {
           <div className="repo-cluster-top">
             <span className="repo-copy-words">{s.title}</span>
             {freshIds.has(s.id)
-              ? <button className="repo-focus repo-chip" onClick={() => onBring(s)}>Bring in this seed</button>
+              ? <button className="repo-focus repo-chip" onClick={() => onBring(s)}>Add seed</button>
               : <span className="repo-verdict repo-verdict-good">On the shelf</span>}
           </div>
           <p className="repo-plan">{s.body}</p>
@@ -199,8 +199,8 @@ function RoomItem({ item, kept, onKeep }) {
         <span className="repo-copy-n">{stampOf(item.at)}</span>
         {item.kind === "poll" && !item.over ? <span className="repo-flagged">On the floor now</span> : null}
         {kept
-          ? <span className="repo-verdict repo-verdict-good" style={{ marginLeft: "auto" }}>Kept as a block</span>
-          : <button className="repo-focus repo-chip" style={{ marginLeft: "auto" }} onClick={onKeep}>Keep as a block</button>}
+          ? <span className="repo-verdict repo-verdict-good" style={{ marginLeft: "auto" }}>Added</span>
+          : <button className="repo-focus repo-chip" style={{ marginLeft: "auto" }} onClick={onKeep}>Add item</button>}
       </div>
 
       <p className="repo-copy-words">{item.title}</p>

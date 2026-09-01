@@ -157,14 +157,14 @@ function End({ le, onDrop, onUnlink, onMakeBlock }) {
         <div className="repo-row">
           {le.kind === "week" ? (
             <>
-              <button className="repo-focus repo-save" onClick={() => onMakeBlock(le)}>Make a block</button>
-              <button className="repo-focus repo-chip" onClick={() => onUnlink(le)}>Just unlink</button>
+              <button className="repo-focus repo-save" onClick={() => onMakeBlock(le)}>Add item</button>
+              <button className="repo-focus repo-chip" onClick={() => onUnlink(le)}>Unlink row</button>
             </>
           ) : null}
           {sure ? (
             <>
-              <button className="repo-focus repo-danger" onClick={() => onDrop(le)}>Yes, take it off</button>
-              <button className="repo-focus repo-chip" onClick={() => setSure(false)}>Leave the row</button>
+              <button className="repo-focus repo-danger" onClick={() => onDrop(le)}>Confirm remove</button>
+              <button className="repo-focus repo-chip" onClick={() => setSure(false)}>Keep row</button>
             </>
           ) : (
             <button className="repo-focus repo-chip repo-del" onClick={() => setSure(true)}>
@@ -218,7 +218,7 @@ export function Tags({ index, alike, onRetag }) {
               <th className="repo-th" scope="col"><span className="repo-sort">Tag</span></th>
               <th className="repo-th" scope="col"><span className="repo-sort">On</span></th>
               <th className="repo-th" scope="col"><span className="repo-sort">Class</span></th>
-              <th className="repo-th" scope="col"><span className="repo-sort">Rename, merge or clear</span></th>
+              <th className="repo-th" scope="col"><span className="repo-sort">Rename tag</span></th>
             </tr>
           </thead>
           <tbody>
@@ -247,8 +247,8 @@ function TagRow({ entry, onRetag }) {
           {gone ? (
             sure ? (
               <>
-                <button className="repo-focus repo-danger" onClick={() => onRetag(entry.tag, "")}>Yes, clear the tag</button>
-                <button className="repo-focus repo-chip" onClick={() => { setValue(entry.tag); setSure(false); }}>Keep the tag</button>
+                <button className="repo-focus repo-danger" onClick={() => onRetag(entry.tag, "")}>Confirm clear</button>
+                <button className="repo-focus repo-chip" onClick={() => { setValue(entry.tag); setSure(false); }}>Keep tag</button>
               </>
             ) : (
               <button className="repo-focus repo-chip repo-del" onClick={() => setSure(true)}>
@@ -285,7 +285,7 @@ export function Links({ blocks, busy, done, total, onCheck, onlyBad, setOnlyBad 
       </p>
       <div className="repo-row">
         <button className="repo-focus repo-save" onClick={onCheck} disabled={busy}>
-          {busy ? "Checking " + done + " of " + total + "…" : "Check all " + blocks.length}
+          {busy ? "Checking " + done + " of " + total + "…" : "Check " + blocks.length + " links"}
         </button>
         <span className="repo-said">{checked} checked, {bad} broken</span>
         {bad ? (
