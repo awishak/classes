@@ -340,6 +340,25 @@ export default function RepoPage() {
     ? termOf({ cls: termCls, store: stores[termCls.id], blockOf: (id) => byId[id] || null })
     : []), [stores, termCls, byId]);
   const termSum = useMemo(() => termCounts(days), [days]);
+  // What this class can put on a day: its own blocks and the shared shelf,
+  // which is the same set a dashboard sees.
+  const termShelf = useMemo(() => items.filter(b => !b.owner || b.owner.id === termCls.id), [items, termCls]);
+
+  // Adding from the schedule view. The two destinations are the two a day has:
+  // a section of the day plan, or the readings the students are given. Both go
+  // through the writers the open row already uses, so a thing added here is
+  // added the same way and lands in the same place.
+  const ASSIGNED = "__assigned";
+  const addOnDay = (date, slot, row) =>
+    (slot === ASSIGNED ? assignOnDay(row, termCls, date) : placeOnDay(row, termCls, date, slot));
+
+  const makeOnDay = (date, slot, patch) => {
+    const words = (patch.title || "").trim() || hostOf(patch.url || "") || "Untitled";
+    const block = makeBlock({ type: "link", ...patch, title: words });
+    keep("Added " + words, [block.id]);
+    writeBlock(writeTo(termCls.id), block);
+    return addOnDay(date, slot, { ...block, owner: termCls, target: termCls.id, uses: [] });
+  };
 
   const bySort = (col) => setF(prev => prev.col === col
     ? { ...prev, dir: prev.dir === "asc" ? "desc" : "asc" }
@@ -826,6 +845,7 @@ export default function RepoPage() {
                     openId={openId} onOpen={id => setOpenId(openId === id ? "" : id)}
                     onTag={t => set({ tag: t })} pickedSet={picked} onPick={pickOne}
                     onStar={b => pickOut(b, !b.pick)}
+                    shelf={termShelf} onAdd={addOnDay} onMake={makeOnDay}
                     detail={b => (
                       <Detail key={b.id} block={b} hue={hue} planOf={planOf} stores={stores}
                         onSave={p => saveBlock(b, p)} onDelete={() => removeBlock(b)}
@@ -966,8 +986,10 @@ export function Steps({ steps, onBack }) {
 //
 // A week item that points at nothing on the shelf still gets a line, because
 // leaving it out would make the schedule say the day is emptier than it is.
-export function Term({ days, here, rowOf, hue, openId, onOpen, onTag, pickedSet, onPick, onStar, detail }) {
+export function Term({ days, here, rowOf, hue, openId, onOpen, onTag, pickedSet, onPick, onStar, detail,
+  shelf, onAdd, onMake }) {
   const span = COLS.length + 1;
+  const [adding, setAdding] = useState("");
   const open = (b) => (openId === b.id ? (
     <tr className="repo-detail-row">
       <td colSpan={span} style={{ "--kind": hue(b.type) }}>{detail(b)}</td>
@@ -986,9 +1008,24 @@ export function Term({ days, here, rowOf, hue, openId, onOpen, onTag, pickedSet,
                 {d.topic ? <span className="repo-dayhead-topic">{d.topic}</span> : null}
                 {d.date === here ? <span className="repo-flagged">Nearest today</span> : null}
                 {!d.rows && !d.assigned.length ? <span className="repo-copy-n">Nothing on this day</span> : null}
+                {onAdd ? (
+                  <button className="repo-focus repo-chip repo-dayadd"
+                    onClick={() => setAdding(adding === d.date ? "" : d.date)}
+                    aria-pressed={adding === d.date}>
+                    {adding === d.date ? "Done adding" : "+ Add to " + d.date}
+                  </button>
+                ) : null}
               </div>
             </td>
           </tr>
+
+          {adding === d.date ? (
+            <tr className="repo-addrow">
+              <td colSpan={span}>
+                <DayAdd day={d} shelf={shelf} onAdd={onAdd} onMake={onMake} hue={hue} />
+              </td>
+            </tr>
+          ) : null}
 
           {d.sections.map(sec => (
             <Fragment key={sec.slot}>
@@ -1031,6 +1068,83 @@ export function Term({ days, here, rowOf, hue, openId, onOpen, onTag, pickedSet,
         </Fragment>
       ))}
     </>
+  );
+}
+
+// Putting something on a day, from the day.
+//
+// Andrew: "i need the ability to add something to a date in that view.
+// basically giving me another way to add readings to a dayplan, but in this
+// view." The day already knows its own sections, so the only question left is
+// which section, or whether the thing goes to the students instead.
+//
+// Two ways in, because both are things I actually do: find something already
+// on the shelf, or paste a link I have open in another tab. A pasted link
+// becomes a block on this class's shelf first and is placed second, so it is
+// searchable next term rather than being words typed onto one day.
+export function DayAdd({ day, shelf, onAdd, onMake, hue }) {
+  const [q, setQ] = useState("");
+  const [slot, setSlot] = useState(day.sections[0]?.slot || "__assigned");
+  const [url, setUrl] = useState("");
+  const [title, setTitle] = useState("");
+  const [said, setSaid] = useState("");
+
+  const text = q.trim().toLowerCase();
+  const hits = !text ? [] : (shelf || []).filter(b =>
+    [b.title, b.headline, b.source, b.url, ...(b.tags || [])].filter(Boolean)
+      .join(" ").toLowerCase().includes(text)).slice(0, 8);
+
+  const where = (
+    <select className="repo-select" value={slot} aria-label="Where on the day it goes"
+      onChange={e => setSlot(e.target.value)}>
+      {day.sections.map(sec => <option key={sec.slot} value={sec.slot}>{sec.name}</option>)}
+      <option value="__assigned">The readings students see</option>
+    </select>
+  );
+
+  return (
+    <div className="repo-dayadd-panel">
+      <div className="repo-row">
+        <span className="repo-label">Add to {day.date}</span>
+        {where}
+        {said ? <span className="repo-said">{said}</span> : null}
+      </div>
+
+      <div className="repo-row">
+        <input className="repo-input" value={q} autoFocus placeholder="Search everything on the shelf"
+          aria-label="Find something already on the shelf" onChange={e => setQ(e.target.value)} />
+      </div>
+
+      {hits.length ? (
+        <ul className="repo-list">
+          {hits.map(b => (
+            <li key={b.id} className="repo-addhit">
+              <span className="repo-kind" style={{ background: hue(b.type) }}>{typeOf(b.type).label}</span>
+              <span className="repo-addhit-words">{b.headline || b.title || "Untitled"}</span>
+              <button className="repo-focus repo-save" onClick={() => setSaid(onAdd(day.date, slot, b))}>Add</button>
+            </li>
+          ))}
+        </ul>
+      ) : text ? <p className="repo-unused">Nothing on the shelf matches those words.</p> : null}
+
+      <div className="repo-row">
+        <span className="repo-label">Or a new reading</span>
+        <input className="repo-input repo-tag-in" value={url} placeholder="https://…"
+          aria-label="The link for a new reading" onChange={e => setUrl(e.target.value)} />
+        <input className="repo-input repo-tag-in" value={title} placeholder="What it is called"
+          aria-label="The title for a new reading" onChange={e => setTitle(e.target.value)}
+          onKeyDown={e => {
+            if (e.key !== "Enter" || (!url.trim() && !title.trim())) return;
+            setSaid(onMake(day.date, slot, { url: url.trim(), title: title.trim() }));
+            setUrl(""); setTitle("");
+          }} />
+        <button className="repo-focus repo-save" disabled={!url.trim() && !title.trim()}
+          onClick={() => { setSaid(onMake(day.date, slot, { url: url.trim(), title: title.trim() }));
+            setUrl(""); setTitle(""); }}>
+          Make it and add it
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1695,6 +1809,13 @@ const CSS = `
 .repo-dayhead-here td{background:#fdf6e7}
 .repo-dayhead-date{font-family:${MONO};font-size:15px;font-weight:600;color:${TEXT}}
 .repo-dayhead-topic{font-size:15px;color:${SECOND}}
+.repo-dayadd{margin-left:auto}
+.repo-addrow td{background:#fff;border-bottom:1px solid ${BORDER};padding:12px 14px}
+.repo-dayadd-panel{display:flex;flex-direction:column;gap:8px}
+.repo-addhit{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:4px 0;
+  border-top:1px solid rgba(23,19,16,.07)}
+.repo-addhit-words{flex:1;min-width:0;font-family:var(--repo-row,${F});font-size:15px;color:${TEXT};
+  overflow-wrap:anywhere}
 .repo-sechead td{padding:7px 12px 2px 26px;font-family:${MONO};font-size:11px;font-weight:600;
   letter-spacing:.09em;text-transform:uppercase;color:${MUTED}}
 .repo-plain-in{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-height:${TAP}px}

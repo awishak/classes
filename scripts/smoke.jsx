@@ -25,7 +25,8 @@ import { FREEFORM } from "../src/engine/dayplan.js";
 import { weekdayOf } from "../src/engine/schedule.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
-  Steps as RepoSteps, Sticker as RepoSticker, Term as RepoTerm } from "../src/engine/RepoPage.jsx";
+  Steps as RepoSteps, Sticker as RepoSticker, Term as RepoTerm, DayAdd as RepoDayAdd }
+  from "../src/engine/RepoPage.jsx";
 import { FLAGS, healthCounts, carries, allClear } from "../src/engine/health.js";
 import { remember, undoPatches, pushEntry, sayEntry, LIMIT } from "../src/engine/undo.js";
 import { Seeds as RepoSeeds, Room as RepoRoom, BlockTypes as RepoTypes } from "../src/engine/RepoMore.jsx";
@@ -528,6 +529,16 @@ cases.push(["Repository", <RepoPage />]);
     <RepoTerm days={termDays} here="" rowOf={() => null} hue={hue}
       openId="" onOpen={noop} onTag={noop} pickedSet={new Set()} onPick={noop} onStar={noop}
       detail={() => null} />), "repo-tr-plain"]);
+  // Adding to a day from the day. The two destinations are the two a day has:
+  // a section of the plan, or the readings the students are given.
+  cases.push(["Add to a day", <RepoDayAdd day={termDays[0]} shelf={[termIndexed.tb1]} hue={hue}
+    onAdd={() => ""} onMake={() => ""} />, "The readings students see"]);
+  cases.push(["Add to a day, a day with no sections", <RepoDayAdd day={termDays[1]} shelf={[]} hue={hue}
+    onAdd={() => ""} onMake={() => ""} />, "Make it and add it"]);
+  cases.push(["The term, with an add button", termTable(
+    <RepoTerm days={termDays} here="" rowOf={() => null} hue={hue} openId="" onOpen={noop} onTag={noop}
+      pickedSet={new Set()} onPick={noop} onStar={noop} detail={() => null}
+      shelf={[]} onAdd={() => ""} onMake={() => ""} />), "+ Add to " + d1]);
   cases.push(["The term, a day header", termTable(
     <RepoTerm days={termDays} here={termDays[0].date} rowOf={() => null} hue={hue}
       openId="" onOpen={noop} onTag={noop} pickedSet={new Set()} onPick={noop} onStar={noop}
