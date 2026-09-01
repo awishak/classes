@@ -1465,7 +1465,7 @@ const CSS = `
 .repo-title-cell{display:flex;align-items:center;gap:8px;width:100%}
 .repo-title-cell .repo-words{flex:1;min-width:0}
 .repo-sticker{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:52px;
-  height:${TAP}px;padding:0 6px;border:none;background:none;cursor:pointer;opacity:.28}
+  height:${TAP}px;padding:0 6px;border:none;background:none;cursor:pointer;opacity:.62}
 .repo-sticker:hover{opacity:1}
 .repo-sticker-on{opacity:1}
 /* The drawing is landscape, 428 by 302, so a square box would shrink it to
