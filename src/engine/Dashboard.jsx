@@ -396,7 +396,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // Nothing goes up as a label. Before a thing can be cast it needs a headline —
 // one full sentence saying what it shows. "Media rights" is a topic; "Rights
 // fees have risen 45% in ten years" is what the room can actually read.
-function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove }) {
+function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, starred, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove }) {
   const [editing, setEditing] = useState(false);
   const [menu, setMenu] = useState(false);
   const [draft, setDraft] = useState(claim || "");
@@ -499,6 +499,7 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
       <span className="flow-main">
         <button className="dash-focus flow-words" onClick={onSelect} title="Open the details"
           style={{ fontFamily: F }}>{words}</button>
+        {starred ? <PickMark size={20} /> : null}
         {url ? (
           <a className="dash-focus flow-src" href={url} target="_blank" rel="noopener noreferrer"
             onClick={e => e.stopPropagation()} title={"Open " + url + " in a new tab"}
@@ -1417,8 +1418,10 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
           onRemove={() => onRemove(it.id)} inFlow={inFlow?.has(it.id)}
           onCast={(c) => castNow(it.url
             ? { ...castFromLink({ label: it.title, url: it.url }), title: c, label: c,
-                openUrl: it.url, linkLabel: hostOf(it.url) }
-            : { type: "quote", tag: "Reading", title: c, label: c })} />
+                openUrl: it.url, linkLabel: hostOf(it.url),
+                pick: !!blockOf?.(it.blockId || it.libId)?.pick }
+            : { type: "quote", tag: "Reading", title: c, label: c,
+                pick: !!blockOf?.(it.blockId || it.libId)?.pick })} />
         );
       })}
       {!items.length && !open ? (
@@ -1707,6 +1710,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                     marginLeft: (it.depth || 0) * 26,
                     borderTop: "2px solid " + (overRow === it.id ? accent : "transparent") }}>
                   <Castable num={numberOf[it.id]} picked={pickedId === it.id} shared={!!it.blockId}
+                    starred={!!blk?.pick}
                     done={doneSet.has(it.id)} next={nextId === it.id} onTick={() => onTick(it.id)}
                     onSelect={() => onSelect({ blockId: it.blockId, item: it, where: bucket.title || s.slot, id: it.id })}
                     kind={it.feature ? "Activity" : blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
@@ -1725,8 +1729,8 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                     onCast={(c) => (it.feature && onFeature
                       ? onFeature(it.feature)
                       : castNow(blk?.url
-                        ? { ...castFromLink({ label: blk.title, url: blk.url }), title: c, label: c }
-                        : { type: "quote", tag: bucket.title || s.slot, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c }))} />
+                        ? { ...castFromLink({ label: blk.title, url: blk.url }), title: c, label: c, pick: !!blk?.pick }
+                        : { type: "quote", tag: bucket.title || s.slot, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c, pick: !!blk?.pick }))} />
                   {(it.links || []).map(l => (
                     <div key={l.id} style={{ paddingLeft: 16 }}>
                       <Castable kind="Link" kindColor={KIND_COLOR.Link} title={l.label} url={l.url}

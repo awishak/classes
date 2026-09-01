@@ -27,6 +27,7 @@ import { FLAGS, healthCounts, carries, allClear } from "../src/engine/health.js"
 import { remember, undoPatches, pushEntry, sayEntry, LIMIT } from "../src/engine/undo.js";
 import { Seeds as RepoSeeds, Room as RepoRoom, BlockTypes as RepoTypes } from "../src/engine/RepoMore.jsx";
 import QuestionPicker from "../src/engine/QuestionPicker.jsx";
+import PickMark, { PICK_LABEL } from "../src/engine/Pick.jsx";
 import { bankOf, questionOf, parseOptions, parseAnswer, searchBank, isReady, asChoice, asFree }
   from "../src/engine/qbank.js";
 import { readTypes, readAdded, addType, renameType, resetName, dropType, idForLabel, orphanTypes }
@@ -201,6 +202,13 @@ cases.push(["Command bar", <CommandBar targets={[{ key: "k", group: "g", title: 
       <OnScreenNow config={c0} live={cast ? { cast, at: 1 } : null} poll={poll} />, "On the screen now"]);
   }
 }
+// The one mark, at the two sizes it is drawn at: small on a row, and big
+// enough to read from the back of a room.
+cases.push(["Andrew's pick, on a row", <PickMark size={20} />, "chef.png"]);
+// The words beside the drawing, so a student knows what the drawing means.
+// Matched on the escaped form, because an apostrophe reaches the page as
+// &#x27; and a case that never matches is a case that proves nothing.
+cases.push(["Andrew's pick, on the wall", <PickMark size={80} label />, PICK_LABEL.replace("'", "&#x27;")]);
 cases.push(["Discussion board", <BoardPage config={cfg0} />]);
 cases.push(["Repository", <RepoPage />]);
 // The page itself is behind a load, so a server render of the page stops at

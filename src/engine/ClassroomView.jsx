@@ -12,6 +12,7 @@ import QRCode from "./QRCode.jsx";
 import { usePoll, tally, written, isFreeForm } from "./poll.js";
 import { useHeadlines, liveSession, activeItem, pickTally } from "./headlines.js";
 import { ENGINE_LIST } from "../config/registry.js";
+import PickMark from "./Pick.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -164,6 +165,7 @@ function Content({ cast, config, plan, data }) {
     return (
       <div style={{ ...wrap, alignItems: "center", justifyContent: "center", textAlign: "center", gap: "2.4vh" }}>
         {cast.tag ? <div style={eyebrow}>{cast.tag}</div> : null}
+        {cast.pick ? <PickMark size={80} label /> : null}
         <div style={{ fontSize: "clamp(28px,4.4vw,64px)", fontWeight: 500, letterSpacing: "-.025em", lineHeight: 1.24, maxWidth: "21ch" }}>
           {cast.title}
         </div>
@@ -178,6 +180,7 @@ function Content({ cast, config, plan, data }) {
   return (
     <div style={{ ...wrap, justifyContent: "center", gap: "2.4vh" }}>
       {cast.kind ? <div style={{ ...eyebrow, color: "#e11d48" }}>{cast.kind}</div> : null}
+      {cast.pick ? <PickMark size={80} label /> : null}
       <div style={{ fontSize: "clamp(30px,4.6vw,70px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.1, maxWidth: "20ch" }}>
         {cast.title}
       </div>
