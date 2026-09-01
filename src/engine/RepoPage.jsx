@@ -84,7 +84,7 @@ export default function RepoPage() {
   // I can send it to myself, out of a saved view when I ask it again, and back
   // off the address bar when Back is pressed.
   const [f, setF] = useState(() => readFilters(window.location.search));
-  const { q, kind, where, tag, flag, lens } = f;
+  const { q, kind, where, tag, flag, pick, lens } = f;
   const set = (patch) => setF(prev => ({ ...prev, ...patch }));
   const [adding, setAdding] = useState(false);
   const [typing, setTyping] = useState(false);
@@ -278,6 +278,7 @@ export default function RepoPage() {
       if (where && where !== "shared" && b.owner?.id !== where) return false;
       if (tag && !(b.tags || []).includes(tag)) return false;
       if (flag && !carries(b, flag)) return false;
+      if (pick && !b.pick) return false;
       if (!text) return true;
       // The places a thing was taught are worth searching as well, so a class
       // code or a date finds everything that ran then.
@@ -295,7 +296,7 @@ export default function RepoPage() {
       return (by ? by * sign : 0) || (a.title || "").localeCompare(b.title || "");
     });
     return out;
-  }, [items, q, kind, where, tag, flag, f.col, f.dir]);
+  }, [items, q, kind, where, tag, flag, pick, f.col, f.dir]);
 
   // The health numbers count what the other filters have already left on
   // screen, so the strip describes what I am looking at rather than the shelf.
@@ -319,6 +320,8 @@ export default function RepoPage() {
     items.forEach(b => { c[b.type] = (c[b.type] || 0) + 1; });
     return c;
   }, [items]);
+
+  const picks = useMemo(() => items.filter(b => b.pick).length, [items]);
 
   const bySort = (col) => setF(prev => prev.col === col
     ? { ...prev, dir: prev.dir === "asc" ? "desc" : "asc" }
@@ -353,6 +356,33 @@ export default function RepoPage() {
     const { owner, target, uses, ...block } = row;
     keep("Edited " + (row.title || "a block"), [row.id]);
     writeBlock(writeTo(target), { ...block, ...patch });
+  };
+
+  // Picked out, the way a menu says which dish the kitchen would order. A
+  // block carries the flag itself, so the sticker follows the block into every
+  // class that uses it.
+  const pickOut = (row, on) => {
+    keep((on ? "Picked out " : "Took the sticker off ") + (row.title || "a block"), [row.id]);
+    const { owner, target, uses, ...block } = row;
+    writeBlock(writeTo(target), { ...block, pick: !!on });
+  };
+
+  const bulkPick = (on) => {
+    const ids = [...picked];
+    keep(on ? "Picked them out" : "Took the stickers off", ids);
+    const want = new Set(ids);
+    ENGINE_LIST.concat([{ id: "shared" }]).forEach(c => {
+      const cur = ref.current[c.id] || {};
+      const blocks = cur.blocks || {};
+      let touched = 0;
+      const out = {};
+      Object.entries(blocks).forEach(([id, b]) => {
+        if (!want.has(id) || !!b.pick === !!on) { out[id] = b; return; }
+        out[id] = { ...b, pick: !!on };
+        touched++;
+      });
+      if (touched) writeTo(c.id)(() => ({ ...cur, blocks: out }));
+    });
   };
 
   const removeBlock = (row) => {
@@ -638,6 +668,8 @@ export default function RepoPage() {
             {chip(!kind, "Everything", () => set({ kind: "" }))}
             {kinds.filter(t => counts[t.id]).map(t =>
               chip(kind === t.id, t.label + " " + counts[t.id], () => set({ kind: kind === t.id ? "" : t.id }), hue(t.id)))}
+            {picks ? chip(pick === "yes", "Picked out " + picks,
+              () => set({ pick: pick ? "" : "yes" }), "#b45309") : null}
             {chip(lens === "types", "Edit the types",
               () => set({ lens: lens === "types" ? "" : "types" }), "#4b5563")}
           </div>
@@ -716,10 +748,19 @@ export default function RepoPage() {
               <thead>
                 <tr>
                   <th className="repo-th repo-th-pick" scope="col">
-                    <label className="repo-pick-all">
-                      <input type="checkbox" checked={hits.length > 0 && hits.every(b => picked.has(b.id))}
-                        onChange={pickAll} aria-label={"Select all " + hits.length + " matches"} />
-                    </label>
+                    <span className="repo-pick-head">
+                      {/* Clearing the ticks belongs where the ticks are, rather
+                          than only in a bar at the bottom of a four hundred
+                          row list. */}
+                      <button className={"repo-focus repo-unpick" + (picked.size ? "" : " repo-unpick-off")}
+                        onClick={unpick} disabled={!picked.size}
+                        aria-label={picked.size ? "Clear the " + picked.size + " ticks" : "Nothing is ticked"}
+                        title="Clear the ticks">×</button>
+                      <label className="repo-pick-all">
+                        <input type="checkbox" checked={hits.length > 0 && hits.every(b => picked.has(b.id))}
+                          onChange={pickAll} aria-label={"Select all " + hits.length + " matches"} />
+                      </label>
+                    </span>
                   </th>
                   {COLS.map(c => (
                     <th key={c.id} className={"repo-th repo-th-" + c.id} scope="col"
@@ -740,6 +781,7 @@ export default function RepoPage() {
                   <Fragment key={b.id}>
                     <Row block={b} hue={hue} open={openId === b.id} onTag={t => set({ tag: t })}
                       picked={picked.has(b.id)} onPick={() => pickOne(b.id)}
+                      onStar={() => pickOut(b, !b.pick)}
                       onOpen={() => setOpenId(openId === b.id ? "" : b.id)} />
                     {openId === b.id ? (
                       <tr className="repo-detail-row">
@@ -763,7 +805,7 @@ export default function RepoPage() {
         {picked.size ? (
           <Bulk n={picked.size} rows={chosen} planOf={planOf} stores={stores}
             onTag={bulkTag} onType={bulkType} onShare={bulkShare} onClear={unpick}
-            onPlace={bulkPlace} onAssign={bulkAssign} />
+            onStar={bulkPick} onPlace={bulkPlace} onAssign={bulkAssign} />
         ) : null}
       </div>
     </div>
@@ -862,7 +904,7 @@ export function Views({ views, pinned, blank, naming, here, say, onGo, onName, o
 // bottom of the window while a selection is live, because the selection is
 // made by running down a long list and the decision has to still be in reach
 // at the bottom of the list.
-export function Bulk({ n, rows, planOf, stores, onTag, onType, onShare, onClear, onPlace, onAssign }) {
+export function Bulk({ n, rows, planOf, stores, onTag, onType, onShare, onClear, onStar, onPlace, onAssign }) {
   const [adding, setAdding] = useState("");
   const [said, setSaid] = useState("");
   const [placing, setPlacing] = useState(false);
@@ -917,6 +959,12 @@ export function Bulk({ n, rows, planOf, stores, onTag, onType, onShare, onClear,
         <button className="repo-focus repo-chip" onClick={() => setPlacing(!placing)} aria-pressed={placing}>
           Put the selection on a day
         </button>
+        <button className="repo-focus repo-chip" onClick={() => { onStar(true); setSaid(n + " picked out"); }}>
+          Pick them out
+        </button>
+        <button className="repo-focus repo-chip" onClick={() => { onStar(false); setSaid("Stickers off " + n); }}>
+          Take the stickers off
+        </button>
         {said ? <span className="repo-said">{said}</span> : null}
       </div>
       {placing ? (
@@ -930,7 +978,30 @@ export function Bulk({ n, rows, planOf, stores, onTag, onType, onShare, onClear,
 // One thing, on one line. Exported so the smoke test can render a row, the
 // open row and the placer, none of which a server render of the page itself
 // ever reaches: the page is behind a load, and a loading screen proves nothing.
-export function Row({ block, hue, open, onOpen, onTag, picked, onPick }) {
+// The sticker.
+//
+// Andrew: "i want to be able to highlight particular items, like the chefs
+// recommendation", with a drawing of himself giving two thumbs up. So a block
+// can be picked out, and a picked block wears him.
+//
+// The drawing is served from /chef.png rather than built into the bundle, so
+// the picture can be replaced without a deploy. A missing file renders as a
+// broken-image icon, which is worse than no sticker at all, so a failed load
+// falls back to the word in a badge.
+export function Sticker({ on, onToggle }) {
+  const [broken, setBroken] = useState(false);
+  return (
+    <button className={"repo-focus repo-sticker" + (on ? " repo-sticker-on" : "")} onClick={onToggle}
+      aria-pressed={!!on} title={on ? "Take the sticker off" : "Pick this one out"}
+      aria-label={on ? "Take the sticker off" : "Pick this one out"}>
+      {on && !broken
+        ? <img src="/chef.png" alt="" className="repo-sticker-img" onError={() => setBroken(true)} />
+        : <span className="repo-sticker-word">Pick</span>}
+    </button>
+  );
+}
+
+export function Row({ block, hue, open, onOpen, onTag, picked, onPick, onStar }) {
   const t = typeOf(block.type);
   const color = hue(block.type);
   const words = block.headline || block.title;
@@ -945,14 +1016,17 @@ export function Row({ block, hue, open, onOpen, onTag, picked, onPick }) {
         </label>
       </td>
       <td className="repo-td repo-td-title">
-        <button className="repo-focus repo-words" onClick={onOpen} aria-expanded={open}>
-          <span className="repo-caret">{open ? "▾" : "▸"}</span>
-          <span className="repo-words-in">
-            <span>{words || "Untitled"}</span>
-            <span className="repo-kind">{t.label}</span>
-            {sub ? <span className="repo-sub">{sub}</span> : null}
-          </span>
-        </button>
+        <span className="repo-title-cell">
+          <button className="repo-focus repo-words" onClick={onOpen} aria-expanded={open}>
+            <span className="repo-caret">{open ? "▾" : "▸"}</span>
+            <span className="repo-words-in">
+              <span>{words || "Untitled"}</span>
+              <span className="repo-kind">{t.label}</span>
+              {sub ? <span className="repo-sub">{sub}</span> : null}
+            </span>
+          </button>
+          <Sticker on={block.pick} onToggle={() => onStar && onStar()} />
+        </span>
       </td>
       <td className="repo-td repo-td-where">
         {block.owner
@@ -1383,6 +1457,28 @@ const CSS = `
   box-shadow:0 10px 30px -12px rgba(23,19,16,.4)}
 .repo-bulk-n{font-family:${MONO};font-size:12px;font-weight:600;letter-spacing:.06em;
   text-transform:uppercase;color:${TEXT}}
+
+/* The sticker, and the button that puts it on. Off, the button is the word in
+   a faint outline; on, it is the drawing. Either way the row keeps its height,
+   because a list where some rows are taller than others is a list the eye
+   cannot run down. */
+.repo-title-cell{display:flex;align-items:center;gap:8px;width:100%}
+.repo-title-cell .repo-words{flex:1;min-width:0}
+.repo-sticker{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:${TAP}px;
+  height:${TAP}px;padding:0 6px;border:none;background:none;cursor:pointer;opacity:.28}
+.repo-sticker:hover{opacity:1}
+.repo-sticker-on{opacity:1}
+.repo-sticker-img{width:34px;height:34px;object-fit:contain;display:block}
+.repo-sticker-word{font-family:${MONO};font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:#b45309;border:1px solid #b45309;border-radius:999px;padding:3px 8px;white-space:nowrap}
+.repo-sticker-on .repo-sticker-word{color:#fff;background:#b45309}
+
+/* Clearing the ticks sits with the ticks. */
+.repo-pick-head{display:flex;align-items:center;gap:2px}
+.repo-unpick{min-width:26px;min-height:${TAP}px;padding:0;border:none;background:none;cursor:pointer;
+  font-family:inherit;font-size:17px;line-height:1;color:${MUTED}}
+.repo-unpick:hover{color:#9f1239}
+.repo-unpick-off{opacity:0;pointer-events:none}
 
 /* The health strip. Five numbers, each a filter, big enough to read from
    across the desk and dim when the number is zero. */

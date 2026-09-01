@@ -22,7 +22,7 @@ import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
-  Steps as RepoSteps } from "../src/engine/RepoPage.jsx";
+  Steps as RepoSteps, Sticker as RepoSticker } from "../src/engine/RepoPage.jsx";
 import { FLAGS, healthCounts, carries, allClear } from "../src/engine/health.js";
 import { remember, undoPatches, pushEntry, sayEntry, LIMIT } from "../src/engine/undo.js";
 import { Seeds as RepoSeeds, Room as RepoRoom, BlockTypes as RepoTypes } from "../src/engine/RepoMore.jsx";
@@ -215,7 +215,11 @@ cases.push(["Repository", <RepoPage />]);
   const stores = { [cfg0.id]: {}, shared: {} };
   const table = (row) => <table><tbody>{row}</tbody></table>;
   cases.push(["Repository row", table(<RepoRow block={blk} hue={hue} open={false} onOpen={noop} onTag={noop}
-    picked={false} onPick={noop} />), "Why We Bet"]);
+    picked={false} onPick={noop} onStar={noop} />), "Why We Bet"]);
+  cases.push(["Repository row, picked out", table(<RepoRow block={{ ...blk, pick: true }} hue={hue} open={false}
+    onOpen={noop} onTag={noop} picked={false} onPick={noop} onStar={noop} />), "repo-sticker-on"]);
+  cases.push(["The sticker, off", <RepoSticker on={false} onToggle={noop} />, "Pick"]);
+  cases.push(["The sticker, on", <RepoSticker on onToggle={noop} />, "/chef.png"]);
   cases.push(["Repository row, selected", table(<RepoRow block={blk} hue={hue} open={false} onOpen={noop}
     onTag={noop} picked onPick={noop} />), "repo-tr-picked"]);
   cases.push(["Repository row, never used", table(<RepoRow block={bare} hue={hue} open onOpen={noop} onTag={noop}
@@ -534,6 +538,8 @@ cases.push(["Repository", <RepoPage />]);
   if (back.q !== "betting" || back.where !== cfg0.id || back.tag !== "framing" || back.kind !== "link") {
     console.error("  FAIL  views: the address did not read back as the same question"); failedEarly++; }
   if (readFilters("?sort=made&dir=asc").col !== "made") { console.error("  FAIL  views: sort did not survive the address"); failedEarly++; }
+  if (filterQuery({ ...BLANK, pick: "yes" }) !== "?pick=yes") { console.error("  FAIL  views: the picked-out filter is not in the address"); failedEarly++; }
+  if (readFilters("?pick=yes").pick !== "yes") { console.error("  FAIL  views: the picked-out filter did not read back"); failedEarly++; }
   // A chip is a step in the history and a keystroke is not.
   if (!isStep(BLANK, { ...BLANK, kind: "link" })) { console.error("  FAIL  views: a kind chip is not a step"); failedEarly++; }
   if (isStep(BLANK, { ...BLANK, q: "bet" })) { console.error("  FAIL  views: a keystroke counted as a step"); failedEarly++; }
@@ -580,7 +586,8 @@ cases.push(["Repository", <RepoPage />]);
   if (tagsAcross(picked, ["p1", "p3"])[0].tag !== "framing") { console.error("  FAIL  bulk: the carried tags came out wrong"); failedEarly++; }
 
   cases.push(["Repository bulk bar", <RepoBulk n={2} rows={picked} planOf={planOf} stores={stores}
-    onTag={noop} onType={noop} onShare={noop} onClear={noop} onPlace={() => ""} onAssign={() => ""} />, "2 selected"]);
+    onTag={noop} onType={noop} onShare={noop} onClear={noop} onStar={noop} onPlace={() => ""}
+    onAssign={() => ""} />, "Pick them out"]);
 
   // ─── the seed library ───
   const md = "## Seeds\n\n### A seed with a turn\n- **Concept:** framing / stakes\n- **Class:** Comm 2 / any\n"
