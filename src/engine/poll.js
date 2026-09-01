@@ -8,15 +8,43 @@
 // Aim for a question 35-70% get right first time; below that the argument dies.
 //
 // State at `${storageKey}-poll`:
-//   { id, question, options, phase, r1, r2, correct, at }
+//   { id, question, options, phase, r1, r2, correct, at, past: [...] }
 //   phase: "idle" | "vote1" | "discuss" | "vote2" | "done"
 //   r1/r2: { [studentName]: optionIndex }
+//
+// The poll that is running sits at the top of the object, which is where every
+// reader has always looked, and the ones that have finished sit under `past`.
+// The store held one poll and overwrote it on the next question, so a term of
+// polls left nothing behind: what a room believed in week two, and what
+// changed their minds, was gone the moment I asked the next question. A poll
+// is archived when the next one starts and when the floor is cleared, never
+// while the poll is live.
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
 export const pollKey = (storageKey) => storageKey + "-poll";
 
 export const EMPTY_POLL = { id: null, question: "", options: [], phase: "idle", r1: {}, r2: {}, correct: null, at: 0 };
+
+// A poll worth keeping is one that was asked and answered. A question typed
+// and abandoned before anybody voted is not history, it is a false start.
+export const worthKeeping = (p) =>
+  !!(p && p.question && (Object.keys(p.r1 || {}).length || Object.keys(p.r2 || {}).length));
+
+// Every finished poll, newest first.
+export const pastPolls = (poll) =>
+  (poll?.past || []).slice().sort((a, b) => (b.at || 0) - (a.at || 0));
+
+// The archive as it would be with the current poll folded in. The archive does
+// not carry itself, so `past` comes off the poll before the poll goes in, and
+// a poll already kept is not kept twice.
+export function archived(prev) {
+  const past = prev?.past || [];
+  if (!worthKeeping(prev) || past.some(p => p.id === prev.id)) return past;
+  const done = { ...prev };
+  delete done.past;
+  return [...past, { ...done, phase: "done", endedAt: Date.now() }];
+}
 
 // No options means they write their own answer.
 export const isFreeForm = (poll) => !((poll?.options || []).length);
@@ -75,12 +103,14 @@ export function usePoll(storageKey) {
   }, [key]);
 
   const start = useCallback((question, options) => write({
+    past: archived(ref.current),
     id: "p" + Date.now(), question, options, phase: "vote1", r1: {}, r2: {}, correct: null,
   }), [write]);
 
   const setPhase = useCallback((phase) => write({ phase }), [write]);
   const setCorrect = useCallback((i) => write({ correct: i }), [write]);
-  const clear = useCallback(() => write(EMPTY_POLL), [write]);
+  // Clearing the floor puts the question away rather than throwing it away.
+  const clear = useCallback(() => write({ ...EMPTY_POLL, past: archived(ref.current) }), [write]);
 
   // One vote per student per round; changing your mind before the round closes
   // is fine, and is part of the point.

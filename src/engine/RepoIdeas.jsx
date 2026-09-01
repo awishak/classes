@@ -77,16 +77,16 @@ const IDEAS = [
     why: "A thing I cannot link to is a thing I have to describe, and describing a block in a note is how a second copy of the block gets made." },
 
   // ─── move faster ───
-  { n: 11, group: "fast", size: "medium", first: true, title: "Select many rows, act once",
+  { n: 11, done: "31 Aug", group: "fast", size: "medium", first: true, title: "Select many rows, act once",
     what: "A checkbox column, then tag, retype, move to the shared shelf, or place, applied to everything selected.",
     why: "Retagging four hundred things one row at a time is a job nobody ever does, so the tags stay wrong forever." },
   { n: 12, group: "fast", size: "medium", title: "Drive the list from the keyboard",
     what: "Arrows down the rows, Enter to open a row, Command-Enter to place, Esc to close, and the same shortcut sheet the dashboard has.",
     why: "The dashboard learned this lesson in August and the repository never got the lesson. A long list is a keyboard surface." },
-  { n: 13, group: "fast", size: "small", title: "Put the filters in the URL",
+  { n: 13, done: "31 Aug", group: "fast", size: "small", title: "Put the filters in the URL",
     what: "/repo?q=betting&kind=link&class=comm118 as a link I can send myself, with Back undoing a filter rather than leaving the page.",
     why: "The class site got real URLs in August for exactly this reason, and the repository shipped with none." },
-  { n: 14, group: "fast", size: "small", title: "Saved views",
+  { n: 14, done: "31 Aug", group: "fast", size: "small", title: "Saved views",
     what: "Name a set of filters and pin the view to the top of the page. Untagged readings for COMM 118, or everything cold since spring.",
     why: "The filters I set are the questions I keep asking, and rebuilding a question every time is how a good filter goes unused." },
   { n: 15, group: "fast", size: "small", title: "Density, and which columns show",
@@ -94,10 +94,10 @@ const IDEAS = [
     why: "The type chooser proved the point already: this is a surface I read for a long time, so how the surface reads should be mine to set." },
 
   // ─── hold more ───
-  { n: 16, group: "more", size: "medium", title: "The seed library becomes blocks",
+  { n: 16, done: "31 Aug", group: "more", size: "medium", title: "The seed library becomes blocks",
     what: "teaching/seeds.md is a tagged library of stories and hooks. Bring every seed in as a story block, carrying the concept and the slot across as tags.",
     why: "Only the seeds already written into comm999.js became blocks. A page called a repository of everything currently cannot see the file where the best material lives." },
-  { n: 17, group: "more", size: "big", title: "Hold what the room made",
+  { n: 17, done: "31 Aug", group: "more", size: "big", title: "Hold what the room made",
     what: "Board posts, questions asked, headlines written, poll results, searchable beside my own material.",
     why: "That is the material that actually accumulates across a quarter, none of it is searchable anywhere, and there is still no instructor view of a board at all. What did students ask about framing last year has no answer today." },
   { n: 18, group: "more", size: "medium", title: "Bring material in in bulk",
@@ -153,10 +153,10 @@ export default function RepoIdeas() {
           <span className="ri-label">Where I would start</span>
           <p className="ri-picks-text">
             {firsts ? <><b>{firsts}</b>. </> : null}
-            Five is an afternoon and makes the rest of the mess visible. Eleven is what makes fixing four
-            hundred rows possible at all. Nineteen is what makes me trust editing a block that nine days
-            depend on. The four already built came first because each one was about the material being wrong
-            rather than the page being thin.
+            Five is an afternoon and makes the rest of the mess visible. Nineteen is what makes me trust
+            editing a block that nine days depend on. The nine already built came first for two reasons: four
+            of them were about the material being wrong, and the rest were about the distance between wanting
+            a thing and having the thing placed.
           </p>
         </div>
 

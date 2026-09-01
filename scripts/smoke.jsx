@@ -21,7 +21,15 @@ import ClassroomView from "../src/engine/ClassroomView.jsx";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
-  TypeSheet as RepoType } from "../src/engine/RepoPage.jsx";
+  TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk } from "../src/engine/RepoPage.jsx";
+import { Seeds as RepoSeeds, Room as RepoRoom } from "../src/engine/RepoMore.jsx";
+import { readFilters, filterQuery, isStep, viewWords, readViews, saveView, dropView, viewFor, BLANK }
+  from "../src/engine/views.js";
+import { tagPatches, typePatches, sharePatches, wouldShare, tagsAcross } from "../src/engine/bulk.js";
+import { parseSeeds, seedPatch, newSeeds } from "../src/engine/seeds.js";
+import { roomItems, roomCounts, blockFromRoom, stampOf } from "../src/engine/room.js";
+import { archived, pastPolls, worthKeeping } from "../src/engine/poll.js";
+import { SEEDS } from "../src/config/seed-library.js";
 import RepoIdeas, { Idea } from "../src/engine/RepoIdeas.jsx";
 import { Duplicates, LooseEnds, Tags, Links } from "../src/engine/RepoTidy.jsx";
 import { tagIndex, lookalikes, retagPatches, normTag } from "../src/engine/tags.js";
@@ -195,8 +203,12 @@ cases.push(["Repository", <RepoPage />]);
   const planOf = (c, date) => ({ sequenceId: c.defaultSequenceId, slots: {}, blocks: [], slides: "", notes: "", date });
   const stores = { [cfg0.id]: {}, shared: {} };
   const table = (row) => <table><tbody>{row}</tbody></table>;
-  cases.push(["Repository row", table(<RepoRow block={blk} hue={hue} open={false} onOpen={noop} onTag={noop} />), "Why We Bet"]);
-  cases.push(["Repository row, never used", table(<RepoRow block={bare} hue={hue} open onOpen={noop} onTag={noop} />), "Never"]);
+  cases.push(["Repository row", table(<RepoRow block={blk} hue={hue} open={false} onOpen={noop} onTag={noop}
+    picked={false} onPick={noop} />), "Why We Bet"]);
+  cases.push(["Repository row, selected", table(<RepoRow block={blk} hue={hue} open={false} onOpen={noop}
+    onTag={noop} picked onPick={noop} />), "repo-tr-picked"]);
+  cases.push(["Repository row, never used", table(<RepoRow block={bare} hue={hue} open onOpen={noop} onTag={noop}
+    picked={false} onPick={noop} />), "Never"]);
   cases.push(["Repository open row", <RepoDetail block={blk} hue={hue} planOf={planOf} stores={stores}
     onSave={noop} onDelete={noop} onPlace={noop} onAssign={noop} />, "Put the block on a day"]);
   cases.push(["Repository placer", <RepoPlace block={blk} planOf={planOf} stores={stores}
@@ -299,6 +311,135 @@ cases.push(["Repository", <RepoPage />]);
 
   cases.push(["Repository type sheet, chosen", <RepoType fonts={{ cols: "fraunces", rows: "grotesk", page: "plex" }}
     bold onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Heavier rows"]);
+
+  // ─── the filters, as an address and as a saved view ───
+  const asked = { ...BLANK, q: "betting", kind: "link", where: cfg0.id, tag: "framing" };
+  if (filterQuery(asked) !== "?q=betting&kind=link&class=" + cfg0.id + "&tag=framing") {
+    console.error("  FAIL  views: the address came out as " + filterQuery(asked)); failedEarly++; }
+  if (filterQuery(BLANK) !== "") { console.error("  FAIL  views: a blank shelf still wrote a query"); failedEarly++; }
+  const back = readFilters(filterQuery(asked));
+  if (back.q !== "betting" || back.where !== cfg0.id || back.tag !== "framing" || back.kind !== "link") {
+    console.error("  FAIL  views: the address did not read back as the same question"); failedEarly++; }
+  if (readFilters("?sort=made&dir=asc").col !== "made") { console.error("  FAIL  views: sort did not survive the address"); failedEarly++; }
+  // A chip is a step in the history and a keystroke is not.
+  if (!isStep(BLANK, { ...BLANK, kind: "link" })) { console.error("  FAIL  views: a kind chip is not a step"); failedEarly++; }
+  if (isStep(BLANK, { ...BLANK, q: "bet" })) { console.error("  FAIL  views: a keystroke counted as a step"); failedEarly++; }
+  const said = viewWords(asked, { classes: [cfg0], label: () => "Article", sharedLabel: "Shared" });
+  if (!said.includes("Article") || !said.includes(cfg0.code)) {
+    console.error("  FAIL  views: a view described itself as " + said); failedEarly++; }
+
+  let shelf = { repoViews: [] };
+  const shelfUpdate = (m) => { shelf = m(shelf); };
+  saveView(shelfUpdate, { id: "v1", name: "Untagged readings", filters: asked });
+  if (readViews(shelf).length !== 1) { console.error("  FAIL  views: pinning kept nothing"); failedEarly++; }
+  if (!viewFor(readViews(shelf), asked)) { console.error("  FAIL  views: the pinned question was not recognised"); failedEarly++; }
+  dropView(shelfUpdate, "v1");
+  if (readViews(shelf).length) { console.error("  FAIL  views: unpinning kept the view"); failedEarly++; }
+
+  cases.push(["Repository views", <RepoViews views={[{ id: "v1", name: "Untagged readings", filters: asked }]}
+    pinned={null} blank={false} naming={null} here={asked} say={() => "COMM 1"} onGo={noop} onName={noop}
+    onPin={noop} onDrop={noop} onClear={noop} />, "Pin this view"]);
+  cases.push(["Repository views, naming one", <RepoViews views={[]} pinned={null} blank={false} naming="A name"
+    here={asked} say={() => "COMM 1"} onGo={noop} onName={noop} onPin={noop} onDrop={noop} onClear={noop} />, "Pin it"]);
+
+  // ─── many rows at once ───
+  const bulkStores = {
+    [cfg0.id]: { blocks: { p1: { id: "p1", type: "link", title: "One", tags: ["framing"] },
+      p2: { id: "p2", type: "link", title: "Two", tags: [] } } },
+    shared: { blocks: { p3: { id: "p3", type: "note", title: "Three", tags: ["framing"] } } },
+  };
+  const tagged2 = tagPatches({ stores: bulkStores, classes: [cfg0], ids: ["p1", "p2", "p3"], add: ["betting"], remove: ["framing"] });
+  if (tagged2[cfg0.id].blocks.p1.tags.join() !== "betting") {
+    console.error("  FAIL  bulk: tags came out as " + tagged2[cfg0.id].blocks.p1.tags.join()); failedEarly++; }
+  if (tagged2.shared.blocks.p3.tags.join() !== "betting") { console.error("  FAIL  bulk: the shared shelf was not retagged"); failedEarly++; }
+  const twice = tagPatches({ stores: bulkStores, classes: [cfg0], ids: ["p1"], add: ["framing"], remove: [] });
+  if (Object.keys(twice).length) { console.error("  FAIL  bulk: a tag a block already carries wrote a save"); failedEarly++; }
+  const retyped = typePatches({ stores: bulkStores, classes: [cfg0], ids: ["p1", "p3"], type: "story" });
+  if (retyped[cfg0.id].blocks.p1.type !== "story" || retyped.shared.blocks.p3.type !== "story") {
+    console.error("  FAIL  bulk: the kind did not change on both stores"); failedEarly++; }
+  if (retyped[cfg0.id].blocks.p2.type !== "link") { console.error("  FAIL  bulk: an unselected block was changed"); failedEarly++; }
+  const shared2 = sharePatches({ stores: bulkStores, classes: [cfg0], ids: ["p1", "p2"] });
+  if (shared2[cfg0.id].blocks.p1 || shared2[cfg0.id].blocks.p2) { console.error("  FAIL  bulk: the class kept the moved blocks"); failedEarly++; }
+  if (!shared2.shared.blocks.p1 || shared2.shared.blocks.p1.id !== "p1") {
+    console.error("  FAIL  bulk: the block did not arrive on the shared shelf with its id"); failedEarly++; }
+  const picked = [{ id: "p1", owner: cfg0, tags: ["framing"] }, { id: "p3", owner: null, tags: ["framing", "money"] }];
+  if (wouldShare(picked, ["p1", "p3"]) !== 1) { console.error("  FAIL  bulk: counted the wrong number to move"); failedEarly++; }
+  if (tagsAcross(picked, ["p1", "p3"])[0].tag !== "framing") { console.error("  FAIL  bulk: the carried tags came out wrong"); failedEarly++; }
+
+  cases.push(["Repository bulk bar", <RepoBulk n={2} rows={picked} planOf={planOf} stores={stores}
+    onTag={noop} onType={noop} onShare={noop} onClear={noop} onPlace={() => ""} onAssign={() => ""} />, "2 selected"]);
+
+  // ─── the seed library ───
+  const md = "## Seeds\n\n### A seed with a turn\n- **Concept:** framing / stakes\n- **Class:** Comm 2 / any\n"
+    + "- **Slot:** connect, explain\n- **Source:** a game I watched\n\nThe hook, in a sentence. The turn: it lands framing.\n";
+  const parsed = parseSeeds(md);
+  if (parsed.length !== 1) { console.error("  FAIL  seeds: parsed " + parsed.length + " seeds out of one"); failedEarly++; }
+  else {
+    const one = seedPatch(parsed[0]);
+    if (one.type !== "story") { console.error("  FAIL  seeds: a seed came in as " + one.type); failedEarly++; }
+    if (one.id !== "seed-a-seed-with-a-turn") { console.error("  FAIL  seeds: the id came out as " + one.id); failedEarly++; }
+    if (one.tags.join() !== "seed,framing,stakes,connect,explain") {
+      console.error("  FAIL  seeds: the tags came out as " + one.tags.join()); failedEarly++; }
+    if (one.concept !== "framing") { console.error("  FAIL  seeds: the concept came out as " + one.concept); failedEarly++; }
+    if (newSeeds(parsed, [{ id: one.id }]).length) { console.error("  FAIL  seeds: a seed already on the shelf came back as new"); failedEarly++; }
+    if (newSeeds(parsed, [{ id: "x", title: "A seed with a turn" }]).length) {
+      console.error("  FAIL  seeds: a seed added by hand came back as new"); failedEarly++; }
+  }
+  if (!SEEDS.length) { console.error("  FAIL  seeds: the generated library is empty"); failedEarly++; }
+  cases.push(["Repository seeds", <RepoSeeds seeds={SEEDS} fresh={SEEDS} onBring={noop} onBringAll={noop} />,
+    "Bring in the " + SEEDS.length + " that are new"]);
+  cases.push(["Repository seeds, all in", <RepoSeeds seeds={SEEDS} fresh={[]} onBring={noop} onBringAll={noop} />,
+    "Every seed is already a block"]);
+
+  // ─── what the room made ───
+  const roomRaw = {
+    boards: { boards: { b1: { id: "b1", prompt: "What would you read more about?", at: 1756600000000,
+      posts: [{ id: "pp1", who: "Sam", text: "Sports betting and the law", at: 1756600100000 }] } } },
+    questions: { items: [{ id: "q1", text: "How does framing work in a headline?", who: "Alex", at: 1756600200000, state: "answered" }] },
+    headlines: { items: [{ id: "h1", text: "Rights fees are up again", url: "https://example.com/rights",
+      submittedBy: "Jo", ts: 1756600300000, realCategories: ["Money"], realConcepts: ["Framing"] }] },
+    poll: { id: "p", question: "Which one moved you?", options: ["The first", "The second"],
+      r1: { Sam: 0, Alex: 1 }, r2: { Sam: 1, Alex: 1 }, correct: 1, at: 1756600400000 },
+  };
+  const made = roomItems(cfg0, roomRaw);
+  if (made.length !== 4) { console.error("  FAIL  room: read " + made.length + " things out of four"); failedEarly++; }
+
+  // ─── a term of polls, rather than the last one ───
+  // A poll is kept when the next question starts, so the archive has to hold
+  // the votes and the room lens has to read the archive alongside the live one.
+  if (worthKeeping({ question: "Asked and never answered", r1: {}, r2: {} })) {
+    console.error("  FAIL  poll: a question nobody answered was kept as history"); failedEarly++; }
+  const kept1 = archived(roomRaw.poll);
+  if (kept1.length !== 1 || kept1[0].question !== "Which one moved you?") {
+    console.error("  FAIL  poll: the finished poll was not archived"); failedEarly++; }
+  if (kept1[0].past) { console.error("  FAIL  poll: the archive carried itself into the archive"); failedEarly++; }
+  if (kept1[0].r2.Sam !== 1) { console.error("  FAIL  poll: the second round did not survive archiving"); failedEarly++; }
+  const twicePolled = archived({ ...roomRaw.poll, past: kept1 });
+  if (twicePolled.length !== 1) { console.error("  FAIL  poll: the same poll was kept twice"); failedEarly++; }
+  const withHistory = { ...roomRaw, poll: { ...roomRaw.poll, id: "p2", question: "And now?",
+    past: [{ ...roomRaw.poll, endedAt: 1756500000000 }] } };
+  const both = roomItems(cfg0, withHistory).filter(i => i.kind === "poll");
+  if (both.length !== 2) { console.error("  FAIL  room: read " + both.length + " polls where two were kept"); failedEarly++; }
+  if (both.some(i => !i.title)) { console.error("  FAIL  room: an archived poll came back with no question"); failedEarly++; }
+  if (pastPolls({ past: [{ id: "a", at: 1 }, { id: "b", at: 2 }] })[0].id !== "b") {
+    console.error("  FAIL  poll: the archive is not newest first"); failedEarly++; }
+  const counts2 = roomCounts(made);
+  if (counts2.board !== 1 || counts2.question !== 1 || counts2.headline !== 1 || counts2.poll !== 1) {
+    console.error("  FAIL  room: the counts by kind came out wrong"); failedEarly++; }
+  if (!made.every(i => i.words === i.words.toLowerCase())) { console.error("  FAIL  room: a row is not searchable in lower case"); failedEarly++; }
+  const askedAbout = made.filter(i => i.words.includes("framing"));
+  if (askedAbout.length !== 2) { console.error("  FAIL  room: searching for framing found " + askedAbout.length); failedEarly++; }
+  const asBlock = blockFromRoom(made.find(i => i.kind === "headline"));
+  if (asBlock.type !== "link" || !asBlock.url) { console.error("  FAIL  room: a headline kept badly"); failedEarly++; }
+  if (blockFromRoom(made.find(i => i.kind === "board")).type !== "board") { console.error("  FAIL  room: a board kept badly"); failedEarly++; }
+  if (!stampOf(1756600000000)) { console.error("  FAIL  room: no day on a room row"); failedEarly++; }
+
+  cases.push(["Repository room", <RepoRoom items={made} counts={counts2} kind="" setKind={noop} busy={false}
+    kept={new Set()} onKeep={noop} />, "Rights fees are up again"]);
+  cases.push(["Repository room, reading", <RepoRoom items={[]} counts={{}} kind="" setKind={noop} busy
+    kept={new Set()} onKeep={noop} />, "Reading the boards"]);
+  cases.push(["Repository room, nothing matched", <RepoRoom items={[]} counts={{}} kind="" setKind={noop}
+    busy={false} kept={new Set()} onKeep={noop} />, "Nothing from the room matches"]);
 }
 cases.push(["Ideas for the repository", <RepoIdeas />, "Merge the duplicates"]);
 cases.push(["One idea", <Idea idea={{ n: 7, group: "reuse", size: "small", first: true,

@@ -47,6 +47,48 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "aug31b", date: "Monday, August 31 \u00b7 later", title: "Five numbers off the backlog, and the repository learned what the room made",
+    blurb: "Andrew named 11, 13, 14, 16 and 17. So a filter set is now an address I can send myself and a view I can pin, a decision made once lands on forty rows at a time, the seed library arrives as blocks, and the posts, questions, headlines and polls the students made are searchable for the first time.",
+    groups: [
+      { name: "The filters became an address, and a thing I can keep", items: [
+        ["/repo?q=betting&kind=link&class=comm118", "Every filter lives in the URL, so a question I ask the shelf is a link rather than a state I rebuilt chip by chip. The names in the address are the ones I would type by hand, and anything sitting at its default is left out, so a plain shelf is still /repo."],
+        ["Back undoes the chip, not the page", "A chip is a step worth keeping in the history and a keystroke in the search box is not, so a chip pushes an entry and a letter replaces one. Pressing Back walks the filters off one at a time and never leaves the repository."],
+        ["Saved views, pinned above the table", "Name a filter set and it sits at the top of the page for good. The name is offered already written, out of what the filters actually say, so pinning is two presses. Views live in the shared store beside the fonts, which means the same views are there on the podium machine and the laptop."],
+        ["The seven fields are one object now", "Search, kind, class, tag, lens and both halves of the sort used to be six pieces of React state, and a question made of six pieces cannot travel. One object goes into the address, comes back out of a saved view, and reads back off the address when Back is pressed."],
+      ] },
+      { name: "Many rows, one decision", items: [
+        ["A checkbox on every row, and one on the heading", "The heading checkbox takes every row that currently matches, so a filter plus one press is a selection of forty. Selected rows go amber and stay selected while I keep filtering, because narrowing the list is how the selection gets built."],
+        ["Tag, untag, retype, share, place", "Add a tag to everything selected, take a tag away from a menu of the tags the selection actually carries, change the kind, move what a class owns onto the shared shelf, or drop the lot into a section of a day. The bar sticks to the bottom of the window, because a selection is made by running down a long list and the decision has to still be in reach at the bottom."],
+        ["One save per store, not one per row", "Every action is worked out whole and written once per store. Placing forty blocks on a day writes the day once and stamps each store once, rather than sending forty saves that each carry the whole store and take a backup first."],
+        ["Moving to the shared shelf repoints nothing", "The id travels with the block, and every reader already looks in the class store and then in the shared one, so a day that pointed at the block still points at the block. Only ever towards the shared shelf: moving a block into one class would take it out of reach of every other class using it."],
+      ] },
+      { name: "The seed library, on the shelf", items: [
+        ["teaching/seeds.md is parsed rather than retyped", "The markdown file is where I write a seed, because writing a paragraph in a form is worse than writing a paragraph. A script turns the file into config the page can read, and the parser is shared, so the words are read the same way in the terminal and in the browser."],
+        ["Seven seeds, as story blocks", "Each one arrives with its concept and its slots carried across as tags, so the facets that already exist can find it. The id is made from the title, which is what makes bringing the library in twice bring each seed in once."],
+        ["The lens says which seeds are already blocks", "Bring them all in on a button, or one at a time. Nothing is written until I press, and a seed already on the shelf says so instead of offering itself again."],
+      ] },
+      { name: "What the room made", items: [
+        ["Board posts, questions, headlines and polls, searchable", "Four more stores per class, read across every class at once and put behind the same search box as my own material. What did students ask about framing last year finally has an answer, and there is an instructor view of a discussion board for the first time: the prompt, the count, and every post under it."],
+        ["Read when I ask for it", "Twenty more fetches on a page I open to find one article is a page that got slower for nothing, so the room is read the first time I open the lens and held for the rest of the visit."],
+        ["Keeping a row makes a block", "A headline a student brought in becomes an article block with its link, a question becomes a question block, a board becomes a board block holding every post. The id is made from where the row came from, so keeping the same post twice writes one block."],
+        ["Both rounds of a poll, side by side", "The counts before the argument and the counts after, on one line each, because the second vote is the whole point of running a poll that way."],
+        ["A term of polls, instead of the last one", "The store held one poll and the next question overwrote it, so what a room believed in week two, and what changed their minds, was gone the moment I asked the next question. A finished poll is now kept when the next one starts and when the floor is cleared, with both rounds of votes intact. The live poll stays exactly where every reader has always looked for it, so the dashboard, the room screen and the ask page are untouched. A question typed and abandoned before anybody voted is not kept, because a false start is not history."],
+      ] },
+      { name: "The build", items: [
+        ["84 surfaces, up from 75, and the archive asserted on", "The saved views bar, the bulk bar, the seed lens and the room lens all render in the smoke run, plus a row with a selection on it. Underneath, the address encoding, the tag and kind and share patches, the seed parser and the room reader are all asserted on directly, which is what lets a change across five stores be tested without a browser."],
+        ["The voice check leaves the seed library alone", "The generated file is Andrew writing in his own voice, and the em dash rule is a guardrail on Claude. A check that corrects the author is a check pointed the wrong way."],
+      ] },
+    ],
+    note: {
+      title: "What is still true",
+      lines: [
+        "The seeds are ready and not yet written: the button puts them on the shared shelf, and nothing was written to a live store today.",
+        "Polls asked before today are gone, and nothing can bring them back: the store kept one poll at a time, so each class has its most recent poll and no others. Everything from here is kept.",
+        "Nothing was watched with eyes. The repository is behind the PIN and the API that checks it, so all of the above is verified by the build and the smoke run.",
+      ],
+    },
+  },
+  {
     id: "aug31", date: "Monday, August 31", title: "The repository became a table, and learned to write",
     blurb: "The repository could show me everything and change nothing. Now the repository is rows rather than cards, every heading sorts, an edit made there lands in every class that uses the block, a thing can go onto a day without opening a dashboard, and the page wears type of its own choosing.",
     groups: [

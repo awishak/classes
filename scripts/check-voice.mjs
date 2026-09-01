@@ -18,8 +18,11 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = new URL("../src/", import.meta.url).pathname;
-// The forked pre-engine class files are frozen and not worth rewriting.
-const SKIP = /(^|\/)(Comm2|Comm4|Comm118|Comm3)\.jsx$/;
+// The forked pre-engine class files are frozen and not worth rewriting. The
+// seed library is generated from teaching/seeds.md, which is Andrew writing in
+// his own voice: the em dash rule is a guardrail on Claude, and running it over
+// his own sentences would be the check correcting the author.
+const SKIP = /(^|\/)(Comm2|Comm4|Comm118|Comm3)\.jsx$|(^|\/)config\/seed-library\.js$/;
 
 const files = [];
 (function walk(dir) {

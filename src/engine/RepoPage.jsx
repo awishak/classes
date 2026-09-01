@@ -38,6 +38,13 @@ import { linkables, checkAll, linkPatches } from "./links.js";
 import { weekdayOf, slotsOf, addScheduleItem } from "./schedule.js";
 import { FACES, REPO_SLOTS, readRepoFonts, repoFontVars, writeRepoFont, resetRepoFonts,
   readRepoBold, writeRepoBold } from "./fonts.js";
+import { readFilters, filterQuery, isStep, isBlank, viewWords,
+  readViews, saveView, dropView, viewFor, BLANK } from "./views.js";
+import { tagPatches, typePatches, sharePatches, wouldShare, tagsAcross } from "./bulk.js";
+import { SEEDS } from "../config/seed-library.js";
+import { newSeeds, seedPatch } from "./seeds.js";
+import { roomKeys, roomItems, roomCounts, blockFromRoom } from "./room.js";
+import { Seeds, Room } from "./RepoMore.jsx";
 import { genId } from "../utils.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -68,17 +75,27 @@ const COLS = [
 
 export default function RepoPage() {
   const [stores, setStores] = useState(null);
-  const [q, setQ] = useState("");
-  const [kind, setKind] = useState("");
-  const [where, setWhere] = useState("");     // a class id, or "shared", or ""
-  const [tag, setTag] = useState("");
-  const [sort, setSort] = useState({ col: "used", dir: "desc" });
+  // Every filter in one object, because a filter set is one question I am
+  // asking the shelf, and the question has to travel: into the address bar so
+  // I can send it to myself, out of a saved view when I ask it again, and back
+  // off the address bar when Back is pressed.
+  const [f, setF] = useState(() => readFilters(window.location.search));
+  const { q, kind, where, tag, lens } = f;
+  const set = (patch) => setF(prev => ({ ...prev, ...patch }));
   const [adding, setAdding] = useState(false);
   const [typing, setTyping] = useState(false);
-  const [lens, setLens] = useState("");   // "", "dupes", "loose", "tags", "links"
   const [checking, setChecking] = useState(null);   // {done, total} while the links are walked
   const [onlyBad, setOnlyBad] = useState(false);
   const [openId, setOpenId] = useState("");
+  // The rows a decision is about to land on, and the name being typed for a
+  // view worth keeping.
+  const [picked, setPicked] = useState(() => new Set());
+  const [naming, setNaming] = useState(null);
+  // What the room made, read only when I ask for it. Twenty more fetches on a
+  // page I open to find one article is a page that got slower for nothing.
+  const [room, setRoom] = useState(null);
+  const [roomKind, setRoomKind] = useState("");
+  const [roomKept, setRoomKept] = useState(() => new Set());
   // The heading row sticks under the page header, so it has to know how tall
   // the page header is. Hard-coding the height was wrong the moment the header
   // wrapped to two lines, which is what a narrow window does to it.
@@ -129,6 +146,49 @@ export default function RepoPage() {
     })();
     return () => { alive = false; };
   }, []);
+
+  // ─── the address bar ───
+  // The filters go in the URL so a question can be sent to myself, and so Back
+  // undoes the last chip rather than leaving the page. A chip is a step worth
+  // keeping in the history; a letter typed into the search box and a change of
+  // sort are not, so those replace the entry instead of adding one.
+  const lastF = useRef(f);
+  useEffect(() => {
+    const want = filterQuery(f);
+    if (want !== (window.location.search || "")) {
+      const url = window.location.pathname + want;
+      if (isStep(lastF.current, f)) window.history.pushState({}, "", url);
+      else window.history.replaceState({}, "", url);
+    }
+    lastF.current = f;
+  }, [f]);
+
+  useEffect(() => {
+    const onPop = () => setF(readFilters(window.location.search));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // ─── what the room made ───
+  // Four more stores per class, read the first time I open the lens and held
+  // for the rest of the visit.
+  useEffect(() => {
+    if (lens !== "room" || room) return;
+    let alive = true;
+    (async () => {
+      const got = {};
+      await Promise.all(ENGINE_LIST.map(async c => {
+        const k = roomKeys(c.storageKey);
+        const [boards, questions, headlines, poll] = await Promise.all([
+          loadClass(k.boards), loadClass(k.questions), loadClass(k.headlines), loadClass(k.poll),
+        ]);
+        got[c.id] = { boards, questions, headlines, poll };
+      }));
+      if (!alive) return;
+      setRoom(ENGINE_LIST.flatMap(c => roomItems(c, got[c.id])));
+    })();
+    return () => { alive = false; };
+  }, [lens, room]);
 
   const colors = readColors(stores?.shared);
   const fonts = readRepoFonts(stores?.shared);
@@ -212,8 +272,8 @@ export default function RepoPage() {
       return [b.title, b.headline, b.body, b.source, b.concept, b.url, used, ...(b.tags || [])]
         .filter(Boolean).join(" ").toLowerCase().includes(text);
     });
-    const col = COLS.find(c => c.id === sort.col) || COLS[0];
-    const sign = sort.dir === "asc" ? 1 : -1;
+    const col = COLS.find(c => c.id === f.col) || COLS[0];
+    const sign = f.dir === "asc" ? 1 : -1;
     out.sort((a, b) => {
       const x = col.sort(a), y = col.sort(b);
       const by = col.num ? x - y : String(x).localeCompare(String(y));
@@ -222,7 +282,7 @@ export default function RepoPage() {
       return (by ? by * sign : 0) || (a.title || "").localeCompare(b.title || "");
     });
     return out;
-  }, [items, q, kind, where, tag, sort]);
+  }, [items, q, kind, where, tag, f.col, f.dir]);
 
   const dupes = useMemo(() => findDuplicates(items), [items]);
   const loose = useMemo(() => (stores ? findLooseEnds(stores, ENGINE_LIST) : []), [stores]);
@@ -237,9 +297,9 @@ export default function RepoPage() {
     return c;
   }, [items]);
 
-  const bySort = (col) => setSort(s =>
-    s.col === col ? { col, dir: s.dir === "asc" ? "desc" : "asc" }
-                  : { col, dir: col === "used" || col === "made" ? "desc" : "asc" });
+  const bySort = (col) => setF(prev => prev.col === col
+    ? { ...prev, dir: prev.dir === "asc" ? "desc" : "asc" }
+    : { ...prev, col, dir: col === "used" || col === "made" ? "desc" : "asc" });
 
   // ─── writing ───
   const addBlock = (target, patch) => {
@@ -348,6 +408,125 @@ export default function RepoPage() {
     writeTo(le.cls.id)(prev => blockFromWeekItem(prev, le.cls, le, block));
   };
 
+  // ─── many rows at once ───
+  // Every one of these is worked out whole and then written, one store at a
+  // time, so a change across five stores is one save per store rather than one
+  // save per row.
+  const chosen = items.filter(b => picked.has(b.id));
+  const writeAll = (patches) => Object.entries(patches || {}).forEach(([t, data]) => writeTo(t)(() => data));
+  const unpick = () => setPicked(new Set());
+
+  const pickOne = (id) => setPicked(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const pickAll = () => setPicked(prev => {
+    const every = hits.length > 0 && hits.every(b => prev.has(b.id));
+    if (every) return new Set();
+    return new Set([...prev, ...hits.map(b => b.id)]);
+  });
+
+  const bulkTag = (add, remove) => {
+    const patches = tagPatches({ stores: ref.current, classes: ENGINE_LIST, ids: [...picked], add, remove });
+    writeAll(patches);
+    return Object.keys(patches).length;
+  };
+  const bulkType = (type) =>
+    writeAll(typePatches({ stores: ref.current, classes: ENGINE_LIST, ids: [...picked], type }));
+  const bulkShare = () =>
+    writeAll(sharePatches({ stores: ref.current, classes: ENGINE_LIST, ids: [...picked] }));
+
+  // One write per store rather than one per block, which matters at forty
+  // rows: every save here carries the whole store and takes a backup first.
+  const stampMany = (rows, date) => {
+    const byStore = {};
+    rows.forEach(r => { (byStore[r.target] = byStore[r.target] || []).push(r.id); });
+    Object.entries(byStore).forEach(([target, ids]) => writeTo(target)(prev => {
+      const blocks = { ...(prev.blocks || {}) };
+      let touched = 0;
+      ids.forEach(id => {
+        const b = blocks[id];
+        if (!b || (b.scheduled || []).includes(date)) return;
+        blocks[id] = { ...b, scheduled: [...(b.scheduled || []), date] };
+        touched++;
+      });
+      return touched ? { ...prev, blocks } : prev;
+    }));
+  };
+
+  const bulkPlace = (cls, date, slot) => {
+    if (!chosen.length) return "Nothing is selected.";
+    let landed = "";
+    let added = 0;
+    writeTo(cls.id)(prev => {
+      const plans = { ...(prev.dayPlans || {}) };
+      const day = { ...blankDay(cls), ...(plans[date] || {}) };
+      const target = slot || slotsOf(cls, day)[0];
+      if (!target) { landed = "none"; return prev; }
+      const slots = { ...(day.slots || {}) };
+      const bucket = normSlot(slots[target]);
+      const have = new Set(bucket.items.map(it => it.blockId));
+      const rows = chosen.filter(r => !have.has(r.id)).map(r => ({ id: genId(), blockId: r.id }));
+      if (!rows.length) return prev;
+      added = rows.length;
+      landed = target;
+      slots[target] = { ...bucket, items: [...bucket.items, ...rows] };
+      plans[date] = { ...day, slots };
+      return { ...prev, dayPlans: plans };
+    });
+    if (landed === "none") return "That day has no sections to land in.";
+    if (!added) return "All " + chosen.length + " are on that day already.";
+    stampMany(chosen, date);
+    return added + " into " + landed + ", " + cls.code + " on " + date;
+  };
+
+  const bulkAssign = (cls, date) => {
+    if (!chosen.length) return "Nothing is selected.";
+    let done = 0;
+    chosen.forEach(row => { if (assignOnDay(row, cls, date).endsWith("assigned")) done++; });
+    if (!done) return "All " + chosen.length + " are assigned on that day already.";
+    return done + " assigned, " + cls.code + " on " + date;
+  };
+
+  // ─── saved views ───
+  const views = readViews(stores?.shared);
+  const pinned = viewFor(views, f);
+  const sayView = (x) => viewWords(x, { classes: ENGINE_LIST, label: (id) => typeOf(id).label, sharedLabel: SHARED_LABEL });
+  const pinView = (name) => {
+    saveView(writeTo("shared"), { id: genId(), name: (name || "").trim() || sayView(f), filters: { ...f }, at: todayStamp() });
+    setNaming(null);
+  };
+
+  // ─── the seed library ───
+  const fresh = newSeeds(SEEDS, items);
+  const bringSeeds = (list) => {
+    if (!list.length) return;
+    writeTo("shared")(prev => {
+      const blocks = { ...(prev.blocks || {}) };
+      list.forEach(seed => {
+        const patch = seedPatch(seed);
+        if (!blocks[patch.id]) blocks[patch.id] = makeBlock(patch);
+      });
+      return { ...prev, blocks };
+    });
+  };
+
+  // ─── what the room made ───
+  // The class chips filter the room too. The shared shelf holds none of this
+  // material, so that one chip is left out of the question rather than
+  // answering it with an empty page.
+  const roomHits = (room || []).filter(it => {
+    if (roomKind && it.kind !== roomKind) return false;
+    if (where && where !== "shared" && it.cls.id !== where) return false;
+    const text = q.trim().toLowerCase();
+    return !text || it.words.includes(text);
+  });
+  const keepRoom = (item) => {
+    writeBlock(writeTo(item.cls.id), makeBlock(blockFromRoom(item)));
+    setRoomKept(prev => new Set(prev).add(item.key));
+  };
+
   if (!stores) {
     return <div style={{ minHeight: "100vh", background: BG, fontFamily: F, display: "grid",
       placeItems: "center", color: MUTED }}>Reading everything…</div>;
@@ -378,43 +557,51 @@ export default function RepoPage() {
       </header>
 
       <div className="repo-body">
-        <input className="repo-search" value={q} onChange={e => setQ(e.target.value)}
+        <input className="repo-search" value={q} onChange={e => set({ q: e.target.value })}
           placeholder="Search everything" aria-label="Search the repository" autoFocus />
 
         <div className="repo-filters">
           <div className="repo-row">
-            {chip(!kind, "Everything", () => setKind(""))}
+            {chip(!kind, "Everything", () => set({ kind: "" }))}
             {TYPES.filter(t => counts[t.id]).map(t =>
-              chip(kind === t.id, t.label + " " + counts[t.id], () => setKind(kind === t.id ? "" : t.id), hue(t.id)))}
+              chip(kind === t.id, t.label + " " + counts[t.id], () => set({ kind: kind === t.id ? "" : t.id }), hue(t.id)))}
           </div>
           <div className="repo-row">
-            {chip(!lens, "The whole shelf", () => setLens(""))}
+            {chip(!lens, "The whole shelf", () => set({ lens: "" }))}
             {chip(lens === "dupes", "Duplicates " + dupes.length,
-              () => setLens(lens === "dupes" ? "" : "dupes"), "#b45309")}
+              () => set({ lens: lens === "dupes" ? "" : "dupes" }), "#b45309")}
             {chip(lens === "loose", "Loose ends " + loose.length,
-              () => setLens(lens === "loose" ? "" : "loose"), "#9f1239")}
+              () => set({ lens: lens === "loose" ? "" : "loose" }), "#9f1239")}
             {chip(lens === "tags", "Tags " + tags2.length,
-              () => setLens(lens === "tags" ? "" : "tags"), "#7c3aed")}
+              () => set({ lens: lens === "tags" ? "" : "tags" }), "#7c3aed")}
             {chip(lens === "links", "Links " + linky.length,
-              () => setLens(lens === "links" ? "" : "links"), "#0369a1")}
+              () => set({ lens: lens === "links" ? "" : "links" }), "#0369a1")}
+            {chip(lens === "seeds", "Seed library " + (fresh.length ? fresh.length + " new" : "all in"),
+              () => set({ lens: lens === "seeds" ? "" : "seeds" }), "#9f1239")}
+            {chip(lens === "room", "What the room made" + (room ? " " + room.length : ""),
+              () => set({ lens: lens === "room" ? "" : "room" }), "#0f766e")}
           </div>
           <div className="repo-row">
-            {chip(!where, "Every class", () => setWhere(""))}
-            {ENGINE_LIST.map(c => chip(where === c.id, c.code, () => setWhere(where === c.id ? "" : c.id), c.accent))}
-            {chip(where === "shared", SHARED_LABEL, () => setWhere(where === "shared" ? "" : "shared"))}
+            {chip(!where, "Every class", () => set({ where: "" }))}
+            {ENGINE_LIST.map(c => chip(where === c.id, c.code, () => set({ where: where === c.id ? "" : c.id }), c.accent))}
+            {chip(where === "shared", SHARED_LABEL, () => set({ where: where === "shared" ? "" : "shared" }))}
             {tags.length ? (
-              <select className="repo-select" value={tag} onChange={e => setTag(e.target.value)} aria-label="Filter by tag">
+              <select className="repo-select" value={tag} onChange={e => set({ tag: e.target.value })} aria-label="Filter by tag">
                 <option value="">Any tag ({tags.length})</option>
                 {tags.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             ) : null}
             <span className="repo-hits">{hits.length} {hits.length === 1 ? "match" : "matches"}</span>
           </div>
+          <Views views={views} pinned={pinned} blank={isBlank(f)} naming={naming} say={sayView} here={f}
+            onGo={v => { setF({ ...BLANK, ...v.filters }); setNaming(null); }}
+            onName={setNaming} onPin={pinView} onDrop={id => dropView(writeTo("shared"), id)}
+            onClear={() => setF({ ...BLANK })} />
         </div>
 
         {typing ? (
           <TypeSheet fonts={fonts} bold={bold} onClose={() => setTyping(false)}
-            onFont={(slot, f) => writeRepoFont(writeTo("shared"), slot, f)}
+            onFont={(slot, faceId) => writeRepoFont(writeTo("shared"), slot, faceId)}
             onBold={on => writeRepoBold(writeTo("shared"), on)}
             onReset={() => resetRepoFonts(writeTo("shared"))} />
         ) : null}
@@ -430,20 +617,33 @@ export default function RepoPage() {
           <Links blocks={linky} busy={!!checking} done={checking?.done || 0} total={checking?.total || 0}
             onCheck={checkLinks} onlyBad={onlyBad} setOnlyBad={setOnlyBad} />
         ) : null}
+        {lens === "seeds" ? (
+          <Seeds seeds={SEEDS} fresh={fresh} onBring={s => bringSeeds([s])} onBringAll={() => bringSeeds(fresh)} />
+        ) : null}
+        {lens === "room" ? (
+          <Room items={roomHits} counts={roomCounts(room || [])} kind={roomKind} setKind={setRoomKind}
+            busy={!room} kept={roomKept} onKeep={keepRoom} />
+        ) : null}
 
         {lens ? null : hits.length ? (
           <div className="repo-sheet">
             <table className="repo-table">
               <thead>
                 <tr>
+                  <th className="repo-th repo-th-pick" scope="col">
+                    <label className="repo-pick-all">
+                      <input type="checkbox" checked={hits.length > 0 && hits.every(b => picked.has(b.id))}
+                        onChange={pickAll} aria-label={"Select all " + hits.length + " matches"} />
+                    </label>
+                  </th>
                   {COLS.map(c => (
                     <th key={c.id} className={"repo-th repo-th-" + c.id} scope="col"
-                      aria-sort={sort.col === c.id ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
+                      aria-sort={f.col === c.id ? (f.dir === "asc" ? "ascending" : "descending") : "none"}>
                       <button className="repo-focus repo-sort" onClick={() => bySort(c.id)}
                         aria-label={"Sort by " + c.name}>
                         {c.name}
-                        <span className={"repo-arrow" + (sort.col === c.id ? " repo-arrow-on" : "")}>
-                          {sort.col === c.id ? (sort.dir === "asc" ? "↑" : "↓") : "↕"}
+                        <span className={"repo-arrow" + (f.col === c.id ? " repo-arrow-on" : "")}>
+                          {f.col === c.id ? (f.dir === "asc" ? "↑" : "↓") : "↕"}
                         </span>
                       </button>
                     </th>
@@ -453,11 +653,12 @@ export default function RepoPage() {
               <tbody>
                 {hits.map(b => (
                   <Fragment key={b.id}>
-                    <Row block={b} hue={hue} open={openId === b.id} onTag={setTag}
+                    <Row block={b} hue={hue} open={openId === b.id} onTag={t => set({ tag: t })}
+                      picked={picked.has(b.id)} onPick={() => pickOne(b.id)}
                       onOpen={() => setOpenId(openId === b.id ? "" : b.id)} />
                     {openId === b.id ? (
                       <tr className="repo-detail-row">
-                        <td colSpan={COLS.length} style={{ "--kind": hue(b.type) }}>
+                        <td colSpan={COLS.length + 1} style={{ "--kind": hue(b.type) }}>
                           <Detail key={b.id} block={b} hue={hue} planOf={planOf} stores={stores}
                             onSave={p => saveBlock(b, p)} onDelete={() => removeBlock(b)}
                             onPlace={(cls, date, slot) => placeOnDay(b, cls, date, slot)}
@@ -473,7 +674,123 @@ export default function RepoPage() {
         ) : (
           <p className="repo-empty">Nothing matches. Try fewer words, or clear a filter.</p>
         )}
+
+        {picked.size ? (
+          <Bulk n={picked.size} rows={chosen} planOf={planOf} stores={stores}
+            onTag={bulkTag} onType={bulkType} onShare={bulkShare} onClear={unpick}
+            onPlace={bulkPlace} onAssign={bulkAssign} />
+        ) : null}
       </div>
+    </div>
+  );
+}
+
+// The filter sets worth keeping, pinned to the top of the page.
+//
+// The filters I set are the questions I keep asking, and rebuilding a question
+// chip by chip every time is how a good filter goes unused. A view is the
+// question named and kept in the shared store, so the same view is there on
+// any machine I open the repository on.
+export function Views({ views, pinned, blank, naming, here, say, onGo, onName, onPin, onDrop, onClear }) {
+  if (!views.length && blank) return null;
+  return (
+    <div className="repo-row repo-views">
+      <span className="repo-label">Saved views</span>
+      {views.map(v => (
+        <span key={v.id} className={"repo-view" + (pinned?.id === v.id ? " repo-view-on" : "")}>
+          <button className="repo-focus repo-view-go" onClick={() => onGo(v)} title={say(v.filters)}>
+            {v.name}
+          </button>
+          <button className="repo-focus repo-view-x" onClick={() => onDrop(v.id)}
+            aria-label={"Unpin the view called " + v.name}>×</button>
+        </span>
+      ))}
+      {blank ? null : pinned ? (
+        <span className="repo-verdict repo-verdict-good">Pinned as {pinned.name}</span>
+      ) : naming === null ? (
+        <button className="repo-focus repo-chip" onClick={() => onName(say(here))}>Pin this view</button>
+      ) : (
+        <>
+          <input className="repo-input repo-tag-in" value={naming} autoFocus
+            onChange={e => onName(e.target.value)} aria-label="A name for this view"
+            onKeyDown={e => { if (e.key === "Enter") onPin(naming); if (e.key === "Escape") onName(null); }} />
+          <button className="repo-focus repo-save" onClick={() => onPin(naming)}>Pin it</button>
+          <button className="repo-focus repo-chip" onClick={() => onName(null)}>Cancel</button>
+        </>
+      )}
+      {blank ? null : <button className="repo-focus repo-chip" onClick={onClear}>Clear the filters</button>}
+    </div>
+  );
+}
+
+// What can be done to everything selected at once.
+//
+// Retagging four hundred rows one at a time is a job nobody ever does, which is
+// why the tags on this shelf are wrong and stay wrong. The bar sits at the
+// bottom of the window while a selection is live, because the selection is
+// made by running down a long list and the decision has to still be in reach
+// at the bottom of the list.
+export function Bulk({ n, rows, planOf, stores, onTag, onType, onShare, onClear, onPlace, onAssign }) {
+  const [adding, setAdding] = useState("");
+  const [said, setSaid] = useState("");
+  const [placing, setPlacing] = useState(false);
+  const carried = tagsAcross(rows, rows.map(r => r.id));
+  const owned = wouldShare(rows, rows.map(r => r.id));
+
+  const addTag = () => {
+    const t = adding.trim();
+    if (!t) return;
+    onTag([t], []);
+    setAdding("");
+    setSaid(t + " added to " + n + " " + (n === 1 ? "block" : "blocks"));
+  };
+
+  return (
+    <div className="repo-bulk">
+      <div className="repo-row">
+        <span className="repo-bulk-n">{n + " selected"}</span>
+        <input className="repo-input repo-tag-in" value={adding} placeholder="Add a tag"
+          aria-label="A tag for everything selected" onChange={e => setAdding(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") addTag(); }} />
+        <button className="repo-focus repo-save" disabled={!adding.trim()} onClick={addTag}>Add the tag</button>
+        {carried.length ? (
+          <select className="repo-select" value="" aria-label="Take a tag away"
+            onChange={e => {
+              if (!e.target.value) return;
+              onTag([], [e.target.value]);
+              setSaid(e.target.value + " taken off " + n + " " + (n === 1 ? "block" : "blocks"));
+            }}>
+            <option value="">Take a tag away</option>
+            {carried.map(t => <option key={t.tag} value={t.tag}>{t.tag} ({t.n})</option>)}
+          </select>
+        ) : null}
+        <button className="repo-focus repo-chip" onClick={onClear} style={{ marginLeft: "auto" }}>
+          Clear the selection
+        </button>
+      </div>
+      <div className="repo-row">
+        <span className="repo-label">Change the kind</span>
+        {TYPES.map(t => (
+          <button key={t.id} className="repo-focus repo-chip"
+            onClick={() => { onType(t.id); setSaid(n + " now " + t.label.toLowerCase()); }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div className="repo-row">
+        <button className="repo-focus repo-chip" disabled={!owned}
+          onClick={() => { onShare(); setSaid(owned + " moved to " + SHARED_LABEL); }}>
+          {owned ? "Move " + owned + " to " + SHARED_LABEL : "All of them are on " + SHARED_LABEL + " already"}
+        </button>
+        <button className="repo-focus repo-chip" onClick={() => setPlacing(!placing)} aria-pressed={placing}>
+          Put the selection on a day
+        </button>
+        {said ? <span className="repo-said">{said}</span> : null}
+      </div>
+      {placing ? (
+        <Place what={"Put the " + n + " selected on a day"} planOf={planOf} stores={stores}
+          onPlace={onPlace} onAssign={onAssign} />
+      ) : null}
     </div>
   );
 }
@@ -481,13 +798,20 @@ export default function RepoPage() {
 // One thing, on one line. Exported so the smoke test can render a row, the
 // open row and the placer, none of which a server render of the page itself
 // ever reaches: the page is behind a load, and a loading screen proves nothing.
-export function Row({ block, hue, open, onOpen, onTag }) {
+export function Row({ block, hue, open, onOpen, onTag, picked, onPick }) {
   const t = typeOf(block.type);
   const color = hue(block.type);
   const words = block.headline || block.title;
   const sub = block.headline && block.title !== block.headline ? block.title : "";
   return (
-    <tr className={"repo-tr" + (open ? " repo-tr-open" : "")} style={{ "--kind": color }}>
+    <tr className={"repo-tr" + (open ? " repo-tr-open" : "") + (picked ? " repo-tr-picked" : "")}
+      style={{ "--kind": color }}>
+      <td className="repo-td repo-td-pick">
+        <label className="repo-pick">
+          <input type="checkbox" checked={!!picked} onChange={() => onPick && onPick()}
+            aria-label={"Select " + (words || "this block")} />
+        </label>
+      </td>
       <td className="repo-td repo-td-title">
         <button className="repo-focus repo-words" onClick={onOpen} aria-expanded={open}>
           <span className="repo-caret">{open ? "▾" : "▸"}</span>
@@ -632,7 +956,7 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
 }
 
 // Put a thing on a day, without going back to a dashboard to do the placing.
-export function Place({ block, planOf, stores, onPlace, onAssign }) {
+export function Place({ block, what, planOf, stores, onPlace, onAssign }) {
   const [clsId, setClsId] = useState(ENGINE_LIST[0].id);
   const [date, setDate] = useState("");
   const [slot, setSlot] = useState("");
@@ -644,7 +968,7 @@ export function Place({ block, planOf, stores, onPlace, onAssign }) {
 
   return (
     <div className="repo-place">
-      <span className="repo-label">Put the block on a day</span>
+      <span className="repo-label">{what || "Put the block on a day"}</span>
       <div className="repo-row">
         <select className="repo-select" value={clsId} aria-label="Which class"
           onChange={e => { setClsId(e.target.value); setDate(""); setSlot(""); setSaid(""); }}>
@@ -893,6 +1217,41 @@ const CSS = `
   padding:3px 0}
 .repo-use:hover{color:${TEXT}}
 .repo-empty{margin:30px 0;font-size:16px;color:${MUTED}}
+
+/* The pick column. A 44px target on a 4px-padded row, which is what makes a
+   checkbox tappable without the rows growing taller. */
+.repo-th-pick,.repo-td-pick{width:1%;padding-left:12px;padding-right:0}
+.repo-pick,.repo-pick-all{display:flex;align-items:center;justify-content:center;
+  min-height:${TAP}px;min-width:30px;cursor:pointer}
+.repo-pick input,.repo-pick-all input{width:19px;height:19px;accent-color:${TEXT};cursor:pointer}
+.repo-tr-picked{background:#fdf6e7}
+.repo-tr-picked:hover{background:#fbf0d8}
+
+/* Saved views, pinned above the table. */
+.repo-views{padding-top:2px}
+.repo-view{display:inline-flex;align-items:center;border:1px solid ${BORDER};border-radius:999px;background:#fff}
+.repo-view-on{border-color:${TEXT};background:${SURFACE}}
+.repo-view-go{min-height:32px;padding:0 6px 0 12px;background:none;border:none;cursor:pointer;
+  font-family:inherit;font-size:13.5px;color:${SECOND}}
+.repo-view-go:hover{color:${TEXT}}
+.repo-view-x{min-height:32px;padding:0 10px 0 4px;background:none;border:none;cursor:pointer;
+  font-family:inherit;font-size:15px;line-height:1;color:${MUTED}}
+.repo-view-x:hover{color:#9f1239}
+
+/* The bar for a live selection. It sticks to the bottom of the window, because
+   a selection is made by running down a long list and the decision has to
+   still be in reach at the bottom of the list. */
+.repo-bulk{position:sticky;bottom:14px;z-index:12;display:flex;flex-direction:column;gap:8px;
+  background:#fff;border:1px solid ${TEXT};border-radius:14px;padding:11px 13px;
+  box-shadow:0 10px 30px -12px rgba(23,19,16,.4)}
+.repo-bulk-n{font-family:${MONO};font-size:12px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:${TEXT}}
+
+/* A post, a question, a headline: the room's own rows. */
+.repo-post{font-size:14.5px;line-height:1.5;color:${SECOND};padding:3px 0;overflow-wrap:anywhere}
+.repo-post b{color:${TEXT};font-weight:600;margin-right:6px}
+.repo-poll-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:4px 0;
+  border-bottom:1px solid rgba(23,19,16,.06)}
 .repo-add-form{background:#fff;border:1px solid ${TEXT};border-radius:14px;padding:14px;
   display:flex;flex-direction:column;gap:8px}
 /* The lenses. A cluster is a decision, so a cluster is a card with the copies
