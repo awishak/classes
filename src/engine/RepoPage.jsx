@@ -48,8 +48,8 @@ import { tagPatches, typePatches, sharePatches, wouldShare, tagsAcross } from ".
 import { SEEDS } from "../config/seed-library.js";
 import { newSeeds, seedPatch } from "./seeds.js";
 import { roomKeys, roomItems, roomCounts, blockFromRoom } from "./room.js";
-import { Seeds, Room, BlockTypes, Term } from "./RepoMore.jsx";
-import { termOf } from "./term.js";
+import { Seeds, Room, BlockTypes } from "./RepoMore.jsx";
+import { termOf, termCounts, nearestDay } from "./term.js";
 import { genId } from "../utils.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -339,6 +339,7 @@ export default function RepoPage() {
   const days = useMemo(() => (stores
     ? termOf({ cls: termCls, store: stores[termCls.id], blockOf: (id) => byId[id] || null })
     : []), [stores, termCls, byId]);
+  const termSum = useMemo(() => termCounts(days), [days]);
 
   const bySort = (col) => setF(prev => prev.col === col
     ? { ...prev, dir: prev.dir === "asc" ? "desc" : "asc" }
@@ -719,7 +720,6 @@ export default function RepoPage() {
               }}>
               <option value="">Housekeeping ({items.length})</option>
               <optgroup label="Views">
-                <option value="lens:schedule">Schedule, day by day</option>
                 <option value="lens:seeds">Seed library ({fresh.length} new)</option>
                 <option value="lens:room">What the room made{room ? " (" + room.length + ")" : ""}</option>
               </optgroup>
@@ -746,6 +746,8 @@ export default function RepoPage() {
             {chip(!where, "Every class", () => set({ where: "" }))}
             {ENGINE_LIST.map(c => chip(where === c.id, c.code, () => set({ where: where === c.id ? "" : c.id }), c.accent))}
             {chip(where === "shared", SHARED_LABEL, () => set({ where: where === "shared" ? "" : "shared" }))}
+            {chip(lens === "schedule", "Schedule by day",
+              () => set({ lens: lens === "schedule" ? "" : "schedule" }), "#0f766e")}
             <span className="repo-hits">{hits.length} {hits.length === 1 ? "match" : "matches"}</span>
           </div>
           <Steps steps={steps} onBack={stepBack} />
@@ -782,15 +784,58 @@ export default function RepoPage() {
             onDrop={id => dropType(writeTo("shared"), id)}
             onRetype={(from, to) => retypeAll(from, to)} />
         ) : null}
-        {lens === "schedule" ? (
-          <Term cls={termCls} classes={ENGINE_LIST} days={days} onClass={id => set({ where: id })} />
-        ) : null}
         {lens === "seeds" ? (
           <Seeds seeds={SEEDS} fresh={fresh} onBring={s => bringSeeds([s])} onBringAll={() => bringSeeds(fresh)} />
         ) : null}
         {lens === "room" ? (
           <Room items={roomHits} counts={roomCounts(room || [])} kind={roomKind} setKind={setRoomKind}
             busy={!room} kept={roomKept} onKeep={keepRoom} />
+        ) : null}
+
+        {lens === "schedule" ? (
+          <>
+            <p className="repo-lens-say">
+              {termCls.code} in order, every class day of the term. Each day says what the room does, in the
+              sections the day plan puts them in, then what the students were told to read or hand in.
+              Building a day still happens on the dashboard; this is the term from the top.
+            </p>
+            <div className="repo-row">
+              <span className="repo-hits" style={{ marginLeft: 0 }}>
+                {termSum.days} days · {termSum.planned} planned · {termSum.rows} rows · {termSum.assigned} assigned
+              </span>
+            </div>
+          </>
+        ) : null}
+
+        {lens === "schedule" ? (
+          days.length ? (
+            <div className="repo-sheet">
+              <table className="repo-table">
+                <thead>
+                  <tr>
+                    <th className="repo-th repo-th-pick" scope="col" />
+                    {COLS.map(c => (
+                      <th key={c.id} className={"repo-th repo-th-" + c.id} scope="col">
+                        <span className="repo-sort repo-sort-flat">{c.name}</span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <Term days={days} here={nearestDay(days)} rowOf={id => byId[id] || null} hue={hue}
+                    openId={openId} onOpen={id => setOpenId(openId === id ? "" : id)}
+                    onTag={t => set({ tag: t })} pickedSet={picked} onPick={pickOne}
+                    onStar={b => pickOut(b, !b.pick)}
+                    detail={b => (
+                      <Detail key={b.id} block={b} hue={hue} planOf={planOf} stores={stores}
+                        onSave={p => saveBlock(b, p)} onDelete={() => removeBlock(b)}
+                        onPlace={(cls, date, slot) => placeOnDay(b, cls, date, slot)}
+                        onAssign={(cls, date) => assignOnDay(b, cls, date)} />
+                    )} />
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="repo-empty">{termCls.code} has no weeks on the schedule yet.</p>
         ) : null}
 
         {lens ? null : hits.length ? (
@@ -907,6 +952,98 @@ export function Steps({ steps, onBack }) {
         {steps.length === 1 ? "1 change this visit" : steps.length + " changes this visit"}
       </span>
     </div>
+  );
+}
+
+// The term, day by day, in the rows the rest of the page uses.
+//
+// Andrew: "you should still show things in the same row kind of format, just
+// with dates and headers and section headers." So this is the same table: the
+// same row, the same checkbox, the same open panel underneath, grouped under a
+// date and the sections of that day. A row here can be ticked, opened, edited
+// and picked out exactly as it can on the shelf, which is what makes the view
+// a view of the shelf rather than a report about it.
+//
+// A week item that points at nothing on the shelf still gets a line, because
+// leaving it out would make the schedule say the day is emptier than it is.
+export function Term({ days, here, rowOf, hue, openId, onOpen, onTag, pickedSet, onPick, onStar, detail }) {
+  const span = COLS.length + 1;
+  const open = (b) => (openId === b.id ? (
+    <tr className="repo-detail-row">
+      <td colSpan={span} style={{ "--kind": hue(b.type) }}>{detail(b)}</td>
+    </tr>
+  ) : null);
+
+  return (
+    <>
+      {days.map(d => (
+        <Fragment key={d.weekId + d.date}>
+          <tr className={"repo-dayhead" + (d.date === here ? " repo-dayhead-here" : "")}>
+            <td colSpan={span}>
+              <span className="repo-dayhead-date">{d.date}</span>
+              <span className="repo-label">{d.week}{d.weekday ? " · " + d.weekday : ""}</span>
+              {d.topic ? <span className="repo-dayhead-topic">{d.topic}</span> : null}
+              {d.date === here ? <span className="repo-flagged">Nearest today</span> : null}
+              {!d.rows && !d.assigned.length ? <span className="repo-copy-n">Nothing on this day</span> : null}
+            </td>
+          </tr>
+
+          {d.sections.map(sec => (
+            <Fragment key={sec.slot}>
+              <tr className="repo-sechead"><td colSpan={span}>{sec.name}</td></tr>
+              {sec.items.map(it => {
+                const b = it.blockId ? rowOf(it.blockId) : null;
+                if (!b) return <PlainRow key={it.id} words={it.words} kind={it.kind} span={span} />;
+                return (
+                  <Fragment key={it.id}>
+                    <Row block={b} hue={hue} open={openId === b.id} onTag={onTag}
+                      picked={pickedSet.has(b.id)} onPick={() => onPick(b.id)}
+                      onStar={() => onStar(b)} onOpen={() => onOpen(b.id)} />
+                    {open(b)}
+                  </Fragment>
+                );
+              })}
+            </Fragment>
+          ))}
+
+          {d.assigned.length ? (
+            <>
+              <tr className="repo-sechead"><td colSpan={span}>Assigned</td></tr>
+              {d.assigned.map(it => {
+                const b = it.blockId ? rowOf(it.blockId) : null;
+                if (!b) {
+                  return <PlainRow key={it.id} words={it.words} kind={it.type} span={span}
+                    note={it.loose ? "no day yet" : ""} />;
+                }
+                return (
+                  <Fragment key={it.id}>
+                    <Row block={b} hue={hue} open={openId === b.id} onTag={onTag}
+                      picked={pickedSet.has(b.id)} onPick={() => onPick(b.id)}
+                      onStar={() => onStar(b)} onOpen={() => onOpen(b.id)} />
+                    {open(b)}
+                  </Fragment>
+                );
+              })}
+            </>
+          ) : null}
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+// A row on a day that points at nothing on the shelf: words typed straight
+// into the plan, or a week item that was never made into a block.
+function PlainRow({ words, kind, note, span }) {
+  return (
+    <tr className="repo-tr repo-tr-plain">
+      <td className="repo-td repo-td-pick" />
+      <td className="repo-td repo-td-title" colSpan={span - 1}>
+        <span className="repo-plain-words">{words}</span>
+        <span className="repo-owner">{kind}</span>
+        {note ? <span className="repo-copy-n">{note}</span> : null}
+      </td>
+    </tr>
   );
 }
 
@@ -1541,19 +1678,22 @@ const CSS = `
 .repo-choose:disabled{opacity:.5}
 .repo-pick-show{min-height:${TAP}px;font-size:15px;padding:0 10px;max-width:min(100%,320px)}
 
-/* The term, day by day. A day is a card, the nearest one is marked, and a day
-   with nothing on it still gets a line, because an empty week in the middle of
-   a term is the thing worth seeing. */
-.repo-day{background:#fff;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:9px;
-  box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.06)}
-.repo-day-here{box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 2px ${TEXT}}
-.repo-day-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.repo-day-date{font-family:${MONO};font-size:15px;font-weight:600;color:${TEXT}}
-.repo-day-topic{font-size:15px;color:${SECOND}}
-.repo-day-sec{display:flex;flex-direction:column;gap:3px}
-.repo-day-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:3px 0;
-  font-size:14.5px;color:${TEXT}}
-.repo-day-words{overflow-wrap:anywhere}
+/* The term, day by day, as rows in the same table. A date is a band across the
+   whole width, a section is a quieter one under it, and everything between
+   them is the row the shelf already draws. */
+.repo-dayhead td{background:${SURFACE};border-top:1px solid ${BORDER};border-bottom:1px solid ${BORDER};
+  padding:9px 12px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.repo-dayhead-here td{background:#fdf6e7}
+.repo-dayhead-date{font-family:${MONO};font-size:15px;font-weight:600;color:${TEXT}}
+.repo-dayhead-topic{font-size:15px;color:${SECOND}}
+.repo-sechead td{padding:7px 12px 2px 26px;font-family:${MONO};font-size:11px;font-weight:600;
+  letter-spacing:.09em;text-transform:uppercase;color:${MUTED}}
+.repo-tr-plain .repo-td-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-height:${TAP}px}
+.repo-plain-words{font-family:var(--repo-row,${F});font-size:15px;color:${SECOND};overflow-wrap:anywhere}
+/* The heading row of a schedule names its columns and sorts nothing, because
+   a term is already in the only order it has. */
+.repo-sort-flat{display:flex;align-items:center;min-height:${TAP}px;font-family:var(--repo-col,${MONO});
+  font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:${MUTED}}
 
 /* The health strip. Five numbers, each a filter, big enough to read from
    across the desk and dim when the number is zero. */

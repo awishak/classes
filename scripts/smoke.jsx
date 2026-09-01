@@ -25,11 +25,10 @@ import { FREEFORM } from "../src/engine/dayplan.js";
 import { weekdayOf } from "../src/engine/schedule.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
-  Steps as RepoSteps, Sticker as RepoSticker } from "../src/engine/RepoPage.jsx";
+  Steps as RepoSteps, Sticker as RepoSticker, Term as RepoTerm } from "../src/engine/RepoPage.jsx";
 import { FLAGS, healthCounts, carries, allClear } from "../src/engine/health.js";
 import { remember, undoPatches, pushEntry, sayEntry, LIMIT } from "../src/engine/undo.js";
-import { Seeds as RepoSeeds, Room as RepoRoom, BlockTypes as RepoTypes, Term as RepoTerm }
-  from "../src/engine/RepoMore.jsx";
+import { Seeds as RepoSeeds, Room as RepoRoom, BlockTypes as RepoTypes } from "../src/engine/RepoMore.jsx";
 import { termOf, termCounts, nearestDay } from "../src/engine/term.js";
 import QuestionPicker from "../src/engine/QuestionPicker.jsx";
 import PickMark, { PICK_LABEL } from "../src/engine/Pick.jsx";
@@ -515,10 +514,24 @@ cases.push(["Repository", <RepoPage />]);
     console.error("  FAIL  term: the counts came out " + JSON.stringify(tc)); failedEarly++; }
   if (!nearestDay(termDays)) { console.error("  FAIL  term: no day came back as the nearest"); failedEarly++; }
 
-  cases.push(["The term, day by day", <RepoTerm cls={termCfg} classes={ENGINE_LIST} days={termDays}
-    onClass={noop} />, "The house always knows."]);
-  cases.push(["The term, a class with no weeks", <RepoTerm cls={termCfg} classes={ENGINE_LIST} days={[]}
-    onClass={noop} />, "no weeks on the schedule"]);
+  // The same row the shelf draws, under a date and a section, which is what
+  // makes the view a view of the shelf rather than a report about it.
+  const termIndexed = { tb1: { ...termBlocks.tb1, owner: termCfg, target: termCfg.id, uses: [], tags: ["betting"] } };
+  const termTable = (el) => <table><tbody>{el}</tbody></table>;
+  cases.push(["The term, day by day", termTable(
+    <RepoTerm days={termDays} here={termDays[0].date} rowOf={id => termIndexed[id] || null} hue={hue}
+      openId="" onOpen={noop} onTag={noop} pickedSet={new Set()} onPick={noop} onStar={noop}
+      detail={() => null} />), "The house always knows."]);
+  // A row that points at nothing on the shelf still gets a line, or the day
+  // would read as emptier than it is.
+  cases.push(["The term, a row with no block behind it", termTable(
+    <RepoTerm days={termDays} here="" rowOf={() => null} hue={hue}
+      openId="" onOpen={noop} onTag={noop} pickedSet={new Set()} onPick={noop} onStar={noop}
+      detail={() => null} />), "repo-tr-plain"]);
+  cases.push(["The term, a day header", termTable(
+    <RepoTerm days={termDays} here={termDays[0].date} rowOf={() => null} hue={hue}
+      openId="" onOpen={noop} onTag={noop} pickedSet={new Set()} onPick={noop} onStar={noop}
+      detail={() => null} />), "Nearest today"]);
 
   // ─── what is wrong with the shelf ───
   const shelf = [
