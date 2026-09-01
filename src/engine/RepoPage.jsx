@@ -375,18 +375,18 @@ export default function RepoPage() {
     writeBlock(writeTo(target), { ...block, ...patch });
   };
 
-  // Picked out, the way a menu says which dish the kitchen would order. A
+  // A Drew's Pick, the way a menu says which dish the kitchen would order. A
   // block carries the flag itself, so the sticker follows the block into every
   // class that uses it.
   const pickOut = (row, on) => {
-    keep((on ? "Picked out " : "Took the sticker off ") + (row.title || "a block"), [row.id]);
+    keep((on ? "Added a Drew's Pick to " : "Took the sticker off ") + (row.title || "a block"), [row.id]);
     const { owner, target, uses, ...block } = row;
     writeBlock(writeTo(target), { ...block, pick: !!on });
   };
 
   const bulkPick = (on) => {
     const ids = [...picked];
-    keep(on ? "Picked them out" : "Took the stickers off", ids);
+    keep(on ? "Made them Drew's Picks" : "Took the stickers off", ids);
     const want = new Set(ids);
     ENGINE_LIST.concat([{ id: "shared" }]).forEach(c => {
       const cur = ref.current[c.id] || {};
@@ -689,7 +689,7 @@ export default function RepoPage() {
           <div className="repo-row">
             <select className="repo-select repo-pick-type" value={kind} aria-label="Which type"
               onChange={e => set({ kind: e.target.value })}>
-              <option value="">Every type ({items.length})</option>
+              <option value="">Choose type ({items.length})</option>
               {kinds.filter(t => counts[t.id]).map(t =>
                 <option key={t.id} value={t.id}>{t.label} ({counts[t.id]})</option>)}
             </select>
@@ -709,7 +709,12 @@ export default function RepoPage() {
                 else if (v.startsWith("flag:")) set({ flag: v.slice(5), lens: "" });
                 else set({ lens: "", flag: "" });
               }}>
-              <option value="">The whole shelf ({items.length})</option>
+              <option value="">Housekeeping ({items.length})</option>
+              <optgroup label="Views">
+                <option value="lens:schedule">Schedule, day by day</option>
+                <option value="lens:seeds">Seed library ({fresh.length} new)</option>
+                <option value="lens:room">What the room made{room ? " (" + room.length + ")" : ""}</option>
+              </optgroup>
               <optgroup label="Worth fixing">
                 {FLAGS.map(x => (
                   <option key={x.id} value={"flag:" + x.id} disabled={!health[x.id]}>
@@ -717,18 +722,15 @@ export default function RepoPage() {
                   </option>
                 ))}
               </optgroup>
-              <optgroup label="Another way to look">
+              <optgroup label="Tidy up">
                 <option value="lens:dupes">Duplicates ({dupes.length})</option>
                 <option value="lens:loose">Loose ends ({loose.length})</option>
                 <option value="lens:tags">Tags ({tags2.length})</option>
                 <option value="lens:links">Links ({linky.length})</option>
-                <option value="lens:schedule">The term, day by day</option>
-                <option value="lens:seeds">Seed library ({fresh.length} new)</option>
-                <option value="lens:room">What the room made{room ? " (" + room.length + ")" : ""}</option>
               </optgroup>
             </select>
 
-            {picks || pick ? chip(pick === "yes", "Picked out " + picks,
+            {picks || pick ? chip(pick === "yes", "Drew's Picks " + picks,
               () => set({ pick: pick ? "" : "yes" }), "#b45309") : null}
           </div>
           <div className="repo-row">
@@ -737,7 +739,7 @@ export default function RepoPage() {
             {chip(where === "shared", SHARED_LABEL, () => set({ where: where === "shared" ? "" : "shared" }))}
             {tags.length ? (
               <select className="repo-select" value={tag} onChange={e => set({ tag: e.target.value })} aria-label="Filter by tag">
-                <option value="">Any tag ({tags.length})</option>
+                <option value="">Choose tag ({tags.length})</option>
                 {tags.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             ) : null}
@@ -1038,8 +1040,8 @@ export function Sticker({ on, onToggle }) {
   const [broken, setBroken] = useState(false);
   return (
     <button className={"repo-focus repo-sticker" + (on ? " repo-sticker-on" : "")} onClick={onToggle}
-      aria-pressed={!!on} title={on ? "Take the sticker off" : "Pick this one out"}
-      aria-label={on ? "Take the sticker off" : "Pick this one out"}>
+      aria-pressed={!!on} title={on ? "Take the sticker off" : "Make this a Drew's Pick"}
+      aria-label={on ? "Take the sticker off" : "Make this a Drew's Pick"}>
       {on && !broken
         ? <img src="/chef.png" alt="" className="repo-sticker-img" onError={() => setBroken(true)} />
         : <span className="repo-sticker-word">Pick</span>}

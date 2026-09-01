@@ -161,7 +161,7 @@ cases.push(["Readings, long title", <Readings items={longRead} accent={cfg0.acce
   onPickBlock={noop} onNote={noop} inFlow={new Set()} onDropIn={noop} blockOf={() => null} />, "read-src"]);
 // A reading pointing at a block Andrew picked out wears the drawing, here and
 // on the class site, because a recommendation nobody receives is not one.
-cases.push(["Readings, an Andrew's pick", <Readings items={longRead} accent={cfg0.accent} castNow={noop}
+cases.push(["Readings, a Drew's Pick", <Readings items={longRead} accent={cfg0.accent} castNow={noop}
   dismiss={noop} liveLabel={null} onAdd={noop} onRemove={noop} onClaim={noop} blocks={[]}
   onPickBlock={noop} onNote={noop} inFlow={new Set()} onDropIn={noop}
   blockOf={() => ({ id: "r1", pick: true })} />, "chef.png"]);
@@ -209,11 +209,11 @@ cases.push(["Command bar", <CommandBar targets={[{ key: "k", group: "g", title: 
 }
 // The one mark, at the two sizes it is drawn at: small on a row, and big
 // enough to read from the back of a room.
-cases.push(["Andrew's pick, on a row", <PickMark size={20} />, "chef.png"]);
+cases.push(["Drew's Pick, on a row", <PickMark size={20} />, "chef.png"]);
 // The words beside the drawing, so a student knows what the drawing means.
 // Matched on the escaped form, because an apostrophe reaches the page as
 // &#x27; and a case that never matches is a case that proves nothing.
-cases.push(["Andrew's pick, on the wall", <PickMark size={80} label />, PICK_LABEL.replace("'", "&#x27;")]);
+cases.push(["Drew's Pick, on the wall", <PickMark size={80} label />, PICK_LABEL.replace("'", "&#x27;")]);
 // ─── the Day Plan card, mirroring the dashboard ───
 // The card used to understand seeds and typed snippets and nothing else, so a
 // block placed from the repository drew an empty card. It reads the same

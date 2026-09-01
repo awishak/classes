@@ -1,4 +1,4 @@
-// Andrew's pick, on anything that draws a block.
+// Drew's Pick, on anything that draws a block.
 //
 // The flag lives on the block and only the repository was drawing it, so a
 // pick made on the shelf was invisible on the dashboard and invisible to
@@ -11,7 +11,7 @@
 
 import { useState } from "react";
 
-export const PICK_LABEL = "Andrew's pick";
+export const PICK_LABEL = "Drew's Pick";
 
 export default function PickMark({ size = 34, label }) {
   const [broken, setBroken] = useState(false);
