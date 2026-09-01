@@ -26,6 +26,7 @@ import { ENGINE_LIST } from "../config/registry.js";
 import { normSlot, sequenceOptions, sequenceFor, sectionsOf } from "./dayplan.js";
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
 import { readAdded, readLabels } from "./types.js";
+import PickMark from "./Pick.jsx";
 import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor } from "./colors.js";
 import { useBoards } from "./boards.js";
 import { FACES, SLOTS, readFonts, fontVars, writeFont, resetFonts, readBold, writeBold } from "./fonts.js";
@@ -795,6 +796,7 @@ function LibraryPick({ blocks, accent, onPick, hue = defaultHue }) {
                 {b.children?.length ? <small style={{ color: TEXT_MUTED, fontSize: 12 }}>{b.children.length} inside</small> : null}
                 {b.tags?.length ? <small style={{ color: TEXT_MUTED, fontSize: 12, display: "block" }}>{b.tags.slice(0, 3).join(" · ")}</small> : null}
               </span>
+              {b.pick ? <PickMark size={20} /> : null}
 
             </button>
           );
@@ -1278,7 +1280,7 @@ export const MEDIA_SET = new Set(["reading", "video", "podcast"]);
 // with, then my note, all of them the full width and none of them shouting.
 // The link and the buttons go along the bottom, which is where a card's
 // actions belong and where they stop stealing width from the words.
-function ReadingCard({ item, accent, live, onCast, onDismiss, onNote, onRemove, inFlow, hue }) {
+function ReadingCard({ item, accent, live, onCast, onDismiss, onNote, onRemove, inFlow, hue, picked }) {
   const color = hue ? hue(item.type === "reading" ? "link" : item.type) : (TYPE_COLOR[item.type] || TYPE_COLOR.reading);
   const btn = { ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5 };
   return (
@@ -1294,6 +1296,7 @@ function ReadingCard({ item, accent, live, onCast, onDismiss, onNote, onRemove, 
 
       <div className="read-foot">
         <span className="read-kind" style={{ background: color }}>{typeLabel(item.type)}</span>
+        {picked ? <PickMark size={20} /> : null}
         {item.url ? (
           <a className="dash-focus read-src" href={item.url} target="_blank" rel="noopener noreferrer"
             title={"Open " + item.url + " in a new tab"}>{hostOf(item.url)} ↗</a>
@@ -1408,6 +1411,7 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
         // is where what I think about it belongs.
         return (
         <ReadingCard key={it.id} item={it} accent={accent} hue={hue}
+          picked={!!blockOf?.(it.blockId || it.libId)?.pick}
           live={liveLabel === it.title} onDismiss={dismiss}
           onNote={(v) => onNote(it.id, v)}
           onRemove={() => onRemove(it.id)} inFlow={inFlow?.has(it.id)}
@@ -2832,6 +2836,7 @@ export function Monitor({ config, live, cast, push, recent, onRecast, info, onBo
 function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
   if (!block && !item) return null;
   const t = block ? typeOf(block.type) : null;
+  const picked = !!block?.pick;
   const rows = [
     ["Headline", block ? block.headline : item?.claim],
     ["What it says", block?.body],
@@ -2847,8 +2852,9 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
   return (
     <div style={{ background: "#fff", border: "1px solid " + accent, borderRadius: 14, padding: 14,
       display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ ...label, color: accent }}>{t ? t.label : "Note"}</span>
+        {picked ? <PickMark size={22} label /> : null}
         <button className="dash-focus" onClick={onClose}
           style={{ ...label, fontSize: 12, marginLeft: "auto", color: TEXT_MUTED, background: "none", border: "none", cursor: "pointer" }}>Close</button>
       </div>

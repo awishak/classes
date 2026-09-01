@@ -153,6 +153,12 @@ const longRead = [{ id: "r1", type: "reading", url: "https://www.nytimes.com/ath
 cases.push(["Readings, long title", <Readings items={longRead} accent={cfg0.accent} castNow={noop}
   dismiss={noop} liveLabel={null} onAdd={noop} onRemove={noop} onClaim={noop} blocks={[]}
   onPickBlock={noop} onNote={noop} inFlow={new Set()} onDropIn={noop} blockOf={() => null} />, "read-src"]);
+// A reading pointing at a block Andrew picked out wears the drawing, here and
+// on the class site, because a recommendation nobody receives is not one.
+cases.push(["Readings, an Andrew's pick", <Readings items={longRead} accent={cfg0.accent} castNow={noop}
+  dismiss={noop} liveLabel={null} onAdd={noop} onRemove={noop} onClaim={noop} blocks={[]}
+  onPickBlock={noop} onNote={noop} inFlow={new Set()} onDropIn={noop}
+  blockOf={() => ({ id: "r1", pick: true })} />, "chef.png"]);
 cases.push(["Readings, empty", <Readings items={[]} accent={cfg0.accent} castNow={noop}
   dismiss={noop} liveLabel={null} onAdd={noop} onRemove={noop} onClaim={noop} blocks={[]}
   onPickBlock={noop} onNote={noop} inFlow={new Set()} onDropIn={noop} blockOf={() => null} />]);

@@ -11,6 +11,7 @@
 import { useState } from "react";
 import { genId } from "../utils.jsx";
 import { addSeedToDay, dayHasSeed } from "./dayplan.js";
+import PickMark from "./Pick.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const TEXT_PRIMARY = "#111827";
@@ -80,7 +81,7 @@ const getDrag = (e) => { try { return JSON.parse(e.dataTransfer.getData("text/pl
 // ─────────────────────────────────────────────────────────────
 // Item row (used in both views)
 // ─────────────────────────────────────────────────────────────
-function ItemView({ item }) {
+function ItemView({ item, picked }) {
   const m = TYPE_META[item.type] || {};
   const inner = (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -93,6 +94,7 @@ function ItemView({ item }) {
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid " + BORDER }}>
       <span style={{ width: 40, flexShrink: 0, fontSize: 13, fontWeight: 700, color: TEXT_SECONDARY }}>{item.date || ""}</span>
       {item.url ? <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>{inner}</a> : inner}
+      {picked ? <PickMark size={26} label /> : null}
     </div>
   );
 }
@@ -132,13 +134,17 @@ export function ScheduleSummary({ config, data }) {
   );
 }
 
-export function ScheduleDetail({ config, role, data, update }) {
+export function ScheduleDetail({ config, role, data, update, blockOf }) {
   if (role === "instructor") return <ScheduleEditor config={config} data={data} update={update} />;
-  return <StudentSchedule config={config} data={data} />;
+  return <StudentSchedule config={config} data={data} blockOf={blockOf} />;
 }
 
-function StudentSchedule({ config, data }) {
+function StudentSchedule({ config, data, blockOf }) {
   const weeks = getWeeks(data, config);
+  // A week item points at a block, and the pick lives on the block, so what
+  // the students see is worked out from the block rather than stamped on the
+  // row when the pick was made.
+  const isPicked = (it) => !!(blockOf && blockOf(it.blockId || it.libId)?.pick);
   const current = nearestWeekId(weeks);
   return (
     <div>
@@ -158,7 +164,7 @@ function StudentSchedule({ config, data }) {
               {w.text && <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 10, whiteSpace: "pre-wrap" }}>{w.text}</div>}
               {(w.items || []).length > 0 && (
                 <div style={{ marginTop: 8 }}>
-                  {w.items.map(it => <ItemView key={it.id} item={it} />)}
+                  {w.items.map(it => <ItemView key={it.id} item={it} picked={isPicked(it)} />)}
                 </div>
               )}
             </div>

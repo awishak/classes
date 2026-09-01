@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useClassData } from "./store.js";
+import { SHARED_KEY, blockById } from "./blocks.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { useLive } from "./live.js";
 import { usePoll } from "./poll.js";
@@ -104,7 +105,7 @@ function detail(key, config, role, ctx) {
     return <AssignmentsDetail config={config} role={role} data={ctx.data} update={ctx.update} asStudent={ctx.asStudent} />;
   }
   if (key === "schedule") {
-    return <ScheduleDetail config={config} role={role} data={ctx.data} update={ctx.update} />;
+    return <ScheduleDetail config={config} role={role} data={ctx.data} update={ctx.update} blockOf={ctx.blockOf} />;
   }
   if (key === "roster") {
     return <RosterDetail config={config} role={role} data={ctx.data} />;
@@ -370,6 +371,10 @@ export default function ClassApp({ config, initialCard }) {
   const ADMIN = config.storageKey + "-admin";
 
   const [data, update] = useClassData(config.storageKey);
+  // The shared shelf as well, because a reading on the schedule can be a block
+  // that belongs to me rather than to this class, and the pick that says read
+  // this one first lives on the block.
+  const [shared] = useClassData(SHARED_KEY);
   const [live] = useLive(config.storageKey);
   const { poll } = usePoll(config.storageKey);
   const isDesktop = useIsDesktop();
@@ -402,7 +407,8 @@ export default function ClassApp({ config, initialCard }) {
     return () => window.removeEventListener("popstate", onPop);
   }, [config.path]);
 
-  const ctx = { data: data || {}, update, asStudent, setAsStudent: role === "instructor" ? setAsStudent : null, live, poll };
+  const ctx = { data: data || {}, update, asStudent, setAsStudent: role === "instructor" ? setAsStudent : null, live, poll,
+    blockOf: (id) => (id ? blockById(data, shared, id) : null) };
 
   // Push updated seed content (schedule + library) to the store when the seed
   // version changes, without touching threads/profiles or other live data.
