@@ -51,6 +51,13 @@ export const normTitle = (t) => (t || "").trim().toLowerCase()
 export const keyOf = (b) => {
   const u = normUrl(b.url);
   if (u) return "u:" + u;
+  // A set is what it holds, not what it is called. COMM 118 and COMM 4 each
+  // have a "Weekly Game, week 1" holding ten completely different questions,
+  // and matching those on the title offered to merge one class's game into the
+  // other's, which would have repointed every day at the wrong ten questions
+  // and deleted the loser. Two sets are the same set when they hold the same
+  // blocks.
+  if (b.type === "set" && (b.children || []).length) return "s:" + [...b.children].sort().join(",");
   const t = normTitle(b.title);
   return t ? "t:" + (b.type || "note") + ":" + t : "";
 };

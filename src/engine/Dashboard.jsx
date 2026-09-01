@@ -1154,6 +1154,7 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
             <span style={{ flex: "none", padding: "1px 7px", borderRadius: 999, background: hue("activity"),
               color: "#fff", fontSize: 10.5, fontWeight: 600, letterSpacing: ".03em", textTransform: "uppercase" }}>Idea</span>
             <b style={{ flex: 1, minWidth: 0, fontWeight: 600, fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.35 }}>{b.title}</b>
+            {b.pick ? <PickMark size={18} /> : null}
             <span style={{ flex: "none", fontSize: 10, color: TEXT_MUTED, transform: shown === b.id ? "none" : "rotate(-90deg)", transition: "transform .14s" }}>▾</span>
           </button>
           {shown !== b.id ? null : (

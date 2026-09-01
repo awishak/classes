@@ -25,6 +25,17 @@ export function Duplicates({ clusters, hue, onMerge }) {
   );
 }
 
+// Whether the copies actually say the same thing. Two assignments called
+// In-Class, one in COMM 118 and one in COMM 4, describe different weeks of
+// activities, and on screen they were two identical rows: same title, same
+// kind, nothing to tell them apart. A merge would have pointed COMM 4's days
+// at COMM 118's words.
+const bodyOf = (b) => (b.body || "").trim();
+const disagree = (blocks) => {
+  const said = [...new Set(blocks.map(bodyOf).filter(Boolean))];
+  return said.length > 1;
+};
+
 function Cluster({ cluster, hue, onMerge }) {
   const [keep, setKeep] = useState(cluster.blocks[0].id);
   const [toShared, setToShared] = useState(cluster.spans);
@@ -33,6 +44,7 @@ function Cluster({ cluster, hue, onMerge }) {
   const moving = cluster.blocks.filter(b => b.id !== keep).reduce((n, b) => n + b.uses.length, 0);
   const homeName = toShared || !survivor.owner ? SHARED_LABEL : survivor.owner.code;
   const risky = cluster.spans && !toShared && survivor.owner;
+  const differ = disagree(cluster.blocks);
 
   return (
     <section className="repo-cluster" style={{ "--kind": hue(cluster.blocks[0].type) }}>
@@ -41,6 +53,7 @@ function Cluster({ cluster, hue, onMerge }) {
         <span className="repo-label">matched on the {cluster.on}</span>
         <code className="repo-key">{cluster.what}</code>
         {cluster.spans ? <span className="repo-flagged">Crosses classes</span> : null}
+        {differ ? <span className="repo-flagged">The copies say different things</span> : null}
       </div>
 
       <div className="repo-copies">
@@ -51,6 +64,7 @@ function Cluster({ cluster, hue, onMerge }) {
             <span className="repo-copy-words">
               {b.headline || b.title || "Untitled"}
               {b.headline && b.title !== b.headline ? <span className="repo-sub">{b.title}</span> : null}
+              {differ && bodyOf(b) ? <span className="repo-sub">{bodyOf(b).slice(0, 120)}</span> : null}
             </span>
             <span className="repo-kind" style={{ background: hue(b.type) }}>{typeOf(b.type).label}</span>
             <span className="repo-owner" style={{ color: b.owner ? b.owner.accent : undefined }}>
@@ -58,6 +72,7 @@ function Cluster({ cluster, hue, onMerge }) {
             </span>
             <span className="repo-copy-n">{b.uses.length ? b.uses.length + " used" : "never used"}</span>
             <span className="repo-copy-n">{b.created || ""}</span>
+            {(b.children || []).length ? <span className="repo-copy-n">{b.children.length} inside</span> : null}
           </label>
         ))}
       </div>

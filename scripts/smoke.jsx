@@ -318,7 +318,25 @@ cases.push(["Repository", <RepoPage />]);
   const dupC = { ...blk, id: "d3", url: "", title: "A Hook With No Link", owner: null, target: "shared", uses: [] };
   const clusters = findDuplicates([dupA, dupB, dupC, { ...dupC, id: "d4", owner: cfg0, target: cfg0.id, uses: [] }]);
   if (clusters.length !== 2) { console.error("  FAIL  tidy: expected 2 clusters, got " + clusters.length); failedEarly++; }
+
+  // Two games called "Weekly Game, week 1" in two classes hold ten completely
+  // different questions each. Matching those on the title offered a merge that
+  // would have repointed a day at the wrong questions and deleted the loser.
+  const setA = { id: "s1", type: "set", title: "Weekly Game, week 1", children: ["a", "b"], owner: cfg0, target: cfg0.id, uses: [] };
+  const setB = { ...setA, id: "s2", children: ["c", "d"], owner: ENGINE_LIST[1], target: ENGINE_LIST[1].id };
+  const setC = { ...setA, id: "s3", children: ["b", "a"], owner: ENGINE_LIST[1], target: ENGINE_LIST[1].id };
+  if (findDuplicates([setA, setB]).length) { console.error("  FAIL  tidy: two different games with one name were called copies"); failedEarly++; }
+  if (findDuplicates([setA, setC]).length !== 1) { console.error("  FAIL  tidy: two sets holding the same blocks were not matched"); failedEarly++; }
   cases.push(["Repository duplicates", <Duplicates clusters={clusters} hue={hue} onMerge={() => ""} />, "copies"]);
+  // Two assignments called In-Class describing different weeks were two
+  // identical rows on screen, and merging them would have pointed one class's
+  // days at the other class's words.
+  const saidDifferent = findDuplicates([
+    { id: "x1", type: "assignment", title: "In-Class", body: "Weekly Game, This or That", owner: cfg0, target: cfg0.id, uses: [] },
+    { id: "x2", type: "assignment", title: "In-Class", body: "Weekly Game, Around the Horn", owner: ENGINE_LIST[1], target: ENGINE_LIST[1].id, uses: [] },
+  ]);
+  cases.push(["Repository duplicates, copies that disagree",
+    <Duplicates clusters={saidDifferent} hue={hue} onMerge={() => ""} />, "The copies say different things"]);
   cases.push(["Repository duplicates, none", <Duplicates clusters={[]} hue={hue} onMerge={() => ""} />, "No copies"]);
 
   const looseStores = { [cfg0.id]: {

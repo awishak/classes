@@ -13,7 +13,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useClassData } from "./store.js";
-import { SHARED_KEY, blockById } from "./blocks.js";
+import { SHARED_KEY, blockById, registerTypes } from "./blocks.js";
+import { readAdded, readLabels } from "./types.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { useLive } from "./live.js";
 import { usePoll } from "./poll.js";
@@ -376,6 +377,10 @@ export default function ClassApp({ config, initialCard }) {
   // that belongs to me rather than to this class, and the pick that says read
   // this one first lives on the block.
   const [shared] = useClassData(SHARED_KEY);
+  // The types Andrew has added or renamed, so a block on this site says what
+  // he calls it rather than the id underneath. The repository and the
+  // dashboard do the same; every reader goes through typeOf.
+  registerTypes({ added: readAdded(shared), labels: readLabels(shared) });
   const [live] = useLive(config.storageKey);
   const { poll } = usePoll(config.storageKey);
   const isDesktop = useIsDesktop();

@@ -305,8 +305,9 @@ export default function RepoPage() {
     if (where === "shared" && b.owner) return false;
     if (where && where !== "shared" && b.owner?.id !== where) return false;
     if (tag && !(b.tags || []).includes(tag)) return false;
+    if (pick && !b.pick) return false;
     return true;
-  })), [items, kind, where, tag]);
+  })), [items, kind, where, tag, pick]);
 
   const dupes = useMemo(() => findDuplicates(items), [items]);
   const loose = useMemo(() => (stores ? findLooseEnds(stores, ENGINE_LIST) : []), [stores]);
@@ -668,7 +669,7 @@ export default function RepoPage() {
             {chip(!kind, "Everything", () => set({ kind: "" }))}
             {kinds.filter(t => counts[t.id]).map(t =>
               chip(kind === t.id, t.label + " " + counts[t.id], () => set({ kind: kind === t.id ? "" : t.id }), hue(t.id)))}
-            {picks ? chip(pick === "yes", "Picked out " + picks,
+            {picks || pick ? chip(pick === "yes", "Picked out " + picks,
               () => set({ pick: pick ? "" : "yes" }), "#b45309") : null}
             {chip(lens === "types", "Edit the types",
               () => set({ lens: lens === "types" ? "" : "types" }), "#4b5563")}
