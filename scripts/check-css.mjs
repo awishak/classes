@@ -40,5 +40,30 @@ for (const { file, name, min } of FLOORS) {
   }
 }
 
+// A table cell that lays itself out as a flex box is not a table cell any
+// more: colSpan stops meaning anything, and a band meant to run the width of
+// the table collapses into the first column. That shipped once, on the day
+// header of the schedule view, and looked like a layout mystery rather than
+// one property in the wrong place.
+const CELL_FLEX = /([^{}\n]*)\{([^{}]*)\}/g;
+for (const { file } of FLOORS) {
+  const src = readFileSync(new URL("../" + file, import.meta.url), "utf8");
+  CELL_FLEX.lastIndex = 0;
+  let m;
+  while ((m = CELL_FLEX.exec(src))) {
+    const sel = m[1].trim();
+    const body = m[2];
+    // Only selectors that end on a cell: `td`, `.repo-tr td`, `th.x`. A class
+    // whose name happens to contain those letters is not a cell.
+    if (!/(^|[\s>+~])(td|th)([.:#[][^\s]*)?$/.test(sel)) continue;
+    if (!/display\s*:\s*(flex|grid|inline-flex|inline-grid)/.test(body)) continue;
+    bad++;
+    console.error(`  ${file}: ${sel} lays a table cell out as a flex or grid box`);
+    console.error("      A cell that does that is no longer a cell, so its colSpan is ignored");
+    console.error("      and a row meant to span the table collapses into the first column.");
+    console.error("      Put the flex on a box inside the cell instead.");
+  }
+}
+
 if (bad) { console.error(`\ncheck-css: ${bad} problem(s) with the stylesheets.`); process.exit(1); }
 console.log("check-css: stylesheets intact");

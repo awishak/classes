@@ -980,11 +980,13 @@ export function Term({ days, here, rowOf, hue, openId, onOpen, onTag, pickedSet,
         <Fragment key={d.weekId + d.date}>
           <tr className={"repo-dayhead" + (d.date === here ? " repo-dayhead-here" : "")}>
             <td colSpan={span}>
-              <span className="repo-dayhead-date">{d.date}</span>
-              <span className="repo-label">{d.week}{d.weekday ? " · " + d.weekday : ""}</span>
-              {d.topic ? <span className="repo-dayhead-topic">{d.topic}</span> : null}
-              {d.date === here ? <span className="repo-flagged">Nearest today</span> : null}
-              {!d.rows && !d.assigned.length ? <span className="repo-copy-n">Nothing on this day</span> : null}
+              <div className="repo-dayhead-in">
+                <span className="repo-dayhead-date">{d.date}</span>
+                <span className="repo-label">{d.week}{d.weekday ? " · " + d.weekday : ""}</span>
+                {d.topic ? <span className="repo-dayhead-topic">{d.topic}</span> : null}
+                {d.date === here ? <span className="repo-flagged">Nearest today</span> : null}
+                {!d.rows && !d.assigned.length ? <span className="repo-copy-n">Nothing on this day</span> : null}
+              </div>
             </td>
           </tr>
 
@@ -1039,9 +1041,11 @@ function PlainRow({ words, kind, note, span }) {
     <tr className="repo-tr repo-tr-plain">
       <td className="repo-td repo-td-pick" />
       <td className="repo-td repo-td-title" colSpan={span - 1}>
-        <span className="repo-plain-words">{words}</span>
-        <span className="repo-owner">{kind}</span>
-        {note ? <span className="repo-copy-n">{note}</span> : null}
+        <div className="repo-plain-in">
+          <span className="repo-plain-words">{words}</span>
+          <span className="repo-owner">{kind}</span>
+          {note ? <span className="repo-copy-n">{note}</span> : null}
+        </div>
       </td>
     </tr>
   );
@@ -1681,14 +1685,19 @@ const CSS = `
 /* The term, day by day, as rows in the same table. A date is a band across the
    whole width, a section is a quieter one under it, and everything between
    them is the row the shelf already draws. */
+/* The band is drawn inside the cell, never on it. A cell that lays itself out
+   as a flex box is no longer a table cell, so its colSpan stops meaning
+   anything and a band across the whole width collapses into the first column,
+   which is exactly what shipped. */
 .repo-dayhead td{background:${SURFACE};border-top:1px solid ${BORDER};border-bottom:1px solid ${BORDER};
-  padding:9px 12px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  padding:9px 12px}
+.repo-dayhead-in{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .repo-dayhead-here td{background:#fdf6e7}
 .repo-dayhead-date{font-family:${MONO};font-size:15px;font-weight:600;color:${TEXT}}
 .repo-dayhead-topic{font-size:15px;color:${SECOND}}
 .repo-sechead td{padding:7px 12px 2px 26px;font-family:${MONO};font-size:11px;font-weight:600;
   letter-spacing:.09em;text-transform:uppercase;color:${MUTED}}
-.repo-tr-plain .repo-td-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-height:${TAP}px}
+.repo-plain-in{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-height:${TAP}px}
 .repo-plain-words{font-family:var(--repo-row,${F});font-size:15px;color:${SECOND};overflow-wrap:anywhere}
 /* The heading row of a schedule names its columns and sorts nothing, because
    a term is already in the only order it has. */
