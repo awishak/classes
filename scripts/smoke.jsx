@@ -25,8 +25,8 @@ import { FREEFORM } from "../src/engine/dayplan.js";
 import { weekdayOf } from "../src/engine/schedule.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
-  Steps as RepoSteps, Sticker as RepoSticker, Term as RepoTerm, DayAdd as RepoDayAdd }
-  from "../src/engine/RepoPage.jsx";
+  Steps as RepoSteps, Sticker as RepoSticker, Term as RepoTerm, DayAdd as RepoDayAdd,
+  Toggle as RepoToggle } from "../src/engine/RepoPage.jsx";
 import { FLAGS, healthCounts, carries, allClear } from "../src/engine/health.js";
 import { remember, undoPatches, pushEntry, sayEntry, LIMIT } from "../src/engine/undo.js";
 import { Seeds as RepoSeeds, Room as RepoRoom, BlockTypes as RepoTypes } from "../src/engine/RepoMore.jsx";
@@ -540,7 +540,7 @@ cases.push(["Repository", <RepoPage />]);
   cases.push(["The term, with a way off the day", termTable(
     <RepoTerm days={termDays} here="" rowOf={id => termIndexed[id] || null} hue={hue} openId="" onOpen={noop}
       onTag={noop} pickedSet={new Set()} onPick={noop} onStar={noop} detail={() => null}
-      shelf={[]} onAdd={() => ""} onMake={() => ""} onOff={() => ""} />), "Off the day"]);
+      shelf={[]} onAdd={() => ""} onMake={() => ""} onOff={() => ""} />), "Remove from " + d1]);
   // and the shelf's own rows have no such button, because a row there is not
   // on a day at all.
   cases.push(["Repository row, no day to come off", table(<RepoRow block={blk} hue={hue} open={false}
@@ -737,7 +737,17 @@ cases.push(["Repository", <RepoPage />]);
 
   cases.push(["Repository bulk bar", <RepoBulk n={2} rows={picked} planOf={planOf} stores={stores}
     onTag={noop} onType={noop} onShare={noop} onClear={noop} onStar={noop} onPlace={() => ""}
-    onAssign={() => ""} />, "Add Drew&#x27;s Pick"]);
+    onAssign={() => ""} />, "Drew&#x27;s Pick"]);
+  // The selection already carries the sticker, so the switch reads on and the
+  // press takes the sticker off.
+  cases.push(["Repository bulk bar, the selection is picked", <RepoBulk n={2}
+    rows={picked.map(r => ({ ...r, pick: true }))} planOf={planOf} stores={stores}
+    onTag={noop} onType={noop} onShare={noop} onClear={noop} onStar={noop} onPlace={() => ""}
+    onAssign={() => ""} />, "repo-toggle-on"]);
+  cases.push(["A switch, off", <RepoToggle on={false} label="Schedule by day" onClick={noop} color="#0f766e" />,
+    "repo-toggle-track"]);
+  cases.push(["A switch, on", <RepoToggle on label="Schedule by day" onClick={noop} color="#0f766e" />,
+    "repo-toggle-on"]);
 
   // ─── the seed library ───
   const md = "## Seeds\n\n### A seed with a turn\n- **Concept:** framing / stakes\n- **Class:** Comm 2 / any\n"

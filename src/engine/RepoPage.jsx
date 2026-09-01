@@ -779,8 +779,8 @@ export default function RepoPage() {
             {chip(!where, "Every class", () => set({ where: "" }))}
             {ENGINE_LIST.map(c => chip(where === c.id, c.code, () => set({ where: where === c.id ? "" : c.id }), c.accent))}
             {chip(where === "shared", SHARED_LABEL, () => set({ where: where === "shared" ? "" : "shared" }))}
-            {chip(lens === "schedule", "Schedule by day",
-              () => set({ lens: lens === "schedule" ? "" : "schedule" }), "#0f766e")}
+            <Toggle on={lens === "schedule"} color="#0f766e" label="Schedule by day"
+              onClick={() => set({ lens: lens === "schedule" ? "" : "schedule" })} />
             <span className="repo-hits">{hits.length} {hits.length === 1 ? "match" : "matches"}</span>
           </div>
           <Steps steps={steps} onBack={stepBack} />
@@ -942,6 +942,24 @@ export default function RepoPage() {
   );
 }
 
+// A switch that says which way it is set.
+//
+// Andrew: "can you make a visible on/off toggle please." A chip that fills in
+// when it is on is a state you have to know to read; a track with a knob in it
+// is a state you can see from across the desk. Same control for the two things
+// that are genuinely on or off: the schedule view, and whether the selection
+// carries a Drew's Pick.
+export function Toggle({ on, label, onClick, color, title }) {
+  return (
+    <button className={"repo-focus repo-toggle" + (on ? " repo-toggle-on" : "")} onClick={onClick}
+      aria-pressed={!!on} title={title}
+      style={on ? { borderColor: color, background: color, color: "#fff" } : undefined}>
+      <span className="repo-toggle-track"><span className="repo-toggle-knob" /></span>
+      {label}
+    </button>
+  );
+}
+
 // What is wrong with the shelf, in five numbers, each one a filter.
 //
 // The page could always say what I have. Saying what is wrong with what I have
@@ -1053,14 +1071,15 @@ export function Term({ days, here, rowOf, hue, openId, onOpen, onTag, pickedSet,
                 const b = it.blockId ? rowOf(it.blockId) : null;
                 if (!b) {
                   return <PlainRow key={it.id} words={it.words} kind={it.kind} span={span}
-                    onOff={onOff ? () => takeOff(d.date, it) : null} />;
+                    onOff={onOff ? () => takeOff(d.date, it) : null} offLabel={"Remove from " + d.date} />;
                 }
                 return (
                   <Fragment key={it.id}>
                     <Row block={b} hue={hue} open={openId === b.id} onTag={onTag}
                       picked={pickedSet.has(b.id)} onPick={() => onPick(b.id)}
                       onStar={() => onStar(b)} onOpen={() => onOpen(b.id)}
-                      onOff={onOff ? () => takeOff(d.date, { ...it, words: b.headline || b.title }) : null} />
+                      onOff={onOff ? () => takeOff(d.date, { ...it, words: b.headline || b.title }) : null}
+                      offLabel={"Remove from " + d.date} />
                     {open(b)}
                   </Fragment>
                 );
@@ -1075,7 +1094,7 @@ export function Term({ days, here, rowOf, hue, openId, onOpen, onTag, pickedSet,
                 const b = it.blockId ? rowOf(it.blockId) : null;
                 if (!b) {
                   return <PlainRow key={it.id} words={it.words} kind={it.type} span={span}
-                    note={it.loose ? "no day yet" : ""}
+                    note={it.loose ? "no day yet" : ""} offLabel={"Remove from " + d.date}
                     onOff={onOff ? () => takeOff(d.date, it) : null} />;
                 }
                 return (
@@ -1083,7 +1102,8 @@ export function Term({ days, here, rowOf, hue, openId, onOpen, onTag, pickedSet,
                     <Row block={b} hue={hue} open={openId === b.id} onTag={onTag}
                       picked={pickedSet.has(b.id)} onPick={() => onPick(b.id)}
                       onStar={() => onStar(b)} onOpen={() => onOpen(b.id)}
-                      onOff={onOff ? () => takeOff(d.date, { ...it, words: b.headline || b.title }) : null} />
+                      onOff={onOff ? () => takeOff(d.date, { ...it, words: b.headline || b.title }) : null}
+                      offLabel={"Remove from " + d.date} />
                     {open(b)}
                   </Fragment>
                 );
@@ -1175,7 +1195,7 @@ export function DayAdd({ day, shelf, onAdd, onMake, hue }) {
 
 // A row on a day that points at nothing on the shelf: words typed straight
 // into the plan, or a week item that was never made into a block.
-function PlainRow({ words, kind, note, span, onOff }) {
+function PlainRow({ words, kind, note, span, onOff, offLabel }) {
   return (
     <tr className="repo-tr repo-tr-plain">
       <td className="repo-td repo-td-pick" />
@@ -1186,7 +1206,8 @@ function PlainRow({ words, kind, note, span, onOff }) {
           {note ? <span className="repo-copy-n">{note}</span> : null}
           {onOff ? (
             <button className="repo-focus repo-off" onClick={onOff}
-              title="Take this off the day">Off the day</button>
+              title="Take this off the day. The block stays on the shelf."
+              aria-label={offLabel || "Remove from this day"}>{offLabel || "Remove"}</button>
           ) : null}
         </div>
       </td>
@@ -1245,6 +1266,10 @@ export function Bulk({ n, rows, planOf, stores, onTag, onType, onShare, onClear,
   const [placing, setPlacing] = useState(false);
   const carried = tagsAcross(rows, rows.map(r => r.id));
   const owned = wouldShare(rows, rows.map(r => r.id));
+  // On means every row in the selection carries the sticker, so pressing it
+  // takes the sticker off. Anything less than all of them is off, and pressing
+  // it puts the sticker on the ones without one.
+  const allPicked = rows.length > 0 && rows.every(r => r.pick);
 
   const addTag = () => {
     const t = adding.trim();
@@ -1294,14 +1319,9 @@ export function Bulk({ n, rows, planOf, stores, onTag, onType, onShare, onClear,
         <button className="repo-focus repo-chip" onClick={() => setPlacing(!placing)} aria-pressed={placing}>
           Put the selection on a day
         </button>
-        <button className="repo-focus repo-chip"
-          onClick={() => { onStar(true); setSaid(n + " are Drew's Picks"); }}>
-          Add Drew's Pick
-        </button>
-        <button className="repo-focus repo-chip"
-          onClick={() => { onStar(false); setSaid("Drew's Pick off " + n); }}>
-          Remove Drew's Pick
-        </button>
+        <Toggle on={allPicked} color="#047857" label="Drew's Pick"
+          title={allPicked ? "Take the sticker off everything selected" : "Put the sticker on everything selected"}
+          onClick={() => { onStar(!allPicked); setSaid(allPicked ? "Drew's Pick off " + n : n + " are Drew's Picks"); }} />
         {said ? <span className="repo-said">{said}</span> : null}
       </div>
       {placing ? (
@@ -1338,7 +1358,7 @@ export function Sticker({ on, onToggle }) {
   );
 }
 
-export function Row({ block, hue, open, onOpen, onTag, picked, onPick, onStar, onOff }) {
+export function Row({ block, hue, open, onOpen, onTag, picked, onPick, onStar, onOff, offLabel }) {
   const t = typeOf(block.type);
   const color = hue(block.type);
   const words = block.headline || block.title;
@@ -1366,7 +1386,7 @@ export function Row({ block, hue, open, onOpen, onTag, picked, onPick, onStar, o
           {onOff ? (
             <button className="repo-focus repo-off" onClick={onOff}
               title="Take this off the day. The block stays on the shelf."
-              aria-label="Take this off the day">Off the day</button>
+              aria-label={offLabel || "Remove from this day"}>{offLabel || "Remove"}</button>
           ) : null}
         </span>
       </td>
@@ -1846,12 +1866,27 @@ const CSS = `
 .repo-dayhead-date{font-family:${MONO};font-size:15px;font-weight:600;color:${TEXT}}
 .repo-dayhead-topic{font-size:15px;color:${SECOND}}
 .repo-dayadd{margin-left:auto}
-/* Taking a row off a day. Quiet until the pointer is on the row, because it is
-   a thing I do occasionally and read past constantly. */
-.repo-off{flex:none;min-height:${TAP}px;padding:0 8px;border:none;background:none;cursor:pointer;
-  font-family:${MONO};font-size:11px;letter-spacing:.04em;color:${MUTED};opacity:0}
+/* Taking a row off a day, as the chip the sticker is: same size, same weight,
+   the same restraint until the pointer is on the row. */
+.repo-off{flex:none;display:inline-flex;align-items:center;cursor:pointer;margin:6px 0;padding:3px 9px;
+  border:1px solid #9f1239;border-radius:999px;background:none;
+  font-family:${MONO};font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:#9f1239;opacity:.62;white-space:nowrap}
 .repo-tr:hover .repo-off,.repo-tr-plain:hover .repo-off,.repo-off:focus-visible{opacity:1}
-.repo-off:hover{color:#9f1239}
+.repo-off:hover{background:#9f1239;color:#fff}
+
+/* The switch. A track with a knob in it says which way the thing is set from
+   across the desk, which a chip that fills in does not. */
+.repo-toggle{display:inline-flex;align-items:center;gap:8px;min-height:${TAP}px;padding:0 14px 0 10px;
+  border-radius:999px;border:1px solid ${BORDER};background:#fff;cursor:pointer;
+  font-family:inherit;font-size:14px;color:${SECOND}}
+.repo-toggle:hover{border-color:${TEXT};color:${TEXT}}
+.repo-toggle-track{flex:none;width:30px;height:18px;border-radius:999px;background:rgba(23,19,16,.16);
+  display:inline-flex;align-items:center;padding:2px;transition:background .14s}
+.repo-toggle-knob{width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .14s;
+  box-shadow:0 1px 2px rgba(23,19,16,.35)}
+.repo-toggle-on .repo-toggle-track{background:rgba(255,255,255,.45)}
+.repo-toggle-on .repo-toggle-knob{transform:translateX(12px)}
 .repo-said-row td{padding:8px 12px;background:#f2fbf6}
 .repo-addrow td{background:#fff;border-bottom:1px solid ${BORDER};padding:12px 14px}
 .repo-dayadd-panel{display:flex;flex-direction:column;gap:8px}
