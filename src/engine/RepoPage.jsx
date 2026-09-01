@@ -32,7 +32,7 @@ import { colorOfType, readColors, writeTypeColor } from "./colors.js";
 import { readTypes, readAdded, readLabels, addType, renameType, resetName, dropType,
   countTypes, orphanTypes } from "./types.js";
 import { FLAGS, carries, healthCounts, allClear } from "./health.js";
-import { remember, undoPatches, pushEntry, sayEntry } from "./undo.js";
+import { remember, rememberDay, undoPatches, pushEntry, sayEntry } from "./undo.js";
 import { normSlot, blankDay, sectionsOf } from "./dayplan.js";
 import { findDuplicates, findLooseEnds, applyMerge,
   dropFlowRow, dropWeekItem, unlinkWeekItem, blockFromWeekItem } from "./tidy.js";
@@ -360,6 +360,7 @@ export default function RepoPage() {
   // students read. Both writers already exist; nothing here is new except
   // being able to reach them from the term.
   const offTheDay = (date, row) => {
+    keepDay("Removed " + (row.words || "a row") + " from " + date, termCls, date, row.weekId || "");
     writeTo(termCls.id)(prev => (row.weekId
       ? dropWeekItem(prev, termCls, { weekId: row.weekId, itemId: row.id })
       : dropFlowRow(prev, { date, slot: row.slot, itemId: row.id })));
@@ -385,6 +386,15 @@ export default function RepoPage() {
   // tab, and putting them back is the photograph written over the top.
   const keep = (what, ids) =>
     setSteps(prev => pushEntry(prev, remember({ stores: ref.current, classes: ENGINE_LIST, ids, what })));
+
+  // The same photograph, of a day rather than of a block: one day of one
+  // class, and the one week the students read.
+  const keepDay = (what, cls, date, weekId) =>
+    setSteps(prev => pushEntry(prev, rememberDay({ stores: ref.current, target: cls.id, date, weekId, what })));
+
+  const weekIdFor = (cls, date) =>
+    (((ref.current[cls.id] || {}).schedule || cls.scheduleWeeks || [])
+      .find(w => (w.dates || []).includes(date)) || {}).id || "";
 
   const stepBack = () => {
     const entry = steps[0];
@@ -455,6 +465,7 @@ export default function RepoPage() {
     (sectionsOf(cls, day).find(([k]) => k === slot) || [])[1] || slot;
 
   const placeOnDay = (row, cls, date, slot) => {
+    keepDay("Put " + (row.title || "a block") + " on " + date, cls, date);
     let landed = "";
     let name = "";
     writeTo(cls.id)(prev => {
@@ -480,6 +491,7 @@ export default function RepoPage() {
   // The other destination: the week's assigned list, which is what students
   // see. Same store, same field the Schedule editor writes.
   const assignOnDay = (row, cls, date) => {
+    keepDay("Assigned " + (row.title || "a block") + " on " + date, cls, date, weekIdFor(cls, date));
     const weeks = (ref.current[cls.id] || {}).schedule || cls.scheduleWeeks || [];
     const week = weeks.find(w => (w.dates || []).includes(date));
     if (!week) return "No week holds that date.";
@@ -594,6 +606,7 @@ export default function RepoPage() {
 
   const bulkPlace = (cls, date, slot) => {
     if (!chosen.length) return "Nothing is selected.";
+    keepDay("Put " + chosen.length + " on " + date, cls, date);
     let landed = "";
     let name = "";
     let added = 0;

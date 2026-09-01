@@ -45,10 +45,30 @@ export const remember = ({ stores, classes, ids, what }) => ({
   what, at: Date.now(), before: photograph({ stores, classes, ids }),
 });
 
+// A day, photographed the same way.
+//
+// Taking a row off a day was outside the way back, on the grounds that a day
+// plan is a different shape from a block. It is, and the shape is small: one
+// day of one class, and the one week the students read. So a change to a day
+// photographs those two things and nothing else, which leaves every other day
+// and every other week alone when the change is put back.
+export function rememberDay({ stores, target, date, weekId, what }) {
+  const store = stores[target] || {};
+  return {
+    what, at: Date.now(),
+    day: {
+      target, date, weekId: weekId || "",
+      plan: ((store.dayPlans || {})[date]) || null,
+      week: weekId ? ((store.schedule || []).find(w => w.id === weekId) || null) : null,
+    },
+  };
+}
+
 // The patches that put a photograph back. A block is taken out of wherever it
 // is now and written where it was, which is what makes a move to the shared
 // shelf reversible; a block that was nowhere is taken out and not put back.
 export function undoPatches({ stores, classes, entry }) {
+  if (entry?.day) return dayPatches({ stores, day: entry.day });
   const targets = TARGETS(classes);
   const next = {};
   const touched = {};
@@ -68,10 +88,24 @@ export function undoPatches({ stores, classes, entry }) {
   return next;
 }
 
+// One day and one week, written back as they were. A day that did not exist
+// before the change is taken away rather than left behind empty.
+function dayPatches({ stores, day }) {
+  const cur = stores[day.target] || {};
+  const plans = { ...(cur.dayPlans || {}) };
+  if (day.plan) plans[day.date] = day.plan; else delete plans[day.date];
+  const next = { ...cur, dayPlans: plans };
+  if (day.weekId && day.week) {
+    next.schedule = (cur.schedule || []).map(w => (w.id === day.weekId ? day.week : w));
+  }
+  return { [day.target]: next };
+}
+
 // What the button says. The count is the point: putting one headline back and
 // putting four hundred tags back should not read the same.
 export const sayEntry = (entry) => {
   if (!entry) return "";
+  if (entry.day) return entry.what;
   const n = (entry.before || []).length;
   return entry.what + (n > 1 ? ", " + n + " blocks" : "");
 };
@@ -80,4 +114,4 @@ export const sayEntry = (entry) => {
 // and holding four hundred blocks a step forever is how a tab runs out of room.
 export const LIMIT = 20;
 export const pushEntry = (stack, entry) =>
-  (!entry?.before?.length ? stack : [entry, ...(stack || [])].slice(0, LIMIT));
+  (!entry?.before?.length && !entry?.day ? stack : [entry, ...(stack || [])].slice(0, LIMIT));

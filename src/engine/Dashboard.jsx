@@ -1113,13 +1113,25 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
   const [shown, setShown] = useState(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const moves = (blocks || []).filter(b => (b.tags || []).includes("teaching move"));
+  // Andrew: "how can we make seeds more like activities? like easily
+  // accessible." A seed is a story I can tell on any day and a move is
+  // something the room does on any day, which makes them the same sort of
+  // thing: material that belongs to no one day and can be dropped into any of
+  // them. So they share the panel, and the chips say which sort I am after.
+  const [only, setOnly] = useState("");
+  const pool = (blocks || []).filter(b =>
+    (b.tags || []).includes("teaching move") || (b.tags || []).includes("seed"));
+  const isSeed = (b) => (b.tags || []).includes("seed");
+  const nMoves = pool.filter(b => !isSeed(b)).length;
+  const nSeeds = pool.filter(isSeed).length;
+  const moves = only === "seed" ? pool.filter(isSeed)
+    : only === "move" ? pool.filter(b => !isSeed(b)) : pool;
 
   const startEdit = (b) => { setEditing(b.id); setTitle(b.title); setBody(b.body || ""); setOpen(false); };
   const commit = () => {
     if (!title.trim()) return;
     if (editing) onEdit(editing, title.trim(), body.trim());
-    else onAdd(title.trim(), body.trim());
+    else onAdd(title.trim(), body.trim(), only === "seed" ? "seed" : "move");
     setTitle(""); setBody(""); setEditing(null); setOpen(false);
   };
   const cancel = () => { setTitle(""); setBody(""); setEditing(null); setOpen(false); };
@@ -1140,6 +1152,18 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
 
   return (
     <>
+      {pool.length ? (
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+          {[["", "All " + pool.length], ["move", "Activities " + nMoves], ["seed", "Seeds " + nSeeds]]
+            .filter(([id]) => id !== "seed" || nSeeds).map(([id, lbl]) => (
+              <button key={id || "all"} className="dash-focus" onClick={() => setOnly(id)} aria-pressed={only === id}
+                style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5,
+                  ...(only === id ? { background: accent, borderColor: accent, color: "#fff" } : {}) }}>
+                {lbl}
+              </button>
+            ))}
+        </div>
+      ) : null}
       {moves.map(b => editing === b.id ? <div key={b.id}>{form}</div> : (
         <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "3px 4px 6px",
           borderRadius: 10, background: shown === b.id ? SURFACE_2 : "transparent" }}>
@@ -1223,7 +1247,10 @@ function Suggestions({ blocks, accent, onPick, onAdd }) {
   const [more, setMore] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const moves = (blocks || []).filter(b => (b.tags || []).includes("teaching move"));
+  // Moves and seeds both, because a suggestion for a day is anything that fits
+  // any day.
+  const moves = (blocks || []).filter(b =>
+    (b.tags || []).includes("teaching move") || (b.tags || []).includes("seed"));
   const shown = more ? moves : moves.slice(0, 5);
   const keep = () => { if (!title.trim()) return; onAdd(title.trim(), body.trim()); setTitle(""); setBody(""); setOpen(false); };
 
@@ -3544,13 +3571,17 @@ export default function Dashboard({ config }) {
   };
 
   // A new idea is a block kept with me, so it turns up in every class.
-  const addIdea = (title, body) => updateShared(prev => {
+  // A move is something the room does and a seed is a story I tell, so they are
+  // made as what they are: an activity tagged teaching move, or a story tagged
+  // seed, which is the tag the seed library itself carries.
+  const addIdea = (title, body, kind) => updateShared(prev => {
     const id = genId();
+    const seed = kind === "seed";
     return {
       ...prev,
       blocks: { ...(prev.blocks || {}), [id]: {
-        id, type: "activity", title, body, url: "", headline: "",
-        children: [], tags: ["teaching move"], concept: "", source: "", refId: "",
+        id, type: seed ? "story" : "activity", title, body, url: "", headline: "",
+        children: [], tags: [seed ? "seed" : "teaching move"], concept: "", source: "", refId: "",
         created: new Date().toISOString().slice(0, 10), scheduled: [],
       } },
     };
@@ -3912,7 +3943,7 @@ export default function Dashboard({ config }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} path={config.path} />,
   };
-  const TITLES = { todo: "To-do", poll: "Poll", flow: "Day Plan", boards: "Enter/Exit", readings: "Readings", ideas: "Activities", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Assignments" };
+  const TITLES = { todo: "To-do", poll: "Poll", flow: "Day Plan", boards: "Enter/Exit", readings: "Readings", ideas: "Activities & seeds", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   const outCount = Object.values(marks).filter(v => v === "out").length;
   // How far through the day I am, counted off the flow rather than the clock.

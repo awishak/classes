@@ -175,6 +175,14 @@ cases.push(["Readings, with my note", <Readings accent={cfg0.accent} castNow={no
 cases.push(["Ideas", <IdeasPanel blocks={[{ id: "b", type: "activity", title: "An idea", body: "How it runs",
   tags: ["teaching move"], children: [] }]} accent={cfg0.accent} sections={[]} days={[]} today="Sep 1"
   onPick={noop} onAdd={noop} onEdit={noop} onRemove={noop} onDuplicate={noop} />]);
+// A seed is a story I can tell on any day and a move is something the room
+// does on any day, so both live in the one panel and the chips say which.
+cases.push(["Ideas, with seeds in it", <IdeasPanel blocks={[
+  { id: "b", type: "activity", title: "Think, pair, share", body: "How it runs", tags: ["teaching move"], children: [] },
+  { id: "s", type: "story", title: "Ira Glass and the gap", body: "The turn", tags: ["seed", "the gap"], children: [] },
+  { id: "x", type: "link", title: "Not in the panel", tags: ["betting"], children: [] },
+]} accent={cfg0.accent} sections={[]} days={[]} today="Sep 1"
+  onPick={noop} onAdd={noop} onEdit={noop} onRemove={noop} onDuplicate={noop} />, "Seeds 1"]);
 // Every sheet that opens over the screen. None of them was rendered here, and
 // that is exactly how ColorsSheet shipped using an accent prop it never took:
 // the build was green and the button threw the moment it was pressed.
