@@ -1464,11 +1464,13 @@ const CSS = `
    cannot run down. */
 .repo-title-cell{display:flex;align-items:center;gap:8px;width:100%}
 .repo-title-cell .repo-words{flex:1;min-width:0}
-.repo-sticker{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:${TAP}px;
+.repo-sticker{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:52px;
   height:${TAP}px;padding:0 6px;border:none;background:none;cursor:pointer;opacity:.28}
 .repo-sticker:hover{opacity:1}
 .repo-sticker-on{opacity:1}
-.repo-sticker-img{width:34px;height:34px;object-fit:contain;display:block}
+/* The drawing is landscape, 428 by 302, so a square box would shrink it to
+   nothing. Sized to the height a row can spare and let wide. */
+.repo-sticker-img{width:46px;height:33px;object-fit:contain;display:block}
 .repo-sticker-word{font-family:${MONO};font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
   color:#b45309;border:1px solid #b45309;border-radius:999px;padding:3px 8px;white-space:nowrap}
 .repo-sticker-on .repo-sticker-word{color:#fff;background:#b45309}
