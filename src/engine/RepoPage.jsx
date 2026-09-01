@@ -48,7 +48,8 @@ import { tagPatches, typePatches, sharePatches, wouldShare, tagsAcross } from ".
 import { SEEDS } from "../config/seed-library.js";
 import { newSeeds, seedPatch } from "./seeds.js";
 import { roomKeys, roomItems, roomCounts, blockFromRoom } from "./room.js";
-import { Seeds, Room, BlockTypes } from "./RepoMore.jsx";
+import { Seeds, Room, BlockTypes, Term } from "./RepoMore.jsx";
+import { termOf } from "./term.js";
 import { genId } from "../utils.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -323,6 +324,21 @@ export default function RepoPage() {
   }, [items]);
 
   const picks = useMemo(() => items.filter(b => b.pick).length, [items]);
+
+  // ─── the term, day by day ───
+  // The class chips choose the class. With none chosen, or with the shared
+  // shelf chosen, the term shows the first class rather than nothing, because
+  // a page that answers with a blank until a chip is pressed is a page that
+  // looks broken.
+  const termCls = ENGINE_LIST.find(c => c.id === where) || ENGINE_LIST[0];
+  const byId = useMemo(() => {
+    const m = {};
+    items.forEach(b => { m[b.id] = b; });
+    return m;
+  }, [items]);
+  const days = useMemo(() => (stores
+    ? termOf({ cls: termCls, store: stores[termCls.id], blockOf: (id) => byId[id] || null })
+    : []), [stores, termCls, byId]);
 
   const bySort = (col) => setF(prev => prev.col === col
     ? { ...prev, dir: prev.dir === "asc" ? "desc" : "asc" }
@@ -662,32 +678,58 @@ export default function RepoPage() {
         <input className="repo-search" value={q} onChange={e => set({ q: e.target.value })}
           placeholder="Search everything" aria-label="Search the repository" autoFocus />
 
-        <Health counts={health} flag={flag} onFlag={id => set({ flag: flag === id ? "" : id, lens: "" })} />
+        {flag ? (
+          <Health counts={health} flag={flag} onFlag={id => set({ flag: flag === id ? "" : id, lens: "" })} />
+        ) : null}
 
         <div className="repo-filters">
+          {/* Type, and the sheet that edits the types, on one line. A row of
+              eight chips that never changes is a row I stopped reading; the
+              menu says which type is chosen without spending a line saying so. */}
           <div className="repo-row">
-            {chip(!kind, "Everything", () => set({ kind: "" }))}
-            {kinds.filter(t => counts[t.id]).map(t =>
-              chip(kind === t.id, t.label + " " + counts[t.id], () => set({ kind: kind === t.id ? "" : t.id }), hue(t.id)))}
+            <select className="repo-select repo-pick-type" value={kind} aria-label="Which type"
+              onChange={e => set({ kind: e.target.value })}>
+              <option value="">Every type ({items.length})</option>
+              {kinds.filter(t => counts[t.id]).map(t =>
+                <option key={t.id} value={t.id}>{t.label} ({counts[t.id]})</option>)}
+            </select>
+            <button className="repo-focus repo-chip" onClick={() => set({ lens: lens === "types" ? "" : "types" })}
+              aria-pressed={lens === "types"}>Edit</button>
+
+            {/* One menu for what the page is showing: the table, the table
+                narrowed to a fault worth fixing, or a lens that answers a
+                question a table cannot. The health numbers used to sit across
+                the top all day, and a number I am not acting on today is a
+                number I stop seeing. */}
+            <select className="repo-select repo-pick-show" aria-label="What to show"
+              value={lens ? "lens:" + lens : flag ? "flag:" + flag : ""}
+              onChange={e => {
+                const v = e.target.value;
+                if (v.startsWith("lens:")) set({ lens: v.slice(5), flag: "" });
+                else if (v.startsWith("flag:")) set({ flag: v.slice(5), lens: "" });
+                else set({ lens: "", flag: "" });
+              }}>
+              <option value="">The whole shelf ({items.length})</option>
+              <optgroup label="Worth fixing">
+                {FLAGS.map(x => (
+                  <option key={x.id} value={"flag:" + x.id} disabled={!health[x.id]}>
+                    {x.label} ({health[x.id]})
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Another way to look">
+                <option value="lens:dupes">Duplicates ({dupes.length})</option>
+                <option value="lens:loose">Loose ends ({loose.length})</option>
+                <option value="lens:tags">Tags ({tags2.length})</option>
+                <option value="lens:links">Links ({linky.length})</option>
+                <option value="lens:schedule">The term, day by day</option>
+                <option value="lens:seeds">Seed library ({fresh.length} new)</option>
+                <option value="lens:room">What the room made{room ? " (" + room.length + ")" : ""}</option>
+              </optgroup>
+            </select>
+
             {picks || pick ? chip(pick === "yes", "Picked out " + picks,
               () => set({ pick: pick ? "" : "yes" }), "#b45309") : null}
-            {chip(lens === "types", "Edit the types",
-              () => set({ lens: lens === "types" ? "" : "types" }), "#4b5563")}
-          </div>
-          <div className="repo-row">
-            {chip(!lens, "The whole shelf", () => set({ lens: "" }))}
-            {chip(lens === "dupes", "Duplicates " + dupes.length,
-              () => set({ lens: lens === "dupes" ? "" : "dupes" }), "#b45309")}
-            {chip(lens === "loose", "Loose ends " + loose.length,
-              () => set({ lens: lens === "loose" ? "" : "loose" }), "#9f1239")}
-            {chip(lens === "tags", "Tags " + tags2.length,
-              () => set({ lens: lens === "tags" ? "" : "tags" }), "#7c3aed")}
-            {chip(lens === "links", "Links " + linky.length,
-              () => set({ lens: lens === "links" ? "" : "links" }), "#0369a1")}
-            {chip(lens === "seeds", "Seed library " + (fresh.length ? fresh.length + " new" : "all in"),
-              () => set({ lens: lens === "seeds" ? "" : "seeds" }), "#9f1239")}
-            {chip(lens === "room", "What the room made" + (room ? " " + room.length : ""),
-              () => set({ lens: lens === "room" ? "" : "room" }), "#0f766e")}
           </div>
           <div className="repo-row">
             {chip(!where, "Every class", () => set({ where: "" }))}
@@ -734,6 +776,9 @@ export default function RepoPage() {
             onColor={(id, sw) => writeTypeColor(writeTo("shared"), id, sw)}
             onDrop={id => dropType(writeTo("shared"), id)}
             onRetype={(from, to) => retypeAll(from, to)} />
+        ) : null}
+        {lens === "schedule" ? (
+          <Term cls={termCls} classes={ENGINE_LIST} days={days} onClass={id => set({ where: id })} />
         ) : null}
         {lens === "seeds" ? (
           <Seeds seeds={SEEDS} fresh={fresh} onBring={s => bringSeeds([s])} onBringAll={() => bringSeeds(fresh)} />
@@ -1482,6 +1527,26 @@ const CSS = `
   font-family:inherit;font-size:17px;line-height:1;color:${MUTED}}
 .repo-unpick:hover{color:#9f1239}
 .repo-unpick-off{opacity:0;pointer-events:none}
+
+/* The two menus that say what the page is showing. Wide enough for the longest
+   option, because a menu that clips its own words is a menu I have to open to
+   read. */
+.repo-pick-type{min-height:${TAP}px;font-size:15px;padding:0 10px;font-weight:500}
+.repo-pick-show{min-height:${TAP}px;font-size:15px;padding:0 10px;max-width:min(100%,320px)}
+
+/* The term, day by day. A day is a card, the nearest one is marked, and a day
+   with nothing on it still gets a line, because an empty week in the middle of
+   a term is the thing worth seeing. */
+.repo-day{background:#fff;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:9px;
+  box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.06)}
+.repo-day-here{box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 2px ${TEXT}}
+.repo-day-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.repo-day-date{font-family:${MONO};font-size:15px;font-weight:600;color:${TEXT}}
+.repo-day-topic{font-size:15px;color:${SECOND}}
+.repo-day-sec{display:flex;flex-direction:column;gap:3px}
+.repo-day-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:3px 0;
+  font-size:14.5px;color:${TEXT}}
+.repo-day-words{overflow-wrap:anywhere}
 
 /* The health strip. Five numbers, each a filter, big enough to read from
    across the desk and dim when the number is zero. */

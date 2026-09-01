@@ -15,6 +15,8 @@ import { SHARED_LABEL } from "./blocks.js";
 import { BUILT_IN } from "./types.js";
 import { PALETTE } from "./colors.js";
 import { hostOf } from "./links.js";
+import { termCounts, nearestDay } from "./term.js";
+import PickMark from "./Pick.jsx";
 
 // The types a block can be, as a list Andrew edits.
 //
@@ -109,6 +111,98 @@ export function BlockTypes({ types, counts, orphans, hue, onAdd, onRename, onRes
           ))}
         </section>
       ) : null}
+    </div>
+  );
+}
+
+// The term, day by day.
+//
+// Where a block turns up was answerable one block at a time, on an open row.
+// The question underneath runs the other way: what is week six made of, and
+// what does a term look like from the top. The dashboard shows one day and the
+// schedule editor shows one week's assignments with no day plan beside them,
+// so nothing answered it.
+//
+// Two things per day, together: what the room does, in sections, in order, and
+// what the students were told to read. Read-only, because the writing still
+// belongs on the dashboard and in the schedule editor.
+export function Term({ cls, classes, days, onClass }) {
+  const counts = termCounts(days);
+  const here = nearestDay(days);
+  return (
+    <div className="repo-lens">
+      <p className="repo-lens-say">
+        {cls.code} in order, every class day of the term. Each day shows what the room does, in the sections the
+        day plan puts them in, and underneath, what the students were told to read or hand in that day. Building
+        a day still happens on the dashboard; this is the term from the top.
+      </p>
+      <div className="repo-row">
+        {classes.map(c => (
+          <button key={c.id} className="repo-focus repo-chip" aria-pressed={c.id === cls.id}
+            onClick={() => onClass(c.id)}
+            style={c.id === cls.id ? { background: c.accent, borderColor: c.accent, color: "#fff" } : undefined}>
+            {c.code}
+          </button>
+        ))}
+        <span className="repo-hits">
+          {counts.days} days · {counts.planned} planned · {counts.rows} rows · {counts.assigned} assigned
+        </span>
+      </div>
+
+      {!days.length ? <p className="repo-empty">{cls.code} has no weeks on the schedule yet.</p> : null}
+
+      {days.map(d => (
+        <section key={d.weekId + d.date} className={"repo-day" + (d.date === here ? " repo-day-here" : "")}>
+          <div className="repo-day-top">
+            <span className="repo-day-date">{d.date}</span>
+            <span className="repo-label">{d.week}{d.weekday ? " · " + d.weekday : ""}</span>
+            <span className="repo-day-topic">{d.topic}</span>
+            {d.date === here ? <span className="repo-flagged">Nearest today</span> : null}
+            {!d.rows && !d.assigned.length ? <span className="repo-copy-n">Nothing yet</span> : null}
+          </div>
+
+          {d.sections.map(sec => (
+            <div key={sec.slot} className="repo-day-sec">
+              <span className="repo-label">{sec.name}</span>
+              <ul className="repo-list">
+                {sec.items.map(it => (
+                  <li key={it.id} className="repo-day-row" style={{ marginLeft: it.depth * 18 }}>
+                    <span className="repo-owner">{it.kind}</span>
+                    <span className="repo-day-words">{it.words}</span>
+                    {it.pick ? <PickMark size={18} /> : null}
+                    {it.url ? (
+                      <a className="repo-focus repo-link" href={it.url} target="_blank" rel="noopener noreferrer">
+                        {hostOf(it.url)} ↗
+                      </a>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+
+          {d.assigned.length ? (
+            <div className="repo-day-sec">
+              <span className="repo-label">Assigned</span>
+              <ul className="repo-list">
+                {d.assigned.map(it => (
+                  <li key={it.id} className="repo-day-row">
+                    <span className="repo-owner">{it.type}</span>
+                    <span className="repo-day-words">{it.words}</span>
+                    {it.pick ? <PickMark size={18} /> : null}
+                    {it.loose ? <span className="repo-copy-n">no day yet</span> : null}
+                    {it.url ? (
+                      <a className="repo-focus repo-link" href={it.url} target="_blank" rel="noopener noreferrer">
+                        {hostOf(it.url)} ↗
+                      </a>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </section>
+      ))}
     </div>
   );
 }

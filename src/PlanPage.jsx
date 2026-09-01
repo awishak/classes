@@ -47,6 +47,30 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep1f", date: "Tuesday, September 1 \u00b7 last", title: "The term day by day, and a filter bar that lost two rows",
+    blurb: "The repository could say where one block turns up. It could not say what week six is made of. And the bar over the table had grown to three rows of chips that never change, with five numbers above them that were only worth reading on the day I acted on them.",
+    groups: [
+      { name: "The term, day by day", items: [
+        ["A class, in order, top to bottom", "Andrew: give me a particular class like 118 and show me what has been assigned to each day. Every class day of the term, with the day's topic, what the room does in the sections the day plan puts them in, and underneath, what the students were told to read or hand in that day."],
+        ["Two sources on one page", "The dashboard shows one day, and the schedule editor shows one week's assignments with no day plan beside them. Nothing put the two together, so the shape of a term was a thing I held in my head."],
+        ["An empty day still gets a line", "A week in the middle of a term with nothing planned is the thing worth seeing, so days with nothing on them are kept and counted rather than skipped. The day nearest today is outlined, so a long term opens where I am."],
+        ["An assignment with no day says so", "A week item carrying a weekday belongs to that day. One with no weekday belongs to the week and still needs putting somewhere, so it shows on every day of the week with a note saying it has no day yet."],
+      ] },
+      { name: "Less bar, more table", items: [
+        ["Type is a menu", "Eight chips that never change is a row I stopped reading. The menu says which type is chosen without spending a line saying so, and Edit sits next to it."],
+        ["One menu for what the page is showing", "The whole shelf, or the shelf narrowed to a fault worth fixing, or a lens that answers a question a table cannot. Duplicates, loose ends, tags, links, the term, the seed library, what the room made, and the five health numbers, all in one control, each with its count."],
+        ["The health strip comes out when I am using it", "Five numbers across the top all day is five numbers I stopped seeing. The strip appears while a fault is being worked through, so the other four numbers are one press away, and stays out of the way the rest of the time."],
+        ["The classes stay as buttons", "Andrew: leave those as buttons to click because I am likely to click on those. Two presses to compare two classes beats two presses inside a menu."],
+      ] },
+    ],
+    note: {
+      title: "Read-only, on purpose",
+      lines: [
+        "The term view writes nothing. Building a day still happens on the dashboard and assigning still happens in the schedule editor, because the repository has no business being a third writer of a day.",
+      ],
+    },
+  },
+  {
     id: "sep1e", date: "Tuesday, September 1 \u00b7 late", title: "The Day Plan card is a mirror of the dashboard",
     blurb: "The card was a second place to build a day, and it understood the model the engine had before blocks existed. So it drew a block placed from the repository as an empty card, and it wrote to the same store the dashboard writes. Now the dashboard builds the day and the card reads it.",
     groups: [

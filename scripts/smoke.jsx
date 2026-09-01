@@ -22,12 +22,15 @@ import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
 import { DayPlanSummary, DayPlanDetail, rowsOf, countRows } from "../src/engine/DayPlanCard.jsx";
 import { FREEFORM } from "../src/engine/dayplan.js";
+import { weekdayOf } from "../src/engine/schedule.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
   Steps as RepoSteps, Sticker as RepoSticker } from "../src/engine/RepoPage.jsx";
 import { FLAGS, healthCounts, carries, allClear } from "../src/engine/health.js";
 import { remember, undoPatches, pushEntry, sayEntry, LIMIT } from "../src/engine/undo.js";
-import { Seeds as RepoSeeds, Room as RepoRoom, BlockTypes as RepoTypes } from "../src/engine/RepoMore.jsx";
+import { Seeds as RepoSeeds, Room as RepoRoom, BlockTypes as RepoTypes, Term as RepoTerm }
+  from "../src/engine/RepoMore.jsx";
+import { termOf, termCounts, nearestDay } from "../src/engine/term.js";
 import QuestionPicker from "../src/engine/QuestionPicker.jsx";
 import PickMark, { PICK_LABEL } from "../src/engine/Pick.jsx";
 import { bankOf, questionOf, parseOptions, parseAnswer, searchBank, isReady, asChoice, asFree }
@@ -476,6 +479,46 @@ cases.push(["Repository", <RepoPage />]);
     onAdd={noop} onClose={noop} />, "From the repository"]);
   cases.push(["Question picker, free answers", <QuestionPicker storageKey="x" mode="free"
     onAdd={noop} onClose={noop} />, "Search every question you have written"]);
+
+  // ─── the term, day by day ───
+  // What is week six made of, which the page could only answer one block at a
+  // time. Two sources per day: the sections the room works through, and what
+  // the students were told to read.
+  const termCfg = ENGINE_LIST[0];
+  const d1 = "Sep 1";
+  const d2 = "Sep 3";
+  const termStore = {
+    schedule: [{ id: "w1", topic: "Framing", dates: [d1, d2], items: [
+      { id: "s1", libId: "tb1", type: "reading", title: "Why We Bet", url: "https://e.com/bet", date: weekdayOf(d1) },
+      { id: "s2", type: "assignment", title: "Media diary", url: "", date: "" },
+    ] }],
+    dayPlans: { [d1]: { sequenceId: FREEFORM, slots: { "sec-1": { title: "The hook", items: [
+      { id: "i1", blockId: "tb1" }, { id: "i2", text: "A note" },
+    ] } } } },
+  };
+  const termBlocks = { tb1: { id: "tb1", type: "link", title: "Why We Bet", headline: "The house always knows.",
+    url: "https://e.com/bet", pick: true } };
+  const termDays = termOf({ cls: termCfg, store: termStore, blockOf: (id) => termBlocks[id] || null });
+  if (termDays.length !== 2) { console.error("  FAIL  term: " + termDays.length + " days out of two"); failedEarly++; }
+  if (termDays[0].sections.length !== 1 || termDays[0].sections[0].items.length !== 2) {
+    console.error("  FAIL  term: the first day's sections came back wrong"); failedEarly++; }
+  if (termDays[0].sections[0].items[0].words !== "The house always knows.") {
+    console.error("  FAIL  term: a block row says " + termDays[0].sections[0].items[0].words); failedEarly++; }
+  if (!termDays[0].sections[0].items[0].pick) { console.error("  FAIL  term: a picked block lost its sticker"); failedEarly++; }
+  // An item with a weekday belongs to that day; an item with none belongs to
+  // the week and still needs a day, so it shows on both and says so.
+  if (termDays[0].assigned.length !== 2) { console.error("  FAIL  term: day one was assigned " + termDays[0].assigned.length); failedEarly++; }
+  if (!termDays[1].assigned.some(a => a.loose)) { console.error("  FAIL  term: an item with no day did not say so"); failedEarly++; }
+  if (termDays[1].rows) { console.error("  FAIL  term: a day with no plan came back with rows"); failedEarly++; }
+  const tc = termCounts(termDays);
+  if (tc.days !== 2 || tc.planned !== 1 || tc.empty !== 1 || tc.rows !== 2) {
+    console.error("  FAIL  term: the counts came out " + JSON.stringify(tc)); failedEarly++; }
+  if (!nearestDay(termDays)) { console.error("  FAIL  term: no day came back as the nearest"); failedEarly++; }
+
+  cases.push(["The term, day by day", <RepoTerm cls={termCfg} classes={ENGINE_LIST} days={termDays}
+    onClass={noop} />, "The house always knows."]);
+  cases.push(["The term, a class with no weeks", <RepoTerm cls={termCfg} classes={ENGINE_LIST} days={[]}
+    onClass={noop} />, "no weeks on the schedule"]);
 
   // ─── what is wrong with the shelf ───
   const shelf = [

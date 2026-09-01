@@ -89,6 +89,7 @@ const FLAG_WORDS = {
 const LENS_WORDS = {
   dupes: "duplicates", loose: "loose ends", tags: "tags", types: "the types",
   links: "links", seeds: "the seed library", room: "what the room made",
+  schedule: "the term day by day",
 };
 
 // ─── the views themselves ───
