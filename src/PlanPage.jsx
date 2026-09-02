@@ -47,6 +47,36 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep2a", date: "Wednesday, September 2 \u00b7 morning", title: "The room's answers, on the screen I teach from",
+    blurb: "Casting a prompt opened a thread and put the prompt on every phone in the room. Nothing read the answers back except the student page, so the answers arrived somewhere I was not looking. And COMM 3 meets twice a day, which one pair of times cannot say.",
+    groups: [
+      { name: "Answers", items: [
+        ["A third tab in the Live column", "Questions, Poll, Answers. The tab carries the number of answers on the thread that is up, so the column can say the room has written six things without being opened."],
+        ["The thread that is up, or the newest thread", "The same rule the student page uses, so the dashboard and the phones are looking at the same conversation. Every older thread is a chip beside the prompt, carrying its own count."],
+        ["Newest answer first", "The other way round from the student page. Reading a conversation wants the order the room wrote in. Reading a room while the room is still writing wants the answer I have not seen."],
+        ["One press puts an answer on the screen", "The same press that reads an answer can push that answer to the room, cited to whoever wrote the answer."],
+        ["The ported boards can be opened", "Boards that came across from the old hubs arrived closed, and nothing in the engine could open a closed board. The switch at the bottom of the panel does."],
+        ["Four cases on the panel", "Still loading, nothing cast yet, a live thread with posts, and a closed thread with nothing under the prompt. Each one names a sentence the output has to reach, because a panel that renders the loading state renders clean."],
+      ] },
+      { name: "Two sittings on one day", items: [
+        ["COMM 3 meets at 8:00 and again at 10:30", "Both in Vari 133, MWF. A class config carried one pair of times, so a class meeting twice on the same day could only be half described."],
+        ["The clock arithmetic lives in one file", "Two places in the dashboard ran the same string-to-minutes sum, and both of them now ask meets.js which sitting the clock is inside. A class meeting once still writes one pair of times, because rewriting four configs to hold a list of one is the worse trade."],
+        ["COMM 118 moved", "9:15 to 10:20, in Vari 133, which is not where the config had the class."],
+        ["Eight checks on the arithmetic", "Against fixed clocks, so the build does not pass or fail by the hour. The gap between two sittings reading as class time is the case worth having."],
+      ] },
+      { name: "A menu that fits on the card", items: [
+        ["The row menu opens upward when opening downward would run off the end", "Everything a row can do hangs off the row's number, and the menu was pinned below the number. On the last rows of a long day the menu opened past the end of the card, so the rows I could not act on were the rows at the bottom. The flip measures against the tallest the menu gets, because the menu is not in the document until after the press."],
+      ] },
+    ],
+    note: {
+      title: "Left alone",
+      lines: [
+        "The two COMM 3 sections stay one class. Andrew: students are in discussion boards and groups with their own roster, but anything I change in one also changes in the other. So the roster, attendance, boards and groups filter down to the section in the room, and everything else stays single. Decided today, built on another day.",
+        "COMM 3 still has no schedule, no roster and no assignments. Those fields stay placeholders until the real class arrives, so the term view for that class is empty.",
+      ],
+    },
+  },
+  {
     id: "sep1f", date: "Tuesday, September 1 \u00b7 last", title: "The term day by day, and a filter bar that lost two rows",
     blurb: "The repository could say where one block turns up. It could not say what week six is made of. And the bar over the table had grown to three rows of chips that never change, with five numbers above them that were only worth reading on the day I acted on them.",
     groups: [

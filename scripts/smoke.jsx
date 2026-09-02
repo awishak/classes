@@ -14,7 +14,7 @@ import "./smoke-globals.js";
 import { renderToString } from "react-dom/server";
 import Dashboard, {
   FlowPanel, TodoPanel, NowPanel, ScratchPanel, AttendancePanel, QuestionsPanel,
-  BoardsPanel, StockedPanel, AssignmentsPanel, CommandBar, Readings, IdeasPanel,
+  AnswersPanel, BoardsPanel, StockedPanel, AssignmentsPanel, CommandBar, Readings, IdeasPanel,
   ColorsSheet, NoteSheet, ShortcutSheet,
 } from "../src/engine/Dashboard.jsx";
 import ClassroomView from "../src/engine/ClassroomView.jsx";
@@ -23,6 +23,7 @@ import BoardPage from "../src/engine/BoardPage.jsx";
 import { DayPlanSummary, DayPlanDetail, rowsOf, countRows } from "../src/engine/DayPlanCard.jsx";
 import { FREEFORM } from "../src/engine/dayplan.js";
 import { weekdayOf } from "../src/engine/schedule.js";
+import { sittingsOf, minutesLeft, sittingLength } from "../src/engine/meets.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
   Steps as RepoSteps, Sticker as RepoSticker, Term as RepoTerm, DayAdd as RepoDayAdd,
@@ -145,6 +146,16 @@ for (const [tag, plan] of [["empty day", emptyPlan], ["full day", fullPlan]]) {
 const cfg0 = ENGINE_LIST[0];
 cases.push(["Attendance", <AttendancePanel students={cfg0.students || []} marks={{}} onMark={noop} onReset={noop} />]);
 cases.push(["Questions", <QuestionsPanel items={[{ id: "q", text: "why", who: "A", anon: false, at: Date.now(), state: "open" }]} setState={noop} archiveOpen={noop} castNow={noop} accent={cfg0.accent} />]);
+// The Answers panel reads threads the dashboard never wrote, so every state it
+// can be handed gets a case: still loading, nothing cast yet, a live thread with
+// posts on it, and a closed thread with nothing under the prompt.
+const aBoard = { id: "b1", prompt: "What did you notice?", at: Date.now(), closed: false,
+  posts: [{ id: "p1", who: "A Student", text: "The crowd noise", at: Date.now() }] };
+const aShut = { id: "b2", prompt: "One word for today", at: Date.now() - 9e5, closed: true, posts: [] };
+cases.push(["Answers, loading", <AnswersPanel boards={null} liveId="" path="/x" castNow={noop} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />]);
+cases.push(["Answers, nothing cast", <AnswersPanel boards={{}} liveId="" path="/x" castNow={noop} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />, "No prompt has been cast"]);
+cases.push(["Answers, live thread", <AnswersPanel boards={{ b1: aBoard, b2: aShut }} liveId="b1" path="/x" castNow={noop} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />, "The crowd noise"]);
+cases.push(["Answers, closed and empty", <AnswersPanel boards={{ b2: aShut }} liveId="" path="/x" castNow={noop} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />, "Nobody wrote anything under this prompt."]);
 cases.push(["Before & After", <BoardsPanel boards={{}} proposals={{ pre: { title: "t", ideas: ["a"] }, post: { title: "t", ideas: ["b"] } }} onSave={noop} castNow={noop} dismiss={noop} liveCast={null} accent={cfg0.accent} />]);
 // A day with no proposals at all, which crashed the editor once the boards
 // moved into the flow and started rendering on every day.
@@ -840,6 +851,23 @@ cases.push(["Instructor links", <InstructorLinks />]);
 // case may name a string its output MUST contain, and a dashboard names the
 // stage: if the layout is not in the markup, the body did not run and the pass
 // is worth nothing.
+// Two sittings on one day is what COMM 3 needs and what one pair of times
+// cannot say. Fixed clocks, so the build does not pass or fail by the hour.
+{
+  const at = (h, m) => new Date(2026, 8, 2, h, m);
+  const two = { meets: [{ start: "08:00", end: "09:05" }, { start: "10:30", end: "11:35" }] };
+  const one = { meets: { start: "09:15", end: "10:20" } };
+  const bad = { meets: { start: "", end: "" } };
+  if (sittingsOf(two).length !== 2) { console.error("  FAIL  meets: two sittings read as " + sittingsOf(two).length); failedEarly++; }
+  if (sittingsOf(one).length !== 1) { console.error("  FAIL  meets: one pair of times stopped working"); failedEarly++; }
+  if (minutesLeft(two, at(8, 30)) !== 35) { console.error("  FAIL  meets: the first sitting does not count down"); failedEarly++; }
+  if (minutesLeft(two, at(10, 45)) !== 50) { console.error("  FAIL  meets: the second sitting does not count down"); failedEarly++; }
+  if (minutesLeft(two, at(9, 40)) !== null) { console.error("  FAIL  meets: the gap between two sittings reads as class"); failedEarly++; }
+  if (minutesLeft(one, at(9, 30)) !== 50) { console.error("  FAIL  meets: a class that meets once does not count down"); failedEarly++; }
+  if (sittingLength(two, at(10, 45)) !== 65) { console.error("  FAIL  meets: a sitting came out the wrong length"); failedEarly++; }
+  if (minutesLeft(bad, at(9, 30)) !== null) { console.error("  FAIL  meets: a class with no times is in session"); failedEarly++; }
+}
+
 let failed = failedEarly;
 for (const [name, el, must] of cases) {
   try {

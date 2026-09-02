@@ -27,7 +27,7 @@ Three columns with fixed jobs, named at the top, each seam draggable:
 
 - **Materials** — Activities, Readings, Assignments
 - **Flow** — the day itself, and nothing else
-- **Live** — Questions, Poll, with the room preview pinned above
+- **Live** — Questions, Poll, Answers, with the room preview pinned above
 
 The top bar: class name (a menu holding the other classes and the ways out),
 the date button, then Cast · Look · Around the Horn · Here.
@@ -68,7 +68,7 @@ right.
 | `check-contrast` | a colour under 4.5:1 |
 | `check-voice` | a clause closing on a bare "it", an em dash in UI copy |
 | `check-jsx-text` | an escape sequence stranded in JSX text |
-| `smoke` | 58 surfaces rendered server-side, including every sheet |
+| `smoke` | 120 surfaces rendered server-side, including every sheet |
 
 Each was written after the matching mistake reached production. Do not remove
 one because it is inconvenient; add the case instead.
@@ -82,11 +82,14 @@ twice, because one edge can serve the old bundle briefly.
 
 ## Things known to be unfinished
 
-- No instructor view of a discussion board; I can cast a prompt and students
-  can answer, but I cannot read the answers on the dashboard.
-- Ported boards are closed, and nothing opens them.
-- A row menu near the bottom of a long day opens downward and can run past the
-  card. It does not flip up.
+- COMM 3 has the real days, times and room, and nothing else: no schedule
+  weeks, no roster, no assignments. Its term view is empty, and the fields are
+  placeholders on purpose until the real class arrives.
+- The COMM 3 roster filter is decided and unbuilt. The two sections are one
+  class. A student belongs to a section, and the surfaces made of people (the
+  roster, attendance, discussion boards, groups) filter down to the section in
+  the room. Everything else is single: change a day plan, an assignment or a
+  block once and both sections have the change.
 - Six `onDone` handlers in the pre-engine Comm118/2/4 files do nothing. Those
   files are frozen.
 - 57 linked readings never had `scheduled` backfilled onto their blocks.

@@ -28,10 +28,16 @@ import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortB
 import { readAdded, readLabels } from "./types.js";
 import PickMark from "./Pick.jsx";
 import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor } from "./colors.js";
-import { useBoards } from "./boards.js";
+import { useBoards, postsOf, idForPrompt } from "./boards.js";
+import { minutesLeft, sittingLength } from "./meets.js";
 import { FACES, SLOTS, readFonts, fontVars, writeFont, resetFonts, readBold, writeBold } from "./fonts.js";
 import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, setScheduleItemClaim, setScheduleItemNote, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
+
+// Six items at 38px, plus the padding: the tallest a row menu gets. The flip
+// measures against this rather than against the menu that is about to open,
+// because the menu is not in the document until after the press.
+const ROWMENU_H = 244;
 
 // One fallback for every component that takes a `hue`, so a panel rendered on
 // its own never has to know that colours exist.
@@ -235,6 +241,9 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .read-flag{font-family:${MONO};font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
   color:${TEXT_MUTED};background:rgba(23,19,16,.06);border-radius:999px;padding:2px 8px}
 /* Everything a row can do, hanging off its number. */
+/* Near the bottom of a long day there is nothing below the number to open into,
+   so the menu opens above it instead. */
+.flow-rowmenu.up{top:auto;bottom:calc(100% + 6px)}
 .flow-rowmenu{position:absolute;left:0;top:calc(100% + 6px);z-index:61;background:#fff;
   border:1px solid rgba(23,19,16,.14);border-radius:12px;padding:5px;min-width:236px;
   box-shadow:0 16px 38px -12px rgba(23,19,16,.42);display:flex;flex-direction:column;gap:1px}
@@ -399,6 +408,21 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, starred, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove }) {
   const [editing, setEditing] = useState(false);
   const [menu, setMenu] = useState(false);
+  // A row near the bottom of a long day opened its menu downward and off the
+  // end of the card, so the last rows of a day were the ones I could not act
+  // on. The menu is six items at its tallest; if that much does not fit under
+  // the number and does fit over it, the menu opens upward. Measured against
+  // the tallest it gets rather than against the height of this one, because a
+  // two-item menu opening upward is still a menu I can read.
+  const numRef = useRef(null);
+  const [menuUp, setMenuUp] = useState(false);
+  const toggleMenu = () => {
+    const box = numRef.current?.getBoundingClientRect();
+    if (box && typeof window !== "undefined") {
+      setMenuUp(window.innerHeight - box.bottom < ROWMENU_H && box.top > ROWMENU_H);
+    }
+    setMenu(v => !v);
+  };
   const [draft, setDraft] = useState(claim || "");
   useEffect(() => { setDraft(claim || ""); }, [claim]);
 
@@ -456,13 +480,13 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
           planning rather than while teaching. The number opens them; the one
           thing I press with the room watching stays out on its own. */}
       <span style={{ position: "relative", flex: "none" }}>
-        <button className="flow-num dash-focus" onClick={() => setMenu(v => !v)}
+        <button ref={numRef} className="flow-num dash-focus" onClick={toggleMenu}
           aria-haspopup="menu" aria-expanded={menu}
           title="What to do with this row">{done ? "\u2713" : (num || "")}</button>
         {menu ? (
           <>
             <div onClick={() => setMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 60 }} />
-            <div role="menu" className="flow-rowmenu">
+            <div role="menu" className={"flow-rowmenu" + (menuUp ? " up" : "")}>
               <button className="dash-focus" onClick={() => { setMenu(false); onTick(); }}>
                 <span className="flow-rowmenu-k">{done ? "\u21ba" : "\u2713"}</span>
                 {done ? "Put it back on the list" : "Done"}
@@ -607,13 +631,12 @@ export function NowPanel({ config, engagedAt, onEngaged, plan, seq, onSlot }) {
   const since = engagedAt ? Math.floor((now - engagedAt) / 60000) : null;
   const cold = since != null && since >= 10;
 
-  const meets = config.meets || {};
-  const mins = (hhmm) => { const [h, m] = (hhmm || "").split(":").map(Number); return isNaN(h) ? null : h * 60 + (m || 0); };
-  const d = new Date(now);
-  const cur = d.getHours() * 60 + d.getMinutes();
-  const start = mins(meets.start), end = mins(meets.end);
-  const inClass = start != null && end != null && cur >= start && cur <= end;
-  const left = end != null ? Math.max(0, end - cur) : null;
+  // Which sitting of this class the clock is inside. COMM 3 meets twice on the
+  // same day, so the answer is not one pair of times, and the arithmetic sits
+  // in meets.js rather than here and in the header both.
+  const left = minutesLeft(config, now);
+  const inClass = left != null;
+  const span = sittingLength(config, now);
 
   const slots = seq ? seq.slots.map(x => x.slot) : [];
   const current = plan?.currentSlot;
@@ -622,7 +645,7 @@ export function NowPanel({ config, engagedAt, onEngaged, plan, seq, onSlot }) {
   // see the number while you are still in it.
   const slotStarted = (plan?.slotAt || {})[current];
   const inSlot = slotStarted ? Math.floor((now - slotStarted) / 60000) : null;
-  const fair = slots.length && left != null ? Math.round((left + (start != null ? cur - start : 0)) / slots.length) : null;
+  const fair = slots.length && span != null ? Math.round(span / slots.length) : null;
   const over = fair != null && inSlot != null && inSlot > fair;
 
   return (
@@ -1969,6 +1992,94 @@ export function QuestionsPanel({ items, setState, archiveOpen, castNow, accent }
   );
 }
 
+// What the room wrote under the prompt on the screen.
+//
+// Casting an Enter or Exit board opens a thread and puts the prompt on every
+// phone in the room. Until now the only surface that read the posts back was
+// the student page, so I cast a prompt, the room answered, and to read the
+// answers I had to leave the screen I teach from. They land here instead,
+// beside the questions and the poll, and the same press that reads one can put
+// that one on the screen.
+//
+// Every thread is in the list, not only today's. Boards ported over from the
+// old hubs arrived closed and nothing in the engine could open one; the switch
+// at the bottom of this panel does.
+export function AnswersPanel({ boards, liveId, path, castNow, onRemove, onSetClosed, accent }) {
+  const [pick, setPick] = useState(null);
+  if (boards === null) return <Muted>Loading…</Muted>;
+
+  const list = Object.values(boards || {}).sort((a, b) => (b.at || 0) - (a.at || 0));
+  if (!list.length) return <Muted>No prompt has been cast to the room yet.</Muted>;
+
+  // The thread whose prompt is on the screen, unless I have asked for another
+  // one, and the newest thread when nothing is up.
+  const board = list.find(b => b.id === pick) || list.find(b => b.id === liveId) || list[0];
+  // Newest first, which is the other way round from the student page. Reading a
+  // conversation wants the order the room wrote in; reading a room while it is
+  // still writing wants the answer I have not seen.
+  const posts = postsOf(board).slice().reverse();
+
+  return (
+    <>
+      {list.length > 1 ? (
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+          {list.map(b => {
+            const on = b.id === board.id;
+            return (
+              <button key={b.id} onClick={() => setPick(b.id)} aria-pressed={on} title={b.prompt}
+                style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 13, maxWidth: 190,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  ...(on ? { background: accent, borderColor: accent, color: "#fff" } : {}) }}>
+                {b.prompt} {(b.posts || []).length || ""}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
+      <p style={{ margin: 0, fontSize: 15, fontWeight: 600, lineHeight: 1.35, color: TEXT_PRIMARY }}>{board.prompt}</p>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
+        <span style={{ ...label, fontSize: 12 }}>
+          {posts.length} {posts.length === 1 ? "answer" : "answers"}
+        </span>
+        {board.id === liveId ? <span style={{ ...label, fontSize: 12, color: LIVE }}>On the screen now</span> : null}
+        {board.closed ? <span style={{ ...label, fontSize: 12 }}>Closed</span> : null}
+      </div>
+
+      {posts.length === 0
+        ? <Muted>{board.closed ? "Nobody wrote anything under this prompt." : "Nobody has written anything yet."}</Muted>
+        : null}
+
+      {posts.map(p => (
+        <div key={p.id} style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, background: SURFACE_2 }}>
+          <div style={{ ...label, fontSize: 12, display: "flex", gap: 7, alignItems: "center" }}>
+            <span>{p.who || "Unknown"}</span>
+            <span>{new Date(p.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
+          </div>
+          <p style={{ margin: 0, fontSize: 15, lineHeight: 1.45, color: TEXT_PRIMARY }}>{p.text}</p>
+          <div style={{ display: "flex", gap: 7 }}>
+            <button style={solid(accent)}
+              onClick={() => castNow({ type: "question", tag: board.prompt, title: p.text,
+                cite: p.who || "", label: "Answer \u00b7 " + (p.who || "the room") })}>
+              Push to screen
+            </button>
+            <button style={{ ...mini, marginLeft: "auto", color: LIVE }}
+              onClick={() => onRemove(board.id, p.id)}>Remove this answer</button>
+          </div>
+        </div>
+      ))}
+
+      <div style={{ display: "flex", gap: 10, alignItems: "center", paddingTop: 4, flexWrap: "wrap" }}>
+        <button style={mini} onClick={() => onSetClosed(board.id, !board.closed)}>
+          {board.closed ? "Open the discussion" : "Close the discussion"}
+        </button>
+        <GoTo href={path + "/board?b=" + board.id} accent={accent}>Open the student page</GoTo>
+      </div>
+    </>
+  );
+}
+
 // Everyone starts Here. Tap to walk it down.
 const ATT_STATES = ["here", "late", "excused", "out"];
 const ATT_STYLE = {
@@ -3066,7 +3177,7 @@ function Picker({ title, opts, value, onPick, accent }) {
 // look at a day — so it opens off the day itself, by clicking the session up in
 // the band, which is the thing it is a to-do list ABOUT.
 const MATERIAL = ["ideas", "readings", "assignments"];
-const LIVE_RAIL = ["questions", "poll"];
+const LIVE_RAIL = ["questions", "poll", "answers"];
 // Starting widths. Flow takes whatever is left, so it is the one column that
 // never needs a number. Both ends are draggable and the drag is remembered.
 const COL = { material: 300, live: 400 };
@@ -3088,6 +3199,15 @@ export default function Dashboard({ config }) {
   const [live, cast, push] = useLive(config.storageKey);
   const q = useQuestions(config.storageKey);
   const DB = useBoards(config.storageKey);
+  // Which thread the Answers tab opens on, and therefore what its count is
+  // counting: the one whose prompt is on the room screen this second, or the
+  // newest one there is. Worked out here rather than inside the panel because
+  // the tab has to say how many answers are waiting without being opened.
+  const castPrompt = live?.cast?.type === "board" ? (live.cast.idea || live.cast.title) : "";
+  const liveBoardId = castPrompt ? idForPrompt(castPrompt) : "";
+  const openBoard = (DB.boards || {})[liveBoardId]
+    || Object.values(DB.boards || {}).sort((a, b) => (b.at || 0) - (a.at || 0))[0]
+    || null;
   const P = usePoll(config.storageKey);
   const [hornOpen, setHornOpen] = useState(false);
   const [hereOpen, setHereOpen] = useState(false);
@@ -3935,6 +4055,9 @@ export default function Dashboard({ config }) {
       onPick={pickBlock} onAdd={addIdea} onEdit={editIdea} onRemove={removeIdea} onDuplicate={duplicateIdea} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
       castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,
+    answers: () => <AnswersPanel boards={DB.boards} liveId={liveBoardId} path={config.path}
+      castNow={(pl) => { castNow(pl); markEngaged(); }} onRemove={DB.remove} onSetClosed={DB.setClosed}
+      accent={config.accent} />,
     scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch}
       dayNote={plan?.notes} weekPlan={weekRow?.plan} weekText={weekRow?.text}
       accent={config.accent} day={day}
@@ -3943,7 +4066,7 @@ export default function Dashboard({ config }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} path={config.path} />,
   };
-  const TITLES = { todo: "To-do", poll: "Poll", flow: "Day Plan", boards: "Enter/Exit", readings: "Readings", ideas: "Activities & seeds", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Assignments" };
+  const TITLES = { todo: "To-do", poll: "Poll", flow: "Day Plan", boards: "Enter/Exit", readings: "Readings", ideas: "Activities & seeds", questions: "Questions", answers: "Answers", attendance: "Here", scratch: "Notes", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   const outCount = Object.values(marks).filter(v => v === "out").length;
   // How far through the day I am, counted off the flow rather than the clock.
@@ -3965,13 +4088,14 @@ export default function Dashboard({ config }) {
   const TAB_HUE = {
     readings: hueOfKind("readings"), ideas: hueOfKind("ideas"), scratch: hueOfKind("notes"),
     assignments: hueOfKind("assignments"), questions: hueOfKind("questions"),
-    poll: hueOfKind("polls"), boards: hueOfKind("boards"), todo: "",
+    poll: hueOfKind("polls"), boards: hueOfKind("boards"), answers: hueOfKind("boards"), todo: "",
   };
   const RAIL_N = {
     questions: openQ,
     readings: readings.length,
     assignments: assignments.length,
     poll: P.poll?.phase && P.poll.phase !== "idle" ? "\u25cf" : 0,
+    answers: (openBoard?.posts || []).length,
     ideas: 0, todo: 0, scratch: 0, boards: 0,
   };
   // The order the flow is drawn in: the sequence's slots, then the sections I
@@ -4005,14 +4129,7 @@ export default function Dashboard({ config }) {
     if (live?.cast) live.cast();
   };
   const sinceMin = live?.engagedAt ? Math.floor((Date.now() - live.engagedAt) / 60000) : null;
-  const minsLeft = (() => {
-    const m = (hhmm) => { const [h, x] = (hhmm || "").split(":").map(Number); return isNaN(h) ? null : h * 60 + (x || 0); };
-    const st = m(config.meets?.start), en = m(config.meets?.end);
-    if (st == null || en == null) return null;
-    const n = new Date();
-    const cur = n.getHours() * 60 + n.getMinutes();
-    return cur >= st && cur <= en ? en - cur : null;
-  })();
+  const minsLeft = minutesLeft(config);
   const onDeck = currentDay(weeks)?.date;
 
   return (

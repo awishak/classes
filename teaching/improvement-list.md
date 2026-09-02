@@ -11,6 +11,8 @@ Tag each item with one area so it stays skimmable:
 
 ## Open
 
+- `[software]` **Roster filter for a class with two sections.** COMM 3 meets twice on the same day and stays one class rather than two. A student belongs to a section, and the surfaces made of people filter down to the section sitting in the room: the roster, attendance, discussion boards, groups. Everything else stays single, so changing a day plan, an assignment or a block once gives both sections the change. Decided 2026-09-02, not built.
+
 ### Fall 2026 LMS rebuild
 
 Framing: design around two audiences. **Student-facing** (what students need and how they get it) and **instructor-facing, you only** (how you put information in, and how you grade). Catalog everything now; build incrementally.

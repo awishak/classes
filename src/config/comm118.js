@@ -17,10 +17,10 @@ const comm118 = {
   code: "COMM 118",
   name: "Communication and Sport",
   quarter: "Fall 2026",
-  desc: "MWF 8:00 to 9:05 am · Vari 128",
+  desc: "MWF 9:15 to 10:20 am \u00b7 Vari 133",
 
   // Used by the Now panel to count down the minutes left in the session.
-  meets: { start: "08:00", end: "09:05" },
+  meets: { start: "09:15", end: "10:20" },
 
   accent: "#9f1239",
   accentLight: "#fff1f2",
