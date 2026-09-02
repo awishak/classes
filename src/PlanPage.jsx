@@ -47,6 +47,35 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep2f", date: "Wednesday, September 2 \u00b7 night", title: "Four themes, and the student picks",
+    blurb: "Andrew: clean is the standard, impressive is an option, call it business, include the other two, people should always be able to switch between all four. The engine could not do any of that this morning, because every colour was a hex baked into a module constant at import.",
+    groups: [
+      { name: "A colour that can change after the page loads", items: [
+        ["Every token is a custom property", "The hexes moved to themes.js, one block per theme. Every surface still reads TOKENS.TEXT.primary; the value is var(--text-primary) now, and the hex arrives from whichever block matches the data-theme on the root."],
+        ["Switching is one attribute", "Nothing re-renders and nothing is threaded through. Clean also sits on bare :root, so a surface that sets no theme still has colours."],
+        ["A theme is more than colour", "Each one carries its own card treatment and its own faces. Clean is a hairline. Snapchat is three pixels of black with a hard offset. Crashing Out stacks two shadows and mixes five typefaces on one screen."],
+        ["Five places appended hex alpha to a state colour", "background: GREEN + \"20\" works on a hex and produces nothing at all on a variable. Those are color-mix now, which is the same effect and survives the change."],
+      ] },
+      { name: "The choice belongs to the student", items: [
+        ["In their browser, not in the class store", "A theme is a preference about a screen rather than a fact about a class, and the class store is shared. Writing a theme there would mean one student's taste changing the site for thirty people."],
+        ["Always reachable", "The picker is in the header on every student surface and in full under More. A student who picked Crashing Out in week one has to be able to get out of it in week two."],
+        ["It follows them everywhere", "The class site, the ask page, the discussion board, the game and the room screen all read the same remembered choice."],
+        ["The wall is the room machine's own choice", "The projector has its own browser, so the theme on the wall is one Andrew sets once at the podium rather than thirty students setting it for him."],
+      ] },
+      { name: "What the build now refuses", items: [
+        ["A theme missing a property", "A missing value does not vanish from the stylesheet. It renders as the literal word undefined, paints nothing and warns nobody. Both checks look at the shape of the value rather than the presence of the name, which took two goes: the first version of the test passed a theme with a hole in it."],
+        ["A colour that fails on its own theme's ground", "Thirty-six readable values across four themes, each against every background that theme puts text on. Crashing Out's ok and late had to go deeper than the other themes' equivalents, because its page is a gradient and text has to clear the darkest band as well as the lightest."],
+        ["The class site rendered under each theme", "Plus one under a theme nobody has heard of, which has to fall back to Clean rather than paint nothing."],
+      ] },
+    ],
+    note: {
+      title: "Locked In",
+      lines: [
+        "The fourth spring theme is out of the engine. It stays in styles.jsx, which the frozen forked files still use, so nothing that ran last term has changed.",
+      ],
+    },
+  },
+  {
     id: "sep2e", date: "Wednesday, September 2 \u00b7 late", title: "The design system existed and no file imported the module",
     blurb: "src/engine/tokens.js has been in the repository since 25 August: the palette with a contrast ratio written beside every colour, a seven-step type scale, a 4px grid, the two hit targets and the reasoning for splitting them. Nothing imported the module. Not one file. So eighteen surfaces each declared a palette of their own.",
     groups: [

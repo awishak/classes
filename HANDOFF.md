@@ -46,6 +46,34 @@ everything that row can do — done, nest under the row above, write the
 headline, put on today's readings, take off the day. Only Cast sits out on the
 right.
 
+## Four themes, and a student picks one
+
+`src/engine/themes.js` holds them: **Clean** is the standard, **Business** is the
+other serious one, **Snapchat** and **Crashing Out** are Andrew's, carried over
+from spring 2026 and rebuilt on this system rather than on their own.
+
+A theme is one attribute. Every colour in the engine is a CSS custom property,
+so `data-theme` on a surface's root picks which block applies and nothing
+re-renders. Each theme also carries its own card treatment and its own faces:
+Clean is a hairline, Snapchat is 3px of black with a hard offset, Crashing Out
+stacks two shadows and mixes five typefaces.
+
+The choice is the student's and lives in their browser rather than in the class
+store, because a theme is a preference about a screen and the class store is
+shared. The picker sits in the header on every student surface and in full under
+More, so a student who picked Crashing Out in week one can get back out in week
+two. It follows them across the class site, the ask page, the board, the game
+and the room screen.
+
+`check-tokens` holds three rules: no surface keeps a colour of its own, every
+theme defines every property, and every readable value clears 4.5:1 on every
+ground that theme puts text on. That last one is why Crashing Out's ok and late
+are deeper than the other themes' equivalents: its page is a gradient and text
+has to clear the darkest band as well as the lightest.
+
+**Locked In is gone from the engine.** It stays in `styles.jsx` for the frozen
+forked files, which still use it.
+
 ## One design system
 
 `src/engine/tokens.js` is the palette, the type scale, the 4px spacing grid, the
@@ -104,8 +132,8 @@ character and those are what drifted. Font sizes are not held to `TYPE` yet.
 | `check-voice` | a clause closing on a bare "it", an em dash in UI copy |
 | `check-jsx-text` | an escape sequence stranded in JSX text |
 | `check-css` | a stylesheet that lost a rule |
-| `check-tokens` | a surface with a colour of its own, or a token that fails where it sits |
-| `smoke` | 134 surfaces rendered server-side, plus a game played through |
+| `check-tokens` | a surface with a colour of its own, a theme missing a token, or a colour that fails where it sits |
+| `smoke` | 136 surfaces rendered server-side, a game played through, and the class site under all four themes |
 
 Each was written after the matching mistake reached production. Do not remove
 one because it is inconvenient; add the case instead.

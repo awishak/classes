@@ -26,6 +26,8 @@ import { DayPlanSummary, DayPlanDetail, rowsOf, countRows } from "../src/engine/
 import { FREEFORM } from "../src/engine/dayplan.js";
 import { weekdayOf } from "../src/engine/schedule.js";
 import { sittingsOf, minutesLeft, sittingLength } from "../src/engine/meets.js";
+import { THEMES, THEME, THEME_LABELS, themeCSS, varsOf, fontHref } from "../src/engine/themes.js";
+import { ThemePicker } from "../src/engine/ThemeShell.jsx";
 import { saveWeek, openWeek, answerWeek, scoreWeek, scoresFor, perfectRuns, pointsOf, mergeAnswers } from "../src/engine/game.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
@@ -915,6 +917,63 @@ cases.push(["Instructor links", <InstructorLinks />]);
   }
   globalThis.localStorage.getItem = was;
 }
+
+// Four themes, and a student switching between them.
+//
+// Every colour in the engine is a custom property now, so a theme that forgets
+// one does not break loudly: the value falls through to Clean and a dark theme
+// quietly gets black text on a black card. So the stylesheet is checked for
+// every property of every theme, and the class site is rendered under each one.
+{
+  const say = (m) => { console.error("  FAIL  theme: " + m); failedEarly++; };
+  const css = themeCSS();
+  const KEYS = Object.keys(varsOf(THEME.clean));
+
+  if (THEMES.length !== 4) say(THEMES.length + " themes where the four are clean, business, snapchat, crashing");
+  ["clean", "business", "snapchat", "crashing"].forEach(t => {
+    if (!THEMES.includes(t)) say(t + " is not in the list a student can pick from");
+    if (!THEME_LABELS[t]) say(t + " has no name a student could read");
+  });
+  // Clean also sits on bare :root, so a surface that sets nothing still draws.
+  if (!css.includes(":root{")) say("Clean is not on bare :root, so an unthemed surface has no colours at all");
+  THEMES.forEach(t => {
+    if (!css.includes(`[data-theme="${t}"]{`)) say(t + " has no block in the stylesheet");
+    const block = (css.split(`[data-theme="${t}"]{`)[1] || "").split("}")[0];
+    KEYS.forEach(k => {
+      // A missing value does not vanish from the stylesheet: it renders as the
+      // literal word undefined, which paints nothing and warns nobody. So the
+      // presence of the property name proves less than the shape of its value.
+      const m = block.match(new RegExp("(?:^|;)" + k + ":([^;]*)"));
+      if (!m) say(`${t} never sets ${k}`);
+      else if (!m[1].trim() || m[1].includes("undefined")) say(`${t} sets ${k} to "${m[1]}"`);
+    });
+    if (!fontHref(t).startsWith("https://fonts.googleapis.com/")) say(t + " asks for fonts from somewhere unexpected");
+  });
+  // A student's own screen: the whole class site, under each theme.
+  THEMES.forEach(t => {
+    const was = globalThis.localStorage.getItem;
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : null);
+    try {
+      const html = renderToString(<ClassApp config={cfg0} />);
+      if (!html.includes(`data-theme="${t}"`)) say(t + " did not reach the class site's root");
+      if (!html.includes("--text-primary")) say(t + ": the class site shipped without the stylesheet");
+    } catch (err) { say(t + ": the class site threw — " + err.message); }
+    globalThis.localStorage.getItem = was;
+  });
+  // A theme nobody has heard of falls back rather than painting nothing.
+  {
+    const was = globalThis.localStorage.getItem;
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? "vaporwave" : null);
+    try {
+      const html = renderToString(<ClassApp config={cfg0} />);
+      if (!html.includes('data-theme="clean"')) say("an unknown theme did not fall back to Clean");
+    } catch (err) { say("an unknown theme threw — " + err.message); }
+    globalThis.localStorage.getItem = was;
+  }
+}
+
+cases.push(["Theme picker, full", <ThemePicker theme="clean" onPick={noop} />, "Crashing Out"]);
+cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick={noop} compact />]);
 
 // Two people writing at once, which is the bug the room actually hit.
 //

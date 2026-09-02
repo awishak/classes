@@ -15,6 +15,7 @@ import { useBoards, postsOf, idForPrompt } from "./boards.js";
 import { useLive } from "./live.js";
 import { lastNameOf } from "./AskPage.jsx";
 import * as TOKENS from "./tokens.js";
+import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -29,6 +30,7 @@ export default function BoardPage({ config }) {
   const [data] = useClassData(config.storageKey);
   const [live] = useLive(config.storageKey);
   const B = useBoards(config.storageKey);
+  const [theme] = useStudentTheme(config);
   const REMEMBER = config.storageKey + "-user";
 
   const [who, setWho] = useState(null);
@@ -72,7 +74,7 @@ export default function BoardPage({ config }) {
 
   if (!prompt) {
     return (
-      <div style={wrap}><div style={inner}>
+      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><div style={inner}>
         <Head config={config} />
         <p style={{ margin: 0, fontSize: 17, color: MUTED }}>No discussion is open right now.</p>
       </div></div>
@@ -84,7 +86,7 @@ export default function BoardPage({ config }) {
       .filter(s => s.name.toLowerCase().includes(search.trim().toLowerCase()))
       .sort((a, b) => lastNameOf(a.name).localeCompare(lastNameOf(b.name)));
     return (
-      <div style={wrap}><div style={inner}>
+      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><div style={inner}>
         <Head config={config} />
         <h1 style={{ margin: 0, fontSize: "clamp(23px,4vw,32px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.2 }}>{prompt}</h1>
         <p style={{ margin: 0, fontSize: 16, color: MUTED }}>Pick your name to post.</p>
@@ -109,7 +111,7 @@ export default function BoardPage({ config }) {
 
   const mine = (p) => p.who === who;
   return (
-    <div style={wrap}><div style={inner}>
+    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><div style={inner}>
       <Head config={config} who={who} onOut={() => {
         setWho(null);
         try { localStorage.removeItem(REMEMBER); } catch { /* private mode */ }

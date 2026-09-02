@@ -27,56 +27,66 @@
 
 // ─── colour ───
 //
-// Warm, not cool. The engine ended up with three greys: #111827 on the class
-// site, #1c1917 on the dashboard and the game, #171310 on the repository. The
-// warm one is where the newest work kept landing, so the warm one wins and the
-// other two go away.
+// Every colour is a custom property now, so a student can change the theme and
+// the whole site follows without a re-render. The hexes live in themes.js, one
+// block per theme; this file is the names the rest of the engine reads.
 //
-// Every value is checked against all three surfaces below, not just white.
-// Checking only against white is how the two reds got here: both clear 4.5 on a
-// card and neither cleared it on the sunk surface the dashboard's panels use.
-// The number after each colour is its worst ratio of the three.
+// A surface sets `data-theme` on its root and drops `themeCSS()` into a style
+// tag. A surface that does neither gets Clean, because Clean is also on bare
+// `:root`.
 export const TEXT = {
-  primary: "#1c1917",   // 15.93:1
-  secondary: "#57534e", //  6.95:1
-  muted: "#6b655f",     //  5.24:1
+  primary: "var(--text-primary)",
+  secondary: "var(--text-secondary)",
+  muted: "var(--text-muted)",
 };
 
 export const LINE = {
-  soft: "#f0edea",      // hairline between rows
-  strong: "#e3ded8",    // input and button borders
-  ghost: "#c9c2ba",     // decorative only — never put text in this colour
+  soft: "var(--line-soft)",      // hairline between rows
+  strong: "var(--line-strong)",  // input and button borders
+  ghost: "var(--line-ghost)",    // decorative only — never put text in this colour
 };
 
 export const SURFACE = {
-  page: "#fafaf9",
-  card: "#fff",
-  sunk: "#f6f4f1",
+  page: "var(--surface-page)",
+  card: "var(--surface-card)",
+  sunk: "var(--surface-sunk)",
 };
 
-// State colours. Each one means exactly one thing, everywhere, forever.
+// State colours. Each one means exactly one thing, everywhere, in every theme.
 export const STATE = {
-  live: "#be123c",  // 5.73:1 — on the room screen right now. Never decorative.
-  ok: "#0f766e",    // 4.99:1 — done, ready, nothing to do
-  warn: "#b45309",  // 4.57:1 — needs attention before the problem lands
-  late: "#c81e1e",  // 5.23:1 — past due
+  live: "var(--state-live)",  // on the room screen right now. Never decorative.
+  ok: "var(--state-ok)",      // done, ready, nothing to do
+  warn: "var(--state-warn)",  // needs attention before the problem lands
+  late: "var(--state-late)",  // past due
 };
-
-// The two reds moved. `live` was #e11d48 and `late` was #dc2626, and both sat
-// at 4.28 and 4.40 on the sunk surface: passing on a card, failing in a panel,
-// which is exactly where both of them get used. Deep enough now to read
-// anywhere, and still far enough apart from each other to mean two things.
 
 // The room screen inverts on purpose: a projector in a lit room, where a white
-// page is a lamp pointed at thirty people. Its four values live here rather
-// than in that one file, so the surface that inverts is still inside the system.
-// Checked against STAGE, which is the only background any of them sit on.
+// page is a lamp pointed at thirty people. Each theme takes the wall somewhere
+// of its own.
 export const ROOM = {
-  stage: "#0f0d0c",
-  ink: "#f6f2ec",   // 17.38:1 on stage
-  dim: "#a79c92",   //  7.21:1 on stage
-  line: "#2b2622",  // decorative only
+  stage: "var(--room-stage)",
+  ink: "var(--room-ink)",
+  dim: "var(--room-dim)",
+  line: "var(--room-line)",
 };
+
+// A card is more than a background: the themes differ by border and shadow more
+// than by colour. Snapchat is 3px of black with a hard offset; Crashing Out
+// stacks two shadows; Clean is a hairline and nothing else.
+export const CARD = {
+  border: "var(--card-border)",
+  shadow: "var(--card-shadow)",
+  radius: "var(--card-radius)",
+};
+
+export const FONT = {
+  body: "var(--font-body)",
+  display: "var(--font-display)",
+  label: "var(--font-label)",
+  displayWeight: "var(--display-weight)",
+};
+
+export { THEMES, THEME_LABELS, THEME_DESCS, THEME, themeCSS, fontHref } from "./themes.js";
 
 // ─── type ───
 // Seven steps. The engine was using twenty sizes between 9 and 32, most of them

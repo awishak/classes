@@ -14,6 +14,7 @@ import { useHeadlines, liveSession, activeItem, pickTally } from "./headlines.js
 import { ENGINE_LIST } from "../config/registry.js";
 import PickMark from "./Pick.jsx";
 import * as TOKENS from "./tokens.js";
+import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -507,6 +508,7 @@ function Controls({ config }) {
 }
 
 export default function ClassroomView({ config }) {
+  const [theme] = useStudentTheme(config);
   const [live] = useLive(config.storageKey);
   const [data] = useClassData(config.storageKey);
 
@@ -559,7 +561,8 @@ export default function ClassroomView({ config }) {
   }, []);
 
   return (
-    <div ref={stageRef} style={{ position: "fixed", inset: 0, background: STAGE, overflow: "hidden", fontFamily: F }}>
+    <div ref={stageRef} data-theme={theme} style={{ position: "fixed", inset: 0, background: STAGE, overflow: "hidden", fontFamily: F }}>
+      <ThemeStyle theme={theme} />
       <style>{CSS}</style>
       {live === null ? (
         <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: DIM, fontFamily: MONO, fontSize: 13, letterSpacing: ".12em", textTransform: "uppercase" }}>

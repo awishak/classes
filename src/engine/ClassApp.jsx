@@ -24,6 +24,7 @@ import { RosterSummary, RosterDetail } from "./RosterCard.jsx";
 import { AssignmentsSummary, AssignmentsDetail, dueState, nextDue, ungradedCount } from "./AssignmentsCard.jsx";
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
+import { useStudentTheme, ThemeStyle, ThemePicker } from "./ThemeShell.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -337,7 +338,6 @@ function SignIn({ config, data, onSignedIn }) {
   return (
     <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, display: "flex", justifyContent: "center", padding: "48px 20px" }}>
       <style>{CSS}</style>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
       <div style={{ width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ fontSize: 13, color: TEXT_MUTED, fontWeight: 600 }}>{config.code} · {config.name}</div>
         <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, letterSpacing: "-.02em" }}>Who are you?</h1>
@@ -422,6 +422,9 @@ export default function ClassApp({ config, initialCard }) {
   //
   // Empty string means not previewing. The instructor flag is untouched, so
   // leaving the preview is one press.
+  // The student's theme. Their browser, not the class store: a theme is a
+  // preference about a screen rather than a fact about a class.
+  const [theme, pickTheme] = useStudentTheme(config);
   const [preview, setPreview] = useState("");
   // What the page draws as. The person is still the instructor; the page is
   // drawn the way the chosen student would get the page drawn.
@@ -611,6 +614,13 @@ export default function ClassApp({ config, initialCard }) {
     <Panel title="More">
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {moreCards.map(CardTile)}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
+          <span style={{ ...label, color: TEXT_MUTED }}>How this looks</span>
+          <p style={{ margin: 0, fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5 }}>
+            Your choice, on your screen. Nobody else in the class sees it.
+          </p>
+          <ThemePicker theme={theme} onPick={pickTheme} />
+        </div>
       </div>
     </Panel>
   );
@@ -656,9 +666,9 @@ export default function ClassApp({ config, initialCard }) {
   // ─── DESKTOP: top nav + side-by-side master/detail ───
   if (isDesktop) {
     return (
-      <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, "--ca-accent": a }}>
+      <div data-theme={theme} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a }}>
+        <ThemeStyle theme={theme} />
         <style>{CSS}</style>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
         <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
         {PreviewBar}
         <div style={{ background: "#fff", borderBottom: "1px solid " + BORDER }}>
@@ -666,6 +676,7 @@ export default function ClassApp({ config, initialCard }) {
             {Logo}
             {Nav}
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+              <ThemePicker theme={theme} onPick={pickTheme} compact />
               {ViewAs}
               {TeachLinks}
               {signedIn && !preview ? (
@@ -700,9 +711,9 @@ export default function ClassApp({ config, initialCard }) {
   // ─── MOBILE: single column, full-screen takeover, bottom tab bar ───
   const BAR_H = 72;
   return (
-    <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, paddingBottom: BAR_H + 12, "--ca-accent": a }}>
+    <div data-theme={theme} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, paddingBottom: BAR_H + 12, "--ca-accent": a }}>
+      <ThemeStyle theme={theme} />
       <style>{CSS}</style>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
 
       {/* compact top bar */}
       <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
@@ -712,6 +723,7 @@ export default function ClassApp({ config, initialCard }) {
           {openKey ? (
             <button className="ca-focus" onClick={() => go(null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 17, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: "0 4px 0 0" }}>← Back</button>
           ) : Logo}
+          <ThemePicker theme={theme} onPick={pickTheme} compact />
           {RoleToggle}
         </div>
       </div>

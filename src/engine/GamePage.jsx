@@ -22,6 +22,7 @@ import { useClassState } from "./store.js";
 import { GameAdmin, StudentAnswerView, TriviaPlayer, Accolades } from "./GameSystem.jsx";
 import { lastNameOf } from "./AskPage.jsx";
 import * as TOKENS from "./tokens.js";
+import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
 
 // The same tokens the rest of the engine uses.
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -86,6 +87,7 @@ function PickName({ config, students, onPick }) {
 // live, because a player in a live game has one thing to do; everything else
 // the week is running sits under it.
 export default function GamePage({ config }) {
+  const [theme] = useStudentTheme(config);
   const [data, take] = useClassState(config.storageKey);
   const REMEMBER = rememberKey(config);
   const [who, setWho] = useState(null);
@@ -101,13 +103,13 @@ export default function GamePage({ config }) {
     [data]);
 
   if (data === null) {
-    return <div style={wrap}><Head config={config} what="Game" />
+    return <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><Head config={config} what="Game" />
       <p style={{ margin: 0, fontSize: 17, color: MUTED }}>Reading the class.</p></div>;
   }
 
   if (!who) {
     return (
-      <div style={wrap}>
+      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} />
         <Head config={config} what="Game" />
         <PickName config={config} students={students} onPick={(n) => {
           setWho(n);
@@ -118,7 +120,7 @@ export default function GamePage({ config }) {
   }
 
   return (
-    <div style={wrap}>
+    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} />
       <Head config={config} who={who} what="Game" onOut={() => {
         setWho(null);
         try { localStorage.removeItem(REMEMBER); } catch { /* private mode */ }
@@ -138,16 +140,17 @@ export default function GamePage({ config }) {
 
 // Where I run it. Behind the instructor gate, like the dashboard.
 export function RunGamePage({ config }) {
+  const [theme] = useStudentTheme(config);
   const [data, take] = useClassState(config.storageKey);
   useEffect(() => { document.title = config.code + " — Run the game"; }, [config.code]);
 
   if (data === null) {
-    return <div style={wrap}><Head config={config} what="Run the game" />
+    return <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><Head config={config} what="Run the game" />
       <p style={{ margin: 0, fontSize: 17, color: MUTED }}>Reading the class.</p></div>;
   }
 
   return (
-    <div style={wrap}>
+    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} />
       <Head config={config} what="Run the game" />
       <GameAdmin config={config} data={data} setData={take} />
     </div>

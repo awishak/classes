@@ -469,7 +469,7 @@ export function GameAdmin({ config, data, setData }) {
                       <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{g.title || "Untitled"}</div>
                       <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{numQs} question{numQs !== 1 ? "s" : ""} · {numTeams} team{numTeams !== 1 ? "s" : ""}</div>
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: phaseColor, padding: "3px 8px", borderRadius: 6, background: phaseColor + "15", textTransform: "uppercase", letterSpacing: "0.05em" }}>{phaseLabel}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: phaseColor, padding: "3px 8px", borderRadius: 6, background: "color-mix(in srgb, " + phaseColor + " 10%, transparent)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{phaseLabel}</span>
                   </div>
                 </button>
               );
@@ -1238,7 +1238,7 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
               return (
                 <div key={q.id} style={{ marginBottom: 8, position: "relative" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: statusColor, background: statusColor + "15", padding: "2px 6px", borderRadius: 4 }}>{status}</span>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: statusColor, background: "color-mix(in srgb, " + statusColor + " 10%, transparent)", padding: "2px 6px", borderRadius: 4 }}>{status}</span>
                     {touched && <span style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic" }}>(can&apos;t delete — already used)</span>}
                   </div>
                   <QuestionRow
@@ -1895,7 +1895,7 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
           {!activity.scored && (
             <button onClick={() => { if (window.confirm("Close the game and score it now? Points will be posted to the leaderboard.")) onScore(); }} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 13 }}>Close and Score</button>
           )}
-          <button onClick={() => { if (window.confirm("Close the game WITHOUT scoring? No points will be awarded.")) endGame(); }} style={{ ...pill, background: "#fff", color: RED, border: "1px solid " + RED + "44", fontSize: 13 }}>Close without Scoring</button>
+          <button onClick={() => { if (window.confirm("Close the game WITHOUT scoring? No points will be awarded.")) endGame(); }} style={{ ...pill, background: "#fff", color: RED, border: "1px solid color-mix(in srgb, " + RED + " 28%, transparent)", fontSize: 13 }}>Close without Scoring</button>
         </div>
 
         {/* Question controls */}
@@ -1909,7 +1909,7 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
               {qs[currentQ].text || (type === "tot" ? qs[currentQ].prompt : "(no text)")}
               <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {qs[currentQ].options.map((opt, oi) => (
-                  <span key={oi} style={{ fontSize: 13, padding: "4px 10px", borderRadius: 8, background: qs[currentQ].correct === oi ? "#ecfdf5" : "#f4f4f5", color: qs[currentQ].correct === oi ? GREEN : TEXT_SECONDARY, fontWeight: qs[currentQ].correct === oi ? 700 : 400, border: "1px solid " + (qs[currentQ].correct === oi ? GREEN + "40" : BORDER_STRONG) }}>
+                  <span key={oi} style={{ fontSize: 13, padding: "4px 10px", borderRadius: 8, background: qs[currentQ].correct === oi ? "#ecfdf5" : "#f4f4f5", color: qs[currentQ].correct === oi ? GREEN : TEXT_SECONDARY, fontWeight: qs[currentQ].correct === oi ? 700 : 400, border: "1px solid " + (qs[currentQ].correct === oi ? "color-mix(in srgb, " + GREEN + " 25%, transparent)" : BORDER_STRONG) }}>
                     {String.fromCharCode(65 + oi)}. {opt}
                   </span>
                 ))}
@@ -1939,7 +1939,7 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
             <div key={qi} style={{
               width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 13, fontWeight: 800,
-              background: isLocked(qi) ? GREEN + "20" : qi === currentQ ? AMBER + "20" : "#f4f4f5",
+              background: isLocked(qi) ? "color-mix(in srgb, " + GREEN + " 13%, transparent)" : qi === currentQ ? "color-mix(in srgb, " + AMBER + " 13%, transparent)" : "#f4f4f5",
               color: isLocked(qi) ? GREEN : qi === currentQ ? AMBER : BORDER_STRONG,
               border: qi === currentQ ? "2px solid #b45309" : "1px solid transparent",
             }}>{qi + 1}</div>
@@ -2414,7 +2414,7 @@ export function StudentAnswerView({ config, data, setData, userName }) {
                           <span style={{ fontSize: 13, fontWeight: 700, color: textColor, minWidth: 16 }}>{letters[oi]}.</span>
                           <span style={{ fontSize: 13, fontWeight: 500, color: textColor, flex: 1 }}>{opt}</span>
                           {isMine && <span style={{ fontSize: 12, fontWeight: 700, color: textColor, padding: "2px 6px", borderRadius: 4, background: "rgba(0,0,0,0.05)" }}>YOU</span>}
-                          {isCorrectOpt && <span style={{ fontSize: 12, fontWeight: 700, color: "#065f46", padding: "2px 6px", borderRadius: 4, background: GREEN + "30" }}>CORRECT</span>}
+                          {isCorrectOpt && <span style={{ fontSize: 12, fontWeight: 700, color: "#065f46", padding: "2px 6px", borderRadius: 4, background: "color-mix(in srgb, " + GREEN + " 19%, transparent)" }}>CORRECT</span>}
                           <span style={{ fontSize: 12, fontWeight: 700, color: textColor }}>{pct}%</span>
                         </div>
                       </div>
@@ -2486,7 +2486,7 @@ export function StudentAnswerView({ config, data, setData, userName }) {
                           <span style={{ fontSize: 13, fontWeight: 700, color: textColor, minWidth: 16 }}>{letters[oi]}.</span>
                           <span style={{ fontSize: 13, fontWeight: 500, color: textColor, flex: 1 }}>{opt}</span>
                           {isMine && <span style={{ fontSize: 12, fontWeight: 700, color: textColor, padding: "2px 6px", borderRadius: 4, background: "rgba(0,0,0,0.05)" }}>YOU</span>}
-                          {isCorrectOpt && <span style={{ fontSize: 12, fontWeight: 700, color: "#065f46", padding: "2px 6px", borderRadius: 4, background: GREEN + "30" }}>CORRECT</span>}
+                          {isCorrectOpt && <span style={{ fontSize: 12, fontWeight: 700, color: "#065f46", padding: "2px 6px", borderRadius: 4, background: "color-mix(in srgb, " + GREEN + " 19%, transparent)" }}>CORRECT</span>}
                           <span style={{ fontSize: 12, fontWeight: 700, color: textColor }}>{pct}%</span>
                         </div>
                       </div>
