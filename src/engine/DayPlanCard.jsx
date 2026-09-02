@@ -19,13 +19,14 @@ import { normSlot, dayPlanFor, sectionsOf } from "./dayplan.js";
 import { typeOf } from "./blocks.js";
 import { hostOf } from "./links.js";
 import PickMark from "./Pick.jsx";
+import * as TOKENS from "./tokens.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
-const TEXT_PRIMARY = "#111827";
-const TEXT_SECONDARY = "#4b5563";
-const TEXT_MUTED = "#646b75"; // 4.85:1 at worst, on every background we use.
-const BORDER = "#eef0f2";
-const BORDER_STRONG = "#e5e7eb";
+const TEXT_PRIMARY = TOKENS.TEXT.primary;
+const TEXT_SECONDARY = TOKENS.TEXT.secondary;
+const TEXT_MUTED = TOKENS.TEXT.muted; // 4.85:1 at worst, on every background we use.
+const BORDER = TOKENS.LINE.soft;
+const BORDER_STRONG = TOKENS.LINE.strong;
 const TAP = 44;
 
 const label = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };

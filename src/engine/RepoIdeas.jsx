@@ -11,15 +11,16 @@
 // the work starts, without either of us re-deriving what the numbers meant.
 
 import { useState, useEffect } from "react";
+import * as TOKENS from "./tokens.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
-const BG = "#faf9f7";
-const SURFACE = "#f5f4f1";
-const TEXT = "#171310";
-const SECOND = "#3f4550";
-const MUTED = "#5b6068";
-const BORDER = "rgba(23,19,16,.12)";
+const BG = TOKENS.SURFACE.page;
+const SURFACE = TOKENS.SURFACE.sunk;
+const TEXT = TOKENS.TEXT.primary;
+const SECOND = TOKENS.TEXT.secondary;
+const MUTED = TOKENS.TEXT.muted;
+const BORDER = TOKENS.LINE.soft;
 
 // How much work, honestly. Small is a sitting, medium is a session, big is a
 // session that spills.

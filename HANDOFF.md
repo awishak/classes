@@ -46,6 +46,34 @@ everything that row can do — done, nest under the row above, write the
 headline, put on today's readings, take off the day. Only Cast sits out on the
 right.
 
+## One design system
+
+`src/engine/tokens.js` is the palette, the type scale, the 4px spacing grid, the
+radii and the two hit targets, and every surface reads from that file. For a
+while the file existed and **nothing imported the module**, so eighteen files
+each declared their own palette and the app had three greys for body text:
+`#111827` on the class site, `#1c1917` on the dashboard and the game, `#171310`
+on the repository. Nobody chose three. Each file picked one because there was
+nothing to point at from inside the file.
+
+The warm grey won, because that is where the newest work kept landing. 104
+constants across 18 files now come off the tokens, through a namespace import,
+so no local name can ever collide with a token name and the diff touches
+declarations rather than the thousands of places that use them.
+
+Two colours moved. `live` was `#e11d48` and `late` was `#dc2626`, and the old
+contrast pass only ever checked against white, where both pass. On the sunk
+surface the dashboard's panels use, they were 4.28 and 4.40, and a panel is
+exactly where both get used. They are `#be123c` and `#c81e1e` now, checked
+against a card, the page and the sunk panel.
+
+The room screen inverts on purpose, so its four values are `ROOM` in the same
+file, checked against the stage rather than against white.
+
+**Still local:** colour written inline inside a style object. `check-tokens`
+holds the constants at the top of a file, because those are what set a surface's
+character and those are what drifted. Font sizes are not held to `TYPE` yet.
+
 ## The ideas that hold it together
 
 - **Blocks.** Content is stored once and referenced everywhere. Editing a
@@ -75,6 +103,8 @@ right.
 | `check-contrast` | a colour under 4.5:1 |
 | `check-voice` | a clause closing on a bare "it", an em dash in UI copy |
 | `check-jsx-text` | an escape sequence stranded in JSX text |
+| `check-css` | a stylesheet that lost a rule |
+| `check-tokens` | a surface with a colour of its own, or a token that fails where it sits |
 | `smoke` | 134 surfaces rendered server-side, plus a game played through |
 
 Each was written after the matching mistake reached production. Do not remove

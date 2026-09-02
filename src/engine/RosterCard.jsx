@@ -6,14 +6,15 @@
 
 import { useState } from "react";
 import { computeGrade } from "./AssignmentsCard.jsx";
+import * as TOKENS from "./tokens.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
-const TEXT_PRIMARY = "#111827";
-const TEXT_SECONDARY = "#4b5563";
-const TEXT_MUTED = "#646b75"; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
-const BORDER = "#eef0f2";
-const BORDER_STRONG = "#e5e7eb";
-const BG = "#fafaf9";
+const TEXT_PRIMARY = TOKENS.TEXT.primary;
+const TEXT_SECONDARY = TOKENS.TEXT.secondary;
+const TEXT_MUTED = TOKENS.TEXT.muted; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
+const BORDER = TOKENS.LINE.soft;
+const BORDER_STRONG = TOKENS.LINE.strong;
+const BG = TOKENS.SURFACE.page;
 const TAP = 44;
 
 const label = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };

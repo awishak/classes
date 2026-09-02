@@ -7,10 +7,11 @@
     "dev": "vite",
     "build": "npm run check && npm run smoke && vite build",
     "preview": "vite preview",
-    "check": "node scripts/check-refs.mjs && node scripts/check-handlers.mjs && node scripts/check-contrast.mjs && node scripts/check-voice.mjs && node scripts/check-jsx-text.mjs && node scripts/check-css.mjs",
+    "check": "node scripts/check-refs.mjs && node scripts/check-handlers.mjs && node scripts/check-contrast.mjs && node scripts/check-voice.mjs && node scripts/check-jsx-text.mjs && node scripts/check-css.mjs && node scripts/check-tokens.mjs",
     "smoke": "esbuild scripts/smoke.jsx --bundle --platform=node --format=esm --packages=external --jsx=automatic --outfile=node_modules/.smoke.mjs --log-level=error --loader:.js=jsx && node node_modules/.smoke.mjs",
     "contrast": "node scripts/check-contrast.mjs",
     "voice": "node scripts/check-voice.mjs",
+    "tokens": "node scripts/check-tokens.mjs",
     "tidy": "esbuild scripts/tidy-report.mjs --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.tidy-report.mjs --log-level=error --loader:.js=jsx --loader:.jsx=jsx && node node_modules/.tidy-report.mjs"
   },
   "dependencies": {

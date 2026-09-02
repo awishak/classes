@@ -14,13 +14,14 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { loadBank, searchBank, isReady, asChoice, asFree } from "./qbank.js";
+import * as TOKENS from "./tokens.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
-const INK = "#111827";
-const INK2 = "#4b5563";
-const MUTED = "#646b75";
-const LINE = "#e5e7eb";
-const GREEN = "#047857";
+const INK = TOKENS.TEXT.primary;
+const INK2 = TOKENS.TEXT.secondary;
+const MUTED = TOKENS.TEXT.muted;
+const LINE = TOKENS.LINE.strong;
+const GREEN = TOKENS.STATE.ok;
 
 export default function QuestionPicker({ storageKey, mode, onAdd, onClose }) {
   const [bank, setBank] = useState(null);

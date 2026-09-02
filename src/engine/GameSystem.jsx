@@ -31,6 +31,7 @@ import QuestionPicker from "./QuestionPicker.jsx";
 import { lastNameOf } from "./AskPage.jsx";
 import { scoreWeek, perfectRuns, mergeAnswers } from "./game.js";
 import { ENGINE } from "../config/registry.js";
+import * as TOKENS from "./tokens.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 // The class this module is rendering. Set by the entry points as they mount.
@@ -49,14 +50,14 @@ const bankKey = () => CFG?.storageKey || "";
 // muted grey at 2.5:1, twelve-pixel radii and a system font while every other
 // surface here is Outfit. Two of those were failures the contrast check would
 // have caught if the check had ever been pointed at the forks.
-const GREEN = "#0f766e";   // 5.4:1 on white. #10b981 was 2.3:1.
-const RED = "#e11d48";     // the same red the rest of the engine calls live
-const TEXT_PRIMARY = "#1c1917";
-const TEXT_SECONDARY = "#57534e";
-const TEXT_MUTED = "#6b655f";  // 5.4:1 on white. #a8a29e was 2.5:1.
-const BORDER = "#f0edea";
-const BORDER_STRONG = "#e3ded8";
-const AMBER = "#b45309";   // 4.9:1 on white. #b45309 was 3.2:1.
+const GREEN = TOKENS.STATE.ok;   // 5.4:1 on white. #10b981 was 2.3:1.
+const RED = TOKENS.STATE.live;     // the same red the rest of the engine calls live
+const TEXT_PRIMARY = TOKENS.TEXT.primary;
+const TEXT_SECONDARY = TOKENS.TEXT.secondary;
+const TEXT_MUTED = TOKENS.TEXT.muted;  // 5.4:1 on white. #a8a29e was 2.5:1.
+const BORDER = TOKENS.LINE.soft;
+const BORDER_STRONG = TOKENS.LINE.strong;
+const AMBER = TOKENS.STATE.warn;   // 4.9:1 on white. #b45309 was 3.2:1.
 const HIT = 36;            // the running side, where a trackpad is under my hands
 const TAP = 44;            // the playing side, where a phone is
 

@@ -11,6 +11,8 @@ Tag each item with one area so it stays skimmable:
 
 ## Open
 
+- `[software]` **Colour inside style objects is still local.** `check-tokens` holds the constants at the top of each engine file. The hexes written inline in style objects are not held to anything yet. Same for font sizes against `TYPE`.
+
 - `[software]` **Click through a game on a real phone.** Steps are in [testing-a-game.md](testing-a-game.md). The rules are played through by the build and every surface renders, and neither of those is a phone answering over the realtime channel. Do that before running a game in front of a room.
 - `[software]` **Team Trivia's live flow has no test beyond rendering.** Rounds, reveals and team scoring still live inside click handlers. Pull them into `src/engine/game.js` the way the weekly game and Ten on Ten went.
 

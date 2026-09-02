@@ -51,15 +51,16 @@ import { roomKeys, roomItems, roomCounts, blockFromRoom } from "./room.js";
 import { Seeds, Room, BlockTypes } from "./RepoMore.jsx";
 import { termOf, termCounts, nearestDay } from "./term.js";
 import { genId } from "../utils.jsx";
+import * as TOKENS from "./tokens.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
-const BG = "#faf9f7";
-const SURFACE = "#f5f4f1";
-const TEXT = "#171310";
-const SECOND = "#3f4550";
-const MUTED = "#5b6068";
-const BORDER = "rgba(23,19,16,.12)";
+const BG = TOKENS.SURFACE.page;
+const SURFACE = TOKENS.SURFACE.sunk;
+const TEXT = TOKENS.TEXT.primary;
+const SECOND = TOKENS.TEXT.secondary;
+const MUTED = TOKENS.TEXT.muted;
+const BORDER = TOKENS.LINE.soft;
 const TAP = 44;
 
 // The columns, in the order they read. `sort` is what the column sorts on, so

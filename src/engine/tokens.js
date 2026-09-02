@@ -26,32 +26,56 @@
 //    and HIT is the pointer floor for the dashboard.
 
 // ─── colour ───
-// Every value here is checked against white. The number after each is its
-// contrast ratio; anything used for text is above 4.5.
+//
+// Warm, not cool. The engine ended up with three greys: #111827 on the class
+// site, #1c1917 on the dashboard and the game, #171310 on the repository. The
+// warm one is where the newest work kept landing, so the warm one wins and the
+// other two go away.
+//
+// Every value is checked against all three surfaces below, not just white.
+// Checking only against white is how the two reds got here: both clear 4.5 on a
+// card and neither cleared it on the sunk surface the dashboard's panels use.
+// The number after each colour is its worst ratio of the three.
 export const TEXT = {
-  primary: "#111827",   // 17.74:1
-  secondary: "#4b5563", //  7.56:1
-  muted: "#646b75",     //  5.38 on card, 5.15 on page, 4.85 on sunk. All pass.
+  primary: "#1c1917",   // 15.93:1
+  secondary: "#57534e", //  6.95:1
+  muted: "#6b655f",     //  5.24:1
 };
 
 export const LINE = {
-  soft: "#eef0f2",      // hairline between rows
-  strong: "#e5e7eb",    // input and button borders
-  ghost: "#9ca3af",     // decorative only — never put text in this colour
+  soft: "#f0edea",      // hairline between rows
+  strong: "#e3ded8",    // input and button borders
+  ghost: "#c9c2ba",     // decorative only — never put text in this colour
 };
 
 export const SURFACE = {
   page: "#fafaf9",
   card: "#fff",
-  sunk: "#f4f3f1",
+  sunk: "#f6f4f1",
 };
 
 // State colours. Each one means exactly one thing, everywhere, forever.
 export const STATE = {
-  live: "#e11d48",  // on the room screen right now. Never decorative.
-  ok: "#0f766e",    // done, ready, nothing to do
-  warn: "#b45309",  // needs attention before it bites
-  late: "#dc2626",  // past due
+  live: "#be123c",  // 5.73:1 — on the room screen right now. Never decorative.
+  ok: "#0f766e",    // 4.99:1 — done, ready, nothing to do
+  warn: "#b45309",  // 4.57:1 — needs attention before the problem lands
+  late: "#c81e1e",  // 5.23:1 — past due
+};
+
+// The two reds moved. `live` was #e11d48 and `late` was #dc2626, and both sat
+// at 4.28 and 4.40 on the sunk surface: passing on a card, failing in a panel,
+// which is exactly where both of them get used. Deep enough now to read
+// anywhere, and still far enough apart from each other to mean two things.
+
+// The room screen inverts on purpose: a projector in a lit room, where a white
+// page is a lamp pointed at thirty people. Its four values live here rather
+// than in that one file, so the surface that inverts is still inside the system.
+// Checked against STAGE, which is the only background any of them sit on.
+export const ROOM = {
+  stage: "#0f0d0c",
+  ink: "#f6f2ec",   // 17.38:1 on stage
+  dim: "#a79c92",   //  7.21:1 on stage
+  line: "#2b2622",  // decorative only
 };
 
 // ─── type ───

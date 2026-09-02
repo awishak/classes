@@ -13,13 +13,14 @@ import { usePoll, tally, written, isFreeForm } from "./poll.js";
 import { useHeadlines, liveSession, activeItem, pickTally } from "./headlines.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import PickMark from "./Pick.jsx";
+import * as TOKENS from "./tokens.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
-const STAGE = "#0f0d0c";
-const INK = "#f6f2ec";
-const DIM = "#a79c92";
-const LINE = "#2b2622";
+const STAGE = TOKENS.ROOM.stage;
+const INK = TOKENS.ROOM.ink;
+const DIM = TOKENS.ROOM.dim;
+const LINE = TOKENS.ROOM.line;
 
 // Keyframes live in a style tag because the rest of the engine styles inline.
 const CSS = `

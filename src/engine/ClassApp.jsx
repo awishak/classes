@@ -23,15 +23,16 @@ import { ScheduleSummary, ScheduleDetail } from "./ScheduleCard.jsx";
 import { RosterSummary, RosterDetail } from "./RosterCard.jsx";
 import { AssignmentsSummary, AssignmentsDetail, dueState, nextDue, ungradedCount } from "./AssignmentsCard.jsx";
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
+import * as TOKENS from "./tokens.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
-const TEXT_PRIMARY = "#111827";
-const TEXT_SECONDARY = "#4b5563";
-const TEXT_MUTED = "#646b75"; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
-const BORDER = "#eef0f2";
-const BORDER_STRONG = "#e5e7eb";
-const BG = "#fafaf9";
-const LIVE = "#e11d48";
+const TEXT_PRIMARY = TOKENS.TEXT.primary;
+const TEXT_SECONDARY = TOKENS.TEXT.secondary;
+const TEXT_MUTED = TOKENS.TEXT.muted; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
+const BORDER = TOKENS.LINE.soft;
+const BORDER_STRONG = TOKENS.LINE.strong;
+const BG = TOKENS.SURFACE.page;
+const LIVE = TOKENS.STATE.live;
 
 // ─── small style helpers ───
 // Following Apple HIG: body text ~15-17px, labels no smaller than 12px,

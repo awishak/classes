@@ -7,15 +7,16 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { genId } from "../utils.jsx";
+import * as TOKENS from "./tokens.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
-const INK = "#111827";
-const INK2 = "#4b5563";
-const MUTED = "#646b75"; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
-const LINE = "#eef0f2";
-const LINE2 = "#e5e7eb";
-const SURFACE_2 = "#f4f3f1";
+const INK = TOKENS.TEXT.primary;
+const INK2 = TOKENS.TEXT.secondary;
+const MUTED = TOKENS.TEXT.muted; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
+const LINE = TOKENS.LINE.soft;
+const LINE2 = TOKENS.LINE.strong;
+const SURFACE_2 = TOKENS.SURFACE.sunk;
 
 const label = { fontFamily: MONO, fontSize: 12, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
 const mini = { minHeight: 34, padding: "0 12px", borderRadius: 8, border: "1px solid " + LINE2, background: "#fff", color: INK2, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };

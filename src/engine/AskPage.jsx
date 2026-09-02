@@ -12,15 +12,16 @@ import { useClassData } from "./store.js";
 import { sendSignInEmail, verifyEmailCode, emailFromRedirect, loadEmailMap, saveEmailName } from "./auth.js";
 import { usePoll, openRound, isFreeForm } from "./poll.js";
 import { useHeadlines, liveSession, activeItem } from "./headlines.js";
+import * as TOKENS from "./tokens.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
-const TEXT_PRIMARY = "#111827";
-const TEXT_SECONDARY = "#4b5563";
-const TEXT_MUTED = "#646b75"; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
-const BORDER = "#eef0f2";
-const BORDER_STRONG = "#e5e7eb";
-const BG = "#fafaf9";
-const RED = "#dc2626";
+const TEXT_PRIMARY = TOKENS.TEXT.primary;
+const TEXT_SECONDARY = TOKENS.TEXT.secondary;
+const TEXT_MUTED = TOKENS.TEXT.muted; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
+const BORDER = TOKENS.LINE.soft;
+const BORDER_STRONG = TOKENS.LINE.strong;
+const BG = TOKENS.SURFACE.page;
+const RED = TOKENS.STATE.late;
 
 const input = { width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: 48, background: "#fff", color: TEXT_PRIMARY };
 const bigBtn = (bg) => ({ ...input, minHeight: 48, cursor: "pointer", fontWeight: 600, border: "none", background: bg, color: "#fff", textAlign: "center" });

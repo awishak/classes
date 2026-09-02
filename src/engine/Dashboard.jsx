@@ -33,6 +33,7 @@ import { minutesLeft, sittingLength } from "./meets.js";
 import { FACES, SLOTS, readFonts, fontVars, writeFont, resetFonts, readBold, writeBold } from "./fonts.js";
 import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, setScheduleItemClaim, setScheduleItemNote, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
+import * as TOKENS from "./tokens.js";
 
 // Six items at 38px, plus the padding: the tallest a row menu gets. The flip
 // measures against this rather than against the menu that is about to open,
@@ -45,16 +46,16 @@ const defaultHue = (type) => colorOfType(null, type);
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
-const TEXT_PRIMARY = "#1c1917";
-const TEXT_SECONDARY = "#57534e";
-const TEXT_MUTED = "#6b655f"; // warm, and 5.4:1 on white — comfortably past AA.
-const BORDER = "#f0edea";
-const BORDER_STRONG = "#e3ded8";
-const BG = "#fafaf9";
-const SURFACE_2 = "#f6f4f1";
-const LIVE = "#e11d48";
-const OK = "#0f766e";
-const WARN = "#b45309";
+const TEXT_PRIMARY = TOKENS.TEXT.primary;
+const TEXT_SECONDARY = TOKENS.TEXT.secondary;
+const TEXT_MUTED = TOKENS.TEXT.muted; // warm, and 5.4:1 on white — comfortably past AA.
+const BORDER = TOKENS.LINE.soft;
+const BORDER_STRONG = TOKENS.LINE.strong;
+const BG = TOKENS.SURFACE.page;
+const SURFACE_2 = TOKENS.SURFACE.sunk;
+const LIVE = TOKENS.STATE.live;
+const OK = TOKENS.STATE.ok;
+const WARN = TOKENS.STATE.warn;
 const TAP = 44;  // student-facing surfaces: students are on phones
 const HIT = 36;  // this screen: a trackpad under my hands, where density is the point
 

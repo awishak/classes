@@ -21,13 +21,14 @@ import { useState, useEffect, useMemo } from "react";
 import { useClassState } from "./store.js";
 import { GameAdmin, StudentAnswerView, TriviaPlayer, Accolades } from "./GameSystem.jsx";
 import { lastNameOf } from "./AskPage.jsx";
+import * as TOKENS from "./tokens.js";
 
 // The same tokens the rest of the engine uses.
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
-const BG = "#fafaf9";
-const TEXT = "#1c1917";
-const MUTED = "#6b655f";
-const BORDER = "#e3ded8";
+const BG = TOKENS.SURFACE.page;
+const TEXT = TOKENS.TEXT.primary;
+const MUTED = TOKENS.TEXT.muted;
+const BORDER = TOKENS.LINE.strong;
 const TAP = 44;
 
 const wrap = { minHeight: "100vh", background: BG, fontFamily: F, color: TEXT,

@@ -14,14 +14,15 @@ import { useClassData } from "./store.js";
 import { useBoards, postsOf, idForPrompt } from "./boards.js";
 import { useLive } from "./live.js";
 import { lastNameOf } from "./AskPage.jsx";
+import * as TOKENS from "./tokens.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
-const BG = "#faf9f7";
-const TEXT = "#171310";
-const MUTED = "#5b6068";
-const BORDER = "rgba(23,19,16,.12)";
-const LIVE = "#e11d48";
+const BG = TOKENS.SURFACE.page;
+const TEXT = TOKENS.TEXT.primary;
+const MUTED = TOKENS.TEXT.muted;
+const BORDER = TOKENS.LINE.soft;
+const LIVE = TOKENS.STATE.live;
 const TAP = 44;
 
 export default function BoardPage({ config }) {

@@ -47,6 +47,34 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep2e", date: "Wednesday, September 2 \u00b7 late", title: "The design system existed and no file imported the module",
+    blurb: "src/engine/tokens.js has been in the repository since 25 August: the palette with a contrast ratio written beside every colour, a seven-step type scale, a 4px grid, the two hit targets and the reasoning for splitting them. Nothing imported the module. Not one file. So eighteen surfaces each declared a palette of their own.",
+    groups: [
+      { name: "Three greys nobody chose", items: [
+        ["Body text was three different colours", "#111827 on the class site, #1c1917 on the dashboard and the game, #171310 on the repository. The page behind them was two. Nobody decided that; each file just picked one, because from inside a file there was nothing to point at."],
+        ["The warm grey wins", "That is where the newest work kept landing, and the dashboard's own comment already said warm. 104 constants across 18 files come off the tokens now."],
+        ["A namespace import, so nothing can collide", "Three files already had a constant called TEXT and two had one called SURFACE. Importing the groups by name would have shadowed them. The whole file arrives as TOKENS instead, and every local name stays exactly as it was, which is why the diff touches declarations and not the thousands of places that use them."],
+        ["The room screen is in the system, not outside it", "It inverts on purpose: a projector in a lit room, where a white page is a lamp pointed at thirty people. Its four values sit in tokens.js as ROOM and are checked against the stage rather than against white."],
+      ] },
+      { name: "Two reds that had never been checked properly", items: [
+        ["The old pass only ever checked against white", "Which is where the live red and the late red passed, at 4.70 and 4.83. On the sunk surface the dashboard's panels use they were 4.28 and 4.40, and a panel is exactly where both get used."],
+        ["Deep enough to read anywhere", "Live is #be123c at 5.73 and late is #c81e1e at 5.23, worst case across a card, the page and a sunk panel. Still far enough apart to mean two things."],
+      ] },
+      { name: "A check that holds both", items: [
+        ["No surface keeps a colour of its own", "A top-level colour constant in an engine file has to come from tokens.js. The check found nine more than the sweep did: LATE and SOON on assignments, three copies of LINE2, and SURFACE and SECOND twice over in the repository."],
+        ["Every token reads where the token sits", "Each one against a card, the page and the sunk panel, and the room screen's two against the stage."],
+        ["Both halves were broken on purpose", "A rogue colour in BoardPage, and the old failing grey put back into the tokens. Both failed the build with the file and the line."],
+      ] },
+    ],
+    note: {
+      title: "Not held yet",
+      lines: [
+        "Colour written inline inside a style object. The check holds the constants at the top of a file, because those are what set a surface's character and those are what drifted.",
+        "Font sizes against the seven-step scale. The game system alone had a hundred and two sizes under twelve pixels this morning.",
+      ],
+    },
+  },
+  {
     id: "sep2d", date: "Wednesday, September 2 \u00b7 night", title: "One tap is the answer, and a write cannot take somebody else's",
     blurb: "Andrew: when one person would submit their answer, it would clear everyone else's. The class store is one JSON blob, every screen writes the whole blob, and nothing re-read before writing. So the last write won and everything that had arrived since that screen last synced was gone.",
     groups: [
