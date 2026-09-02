@@ -8,6 +8,8 @@ import ClassApp from "./engine/ClassApp.jsx";
 import Dashboard from "./engine/Dashboard.jsx";
 import ClassroomView from "./engine/ClassroomView.jsx";
 import BoardPage from "./engine/BoardPage.jsx";
+import GamePage, { RunGamePage } from "./engine/GamePage.jsx";
+import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
 import AskPage from "./engine/AskPage.jsx";
@@ -156,6 +158,13 @@ export default function App() {
     if (presenterClass === "comm118") return <TriviaPresenter118 gameId={presenterGameId} classKey="comm118" />;
     return <TriviaPresenter4 gameId={presenterGameId} classKey="comm4" />;
   }
+  // The engine's presenter. Its own parameter name, because `presenter` still
+  // belongs to the frozen forks and the two read different stores under the
+  // same class id.
+  const engineGameId = params.get("game");
+  if (engineGameId && presenterClass && ENGINE[presenterClass]) {
+    return <EnginePresenter gameId={engineGameId} classKey={presenterClass} />;
+  }
 
   if (path === "/plan" || path === "/plan/") {
     return <PlanPage />;
@@ -185,7 +194,7 @@ export default function App() {
 
   // Live teaching surfaces: /<class>/dashboard (me), /<class>/today (the room
   // screen), /<class>/ask (where the room screen's QR sends students).
-  const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask|board)\/?$/);
+  const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask|board|game|rungame)\/?$/);
   if (live && ENGINE[live[1]]) {
     const cfg = ENGINE[live[1]];
     if (live[2] === "dashboard") {
@@ -195,8 +204,16 @@ export default function App() {
         </InstructorGate>
       );
     }
+    if (live[2] === "rungame") {
+      return (
+        <InstructorGate what={cfg.code + " game"}>
+          <RunGamePage key={cfg.id} config={cfg} />
+        </InstructorGate>
+      );
+    }
     if (live[2] === "today") return <ClassroomView key={cfg.id} config={cfg} />;
     if (live[2] === "board") return <BoardPage key={cfg.id} config={cfg} />;
+    if (live[2] === "game") return <GamePage key={cfg.id} config={cfg} />;
     return <AskPage key={cfg.id} config={cfg} />;
   }
 

@@ -11,6 +11,9 @@ Tag each item with one area so it stays skimmable:
 
 ## Open
 
+- `[software]` **Play a game end to end on the engine.** The game system is ported and every surface renders under test, but no game has been played through from setup to scoring on a real phone. Do that before running one in front of a room. Ported 2026-09-02.
+- `[software]` **The game surfaces do not look like the engine.** They came across wearing `styles.jsx` and the old hub's themes. Restyle onto the engine's stylesheet.
+
 - `[software]` **Roster filter for a class with two sections.** COMM 3 meets twice on the same day and stays one class rather than two. A student belongs to a section, and the surfaces made of people filter down to the section sitting in the room: the roster, attendance, discussion boards, groups. Everything else stays single, so changing a day plan, an assignment or a block once gives both sections the change. Decided 2026-09-02, not built.
 
 ### Fall 2026 LMS rebuild
@@ -45,6 +48,7 @@ Submission baseline: students submit **links** today and you see them in the LMS
 #### Architecture: shared-source rebuild + template class
 
 - `[software]` **One source of truth for all classes (config-driven, "1b").** One shared app renders **any** class from a **config object** (schedule, assignments, roster, theme, which cards are enabled, content). CSS and all logic live in common files; a class is data, not code. Update once, every class updates. Today classes are forked (`Comm118/Comm2/Comm4`, per-class game + grades files); that goes away.
+- `[software]` ~~**One source of truth for the game system.**~~ Done 2026-09-02: `src/engine/GameSystem.jsx` replaces the three forked copies. The forked files stay frozen and still hold their term of data.
 - `[software]` **All components everywhere, toggled by admin.** Every class includes every component; the instructor admin page enables/disables them per class (e.g. turn off Leaderboard). No per-class forks of features.
 - `[software]` **COMM 999 template.** Build a `COMM 999` off the current COMM 118 as the canonical Fall 2026 template. Build it on top of the shared engine so it proves the shared model works (not another fork).
 

@@ -17,9 +17,11 @@ import Dashboard, {
   AnswersPanel, BoardsPanel, StockedPanel, AssignmentsPanel, CommandBar, Readings, IdeasPanel,
   ColorsSheet, NoteSheet, ShortcutSheet,
 } from "../src/engine/Dashboard.jsx";
-import ClassroomView from "../src/engine/ClassroomView.jsx";
+import ClassroomView, { Content as CastContent } from "../src/engine/ClassroomView.jsx";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
+import GamePage, { RunGamePage } from "../src/engine/GamePage.jsx";
+import { GameAdmin, StudentAnswerView, TriviaPlayer, TriviaPresenter, Accolades, ReboundPanel } from "../src/engine/GameSystem.jsx";
 import { DayPlanSummary, DayPlanDetail, rowsOf, countRows } from "../src/engine/DayPlanCard.jsx";
 import { FREEFORM } from "../src/engine/dayplan.js";
 import { weekdayOf } from "../src/engine/schedule.js";
@@ -152,10 +154,10 @@ cases.push(["Questions", <QuestionsPanel items={[{ id: "q", text: "why", who: "A
 const aBoard = { id: "b1", prompt: "What did you notice?", at: Date.now(), closed: false,
   posts: [{ id: "p1", who: "A Student", text: "The crowd noise", at: Date.now() }] };
 const aShut = { id: "b2", prompt: "One word for today", at: Date.now() - 9e5, closed: true, posts: [] };
-cases.push(["Answers, loading", <AnswersPanel boards={null} liveId="" path="/x" castNow={noop} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />]);
-cases.push(["Answers, nothing cast", <AnswersPanel boards={{}} liveId="" path="/x" castNow={noop} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />, "No prompt has been cast"]);
-cases.push(["Answers, live thread", <AnswersPanel boards={{ b1: aBoard, b2: aShut }} liveId="b1" path="/x" castNow={noop} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />, "The crowd noise"]);
-cases.push(["Answers, closed and empty", <AnswersPanel boards={{ b2: aShut }} liveId="" path="/x" castNow={noop} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />, "Nobody wrote anything under this prompt."]);
+cases.push(["Answers, loading", <AnswersPanel boards={null} liveId="" path="/x" castNow={noop} onOpen={() => "b1"} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />]);
+cases.push(["Answers, nothing cast", <AnswersPanel boards={{}} liveId="" path="/x" castNow={noop} onOpen={() => "b1"} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />, "A question for the room"]);
+cases.push(["Answers, live thread", <AnswersPanel boards={{ b1: aBoard, b2: aShut }} liveId="b1" path="/x" castNow={noop} onOpen={() => "b1"} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />, "The crowd noise"]);
+cases.push(["Answers, closed and empty", <AnswersPanel boards={{ b2: aShut }} liveId="" path="/x" castNow={noop} onOpen={() => "b1"} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />, "Nobody wrote anything under this prompt."]);
 cases.push(["Before & After", <BoardsPanel boards={{}} proposals={{ pre: { title: "t", ideas: ["a"] }, post: { title: "t", ideas: ["b"] } }} onSave={noop} castNow={noop} dismiss={noop} liveCast={null} accent={cfg0.accent} />]);
 // A day with no proposals at all, which crashed the editor once the boards
 // moved into the flow and started rendering on every day.
@@ -840,6 +842,16 @@ cases.push(["Repository", <RepoPage />]);
   cases.push(["Repository room, nothing matched", <RepoRoom items={[]} counts={{}} kind="" setKind={noop}
     busy={false} kept={new Set()} onKeep={noop} />, "Nothing from the room matches"]);
 }
+// Each kind of cast, drawn on its own, because mounting the room screen with
+// nothing live proves only that the empty screen draws.
+cases.push(["On the wall, a discussion", <CastContent config={cfg0} plan={{}} data={{}}
+  cast={{ type: "board", tag: "Discussion", title: "Discussion", idea: "What did you notice?",
+    at: 0, count: 1, join: "board" }} />, "Answer on your phone"]);
+cases.push(["On the wall, the Enter board", <CastContent config={cfg0} plan={{}} data={{}}
+  cast={{ type: "board", tag: "Enter", title: "Enter", idea: "One word for today",
+    at: 0, count: 3, showAsk: true }} />, "Ask me anything"]);
+cases.push(["On the wall, a question from the room", <CastContent config={cfg0} plan={{}} data={{}}
+  cast={{ type: "question", tag: "From the room", title: "Why does that work?", cite: "Anonymous" }} />]);
 cases.push(["Ideas for the repository", <RepoIdeas />, "Merge the duplicates"]);
 cases.push(["One idea", <Idea idea={{ n: 7, group: "reuse", size: "small", first: true,
   title: "Last used", what: "A last-used column.", why: "A count cannot say when." }} />, "Start here"]);
@@ -851,6 +863,36 @@ cases.push(["Instructor links", <InstructorLinks />]);
 // case may name a string its output MUST contain, and a dashboard names the
 // stage: if the layout is not in the markup, the body did not run and the pass
 // is worth nothing.
+// The game system, ported out of three forked class files into one. Every
+// entry point, on a real class config, with a game in each state the room can
+// put it in. A port that renders is the least this can be asked to prove, and
+// the forks had no test at all.
+{
+  const gcfg = cfg0;
+  const gstudents = (gcfg.students || []).slice(0, 4);
+  const noop2 = () => {};
+  const qs = [{ id: "q1", text: "Who won?", options: ["A", "B", "C", "D"], correct: 1, pts: 10 }];
+  const base = { students: gstudents, log: [], teams: [], weeklyGames: {}, weeklyToT: {},
+    weeklyFishbowl: {}, triviaGames: {}, triviaQuestionPool: [], rebounds: {}, reboundGrades: {} };
+  const liveWeek = { ...base, weeklyGames: { 3: { week: 3, phase: "live", questions: qs, responses: {} } } };
+  const liveTrivia = { ...base, teams: [{ id: "t1", name: "Red", color: 0 }],
+    triviaGames: { g1: { id: "g1", week: 3, phase: "live", questions: qs, rounds: [], answers: {} } } };
+  const done = { ...base, weeklyGames: { 3: { week: 3, phase: "done", scored: true, questions: qs, responses: {} } } };
+
+  const who = gstudents[0]?.name || "A Student";
+  cases.push(["Game, running it", <RunGamePage config={gcfg} />]);
+  cases.push(["Game, the admin with nothing set up", <GameAdmin config={gcfg} data={base} setData={noop2} />]);
+  cases.push(["Game, the admin with a week live", <GameAdmin config={gcfg} data={liveWeek} setData={noop2} />]);
+  cases.push(["Game, the admin with a game finished", <GameAdmin config={gcfg} data={done} setData={noop2} />]);
+  cases.push(["Game, a student playing", <GamePage config={gcfg} />]);
+  cases.push(["Game, the week's answers", <StudentAnswerView config={gcfg} data={liveWeek} setData={noop2} userName={who} />]);
+  cases.push(["Game, nothing to answer", <StudentAnswerView config={gcfg} data={base} setData={noop2} userName={who} />]);
+  cases.push(["Game, trivia on a phone", <TriviaPlayer config={gcfg} data={liveTrivia} setData={noop2} userName={who} />]);
+  cases.push(["Game, the presenter", <TriviaPresenter gameId="g1" classKey={gcfg.id} />]);
+  cases.push(["Game, accolades", <Accolades config={gcfg} data={done} />]);
+  cases.push(["Game, the rebound", <ReboundPanel config={gcfg} data={base} setData={noop2} activityType="game" week={3} isAdmin={false} userName={who} />]);
+}
+
 // The instructor's own class site, which is where the way in to seeing the class
 // as a student lives. The role is read off localStorage on the first render, so
 // the stub answers to the admin key for this one render and goes back to

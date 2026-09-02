@@ -76,3 +76,49 @@ export function useClassData(key) {
 
   return [data, update];
 }
+
+// The same reader, without the writer.
+//
+// The game system saves through a path of its own, because a student sending an
+// answer merges against what the server holds and retries, so that code has to
+// see whether the write landed. Having saved, it hands back the object it
+// saved. Passing that object through `update` would write the same JSON a
+// second time. So this returns the class data and a way to take what was just
+// written, and saves nothing itself.
+export function useClassState(key) {
+  const [data, setData] = useState(() => WARM.get(key) || null);
+  const ref = useRef(null);
+  const mine = useRef(0);
+
+  useEffect(() => {
+    let alive = true;
+    const warm = WARM.get(key);
+    if (warm) ref.current = warm;
+    loadClass(key).then(d => {
+      if (!alive) return;
+      ref.current = d || {};
+      WARM.set(key, ref.current);
+      setData(ref.current);
+    });
+    const off = window.storage?.onUpdate?.(key, (val) => {
+      // Our own write coming back. The caller already holds the newer state.
+      if (mine.current > 0) { mine.current--; return; }
+      try {
+        const d = JSON.parse(val);
+        ref.current = d;
+        WARM.set(key, d);
+        setData(d);
+      } catch { /* ignore */ }
+    });
+    return () => { alive = false; if (off) off(); };
+  }, [key]);
+
+  const take = useCallback((next) => {
+    ref.current = next;
+    WARM.set(key, next);
+    mine.current++;
+    setData({ ...next });
+  }, [key]);
+
+  return [data, take];
+}

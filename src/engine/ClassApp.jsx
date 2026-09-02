@@ -80,7 +80,7 @@ function summary(key, config, role, ctx) {
     case "schedule":
       return { title: "Schedule", body: <ScheduleSummary config={config} data={ctx.data} /> };
     case "community":
-      return { title: "Community", body: <CommunitySummary config={config} live={ctx.live} poll={ctx.poll} /> };
+      return { title: "Community", body: <CommunitySummary config={config} live={ctx.live} poll={ctx.poll} data={ctx.data} /> };
     case "leaderboard":
       return { title: "Leaderboard", body: <Muted>In-class game standings.</Muted> };
     case "roster":
@@ -122,7 +122,7 @@ function detail(key, config, role, ctx) {
       </Panel>
     );
   }
-  if (key === "community") return <Panel title="Community"><CommunityDetail config={config} live={ctx.live} poll={ctx.poll} /></Panel>;
+  if (key === "community") return <Panel title="Community"><CommunityDetail config={config} live={ctx.live} poll={ctx.poll} data={ctx.data} /></Panel>;
   if (key === "leaderboard") return <Panel title="Leaderboard"><Muted>In-class game leaderboard.</Muted></Panel>;
   return <Panel title={key}><Muted>Coming soon.</Muted></Panel>;
 }
@@ -222,8 +222,19 @@ export function OnScreenNow({ config, live, poll }) {
 
 // "Nothing live right now" was a lie whenever a poll was open. This reads the
 // same cast bus the room screen reads, so the card and the projector agree.
-function liveNow(config, live, poll) {
+function liveNow(config, live, poll, data) {
   const out = [];
+  // A game that is open is the most joinable thing there is, so the game goes
+  // at the top rather than under the poll.
+  const trivia = Object.values(data?.triviaGames || {}).find(g => g.phase === "live");
+  if (trivia) out.push({ id: "trivia", title: "Team Trivia is running",
+    what: "Answer with your team.", href: config.path + "/game" });
+  const week = Object.values(data?.weeklyGames || {}).find(g => g.phase === "live");
+  if (week) out.push({ id: "game", title: "The game is open",
+    what: "Answer this week's questions.", href: config.path + "/game" });
+  const tot = Object.values(data?.weeklyToT || {}).find(g => g.phase === "live");
+  if (tot) out.push({ id: "tot", title: "Ten on Ten is open",
+    what: "Answer this week's ten.", href: config.path + "/game" });
   if (poll && (poll.phase === "vote1" || poll.phase === "vote2")) {
     out.push({ id: "poll", title: "A poll is open", what: poll.question || "Vote on the question that is up.", href: config.path + "/ask" });
   }
@@ -233,8 +244,8 @@ function liveNow(config, live, poll) {
   return out;
 }
 
-function CommunitySummary({ config, live, poll }) {
-  const items = liveNow(config, live, poll);
+function CommunitySummary({ config, live, poll, data }) {
+  const items = liveNow(config, live, poll, data);
   if (!items.length) return <Muted>Nothing live right now.</Muted>;
   return (
     <div>
@@ -247,8 +258,8 @@ function CommunitySummary({ config, live, poll }) {
   );
 }
 
-function CommunityDetail({ config, live, poll }) {
-  const items = liveNow(config, live, poll);
+function CommunityDetail({ config, live, poll, data }) {
+  const items = liveNow(config, live, poll, data);
   if (!items.length) return <Muted>Games, boards and live activities appear here while they run.</Muted>;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -510,7 +521,7 @@ export default function ClassApp({ config, initialCard }) {
           borderRadius: 999, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY, cursor: "pointer" }}>
         {ENGINE_LIST.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
       </select>
-      {[["/dashboard", "Dashboard"], ["/today", "Room screen"], ["/ask", "Ask"]].map(([suffix, name]) => (
+      {[["/dashboard", "Dashboard"], ["/today", "Room screen"], ["/ask", "Ask"], ["/rungame", "Game"]].map(([suffix, name]) => (
         <a key={suffix} className="ca-focus" href={config.path + suffix}
           style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, padding: "0 14px", borderRadius: 999,
             border: "1px solid " + (suffix === "/dashboard" ? a : BORDER_STRONG),

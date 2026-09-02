@@ -59,7 +59,10 @@ const CSS = `
 const eyebrow = { fontFamily: MONO, fontSize: "clamp(11px,1.1vw,15px)", letterSpacing: ".16em", textTransform: "uppercase", color: DIM };
 
 // ─── the content types a cast can be ───
-function Content({ cast, config, plan, data }) {
+// Exported so the build can render each kind of cast on its own. The room
+// screen reads what is live off the store, which server-side is nothing, so a
+// test that mounts the whole screen proves only that the empty screen draws.
+export function Content({ cast, config, plan, data }) {
   const pad = "clamp(28px,5vw,80px)";
   const wrap = { position: "absolute", inset: 0, display: "flex", flexDirection: "column", padding: pad, color: INK, fontFamily: F };
 
@@ -104,6 +107,7 @@ function Content({ cast, config, plan, data }) {
             ))}
           </div>
         ) : null}
+        {cast.join === "board" ? <JoinBlock base={origin + config.path} compact /> : null}
         {cast.showAsk ? <AskBlock base={origin + config.path} compact /> : null}
       </div>
     );
@@ -426,6 +430,23 @@ function ReadScreen({ url, claim, kind }) {
 }
 
 const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return "the page"; } };
+
+// Where to answer a discussion prompt. The Ask block sends a phone to /ask,
+// which is the wrong door for a board: a student reading a prompt off the wall
+// had no way of knowing the answers go somewhere else.
+function JoinBlock({ base, compact }) {
+  const px = compact ? 96 : 132;
+  return (
+    <div style={{ display: "flex", gap: "clamp(22px,3.4vw,52px)", marginTop: "2.5vh", alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+      <QRCode value={base + "/board"} size={px} />
+      <div style={{ textAlign: "left" }}>
+        <div style={{ fontSize: "clamp(15px,1.6vw,22px)", fontWeight: 500 }}>Answer on your phone</div>
+        <div style={{ ...eyebrow, marginTop: 4, letterSpacing: ".06em" }}>{base.replace(/^https?:\/\//, "")}/board</div>
+        <div style={{ color: DIM, fontSize: "clamp(12px,1.1vw,15px)", marginTop: 6 }}>Everyone reads what everyone writes.</div>
+      </div>
+    </div>
+  );
+}
 
 function AskBlock({ base, compact }) {
   const px = compact ? 96 : 132;

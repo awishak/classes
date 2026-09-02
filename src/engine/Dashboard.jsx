@@ -549,6 +549,9 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
 // the room goes into. Scheduled on a day in the week's items, run from Class
 // Flow. Around the Horn opens its own board; the rest announce themselves on
 // the room screen until they are built out.
+// The rows that open the game system rather than only naming themselves.
+export const GAME_FEATURES = new Set(["Game", "Team Trivia"]);
+
 export const FEATURES = {
   "Headlines": "Students bring real headlines. The room votes them into categories.",
   "Game": "The weekly game. Six On Topic, four Sports World.",
@@ -2004,12 +2007,50 @@ export function QuestionsPanel({ items, setState, archiveOpen, castNow, accent }
 // Every thread is in the list, not only today's. Boards ported over from the
 // old hubs arrived closed and nothing in the engine could open one; the switch
 // at the bottom of this panel does.
-export function AnswersPanel({ boards, liveId, path, castNow, onRemove, onSetClosed, accent }) {
+export function AnswersPanel({ boards, liveId, path, castNow, onOpen, onRemove, onSetClosed, accent }) {
   const [pick, setPick] = useState(null);
+  const [draft, setDraft] = useState("");
   if (boards === null) return <Muted>Loading…</Muted>;
 
   const list = Object.values(boards || {}).sort((a, b) => (b.at || 0) - (a.at || 0));
-  if (!list.length) return <Muted>No prompt has been cast to the room yet.</Muted>;
+
+  // Starting a discussion.
+  //
+  // A board used to come into being only as a side effect of casting the Enter
+  // or the Exit board, so the two boards a day had names I had chosen in
+  // advance and there was no third. A question I think of while the room is
+  // arguing had nowhere to go. Now the question is the board: typing one opens
+  // the thread, puts the question on the wall, and puts a code on the wall that
+  // sends a phone to the answers rather than to the Ask page.
+  const start = () => {
+    const q = draft.trim();
+    if (!q || !onOpen) return;
+    const id = onOpen(q);
+    setDraft("");
+    setPick(id);
+    castNow({ type: "board", tag: "Discussion", boardLabel: "Discussion", title: "Discussion",
+      idea: q, at: 0, count: 1, join: "board", label: "Discussion" });
+  };
+
+  const Composer = onOpen ? (
+    <div style={{ display: "flex", gap: 7, alignItems: "stretch" }}>
+      <input value={draft} onChange={e => setDraft(e.target.value)}
+        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); start(); } }}
+        placeholder="A question for the room"
+        style={{ ...inputStyle, flex: 1, minWidth: 0 }} />
+      <button style={draft.trim() ? solid(accent) : { ...mini, opacity: .45 }}
+        onClick={start} disabled={!draft.trim()}>Open the discussion</button>
+    </div>
+  ) : null;
+
+  if (!list.length) {
+    return (
+      <>
+        {Composer}
+        <Muted>No discussion is open. Type a question and the room gets the question on the wall.</Muted>
+      </>
+    );
+  }
 
   // The thread whose prompt is on the screen, unless I have asked for another
   // one, and the newest thread when nothing is up.
@@ -2021,6 +2062,7 @@ export function AnswersPanel({ boards, liveId, path, castNow, onRemove, onSetClo
 
   return (
     <>
+      {Composer}
       {list.length > 1 ? (
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
           {list.map(b => {
@@ -2749,6 +2791,7 @@ function ClassMenu({ config }) {
       <span style={{ ...label, padding: "6px 10px 4px" }}>Go to</span>
       <a className="dash-focus" href={config.path} style={menuRow}>Class home</a>
       <a className="dash-focus" href={config.path + "/schedule"} style={menuRow}>The schedule</a>
+      <a className="dash-focus" href={config.path + "/rungame"} style={menuRow}>Run the game</a>
       <a className="dash-focus" href="/repo" style={menuRow}>The repository</a>
       <a className="dash-focus" href="/plan" style={menuRow}>The Brief</a>
       <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
@@ -3863,6 +3906,17 @@ export default function Dashboard({ config }) {
   const runFeature = (name) => {
     if (name === "Around the Horn") { setHornOpen(true); markEngaged(); return; }
     if (name === "Headlines") { setHlOpen(true); castNow({ type: "headlines", label: "Headlines" }); markEngaged(); return; }
+    // The game rows used to put their own name on the room screen and stop
+    // there, because the thing they named lived in a forked class file this
+    // screen could not reach. The game is in the engine now, so running one of
+    // these rows opens the surface that runs it, and the room screen still gets
+    // told what is happening.
+    if (GAME_FEATURES.has(name)) {
+      castNow({ type: "feature", title: name, body: FEATURES[name] || "", label: name });
+      markEngaged();
+      window.open(config.path + "/rungame", "_blank", "noopener");
+      return;
+    }
     castNow({ type: "feature", title: name, body: FEATURES[name] || "", label: name });
     markEngaged();
   };
@@ -4056,8 +4110,8 @@ export default function Dashboard({ config }) {
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
       castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,
     answers: () => <AnswersPanel boards={DB.boards} liveId={liveBoardId} path={config.path}
-      castNow={(pl) => { castNow(pl); markEngaged(); }} onRemove={DB.remove} onSetClosed={DB.setClosed}
-      accent={config.accent} />,
+      castNow={(pl) => { castNow(pl); markEngaged(); }} onOpen={DB.open}
+      onRemove={DB.remove} onSetClosed={DB.setClosed} accent={config.accent} />,
     scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch}
       dayNote={plan?.notes} weekPlan={weekRow?.plan} weekText={weekRow?.text}
       accent={config.accent} day={day}

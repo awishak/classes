@@ -47,6 +47,39 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep2b", date: "Wednesday, September 2 \u00b7 afternoon", title: "One game system where there were three",
+    blurb: "COMM 118 and COMM 4 each carried a copy of the game system, 4203 lines and 4125 lines, and the difference between the two copies was a storage key, an accent, two category labels, a few compound surnames and one word in a URL. COMM 2 had a third, shorter copy. A fix went in three times, or went in once and stayed broken in the other two.",
+    groups: [
+      { name: "The game, on the engine", items: [
+        ["One copy, rendered from a class config", "The weekly game, Ten on Ten, Fishbowl, Team Trivia with its teams and its presenter screen, the rebound and the accolades, all of them the same code the forks were running, now reading the class off a config like every other surface here."],
+        ["Two addresses rather than a tab in a hub", "Students play at /<class>/game. I run the game at /<class>/rungame, behind the gate the dashboard sits behind. Two addresses, because the student page has to open for somebody who is not signed in as me, and because I run the game on a laptop while thirty phones are on the other page."],
+        ["Games live in the class store", "Not at a key of their own. A game needs the roster and a game awards points, and the roster and the log the gradebook reads are both in that store already. A separate key would have meant a second copy of the roster and points nothing could grade."],
+        ["The presenter has a parameter of its own", "The frozen forks still answer to ?presenter=, and the fork and the engine read different stores under the same class id, so the engine's presenter answers to ?game= instead."],
+        ["A bug that came across and got fixed", "Both forks counted a perfect score by walking ten question indices and reading the tenth question with no guard, which held only while every game was exactly ten questions written by hand. Games are built off the question bank now and come in other lengths. A scored game with nine questions took the accolades panel down, and the new case for that panel is what found it."],
+        ["Eleven cases on the game", "Every entry point, on a real class config, with a game in each state the room can put a game in. The forks had no test at all."],
+      ] },
+      { name: "A discussion is a question I can type", items: [
+        ["The board used to be a side effect", "A thread came into being only when the Enter or the Exit board was cast, so the two discussions in a day had names chosen in advance and there was no third. A question I think of while the room is arguing had nowhere to go."],
+        ["Now the question is the board", "Type a question in the Answers panel and press Open the discussion. That opens the thread, puts the question on the wall, and puts a code on the wall that sends a phone to the answers."],
+        ["The wall used to send them to the wrong door", "A cast board showed the Ask code, which goes to the questions page. A student reading a prompt off the wall had no way of knowing the answers went somewhere else. A discussion now shows the code for the board."],
+        ["Each kind of cast is drawn on its own in the build", "The room screen reads what is live off the store, and server-side nothing is live, so mounting the whole screen only ever proved that the empty screen draws."],
+      ] },
+      { name: "Seeing the class as any student", items: [
+        ["A picker in the instructor header", "Pick a name and the whole class site draws the way that student gets the site drawn. A bar in the class colour names who is being looked at and holds one press back."],
+        ["The select that had never rendered", "The pieces were nearly all here. asStudent already chose which student the You and Assignments cards were about, and the select that changed the choice sat where the two conditions guarding it could not both hold."],
+        ["The lens does not write", "The class store is shared and real, so a press on the student side would post a message from that student. While the lens is on, writes go nowhere."],
+      ] },
+    ],
+    note: {
+      title: "What the port does not prove",
+      lines: [
+        "No game has been played end to end on the engine. The cases prove every game surface renders, in every state the room can put a game in. They do not prove a game plays. Run one against a phone before running one in front of a room.",
+        "The game surfaces still wear the old hub's styling, because they came across with styles.jsx and its themes rather than the engine's stylesheet.",
+        "Nothing was migrated. The three forked files are untouched and still hold a term of games and grades at their own keys, so an engine class starts with no games.",
+      ],
+    },
+  },
+  {
     id: "sep2a", date: "Wednesday, September 2 \u00b7 morning", title: "The room's answers, on the screen I teach from",
     blurb: "Casting a prompt opened a thread and put the prompt on every phone in the room. Nothing read the answers back except the student page, so the answers arrived somewhere I was not looking. And COMM 3 meets twice a day, which one pair of times cannot say.",
     groups: [

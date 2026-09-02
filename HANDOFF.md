@@ -19,7 +19,14 @@ COMM 118, COMM 2, COMM 4, COMM 3, COMM 999. Deployed at
 | `/<class>/today` | the room | the projector screen |
 | `/<class>/ask` | students | questions and headlines |
 | `/<class>/board` | students | discussion boards |
+| `/<class>/game` | students | where the room plays |
+| `/<class>/rungame` | me | where I run the game |
 | `/plan` | me | The Brief, the changelog |
+
+The presenter screen opens in a window of its own at
+`/<class>?game=<gameId>&class=<class>`. The frozen forks still answer to
+`?presenter=`, and the two read different stores under the same class id, which
+is why the engine's presenter has a parameter of its own.
 
 ## The dashboard, in its current shape
 
@@ -68,7 +75,7 @@ right.
 | `check-contrast` | a colour under 4.5:1 |
 | `check-voice` | a clause closing on a bare "it", an em dash in UI copy |
 | `check-jsx-text` | an escape sequence stranded in JSX text |
-| `smoke` | 120 surfaces rendered server-side, including every sheet |
+| `smoke` | 134 surfaces rendered server-side, including every sheet |
 
 Each was written after the matching mistake reached production. Do not remove
 one because it is inconvenient; add the case instead.
@@ -93,9 +100,33 @@ twice, because one edge can serve the old bundle briefly.
 - Six `onDone` handlers in the pre-engine Comm118/2/4 files do nothing. Those
   files are frozen.
 - 57 linked readings never had `scheduled` backfilled onto their blocks.
+- **No game has been played end to end on the engine.** 134 smoke cases prove
+  every game surface renders, in every state the room can put a game in. They
+  do not prove a game plays. Run one against a phone before running one in
+  front of a room.
+- The game surfaces still wear the old hub's styling, because they came across
+  with `styles.jsx` and its themes rather than the engine's stylesheet. They
+  work; they do not look like the rest of the engine.
+- Nothing was migrated out of the forks. The three legacy files still hold a
+  term of games and grades at their own keys, and an engine class starts with
+  no games.
 
-## What is being built next
+## The game, ported
 
-A full-page searchable repository of everything: links, readings, ideas, notes.
-Same colour coding as the dashboard, able to add items, and it says where each
-item sits in the schedule.
+`src/engine/GameSystem.jsx` is one copy of what used to be three:
+`GameSystem.jsx` at 4203 lines for COMM 118, `GameSystem4.jsx` at 4125 for
+COMM 4, and a shorter `Comm2Game.jsx`. The difference between the two big ones
+was a storage key, an accent, two category labels, a handful of compound
+surnames and one word in a URL. Everything else was the same code written
+twice, so a fix went in three times or went in once and stayed broken twice.
+
+The class the module is running for is held in a module variable rather than
+threaded through thirty components, set by whichever entry point mounted. A
+page shows one class: every route is `/<class>/...` and the presenter opens in
+a window of its own.
+
+Games live in the class store rather than at a key of their own, because the
+game needs the roster and awards points, and both the roster and the `log` the
+gradebook reads are already there.
+
+The forked files are untouched and stay frozen.
