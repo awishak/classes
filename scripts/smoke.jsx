@@ -851,6 +851,28 @@ cases.push(["Instructor links", <InstructorLinks />]);
 // case may name a string its output MUST contain, and a dashboard names the
 // stage: if the layout is not in the markup, the body did not run and the pass
 // is worth nothing.
+// The instructor's own class site, which is where the way in to seeing the class
+// as a student lives. The role is read off localStorage on the first render, so
+// the stub answers to the admin key for this one render and goes back to
+// answering nothing straight after.
+{
+  const admin = cfg0.storageKey + "-admin";
+  const was = globalThis.localStorage.getItem;
+  globalThis.localStorage.getItem = (k) => (k === admin ? "1" : null);
+  try {
+    const html = renderToString(<ClassApp config={cfg0} />);
+    if (!html.includes("View as a student")) {
+      console.error("  FAIL  class site, instructor: no way in to seeing the class as a student"); failedEarly++; }
+    if (!html.includes("Dashboard")) {
+      console.error("  FAIL  class site, instructor: the teaching links did not render"); failedEarly++; }
+    if (!(cfg0.students || []).every(st => html.includes(st.name))) {
+      console.error("  FAIL  class site, instructor: the picker is missing somebody on the roster"); failedEarly++; }
+  } catch (err) {
+    console.error("  FAIL  class site, instructor: " + err.message); failedEarly++;
+  }
+  globalThis.localStorage.getItem = was;
+}
+
 // Two sittings on one day is what COMM 3 needs and what one pair of times
 // cannot say. Fixed clocks, so the build does not pass or fail by the hour.
 {

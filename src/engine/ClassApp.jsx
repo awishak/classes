@@ -397,6 +397,23 @@ export default function ClassApp({ config, initialCard }) {
   const [day, setDay] = useState("");
   const [signedIn, setSignedIn] = useState(remembered);
   const [asStudent, setAsStudent] = useState(() => remembered() || config.testStudent || config.students?.[0]?.name || "");
+  // An instructor looking at the class the way one student gets the class.
+  //
+  // Most of the parts were already here and none of them were reachable.
+  // `asStudent` already decided which student the You and Assignments cards
+  // were about, and the select that changed the choice sat inside the You card,
+  // where nothing could ever draw it: that card only renders for a student, and
+  // the setter only arrived for an instructor, so the two conditions could not
+  // both hold. Pressing Student on the role toggle was the only way through,
+  // and pressing Student cleared the instructor flag, so coming back meant
+  // signing in again.
+  //
+  // Empty string means not previewing. The instructor flag is untouched, so
+  // leaving the preview is one press.
+  const [preview, setPreview] = useState("");
+  // What the page draws as. The person is still the instructor; the page is
+  // drawn the way the chosen student would get the page drawn.
+  const view = preview ? "student" : role;
 
   // ─── the URL is the state ───
   // /comm999/assignments is a link you can send someone, and Back goes back to
@@ -416,7 +433,12 @@ export default function ClassApp({ config, initialCard }) {
     return () => window.removeEventListener("popstate", onPop);
   }, [config.path]);
 
-  const ctx = { data: data || {}, update, asStudent, setAsStudent: role === "instructor" ? setAsStudent : null, live, poll,
+  // A preview is a look, not a login. The class store is shared and real, so a
+  // press on the student side would post a message from that student or rewrite
+  // that student's profile. While the lens is on, writes go nowhere.
+  const write = preview ? () => {} : update;
+  const ctx = { data: data || {}, update: write, asStudent: preview || asStudent,
+    setAsStudent: preview ? setPreview : null, live, poll,
     blockOf: (id) => (id ? blockById(data, shared, id) : null), day, setDay };
 
   // Push updated seed content (schedule + library) to the store when the seed
@@ -443,7 +465,7 @@ export default function ClassApp({ config, initialCard }) {
   const enabledCards = Object.entries(config.cards || {})
     .filter(([, on]) => on)
     .map(([k]) => k)
-    .filter(k => role === "instructor" || !INSTRUCTOR_ONLY.has(k));
+    .filter(k => view === "instructor" || !INSTRUCTOR_ONLY.has(k));
   const moreCards = enabledCards.filter(k => !NAV_CARDS.has(k));
 
   const signIn = (name) => {
@@ -463,7 +485,7 @@ export default function ClassApp({ config, initialCard }) {
     return <SignIn config={config} data={data} onSignedIn={signIn} />;
   }
 
-  const RoleToggle = (
+  const RoleToggle = preview ? null : (
     <div style={{ display: "flex", gap: 4, background: BG, padding: 3, borderRadius: 999, border: "1px solid " + BORDER }}>
       {["student", "instructor"].map(r => (
         <button key={r} className="ca-focus" onClick={() => pickRole(r)} aria-pressed={role === r}
@@ -475,7 +497,7 @@ export default function ClassApp({ config, initialCard }) {
 
   // In instructor view, the class page is where I already am when I realise I
   // want to teach from it. These are the three teaching surfaces.
-  const TeachLinks = role === "instructor" ? (
+  const TeachLinks = view === "instructor" ? (
     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
       <select className="ca-focus" value={config.id} aria-label="Class"
         onChange={e => {
@@ -496,6 +518,45 @@ export default function ClassApp({ config, initialCard }) {
             color: suffix === "/dashboard" ? "#fff" : TEXT_SECONDARY,
             fontSize: 15, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>{name}</a>
       ))}
+    </div>
+  ) : null;
+
+  // The roster, alphabetical, because a picker over thirty names wants an order
+  // I can aim at.
+  const roster = (data?.students || config.students || []).slice()
+    .sort((x, y) => (x.name || "").localeCompare(y.name || ""));
+
+  const StudentPicker = (
+    <select className="ca-focus" value={preview} aria-label="Which student"
+      onChange={e => { setPreview(e.target.value); go(null); }}
+      style={{ fontFamily: F, fontSize: 15, fontWeight: 600, minHeight: TAP, padding: "0 10px", maxWidth: 230,
+        borderRadius: 999, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY, cursor: "pointer" }}>
+      <option value="">View as a student</option>
+      {roster.map(st => <option key={st.name} value={st.name}>{st.name}</option>)}
+    </select>
+  );
+
+  // The way in, beside the teaching links, and only for an instructor with a
+  // roster to look through.
+  const ViewAs = role === "instructor" && !preview && roster.length ? StudentPicker : null;
+
+  // The way out, across the top of every page, in the class colour, so no
+  // amount of scrolling loses the way back.
+  const PreviewBar = preview ? (
+    <div style={{ background: a, color: "#fff" }}>
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "10px 16px", display: "flex",
+        alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 15, fontWeight: 600 }}>Seeing the class as {preview}</span>
+        <span style={{ fontSize: 15, opacity: .85 }}>This is a look, not a login. Nothing you press is saved.</span>
+        <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {StudentPicker}
+          <button className="ca-focus" onClick={() => { setPreview(""); go(null); }}
+            style={{ minHeight: TAP, padding: "0 16px", borderRadius: 999, border: "1px solid rgba(255,255,255,.55)",
+              background: "transparent", color: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
+            Go back to instructor view
+          </button>
+        </span>
+      </div>
     </div>
   ) : null;
 
@@ -521,7 +582,7 @@ export default function ClassApp({ config, initialCard }) {
   const activeNav = !openKey ? "home" : (NAV_CARDS.has(openKey) ? openKey : "more");
 
   const CardTile = (key) => {
-    const s = summary(key, config, role, ctx);
+    const s = summary(key, config, view, ctx);
     return (
       <button key={key} className="ca-focus" onClick={() => go(key)}
         style={{ ...card, outline: openKey === key ? "2px solid " + a : "none" }}>
@@ -542,7 +603,7 @@ export default function ClassApp({ config, initialCard }) {
     </Panel>
   );
 
-  const detailFor = (key) => key === "more" ? MorePage : detail(key, config, role, ctx);
+  const detailFor = (key) => key === "more" ? MorePage : detail(key, config, view, ctx);
 
   // Class is on the projector right now. Students following remotely get the
   // same screen the room is looking at.
@@ -560,7 +621,7 @@ export default function ClassApp({ config, initialCard }) {
     </a>
   ) : null;
 
-  const actions = data === null ? [] : needsYou(config, data, role, asStudent);
+  const actions = data === null ? [] : needsYou(config, data, view, preview || asStudent);
 
   const Nav = (
     <nav style={{ display: "flex", gap: 2, marginLeft: 8 }}>
@@ -586,13 +647,16 @@ export default function ClassApp({ config, initialCard }) {
       <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, "--ca-accent": a }}>
         <style>{CSS}</style>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
-        <div style={{ background: "#fff", borderBottom: "1px solid " + BORDER, position: "sticky", top: 0, zIndex: 10 }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
+        {PreviewBar}
+        <div style={{ background: "#fff", borderBottom: "1px solid " + BORDER }}>
           <div style={{ maxWidth: 1240, margin: "0 auto", padding: "14px 20px", display: "flex", alignItems: "center", gap: 20 }}>
             {Logo}
             {Nav}
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+              {ViewAs}
               {TeachLinks}
-              {signedIn ? (
+              {signedIn && !preview ? (
                 <button className="ca-focus" onClick={signOut}
                   style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, color: TEXT_SECONDARY, cursor: "pointer", minHeight: TAP }}>
                   {signedIn.split(" ")[0]} · sign out
@@ -601,6 +665,7 @@ export default function ClassApp({ config, initialCard }) {
               {RoleToggle}
             </div>
           </div>
+        </div>
         </div>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 24, alignItems: "start" }}>
           <div style={{ maxWidth: CARD_MAX * 2 + 12 }}>
@@ -628,7 +693,9 @@ export default function ClassApp({ config, initialCard }) {
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
 
       {/* compact top bar */}
-      <div style={{ background: "#fff", borderBottom: "1px solid " + BORDER, position: "sticky", top: 0, zIndex: 10 }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
+      {PreviewBar}
+      <div style={{ background: "#fff", borderBottom: "1px solid " + BORDER }}>
         <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           {openKey ? (
             <button className="ca-focus" onClick={() => go(null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 17, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: "0 4px 0 0" }}>← Back</button>
@@ -636,10 +703,11 @@ export default function ClassApp({ config, initialCard }) {
           {RoleToggle}
         </div>
       </div>
+      </div>
 
-      {TeachLinks ? (
+      {TeachLinks || ViewAs ? (
         <div style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "8px 16px",
-          display: "flex", gap: 6, overflowX: "auto" }}>{TeachLinks}</div>
+          display: "flex", gap: 6, alignItems: "center", overflowX: "auto" }}>{ViewAs}{TeachLinks}</div>
       ) : null}
 
       {/* content: grid OR full-screen takeover */}
@@ -655,7 +723,7 @@ export default function ClassApp({ config, initialCard }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {Grid}
             </div>
-            {signedIn ? (
+            {signedIn && !preview ? (
               <button className="ca-focus" onClick={signOut}
                 style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, color: TEXT_MUTED, cursor: "pointer", minHeight: TAP, marginTop: 8 }}>
                 Signed in as {signedIn} · sign out
