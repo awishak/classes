@@ -107,7 +107,7 @@ twice, because one edge can serve the old bundle briefly.
 - **Nobody has clicked through the game on a real device.** The rules are
   checked and every surface renders, and neither of those is a phone answering
   a question over the realtime channel. Do that before running a game in front
-  of a room.
+  of a room. `teaching/testing-a-game.md` says how.
 - Nothing was migrated out of the forks. The three legacy files still hold a
   term of games and grades at their own keys, and an engine class starts with
   no games.
@@ -139,6 +139,21 @@ student whose score has not moved keeps the entry they have, a student whose
 score has moved has the old entry replaced rather than added to, and the
 timestamp stays on the first scoring so a makeup graded in week nine does not
 land in week nine's leaderboard.
+
+One write cannot take somebody's answer with it. The store is one JSON blob per
+class, every screen writes the whole blob, and nothing re-read before writing,
+so the last write won and everything that had arrived since that screen last
+synced was gone. A phone locked in an answer, I pressed "next question" a second
+later, and my snapshot went over the top of the answer. Every write now merges
+against what the server holds: what the writer changed is the writer's, and
+everything the writer did not touch comes from the server. `mergeAnswers` in
+`src/engine/game.js` is the rule, and seven cases in the build reproduce the
+ways a room lost answers.
+
+Answering is one press. Tapping an option sends the answer; tapping another
+changes it until the question locks. It used to be tap, then press "Lock in
+answer", and while the choice sat there unsent the screen stopped taking live
+updates.
 
 The surfaces wear the engine's palette now rather than the forks' own, which
 also took three colours past 4.5:1 for the first time: the muted grey was

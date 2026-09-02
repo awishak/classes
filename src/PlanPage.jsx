@@ -47,6 +47,34 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep2d", date: "Wednesday, September 2 \u00b7 night", title: "One tap is the answer, and a write cannot take somebody else's",
+    blurb: "Andrew: when one person would submit their answer, it would clear everyone else's. The class store is one JSON blob, every screen writes the whole blob, and nothing re-read before writing. So the last write won and everything that had arrived since that screen last synced was gone.",
+    groups: [
+      { name: "Where the answers went", items: [
+        ["The instructor screen was the one doing it", "Thirty handlers built the new store out of the data they were holding, which is a snapshot from whenever that screen last synced. A phone locks in an answer, I press next question a second later, and my snapshot goes over the top of the answer. The student side already re-read before writing; my side never did."],
+        ["Every write is a merge now", "Given what the writer started from, the write re-reads what the server holds before writing. What the writer changed is the writer's, because changing it was the point. Everything the writer did not touch comes from the server, because somebody else may have touched it in the meantime."],
+        ["Only the answers merge", "Everything else in a game has exactly one writer. Nobody but me opens a week, locks a question or scores anything."],
+        ["Seven cases, each one a way a room lost answers", "Two students answering at the same moment. Me advancing the question while three phones answer. A student changing their mind. Clearing a week and having the answers stay cleared. A week the server has never seen. A week somebody else made while I was writing. A trivia round with two teams."],
+        ["The merge was taken back out to watch the tests fail", "Six of the seven fired, and two of them printed the sentence Andrew used: submitting cleared the other student's answer, and advancing the question wiped three answers."],
+      ] },
+      { name: "One press", items: [
+        ["Tapping an option is the answer", "It used to be two presses: tap to choose, then press Lock in answer. Two presses under a countdown is a press people miss."],
+        ["And the second press was making things worse", "While a choice sat there chosen and unsent, the screen stopped taking live updates, so the phone most likely to be holding a stale copy of the week was the phone about to write one."],
+        ["Tapping another option changes the answer", "Until the question locks. There is nothing to undo and nothing to confirm."],
+      ] },
+      { name: "How to test a game", items: [
+        ["Twenty minutes, a laptop and a phone", "teaching/testing-a-game.md walks it: set up a game, two students, both answer, then press next question and go back and look. Steps 9 and 10 are the moment the room used to lose its answers."],
+        ["Trivia gets its own steps", "Its rounds and reveals are still inside click handlers with nothing checking them, so the procedure gives that half the same treatment by hand."],
+      ] },
+    ],
+    note: {
+      title: "What the build cannot do",
+      lines: [
+        "The merge is checked against three snapshots in memory. Two real devices on the realtime channel is a different thing, and nobody has done that yet.",
+      ],
+    },
+  },
+  {
     id: "sep2c", date: "Wednesday, September 2 \u00b7 evening", title: "The game looks like the engine, and the build plays a game",
     blurb: "The game came over from the forks wearing the forks' own palette, written before the engine had one: a cool grey where the engine is warm, a system font where everything else is Outfit, and three colours that had never been past a contrast check. And four thousand lines of game had every rule about what a week is worth sitting inside a click handler, which is why nothing had ever checked one.",
     groups: [

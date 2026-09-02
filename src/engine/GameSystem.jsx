@@ -29,7 +29,7 @@ import { useTheme, themedInteriorCrd, themedHeadingFont } from "../styles.jsx";
 import { genId, gp, Toast } from "../utils.jsx";
 import QuestionPicker from "./QuestionPicker.jsx";
 import { lastNameOf } from "./AskPage.jsx";
-import { scoreWeek, perfectRuns } from "./game.js";
+import { scoreWeek, perfectRuns, mergeAnswers } from "./game.js";
 import { ENGINE } from "../config/registry.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -113,7 +113,29 @@ const OPT_COLORS = [
 // already reads them.
 const lastName = (name) => lastNameOf(name || "", CFG?.lastNameOverrides);
 function lastSortObj(a, b) { return lastName(a.name).localeCompare(lastName(b.name)); }
-async function saveData(data) { try { await window.storage.set(gkey(), JSON.stringify(data), true); return true; } catch { return false; } }
+// Writing without taking somebody's answer with you.
+//
+// Given the store the writer started from, the write re-reads what the server
+// holds and merges the answer maps before writing, so a screen that has been
+// sitting open for a minute cannot put its snapshot over the top of an answer
+// that arrived in that minute. Hands back what was actually written, because
+// after a merge that is no longer the object the caller built. See game.js for
+// the rule.
+//
+// Called with no base, the write is a plain overwrite. The one caller that does
+// that reads, merges and verifies for itself.
+async function saveData(next, base) {
+  try {
+    let out = next;
+    if (base) {
+      const raw = await window.storage.get(gkey(), true);
+      const server = raw?.value ? JSON.parse(raw.value) : null;
+      if (server) out = mergeAnswers(next, base, server);
+    }
+    const ok = await window.storage.set(gkey(), JSON.stringify(out), true);
+    return ok ? out : null;
+  } catch { return null; }
+}
 function rs(students, log) { return students.map(s => ({ ...s, points: gp(log, s.id) })).sort((a, b) => b.points - a.points); }
 function shuffleTeams(students, log, teams) {
   const ranked = rs(students, log);
@@ -157,7 +179,7 @@ export function GameAdmin({ config, data, setData }) {
   const saveTrivia = async (id, patch) => {
     const existing = triviaGames[id] || {};
     const updated = { ...data, triviaGames: { ...triviaGames, [id]: { ...existing, ...patch } } };
-    await saveData(updated); setData(updated);
+    const wrote = await saveData(updated, data); setData(wrote || updated);
   };
 
   const createTrivia = async () => {
@@ -174,26 +196,26 @@ export function GameAdmin({ config, data, setData }) {
       bonusPoints: { teams: {}, students: {} },
     };
     const updated = { ...data, triviaGames: { ...triviaGames, [id]: game } };
-    await saveData(updated); setData(updated); showMsg("Trivia game created"); setTriviaId(id);
+    const wrote = await saveData(updated, data); setData(wrote || updated); showMsg("Trivia game created"); setTriviaId(id);
   };
 
   const deleteTrivia = async (id) => {
     const { [id]: _, ...rest } = triviaGames;
     const updated = { ...data, triviaGames: rest };
-    await saveData(updated); setData(updated); showMsg("Deleted");
+    const wrote = await saveData(updated, data); setData(wrote || updated); showMsg("Deleted");
     if (triviaId === id) setTriviaId(null);
   };
 
   const saveGame = async (w, questions) => {
     const existing = games[w] || {};
     const updated = { ...data, weeklyGames: { ...games, [w]: { ...existing, questions, scored: false } } };
-    await saveData(updated); setData(updated); showMsg("Week " + w + " saved");
+    const wrote = await saveData(updated, data); setData(wrote || updated); showMsg("Week " + w + " saved");
   };
 
   const goLiveGame = async (w) => {
     const game = games[w]; if (!game) return;
     const updated = { ...data, weeklyGames: { ...games, [w]: { ...game, phase: "live", currentQ: 0, lockedQs: [], countdown: null, active: true, scored: false } } };
-    await saveData(updated); setData(updated); showMsg("Game is LIVE");
+    const wrote = await saveData(updated, data); setData(wrote || updated); showMsg("Game is LIVE");
   };
 
   // The rule for what a week is worth lives in game.js, where the build can run
@@ -201,7 +223,7 @@ export function GameAdmin({ config, data, setData }) {
   const scoreGame = async (w) => {
     if (!games[w]) return;
     const updated = scoreWeek(data, "game", w);
-    await saveData(updated); setData(updated); showMsg("Scored!");
+    const wrote = await saveData(updated, data); setData(wrote || updated); showMsg("Scored!");
   };
 
   const applyTeamBonus = async (w) => {
@@ -229,7 +251,7 @@ export function GameAdmin({ config, data, setData }) {
     winMembers.forEach(m => { entries.push({ id: genId(), studentId: m.id, amount: 10, source: "Team Win Wk" + w, ts: Date.now() }); });
     const weeklyWins = { ...(data.weeklyTeamWins || {}), [w]: winningTeamId };
     const updated = { ...data, log: [...data.log, ...entries], weeklyTeamWins: weeklyWins };
-    await saveData(updated); setData(updated);
+    const wrote = await saveData(updated, data); setData(wrote || updated);
     const winName = (data.teams || []).find(t => t.id === winningTeamId)?.name || "Unknown";
     showMsg("Team bonus: " + winName + " (+10 each)");
   };
@@ -237,31 +259,31 @@ export function GameAdmin({ config, data, setData }) {
   const deleteGame = async (w) => {
     const { [w]: _, ...rest } = games;
     const updated = { ...data, weeklyGames: rest };
-    await saveData(updated); setData(updated); setWeek(null); showMsg("Deleted");
+    const wrote = await saveData(updated, data); setData(wrote || updated); setWeek(null); showMsg("Deleted");
   };
 
   const saveToT = async (w, questions) => {
     const existing = tots[w] || {};
     const updated = { ...data, weeklyToT: { ...tots, [w]: { ...existing, questions, scored: false } } };
-    await saveData(updated); setData(updated); showMsg("Week " + w + " saved");
+    const wrote = await saveData(updated, data); setData(wrote || updated); showMsg("Week " + w + " saved");
   };
 
   const goLiveToT = async (w) => {
     const tot = tots[w]; if (!tot) return;
     const updated = { ...data, weeklyToT: { ...tots, [w]: { ...tot, phase: "live", currentQ: 0, lockedQs: [], countdown: null, active: true, scored: false } } };
-    await saveData(updated); setData(updated); showMsg("This or That is LIVE");
+    const wrote = await saveData(updated, data); setData(wrote || updated); showMsg("This or That is LIVE");
   };
 
   const scoreToT = async (w) => {
     if (!tots[w]) return;
     const updated = scoreWeek(data, "tot", w);
-    await saveData(updated); setData(updated); showMsg("Scored!");
+    const wrote = await saveData(updated, data); setData(wrote || updated); showMsg("Scored!");
   };
 
   const deleteToT = async (w) => {
     const { [w]: _, ...rest } = tots;
     const updated = { ...data, weeklyToT: rest };
-    await saveData(updated); setData(updated); setWeek(null); showMsg("Deleted");
+    const wrote = await saveData(updated, data); setData(wrote || updated); setWeek(null); showMsg("Deleted");
   };
 
   // Fishbowl
@@ -1534,7 +1556,7 @@ function ReviewAnswers({ type, week, data, setData }) {
     });
 
     updated.log = [...oldLog, ...newEntries];
-    await saveData(updated); setData(updated); showMsg("Answer changed and rescored");
+    const wrote = await saveData(updated, data); setData(wrote || updated); showMsg("Answer changed and rescored");
   };
 
   const letters = ["A", "B", "C", "D", "E", "F"];
@@ -1777,27 +1799,27 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
     const key = type === "game" ? "weeklyGames" : "weeklyToT";
     const deadline = Date.now() + 5000;
     const updated = { ...data, [key]: { ...activities, [wKey]: { ...activity, countdown: deadline } } };
-    await saveData(updated); setData(updated);
+    const wrote = await saveData(updated, data); setData(wrote || updated);
   };
 
   const lockQuestion = async () => {
     const newLocked = [...new Set([...(activity.lockedQs || []), activity.currentQ])];
     const key = type === "game" ? "weeklyGames" : "weeklyToT";
     const updated = { ...data, [key]: { ...activities, [wKey]: { ...activity, lockedQs: newLocked, countdown: null } } };
-    await saveData(updated); setData(updated);
+    const wrote = await saveData(updated, data); setData(wrote || updated);
   };
 
   const nextQuestion = async () => {
     if (currentQ >= qs.length - 1) return;
     const key = type === "game" ? "weeklyGames" : "weeklyToT";
     const updated = { ...data, [key]: { ...activities, [wKey]: { ...activity, currentQ: currentQ + 1, countdown: null } } };
-    await saveData(updated); setData(updated);
+    const wrote = await saveData(updated, data); setData(wrote || updated);
   };
 
   const endGame = async () => {
     const key = type === "game" ? "weeklyGames" : "weeklyToT";
     const updated = { ...data, [key]: { ...activities, [wKey]: { ...activity, phase: "done", active: false } } };
-    await saveData(updated); setData(updated);
+    const wrote = await saveData(updated, data); setData(wrote || updated);
   };
 
   // Calculate scores
@@ -2031,7 +2053,7 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
       fishbowlStars: stars,
       log: [...data.log, ...entries],
     };
-    await saveData(updated); setData(updated); showMsg("Confirmed! Points posted.");
+    const wrote = await saveData(updated, data); setData(wrote || updated); showMsg("Confirmed! Points posted.");
   };
 
   const saveDraft = async () => {
@@ -2039,13 +2061,13 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
       ...data,
       weeklyFishbowl: { ...fishbowls, [week]: { ...existing, scores, groups, star } },
     };
-    await saveData(updated); setData(updated); showMsg("Draft saved");
+    const wrote = await saveData(updated, data); setData(wrote || updated); showMsg("Draft saved");
   };
 
   const deleteFishbowl = async () => {
     const { [week]: _, ...rest } = fishbowls;
     const updated = { ...data, weeklyFishbowl: rest };
-    await saveData(updated); setData(updated); onBack();
+    const wrote = await saveData(updated, data); setData(wrote || updated); onBack();
   };
 
   const GROUP_COLORS = {
@@ -2555,30 +2577,43 @@ export function StudentAnswerView({ config, data, setData, userName }) {
 
         <div style={{ fontSize: 48, fontWeight: 900, color: TEXT_PRIMARY, marginBottom: 24 }}>Q{currentQ + 1}</div>
 
+        {/* Tapping an option is the answer.
+            It used to take two presses: tap to choose, then press Lock in
+            answer. Two presses under a countdown is a press people miss, and
+            while the choice was sitting there unsent the screen stopped taking
+            live updates, which is the state in which most of this went wrong.
+            One press, and the answer is in. Tapping another option changes the
+            answer, until the question locks. */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 340, margin: "0 auto", marginBottom: 20 }}>
+          {q.options.map((opt, oi) => {
+            if (!opt && actType === "game") return null;
+            const c = OPT_COLORS[oi] || OPT_COLORS[0];
+            const isMine = myAnswer === oi;
+            const busy = saving && selected === oi;
+            return (
+              <button key={oi} disabled={saving}
+                onClick={() => { setSelected(oi); submitAnswer(actType, week, currentQ, oi); }}
+                title={isMine ? "This is your answer" : "Send this as your answer"}
+                style={{
+                  padding: "16px 20px", borderRadius: 12, width: "100%", textAlign: "left", minHeight: TAP,
+                  fontSize: 15, fontWeight: 600, cursor: saving ? "wait" : "pointer", fontFamily: F, transition: "all 0.15s",
+                  background: isMine ? c.bg : c.light, color: isMine ? "#fff" : c.bg,
+                  border: "2px solid " + c.bg, transform: isMine ? "scale(1.02)" : "scale(1)",
+                  opacity: busy ? 0.75 : 1,
+                  whiteSpace: "normal", wordBreak: "break-word", lineHeight: 1.35,
+                }}><span style={{ fontWeight: 900, marginRight: 8 }}>{String.fromCharCode(65 + oi)}.</span>{opt}</button>
+            );
+          })}
+        </div>
         {myAnswer !== undefined ? (
-          <div style={{ padding: 24 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: GREEN, wordBreak: "break-word", lineHeight: 1.35 }}>Locked in: {q.options[myAnswer]}</div>
-            <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 8 }}>Waiting for results...</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: GREEN, lineHeight: 1.35 }}>
+            Locked in: {q.options[myAnswer]}
+            <div style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, marginTop: 6 }}>
+              Tap another option to change your answer.
+            </div>
           </div>
         ) : (
-          <>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 340, margin: "0 auto", marginBottom: 20 }}>
-              {q.options.map((opt, oi) => {
-                if (!opt && actType === "game") return null;
-                const c = OPT_COLORS[oi] || OPT_COLORS[0]; const isSel = selected === oi;
-                return (
-                  <button key={oi} onClick={() => setSelected(oi)} style={{
-                    padding: "16px 20px", borderRadius: 12, width: "100%", textAlign: "left",
-                    fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: F, transition: "all 0.15s",
-                    background: isSel ? c.bg : c.light, color: isSel ? "#fff" : c.bg,
-                    border: "2px solid " + c.bg, transform: isSel ? "scale(1.02)" : "scale(1)",
-                    whiteSpace: "normal", wordBreak: "break-word", lineHeight: 1.35,
-                  }}><span style={{ fontWeight: 900, marginRight: 8 }}>{String.fromCharCode(65 + oi)}.</span>{opt}</button>
-                );
-              })}
-            </div>
-            {selected !== null && <button onClick={() => submitAnswer(actType, week, currentQ, selected)} disabled={saving} style={{ ...pill, fontSize: 14, padding: "12px 40px", background: saving ? "#646b75" : TEXT_PRIMARY, color: "#fff", fontWeight: 700, cursor: saving ? "wait" : "pointer", opacity: saving ? 0.85 : 1 }}>{saving ? "Saving..." : "Lock in answer"}</button>}
-          </>
+          <div style={{ fontSize: 13, color: TEXT_MUTED }}>{saving ? "Sending" : "Tap your answer."}</div>
         )}
 
         {/* Progress dots */}
@@ -2975,7 +3010,7 @@ export function TriviaPlayer({ config, data, setData, userName }) {
         },
       },
     };
-    await saveData(updated); setData(updated);
+    const wrote = await saveData(updated, data); setData(wrote || updated);
     // Clear local draft
     setDrafts(d => { const x = { ...d }; delete x[qi]; return x; });
   };
@@ -3758,7 +3793,7 @@ export function ReboundPanel({ config, data, setData, activityType, week, isAdmi
       weeklyFishbowl: { ...fbAll, [week]: { ...fbWeek, scores: newScores } },
       log: newLog,
     };
-    await saveData(updated); setData(updated);
+    const wrote = await saveData(updated, data); setData(wrote || updated);
     showMsg("Saved");
   };
 
@@ -3826,7 +3861,7 @@ export function ReboundPanel({ config, data, setData, activityType, week, isAdmi
   const ensureScoredTs = async () => {
     if (!reboundData.scoredTs) {
       const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, scoredTs: Date.now() } } };
-      await saveData(updated); setData(updated);
+      const wrote = await saveData(updated, data); setData(wrote || updated);
     }
   };
   if (!reboundData.scoredTs && isScored) ensureScoredTs();
@@ -3834,7 +3869,7 @@ export function ReboundPanel({ config, data, setData, activityType, week, isAdmi
   const setStudentStatus = async (studentId, status) => {
     const ss = { ...statuses, [studentId]: { ...(statuses[studentId] || {}), status } };
     const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: ss } } };
-    await saveData(updated); setData(updated); showMsg("Set: " + STATUS_COLORS[status].label);
+    const wrote = await saveData(updated, data); setData(wrote || updated); showMsg("Set: " + STATUS_COLORS[status].label);
   };
 
   const approveRebound = async (studentId) => {
@@ -3858,7 +3893,7 @@ export function ReboundPanel({ config, data, setData, activityType, week, isAdmi
       }};
       const newSS = { ...statuses, [studentId]: { ...ss, approved: true, reboundGradePts: cappedPts, gradeOnly: true } };
       const updated = { ...data, reboundGrades, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: newSS } } };
-      await saveData(updated); setData(updated); showMsg("Rebound grade set: " + cappedPts + " / 100");
+      const wrote = await saveData(updated, data); setData(wrote || updated); showMsg("Rebound grade set: " + cappedPts + " / 100");
       return;
     }
 
@@ -3874,7 +3909,7 @@ export function ReboundPanel({ config, data, setData, activityType, week, isAdmi
       const entry = { id: genId(), studentId, amount: gamePts, source, ts: reboundData.scoredTs || Date.now() };
       const newSS = { ...statuses, [studentId]: { ...ss, approved: true, makeupGamePts: gamePts, makeupGradePts: gradePts2 } };
       const updated = { ...data, reboundGrades, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: newSS } }, log: [...data.log, entry] };
-      await saveData(updated); setData(updated); showMsg("Makeup applied: " + gamePts + " game / " + gradePts2 + " grade");
+      const wrote = await saveData(updated, data); setData(wrote || updated); showMsg("Makeup applied: " + gamePts + " game / " + gradePts2 + " grade");
       return;
     }
 
@@ -3895,26 +3930,26 @@ export function ReboundPanel({ config, data, setData, activityType, week, isAdmi
     const entry = { id: genId(), studentId, amount: reboundPts, source, ts: Date.now(), gradeOnly: gradeOnly || undefined };
     const newSS = { ...statuses, [studentId]: { ...ss, approved: true, reboundPts, gradeOnly } };
     const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: newSS } }, log: [...data.log, entry] };
-    await saveData(updated); setData(updated); showMsg((gradeOnly ? "Rebound" : "Makeup") + " +" + reboundPts);
+    const wrote = await saveData(updated, data); setData(wrote || updated); showMsg((gradeOnly ? "Rebound" : "Makeup") + " +" + reboundPts);
   };
 
   const setCustomPts = async (studentId, pts) => {
     const ss = { ...statuses, [studentId]: { ...(statuses[studentId] || {}), customPts: parseFloat(pts) || 0 } };
     const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: ss } } };
-    await saveData(updated); setData(updated);
+    const wrote = await saveData(updated, data); setData(wrote || updated);
   };
 
   const setCustomMakeupPts = async (studentId, field, pts) => {
     const ss = { ...statuses, [studentId]: { ...(statuses[studentId] || {}), [field]: parseFloat(pts) || 0 } };
     const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: ss } } };
-    await saveData(updated); setData(updated);
+    const wrote = await saveData(updated, data); setData(wrote || updated);
   };
 
   const submitRebound = async () => {
     if (!reboundLink.trim() || !sid) return;
     const ss = { ...statuses, [sid]: { ...(statuses[sid] || {}), link: reboundLink.trim(), linkTs: Date.now() } };
     const updated = { ...data, rebounds: { ...rebounds, [reboundKey]: { ...reboundData, studentStatuses: ss } } };
-    await saveData(updated); setData(updated);
+    const wrote = await saveData(updated, data); setData(wrote || updated);
     setReboundLink(""); showMsg("Submitted! Your instructor will review.");
   };
 

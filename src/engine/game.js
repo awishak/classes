@@ -139,3 +139,58 @@ export function perfectRuns(data) {
 // What one student has, out of the log, which is what the gradebook adds up.
 export const pointsOf = (log, studentId) =>
   (log || []).filter(e => e.studentId === studentId).reduce((n, e) => n + e.amount, 0);
+
+
+// Two people writing at the same time, and what to do about it.
+//
+// The class store is one JSON blob, so every screen writes the whole store.
+// Two writes at once is a race and the loser's work is gone: a phone locks in
+// an answer, I press "next question" a second later, and my screen writes a
+// snapshot taken before that answer arrived. The answer disappears, and the
+// room notices before I do. Andrew watched a room lose its answers this way.
+//
+// So a write is a three-way merge. `base` is the store the writer started from,
+// `next` is what the writer wants, `server` is what is there now. Anything the
+// writer did not touch, meaning identical in `base` and `next`, comes from the
+// server, because somebody else may have touched it in the meantime. Anything
+// the writer did touch is the writer's, because touching it was the point of
+// the write.
+//
+// Only the answer maps merge. Everything else has exactly one writer: nobody
+// but me opens a week, locks a question or scores anything.
+const ANSWER_MAPS = [
+  ["weeklyGames", "responses"],
+  ["weeklyToT", "responses"],
+  ["triviaGames", "answers"],
+];
+
+export function mergeAnswers(next, base, server) {
+  if (!next || !server) return next;
+  const out = { ...next };
+  ANSWER_MAPS.forEach(([store, field]) => {
+    const mine = next[store];
+    if (!mine) return;
+    const theirs = server[store] || {};
+    const was = (base || {})[store] || {};
+    const merged = {};
+    Object.keys(mine).forEach(id => {
+      const activity = mine[id] || {};
+      const onServer = theirs[id];
+      // An activity the server has never seen goes across whole.
+      if (!onServer) { merged[id] = activity; return; }
+      const mineMap = activity[field] || {};
+      const wasMap = (was[id] || {})[field] || {};
+      const map = { ...(onServer[field] || {}) };
+      // What I changed, I keep.
+      Object.keys(mineMap).forEach(k => { if (mineMap[k] !== wasMap[k]) map[k] = mineMap[k]; });
+      // What I took out stays out, so clearing a week still clears it.
+      Object.keys(wasMap).forEach(k => { if (!(k in mineMap)) delete map[k]; });
+      merged[id] = { ...activity, [field]: map };
+    });
+    // An activity I deleted is gone; an activity only the server has is the
+    // server's business and stays where it is.
+    Object.keys(theirs).forEach(id => { if (!(id in mine) && !(id in was)) merged[id] = theirs[id]; });
+    out[store] = merged;
+  });
+  return out;
+}

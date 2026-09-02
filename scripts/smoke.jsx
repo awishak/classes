@@ -26,7 +26,7 @@ import { DayPlanSummary, DayPlanDetail, rowsOf, countRows } from "../src/engine/
 import { FREEFORM } from "../src/engine/dayplan.js";
 import { weekdayOf } from "../src/engine/schedule.js";
 import { sittingsOf, minutesLeft, sittingLength } from "../src/engine/meets.js";
-import { saveWeek, openWeek, answerWeek, scoreWeek, scoresFor, perfectRuns, pointsOf } from "../src/engine/game.js";
+import { saveWeek, openWeek, answerWeek, scoreWeek, scoresFor, perfectRuns, pointsOf, mergeAnswers } from "../src/engine/game.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
   Steps as RepoSteps, Sticker as RepoSticker, Term as RepoTerm, DayAdd as RepoDayAdd,
@@ -914,6 +914,84 @@ cases.push(["Instructor links", <InstructorLinks />]);
     console.error("  FAIL  class site, instructor: " + err.message); failedEarly++;
   }
   globalThis.localStorage.getItem = was;
+}
+
+// Two people writing at once, which is the bug the room actually hit.
+//
+// Andrew: "when one person would submit their answer, it would clear everyone
+// else's." The store is one JSON blob, every screen writes the whole blob, and
+// nothing re-read before writing. So the last write wins and everything that
+// arrived since that screen last synced is gone. Each case below is a way that
+// happened.
+{
+  const say = (m) => { console.error("  FAIL  race: " + m); failedEarly++; };
+  const wk = (responses, extra) => ({ weeklyGames: { 3: { week: 3, phase: "live", questions: [], responses, ...extra } } });
+  const got = (d) => d.weeklyGames[3].responses;
+
+  // Two students answer at the same moment. Both keep their answer.
+  {
+    const base = wk({});
+    const mine = wk({ "s1-0": 0 });
+    const server = wk({ "s2-0": 1 });
+    const out = got(mergeAnswers(mine, base, server));
+    if (out["s1-0"] !== 0) say("my own answer did not survive my own write");
+    if (out["s2-0"] !== 1) say("submitting cleared the other student's answer");
+  }
+
+  // I press "next question" holding a snapshot from before three phones
+  // answered. This is the one that emptied the room.
+  {
+    const base = wk({});
+    const mine = wk({}, { currentQ: 1 });
+    const server = wk({ "s1-0": 0, "s2-0": 1, "s3-0": 2 });
+    const out = mergeAnswers(mine, base, server);
+    if (Object.keys(got(out)).length !== 3) say("advancing the question wiped " + (3 - Object.keys(got(out)).length) + " answers");
+    if (out.weeklyGames[3].currentQ !== 1) say("advancing the question did not advance the question");
+  }
+
+  // A student changes their mind. Their new answer beats the server's copy of
+  // their old one, and nobody else is touched.
+  {
+    const base = wk({ "s1-0": 0 });
+    const mine = wk({ "s1-0": 1 });
+    const server = wk({ "s1-0": 0, "s2-0": 1 });
+    const out = got(mergeAnswers(mine, base, server));
+    if (out["s1-0"] !== 1) say("changing an answer did not take");
+    if (out["s2-0"] !== 1) say("changing an answer cleared somebody else's");
+  }
+
+  // Clearing a week really clears it, and does not resurrect from the server.
+  {
+    const base = wk({ "s1-0": 0 });
+    const mine = wk({});
+    const server = wk({ "s1-0": 0, "s2-0": 1 });
+    const out = got(mergeAnswers(mine, base, server));
+    if ("s1-0" in out) say("an answer I cleared came back");
+    if (out["s2-0"] !== 1) say("clearing one answer cleared another");
+  }
+
+  // A week the server has never seen goes across whole.
+  {
+    const out = mergeAnswers(wk({ "s1-0": 0 }), { weeklyGames: {} }, { weeklyGames: {} });
+    if (got(out)["s1-0"] !== 0) say("a brand new week lost its answers");
+  }
+
+  // A week somebody else created while I was writing stays where it is.
+  {
+    const mine = wk({ "s1-0": 0 });
+    const server = { weeklyGames: { 3: { responses: {} }, 4: { week: 4, responses: { "s2-0": 1 } } } };
+    const out = mergeAnswers(mine, { weeklyGames: {} }, server);
+    if (!out.weeklyGames[4]) say("a week created by somebody else disappeared");
+  }
+
+  // Trivia answers merge on the same rule.
+  {
+    const base = { triviaGames: { g1: { answers: {} } } };
+    const mine = { triviaGames: { g1: { answers: { "t1-0": "us" } } } };
+    const server = { triviaGames: { g1: { answers: { "t2-0": "them" } } } };
+    const out = mergeAnswers(mine, base, server).triviaGames.g1.answers;
+    if (out["t1-0"] !== "us" || out["t2-0"] !== "them") say("a trivia round lost a team's answer");
+  }
 }
 
 // A game, played all the way through.
