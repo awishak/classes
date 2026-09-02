@@ -26,6 +26,7 @@ import { DayPlanSummary, DayPlanDetail, rowsOf, countRows } from "../src/engine/
 import { FREEFORM } from "../src/engine/dayplan.js";
 import { weekdayOf } from "../src/engine/schedule.js";
 import { sittingsOf, minutesLeft, sittingLength } from "../src/engine/meets.js";
+import { saveWeek, openWeek, answerWeek, scoreWeek, scoresFor, perfectRuns, pointsOf } from "../src/engine/game.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
   Steps as RepoSteps, Sticker as RepoSticker, Term as RepoTerm, DayAdd as RepoDayAdd,
@@ -913,6 +914,91 @@ cases.push(["Instructor links", <InstructorLinks />]);
     console.error("  FAIL  class site, instructor: " + err.message); failedEarly++;
   }
   globalThis.localStorage.getItem = was;
+}
+
+// A game, played all the way through.
+//
+// Nothing checked this before: three forked copies ran a term of games with the
+// rules buried in click handlers, and the one bug anybody found was found by a
+// render test. So a game gets written, opened, answered by two students, scored,
+// and the gradebook gets read afterwards. Then it gets scored again, because
+// scoring twice is what a makeup is.
+{
+  const say = (m) => { console.error("  FAIL  game: " + m); failedEarly++; };
+  const students = [{ id: "s1", name: "Ada Byron" }, { id: "s2", name: "Bo Diaz" }];
+  const qs = [
+    { id: "q1", text: "One", options: ["a", "b"], correct: 0 },
+    { id: "q2", text: "Two", options: ["a", "b"], correct: 1 },
+    { id: "q3", text: "Three", options: ["a", "b"], correct: 0 },
+  ];
+  const T = 1756000000000;
+
+  let d = { students, log: [] };
+  d = saveWeek(d, "game", 3, qs);
+  if (d.weeklyGames[3].questions.length !== 3) say("a written week did not keep its questions");
+
+  // Answering before the week is open changes nothing.
+  const early = answerWeek(d, "game", 3, "s1", 0, 0);
+  if (early.weeklyGames[3].responses) say("an answer landed on a week that was not open");
+
+  d = openWeek(d, "game", 3);
+  if (d.weeklyGames[3].phase !== "live") say("the week did not open");
+
+  // Ada gets all three. Bo gets the first two.
+  d = answerWeek(d, "game", 3, "s1", 0, 0);
+  d = answerWeek(d, "game", 3, "s1", 1, 1);
+  d = answerWeek(d, "game", 3, "s1", 2, 0);
+  d = answerWeek(d, "game", 3, "s2", 0, 0);
+  d = answerWeek(d, "game", 3, "s2", 1, 1);
+  d = answerWeek(d, "game", 3, "s2", 2, 1);
+
+  const pre = scoresFor(d, "game", 3);
+  if (pre.s1 !== 30) say("three right came to " + pre.s1 + " rather than 30");
+  if (pre.s2 !== 20) say("two right came to " + pre.s2 + " rather than 20");
+
+  d = scoreWeek(d, "game", 3, T);
+  if (d.weeklyGames[3].phase !== "done" || !d.weeklyGames[3].scored) say("a scored week is not done");
+  if (d.weeklyGames[3].active) say("a scored week is still open to the room");
+  if (pointsOf(d.log, "s1") !== 30) say("Ada has " + pointsOf(d.log, "s1") + " in the gradebook rather than 30");
+  if (pointsOf(d.log, "s2") !== 20) say("Bo has " + pointsOf(d.log, "s2") + " rather than 20");
+  if (d.log.length !== 2) say(d.log.length + " log entries where two students played");
+  if (d.log.some(e => e.ts !== T)) say("a log entry did not take the scoring time");
+
+  // Scoring the same week again changes nothing at all.
+  const again = scoreWeek(d, "game", 3, T + 99999);
+  if (again.log.length !== 2) say("scoring twice wrote " + again.log.length + " entries");
+  if (pointsOf(again.log, "s1") !== 30) say("scoring twice moved a score");
+  if (again.log.some(e => e.ts !== T)) say("scoring twice moved the timestamp off the first scoring");
+
+  // Bo comes back and fixes the third question. One entry, replaced, not added.
+  let fixed = { ...again, weeklyGames: { ...again.weeklyGames,
+    3: { ...again.weeklyGames[3], phase: "live" } } };
+  fixed = answerWeek(fixed, "game", 3, "s2", 2, 0);
+  fixed = scoreWeek(fixed, "game", 3, T + 99999);
+  if (fixed.log.length !== 2) say("a makeup made " + fixed.log.length + " entries out of two students");
+  if (pointsOf(fixed.log, "s2") !== 30) say("a makeup left Bo on " + pointsOf(fixed.log, "s2"));
+  if (fixed.log.some(e => e.ts !== T)) say("a makeup dated itself to the week it was graded in");
+
+  // Who got everything right.
+  const runs = perfectRuns(fixed);
+  if (runs.length !== 2) say(runs.length + " perfect runs where both students ended on three");
+  if (perfectRuns(d).length !== 1) say("the first scoring should have had one perfect run");
+  // The crash the forks carried: a scored game shorter than ten questions.
+  if (perfectRuns({ students, weeklyGames: { 9: { scored: true, questions: qs.slice(0, 2), responses: {} } } }).length !== 0) {
+    say("a two-question game invented a perfect run");
+  }
+
+  // Ten on Ten splits twenty points across the week's questions.
+  let t = { students, log: [] };
+  t = saveWeek(t, "tot", 4, qs);
+  t = openWeek(t, "tot", 4);
+  t = answerWeek(t, "tot", 4, "s1", 0, 0);
+  t = answerWeek(t, "tot", 4, "s1", 1, 1);
+  t = answerWeek(t, "tot", 4, "s1", 2, 0);
+  t = scoreWeek(t, "tot", 4, T);
+  if (pointsOf(t.log, "s1") !== 20) say("a whole Ten on Ten came to " + pointsOf(t.log, "s1") + " rather than 20");
+  if (t.weeklyToT[4].phase !== "done") say("a scored Ten on Ten is not done");
+  if (t.log[0].source !== "ToT Wk4") say("a Ten on Ten entry is filed as " + t.log[0].source);
 }
 
 // Two sittings on one day is what COMM 3 needs and what one pair of times

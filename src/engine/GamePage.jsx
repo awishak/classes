@@ -22,11 +22,12 @@ import { useClassState } from "./store.js";
 import { GameAdmin, StudentAnswerView, TriviaPlayer, Accolades } from "./GameSystem.jsx";
 import { lastNameOf } from "./AskPage.jsx";
 
+// The same tokens the rest of the engine uses.
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
-const BG = "#faf9f7";
-const TEXT = "#171310";
-const MUTED = "#5b6068";
-const BORDER = "rgba(23,19,16,.12)";
+const BG = "#fafaf9";
+const TEXT = "#1c1917";
+const MUTED = "#6b655f";
+const BORDER = "#e3ded8";
 const TAP = 44;
 
 const wrap = { minHeight: "100vh", background: BG, fontFamily: F, color: TEXT,

@@ -75,7 +75,7 @@ right.
 | `check-contrast` | a colour under 4.5:1 |
 | `check-voice` | a clause closing on a bare "it", an em dash in UI copy |
 | `check-jsx-text` | an escape sequence stranded in JSX text |
-| `smoke` | 134 surfaces rendered server-side, including every sheet |
+| `smoke` | 134 surfaces rendered server-side, plus a game played through |
 
 Each was written after the matching mistake reached production. Do not remove
 one because it is inconvenient; add the case instead.
@@ -100,13 +100,14 @@ twice, because one edge can serve the old bundle briefly.
 - Six `onDone` handlers in the pre-engine Comm118/2/4 files do nothing. Those
   files are frozen.
 - 57 linked readings never had `scheduled` backfilled onto their blocks.
-- **No game has been played end to end on the engine.** 134 smoke cases prove
-  every game surface renders, in every state the room can put a game in. They
-  do not prove a game plays. Run one against a phone before running one in
-  front of a room.
-- The game surfaces still wear the old hub's styling, because they came across
-  with `styles.jsx` and its themes rather than the engine's stylesheet. They
-  work; they do not look like the rest of the engine.
+- **Team Trivia's live flow has no test beyond rendering.** The weekly game and
+  Ten on Ten are played end to end by the build, through `src/engine/game.js`.
+  Trivia's rounds, reveals and team scoring still live inside click handlers,
+  so the only thing checked there is that the screens draw.
+- **Nobody has clicked through the game on a real device.** The rules are
+  checked and every surface renders, and neither of those is a phone answering
+  a question over the realtime channel. Do that before running a game in front
+  of a room.
 - Nothing was migrated out of the forks. The three legacy files still hold a
   term of games and grades at their own keys, and an engine class starts with
   no games.
@@ -128,5 +129,20 @@ a window of its own.
 Games live in the class store rather than at a key of their own, because the
 game needs the roster and awards points, and both the roster and the `log` the
 gradebook reads are already there.
+
+`src/engine/game.js` holds what a game is worth: write a week, open it, take an
+answer, score it, and work out who got everything right. Each function takes the
+class store and hands back a new one, so the build plays a whole game through
+and reads the gradebook afterwards. The screens call those functions. Scoring
+the same week twice is safe on purpose, because that is what a makeup is: a
+student whose score has not moved keeps the entry they have, a student whose
+score has moved has the old entry replaced rather than added to, and the
+timestamp stays on the first scoring so a makeup graded in week nine does not
+land in week nine's leaderboard.
+
+The surfaces wear the engine's palette now rather than the forks' own, which
+also took three colours past 4.5:1 for the first time: the muted grey was
+2.5:1, the green 2.3:1 and the amber 3.2:1. Andrew's themes are untouched;
+`clean` is the engine's card and every other theme draws as it did.
 
 The forked files are untouched and stay frozen.

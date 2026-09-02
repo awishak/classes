@@ -29,9 +29,10 @@ import { useTheme, themedInteriorCrd, themedHeadingFont } from "../styles.jsx";
 import { genId, gp, Toast } from "../utils.jsx";
 import QuestionPicker from "./QuestionPicker.jsx";
 import { lastNameOf } from "./AskPage.jsx";
+import { scoreWeek, perfectRuns } from "./game.js";
 import { ENGINE } from "../config/registry.js";
 
-const F = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 // The class this module is rendering. Set by the entry points as they mount.
 let CFG = null;
 export const setGameClass = (config) => { if (config) CFG = config; };
@@ -41,21 +42,35 @@ const gkey = () => gameKeyOf(CFG);
 const accent = () => CFG?.accent || "#9f1239";
 // The question bank and the blocks, which sit in that same store.
 const bankKey = () => CFG?.storageKey || "";
-const GREEN = "#10b981";
-const RED = "#ef4444";
+// The engine's palette, not the old hub's.
+//
+// The forks were written before the engine had one, so they carried their own:
+// a cool grey where the engine is warm, a mint green at 2.3:1 on white, a
+// muted grey at 2.5:1, twelve-pixel radii and a system font while every other
+// surface here is Outfit. Two of those were failures the contrast check would
+// have caught if the check had ever been pointed at the forks.
+const GREEN = "#0f766e";   // 5.4:1 on white. #10b981 was 2.3:1.
+const RED = "#e11d48";     // the same red the rest of the engine calls live
 const TEXT_PRIMARY = "#1c1917";
 const TEXT_SECONDARY = "#57534e";
-const TEXT_MUTED = "#a8a29e";
-const BORDER = "#e5e5e4";
-const AMBER = "#d97706";
+const TEXT_MUTED = "#6b655f";  // 5.4:1 on white. #a8a29e was 2.5:1.
+const BORDER = "#f0edea";
+const BORDER_STRONG = "#e3ded8";
+const AMBER = "#b45309";   // 4.9:1 on white. #b45309 was 3.2:1.
+const HIT = 36;            // the running side, where a trackpad is under my hands
+const TAP = 44;            // the playing side, where a phone is
 
-const crd = { background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", overflow: "hidden" };
+const crd = { background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, overflow: "hidden" };
 
-const pill = { padding: "6px 12px", borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: F, border: "none", transition: "all 0.15s" };
-const pillActive = { ...pill, background: "#111827", color: "#fff" };
-const pillInactive = { ...pill, background: "#f3f4f6", color: "#4b5563" };
-const sectionLabel = { fontSize: 10, fontWeight: 500, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: F };
-const inp = { background: "#fff", border: "2px solid #e5e7eb", borderRadius: 12, padding: "10px 12px", color: "#111827", fontFamily: F, fontSize: 14, fontWeight: 500, outline: "none", width: "100%", boxSizing: "border-box" };
+// A card that keeps the themes. Clean is the engine's card; the other themes
+// are Andrew's and stay exactly as they were.
+const cardFor = (theme, idx) => (theme && theme !== "clean" ? themedInteriorCrd(theme, idx) : crd);
+
+const pill = { minHeight: HIT, padding: "0 13px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: F, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_SECONDARY };
+const pillActive = { ...pill, background: TEXT_PRIMARY, borderColor: TEXT_PRIMARY, color: "#fff" };
+const pillInactive = pill;
+const sectionLabel = { fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: F };
+const inp = { background: "#fff", border: "1px solid " + BORDER_STRONG, borderRadius: 11, padding: "10px 13px", minHeight: 40, color: TEXT_PRIMARY, fontFamily: F, fontSize: 16, fontWeight: 500, outline: "none", width: "100%", boxSizing: "border-box" };
 const sel = { ...inp, width: "auto" };
 
 // Kept for reading the games played before 1 September, whose questions still
@@ -88,8 +103,8 @@ const GAME_PTS = 10;
 const OPT_COLORS = [
   { bg: "#dc2626", light: "#fef2f2" },
   { bg: "#2563eb", light: "#eff6ff" },
-  { bg: "#d97706", light: "#fffbeb" },
-  { bg: "#059669", light: "#ecfdf5" },
+  { bg: AMBER, light: "#fffbeb" },
+  { bg: GREEN, light: "#ecfdf5" },
 ];
 
 // Sorting by last name, the way the roster reads in the room. Each fork carried
@@ -181,36 +196,11 @@ export function GameAdmin({ config, data, setData }) {
     await saveData(updated); setData(updated); showMsg("Game is LIVE");
   };
 
+  // The rule for what a week is worth lives in game.js, where the build can run
+  // a whole game through it. This is the button.
   const scoreGame = async (w) => {
-    const game = games[w]; if (!game) return;
-    const entries = [];
-    const playerScores = {};
-    data.students.forEach(s => {
-      let pts = 0;
-      for (let q = 0; q < (game.questions || []).length; q++) {
-        const ans = game.responses?.[s.id + "-" + q];
-        if (ans === game.questions[q].correct) pts += GAME_PTS;
-      }
-      playerScores[s.id] = pts;
-    });
-    // Use the original scored timestamp so makeup entries don't count toward "this week" leaderboard
-    const rebounds = data.rebounds || {};
-    const rKey = "game-" + w;
-    const originalTs = rebounds[rKey]?.scoredTs || Date.now();
-    // Only add log entries for students who don't already have one for this source, or whose score changed
-    const source = "Game Wk" + w;
-    const existingEntries = data.log.filter(e => e.source === source);
-    data.students.forEach(s => {
-      const pts = playerScores[s.id] || 0;
-      const existing = existingEntries.find(e => e.studentId === s.id);
-      if (existing && existing.amount === pts) return; // no change
-      if (existing) { /* remove old entry, will add new */ }
-      if (pts > 0) entries.push({ id: genId(), studentId: s.id, amount: pts, source, ts: originalTs });
-    });
-    const cleanLog = data.log.filter(e => !(e.source === source && entries.find(n => n.studentId === e.studentId)));
-    // Ensure rebound scoredTs is set on first scoring
-    const newRebounds = { ...rebounds, [rKey]: { ...(rebounds[rKey] || {}), scoredTs: originalTs } };
-    const updated = { ...data, weeklyGames: { ...games, [w]: { ...game, scored: true, active: false, phase: "done" } }, log: [...cleanLog, ...entries], rebounds: newRebounds };
+    if (!games[w]) return;
+    const updated = scoreWeek(data, "game", w);
     await saveData(updated); setData(updated); showMsg("Scored!");
   };
 
@@ -263,32 +253,8 @@ export function GameAdmin({ config, data, setData }) {
   };
 
   const scoreToT = async (w) => {
-    const tot = tots[w]; if (!tot) return;
-    const ptsEach = tot.questions.length > 0 ? 20 / tot.questions.length : 20;
-    const entries = [];
-    const playerScores = {};
-    data.students.forEach(s => {
-      let pts = 0;
-      tot.questions.forEach((q, qi) => {
-        if (tot.responses?.[s.id + "-" + qi] === q.correct) pts += ptsEach;
-      });
-      const rounded = Math.round(pts * 10) / 10;
-      playerScores[s.id] = rounded;
-    });
-    const rebounds = data.rebounds || {};
-    const rKey = "tot-" + w;
-    const originalTs = rebounds[rKey]?.scoredTs || Date.now();
-    const source = "ToT Wk" + w;
-    const existingEntries = data.log.filter(e => e.source === source);
-    data.students.forEach(s => {
-      const pts = playerScores[s.id] || 0;
-      const existing = existingEntries.find(e => e.studentId === s.id);
-      if (existing && existing.amount === pts) return;
-      if (pts > 0) entries.push({ id: genId(), studentId: s.id, amount: pts, source, ts: originalTs });
-    });
-    const cleanLog = data.log.filter(e => !(e.source === source && entries.find(n => n.studentId === e.studentId)));
-    const newRebounds = { ...rebounds, [rKey]: { ...(rebounds[rKey] || {}), scoredTs: originalTs } };
-    const updated = { ...data, weeklyToT: { ...tots, [w]: { ...tot, scored: true, active: false, phase: "done" } }, log: [...cleanLog, ...entries], rebounds: newRebounds };
+    if (!tots[w]) return;
+    const updated = scoreWeek(data, "tot", w);
     await saveData(updated); setData(updated); showMsg("Scored!");
   };
 
@@ -469,7 +435,7 @@ export function GameAdmin({ config, data, setData }) {
               const numQs = (g.questions || []).length;
               const numTeams = (g.teams || []).length;
               const phaseLabel = g.scored ? "Done" : g.phase === "live" ? "LIVE" : "Setup";
-              const phaseColor = g.scored ? GREEN : g.phase === "live" ? "#d97706" : accent();
+              const phaseColor = g.scored ? GREEN : g.phase === "live" ? AMBER : accent();
               return (
                 <button key={g.id} onClick={() => setTriviaId(g.id)} style={{
                   ...crd, width: "100%", textAlign: "left", padding: 14, marginBottom: 8, cursor: "pointer",
@@ -480,7 +446,7 @@ export function GameAdmin({ config, data, setData }) {
                       <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>{g.title || "Untitled"}</div>
                       <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{numQs} question{numQs !== 1 ? "s" : ""} · {numTeams} team{numTeams !== 1 ? "s" : ""}</div>
                     </div>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: phaseColor, padding: "3px 8px", borderRadius: 6, background: phaseColor + "15", textTransform: "uppercase", letterSpacing: "0.05em" }}>{phaseLabel}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: phaseColor, padding: "3px 8px", borderRadius: 6, background: phaseColor + "15", textTransform: "uppercase", letterSpacing: "0.05em" }}>{phaseLabel}</span>
                   </div>
                 </button>
               );
@@ -497,10 +463,10 @@ export function GameAdmin({ config, data, setData }) {
             return (
               <button key={w} onClick={() => setWeek(w)} style={{
                 ...crd, padding: "14px 8px", cursor: "pointer", textAlign: "center",
-                border: exists ? scored ? "2px solid " + GREEN : isLive ? "2px solid #d97706" : "2px solid " + accent() : "1px solid #f3f4f6",
+                border: exists ? scored ? "2px solid " + GREEN : isLive ? "2px solid #b45309" : "2px solid " + accent() : "1px solid #f6f4f1",
               }}>
-                <div style={{ fontSize: 20, fontWeight: 900, color: scored ? GREEN : isLive ? "#d97706" : exists ? accent() : "#d1d5db" }}>{w}</div>
-                <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{scored ? "Done" : isLive ? "LIVE" : exists ? "Ready" : "Empty"}</div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: scored ? GREEN : isLive ? AMBER : exists ? accent() : BORDER_STRONG }}>{w}</div>
+                <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{scored ? "Done" : isLive ? "LIVE" : exists ? "Ready" : "Empty"}</div>
               </button>
             );
           })}
@@ -518,7 +484,7 @@ export function GameAdmin({ config, data, setData }) {
 */
 function TriviaSetup({ game, students, rosterTeams, pool, onPoolUpdate, onSave, onDelete, onBack, msg, showMsg }) {
   const { theme } = useTheme(gkey());
-  const crd = themedInteriorCrd(theme, 0);
+  const crd = cardFor(theme, 0);
   const [dragSrc, setDragSrc] = useState(null);
   const [showPool, setShowPool] = useState(false);
   const [showShelf, setShowShelf] = useState(false);
@@ -569,8 +535,8 @@ function TriviaSetup({ game, students, rosterTeams, pool, onPoolUpdate, onSave, 
   const TEAM_PALETTE = [
     { bg: "#fef2f2", accent: "#dc2626" },
     { bg: "#eff6ff", accent: "#2563eb" },
-    { bg: "#ecfdf5", accent: "#059669" },
-    { bg: "#fffbeb", accent: "#d97706" },
+    { bg: "#ecfdf5", accent: GREEN },
+    { bg: "#fffbeb", accent: AMBER },
     { bg: "#f5f3ff", accent: "#7c3aed" },
     { bg: "#ecfeff", accent: "#0891b2" },
     { bg: "#fdf2f8", accent: "#db2777" },
@@ -734,8 +700,8 @@ function TriviaSetup({ game, students, rosterTeams, pool, onPoolUpdate, onSave, 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 6 }}>
             <div style={{ ...sectionLabel }}>Questions ({questions.length})</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <button onClick={() => setShowPool(!showPool)} style={{ ...pillInactive, fontSize: 11, padding: "5px 10px" }}>{showPool ? "Hide" : "View"} pool ({poolList.length})</button>
-              <button onClick={() => setShowShelf(!showShelf)} style={{ ...pillInactive, fontSize: 11, padding: "5px 10px" }}>{showShelf ? "Hide" : "From"} the repository</button>
+              <button onClick={() => setShowPool(!showPool)} style={{ ...pillInactive, fontSize: 12.5, padding: "5px 10px" }}>{showPool ? "Hide" : "View"} pool ({poolList.length})</button>
+              <button onClick={() => setShowShelf(!showShelf)} style={{ ...pillInactive, fontSize: 12.5, padding: "5px 10px" }}>{showShelf ? "Hide" : "From"} the repository</button>
               <button onClick={addQ} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12, padding: "5px 12px" }}>+ Add Question</button>
             </div>
           </div>
@@ -750,9 +716,9 @@ function TriviaSetup({ game, students, rosterTeams, pool, onPoolUpdate, onSave, 
           {showPool && (
             <div style={{ background: "#fafaf9", border: "1.5px dashed " + BORDER, borderRadius: 10, padding: 12, marginBottom: 12 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Question Pool</div>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Question Pool</div>
                 {poolSelection.size > 0 && (
-                  <button onClick={importSelected} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 11, padding: "4px 10px" }}>Import {poolSelection.size} selected</button>
+                  <button onClick={importSelected} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12.5, padding: "4px 10px" }}>Import {poolSelection.size} selected</button>
                 )}
               </div>
               {poolList.length === 0 && <div style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic" }}>Pool is empty. Questions saved from "End Game & Finalize Now" will appear here.</div>}
@@ -763,9 +729,9 @@ function TriviaSetup({ game, students, rosterTeams, pool, onPoolUpdate, onSave, 
                     <input type="checkbox" checked={selected} onChange={() => togglePoolItem(p.id)} style={{ cursor: "pointer" }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, color: TEXT_PRIMARY }}>{p.text}</div>
-                      {p.fromGameTitle && <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>from "{p.fromGameTitle}"</div>}
+                      {p.fromGameTitle && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>from "{p.fromGameTitle}"</div>}
                     </div>
-                    <button onClick={() => deletePoolItem(p.id)} title="Delete from pool" style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 10, padding: "3px 7px" }}>✕</button>
+                    <button onClick={() => deletePoolItem(p.id)} title="Delete from pool" style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 12, padding: "3px 7px" }}>✕</button>
                   </div>
                 );
               })}
@@ -789,21 +755,21 @@ function TriviaSetup({ game, students, rosterTeams, pool, onPoolUpdate, onSave, 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 6 }}>
             <div style={{ ...sectionLabel }}>Teams ({teams.length})</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <button onClick={importFromRoster} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Import from roster</button>
-              <button onClick={autoDistribute} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Auto-distribute</button>
-              <button onClick={allInSittingOut} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>Reset</button>
+              <button onClick={importFromRoster} style={{ ...pillInactive, fontSize: 12.5, padding: "4px 10px" }}>Import from roster</button>
+              <button onClick={autoDistribute} style={{ ...pillInactive, fontSize: 12.5, padding: "4px 10px" }}>Auto-distribute</button>
+              <button onClick={allInSittingOut} style={{ ...pillInactive, fontSize: 12.5, padding: "4px 10px" }}>Reset</button>
               <button onClick={addTeam} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12, padding: "5px 12px" }}>+ Add Team</button>
             </div>
           </div>
-          <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 10 }}>Drag students between Sitting Out and team boxes. Anyone in Sitting Out won&apos;t answer this round.</div>
+          <div style={{ fontSize: 12.5, color: TEXT_MUTED, marginBottom: 10 }}>Drag students between Sitting Out and team boxes. Anyone in Sitting Out won&apos;t answer this round.</div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
             {/* Sitting Out column */}
             <div
               onDragOver={onDragOver} onDrop={onDrop("sitting", null)}
-              style={{ background: "#f9fafb", border: "2px dashed " + BORDER, borderRadius: 10, padding: 10, minHeight: 120 }}
+              style={{ background: "#f6f4f1", border: "2px dashed " + BORDER, borderRadius: 10, padding: 10, minHeight: 120 }}
             >
-              <div style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Sitting Out ({sittingOut.length})</div>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Sitting Out ({sittingOut.length})</div>
               {sittingOut.map(sid => {
                 const s = studentById(sid); if (!s) return null;
                 return (
@@ -816,7 +782,7 @@ function TriviaSetup({ game, students, rosterTeams, pool, onPoolUpdate, onSave, 
               })}
               {unassigned.length > 0 && (
                 <>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: AMBER, marginTop: 8, marginBottom: 4, textTransform: "uppercase" }}>Unassigned ({unassigned.length})</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: AMBER, marginTop: 8, marginBottom: 4, textTransform: "uppercase" }}>Unassigned ({unassigned.length})</div>
                   {unassigned.map(sid => {
                     const s = studentById(sid); if (!s) return null;
                     return (
@@ -846,7 +812,7 @@ function TriviaSetup({ game, students, rosterTeams, pool, onPoolUpdate, onSave, 
                     onCycleColor={() => cycleTeamColor(t.id)}
                     onRemove={() => removeTeam(t.id)}
                   />
-                  <div style={{ fontSize: 10, fontWeight: 700, color: palette.accent, marginBottom: 6, textTransform: "uppercase" }}>{(t.memberIds || []).length} member{(t.memberIds || []).length !== 1 ? "s" : ""}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: palette.accent, marginBottom: 6, textTransform: "uppercase" }}>{(t.memberIds || []).length} member{(t.memberIds || []).length !== 1 ? "s" : ""}</div>
                   {(t.memberIds || []).map(sid => {
                     const s = studentById(sid); if (!s) return null;
                     return (
@@ -873,7 +839,7 @@ function TriviaSetup({ game, students, rosterTeams, pool, onPoolUpdate, onSave, 
           }}>Go Live</button>
           <button onClick={() => { if (window.confirm("Delete this trivia game?")) onDelete(); }} style={{ ...pill, background: "#fef2f2", color: RED }}>Delete</button>
         </div>
-        {!canGoLive && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 8, textAlign: "center" }}>Need at least 2 teams with members, plus all questions filled in.</div>}
+        {!canGoLive && <div style={{ fontSize: 12.5, color: TEXT_MUTED, marginTop: 8, textAlign: "center" }}>Need at least 2 teams with members, plus all questions filled in.</div>}
       </div>
     </div>
   );
@@ -917,7 +883,7 @@ function QuestionRow({ idx, question, defaultPts, onUpdate, onRemove }) {
   return (
     <div style={{ padding: 12, borderRadius: 10, border: "1px solid " + BORDER, marginBottom: 8 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-        <span style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED }}>Q{idx + 1}</span>
+        <span style={{ fontSize: 12.5, fontWeight: 800, color: TEXT_MUTED }}>Q{idx + 1}</span>
         <input
           value={text}
           onChange={e => setText(e.target.value)}
@@ -925,7 +891,7 @@ function QuestionRow({ idx, question, defaultPts, onUpdate, onRemove }) {
           placeholder="Question text"
           style={{ ...inp, flex: 1 }}
         />
-        <button onClick={onRemove} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "4px 8px" }}>✕</button>
+        <button onClick={onRemove} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 12.5, padding: "4px 8px" }}>✕</button>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <input
@@ -936,7 +902,7 @@ function QuestionRow({ idx, question, defaultPts, onUpdate, onRemove }) {
           style={{ ...inp, flex: 1, fontSize: 12, color: TEXT_SECONDARY }}
         />
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ fontSize: 10, color: TEXT_MUTED }}>pts:</span>
+          <span style={{ fontSize: 12, color: TEXT_MUTED }}>pts:</span>
           <input
             type="number" min={0}
             value={pts}
@@ -961,8 +927,8 @@ function TeamHeader({ team, accent, onRename, onCycleColor, onRemove }) {
         onBlur={() => onRename(name)}
         style={{ ...inp, fontSize: 13, fontWeight: 800, color: accent, padding: "4px 6px", flex: 1, background: "#fff" }}
       />
-      <button onClick={onCycleColor} title="Cycle color" style={{ ...pillInactive, padding: "4px 8px", fontSize: 10 }}>🎨</button>
-      <button onClick={onRemove} style={{ ...pill, background: "#fff", color: RED, fontSize: 10, padding: "4px 8px", border: "1px solid " + BORDER }}>✕</button>
+      <button onClick={onCycleColor} title="Cycle color" style={{ ...pillInactive, padding: "4px 8px", fontSize: 12 }}>🎨</button>
+      <button onClick={onRemove} style={{ ...pill, background: "#fff", color: RED, fontSize: 12, padding: "4px 8px", border: "1px solid " + BORDER }}>✕</button>
     </div>
   );
 }
@@ -976,13 +942,13 @@ function TeamHeader({ team, accent, onRename, onCycleColor, onRemove }) {
 */
 function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBackToSetup, onFinalize, onEndGameAndPool, msg, showMsg }) {
   const { theme } = useTheme(gkey());
-  const crd = themedInteriorCrd(theme, 0);
+  const crd = cardFor(theme, 0);
 
   const TEAM_PALETTE = [
     { bg: "#fef2f2", accent: "#dc2626" },
     { bg: "#eff6ff", accent: "#2563eb" },
-    { bg: "#ecfdf5", accent: "#059669" },
-    { bg: "#fffbeb", accent: "#d97706" },
+    { bg: "#ecfdf5", accent: GREEN },
+    { bg: "#fffbeb", accent: AMBER },
     { bg: "#f5f3ff", accent: "#7c3aed" },
     { bg: "#ecfeff", accent: "#0891b2" },
     { bg: "#fdf2f8", accent: "#db2777" },
@@ -1216,10 +1182,10 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 6 }}>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <button onClick={onBack} style={pillInactive}>Back</button>
-            {onBackToSetup && <button onClick={onBackToSetup} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>← Back to Setup</button>}
+            {onBackToSetup && <button onClick={onBackToSetup} style={{ ...pillInactive, fontSize: 12.5, padding: "4px 10px" }}>← Back to Setup</button>}
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#d97706", padding: "3px 10px", borderRadius: 6, background: "#fffbeb", textTransform: "uppercase", letterSpacing: "0.05em" }}>LIVE</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: AMBER, padding: "3px 10px", borderRadius: 6, background: "#fffbeb", textTransform: "uppercase", letterSpacing: "0.05em" }}>LIVE</span>
             <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{game.title}</span>
           </div>
         </div>
@@ -1241,16 +1207,16 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
               <div style={{ ...sectionLabel }}>Questions ({questions.length})</div>
               <button onClick={addQ} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12, padding: "5px 12px" }}>+ Add Question</button>
             </div>
-            <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 10 }}>Edit any question text or expected answer at any time. Questions that have been opened, locked, or revealed can&apos;t be deleted.</div>
+            <div style={{ fontSize: 12.5, color: TEXT_MUTED, marginBottom: 10 }}>Edit any question text or expected answer at any time. Questions that have been opened, locked, or revealed can&apos;t be deleted.</div>
             {questions.map((q, i) => {
               const touched = isQTouched(i);
               const status = revealedQs.includes(i) ? "REVEALED" : lockedQs.includes(i) ? "LOCKED" : openQs.includes(i) ? "OPEN" : "AVAILABLE";
-              const statusColor = status === "REVEALED" ? GREEN : status === "LOCKED" ? "#d97706" : status === "OPEN" ? "#2563eb" : TEXT_MUTED;
+              const statusColor = status === "REVEALED" ? GREEN : status === "LOCKED" ? AMBER : status === "OPEN" ? "#2563eb" : TEXT_MUTED;
               return (
                 <div key={q.id} style={{ marginBottom: 8, position: "relative" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, color: statusColor, background: statusColor + "15", padding: "2px 6px", borderRadius: 4 }}>{status}</span>
-                    {touched && <span style={{ fontSize: 10, color: TEXT_MUTED, fontStyle: "italic" }}>(can&apos;t delete — already used)</span>}
+                    <span style={{ fontSize: 12, fontWeight: 800, color: statusColor, background: statusColor + "15", padding: "2px 6px", borderRadius: 4 }}>{status}</span>
+                    {touched && <span style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic" }}>(can&apos;t delete — already used)</span>}
                   </div>
                   <QuestionRow
                     idx={i} question={q} defaultPts={defaultPts}
@@ -1270,11 +1236,11 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
               <div style={{ ...sectionLabel }}>Teams ({teams.length})</div>
               <button onClick={addTeam} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12, padding: "5px 12px" }}>+ Add Team</button>
             </div>
-            <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 10 }}>Drag students between Sitting Out and team boxes. An answer stays credited to the team that submitted the answer.</div>
+            <div style={{ fontSize: 12.5, color: TEXT_MUTED, marginBottom: 10 }}>Drag students between Sitting Out and team boxes. An answer stays credited to the team that submitted the answer.</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
               {/* Sitting Out + Unassigned column */}
-              <div onDragOver={onEditDragOver} onDrop={onEditDrop("sitting", null)} style={{ background: "#f9fafb", border: "2px dashed " + BORDER, borderRadius: 10, padding: 10, minHeight: 120 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Sitting Out ({sittingOut.length})</div>
+              <div onDragOver={onEditDragOver} onDrop={onEditDrop("sitting", null)} style={{ background: "#f6f4f1", border: "2px dashed " + BORDER, borderRadius: 10, padding: 10, minHeight: 120 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Sitting Out ({sittingOut.length})</div>
                 {sittingOut.map(sid => {
                   const s = studentById(sid); if (!s) return null;
                   return (
@@ -1283,7 +1249,7 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
                 })}
                 {unassigned.length > 0 && (
                   <>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: AMBER, marginTop: 8, marginBottom: 4, textTransform: "uppercase" }}>Unassigned ({unassigned.length})</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: AMBER, marginTop: 8, marginBottom: 4, textTransform: "uppercase" }}>Unassigned ({unassigned.length})</div>
                     {unassigned.map(sid => {
                       const s = studentById(sid); if (!s) return null;
                       return (
@@ -1304,7 +1270,7 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
                       onCycleColor={() => cycleTeamColor(t.id)}
                       onRemove={() => removeTeam(t.id)}
                     />
-                    <div style={{ fontSize: 10, fontWeight: 700, color: palette.accent, marginBottom: 6, textTransform: "uppercase" }}>{(t.memberIds || []).length} member{(t.memberIds || []).length !== 1 ? "s" : ""}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: palette.accent, marginBottom: 6, textTransform: "uppercase" }}>{(t.memberIds || []).length} member{(t.memberIds || []).length !== 1 ? "s" : ""}</div>
                     {(t.memberIds || []).map(sid => {
                       const s = studentById(sid); if (!s) return null;
                       return (
@@ -1319,7 +1285,7 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
         )}
 
         {/* Running standings strip */}
-        <div style={{ ...crd, padding: 14, marginBottom: 16, background: "#fafafa" }}>
+        <div style={{ ...crd, padding: 14, marginBottom: 16, background: "#fafaf9" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
             <div style={{ ...sectionLabel }}>Standings ({revealedQs.length} of {questions.length} questions revealed)</div>
             <button
@@ -1327,7 +1293,7 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
                 const url = window.location.origin + window.location.pathname + "?game=" + encodeURIComponent(game.id) + "&class=" + CFG.id;
                 window.open(url, "trivia-presenter", "width=1280,height=800");
               }}
-              style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}
+              style={{ ...pillInactive, fontSize: 12.5, padding: "4px 10px" }}
             >Open Presenter →</button>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -1337,7 +1303,7 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
               const bonus = teamBonus(t.id);
               return (
                 <div key={t.id} style={{ background: pal.bg, border: "2px solid " + pal.accent, borderRadius: 10, padding: "8px 12px", minWidth: 130 }}>
-                  <div style={{ fontSize: 9, fontWeight: 800, color: pal.accent, letterSpacing: "0.05em" }}>#{idx + 1}</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: pal.accent, letterSpacing: "0.05em" }}>#{idx + 1}</div>
                   <div style={{ fontSize: 13, fontWeight: 800, color: TEXT_PRIMARY, lineHeight: 1.1 }}>{t.name}</div>
                   <div style={{ fontSize: 18, fontWeight: 900, color: pal.accent, fontVariantNumeric: "tabular-nums" }}>{total}</div>
                   <TeamBonusEditor
@@ -1358,7 +1324,7 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
               <div style={{ ...sectionLabel }}>{openQs.length > 0 ? "Open Round" : "Locked · Grade Answers"}</div>
               <div style={{ display: "flex", gap: 6 }}>
                 {openQs.length > 0 && (
-                  <button onClick={lockRound} style={{ ...pill, background: "#d97706", color: "#fff", fontSize: 12 }}>Lock {openQs.length} question{openQs.length !== 1 ? "s" : ""}</button>
+                  <button onClick={lockRound} style={{ ...pill, background: AMBER, color: "#fff", fontSize: 12 }}>Lock {openQs.length} question{openQs.length !== 1 ? "s" : ""}</button>
                 )}
                 {lockedQs.length > 0 && (
                   <button onClick={revealRound} style={{ ...pill, background: GREEN, color: "#fff", fontSize: 12 }}>Reveal Round</button>
@@ -1374,16 +1340,16 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
               return (
                 <div key={qi} style={{ padding: 14, borderRadius: 10, border: "1px solid " + BORDER, marginBottom: 10, background: "#fff" }}>
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED }}>Q{qi + 1} · {qPts} pt{qPts !== 1 ? "s" : ""}</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 800, color: TEXT_MUTED }}>Q{qi + 1} · {qPts} pt{qPts !== 1 ? "s" : ""}</div>
                     {isLocked ? (
-                      <span style={{ fontSize: 9, fontWeight: 800, color: "#d97706", background: "#fffbeb", padding: "2px 6px", borderRadius: 4 }}>LOCKED</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: AMBER, background: "#fffbeb", padding: "2px 6px", borderRadius: 4 }}>LOCKED</span>
                     ) : (
-                      <span style={{ fontSize: 9, fontWeight: 800, color: GREEN, background: "#ecfdf5", padding: "2px 6px", borderRadius: 4 }}>OPEN</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: GREEN, background: "#ecfdf5", padding: "2px 6px", borderRadius: 4 }}>OPEN</span>
                     )}
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 4 }}>{q.text}</div>
                   {q.expectedAnswer && (
-                    <div style={{ fontSize: 11, color: TEXT_SECONDARY, marginBottom: 8, fontStyle: "italic" }}>Expected: {q.expectedAnswer}</div>
+                    <div style={{ fontSize: 12.5, color: TEXT_SECONDARY, marginBottom: 8, fontStyle: "italic" }}>Expected: {q.expectedAnswer}</div>
                   )}
 
                   {/* Team answer cards */}
@@ -1400,7 +1366,7 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
                           border: "2px solid " + (correct ? GREEN : incorrect ? RED : pal.accent),
                           borderRadius: 10, padding: 10,
                         }}>
-                          <div style={{ fontSize: 10, fontWeight: 800, color: pal.accent, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{t.name}</div>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: pal.accent, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{t.name}</div>
                           {submitted ? (
                             <div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 6, wordBreak: "break-word" }}>{a.text}</div>
                           ) : (
@@ -1454,9 +1420,9 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
                   cursor: "pointer", fontFamily: F,
                 }}>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED, flexShrink: 0 }}>Q{idx + 1}</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 800, color: TEXT_MUTED, flexShrink: 0 }}>Q{idx + 1}</span>
                     <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1 }}>{q.text}</span>
-                    <span style={{ fontSize: 10, color: TEXT_MUTED, flexShrink: 0 }}>{qPts} pt{qPts !== 1 ? "s" : ""}</span>
+                    <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0 }}>{qPts} pt{qPts !== 1 ? "s" : ""}</span>
                     {isSelected && <span style={{ fontSize: 14, color: GREEN, fontWeight: 800 }}>✓</span>}
                   </div>
                 </button>
@@ -1474,8 +1440,8 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
               if (!q) return null;
               const qPts = (q.pointsOverride !== null && q.pointsOverride !== undefined) ? q.pointsOverride : defaultPts;
               return (
-                <div key={qi} style={{ padding: 10, borderRadius: 8, background: "#fafafa", marginBottom: 6 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED, marginBottom: 2 }}>Q{qi + 1}</div>
+                <div key={qi} style={{ padding: 10, borderRadius: 8, background: "#fafaf9", marginBottom: 6 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 800, color: TEXT_MUTED, marginBottom: 2 }}>Q{qi + 1}</div>
                   <div style={{ fontSize: 13, color: TEXT_PRIMARY, marginBottom: 6 }}>{q.text}</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {teams.map(t => {
@@ -1487,7 +1453,7 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
                           background: correct ? "#ecfdf5" : "#fef2f2",
                           border: "1.5px solid " + (correct ? GREEN : RED),
                           borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: F,
-                          fontSize: 11, fontWeight: 700, color: correct ? GREEN : RED,
+                          fontSize: 12.5, fontWeight: 700, color: correct ? GREEN : RED,
                         }}>
                           {t.name}: {correct ? "+" + qPts : "0"}
                         </button>
@@ -1508,11 +1474,11 @@ function TriviaLiveAdmin({ game, students, data, setData, onSave, onBack, onBack
             </button>
           ) : (
             <>
-              <div style={{ fontSize: 11, color: TEXT_MUTED, textAlign: "center" }}>{revealedQs.length} of {questions.length} questions revealed</div>
+              <div style={{ fontSize: 12.5, color: TEXT_MUTED, textAlign: "center" }}>{revealedQs.length} of {questions.length} questions revealed</div>
               <button onClick={onEndGameAndPool} style={{ ...pill, padding: "10px 16px", background: "#fff", color: TEXT_PRIMARY, border: "1.5px solid " + TEXT_PRIMARY, width: "100%", fontSize: 13, fontWeight: 700 }}>
                 End Game & Finalize Now
               </button>
-              <div style={{ fontSize: 11, color: TEXT_MUTED, textAlign: "center" }}>Unused questions will be saved to the pool for next time</div>
+              <div style={{ fontSize: 12.5, color: TEXT_MUTED, textAlign: "center" }}>Unused questions will be saved to the pool for next time</div>
             </>
           )}
         </div>
@@ -1586,7 +1552,7 @@ function ReviewAnswers({ type, week, data, setData }) {
                   <div style={{ width: 28, height: 28, borderRadius: 7, background: accent() + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: accent() }}>{qi + 1}</div>
                   <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }}>{q.text || q.prompt || "(no text)"}</div>
                 </div>
-                <div style={{ fontSize: 11, color: GREEN, fontWeight: 600, marginBottom: 8 }}>
+                <div style={{ fontSize: 12.5, color: GREEN, fontWeight: 600, marginBottom: 8 }}>
                   Correct: {type === "game" ? (q.options?.[q.correct] || letters[q.correct]) : (q.options?.[q.correct] || "Option " + (q.correct + 1))}
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -1596,12 +1562,12 @@ function ReviewAnswers({ type, week, data, setData }) {
                     const correct = ans === q.correct;
                     const noAnswer = ans === undefined || ans === null;
                     return (
-                      <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", borderRadius: 6, background: noAnswer ? "#f9fafb" : correct ? "#ecfdf5" : "#fef2f2" }}>
+                      <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", borderRadius: 6, background: noAnswer ? "#f6f4f1" : correct ? "#ecfdf5" : "#fef2f2" }}>
                         <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_PRIMARY, flex: 1, minWidth: 0 }}>{s.name.split(" ")[0]}</span>
                         <span style={{ fontSize: 12, fontWeight: 600, color: noAnswer ? TEXT_MUTED : correct ? GREEN : RED, marginRight: 4 }}>
                           {noAnswer ? "No answer" : type === "game" ? (q.options?.[ans] || letters[ans] || "?") : (q.options?.[ans] || "Option " + (ans + 1))}
                         </span>
-                        <select value={ans !== undefined && ans !== null ? ans : ""} onChange={e => { const v = e.target.value; changeAnswer(s.id, qi, v === "" ? undefined : parseInt(v)); }} style={{ fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid " + BORDER, fontFamily: F, background: "#fff" }}>
+                        <select value={ans !== undefined && ans !== null ? ans : ""} onChange={e => { const v = e.target.value; changeAnswer(s.id, qi, v === "" ? undefined : parseInt(v)); }} style={{ fontSize: 12.5, padding: "2px 4px", borderRadius: 4, border: "1px solid " + BORDER, fontFamily: F, background: "#fff" }}>
                           <option value="">No answer</option>
                           {(q.options || []).map((o, oi) => (
                             <option key={oi} value={oi}>{type === "game" ? (letters[oi] + ") " + (o || "Option " + (oi + 1))) : (o || "Option " + (oi + 1))}</option>
@@ -1647,7 +1613,7 @@ function GameEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack,
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <button onClick={onBack} style={pillInactive}>Back</button>
-          <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>Week {week} Game</div>
+          <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY }}>Week {week} Game</div>
           <div style={{ width: 60 }} />
         </div>
         {scored && <div style={{ textAlign: "center", fontSize: 13, color: GREEN, fontWeight: 700, marginBottom: 12, padding: 8, background: "#ecfdf5", borderRadius: 8 }}>Scored</div>}
@@ -1663,20 +1629,20 @@ function GameEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack,
           <div key={i} style={{ ...crd, padding: 14, marginBottom: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <button onClick={() => moveQ(i, i - 1)} disabled={i === 0} style={{ background: "none", border: "none", cursor: i === 0 ? "default" : "pointer", color: i === 0 ? "#e5e7eb" : "#9ca3af", fontSize: 12, padding: 0, lineHeight: 1 }}>&#9650;</button>
-                <button onClick={() => moveQ(i, i + 1)} disabled={i === questions.length - 1} style={{ background: "none", border: "none", cursor: i === questions.length - 1 ? "default" : "pointer", color: i === questions.length - 1 ? "#e5e7eb" : "#9ca3af", fontSize: 12, padding: 0, lineHeight: 1 }}>&#9660;</button>
+                <button onClick={() => moveQ(i, i - 1)} disabled={i === 0} style={{ background: "none", border: "none", cursor: i === 0 ? "default" : "pointer", color: i === 0 ? BORDER_STRONG : TEXT_MUTED, fontSize: 12, padding: 0, lineHeight: 1 }}>&#9650;</button>
+                <button onClick={() => moveQ(i, i + 1)} disabled={i === questions.length - 1} style={{ background: "none", border: "none", cursor: i === questions.length - 1 ? "default" : "pointer", color: i === questions.length - 1 ? BORDER_STRONG : TEXT_MUTED, fontSize: 12, padding: 0, lineHeight: 1 }}>&#9660;</button>
               </div>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: "#111827", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 900, flexShrink: 0 }}>{i + 1}</div>
-              <div style={{ fontSize: 10, color: "#9ca3af" }}>Game: {GAME_PTS}pts / Grade: {gradePtsOf(q)}pts</div>
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: TEXT_PRIMARY, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 900, flexShrink: 0 }}>{i + 1}</div>
+              <div style={{ fontSize: 12, color: TEXT_MUTED }}>Game: {GAME_PTS}pts / Grade: {gradePtsOf(q)}pts</div>
             </div>
             <input value={q.text} onChange={e => updateQ(i, "text", e.target.value)} placeholder="Question text (your reference only)" style={{ ...inp, fontSize: 12, padding: "6px 10px", marginBottom: 6 }} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
               {q.options.map((opt, oi) => (
                 <div key={oi} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <button onClick={() => updateQ(i, "correct", oi)} style={{
-                    width: 24, height: 24, borderRadius: 6, border: "2px solid " + (q.correct === oi ? GREEN : "#e5e7eb"),
-                    background: q.correct === oi ? "#ecfdf5" : "#fff", cursor: "pointer", fontSize: 10, fontWeight: 900,
-                    color: q.correct === oi ? GREEN : "#d1d5db", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    width: 24, height: 24, borderRadius: 6, border: "2px solid " + (q.correct === oi ? GREEN : BORDER_STRONG),
+                    background: q.correct === oi ? "#ecfdf5" : "#fff", cursor: "pointer", fontSize: 12, fontWeight: 900,
+                    color: q.correct === oi ? GREEN : BORDER_STRONG, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                   }}>{String.fromCharCode(65 + oi)}</button>
                   <input value={opt} onChange={e => updateQ(i, "option", { idx: oi, text: e.target.value })} placeholder={"Option " + String.fromCharCode(65 + oi)} style={{ ...inp, fontSize: 12, padding: "5px 8px" }} />
                 </div>
@@ -1685,8 +1651,8 @@ function GameEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack,
           </div>
         ))}
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <button onClick={() => onSave(questions)} style={{ ...pill, background: "#111827", color: "#fff", flex: 1, padding: "12px 0" }}>Save</button>
-          <button onClick={() => { onSave(questions); setTimeout(onGoLive, 300); }} style={{ ...pill, background: "#d97706", color: "#fff", flex: 1, padding: "12px 0" }}>{scored ? "Re-Open Live" : "Go Live"}</button>
+          <button onClick={() => onSave(questions)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1, padding: "12px 0" }}>Save</button>
+          <button onClick={() => { onSave(questions); setTimeout(onGoLive, 300); }} style={{ ...pill, background: AMBER, color: "#fff", flex: 1, padding: "12px 0" }}>{scored ? "Re-Open Live" : "Go Live"}</button>
           <button onClick={onDelete} style={{ ...pill, background: "#fef2f2", color: RED, padding: "12px 16px" }}>Delete</button>
         </div>
       </div>
@@ -1718,31 +1684,31 @@ function ToTEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack, 
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <button onClick={onBack} style={pillInactive}>Back</button>
-          <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>Week {week} This or That</div>
+          <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY }}>Week {week} This or That</div>
           <div style={{ width: 60 }} />
         </div>
         {scored && <div style={{ textAlign: "center", fontSize: 13, color: GREEN, fontWeight: 700, marginBottom: 12, padding: 8, background: "#ecfdf5", borderRadius: 8 }}>Scored</div>}
-        <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 12 }}>{questions.length} question{questions.length !== 1 ? "s" : ""}, {ptsEach} pts each (20 total)</div>
+        <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>{questions.length} question{questions.length !== 1 ? "s" : ""}, {ptsEach} pts each (20 total)</div>
         {questions.map((q, i) => (
           <div key={i} style={{ ...crd, padding: 14, marginBottom: 8 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  <button onClick={() => moveQ(i, i - 1)} disabled={i === 0} style={{ background: "none", border: "none", cursor: i === 0 ? "default" : "pointer", color: i === 0 ? "#e5e7eb" : "#9ca3af", fontSize: 12, padding: 0, lineHeight: 1 }}>&#9650;</button>
-                  <button onClick={() => moveQ(i, i + 1)} disabled={i === questions.length - 1} style={{ background: "none", border: "none", cursor: i === questions.length - 1 ? "default" : "pointer", color: i === questions.length - 1 ? "#e5e7eb" : "#9ca3af", fontSize: 12, padding: 0, lineHeight: 1 }}>&#9660;</button>
+                  <button onClick={() => moveQ(i, i - 1)} disabled={i === 0} style={{ background: "none", border: "none", cursor: i === 0 ? "default" : "pointer", color: i === 0 ? BORDER_STRONG : TEXT_MUTED, fontSize: 12, padding: 0, lineHeight: 1 }}>&#9650;</button>
+                  <button onClick={() => moveQ(i, i + 1)} disabled={i === questions.length - 1} style={{ background: "none", border: "none", cursor: i === questions.length - 1 ? "default" : "pointer", color: i === questions.length - 1 ? BORDER_STRONG : TEXT_MUTED, fontSize: 12, padding: 0, lineHeight: 1 }}>&#9660;</button>
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 900 }}>#{i + 1}</div>
               </div>
-              {questions.length > 1 && <button onClick={() => removeQ(i)} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "3px 8px" }}>Remove</button>}
+              {questions.length > 1 && <button onClick={() => removeQ(i)} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 12.5, padding: "3px 8px" }}>Remove</button>}
             </div>
             <input value={q.prompt} onChange={e => updateQ(i, "prompt", e.target.value)} placeholder="Statement or prompt" style={{ ...inp, fontSize: 13, padding: "8px 10px", marginBottom: 6 }} />
             <div style={{ display: "flex", gap: 6 }}>
               {q.options.map((opt, oi) => (
                 <div key={oi} style={{ flex: 1, display: "flex", alignItems: "center", gap: 4 }}>
                   <button onClick={() => updateQ(i, "correct", oi)} style={{
-                    width: 24, height: 24, borderRadius: 6, border: "2px solid " + (q.correct === oi ? GREEN : "#e5e7eb"),
-                    background: q.correct === oi ? "#ecfdf5" : "#fff", cursor: "pointer", fontSize: 11, fontWeight: 900,
-                    color: q.correct === oi ? GREEN : "#d1d5db", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    width: 24, height: 24, borderRadius: 6, border: "2px solid " + (q.correct === oi ? GREEN : BORDER_STRONG),
+                    background: q.correct === oi ? "#ecfdf5" : "#fff", cursor: "pointer", fontSize: 12.5, fontWeight: 900,
+                    color: q.correct === oi ? GREEN : BORDER_STRONG, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                   }}>{oi === 0 ? "A" : "B"}</button>
                   <input value={opt} onChange={e => updateQ(i, "optionText", { idx: oi, text: e.target.value })} placeholder={oi === 0 ? "This" : "That"} style={{ ...inp, fontSize: 12, padding: "5px 8px" }} />
                 </div>
@@ -1752,8 +1718,8 @@ function ToTEditor({ week, initial, scored, onSave, onGoLive, onDelete, onBack, 
         ))}
         {questions.length < 4 && <button onClick={addQ} style={{ ...pillInactive, width: "100%", marginBottom: 12 }}>+ Add Question</button>}
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => onSave(questions)} style={{ ...pill, background: "#111827", color: "#fff", flex: 1, padding: "12px 0" }}>Save</button>
-          <button onClick={() => { onSave(questions); setTimeout(onGoLive, 300); }} style={{ ...pill, background: "#d97706", color: "#fff", flex: 1, padding: "12px 0" }}>{scored ? "Re-Open Live" : "Go Live"}</button>
+          <button onClick={() => onSave(questions)} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", flex: 1, padding: "12px 0" }}>Save</button>
+          <button onClick={() => { onSave(questions); setTimeout(onGoLive, 300); }} style={{ ...pill, background: AMBER, color: "#fff", flex: 1, padding: "12px 0" }}>{scored ? "Re-Open Live" : "Go Live"}</button>
           <button onClick={onDelete} style={{ ...pill, background: "#fef2f2", color: RED, padding: "12px 16px" }}>Delete</button>
         </div>
       </div>
@@ -1853,13 +1819,13 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
     const totalStudents = sorted.length;
     const lockedCount = sorted.filter(s => activity.responses?.[s.id + "-" + currentQ] !== undefined).length;
     return (
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#fafaf9", color: "#111827", fontFamily: F, padding: "24px 32px", zIndex: 9999, display: "flex", flexDirection: "column" }}>
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#fafaf9", color: TEXT_PRIMARY, fontFamily: F, padding: "24px 32px", zIndex: 9999, display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexShrink: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>{label} / Week {week} / Q{currentQ + 1} of {qs.length}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             {countdownActive && <div style={{ fontSize: 32, fontWeight: 900, color: RED, fontVariantNumeric: "tabular-nums" }}>{countdownSecs}</div>}
             <div style={{ background: "#fff", border: "2px solid " + BORDER, borderRadius: 12, padding: "8px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase" }}>Locked</span>
+              <span style={{ fontSize: 12.5, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase" }}>Locked</span>
               <span style={{ fontSize: 24, fontWeight: 900, color: GREEN, fontVariantNumeric: "tabular-nums" }}>{lockedCount}<span style={{ color: TEXT_MUTED, fontSize: 16 }}> / {totalStudents}</span></span>
             </div>
             <button onClick={() => setPresenterMode(false)} style={{ background: "#fff", color: TEXT_PRIMARY, border: "1px solid " + BORDER, padding: "8px 16px", borderRadius: 10, fontFamily: F, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Exit</button>
@@ -1867,7 +1833,7 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
         </div>
         {q ? (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 0 }}>
-            <div style={{ fontSize: "clamp(28px, 4vw, 48px)", fontWeight: 900, color: "#111827", lineHeight: 1.2, marginBottom: 32, textAlign: "center", padding: "0 20px" }}>{q.text || q.prompt || "(no text)"}</div>
+            <div style={{ fontSize: "clamp(28px, 4vw, 48px)", fontWeight: 900, color: TEXT_PRIMARY, lineHeight: 1.2, marginBottom: 32, textAlign: "center", padding: "0 20px" }}>{q.text || q.prompt || "(no text)"}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, maxWidth: 1200, width: "100%", margin: "0 auto" }}>
               {(q.options || []).map((opt, oi) => {
                 if (!opt && type === "game") return null;
@@ -1897,7 +1863,7 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <button onClick={onBack} style={pillInactive}>Back</button>
-          <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>Week {week} {label} <span style={{ color: "#d97706" }}>LIVE</span></div>
+          <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY }}>Week {week} {label} <span style={{ color: AMBER }}>LIVE</span></div>
           <button onClick={() => setPresenterMode(true)} style={{ ...pill, background: "#0f172a", color: "#fff", fontSize: 13 }}>Presenter</button>
         </div>
 
@@ -1912,7 +1878,7 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
         {/* Question controls */}
         <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>Q{currentQ + 1}<span style={{ fontSize: 14, color: "#9ca3af" }}> / {qs.length}</span></div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: TEXT_PRIMARY }}>Q{currentQ + 1}<span style={{ fontSize: 14, color: TEXT_MUTED }}> / {qs.length}</span></div>
             {countdownActive && <div style={{ fontSize: 36, fontWeight: 900, color: RED, fontVariantNumeric: "tabular-nums" }}>{countdownSecs}</div>}
           </div>
           {qs[currentQ] && (
@@ -1920,7 +1886,7 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
               {qs[currentQ].text || (type === "tot" ? qs[currentQ].prompt : "(no text)")}
               <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {qs[currentQ].options.map((opt, oi) => (
-                  <span key={oi} style={{ fontSize: 13, padding: "4px 10px", borderRadius: 8, background: qs[currentQ].correct === oi ? "#ecfdf5" : "#f4f4f5", color: qs[currentQ].correct === oi ? GREEN : TEXT_SECONDARY, fontWeight: qs[currentQ].correct === oi ? 700 : 400, border: "1px solid " + (qs[currentQ].correct === oi ? GREEN + "40" : "#e5e7eb") }}>
+                  <span key={oi} style={{ fontSize: 13, padding: "4px 10px", borderRadius: 8, background: qs[currentQ].correct === oi ? "#ecfdf5" : "#f4f4f5", color: qs[currentQ].correct === oi ? GREEN : TEXT_SECONDARY, fontWeight: qs[currentQ].correct === oi ? 700 : 400, border: "1px solid " + (qs[currentQ].correct === oi ? GREEN + "40" : BORDER_STRONG) }}>
                     {String.fromCharCode(65 + oi)}. {opt}
                   </span>
                 ))}
@@ -1932,7 +1898,7 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
               <button onClick={startCountdown} style={{ ...pill, background: RED, color: "#fff", padding: "10px 20px", fontSize: 14 }}>5 Seconds Left</button>
             )}
             {isLocked(currentQ) && currentQ < qs.length - 1 && (
-              <button onClick={nextQuestion} style={{ ...pill, background: "#111827", color: "#fff", padding: "10px 20px", fontSize: 14 }}>Next Question</button>
+              <button onClick={nextQuestion} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", padding: "10px 20px", fontSize: 14 }}>Next Question</button>
             )}
             {isAllLocked && !activity.scored && (
               <button onClick={onScore} style={{ ...pill, background: GREEN, color: "#fff", padding: "10px 20px", fontSize: 14 }}>Score and Post Points</button>
@@ -1950,9 +1916,9 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
             <div key={qi} style={{
               width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 13, fontWeight: 800,
-              background: isLocked(qi) ? GREEN + "20" : qi === currentQ ? "#d97706" + "20" : "#f4f4f5",
-              color: isLocked(qi) ? GREEN : qi === currentQ ? "#d97706" : "#d1d5db",
-              border: qi === currentQ ? "2px solid #d97706" : "1px solid transparent",
+              background: isLocked(qi) ? GREEN + "20" : qi === currentQ ? AMBER + "20" : "#f4f4f5",
+              color: isLocked(qi) ? GREEN : qi === currentQ ? AMBER : BORDER_STRONG,
+              border: qi === currentQ ? "2px solid #b45309" : "1px solid transparent",
             }}>{qi + 1}</div>
           ))}
         </div>
@@ -1961,10 +1927,10 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
         <div style={{ ...crd, overflow: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, fontFamily: F }}>
             <thead>
-              <tr style={{ background: "#f9fafb" }}>
-                <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: TEXT_PRIMARY, position: "sticky", left: 0, background: "#f9fafb", minWidth: 120 }}>Student</th>
+              <tr style={{ background: "#f6f4f1" }}>
+                <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: TEXT_PRIMARY, position: "sticky", left: 0, background: "#f6f4f1", minWidth: 120 }}>Student</th>
                 {qs.map((_, qi) => (
-                  <th key={qi} style={{ padding: "8px 6px", textAlign: "center", fontWeight: 700, color: qi === currentQ ? "#d97706" : TEXT_MUTED, minWidth: 40 }}>Q{qi + 1}</th>
+                  <th key={qi} style={{ padding: "8px 6px", textAlign: "center", fontWeight: 700, color: qi === currentQ ? AMBER : TEXT_MUTED, minWidth: 40 }}>Q{qi + 1}</th>
                 ))}
                 <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 700, color: TEXT_PRIMARY, minWidth: 50 }}>Total</th>
               </tr>
@@ -1985,7 +1951,7 @@ function LiveActivityAdmin({ type, week, data, setData, onBack, onScore, onTeamB
                         <td key={qi} style={{
                           padding: "6px 6px", textAlign: "center", fontWeight: 700,
                           background: showResult ? (correct ? "#ecfdf5" : answered ? "#fef2f2" : "transparent") : (answered ? "#f0f0ff" : "transparent"),
-                          color: showResult ? (correct ? GREEN : RED) : (answered ? "#6366f1" : "#e5e7eb"),
+                          color: showResult ? (correct ? GREEN : RED) : (answered ? "#6366f1" : BORDER_STRONG),
                         }}>{answered ? letter : "-"}</td>
                       );
                     })}
@@ -2084,8 +2050,8 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
 
   const GROUP_COLORS = {
     1: { bg: "#eff6ff", text: "#2563eb", border: "#2563eb" },
-    2: { bg: "#fffbeb", text: "#d97706", border: "#d97706" },
-    3: { bg: "#ecfdf5", text: "#059669", border: "#059669" },
+    2: { bg: "#fffbeb", text: AMBER, border: AMBER },
+    3: { bg: "#ecfdf5", text: GREEN, border: GREEN },
   };
 
   return (
@@ -2094,7 +2060,7 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
       <div style={{ maxWidth: 700, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <button onClick={onBack} style={pillInactive}>Back</button>
-          <div style={{ fontSize: 16, fontWeight: 900, color: "#111827" }}>Week {week} Fishbowl</div>
+          <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY }}>Week {week} Fishbowl</div>
           <div style={{ width: 60 }} />
         </div>
         {isConfirmed && <div style={{ textAlign: "center", fontSize: 13, color: GREEN, fontWeight: 700, marginBottom: 12, padding: 8, background: "#ecfdf5", borderRadius: 8 }}>Confirmed and posted</div>}
@@ -2107,7 +2073,7 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
               <button onClick={clearGroups} style={pillInactive}>Clear</button>
             </div>
           </div>
-          <div style={{ fontSize: 11, color: TEXT_MUTED }}>Click a number (1, 2, 3) next to each student to assign, or use Randomize to split evenly.</div>
+          <div style={{ fontSize: 12.5, color: TEXT_MUTED }}>Click a number (1, 2, 3) next to each student to assign, or use Randomize to split evenly.</div>
         </div>
 
         <div style={{ ...crd, padding: 14, marginBottom: 12 }}>
@@ -2116,11 +2082,11 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
             <option value="">None</option>
             {sorted.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
-          {star && <div style={{ fontSize: 12, color: "#d97706", marginTop: 6, fontWeight: 600 }}>+1 bonus point for the star</div>}
+          {star && <div style={{ fontSize: 12, color: AMBER, marginTop: 6, fontWeight: 600 }}>+1 bonus point for the star</div>}
         </div>
 
         <div style={{ ...crd, padding: 0 }}>
-          <div style={{ padding: "10px 14px", borderBottom: "1px solid #f3f4f6" }}>
+          <div style={{ padding: "10px 14px", borderBottom: "1px solid #f6f4f1" }}>
             <div style={{ ...sectionLabel }}>Scores (default 20)</div>
           </div>
           {sorted.map(s => {
@@ -2128,14 +2094,14 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
             const isStar = star === s.id;
             const myGroup = groups[s.id];
             return (
-              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderBottom: "1px solid #f9fafb" }}>
+              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderBottom: "1px solid #f6f4f1" }}>
                 <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
                   {[1, 2, 3].map(g => {
                     const gc = GROUP_COLORS[g];
                     const active = myGroup === g;
                     return (
                       <button key={g} onClick={() => setGroup(s.id, active ? null : g)} style={{
-                        width: 22, height: 22, borderRadius: 6, fontFamily: F, fontWeight: 800, fontSize: 11, cursor: "pointer",
+                        width: 22, height: 22, borderRadius: 6, fontFamily: F, fontWeight: 800, fontSize: 12.5, cursor: "pointer",
                         background: active ? gc.border : gc.bg, color: active ? "#fff" : gc.text,
                         border: "1px solid " + gc.border,
                       }}>{g}</button>
@@ -2143,16 +2109,16 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
                   })}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>
                     {s.name}
-                    {isStar && <span style={{ marginLeft: 6, fontSize: 12, color: "#d97706" }}>&#9733;</span>}
+                    {isStar && <span style={{ marginLeft: 6, fontSize: 12, color: AMBER }}>&#9733;</span>}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
-                  <button onClick={() => adjust(s.id, -20)} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "4px 6px", minWidth: 32 }}>-20</button>
-                  <button onClick={() => adjust(s.id, -1)} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 11, padding: "4px 6px", minWidth: 28 }}>-1</button>
-                  <div style={{ fontSize: 18, fontWeight: 900, color: pts === 20 ? "#111827" : pts === 0 ? RED : "#d97706", width: 36, textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{pts}</div>
-                  <button onClick={() => adjust(s.id, 1)} style={{ ...pill, background: "#ecfdf5", color: GREEN, fontSize: 11, padding: "4px 6px", minWidth: 28 }}>+1</button>
+                  <button onClick={() => adjust(s.id, -20)} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 12.5, padding: "4px 6px", minWidth: 32 }}>-20</button>
+                  <button onClick={() => adjust(s.id, -1)} style={{ ...pill, background: "#fef2f2", color: RED, fontSize: 12.5, padding: "4px 6px", minWidth: 28 }}>-1</button>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: pts === 20 ? TEXT_PRIMARY : pts === 0 ? RED : AMBER, width: 36, textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{pts}</div>
+                  <button onClick={() => adjust(s.id, 1)} style={{ ...pill, background: "#ecfdf5", color: GREEN, fontSize: 12.5, padding: "4px 6px", minWidth: 28 }}>+1</button>
                 </div>
               </div>
             );
@@ -2175,7 +2141,7 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
 export function StudentAnswerView({ config, data, setData, userName }) {
   setGameClass(config);
   const { theme } = useTheme(gkey());
-  const crd = themedInteriorCrd(theme, 0);
+  const crd = cardFor(theme, 0);
   const [week, setWeek] = useState(null);
   const [mode, setMode] = useState("game");
   const [selected, setSelected] = useState(null);
@@ -2366,7 +2332,7 @@ export function StudentAnswerView({ config, data, setData, userName }) {
 
   const activity = (selected !== null && frozenActivityRef.current) ? frozenActivityRef.current : liveActivity;
 
-  if (!activity) return <div style={{ padding: 40, textAlign: "center", fontFamily: F, color: "#9ca3af" }}>Not available.<br /><button onClick={() => setWeek(null)} style={{ ...pillInactive, marginTop: 12 }}>Back</button></div>;
+  if (!activity) return <div style={{ padding: 40, textAlign: "center", fontFamily: F, color: TEXT_MUTED }}>Not available.<br /><button onClick={() => setWeek(null)} style={{ ...pillInactive, marginTop: 12 }}>Back</button></div>;
 
   const qs = activity.questions || [];
   const currentQ = activity.currentQ || 0;
@@ -2384,7 +2350,7 @@ export function StudentAnswerView({ config, data, setData, userName }) {
       <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
           <button onClick={() => setWeek(null)} style={{ ...pillInactive, marginBottom: 12 }}>Back</button>
-          <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", marginBottom: 12 }}>Week {week} Results</div>
+          <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY, marginBottom: 12 }}>Week {week} Results</div>
           {qs.map((q, qi) => {
             const my = sid ? responses[sid + "-" + qi] : undefined;
             const isCorrect = my === q.correct;
@@ -2400,12 +2366,12 @@ export function StudentAnswerView({ config, data, setData, userName }) {
               }
             });
             return (
-              <div key={qi} style={{ padding: 14, marginBottom: 10, background: "#fafafa", borderRadius: 10, border: "1px solid #e5e5e4" }}>
+              <div key={qi} style={{ padding: 14, marginBottom: 10, background: "#fafaf9", borderRadius: 10, border: "1px solid #e5e5e4" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 7, background: "#9f123915", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: "#9f1239", flexShrink: 0 }}>{qi + 1}</div>
+                  <div style={{ width: 28, height: 28, borderRadius: 7, background: accent() + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: accent(), flexShrink: 0 }}>{qi + 1}</div>
                   <div style={{ flex: 1 }}>
-                    {q.category && <div style={{ fontSize: 10, color: "#9ca3af", textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>{cats().find(c => c.id === q.category)?.label}</div>}
-                    <div style={{ fontSize: 14, fontWeight: 600, color: "#111827", lineHeight: 1.4 }}>{q.text || q.prompt || "(no text)"}</div>
+                    {q.category && <div style={{ fontSize: 12, color: TEXT_MUTED, textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>{cats().find(c => c.id === q.category)?.label}</div>}
+                    <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, lineHeight: 1.4 }}>{q.text || q.prompt || "(no text)"}</div>
                   </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -2415,7 +2381,7 @@ export function StudentAnswerView({ config, data, setData, userName }) {
                     const pct = totalAnswered > 0 ? Math.round(counts[oi] / totalAnswered * 100) : 0;
                     let bg = "#fff";
                     let borderColor = "#e5e5e4";
-                    let textColor = "#111827";
+                    let textColor = TEXT_PRIMARY;
                     if (isCorrectOpt) { bg = "#ecfdf5"; borderColor = GREEN; textColor = "#065f46"; }
                     if (isMine && !isCorrectOpt) { bg = "#fef2f2"; borderColor = RED; textColor = "#991b1b"; }
                     return (
@@ -2424,22 +2390,22 @@ export function StudentAnswerView({ config, data, setData, userName }) {
                         <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ fontSize: 13, fontWeight: 700, color: textColor, minWidth: 16 }}>{letters[oi]}.</span>
                           <span style={{ fontSize: 13, fontWeight: 500, color: textColor, flex: 1 }}>{opt}</span>
-                          {isMine && <span style={{ fontSize: 10, fontWeight: 700, color: textColor, padding: "2px 6px", borderRadius: 4, background: "rgba(0,0,0,0.05)" }}>YOU</span>}
-                          {isCorrectOpt && <span style={{ fontSize: 10, fontWeight: 700, color: "#065f46", padding: "2px 6px", borderRadius: 4, background: GREEN + "30" }}>CORRECT</span>}
+                          {isMine && <span style={{ fontSize: 12, fontWeight: 700, color: textColor, padding: "2px 6px", borderRadius: 4, background: "rgba(0,0,0,0.05)" }}>YOU</span>}
+                          {isCorrectOpt && <span style={{ fontSize: 12, fontWeight: 700, color: "#065f46", padding: "2px 6px", borderRadius: 4, background: GREEN + "30" }}>CORRECT</span>}
                           <span style={{ fontSize: 12, fontWeight: 700, color: textColor }}>{pct}%</span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-                {my === undefined && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 6, fontStyle: "italic" }}>You did not answer this question</div>}
+                {my === undefined && <div style={{ fontSize: 12.5, color: TEXT_MUTED, marginTop: 6, fontStyle: "italic" }}>You did not answer this question</div>}
               </div>
             );
           })}
           <div style={{ ...crd, padding: 14, marginTop: 12 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, textAlign: "center" }}>
-              <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Game Points</div><div style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>{gameTotal}<span style={{ fontSize: 13, color: "#9ca3af" }}> / 100</span></div></div>
-              <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Grade Points</div><div style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>{Math.round(gradeTotal * 10) / 10}<span style={{ fontSize: 13, color: "#9ca3af" }}> / 100</span></div></div>
+              <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Game Points</div><div style={{ fontSize: 24, fontWeight: 900, color: TEXT_PRIMARY }}>{gameTotal}<span style={{ fontSize: 13, color: TEXT_MUTED }}> / 100</span></div></div>
+              <div><div style={{ ...sectionLabel, marginBottom: 2 }}>Grade Points</div><div style={{ fontSize: 24, fontWeight: 900, color: TEXT_PRIMARY }}>{Math.round(gradeTotal * 10) / 10}<span style={{ fontSize: 13, color: TEXT_MUTED }}> / 100</span></div></div>
             </div>
           </div>
           <ReboundPanel data={data} setData={setData} activityType="game" week={week} isAdmin={false} userName={userName} />
@@ -2460,7 +2426,7 @@ export function StudentAnswerView({ config, data, setData, userName }) {
       <div style={{ padding: "20px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
           <button onClick={() => setWeek(null)} style={{ ...pillInactive, marginBottom: 12 }}>Back</button>
-          <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", marginBottom: 12 }}>Week {week} This or That Results</div>
+          <div style={{ fontSize: 16, fontWeight: 900, color: TEXT_PRIMARY, marginBottom: 12 }}>Week {week} This or That Results</div>
           {qs.map((q, qi) => {
             const my = sid ? responses[sid + "-" + qi] : undefined;
             const isCorrect = my === q.correct;
@@ -2475,10 +2441,10 @@ export function StudentAnswerView({ config, data, setData, userName }) {
               }
             });
             return (
-              <div key={qi} style={{ padding: 14, marginBottom: 10, background: "#fafafa", borderRadius: 10, border: "1px solid #e5e5e4" }}>
+              <div key={qi} style={{ padding: 14, marginBottom: 10, background: "#fafaf9", borderRadius: 10, border: "1px solid #e5e5e4" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 7, background: "#9f123915", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: "#9f1239", flexShrink: 0 }}>{qi + 1}</div>
-                  <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#111827", lineHeight: 1.4 }}>{q.text || q.prompt || "(no text)"}</div>
+                  <div style={{ width: 28, height: 28, borderRadius: 7, background: accent() + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: accent(), flexShrink: 0 }}>{qi + 1}</div>
+                  <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, lineHeight: 1.4 }}>{q.text || q.prompt || "(no text)"}</div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {(q.options || []).map((opt, oi) => {
@@ -2487,7 +2453,7 @@ export function StudentAnswerView({ config, data, setData, userName }) {
                     const pct = totalAnswered > 0 ? Math.round(counts[oi] / totalAnswered * 100) : 0;
                     let bg = "#fff";
                     let borderColor = "#e5e5e4";
-                    let textColor = "#111827";
+                    let textColor = TEXT_PRIMARY;
                     if (isCorrectOpt) { bg = "#ecfdf5"; borderColor = GREEN; textColor = "#065f46"; }
                     if (isMine && !isCorrectOpt) { bg = "#fef2f2"; borderColor = RED; textColor = "#991b1b"; }
                     return (
@@ -2496,21 +2462,21 @@ export function StudentAnswerView({ config, data, setData, userName }) {
                         <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ fontSize: 13, fontWeight: 700, color: textColor, minWidth: 16 }}>{letters[oi]}.</span>
                           <span style={{ fontSize: 13, fontWeight: 500, color: textColor, flex: 1 }}>{opt}</span>
-                          {isMine && <span style={{ fontSize: 10, fontWeight: 700, color: textColor, padding: "2px 6px", borderRadius: 4, background: "rgba(0,0,0,0.05)" }}>YOU</span>}
-                          {isCorrectOpt && <span style={{ fontSize: 10, fontWeight: 700, color: "#065f46", padding: "2px 6px", borderRadius: 4, background: GREEN + "30" }}>CORRECT</span>}
+                          {isMine && <span style={{ fontSize: 12, fontWeight: 700, color: textColor, padding: "2px 6px", borderRadius: 4, background: "rgba(0,0,0,0.05)" }}>YOU</span>}
+                          {isCorrectOpt && <span style={{ fontSize: 12, fontWeight: 700, color: "#065f46", padding: "2px 6px", borderRadius: 4, background: GREEN + "30" }}>CORRECT</span>}
                           <span style={{ fontSize: 12, fontWeight: 700, color: textColor }}>{pct}%</span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-                {my === undefined && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 6, fontStyle: "italic" }}>You did not answer this question</div>}
+                {my === undefined && <div style={{ fontSize: 12.5, color: TEXT_MUTED, marginTop: 6, fontStyle: "italic" }}>You did not answer this question</div>}
               </div>
             );
           })}
           <div style={{ ...crd, padding: 14, marginTop: 12, textAlign: "center" }}>
             <div style={{ ...sectionLabel, marginBottom: 2 }}>Game Points</div>
-            <div style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>{Math.round(total * 10) / 10}<span style={{ fontSize: 13, color: "#9ca3af" }}> / 20</span></div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: TEXT_PRIMARY }}>{Math.round(total * 10) / 10}<span style={{ fontSize: 13, color: TEXT_MUTED }}> / 20</span></div>
           </div>
           <ReboundPanel data={data} setData={setData} activityType="tot" week={week} isAdmin={false} userName={userName} />
         </div>
@@ -2520,7 +2486,7 @@ export function StudentAnswerView({ config, data, setData, userName }) {
 
   // Not live yet
   if (!isLive) {
-    return <div style={{ padding: 40, textAlign: "center", fontFamily: F, color: "#9ca3af" }}>Not open yet.<br /><button onClick={() => setWeek(null)} style={{ ...pillInactive, marginTop: 12 }}>Back</button></div>;
+    return <div style={{ padding: 40, textAlign: "center", fontFamily: F, color: TEXT_MUTED }}>Not open yet.<br /><button onClick={() => setWeek(null)} style={{ ...pillInactive, marginTop: 12 }}>Back</button></div>;
   }
 
   // Live answering - student sees admin-controlled current question
@@ -2539,10 +2505,10 @@ export function StudentAnswerView({ config, data, setData, userName }) {
         <div style={{ maxWidth: 400, margin: "0 auto", textAlign: "center" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <button onClick={() => setWeek(null)} style={pillInactive}>Back</button>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#d97706" }}>Wk {week}</span>
-            <span style={{ fontSize: 12, color: "#9ca3af" }}>{currentQ + 1}/{qs.length}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: AMBER }}>Wk {week}</span>
+            <span style={{ fontSize: 12, color: TEXT_MUTED }}>{currentQ + 1}/{qs.length}</span>
           </div>
-          <div style={{ fontSize: 48, fontWeight: 900, color: "#111827", marginBottom: 12 }}>Q{currentQ + 1}</div>
+          <div style={{ fontSize: 48, fontWeight: 900, color: TEXT_PRIMARY, marginBottom: 12 }}>Q{currentQ + 1}</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: correct ? GREEN : RED, marginBottom: 8 }}>{correct ? "Correct!" : "Incorrect"}</div>
           {!correct && myAnswer !== undefined && (
             <div style={{ fontSize: 15, color: "#646b75", marginBottom: 8 }}>
@@ -2550,7 +2516,7 @@ export function StudentAnswerView({ config, data, setData, userName }) {
             </div>
           )}
           {myAnswer === undefined && (
-            <div style={{ fontSize: 15, color: "#9ca3af", marginBottom: 8 }}>
+            <div style={{ fontSize: 15, color: TEXT_MUTED, marginBottom: 8 }}>
               No answer. The answer was <strong style={{ color: GREEN }}>{q.options[q.correct]}</strong>
             </div>
           )}
@@ -2563,7 +2529,7 @@ export function StudentAnswerView({ config, data, setData, userName }) {
               const locked = lockedQs.includes(qi);
               const c = locked && a !== undefined && a === qq.correct;
               const w2 = locked && (a === undefined || a !== qq.correct);
-              return <div key={qi} style={{ width: 12, height: 12, borderRadius: 6, background: c ? GREEN : w2 ? RED : qi === currentQ ? "#d97706" : "#e5e7eb" }} />;
+              return <div key={qi} style={{ width: 12, height: 12, borderRadius: 6, background: c ? GREEN : w2 ? RED : qi === currentQ ? AMBER : BORDER_STRONG }} />;
             })}
           </div>
         </div>
@@ -2578,8 +2544,8 @@ export function StudentAnswerView({ config, data, setData, userName }) {
       <div style={{ maxWidth: 400, margin: "0 auto", textAlign: "center" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <button onClick={() => setWeek(null)} style={pillInactive}>Back</button>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "#d97706" }}>Wk {week}</span>
-          <span style={{ fontSize: 12, color: "#9ca3af" }}>{currentQ + 1}/{qs.length}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: AMBER }}>Wk {week}</span>
+          <span style={{ fontSize: 12, color: TEXT_MUTED }}>{currentQ + 1}/{qs.length}</span>
         </div>
 
         {/* Countdown overlay */}
@@ -2587,7 +2553,7 @@ export function StudentAnswerView({ config, data, setData, userName }) {
           <div style={{ fontSize: 64, fontWeight: 900, color: RED, marginBottom: 8, fontVariantNumeric: "tabular-nums" }}>{countdown}</div>
         )}
 
-        <div style={{ fontSize: 48, fontWeight: 900, color: "#111827", marginBottom: 24 }}>Q{currentQ + 1}</div>
+        <div style={{ fontSize: 48, fontWeight: 900, color: TEXT_PRIMARY, marginBottom: 24 }}>Q{currentQ + 1}</div>
 
         {myAnswer !== undefined ? (
           <div style={{ padding: 24 }}>
@@ -2611,7 +2577,7 @@ export function StudentAnswerView({ config, data, setData, userName }) {
                 );
               })}
             </div>
-            {selected !== null && <button onClick={() => submitAnswer(actType, week, currentQ, selected)} disabled={saving} style={{ ...pill, fontSize: 14, padding: "12px 40px", background: saving ? "#646b75" : "#111827", color: "#fff", fontWeight: 700, cursor: saving ? "wait" : "pointer", opacity: saving ? 0.85 : 1 }}>{saving ? "Saving..." : "Lock in answer"}</button>}
+            {selected !== null && <button onClick={() => submitAnswer(actType, week, currentQ, selected)} disabled={saving} style={{ ...pill, fontSize: 14, padding: "12px 40px", background: saving ? "#646b75" : TEXT_PRIMARY, color: "#fff", fontWeight: 700, cursor: saving ? "wait" : "pointer", opacity: saving ? 0.85 : 1 }}>{saving ? "Saving..." : "Lock in answer"}</button>}
           </>
         )}
 
@@ -2622,7 +2588,7 @@ export function StudentAnswerView({ config, data, setData, userName }) {
             const locked = lockedQs.includes(qi);
             const c2 = locked && a !== undefined && a === qq.correct;
             const w2 = locked && (a === undefined || a !== qq.correct);
-            return <div key={qi} style={{ width: 12, height: 12, borderRadius: 6, background: c2 ? GREEN : w2 ? RED : qi === currentQ ? "#d97706" : "#e5e7eb" }} />;
+            return <div key={qi} style={{ width: 12, height: 12, borderRadius: 6, background: c2 ? GREEN : w2 ? RED : qi === currentQ ? AMBER : BORDER_STRONG }} />;
           })}
         </div>
       </div>
@@ -2649,13 +2615,13 @@ export function StudentAnswerView({ config, data, setData, userName }) {
 */
 function TriviaFinalize({ game, students, data, setData, onSave, onAwardPoints, onUnfinalize, onBackToLive, onBack, msg, showMsg }) {
   const { theme } = useTheme(gkey());
-  const crd = themedInteriorCrd(theme, 0);
+  const crd = cardFor(theme, 0);
 
   const TEAM_PALETTE = [
     { bg: "#fef2f2", accent: "#dc2626" },
     { bg: "#eff6ff", accent: "#2563eb" },
-    { bg: "#ecfdf5", accent: "#059669" },
-    { bg: "#fffbeb", accent: "#d97706" },
+    { bg: "#ecfdf5", accent: GREEN },
+    { bg: "#fffbeb", accent: AMBER },
     { bg: "#f5f3ff", accent: "#7c3aed" },
     { bg: "#ecfeff", accent: "#0891b2" },
     { bg: "#fdf2f8", accent: "#db2777" },
@@ -2763,10 +2729,10 @@ function TriviaFinalize({ game, students, data, setData, onSave, onAwardPoints, 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 6 }}>
           <div style={{ display: "flex", gap: 6 }}>
             <button onClick={onBack} style={pillInactive}>Back</button>
-            {!isFinalized && <button onClick={onBackToLive} style={{ ...pillInactive, fontSize: 11, padding: "4px 10px" }}>← Back to Live</button>}
+            {!isFinalized && <button onClick={onBackToLive} style={{ ...pillInactive, fontSize: 12.5, padding: "4px 10px" }}>← Back to Live</button>}
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: isFinalized ? GREEN : "#d97706", padding: "3px 10px", borderRadius: 6, background: isFinalized ? "#ecfdf5" : "#fffbeb", textTransform: "uppercase", letterSpacing: "0.05em" }}>{isFinalized ? "Finalized" : "Ready to Finalize"}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: isFinalized ? GREEN : AMBER, padding: "3px 10px", borderRadius: 6, background: isFinalized ? "#ecfdf5" : "#fffbeb", textTransform: "uppercase", letterSpacing: "0.05em" }}>{isFinalized ? "Finalized" : "Ready to Finalize"}</span>
             <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{game.title}</span>
           </div>
         </div>
@@ -2789,10 +2755,10 @@ function TriviaFinalize({ game, students, data, setData, onSave, onAwardPoints, 
               const bonus = teamBonus(t.id);
               return (
                 <div key={t.id} style={{ background: pal.bg, border: "2px solid " + pal.accent, borderRadius: 10, padding: "10px 14px", minWidth: 150 }}>
-                  <div style={{ fontSize: 9, fontWeight: 800, color: pal.accent, letterSpacing: "0.05em" }}>#{idx + 1}{idx === 0 ? " 🏆" : ""}</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: pal.accent, letterSpacing: "0.05em" }}>#{idx + 1}{idx === 0 ? " 🏆" : ""}</div>
                   <div style={{ fontSize: 14, fontWeight: 800, color: TEXT_PRIMARY }}>{t.name}</div>
                   <div style={{ fontSize: 22, fontWeight: 900, color: pal.accent, fontVariantNumeric: "tabular-nums" }}>{correct + bonus}</div>
-                  <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>{correct} correct{bonus !== 0 ? " " + (bonus > 0 ? "+" : "") + bonus + " bonus" : ""}</div>
+                  <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{correct} correct{bonus !== 0 ? " " + (bonus > 0 ? "+" : "") + bonus + " bonus" : ""}</div>
                 </div>
               );
             })}
@@ -2850,16 +2816,16 @@ function TriviaFinalize({ game, students, data, setData, onSave, onAwardPoints, 
         {(sittingOut.length > 0 || unassigned.length > 0) && (
           <div style={{ ...crd, padding: 14, marginBottom: 16 }}>
             <div style={{ ...sectionLabel, marginBottom: 10 }}>Other Students (Bonus only)</div>
-            <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>Students sitting out or not on any team. They don&apos;t get team points but you can still award personal bonus.</div>
+            <div style={{ fontSize: 12.5, color: TEXT_MUTED, marginBottom: 8 }}>Students sitting out or not on any team. They don&apos;t get team points but you can still award personal bonus.</div>
             {[...sittingOut, ...unassigned.map(s => s.id)].map(sid => {
               const s = studentById(sid); if (!s) return null;
               const sittingFlag = sittingSet.has(sid);
               const pBonus = studentBonus(sid);
               const pTotal = studentTotal(sid);
               return (
-                <div key={sid} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "#fafafa", borderRadius: 6, border: "1px solid " + BORDER, marginBottom: 4, flexWrap: "wrap" }}>
+                <div key={sid} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "#fafaf9", borderRadius: 6, border: "1px solid " + BORDER, marginBottom: 4, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 12, fontWeight: 600, color: TEXT_PRIMARY }}>{s.name}</span>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: TEXT_MUTED, padding: "2px 6px", background: "#fff", borderRadius: 4, border: "1px solid " + BORDER, textTransform: "uppercase" }}>{sittingFlag ? "Sitting out" : "Unassigned"}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, padding: "2px 6px", background: "#fff", borderRadius: 4, border: "1px solid " + BORDER, textTransform: "uppercase" }}>{sittingFlag ? "Sitting out" : "Unassigned"}</span>
                   <div style={{ flex: 1 }} />
                   <FinalBonusEditor
                     label="Bonus"
@@ -2899,7 +2865,7 @@ function FinalBonusEditor({ label, bonus, accent, onSave }) {
   if (editing) {
     return (
       <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-        <span style={{ fontSize: 10, color: TEXT_MUTED }}>{label}:</span>
+        <span style={{ fontSize: 12, color: TEXT_MUTED }}>{label}:</span>
         <input
           type="number" autoFocus
           value={value}
@@ -2914,7 +2880,7 @@ function FinalBonusEditor({ label, bonus, accent, onSave }) {
   if (!bonus || bonus === 0) {
     return (
       <button onClick={() => setEditing(true)} style={{
-        fontSize: 10, fontWeight: 700, color: accent, background: "transparent",
+        fontSize: 12, fontWeight: 700, color: accent, background: "transparent",
         border: "1px dashed " + accent + "60", borderRadius: 6, padding: "2px 8px",
         cursor: "pointer", fontFamily: F,
       }}>+ {label.toLowerCase()}</button>
@@ -2923,7 +2889,7 @@ function FinalBonusEditor({ label, bonus, accent, onSave }) {
   const positive = bonus > 0;
   return (
     <button onClick={() => setEditing(true)} style={{
-      fontSize: 11, fontWeight: 800, color: "#fff",
+      fontSize: 12.5, fontWeight: 800, color: "#fff",
       background: positive ? accent : "#646b75",
       border: "none", borderRadius: 999, padding: "3px 10px",
       cursor: "pointer", fontFamily: F,
@@ -2942,12 +2908,12 @@ function FinalBonusEditor({ label, bonus, accent, onSave }) {
 export function TriviaPlayer({ config, data, setData, userName }) {
   setGameClass(config);
   const { theme } = useTheme(gkey());
-  const crd = themedInteriorCrd(theme, 0);
+  const crd = cardFor(theme, 0);
   const TEAM_PALETTE = [
     { bg: "#fef2f2", accent: "#dc2626" },
     { bg: "#eff6ff", accent: "#2563eb" },
-    { bg: "#ecfdf5", accent: "#059669" },
-    { bg: "#fffbeb", accent: "#d97706" },
+    { bg: "#ecfdf5", accent: GREEN },
+    { bg: "#fffbeb", accent: AMBER },
     { bg: "#f5f3ff", accent: "#7c3aed" },
     { bg: "#ecfeff", accent: "#0891b2" },
     { bg: "#fdf2f8", accent: "#db2777" },
@@ -3034,7 +3000,7 @@ export function TriviaPlayer({ config, data, setData, userName }) {
       <div style={{ padding: "24px 20px 40px", fontFamily: themedHeadingFont(theme, F) }}>
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
           <div style={{ ...crd, padding: 24, textAlign: "center" }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#d97706", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Live: {liveGame.title}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: AMBER, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Live: {liveGame.title}</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_PRIMARY, marginBottom: 8 }}>You&apos;re sitting this one out</div>
             <div style={{ fontSize: 14, color: TEXT_SECONDARY, marginBottom: 16 }}>Cheer the teams on. Live standings below.</div>
 
@@ -3043,7 +3009,7 @@ export function TriviaPlayer({ config, data, setData, userName }) {
                 const pal = teamColor(t);
                 return (
                   <div key={t.id} style={{ background: pal.bg, border: "2px solid " + pal.accent, borderRadius: 10, padding: "8px 12px", minWidth: 100 }}>
-                    <div style={{ fontSize: 9, fontWeight: 800, color: pal.accent, letterSpacing: "0.05em" }}>#{i + 1}</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: pal.accent, letterSpacing: "0.05em" }}>#{i + 1}</div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: TEXT_PRIMARY }}>{t.name}</div>
                     <div style={{ fontSize: 18, fontWeight: 900, color: pal.accent, fontVariantNumeric: "tabular-nums" }}>{teamTotal(t.id)}</div>
                   </div>
@@ -3073,9 +3039,9 @@ export function TriviaPlayer({ config, data, setData, userName }) {
           background: myPal.bg, border: "3px solid " + myPal.accent, borderRadius: 14, padding: 16, marginBottom: 16,
           textAlign: "center",
         }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: myPal.accent, textTransform: "uppercase", letterSpacing: "0.08em" }}>{liveGame.title}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: myPal.accent, textTransform: "uppercase", letterSpacing: "0.08em" }}>{liveGame.title}</div>
           <div style={{ fontSize: 28, fontWeight: 900, color: TEXT_PRIMARY, lineHeight: 1.1 }}>{myTeam.name}</div>
-          <div style={{ fontSize: 11, color: TEXT_SECONDARY, marginTop: 4 }}>{(myTeam.memberIds || []).length} member{(myTeam.memberIds || []).length !== 1 ? "s" : ""}</div>
+          <div style={{ fontSize: 12.5, color: TEXT_SECONDARY, marginTop: 4 }}>{(myTeam.memberIds || []).length} member{(myTeam.memberIds || []).length !== 1 ? "s" : ""}</div>
           <div style={{ fontSize: 36, fontWeight: 900, color: myPal.accent, marginTop: 6, fontVariantNumeric: "tabular-nums" }}>
             <SnapCountUp value={myTotal} />
           </div>
@@ -3094,14 +3060,14 @@ export function TriviaPlayer({ config, data, setData, userName }) {
               return (
                 <div key={qi} style={{ padding: 14, borderRadius: 10, border: "1px solid " + BORDER, marginBottom: 10 }}>
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED }}>Q{qi + 1} · {qPts} pt{qPts !== 1 ? "s" : ""}</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 800, color: TEXT_MUTED }}>Q{qi + 1} · {qPts} pt{qPts !== 1 ? "s" : ""}</span>
                   </div>
                   <div style={{ fontSize: 16, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 10 }}>{q.text}</div>
                   {submitted ? (
                     <div style={{ padding: 10, background: "#ecfdf5", border: "1.5px solid " + GREEN, borderRadius: 8 }}>
-                      <div style={{ fontSize: 10, fontWeight: 800, color: GREEN, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Locked in</div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: GREEN, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Locked in</div>
                       <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>{submitted.text}</div>
-                      <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>by {submitted.submittedBy || "teammate"}</div>
+                      <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>by {submitted.submittedBy || "teammate"}</div>
                     </div>
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -3135,7 +3101,7 @@ export function TriviaPlayer({ config, data, setData, userName }) {
         {/* Locked, waiting for reveal */}
         {myOpenQs.length === 0 && myLockedAwaitingReveal.length > 0 && (
           <div style={{ ...crd, padding: 20, marginBottom: 16, textAlign: "center" }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#d97706", marginBottom: 6 }}>Locked in</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: AMBER, marginBottom: 6 }}>Locked in</div>
             <div style={{ fontSize: 13, color: TEXT_SECONDARY }}>Waiting for results...</div>
           </div>
         )}
@@ -3231,9 +3197,9 @@ function TriviaRevealGrid({ questions, roundQs, teams, answers, defaultPts, myTe
       <div style={{ display: "grid", gridTemplateColumns: `140px repeat(${roundQs.length}, 1fr) 80px`, gap: 4, alignItems: "center", marginBottom: 4 }}>
         <div></div>
         {roundQs.map(qi => (
-          <div key={qi} style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textAlign: "center" }}>Q{qi + 1}</div>
+          <div key={qi} style={{ fontSize: 12, fontWeight: 800, color: TEXT_MUTED, textAlign: "center" }}>Q{qi + 1}</div>
         ))}
-        <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textAlign: "right" }}>+ROUND</div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: TEXT_MUTED, textAlign: "right" }}>+ROUND</div>
       </div>
       {sorted.map((t, idx) => {
         const pal = teamColor(t);
@@ -3252,7 +3218,7 @@ function TriviaRevealGrid({ questions, roundQs, teams, answers, defaultPts, myTe
             }}
           >
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 4 }}>
-              <div style={{ fontSize: 9, fontWeight: 800, color: pal.accent }}>#{idx + 1}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: pal.accent }}>#{idx + 1}</div>
               <div style={{ fontSize: 12, fontWeight: 800, color: TEXT_PRIMARY, lineHeight: 1.1 }}>{t.name}{isMe ? " ★" : ""}</div>
             </div>
             {roundQs.map(qi => {
@@ -3261,10 +3227,10 @@ function TriviaRevealGrid({ questions, roundQs, teams, answers, defaultPts, myTe
               const text = a?.text || "—";
               return (
                 <div key={qi} style={{
-                  background: correct ? "#ecfdf5" : "#fafafa",
+                  background: correct ? "#ecfdf5" : "#fafaf9",
                   border: correct ? "2px solid " + GREEN : "1px solid " + BORDER,
                   borderRadius: 6, padding: "4px 6px",
-                  fontSize: 11, fontWeight: correct ? 700 : 500,
+                  fontSize: 12.5, fontWeight: correct ? 700 : 500,
                   color: correct ? GREEN : TEXT_SECONDARY,
                   display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center",
                   wordBreak: "break-word",
@@ -3305,7 +3271,7 @@ function TeamBonusEditor({ bonus, accent, onSave }) {
           onChange={e => setValue(e.target.value)}
           onBlur={commit}
           onKeyDown={e => { if (e.key === "Enter") commit(); else if (e.key === "Escape") { setValue(String(bonus || 0)); setEditing(false); } }}
-          style={{ ...inp, width: 64, fontSize: 11, padding: "2px 6px", textAlign: "center" }}
+          style={{ ...inp, width: 64, fontSize: 12.5, padding: "2px 6px", textAlign: "center" }}
         />
       </div>
     );
@@ -3313,7 +3279,7 @@ function TeamBonusEditor({ bonus, accent, onSave }) {
   if (!bonus || bonus === 0) {
     return (
       <button onClick={() => setEditing(true)} style={{
-        marginTop: 4, fontSize: 9, fontWeight: 700, color: accent, background: "transparent",
+        marginTop: 4, fontSize: 12, fontWeight: 700, color: accent, background: "transparent",
         border: "1px dashed " + accent + "60", borderRadius: 6, padding: "1px 6px",
         cursor: "pointer", fontFamily: F,
       }}>+ bonus</button>
@@ -3322,7 +3288,7 @@ function TeamBonusEditor({ bonus, accent, onSave }) {
   const positive = bonus > 0;
   return (
     <button onClick={() => setEditing(true)} style={{
-      marginTop: 4, fontSize: 10, fontWeight: 800,
+      marginTop: 4, fontSize: 12, fontWeight: 800,
       color: positive ? "#fff" : "#fff",
       background: positive ? accent : "#646b75",
       border: "none", borderRadius: 999, padding: "2px 8px",
@@ -3381,8 +3347,8 @@ export function TriviaPresenter({ gameId, classKey }) {
   const TEAM_PALETTE = [
     { bg: "#fef2f2", accent: "#dc2626" },
     { bg: "#eff6ff", accent: "#2563eb" },
-    { bg: "#ecfdf5", accent: "#059669" },
-    { bg: "#fffbeb", accent: "#d97706" },
+    { bg: "#ecfdf5", accent: GREEN },
+    { bg: "#fffbeb", accent: AMBER },
     { bg: "#f5f3ff", accent: "#7c3aed" },
     { bg: "#ecfeff", accent: "#0891b2" },
     { bg: "#fdf2f8", accent: "#db2777" },
@@ -3435,7 +3401,7 @@ export function TriviaPresenter({ gameId, classKey }) {
       {/* Title + standings strip */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.1em" }}>{game.title}</div>
-        <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{revealedQs.length} of {questions.length} revealed</div>
+        <div style={{ fontSize: 12.5, color: TEXT_MUTED, marginTop: 2 }}>{revealedQs.length} of {questions.length} revealed</div>
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
@@ -3447,7 +3413,7 @@ export function TriviaPresenter({ gameId, classKey }) {
               padding: "8px 14px", minWidth: 140,
               border: idx === 0 ? "3px solid #fbbf24" : "none",
             }}>
-              <div style={{ fontSize: 10, fontWeight: 800, opacity: 0.8, letterSpacing: "0.05em" }}>#{idx + 1}{idx === 0 ? " 👑" : ""}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.8, letterSpacing: "0.05em" }}>#{idx + 1}{idx === 0 ? " 👑" : ""}</div>
               <div style={{ fontSize: 16, fontWeight: 900, lineHeight: 1.05 }}>{t.name}</div>
               <div style={{ fontSize: 28, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
                 <PresenterCountUp value={teamTotal(t.id)} />
@@ -3463,7 +3429,7 @@ export function TriviaPresenter({ gameId, classKey }) {
         {isWaiting && (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
             <div style={{ fontSize: 56, fontWeight: 900, color: "#fbbf24", textAlign: "center" }}>Get ready</div>
-            <div style={{ fontSize: 20, color: "#94a3b8", marginTop: 8 }}>Next round opening soon...</div>
+            <div style={{ fontSize: 20, color: TEXT_MUTED, marginTop: 8 }}>Next round opening soon...</div>
           </div>
         )}
 
@@ -3517,7 +3483,7 @@ function PresenterOpenView({ qs, questions, teams, answers, defaultPts, teamColo
         return (
           <div key={qi} style={{ background: "rgba(255,255,255,0.06)", borderRadius: 14, padding: 24, border: "2px solid rgba(255,255,255,0.1)" }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: "#94a3b8" }}>Q{qi + 1}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: TEXT_MUTED }}>Q{qi + 1}</span>
               <span style={{ fontSize: 14, fontWeight: 800, color: "#fbbf24" }}>{qPts} pt{qPts !== 1 ? "s" : ""}</span>
             </div>
             <div style={{ fontSize: 32, fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 16 }}>{q.text}</div>
@@ -3531,7 +3497,7 @@ function PresenterOpenView({ qs, questions, teams, answers, defaultPts, teamColo
                 );
               })}
               {waitingTeams.map(t => (
-                <div key={t.id} style={{ background: "rgba(255,255,255,0.08)", color: "#94a3b8", borderRadius: 8, padding: "6px 12px", fontSize: 14, fontWeight: 700 }}>
+                <div key={t.id} style={{ background: "rgba(255,255,255,0.08)", color: TEXT_MUTED, borderRadius: 8, padding: "6px 12px", fontSize: 14, fontWeight: 700 }}>
                   ... {t.name}
                 </div>
               ))}
@@ -3553,7 +3519,7 @@ function PresenterLockedView({ qs, questions, teams, answers, defaultPts, teamCo
         return (
           <div key={qi} style={{ background: "rgba(255,255,255,0.06)", borderRadius: 14, padding: 24, border: "2px solid rgba(255,255,255,0.1)" }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: "#94a3b8" }}>Q{qi + 1}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: TEXT_MUTED }}>Q{qi + 1}</span>
               <span style={{ fontSize: 14, fontWeight: 800, color: "#fbbf24" }}>{qPts} pt{qPts !== 1 ? "s" : ""}</span>
             </div>
             <div style={{ fontSize: 28, fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 16 }}>{q.text}</div>
@@ -3571,7 +3537,7 @@ function PresenterLockedView({ qs, questions, teams, answers, defaultPts, teamCo
                     border: correct ? "3px solid #fbbf24" : "none",
                     transition: "all 0.4s",
                   }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, opacity: 0.9 }}>{t.name}</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 800, opacity: 0.9 }}>{t.name}</div>
                     <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2, wordBreak: "break-word" }}>
                       {submitted ? a.text : <span style={{ opacity: 0.6 }}>(no answer)</span>}
                     </div>
@@ -3610,7 +3576,7 @@ function PresenterRevealView({ roundQs, questions, teams, answers, defaultPts, t
       }}>
         <div></div>
         {roundQs.map(qi => (
-          <div key={qi} style={{ fontSize: 13, fontWeight: 800, color: "#94a3b8", textAlign: "center" }}>Q{qi + 1}</div>
+          <div key={qi} style={{ fontSize: 13, fontWeight: 800, color: TEXT_MUTED, textAlign: "center" }}>Q{qi + 1}</div>
         ))}
         <div style={{ fontSize: 13, fontWeight: 800, color: "#fbbf24", textAlign: "right" }}>+ROUND</div>
       </div>
@@ -3626,7 +3592,7 @@ function PresenterRevealView({ roundQs, questions, teams, answers, defaultPts, t
             borderRadius: 10, padding: 10,
           }}>
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 6 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: pal.accent }}>#{idx + 1}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: pal.accent }}>#{idx + 1}</div>
               <div style={{ fontSize: 18, fontWeight: 900, color: "#fff", lineHeight: 1.05 }}>{t.name}</div>
             </div>
             {roundQs.map(qi => {
@@ -3681,27 +3647,11 @@ function PresenterCountUp({ value }) {
 export function Accolades({ config, data }) {
   setGameClass(config);
   const { theme } = useTheme(gkey());
-  const crd = themedInteriorCrd(theme, 0);
+  const crd = cardFor(theme, 0);
   const stars = data.fishbowlStars || {};
   const games = data.weeklyGames || {};
 
-  const perfectScores = [];
-  Object.entries(games).forEach(([w, game]) => {
-    if (!game.scored) return;
-    // A perfect score is every question right, counted over the questions the
-    // game actually has. Both forks walked ten indices and read
-    // `game.questions[q].correct` with no guard, which was safe only while
-    // every game was exactly ten questions written by hand. Games are built
-    // off the question bank now and come in other lengths, and a scored game
-    // with nine questions took this panel down with it.
-    const qs = game.questions || [];
-    if (!qs.length) return;
-    (data.students || []).forEach(s => {
-      const right = qs.filter((q, i) => game.responses?.[s.id + "-" + i] === q.correct).length;
-      if (right === qs.length) perfectScores.push({ week: parseInt(w), student: s });
-    });
-  });
-  perfectScores.sort((a, b) => a.week - b.week);
+  const perfectScores = perfectRuns(data);
 
   const starEntries = Object.entries(stars).filter(([_, sid]) => sid).sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
 
@@ -3713,15 +3663,15 @@ export function Accolades({ config, data }) {
         <div style={{ ...crd, padding: 16, marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <span style={{ fontSize: 20 }}>&#9733;</span>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>Fishbowl Star of the Week</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>Fishbowl Star of the Week</div>
           </div>
-          {starEntries.length === 0 && <div style={{ fontSize: 13, color: "#d1d5db", fontStyle: "italic" }}>No stars awarded yet.</div>}
+          {starEntries.length === 0 && <div style={{ fontSize: 13, color: BORDER_STRONG, fontStyle: "italic" }}>No stars awarded yet.</div>}
           {starEntries.map(([w, sid]) => {
             const student = data.students.find(s => s.id === sid);
             return (
-              <div key={w} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #f9fafb" }}>
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#d97706", flexShrink: 0 }}>{w}</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{student?.name || "Unknown"}</div>
+              <div key={w} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #f6f4f1" }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: AMBER, flexShrink: 0 }}>{w}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{student?.name || "Unknown"}</div>
               </div>
             );
           })}
@@ -3730,14 +3680,14 @@ export function Accolades({ config, data }) {
         <div style={{ ...crd, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <span style={{ fontSize: 18 }}>&#128175;</span>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>Perfect Game Scores</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>Perfect Game Scores</div>
           </div>
-          {perfectScores.length === 0 && <div style={{ fontSize: 13, color: "#d1d5db", fontStyle: "italic" }}>No perfect scores yet.</div>}
+          {perfectScores.length === 0 && <div style={{ fontSize: 13, color: BORDER_STRONG, fontStyle: "italic" }}>No perfect scores yet.</div>}
           {perfectScores.map((p, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #f9fafb" }}>
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #f6f4f1" }}>
               <div style={{ width: 28, height: 28, borderRadius: 8, background: "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: GREEN, flexShrink: 0 }}>{p.week}</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{p.student.name}</div>
-              <div style={{ fontSize: 12, color: "#9ca3af", marginLeft: "auto" }}>100/100</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{p.student.name}</div>
+              <div style={{ fontSize: 12, color: TEXT_MUTED, marginLeft: "auto" }}>100/100</div>
             </div>
           ))}
         </div>
@@ -3773,7 +3723,7 @@ const STATUS_COLORS = {
 export function ReboundPanel({ config, data, setData, activityType, week, isAdmin, userName }) {
   setGameClass(config);
   const { theme } = useTheme(gkey());
-  const crd = themedInteriorCrd(theme, 0);
+  const crd = cardFor(theme, 0);
   const [msg, setMsg] = useState("");
   const showMsg = m => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
   const [reboundLink, setReboundLink] = useState("");
@@ -3989,17 +3939,17 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
           <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 4 }}>
             Class average: <strong>{classAvg}</strong> / {maxPts} | Rebound: {reboundOpen ? reboundHoursLeft + "h left" : "Closed"} | Makeup: {makeupOpen ? makeupDaysLeft + "d left" : "Closed"}
           </div>
-          <button onClick={() => setShowPolicy(!showPolicy)} style={{ fontSize: 11, color: accent(), background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600, padding: 0, marginBottom: 10 }}>{showPolicy ? "Hide Policy" : "View Policy"}</button>
-          {showPolicy && <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap", padding: 12, background: "#f9fafb", borderRadius: 8, marginBottom: 12, border: "1px solid " + BORDER }}>{policyText}</div>}
+          <button onClick={() => setShowPolicy(!showPolicy)} style={{ fontSize: 12.5, color: accent(), background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600, padding: 0, marginBottom: 10 }}>{showPolicy ? "Hide Policy" : "View Policy"}</button>
+          {showPolicy && <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap", padding: 12, background: "#f6f4f1", borderRadius: 8, marginBottom: 12, border: "1px solid " + BORDER }}>{policyText}</div>}
 
           {activityType === "fishbowl" && (
-            <div style={{ marginBottom: 12, padding: 12, background: "#f9fafb", borderRadius: 8, border: "1px solid " + BORDER }}>
+            <div style={{ marginBottom: 12, padding: 12, background: "#f6f4f1", borderRadius: 8, border: "1px solid " + BORDER }}>
               <button onClick={() => setFbEditOpen(!fbEditOpen)} style={{ fontSize: 12, color: accent(), background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 700, padding: 0 }}>
                 {fbEditOpen ? "Hide Score Editor" : "Edit Individual Scores"}
               </button>
               {fbEditOpen && (
                 <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr", gap: 4 }}>
-                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>
+                  <div style={{ fontSize: 12.5, color: TEXT_MUTED, marginBottom: 4 }}>
                     Change one student's fishbowl score for Week {week}. Saving updates only that student. Out of {maxPts}.
                   </div>
                   {sorted.map(s => {
@@ -4067,12 +4017,12 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
                       <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{s.name}</span>
-                      {missed && !status && <span style={{ fontSize: 11, fontWeight: 600, color: RED, marginLeft: 6 }}>MISSED</span>}
-                      {status && <span style={{ fontSize: 11, fontWeight: 600, color: sc.color, marginLeft: 6 }}>{sc.label}</span>}
+                      {missed && !status && <span style={{ fontSize: 12.5, fontWeight: 600, color: RED, marginLeft: 6 }}>MISSED</span>}
+                      {status && <span style={{ fontSize: 12.5, fontWeight: 600, color: sc.color, marginLeft: 6 }}>{sc.label}</span>}
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 18, fontWeight: 900, color: gradePercent >= 80 ? GREEN : gradePercent === 0 ? RED : "#d97706" }}>{gradePercent}%<span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 500 }}> grade</span></div>
-                      <div style={{ fontSize: 11, color: TEXT_MUTED }}>{score}/{maxPts} game</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: gradePercent >= 80 ? GREEN : gradePercent === 0 ? RED : AMBER }}>{gradePercent}%<span style={{ fontSize: 12.5, color: TEXT_MUTED, fontWeight: 500 }}> grade</span></div>
+                      <div style={{ fontSize: 12.5, color: TEXT_MUTED }}>{score}/{maxPts} game</div>
                     </div>
                   </div>
 
@@ -4082,7 +4032,7 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
                         {Object.entries(STATUS_COLORS).map(([key, val]) => (
                           <button key={key} onClick={() => setStudentStatus(s.id, key)} style={{
-                            ...pill, fontSize: 10, padding: "3px 8px",
+                            ...pill, fontSize: 12, padding: "3px 8px",
                             background: status === key ? val.border : "transparent",
                             color: status === key ? "#fff" : val.color,
                             border: "1px solid " + val.border,
@@ -4093,9 +4043,9 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
                       {/* Rebound video link */}
                       {ss.link && (
                         <div style={{ marginBottom: 6 }}>
-                          <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 2 }}>Rebound video:</div>
+                          <div style={{ fontSize: 12.5, color: TEXT_MUTED, marginBottom: 2 }}>Rebound video:</div>
                           <a href={ss.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#2563eb", wordBreak: "break-all" }}>{ss.link}</a>
-                          <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Submitted {new Date(ss.linkTs).toLocaleString()}</div>
+                          <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>Submitted {new Date(ss.linkTs).toLocaleString()}</div>
                         </div>
                       )}
 
@@ -4103,7 +4053,7 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
                           Always available to admin for a Weekly Game; no eligibility wall. */}
                       {isGameGradePath && !ss.approved && (
                         <div>
-                          <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>
+                          <div style={{ fontSize: 12.5, color: TEXT_MUTED, marginBottom: 4 }}>
                             Original grade: <strong>{origGradePts}</strong> / 100. Set any grade out of 100.
                           </div>
                           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
@@ -4194,11 +4144,11 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, textAlign: "center", marginBottom: 12 }}>
           <div style={{ padding: 12, borderRadius: 10, background: myScore >= classAvg ? "#ecfdf5" : "#fef2f2" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>Your Score</div>
-            <div style={{ fontSize: 24, fontWeight: 900, color: myScore >= classAvg ? GREEN : "#d97706" }}>{myScore}<span style={{ fontSize: 13, color: TEXT_MUTED }}>/{maxPts}</span></div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>Your Score</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: myScore >= classAvg ? GREEN : AMBER }}>{myScore}<span style={{ fontSize: 13, color: TEXT_MUTED }}>/{maxPts}</span></div>
           </div>
           <div style={{ padding: 12, borderRadius: 10, background: "#f4f4f5" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>Class Average</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>Class Average</div>
             <div style={{ fontSize: 24, fontWeight: 900, color: TEXT_PRIMARY }}>{classAvg}<span style={{ fontSize: 13, color: TEXT_MUTED }}>/{maxPts}</span></div>
           </div>
         </div>
@@ -4237,8 +4187,8 @@ Rebound: You were present but scored below 80%. Submit a video of you explaining
               Your grade was {myGradePercent}%. You can earn back to {myTargetPercent}% by submitting a video of you explaining the material with a friend or family member.
               {" "}You have <strong>{reboundHoursLeft} hours</strong> left to submit. Points count for your grade only.
             </div>
-            <button onClick={() => setShowPolicy(!showPolicy)} style={{ fontSize: 11, color: accent(), background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600, padding: 0, marginBottom: 6 }}>{showPolicy ? "Hide Policy" : "View Full Policy"}</button>
-            {showPolicy && <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap", padding: 10, background: "#f9fafb", borderRadius: 8, marginBottom: 8, border: "1px solid " + BORDER }}>{policyText}</div>}
+            <button onClick={() => setShowPolicy(!showPolicy)} style={{ fontSize: 12.5, color: accent(), background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 600, padding: 0, marginBottom: 6 }}>{showPolicy ? "Hide Policy" : "View Full Policy"}</button>
+            {showPolicy && <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.6, whiteSpace: "pre-wrap", padding: 10, background: "#f6f4f1", borderRadius: 8, marginBottom: 8, border: "1px solid " + BORDER }}>{policyText}</div>}
             <div style={{ display: "flex", gap: 6 }}>
               <input value={reboundLink} onChange={e => setReboundLink(e.target.value)} placeholder="Paste your video link here..." style={{ ...inp, flex: 1, fontSize: 13 }} />
               <button onClick={submitRebound} style={{ ...pill, background: TEXT_PRIMARY, color: "#fff", fontSize: 12 }}>Submit</button>

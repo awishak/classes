@@ -11,8 +11,8 @@ Tag each item with one area so it stays skimmable:
 
 ## Open
 
-- `[software]` **Play a game end to end on the engine.** The game system is ported and every surface renders under test, but no game has been played through from setup to scoring on a real phone. Do that before running one in front of a room. Ported 2026-09-02.
-- `[software]` **The game surfaces do not look like the engine.** They came across wearing `styles.jsx` and the old hub's themes. Restyle onto the engine's stylesheet.
+- `[software]` **Click through a game on a real phone.** The rules are played through by the build and every surface renders, and neither of those is a phone answering over the realtime channel. Do that before running a game in front of a room.
+- `[software]` **Team Trivia's live flow has no test beyond rendering.** Rounds, reveals and team scoring still live inside click handlers. Pull them into `src/engine/game.js` the way the weekly game and Ten on Ten went.
 
 - `[software]` **Roster filter for a class with two sections.** COMM 3 meets twice on the same day and stays one class rather than two. A student belongs to a section, and the surfaces made of people filter down to the section sitting in the room: the roster, attendance, discussion boards, groups. Everything else stays single, so changing a day plan, an assignment or a block once gives both sections the change. Decided 2026-09-02, not built.
 

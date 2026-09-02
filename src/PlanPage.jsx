@@ -47,6 +47,31 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep2c", date: "Wednesday, September 2 \u00b7 evening", title: "The game looks like the engine, and the build plays a game",
+    blurb: "The game came over from the forks wearing the forks' own palette, written before the engine had one: a cool grey where the engine is warm, a system font where everything else is Outfit, and three colours that had never been past a contrast check. And four thousand lines of game had every rule about what a week is worth sitting inside a click handler, which is why nothing had ever checked one.",
+    groups: [
+      { name: "It looks like the engine now", items: [
+        ["The engine's palette, on every game surface", "Warm greys, Outfit, the engine's card at 16 rather than 12, the engine's buttons. Andrew's themes are untouched: clean draws the engine's card and every other theme draws exactly as before."],
+        ["Three colours that had failed all along", "The muted grey was 2.5:1 on white, the green 2.3:1 and the amber 3.2:1. The contrast check has never been pointed at the forked files, so nothing said so. All three are past 4.5:1 now."],
+        ["Nothing under twelve pixels", "A hundred and two sizes in the file were nine, ten or eleven pixels, which is smaller than anything else here draws and smaller than the standard this app is meant to hold."],
+      ] },
+      { name: "The build plays a game", items: [
+        ["What a game is worth is a function now", "Write a week, open it to the room, take an answer, score it, work out who got everything right. Each one takes the class store and hands back a new one, so a whole game runs in the build and the gradebook can be read afterwards. The screens call these."],
+        ["A game is played all the way through, every build", "Written, opened, answered by two students, scored, and the points read back out of the log. Then scored a second time, because scoring twice is what a makeup is."],
+        ["Scoring twice is safe on purpose", "A student whose score has not moved keeps the entry they have. A student whose score has moved has the old entry replaced rather than added to. The timestamp stays on the first scoring, so a makeup graded in week nine does not land in week nine's leaderboard. All three of those are checked."],
+        ["The same function scores both", "The weekly game and Ten on Ten ran two copies of the same forty lines, one paying ten a question and the other splitting twenty across the week. One function, one rule for what a question is worth."],
+        ["The test was broken on purpose to see it fail", "Nine points a question instead of ten, and six assertions fired naming the numbers. A test that has never failed is not yet a test."],
+      ] },
+    ],
+    note: {
+      title: "Still not proven",
+      lines: [
+        "Nobody has clicked through a game on a real device. The rules are checked and every surface renders, and neither of those is a phone answering a question over the realtime channel.",
+        "Team Trivia's live flow has no test beyond rendering. Its rounds, reveals and team scoring are still inside click handlers, where the weekly game's rules used to be.",
+      ],
+    },
+  },
+  {
     id: "sep2b", date: "Wednesday, September 2 \u00b7 afternoon", title: "One game system where there were three",
     blurb: "COMM 118 and COMM 4 each carried a copy of the game system, 4203 lines and 4125 lines, and the difference between the two copies was a storage key, an accent, two category labels, a few compound surnames and one word in a URL. COMM 2 had a third, shorter copy. A fix went in three times, or went in once and stayed broken in the other two.",
     groups: [
