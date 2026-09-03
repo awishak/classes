@@ -26,7 +26,7 @@ import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, ThemeStyle, ThemePicker } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
-  ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, Avatar, cardStyle } from "./ThemeChrome.jsx";
+  ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle } from "./ThemeChrome.jsx";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
 // Fredoka on Crashing Out. One declaration, and every use below follows.
@@ -752,7 +752,7 @@ export default function ClassApp({ config, initialCard }) {
         <ThemeChrome theme={theme} />
         <style>{CSS}</style>
         <ThemeStickers theme={theme} />
-        <ThemeTopper theme={theme} lines={tickerLines} />
+        <ThemeTopper theme={theme} lines={tickerLines} seed={(seenAs || "").length + (config.code || "").length} />
         <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
         {PreviewBar}
         <div style={{ background: "var(--surface-card)", borderBottom: "1px solid " + BORDER }}>
@@ -782,6 +782,7 @@ export default function ClassApp({ config, initialCard }) {
               {Grid}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
+              <ClassLeader theme={theme} roster={roster} log={data?.log} me={seenAs} />
               <TubeySays theme={theme} seed={(seenAs || "").length} />
               <ThemeSponsor theme={theme} />
               <ThemeLegal theme={theme} />
@@ -806,7 +807,7 @@ export default function ClassApp({ config, initialCard }) {
       <style>{CSS}</style>
 
       <ThemeStickers theme={theme} />
-      <ThemeTopper theme={theme} lines={tickerLines} />
+      <ThemeTopper theme={theme} lines={tickerLines} seed={(seenAs || "").length + (config.code || "").length} />
       {/* compact top bar */}
       <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
       {PreviewBar}
@@ -849,6 +850,7 @@ export default function ClassApp({ config, initialCard }) {
               {Grid}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
+              <ClassLeader theme={theme} roster={roster} log={data?.log} me={seenAs} />
               <TubeySays theme={theme} seed={(seenAs || "").length} />
               <ThemeSponsor theme={theme} compact />
               <ThemeLegal theme={theme} />

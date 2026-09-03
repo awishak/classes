@@ -96,6 +96,24 @@ Stickers twinkle and pulse down both edges, pinned and pointer-events off.
 Headings carry a pink shadow, which is a token like everything else. Tubey peeks
 out from behind the first card.
 
+Two more things only Crashing Out does. **The class leader talks to whoever is
+looking.** Whoever is top of the in-class points turns up with a crown and says
+the gap out loud, because a leaderboard is a number in a card that nobody feels
+and a classmate saying the number is a different thing. The leader looking at
+their own screen gets a different line, since a leader taunting themselves is a
+bug and the build says so.
+
+**The marquee carries championships.** `src/engine/crashing-facts.js` holds 104
+results: every Super Bowl, NBA Finals and World Series from the 1990 season to
+the 2024 season, alternating with the class's own facts as the strip scrolls.
+The last two seasons are deliberately absent rather than guessed, because a
+banner that states a result confidently is worse than a shorter banner. **This
+is the one part of the app that can be factually wrong.** Check any of them
+before quoting one at a room. The build checks the shape, not the truth: every
+line starts with a season inside the range the file claims, the picks are
+seeded so a re-render does not reshuffle under a reader, and one banner never
+repeats a result.
+
 Crashing Out cuts its cards up. Each one takes its own border colour, its own
 shadow colour, four different corner radii and a fraction of a degree of tilt,
 so a grid reads as a stack of things somebody put down rather than six copies of
@@ -213,7 +231,7 @@ character and those are what drifted. Font sizes are not held to `TYPE` yet.
 | `check-jsx-text` | an escape sequence stranded in JSX text |
 | `check-css` | a stylesheet that lost a rule |
 | `check-tokens` | a surface with a colour of its own, a theme missing a token, or a colour that fails where it sits |
-| `smoke` | 140 surfaces rendered server-side, a game played through, and every theme's colours and furniture |
+| `smoke` | 141 surfaces rendered server-side, a game played through, and every theme's colours and furniture |
 
 Each was written after the matching mistake reached production. Do not remove
 one because it is inconvenient; add the case instead.

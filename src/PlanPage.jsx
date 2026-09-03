@@ -47,6 +47,30 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep2m", date: "Wednesday, September 2 \u00b7 last", title: "The leader talks, and the banner knows every champion since 1990",
+    blurb: "Andrew: make the avatar of the class leader say stuff to them. add weird stuff to the banner, like just name any world series, nba finals, or superbowl from the last 36 years. Both are the sort of thing that only works if it says something true, so both do.",
+    groups: [
+      { name: "Somebody is beating you and now they say so", items: [
+        ["The top of the points turns up with a crown", "A leaderboard is a number in a card that nobody feels. A classmate saying the number out loud is a different thing entirely."],
+        ["The line is built from the gap", "Sixty points behind gets a different sentence from four points behind, and both name the actual number. A line that could be said to anybody says nothing."],
+        ["The leader is not taunted by themselves", "Looking at your own screen while first gets its own line. Breaking that on purpose failed the build."],
+        ["Nobody leads before anybody scores", "An empty log means no leader, rather than a student with a crown and zero points."],
+      ] },
+      { name: "Every champion since 1990", items: [
+        ["A hundred and four results", "Every Super Bowl, NBA Finals and World Series from the 1990 season to the 2024 season, alternating with the class's own facts as the strip scrolls."],
+        ["Wide right, twenty-eight to three, and down three to one", "The ones worth a second look carry the reason they are worth it. Nineteen ninety-four is in there because a cancelled World Series is the weirdest fact in thirty-five years of this."],
+        ["The last two seasons are missing on purpose", "A banner that states a result confidently is worse than a shorter banner, and this is the one part of the app that can be factually wrong. Check any of them before quoting one at a room."],
+        ["Seeded, not random", "A banner that reshuffles under somebody reading it is a banner nobody finishes. The same student gets the same four results, and no banner repeats one."],
+      ] },
+    ],
+    note: {
+      title: "What the build can and cannot check",
+      lines: [
+        "The shape, not the truth. Every line starts with a season inside the range the file claims, in the marquee's case, seeded and without repeats. Nothing here can tell you the Rangers beat the Diamondbacks.",
+      ],
+    },
+  },
+  {
     id: "sep2l", date: "Wednesday, September 2 \u00b7 last", title: "Thirteen controls across the top, down to two",
     blurb: "Andrew: way too many buttons on the top bar for the instructor view. Four theme buttons, a view-as select, a class select, four teaching links, sign out and a two-button role toggle. Everything competed and nothing led, and I had added most of it today one piece at a time without ever looking at the row as a row.",
     groups: [

@@ -1,0 +1,142 @@
+// Championships, for the marquee on Crashing Out.
+//
+// Andrew: "add weird stuff to the banner, like just name any world series, nba
+// finals, or superbowl from the last 36 years." In a class about communication
+// and sport, a strip of results scrolling past a student's grade is exactly the
+// right kind of wrong.
+//
+// Seasons 1990 through 2024. The last two seasons are left out rather than
+// guessed: a marquee that states a result confidently is worse than a shorter
+// marquee, and this list is the one part of the theme that can be factually
+// wrong. Check any of these before quoting one at a room.
+//
+// 1994 is in here on purpose. A cancelled World Series is the weirdest fact in
+// thirty-five years of this and it belongs on a scrolling banner.
+
+export const SUPER_BOWLS = [
+  "1990 · GIANTS 20 BILLS 19 · WIDE RIGHT",
+  "1991 · WASHINGTON 37 BILLS 24",
+  "1992 · COWBOYS 52 BILLS 17",
+  "1993 · COWBOYS 30 BILLS 13 · FOUR IN A ROW, FOUR LOSSES",
+  "1994 · 49ERS 49 CHARGERS 26",
+  "1995 · COWBOYS 27 STEELERS 17",
+  "1996 · PACKERS 35 PATRIOTS 21",
+  "1997 · BRONCOS 31 PACKERS 24",
+  "1998 · BRONCOS 34 FALCONS 19",
+  "1999 · RAMS 23 TITANS 16 · ONE YARD SHORT",
+  "2000 · RAVENS 34 GIANTS 7",
+  "2001 · PATRIOTS 20 RAMS 17",
+  "2002 · BUCCANEERS 48 RAIDERS 21",
+  "2003 · PATRIOTS 32 PANTHERS 29",
+  "2004 · PATRIOTS 24 EAGLES 21",
+  "2005 · STEELERS 21 SEAHAWKS 10",
+  "2006 · COLTS 29 BEARS 17",
+  "2007 · GIANTS 17 PATRIOTS 14 · THE HELMET CATCH, 18 AND 1",
+  "2008 · STEELERS 27 CARDINALS 23",
+  "2009 · SAINTS 31 COLTS 17",
+  "2010 · PACKERS 31 STEELERS 25",
+  "2011 · GIANTS 21 PATRIOTS 17",
+  "2012 · RAVENS 34 49ERS 31",
+  "2013 · SEAHAWKS 43 BRONCOS 8",
+  "2014 · PATRIOTS 28 SEAHAWKS 24 · THROW IT FROM THE ONE, WHY NOT",
+  "2015 · BRONCOS 24 PANTHERS 10",
+  "2016 · PATRIOTS 34 FALCONS 28 · 28 TO 3",
+  "2017 · EAGLES 41 PATRIOTS 33 · THE PHILLY SPECIAL",
+  "2018 · PATRIOTS 13 RAMS 3",
+  "2019 · CHIEFS 31 49ERS 20",
+  "2020 · BUCCANEERS 31 CHIEFS 9",
+  "2021 · RAMS 23 BENGALS 20",
+  "2022 · CHIEFS 38 EAGLES 35",
+  "2023 · CHIEFS 25 49ERS 22 · OVERTIME",
+  "2024 · EAGLES 40 CHIEFS 22",
+];
+
+export const NBA_FINALS = [
+  "1991 · BULLS OVER LAKERS",
+  "1992 · BULLS OVER BLAZERS",
+  "1993 · BULLS OVER SUNS",
+  "1994 · ROCKETS OVER KNICKS",
+  "1995 · ROCKETS OVER MAGIC",
+  "1996 · BULLS OVER SONICS",
+  "1997 · BULLS OVER JAZZ",
+  "1998 · BULLS OVER JAZZ",
+  "1999 · SPURS OVER KNICKS",
+  "2000 · LAKERS OVER PACERS",
+  "2001 · LAKERS OVER 76ERS",
+  "2002 · LAKERS OVER NETS",
+  "2003 · SPURS OVER NETS",
+  "2004 · PISTONS OVER LAKERS",
+  "2005 · SPURS OVER PISTONS",
+  "2006 · HEAT OVER MAVERICKS",
+  "2007 · SPURS OVER CAVALIERS",
+  "2008 · CELTICS OVER LAKERS",
+  "2009 · LAKERS OVER MAGIC",
+  "2010 · LAKERS OVER CELTICS",
+  "2011 · MAVERICKS OVER HEAT",
+  "2012 · HEAT OVER THUNDER",
+  "2013 · HEAT OVER SPURS",
+  "2014 · SPURS OVER HEAT",
+  "2015 · WARRIORS OVER CAVALIERS",
+  "2016 · CAVALIERS OVER WARRIORS · DOWN 3 TO 1",
+  "2017 · WARRIORS OVER CAVALIERS",
+  "2018 · WARRIORS OVER CAVALIERS",
+  "2019 · RAPTORS OVER WARRIORS",
+  "2020 · LAKERS OVER HEAT · IN A BUBBLE",
+  "2021 · BUCKS OVER SUNS",
+  "2022 · WARRIORS OVER CELTICS",
+  "2023 · NUGGETS OVER HEAT",
+  "2024 · CELTICS OVER MAVERICKS",
+];
+
+export const WORLD_SERIES = [
+  "1990 · REDS SWEEP THE A'S",
+  "1991 · TWINS OVER BRAVES · SEVEN GAMES",
+  "1992 · BLUE JAYS OVER BRAVES",
+  "1993 · BLUE JAYS OVER PHILLIES · CARTER WALKS IT OFF",
+  "1994 · NO WORLD SERIES · THEY JUST DID NOT PLAY ONE",
+  "1995 · BRAVES OVER INDIANS",
+  "1996 · YANKEES OVER BRAVES",
+  "1997 · MARLINS OVER INDIANS",
+  "1998 · YANKEES SWEEP THE PADRES",
+  "1999 · YANKEES SWEEP THE BRAVES",
+  "2000 · YANKEES OVER METS",
+  "2001 · DIAMONDBACKS OVER YANKEES",
+  "2002 · ANGELS OVER GIANTS",
+  "2003 · MARLINS OVER YANKEES",
+  "2004 · RED SOX SWEEP THE CARDINALS · 86 YEARS",
+  "2005 · WHITE SOX SWEEP THE ASTROS",
+  "2006 · CARDINALS OVER TIGERS",
+  "2007 · RED SOX SWEEP THE ROCKIES",
+  "2008 · PHILLIES OVER RAYS",
+  "2009 · YANKEES OVER PHILLIES",
+  "2010 · GIANTS OVER RANGERS",
+  "2011 · CARDINALS OVER RANGERS · DOWN TO A STRIKE, TWICE",
+  "2012 · GIANTS SWEEP THE TIGERS",
+  "2013 · RED SOX OVER CARDINALS",
+  "2014 · GIANTS OVER ROYALS",
+  "2015 · ROYALS OVER METS",
+  "2016 · CUBS OVER INDIANS · 108 YEARS",
+  "2017 · ASTROS OVER DODGERS",
+  "2018 · RED SOX OVER DODGERS",
+  "2019 · NATIONALS OVER ASTROS · ROAD TEAM WINS ALL SEVEN",
+  "2020 · DODGERS OVER RAYS",
+  "2021 · BRAVES OVER ASTROS",
+  "2022 · ASTROS OVER PHILLIES",
+  "2023 · RANGERS OVER DIAMONDBACKS",
+  "2024 · DODGERS OVER YANKEES",
+];
+
+export const ALL_FACTS = [...SUPER_BOWLS, ...NBA_FINALS, ...WORLD_SERIES];
+
+// Picked off a seed rather than at random, so a page that re-renders does not
+// reshuffle the banner under somebody who is reading it.
+export function factsFor(seed, n = 4) {
+  const out = [];
+  const step = 7919; // a prime, so the walk covers the list rather than looping
+  let i = Math.abs(seed || 0) % ALL_FACTS.length;
+  for (let k = 0; k < n; k++) {
+    out.push(ALL_FACTS[i]);
+    i = (i + step) % ALL_FACTS.length;
+  }
+  return out;
+}

@@ -29,7 +29,8 @@ import { sittingsOf, minutesLeft, sittingLength } from "../src/engine/meets.js";
 import { THEMES, THEME, THEME_LABELS, themeCSS, varsOf, fontHref } from "../src/engine/themes.js";
 import { ThemePicker } from "../src/engine/ThemeShell.jsx";
 import { Tubey, TubeySays, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeyPeek, ThemeStickers,
-  StoryBar, ThemeIdentity, ThemeCamera, Avatar, StatusMark, cardStyle, CHROME_CSS } from "../src/engine/ThemeChrome.jsx";
+  StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, StatusMark, cardStyle, CHROME_CSS } from "../src/engine/ThemeChrome.jsx";
+import { ALL_FACTS, factsFor } from "../src/engine/crashing-facts.js";
 import { saveWeek, openWeek, answerWeek, scoreWeek, scoresFor, perfectRuns, pointsOf, mergeAnswers } from "../src/engine/game.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
@@ -1130,7 +1131,58 @@ cases.push(["Instructor links", <InstructorLinks />]);
   onSite("clean", "text-shadow:var(--display-shadow)", "the heading shadow");
 }
 
+// The leader, and the championships. Both are Crashing Out only, both have to
+// say something true, and the facts are the one part of this theme that can be
+// factually wrong, so they are held to a shape.
+{
+  const say = (m) => { console.error("  FAIL  crashing: " + m); failedEarly++; };
+  const html = (el) => renderToString(el);
+  const ROSTER = [{ name: "Ada Byron", id: "s1" }, { name: "Bo Diaz", id: "s2" }];
+  const LOG = [{ studentId: "s1", amount: 30 }, { studentId: "s2", amount: 90 }];
+
+  // Bo leads Ada by 60, and the line says so rather than saying something vague.
+  const toAda = html(<ClassLeader theme="crashing" roster={ROSTER} log={LOG} me="Ada Byron" />);
+  if (!toAda.includes("Bo")) say("the leader does not say who they are");
+  if (!toAda.includes("60")) say("the leader never names the gap, so the line says nothing true");
+  if (!toAda.includes("TOP OF THE CLASS")) say("the leader is not marked as the leader");
+  // The leader looking at their own screen must not be taunted by themselves.
+  const toBo = html(<ClassLeader theme="crashing" roster={ROSTER} log={LOG} me="Bo Diaz" />);
+  if (toBo.includes("ahead of you")) say("the leader is taunting themselves");
+  if (!toBo.includes("first")) say("the leader is not told they are first");
+  // Nobody has scored, so nobody is leading.
+  if (html(<ClassLeader theme="crashing" roster={ROSTER} log={[]} me="Ada Byron" />) !== "")
+    say("a leader appeared before anybody scored a point");
+  ["clean", "business", "snapchat"].forEach(t => {
+    if (html(<ClassLeader theme={t} roster={ROSTER} log={LOG} me="Ada Byron" />) !== "")
+      say(t + " grew a class leader");
+  });
+
+  // The facts. Shape, not truth: nothing here can check a score, so the check
+  // is that every line names a season in range and reads as a result.
+  if (ALL_FACTS.length < 90) say("only " + ALL_FACTS.length + " championships, which is not thirty-five years of three sports");
+  ALL_FACTS.forEach(f => {
+    const m = f.match(/^(\d{4}) · /);
+    if (!m) say("a fact does not start with its season: " + f);
+    else {
+      const y = Number(m[1]);
+      if (y < 1990 || y > 2024) say("a fact is outside the range the file claims: " + f);
+    }
+    if (f !== f.toUpperCase()) say("a fact is not in the marquee's case: " + f);
+  });
+  // Seeded, so a re-render does not reshuffle the banner under a reader.
+  if (factsFor(7, 4).join("|") !== factsFor(7, 4).join("|")) say("the same seed gives different facts");
+  if (factsFor(7, 4).join("|") === factsFor(8, 4).join("|")) say("every seed gives the same facts");
+  if (new Set(factsFor(3, 6)).size !== 6) say("one banner repeats a result");
+  // And a championship reaches the strip.
+  const strip = html(<ThemeTopper theme="crashing" lines={["A CLASS FACT"]} seed={11} />);
+  if (!strip.includes("A CLASS FACT")) say("the marquee dropped the class's own line");
+  if (!/\d{4} ·/.test(strip)) say("no championship reached the marquee");
+}
+
 cases.push(["Tubey", <Tubey size={120} />]);
+cases.push(["Crashing Out, the leader speaks", <ClassLeader theme="crashing"
+  roster={[{ name: "Ada Byron", id: "s1" }, { name: "Bo Diaz", id: "s2" }]}
+  log={[{ studentId: "s2", amount: 90 }]} me="Ada Byron" />, "TOP OF THE CLASS"]);
 cases.push(["Snapchat, the story bar", <StoryBar theme="snapchat" roster={[{ name: "Bo Diaz" }, { name: "Kaz Osei" }]} me="Ada Byron" />, "your story"]);
 // The furniture on the four surfaces it was just carried to. A room screen
 // under Crashing Out has to hold the worm; under Clean it must hold nothing.

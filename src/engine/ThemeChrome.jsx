@@ -14,6 +14,7 @@
 // permitted to help with anybody's homework, and he says so himself.
 
 import { THEME, BRAND } from "./themes.js";
+import { factsFor } from "./crashing-facts.js";
 
 // The sponsor's palette, from the system rather than from here. `onCream` and
 // `onYellow` are the two that carry words; everything else is a fill or a line.
@@ -104,7 +105,7 @@ export function TubeySays({ theme, seed = 0 }) {
 
 // ─── the strip across the top ───
 // Crashing Out puts a marquee above everything. Nothing else does.
-export function ThemeTopper({ theme, lines = [], fixed }) {
+export function ThemeTopper({ theme, lines = [], fixed, seed = 0 }) {
   if (theme !== "crashing") return null;
   // Some surfaces centre their content in a flex row, where a full-width strip
   // would become a squeezed sibling. Those pin it to the top of the viewport
@@ -112,8 +113,18 @@ export function ThemeTopper({ theme, lines = [], fixed }) {
   const seat = fixed
     ? { position: "fixed", top: 0, left: 0, right: 0, zIndex: 40 }
     : null;
-  const text = (lines.length ? lines : ["THIS IS A CLASS", "YOU ARE DOING FINE"])
-    .map(l => "★ " + String(l).toUpperCase()).join(" ") + " ★ ";
+  // What is happening in this class, and then a championship from the last
+  // thirty-five years, alternating. The result has nothing to do with anybody's
+  // grade, which is the point: it is a class about sport and the banner has
+  // opinions.
+  const own = (lines.length ? lines : ["THIS IS A CLASS", "YOU ARE DOING FINE"]).map(l => String(l).toUpperCase());
+  const facts = factsFor(seed, Math.max(own.length, 3));
+  const mixed = [];
+  for (let i = 0; i < Math.max(own.length, facts.length); i++) {
+    if (own[i]) mixed.push(own[i]);
+    if (facts[i]) mixed.push(facts[i]);
+  }
+  const text = mixed.map(l => "★ " + l).join(" ") + " ★ ";
   return (
     <div className="tc-torn" style={{ background: INK, whiteSpace: "nowrap", padding: "9px 0",
       borderBottom: "3px solid " + PNK, ...seat }}>
@@ -343,6 +354,75 @@ export function ThemeCamera({ theme }) {
     <div aria-hidden="true" style={{ width: 58, height: 58, borderRadius: "50%", border: "4px solid #000",
       background: "#fff", boxShadow: "4px 4px 0 #000", display: "flex", alignItems: "center",
       justifyContent: "center", fontSize: 24, flex: "none", marginTop: -14 }}>&#128247;</div>
+  );
+}
+
+// ─── the leader talks ───
+//
+// Whoever is top of the in-class points turns up on Crashing Out and addresses
+// the person looking at the screen. A leaderboard is a number in a card that
+// nobody feels; a classmate saying the number out loud is a different thing.
+//
+// The line is picked off the gap between the two of you, so it says something
+// true rather than something generic. Being first gets its own line, because
+// the leader taunting themselves is a bug.
+const LEAD_FAR = [
+  "i am {gap} points ahead of you and i do think about that.",
+  "{gap} points. i am not going to pretend i have not counted.",
+  "you are {gap} behind. i say this with love and a spreadsheet.",
+];
+const LEAD_NEAR = [
+  "{gap} points in it. i have started checking this between classes.",
+  "you are {gap} back. that is nothing. that is one bad week for me.",
+  "{gap} points. i can hear you.",
+];
+const LEAD_SELF = [
+  "you are first. everyone can see that. no pressure.",
+  "top of the class. the only way from here is the other way.",
+  "first. enjoy the next four days.",
+];
+const pick = (list, seed) => list[Math.abs(seed || 0) % list.length];
+
+export function ClassLeader({ theme, roster = [], log = [], me }) {
+  if (theme !== "crashing" || !roster.length) return null;
+  const points = (id) => (log || []).filter(e => e.studentId === id).reduce((n, e) => n + (e.amount || 0), 0);
+  const ranked = roster.map(s => ({ ...s, pts: points(s.id) })).sort((a, b) => b.pts - a.pts);
+  const leader = ranked[0];
+  // Nobody has scored anything yet, so there is no leader to hear from.
+  if (!leader || leader.pts <= 0) return null;
+
+  const mine = ranked.find(s => s.name === me);
+  const isMe = mine && mine.name === leader.name;
+  const gap = Math.round(leader.pts - (mine ? mine.pts : 0));
+  const seed = (me || "").length + (leader.name || "").length;
+  const line = isMe ? pick(LEAD_SELF, seed)
+    : pick(gap > 40 ? LEAD_FAR : LEAD_NEAR, seed).replace("{gap}", String(Math.max(gap, 1)));
+
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, flex: "none" }}>
+        <div style={{ position: "relative" }}>
+          <Avatar theme="crashing" name={leader.name} size={62} bg={PUR} />
+          <span aria-hidden="true" style={{ position: "absolute", top: -12, left: -10, fontSize: 24,
+            transform: "rotate(-18deg)" }}>&#128081;</span>
+        </div>
+        <span style={{ fontFamily: "var(--font-label)", fontSize: 13, color: INK, maxWidth: 74,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {String(leader.name).split(" ")[0]}
+        </span>
+      </div>
+      <div style={{ flex: 1, minWidth: 0, background: "#fff", border: "3px solid " + PUR,
+        borderRadius: "8px 26px 6px 22px", boxShadow: "3px 3px 0 " + YEL + ", 5px 5px 0 " + INK,
+        transform: "rotate(-0.5deg)", padding: "12px 14px", position: "relative" }}>
+        <span aria-hidden="true" style={{ position: "absolute", left: -11, top: 20, width: 15, height: 15,
+          background: "#fff", borderLeft: "3px solid " + PUR, borderBottom: "3px solid " + PUR,
+          transform: "rotate(45deg)" }} />
+        <div style={{ fontFamily: "var(--font-label)", fontSize: 13, color: PUR, marginBottom: 3 }}>
+          TOP OF THE CLASS
+        </div>
+        <div style={{ fontSize: 15, lineHeight: 1.4, color: INK, position: "relative" }}>{line}</div>
+      </div>
+    </div>
   );
 }
 
