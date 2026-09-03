@@ -15,7 +15,9 @@ import { genId } from "../utils.jsx";
 import { draftFeedback, textToHtml } from "./feedback.js";
 import * as TOKENS from "./tokens.js";
 
-const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
+// The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
+// Fredoka on Crashing Out. One declaration, and every use below follows.
+const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
 const TEXT_SECONDARY = TOKENS.TEXT.secondary;
 const TEXT_MUTED = TOKENS.TEXT.muted; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.

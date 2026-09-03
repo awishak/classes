@@ -1006,6 +1006,44 @@ cases.push(["Instructor links", <InstructorLinks />]);
   if (html(<StatusMark theme="clean" tone="live" label="new" />).includes("rotate(45deg)")) say("Clean drew a diamond");
 }
 
+// The faces, which were defined and unused for a whole pass. A theme that
+// declares Bangers and then renders Outfit is not a theme, and nothing said so.
+{
+  const say = (m) => { console.error("  FAIL  fonts: " + m); failedEarly++; };
+  const FACE = {
+    clean:    { body: "Outfit", display: "Outfit",  label: "IBM Plex Mono" },
+    business: { body: "Outfit", display: "Fraunces", label: "IBM Plex Mono" },
+    snapchat: { body: "Nunito", display: "Nunito",  label: "Nunito" },
+    crashing: { body: "Fredoka", display: "Bangers", label: "Lilita One" },
+  };
+  const css = themeCSS();
+  Object.entries(FACE).forEach(([t, want]) => {
+    const block = (css.split(`[data-theme="${t}"]{`)[1] || "").split("}")[0];
+    Object.entries(want).forEach(([slot, face]) => {
+      const m = block.match(new RegExp("(?:^|;)--font-" + slot + ":([^;]*)"));
+      if (!m) say(`${t} sets no --font-${slot}`);
+      else if (!m[1].includes(face)) say(`${t}'s ${slot} face is ${m[1].trim()}, not ${face}`);
+    });
+    // The file the browser fetches has to carry the faces the block names.
+    const href = fontHref(t);
+    Object.values(want).forEach(face => {
+      const q = face.replace(/ /g, "+");
+      if (!href.includes(q)) say(`${t} asks for ${face} and never loads it`);
+    });
+  });
+  // The two loud themes must not quietly render the calm one's face.
+  ["snapchat", "crashing"].forEach(t => {
+    const was = globalThis.localStorage.getItem;
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : null);
+    try {
+      const html = renderToString(<ClassApp config={cfg0} />);
+      if (!html.includes("var(--font-body)")) say(t + ": the class site hardcodes a face instead of taking the theme's");
+      if (!html.includes("var(--font-display)")) say(t + ": no heading takes the display face");
+    } catch (err) { say(t + ": " + err.message); }
+    globalThis.localStorage.getItem = was;
+  });
+}
+
 cases.push(["Tubey", <Tubey size={120} />]);
 // The furniture on the four surfaces it was just carried to. A room screen
 // under Crashing Out has to hold the worm; under Clean it must hold nothing.

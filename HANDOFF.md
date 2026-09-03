@@ -52,6 +52,24 @@ right.
 other serious one, **Snapchat** and **Crashing Out** are Andrew's, carried over
 from spring 2026 and rebuilt on this system rather than on their own.
 
+Each theme has its own faces, and every student surface takes them. `F` and
+`MONO` in those files point at `TOKENS.FONT.body` and `TOKENS.FONT.label`, so
+one declaration per file carries all 88 uses. Headings take
+`TOKENS.FONT.display` with the weight that comes with the face, because 600 on
+Bangers is not a thing.
+
+| Theme | Body | Headings | Labels |
+| --- | --- | --- | --- |
+| Clean | Outfit | Outfit | IBM Plex Mono |
+| Business | Outfit | Fraunces | IBM Plex Mono |
+| Snapchat | Nunito | Nunito 900 | Nunito |
+| Crashing Out | Fredoka | Bangers | Lilita One |
+
+Press Start 2P is not a label face anywhere: it is roughly twice as wide per
+character as anything else here, so a label in it overflows every card. The
+pixel font stays in the marquee, where the strip scrolls and width costs
+nothing.
+
 A theme is furniture as well as colour. `src/engine/ThemeChrome.jsx` holds the
 pieces: the marquee across the top, Tubey the Worm and what he says, the
 Homework Tubes sponsor bar and its legal line, the streak badge, the story ring

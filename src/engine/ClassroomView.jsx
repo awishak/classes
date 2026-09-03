@@ -17,8 +17,10 @@ import * as TOKENS from "./tokens.js";
 import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, Tubey } from "./ThemeChrome.jsx";
 
-const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
-const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
+// The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
+// Fredoka on Crashing Out. One declaration, and every use below follows.
+const F = TOKENS.FONT.body;
+const MONO = TOKENS.FONT.label;
 const STAGE = TOKENS.ROOM.stage;
 const INK = TOKENS.ROOM.ink;
 const DIM = TOKENS.ROOM.dim;
@@ -59,7 +61,7 @@ const CSS = `
   background:rgba(20,17,15,.9);border:1px solid ${LINE};border-radius:8px;padding:7px 9px;min-height:34px;cursor:pointer}
 `;
 
-const eyebrow = { fontFamily: MONO, fontSize: "clamp(11px,1.1vw,15px)", letterSpacing: ".16em", textTransform: "uppercase", color: DIM };
+const eyebrow = { fontFamily: TOKENS.FONT.label, fontSize: "clamp(11px,1.1vw,15px)", letterSpacing: ".16em", textTransform: "uppercase", color: DIM };
 
 // ─── the content types a cast can be ───
 // Exported so the build can render each kind of cast on its own. The room
@@ -75,7 +77,7 @@ export function Content({ cast, config, plan, data }) {
     return (
       <div style={{ ...wrap, alignItems: "center", justifyContent: "center", textAlign: "center", gap: "2.2vh" }}>
         <div style={eyebrow}>{config.code} &middot; {todayLabel()}</div>
-        <div style={{ fontSize: "clamp(30px,4.6vw,68px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.08 }}>
+        <div style={{ fontFamily: TOKENS.FONT.display, fontSize: "clamp(30px,4.6vw,68px)", fontWeight: TOKENS.FONT.displayWeight, letterSpacing: "-.03em", lineHeight: 1.08 }}>
           {plan?.topic || config.name}
         </div>
         {plan?.notes ? (
@@ -96,10 +98,10 @@ export function Content({ cast, config, plan, data }) {
     return (
       <div style={{ ...wrap, justifyContent: "center", gap: "2.4vh" }}>
         <div style={eyebrow}>{cast.tag || todayLabel()}</div>
-        <div style={{ fontSize: "clamp(20px,2.4vw,34px)", fontWeight: 500, color: DIM, letterSpacing: "-.01em" }}>
+        <div style={{ fontFamily: TOKENS.FONT.display, fontSize: "clamp(20px,2.4vw,34px)", fontWeight: TOKENS.FONT.displayWeight, color: DIM, letterSpacing: "-.01em" }}>
           {cast.title}
         </div>
-        <div style={{ fontSize: "clamp(26px,4vw,58px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.16, maxWidth: "24ch" }}>
+        <div style={{ fontFamily: TOKENS.FONT.display, fontSize: "clamp(26px,4vw,58px)", fontWeight: TOKENS.FONT.displayWeight, letterSpacing: "-.03em", lineHeight: 1.16, maxWidth: "24ch" }}>
           {cast.idea}
         </div>
         {count > 1 ? (

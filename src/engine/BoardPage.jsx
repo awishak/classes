@@ -18,8 +18,10 @@ import * as TOKENS from "./tokens.js";
 import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeBadge, TubeySays, Avatar } from "./ThemeChrome.jsx";
 
-const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
-const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
+// The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
+// Fredoka on Crashing Out. One declaration, and every use below follows.
+const F = TOKENS.FONT.body;
+const MONO = TOKENS.FONT.label;
 const BG = TOKENS.SURFACE.page;
 const TEXT = TOKENS.TEXT.primary;
 const MUTED = TOKENS.TEXT.muted;
@@ -91,7 +93,7 @@ export default function BoardPage({ config }) {
     return (
       <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["SAY SOMETHING", config.code]} fixed /><div style={inner}>
         <Head config={config} />
-        <h1 style={{ margin: 0, fontSize: "clamp(23px,4vw,32px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.2 }}>{prompt}</h1>
+        <h1 style={{ margin: 0, fontFamily: TOKENS.FONT.display, fontSize: "clamp(23px,4vw,32px)", fontWeight: TOKENS.FONT.displayWeight, letterSpacing: "-.03em", lineHeight: 1.2 }}>{prompt}</h1>
         <p style={{ margin: 0, fontSize: 16, color: MUTED }}>Pick your name to post.</p>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Your name"
           style={{ width: "100%", minHeight: TAP, padding: "0 14px", fontSize: 17, fontFamily: F,
@@ -120,7 +122,7 @@ export default function BoardPage({ config }) {
         try { localStorage.removeItem(REMEMBER); } catch { /* private mode */ }
       }} />
 
-      <h1 style={{ margin: 0, fontSize: "clamp(23px,4vw,32px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.2 }}>{prompt}</h1>
+      <h1 style={{ margin: 0, fontFamily: TOKENS.FONT.display, fontSize: "clamp(23px,4vw,32px)", fontWeight: TOKENS.FONT.displayWeight, letterSpacing: "-.03em", lineHeight: 1.2 }}>{prompt}</h1>
 
       {board?.closed ? (
         <p style={{ margin: 0, fontSize: 16, color: MUTED }}>This discussion is closed.</p>

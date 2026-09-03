@@ -26,7 +26,9 @@ import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeBadge, TubeySays } from "./ThemeChrome.jsx";
 
 // The same tokens the rest of the engine uses.
-const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
+// The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
+// Fredoka on Crashing Out. One declaration, and every use below follows.
+const F = TOKENS.FONT.body;
 const BG = TOKENS.SURFACE.page;
 const TEXT = TOKENS.TEXT.primary;
 const MUTED = TOKENS.TEXT.muted;

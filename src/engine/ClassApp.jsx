@@ -27,7 +27,9 @@ import * as TOKENS from "./tokens.js";
 import { useStudentTheme, ThemeStyle, ThemePicker } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, Avatar, cardStyle } from "./ThemeChrome.jsx";
 
-const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
+// The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
+// Fredoka on Crashing Out. One declaration, and every use below follows.
+const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
 const TEXT_SECONDARY = TOKENS.TEXT.secondary;
 const TEXT_MUTED = TOKENS.TEXT.muted; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
@@ -40,15 +42,20 @@ const LIVE = TOKENS.STATE.live;
 // Following Apple HIG: body text ~15-17px, labels no smaller than 12px,
 // interactive targets at least 44px tall, inputs >=16px (prevents iOS zoom).
 const TAP = 44;
-const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
+const MONO = TOKENS.FONT.label;
 const CARD_MAX = 380; // cards never grow wider than this (a phone-width card)
 const card = {
   background: "#fff", borderRadius: 16, padding: 20,
   border: "1px solid " + BORDER, fontFamily: F, textAlign: "left",
   width: "100%", cursor: "pointer", display: "block",
 };
-const label = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
-const h2 = { fontSize: 22, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.02em" };
+const label = { fontFamily: TOKENS.FONT.label, fontSize: 13, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
+// Anything a student reads as a heading takes the theme's display face, which
+// is where a theme stops being a palette. Outfit on Clean, Fraunces on
+// Business, Nunito at 900 on Snapchat, Bangers on Crashing Out. The weight
+// comes with the face, because 600 on Bangers is not a thing.
+const DISPLAY = { fontFamily: TOKENS.FONT.display, fontWeight: TOKENS.FONT.displayWeight };
+const h2 = { ...DISPLAY, fontSize: 22, color: TEXT_PRIMARY, letterSpacing: "-0.02em" };
 
 // Keyboard users could not see where they were. Everything focusable now says
 // so, and the skeleton tiles breathe while the class data is on its way.
@@ -584,7 +591,7 @@ export default function ClassApp({ config, initialCard }) {
       </div>
       <div>
         <div style={{ fontSize: 12, fontWeight: 700, color: a, textTransform: "uppercase", letterSpacing: "0.08em" }}>{config.code}</div>
-        <div style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.1 }}>{config.name}</div>
+        <div style={{ ...DISPLAY, fontSize: 16, lineHeight: 1.1 }}>{config.name}</div>
       </div>
     </button>
   );

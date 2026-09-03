@@ -47,6 +47,29 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep2i", date: "Wednesday, September 2 \u00b7 last", title: "The faces were declared and never worn",
+    blurb: "Andrew: the fonts are the same across all four themes. shouldn't crashing out be wild? He was right. Every theme named its own faces in themes.js and every student surface hard-coded Outfit, eighty-eight times over, and no heading took a display face at all. So four themes shipped in one font.",
+    groups: [
+      { name: "One declaration, eighty-eight uses", items: [
+        ["F and MONO point at the theme", "Ten student files each declared const F = Outfit. They read TOKENS.FONT.body and TOKENS.FONT.label now, so one line per file carries every use below it."],
+        ["Headings take a display face", "Which is where a theme stops being a palette. The weight travels with the face, because 600 on Bangers is not a thing."],
+        ["Four sets of faces", "Clean is Outfit throughout. Business puts Fraunces over Outfit. Snapchat is Nunito at 900, which is the whole look. Crashing Out is Bangers over Fredoka with Lilita One labels."],
+        ["The pixel font stays in the marquee", "Press Start 2P is about twice as wide per character as anything else here, so a label in it overflows every card it lands in. In a strip that scrolls, width costs nothing."],
+      ] },
+      { name: "What the tests found", items: [
+        ["A face asked for and never loaded", "Lilita One was in the theme and only in the furniture's own font link, so any surface mounting the palette without the furniture drew its labels in a fallback. One place loads a theme's faces now."],
+        ["A blunted theme fails the build", "The display face was swapped for Outfit on purpose and the check named the theme, the slot and both faces. Before today the same swap would have changed nothing, because nothing was applying the face."],
+        ["A label under the floor", "The class site's label was 12px against a floor of 13 this repo declared this afternoon. Fixed on the way past."],
+      ] },
+    ],
+    note: {
+      title: "Two of ten",
+      lines: [
+        "Two files still carry their own MONO for a place where digits have to line up. The dashboard and the repository keep Outfit throughout, because themes are a student's choice about a student's screen.",
+      ],
+    },
+  },
+  {
     id: "sep2h", date: "Wednesday, September 2 \u00b7 last", title: "The furniture reaches the other four surfaces",
     blurb: "The character was on the class home and nowhere else, so a student who tapped through to the board or the game watched the theme fall away. It is on all five now, and each surface takes what suits the thing it is for.",
     groups: [

@@ -101,7 +101,7 @@ export function ThemeTopper({ theme, lines = [], fixed }) {
     <div style={{ background: INK, overflow: "hidden", whiteSpace: "nowrap", padding: "9px 0",
       borderBottom: "3px solid " + PNK, ...seat }}>
       <div className="tc-anim" style={{ display: "inline-block", animation: "tcMarquee 22s linear infinite",
-        fontFamily: "var(--font-label)", fontSize: 13, color: YEL }}>{text.repeat(4)}</div>
+        fontFamily: "'Press Start 2P', monospace", fontSize: 13, color: YEL }}>{text.repeat(4)}</div>
     </div>
   );
 }
@@ -220,9 +220,9 @@ export function cardStyle(theme, i = 0) {
 export function ThemeChrome({ theme }) {
   return (
     <>
-      {theme === "crashing" ? (
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Bangers&display=swap" />
-      ) : null}
+      {/* The faces arrive with the theme, from THEME_FONTS. This used to load
+          Lilita One on its own, which meant a surface mounting the palette
+          without the furniture drew its labels in a fallback. */}
       <style>{CHROME_CSS}</style>
     </>
   );
