@@ -130,3 +130,24 @@ export const THEME_FONTS = {
 };
 export const fontHref = (name) =>
   "https://fonts.googleapis.com/css2?" + (THEME_FONTS[name] || THEME_FONTS.clean) + "&display=swap";
+
+// ─── someone else's brand ───
+//
+// Crashing Out is sponsored, so the Homework Tubes palette lives here rather
+// than loose inside a component. Lifted from ~/Projects/homework-tubes, with two
+// text pairs corrected: their blue on their yellow is 2.81:1 and their red on
+// their cream is 4.18:1, so the URL pill takes ink on yellow at 10.15:1 and the
+// eyebrow takes a deeper red at 6.26:1. Fills, borders and shadows keep the
+// brand exactly as it is, because contrast rules do not apply to those.
+export const BRAND = {
+  homeworkTubes: {
+    red: "#E8243C", yellow: "#FFD233", blue: "#2B7CE9", green: "#3CBB57",
+    purple: "#9B4DFF", orange: "#FF8C1A", pink: "#FF5FA2", cream: "#FFF8E7", ink: "#1A1230",
+    // The two that carry words.
+    onCream: "#b81428",   // 6.26:1 on cream
+    onYellow: "#1f2937",  // 10.15:1 on yellow
+    url: "https://homeworktubes.com",
+    // Checked as text, against the ground each one actually sits on.
+    text: [["onCream", "#b81428", "#FFF8E7"], ["onYellow", "#1f2937", "#FFD233"]],
+  },
+};

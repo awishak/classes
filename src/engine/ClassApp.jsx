@@ -25,6 +25,7 @@ import { AssignmentsSummary, AssignmentsDetail, dueState, nextDue, ungradedCount
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, ThemeStyle, ThemePicker } from "./ThemeShell.jsx";
+import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, Avatar, cardStyle } from "./ThemeChrome.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -644,6 +645,16 @@ export default function ClassApp({ config, initialCard }) {
   ) : null;
 
   const actions = data === null ? [] : needsYou(config, data, view, preview || asStudent);
+  // The marquee reads the same facts the cards do, so Crashing Out is loud
+  // about something true rather than loud about nothing.
+  const seenAs = preview || asStudent;
+  const myPoints = (data?.log || []).filter(e => e.studentId === (roster.find(x => x.name === seenAs) || {}).id)
+    .reduce((n, e) => n + (e.amount || 0), 0);
+  const tickerLines = [
+    config.code + " " + (config.name || ""),
+    ...actions.map(a => a.text),
+    ...liveNow(config, live, poll, data).map(i => i.title),
+  ].filter(Boolean);
 
   const Nav = (
     <nav style={{ display: "flex", gap: 2, marginLeft: 8 }}>
@@ -668,7 +679,9 @@ export default function ClassApp({ config, initialCard }) {
     return (
       <div data-theme={theme} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a }}>
         <ThemeStyle theme={theme} />
+        <ThemeChrome theme={theme} />
         <style>{CSS}</style>
+        <ThemeTopper theme={theme} lines={tickerLines} />
         <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
         {PreviewBar}
         <div style={{ background: "#fff", borderBottom: "1px solid " + BORDER }}>
@@ -676,6 +689,7 @@ export default function ClassApp({ config, initialCard }) {
             {Logo}
             {Nav}
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+              <ThemeBadge theme={theme} points={myPoints} />
               <ThemePicker theme={theme} onPick={pickTheme} compact />
               {ViewAs}
               {TeachLinks}
@@ -697,6 +711,11 @@ export default function ClassApp({ config, initialCard }) {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
               {Grid}
             </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
+              <TubeySays theme={theme} seed={(seenAs || "").length} />
+              <ThemeSponsor theme={theme} />
+              <ThemeLegal theme={theme} />
+            </div>
           </div>
           <div style={{ background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, padding: 24, minHeight: 400, position: "sticky", top: 80 }}>
             {openKey
@@ -713,8 +732,10 @@ export default function ClassApp({ config, initialCard }) {
   return (
     <div data-theme={theme} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, paddingBottom: BAR_H + 12, "--ca-accent": a }}>
       <ThemeStyle theme={theme} />
+        <ThemeChrome theme={theme} />
       <style>{CSS}</style>
 
+      <ThemeTopper theme={theme} lines={tickerLines} />
       {/* compact top bar */}
       <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
       {PreviewBar}
@@ -723,6 +744,7 @@ export default function ClassApp({ config, initialCard }) {
           {openKey ? (
             <button className="ca-focus" onClick={() => go(null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 17, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: "0 4px 0 0" }}>← Back</button>
           ) : Logo}
+          <ThemeBadge theme={theme} points={myPoints} />
           <ThemePicker theme={theme} onPick={pickTheme} compact />
           {RoleToggle}
         </div>
@@ -746,6 +768,11 @@ export default function ClassApp({ config, initialCard }) {
             <NeedsYou items={actions} accent={a} onOpen={go} />
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {Grid}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
+              <TubeySays theme={theme} seed={(seenAs || "").length} />
+              <ThemeSponsor theme={theme} compact />
+              <ThemeLegal theme={theme} />
             </div>
             {signedIn && !preview ? (
               <button className="ca-focus" onClick={signOut}

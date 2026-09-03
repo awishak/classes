@@ -28,6 +28,7 @@ import { weekdayOf } from "../src/engine/schedule.js";
 import { sittingsOf, minutesLeft, sittingLength } from "../src/engine/meets.js";
 import { THEMES, THEME, THEME_LABELS, themeCSS, varsOf, fontHref } from "../src/engine/themes.js";
 import { ThemePicker } from "../src/engine/ThemeShell.jsx";
+import { Tubey, TubeySays, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, Avatar, StatusMark, cardStyle } from "../src/engine/ThemeChrome.jsx";
 import { saveWeek, openWeek, answerWeek, scoreWeek, scoresFor, perfectRuns, pointsOf, mergeAnswers } from "../src/engine/game.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
@@ -972,6 +973,42 @@ cases.push(["Instructor links", <InstructorLinks />]);
   }
 }
 
+// A theme is furniture as well as colour, and the furniture is conditional, so
+// each piece is rendered under a theme that wants it and one that does not.
+{
+  const say = (m) => { console.error("  FAIL  chrome: " + m); failedEarly++; };
+  const off = ["clean", "business"];
+  const html = (el) => renderToString(el);
+  // Crashing Out brings a marquee, a mascot, a sponsor and a legal line.
+  if (!html(<ThemeTopper theme="crashing" lines={["a", "b"]} />).includes("tcMarquee")) say("no marquee on Crashing Out");
+  if (!html(<TubeySays theme="crashing" seed={1} />).includes("<svg")) say("Tubey is not drawn on Crashing Out");
+  const sp = html(<ThemeSponsor theme="crashing" />);
+  if (!sp.includes("homeworktubes.com")) say("the sponsor bar does not link to Homework Tubes");
+  if (!sp.includes("HOMEWORK TUBES")) say("the sponsor bar does not name Homework Tubes");
+  if (!html(<ThemeLegal theme="crashing" />).includes("not permitted")) say("Tubey's homework ban is missing");
+  // Snapchat brings a streak and a ringed face.
+  if (!html(<ThemeBadge theme="snapchat" points={140} />).includes("140")) say("no streak on Snapchat");
+  if (!html(<Avatar theme="snapchat" name="Ada Byron" />).includes("linear-gradient")) say("no story ring on Snapchat");
+  if (html(<Avatar theme="clean" name="Ada Byron" />).includes("linear-gradient")) say("Clean grew a story ring");
+  // The calm themes get none of it.
+  off.forEach(t => {
+    [["marquee", <ThemeTopper theme={t} lines={["a"]} />], ["Tubey", <TubeySays theme={t} />],
+     ["a sponsor", <ThemeSponsor theme={t} />], ["a legal line", <ThemeLegal theme={t} />],
+     ["a streak", <ThemeBadge theme={t} points={9} />]].forEach(([what, el]) => {
+      if (html(el) !== "") say(`${t} rendered ${what}, and should render nothing`);
+    });
+    if (cardStyle(t, 3).border !== "var(--card-border)") say(t + " does not use the system's card border");
+  });
+  // Crashing Out rotates its card borders, so a grid is never one card six times.
+  if (cardStyle("crashing", 0).border === cardStyle("crashing", 1).border) say("Crashing Out draws every card the same");
+  // Both faces of the status mark.
+  if (!html(<StatusMark theme="snapchat" tone="live" label="new" />).includes("rotate(45deg)")) say("no diamond on Snapchat");
+  if (html(<StatusMark theme="clean" tone="live" label="new" />).includes("rotate(45deg)")) say("Clean drew a diamond");
+}
+
+cases.push(["Tubey", <Tubey size={120} />]);
+cases.push(["Crashing Out, the sponsor", <ThemeSponsor theme="crashing" />, "HOMEWORKTUBES.COM"]);
+cases.push(["Crashing Out, Tubey talking", <TubeySays theme="crashing" seed={2} />]);
 cases.push(["Theme picker, full", <ThemePicker theme="clean" onPick={noop} />, "Crashing Out"]);
 cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick={noop} compact />]);
 

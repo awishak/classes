@@ -24,7 +24,7 @@
 //      shipped at 4.28 and 4.40 on the sunk surface.
 
 import { readFileSync, readdirSync } from "node:fs";
-import { THEMES, THEME, varsOf } from "../src/engine/themes.js";
+import { THEMES, THEME, BRAND, varsOf } from "../src/engine/themes.js";
 
 const ENGINE = new URL("../src/engine/", import.meta.url);
 let bad = 0;
@@ -82,6 +82,17 @@ for (const name of THEMES) {
     checked++;
     const r = ratio(t.room[k], t.room.stage);
     if (r < AA) fail("themes.js", `${name}: room.${k} ${t.room[k]} is ${r.toFixed(2)}:1 on its stage, under ${AA}.`);
+  }
+}
+
+// A sponsor's brand is still text on a background. Their own blue on their own
+// yellow is 2.81:1, which is why the pairs below are corrected rather than
+// lifted, and why they are checked here rather than trusted.
+for (const [name, b] of Object.entries(BRAND)) {
+  for (const [label, hex, ground] of b.text || []) {
+    checked++;
+    const r = ratio(hex, ground);
+    if (r < AA) fail("themes.js", `${name}: ${label} ${hex} is ${r.toFixed(2)}:1 on ${ground}, under ${AA}.`);
   }
 }
 

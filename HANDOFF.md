@@ -52,6 +52,20 @@ right.
 other serious one, **Snapchat** and **Crashing Out** are Andrew's, carried over
 from spring 2026 and rebuilt on this system rather than on their own.
 
+A theme is furniture as well as colour. `src/engine/ThemeChrome.jsx` holds the
+pieces: the marquee across the top, Tubey the Worm and what he says, the
+Homework Tubes sponsor bar and its legal line, the streak badge, the story ring
+on a face, the status diamond, and the rotating card borders. Every piece
+renders nothing at all for the themes that do not want it, so surfaces call them
+unconditionally and Clean stays clean.
+
+Tubey belongs to Homework Tubes and appears by arrangement. He is drawn rather
+than borrowed from an emoji font, he talks, and he is not permitted to help with
+anybody's homework. Their palette lives in `themes.js` under `BRAND`, with two
+text pairs corrected: their blue on their yellow is 2.81:1 and their red on
+their cream is 4.18:1, so the URL pill takes ink on yellow and the eyebrow takes
+a deeper red. The check measures those two the same as everything else.
+
 A theme is one attribute. Every colour in the engine is a CSS custom property,
 so `data-theme` on a surface's root picks which block applies and nothing
 re-renders. Each theme also carries its own card treatment and its own faces:
@@ -133,7 +147,7 @@ character and those are what drifted. Font sizes are not held to `TYPE` yet.
 | `check-jsx-text` | an escape sequence stranded in JSX text |
 | `check-css` | a stylesheet that lost a rule |
 | `check-tokens` | a surface with a colour of its own, a theme missing a token, or a colour that fails where it sits |
-| `smoke` | 136 surfaces rendered server-side, a game played through, and the class site under all four themes |
+| `smoke` | 139 surfaces rendered server-side, a game played through, and every theme's colours and furniture |
 
 Each was written after the matching mistake reached production. Do not remove
 one because it is inconvenient; add the case instead.

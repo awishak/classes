@@ -47,6 +47,38 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep2g", date: "Wednesday, September 2 \u00b7 late", title: "A theme is furniture, not a palette",
+    blurb: "Andrew: the themes only changed the colors. what about tubey and all that? snapchat features? the whole look? Fair. The first pass moved colour, type and card treatment into custom properties and called that a theme. Snapchat is story rings and a streak. Crashing Out is a marquee, a mascot who talks, and a sponsor. None of that is a colour.",
+    groups: [
+      { name: "Crashing Out got its cast back", items: [
+        ["Tubey the Worm, drawn", "Four blobby segments getting fatter toward the head, eyes too big and pointing slightly different ways, a grin wider than the mouth should be, mismatched antennae. Inline SVG rather than an emoji, so he scales and recolours."],
+        ["He talks", "Four lines, picked off the student's own name so the same person sees the same worm. He is contractually barred from being useful and says so: i am not allowed near your assignment but i am rooting for you extremely hard."],
+        ["The marquee reads real facts", "Whatever the strip is nagging about and whatever is live in the room, scrolling. Loud about something true rather than loud about nothing."],
+        ["Brought to you by Homework Tubes", "The sponsor bar links out, and the legal line underneath keeps Tubey's homework ban, which is the funnier constraint and gives him something to strain against."],
+        ["Cards rotate their borders", "Six pairs of border and shadow, so a grid of cards is never the same card six times."],
+      ] },
+      { name: "Snapchat got its grammar back", items: [
+        ["The streak is a real number", "Their own points out of the log, wearing a flame that flickers. A fact rather than a decoration."],
+        ["Faces are ringed", "The story hoop, with a grey ring for one already seen. Every other theme draws a circle."],
+        ["The status diamond", "Snapchat already has a visual language for sent, delivered and opened, and an assignment has the same three states. Filled is new, hollow means you have been here before. Every other theme draws a dot."],
+      ] },
+      { name: "A sponsor gets checked like everything else", items: [
+        ["Their blue on their yellow is 2.81:1", "And their red on their cream is 4.18:1. Both carry words on the sponsor bar. The URL pill takes ink on yellow at 10.15:1 and the eyebrow takes a deeper red at 6.26:1; every fill, border and shadow keeps the brand exactly as it is."],
+        ["The brand lives in the system", "check-tokens caught the new file the moment it was written, holding its own hexes. So the Homework Tubes palette sits in themes.js under BRAND, and the two pairs that carry text are measured with the other thirty-six."],
+      ] },
+      { name: "What the build refuses now", items: [
+        ["Furniture leaking into a calm theme", "Every piece is rendered under a theme that wants it and one that does not. Removing a single guard was enough to fail the build twice, naming both quiet themes."],
+        ["A card that never varies", "Crashing Out drawing every card the same is a failure, because the rotation is the point."],
+      ] },
+    ],
+    note: {
+      title: "Only the class site so far",
+      lines: [
+        "The furniture is mounted on the class home, desktop and phone. The ask page, the board, the game and the room screen take the palette and the fonts but none of the furniture yet.",
+      ],
+    },
+  },
+  {
     id: "sep2f", date: "Wednesday, September 2 \u00b7 night", title: "Four themes, and the student picks",
     blurb: "Andrew: clean is the standard, impressive is an option, call it business, include the other two, people should always be able to switch between all four. The engine could not do any of that this morning, because every colour was a hex baked into a module constant at import.",
     groups: [
