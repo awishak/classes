@@ -1378,6 +1378,27 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const rail = src.match(/const LIVE_RAIL = (\[[^\]]*\]);/);
   if (rail && JSON.parse(rail[1].replace(/'/g, '"')).includes("answers")) say("the Answers tab is back in the rail");
   if (!src.includes("DB.open(prompt)")) say("casting a board no longer opens its thread, which the student page needs");
+
+  // A card has to look like a card. At the sunk grey the edge against the white
+  // panel was 1.10:1, which is no edge at all.
+  const { inkOf, LIBRARY_CARD } = await import("../src/engine/colors.js");
+  const lin = (c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  const lum = (h) => { const [r, g, b] = [1, 3, 5].map(i => lin(parseInt(h.slice(i, i + 2), 16) / 255));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const ratio = (a, b) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
+  const edge = ratio(LIBRARY_CARD, "#ffffff");
+  if (edge < 1.25) say(`the library card is ${edge.toFixed(2)}:1 against the panel behind it, which nobody can see as a card`);
+  if (!src.includes("${LIBRARY_CARD}")) say("the library row does not sit on the library card");
+
+  // A tab has to sit on the panel it opens. The room preview used to stand
+  // between them, so Questions named something a screen further down.
+  const liveRail = src.slice(src.indexOf('<Rail side="Live"'), src.indexOf('<Rail side="Live"') + 1400);
+  if (!liveRail.includes("head={")) say("the room preview is back between the Live tabs and their panel");
+  const railStart = src.indexOf("function Rail({");
+  const railFn = src.slice(railStart, src.indexOf("\n}", railStart));
+  const atHead = railFn.indexOf("{head}"), atTabs = railFn.indexOf('role="tablist"');
+  if (atHead < 0) say("Rail no longer renders its head slot at all");
+  else if (atHead > atTabs) say("the preview renders below the tabs rather than above them");
 }
 
 // The dashboard, above the day.

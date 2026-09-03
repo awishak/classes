@@ -48,10 +48,14 @@ export const swatch = (id) => PALETTE.find(s => s.id === id) || null;
 // swatch above was generated for, and the comment on PALETTE says so: the light
 // tier is only as light as it is because each swatch has to hold white.
 //
-// So on the sunk grey the light tier fails as text, narrowly. Teal, pink,
-// yellow and red land between 4.36 and 4.48, which is under the line and only
-// just. Darkening each channel to 85% clears all twenty with room: the worst is
-// teal at 5.63 against the sunk grey.
+// Two constraints pull against each other. The ink has to read, and the card it
+// sits on has to look like a card: at #f6f4f1 against a white panel the edge is
+// 1.10:1, which Andrew could not see at all. A card you cannot pick out is not a
+// card.
+//
+// So the card goes to #d9d2c8, a clear 1.50:1 against white, and the ink goes to
+// 72% per channel to pay for it. Every swatch clears the line on that grey, with
+// teal worst at 5.23.
 //
 // Derived rather than hand-picked, so a swatch added later gets its ink for
 // free, and check-contrast measures every one of them so the derivation cannot
@@ -60,7 +64,7 @@ export const inkOf = (hex) => {
   const h = String(hex || "").trim();
   if (!/^#[0-9a-fA-F]{6}$/.test(h)) return h;
   return "#" + [1, 3, 5]
-    .map(i => Math.round(parseInt(h.slice(i, i + 2), 16) * 0.85).toString(16).padStart(2, "0"))
+    .map(i => Math.round(parseInt(h.slice(i, i + 2), 16) * 0.72).toString(16).padStart(2, "0"))
     .join("");
 };
 
@@ -132,3 +136,11 @@ export const writeColor = (updateShared, kind, swatchId) => updateShared(prev =>
 }));
 
 export const resetColors = (updateShared) => updateShared(prev => ({ ...prev, colors: {} }));
+
+// The ground a library row sits on.
+//
+// Deep enough to read as a card against the white panel behind it, and no
+// deeper than the ink can survive. Paired with inkOf: move one and the other
+// has to move, which is why they live together and why check-contrast measures
+// every swatch against this exact value.
+export const LIBRARY_CARD = "#d9d2c8";

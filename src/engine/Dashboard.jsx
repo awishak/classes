@@ -27,7 +27,7 @@ import { normSlot, sequenceOptions, sequenceFor, sectionsOf } from "./dayplan.js
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
 import { readAdded, readLabels } from "./types.js";
 import PickMark from "./Pick.jsx";
-import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor, inkOf } from "./colors.js";
+import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor, inkOf, LIBRARY_CARD } from "./colors.js";
 import { useBoards } from "./boards.js";
 import { minutesLeft, sittingLength } from "./meets.js";
 import { FACES, SLOTS, readFonts, fontVars, writeFont, resetFonts, readBold, writeBold } from "./fonts.js";
@@ -227,11 +227,11 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
    generated to CARRY white and the light tier fails as text on grey by a hair.
    check-contrast measures all twenty as ink; the worst is teal at 5.63. */
 .lib-row{display:flex;align-items:center;gap:8px;min-height:var(--row-h,44px);
-  padding:4px 12px 4px 8px;border-radius:12px;background:${SURFACE_2};
+  padding:4px 12px 4px 8px;border-radius:12px;background:${LIBRARY_CARD};
   color:var(--ink,${TEXT_PRIMARY});border:none;width:100%;text-align:left;
   font-family:${F};cursor:grab;position:relative;
   transition:background .13s,box-shadow .13s}
-.lib-row:hover{background:#fff;box-shadow:0 0 0 1px var(--ink,${BORDER_STRONG})}
+.lib-row:hover{background:#efebe5;box-shadow:0 0 0 1px var(--ink,${BORDER_STRONG})}
 .lib-row[data-drag="1"]{opacity:.5;cursor:grabbing}
 .lib-words{flex:1;min-width:0;font-weight:600;font-size:var(--fs,15px);
   line-height:1.35;color:var(--ink,${TEXT_PRIMARY})}
@@ -246,7 +246,7 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 @supports not (color:color-mix(in srgb,red 10%,#fff)){.lib-grip{background:${SURFACE_2}}}
 .lib-kind{flex:none;font-family:${MONO};font-size:13px;font-weight:600;
   letter-spacing:.08em;text-transform:uppercase;color:var(--ink,${TEXT_MUTED})}
-.read-card{border-radius:12px;background:${SURFACE_2};overflow:hidden}
+.read-card{border-radius:12px;background:${LIBRARY_CARD};overflow:hidden}
 /* A field with its own confirm. The tick sits inside the box against the right
    edge, and the field carries padding so the words never run under the tick. */
 .read-field{position:relative;display:block;width:100%}
@@ -418,13 +418,21 @@ function Seam({ which, onDown, label }) {
   );
 }
 
-function Rail({ tabs, active, onPick, accent, children, side, className }) {
+// A rail: a heading, a row of tabs, one panel under them, and on the Live side
+// something pinned above the tabs.
+//
+// The room preview used to sit between the tabs and the panel, so Questions and
+// Poll named a thing that started a screen's worth of monitor further down.
+// `head` puts the preview above the tabs instead, and a tab now sits directly
+// on the panel it opens.
+function Rail({ tabs, active, onPick, accent, children, head, side, className }) {
   return (
     <div className={"dash-rail" + (className ? " " + className : "")}
       style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 8,
         position: "sticky", top: "calc(var(--head-h, 58px) + 14px)",
         maxHeight: "calc(100vh - var(--head-h, 58px) - 28px)" }}>
       <h2 className="dash-col">{side}</h2>
+      {head}
       <div role="tablist" aria-label={side} className="dash-rail-tabs">
         {tabs.map(t => {
           const on = t.id === active;
@@ -4209,8 +4217,8 @@ export default function Dashboard({ config }) {
         <Seam which="live" onDown={startSeam("live")} label="Live" />
 
         <Rail side="Live" className="dash-room" tabs={LIVE_RAIL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: MATERIAL.length + i + 1, hue: TAB_HUE[id] }))}
-          active={room} onPick={pickRoom} accent={config.accent}>
-          <div className="dash-room-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          active={room} onPick={pickRoom} accent={config.accent}
+          head={
             <Monitor config={config} live={live} cast={cast} push={push} recent={recent} onRecast={castNow}
               onCastAnything={() => setCmdOpen(true)}
               boardHue={hueOfKind("boards")} onBoard={(which) => {
@@ -4227,6 +4235,8 @@ export default function Dashboard({ config }) {
                 <BlockInfo block={picked.blockId ? blockOf(picked.blockId) : null} item={picked.item}
                   where={picked.where} accent={config.accent} onClose={() => setPicked(null)} />
               ) : null} />
+          }>
+          <div className="dash-room-body">
             <Panel id={room} title={null}>{render[room]()}</Panel>
           </div>
         </Rail>
