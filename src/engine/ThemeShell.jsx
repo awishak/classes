@@ -10,10 +10,12 @@
 // mean one student's taste changing the site for thirty people.
 
 import { useState, useEffect, useCallback } from "react";
-import { THEMES, THEME_LABELS, THEME_DESCS, themeCSS, fontHref } from "./themes.js";
+import { THEMES, THEME_LABELS, THEME_DESCS, MODES, MODE_LABELS, MODE_DESCS,
+  hasNight, themeCSS, fontHref } from "./themes.js";
 
 const keyOf = (config) => (config?.storageKey || "class") + "-theme";
 const known = (v) => (THEMES.includes(v) ? v : "clean");
+const knownMode = (v) => (MODES.includes(v) ? v : "auto");
 
 export function useStudentTheme(config) {
   const key = keyOf(config);
@@ -96,6 +98,58 @@ export function ThemePicker({ theme, onPick, compact }) {
             <span style={{ fontSize: 15, color: "var(--text-muted)" }}>{THEME_DESCS[t]}</span>
           </span>
           {t === on ? <span style={{ marginLeft: "auto", fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>On</span> : null}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Day, night, or whatever this device says.
+//
+// Auto is the default because most people never touch it and the machine
+// already knows. The other two exist because some people read in a bright room
+// at night, or in a dark one at noon, and a preference the app cannot express
+// is a preference the app is arguing with.
+//
+// Stored beside the theme, in the student's own browser, for the same reason:
+// it is a fact about a screen rather than about a class.
+export function useDayNight(config) {
+  const key = (config?.storageKey || "class") + "-mode";
+  const [mode, setMode] = useState(() => {
+    try { return knownMode(localStorage.getItem(key)); } catch { return "auto"; }
+  });
+  useEffect(() => {
+    const onPick = (e) => { if (e.detail?.key === key) setMode(knownMode(e.detail.mode)); };
+    window.addEventListener("modepick", onPick);
+    return () => window.removeEventListener("modepick", onPick);
+  }, [key]);
+  const pick = useCallback((next) => {
+    const m = knownMode(next);
+    setMode(m);
+    try { localStorage.setItem(key, m); } catch { /* private mode */ }
+    try { window.dispatchEvent(new CustomEvent("modepick", { detail: { key, mode: m } })); } catch { /* older browser */ }
+  }, [key]);
+  return [mode, pick];
+}
+
+// The control. Only drawn for a theme that has a night, because on Snapchat or
+// Crashing Out these three buttons would all do the same nothing.
+export function DayNightPicker({ theme, mode, onPick }) {
+  if (!hasNight(known(theme))) return null;
+  const on = knownMode(mode);
+  return (
+    <div role="radiogroup" aria-label="Day or night"
+      style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6 }}>
+      {MODES.map(m => (
+        <button key={m} role="radio" aria-checked={m === on}
+          title={MODE_DESCS[m]} onClick={() => onPick(m)}
+          style={{ minHeight: 44, padding: "0 8px", borderRadius: 999, cursor: "pointer",
+            background: m === on ? "var(--text-primary)" : "var(--surface-card)",
+            border: m === on ? "2px solid var(--text-primary)" : "1px solid var(--line-strong)",
+            color: m === on ? "var(--surface-card)" : "var(--text-primary)",
+            fontFamily: "var(--font-body)", fontSize: 13, fontWeight: m === on ? 700 : 500,
+            display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {MODE_LABELS[m]}
         </button>
       ))}
     </div>

@@ -16,7 +16,7 @@ import { useLive } from "./live.js";
 import { lastNameOf } from "./AskPage.jsx";
 import * as TOKENS from "./tokens.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
-import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
+import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeBadge, TubeySays, Avatar } from "./ThemeChrome.jsx";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -35,6 +35,7 @@ export default function BoardPage({ config }) {
   const [live] = useLive(config.storageKey);
   const B = useBoards(config.storageKey);
   const [theme] = useStudentTheme(config);
+  const [mode] = useDayNight(config);
   const REMEMBER = config.storageKey + "-user";
 
   const [who, setWho] = useState(null);
@@ -80,7 +81,7 @@ export default function BoardPage({ config }) {
 
   if (!prompt) {
     return (
-      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["SAY SOMETHING", config.code]} fixed /><div style={inner}>
+      <div data-theme={theme} data-mode={mode} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["SAY SOMETHING", config.code]} fixed /><div style={inner}>
         <Head config={config} />
         <p style={{ margin: 0, fontSize: 17, color: MUTED }}>No discussion is open right now.</p>
       </div></div>
@@ -92,7 +93,7 @@ export default function BoardPage({ config }) {
       .filter(s => s.name.toLowerCase().includes(search.trim().toLowerCase()))
       .sort((a, b) => lastNameOf(a.name).localeCompare(lastNameOf(b.name)));
     return (
-      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["SAY SOMETHING", config.code]} fixed /><div style={inner}>
+      <div data-theme={theme} data-mode={mode} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["SAY SOMETHING", config.code]} fixed /><div style={inner}>
         <Head config={config} />
         <h1 style={{ margin: 0, fontFamily: TOKENS.FONT.display, fontSize: "clamp(23px,4vw,32px)", fontWeight: TOKENS.FONT.displayWeight, letterSpacing: "-.03em", lineHeight: 1.2 }}>{prompt}</h1>
         <p style={{ margin: 0, fontSize: 16, color: MUTED }}>Pick your name to post.</p>
@@ -117,7 +118,7 @@ export default function BoardPage({ config }) {
 
   const mine = (p) => p.who === who;
   return (
-    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["SAY SOMETHING", config.code]} fixed /><div style={inner}>
+    <div data-theme={theme} data-mode={mode} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["SAY SOMETHING", config.code]} fixed /><div style={inner}>
       <Head config={config} who={who} theme={theme} points={myPoints} onOut={() => {
         setWho(null);
         try { localStorage.removeItem(REMEMBER); } catch { /* private mode */ }

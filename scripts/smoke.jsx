@@ -26,8 +26,8 @@ import { DayPlanSummary, DayPlanDetail, rowsOf, countRows } from "../src/engine/
 import { FREEFORM } from "../src/engine/dayplan.js";
 import { weekdayOf } from "../src/engine/schedule.js";
 import { sittingsOf, minutesLeft, sittingLength } from "../src/engine/meets.js";
-import { THEMES, THEME, THEME_LABELS, themeCSS, varsOf, fontHref } from "../src/engine/themes.js";
-import { ThemePicker } from "../src/engine/ThemeShell.jsx";
+import { THEMES, THEME, THEME_LABELS, themeCSS, varsOf, fontHref, hasNight } from "../src/engine/themes.js";
+import { ThemePicker, DayNightPicker } from "../src/engine/ThemeShell.jsx";
 import { Tubey, TubeySays, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeyPeek, ThemeStickers,
   StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, StatusMark, cardStyle, CHROME_CSS,
   MARQUEE_SECONDS_PER_ITEM, marqueeSeconds } from "../src/engine/ThemeChrome.jsx";
@@ -1230,11 +1230,11 @@ cases.push(["Instructor links", <InstructorLinks />]);
   if (dur < 200) say("the strip carries every fact and crosses in " + dur + "s, which nobody can read");
 }
 
-// Clean at night.
+// Clean at night, and the override.
 //
-// Adaptive rather than a switch: the page follows the system and there is
-// nothing to find. Only Clean has one, because Snapchat is a yellow page and
-// Crashing Out is a pastel gradient and those are the whole point of them.
+// Auto follows the machine and is the default. Day and night are overrides, and
+// each has to beat the rule it overrides, which is a specificity question
+// rather than an opinion. So the shape of the selectors is the thing checked.
 {
   const say = (m) => { console.error("  FAIL  dark: " + m); failedEarly++; };
   const css = themeCSS();
@@ -1242,14 +1242,27 @@ cases.push(["Instructor links", <InstructorLinks />]);
   if (!css.includes(q)) say("nothing follows the system after dark");
   const night = css.split(q)[1] || "";
 
-  // A surface that sets no theme has to turn down too, or the room screen and
-  // anything else on bare :root stays bright at midnight.
-  if (!/\{:root,\[data-theme="clean"\]\{/.test(night)) say("a surface with no data-theme stays light after dark");
+  // Auto: the machine decides, unless somebody asked for day.
+  if (!night.includes(':root:not([data-mode="day"])')) say("a surface with no theme stays light after dark");
+  if (!night.includes('[data-theme="clean"]:not([data-mode="day"])')) say("Clean does not follow the machine");
+  // Forced day works by the media query stepping aside, so the exclusion is the
+  // whole mechanism and its absence would make Day do nothing in a dark OS.
+  if (!/:not\(\[data-mode="day"\]\)\{/.test(night)) say("asking for Day would not survive a dark system");
+
+  // Forced night lives outside the media query, or it would only work at night,
+  // which is the one time nobody needs it.
+  const forced = css.split("\n").filter(l => l.includes('[data-mode="night"]'));
+  if (!forced.length) say("asking for Night does nothing");
+  if (forced.some(l => l.startsWith("@media"))) say("Night only works when the machine already says night");
+  // Two attribute selectors beat one, which is why no !important is needed.
+  if (!forced.every(l => l.startsWith('[data-theme="clean"][data-mode="night"]')))
+    say("the Night rule is not specific enough to beat the daytime block");
+  if (css.includes("!important")) say("something is winning by force rather than by specificity");
 
   // Every property the day has, the night has, or a value falls through and a
   // dark page gets one daytime colour in the middle of it.
   const KEYS = Object.keys(varsOf(THEME.clean));
-  const cleanNight = (night.split('[data-theme="clean"]{')[1] || "").split("}")[0];
+  const cleanNight = (forced[0] || "").split("{")[1] || "";
   KEYS.forEach(k => {
     const m = cleanNight.match(new RegExp("(?:^|;)" + k + ":([^;]*)"));
     if (!m) say(`Clean's night never sets ${k}`);
@@ -1259,11 +1272,42 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const dayPage = (css.split('[data-theme="clean"]{')[1] || "").split("}")[0].match(/--surface-page:([^;]*)/);
   const nightPage = cleanNight.match(/--surface-page:([^;]*)/);
   if (dayPage && nightPage && dayPage[1] === nightPage[1]) say("Clean's night is the same page as its day");
-  // The two loud themes stay as they are.
+
+  // The two loud themes have no night and offer no control for one.
   ["snapchat", "crashing"].forEach(t => {
     if (night.includes(`[data-theme="${t}"]`)) say(t + " grew a dark mode, and should not have one");
+    if (hasNight(t)) say(t + " claims to have a night");
+    if (renderToString(<DayNightPicker theme={t} mode="auto" onPick={noop} />) !== "")
+      say(t + " offers a day and night control that would do nothing");
   });
+  // Clean offers all three.
+  const ctl = renderToString(<DayNightPicker theme="clean" mode="auto" onPick={noop} />);
+  ["Auto", "Day", "Night"].forEach(w => { if (!ctl.includes(w)) say("the control never offers " + w); });
+  if (!ctl.includes('aria-checked="true"')) say("the control shows nothing as chosen");
+
+  // And the choice reaches the page.
+  [["auto", LAPTOP], ["night", PHONE]].forEach(([m, px]) => {
+    const was = globalThis.localStorage.getItem;
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-mode") ? m : k.endsWith("-theme") ? "clean" : null);
+    try {
+      const html = atWidth(px, () => renderToString(<ClassApp config={cfg0} />));
+      if (!html.includes(`data-mode="${m}"`)) say(`asking for ${m} never reaches the page root`);
+    } catch (err) { say(`${m} threw: ` + err.message); }
+    globalThis.localStorage.getItem = was;
+  });
+  // A mode nobody has heard of falls back rather than breaking the page.
+  {
+    const was = globalThis.localStorage.getItem;
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-mode") ? "dusk" : null);
+    try {
+      const html = renderToString(<ClassApp config={cfg0} />);
+      if (!html.includes('data-mode="auto"')) say("an unknown mode did not fall back to auto");
+    } catch (err) { say("an unknown mode threw: " + err.message); }
+    globalThis.localStorage.getItem = was;
+  }
 }
+
+cases.push(["Day and night control", <DayNightPicker theme="clean" mode="night" onPick={noop} />, "Auto"]);
 
 cases.push(["Tubey", <Tubey size={120} />]);
 cases.push(["Crashing Out, the leader speaks", <ClassLeader theme="crashing"

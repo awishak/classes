@@ -25,7 +25,7 @@ import { AssignmentsSummary, AssignmentsDetail, dueState, nextDue, ungradedCount
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
-import { useStudentTheme, ThemeStyle, ThemePicker } from "./ThemeShell.jsx";
+import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
 } from "./ThemeChrome.jsx";
@@ -441,6 +441,8 @@ export default function ClassApp({ config, initialCard }) {
   // The student's theme. Their browser, not the class store: a theme is a
   // preference about a screen rather than a fact about a class.
   const [theme, pickTheme] = useStudentTheme(config);
+  // Auto by default, and an override for anybody who wants one.
+  const [mode, pickMode] = useDayNight(config);
   const [preview, setPreview] = useState("");
   // What the page draws as. The person is still the instructor; the page is
   // drawn the way the chosen student would get the page drawn.
@@ -632,8 +634,9 @@ export default function ClassApp({ config, initialCard }) {
               </>
             ) : null}
             <div style={menuLabel}>Theme</div>
-            <div style={{ padding: "2px 14px 8px" }}>
+            <div style={{ padding: "2px 14px 8px", display: "flex", flexDirection: "column", gap: 6 }}>
               <ThemePicker theme={theme} onPick={pickTheme} compact />
+              <DayNightPicker theme={theme} mode={mode} onPick={pickMode} />
             </div>
             {rule}
             <div style={{ padding: "2px 8px 4px" }}>{RoleToggle}</div>
@@ -694,6 +697,7 @@ export default function ClassApp({ config, initialCard }) {
             Your choice, on your screen. Nobody else in the class sees it.
           </p>
           <ThemePicker theme={theme} onPick={pickTheme} />
+          <DayNightPicker theme={theme} mode={mode} onPick={pickMode} />
         </div>
       </div>
     </Panel>
@@ -750,7 +754,7 @@ export default function ClassApp({ config, initialCard }) {
   // ─── DESKTOP: top nav + side-by-side master/detail ───
   if (isDesktop) {
     return (
-      <div data-theme={theme} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a }}>
+      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a }}>
         <ThemeStyle theme={theme} />
         <ThemeChrome theme={theme} />
         <style>{CSS}</style>
@@ -804,7 +808,7 @@ export default function ClassApp({ config, initialCard }) {
   // ─── MOBILE: single column, full-screen takeover, bottom tab bar ───
   const BAR_H = 72;
   return (
-    <div data-theme={theme} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, paddingBottom: BAR_H + 12, "--ca-accent": a }}>
+    <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, paddingBottom: BAR_H + 12, "--ca-accent": a }}>
       <ThemeStyle theme={theme} />
         <ThemeChrome theme={theme} />
       <style>{CSS}</style>

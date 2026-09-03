@@ -129,20 +129,44 @@ export const varsOf = (t) => ({
 // only carries what changes and inherits the rest.
 const darkOf = (t) => (t.dark ? { ...t, ...t.dark } : null);
 
+// Which themes have a night at all.
+export const hasNight = (name) => !!(THEME[name] || {}).dark;
+
+// Auto, day or night.
+//
+// Auto is the default and follows the machine. The other two are overrides, and
+// each has to beat the rule it overrides:
+//
+//   day    the media query excludes [data-mode="day"], so the daytime block,
+//          which is already on the page, keeps applying in a dark OS.
+//   night  a rule outside the media query, selected on the theme and the mode
+//          together. Two attribute selectors outrank the one on the daytime
+//          block, so night wins in a light OS with no !important anywhere.
 export const themeCSS = () => {
   const vars = (t) => Object.entries(varsOf(t)).map(([k, v]) => k + ":" + v).join(";");
   const light = [":root{" + vars(THEME.clean) + "}",
-    ...THEMES.map(n => `[data-theme="${n}"]{` + vars(THEME[n]) + "}")];
-  // Every theme with a night, inside one media query. The bare :root is in
-  // there too, so a surface that sets no theme still turns down after dark.
+    ...THEMES.map(n => "[data-theme=\"" + n + "\"]{" + vars(THEME[n]) + "}")];
+
   const nights = THEMES.map(n => [n, darkOf(THEME[n])]).filter(([, d]) => d);
   if (!nights.length) return light.join("\n");
-  const dark = "@media (prefers-color-scheme: dark){"
+
+  // Following the machine, unless somebody has asked for day.
+  const auto = "@media (prefers-color-scheme: dark){"
     + nights.map(([n, d]) =>
-        (n === "clean" ? ":root," : "") + `[data-theme="${n}"]{` + vars(d) + "}").join("")
+        (n === "clean" ? ":root:not([data-mode=\"day\"])," : "")
+        + "[data-theme=\"" + n + "\"]:not([data-mode=\"day\"]){" + vars(d) + "}").join("")
     + "}";
-  return [...light, dark].join("\n");
+  // Asked for night, whatever the machine says.
+  const forced = nights.map(([n, d]) =>
+    "[data-theme=\"" + n + "\"][data-mode=\"night\"]{" + vars(d) + "}").join("\n");
+
+  return [...light, auto, forced].join("\n");
 };
+
+// The three states, in the order a control should offer them.
+export const MODES = ["auto", "day", "night"];
+export const MODE_LABELS = { auto: "Auto", day: "Day", night: "Night" };
+export const MODE_DESCS = { auto: "Follow this device", day: "Always light", night: "Always dark" };
 
 // Which fonts a theme needs, so a surface loads those and no others.
 export const THEME_FONTS = {

@@ -197,7 +197,7 @@ export function ThemeBadge({ theme, points }) {
       <span className="tc-anim" aria-hidden="true"
         style={{ display: "inline-block", animation: "tcFlicker .8s ease-in-out infinite" }}>&#128293;</span>
       <span style={{ fontVariantNumeric: "tabular-nums" }}>{Math.round(points)}</span>
-      <span className="sr-only" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>points</span>
+      <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>points</span>
     </div>
   );
 }

@@ -87,6 +87,25 @@ version of either would be a different theme rather than the same theme after
 dark. The bare `:root` turns down too, so a surface that sets no theme does not
 stay bright at midnight.
 
+**Auto, Day and Night** sit under Theme in the menu and on the More page, and
+only for a theme that has a night: on Snapchat or Crashing Out those three
+buttons would all do the same nothing. Auto is the default. The choice lives in
+the student's browser at `${storageKey}-mode`, beside the theme, and reaches the
+page as `data-mode` on the same root.
+
+Each override has to beat the rule it overrides, which is a specificity question
+rather than an opinion:
+
+- **Day** works by the media query stepping aside. The query excludes
+  `[data-mode="day"]`, so the daytime block already on the page keeps applying
+  in a dark OS.
+- **Night** is a rule outside the media query, selected on the theme and the
+  mode together. Two attribute selectors outrank the one on the daytime block,
+  so it wins in a light OS with no `!important` anywhere.
+
+Both of those are checked by shape. Moving the Night rule inside the media query
+fails the build, and so does dropping the Day exclusion.
+
 The dark state colours are not the daytime ones dimmed. A red that reads on
 white disappears on near-black, so each is its own value and `check-tokens`
 measures all of them against the dark surfaces.
@@ -260,9 +279,9 @@ character and those are what drifted. Font sizes are not held to `TYPE` yet.
 | `check-contrast` | a colour under 4.5:1 |
 | `check-voice` | a clause closing on a bare "it", an em dash in UI copy |
 | `check-jsx-text` | an escape sequence stranded in JSX text |
-| `check-css` | a stylesheet that lost a rule |
+| `check-css` | a stylesheet that lost a rule, or a class name with nothing behind the name |
 | `check-tokens` | a surface with a colour of its own, a theme missing a token, or a colour that fails where it sits |
-| `smoke` | 146 surfaces rendered server-side, a game played through, and every theme's colours and furniture |
+| `smoke` | 147 surfaces rendered server-side, a game played through, and every theme's colours and furniture |
 
 Each was written after the matching mistake reached production. Do not remove
 one because it is inconvenient; add the case instead.

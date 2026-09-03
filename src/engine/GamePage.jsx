@@ -23,7 +23,7 @@ import { GameAdmin, StudentAnswerView, TriviaPlayer, Accolades } from "./GameSys
 import { lastNameOf } from "./AskPage.jsx";
 import * as TOKENS from "./tokens.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
-import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
+import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeBadge, TubeySays } from "./ThemeChrome.jsx";
 
 // The same tokens the rest of the engine uses.
@@ -93,6 +93,7 @@ function PickName({ config, students, onPick }) {
 // the week is running sits under it.
 export default function GamePage({ config }) {
   const [theme] = useStudentTheme(config);
+  const [mode] = useDayNight(config);
   const [data, take] = useClassState(config.storageKey);
   const REMEMBER = rememberKey(config);
   const [who, setWho] = useState(null);
@@ -111,13 +112,13 @@ export default function GamePage({ config }) {
     [data]);
 
   if (data === null) {
-    return <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed /><Head config={config} what="Game" />
+    return <div data-theme={theme} data-mode={mode} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed /><Head config={config} what="Game" />
       <p style={{ margin: 0, fontSize: 17, color: MUTED }}>Reading the class.</p></div>;
   }
 
   if (!who) {
     return (
-      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed />
+      <div data-theme={theme} data-mode={mode} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed />
         <Head config={config} what="Game" />
         <PickName config={config} students={students} onPick={(n) => {
           setWho(n);
@@ -128,7 +129,7 @@ export default function GamePage({ config }) {
   }
 
   return (
-    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed />
+    <div data-theme={theme} data-mode={mode} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed />
       <Head config={config} who={who} what="Game" theme={theme} points={myPoints} onOut={() => {
         setWho(null);
         try { localStorage.removeItem(REMEMBER); } catch { /* private mode */ }
@@ -150,16 +151,17 @@ export default function GamePage({ config }) {
 // Where I run it. Behind the instructor gate, like the dashboard.
 export function RunGamePage({ config }) {
   const [theme] = useStudentTheme(config);
+  const [mode] = useDayNight(config);
   const [data, take] = useClassState(config.storageKey);
   useEffect(() => { document.title = config.code + " — Run the game"; }, [config.code]);
 
   if (data === null) {
-    return <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed /><Head config={config} what="Run the game" />
+    return <div data-theme={theme} data-mode={mode} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed /><Head config={config} what="Run the game" />
       <p style={{ margin: 0, fontSize: 17, color: MUTED }}>Reading the class.</p></div>;
   }
 
   return (
-    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed />
+    <div data-theme={theme} data-mode={mode} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed />
       <Head config={config} what="Run the game" />
       <GameAdmin config={config} data={data} setData={take} />
     </div>

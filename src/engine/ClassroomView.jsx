@@ -14,7 +14,7 @@ import { useHeadlines, liveSession, activeItem, pickTally } from "./headlines.js
 import { ENGINE_LIST } from "../config/registry.js";
 import PickMark from "./Pick.jsx";
 import * as TOKENS from "./tokens.js";
-import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
+import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, Tubey } from "./ThemeChrome.jsx";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -423,7 +423,7 @@ function ReadScreen({ url, claim, kind }) {
         {claim ? (
           <div style={{ flex: 1, minWidth: 0, fontSize: "clamp(15px,1.7vw,26px)", fontWeight: 600, color: INK }}>{claim}</div>
         ) : <span style={{ flex: 1 }} />}
-        <a href={url} target="_blank" rel="noopener noreferrer" className="room-link"
+        <a href={url} target="_blank" rel="noopener noreferrer"
           style={{ flex: "none", fontSize: "clamp(13px,1.35vw,20px)", fontWeight: 600, color: "#e11d48",
             textDecoration: "none", border: "2px solid #e11d48", borderRadius: 999,
             padding: "0.5vh clamp(12px,1.4vw,22px)", whiteSpace: "nowrap" }}>
@@ -512,6 +512,7 @@ function Controls({ config }) {
 
 export default function ClassroomView({ config }) {
   const [theme] = useStudentTheme(config);
+  const [mode] = useDayNight(config);
   const [live] = useLive(config.storageKey);
   const [data] = useClassData(config.storageKey);
 
@@ -564,7 +565,7 @@ export default function ClassroomView({ config }) {
   }, []);
 
   return (
-    <div ref={stageRef} data-theme={theme} style={{ position: "fixed", inset: 0, background: STAGE, overflow: "hidden", fontFamily: F }}>
+    <div ref={stageRef} data-theme={theme} data-mode={mode} style={{ position: "fixed", inset: 0, background: STAGE, overflow: "hidden", fontFamily: F }}>
       <ThemeStyle theme={theme} />
       <ThemeChrome theme={theme} />
       <style>{CSS}</style>

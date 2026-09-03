@@ -13,7 +13,7 @@ import { sendSignInEmail, verifyEmailCode, emailFromRedirect, loadEmailMap, save
 import { usePoll, openRound, isFreeForm } from "./poll.js";
 import { useHeadlines, liveSession, activeItem } from "./headlines.js";
 import * as TOKENS from "./tokens.js";
-import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
+import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, TubeySays } from "./ThemeChrome.jsx";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -201,6 +201,7 @@ export default function AskPage({ config }) {
   };
 
   const [theme] = useStudentTheme(config);
+  const [dayNight] = useDayNight(config);
   const wrap = { minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, display: "flex", justifyContent: "center", padding: "40px 20px" };
   const card = { width: "100%", maxWidth: 440, display: "flex", flexDirection: "column", gap: 14 };
   const header = (
@@ -214,7 +215,7 @@ export default function AskPage({ config }) {
   if (!who && picking) {
     const needsPin = !!pins[picking] && !verified;
     return (
-      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
+      <div data-theme={theme} data-mode={dayNight} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
         <div style={card}>
           {header}
           <div style={{ fontSize: 22, fontWeight: 600 }}>{picking}</div>
@@ -247,7 +248,7 @@ export default function AskPage({ config }) {
   // ─── email step ───
   if (!who && mode === "email") {
     return (
-      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
+      <div data-theme={theme} data-mode={dayNight} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
         <div style={card}>
           {header}
           <p style={{ margin: 0, color: TEXT_SECONDARY, lineHeight: 1.5 }}>
@@ -280,7 +281,7 @@ export default function AskPage({ config }) {
   // ─── how do you want in ───
   if (!who && mode === null) {
     return (
-      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
+      <div data-theme={theme} data-mode={dayNight} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
         <div style={card}>
           {header}
           <p style={{ margin: 0, color: TEXT_SECONDARY, lineHeight: 1.5 }}>
@@ -299,7 +300,7 @@ export default function AskPage({ config }) {
   // ─── name step ───
   if (!who) {
     return (
-      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
+      <div data-theme={theme} data-mode={dayNight} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
         <div style={card}>
           {header}
           <p style={{ margin: 0, color: TEXT_SECONDARY, lineHeight: 1.5 }}>
@@ -336,7 +337,7 @@ export default function AskPage({ config }) {
   const LETTERS = ["A", "B", "C", "D", "E"];
 
   return (
-    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
+    <div data-theme={theme} data-mode={dayNight} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
       <div style={card}>
         <div style={{ fontSize: 13, color: TEXT_MUTED, fontWeight: 600 }}>{config.code} · {who}</div>
 
