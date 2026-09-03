@@ -44,9 +44,13 @@ const LIVE = TOKENS.STATE.live;
 const TAP = 44;
 const MONO = TOKENS.FONT.label;
 const CARD_MAX = 380; // cards never grow wider than this (a phone-width card)
+// Everything a card needs that is not the theme's business. The background,
+// the border, the radius, the shadow and the tilt come from cardStyle, because
+// those are exactly the parts a theme changes: Snapchat is three pixels of
+// black with a hard offset, Crashing Out cuts four different corners and leans
+// a fraction of a degree, Clean is a hairline and nothing else.
 const card = {
-  background: "#fff", borderRadius: 16, padding: 20,
-  border: "1px solid " + BORDER, fontFamily: F, textAlign: "left",
+  padding: 20, fontFamily: F, textAlign: "left",
   width: "100%", cursor: "pointer", display: "block",
 };
 const label = { fontFamily: TOKENS.FONT.label, fontSize: 13, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
@@ -604,11 +608,11 @@ export default function ClassApp({ config, initialCard }) {
   // that lives under it.
   const activeNav = !openKey ? "home" : (NAV_CARDS.has(openKey) ? openKey : "more");
 
-  const CardTile = (key) => {
+  const CardTile = (key, i = 0) => {
     const s = summary(key, config, view, ctx);
     return (
       <button key={key} className="ca-focus" onClick={() => go(key)}
-        style={{ ...card, outline: openKey === key ? "2px solid " + a : "none" }}>
+        style={{ ...cardStyle(theme, i), ...card, outline: openKey === key ? "2px solid " + a : "none" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{ ...label, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{s.title}</span>
           <span style={{ fontSize: 15, fontWeight: 600, color: a, whiteSpace: "nowrap", flexShrink: 0 }}>open →</span>
@@ -644,7 +648,7 @@ export default function ClassApp({ config, initialCard }) {
   const LiveBanner = onNow ? <OnScreenNow config={config} live={live} poll={poll} /> : roomLive ? (
     <a className="ca-focus" href={config.path + "/today"}
       style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none",
-        background: "#fff", border: "1px solid " + LIVE, borderRadius: 12, padding: "12px 16px", minHeight: TAP, marginBottom: 14 }}>
+        background: "var(--surface-card)", border: "1px solid " + LIVE, borderRadius: "var(--card-radius)", padding: "12px 16px", minHeight: TAP, marginBottom: 14 }}>
       <span style={{ width: 8, height: 8, borderRadius: "50%", background: LIVE, flexShrink: 0 }} />
       <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY }}>Class is on the screen right now</span>
       <span style={{ flex: "none", fontSize: 15, fontWeight: 600, color: LIVE }}>follow along →</span>
@@ -691,7 +695,7 @@ export default function ClassApp({ config, initialCard }) {
         <ThemeTopper theme={theme} lines={tickerLines} />
         <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
         {PreviewBar}
-        <div style={{ background: "#fff", borderBottom: "1px solid " + BORDER }}>
+        <div style={{ background: "var(--surface-card)", borderBottom: "1px solid " + BORDER }}>
           <div style={{ maxWidth: 1240, margin: "0 auto", padding: "14px 20px", display: "flex", alignItems: "center", gap: 20 }}>
             {Logo}
             {Nav}
@@ -724,7 +728,7 @@ export default function ClassApp({ config, initialCard }) {
               <ThemeLegal theme={theme} />
             </div>
           </div>
-          <div style={{ background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, padding: 24, minHeight: 400, position: "sticky", top: 80 }}>
+          <div style={{ ...cardStyle(theme, 2), padding: 24, minHeight: 400, position: "sticky", top: 80 }}>
             {openKey
               ? detailFor(openKey)
               : <div style={{ color: TEXT_MUTED, fontSize: 16, paddingTop: 40, textAlign: "center" }}>Open a card to see its full page here.</div>}
@@ -746,7 +750,7 @@ export default function ClassApp({ config, initialCard }) {
       {/* compact top bar */}
       <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
       {PreviewBar}
-      <div style={{ background: "#fff", borderBottom: "1px solid " + BORDER }}>
+      <div style={{ background: "var(--surface-card)", borderBottom: "1px solid " + BORDER }}>
         <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           {openKey ? (
             <button className="ca-focus" onClick={() => go(null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 17, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: "0 4px 0 0" }}>← Back</button>
@@ -759,14 +763,14 @@ export default function ClassApp({ config, initialCard }) {
       </div>
 
       {TeachLinks || ViewAs ? (
-        <div style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "8px 16px",
+        <div style={{ background: "var(--surface-card)", borderBottom: "1px solid " + BORDER, padding: "8px 16px",
           display: "flex", gap: 6, alignItems: "center", overflowX: "auto" }}>{ViewAs}{TeachLinks}</div>
       ) : null}
 
       {/* content: grid OR full-screen takeover */}
       <div style={{ padding: 16 }}>
         {openKey ? (
-          <div style={{ background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, padding: 20 }}>
+          <div style={{ ...cardStyle(theme, 2), padding: 20 }}>
             {detailFor(openKey)}
           </div>
         ) : (
@@ -792,7 +796,7 @@ export default function ClassApp({ config, initialCard }) {
       </div>
 
       {/* bottom tab bar */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BAR_H, background: "#fff", borderTop: "1px solid " + BORDER, display: "flex", zIndex: 20 }}>
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BAR_H, background: "var(--surface-card)", borderTop: "1px solid " + BORDER, display: "flex", zIndex: 20 }}>
         {NAV.map(n => {
           const on = activeNav === n.id;
           return (

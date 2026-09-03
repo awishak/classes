@@ -47,6 +47,32 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep2j", date: "Wednesday, September 2 \u00b7 last", title: "Crashing Out stops being a rounded rectangle",
+    blurb: "Andrew: crashing out is not nearly crazy enough with the fonts. like the regular text font has gotta be very different. and the borders need to be like cut up and stuff. He was right twice over, and the second half was worse than a taste problem: the card treatment was written, exported, and called by nothing at all.",
+    groups: [
+      { name: "Cut up", items: [
+        ["Four different corners and a lean", "Each card takes its own border colour, its own shadow colour, four separate corner radii and a fraction of a degree of tilt. A grid reads as a stack of things somebody put down rather than six copies of one box. The tilt stays under a degree, which is enough to look hand-placed and small enough that nothing overlaps a neighbour."],
+        ["Radii rather than clip-path", "A clip would cut a better corner and would take the drop shadows with it, and the shadows are the part doing the work. The marquee's torn bottom edge is two gradients for the same reason."],
+        ["The body font is a marker", "Shantell Sans, not Fredoka. Fredoka is a friendly rounded sans, which is a perfectly nice thing for a theme called Crashing Out to not be."],
+      ] },
+      { name: "The card treatment was reaching nothing", items: [
+        ["cardStyle was exported and called by nobody", "The class site built its cards out of a hard-coded white background, a one-pixel border and a single radius, so no theme's card ever appeared on the surface students actually use. Snapchat's three pixels of black with a hard offset, and every cut corner in Crashing Out, existed in a function nothing ran."],
+        ["Every card takes the theme now", "The grid, the open panel on the right, the mobile takeover. The tile passes its index through, so Crashing Out cuts each one differently."],
+      ] },
+      { name: "Three goes at one test", items: [
+        ["Does the string appear", "Passed with every card unwired, because the sponsor bar carries the same shadow."],
+        ["Count the string", "Failed on the correct build, because three of the four themes send their shadow through var(--card-shadow) and resolve it in CSS, so the hex is never in the markup at all."],
+        ["Count the right string per theme", "Passes wired and fails unwired, which is the first version of this check worth keeping. Unwiring the tiles now names the theme and the count."],
+      ] },
+    ],
+    note: {
+      title: "Where the tilt stops",
+      lines: [
+        "Only Crashing Out tilts. A Clean card sitting at an angle is a bug, and the build says so.",
+      ],
+    },
+  },
+  {
     id: "sep2i", date: "Wednesday, September 2 \u00b7 last", title: "The faces were declared and never worn",
     blurb: "Andrew: the fonts are the same across all four themes. shouldn't crashing out be wild? He was right. Every theme named its own faces in themes.js and every student surface hard-coded Outfit, eighty-eight times over, and no heading took a display face at all. So four themes shipped in one font.",
     groups: [

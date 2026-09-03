@@ -63,7 +63,16 @@ Bangers is not a thing.
 | Clean | Outfit | Outfit | IBM Plex Mono |
 | Business | Outfit | Fraunces | IBM Plex Mono |
 | Snapchat | Nunito | Nunito 900 | Nunito |
-| Crashing Out | Fredoka | Bangers | Lilita One |
+| Crashing Out | Shantell Sans | Bangers | Lilita One |
+
+Crashing Out cuts its cards up. Each one takes its own border colour, its own
+shadow colour, four different corner radii and a fraction of a degree of tilt,
+so a grid reads as a stack of things somebody put down rather than six copies of
+one box. The tilt stays under a degree: enough to look hand-placed, small enough
+that nothing overlaps a neighbour. Clip-path would cut a better corner and would
+also clip the shadows off, which is the part doing the work, so the cutting is
+done with radii. The marquee's torn bottom edge is two gradients for the same
+reason.
 
 Press Start 2P is not a label face anywhere: it is roughly twice as wide per
 character as anything else here, so a label in it overflows every card. The

@@ -90,13 +90,14 @@ export const THEME = {
     // gradient and text has to clear its darkest band as well as its lightest.
     state:   { live: "#b31655", ok: "#0d6660", warn: "#8a4a00", late: "#b31c1c" },
     room:    { stage: "#1f2937", ink: "#FFD233", dim: "#FF5FA2", line: "#FF5FA2" },
-    card:    { border: "3px solid #FF5FA2", shadow: "4px 4px 0 #FF8C1A, 6px 6px 0 #1f2937", radius: "14px" },
+    card:    { border: "3px solid #FF5FA2", shadow: "4px 4px 0 #FF8C1A, 6px 6px 0 #1f2937",
+               radius: "28px 6px 24px 8px" },
     // Four faces at once, which is the point of this theme. Press Start 2P is
     // not among them: it is roughly twice as wide per character as anything
     // else here, so a label in it overflows every card it lands in. The pixel
     // font stays in the marquee, where the strip scrolls and width costs
     // nothing.
-    font:    { body: "'Fredoka', 'Outfit', sans-serif",
+    font:    { body: "'Shantell Sans', 'Comic Neue', 'Fredoka', cursive",
                display: "'Bangers', 'Rubik Mono One', cursive",
                label: "'Lilita One', 'Fredoka', cursive" },
     weight:  { display: "400" },
@@ -131,7 +132,7 @@ export const THEME_FONTS = {
   clean: "family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600",
   business: "family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600",
   snapchat: "family=Nunito:wght@400;600;700;800;900",
-  crashing: "family=Bangers&family=Lilita+One&family=Rubik+Mono+One&family=Press+Start+2P&family=Fredoka:wght@400;500;600;700&family=Outfit:wght@400;600;800",
+  crashing: "family=Bangers&family=Lilita+One&family=Shantell+Sans:ital,wght@0,300..800;1,300..800&family=Rubik+Mono+One&family=Press+Start+2P&family=Fredoka:wght@400;500;600;700",
 };
 export const fontHref = (name) =>
   "https://fonts.googleapis.com/css2?" + (THEME_FONTS[name] || THEME_FONTS.clean) + "&display=swap";

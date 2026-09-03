@@ -31,6 +31,15 @@ export const CHROME_CSS = `
 @media (prefers-reduced-motion:reduce){
   .tc-anim,.tc-anim *{animation:none !important}
 }
+/* A torn bottom edge. Two gradients rather than a clip-path, because a clip
+   would take the drop shadows with it, and the shadows are half the theme. */
+.tc-torn{position:relative}
+.tc-torn::after{content:"";position:absolute;left:0;right:0;bottom:-11px;height:12px;
+  background:
+    linear-gradient(-45deg, transparent 0 8px, ${PNK} 8px 100%) 0 0/18px 12px repeat-x,
+    linear-gradient(45deg, transparent 0 8px, ${PNK} 8px 100%) 0 0/18px 12px repeat-x;
+  -webkit-mask:linear-gradient(#000,#000);mask:linear-gradient(#000,#000);
+  transform:scaleY(-1)}
 `;
 
 // ─── Tubey ───
@@ -75,8 +84,8 @@ export function TubeySays({ theme, seed = 0 }) {
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
       <Tubey size={68} />
-      <div style={{ flex: 1, minWidth: 0, background: "#fff", border: "3px solid " + INK, borderRadius: 16,
-        boxShadow: "3px 3px 0 " + BLU, padding: "12px 14px", position: "relative" }}>
+      <div style={{ flex: 1, minWidth: 0, background: "#fff", border: "3px solid " + INK, borderRadius: "26px 8px 22px 6px",
+        boxShadow: "3px 3px 0 " + BLU, transform: "rotate(0.4deg)", padding: "12px 14px", position: "relative" }}>
         <span aria-hidden="true" style={{ position: "absolute", left: -11, top: 22, width: 16, height: 16,
           background: "#fff", borderLeft: "3px solid " + INK, borderBottom: "3px solid " + INK, transform: "rotate(45deg)" }} />
         <div style={{ fontSize: 15, lineHeight: 1.4, color: INK, position: "relative" }}>{tubeyLine(seed)}</div>
@@ -98,10 +107,12 @@ export function ThemeTopper({ theme, lines = [], fixed }) {
   const text = (lines.length ? lines : ["THIS IS A CLASS", "YOU ARE DOING FINE"])
     .map(l => "★ " + String(l).toUpperCase()).join(" ") + " ★ ";
   return (
-    <div style={{ background: INK, overflow: "hidden", whiteSpace: "nowrap", padding: "9px 0",
+    <div className="tc-torn" style={{ background: INK, whiteSpace: "nowrap", padding: "9px 0",
       borderBottom: "3px solid " + PNK, ...seat }}>
+      <div style={{ overflow: "hidden" }}>
       <div className="tc-anim" style={{ display: "inline-block", animation: "tcMarquee 22s linear infinite",
         fontFamily: "'Press Start 2P', monospace", fontSize: 13, color: YEL }}>{text.repeat(4)}</div>
+      </div>
     </div>
   );
 }
@@ -114,8 +125,8 @@ export function ThemeSponsor({ theme, compact }) {
   return (
     <a href={HT.url} target="_blank" rel="noopener noreferrer"
       style={{ textDecoration: "none", display: "block" }}>
-      <div style={{ background: CREAM, border: "3px solid " + INK, borderRadius: 14,
-        boxShadow: "4px 4px 0 " + RED + ", 6px 6px 0 " + INK,
+      <div style={{ background: CREAM, border: "3px solid " + INK, borderRadius: "30px 8px 26px 6px",
+        boxShadow: "4px 4px 0 " + RED + ", 6px 6px 0 " + INK, transform: "rotate(-0.5deg)",
         padding: compact ? "12px 14px" : "14px 20px", display: "flex", alignItems: "center", gap: 14 }}>
         <Tubey size={compact ? 44 : 54} title="Tubey the Worm, the Homework Tubes mascot" />
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
@@ -199,11 +210,23 @@ export function StatusMark({ theme, tone = "live", open = false, label }) {
     style={{ ...common, width: 8, height: 8, borderRadius: "50%", background: color }} />;
 }
 
-// A card's border rotates through the palette in Crashing Out, so a grid of
-// cards is never the same card six times.
+// Nothing in Crashing Out is a rounded rectangle.
+//
+// Each card takes its own border colour, its own shadow colour, four different
+// corner radii and a fraction of a degree of tilt, so a grid reads as a stack
+// of things somebody put down rather than six copies of one box. The tilt stays
+// under a degree on purpose: enough to look hand-placed, small enough that
+// nothing overlaps its neighbour.
+//
+// Clip-path would cut a better corner and would also clip the shadows off,
+// which is the part doing the work here. So the cutting is done with radii.
 const ROTATE = [
-  { b: PNK, s: ORA }, { b: BLU, s: PUR }, { b: GRN, s: PNK },
-  { b: ORA, s: BLU }, { b: PUR, s: GRN }, { b: RED, s: BLU },
+  { b: PNK, s: ORA, r: "28px 6px 24px 8px",  t: "-0.7deg" },
+  { b: BLU, s: PUR, r: "8px 30px 6px 26px",  t: "0.6deg" },
+  { b: GRN, s: PNK, r: "26px 26px 4px 20px", t: "-0.4deg" },
+  { b: ORA, s: BLU, r: "6px 22px 28px 6px",  t: "0.8deg" },
+  { b: PUR, s: GRN, r: "24px 8px 8px 28px",  t: "-0.6deg" },
+  { b: RED, s: BLU, r: "10px 26px 22px 4px", t: "0.5deg" },
 ];
 export function cardStyle(theme, i = 0) {
   if (theme !== "crashing") {
@@ -211,8 +234,8 @@ export function cardStyle(theme, i = 0) {
       boxShadow: "var(--card-shadow)", borderRadius: "var(--card-radius)" };
   }
   const p = ROTATE[Math.abs(i) % ROTATE.length];
-  return { background: "#fff", border: "3px solid " + p.b, borderRadius: 14,
-    boxShadow: "4px 4px 0 " + p.s + ", 6px 6px 0 " + INK };
+  return { background: "#fff", border: "3px solid " + p.b, borderRadius: p.r,
+    boxShadow: "4px 4px 0 " + p.s + ", 6px 6px 0 " + INK, transform: "rotate(" + p.t + ")" };
 }
 
 // The one mount a themed surface needs: keyframes, plus the fonts the furniture

@@ -1001,6 +1001,32 @@ cases.push(["Instructor links", <InstructorLinks />]);
   });
   // Crashing Out rotates its card borders, so a grid is never one card six times.
   if (cardStyle("crashing", 0).border === cardStyle("crashing", 1).border) say("Crashing Out draws every card the same");
+  // Cut up, not rounded. Four different corners and a lean.
+  const cut = cardStyle("crashing", 0);
+  if (String(cut.borderRadius).split(/\s+/).length < 4) say("a Crashing Out card is still a rounded rectangle");
+  if (!String(cut.transform || "").includes("rotate")) say("a Crashing Out card sits perfectly square");
+  if (cardStyle("clean", 0).transform) say("a Clean card is tilted, and should not be");
+  // And the treatment has to actually reach the page, which it did not for a
+  // whole pass: cardStyle was exported and nothing called it.
+  ["snapchat", "crashing"].forEach(t => {
+    const was = globalThis.localStorage.getItem;
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : null);
+    try {
+      const html = renderToString(<ClassApp config={cfg0} />);
+      // Counted, not looked for, and looking for the right thing.
+      //
+      // Two mistakes here before this worked. Checking whether a string appears
+      // passed with every card unwired, because the sponsor bar carries the
+      // same shadow. And checking for a literal shadow only ever works on
+      // Crashing Out, whose cards are computed; the other three arrive through
+      // var(--card-shadow) and resolve in CSS, so the hex is never in the
+      // markup at all.
+      const want = t === "crashing" ? "6px 6px 0 #1f2937" : "var(--card-shadow)";
+      const n = html.split(want).length - 1;
+      if (n < 3) say(`${t}: ${n} element(s) wear the theme's card, so the grid is not taking it`);
+    } catch (err) { say(t + ": " + err.message); }
+    globalThis.localStorage.getItem = was;
+  });
   // Both faces of the status mark.
   if (!html(<StatusMark theme="snapchat" tone="live" label="new" />).includes("rotate(45deg)")) say("no diamond on Snapchat");
   if (html(<StatusMark theme="clean" tone="live" label="new" />).includes("rotate(45deg)")) say("Clean drew a diamond");
