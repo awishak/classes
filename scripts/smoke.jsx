@@ -28,7 +28,8 @@ import { weekdayOf } from "../src/engine/schedule.js";
 import { sittingsOf, minutesLeft, sittingLength } from "../src/engine/meets.js";
 import { THEMES, THEME, THEME_LABELS, themeCSS, varsOf, fontHref } from "../src/engine/themes.js";
 import { ThemePicker } from "../src/engine/ThemeShell.jsx";
-import { Tubey, TubeySays, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, Avatar, StatusMark, cardStyle } from "../src/engine/ThemeChrome.jsx";
+import { Tubey, TubeySays, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeyPeek, ThemeStickers,
+  StoryBar, ThemeIdentity, ThemeCamera, Avatar, StatusMark, cardStyle, CHROME_CSS } from "../src/engine/ThemeChrome.jsx";
 import { saveWeek, openWeek, answerWeek, scoreWeek, scoresFor, perfectRuns, pointsOf, mergeAnswers } from "../src/engine/game.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
@@ -1070,7 +1071,56 @@ cases.push(["Instructor links", <InstructorLinks />]);
   });
 }
 
+// Everything added in the last pass, checked the way the earlier misses taught:
+// does the piece render for the theme that wants it, stay away from the ones
+// that do not, and actually reach the page it was written for.
+{
+  const say = (m) => { console.error("  FAIL  chrome: " + m); failedEarly++; };
+  const html = (el) => renderToString(el);
+  const ROSTER = [{ name: "Ada Byron", id: "s1" }, { name: "Bo Diaz", id: "s2" }, { name: "Kaz Osei", id: "s3" }];
+
+  // The page has to move. A six-stop gradient painting once is a gradient.
+  if (!CHROME_CSS.includes('[data-theme="crashing"]')) say("nothing animates the Crashing Out page");
+  if (!CHROME_CSS.includes("background-size:300% 300%")) say("the gradient has no room to travel, so the wobble does nothing");
+  if (!CHROME_CSS.includes("prefers-reduced-motion")) say("the wobble ignores reduced motion");
+
+  if (!html(<ThemeStickers theme="crashing" />).includes("tcTwinkle")) say("no stickers on Crashing Out");
+  if (!html(<TubeyPeek theme="crashing" />).includes("<svg")) say("Tubey does not peek");
+  const bar = html(<StoryBar theme="snapchat" roster={ROSTER} me="Ada Byron" />);
+  if (!bar.includes("your story")) say("the story bar has no story of your own");
+  if (!bar.includes("linear-gradient")) say("the story bar draws no rings");
+  if (bar.includes("ada")) say("the story bar shows you to yourself");
+  if (!html(<ThemeIdentity theme="snapchat" points={12} />).includes("snap score")) say("no snap score");
+  if (!html(<ThemeCamera theme="snapchat" />).includes("4px 4px 0 #000")) say("no camera in the bar");
+
+  ["clean", "business"].forEach(t => {
+    [["stickers", <ThemeStickers theme={t} />], ["Tubey peeking", <TubeyPeek theme={t} />],
+     ["a story bar", <StoryBar theme={t} roster={ROSTER} me="Ada Byron" />],
+     ["a snap score", <ThemeIdentity theme={t} points={4} />], ["a camera", <ThemeCamera theme={t} />]]
+      .forEach(([what, el]) => { if (html(el) !== "") say(`${t} rendered ${what}`); });
+  });
+
+  // And the pieces have to land on the class site, not just exist.
+  const onSite = (t, needle, what) => {
+    const was = globalThis.localStorage.getItem;
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : null);
+    try {
+      const out = renderToString(<ClassApp config={cfg0} />);
+      if (!out.includes(needle)) say(`${t}: ${what} never reaches the class site`);
+    } catch (err) { say(t + ": " + err.message); }
+    globalThis.localStorage.getItem = was;
+  };
+  onSite("snapchat", "your story", "the story bar");
+  onSite("snapchat", "snap score", "the snap score");
+  onSite("crashing", "tcTwinkle", "the stickers");
+  // Not the hex: the stylesheet ships every theme's block, so that string is in
+  // the output whatever theme is on. The marker is a heading using the variable.
+  onSite("crashing", "text-shadow:var(--display-shadow)", "the heading shadow");
+  onSite("clean", "text-shadow:var(--display-shadow)", "the heading shadow");
+}
+
 cases.push(["Tubey", <Tubey size={120} />]);
+cases.push(["Snapchat, the story bar", <StoryBar theme="snapchat" roster={[{ name: "Bo Diaz" }, { name: "Kaz Osei" }]} me="Ada Byron" />, "your story"]);
 // The furniture on the four surfaces it was just carried to. A room screen
 // under Crashing Out has to hold the worm; under Clean it must hold nothing.
 {

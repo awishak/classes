@@ -65,6 +65,18 @@ Bangers is not a thing.
 | Snapchat | Nunito | Nunito 900 | Nunito |
 | Crashing Out | Shantell Sans | Bangers | Lilita One |
 
+Snapchat speaks its own language on the class home: a story bar of hooped faces
+with your own story first and the ones you have seen greyed out, a ghost and a
+snap score beside the class name, the camera in the middle of the bottom bar,
+and the status diamond on anything with a state.
+
+Crashing Out's page moves. `--surface-page` is a six-stop gradient there and was
+painting once and holding still, which is a gradient rather than a wobble; the
+travel is set on the element carrying `data-theme`, so nothing else has to know.
+Stickers twinkle and pulse down both edges, pinned and pointer-events off.
+Headings carry a pink shadow, which is a token like everything else. Tubey peeks
+out from behind the first card.
+
 Crashing Out cuts its cards up. Each one takes its own border colour, its own
 shadow colour, four different corner radii and a fraction of a degree of tilt,
 so a grid reads as a stack of things somebody put down rather than six copies of
@@ -182,7 +194,7 @@ character and those are what drifted. Font sizes are not held to `TYPE` yet.
 | `check-jsx-text` | an escape sequence stranded in JSX text |
 | `check-css` | a stylesheet that lost a rule |
 | `check-tokens` | a surface with a colour of its own, a theme missing a token, or a colour that fails where it sits |
-| `smoke` | 139 surfaces rendered server-side, a game played through, and every theme's colours and furniture |
+| `smoke` | 140 surfaces rendered server-side, a game played through, and every theme's colours and furniture |
 
 Each was written after the matching mistake reached production. Do not remove
 one because it is inconvenient; add the case instead.

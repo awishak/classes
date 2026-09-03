@@ -25,7 +25,8 @@ import { AssignmentsSummary, AssignmentsDetail, dueState, nextDue, ungradedCount
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, ThemeStyle, ThemePicker } from "./ThemeShell.jsx";
-import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, Avatar, cardStyle } from "./ThemeChrome.jsx";
+import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
+  ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, Avatar, cardStyle } from "./ThemeChrome.jsx";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
 // Fredoka on Crashing Out. One declaration, and every use below follows.
@@ -58,7 +59,8 @@ const label = { fontFamily: TOKENS.FONT.label, fontSize: 13, fontWeight: 700, co
 // is where a theme stops being a palette. Outfit on Clean, Fraunces on
 // Business, Nunito at 900 on Snapchat, Bangers on Crashing Out. The weight
 // comes with the face, because 600 on Bangers is not a thing.
-const DISPLAY = { fontFamily: TOKENS.FONT.display, fontWeight: TOKENS.FONT.displayWeight };
+const DISPLAY = { fontFamily: TOKENS.FONT.display, fontWeight: TOKENS.FONT.displayWeight,
+  textShadow: TOKENS.FONT.displayShadow };
 const h2 = { ...DISPLAY, fontSize: 22, color: TEXT_PRIMARY, letterSpacing: "-0.02em" };
 
 // Keyboard users could not see where they were. Everything focusable now says
@@ -612,7 +614,9 @@ export default function ClassApp({ config, initialCard }) {
     const s = summary(key, config, view, ctx);
     return (
       <button key={key} className="ca-focus" onClick={() => go(key)}
-        style={{ ...cardStyle(theme, i), ...card, outline: openKey === key ? "2px solid " + a : "none" }}>
+        style={{ ...cardStyle(theme, i), ...card, position: "relative",
+          outline: openKey === key ? "2px solid " + a : "none" }}>
+        {i === 0 ? <TubeyPeek theme={theme} /> : null}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{ ...label, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{s.title}</span>
           <span style={{ fontSize: 15, fontWeight: 600, color: a, whiteSpace: "nowrap", flexShrink: 0 }}>open →</span>
@@ -692,12 +696,14 @@ export default function ClassApp({ config, initialCard }) {
         <ThemeStyle theme={theme} />
         <ThemeChrome theme={theme} />
         <style>{CSS}</style>
+        <ThemeStickers theme={theme} />
         <ThemeTopper theme={theme} lines={tickerLines} />
         <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
         {PreviewBar}
         <div style={{ background: "var(--surface-card)", borderBottom: "1px solid " + BORDER }}>
           <div style={{ maxWidth: 1240, margin: "0 auto", padding: "14px 20px", display: "flex", alignItems: "center", gap: 20 }}>
             {Logo}
+            <ThemeIdentity theme={theme} points={myPoints} />
             {Nav}
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
               <ThemeBadge theme={theme} points={myPoints} />
@@ -717,6 +723,7 @@ export default function ClassApp({ config, initialCard }) {
         </div>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 24, alignItems: "start" }}>
           <div style={{ maxWidth: CARD_MAX * 2 + 12 }}>
+            <StoryBar theme={theme} roster={roster} me={seenAs} />
             {LiveBanner}
             <NeedsYou items={actions} accent={a} onOpen={go} />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
@@ -746,6 +753,7 @@ export default function ClassApp({ config, initialCard }) {
         <ThemeChrome theme={theme} />
       <style>{CSS}</style>
 
+      <ThemeStickers theme={theme} />
       <ThemeTopper theme={theme} lines={tickerLines} />
       {/* compact top bar */}
       <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
@@ -775,6 +783,7 @@ export default function ClassApp({ config, initialCard }) {
           </div>
         ) : (
           <>
+            <StoryBar theme={theme} roster={roster} me={seenAs} />
             {LiveBanner}
             <NeedsYou items={actions} accent={a} onOpen={go} />
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -797,11 +806,13 @@ export default function ClassApp({ config, initialCard }) {
 
       {/* bottom tab bar */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BAR_H, background: "var(--surface-card)", borderTop: "1px solid " + BORDER, display: "flex", zIndex: 20 }}>
-        {NAV.map(n => {
+        {NAV.map((n, i) => {
           const on = activeNav === n.id;
+          const mid = theme === "snapchat" && i === Math.floor(NAV.length / 2);
+          if (mid) return <ThemeCamera key="cam" theme={theme} />;
           return (
             <button key={n.id} className="ca-focus" onClick={() => go(n.card)} aria-current={on ? "page" : undefined}
-              style={{ flex: 1, minHeight: TAP, background: "none", border: "none", fontFamily: F, fontSize: 12, fontWeight: 600, color: on ? a : TEXT_SECONDARY, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
+              style={{ flex: 1, minHeight: TAP, background: "none", border: "none", fontFamily: F, fontSize: 13, fontWeight: 600, color: on ? a : TEXT_SECONDARY, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: on ? a : "transparent" }} />
               {n.label}
             </button>

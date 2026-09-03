@@ -47,7 +47,7 @@ export const THEME = {
     font:    { body: "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif",
                display: "'Outfit', -apple-system, sans-serif",
                label: "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace" },
-    weight:  { display: "600" },
+    weight:  { display: "600", shadow: "none" },
     grounds: ["#ffffff", "#fafaf9", "#f6f4f1"],
   },
 
@@ -61,7 +61,7 @@ export const THEME = {
     font:    { body: "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif",
                display: "'Fraunces', Georgia, serif",
                label: "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace" },
-    weight:  { display: "600" },
+    weight:  { display: "600", shadow: "none" },
     grounds: ["#1c1917", "#241f1c", "#2b2622"],
   },
 
@@ -75,7 +75,7 @@ export const THEME = {
     font:    { body: "'Nunito', 'Avenir Next', -apple-system, sans-serif",
                display: "'Nunito', 'Avenir Next', sans-serif",
                label: "'Nunito', sans-serif" },
-    weight:  { display: "900" },
+    weight:  { display: "900", shadow: "none" },
     grounds: ["#ffffff", "#FFFC00"],
   },
 
@@ -100,7 +100,7 @@ export const THEME = {
     font:    { body: "'Shantell Sans', 'Comic Neue', 'Fredoka', cursive",
                display: "'Bangers', 'Rubik Mono One', cursive",
                label: "'Lilita One', 'Fredoka', cursive" },
-    weight:  { display: "400" },
+    weight:  { display: "400", shadow: "3px 3px 0 #FF5FA2" },
     // Every band of the gradient, plus the card, because text lands on both.
     grounds: ["#ffffff", "#fce7f3", "#fef3c7", "#dbeafe", "#ddd6fe", "#fbcfe8"],
   },
@@ -116,7 +116,7 @@ export const varsOf = (t) => ({
   "--room-stage": t.room.stage, "--room-ink": t.room.ink, "--room-dim": t.room.dim, "--room-line": t.room.line,
   "--card-border": t.card.border, "--card-shadow": t.card.shadow, "--card-radius": t.card.radius,
   "--font-body": t.font.body, "--font-display": t.font.display, "--font-label": t.font.label,
-  "--display-weight": t.weight.display,
+  "--display-weight": t.weight.display, "--display-shadow": t.weight.shadow,
 });
 
 // The whole stylesheet: one block per theme, Clean also on bare :root so a

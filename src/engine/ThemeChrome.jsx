@@ -27,10 +27,18 @@ export const CHROME_CSS = `
 @keyframes tcWave { 0%,100% { transform: rotate(-14deg); } 50% { transform: rotate(16deg); } }
 @keyframes tcBob { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-9px) rotate(4deg); } }
 @keyframes tcFlicker { 0%,100% { transform: rotate(-4deg) scale(1); } 50% { transform: rotate(6deg) scale(1.1); } }
-@keyframes tcPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+@keyframes tcPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.24); } }
+@keyframes tcTwinkle { 0%,100% { opacity: 1; transform: scale(1) rotate(0); } 50% { opacity: .35; transform: scale(.7) rotate(20deg); } }
 @media (prefers-reduced-motion:reduce){
   .tc-anim,.tc-anim *{animation:none !important}
 }
+/* The page moves. --surface-page is a six-stop gradient on Crashing Out and was
+   painting once and holding still, which is a gradient rather than a wobble.
+   Set on the element carrying data-theme, so nothing has to know about it. */
+[data-theme="crashing"]{background-size:300% 300% !important;animation:tcWobble 16s ease-in-out infinite}
+@keyframes tcWobble { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+@media (prefers-reduced-motion:reduce){ [data-theme="crashing"]{animation:none} }
+
 /* A torn bottom edge. Two gradients rather than a clip-path, because a clip
    would take the drop shadows with it, and the shadows are half the theme. */
 .tc-torn{position:relative}
@@ -253,3 +261,88 @@ export function ThemeChrome({ theme }) {
 
 export const hasChrome = (theme) => theme === "crashing" || theme === "snapchat";
 export const THEME_KEYS = Object.keys(THEME);
+
+// ─── stickers ───
+// Crashing Out scatters marks that twinkle and pulse. Pinned to the page rather
+// than in the flow, and pointer-events off, so nothing they land on stops
+// working. Positions are fixed rather than random: a layout that moves every
+// render is a layout nobody can point at.
+const STICKERS = [
+  { c: "\u2726", top: "12%", left: "2.5%", size: 30, anim: "tcTwinkle 1.6s ease-in-out infinite" },
+  { c: "\u2665", top: "38%", right: "2%", size: 26, anim: "tcPulse 1.1s ease-in-out infinite" },
+  { c: "\u2605", top: "68%", left: "1.5%", size: 24, anim: "tcTwinkle 2.1s ease-in-out infinite" },
+  { c: "\u2726", top: "84%", right: "3.5%", size: 22, anim: "tcPulse 1.4s ease-in-out infinite" },
+];
+export function ThemeStickers({ theme }) {
+  if (theme !== "crashing") return null;
+  return (
+    <div aria-hidden="true" style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1 }}>
+      {STICKERS.map((s, i) => (
+        <span key={i} className="tc-anim" style={{ position: "absolute", top: s.top, left: s.left, right: s.right,
+          fontSize: s.size, color: [PNK, PUR, ORA, BLU][i % 4], animation: s.anim }}>{s.c}</span>
+      ))}
+    </div>
+  );
+}
+
+// Tubey, half behind whatever he is standing next to.
+export function TubeyPeek({ theme, size = 72 }) {
+  if (theme !== "crashing") return null;
+  return (
+    <div aria-hidden="true" style={{ position: "absolute", right: -18, bottom: -14, pointerEvents: "none" }}>
+      <Tubey size={size} title="Tubey the Worm" />
+    </div>
+  );
+}
+
+// ─── the story bar ───
+// The row of hooped faces along the top of Snapchat, which is the single most
+// recognisable thing about it. Your own story first, then the class.
+export function StoryBar({ theme, roster = [], me, seenAfter = 5 }) {
+  if (theme !== "snapchat" || !roster.length) return null;
+  const others = roster.filter(s => s.name !== me).slice(0, 8);
+  const hue = ["#0FADFF", "#A05FFF", "#3CBB57", "#FF8C1A", "#F23C57", "#2B7CE9", "#9B4DFF", "#0f766e"];
+  return (
+    <div style={{ display: "flex", gap: 10, overflowX: "auto", padding: "2px 0 6px" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, flex: "none", width: 62 }}>
+        <div style={{ width: 54, height: 54, borderRadius: "50%", background: "#fff", border: "3px solid #000",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 900 }}>+</div>
+        <span style={{ fontSize: 13, fontWeight: 800, whiteSpace: "nowrap" }}>your story</span>
+      </div>
+      {others.map((s, i) => (
+        <div key={s.name} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, flex: "none", width: 62 }}>
+          <Avatar theme="snapchat" name={s.name} size={54} bg={hue[i % hue.length]} seen={i >= seenAfter} />
+          <span style={{ fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden",
+            textOverflow: "ellipsis", maxWidth: "100%", opacity: i >= seenAfter ? .5 : 1 }}>
+            {String(s.name).split(" ")[0].toLowerCase()}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// The ghost and the score, which is where Snapchat puts your identity.
+export function ThemeIdentity({ theme, points }) {
+  if (theme !== "snapchat") return null;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div aria-hidden="true" style={{ width: 40, height: 40, borderRadius: "50%", background: "#000",
+        color: "#FFFC00", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flex: "none" }}>&#128123;</div>
+      <span style={{ fontSize: 13, fontWeight: 800, opacity: .6, whiteSpace: "nowrap" }}>
+        snap score {Math.round((points || 0) * 30 + 1208)}
+      </span>
+    </div>
+  );
+}
+
+// The camera, in the middle of the bottom bar, bigger than everything beside it.
+export function ThemeCamera({ theme }) {
+  if (theme !== "snapchat") return null;
+  return (
+    <div aria-hidden="true" style={{ width: 58, height: 58, borderRadius: "50%", border: "4px solid #000",
+      background: "#fff", boxShadow: "4px 4px 0 #000", display: "flex", alignItems: "center",
+      justifyContent: "center", fontSize: 24, flex: "none", marginTop: -14 }}>&#128247;</div>
+  );
+}
+

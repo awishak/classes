@@ -47,6 +47,33 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep2k", date: "Wednesday, September 2 \u00b7 last", title: "Further, on both loud themes",
+    blurb: "Andrew: can you go further with snapchat and crashing out? Snapchat had the palette and the streak and none of the language people recognise it by. Crashing Out had a six-stop gradient that painted once and then held perfectly still, which is a gradient rather than a wobble.",
+    groups: [
+      { name: "Snapchat speaks its own language", items: [
+        ["A story bar", "Hooped faces along the top, your own story first with a plus, the ones you have already seen greyed. The single most recognisable thing about that app, and it was missing."],
+        ["A ghost and a snap score", "Beside the class name, where Snapchat puts your identity."],
+        ["The camera in the middle of the bar", "Bigger than everything beside it, which is how that bar is shaped."],
+      ] },
+      { name: "Crashing Out actually moves", items: [
+        ["The page wobbles", "The gradient had no room to travel and no animation, so a six-stop gradient painted once and sat there. The travel is set on the element carrying data-theme, so nothing else has to know, and reduced motion turns it off."],
+        ["Stickers down both edges", "Twinkling and pulsing, pinned to the page rather than in the flow, pointer-events off so nothing they land on stops working. Fixed positions rather than random ones, because a layout that moves every render is a layout nobody can point at."],
+        ["Pink behind every heading", "A text shadow, and a token like everything else, so Clean gets none and the build checks both."],
+        ["Tubey peeks out from behind the first card", "Which is the version of him I like best."],
+      ] },
+      { name: "The same trap, twice more", items: [
+        ["A hex that is always in the output", "The check for the heading shadow looked for its colour, which is in the stylesheet for every theme because all four blocks ship. So it passed with the shadow hard-coded off. The marker is a heading using the variable."],
+        ["Every new piece is checked three ways", "Does it render for the theme that wants it, does it stay away from the two that do not, and does it reach the class site at all. That last question is the one that has caught something every single time."],
+      ] },
+    ],
+    note: {
+      title: "Still the class home only",
+      lines: [
+        "The story bar, the camera and the stickers are on the class home. The board, the game, the ask page and the wall have the palette, the faces, the marquee and Tubey, but not these.",
+      ],
+    },
+  },
+  {
     id: "sep2j", date: "Wednesday, September 2 \u00b7 last", title: "Crashing Out stops being a rounded rectangle",
     blurb: "Andrew: crashing out is not nearly crazy enough with the fonts. like the regular text font has gotta be very different. and the borders need to be like cut up and stuff. He was right twice over, and the second half was worse than a taste problem: the card treatment was written, exported, and called by nothing at all.",
     groups: [

@@ -84,6 +84,7 @@ export const FONT = {
   display: "var(--font-display)",
   label: "var(--font-label)",
   displayWeight: "var(--display-weight)",
+  displayShadow: "var(--display-shadow)",
 };
 
 export { THEMES, THEME_LABELS, THEME_DESCS, THEME, themeCSS, fontHref } from "./themes.js";
