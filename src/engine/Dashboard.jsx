@@ -108,9 +108,13 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
    first week and there when someone else sits down. */
 .dash-col{margin:0 0 0 3px;font-family:var(--font-col,ui-monospace,SFMono-Regular,Menlo,monospace);font-size:11px;
   font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:#8a9098}
-.dash-rail-tabs{display:flex;gap:4px;background:rgba(23,19,16,.045);border-radius:13px;padding:4px;overflow-x:auto;scrollbar-width:none}
-.dash-rail-tabs::-webkit-scrollbar{display:none}
-.dash-tab{flex:1 1 auto;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 11px;border:none;border-radius:10px;background:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:500;color:#5b6068;transition:background .14s,color .14s,box-shadow .14s}
+/* Three tabs in a 320px column did not fit, and the row scrolled sideways with
+   its scrollbar hidden, so Assignments was off the edge with nothing to say so.
+   A tab that cannot be seen is a panel that cannot be reached. The row wraps
+   now: nothing is ever hidden, and a long name shrinks rather than pushing its
+   neighbours out. */
+.dash-rail-tabs{display:flex;flex-wrap:wrap;gap:4px;background:rgba(23,19,16,.045);border-radius:13px;padding:4px}
+.dash-tab{flex:1 1 auto;min-width:0;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 11px;border:none;border-radius:10px;background:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:500;color:#5b6068;transition:background .14s,color .14s,box-shadow .14s}
 .dash-tab:hover{color:#171310}
 .dash-tab{position:relative}
 .dash-tab.on{background:var(--tab-hue,var(--dash-accent,#171310));color:#fff;font-weight:600;
@@ -400,7 +404,7 @@ function Rail({ tabs, active, onPick, accent, children, side, className }) {
               onClick={() => onPick(t.id)} title={t.label + " \u00b7 press " + t.hot}
               style={t.hue ? { "--tab-hue": t.hue } : undefined}>
               <span className="dash-tab-k">{t.hot}</span>
-              {t.label}
+              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{t.label}</span>
               {t.count ? <span className="dash-tab-n" style={{ background: t.hue || (on ? accent : BORDER_STRONG) }}>{t.count}</span> : null}
             </button>
           );
@@ -418,7 +422,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
       title={live ? "Take it back down" : "Send it to the room screen"}
       style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", cursor: "pointer",
         background: live ? "rgba(225,29,72,.07)" : SURFACE_2, border: "1px solid " + (live ? LIVE : "transparent"),
-        borderRadius: 10, padding: "9px 11px", minHeight: TAP, fontFamily: F, transition: "background .14s, border-color .14s" }}>
+        borderRadius: 10, padding: "9px 11px", minHeight: HIT, fontFamily: F, transition: "background .14s, border-color .14s" }}>
       <span style={{ flex: "none", fontFamily: MONO, fontSize: 11.5, fontWeight: 600, letterSpacing: ".07em", textTransform: "uppercase",
         padding: "3px 8px", borderRadius: 999, background: kindColor || TEXT_MUTED, color: "#fff" }}>{kind}</span>
       <span style={{ minWidth: 0, flex: 1 }}>
@@ -598,7 +602,7 @@ function FeatureRow({ name, live, accent, onRun, onDismiss }) {
     <button onClick={live ? onDismiss : onRun}
       style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", cursor: "pointer",
         background: live ? "rgba(225,29,72,.07)" : "#fff", border: "1px solid " + (live ? LIVE : BORDER_STRONG),
-        borderRadius: 10, padding: "9px 12px", minHeight: TAP, fontFamily: F }}>
+        borderRadius: 10, padding: "9px 12px", minHeight: HIT, fontFamily: F }}>
       <span style={{ flex: "none", width: 7, height: 7, borderRadius: "50%", background: live ? LIVE : accent }} />
       <span style={{ minWidth: 0, flex: 1 }}>
         <b style={{ display: "block", fontWeight: 600, fontSize: 15, color: TEXT_PRIMARY }}>{name}</b>
@@ -1205,7 +1209,7 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
     </div>
   );
 
-  const tool = { ...mini, minHeight: 26, padding: "0 8px", fontSize: 12, color: TEXT_MUTED };
+  const tool = { ...mini, minHeight: 26, padding: "0 8px", fontSize: 13, color: TEXT_MUTED };
 
   return (
     <>
@@ -1214,7 +1218,7 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
           {[["", "All " + pool.length], ["move", "Activities " + nMoves], ["seed", "Seeds " + nSeeds]]
             .filter(([id]) => id !== "seed" || nSeeds).map(([id, lbl]) => (
               <button key={id || "all"} className="dash-focus" onClick={() => setOnly(id)} aria-pressed={only === id}
-                style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5,
+                style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 13,
                   ...(only === id ? { background: accent, borderColor: accent, color: "#fff" } : {}) }}>
                 {lbl}
               </button>
@@ -1233,15 +1237,15 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
             style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", minHeight: 38, padding: "4px 7px",
               background: "none", border: "none", borderRadius: 9, cursor: "pointer", fontFamily: F, textAlign: "left" }}>
             <span style={{ flex: "none", padding: "1px 7px", borderRadius: 999, background: hue("activity"),
-              color: "#fff", fontSize: 10.5, fontWeight: 600, letterSpacing: ".03em", textTransform: "uppercase" }}>Idea</span>
+              color: "#fff", fontSize: 13, fontWeight: 600, letterSpacing: ".03em", textTransform: "uppercase" }}>Idea</span>
             <b style={{ flex: 1, minWidth: 0, fontWeight: 600, fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.35 }}>{b.title}</b>
             {b.pick ? <PickMark size={18} /> : null}
-            <span style={{ flex: "none", fontSize: 10, color: TEXT_MUTED, transform: shown === b.id ? "none" : "rotate(-90deg)", transition: "transform .14s" }}>▾</span>
+            <span style={{ flex: "none", fontSize: 13, color: TEXT_MUTED, transform: shown === b.id ? "none" : "rotate(-90deg)", transition: "transform .14s" }}>▾</span>
           </button>
           {shown !== b.id ? null : (
           <>
           {b.body ? (
-            <small style={{ color: TEXT_MUTED, fontSize: 12.5, lineHeight: 1.45, display: "block", padding: "0 7px 2px 23px", whiteSpace: "pre-wrap" }}>{b.body}</small>
+            <small style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45, display: "block", padding: "0 7px 2px 23px", whiteSpace: "pre-wrap" }}>{b.body}</small>
           ) : null}
           <div style={{ display: "flex", gap: 5, flexWrap: "wrap", padding: "0 7px 0 23px" }}>
             <button className="dash-focus" style={{ ...tool, borderColor: accent, color: accent }}
@@ -1264,7 +1268,7 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
 
       {features.length ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
-          <span style={{ ...label, color: accent }}>The room does these</span>
+          <span style={{ ...label, color: accent }}>Run with the room</span>
           {features.map(name => (
             <div key={name} style={{ display: "flex", flexDirection: "column", gap: 4,
               padding: "3px 4px 5px", borderRadius: 10, background: placing === name ? SURFACE_2 : "transparent" }}>
@@ -1294,7 +1298,7 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
           ))}
         </div>
       ) : null}
-      <Muted style={{ fontSize: 12 }}>Kept with me rather than with a class, so every class has these.</Muted>
+      <Muted style={{ fontSize: 13 }}>Kept with me rather than with a class, so every class has these.</Muted>
     </>
   );
 }
@@ -1315,7 +1319,7 @@ function Suggestions({ blocks, accent, onPick, onAdd }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ ...label, color: accent }}>Ideas</span>
-        <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
+        <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 13, marginLeft: "auto" }}
           onClick={() => setOpen(v => !v)}>{open ? "Close" : "+ Add"}</button>
       </div>
       {shown.map(b => (
@@ -1326,7 +1330,7 @@ function Suggestions({ blocks, accent, onPick, onAdd }) {
           <span style={{ flex: "none", marginTop: 5, width: 7, height: 7, borderRadius: "50%", background: typeOf("activity").color }} />
           <span style={{ flex: 1, minWidth: 0 }}>
             <b style={{ display: "block", fontWeight: 600, fontSize: 14, color: TEXT_PRIMARY }}>{b.title}</b>
-            {b.body ? <small style={{ color: TEXT_MUTED, fontSize: 12.5, lineHeight: 1.4, display: "block" }}>{b.body}</small> : null}
+            {b.body ? <small style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.4, display: "block" }}>{b.body}</small> : null}
           </span>
         </button>
       ))}
@@ -1343,7 +1347,7 @@ function Suggestions({ blocks, accent, onPick, onAdd }) {
           <button style={solid(accent)} onClick={keep}>Keep the block</button>
         </div>
       ) : null}
-      <Muted style={{ fontSize: 12 }}>Kept with me rather than with a class, so every class has these.</Muted>
+      <Muted style={{ fontSize: 13 }}>Kept with me rather than with a class, so every class has these.</Muted>
     </div>
   );
 }
@@ -1368,7 +1372,7 @@ export const MEDIA_SET = new Set(["reading", "video", "podcast"]);
 // actions belong and where they stop stealing width from the words.
 function ReadingCard({ item, accent, live, onCast, onDismiss, onNote, onRemove, inFlow, hue, picked }) {
   const color = hue ? hue(item.type === "reading" ? "link" : item.type) : (TYPE_COLOR[item.type] || TYPE_COLOR.reading);
-  const btn = { ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5 };
+  const btn = { ...mini, minHeight: 30, padding: "0 10px", fontSize: 13 };
   return (
     <div className="read-card" draggable
       onDragStart={e => { e.dataTransfer.effectAllowed = "copy";
@@ -1488,7 +1492,7 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
         outline: over ? "2px dashed " + accent : "none", outlineOffset: 4 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ ...label, color: accent }}>Today's readings</span>
-        <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 12, marginLeft: "auto" }}
+        <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 9px", fontSize: 13, marginLeft: "auto" }}
           onClick={() => setOpen(v => !v)}>{open ? "Close" : "+ Add"}</button>
       </div>
       {items.map(it => {
@@ -1524,7 +1528,7 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
           <div style={{ display: "flex", gap: 5 }}>
             {MEDIA_KINDS.map(([k, lbl]) => (
               <button key={k} onClick={() => setKind(k)} aria-pressed={kind === k}
-                style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5,
+                style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 13,
                   ...(kind === k ? { background: accent, borderColor: accent, color: "#fff" } : {}) }}>{lbl}</button>
             ))}
           </div>
@@ -1556,7 +1560,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -1613,7 +1617,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
       {blocks.map((b, i) => (
         <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 7px", fontSize: 12, color: TEXT_MUTED }}
+            <button className="dash-focus" style={{ ...mini, minHeight: 26, padding: "0 7px", fontSize: 13, color: TEXT_MUTED }}
               onClick={() => onRemoveBlock(b.id)} title="Remove">Remove</button>
           </div>
           <Castable kind="Note" kindColor={KIND_COLOR.Note} title={b.title || "Untitled block"} claim={b.claim} accent={accent}
@@ -1721,7 +1725,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
               trigger={(open, toggle) => (
                 <button className="dash-focus" style={{ ...mini, minHeight: 30 }} onClick={toggle}
                   aria-expanded={open} aria-haspopup="menu">
-                  Structure<span style={{ opacity: .5, fontSize: 9, marginLeft: 5 }}>▾</span>
+                  Structure<span style={{ opacity: .5, fontSize: 13, marginLeft: 5 }}>▾</span>
                 </button>
               )}>
               {sequences.map(x => (
@@ -1857,7 +1861,8 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
       {foldRow}
       {mySections.map(([slot, title]) => renderSlot({ slot }, title))}
       {blockBlock}
-      <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} />
+      <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
+        extra={<GoTo href={classHref + "/assignments"} accent={accent}>All assignments</GoTo>} />
       {!anyContent && !blockBlock && !freeform ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
           <Muted style={{ fontSize: 13 }}>
@@ -1918,9 +1923,9 @@ function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveL
     <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
         <span style={{ ...label, color: accent }}>{shelf.label}</span>
-        <span style={{ ...label, fontSize: 12 }}>{shelf.scope}</span>
+        <span style={{ ...label, fontSize: 13 }}>{shelf.scope}</span>
       </div>
-      {(items || []).length ? null : <Muted style={{ fontSize: 12.5 }}>{shelf.hint}</Muted>}
+      {(items || []).length ? null : <Muted style={{ fontSize: 13 }}>{shelf.hint}</Muted>}
       {(items || []).map(s => (
         <div key={s.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -1942,12 +1947,12 @@ function Shelf({ shelf, items, onAdd, onRemove, onClaim, castNow, dismiss, liveL
         </div>
         {toFlow === s.id ? (
           <div style={{ display: "flex", gap: 5, flexWrap: "wrap", paddingLeft: 4, paddingBottom: 6 }}>
-            <span style={{ ...label, fontSize: 12, alignSelf: "center" }}>Into</span>
+            <span style={{ ...label, fontSize: 13, alignSelf: "center" }}>Into</span>
             {(slots || []).map(sl => (
-              <button key={sl} className="dash-focus" style={{ ...mini, minHeight: HIT, padding: "0 10px", fontSize: 12.5 }}
+              <button key={sl} className="dash-focus" style={{ ...mini, minHeight: HIT, padding: "0 10px", fontSize: 13 }}
                 onClick={() => { onToFlow(sl, s); setToFlow(null); }}>{sl}</button>
             ))}
-            {!(slots || []).length ? <Muted style={{ fontSize: 12.5 }}>This day has no slots to put it in.</Muted> : null}
+            {!(slots || []).length ? <Muted style={{ fontSize: 13 }}>This day has no slots to put it in.</Muted> : null}
           </div>
         ) : null}
         </div>
@@ -3250,7 +3255,15 @@ function Picker({ title, opts, value, onPick, accent }) {
 // To-do is not on a rail either. It is a list I check once, when I sit down to
 // look at a day — so it opens off the day itself, by clicking the session up in
 // the band, which is the thing it is a to-do list ABOUT.
-const MATERIAL = ["ideas", "readings", "assignments"];
+// Two tabs, because three did not fit a 300px column and the third was a
+// duplicate. The Assignments panel listed every assignment and cast a reveal;
+// Coming up in the Day Plan lists the ones with a date near this day and casts
+// the same payload, with the days remaining beside each one. So the tab carried
+// a count that never moved and a list already on screen.
+//
+// Everything else is one press away: Coming up has a link through to the page
+// where assignments are actually written and graded.
+const MATERIAL = ["ideas", "readings"];
 const LIVE_RAIL = ["questions", "poll", "answers"];
 // Starting widths. Flow takes whatever is left, so it is the one column that
 // never needs a number. Both ends are draggable and the drag is remembered.
@@ -4098,7 +4111,7 @@ export default function Dashboard({ config }) {
       onCast={() => cast({ type: "poll", label: "Live poll" })} />,
     flow: () => <FlowPanel plan={plan} seq={seq} seeds={seeds} castNow={castNow} dismiss={dismiss}
       liveLabel={liveLabel} accent={config.accent} onClaim={saveFlowClaim}
-      features={features} onFeature={runFeature} planHref={config.path + "/dayplan"}
+      features={features} onFeature={runFeature} planHref={config.path + "/dayplan"} classHref={config.path}
       onSlidesClaim={saveSlidesClaim} onBlockClaim={saveBlockClaim} where={config.code + " · " + day}
       loose={looseItems} onAddScheduled={(it, slot, date) => addScheduleItemToDay(update, config, date || day, it, slot)}
       onAddItem={addFlowItem} onRemoveItem={removeFlowItem} onMoveItem={moveFlowItem}

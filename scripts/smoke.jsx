@@ -11,6 +11,7 @@
 // Run with `npm run smoke`. The build runs it too.
 
 import "./smoke-globals.js";
+import { readFileSync } from "node:fs";
 import { renderToString } from "react-dom/server";
 import Dashboard, {
   FlowPanel, TodoPanel, NowPanel, ScratchPanel, AttendancePanel, QuestionsPanel,
@@ -1358,6 +1359,41 @@ cases.push(["Theme picker, full", <ThemePicker theme="clean" onPick={noop} />, "
   });
 }
 cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick={noop} compact />, "Crashing Out"]);
+
+// The dashboard's left column.
+//
+// Three tabs did not fit a 300px column and the row scrolled sideways with its
+// scrollbar hidden, so Assignments was off the edge with nothing to say so. It
+// is two tabs now, and the panel that went was a duplicate: it listed every
+// assignment and cast a reveal, which is what Coming up already does with the
+// days remaining beside each one.
+{
+  const say = (m) => { console.error("  FAIL  materials: " + m); failedEarly++; };
+  const src = readFileSync(new URL("../src/engine/Dashboard.jsx", import.meta.url), "utf8");
+
+  const m = src.match(/const MATERIAL = (\[[^\]]*\]);/);
+  if (!m) say("no MATERIAL list");
+  else {
+    const tabs = JSON.parse(m[1].replace(/'/g, '"'));
+    if (tabs.length > 2) say(`${tabs.length} tabs in a 300px column, which is where the last one went off the edge`);
+    if (tabs.includes("assignments")) say("the assignments tab is back, and Coming up already casts the same thing");
+  }
+  // Dropping a tab must not leave a hole in the number keys, which run left
+  // rail then right.
+  const live = src.match(/const LIVE_RAIL = (\[[^\]]*\]);/);
+  if (!live) say("no LIVE_RAIL list");
+  // Nothing becomes unreachable: Coming up covers three weeks and the link
+  // covers everything past that, plus anything marked Ongoing, which has no
+  // date to sort by at all.
+  if (!src.includes("All assignments")) say("nothing on the dashboard reaches the assignments beyond three weeks");
+  // The row never scrolls out of sight again.
+  if (src.includes(".dash-rail-tabs{display:flex;gap:4px") && !src.includes("flex-wrap:wrap"))
+    say("the tab row can still hide a tab off its edge");
+  // And a 300px trackpad column stops using the student touch floor.
+  const panel = src.slice(src.indexOf("export function IdeasPanel"), src.indexOf("export function QuestionsPanel"));
+  const small = [...panel.matchAll(/fontSize: (\d+(?:\.\d+)?)/g)].map(x => Number(x[1])).filter(n => n < 13);
+  if (small.length) say(`${small.length} size(s) under the 13px floor in the activities panel: ${small.join(", ")}`);
+}
 
 // Two people writing at once, which is the bug the room actually hit.
 //
