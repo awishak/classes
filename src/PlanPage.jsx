@@ -56,7 +56,7 @@ const SESSIONS = [
         ["The night's colours are their own", "A red that reads on white disappears on near-black, so each state colour is a separate value rather than the daytime one dimmed, and the contrast check measures every one against the dark surfaces."],
         ["Only Clean has one", "Snapchat is a yellow page and Crashing Out is a pastel gradient. Those are the whole point of them, and a dark version of either would be a different theme rather than the same theme after dark."],
       ] },
-      { name: "What the two took with them", items: [
+      { name: "What came out alongside", items: [
         ["The ruled layout", "Clean 2 was its only user, so the whole layout dimension came out rather than sitting in the code with nothing calling it. That is the pattern that has bitten here over and over: tokens.js unimported, cardStyle uncalled, the fonts declared and never worn."],
         ["Business", "Its dark palette was not wasted. The night values for Clean started there."],
       ] },
