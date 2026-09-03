@@ -238,8 +238,11 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
   transition:background .13s,box-shadow .13s}
 .lib-row:hover{background:${LIBRARY_CARD_HOVER};box-shadow:0 0 0 1px var(--ink,${BORDER_STRONG})}
 .lib-row[data-drag="1"]{opacity:.5;cursor:grabbing}
+/* line-height in pixels, not a ratio, so a title that wraps to two lines sits
+   on the same 20px rhythm as the note under it and the preview under an idea.
+   overflow-wrap because a title can be one long unbroken string. */
 .lib-words{flex:1;min-width:0;font-weight:600;font-size:var(--fs,15px);
-  line-height:1.35;color:var(--ink,${TEXT_PRIMARY})}
+  line-height:20px;overflow-wrap:anywhere;color:var(--ink,${TEXT_PRIMARY})}
 .lib-sub{font-size:13px;color:${TEXT_SECONDARY};line-height:1.4}
 /* The grip sits where the day plan puts its number. Same slot, so the eye
    learns one place: a number once a thing is on the day, a grip while it is
@@ -260,7 +263,7 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
    once the card is open. Both hang off the title's own left edge. */
 .lib-peek,.lib-full{display:block;width:100%;text-align:left;background:none;border:none;
   font-family:${F};font-size:13px;line-height:20px;color:${TEXT_SECONDARY};
-  padding:0 8px 8px 40px;cursor:pointer;overflow-wrap:anywhere}
+  padding:4px 8px 8px 40px;cursor:pointer;overflow-wrap:anywhere}
 .lib-peek{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .lib-full{white-space:pre-wrap;cursor:default}
 .lib-tools{display:flex;flex-wrap:wrap;gap:4px;padding:0 8px 8px 8px}
@@ -276,7 +279,7 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .read-tick:hover{transform:translateY(-50%) scale(1.09);filter:brightness(1.1)}
 .read-tick:disabled{opacity:.35;cursor:default}
 .read-tick[style*="bottom"]:hover{transform:scale(1.09)}
-.read-body{display:flex;flex-direction:column;gap:4px;padding:0 8px 8px 40px}
+.read-body{display:flex;flex-direction:column;gap:4px;padding:4px 8px 8px 40px}
 .read-head{display:block;width:100%;text-align:left;background:none;border:none;padding:2px 7px;
   border-radius:8px;cursor:text;font-family:${F};font-size:13px;font-weight:600;line-height:1.4;
   letter-spacing:-.005em;overflow-wrap:anywhere}
@@ -1431,11 +1434,15 @@ const looksLikeUrl = (t) => /^https?:\/\/\S+$/i.test((t || "").trim());
 // is behind me and as the next time when the seed is ahead.
 export function placedOn(dayPlans, today) {
   const at = new Map();
-  const t = Date.parse((today || "") + "T00:00:00");
-  const gap = (d) => Math.abs(Date.parse(d + "T00:00:00") - t);
+  // A day key is already the short string the schedule uses, "Sep 23", so it
+  // goes through parseDay like every other day in the engine. Handing the key
+  // to the Date constructor with a time on the end is what put "Invalid Date"
+  // on the card.
+  const t = parseDay(today);
+  const gap = (d) => { const p = parseDay(d); return p && t ? Math.abs(p - t) : Infinity; };
   const keep = (k, date) => {
     const seen = at.get(k);
-    if (!seen || (Number.isFinite(t) && gap(date) < gap(seen))) at.set(k, date);
+    if (!seen || gap(date) < gap(seen)) at.set(k, date);
   };
   Object.entries(dayPlans || {}).forEach(([date, p]) => {
     Object.values(p?.slots || {}).forEach(b => normSlot(b).items.forEach(it => {
@@ -1446,11 +1453,10 @@ export function placedOn(dayPlans, today) {
   return at;
 }
 
-export const whenLabel = (date) => {
-  if (!date) return "";
-  try { return new Date(date + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }); }
-  catch { return date; }
-};
+// The key is already what I want on the card. Reformatting a day the schedule
+// calls "Sep 23" into a date and back out again gains nothing and is how the
+// card came to read "Invalid Date".
+export const whenLabel = (date) => String(date || "").trim();
 
 const MEDIA_KINDS = [["reading", "Reading"], ["video", "Video"], ["podcast", "Podcast"]];
 export const MEDIA_SET = new Set(["reading", "video", "podcast"]);

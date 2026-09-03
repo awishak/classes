@@ -1421,19 +1421,25 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // looking at, which reads as the last time I used a seed when the seed is
   // behind me and the next time when the seed is ahead.
   const { placedOn, whenLabel } = await import("../src/engine/Dashboard.jsx");
+  // Keys are the schedule's own short days, "Sep 23", not ISO dates. Feeding a
+  // key to the Date constructor put "Invalid Date" on every card that shipped.
   const plans = {
-    "2026-09-01": { slots: { a: { items: [{ blockId: "seed1" }, { schedItemId: "r9" }] } } },
-    "2026-09-11": { slots: { a: { items: [{ blockId: "seed1" }] } } },
-    "2026-09-05": { slots: { a: { items: [{ blockId: "seed1" }] } } },
+    "Sep 1":  { slots: { a: { items: [{ blockId: "seed1" }, { schedItemId: "r9" }] } } },
+    "Sep 11": { slots: { a: { items: [{ blockId: "seed1" }] } } },
+    "Sep 5":  { slots: { a: { items: [{ blockId: "seed1" }] } } },
   };
-  const at = placedOn(plans, "2026-09-04");
-  if (at.get("b:seed1") !== "2026-09-05")
+  const at = placedOn(plans, "Sep 4");
+  if (at.get("b:seed1") !== "Sep 5")
     say(`a seed on three days shows ${at.get("b:seed1")}, not the day nearest the one I am on`);
-  if (at.get("r9") !== "2026-09-01") say("a reading placed by its schedule row is not found");
+  if (at.get("r9") !== "Sep 1") say("a reading placed by its schedule row is not found");
   if (at.get("b:nothing")) say("placedOn invents a day for a block on no day");
-  if (placedOn(null, "2026-09-04").size) say("placedOn throws or invents days on a class with no plans");
-  if (whenLabel("") !== "" || !/\d/.test(whenLabel("2026-09-05")))
-    say("the date label is empty on a real date, or prints something on no date");
+  if (placedOn(null, "Sep 4").size) say("placedOn throws or invents days on a class with no plans");
+  for (const d of Object.keys(plans).concat("Sep 23")) {
+    const out = whenLabel(d);
+    if (!out || /invalid|nan|undefined/i.test(out))
+      say(`the card renders "${out}" for the day ${d}`);
+  }
+  if (whenLabel("") !== "" || whenLabel(null) !== "") say("the date slot prints something on a thing placed on no day");
 
   const railStart = src.indexOf("function Rail({");
   const railFn = src.slice(railStart, src.indexOf("\n}", railStart));
