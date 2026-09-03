@@ -59,6 +59,14 @@ on a face, the status diamond, and the rotating card borders. Every piece
 renders nothing at all for the themes that do not want it, so surfaces call them
 unconditionally and Clean stays clean.
 
+The furniture is on every student surface: the class home, the ask page, the
+discussion board, the game and the room screen. Each takes what suits it. The
+board rings every poster's face and puts Tubey under the composer, where a
+student is deciding whether to post. The game carries the streak in its header
+and a worm who cannot help. The wall runs the marquee across the top and stands
+Tubey in the corner at 140px. A surface that centres its content in a flex row
+pins the marquee to the viewport instead of putting it in the flow.
+
 Tubey belongs to Homework Tubes and appears by arrangement. He is drawn rather
 than borrowed from an emoji font, he talks, and he is not permitted to help with
 anybody's homework. Their palette lives in `themes.js` under `BRAND`, with two

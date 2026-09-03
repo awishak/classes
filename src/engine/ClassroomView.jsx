@@ -15,6 +15,7 @@ import { ENGINE_LIST } from "../config/registry.js";
 import PickMark from "./Pick.jsx";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
+import { ThemeChrome, ThemeTopper, Tubey } from "./ThemeChrome.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -563,7 +564,20 @@ export default function ClassroomView({ config }) {
   return (
     <div ref={stageRef} data-theme={theme} style={{ position: "fixed", inset: 0, background: STAGE, overflow: "hidden", fontFamily: F }}>
       <ThemeStyle theme={theme} />
+      <ThemeChrome theme={theme} />
       <style>{CSS}</style>
+      {/* The wall gets the theme's furniture too, at the size a room reads.
+          Crashing Out runs its marquee across the top and stands Tubey in the
+          corner; every other theme leaves the wall to whatever is cast. */}
+      <ThemeTopper theme={theme} lines={[config.code, "ANSWER ON YOUR PHONE"]} fixed />
+      {theme === "crashing" ? (
+        <div style={{ position: "absolute", left: "2.5vw", bottom: "3vh", zIndex: 5, pointerEvents: "none",
+          display: "flex", alignItems: "flex-end", gap: "1.2vw" }}>
+          <Tubey size={140} />
+          <span style={{ fontFamily: "'Bangers', cursive", fontSize: "clamp(18px,1.8vw,26px)",
+            color: "var(--room-dim)", paddingBottom: "1.4vh" }}>SAY THE THING YOU ACTUALLY THINK</span>
+        </div>
+      ) : null}
       {live === null ? (
         <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: DIM, fontFamily: MONO, fontSize: 13, letterSpacing: ".12em", textTransform: "uppercase" }}>
           Connecting

@@ -980,7 +980,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const off = ["clean", "business"];
   const html = (el) => renderToString(el);
   // Crashing Out brings a marquee, a mascot, a sponsor and a legal line.
-  if (!html(<ThemeTopper theme="crashing" lines={["a", "b"]} />).includes("tcMarquee")) say("no marquee on Crashing Out");
+  if (!html(<ThemeTopper theme="crashing" lines={["a", "b"]} />).includes("tcMarquee 22s")) say("no marquee on Crashing Out");
   if (!html(<TubeySays theme="crashing" seed={1} />).includes("<svg")) say("Tubey is not drawn on Crashing Out");
   const sp = html(<ThemeSponsor theme="crashing" />);
   if (!sp.includes("homeworktubes.com")) say("the sponsor bar does not link to Homework Tubes");
@@ -1007,6 +1007,36 @@ cases.push(["Instructor links", <InstructorLinks />]);
 }
 
 cases.push(["Tubey", <Tubey size={120} />]);
+// The furniture on the four surfaces it was just carried to. A room screen
+// under Crashing Out has to hold the worm; under Clean it must hold nothing.
+{
+  const say = (m) => { console.error("  FAIL  chrome: " + m); failedEarly++; };
+  const withTheme = (t, el) => {
+    const was = globalThis.localStorage.getItem;
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : null);
+    try { return renderToString(el); } catch (err) { say(t + ": " + err.message); return ""; }
+    finally { globalThis.localStorage.getItem = was; }
+  };
+  const SURFACES = [["room screen", <ClassroomView config={cfg0} />],
+                    ["ask page", <AskPage config={cfg0} />],
+                    ["discussion board", <BoardPage config={cfg0} />],
+                    ["game", <GamePage config={cfg0} />]];
+  // The name tcMarquee is in the keyframes on every theme, because the
+  // stylesheet ships whole. What is conditional is the element that uses it, so
+  // the marker is the inline animation rather than the name on its own. The
+  // first version of this test checked the name and therefore checked nothing.
+  const RUNS = "tcMarquee 22s";
+  SURFACES.forEach(([name, el]) => {
+    const loud = withTheme("crashing", el);
+    if (!loud.includes(RUNS)) say(`no marquee on the ${name} under Crashing Out`);
+    if (!loud.includes('data-theme="crashing"')) say(`the ${name} did not take the theme`);
+    const calm = withTheme("clean", el);
+    if (calm.includes(RUNS)) say(`Clean put a marquee on the ${name}`);
+    if (calm.includes("HOMEWORKTUBES")) say(`Clean put a sponsor on the ${name}`);
+  });
+  if (!withTheme("crashing", <ClassroomView config={cfg0} />).includes("Tubey the Worm")) say("Tubey is not on the wall");
+  if (withTheme("clean", <ClassroomView config={cfg0} />).includes("Tubey the Worm")) say("Tubey wandered onto a Clean wall");
+}
 cases.push(["Crashing Out, the sponsor", <ThemeSponsor theme="crashing" />, "HOMEWORKTUBES.COM"]);
 cases.push(["Crashing Out, Tubey talking", <TubeySays theme="crashing" seed={2} />]);
 cases.push(["Theme picker, full", <ThemePicker theme="clean" onPick={noop} />, "Crashing Out"]);

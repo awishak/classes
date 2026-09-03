@@ -16,6 +16,7 @@ import { useLive } from "./live.js";
 import { lastNameOf } from "./AskPage.jsx";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
+import { ThemeChrome, ThemeTopper, ThemeBadge, TubeySays, Avatar } from "./ThemeChrome.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -43,6 +44,8 @@ export default function BoardPage({ config }) {
   }, [config.code, REMEMBER]);
 
   const students = data?.students || config.students || [];
+  const myId = (students.find(s => s.name === who) || {}).id;
+  const myPoints = myId ? (data?.log || []).filter(e => e.studentId === myId).reduce((n, e) => n + (e.amount || 0), 0) : null;
   const boards = B.boards || {};
 
   // Which board this is: the one named in the address, or the one whose prompt
@@ -74,7 +77,7 @@ export default function BoardPage({ config }) {
 
   if (!prompt) {
     return (
-      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><div style={inner}>
+      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["SAY SOMETHING", config.code]} fixed /><div style={inner}>
         <Head config={config} />
         <p style={{ margin: 0, fontSize: 17, color: MUTED }}>No discussion is open right now.</p>
       </div></div>
@@ -86,7 +89,7 @@ export default function BoardPage({ config }) {
       .filter(s => s.name.toLowerCase().includes(search.trim().toLowerCase()))
       .sort((a, b) => lastNameOf(a.name).localeCompare(lastNameOf(b.name)));
     return (
-      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><div style={inner}>
+      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["SAY SOMETHING", config.code]} fixed /><div style={inner}>
         <Head config={config} />
         <h1 style={{ margin: 0, fontSize: "clamp(23px,4vw,32px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.2 }}>{prompt}</h1>
         <p style={{ margin: 0, fontSize: 16, color: MUTED }}>Pick your name to post.</p>
@@ -111,8 +114,8 @@ export default function BoardPage({ config }) {
 
   const mine = (p) => p.who === who;
   return (
-    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><div style={inner}>
-      <Head config={config} who={who} onOut={() => {
+    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["SAY SOMETHING", config.code]} fixed /><div style={inner}>
+      <Head config={config} who={who} theme={theme} points={myPoints} onOut={() => {
         setWho(null);
         try { localStorage.removeItem(REMEMBER); } catch { /* private mode */ }
       }} />
@@ -137,6 +140,8 @@ export default function BoardPage({ config }) {
         </div>
       )}
 
+      <TubeySays theme={theme} seed={(who || "").length + 3} />
+
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, paddingTop: 6 }}>
         <span style={{ fontFamily: MONO, fontSize: 11.5, fontWeight: 600, letterSpacing: ".1em",
           textTransform: "uppercase", color: MUTED }}>
@@ -149,7 +154,8 @@ export default function BoardPage({ config }) {
           <article key={p.id}
             style={{ background: "#fff", border: "1px solid " + (mine(p) ? config.accent : BORDER),
               borderRadius: 14, padding: "13px 16px", display: "flex", flexDirection: "column", gap: 5 }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <Avatar theme={theme} name={p.who} size={30} bg={mine(p) ? config.accent : undefined} />
               <span style={{ fontSize: 14, fontWeight: 600, color: mine(p) ? config.accent : TEXT }}>{p.who}</span>
               {mine(p) ? <span style={{ fontSize: 12, color: MUTED }}>you</span> : null}
             </div>
@@ -162,13 +168,14 @@ export default function BoardPage({ config }) {
   );
 }
 
-function Head({ config, who, onOut }) {
+function Head({ config, who, onOut, theme, points }) {
   return (
     <header style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
       <a href={config.path} style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-.02em",
         color: config.accent, textDecoration: "none" }}>{config.code}</a>
       <span style={{ fontFamily: MONO, fontSize: 11.5, fontWeight: 600, letterSpacing: ".1em",
         textTransform: "uppercase", color: LIVE }}>Discussion</span>
+      <ThemeBadge theme={theme} points={points} />
       {who ? (
         <button onClick={onOut} style={{ marginLeft: "auto", minHeight: 34, padding: "0 12px", fontSize: 14,
           fontFamily: F, background: "#fff", border: "1px solid " + BORDER, borderRadius: 10, cursor: "pointer", color: MUTED }}>

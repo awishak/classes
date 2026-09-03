@@ -23,6 +23,7 @@ import { GameAdmin, StudentAnswerView, TriviaPlayer, Accolades } from "./GameSys
 import { lastNameOf } from "./AskPage.jsx";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
+import { ThemeChrome, ThemeTopper, ThemeBadge, TubeySays } from "./ThemeChrome.jsx";
 
 // The same tokens the rest of the engine uses.
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -39,12 +40,13 @@ const wrap = { minHeight: "100vh", background: BG, fontFamily: F, color: TEXT,
 // student signed in to ask a question is already signed in to play.
 const rememberKey = (config) => config.storageKey + "-user";
 
-function Head({ config, who, onOut, what }) {
+function Head({ config, who, onOut, what, theme, points }) {
   return (
-    <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
       <a href={config.path} style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".08em",
         textTransform: "uppercase", color: config.accent, textDecoration: "none" }}>{config.code}</a>
       <span style={{ fontSize: 15, color: MUTED }}>{what}</span>
+      <ThemeBadge theme={theme} points={points} />
       {who ? (
         <button onClick={onOut} style={{ marginLeft: "auto", minHeight: TAP, padding: "0 14px",
           background: "none", border: "1px solid " + BORDER, borderRadius: 12, fontFamily: F,
@@ -98,18 +100,21 @@ export default function GamePage({ config }) {
   }, [config.code, REMEMBER]);
 
   const students = data?.students || config.students || [];
+  // The streak is a real number: what this student has in the log already.
+  const myId = (students.find(s => s.name === who) || {}).id;
+  const myPoints = myId ? (data?.log || []).filter(e => e.studentId === myId).reduce((n, e) => n + (e.amount || 0), 0) : null;
   const liveTrivia = useMemo(
     () => Object.values(data?.triviaGames || {}).find(g => g.phase === "live"),
     [data]);
 
   if (data === null) {
-    return <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><Head config={config} what="Game" />
+    return <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed /><Head config={config} what="Game" />
       <p style={{ margin: 0, fontSize: 17, color: MUTED }}>Reading the class.</p></div>;
   }
 
   if (!who) {
     return (
-      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} />
+      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed />
         <Head config={config} what="Game" />
         <PickName config={config} students={students} onPick={(n) => {
           setWho(n);
@@ -120,8 +125,8 @@ export default function GamePage({ config }) {
   }
 
   return (
-    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} />
-      <Head config={config} who={who} what="Game" onOut={() => {
+    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed />
+      <Head config={config} who={who} what="Game" theme={theme} points={myPoints} onOut={() => {
         setWho(null);
         try { localStorage.removeItem(REMEMBER); } catch { /* private mode */ }
       }} />
@@ -130,6 +135,7 @@ export default function GamePage({ config }) {
           <TriviaPlayer config={config} data={data} setData={take} userName={who} />
         </div>
       ) : null}
+      <div style={{ marginBottom: 16 }}><TubeySays theme={theme} seed={(who || "").length + 1} /></div>
       <StudentAnswerView config={config} data={data} setData={take} userName={who} />
       <div style={{ marginTop: 20 }}>
         <Accolades config={config} data={data} />
@@ -145,12 +151,12 @@ export function RunGamePage({ config }) {
   useEffect(() => { document.title = config.code + " — Run the game"; }, [config.code]);
 
   if (data === null) {
-    return <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><Head config={config} what="Run the game" />
+    return <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed /><Head config={config} what="Run the game" />
       <p style={{ margin: 0, fontSize: 17, color: MUTED }}>Reading the class.</p></div>;
   }
 
   return (
-    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} />
+    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed />
       <Head config={config} what="Run the game" />
       <GameAdmin config={config} data={data} setData={take} />
     </div>

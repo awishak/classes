@@ -87,13 +87,19 @@ export function TubeySays({ theme, seed = 0 }) {
 
 // ─── the strip across the top ───
 // Crashing Out puts a marquee above everything. Nothing else does.
-export function ThemeTopper({ theme, lines = [] }) {
+export function ThemeTopper({ theme, lines = [], fixed }) {
   if (theme !== "crashing") return null;
+  // Some surfaces centre their content in a flex row, where a full-width strip
+  // would become a squeezed sibling. Those pin it to the top of the viewport
+  // instead of putting it in the flow.
+  const seat = fixed
+    ? { position: "fixed", top: 0, left: 0, right: 0, zIndex: 40 }
+    : null;
   const text = (lines.length ? lines : ["THIS IS A CLASS", "YOU ARE DOING FINE"])
     .map(l => "★ " + String(l).toUpperCase()).join(" ") + " ★ ";
   return (
     <div style={{ background: INK, overflow: "hidden", whiteSpace: "nowrap", padding: "9px 0",
-      borderBottom: "3px solid " + PNK }}>
+      borderBottom: "3px solid " + PNK, ...seat }}>
       <div className="tc-anim" style={{ display: "inline-block", animation: "tcMarquee 22s linear infinite",
         fontFamily: "var(--font-label)", fontSize: 13, color: YEL }}>{text.repeat(4)}</div>
     </div>

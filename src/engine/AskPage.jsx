@@ -14,6 +14,7 @@ import { usePoll, openRound, isFreeForm } from "./poll.js";
 import { useHeadlines, liveSession, activeItem } from "./headlines.js";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
+import { ThemeChrome, ThemeTopper, TubeySays } from "./ThemeChrome.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -211,7 +212,7 @@ export default function AskPage({ config }) {
   if (!who && picking) {
     const needsPin = !!pins[picking] && !verified;
     return (
-      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} />
+      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
         <div style={card}>
           {header}
           <div style={{ fontSize: 22, fontWeight: 600 }}>{picking}</div>
@@ -244,7 +245,7 @@ export default function AskPage({ config }) {
   // ─── email step ───
   if (!who && mode === "email") {
     return (
-      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} />
+      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
         <div style={card}>
           {header}
           <p style={{ margin: 0, color: TEXT_SECONDARY, lineHeight: 1.5 }}>
@@ -277,7 +278,7 @@ export default function AskPage({ config }) {
   // ─── how do you want in ───
   if (!who && mode === null) {
     return (
-      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} />
+      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
         <div style={card}>
           {header}
           <p style={{ margin: 0, color: TEXT_SECONDARY, lineHeight: 1.5 }}>
@@ -296,7 +297,7 @@ export default function AskPage({ config }) {
   // ─── name step ───
   if (!who) {
     return (
-      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} />
+      <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
         <div style={card}>
           {header}
           <p style={{ margin: 0, color: TEXT_SECONDARY, lineHeight: 1.5 }}>
@@ -333,7 +334,7 @@ export default function AskPage({ config }) {
   const LETTERS = ["A", "B", "C", "D", "E"];
 
   return (
-    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} />
+    <div data-theme={theme} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["ASK ME ANYTHING", "IT IS CONFIDENTIAL"]} fixed />
       <div style={card}>
         <div style={{ fontSize: 13, color: TEXT_MUTED, fontWeight: 600 }}>{config.code} · {who}</div>
 

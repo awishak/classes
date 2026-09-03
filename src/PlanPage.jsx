@@ -47,6 +47,28 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep2h", date: "Wednesday, September 2 \u00b7 last", title: "The furniture reaches the other four surfaces",
+    blurb: "The character was on the class home and nowhere else, so a student who tapped through to the board or the game watched the theme fall away. It is on all five now, and each surface takes what suits the thing it is for.",
+    groups: [
+      { name: "What each surface took", items: [
+        ["The board rings every face", "A post carries its writer's avatar, hooped under Snapchat and a plain circle everywhere else, and Tubey sits under the composer, which is where a student is deciding whether to post at all."],
+        ["The game carries the streak", "In the header, counting the points that student already has in the log. And a worm who says he knows the answer and is legally unable to share it."],
+        ["The wall gets Tubey at 140 pixels", "With the marquee across the top and one line in Bangers beside him: say the thing you actually think. Every other theme leaves the wall to whatever is cast."],
+        ["The ask page pins its marquee", "That surface centres its content in a flex row, where a full-width strip becomes a squeezed sibling. So the strip pins to the viewport rather than sitting in the flow."],
+      ] },
+      { name: "Two holes the tests found", items: [
+        ["The name of an animation is not the animation", "The first version of the check looked for tcMarquee in the output, which is in the keyframes on every theme because the stylesheet ships whole. Both halves of that assertion were true no matter what, so the test proved nothing in either direction. The marker is the inline animation now."],
+        ["The sign-in screen had no theme", "With the marker fixed the check found a real gap: the board and the game return early, one for a student who has not picked a name and one while the class is still loading, and neither early return mounted anything. So a student sat on a plain white sign-in and then walked into Crashing Out. The furniture sits beside the stylesheet now, on every path out of the component."],
+      ] },
+    ],
+    note: {
+      title: "The dashboard stays out",
+      lines: [
+        "Themes are a student's choice about a student's screen. The dashboard, the repository and the running side of the game are Andrew's and keep the standard palette.",
+      ],
+    },
+  },
+  {
     id: "sep2g", date: "Wednesday, September 2 \u00b7 late", title: "A theme is furniture, not a palette",
     blurb: "Andrew: the themes only changed the colors. what about tubey and all that? snapchat features? the whole look? Fair. The first pass moved colour, type and card treatment into custom properties and called that a theme. Snapchat is story rings and a streak. Crashing Out is a marquee, a mascot who talks, and a sponsor. None of that is a colour.",
     groups: [
