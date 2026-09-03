@@ -77,6 +77,23 @@ for (const name of THEMES) {
       if (r < AA) fail("themes.js", `${name}: ${label} ${hex} is ${r.toFixed(2)}:1 on ${ground}, under ${AA}.`);
     }
   }
+  // A theme with a night is a second palette on second grounds, and a red that
+  // reads on white disappears on near-black, so the dark values are measured
+  // the same way rather than assumed to inherit.
+  if (t.dark) {
+    const d = { ...t, ...t.dark };
+    const readable = [
+      ...Object.entries(d.text).map(([k, v]) => ["dark text." + k, v]),
+      ...Object.entries(d.state).map(([k, v]) => ["dark state." + k, v]),
+    ];
+    for (const [label, hex] of readable) {
+      checked++;
+      for (const ground of d.grounds) {
+        const r = ratio(hex, ground);
+        if (r < AA) fail("themes.js", `${name}: ${label} ${hex} is ${r.toFixed(2)}:1 on ${ground}, under ${AA}.`);
+      }
+    }
+  }
   // The wall inverts, so its two readable values are measured on the stage.
   for (const k of ["ink", "dim"]) {
     checked++;

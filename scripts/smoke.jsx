@@ -29,7 +29,7 @@ import { sittingsOf, minutesLeft, sittingLength } from "../src/engine/meets.js";
 import { THEMES, THEME, THEME_LABELS, themeCSS, varsOf, fontHref } from "../src/engine/themes.js";
 import { ThemePicker } from "../src/engine/ThemeShell.jsx";
 import { Tubey, TubeySays, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeyPeek, ThemeStickers,
-  StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, StatusMark, cardStyle, CHROME_CSS, isRuled,
+  StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, StatusMark, cardStyle, CHROME_CSS,
   MARQUEE_SECONDS_PER_ITEM, marqueeSeconds } from "../src/engine/ThemeChrome.jsx";
 import { ALL_FACTS, factsFor, shuffledFacts } from "../src/engine/crashing-facts.js";
 import { saveWeek, openWeek, answerWeek, scoreWeek, scoresFor, perfectRuns, pointsOf, mergeAnswers } from "../src/engine/game.js";
@@ -978,7 +978,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const css = themeCSS();
   const KEYS = Object.keys(varsOf(THEME.clean));
 
-  const NAMED = ["clean", "clean2", "business", "snapchat", "crashing"];
+  const NAMED = ["clean", "snapchat", "crashing"];
   if (THEMES.length !== NAMED.length) say(`${THEMES.length} themes where the ${NAMED.length} are ` + NAMED.join(", "));
   NAMED.forEach(t => {
     if (!THEMES.includes(t)) say(t + " is not in the list a student can pick from");
@@ -1028,7 +1028,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
 // each piece is rendered under a theme that wants it and one that does not.
 {
   const say = (m) => { console.error("  FAIL  chrome: " + m); failedEarly++; };
-  const off = ["clean", "business"];
+  const off = ["clean"];
   const html = (el) => renderToString(el);
   // Crashing Out brings a marquee, a mascot, a sponsor and a legal line.
   if (!html(<ThemeTopper theme="crashing" lines={["a", "b"]} />).includes("animation:tcMarquee")) say("no marquee on Crashing Out");
@@ -1089,9 +1089,8 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const say = (m) => { console.error("  FAIL  fonts: " + m); failedEarly++; };
   const FACE = {
     clean:    { body: "Outfit", display: "Outfit",  label: "IBM Plex Mono" },
-    business: { body: "Outfit", display: "Fraunces", label: "IBM Plex Mono" },
     snapchat: { body: "Nunito", display: "Nunito",  label: "Nunito" },
-    crashing: { body: "Fredoka", display: "Bangers", label: "Lilita One" },
+    crashing: { body: "Shantell Sans", display: "Bangers", label: "Lilita One" },
   };
   const css = themeCSS();
   Object.entries(FACE).forEach(([t, want]) => {
@@ -1146,7 +1145,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   if (!html(<ThemeIdentity theme="snapchat" points={12} />).includes("snap score")) say("no snap score");
   if (!html(<ThemeCamera theme="snapchat" />).includes("4px 4px 0 #000")) say("no camera in the bar");
 
-  ["clean", "business"].forEach(t => {
+  ["clean"].forEach(t => {
     [["stickers", <ThemeStickers theme={t} />], ["Tubey peeking", <TubeyPeek theme={t} />],
      ["a story bar", <StoryBar theme={t} roster={ROSTER} me="Ada Byron" />],
      ["a snap score", <ThemeIdentity theme={t} points={4} />], ["a camera", <ThemeCamera theme={t} />]]
@@ -1193,7 +1192,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   // Nobody has scored, so nobody is leading.
   if (html(<ClassLeader theme="crashing" roster={ROSTER} log={[]} me="Ada Byron" />) !== "")
     say("a leader appeared before anybody scored a point");
-  ["clean", "business", "snapchat"].forEach(t => {
+  ["clean", "snapchat"].forEach(t => {
     if (html(<ClassLeader theme={t} roster={ROSTER} log={LOG} me="Ada Byron" />) !== "")
       say(t + " grew a class leader");
   });
@@ -1231,34 +1230,38 @@ cases.push(["Instructor links", <InstructorLinks />]);
   if (dur < 200) say("the strip carries every fact and crosses in " + dur + "s, which nobody can read");
 }
 
-// Clean 2 is a different page, not a different palette. So the check is
-// structural: no card boxes anywhere, and hairlines doing the dividing.
+// Clean at night.
 //
-// This is the gap that made Clean ship as the old layout in new colour. A theme
-// could only swap tokens, and the direction Andrew picked deleted the cards.
+// Adaptive rather than a switch: the page follows the system and there is
+// nothing to find. Only Clean has one, because Snapchat is a yellow page and
+// Crashing Out is a pastel gradient and those are the whole point of them.
 {
-  const say = (m) => { console.error("  FAIL  layout: " + m); failedEarly++; };
-  const at = (t, px) => {
-    const was = globalThis.localStorage.getItem;
-    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : null);
-    try { return atWidth(px, () => renderToString(<ClassApp config={cfg0} />)); }
-    catch (err) { say(`${t} threw: ` + err.message); return ""; }
-    finally { globalThis.localStorage.getItem = was; }
-  };
-  if (!isRuled("clean2")) say("Clean 2 is not the ruled one");
-  ["clean", "business", "snapchat", "crashing"].forEach(t => {
-    if (isRuled(t)) say(t + " went ruled, and only Clean 2 should be");
+  const say = (m) => { console.error("  FAIL  dark: " + m); failedEarly++; };
+  const css = themeCSS();
+  const q = "@media (prefers-color-scheme: dark)";
+  if (!css.includes(q)) say("nothing follows the system after dark");
+  const night = css.split(q)[1] || "";
+
+  // A surface that sets no theme has to turn down too, or the room screen and
+  // anything else on bare :root stays bright at midnight.
+  if (!/\{:root,\[data-theme="clean"\]\{/.test(night)) say("a surface with no data-theme stays light after dark");
+
+  // Every property the day has, the night has, or a value falls through and a
+  // dark page gets one daytime colour in the middle of it.
+  const KEYS = Object.keys(varsOf(THEME.clean));
+  const cleanNight = (night.split('[data-theme="clean"]{')[1] || "").split("}")[0];
+  KEYS.forEach(k => {
+    const m = cleanNight.match(new RegExp("(?:^|;)" + k + ":([^;]*)"));
+    if (!m) say(`Clean's night never sets ${k}`);
+    else if (!m[1].trim() || m[1].includes("undefined")) say(`Clean's night sets ${k} to "${m[1]}"`);
   });
-  [["laptop", LAPTOP], ["phone", PHONE]].forEach(([where, px]) => {
-    const c2 = at("clean2", px);
-    if (!c2) return;
-    // A tile with a card's shadow or radius is a box, and Clean 2 has none.
-    if (c2.includes("var(--card-shadow)")) say(`Clean 2 draws a card shadow on the ${where}`);
-    if (!c2.includes("var(--line-soft)")) say(`Clean 2 draws no hairlines on the ${where}`);
-    if (!c2.includes("font-weight:var(--display-weight)")) say(`Clean 2's headings take no display weight on the ${where}`);
-    // And Clean, side by side, still has its boxes.
-    const c1 = at("clean", px);
-    if (!c1.includes("var(--card-shadow)")) say(`Clean lost its cards on the ${where}`);
+  // And it is genuinely dark, rather than the day repeated.
+  const dayPage = (css.split('[data-theme="clean"]{')[1] || "").split("}")[0].match(/--surface-page:([^;]*)/);
+  const nightPage = cleanNight.match(/--surface-page:([^;]*)/);
+  if (dayPage && nightPage && dayPage[1] === nightPage[1]) say("Clean's night is the same page as its day");
+  // The two loud themes stay as they are.
+  ["snapchat", "crashing"].forEach(t => {
+    if (night.includes(`[data-theme="${t}"]`)) say(t + " grew a dark mode, and should not have one");
   });
 }
 

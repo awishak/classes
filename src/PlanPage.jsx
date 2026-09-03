@@ -47,6 +47,27 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep3d", date: "Thursday, September 3 \u00b7 midday", title: "Two themes out, and Clean gets a night",
+    blurb: "Andrew: clean 2 sucks. kill it. kill business too, but we need an adaptive dark mode for clean. Three themes left, and the one people will actually use now follows the system instead of asking.",  // voice-ok: his words, and the guardrail is on me
+    groups: [
+      { name: "Adaptive, not a switch", items: [
+        ["One media query, a second palette", "Clean carries a night as a set of rows that replace the day's. Nothing to find and nothing to remember: the page follows the machine."],
+        ["The bare root turns down too", "A surface that sets no theme would otherwise stay bright at midnight."],
+        ["The night's colours are their own", "A red that reads on white disappears on near-black, so each state colour is a separate value rather than the daytime one dimmed, and the contrast check measures every one against the dark surfaces."],
+        ["Only Clean has one", "Snapchat is a yellow page and Crashing Out is a pastel gradient. Those are the whole point of them, and a dark version of either would be a different theme rather than the same theme after dark."],
+      ] },
+      { name: "What the two took with them", items: [
+        ["The ruled layout", "Clean 2 was its only user, so the whole layout dimension came out rather than sitting in the code with nothing calling it. That is the pattern that has bitten here over and over: tokens.js unimported, cardStyle uncalled, the fonts declared and never worn."],
+        ["Business", "Its dark palette was not wasted. The night values for Clean started there."],
+      ] },
+      { name: "Checked", items: [
+        ["Every property the day has, the night has", "A missing one falls through and puts a single daytime colour in the middle of a dark page."],
+        ["The night is genuinely a different page", "Repointing the dark surfaces at the light ones fails the build."],
+        ["The loud two stay bright", "Growing a dark mode is a failure for either."],
+      ] },
+    ],
+  },
+  {
     id: "sep3c", date: "Thursday, September 3 \u00b7 morning", title: "Clean 2, which is the look I drew and never built",
     blurb: "Andrew: you gave me a certain look for clean then you didn't make it the look on clean. why. Because I built the theme engine as token swapping, and the direction he picked deleted the cards. Layout is not a token, so the engine could never have produced it, and I described the result as though it had.",
     groups: [

@@ -73,23 +73,27 @@ clicks, and no render test covers their contents any more. The build counts tap
 targets across the bar instead and fails over six, which is the blunt measure
 that would have caught the drift in the first place.
 
-## Five themes, and a student picks one
+## Three themes, and a student picks one
 
-`src/engine/themes.js` holds them: **Clean** is the standard, **Clean 2** is the
-same palette with the boxes taken away, **Business** is the other serious one,
-and **Snapchat** and **Crashing Out** are Andrew's, carried over from spring
-2026 and rebuilt on this system rather than on their own.
+`src/engine/themes.js` holds them: **Clean** is the standard, and **Snapchat**
+and **Crashing Out** are Andrew's, carried over from spring 2026 and rebuilt on
+this system rather than on their own.
 
-**A theme says how a page is built, not only how it is painted.** `layout` is
-`cards` for four of them and `ruled` for Clean 2: no boxes, hairlines between
-columns, four across on a laptop and rules between rows on a phone, headings at
-weight 300, colour kept for the one thing that is live.
+**Clean follows the system after dark.** Adaptive rather than a switch, so there
+is nothing to find: one `prefers-color-scheme` block carrying a second palette
+on second grounds. Only Clean has a night, because Snapchat is a yellow page and
+Crashing Out is a pastel gradient and those are the whole point of them; a dark
+version of either would be a different theme rather than the same theme after
+dark. The bare `:root` turns down too, so a surface that sets no theme does not
+stay bright at midnight.
 
-That distinction exists because the first pass got it wrong. The Clean artboard
-on the canvas had no cards at all, and Clean shipped as the old card grid in the
-new palette, because the theme engine could only swap tokens and layout is not a
-token. Clean 2 is that direction, built. The build checks it structurally: Clean
-2 draws no card shadow at either width and Clean still does.
+The dark state colours are not the daytime ones dimmed. A red that reads on
+white disappears on near-black, so each is its own value and `check-tokens`
+measures all of them against the dark surfaces.
+
+**Clean 2 and Business are gone.** Clean 2 was the ruled layout, and the whole
+`layout` dimension went with it rather than sitting in the code with no user;
+dead structure is the pattern that has bitten repeatedly here.
 
 Each theme has its own faces, and every student surface takes them. `F` and
 `MONO` in those files point at `TOKENS.FONT.body` and `TOKENS.FONT.label`, so

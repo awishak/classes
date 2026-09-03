@@ -18,20 +18,16 @@
 // theme actually puts it on. `npm run tokens` fails the build otherwise, so a
 // theme cannot ship a colour nobody can read.
 
-export const THEMES = ["clean", "clean2", "business", "snapchat", "crashing"];
+export const THEMES = ["clean", "snapchat", "crashing"];
 
 export const THEME_LABELS = {
   clean: "Clean",
-  clean2: "Clean 2",
-  business: "Business",
   snapchat: "Snapchat",
   crashing: "Crashing Out",
 };
 
 export const THEME_DESCS = {
-  clean: "Calm and out of the way",
-  clean2: "No boxes. Rules and space.",
-  business: "Dark, serious, a bit of weight",
+  clean: "Calm, and it follows your system",
   snapchat: "Yellow, loud, streaks",
   crashing: "Maximum chaos, sponsored",
 };
@@ -50,47 +46,28 @@ export const THEME = {
                display: "'Outfit', -apple-system, sans-serif",
                label: "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace" },
     weight:  { display: "600", shadow: "none" },
-    layout:  "cards",
     grounds: ["#ffffff", "#fafaf9", "#f6f4f1"],
+
+    // At night, on its own, with no switch to find.
+    //
+    // Only Clean has one. Snapchat is a yellow page and Crashing Out is a
+    // pastel gradient, and those are the whole point of them; a dark version of
+    // either would be a different theme rather than the same theme after dark.
+    //
+    // The state colours are not the daytime ones dimmed. A red that reads on
+    // white disappears on near-black, so each one is its own value, checked
+    // against the dark surfaces the same way.
+    dark: {
+      text:    { primary: "#f6f2ec", secondary: "#cdc3b9", muted: "#a79c92" },
+      line:    { soft: "#2b2622", strong: "#3a332e", ghost: "#4a423b" },
+      surface: { page: "#171310", card: "#1f1a16", sunk: "#26201b" },
+      state:   { live: "#ff8fa8", ok: "#5ecfa8", warn: "#f0b45c", late: "#ff9c8f" },
+      card:    { border: "1px solid #2b2622", shadow: "none", radius: "16px" },
+      grounds: ["#171310", "#1f1a16", "#26201b"],
+    },
   },
 
-  // Clean 2 is Clean's palette with the boxes taken away.
-  //
-  // The difference is structure rather than skin, which is why it is a theme of
-  // its own and not a switch on Clean: a card grid and a ruled band are two
-  // different pages. Hairlines instead of borders, a display weight of 300, and
-  // colour kept for the one thing that is live.
-  clean2: {
-    text:    { primary: "#1c1917", secondary: "#57534e", muted: "#6b655f" },
-    line:    { soft: "#e8e3de", strong: "#d9d2ca", ghost: "#c9c2ba" },
-    // The sunk surface matches Clean's rather than going a shade darker: at
-    // #f4f2ef the warn amber lands at 4.49:1, which is one hundredth under.
-    surface: { page: "#fafaf9", card: "#fafaf9", sunk: "#f6f4f1" },
-    state:   { live: "#be123c", ok: "#0f766e", warn: "#b45309", late: "#c81e1e" },
-    room:    { stage: "#0f0d0c", ink: "#f6f2ec", dim: "#a79c92", line: "#2b2622" },
-    card:    { border: "none", shadow: "none", radius: "0px" },
-    font:    { body: "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif",
-               display: "'Outfit', -apple-system, sans-serif",
-               label: "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace" },
-    weight:  { display: "300", shadow: "none" },
-    layout:  "ruled",
-    grounds: ["#fafaf9", "#f6f4f1"],
-  },
 
-  business: {
-    text:    { primary: "#f6f2ec", secondary: "#cbc2b9", muted: "#a79c92" },
-    line:    { soft: "#2b2622", strong: "#3a332e", ghost: "#4a423b" },
-    surface: { page: "#1c1917", card: "#241f1c", sunk: "#2b2622" },
-    state:   { live: "#ff8fa8", ok: "#5ecfa8", warn: "#f0b45c", late: "#ff9c8f" },
-    room:    { stage: "#1c1917", ink: "#f6f2ec", dim: "#a79c92", line: "#2b2622" },
-    card:    { border: "1px solid #2b2622", shadow: "none", radius: "16px" },
-    font:    { body: "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif",
-               display: "'Fraunces', Georgia, serif",
-               label: "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace" },
-    weight:  { display: "600", shadow: "none" },
-    layout:  "cards",
-    grounds: ["#1c1917", "#241f1c", "#2b2622"],
-  },
 
   snapchat: {
     text:    { primary: "#000000", secondary: "#2b2b2b", muted: "#4a4a4a" },
@@ -103,7 +80,6 @@ export const THEME = {
                display: "'Nunito', 'Avenir Next', sans-serif",
                label: "'Nunito', sans-serif" },
     weight:  { display: "900", shadow: "none" },
-    layout:  "cards",
     grounds: ["#ffffff", "#FFFC00"],
   },
 
@@ -129,7 +105,6 @@ export const THEME = {
                display: "'Bangers', 'Rubik Mono One', cursive",
                label: "'Lilita One', 'Fredoka', cursive" },
     weight:  { display: "400", shadow: "3px 3px 0 #FF5FA2" },
-    layout:  "cards",
     // Every band of the gradient, plus the card, because text lands on both.
     grounds: ["#ffffff", "#fce7f3", "#fef3c7", "#dbeafe", "#ddd6fe", "#fbcfe8"],
   },
@@ -150,10 +125,23 @@ export const varsOf = (t) => ({
 
 // The whole stylesheet: one block per theme, Clean also on bare :root so a
 // surface that never sets `data-theme` still draws.
+// A theme's night is the same table with some rows replaced, so the dark block
+// only carries what changes and inherits the rest.
+const darkOf = (t) => (t.dark ? { ...t, ...t.dark } : null);
+
 export const themeCSS = () => {
-  const block = (sel, name) =>
-    sel + "{" + Object.entries(varsOf(THEME[name])).map(([k, v]) => k + ":" + v).join(";") + "}";
-  return [block(":root", "clean"), ...THEMES.map(n => block(`[data-theme="${n}"]`, n))].join("\n");
+  const vars = (t) => Object.entries(varsOf(t)).map(([k, v]) => k + ":" + v).join(";");
+  const light = [":root{" + vars(THEME.clean) + "}",
+    ...THEMES.map(n => `[data-theme="${n}"]{` + vars(THEME[n]) + "}")];
+  // Every theme with a night, inside one media query. The bare :root is in
+  // there too, so a surface that sets no theme still turns down after dark.
+  const nights = THEMES.map(n => [n, darkOf(THEME[n])]).filter(([, d]) => d);
+  if (!nights.length) return light.join("\n");
+  const dark = "@media (prefers-color-scheme: dark){"
+    + nights.map(([n, d]) =>
+        (n === "clean" ? ":root," : "") + `[data-theme="${n}"]{` + vars(d) + "}").join("")
+    + "}";
+  return [...light, dark].join("\n");
 };
 
 // Which fonts a theme needs, so a surface loads those and no others.
@@ -187,6 +175,3 @@ export const BRAND = {
   },
 };
 
-// How a page is built under this theme. "cards" is a grid of boxes; "ruled" is
-// a band divided by hairlines, with no boxes at all.
-export const layoutOf = (name) => (THEME[name] || THEME.clean).layout || "cards";
