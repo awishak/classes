@@ -94,15 +94,32 @@ const CSS = `
 .dash-seam:hover::after,.dash-seam:focus-visible::after,.dash-seam[data-drag="1"]::after{opacity:1}
 .dash-seam[data-drag="1"]::after{background:var(--dash-accent,#171310)}
 body[data-resizing="1"]{cursor:col-resize;user-select:none}
-/* Too narrow for three. Live goes full width UNDER the flow rather than away —
-   the room preview is the one thing on this screen that must never be the
-   thing that gets hidden to make room. */
-@media (max-width:1240px){.dash-stage{grid-template-columns:minmax(0,1fr)!important}
-  .dash-seam{display:none}
+/* Three columns, then two, then one.
+   Andrew, on a window at 800: it should still show the first two columns.
+   It was dropping straight from three to one at 1240, so a laptop window at
+   half the screen put Materials above the day plan and cost the whole point of
+   having a library beside the plan I am dragging into.
+   In every band Live goes full width UNDER the flow rather than away. The room
+   preview is the one thing on this screen that must never be the thing hidden
+   to make room. */
+@media (max-width:1240px){
   .dash-room{grid-column:1/-1}
   .dash-room .dash-room-body{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,1fr);gap:12px;align-items:start}
   .dash-rail{position:static!important;max-height:none!important}
-  .dash-rail-body{overflow:visible;max-height:none}}
+  .dash-rail-body{overflow:visible;max-height:none}
+  .dash-seam[data-which="live"]{display:none}}
+/* Two: Materials beside the day plan. The material column keeps the width I
+   dragged it to, capped at a third of the window so the plan never ends up the
+   narrower of the two. */
+@media (max-width:1240px) and (min-width:720px){
+  .dash-stage{grid-template-columns:clamp(200px,var(--mat,300px),33vw) 16px minmax(0,1fr)!important}
+  .dash-stage[data-rail="shut"],.dash-stage[data-teach="on"]{grid-template-columns:minmax(0,1fr)!important}}
+/* One. Below this a two-column split leaves neither column able to hold a
+   reading title, so Materials goes above the plan. */
+@media (max-width:719px){
+  .dash-stage{grid-template-columns:minmax(0,1fr)!important}
+  .dash-seam{display:none}
+  .dash-room .dash-room-body{grid-template-columns:minmax(0,1fr)}}
 /* Each column says what it is. Three columns that look alike need naming once
    at the top, not explaining every time. Quiet enough to disappear after the
    first week and there when someone else sits down. */
@@ -427,7 +444,7 @@ function Panel({ id, title, right, children, flush }) {
 // nudge by 24px, which is enough to be worth pressing and small enough to aim.
 function Seam({ which, onDown, label }) {
   return (
-    <button className="dash-seam" onPointerDown={onDown} data-drag="0"
+    <button className="dash-seam" data-which={which} onPointerDown={onDown} data-drag="0"
       aria-label={"Resize the " + label + " column"} title={"Drag to resize " + label}
       onKeyDown={e => {
         if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
@@ -4251,7 +4268,8 @@ export default function Dashboard({ config }) {
 
 
       <main ref={stageRef} className="dash-stage" data-rail={railOpen ? "open" : "shut"} data-teach={focus ? "on" : "off"}
-        style={{ gridTemplateColumns: gridFor(cols, railOpen, focus) }}>
+        style={{ gridTemplateColumns: gridFor(cols, railOpen, focus),
+          "--mat": cols.material + "px", "--live": cols.live + "px" }}>
         {railOpen && !focus ? (
           <>
             <Rail side="Materials" tabs={MATERIAL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: i + 1, hue: TAB_HUE[id] }))}

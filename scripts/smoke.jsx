@@ -1441,6 +1441,33 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   }
   if (whenLabel("") !== "" || whenLabel(null) !== "") say("the date slot prints something on a thing placed on no day");
 
+  // Three columns, then two, then one. Andrew asked for the first two columns
+  // at a window of 800. A server render cannot run a media query, so the thing
+  // worth testing is the arithmetic: the bands have to tile the whole range
+  // with no gap and no width where two of them fight.
+  const bands = [...src.matchAll(/@media ([^{]*?)\{\s*\.dash-stage\{grid-template-columns:([^!]*)!important/g)]
+    .map(m => {
+      const q = m[1];
+      const max = /max-width:(\d+)px/.exec(q), min = /min-width:(\d+)px/.exec(q);
+      return { lo: min ? +min[1] : 0, hi: max ? +max[1] : Infinity, cols: m[2].trim() };
+    });
+  if (bands.length !== 2) say(`the stage has ${bands.length} width bands, not the two that sit under the three-column default`);
+  else {
+    const two = bands.find(b => b.lo <= 800 && 800 <= b.hi);
+    const one = bands.find(b => b !== two);
+    if (!two) say("a window of 800 falls through every band, so the stage keeps the three-column default");
+    else if (two.cols.split(/\s+(?![^(]*\))/).length < 3)
+      say(`at 800 the stage is "${two.cols}", which is not two columns and a seam`);
+    if (two && one && one.hi + 1 !== two.lo)
+      say(`the bands leave a gap: one column ends at ${one.hi} and two columns start at ${two.lo}`);
+    if (two && one && one.hi >= two.lo)
+      say(`the bands overlap between ${two.lo} and ${one.hi}, so two rules fight over the same window`);
+  }
+  if (!/\.dash-seam\[data-which="live"\]\{display:none\}/.test(src))
+    say("the live seam is still drawn below 1240, where there is no column on the far side of it");
+  if (!src.includes('data-which={which}')) say("the seam no longer says which column it resizes");
+  if (!/"--mat": cols\.material/.test(src)) say("the stage no longer publishes the width the material column was dragged to");
+
   const railStart = src.indexOf("function Rail({");
   const railFn = src.slice(railStart, src.indexOf("\n}", railStart));
   const atHead = railFn.indexOf("{head}"), atTabs = railFn.indexOf('role="tablist"');
