@@ -23,6 +23,17 @@ const { yellow: YEL, green: GRN, blue: BLU, red: RED, orange: ORA, purple: PUR, 
 const INK = HT.onYellow;
 
 // The keyframes each theme's furniture needs. Mounted once by ThemeChrome.
+// How long the marquee takes to travel its own length.
+//
+// It ran at 22s when the strip was three short lines about this class. Adding a
+// championship between every one of them roughly doubled the length, and the
+// animation moves a proportion rather than a distance, so the same duration
+// meant twice the pixels a second. Sixty reads at a walk.
+//
+// Exported because the build checks for this exact value in the markup, and a
+// number written in two places is a number that will disagree with itself.
+export const MARQUEE_SECONDS = 60;
+
 export const CHROME_CSS = `
 @keyframes tcMarquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 @keyframes tcWave { 0%,100% { transform: rotate(-14deg); } 50% { transform: rotate(16deg); } }
@@ -129,7 +140,7 @@ export function ThemeTopper({ theme, lines = [], fixed, seed = 0 }) {
     <div className="tc-torn" style={{ background: INK, whiteSpace: "nowrap", padding: "9px 0",
       borderBottom: "3px solid " + PNK, ...seat }}>
       <div style={{ overflow: "hidden" }}>
-      <div className="tc-anim" style={{ display: "inline-block", animation: "tcMarquee 22s linear infinite",
+      <div className="tc-anim" style={{ display: "inline-block", animation: `tcMarquee ${MARQUEE_SECONDS}s linear infinite`,
         fontFamily: "'Press Start 2P', monospace", fontSize: 13, color: YEL }}>{text.repeat(4)}</div>
       </div>
     </div>

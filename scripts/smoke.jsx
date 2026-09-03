@@ -29,7 +29,8 @@ import { sittingsOf, minutesLeft, sittingLength } from "../src/engine/meets.js";
 import { THEMES, THEME, THEME_LABELS, themeCSS, varsOf, fontHref } from "../src/engine/themes.js";
 import { ThemePicker } from "../src/engine/ThemeShell.jsx";
 import { Tubey, TubeySays, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeyPeek, ThemeStickers,
-  StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, StatusMark, cardStyle, CHROME_CSS } from "../src/engine/ThemeChrome.jsx";
+  StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, StatusMark, cardStyle, CHROME_CSS,
+  MARQUEE_SECONDS } from "../src/engine/ThemeChrome.jsx";
 import { ALL_FACTS, factsFor } from "../src/engine/crashing-facts.js";
 import { saveWeek, openWeek, answerWeek, scoreWeek, scoresFor, perfectRuns, pointsOf, mergeAnswers } from "../src/engine/game.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
@@ -993,7 +994,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const off = ["clean", "business"];
   const html = (el) => renderToString(el);
   // Crashing Out brings a marquee, a mascot, a sponsor and a legal line.
-  if (!html(<ThemeTopper theme="crashing" lines={["a", "b"]} />).includes("tcMarquee 22s")) say("no marquee on Crashing Out");
+  if (!html(<ThemeTopper theme="crashing" lines={["a", "b"]} />).includes(`tcMarquee ${MARQUEE_SECONDS}s`)) say("no marquee on Crashing Out");
   if (!html(<TubeySays theme="crashing" seed={1} />).includes("<svg")) say("Tubey is not drawn on Crashing Out");
   const sp = html(<ThemeSponsor theme="crashing" />);
   if (!sp.includes("homeworktubes.com")) say("the sponsor bar does not link to Homework Tubes");
@@ -1095,6 +1096,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   if (!CHROME_CSS.includes('[data-theme="crashing"]')) say("nothing animates the Crashing Out page");
   if (!CHROME_CSS.includes("background-size:300% 300%")) say("the gradient has no room to travel, so the wobble does nothing");
   if (!CHROME_CSS.includes("prefers-reduced-motion")) say("the wobble ignores reduced motion");
+  if (MARQUEE_SECONDS < 40) say("the marquee runs at " + MARQUEE_SECONDS + "s, which is faster than anybody reads it");
 
   if (!html(<ThemeStickers theme="crashing" />).includes("tcTwinkle")) say("no stickers on Crashing Out");
   if (!html(<TubeyPeek theme="crashing" />).includes("<svg")) say("Tubey does not peek");
@@ -1202,7 +1204,7 @@ cases.push(["Snapchat, the story bar", <StoryBar theme="snapchat" roster={[{ nam
   // stylesheet ships whole. What is conditional is the element that uses it, so
   // the marker is the inline animation rather than the name on its own. The
   // first version of this test checked the name and therefore checked nothing.
-  const RUNS = "tcMarquee 22s";
+  const RUNS = `tcMarquee ${MARQUEE_SECONDS}s`;
   SURFACES.forEach(([name, el]) => {
     const loud = withTheme("crashing", el);
     if (!loud.includes(RUNS)) say(`no marquee on the ${name} under Crashing Out`);
