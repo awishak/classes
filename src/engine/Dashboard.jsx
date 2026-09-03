@@ -212,8 +212,8 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 /* My note under a reading. Quiet until there is one, and indented to the
    width of the number chip so it hangs off the thing it is about. */
 .dash-note{display:block;width:100%;text-align:left;background:none;
-  border:none;padding:2px 7px;border-radius:8px;cursor:text;font-family:${F};font-size:12.5px;
-  line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+  border:none;padding:0;border-radius:8px;cursor:text;font-family:${F};font-size:13px;
+  line-height:20px;white-space:pre-wrap;overflow-wrap:anywhere}
 .dash-note:hover{background:${SURFACE_2}}
 /* A reading card. The words get the whole width; the link and the buttons sit
    along the bottom where a card's actions belong. */
@@ -226,8 +226,13 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
    --ink is the swatch darkened to 85% per channel, because the palette was
    generated to CARRY white and the light tier fails as text on grey by a hair.
    check-contrast measures all twenty as ink; the worst is teal at 5.63. */
-.lib-row{display:flex;align-items:center;gap:8px;min-height:var(--row-h,44px);
-  padding:4px 12px 4px 8px;border-radius:12px;background:${LIBRARY_CARD};
+/* 34, not 44, and not the density variable either. The density classes size
+   the day plan, where a row is a thing I drag under my hand all lesson. A rail
+   is a trackpad surface an arm's length away, and DESIGN.md has said 34 for an
+   instructor control the whole time; the rail was the one place still running
+   at the student-site target. */
+.lib-row{display:flex;align-items:center;gap:8px;min-height:34px;
+  padding:4px 8px;border-radius:12px;background:${LIBRARY_CARD};
   color:var(--ink,${TEXT_PRIMARY});border:none;width:100%;text-align:left;
   font-family:${F};cursor:grab;position:relative;
   transition:background .13s,box-shadow .13s}
@@ -239,13 +244,26 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 /* The grip sits where the day plan puts its number. Same slot, so the eye
    learns one place: a number once a thing is on the day, a grip while it is
    still in the library. */
-.lib-grip{flex:none;width:25px;height:25px;border-radius:8px;display:flex;
+.lib-grip{flex:none;width:24px;height:24px;border-radius:8px;display:flex;
   align-items:center;justify-content:center;font-size:13px;
   color:var(--ink,${TEXT_MUTED});
   background:color-mix(in srgb, var(--ink,${TEXT_MUTED}) 12%, transparent)}
 @supports not (color:color-mix(in srgb,red 10%,#fff)){.lib-grip{background:${SURFACE_2}}}
-.lib-kind{flex:none;font-family:${MONO};font-size:13px;font-weight:600;
-  letter-spacing:.08em;text-transform:uppercase;color:var(--ink,${TEXT_MUTED})}
+/* Where the kind label used to sit. The label said "Reading" on a card in a
+   panel headed Today's readings, which is the width of the row spent saying
+   nothing. The date says the thing the row cannot: which day already carries a
+   row for this, so I can see at a glance whether I have put it in front of this
+   room yet. Empty when the thing is on no day. */
+.lib-when{flex:none;font-family:${MONO};font-size:13px;font-weight:500;
+  letter-spacing:.02em;font-variant-numeric:tabular-nums;color:var(--ink,${TEXT_MUTED})}
+/* The body of an idea, always the first two lines of it, and the whole thing
+   once the card is open. Both hang off the title's own left edge. */
+.lib-peek,.lib-full{display:block;width:100%;text-align:left;background:none;border:none;
+  font-family:${F};font-size:13px;line-height:20px;color:${TEXT_SECONDARY};
+  padding:0 8px 8px 40px;cursor:pointer;overflow-wrap:anywhere}
+.lib-peek{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lib-full{white-space:pre-wrap;cursor:default}
+.lib-tools{display:flex;flex-wrap:wrap;gap:4px;padding:0 8px 8px 8px}
 .read-card{border-radius:12px;background:${LIBRARY_CARD};overflow:hidden}
 /* A field with its own confirm. The tick sits inside the box against the right
    edge, and the field carries padding so the words never run under the tick. */
@@ -258,7 +276,7 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .read-tick:hover{transform:translateY(-50%) scale(1.09);filter:brightness(1.1)}
 .read-tick:disabled{opacity:.35;cursor:default}
 .read-tick[style*="bottom"]:hover{transform:scale(1.09)}
-.read-body{display:flex;flex-direction:column;gap:2px;padding:8px 8px 4px}
+.read-body{display:flex;flex-direction:column;gap:4px;padding:0 8px 8px 40px}
 .read-head{display:block;width:100%;text-align:left;background:none;border:none;padding:2px 7px;
   border-radius:8px;cursor:text;font-family:${F};font-size:13px;font-weight:600;line-height:1.4;
   letter-spacing:-.005em;overflow-wrap:anywhere}
@@ -267,13 +285,12 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
   font-weight:500;letter-spacing:-.008em;overflow-wrap:anywhere;font-family:var(--font-row,${F})}
 .read-kind{flex:none;padding:2px 8px;border-radius:999px;color:#fff;
   font-family:${MONO};font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
-.read-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 10px 8px;
-  border-top:1px solid rgba(23,19,16,.06)}
-.read-src{margin-right:auto;font-family:${F};font-size:12px;color:${TEXT_MUTED};text-decoration:none;
+/* No rule above the footer any more. The card is two strips on a reading with
+   no note, and a rule between two strips is a line drawn for its own sake. */
+.read-foot{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:0 8px 8px}
+.read-src{margin-right:auto;font-family:${F};font-size:13px;color:${TEXT_SECONDARY};text-decoration:none;
   max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .read-src:hover{color:#171310;text-decoration:underline}
-.read-flag{font-family:${MONO};font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
-  color:${TEXT_MUTED};background:rgba(23,19,16,.06);border-radius:999px;padding:2px 8px}
 /* Everything a row can do, hanging off its number. */
 /* Near the bottom of a long day there is nothing below the number to open into,
    so the menu opens above it instead. */
@@ -1199,7 +1216,7 @@ function RowMenu({ at, onRemove, onClose }) {
 // they are blocks like anything else: droppable into a day, editable, and I can
 // add to them. Seeded rather than left empty, because the one empty state that
 // reliably stops people starting is a blank box with a plus on it.
-export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAdd, onEdit, onRemove, onDuplicate,
+export function IdeasPanel({ blocks, accent, sections, days, today, placed, onPick, onAdd, onEdit, onRemove, onDuplicate,
   hue = defaultHue, features = [], onRunFeature, featureBlurb, onPlaceFeature }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -1246,7 +1263,7 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
     </div>
   );
 
-  const tool = { ...mini, minHeight: 26, padding: "0 8px", fontSize: 13, color: TEXT_MUTED };
+  const tool = { ...mini, minHeight: 34, padding: "0 10px", fontSize: 13, color: TEXT_SECONDARY };
 
   return (
     <>
@@ -1262,9 +1279,14 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
             ))}
         </div>
       ) : null}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {moves.map(b => editing === b.id ? <div key={b.id}>{form}</div> : (
-        <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "3px 4px 6px",
-          borderRadius: 10, background: shown === b.id ? SURFACE_2 : "transparent" }}>
+        // The same card a reading gets, minus the footer, because an idea has
+        // no source to link and nothing to put on the room screen. The first
+        // two lines of how it runs sit on every card: the title alone was never
+        // enough to tell two warm-up activities apart, and opening each one to
+        // find out is the scrolling the accordion was supposed to save.
+        <div key={b.id} className="read-card" style={{ "--ink": inkOf(hue("activity")) }}>
           <button className="dash-focus lib-row" onClick={() => { setShown(shown === b.id ? null : b.id); setPlacing(null); }}
             aria-expanded={shown === b.id}
             draggable
@@ -1272,18 +1294,19 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
               e.dataTransfer.setData("text/plain", JSON.stringify({ blockId: b.id })); }}
             onDragEnd={e => { e.currentTarget.dataset.drag = "0"; }}
             title="Drag this idea into a section of the day plan, or click to read how the idea runs"
-            style={{ "--ink": inkOf(hue("activity")) }}>
+            style={{ cursor: "grab" }}>
             <span className="lib-grip" aria-hidden="true">&#10303;</span>
             <b className="lib-words">{b.title}</b>
             {b.pick ? <PickMark size={18} /> : null}
-            <span style={{ flex: "none", fontSize: 13, color: TEXT_MUTED, transform: shown === b.id ? "none" : "rotate(-90deg)", transition: "transform .14s" }}>▾</span>
+            <span className="lib-when">{whenLabel(placed?.get("b:" + b.id))}</span>
           </button>
+          {!b.body ? null : shown === b.id
+            ? <div className="lib-full">{b.body}</div>
+            : <button className="dash-focus lib-peek" onClick={() => { setShown(b.id); setPlacing(null); }}
+                title="Read the whole idea">{b.body}</button>}
           {shown !== b.id ? null : (
           <>
-          {b.body ? (
-            <small style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45, display: "block", padding: "0 7px 2px 23px", whiteSpace: "pre-wrap" }}>{b.body}</small>
-          ) : null}
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", padding: "0 7px 0 23px" }}>
+          <div className="lib-tools">
             <button className="dash-focus" style={{ ...tool, borderColor: accent, color: accent }}
               onClick={() => setPlacing(placing === b.id ? null : b.id)}>{placing === b.id ? "Cancel" : "Add to a section"}</button>
             <button className="dash-focus" style={tool} onClick={() => startEdit(b)}>Edit</button>
@@ -1298,6 +1321,7 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
           )}
         </div>
       ))}
+      </div>
       {open && !editing ? form : (
         <button className="dash-focus" style={{ ...mini, alignSelf: "flex-start" }} onClick={() => setOpen(true)}>+ Add an activity</button>
       )}
@@ -1395,6 +1419,39 @@ const isSection = (k) => k.startsWith(SECTION_PREFIX);
 
 const looksLikeUrl = (t) => /^https?:\/\/\S+$/i.test((t || "").trim());
 
+// Which day already carries a row for this thing.
+//
+// The card used to show a flag reading "on the day plan", and the flag could
+// only ever mean today, because today's flow was the only flow the card could
+// see. The date answers the question the flag was standing in for: have I put
+// this in front of this room yet, and when.
+//
+// A thing can sit on several days. The one worth showing is the one nearest the
+// day I am looking at, which reads as the last time I used a seed when the seed
+// is behind me and as the next time when the seed is ahead.
+export function placedOn(dayPlans, today) {
+  const at = new Map();
+  const t = Date.parse((today || "") + "T00:00:00");
+  const gap = (d) => Math.abs(Date.parse(d + "T00:00:00") - t);
+  const keep = (k, date) => {
+    const seen = at.get(k);
+    if (!seen || (Number.isFinite(t) && gap(date) < gap(seen))) at.set(k, date);
+  };
+  Object.entries(dayPlans || {}).forEach(([date, p]) => {
+    Object.values(p?.slots || {}).forEach(b => normSlot(b).items.forEach(it => {
+      if (it.schedItemId) keep(it.schedItemId, date);
+      if (it.blockId) keep("b:" + it.blockId, date);
+    }));
+  });
+  return at;
+}
+
+export const whenLabel = (date) => {
+  if (!date) return "";
+  try { return new Date(date + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }); }
+  catch { return date; }
+};
+
 const MEDIA_KINDS = [["reading", "Reading"], ["video", "Video"], ["podcast", "Podcast"]];
 export const MEDIA_SET = new Set(["reading", "video", "podcast"]);
 
@@ -1406,9 +1463,11 @@ export const MEDIA_SET = new Set(["reading", "video", "podcast"]);
 // with, then my note, all of them the full width and none of them shouting.
 // The link and the buttons go along the bottom, which is where a card's
 // actions belong and where they stop stealing width from the words.
-function ReadingCard({ item, accent, live, onCast, onDismiss, onNote, onRemove, inFlow, hue, picked }) {
+function ReadingCard({ item, accent, live, onCast, onDismiss, onNote, onRemove, placedDate, hue, picked }) {
   const color = hue ? hue(item.type === "reading" ? "link" : item.type) : (TYPE_COLOR[item.type] || TYPE_COLOR.reading);
-  const btn = { ...mini, minHeight: 30, padding: "0 10px", fontSize: 13 };
+  const btn = { ...mini, minHeight: 34, padding: "0 10px", fontSize: 13 };
+  const [adding, setAdding] = useState(false);
+  const note = (item.note || "").trim();
   return (
     <div className="read-card" draggable style={{ "--ink": inkOf(color) }}
       onDragStart={e => { e.currentTarget.dataset.drag = "1"; e.dataTransfer.effectAllowed = "copy";
@@ -1419,19 +1478,25 @@ function ReadingCard({ item, accent, live, onCast, onDismiss, onNote, onRemove, 
       <div className="lib-row" style={{ cursor: "grab" }}>
         <span className="lib-grip" aria-hidden="true">&#10303;</span>
         <span className="lib-words">{item.title}</span>
-        <span className="lib-kind">{typeLabel(item.type)}</span>
+        {picked ? <PickMark size={20} /> : null}
+        <span className="lib-when">{whenLabel(placedDate)}</span>
       </div>
-      <div className="read-body">
-        <ReadingNote value={item.note || ""} accent={accent} onSave={onNote} />
-      </div>
+      {note || adding ? (
+        <div className="read-body">
+          <ReadingNote value={item.note || ""} accent={accent} startOpen={adding && !note}
+            onSave={(v) => { setAdding(false); onNote(v); }} />
+        </div>
+      ) : null}
 
       <div className="read-foot">
-        {picked ? <PickMark size={20} /> : null}
         {item.url ? (
           <a className="dash-focus read-src" href={item.url} target="_blank" rel="noopener noreferrer"
             title={"Open " + item.url + " in a new tab"}>{hostOf(item.url)} ↗</a>
         ) : <span style={{ marginRight: "auto" }} />}
-        {inFlow ? <span className="read-flag" title="This reading also has a row in the day plan today">on the day plan</span> : null}
+        {note || adding ? null : (
+          <button className="dash-focus" style={{ ...btn, border: "none", background: "none", color: TEXT_SECONDARY }}
+            title="Say why this reading is here" onClick={() => setAdding(true)}>Add a note</button>
+        )}
         {live ? (
           <button className="dash-focus" style={{ ...btn, borderColor: LIVE, color: LIVE }}
             title="Take it back down" onClick={onDismiss}>× Take it down</button>
@@ -1474,8 +1539,8 @@ function Confirm({ onClick, disabled, title, bottom }) {
 // the reason it is on this day and not another. In eleven weeks I will not
 // remember, and the headline is the wrong place to put it because the headline
 // is public.
-function ReadingNote({ value, accent, onSave }) {
-  const [editing, setEditing] = useState(false);
+function ReadingNote({ value, accent, onSave, startOpen }) {
+  const [editing, setEditing] = useState(!!startOpen);
   const [draft, setDraft] = useState(value);
   useEffect(() => { setDraft(value); }, [value]);
   const commit = () => { onSave(draft.trim()); setEditing(false); };
@@ -1494,14 +1559,13 @@ function ReadingNote({ value, accent, onSave }) {
   }
   return (
     <button className="dash-focus dash-note" onClick={() => setEditing(true)}
-      title={value ? "Edit my note" : "Say why this reading is here"}
-      style={{ color: value ? TEXT_SECONDARY : TEXT_MUTED }}>
-      {value || "+ note"}
+      title="Edit my note" style={{ color: TEXT_SECONDARY }}>
+      {value}
     </button>
   );
 }
 
-export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, onNote, inFlow, onDropIn, hue = defaultHue, blocks, onPickBlock, blockOf }) {
+export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, onRemove, onClaim, onNote, placed, onDropIn, hue = defaultHue, blocks, onPickBlock, blockOf }) {
   const [over, setOver] = useState(false);
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("reading");
@@ -1527,8 +1591,8 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
   return (
     <div onDragOver={e => { if (onDropIn) { e.preventDefault(); setOver(true); } }}
       onDragLeave={() => setOver(false)} onDrop={takeDrop}
-      style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10,
-        borderTop: "1px solid " + BORDER, borderRadius: 10,
+      style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 12,
+        borderTop: "1px solid " + BORDER, borderRadius: 12,
         outline: over ? "2px dashed " + accent : "none", outlineOffset: 4 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ ...label, color: accent }}>Today's readings</span>
@@ -1544,7 +1608,8 @@ export function Readings({ items, accent, castNow, dismiss, liveLabel, onAdd, on
           picked={!!blockOf?.(it.blockId || it.libId)?.pick}
           live={liveLabel === it.title} onDismiss={dismiss}
           onNote={(v) => onNote(it.id, v)}
-          onRemove={() => onRemove(it.id)} inFlow={inFlow?.has(it.id)}
+          onRemove={() => onRemove(it.id)}
+          placedDate={placed?.get(it.id) || (it.libId ? placed?.get("b:" + it.libId) : null)}
           onCast={(c) => castNow(it.url
             ? { ...castFromLink({ label: it.title, url: it.url }), title: c, label: c,
                 openUrl: it.url, linkLabel: hostOf(it.url),
@@ -3636,17 +3701,10 @@ export default function Dashboard({ config }) {
   // The day's readings ARE the schedule's readings. One list, written from
   // whichever screen I happen to be on.
   const readings = scheduledFor(weeks, day).filter(it => MEDIA_SET.has(it.type));
-  // Which of today's readings also have a row in the flow. Matched on the
-  // schedule item id where the row came from the schedule, and on the block
-  // otherwise, because a reading picked out of the library carries libId.
-  const flowSched = new Set();
-  Object.values(plan?.slots || {}).forEach(b => normSlot(b).items.forEach(it => {
-    if (it.schedItemId) flowSched.add(it.schedItemId);
-    if (it.blockId) flowSched.add("b:" + it.blockId);
-  }));
-  const readingInFlow = new Set(readings
-    .filter(r => flowSched.has(r.id) || (r.libId && flowSched.has("b:" + r.libId)))
-    .map(r => r.id));
+  // Which day already carries a row for a reading or an idea. This used to be a
+  // set of today's flow alone, which is all a flag saying "on the day plan"
+  // needed; a date needs every day.
+  const placedDays = placedOn(data?.dayPlans, day);
   const comingRows = comingUp(assignments, day, 21);
   const addReading = (item) => addScheduleItem(update, config, day, item);
   const dropReading = (id) => removeScheduleItem(update, config, id);
@@ -4058,13 +4116,13 @@ export default function Dashboard({ config }) {
       liveLabel={liveLabel} onAdd={addReading} onRemove={dropReading}
       blockOf={blockOf}
       onClaim={(id, c) => setScheduleItemClaim(update, config, id, c)}
-      onNote={(id, n) => setScheduleItemNote(update, config, id, n)} inFlow={readingInFlow}
+      onNote={(id, n) => setScheduleItemNote(update, config, id, n)} placed={placedDays}
       onDropIn={assignDropped} hue={hueOf}
       blocks={blocks2} onPickBlock={pickReading} />,
     ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent} hue={hueOf}
       features={Object.keys(FEATURES)} onRunFeature={runFeature} featureBlurb={(n) => FEATURES[n] || ""}
       onPlaceFeature={(slot, name, date) => addFlowItem(slot, { text: name, feature: name }, date)}
-      sections={sections} days={days} today={day}
+      sections={sections} days={days} today={day} placed={placedDays}
       onPick={pickBlock} onAdd={addIdea} onEdit={editIdea} onRemove={removeIdea} onDuplicate={duplicateIdea} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
       castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,

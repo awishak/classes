@@ -1399,6 +1399,42 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // between them, so Questions named something a screen further down.
   const liveRail = src.slice(src.indexOf('<Rail side="Live"'), src.indexOf('<Rail side="Live"') + 1400);
   if (!liveRail.includes("head={")) say("the room preview is back between the Live tabs and their panel");
+  // The card the rail draws. Andrew: "the readings cards are too tall."
+  // Height came from a 44px row on a trackpad surface and a note strip that
+  // rendered "+ note" on a reading with no note. Both are gone, and both come
+  // back silently if anyone edits the wrong line.
+  if (/\.lib-row\{[^}]*min-height:var\(--row-h/.test(src))
+    say("the library row is back on the day plan's density height instead of the instructor target");
+  if (!/\.lib-row\{[^}]*min-height:34px/.test(src)) say("the library row is no longer 34px");
+  if (src.includes("+ note")) say("the + note placeholder is back in the note field");
+  const bodyAt = src.indexOf('<div className="read-body">');
+  if (bodyAt < 0) say("the readings card no longer has a note strip at all");
+  else if (!/note \|\| adding \?/.test(src.slice(bodyAt - 140, bodyAt)))
+    say("the note strip renders on a reading that has no note, which is where the height went");
+  if (src.includes("lib-kind")) say("the kind label is back in the readings card, saying Reading inside Today's readings");
+  if (!src.includes('<span className="lib-when">')) say("neither card shows the day it is placed on");
+  if (src.includes("read-flag")) say("the on-the-day-plan flag is back in place of the date");
+  if (!src.includes('className="dash-focus lib-peek"')) say("an idea no longer shows the first lines of how it runs");
+
+  // placedOn is the whole date feature, so test the function rather than grep
+  // for the call. A thing on several days shows the day nearest the one I am
+  // looking at, which reads as the last time I used a seed when the seed is
+  // behind me and the next time when the seed is ahead.
+  const { placedOn, whenLabel } = await import("../src/engine/Dashboard.jsx");
+  const plans = {
+    "2026-09-01": { slots: { a: { items: [{ blockId: "seed1" }, { schedItemId: "r9" }] } } },
+    "2026-09-11": { slots: { a: { items: [{ blockId: "seed1" }] } } },
+    "2026-09-05": { slots: { a: { items: [{ blockId: "seed1" }] } } },
+  };
+  const at = placedOn(plans, "2026-09-04");
+  if (at.get("b:seed1") !== "2026-09-05")
+    say(`a seed on three days shows ${at.get("b:seed1")}, not the day nearest the one I am on`);
+  if (at.get("r9") !== "2026-09-01") say("a reading placed by its schedule row is not found");
+  if (at.get("b:nothing")) say("placedOn invents a day for a block on no day");
+  if (placedOn(null, "2026-09-04").size) say("placedOn throws or invents days on a class with no plans");
+  if (whenLabel("") !== "" || !/\d/.test(whenLabel("2026-09-05")))
+    say("the date label is empty on a real date, or prints something on no date");
+
   const railStart = src.indexOf("function Rail({");
   const railFn = src.slice(railStart, src.indexOf("\n}", railStart));
   const atHead = railFn.indexOf("{head}"), atTabs = railFn.indexOf('role="tablist"');
