@@ -47,6 +47,31 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep3b", date: "Thursday, September 3 \u00b7 morning", title: "Every test had only ever seen the laptop",
+    blurb: "Andrew: i don't like that when i look at it in student view from a phone, the four themes are all over the top menu. He was looking at a header I thought I had tidied a day earlier. The desktop got tidied; the phone did not, and nothing in the build could tell.",
+    groups: [
+      { name: "How the phone kept thirteen buttons", items: [
+        ["An edit that threw before it wrote", "The phone header and the strip beneath it were changed in one script. The second half hit an assertion, so nothing was written, and only the first half got redone by hand."],
+        ["innerWidth was 1440 and never moved", "The test globals set one width. The class site has two layouts, a desktop grid and a phone column, with their own headers, their own strip and their own bottom bar. Every test in this repo had only ever rendered the desktop one."],
+        ["So the surface students actually use had no coverage", "Not the header, not the bottom bar, not the phone takeover. A day of theme work went in without a single render of the column layout."],
+      ] },
+      { name: "Both widths, now", items: [
+        ["A width helper", "Renders at 390 as well as 1440, and every failure names which."],
+        ["The header checks, the theme checks, and a case for each", "Putting the picker back in the phone bar now fails the build naming the phone."],
+        ["The tap-target count reads every bar", "It stopped at the first one, which on a phone was the wrong one."],
+      ] },
+      { name: "A marker that matched a comment", items: [
+        ["Looking for a theme's name found a CSS comment", "The check for a loose picker searched for Crashing Out, which appears in a comment inside the chrome stylesheet. The marker is the picker's own aria-label now. Third time a check here has matched a string living somewhere else."],
+      ] },
+    ],
+    note: {
+      title: "146 surfaces",
+      lines: [
+        "Up from 141, and five of the new ones are the class site drawn at phone width for the first time.",
+      ],
+    },
+  },
+  {
     id: "sep3a", date: "Thursday, September 3 \u00b7 morning", title: "Every student was the same student",
     blurb: "Checking whether a phone test could even be run found the thing that would have made the test look broken. The seeded roster is name, from and goals, with no id, and nothing in the engine ever assigned one. So student.id was undefined for every student in a fresh class.",
     groups: [

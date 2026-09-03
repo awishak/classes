@@ -116,6 +116,7 @@ for (const cfg of ENGINE_LIST) {
   cases.push([cfg.code + " dashboard, empty day", <Dashboard config={cfg} />, "dash-stage"]);
   cases.push([cfg.code + " room screen", <ClassroomView config={cfg} />]);
   cases.push([cfg.code + " class site", <ClassApp config={cfg} />]);
+  cases.push([cfg.code + " class site, on a phone", atWidth(PHONE, () => <ClassApp config={cfg} />)]);
   cases.push([cfg.code + " ask page", <AskPage config={cfg} />]);
 }
 // and again with a day that has things on it
@@ -129,6 +130,21 @@ for (const cfg of ENGINE_LIST) {
 // and a populated one, since today's crash only appeared on one of those.
 const noop = () => {};
 let failedEarly = 0;
+
+// Render at a given viewport width.
+//
+// The globals set innerWidth to 1440 and never moved it, so every test in this
+// file has only ever rendered the desktop layout. The class site has two: a
+// desktop grid and a phone column, with their own headers and their own bottom
+// bar. The phone one is what students actually use, and nothing rendered it
+// until now. That is how the phone header kept four theme buttons, a badge and
+// a role toggle for a day after the desktop header was tidied.
+const PHONE = 390, LAPTOP = 1440;
+function atWidth(px, fn) {
+  const was = globalThis.innerWidth;
+  globalThis.innerWidth = px;
+  try { return fn(); } finally { globalThis.innerWidth = was; }
+}
 const seq = { id: "s", name: "Test", slots: [{ slot: "opener" }, { slot: "problem" }] };
 const emptyPlan = { sequenceId: "s", slots: {}, blocks: [] };
 const fullPlan = {
@@ -910,8 +926,9 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const admin = cfg0.storageKey + "-admin";
   const was = globalThis.localStorage.getItem;
   globalThis.localStorage.getItem = (k) => (k === admin ? "1" : null);
+  for (const [where, px] of [["laptop", LAPTOP], ["phone", PHONE]]) {
   try {
-    const html = renderToString(<ClassApp config={cfg0} />);
+    const html = atWidth(px, () => renderToString(<ClassApp config={cfg0} />));
     // The header used to carry thirteen controls and now carries two: the
     // Dashboard, and a menu holding everything else. So this checks the closed
     // header, which is all a render test can see.
@@ -920,17 +937,32 @@ cases.push(["Instructor links", <InstructorLinks />]);
     // the teaching links are inside the menu and no longer appear in the
     // markup until somebody clicks. Nothing checks their contents any more.
     if (!html.includes("Dashboard")) {
-      console.error("  FAIL  class site, instructor: no way through to the dashboard"); failedEarly++; }
+      console.error(`  FAIL  class site, instructor, ${where}: no way through to the dashboard`); failedEarly++; }
     if (!html.includes('aria-haspopup="menu"')) {
-      console.error("  FAIL  class site, instructor: no menu, so everything behind it is unreachable"); failedEarly++; }
+      console.error(`  FAIL  class site, instructor, ${where}: no menu, so everything behind it is unreachable`); failedEarly++; }
     // And the header stays small. Counting the tap targets across the top is a
     // blunt measure and it is the one that would have caught this drifting.
-    const bar = (html.split('borderBottom:1px solid')[1] || "").slice(0, 4000);
-    const taps = (bar.match(/min-height:44px/g) || []).length;
-    if (taps > 6) {
-      console.error("  FAIL  class site, instructor: " + taps + " tap targets across the top bar"); failedEarly++; }
+    // Every bar across the top, not the first one. The phone and the desktop are
+    // separate headers, and only the desktop got tidied: the phone kept four
+    // theme buttons, a badge and a two-button role toggle for a day, because
+    // this check stopped at the first bar it found.
+    const bars = html.split("borderBottom:1px solid").slice(1);
+    bars.forEach((bar, i) => {
+      const taps = (bar.slice(0, 3000).match(/min-height:44px/g) || []).length;
+      if (taps > 6) {
+        console.error(`  FAIL  class site, instructor, ${where}: ${taps} tap targets across top bar ${i + 1}`); failedEarly++; }
+    });
+    // And the picker belongs in the menu, not loose in a bar.
+    //
+    // The marker is what only a picker renders. Looking for a theme's name
+    // matched a CSS comment inside the chrome stylesheet, which is the third
+    // time a check here has matched a string that lives somewhere else.
+    const beforeMenu = html.split('aria-haspopup="menu"')[0] || "";
+    if (beforeMenu.includes('aria-label="Theme"')) {
+      console.error(`  FAIL  class site, ${where}: the theme picker is loose in the header instead of inside the menu`); failedEarly++; }
   } catch (err) {
-    console.error("  FAIL  class site, instructor: " + err.message); failedEarly++;
+    console.error(`  FAIL  class site, instructor, ${where}: ` + err.message); failedEarly++;
+  }
   }
   globalThis.localStorage.getItem = was;
 }
@@ -970,11 +1002,13 @@ cases.push(["Instructor links", <InstructorLinks />]);
   THEMES.forEach(t => {
     const was = globalThis.localStorage.getItem;
     globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : null);
-    try {
-      const html = renderToString(<ClassApp config={cfg0} />);
-      if (!html.includes(`data-theme="${t}"`)) say(t + " did not reach the class site's root");
-      if (!html.includes("--text-primary")) say(t + ": the class site shipped without the stylesheet");
-    } catch (err) { say(t + ": the class site threw — " + err.message); }
+    [["laptop", LAPTOP], ["phone", PHONE]].forEach(([where, px]) => {
+      try {
+        const html = atWidth(px, () => renderToString(<ClassApp config={cfg0} />));
+        if (!html.includes(`data-theme="${t}"`)) say(`${t} did not reach the class site's root on the ${where}`);
+        if (!html.includes("--text-primary")) say(`${t}: the ${where} shipped without the stylesheet`);
+      } catch (err) { say(`${t} threw on the ${where}: ` + err.message); }
+    });
     globalThis.localStorage.getItem = was;
   });
   // A theme nobody has heard of falls back rather than painting nothing.

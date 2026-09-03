@@ -599,7 +599,7 @@ export default function ClassApp({ config, initialCard }) {
         <>
           <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
           <div role="menu" style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", zIndex: 41,
-            width: 288, padding: 6, background: "var(--surface-card)", border: "var(--card-border)",
+            width: 288, maxWidth: "calc(100vw - 32px)", padding: 6, background: "var(--surface-card)", border: "var(--card-border)",
             borderRadius: "var(--card-radius)", boxShadow: "0 20px 44px -14px rgba(23,19,16,.34)" }}>
             {view === "instructor" ? (
               <>
@@ -817,9 +817,10 @@ export default function ClassApp({ config, initialCard }) {
           {openKey ? (
             <button className="ca-focus" onClick={() => go(null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 17, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: "0 4px 0 0" }}>← Back</button>
           ) : Logo}
-          <ThemeBadge theme={theme} points={myPoints} />
-          <ThemePicker theme={theme} onPick={pickTheme} compact />
-          {RoleToggle}
+          <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flex: "none" }}>
+            <ThemeBadge theme={theme} points={myPoints} />
+            {HeaderMenu}
+          </span>
         </div>
       </div>
       </div>

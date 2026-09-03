@@ -59,6 +59,14 @@ The bar carried thirteen controls before: four theme buttons, a view-as select,
 a class select, four teaching links, sign out and a two-button role toggle.
 Everything competed and nothing led.
 
+The phone and the desktop are separate headers in the same file. The desktop got
+this tidy a day before the phone did, because an edit to the phone header threw
+before it wrote and nothing noticed: **`innerWidth` is 1440 in the test globals,
+so every test in this repo had only ever rendered the desktop layout.** The
+class site's phone column, which is what students actually use, had no coverage
+at all. Every class-site check runs at both widths now, and the failure message
+names which one.
+
 **What that costs:** the roster picker, the class switcher and the teaching
 links live inside a closed menu, so they are not in the markup until somebody
 clicks, and no render test covers their contents any more. The build counts tap
@@ -238,7 +246,7 @@ character and those are what drifted. Font sizes are not held to `TYPE` yet.
 | `check-jsx-text` | an escape sequence stranded in JSX text |
 | `check-css` | a stylesheet that lost a rule |
 | `check-tokens` | a surface with a colour of its own, a theme missing a token, or a colour that fails where it sits |
-| `smoke` | 141 surfaces rendered server-side, a game played through, and every theme's colours and furniture |
+| `smoke` | 146 surfaces rendered server-side, a game played through, and every theme's colours and furniture |
 
 Each was written after the matching mistake reached production. Do not remove
 one because it is inconvenient; add the case instead.
