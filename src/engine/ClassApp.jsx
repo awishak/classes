@@ -24,6 +24,7 @@ import { RosterSummary, RosterDetail } from "./RosterCard.jsx";
 import { AssignmentsSummary, AssignmentsDetail, dueState, nextDue, ungradedCount } from "./AssignmentsCard.jsx";
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
+import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, ThemeStyle, ThemePicker } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle } from "./ThemeChrome.jsx";
@@ -529,7 +530,7 @@ export default function ClassApp({ config, initialCard }) {
 
   // The roster, alphabetical, because a picker over thirty names wants an order
   // I can aim at.
-  const roster = (data?.students || config.students || []).slice()
+  const roster = withIds(data?.students || config.students).slice()
     .sort((x, y) => (x.name || "").localeCompare(y.name || ""));
 
   const StudentPicker = (

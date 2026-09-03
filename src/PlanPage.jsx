@@ -47,6 +47,32 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep3a", date: "Thursday, September 3 \u00b7 morning", title: "Every student was the same student",
+    blurb: "Checking whether a phone test could even be run found the thing that would have made the test look broken. The seeded roster is name, from and goals, with no id, and nothing in the engine ever assigned one. So student.id was undefined for every student in a fresh class.",
+    groups: [
+      { name: "One key for thirty people", items: [
+        ["responses[\"undefined-0\"]", "Every student's answer to question one, in one slot. Two phones answering the same question wrote the same key and the second replaced the first."],
+        ["A different bug from the one fixed last night", "The write merge handles two people writing at once. It cannot help when both are aiming at the same key, because there is nothing to merge."],
+        ["Every log entry said studentId: undefined", "So a scored game put everybody's points in one bucket and the gradebook could not attribute any of them."],
+      ] },
+      { name: "A name is already the identity", items: [
+        ["Students sign in by picking a name", "The discussion board stores a name, the roster is a list of names, and the Ask page remembers one. So the id is derived from the name, which needs no migration and works on data already in the store."],
+        ["An explicit id always wins", "A class whose roster came from somewhere with real ids keeps them."],
+        ["Normalised at the door", "Eighty-odd places read student.id. Filling the id in where the roster is read is a much smaller and safer change than editing every one of them. The doors are the five game entry points, game.js, the class site, the game page and the board."],
+      ] },
+      { name: "The test that would have caught the collision", items: [
+        ["Two students, one question, two answers", "Both survive, both score correctly, and no log entry is missing a student. Removing the fix fails three ways, including the student who was right scoring zero."],
+        ["Nobody is seeded without an id", "And no two students share one, which two people in the same family would otherwise do."],
+      ] },
+    ],
+    note: {
+      title: "Found by asking a smaller question",
+      lines: [
+        "The plan was to walk through the phone test. Checking the roster was ready first is what turned this up, before twenty minutes went into a test that would have failed for a reason nobody could see from the room.",
+      ],
+    },
+  },
+  {
     id: "sep2m", date: "Wednesday, September 2 \u00b7 last", title: "The leader talks, and the banner knows every champion since 1990",
     blurb: "Andrew: make the avatar of the class leader say stuff to them. add weird stuff to the banner, like just name any world series, nba finals, or superbowl from the last 36 years. Both are the sort of thing that only works if it says something true, so both do.",
     groups: [

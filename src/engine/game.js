@@ -14,6 +14,7 @@
 // The screens call these functions. Nothing here touches storage or React.
 
 import { genId } from "../utils.jsx";
+import { withIds } from "./roster.js";
 
 // A right answer in the weekly game is ten points. Ten on Ten splits twenty
 // points across however many questions the week has, which is where the odd
@@ -69,7 +70,7 @@ export function scoresFor(data, kind, week) {
   if (!w) return out;
   const qs = w.questions || [];
   const each = perQuestion(kind, qs);
-  (data?.students || []).forEach(s => {
+  withIds(data?.students).forEach(s => {
     let pts = 0;
     qs.forEach((q, qi) => { if (w.responses?.[s.id + "-" + qi] === q.correct) pts += each; });
     out[s.id] = Math.round(pts * 10) / 10;
@@ -100,7 +101,7 @@ export function scoreWeek(data, kind, week, now) {
   const log = data.log || [];
   const existing = log.filter(e => e.source === source);
   const entries = [];
-  (data.students || []).forEach(s => {
+  withIds(data.students).forEach(s => {
     const pts = scores[s.id] || 0;
     const had = existing.find(e => e.studentId === s.id);
     if (had && had.amount === pts) return;          // nothing moved
@@ -128,7 +129,7 @@ export function perfectRuns(data) {
     if (!game.scored) return;
     const qs = game.questions || [];
     if (!qs.length) return;
-    (data?.students || []).forEach(s => {
+    withIds(data?.students).forEach(s => {
       const right = qs.filter((q, i) => game.responses?.[s.id + "-" + i] === q.correct).length;
       if (right === qs.length) out.push({ week: parseInt(w, 10), student: s });
     });

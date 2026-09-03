@@ -33,6 +33,8 @@ import { Tubey, TubeySays, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, Tu
   MARQUEE_SECONDS_PER_ITEM, marqueeSeconds } from "../src/engine/ThemeChrome.jsx";
 import { ALL_FACTS, factsFor, shuffledFacts } from "../src/engine/crashing-facts.js";
 import { saveWeek, openWeek, answerWeek, scoreWeek, scoresFor, perfectRuns, pointsOf, mergeAnswers } from "../src/engine/game.js";
+import { idOf, slugOf, withIds } from "../src/engine/roster.js";
+import comm999 from "../src/config/comm999.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
   Steps as RepoSteps, Sticker as RepoSticker, Term as RepoTerm, DayAdd as RepoDayAdd,
@@ -1320,6 +1322,48 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const out = mergeAnswers(mine, base, server).triviaGames.g1.answers;
     if (out["t1-0"] !== "us" || out["t2-0"] !== "them") say("a trivia round lost a team's answer");
   }
+}
+
+// Who a student is.
+//
+// The seeded roster was { name, from, goals } with no id, and nothing ever
+// assigned one. So student.id was undefined for every student in a fresh class
+// and every answer key was "undefined-0": two phones answering the same
+// question wrote the same key and the second replaced the first. Not a race,
+// which the write merge already handles. The same key, which no merge can help
+// with. This is what would have made the phone test look broken.
+{
+  const say = (m) => { console.error("  FAIL  roster: " + m); failedEarly++; };
+
+  // Every seeded student in every class has an id, and no two share one.
+  const seeded = comm999.students || [];
+  if (!seeded.length) say("the template class has no roster to seed from");
+  seeded.forEach(st => { if (!st.id) say(`${st.name} is seeded without an id`); });
+  if (new Set(seeded.map(st => st.id)).size !== seeded.length) say("two seeded students share an id");
+
+  // And a roster from anywhere else gets one at the door.
+  const bare = withIds([{ name: "Ada Byron" }, { name: "Bo Diaz" }]);
+  if (bare.some(st => !st.id)) say("a roster with no ids came back with no ids");
+  if (bare[0].id === bare[1].id) say("two different students normalise to the same id");
+  if (withIds([{ id: "keep-me", name: "Ada Byron" }])[0].id !== "keep-me") say("a real id was thrown away");
+  if (idOf({ name: "Joe Hanna" }) === idOf({ name: "George Hanna" })) say("two Hannas are the same student");
+
+  // The whole point: two students, one question, two answers that both survive.
+  const roster = [{ name: "Ada Byron" }, { name: "Bo Diaz" }];
+  const qs = [{ id: "q", text: "One", options: ["a", "b"], correct: 0 }];
+  let d = { students: roster, log: [] };
+  d = openWeek(saveWeek(d, "game", 2, qs), "game", 2);
+  d = answerWeek(d, "game", 2, idOf(roster[0]), 0, 0);   // Ada, right
+  d = answerWeek(d, "game", 2, idOf(roster[1]), 0, 1);   // Bo, wrong
+  const keys = Object.keys(d.weeklyGames[2].responses);
+  if (keys.length !== 2) say(`two students answering one question made ${keys.length} answer(s)`);
+  if (keys.some(k => k.startsWith("undefined"))) say("an answer is keyed to undefined");
+  const sc = scoresFor(d, "game", 2);
+  d = scoreWeek(d, "game", 2, 1756000000000);
+  if (pointsOf(d.log, idOf(roster[0])) !== 10) say("the student who was right scored " + pointsOf(d.log, idOf(roster[0])));
+  if (pointsOf(d.log, idOf(roster[1])) !== 0) say("the student who was wrong scored something");
+  if (d.log.some(e => !e.studentId || String(e.studentId).includes("undefined")))
+    say("a log entry has no student on it, so the gradebook cannot attribute the points");
 }
 
 // A game, played all the way through.

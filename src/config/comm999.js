@@ -33,16 +33,16 @@ const comm999 = {
   // Goals get filled in on day one (first-day "what are your goals" seed).
   testStudent: "Zack Girgis",
   students: [
-    { name: "Zack Girgis", from: "", goals: "" },
-    { name: "Joe Hanna", from: "", goals: "" },
-    { name: "Hanni Fakhoury", from: "", goals: "" },
-    { name: "Kirellos Zamary", from: "", goals: "" },
-    { name: "George Hanna", from: "", goals: "" },
-    { name: "Brian Dong", from: "", goals: "" },
-    { name: "Brett Dillon", from: "", goals: "" },
-    { name: "Blake Michaelsen", from: "", goals: "" },
-    { name: "Dan Patry", from: "", goals: "" },
-    { name: "Theo Ishak", from: "", goals: "" },
+    { id: "zack-girgis", name: "Zack Girgis", from: "", goals: "" },
+    { id: "joe-hanna", name: "Joe Hanna", from: "", goals: "" },
+    { id: "hanni-fakhoury", name: "Hanni Fakhoury", from: "", goals: "" },
+    { id: "kirellos-zamary", name: "Kirellos Zamary", from: "", goals: "" },
+    { id: "george-hanna", name: "George Hanna", from: "", goals: "" },
+    { id: "brian-dong", name: "Brian Dong", from: "", goals: "" },
+    { id: "brett-dillon", name: "Brett Dillon", from: "", goals: "" },
+    { id: "blake-michaelsen", name: "Blake Michaelsen", from: "", goals: "" },
+    { id: "dan-patry", name: "Dan Patry", from: "", goals: "" },
+    { id: "theo-ishak", name: "Theo Ishak", from: "", goals: "" },
   ],
   teams: null, // null = no teams; or [{ id, name }]
 

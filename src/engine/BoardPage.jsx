@@ -15,6 +15,7 @@ import { useBoards, postsOf, idForPrompt } from "./boards.js";
 import { useLive } from "./live.js";
 import { lastNameOf } from "./AskPage.jsx";
 import * as TOKENS from "./tokens.js";
+import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, ThemeStyle } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeBadge, TubeySays, Avatar } from "./ThemeChrome.jsx";
 
@@ -45,7 +46,7 @@ export default function BoardPage({ config }) {
     try { const v = localStorage.getItem(REMEMBER); if (v) setWho(v); } catch { /* private mode */ }
   }, [config.code, REMEMBER]);
 
-  const students = data?.students || config.students || [];
+  const students = withIds(data?.students || config.students);
   const myId = (students.find(s => s.name === who) || {}).id;
   const myPoints = myId ? (data?.log || []).filter(e => e.studentId === myId).reduce((n, e) => n + (e.amount || 0), 0) : null;
   const boards = B.boards || {};

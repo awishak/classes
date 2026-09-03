@@ -29,6 +29,7 @@ import { useTheme, themedInteriorCrd, themedHeadingFont } from "../styles.jsx";
 import { genId, gp, Toast } from "../utils.jsx";
 import QuestionPicker from "./QuestionPicker.jsx";
 import { lastNameOf } from "./AskPage.jsx";
+import { dataWithIds } from "./roster.js";
 import { scoreWeek, perfectRuns, mergeAnswers } from "./game.js";
 import { ENGINE } from "../config/registry.js";
 import * as TOKENS from "./tokens.js";
@@ -165,6 +166,9 @@ function emptyGame() {
 /* ─── ADMIN: GAME + TOT + FISHBOWL SETUP ─── */
 export function GameAdmin({ config, data, setData }) {
   setGameClass(config);
+  // Every id filled in before anything reads one. A seeded roster has no ids,
+  // so `student.id` was undefined and every answer key was "undefined-0".
+  data = dataWithIds(data);
   const { theme } = useTheme(gkey());
   const [week, setWeek] = useState(null);
   const [triviaId, setTriviaId] = useState(null);
@@ -2163,6 +2167,9 @@ function FishbowlAdmin({ week, data, setData, onBack }) {
 /* ─── STUDENT: GAME + TOT ANSWER VIEW ─── */
 export function StudentAnswerView({ config, data, setData, userName }) {
   setGameClass(config);
+  // Every id filled in before anything reads one. A seeded roster has no ids,
+  // so `student.id` was undefined and every answer key was "undefined-0".
+  data = dataWithIds(data);
   const { theme } = useTheme(gkey());
   const crd = cardFor(theme, 0);
   const [week, setWeek] = useState(null);
@@ -2943,6 +2950,9 @@ function FinalBonusEditor({ label, bonus, accent, onSave }) {
 */
 export function TriviaPlayer({ config, data, setData, userName }) {
   setGameClass(config);
+  // Every id filled in before anything reads one. A seeded roster has no ids,
+  // so `student.id` was undefined and every answer key was "undefined-0".
+  data = dataWithIds(data);
   const { theme } = useTheme(gkey());
   const crd = cardFor(theme, 0);
   const TEAM_PALETTE = [
@@ -3682,6 +3692,9 @@ function PresenterCountUp({ value }) {
 
 export function Accolades({ config, data }) {
   setGameClass(config);
+  // Every id filled in before anything reads one. A seeded roster has no ids,
+  // so `student.id` was undefined and every answer key was "undefined-0".
+  data = dataWithIds(data);
   const { theme } = useTheme(gkey());
   const crd = cardFor(theme, 0);
   const stars = data.fishbowlStars || {};
@@ -3758,6 +3771,9 @@ const STATUS_COLORS = {
 
 export function ReboundPanel({ config, data, setData, activityType, week, isAdmin, userName }) {
   setGameClass(config);
+  // Every id filled in before anything reads one. A seeded roster has no ids,
+  // so `student.id` was undefined and every answer key was "undefined-0".
+  data = dataWithIds(data);
   const { theme } = useTheme(gkey());
   const crd = cardFor(theme, 0);
   const [msg, setMsg] = useState("");

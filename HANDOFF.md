@@ -275,6 +275,28 @@ twice, because one edge can serve the old bundle briefly.
   term of games and grades at their own keys, and an engine class starts with
   no games.
 
+## Who a student is
+
+`src/engine/roster.js`. The seeded roster was `{ name, from, goals }` with no
+id, and nothing in the engine ever assigned one, so `student.id` was `undefined`
+for every student in a fresh class. Everything keyed by it collapsed onto one
+key: `responses["undefined-0"]` was every student's answer to question one, and
+every log entry was `{ studentId: undefined }`.
+
+Two phones answering the same question wrote the same key, and the second answer
+replaced the first. **That is a different bug from the write race fixed the night
+before.** A merge cannot help when both writers are aiming at the same key.
+
+The id comes from the name, because a name is the identity the whole app already
+uses: students sign in by picking one, the board stores one, the roster is a list
+of them. So the fix needs no migration and works on data already in the store.
+An explicit id always wins, so a class whose roster came from somewhere with real
+ids keeps them.
+
+`withIds` normalises at the door rather than at the eighty-odd places that read
+`student.id`, which is a much smaller and safer change. The doors are the five
+game entry points, `game.js`, the class site, the game page and the board.
+
 ## The game, ported
 
 `src/engine/GameSystem.jsx` is one copy of what used to be three:
