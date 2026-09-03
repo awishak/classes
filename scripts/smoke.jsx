@@ -15,7 +15,7 @@ import { readFileSync } from "node:fs";
 import { renderToString } from "react-dom/server";
 import Dashboard, {
   FlowPanel, TodoPanel, NowPanel, ScratchPanel, AttendancePanel, QuestionsPanel,
-  AnswersPanel, BoardsPanel, StockedPanel, AssignmentsPanel, CommandBar, Readings, IdeasPanel,
+  BoardsPanel, StockedPanel, AssignmentsPanel, CommandBar, Readings, IdeasPanel,
   ColorsSheet, NoteSheet, ShortcutSheet,
 } from "../src/engine/Dashboard.jsx";
 import ClassroomView, { Content as CastContent } from "../src/engine/ClassroomView.jsx";
@@ -174,16 +174,6 @@ for (const [tag, plan] of [["empty day", emptyPlan], ["full day", fullPlan]]) {
 const cfg0 = ENGINE_LIST[0];
 cases.push(["Attendance", <AttendancePanel students={cfg0.students || []} marks={{}} onMark={noop} onReset={noop} />]);
 cases.push(["Questions", <QuestionsPanel items={[{ id: "q", text: "why", who: "A", anon: false, at: Date.now(), state: "open" }]} setState={noop} archiveOpen={noop} castNow={noop} accent={cfg0.accent} />]);
-// The Answers panel reads threads the dashboard never wrote, so every state it
-// can be handed gets a case: still loading, nothing cast yet, a live thread with
-// posts on it, and a closed thread with nothing under the prompt.
-const aBoard = { id: "b1", prompt: "What did you notice?", at: Date.now(), closed: false,
-  posts: [{ id: "p1", who: "A Student", text: "The crowd noise", at: Date.now() }] };
-const aShut = { id: "b2", prompt: "One word for today", at: Date.now() - 9e5, closed: true, posts: [] };
-cases.push(["Answers, loading", <AnswersPanel boards={null} liveId="" path="/x" castNow={noop} onOpen={() => "b1"} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />]);
-cases.push(["Answers, nothing cast", <AnswersPanel boards={{}} liveId="" path="/x" castNow={noop} onOpen={() => "b1"} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />, "A question for the room"]);
-cases.push(["Answers, live thread", <AnswersPanel boards={{ b1: aBoard, b2: aShut }} liveId="b1" path="/x" castNow={noop} onOpen={() => "b1"} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />, "The crowd noise"]);
-cases.push(["Answers, closed and empty", <AnswersPanel boards={{ b2: aShut }} liveId="" path="/x" castNow={noop} onOpen={() => "b1"} onRemove={noop} onSetClosed={noop} accent={cfg0.accent} />, "Nobody wrote anything under this prompt."]);
 cases.push(["Before & After", <BoardsPanel boards={{}} proposals={{ pre: { title: "t", ideas: ["a"] }, post: { title: "t", ideas: ["b"] } }} onSave={noop} castNow={noop} dismiss={noop} liveCast={null} accent={cfg0.accent} />]);
 // A day with no proposals at all, which crashed the editor once the boards
 // moved into the flow and started rendering on every day.
@@ -1359,6 +1349,58 @@ cases.push(["Theme picker, full", <ThemePicker theme="clean" onPick={noop} />, "
   });
 }
 cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick={noop} compact />, "Crashing Out"]);
+
+// The two library panels read as the day plan, inverted.
+//
+// A row on the plan is a solid block of its kind's colour carrying white text.
+// Activities and Readings are the same family the other way round: one grey
+// card with the words in that kind's colour. The palette was generated to CARRY
+// white, which is the opposite job, so the ink is the swatch darkened to 85%
+// per channel and check-contrast measures all twenty of them.
+{
+  const say = (m) => { console.error("  FAIL  library: " + m); failedEarly++; };
+  const src = readFileSync(new URL("../src/engine/Dashboard.jsx", import.meta.url), "utf8");
+
+  // One row shape, used by both panels.
+  if (!src.includes(".lib-row{")) say("no library row style");
+  const ideas = src.slice(src.indexOf("export function IdeasPanel"), src.indexOf("export function QuestionsPanel"));
+  if (!ideas.includes("lib-row")) say("the activities panel does not use the library row");
+  if (!src.includes('className="read-card"') || !src.slice(src.indexOf('className="read-card"'), src.indexOf('className="read-card"') + 900).includes("lib-row"))
+    say("the readings card does not use the library row");
+  // The filled pill is gone: the words carry the colour now.
+  if (src.includes('className="read-kind"')) say("the readings pill survived, so the colour is in two places");
+  if (ideas.includes('textTransform: "uppercase" }}>Idea<')) say("the activities pill survived");
+  // Ink, not fill.
+  const inks = (src.match(/"--ink": inkOf\(/g) || []).length;
+  if (inks < 2) say(`${inks} row(s) take an ink colour, where both panels should`);
+  // And the Answers tab is gone, with the boards themselves untouched.
+  if (src.includes("AnswersPanel")) say("the Answers panel is back");
+  const rail = src.match(/const LIVE_RAIL = (\[[^\]]*\]);/);
+  if (rail && JSON.parse(rail[1].replace(/'/g, '"')).includes("answers")) say("the Answers tab is back in the rail");
+  if (!src.includes("DB.open(prompt)")) say("casting a board no longer opens its thread, which the student page needs");
+}
+
+// The dashboard, above the day.
+//
+// Two rows of controls that had grown where nobody would want them.
+{
+  const say = (m) => { console.error("  FAIL  dashboard: " + m); failedEarly++; };
+  const src = readFileSync(new URL("../src/engine/Dashboard.jsx", import.meta.url), "utf8");
+
+  // Ten shortcuts were live and the only way to see the list was a shortcut.
+  // ViewMenu carries the Keyboard row and was written months ago and never
+  // mounted, so the component existed and nothing rendered it.
+  if (!/<ViewMenu\b/.test(src)) say("ViewMenu is defined and never rendered, so the shortcut list is unreachable without knowing a shortcut");
+  const menu = src.slice(src.indexOf("function ViewMenu"), src.indexOf("function ViewMenu") + 1800);
+  if (!menu.includes("onKeys")) say("the view menu no longer opens the shortcut sheet");
+
+  // The row under the day title: four planning controls sitting on the line I
+  // read off the screen while talking.
+  const flow = src.slice(src.indexOf("export function FlowPanel"), src.indexOf("export function ComingUp") + 1);
+  const bare = ["+ New section", "Merge sections", "+ New note"].filter(t => flow.includes(">" + t + "<"));
+  if (bare.length) say(`${bare.length} planning control(s) loose under the day title: ${bare.join(", ")}`);
+  if (!src.includes("Build the day")) say("nothing gathers the day-building controls");
+}
 
 // The dashboard's left column.
 //

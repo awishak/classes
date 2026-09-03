@@ -40,6 +40,30 @@ export const PALETTE = [
 
 export const swatch = (id) => PALETTE.find(s => s.id === id) || null;
 
+// The same colour, as ink rather than as a fill.
+//
+// A row in the day plan is a solid block of its kind's colour carrying white
+// text. The library panels read as the same family inverted: a grey card with
+// the words in that kind's colour. Which is the opposite job from the one every
+// swatch above was generated for, and the comment on PALETTE says so: the light
+// tier is only as light as it is because each swatch has to hold white.
+//
+// So on the sunk grey the light tier fails as text, narrowly. Teal, pink,
+// yellow and red land between 4.36 and 4.48, which is under the line and only
+// just. Darkening each channel to 85% clears all twenty with room: the worst is
+// teal at 5.63 against the sunk grey.
+//
+// Derived rather than hand-picked, so a swatch added later gets its ink for
+// free, and check-contrast measures every one of them so the derivation cannot
+// quietly stop working.
+export const inkOf = (hex) => {
+  const h = String(hex || "").trim();
+  if (!/^#[0-9a-fA-F]{6}$/.test(h)) return h;
+  return "#" + [1, 3, 5]
+    .map(i => Math.round(parseInt(h.slice(i, i + 2), 16) * 0.85).toString(16).padStart(2, "0"))
+    .join("");
+};
+
 // Everything that carries a colour, in the order the picker lists them.
 // `types` is which block types answer to this kind, so a chip on a block and
 // the rail tab above it never disagree.

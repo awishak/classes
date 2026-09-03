@@ -27,8 +27,8 @@ import { normSlot, sequenceOptions, sequenceFor, sectionsOf } from "./dayplan.js
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
 import { readAdded, readLabels } from "./types.js";
 import PickMark from "./Pick.jsx";
-import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor } from "./colors.js";
-import { useBoards, postsOf, idForPrompt } from "./boards.js";
+import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor, inkOf } from "./colors.js";
+import { useBoards } from "./boards.js";
 import { minutesLeft, sittingLength } from "./meets.js";
 import { FACES, SLOTS, readFonts, fontVars, writeFont, resetFonts, readBold, writeBold } from "./fonts.js";
 import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, setScheduleItemClaim, setScheduleItemNote, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
@@ -217,6 +217,35 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .dash-note:hover{background:${SURFACE_2}}
 /* A reading card. The words get the whole width; the link and the buttons sit
    along the bottom where a card's actions belong. */
+/* The library row: the day plan's row, inverted.
+   A row on the plan is a solid block of its kind's colour carrying white text.
+   These read as the same family the other way round: one grey card, and the
+   words in that kind's colour. Same radius, same height, same rhythm, so a
+   reading dragged from here into the day is recognisably the same object
+   before and after.
+   --ink is the swatch darkened to 85% per channel, because the palette was
+   generated to CARRY white and the light tier fails as text on grey by a hair.
+   check-contrast measures all twenty as ink; the worst is teal at 5.63. */
+.lib-row{display:flex;align-items:center;gap:8px;min-height:var(--row-h,44px);
+  padding:4px 12px 4px 8px;border-radius:12px;background:${SURFACE_2};
+  color:var(--ink,${TEXT_PRIMARY});border:none;width:100%;text-align:left;
+  font-family:${F};cursor:grab;position:relative;
+  transition:background .13s,box-shadow .13s}
+.lib-row:hover{background:#fff;box-shadow:0 0 0 1px var(--ink,${BORDER_STRONG})}
+.lib-row[data-drag="1"]{opacity:.5;cursor:grabbing}
+.lib-words{flex:1;min-width:0;font-weight:600;font-size:var(--fs,15px);
+  line-height:1.35;color:var(--ink,${TEXT_PRIMARY})}
+.lib-sub{font-size:13px;color:${TEXT_SECONDARY};line-height:1.4}
+/* The grip sits where the day plan puts its number. Same slot, so the eye
+   learns one place: a number once a thing is on the day, a grip while it is
+   still in the library. */
+.lib-grip{flex:none;width:25px;height:25px;border-radius:8px;display:flex;
+  align-items:center;justify-content:center;font-size:13px;
+  color:var(--ink,${TEXT_MUTED});
+  background:color-mix(in srgb, var(--ink,${TEXT_MUTED}) 12%, transparent)}
+@supports not (color:color-mix(in srgb,red 10%,#fff)){.lib-grip{background:${SURFACE_2}}}
+.lib-kind{flex:none;font-family:${MONO};font-size:13px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink,${TEXT_MUTED})}
 .read-card{border-radius:12px;background:${SURFACE_2};overflow:hidden}
 /* A field with its own confirm. The tick sits inside the box against the right
    edge, and the field carries padding so the words never run under the tick. */
@@ -1228,17 +1257,16 @@ export function IdeasPanel({ blocks, accent, sections, days, today, onPick, onAd
       {moves.map(b => editing === b.id ? <div key={b.id}>{form}</div> : (
         <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "3px 4px 6px",
           borderRadius: 10, background: shown === b.id ? SURFACE_2 : "transparent" }}>
-          <button className="dash-focus" onClick={() => { setShown(shown === b.id ? null : b.id); setPlacing(null); }}
+          <button className="dash-focus lib-row" onClick={() => { setShown(shown === b.id ? null : b.id); setPlacing(null); }}
             aria-expanded={shown === b.id}
             draggable
-            onDragStart={e => { e.dataTransfer.effectAllowed = "copy";
+            onDragStart={e => { e.currentTarget.dataset.drag = "1"; e.dataTransfer.effectAllowed = "copy";
               e.dataTransfer.setData("text/plain", JSON.stringify({ blockId: b.id })); }}
+            onDragEnd={e => { e.currentTarget.dataset.drag = "0"; }}
             title="Drag this idea into a section of the day plan, or click to read how the idea runs"
-            style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", minHeight: 38, padding: "4px 7px",
-              background: "none", border: "none", borderRadius: 9, cursor: "pointer", fontFamily: F, textAlign: "left" }}>
-            <span style={{ flex: "none", padding: "1px 7px", borderRadius: 999, background: hue("activity"),
-              color: "#fff", fontSize: 13, fontWeight: 600, letterSpacing: ".03em", textTransform: "uppercase" }}>Idea</span>
-            <b style={{ flex: 1, minWidth: 0, fontWeight: 600, fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.35 }}>{b.title}</b>
+            style={{ "--ink": inkOf(hue("activity")) }}>
+            <span className="lib-grip" aria-hidden="true">&#10303;</span>
+            <b className="lib-words">{b.title}</b>
             {b.pick ? <PickMark size={18} /> : null}
             <span style={{ flex: "none", fontSize: 13, color: TEXT_MUTED, transform: shown === b.id ? "none" : "rotate(-90deg)", transition: "transform .14s" }}>▾</span>
           </button>
@@ -1374,18 +1402,22 @@ function ReadingCard({ item, accent, live, onCast, onDismiss, onNote, onRemove, 
   const color = hue ? hue(item.type === "reading" ? "link" : item.type) : (TYPE_COLOR[item.type] || TYPE_COLOR.reading);
   const btn = { ...mini, minHeight: 30, padding: "0 10px", fontSize: 13 };
   return (
-    <div className="read-card" draggable
-      onDragStart={e => { e.dataTransfer.effectAllowed = "copy";
+    <div className="read-card" draggable style={{ "--ink": inkOf(color) }}
+      onDragStart={e => { e.currentTarget.dataset.drag = "1"; e.dataTransfer.effectAllowed = "copy";
         e.dataTransfer.setData("text/plain", JSON.stringify({ blockId: item.libId || "", schedItemId: item.id,
           title: item.title, url: item.url || "" })); }}
+      onDragEnd={e => { e.currentTarget.dataset.drag = "0"; }}
       title="Drag this reading into a section of the day plan">
+      <div className="lib-row" style={{ cursor: "grab" }}>
+        <span className="lib-grip" aria-hidden="true">&#10303;</span>
+        <span className="lib-words">{item.title}</span>
+        <span className="lib-kind">{typeLabel(item.type)}</span>
+      </div>
       <div className="read-body">
-        <div className="read-title">{item.title}</div>
         <ReadingNote value={item.note || ""} accent={accent} onSave={onNote} />
       </div>
 
       <div className="read-foot">
-        <span className="read-kind" style={{ background: color }}>{typeLabel(item.type)}</span>
         {picked ? <PickMark size={20} /> : null}
         {item.url ? (
           <a className="dash-focus read-src" href={item.url} target="_blank" rel="noopener noreferrer"
@@ -1720,31 +1752,42 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
         </div>
       ) : (
         <>
-          {(sequences || []).length > 1 ? (
-            <DropMenu label="Structure" width={230} side="left"
-              trigger={(open, toggle) => (
-                <button className="dash-focus" style={{ ...mini, minHeight: 30 }} onClick={toggle}
-                  aria-expanded={open} aria-haspopup="menu">
-                  Structure<span style={{ opacity: .5, fontSize: 13, marginLeft: 5 }}>▾</span>
-                </button>
-              )}>
-              {sequences.map(x => (
-                <button key={x.id} className="dash-focus" onClick={() => onSetSequence(x.id)}
-                  style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", textAlign: "left",
-                    background: "none", border: "none", cursor: "pointer", padding: "0 10px", minHeight: 38,
-                    borderRadius: 8, fontFamily: F, fontSize: 14,
-                    color: x.id === seq?.id ? accent : TEXT_PRIMARY, fontWeight: x.id === seq?.id ? 600 : 400 }}>
-                  {x.name}
-                </button>
-              ))}
-            </DropMenu>
-          ) : null}
-          <button className="dash-focus" style={{ ...mini, minHeight: 30, borderColor: accent, color: accent }}
-            onClick={() => setAddingBlock(true)}>+ New section</button>
-          {sectionList.length > 1 ? (
-            <button className="dash-focus" style={{ ...mini, minHeight: 30 }} onClick={() => setMerging(true)}>Merge sections</button>
-          ) : null}
-          <button className="dash-focus" style={{ ...mini, minHeight: 30 }} onClick={() => setNoting(true)}>+ New note</button>
+          {/* One control where there were four.
+              Structure, New section, Merge sections and New note sat in a row
+              directly under the day's title, which is the line I read off the
+              screen while talking. All four are things I do while planning and
+              none of them are things I do while teaching, so a row of them
+              between the title and the day was four buttons of noise in the
+              worst possible place. They are all still one press away. */}
+          <DropMenu label="Build the day" width={250} side="left"
+            trigger={(open, toggle) => (
+              <button className="dash-focus" style={{ ...mini, minHeight: 30 }} onClick={toggle}
+                aria-expanded={open} aria-haspopup="menu">
+                Build the day<span style={{ opacity: .5, fontSize: 13, marginLeft: 5 }}>▾</span>
+              </button>
+            )}>
+            {(sequences || []).length > 1 ? (
+              <>
+                <div style={{ ...label, color: TEXT_MUTED, padding: "8px 12px 3px" }}>Structure</div>
+                {sequences.map(x => (
+                  <button key={x.id} className="dash-focus" onClick={() => onSetSequence(x.id)}
+                    style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", textAlign: "left",
+                      background: "none", border: "none", cursor: "pointer", padding: "0 12px", minHeight: 38,
+                      borderRadius: 8, fontFamily: F, fontSize: 14,
+                      color: x.id === seq?.id ? accent : TEXT_PRIMARY, fontWeight: x.id === seq?.id ? 600 : 400 }}>
+                    {x.name}
+                  </button>
+                ))}
+                <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
+              </>
+            ) : null}
+            <button className="dash-focus" onClick={() => setAddingBlock(true)}
+              style={{ ...menuRow, color: accent, fontWeight: 600 }}>Add a section</button>
+            {sectionList.length > 1 ? (
+              <button className="dash-focus" onClick={() => setMerging(true)} style={menuRow}>Merge two sections</button>
+            ) : null}
+            <button className="dash-focus" onClick={() => setNoting(true)} style={menuRow}>Add a note</button>
+          </DropMenu>
         </>
       )}
     </div>
@@ -2026,133 +2069,6 @@ export function QuestionsPanel({ items, setState, archiveOpen, castNow, accent }
       <div style={{ display: "flex", gap: 10, alignItems: "center", paddingTop: 4 }}>
         <button style={mini} onClick={archiveOpen}>Archive session</button>
         <Muted style={{ fontSize: 12 }}>{unanswered} archived unanswered</Muted>
-      </div>
-    </>
-  );
-}
-
-// What the room wrote under the prompt on the screen.
-//
-// Casting an Enter or Exit board opens a thread and puts the prompt on every
-// phone in the room. Until now the only surface that read the posts back was
-// the student page, so I cast a prompt, the room answered, and to read the
-// answers I had to leave the screen I teach from. They land here instead,
-// beside the questions and the poll, and the same press that reads one can put
-// that one on the screen.
-//
-// Every thread is in the list, not only today's. Boards ported over from the
-// old hubs arrived closed and nothing in the engine could open one; the switch
-// at the bottom of this panel does.
-export function AnswersPanel({ boards, liveId, path, castNow, onOpen, onRemove, onSetClosed, accent }) {
-  const [pick, setPick] = useState(null);
-  const [draft, setDraft] = useState("");
-  if (boards === null) return <Muted>Loading…</Muted>;
-
-  const list = Object.values(boards || {}).sort((a, b) => (b.at || 0) - (a.at || 0));
-
-  // Starting a discussion.
-  //
-  // A board used to come into being only as a side effect of casting the Enter
-  // or the Exit board, so the two boards a day had names I had chosen in
-  // advance and there was no third. A question I think of while the room is
-  // arguing had nowhere to go. Now the question is the board: typing one opens
-  // the thread, puts the question on the wall, and puts a code on the wall that
-  // sends a phone to the answers rather than to the Ask page.
-  const start = () => {
-    const q = draft.trim();
-    if (!q || !onOpen) return;
-    const id = onOpen(q);
-    setDraft("");
-    setPick(id);
-    castNow({ type: "board", tag: "Discussion", boardLabel: "Discussion", title: "Discussion",
-      idea: q, at: 0, count: 1, join: "board", label: "Discussion" });
-  };
-
-  const Composer = onOpen ? (
-    <div style={{ display: "flex", gap: 7, alignItems: "stretch" }}>
-      <input value={draft} onChange={e => setDraft(e.target.value)}
-        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); start(); } }}
-        placeholder="A question for the room"
-        style={{ ...inputStyle, flex: 1, minWidth: 0 }} />
-      <button style={draft.trim() ? solid(accent) : { ...mini, opacity: .45 }}
-        onClick={start} disabled={!draft.trim()}>Open the discussion</button>
-    </div>
-  ) : null;
-
-  if (!list.length) {
-    return (
-      <>
-        {Composer}
-        <Muted>No discussion is open. Type a question and the room gets the question on the wall.</Muted>
-      </>
-    );
-  }
-
-  // The thread whose prompt is on the screen, unless I have asked for another
-  // one, and the newest thread when nothing is up.
-  const board = list.find(b => b.id === pick) || list.find(b => b.id === liveId) || list[0];
-  // Newest first, which is the other way round from the student page. Reading a
-  // conversation wants the order the room wrote in; reading a room while it is
-  // still writing wants the answer I have not seen.
-  const posts = postsOf(board).slice().reverse();
-
-  return (
-    <>
-      {Composer}
-      {list.length > 1 ? (
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          {list.map(b => {
-            const on = b.id === board.id;
-            return (
-              <button key={b.id} onClick={() => setPick(b.id)} aria-pressed={on} title={b.prompt}
-                style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 13, maxWidth: 190,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  ...(on ? { background: accent, borderColor: accent, color: "#fff" } : {}) }}>
-                {b.prompt} {(b.posts || []).length || ""}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
-      <p style={{ margin: 0, fontSize: 15, fontWeight: 600, lineHeight: 1.35, color: TEXT_PRIMARY }}>{board.prompt}</p>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
-        <span style={{ ...label, fontSize: 12 }}>
-          {posts.length} {posts.length === 1 ? "answer" : "answers"}
-        </span>
-        {board.id === liveId ? <span style={{ ...label, fontSize: 12, color: LIVE }}>On the screen now</span> : null}
-        {board.closed ? <span style={{ ...label, fontSize: 12 }}>Closed</span> : null}
-      </div>
-
-      {posts.length === 0
-        ? <Muted>{board.closed ? "Nobody wrote anything under this prompt." : "Nobody has written anything yet."}</Muted>
-        : null}
-
-      {posts.map(p => (
-        <div key={p.id} style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, background: SURFACE_2 }}>
-          <div style={{ ...label, fontSize: 12, display: "flex", gap: 7, alignItems: "center" }}>
-            <span>{p.who || "Unknown"}</span>
-            <span>{new Date(p.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
-          </div>
-          <p style={{ margin: 0, fontSize: 15, lineHeight: 1.45, color: TEXT_PRIMARY }}>{p.text}</p>
-          <div style={{ display: "flex", gap: 7 }}>
-            <button style={solid(accent)}
-              onClick={() => castNow({ type: "question", tag: board.prompt, title: p.text,
-                cite: p.who || "", label: "Answer \u00b7 " + (p.who || "the room") })}>
-              Push to screen
-            </button>
-            <button style={{ ...mini, marginLeft: "auto", color: LIVE }}
-              onClick={() => onRemove(board.id, p.id)}>Remove this answer</button>
-          </div>
-        </div>
-      ))}
-
-      <div style={{ display: "flex", gap: 10, alignItems: "center", paddingTop: 4, flexWrap: "wrap" }}>
-        <button style={mini} onClick={() => onSetClosed(board.id, !board.closed)}>
-          {board.closed ? "Open the discussion" : "Close the discussion"}
-        </button>
-        <GoTo href={path + "/board?b=" + board.id} accent={accent}>Open the student page</GoTo>
       </div>
     </>
   );
@@ -3264,7 +3180,7 @@ function Picker({ title, opts, value, onPick, accent }) {
 // Everything else is one press away: Coming up has a link through to the page
 // where assignments are actually written and graded.
 const MATERIAL = ["ideas", "readings"];
-const LIVE_RAIL = ["questions", "poll", "answers"];
+const LIVE_RAIL = ["questions", "poll"];
 // Starting widths. Flow takes whatever is left, so it is the one column that
 // never needs a number. Both ends are draggable and the drag is remembered.
 const COL = { material: 300, live: 400 };
@@ -3286,15 +3202,6 @@ export default function Dashboard({ config }) {
   const [live, cast, push] = useLive(config.storageKey);
   const q = useQuestions(config.storageKey);
   const DB = useBoards(config.storageKey);
-  // Which thread the Answers tab opens on, and therefore what its count is
-  // counting: the one whose prompt is on the room screen this second, or the
-  // newest one there is. Worked out here rather than inside the panel because
-  // the tab has to say how many answers are waiting without being opened.
-  const castPrompt = live?.cast?.type === "board" ? (live.cast.idea || live.cast.title) : "";
-  const liveBoardId = castPrompt ? idForPrompt(castPrompt) : "";
-  const openBoard = (DB.boards || {})[liveBoardId]
-    || Object.values(DB.boards || {}).sort((a, b) => (b.at || 0) - (a.at || 0))[0]
-    || null;
   const P = usePoll(config.storageKey);
   const [hornOpen, setHornOpen] = useState(false);
   const [hereOpen, setHereOpen] = useState(false);
@@ -4153,9 +4060,6 @@ export default function Dashboard({ config }) {
       onPick={pickBlock} onAdd={addIdea} onEdit={editIdea} onRemove={removeIdea} onDuplicate={duplicateIdea} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
       castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,
-    answers: () => <AnswersPanel boards={DB.boards} liveId={liveBoardId} path={config.path}
-      castNow={(pl) => { castNow(pl); markEngaged(); }} onOpen={DB.open}
-      onRemove={DB.remove} onSetClosed={DB.setClosed} accent={config.accent} />,
     scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch}
       dayNote={plan?.notes} weekPlan={weekRow?.plan} weekText={weekRow?.text}
       accent={config.accent} day={day}
@@ -4164,7 +4068,7 @@ export default function Dashboard({ config }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} path={config.path} />,
   };
-  const TITLES = { todo: "To-do", poll: "Poll", flow: "Day Plan", boards: "Enter/Exit", readings: "Readings", ideas: "Activities & seeds", questions: "Questions", answers: "Answers", attendance: "Here", scratch: "Notes", assignments: "Assignments" };
+  const TITLES = { todo: "To-do", poll: "Poll", flow: "Day Plan", boards: "Enter/Exit", readings: "Readings", ideas: "Activities & seeds", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   const outCount = Object.values(marks).filter(v => v === "out").length;
   // How far through the day I am, counted off the flow rather than the clock.
@@ -4186,14 +4090,13 @@ export default function Dashboard({ config }) {
   const TAB_HUE = {
     readings: hueOfKind("readings"), ideas: hueOfKind("ideas"), scratch: hueOfKind("notes"),
     assignments: hueOfKind("assignments"), questions: hueOfKind("questions"),
-    poll: hueOfKind("polls"), boards: hueOfKind("boards"), answers: hueOfKind("boards"), todo: "",
+    poll: hueOfKind("polls"), boards: hueOfKind("boards"), todo: "",
   };
   const RAIL_N = {
     questions: openQ,
     readings: readings.length,
     assignments: assignments.length,
     poll: P.poll?.phase && P.poll.phase !== "idle" ? "\u25cf" : 0,
-    answers: (openBoard?.posts || []).length,
     ideas: 0, todo: 0, scratch: 0, boards: 0,
   };
   // The order the flow is drawn in: the sequence's slots, then the sections I
@@ -4262,6 +4165,14 @@ export default function Dashboard({ config }) {
         <button className="dash-focus dash-bar" onClick={() => setHornOpen(true)}>Around the Horn</button>
         <button className="dash-focus dash-bar" onClick={() => setColorsOpen(true)}>Look</button>
         <a className="dash-focus dash-bar" href="/repo">Repo</a>
+        {/* Written months ago and never mounted. Its Keyboard row is the only
+            way to reach the shortcut sheet without already knowing ⌘/, which
+            made ten live shortcuts undiscoverable. */}
+        <ViewMenu railOpen={railOpen} onRail={toggleRail}
+          dense={dense} onDense={() => railSave.current({ dense: !dense })}
+          onReset={() => railSave.current({ cols: { ...COL } })}
+          onKeys={() => { setCmdOpen(false); setKeysOpen(true); }}
+          dragKeeps={dragKeeps} onDragKeeps={() => setDragKeeps(v => !v)} />
 
       </header>
 

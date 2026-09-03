@@ -44,3 +44,37 @@ for (const [, name, hex] of swatches) {
 
 if (bad) { console.error(`check-contrast: ${bad} colour(s) below AA.`); process.exit(1); }
 console.log(`check-contrast: ${SEC.length} section colours and ${swatches.length} palette swatches, all at or above ${AA}:1`);
+
+// ─── the same swatches, as ink ───
+//
+// A library row is a grey card with its words in the kind's colour, which is
+// the opposite job from the fills above: those carry white, these have to be
+// read ON white and on the sunk grey. The light tier fails that job by a hair,
+// so the ink is derived by darkening each channel to 85%. Checked here, not
+// trusted, because a swatch added later has to earn the same clearance.
+// Imported rather than copied. The first version of this check carried its own
+// darkening rule, so changing the one the app uses left the check passing: a
+// check that tests its own copy of a thing tests nothing.
+const INK_ON = [["white", "#ffffff"], ["the sunk grey", "#f6f4f1"]];
+const { inkOf } = await import("../src/engine/colors.js");
+let inkBad = 0;
+for (const [, name, hex] of swatches) {
+  const ink = inkOf(hex);
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(ink.slice(i, i + 2), 16) / 255);
+  const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  for (const [where, ground] of INK_ON) {
+    const [gr, gg, gb] = [1, 3, 5].map(i => parseInt(ground.slice(i, i + 2), 16) / 255);
+    const GL = 0.2126 * lin(gr) + 0.7152 * lin(gg) + 0.0722 * lin(gb);
+    const [hi, lo] = [L, GL].sort((x, y) => y - x);
+    const ratio = (hi + 0.05) / (lo + 0.05);
+    if (ratio < AA) {
+      inkBad++;
+      console.error(`  FAIL  ${name} as ink is ${ink} at ${ratio.toFixed(2)}:1 on ${where}, under ${AA}`);
+    }
+  }
+}
+if (inkBad) {
+  console.error(`\ncheck-contrast: ${inkBad} swatch(es) unreadable as ink.`);
+  process.exit(1);
+}
+console.log(`check-contrast: all ${swatches.length} swatches read as ink on white and on the sunk grey`);
