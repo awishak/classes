@@ -30,8 +30,8 @@ import { THEMES, THEME, THEME_LABELS, themeCSS, varsOf, fontHref } from "../src/
 import { ThemePicker } from "../src/engine/ThemeShell.jsx";
 import { Tubey, TubeySays, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeyPeek, ThemeStickers,
   StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, StatusMark, cardStyle, CHROME_CSS,
-  MARQUEE_SECONDS } from "../src/engine/ThemeChrome.jsx";
-import { ALL_FACTS, factsFor } from "../src/engine/crashing-facts.js";
+  MARQUEE_SECONDS_PER_ITEM, marqueeSeconds } from "../src/engine/ThemeChrome.jsx";
+import { ALL_FACTS, factsFor, shuffledFacts } from "../src/engine/crashing-facts.js";
 import { saveWeek, openWeek, answerWeek, scoreWeek, scoresFor, perfectRuns, pointsOf, mergeAnswers } from "../src/engine/game.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
@@ -994,7 +994,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const off = ["clean", "business"];
   const html = (el) => renderToString(el);
   // Crashing Out brings a marquee, a mascot, a sponsor and a legal line.
-  if (!html(<ThemeTopper theme="crashing" lines={["a", "b"]} />).includes(`tcMarquee ${MARQUEE_SECONDS}s`)) say("no marquee on Crashing Out");
+  if (!html(<ThemeTopper theme="crashing" lines={["a", "b"]} />).includes("animation:tcMarquee")) say("no marquee on Crashing Out");
   if (!html(<TubeySays theme="crashing" seed={1} />).includes("<svg")) say("Tubey is not drawn on Crashing Out");
   const sp = html(<ThemeSponsor theme="crashing" />);
   if (!sp.includes("homeworktubes.com")) say("the sponsor bar does not link to Homework Tubes");
@@ -1096,7 +1096,9 @@ cases.push(["Instructor links", <InstructorLinks />]);
   if (!CHROME_CSS.includes('[data-theme="crashing"]')) say("nothing animates the Crashing Out page");
   if (!CHROME_CSS.includes("background-size:300% 300%")) say("the gradient has no room to travel, so the wobble does nothing");
   if (!CHROME_CSS.includes("prefers-reduced-motion")) say("the wobble ignores reduced motion");
-  if (MARQUEE_SECONDS < 40) say("the marquee runs at " + MARQUEE_SECONDS + "s, which is faster than anybody reads it");
+  // The strip is only readable if each item gets a few seconds of screen.
+  if (MARQUEE_SECONDS_PER_ITEM < 2) say("each item gets " + MARQUEE_SECONDS_PER_ITEM + "s, which is faster than anybody reads one");
+  if (marqueeSeconds(125) <= marqueeSeconds(20)) say("a longer strip does not take longer, so more facts means a faster banner");
 
   if (!html(<ThemeStickers theme="crashing" />).includes("tcTwinkle")) say("no stickers on Crashing Out");
   if (!html(<TubeyPeek theme="crashing" />).includes("<svg")) say("Tubey does not peek");
@@ -1171,14 +1173,25 @@ cases.push(["Instructor links", <InstructorLinks />]);
     }
     if (f !== f.toUpperCase()) say("a fact is not in the marquee's case: " + f);
   });
-  // Seeded, so a re-render does not reshuffle the banner under a reader.
-  if (factsFor(7, 4).join("|") !== factsFor(7, 4).join("|")) say("the same seed gives different facts");
-  if (factsFor(7, 4).join("|") === factsFor(8, 4).join("|")) say("every seed gives the same facts");
-  if (new Set(factsFor(3, 6)).size !== 6) say("one banner repeats a result");
-  // And a championship reaches the strip.
+  // Every fact rotates, in this reader's own order. The first version put four
+  // on the strip and repeated those four forever, so a student saw the same
+  // three championships all term.
+  const mine = shuffledFacts(7), again = shuffledFacts(7), theirs = shuffledFacts(8);
+  if (mine.length !== ALL_FACTS.length) say(`only ${mine.length} of ${ALL_FACTS.length} facts rotate`);
+  if (new Set(mine).size !== mine.length) say("a shuffle repeats a result");
+  if (mine.join("|") !== again.join("|")) say("the same reader gets a different order each render");
+  if (mine.join("|") === theirs.join("|")) say("every reader gets the same order");
+
+  // And the whole lot has to reach the strip, not a sample of it.
   const strip = html(<ThemeTopper theme="crashing" lines={["A CLASS FACT"]} seed={11} />);
   if (!strip.includes("A CLASS FACT")) say("the marquee dropped the class's own line");
-  if (!/\d{4} ·/.test(strip)) say("no championship reached the marquee");
+  // renderToString escapes an apostrophe, and one of these is "THE A'S", so the
+  // strip is decoded before matching rather than the check being loosened.
+  const plain = strip.replace(/&#x27;|&#39;/g, "'").replace(/&amp;/g, "&");
+  const onStrip = ALL_FACTS.filter(f => plain.includes(f)).length;
+  if (onStrip !== ALL_FACTS.length) say(`${onStrip} of ${ALL_FACTS.length} championships reached the marquee`);
+  const dur = Number((strip.match(/animation:tcMarquee (\d+)s/) || [])[1] || 0);
+  if (dur < 200) say("the strip carries every fact and crosses in " + dur + "s, which nobody can read");
 }
 
 cases.push(["Tubey", <Tubey size={120} />]);
@@ -1204,7 +1217,7 @@ cases.push(["Snapchat, the story bar", <StoryBar theme="snapchat" roster={[{ nam
   // stylesheet ships whole. What is conditional is the element that uses it, so
   // the marker is the inline animation rather than the name on its own. The
   // first version of this test checked the name and therefore checked nothing.
-  const RUNS = `tcMarquee ${MARQUEE_SECONDS}s`;
+  const RUNS = "animation:tcMarquee";
   SURFACES.forEach(([name, el]) => {
     const loud = withTheme("crashing", el);
     if (!loud.includes(RUNS)) say(`no marquee on the ${name} under Crashing Out`);

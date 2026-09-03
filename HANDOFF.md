@@ -103,9 +103,16 @@ and a classmate saying the number is a different thing. The leader looking at
 their own screen gets a different line, since a leader taunting themselves is a
 bug and the build says so.
 
-**The marquee carries championships.** `src/engine/crashing-facts.js` holds 104
+**The marquee carries every championship.** `src/engine/crashing-facts.js` holds 104
 results: every Super Bowl, NBA Finals and World Series from the 1990 season to
-the 2024 season, alternating with the class's own facts as the strip scrolls.
+the 2024 season. All of them go on the strip, shuffled into an order that
+belongs to that reader, with the class's own news coming round every fifth item
+so a student's grade never scrolls away for good.
+
+The duration is computed from the number of items rather than fixed, because the
+animation moves a proportion of the element rather than a distance: a longer
+strip at the same duration is a faster strip. `MARQUEE_SECONDS_PER_ITEM` is the
+one number, and 125 items works out at about 400 seconds.
 The last two seasons are deliberately absent rather than guessed, because a
 banner that states a result confidently is worse than a shorter banner. **This
 is the one part of the app that can be factually wrong.** Check any of them

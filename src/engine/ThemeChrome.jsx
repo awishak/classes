@@ -14,7 +14,7 @@
 // permitted to help with anybody's homework, and he says so himself.
 
 import { THEME, BRAND } from "./themes.js";
-import { factsFor } from "./crashing-facts.js";
+import { shuffledFacts } from "./crashing-facts.js";
 
 // The sponsor's palette, from the system rather than from here. `onCream` and
 // `onYellow` are the two that carry words; everything else is a fill or a line.
@@ -23,16 +23,17 @@ const { yellow: YEL, green: GRN, blue: BLU, red: RED, orange: ORA, purple: PUR, 
 const INK = HT.onYellow;
 
 // The keyframes each theme's furniture needs. Mounted once by ThemeChrome.
-// How long the marquee takes to travel its own length.
+// How long one item spends crossing the strip.
 //
-// It ran at 22s when the strip was three short lines about this class. Adding a
-// championship between every one of them roughly doubled the length, and the
-// animation moves a proportion rather than a distance, so the same duration
-// meant twice the pixels a second. Sixty reads at a walk.
-//
-// Exported because the build checks for this exact value in the markup, and a
-// number written in two places is a number that will disagree with itself.
-export const MARQUEE_SECONDS = 60;
+// A fixed duration was the wrong shape for this. The animation moves a
+// proportion of the element rather than a distance, so a longer strip at the
+// same duration is a faster strip: adding a championship between every class
+// fact doubled the length and doubled the speed with it, and putting all
+// hundred and four on there would have made the thing unreadable. The duration
+// is computed from the number of items instead, so the apparent speed holds
+// whatever goes on the banner.
+export const MARQUEE_SECONDS_PER_ITEM = 3.2;
+export const marqueeSeconds = (items) => Math.round(Math.max(items, 8) * MARQUEE_SECONDS_PER_ITEM);
 
 export const CHROME_CSS = `
 @keyframes tcMarquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
@@ -124,24 +125,25 @@ export function ThemeTopper({ theme, lines = [], fixed, seed = 0 }) {
   const seat = fixed
     ? { position: "fixed", top: 0, left: 0, right: 0, zIndex: 40 }
     : null;
-  // What is happening in this class, and then a championship from the last
-  // thirty-five years, alternating. The result has nothing to do with anybody's
-  // grade, which is the point: it is a class about sport and the banner has
-  // opinions.
+  // Every championship in the file, in this reader's own order, with the class's
+  // own news coming round every fifth item so a student's grade never scrolls
+  // away for good. The result has nothing to do with anybody's grade, which is
+  // the point: this is a class about sport and the banner has opinions.
   const own = (lines.length ? lines : ["THIS IS A CLASS", "YOU ARE DOING FINE"]).map(l => String(l).toUpperCase());
-  const facts = factsFor(seed, Math.max(own.length, 3));
+  const facts = shuffledFacts(seed);
   const mixed = [];
-  for (let i = 0; i < Math.max(own.length, facts.length); i++) {
-    if (own[i]) mixed.push(own[i]);
-    if (facts[i]) mixed.push(facts[i]);
-  }
+  facts.forEach((f, i) => {
+    if (i % 5 === 0 && own.length) mixed.push(own[(i / 5) % own.length]);
+    mixed.push(f);
+  });
   const text = mixed.map(l => "★ " + l).join(" ") + " ★ ";
+  const seconds = marqueeSeconds(mixed.length);
   return (
     <div className="tc-torn" style={{ background: INK, whiteSpace: "nowrap", padding: "9px 0",
       borderBottom: "3px solid " + PNK, ...seat }}>
       <div style={{ overflow: "hidden" }}>
-      <div className="tc-anim" style={{ display: "inline-block", animation: `tcMarquee ${MARQUEE_SECONDS}s linear infinite`,
-        fontFamily: "'Press Start 2P', monospace", fontSize: 13, color: YEL }}>{text.repeat(4)}</div>
+      <div className="tc-anim" style={{ display: "inline-block", animation: `tcMarquee ${seconds}s linear infinite`,
+        fontFamily: "'Press Start 2P', monospace", fontSize: 13, color: YEL }}>{text.repeat(2)}</div>
       </div>
     </div>
   );

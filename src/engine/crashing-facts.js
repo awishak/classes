@@ -128,15 +128,34 @@ export const WORLD_SERIES = [
 
 export const ALL_FACTS = [...SUPER_BOWLS, ...NBA_FINALS, ...WORLD_SERIES];
 
-// Picked off a seed rather than at random, so a page that re-renders does not
-// reshuffle the banner under somebody who is reading it.
-export function factsFor(seed, n = 4) {
-  const out = [];
-  const step = 7919; // a prime, so the walk covers the list rather than looping
-  let i = Math.abs(seed || 0) % ALL_FACTS.length;
-  for (let k = 0; k < n; k++) {
-    out.push(ALL_FACTS[i]);
-    i = (i + step) % ALL_FACTS.length;
+// All of them, in an order that belongs to this reader.
+//
+// The first version picked four and the strip repeated those four forever, so a
+// student saw the same three championships all term. The whole list goes on the
+// strip now, shuffled off a seed rather than off Math.random, because a banner
+// that reorders itself on every re-render is a banner nobody can finish
+// reading. The same student gets the same order every time; two students get
+// different orders.
+//
+// A small linear congruential generator, which is plenty for shuffling a list
+// of sports results and has the one property that matters here: the same seed
+// gives the same sequence.
+const rng = (seed) => {
+  let x = (Math.abs(seed | 0) % 2147483646) + 1;
+  return () => (x = (x * 16807) % 2147483647) / 2147483647;
+};
+
+export function shuffledFacts(seed) {
+  const out = ALL_FACTS.slice();
+  const next = rng(seed);
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
+}
+
+// Kept for anything that wants a handful rather than the lot.
+export function factsFor(seed, n = 4) {
+  return shuffledFacts(seed).slice(0, n);
 }
