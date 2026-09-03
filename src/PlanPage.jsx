@@ -47,6 +47,34 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep3h", date: "Thursday, September 3 \u00b7 evening", title: "Invalid Date, because the test invented the format",
+    blurb: "Two cards in the rails were rebuilt and one of them shipped broken. The date on every card read \"Invalid Date\", and the check written to guard the date passed, because the fixture used a format the app has never stored.",
+    groups: [
+      { name: "A card you can see", items: [
+        ["The grey went too deep first", "#d9d2c8 stood 1.50:1 off the white panel and cost 28% of every swatch to pay for, so Ideas green and Readings blue came out muddy in the rail and bright in the day plan for the same kind of thing."],
+        ["The tradeoff is lopsided", "Across the whole ramp the ink moves seven points and the edge moves from invisible to plain. So the card is picked on its edge and the ink follows: #f1f2f5 at 1.12:1, ink at 96%, worst swatch teal at 4.57."],
+        ["The hover goes the other way", "Deeper on hover is the obvious direction and it fails: at 96% ink one step down puts teal at 4.17. The hover lifts to #f8f9fb and the ring in the ink colour carries the state."],
+      ] },
+      { name: "Cards that fit", items: [
+        ["A rail is not a phone", "The library row ran at 44px, the student-site finger target, in a panel reached with a trackpad. DESIGN.md has said 34 for an instructor control the whole time and the rail was the one place ignoring the number."],
+        ["A placeholder taking 34px", "The note strip rendered \"+ note\" whether or not there was a note. The strip appears once there is something in it now, and the card is 80px, a third shorter."],
+        ["A label saying nothing", "The card said Reading inside a panel headed Today\u2019s readings. The slot carries the day the thing is placed on instead."],
+        ["Ideas got the same card", "Minus the footer, since an idea has no source and nothing to put on the room screen. The first two lines of how it runs sit on every card, because the title alone never told two warm-ups apart."],
+      ] },
+      { name: "The bug the check let through", items: [
+        ["A day key is not a date", "Keys are the schedule\u2019s own short strings, \"Sep 23\", and days.js has parseDay for reading exactly that format. Handing the key to new Date with a time on the end is not a date, so every card printed Invalid Date."],
+        ["The fixture was made up", "The test used ISO dates invented for the test rather than the format the app stores, so it passed on code that could not work. It uses real keys now and fails on what shipped."],
+        ["Three sizes under the floor", "The note at 12.5px, the source at 12, the flag at 10.5. The build checks JSX text and has never checked CSS, so all three had been sitting there under the 13px floor the design doc sets."],
+      ] },
+    ],
+    note: {
+      title: "A test is only as honest as its fixture",
+      lines: [
+        "Every fix this week was paired with a check that fails when the fix comes undone, and the pairing works. This one did not, for a reason worth remembering: the check was written from what I assumed the data looked like rather than from the data. A green check on an invented fixture is worse than no check, because it buys confidence it has not earned.",
+      ],
+    },
+  },
+  {
     id: "sep3f", date: "Thursday, September 3 \u00b7 afternoon", title: "A class name with nothing behind the name",
     blurb: "Andrew sent a screenshot of the day title on the dashboard, with clear jammed against Monday and rename stuck on the end of the sentence. The block was rewritten on 28 August, the new markup arrived with five class names, and only one of them kept a rule.",
     groups: [
