@@ -47,6 +47,28 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep2l", date: "Wednesday, September 2 \u00b7 last", title: "Thirteen controls across the top, down to two",
+    blurb: "Andrew: way too many buttons on the top bar for the instructor view. Four theme buttons, a view-as select, a class select, four teaching links, sign out and a two-button role toggle. Everything competed and nothing led, and I had added most of it today one piece at a time without ever looking at the row as a row.",
+    groups: [
+      { name: "One primary, one menu", items: [
+        ["Dashboard stays out", "The button pressed with a class about to start, in the class colour, on its own."],
+        ["Everything else is a setting", "The room screen, Ask, Run the game, the class switcher, View as a student, the theme, the role toggle and sign out. All behind one menu, grouped and labelled."],
+        ["A student sees the same menu with the teaching half gone", "One pattern rather than two, and the theme picker is still one press from anywhere, which was the requirement."],
+        ["The phone lost its strip", "A scrolling row of teaching links under the header is gone. The phone gets the same primary and the same menu."],
+      ] },
+      { name: "What the tidy cost", items: [
+        ["A test had to change", "The build asserted that the roster picker appears in the instructor's markup. Inside a closed menu it does not, so that check is gone and nothing covers the menu's contents now. Worth saying rather than quietly weakening."],
+        ["A blunter check took its place", "The build counts tap targets across the top bar and fails over six. Crude, and it is the measure that would have caught thirteen buttons accumulating one at a time."],
+      ] },
+    ],
+    note: {
+      title: "How it got to thirteen",
+      lines: [
+        "Every one of them was added deliberately and none of them were added together. The theme picker, the view-as picker and the game link all went in today, each reasonable on its own, and nobody looked at the row afterwards.",
+      ],
+    },
+  },
+  {
     id: "sep2k", date: "Wednesday, September 2 \u00b7 last", title: "Further, on both loud themes",
     blurb: "Andrew: can you go further with snapchat and crashing out? Snapchat had the palette and the streak and none of the language people recognise it by. Crashing Out had a six-stop gradient that painted once and then held perfectly still, which is a gradient rather than a wobble.",
     groups: [

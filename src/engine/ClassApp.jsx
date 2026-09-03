@@ -526,29 +526,6 @@ export default function ClassApp({ config, initialCard }) {
 
   // In instructor view, the class page is where I already am when I realise I
   // want to teach from it. These are the three teaching surfaces.
-  const TeachLinks = view === "instructor" ? (
-    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-      <select className="ca-focus" value={config.id} aria-label="Class"
-        onChange={e => {
-          const next = ENGINE_LIST.find(c => c.id === e.target.value);
-          if (!next) return;
-          window.history.pushState({}, "", next.path);
-          window.dispatchEvent(new PopStateEvent("popstate"));
-        }}
-        style={{ fontFamily: F, fontSize: 15, fontWeight: 600, minHeight: TAP, padding: "0 10px",
-          borderRadius: 999, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY, cursor: "pointer" }}>
-        {ENGINE_LIST.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
-      </select>
-      {[["/dashboard", "Dashboard"], ["/today", "Room screen"], ["/ask", "Ask"], ["/rungame", "Game"]].map(([suffix, name]) => (
-        <a key={suffix} className="ca-focus" href={config.path + suffix}
-          style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, padding: "0 14px", borderRadius: 999,
-            border: "1px solid " + (suffix === "/dashboard" ? a : BORDER_STRONG),
-            background: suffix === "/dashboard" ? a : "#fff",
-            color: suffix === "/dashboard" ? "#fff" : TEXT_SECONDARY,
-            fontSize: 15, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>{name}</a>
-      ))}
-    </div>
-  ) : null;
 
   // The roster, alphabetical, because a picker over thirty names wants an order
   // I can aim at.
@@ -564,10 +541,6 @@ export default function ClassApp({ config, initialCard }) {
       {roster.map(st => <option key={st.name} value={st.name}>{st.name}</option>)}
     </select>
   );
-
-  // The way in, beside the teaching links, and only for an instructor with a
-  // roster to look through.
-  const ViewAs = role === "instructor" && !preview && roster.length ? StudentPicker : null;
 
   // The way out, across the top of every page, in the class colour, so no
   // amount of scrolling loses the way back.
@@ -588,6 +561,88 @@ export default function ClassApp({ config, initialCard }) {
       </div>
     </div>
   ) : null;
+
+  // The header had thirteen controls on the instructor side: four theme
+  // buttons, a view-as select, a class select, four teaching links, sign out
+  // and a two-button role toggle. Everything competed and nothing led.
+  //
+  // One thing stays out: the Dashboard, which is the button pressed with a
+  // class about to start. Everything else is a setting, and settings go behind
+  // a menu. A student sees the same menu with the teaching half missing.
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e) => { if (e.key === "Escape") setMenuOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
+  const menuRow = { display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: TAP,
+    padding: "0 14px", background: "none", border: "none", borderRadius: 10, cursor: "pointer",
+    fontFamily: F, fontSize: 15, fontWeight: 500, color: TEXT_PRIMARY, textAlign: "left", textDecoration: "none" };
+  const menuLabel = { ...label, color: TEXT_MUTED, padding: "10px 14px 4px" };
+  const rule = <div style={{ height: 1, background: BORDER, margin: "6px 0" }} />;
+
+  const HeaderMenu = (
+    <div style={{ position: "relative" }}>
+      <button className="ca-focus" onClick={() => setMenuOpen(v => !v)}
+        aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Menu"
+        style={{ minHeight: TAP, padding: "0 14px", borderRadius: 999, cursor: "pointer",
+          background: "var(--surface-card)", border: "1px solid " + BORDER_STRONG,
+          fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_SECONDARY,
+          display: "inline-flex", alignItems: "center", gap: 8 }}>
+        {signedIn ? signedIn.split(" ")[0] : "Menu"}
+        <span aria-hidden="true" style={{ fontSize: 13, color: TEXT_MUTED }}>▾</span>
+      </button>
+      {menuOpen ? (
+        <>
+          <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+          <div role="menu" style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", zIndex: 41,
+            width: 288, padding: 6, background: "var(--surface-card)", border: "var(--card-border)",
+            borderRadius: "var(--card-radius)", boxShadow: "0 20px 44px -14px rgba(23,19,16,.34)" }}>
+            {view === "instructor" ? (
+              <>
+                <div style={menuLabel}>Teach</div>
+                <a className="ca-focus" style={menuRow} href={config.path + "/today"}>Room screen</a>
+                <a className="ca-focus" style={menuRow} href={config.path + "/ask"}>Ask</a>
+                <a className="ca-focus" style={menuRow} href={config.path + "/rungame"}>Run the game</a>
+                {rule}
+                <div style={menuLabel}>Class</div>
+                <select className="ca-focus" value={config.id} aria-label="Class"
+                  onChange={e => {
+                    const next = ENGINE_LIST.find(c => c.id === e.target.value);
+                    if (!next) return;
+                    window.history.pushState({}, "", next.path);
+                    window.dispatchEvent(new PopStateEvent("popstate"));
+                  }}
+                  style={{ ...menuRow, cursor: "pointer" }}>
+                  {ENGINE_LIST.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
+                </select>
+                {roster.length ? (
+                  <select className="ca-focus" value={preview} aria-label="Which student"
+                    onChange={e => { setPreview(e.target.value); setMenuOpen(false); go(null); }}
+                    style={{ ...menuRow, cursor: "pointer" }}>
+                    <option value="">View as a student</option>
+                    {roster.map(st => <option key={st.name} value={st.name}>{st.name}</option>)}
+                  </select>
+                ) : null}
+                {rule}
+              </>
+            ) : null}
+            <div style={menuLabel}>How this looks</div>
+            <div style={{ padding: "2px 14px 8px" }}>
+              <ThemePicker theme={theme} onPick={pickTheme} compact />
+            </div>
+            {rule}
+            <div style={{ padding: "2px 8px 4px" }}>{RoleToggle}</div>
+            {signedIn && !preview ? (
+              <button className="ca-focus" onClick={signOut} style={{ ...menuRow, color: TEXT_SECONDARY }}>Sign out</button>
+            ) : null}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
 
   const Logo = (
     <button className="ca-focus" onClick={() => go(null)}
@@ -705,18 +760,15 @@ export default function ClassApp({ config, initialCard }) {
             {Logo}
             <ThemeIdentity theme={theme} points={myPoints} />
             {Nav}
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
               <ThemeBadge theme={theme} points={myPoints} />
-              <ThemePicker theme={theme} onPick={pickTheme} compact />
-              {ViewAs}
-              {TeachLinks}
-              {signedIn && !preview ? (
-                <button className="ca-focus" onClick={signOut}
-                  style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, color: TEXT_SECONDARY, cursor: "pointer", minHeight: TAP }}>
-                  {signedIn.split(" ")[0]} · sign out
-                </button>
+              {view === "instructor" ? (
+                <a className="ca-focus" href={config.path + "/dashboard"}
+                  style={{ minHeight: TAP, padding: "0 18px", borderRadius: 999, background: a, color: "#fff",
+                    fontFamily: F, fontSize: 15, fontWeight: 600, textDecoration: "none",
+                    display: "inline-flex", alignItems: "center", whiteSpace: "nowrap" }}>Dashboard</a>
               ) : null}
-              {RoleToggle}
+              {HeaderMenu}
             </div>
           </div>
         </div>
@@ -770,9 +822,16 @@ export default function ClassApp({ config, initialCard }) {
       </div>
       </div>
 
-      {TeachLinks || ViewAs ? (
+      {view === "instructor" ? (
         <div style={{ background: "var(--surface-card)", borderBottom: "1px solid " + BORDER, padding: "8px 16px",
-          display: "flex", gap: 6, alignItems: "center", overflowX: "auto" }}>{ViewAs}{TeachLinks}</div>
+          display: "flex", gap: 10, alignItems: "center" }}>
+          <a className="ca-focus" href={config.path + "/dashboard"}
+            style={{ minHeight: TAP, padding: "0 18px", borderRadius: 999, background: a, color: "#fff",
+              fontFamily: F, fontSize: 15, fontWeight: 600, textDecoration: "none",
+              display: "inline-flex", alignItems: "center" }}>Dashboard</a>
+          <span style={{ fontSize: 15, color: TEXT_MUTED, minWidth: 0, overflow: "hidden",
+            textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{config.desc}</span>
+        </div>
       ) : null}
 
       {/* content: grid OR full-screen takeover */}

@@ -46,6 +46,23 @@ everything that row can do — done, nest under the row above, write the
 headline, put on today's readings, take off the day. Only Cast sits out on the
 right.
 
+## The class site's top bar
+
+Two controls. **Dashboard**, which is the button pressed with a class about to
+start, and a **menu** holding everything else: the room screen, Ask, Run the
+game, the class switcher, View as a student, the theme picker, the role toggle
+and sign out. A student sees the same menu with the teaching half missing.
+
+The bar carried thirteen controls before: four theme buttons, a view-as select,
+a class select, four teaching links, sign out and a two-button role toggle.
+Everything competed and nothing led.
+
+**What that costs:** the roster picker, the class switcher and the teaching
+links live inside a closed menu, so they are not in the markup until somebody
+clicks, and no render test covers their contents any more. The build counts tap
+targets across the bar instead and fails over six, which is the blunt measure
+that would have caught the drift in the first place.
+
 ## Four themes, and a student picks one
 
 `src/engine/themes.js` holds them: **Clean** is the standard, **Business** is the

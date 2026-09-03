@@ -908,12 +908,23 @@ cases.push(["Instructor links", <InstructorLinks />]);
   globalThis.localStorage.getItem = (k) => (k === admin ? "1" : null);
   try {
     const html = renderToString(<ClassApp config={cfg0} />);
-    if (!html.includes("View as a student")) {
-      console.error("  FAIL  class site, instructor: no way in to seeing the class as a student"); failedEarly++; }
+    // The header used to carry thirteen controls and now carries two: the
+    // Dashboard, and a menu holding everything else. So this checks the closed
+    // header, which is all a render test can see.
+    //
+    // What that costs, said out loud: the roster picker, the class switcher and
+    // the teaching links are inside the menu and no longer appear in the
+    // markup until somebody clicks. Nothing checks their contents any more.
     if (!html.includes("Dashboard")) {
-      console.error("  FAIL  class site, instructor: the teaching links did not render"); failedEarly++; }
-    if (!(cfg0.students || []).every(st => html.includes(st.name))) {
-      console.error("  FAIL  class site, instructor: the picker is missing somebody on the roster"); failedEarly++; }
+      console.error("  FAIL  class site, instructor: no way through to the dashboard"); failedEarly++; }
+    if (!html.includes('aria-haspopup="menu"')) {
+      console.error("  FAIL  class site, instructor: no menu, so everything behind it is unreachable"); failedEarly++; }
+    // And the header stays small. Counting the tap targets across the top is a
+    // blunt measure and it is the one that would have caught this drifting.
+    const bar = (html.split('borderBottom:1px solid')[1] || "").slice(0, 4000);
+    const taps = (bar.match(/min-height:44px/g) || []).length;
+    if (taps > 6) {
+      console.error("  FAIL  class site, instructor: " + taps + " tap targets across the top bar"); failedEarly++; }
   } catch (err) {
     console.error("  FAIL  class site, instructor: " + err.message); failedEarly++;
   }
