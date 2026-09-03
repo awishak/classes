@@ -18,10 +18,11 @@
 // theme actually puts it on. `npm run tokens` fails the build otherwise, so a
 // theme cannot ship a colour nobody can read.
 
-export const THEMES = ["clean", "business", "snapchat", "crashing"];
+export const THEMES = ["clean", "clean2", "business", "snapchat", "crashing"];
 
 export const THEME_LABELS = {
   clean: "Clean",
+  clean2: "Clean 2",
   business: "Business",
   snapchat: "Snapchat",
   crashing: "Crashing Out",
@@ -29,6 +30,7 @@ export const THEME_LABELS = {
 
 export const THEME_DESCS = {
   clean: "Calm and out of the way",
+  clean2: "No boxes. Rules and space.",
   business: "Dark, serious, a bit of weight",
   snapchat: "Yellow, loud, streaks",
   crashing: "Maximum chaos, sponsored",
@@ -48,7 +50,31 @@ export const THEME = {
                display: "'Outfit', -apple-system, sans-serif",
                label: "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace" },
     weight:  { display: "600", shadow: "none" },
+    layout:  "cards",
     grounds: ["#ffffff", "#fafaf9", "#f6f4f1"],
+  },
+
+  // Clean 2 is Clean's palette with the boxes taken away.
+  //
+  // The difference is structure rather than skin, which is why it is a theme of
+  // its own and not a switch on Clean: a card grid and a ruled band are two
+  // different pages. Hairlines instead of borders, a display weight of 300, and
+  // colour kept for the one thing that is live.
+  clean2: {
+    text:    { primary: "#1c1917", secondary: "#57534e", muted: "#6b655f" },
+    line:    { soft: "#e8e3de", strong: "#d9d2ca", ghost: "#c9c2ba" },
+    // The sunk surface matches Clean's rather than going a shade darker: at
+    // #f4f2ef the warn amber lands at 4.49:1, which is one hundredth under.
+    surface: { page: "#fafaf9", card: "#fafaf9", sunk: "#f6f4f1" },
+    state:   { live: "#be123c", ok: "#0f766e", warn: "#b45309", late: "#c81e1e" },
+    room:    { stage: "#0f0d0c", ink: "#f6f2ec", dim: "#a79c92", line: "#2b2622" },
+    card:    { border: "none", shadow: "none", radius: "0px" },
+    font:    { body: "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif",
+               display: "'Outfit', -apple-system, sans-serif",
+               label: "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace" },
+    weight:  { display: "300", shadow: "none" },
+    layout:  "ruled",
+    grounds: ["#fafaf9", "#f6f4f1"],
   },
 
   business: {
@@ -62,6 +88,7 @@ export const THEME = {
                display: "'Fraunces', Georgia, serif",
                label: "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace" },
     weight:  { display: "600", shadow: "none" },
+    layout:  "cards",
     grounds: ["#1c1917", "#241f1c", "#2b2622"],
   },
 
@@ -76,6 +103,7 @@ export const THEME = {
                display: "'Nunito', 'Avenir Next', sans-serif",
                label: "'Nunito', sans-serif" },
     weight:  { display: "900", shadow: "none" },
+    layout:  "cards",
     grounds: ["#ffffff", "#FFFC00"],
   },
 
@@ -101,6 +129,7 @@ export const THEME = {
                display: "'Bangers', 'Rubik Mono One', cursive",
                label: "'Lilita One', 'Fredoka', cursive" },
     weight:  { display: "400", shadow: "3px 3px 0 #FF5FA2" },
+    layout:  "cards",
     // Every band of the gradient, plus the card, because text lands on both.
     grounds: ["#ffffff", "#fce7f3", "#fef3c7", "#dbeafe", "#ddd6fe", "#fbcfe8"],
   },
@@ -157,3 +186,7 @@ export const BRAND = {
     text: [["onCream", "#b81428", "#FFF8E7"], ["onYellow", "#1f2937", "#FFD233"]],
   },
 };
+
+// How a page is built under this theme. "cards" is a grid of boxes; "ruled" is
+// a band divided by hairlines, with no boxes at all.
+export const layoutOf = (name) => (THEME[name] || THEME.clean).layout || "cards";

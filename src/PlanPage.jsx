@@ -47,6 +47,32 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep3c", date: "Thursday, September 3 \u00b7 morning", title: "Clean 2, which is the look I drew and never built",
+    blurb: "Andrew: you gave me a certain look for clean then you didn't make it the look on clean. why. Because I built the theme engine as token swapping, and the direction he picked deleted the cards. Layout is not a token, so the engine could never have produced it, and I described the result as though it had.",
+    groups: [
+      { name: "What went wrong the first time", items: [
+        ["The artboard had no boxes", "Checking the file: zero rounded cards, one heading at weight 300, a four-column band divided by hairlines. What shipped as Clean was the existing two-column card grid wearing the warm palette."],
+        ["A theme could only change the skin", "Colour, faces, card treatment, furniture. All of that is a token or a component. A grid of boxes against a ruled band is neither."],
+        ["His call to make it a fifth theme", "Rather than change Clean, which people may already have chosen. Two different pages deserve two names."],
+      ] },
+      { name: "What a theme can say now", items: [
+        ["layout: cards or ruled", "Four themes want boxes, and they need them: a hard black shadow and a cut corner have to sit on something. Clean 2 wants none."],
+        ["Ruled, in full", "No background, no border, no radius. Hairlines between columns on a laptop and between rows on a phone, four across instead of two, the open panel divided by a rule rather than boxed, headings at 300."],
+        ["Colour only where something is live", "Which is the whole argument for the direction: on a page with no boxes, one red dot is unmissable."],
+      ] },
+      { name: "Checked structurally", items: [
+        ["Clean 2 draws no card shadow at either width", "And Clean still does, side by side in the same check. Turning the ruled layout off fails the build three ways."],
+        ["The contrast check caught it on the first run", "Clean 2's sunk surface started a shade darker than Clean's, which put the warn amber at 4.49:1. One hundredth under, and the build said so before anybody saw it."],
+      ] },
+    ],
+    note: {
+      title: "Written twice",
+      lines: [
+        "The first script adding this threw on a regex before it wrote anything, which is the same failure that left the phone header untidied for a day. Line-based edits and a verification read after, both times.",
+      ],
+    },
+  },
+  {
     id: "sep3b", date: "Thursday, September 3 \u00b7 morning", title: "Every test had only ever seen the laptop",
     blurb: "Andrew: i don't like that when i look at it in student view from a phone, the four themes are all over the top menu. He was looking at a header I thought I had tidied a day earlier. The desktop got tidied; the phone did not, and nothing in the build could tell.",
     groups: [

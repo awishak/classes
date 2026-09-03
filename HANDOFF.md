@@ -73,11 +73,23 @@ clicks, and no render test covers their contents any more. The build counts tap
 targets across the bar instead and fails over six, which is the blunt measure
 that would have caught the drift in the first place.
 
-## Four themes, and a student picks one
+## Five themes, and a student picks one
 
-`src/engine/themes.js` holds them: **Clean** is the standard, **Business** is the
-other serious one, **Snapchat** and **Crashing Out** are Andrew's, carried over
-from spring 2026 and rebuilt on this system rather than on their own.
+`src/engine/themes.js` holds them: **Clean** is the standard, **Clean 2** is the
+same palette with the boxes taken away, **Business** is the other serious one,
+and **Snapchat** and **Crashing Out** are Andrew's, carried over from spring
+2026 and rebuilt on this system rather than on their own.
+
+**A theme says how a page is built, not only how it is painted.** `layout` is
+`cards` for four of them and `ruled` for Clean 2: no boxes, hairlines between
+columns, four across on a laptop and rules between rows on a phone, headings at
+weight 300, colour kept for the one thing that is live.
+
+That distinction exists because the first pass got it wrong. The Clean artboard
+on the canvas had no cards at all, and Clean shipped as the old card grid in the
+new palette, because the theme engine could only swap tokens and layout is not a
+token. Clean 2 is that direction, built. The build checks it structurally: Clean
+2 draws no card shadow at either width and Clean still does.
 
 Each theme has its own faces, and every student surface takes them. `F` and
 `MONO` in those files point at `TOKENS.FONT.body` and `TOKENS.FONT.label`, so

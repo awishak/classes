@@ -13,7 +13,7 @@
 // Tubey the Worm belongs to Homework Tubes and appears by arrangement. He is not
 // permitted to help with anybody's homework, and he says so himself.
 
-import { THEME, BRAND } from "./themes.js";
+import { THEME, BRAND, layoutOf } from "./themes.js";
 import { shuffledFacts } from "./crashing-facts.js";
 
 // The sponsor's palette, from the system rather than from here. `onCream` and
@@ -439,3 +439,22 @@ export function ClassLeader({ theme, roster = [], log = [], me }) {
   );
 }
 
+// ─── how the page is built ───
+//
+// Every theme but Clean 2 draws a grid of cards. Clean 2 draws a band: no
+// boxes, hairlines between the columns, and the space doing the work the
+// borders used to do. That is structure rather than skin, which is why it
+// could never have been a token, and why it is a theme of its own.
+export const isRuled = (theme) => layoutOf(theme) === "ruled";
+
+// A cell in the ruled band. A rule on the left of every cell except the first,
+// so the dividers land between columns rather than around them. On a phone the
+// band is one column, so the rule goes on top instead.
+export const ruledCell = (i, phone) => ({
+  padding: phone ? "20px 0 0" : "24px 24px 0 0",
+  ...(i === 0
+    ? {}
+    : phone
+      ? { borderTop: "1px solid var(--line-soft)", marginTop: 20 }
+      : { borderLeft: "1px solid var(--line-soft)", paddingLeft: 24 }),
+});

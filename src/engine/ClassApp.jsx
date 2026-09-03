@@ -27,7 +27,8 @@ import * as TOKENS from "./tokens.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, ThemeStyle, ThemePicker } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
-  ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle } from "./ThemeChrome.jsx";
+  ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
+  isRuled, ruledCell } from "./ThemeChrome.jsx";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
 // Fredoka on Crashing Out. One declaration, and every use below follows.
@@ -666,11 +667,18 @@ export default function ClassApp({ config, initialCard }) {
   // that lives under it.
   const activeNav = !openKey ? "home" : (NAV_CARDS.has(openKey) ? openKey : "more");
 
+  const ruled = isRuled(theme);
   const CardTile = (key, i = 0) => {
     const s = summary(key, config, view, ctx);
+    // Clean 2 has no boxes. A tile is a cell in a ruled band, so it drops the
+    // card's background, border, radius and padding and takes a hairline on the
+    // side that faces its neighbour.
+    const seat = ruled
+      ? { ...card, ...ruledCell(i % (isDesktop ? 4 : 1), !isDesktop), background: "none", border: "none" }
+      : { ...cardStyle(theme, i), ...card };
     return (
       <button key={key} className="ca-focus" onClick={() => go(key)}
-        style={{ ...cardStyle(theme, i), ...card, position: "relative",
+        style={{ ...seat, position: "relative",
           outline: openKey === key ? "2px solid " + a : "none" }}>
         {i === 0 ? <TubeyPeek theme={theme} /> : null}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -779,7 +787,10 @@ export default function ClassApp({ config, initialCard }) {
             <StoryBar theme={theme} roster={roster} me={seenAs} />
             {LiveBanner}
             <NeedsYou items={actions} accent={a} onOpen={go} />
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+            <div style={{ display: "grid",
+              gridTemplateColumns: ruled ? "repeat(4, minmax(0, 1fr))" : "repeat(2, minmax(0, 1fr))",
+              gap: ruled ? 0 : 12,
+              borderTop: ruled ? "1px solid var(--line-strong)" : "none" }}>
               {Grid}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
@@ -789,7 +800,10 @@ export default function ClassApp({ config, initialCard }) {
               <ThemeLegal theme={theme} />
             </div>
           </div>
-          <div style={{ ...cardStyle(theme, 2), padding: 24, minHeight: 400, position: "sticky", top: 80 }}>
+          <div style={{ ...(ruled
+            ? { background: "none", borderLeft: "1px solid var(--line-soft)", paddingLeft: 32 }
+            : cardStyle(theme, 2)),
+            padding: ruled ? "0 0 0 32px" : 24, minHeight: 400, position: "sticky", top: 80 }}>
             {openKey
               ? detailFor(openKey)
               : <div style={{ color: TEXT_MUTED, fontSize: 16, paddingTop: 40, textAlign: "center" }}>Open a card to see its full page here.</div>}
@@ -840,7 +854,7 @@ export default function ClassApp({ config, initialCard }) {
       {/* content: grid OR full-screen takeover */}
       <div style={{ padding: 16 }}>
         {openKey ? (
-          <div style={{ ...cardStyle(theme, 2), padding: 20 }}>
+          <div style={{ ...(ruled ? { background: "none" } : cardStyle(theme, 2)), padding: ruled ? 0 : 20 }}>
             {detailFor(openKey)}
           </div>
         ) : (
@@ -848,7 +862,8 @@ export default function ClassApp({ config, initialCard }) {
             <StoryBar theme={theme} roster={roster} me={seenAs} />
             {LiveBanner}
             <NeedsYou items={actions} accent={a} onOpen={go} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: ruled ? 0 : 12,
+              borderTop: ruled ? "1px solid var(--line-strong)" : "none" }}>
               {Grid}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>

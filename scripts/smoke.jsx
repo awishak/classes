@@ -29,7 +29,7 @@ import { sittingsOf, minutesLeft, sittingLength } from "../src/engine/meets.js";
 import { THEMES, THEME, THEME_LABELS, themeCSS, varsOf, fontHref } from "../src/engine/themes.js";
 import { ThemePicker } from "../src/engine/ThemeShell.jsx";
 import { Tubey, TubeySays, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeyPeek, ThemeStickers,
-  StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, StatusMark, cardStyle, CHROME_CSS,
+  StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, StatusMark, cardStyle, CHROME_CSS, isRuled,
   MARQUEE_SECONDS_PER_ITEM, marqueeSeconds } from "../src/engine/ThemeChrome.jsx";
 import { ALL_FACTS, factsFor, shuffledFacts } from "../src/engine/crashing-facts.js";
 import { saveWeek, openWeek, answerWeek, scoreWeek, scoresFor, perfectRuns, pointsOf, mergeAnswers } from "../src/engine/game.js";
@@ -978,8 +978,9 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const css = themeCSS();
   const KEYS = Object.keys(varsOf(THEME.clean));
 
-  if (THEMES.length !== 4) say(THEMES.length + " themes where the four are clean, business, snapchat, crashing");
-  ["clean", "business", "snapchat", "crashing"].forEach(t => {
+  const NAMED = ["clean", "clean2", "business", "snapchat", "crashing"];
+  if (THEMES.length !== NAMED.length) say(`${THEMES.length} themes where the ${NAMED.length} are ` + NAMED.join(", "));
+  NAMED.forEach(t => {
     if (!THEMES.includes(t)) say(t + " is not in the list a student can pick from");
     if (!THEME_LABELS[t]) say(t + " has no name a student could read");
   });
@@ -1228,6 +1229,37 @@ cases.push(["Instructor links", <InstructorLinks />]);
   if (onStrip !== ALL_FACTS.length) say(`${onStrip} of ${ALL_FACTS.length} championships reached the marquee`);
   const dur = Number((strip.match(/animation:tcMarquee (\d+)s/) || [])[1] || 0);
   if (dur < 200) say("the strip carries every fact and crosses in " + dur + "s, which nobody can read");
+}
+
+// Clean 2 is a different page, not a different palette. So the check is
+// structural: no card boxes anywhere, and hairlines doing the dividing.
+//
+// This is the gap that made Clean ship as the old layout in new colour. A theme
+// could only swap tokens, and the direction Andrew picked deleted the cards.
+{
+  const say = (m) => { console.error("  FAIL  layout: " + m); failedEarly++; };
+  const at = (t, px) => {
+    const was = globalThis.localStorage.getItem;
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : null);
+    try { return atWidth(px, () => renderToString(<ClassApp config={cfg0} />)); }
+    catch (err) { say(`${t} threw: ` + err.message); return ""; }
+    finally { globalThis.localStorage.getItem = was; }
+  };
+  if (!isRuled("clean2")) say("Clean 2 is not the ruled one");
+  ["clean", "business", "snapchat", "crashing"].forEach(t => {
+    if (isRuled(t)) say(t + " went ruled, and only Clean 2 should be");
+  });
+  [["laptop", LAPTOP], ["phone", PHONE]].forEach(([where, px]) => {
+    const c2 = at("clean2", px);
+    if (!c2) return;
+    // A tile with a card's shadow or radius is a box, and Clean 2 has none.
+    if (c2.includes("var(--card-shadow)")) say(`Clean 2 draws a card shadow on the ${where}`);
+    if (!c2.includes("var(--line-soft)")) say(`Clean 2 draws no hairlines on the ${where}`);
+    if (!c2.includes("font-weight:var(--display-weight)")) say(`Clean 2's headings take no display weight on the ${where}`);
+    // And Clean, side by side, still has its boxes.
+    const c1 = at("clean", px);
+    if (!c1.includes("var(--card-shadow)")) say(`Clean lost its cards on the ${where}`);
+  });
 }
 
 cases.push(["Tubey", <Tubey size={120} />]);
