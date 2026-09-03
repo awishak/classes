@@ -53,18 +53,28 @@ export function ThemeStyle({ theme }) {
 // Crashing Out in week one has to be able to get back out of it in week two.
 export function ThemePicker({ theme, onPick, compact }) {
   const on = known(theme);
+  // Compact still names them. Four unlabelled swatches is a row of dots asking
+  // you to guess, and Crashing Out and Snapchat are not colours somebody can
+  // infer. Two columns, because four named pills do not fit across a menu.
   if (compact) {
     return (
-      <div role="radiogroup" aria-label="Theme" style={{ display: "flex", gap: 4 }}>
+      <div role="radiogroup" aria-label="Theme"
+        style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 6 }}>
         {THEMES.map(t => (
-          <button key={t} role="radio" aria-checked={t === on} aria-label={THEME_LABELS[t]}
-            title={THEME_LABELS[t] + " · " + THEME_DESCS[t]} onClick={() => onPick(t)}
-            style={{ width: 44, height: 44, padding: 0, borderRadius: 999, cursor: "pointer",
-              background: "var(--surface-card)", border: t === on ? "2px solid var(--text-primary)" : "1px solid var(--line-strong)",
-              display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button key={t} role="radio" aria-checked={t === on}
+            title={THEME_DESCS[t]} onClick={() => onPick(t)}
+            style={{ minHeight: 44, padding: "0 10px", borderRadius: 999, cursor: "pointer",
+              background: "var(--surface-card)",
+              border: t === on ? "2px solid var(--text-primary)" : "1px solid var(--line-strong)",
+              display: "flex", alignItems: "center", gap: 8, minWidth: 0,
+              fontFamily: "var(--font-body)", fontSize: 13,
+              fontWeight: t === on ? 700 : 500, color: "var(--text-primary)" }}>
             <span aria-hidden="true" data-theme={t}
-              style={{ width: 20, height: 20, borderRadius: 999, background: "var(--surface-page)",
+              style={{ width: 18, height: 18, flex: "none", borderRadius: 999, background: "var(--surface-page)",
                 border: "2px solid var(--text-primary)", display: "block" }} />
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {THEME_LABELS[t]}
+            </span>
           </button>
         ))}
       </div>

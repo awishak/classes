@@ -51,7 +51,9 @@ right.
 Two controls. **Dashboard**, which is the button pressed with a class about to
 start, and a **menu** holding everything else: the room screen, Ask, Run the
 game, the class switcher, View as a student, the theme picker, the role toggle
-and sign out. A student sees the same menu with the teaching half missing.
+and sign out. That section is headed **Theme**, and both shapes of the picker
+name every theme: four unlabelled swatches is a row of dots asking you to
+guess, and Crashing Out and Snapchat are not colours anybody can infer. A student sees the same menu with the teaching half missing.
 
 The bar carried thirteen controls before: four theme buttons, a view-as select,
 a class select, four teaching links, sign out and a two-button role toggle.

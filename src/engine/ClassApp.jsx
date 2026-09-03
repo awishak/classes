@@ -629,7 +629,7 @@ export default function ClassApp({ config, initialCard }) {
                 {rule}
               </>
             ) : null}
-            <div style={menuLabel}>How this looks</div>
+            <div style={menuLabel}>Theme</div>
             <div style={{ padding: "2px 14px 8px" }}>
               <ThemePicker theme={theme} onPick={pickTheme} compact />
             </div>
@@ -686,7 +686,7 @@ export default function ClassApp({ config, initialCard }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {moreCards.map(CardTile)}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
-          <span style={{ ...label, color: TEXT_MUTED }}>How this looks</span>
+          <span style={{ ...label, color: TEXT_MUTED }}>Theme</span>
           <p style={{ margin: 0, fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5 }}>
             Your choice, on your screen. Nobody else in the class sees it.
           </p>

@@ -1165,7 +1165,17 @@ cases.push(["Snapchat, the story bar", <StoryBar theme="snapchat" roster={[{ nam
 cases.push(["Crashing Out, the sponsor", <ThemeSponsor theme="crashing" />, "HOMEWORKTUBES.COM"]);
 cases.push(["Crashing Out, Tubey talking", <TubeySays theme="crashing" seed={2} />]);
 cases.push(["Theme picker, full", <ThemePicker theme="clean" onPick={noop} />, "Crashing Out"]);
-cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick={noop} compact />]);
+{
+  const say = (m) => { console.error("  FAIL  theme: " + m); failedEarly++; };
+  [["full", <ThemePicker theme="clean" onPick={noop} />],
+   ["compact", <ThemePicker theme="clean" onPick={noop} compact />]].forEach(([shape, el]) => {
+    const out = renderToString(el);
+    THEMES.forEach(t => {
+      if (!out.includes(THEME_LABELS[t])) say(`the ${shape} picker never names ${THEME_LABELS[t]}`);
+    });
+  });
+}
+cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick={noop} compact />, "Crashing Out"]);
 
 // Two people writing at once, which is the bug the room actually hit.
 //
