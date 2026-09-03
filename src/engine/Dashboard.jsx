@@ -27,7 +27,7 @@ import { normSlot, sequenceOptions, sequenceFor, sectionsOf } from "./dayplan.js
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
 import { readAdded, readLabels } from "./types.js";
 import PickMark from "./Pick.jsx";
-import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor, inkOf, LIBRARY_CARD } from "./colors.js";
+import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor, inkOf, LIBRARY_CARD, LIBRARY_CARD_HOVER } from "./colors.js";
 import { useBoards } from "./boards.js";
 import { minutesLeft, sittingLength } from "./meets.js";
 import { FACES, SLOTS, readFonts, fontVars, writeFont, resetFonts, readBold, writeBold } from "./fonts.js";
@@ -231,7 +231,7 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
   color:var(--ink,${TEXT_PRIMARY});border:none;width:100%;text-align:left;
   font-family:${F};cursor:grab;position:relative;
   transition:background .13s,box-shadow .13s}
-.lib-row:hover{background:#efebe5;box-shadow:0 0 0 1px var(--ink,${BORDER_STRONG})}
+.lib-row:hover{background:${LIBRARY_CARD_HOVER};box-shadow:0 0 0 1px var(--ink,${BORDER_STRONG})}
 .lib-row[data-drag="1"]{opacity:.5;cursor:grabbing}
 .lib-words{flex:1;min-width:0;font-weight:600;font-size:var(--fs,15px);
   line-height:1.35;color:var(--ink,${TEXT_PRIMARY})}

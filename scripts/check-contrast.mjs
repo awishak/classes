@@ -55,8 +55,9 @@ console.log(`check-contrast: ${SEC.length} section colours and ${swatches.length
 // Imported rather than copied. The first version of this check carried its own
 // darkening rule, so changing the one the app uses left the check passing: a
 // check that tests its own copy of a thing tests nothing.
-const { inkOf, LIBRARY_CARD } = await import("../src/engine/colors.js");
-const INK_ON = [["white", "#ffffff"], ["the library card", LIBRARY_CARD]];
+const { inkOf, LIBRARY_CARD, LIBRARY_CARD_HOVER } = await import("../src/engine/colors.js");
+const INK_ON = [["white", "#ffffff"], ["the library card", LIBRARY_CARD],
+  ["the library card under the cursor", LIBRARY_CARD_HOVER]];
 let inkBad = 0;
 for (const [, name, hex] of swatches) {
   const ink = inkOf(hex);
@@ -77,4 +78,4 @@ if (inkBad) {
   console.error(`\ncheck-contrast: ${inkBad} swatch(es) unreadable as ink.`);
   process.exit(1);
 }
-console.log(`check-contrast: all ${swatches.length} swatches read as ink on white and on ${LIBRARY_CARD}`);
+console.log(`check-contrast: all ${swatches.length} swatches read as ink on white, on ${LIBRARY_CARD} and on ${LIBRARY_CARD_HOVER}`);

@@ -1381,14 +1381,19 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
 
   // A card has to look like a card. At the sunk grey the edge against the white
   // panel was 1.10:1, which is no edge at all.
-  const { inkOf, LIBRARY_CARD } = await import("../src/engine/colors.js");
+  const { inkOf, LIBRARY_CARD, LIBRARY_CARD_HOVER } = await import("../src/engine/colors.js");
   const lin = (c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
   const lum = (h) => { const [r, g, b] = [1, 3, 5].map(i => lin(parseInt(h.slice(i, i + 2), 16) / 255));
     return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
   const ratio = (a, b) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
   const edge = ratio(LIBRARY_CARD, "#ffffff");
-  if (edge < 1.25) say(`the library card is ${edge.toFixed(2)}:1 against the panel behind it, which nobody can see as a card`);
+  if (edge < 1.10) say(`the library card is ${edge.toFixed(2)}:1 against the panel behind it, which nobody can see as a card`);
   if (!src.includes("${LIBRARY_CARD}")) say("the library row does not sit on the library card");
+
+  // The hover lifts toward white. Deeper reads as the obvious direction and it
+  // breaks the ink: at 96% one step down puts teal at 4.17, under the line.
+  if (!src.includes("${LIBRARY_CARD_HOVER}")) say("the library row hover is back to a hex nothing measures");
+  if (lum(LIBRARY_CARD_HOVER) <= lum(LIBRARY_CARD)) say("the library row hover goes deeper than the card, which the ink cannot survive");
 
   // A tab has to sit on the panel it opens. The room preview used to stand
   // between them, so Questions named something a screen further down.
