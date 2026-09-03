@@ -293,6 +293,36 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-row{font-size:var(--fs,15px)}
 .dash-band{padding:var(--pad,16px) calc(var(--pad,16px) + 4px);gap:var(--gap,11px)}
 .dash-topic{font-size:var(--topic,26px)}
+
+/* The day's title, and the two controls hanging off it.
+   Written when the block was rewritten on 28 August and lost on the way: the
+   markup arrived with five class names and only one of them kept a rule. So
+   clear and rename rendered as bare browser buttons jammed against the
+   words, and the rename hint, which is meant to appear on hover, never went
+   away. check-css now fails on a class used with no rule anywhere. */
+.dash-topic-wrap{display:flex;flex-direction:column;gap:2px;padding:2px 0 8px}
+.dash-topic-meta{display:flex;align-items:center;gap:9px;min-height:22px;
+  font-family:${MONO};font-size:13px;font-weight:600;letter-spacing:.09em;
+  text-transform:uppercase;color:${TEXT_MUTED}}
+.dash-topic-clear{flex:none;min-height:22px;padding:0 9px;border-radius:999px;
+  border:1px solid ${BORDER_STRONG};background:${SURFACE_2};cursor:pointer;
+  font-family:${MONO};font-size:13px;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;color:${TEXT_MUTED};opacity:0;transition:opacity .13s}
+.dash-topic-clear:hover{color:${TEXT_PRIMARY};border-color:${TEXT_MUTED}}
+.dash-topic-wrap:hover .dash-topic-clear,.dash-topic-clear:focus-visible{opacity:1}
+.dash-topic-edit{display:block;width:100%;margin:0;padding:2px 8px 2px 0;border:none;
+  background:none;cursor:text;font:inherit;letter-spacing:inherit;text-align:left;
+  border-radius:8px;transition:background .13s,padding .13s}
+.dash-topic-edit:hover{background:${SURFACE_2};padding-left:8px}
+/* The line has been editable since it was built and never said so, so it got
+   asked about twice. */
+.dash-topic-hint{display:inline-block;margin-left:10px;vertical-align:middle;
+  font-family:${MONO};font-size:13px;font-weight:600;letter-spacing:.09em;
+  text-transform:uppercase;color:${TEXT_MUTED};opacity:0;transition:opacity .13s;
+  white-space:nowrap}
+.dash-topic-edit:hover .dash-topic-hint,.dash-topic-edit:focus-visible .dash-topic-hint{opacity:1}
+/* Nothing hovers on a touch screen, so both stay visible there. */
+@media (hover:none){.dash-topic-clear,.dash-topic-hint{opacity:1}}
 .dash-focus:focus:not(:focus-visible){outline:none}
 
 /* The class accent and the live red are 1.71:1 apart, which is no distance at

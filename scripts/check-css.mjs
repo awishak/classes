@@ -66,4 +66,48 @@ for (const { file } of FLOORS) {
 }
 
 if (bad) { console.error(`\ncheck-css: ${bad} problem(s) with the stylesheets.`); process.exit(1); }
-console.log("check-css: stylesheets intact");
+
+// ─── a class name with no rule ───
+//
+// A day-title block was rewritten on 28 August. The markup arrived with five
+// class names and only one of them kept a rule, so `clear` and `rename`
+// rendered as bare browser buttons jammed against the words, and the rename
+// hint, which is meant to appear on hover, never went away. Nothing said so for
+// six days, because a missing rule is not an error anywhere: the attribute is
+// valid, the element renders, and it only looks wrong.
+//
+// Pooled across the engine rather than checked file by file, because a
+// component does not have to own the stylesheet that dresses it: RepoMore and
+// RepoTidy render inside RepoPage and are styled by RepoPage's block.
+//
+// Two things are skipped. A name ending in a dash is a prefix joined to a
+// value, and an attribute selector like [class*="cv-out-"] covers the family it
+// names.
+import { readdirSync } from "node:fs";
+
+const ENGINE = new URL("../src/engine/", import.meta.url);
+const files = readdirSync(ENGINE).filter(f => /\.jsx$/.test(f)).sort();
+const styled = new Set();
+const partial = [];
+const used = [];
+for (const file of files) {
+  const src = readFileSync(new URL(file, ENGINE), "utf8");
+  for (const m of src.matchAll(/\.([a-zA-Z][\w-]*)/g)) styled.add(m[1]);
+  for (const m of src.matchAll(/\[class\*="([^"]+)"\]/g)) partial.push(m[1]);
+  const here = new Set();
+  for (const m of src.matchAll(/className="([^"]+)"/g)) m[1].split(/\s+/).forEach(c => c && here.add(c));
+  for (const m of src.matchAll(/className=\{"([^"]+)"/g)) m[1].split(/\s+/).forEach(c => c && here.add(c));
+  for (const c of here) used.push([file, c]);
+}
+let orphans = 0;
+for (const [file, c] of used) {
+  if (c.endsWith("-") || styled.has(c)) continue;
+  if (partial.some(pre => c.startsWith(pre))) continue;
+  orphans++;
+  console.error(`  src/engine/${file}  .${c} is used and has no rule anywhere`);
+}
+if (orphans) {
+  console.error(`\ncheck-css: ${orphans} class name(s) with nothing behind them.`);
+  process.exit(1);
+}
+console.log("check-css: stylesheets intact, and every class name has a rule");

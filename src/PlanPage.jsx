@@ -47,6 +47,50 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep3f", date: "Thursday, September 3 \u00b7 afternoon", title: "A class name with nothing behind the name",
+    blurb: "Andrew sent a screenshot of the day title on the dashboard, with clear jammed against Monday and rename stuck on the end of the sentence. The block was rewritten on 28 August, the new markup arrived with five class names, and only one of them kept a rule.",
+    groups: [
+      { name: "Six days of looking wrong", items: [
+        ["Five names, one rule", "dash-topic kept its font size. The wrap, the meta line, the clear button, the edit button and the rename hint had no rules at all, so the buttons drew as bare browser buttons and the hint, which fades in on hover, was simply always there."],
+        ["Nothing could say so", "A missing rule is not an error anywhere. The attribute is valid, the element renders, and the page only looks wrong. Six days is how long that took to notice, and noticing took a person with a screenshot."],
+        ["Restored against the current tokens", "The meta line is small mono, clear is a pill that fades in on hover, the title takes a hover tint, and rename is hidden until you hover or tab to the title. Both stay visible on a touch screen, where nothing hovers."],
+      ] },
+      { name: "The check that was missing", items: [
+        ["A class used with no rule fails the build", "Pooled across the engine rather than checked file by file, because a component does not have to own the stylesheet that dresses the markup: RepoMore and RepoTidy are styled by RepoPage."],
+        ["Two things skipped", "A name ending in a dash is a prefix joined to a value, and an attribute selector covers the family it names. Without those two the check reported seventy-seven false alarms on the first run."],
+        ["It found one more", "A screen-reader hook written this morning on an element that already hides itself inline. Removing a restored rule fails the build."],
+      ] },
+    ],
+    note: {
+      title: "The same blind spot twice",
+      lines: [
+        "This and the phone header were invisible for the same reason. Rendering proves a thing exists; it proves nothing about how the thing looks.",
+      ],
+    },
+  },
+  {
+    id: "sep3e", date: "Thursday, September 3 \u00b7 afternoon", title: "Auto, Day, Night",
+    blurb: "Andrew: what if someone wants to manually override? Adaptive was right as a default and wrong as the only option. Some people read in a bright room at night, and a preference the app cannot express is a preference the app is arguing with.",
+    groups: [
+      { name: "Three states", items: [
+        ["Auto is still the default", "Most people never touch it and the machine already knows."],
+        ["Only where a night exists", "On Snapchat or Crashing Out the three buttons would all do the same nothing, so the control is not drawn there at all."],
+        ["Stored beside the theme", "In the student's own browser, and it reaches the page as data-mode on the same root the theme uses."],
+      ] },
+      { name: "Each override beats the rule above", items: [
+        ["Day works by the media query stepping aside", "The query excludes data-mode day, so the daytime block already on the page keeps applying in a dark system. Dropping that exclusion is a build failure."],
+        ["Night is a rule outside the query", "Selected on the theme and the mode together. Two attribute selectors outrank the one on the daytime block, so it wins in a light system with no exclamation-important anywhere. Moving it inside the query is a build failure, because then Night would only work when the machine already agreed."],
+        ["Specificity rather than force", "The build fails if anything in the stylesheet starts winning by force."],
+      ] },
+    ],
+    note: {
+      title: "A name collision",
+      lines: [
+        "The ask page already had a variable called mode for its sign-in step, so the theme's one took a different name there rather than shadowing it. The build caught that before anything ran.",
+      ],
+    },
+  },
+  {
     id: "sep3d", date: "Thursday, September 3 \u00b7 midday", title: "Two themes out, and Clean gets a night",
     blurb: "Andrew: clean 2 sucks. kill it. kill business too, but we need an adaptive dark mode for clean. Three themes left, and the one people will actually use now follows the system instead of asking.",  // voice-ok: his words, and the guardrail is on me
     groups: [
