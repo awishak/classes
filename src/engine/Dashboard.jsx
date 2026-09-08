@@ -643,6 +643,11 @@ export function Castable({ kind, kindColor, title, url, claim, live, accent, onC
         <button className="dash-focus flow-words" onClick={onSelect} title="Open the details"
           style={{ fontFamily: F }}>{words}</button>
         {starred ? <PickMark size={20} /> : null}
+        {steps ? (
+          <span title={"Plays as " + steps.length + " slides: " + steps.map(st => st.name.toLowerCase()).join(", ")}
+            style={{ flex: "none", fontFamily: MONO, fontSize: 12, letterSpacing: ".06em", color: TEXT_MUTED,
+              border: "1px solid " + BORDER_STRONG, borderRadius: 999, padding: "1px 8px" }}>{steps[1].name.toUpperCase()}</span>
+        ) : null}
         {url ? (
           <a className="dash-focus flow-src" href={url} target="_blank" rel="noopener noreferrer"
             onClick={e => e.stopPropagation()} title={"Open " + url + " in a new tab"}

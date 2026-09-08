@@ -1450,19 +1450,26 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
     if (!file) return;
     setSendWhy(""); setSending(0);
     uploadMedia(file, { classId: block.uses?.[0]?.cls?.id || "shared", onProgress: setSending })
-      .then(media => { set("media", media); setSending(null); })
+      .then(media => {
+        // Saved the moment the file lands. The first time round the file sat
+        // in the editor waiting for Save changes, Andrew never pressed Save,
+        // and the clip he had just sent up was on nothing.
+        setSending(null);
+        setDraft(d => { const next = { ...d, media }; commitDraft(next); return next; });
+      })
       .catch(err => { setSending(null); setSendWhy(err.message); });
   };
 
-  const commit = () => {
+  const commitDraft = (d) => {
     onSave({
-      type: draft.type, title: draft.title.trim(), headline: draft.headline.trim(),
-      url: draft.url.trim(), body: draft.body.trim(), concept: draft.concept.trim(),
-      source: draft.source.trim(), tags: draft.tags.split(",").map(x => x.trim()).filter(Boolean),
-      media: draft.media || null, ask: draft.ask.trim(),
+      type: d.type, title: d.title.trim(), headline: d.headline.trim(),
+      url: d.url.trim(), body: d.body.trim(), concept: d.concept.trim(),
+      source: d.source.trim(), tags: d.tags.split(",").map(x => x.trim()).filter(Boolean),
+      media: d.media || null, ask: d.ask.trim(),
     });
     setSaved(true);
   };
+  const commit = () => commitDraft(draft);
 
   return (
     <div className="repo-detail">
@@ -1499,7 +1506,8 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
               <a className="repo-focus repo-link" href={draft.media.src} target="_blank" rel="noopener noreferrer">
                 {mediaLabel(draft.media.kind)}{draft.media.name ? ", " + draft.media.name : ""}{draft.media.size ? ", " + sizeLabel(draft.media.size) : ""} ↗
               </a>
-              <button className="repo-focus repo-chip" onClick={() => set("media", null)}>Take the file off</button>
+              <button className="repo-focus repo-chip"
+                onClick={() => setDraft(d => { const next = { ...d, media: null }; commitDraft(next); return next; })}>Take the file off</button>
             </div>
           ) : null}
           <div className="repo-row">
