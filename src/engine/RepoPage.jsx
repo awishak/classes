@@ -874,11 +874,6 @@ export default function RepoPage() {
 
         {lens === "schedule" ? (
           <>
-            <p className="repo-lens-say">
-              {termCls.code} in order, every class day of the term. Each day says what the room does, in the
-              sections the day plan puts them in, then what the students were told to read or hand in.
-              Building a day still happens on the dashboard; this is the term from the top.
-            </p>
             <div className="repo-row">
               <span className="repo-hits" style={{ marginLeft: 0 }}>
                 {termSum.days} days · {termSum.planned} planned · {termSum.rows} rows · {termSum.assigned} assigned
