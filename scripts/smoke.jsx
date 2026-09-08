@@ -872,6 +872,15 @@ cases.push(["On the wall, a discussion", <CastContent config={cfg0} plan={{}} da
 cases.push(["On the wall, the Enter board", <CastContent config={cfg0} plan={{}} data={{}}
   cast={{ type: "board", tag: "Enter", title: "Enter", idea: "One word for today",
     at: 0, count: 3, showAsk: true }} />, "Ask me anything"]);
+// The three ways a link goes up. Server-side nothing is fetched, so these prove
+// the screens draw before the article arrives: Read says so, Page shows the
+// frame, Card shows the headline on the stage with the way out.
+cases.push(["On the wall, an article, read", <CastContent config={cfg0} plan={{}} data={{}}
+  cast={{ type: "doc", mode: "read", kind: "espn.com", url: "https://www.espn.com/x", openUrl: "https://www.espn.com/x", title: "The Cowboys spent the offseason arguing with themselves." }} />, "Reading the page"]);
+cases.push(["On the wall, an article, page", <CastContent config={cfg0} plan={{}} data={{}}
+  cast={{ type: "doc", mode: "embed", kind: "wikipedia.org", url: "https://en.wikipedia.org/wiki/Super_Bowl", openUrl: "https://en.wikipedia.org/wiki/Super_Bowl", title: "The one game everybody watches." }} />, "<iframe"]);
+cases.push(["On the wall, an article, card", <CastContent config={cfg0} plan={{}} data={{}}
+  cast={{ type: "doc", mode: "card", kind: "espn.com", url: "https://www.espn.com/x", openUrl: "https://www.espn.com/x", title: "The Cowboys spent the offseason arguing with themselves." }} />, "Open espn.com"]);
 cases.push(["On the wall, a clip from my phone", <CastContent config={cfg0} plan={{}} data={{}}
   cast={{ type: "media", media: "video", src: "https://e.com/clip.mov", title: "The ad that ran during the game" }} />]);
 cases.push(["On the wall, a photo", <CastContent config={cfg0} plan={{}} data={{}}

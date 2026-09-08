@@ -30,6 +30,43 @@ function meta(html, prop) {
   return "";
 }
 
+// A page title usually carries the site on the end: "Super Bowl - Wikipedia",
+// "Something happened | The Athletic". The room wants the story, not the
+// masthead, so the last piece goes when there is more than one and the last
+// piece is short.
+export function cleanTitle(title) {
+  const t = (title || "").trim();
+  const parts = t.split(/\s+(?:-|–|—|\|)\s+/);
+  if (parts.length > 1 && parts[parts.length - 1].length <= 40 && parts.slice(0, -1).join(" ").length >= 4) {
+    return parts.slice(0, -1).join(" - ").trim();
+  }
+  return t;
+}
+
+// Wikipedia leaves "[ a ]" and "[ 12 ]" where its footnotes were, and every
+// site's markup leaves a space in front of the full stop once the tags are
+// gone. Neither belongs on a wall.
+export function cleanProse(t) {
+  return (t || "")
+    .replace(/\[\s*(?:[a-z]|\d{1,3}|citation needed|note \d+)\s*\]/gi, "")
+    .replace(/\s+([.,;:!?%)\]])/g, "$1")
+    .replace(/([(\[])\s+/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+// Whether a browser would let this page sit inside an iframe. Most of the web
+// says no, in one of two headers, and an iframe that gets refused renders as
+// a black rectangle with no error anyone can catch. Read the answer here, where
+// the headers are, so the room screen can show a card and say why instead.
+export function framableFrom(headers) {
+  const xfo = (headers.get("x-frame-options") || "").trim().toLowerCase();
+  if (xfo === "deny" || xfo === "sameorigin") return false;
+  const csp = (headers.get("content-security-policy") || "").toLowerCase();
+  if (/frame-ancestors\s+(?!\*)/.test(csp)) return false;
+  return true;
+}
+
 // Strip everything that is not prose, then take the paragraphs.
 function paragraphs(html) {
   const body = html
@@ -39,7 +76,7 @@ function paragraphs(html) {
   const article = body.match(/<article[\s\S]*?<\/article>/i);
   const source = article ? article[0] : body;
   return [...source.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
-    .map(m => decode(m[1].replace(/<[^>]+>/g, " ")))
+    .map(m => cleanProse(decode(m[1].replace(/<[^>]+>/g, " "))))
     .filter(t => t.length > 60 && !/^(advertisement|sign up|subscribe|share this)/i.test(t));
 }
 
@@ -54,10 +91,12 @@ export default async function handler(req, res) {
       headers: { "user-agent": UA, accept: "text/html,application/xhtml+xml" },
       redirect: "follow",
     });
-    if (!r.ok) return res.status(200).json({ ok: false, reason: "The site returned " + r.status + "." });
+    const framable = framableFrom(r.headers);
+    const host = (() => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; } })();
+    if (!r.ok) return res.status(200).json({ ok: false, framable, site: host, reason: "The site returned " + r.status + "." });
 
     const type = r.headers.get("content-type") || "";
-    if (!type.includes("html")) return res.status(200).json({ ok: false, reason: "That link is not a web page." });
+    if (!type.includes("html")) return res.status(200).json({ ok: false, framable, site: host, reason: "That link is not a web page." });
 
     const html = (await r.text()).slice(0, 1_500_000);
 
@@ -65,21 +104,22 @@ export default async function handler(req, res) {
     // error. ESPN does exactly this. That is a block, not a paywall, and it is
     // worth saying which so nobody goes hunting for a subscription.
     if (html.trim().length < 500) {
-      return res.status(200).json({ ok: false, reason: "That site blocks this kind of request. Use Page or Open it yourself." });
+      return res.status(200).json({ ok: false, framable, site: host, reason: "That site blocks this kind of request. Open the page yourself." });
     }
 
-    const title = meta(html, "og:title") || decode((html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || "");
+    const title = cleanTitle(meta(html, "og:title") || decode((html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || ""));
     const body = paragraphs(html);
 
     if (!title && !body.length) {
-      return res.status(200).json({ ok: false, reason: "Nothing readable on that page — a paywall, or it builds itself in the browser." });
+      return res.status(200).json({ ok: false, framable, site: host, reason: "Nothing readable on that page. A paywall, or a page that builds itself in the browser." });
     }
 
     res.setHeader("cache-control", "public, s-maxage=600, stale-while-revalidate=3600");
     return res.status(200).json({
       ok: true,
+      framable,
       title,
-      site: meta(html, "og:site_name"),
+      site: meta(html, "og:site_name") || host,
       image: meta(html, "og:image"),
       description: meta(html, "og:description"),
       paragraphs: body.slice(0, 40),

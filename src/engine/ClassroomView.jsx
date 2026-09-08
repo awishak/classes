@@ -139,21 +139,15 @@ export function Content({ cast, config, plan, data }) {
   }
 
   if (cast.mode === "read" && (cast.openUrl || cast.url)) {
-    return <ReadScreen url={cast.openUrl || cast.url} claim={cast.title} kind={cast.kind} />;
+    return <ReadScreen url={cast.openUrl || cast.url} claim={cast.title} kind={cast.kind} pick={cast.pick} />;
   }
 
   if (cast.mode === "embed" && cast.url) {
-    return (
-      <div style={{ position: "absolute", inset: 0, background: "#000" }}>
-        <iframe
-          src={cast.url}
-          title={cast.title || "Cast"}
-          style={{ width: "100%", height: "100%", border: "none", display: "block" }}
-          allow="autoplay; fullscreen; picture-in-picture"
-          referrerPolicy="no-referrer"
-        />
-      </div>
-    );
+    return <PageScreen url={cast.url} openUrl={cast.openUrl || cast.url} claim={cast.title} kind={cast.kind} pick={cast.pick} />;
+  }
+
+  if (cast.mode === "card" && (cast.openUrl || cast.url)) {
+    return <CardScreen url={cast.openUrl || cast.url} claim={cast.title} kind={cast.kind} pick={cast.pick} />;
   }
 
   // A file rather than a link: a clip, a photo or a voice memo that came up
@@ -393,11 +387,27 @@ function HeadlinesScreen({ config, data }) {
   );
 }
 
-// The page, fetched and set for the back row. Falls back to the title card if
-// the site gives us nothing — a paywall, or a page that builds itself in JS.
-function ReadScreen({ url, claim, kind }) {
-  const [state, setState] = useState({ loading: true });
+// ─── an article on the wall ───
+//
+// Three ways to put a link up, and one rule under all of them: the headline
+// Andrew wrote goes first and biggest, because the room reads the wall from a
+// distance and the article's own title is somebody else's headline.
+//
+//   Read   the page fetched and set for the back row: headline, then the
+//          first paragraphs and the picture, then where it came from.
+//   Page   the page itself in a frame, for the few sites that allow it. Most
+//          refuse, and a refused frame is a black rectangle with no error, so
+//          the reader API says in advance whether a site will frame and the
+//          wall shows the card with a reason instead.
+//   Card   the headline over the article's picture. The title card.
+//
+// All three read the same endpoint, /api/read, which is cached for ten minutes
+// so switching between them costs one fetch.
+
+function useArticle(url) {
+  const [state, setState] = useState({ loading: !!url });
   useEffect(() => {
+    if (!url) return undefined;
     let alive = true;
     setState({ loading: true });
     fetch("/api/read?url=" + encodeURIComponent(url))
@@ -406,59 +416,120 @@ function ReadScreen({ url, claim, kind }) {
       .catch(() => { if (alive) setState({ loading: false, ok: false, reason: "Could not reach that page." }); });
     return () => { alive = false; };
   }, [url]);
+  return state;
+}
 
-  const wrap = { position: "absolute", inset: 0, display: "flex", flexDirection: "column",
-    padding: "clamp(28px,4.4vw,72px)", color: INK, fontFamily: F, gap: "1.8vh" };
+const openPill = {
+  flex: "none", fontFamily: F, fontSize: "clamp(14px,1.4vw,21px)", fontWeight: 600, color: INK,
+  textDecoration: "none", border: "2px solid " + DIM, borderRadius: 999,
+  padding: "0.5vh clamp(14px,1.5vw,24px)", whiteSpace: "nowrap", minHeight: 34, display: "inline-flex", alignItems: "center",
+};
 
-  if (state.loading) {
-    return <div style={{ ...wrap, alignItems: "center", justifyContent: "center" }}>
-      <div style={{ ...eyebrow }}>Reading it…</div>
-    </div>;
-  }
-
-  if (!state.ok) {
-    // The page could not be read, which is exactly when the link matters most.
-    return (
-      <div style={{ ...wrap, justifyContent: "center", gap: "2.4vh" }}>
-        {kind ? <div style={{ ...eyebrow, color: "#e11d48" }}>{kind}</div> : null}
-        <div style={{ fontSize: "clamp(30px,4.6vw,70px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.1, maxWidth: "20ch" }}>{claim}</div>
-        <div style={{ color: DIM, fontSize: "clamp(14px,1.5vw,20px)" }}>{state.reason}</div>
-        <a href={url} target="_blank" rel="noopener noreferrer"
-          style={{ alignSelf: "flex-start", fontSize: "clamp(14px,1.5vw,22px)", fontWeight: 600, color: "#e11d48",
-            textDecoration: "none", border: "2px solid #e11d48", borderRadius: 999, padding: "0.6vh clamp(14px,1.6vw,24px)" }}>
-          Open the page \u2197
-        </a>
+// The last line of every article screen: where the page came from, and the
+// way out to the real thing. The host, never the URL, which is unreadable at
+// ten feet.
+function SourceLine({ url, site, title, claim }) {
+  const sub = title && title !== claim ? title : "";
+  return (
+    <div style={{ borderTop: "1px solid " + LINE, paddingTop: "1.6vh", display: "flex", alignItems: "center", gap: "clamp(14px,2vw,32px)" }}>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "0.4vh" }}>
+        <div style={{ ...eyebrow, color: TOKENS.ROOM.live || "#e11d48" }}>{site || hostOf(url)}</div>
+        {sub ? <div style={{ fontSize: "clamp(15px,1.5vw,23px)", color: DIM, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub}</div> : null}
       </div>
-    );
-  }
+      <a href={url} target="_blank" rel="noopener noreferrer" style={openPill}>{"Open " + hostOf(url) + " \u2197"}</a>
+    </div>
+  );
+}
 
+const headlineStyle = { fontSize: "clamp(30px,4.4vw,66px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.08, maxWidth: "22ch" };
+
+// Read: the headline, then the first paragraphs beside the picture. Three
+// paragraphs at a size the back row can read beat six at a size nobody can,
+// and the fade at the bottom says there is more without cutting a line in
+// half.
+function ReadScreen({ url, claim, kind, pick }) {
+  const a = useArticle(url);
+  const wrap = { position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+    padding: "clamp(28px,4.4vw,72px)", color: INK, fontFamily: F, gap: "2vh" };
+
+  if (a.loading) {
+    return <div style={{ ...wrap, alignItems: "center", justifyContent: "center" }}><div style={eyebrow}>Reading the page</div></div>;
+  }
+  if (!a.ok) return <CardScreen url={url} claim={claim} kind={kind} pick={pick} article={a} note={a.reason} />;
+
+  const paras = (a.paragraphs || []).slice(0, 3);
   return (
     <div style={{ ...wrap, overflow: "hidden" }}>
-      <div style={{ ...eyebrow, color: "#e11d48" }}>{state.site || kind}</div>
-      <div style={{ fontSize: "clamp(24px,3.2vw,48px)", fontWeight: 700, letterSpacing: "-.03em", lineHeight: 1.12, maxWidth: "26ch" }}>
-        {state.title}
-      </div>
-      <div style={{ display: "flex", gap: "clamp(18px,2.4vw,40px)", minHeight: 0, flex: 1 }}>
-        {state.image ? (
-          <img src={state.image} alt="" style={{ width: "34%", maxHeight: "100%", objectFit: "cover", borderRadius: 10, flex: "none" }} />
-        ) : null}
-        <div style={{ flex: 1, minWidth: 0, overflow: "hidden", display: "flex", flexDirection: "column", gap: "1.4vh" }}>
-          {(state.paragraphs || []).slice(0, 6).map((t, i) => (
-            <p key={i} style={{ margin: 0, fontSize: "clamp(15px,1.55vw,23px)", lineHeight: 1.45, color: i === 0 ? INK : DIM }}>{t}</p>
-          ))}
+      {pick ? <PickMark size={64} label /> : null}
+      <div style={headlineStyle}>{claim || a.title}</div>
+      <div style={{ display: "flex", gap: "clamp(20px,2.8vw,48px)", minHeight: 0, flex: 1, alignItems: "stretch" }}>
+        <div style={{ flex: 1, minWidth: 0, position: "relative", overflow: "hidden" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.6vh" }}>
+            {paras.map((t, i) => (
+              <p key={i} style={{ margin: 0, fontSize: "clamp(17px,1.65vw,26px)", lineHeight: 1.42, color: i === 0 ? INK : DIM, maxWidth: "60ch" }}>{t}</p>
+            ))}
+          </div>
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "14%", pointerEvents: "none",
+            background: "linear-gradient(to bottom, rgba(15,13,12,0), " + STAGE + ")" }} />
         </div>
+        {a.image ? (
+          <img src={a.image} alt="" style={{ width: "36%", maxWidth: "36%", flex: "none", objectFit: "cover", borderRadius: 16, alignSelf: "stretch", background: LINE }} />
+        ) : null}
       </div>
-      <div style={{ borderTop: "1px solid " + LINE, paddingTop: "1.4vh", display: "flex",
-        alignItems: "baseline", gap: "clamp(14px,2vw,32px)", flexWrap: "wrap" }}>
-        {claim ? (
-          <div style={{ flex: 1, minWidth: 0, fontSize: "clamp(15px,1.7vw,26px)", fontWeight: 600, color: INK }}>{claim}</div>
-        ) : <span style={{ flex: 1 }} />}
-        <a href={url} target="_blank" rel="noopener noreferrer"
-          style={{ flex: "none", fontSize: "clamp(13px,1.35vw,20px)", fontWeight: 600, color: "#e11d48",
-            textDecoration: "none", border: "2px solid #e11d48", borderRadius: 999,
-            padding: "0.5vh clamp(12px,1.4vw,22px)", whiteSpace: "nowrap" }}>
-          Open {hostOf(url)} \u2197
-        </a>
+      <SourceLine url={url} site={a.site} title={a.title} claim={claim} />
+    </div>
+  );
+}
+
+// Page: the site itself, when the site allows framing. When the reader says
+// the site refuses, the card goes up with a line saying so, which beats a
+// black rectangle and a podium wondering what went wrong.
+function PageScreen({ url, openUrl, claim, kind, pick }) {
+  const a = useArticle(openUrl);
+  if (!a.loading && a.framable === false) {
+    return <CardScreen url={openUrl} claim={claim} kind={kind} pick={pick} article={a}
+      note={(a.site || hostOf(openUrl)) + " does not let its pages show inside another site. Open the page instead."} />;
+  }
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "#000" }}>
+      <iframe
+        src={url}
+        title={claim || "Cast"}
+        style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+        allow="autoplay; fullscreen; picture-in-picture"
+        referrerPolicy="no-referrer"
+      />
+    </div>
+  );
+}
+
+// Card: the headline over the article's own picture, dimmed enough to read
+// through. No picture, no fetch yet, or nothing readable: the headline on the
+// stage, with the source under it, which is the title card the room had before
+// and is still a fine thing to project.
+function CardScreen({ url, claim, kind, pick, article, note }) {
+  const fetched = useArticle(article ? "" : url);
+  const a = article || fetched;
+  const image = a && a.ok && a.image;
+  const pad = "clamp(28px,4.4vw,72px)";
+  const wrap = { position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end",
+    padding: pad, color: INK, fontFamily: F, gap: "2vh" };
+  return (
+    <div style={{ position: "absolute", inset: 0, background: STAGE }}>
+      {image ? (
+        <>
+          <img src={image} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+          <div style={{ position: "absolute", inset: 0,
+            background: "linear-gradient(to top, rgba(15,13,12,.96) 0%, rgba(15,13,12,.72) 45%, rgba(15,13,12,.25) 100%)" }} />
+        </>
+      ) : null}
+      <div style={wrap}>
+        {pick ? <PickMark size={64} label /> : null}
+        <div style={{ ...headlineStyle, fontSize: "clamp(34px,5vw,76px)", textShadow: image ? "0 2px 18px rgba(0,0,0,.5)" : "none" }}>
+          {claim || (a && a.title) || hostOf(url)}
+        </div>
+        {note ? <div style={{ fontSize: "clamp(15px,1.5vw,23px)", color: DIM, maxWidth: "50ch", lineHeight: 1.4 }}>{note}</div> : null}
+        <SourceLine url={url} site={(a && a.site) || kind} title={a && a.ok ? a.title : ""} claim={claim} />
       </div>
     </div>
   );
