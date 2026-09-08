@@ -4,8 +4,9 @@
 // profile, goals, what matters to them, email, their message thread, and a
 // placeholder for grades/assignments (filled in once the gradebook exists).
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { computeGrade } from "./AssignmentsCard.jsx";
+import RosterSheet, { callLogins } from "./RosterSheet.jsx";
 import * as TOKENS from "./tokens.js";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -65,26 +66,64 @@ export function RosterSummary({ config, data }) {
   );
 }
 
-export function RosterDetail({ config, role, data }) {
-  if (role === "instructor") return <InstructorRoster config={config} data={data} />;
+export function RosterDetail({ config, role, data, update }) {
+  if (role === "instructor") return <InstructorRoster config={config} data={data} update={update} />;
   return <StudentRoster config={config} data={data} />;
 }
 
 // ─── instructor: list + full student page ───
-function InstructorRoster({ config, data }) {
+//
+// The roster is managed here, on the class site, beside the students it is
+// about: paste the registrar's list, make the logins, read a code off. The
+// codes come from the API, which trusts the instructor's session.
+function InstructorRoster({ config, data, update }) {
   const a = config.accent;
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState(null);
-  const students = config.students || [];
+  const [managing, setManaging] = useState(false);
+  const students = data?.students || config.students || [];
 
-  if (selected) return <StudentPage config={config} data={data} name={selected} onBack={() => setSelected(null)} />;
+  // Every code, once, for the student pages. A failure leaves the pages
+  // without codes and nothing else.
+  const [codes, setCodes] = useState({});
+  useEffect(() => {
+    let alive = true;
+    callLogins({ action: "list" })
+      .then(out => { if (alive) setCodes(Object.fromEntries(out.logins.map(l => [l.email, l.code]))); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  if (selected) {
+    const row = students.find(s => s.name === selected);
+    const code = row?.email ? codes[String(row.email).toLowerCase()] || "" : "";
+    return <StudentPage config={config} data={data} name={selected} email={row?.email || ""} code={code} onBack={() => setSelected(null)} />;
+  }
+
+  if (managing) {
+    return (
+      <div>
+        <button onClick={() => setManaging(false)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, padding: "0 4px 0 0" }}>← Roster</button>
+        <div style={{ ...h2, margin: "4px 0 6px" }}>The roster and the logins</div>
+        <Muted style={{ marginBottom: 14 }}>Who is in this class, their emails, and the code each one signs in with.</Muted>
+        <RosterSheet students={students} accent={a} sections={(config.meets || []).length > 1}
+          onSave={(next) => update && update(prev => ({ ...prev, students: next }))} />
+      </div>
+    );
+  }
 
   const lc = q.toLowerCase();
   const results = students.filter(s => s.name.toLowerCase().includes(lc));
 
   return (
     <div>
-      <div style={{ ...h2, marginBottom: 6 }}>Roster</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+        <div style={h2}>Roster</div>
+        <button onClick={() => setManaging(true)}
+          style={{ marginLeft: "auto", minHeight: TAP, padding: "0 14px", borderRadius: 999, border: "1px solid " + a, background: "#fff", color: a, fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+          Roster and logins
+        </button>
+      </div>
       <Muted style={{ marginBottom: 12 }}>Private to you.</Muted>
       <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search students"
         style={{ width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: TAP, marginBottom: 12 }} />
@@ -108,7 +147,7 @@ function InstructorRoster({ config, data }) {
   );
 }
 
-function StudentPage({ config, data, name, onBack }) {
+function StudentPage({ config, data, name, email, code, onBack }) {
   const a = config.accent;
   const p = profileOf(data, name);
   const msgs = threadOf(data, name);
@@ -127,7 +166,8 @@ function StudentPage({ config, data, name, onBack }) {
           <Field title="Motto" value={p.motto} />
           <Field title="Goals for the class" value={p.goals} />
           <Field title="What matters most" value={p.priority} />
-          <Field title="Email" value={p.email} />
+          <Field title="Email" value={email || p.email} />
+          <Field title="Sign-in code" value={code} />
 
           {(() => {
             const { pct, rows } = computeGrade(config, data, name);

@@ -26,7 +26,7 @@ import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
-import { useSession, studentFor } from "./session.js";
+import { useSession, studentFor, myCode } from "./session.js";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
 } from "./ThemeChrome.jsx";
@@ -129,7 +129,7 @@ function detail(key, config, role, ctx) {
     return <ScheduleDetail config={config} role={role} data={ctx.data} update={ctx.update} blockOf={ctx.blockOf} />;
   }
   if (key === "roster") {
-    return <RosterDetail config={config} role={role} data={ctx.data} />;
+    return <RosterDetail config={config} role={role} data={ctx.data} update={ctx.update} />;
   }
   if (key === "instructor") {
     const ins = config.instructor || {};
@@ -536,6 +536,14 @@ export default function ClassApp({ config, initialCard }) {
   // makes the instructor; nobody has to press a role toggle to get in.
   const { session, email: sessionEmail, instructor: sessionInstructor, signOut: endSession } = useSession();
   const rosterNow = withIds(data?.students || config.students || []);
+  // The student's own code, read off the row only they can see, for the menu.
+  const [ownCode, setOwnCode] = useState("");
+  useEffect(() => {
+    let alive = true;
+    if (!session || sessionInstructor) { setOwnCode(""); return undefined; }
+    myCode().then(c => { if (alive) setOwnCode(c); });
+    return () => { alive = false; };
+  }, [session?.user?.id, sessionInstructor]);   // eslint-disable-line react-hooks/exhaustive-deps
   const me = session && !sessionInstructor ? studentFor(sessionEmail, rosterNow) : null;
   useEffect(() => {
     if (!session || data === null) return;
@@ -674,6 +682,12 @@ export default function ClassApp({ config, initialCard }) {
             {rule}
             <div style={{ padding: "2px 8px 4px" }}>{RoleToggle}</div>
             {signedIn && !preview ? (
+              {ownCode ? (
+                <div style={{ ...menuRow, cursor: "default", justifyContent: "space-between" }} title="Your email and this code sign you in anywhere">
+                  <span style={{ fontSize: 14, color: TEXT_MUTED }}>Your sign-in code</span>
+                  <span style={{ fontFamily: "var(--font-label)", fontSize: 16, fontWeight: 600, letterSpacing: ".14em", color: TEXT_PRIMARY }}>{ownCode}</span>
+                </div>
+              ) : null}
               <button className="ca-focus" onClick={signOut} style={{ ...menuRow, color: TEXT_SECONDARY }}>Sign out</button>
             ) : null}
           </div>

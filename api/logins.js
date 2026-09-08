@@ -15,6 +15,8 @@
 //   -> { ok, logins: [...] }   creates the login for any email without one
 // POST /api/logins { pin, action: "reset", email }
 //   -> { ok, login: { email, code } }   a fresh code, for a student who lost theirs
+// POST /api/logins { pin, action: "set", email, code }
+//   -> { ok, login: { email, code } }   the code somebody chose, six digits
 
 import { callerAllowed, readBody } from "./_auth.js";
 import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
@@ -112,6 +114,16 @@ export default async function handler(req, res) {
       const email = cleanEmail(body.email);
       if (!looksLikeEmail(email)) return res.status(400).json({ ok: false, error: "That is not an email address." });
       const code = makeCode();
+      const { id } = await userFor(email, code);
+      await setPassword(id, code);
+      return res.status(200).json({ ok: true, login: await saveLogin(id, email, code) });
+    }
+
+    if (body.action === "set") {
+      const email = cleanEmail(body.email);
+      const code = String(body.code || "").trim();
+      if (!looksLikeEmail(email)) return res.status(400).json({ ok: false, error: "That is not an email address." });
+      if (!/^\d{6}$/.test(code)) return res.status(400).json({ ok: false, error: "A code is six digits." });
       const { id } = await userFor(email, code);
       await setPassword(id, code);
       return res.status(200).json({ ok: true, login: await saveLogin(id, email, code) });

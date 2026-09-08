@@ -158,6 +158,18 @@ export function whereTo(email, rosters) {
 export const studentFor = (email, students) =>
   (students || []).find(s => cleanEmail(s.email) === cleanEmail(email)) || null;
 
+// The signed-in student's own code, off the row only they can read. Empty
+// for the instructor, for a student with no login row, or when signed out.
+export async function myCode() {
+  const t = await accessToken();
+  if (!t) return "";
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/class_logins?select=code", { headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + t } });
+    const rows = await r.json().catch(() => []);
+    return (Array.isArray(rows) && rows[0]?.code) || "";
+  } catch { return ""; }
+}
+
 // ─── the hook ───
 
 export function useSession() {

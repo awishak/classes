@@ -34,7 +34,7 @@ const solid = (accent) => ({ ...mini, background: accent, borderColor: accent, c
 const label = { fontFamily: MONO, fontSize: 13, letterSpacing: ".06em", textTransform: "uppercase", color: TEXT_MUTED, fontWeight: 500 };
 const inputStyle = { width: "100%", padding: "10px 13px", borderRadius: 11, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: 40, background: "#fff", color: TEXT_PRIMARY };
 
-async function callLogins(body) {
+export async function callLogins(body) {
   const r = await fetch("/api/logins", {
     method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) },
     body: JSON.stringify({ pin: savedPin(), ...body }),
@@ -78,6 +78,20 @@ export default function RosterSheet({ students, accent, onSave, sections }) {
       const out = await callLogins({ action: "provision", students: roster.map(s => ({ name: s.name, email: s.email })) });
       setCodes(Object.fromEntries(out.logins.map(l => [l.email, l.code])));
       setSaid(out.made + " logins made" + (out.failed?.length ? ", " + out.failed.length + " failed: " + out.failed.map(f => f.email).join(", ") : "."));
+    } catch (e) { setWhy(e.message); }
+    setBusy("");
+  };
+
+  const [setting, setSetting] = useState("");     // the email whose code is being typed
+  const [typed, setTyped] = useState("");
+  const setCode = async (email) => {
+    if (!/^\d{6}$/.test(typed)) { setWhy("A code is six digits."); return; }
+    setWhy(""); setBusy(email);
+    try {
+      const out = await callLogins({ action: "set", email, code: typed });
+      setCodes(c => ({ ...(c || {}), [out.login.email]: out.login.code }));
+      setSaid("Code set for " + email + ".");
+      setSetting(""); setTyped("");
     } catch (e) { setWhy(e.message); }
     setBusy("");
   };
@@ -128,12 +142,27 @@ export default function RosterSheet({ students, accent, onSave, sections }) {
                   <td style={{ padding: "8px 10px", fontFamily: MONO, fontSize: 15, letterSpacing: ".12em" }}>
                     {code || (email ? (codes ? <span style={{ ...label, letterSpacing: ".06em" }}>no login yet</span> : "") : "")}
                   </td>
-                  <td style={{ padding: "6px 10px", textAlign: "right" }}>
-                    {email ? (
-                      <button style={{ ...mini, minHeight: 30, padding: "0 9px", fontSize: 12.5 }} disabled={busy !== ""}
-                        onClick={() => reset(email)} title="A fresh code for this student">
-                        {busy === email ? "Making" : code ? "New code" : "Make a login"}
-                      </button>
+                  <td style={{ padding: "6px 10px", textAlign: "right", whiteSpace: "nowrap" }}>
+                    {email && setting === email ? (
+                      <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                        <input value={typed} onChange={e => setTyped(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric"
+                          placeholder="6 digits" aria-label={"A code for " + email} autoFocus
+                          onKeyDown={e => { if (e.key === "Enter") setCode(email); if (e.key === "Escape") { setSetting(""); setTyped(""); } }}
+                          style={{ ...inputStyle, width: 110, minHeight: 30, padding: "4px 8px", fontFamily: MONO, letterSpacing: ".12em", fontSize: 15 }} />
+                        <button style={solid(accent)} disabled={busy !== ""} onClick={() => setCode(email)}>{busy === email ? "Saving" : "Save"}</button>
+                        <button style={mini} onClick={() => { setSetting(""); setTyped(""); }}>Cancel</button>
+                      </span>
+                    ) : email ? (
+                      <span style={{ display: "inline-flex", gap: 6 }}>
+                        <button style={{ ...mini, minHeight: 30, padding: "0 9px", fontSize: 12.5 }} disabled={busy !== ""}
+                          onClick={() => { setSetting(email); setTyped(""); setWhy(""); }} title="Type a code for this student">
+                          Set a code
+                        </button>
+                        <button style={{ ...mini, minHeight: 30, padding: "0 9px", fontSize: 12.5 }} disabled={busy !== ""}
+                          onClick={() => reset(email)} title="A random code for this student">
+                          {busy === email ? "Making" : code ? "Random code" : "Make a login"}
+                        </button>
+                      </span>
                     ) : null}
                   </td>
                 </tr>
