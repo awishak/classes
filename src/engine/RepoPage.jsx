@@ -143,19 +143,35 @@ export default function RepoPage() {
   }, [stores]);
 
   // Every class, and the shelf that belongs to me rather than to a class.
+  //
+  // Loaded once, and then kept current. This page used to load each store on
+  // arrival and never look again, and every write here is the whole class
+  // blob, so putting a block on a day wrote a copy of the class from when the
+  // page opened over everything the dashboard had done since. The dashboard's
+  // next write did the same in reverse, and the block was on nothing. Now each
+  // store's updates come in over the same channel the dashboard reads, and a
+  // write here starts from what the server has. Our own writes come back as
+  // echoes too; while one is outstanding we already hold the newer state.
+  const pending = useRef({});
   useEffect(() => {
     let alive = true;
+    const targets = [...ENGINE_LIST.map(c => [c.id, c.storageKey]), ["shared", SHARED_KEY]];
     (async () => {
       const out = {};
-      await Promise.all([
-        ...ENGINE_LIST.map(async c => { out[c.id] = await loadClass(c.storageKey) || {}; }),
-        (async () => { out.shared = await loadClass(SHARED_KEY) || {}; })(),
-      ]);
+      await Promise.all(targets.map(async ([id, key]) => { out[id] = await loadClass(key) || {}; }));
       if (!alive) return;
       ref.current = out;
       setStores(out);
     })();
-    return () => { alive = false; };
+    const offs = targets.map(([id, key]) => window.storage?.onUpdate?.(key, (val) => {
+      if (!alive || (pending.current[id] || 0) > 0) return;
+      try {
+        const d = JSON.parse(val);
+        ref.current = { ...ref.current, [id]: d };
+        setStores(ref.current);
+      } catch { /* ignore */ }
+    }));
+    return () => { alive = false; offs.forEach(off => { if (off) off(); }); };
   }, []);
 
   // ─── the address bar ───
@@ -225,7 +241,8 @@ export default function RepoPage() {
     if (!next || next === cur) return;
     ref.current = { ...ref.current, [target]: next };
     setStores(ref.current);
-    saveClass(key, next);
+    pending.current[target] = (pending.current[target] || 0) + 1;
+    Promise.resolve(saveClass(key, next)).catch(() => {}).finally(() => { pending.current[target]--; });
   };
 
   // ─── the index ───
