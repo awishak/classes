@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from "react";
 import { savedPin } from "../InstructorGate.jsx";
+import { authHeaders } from "./session.js";
 import { parseRoster, mergeRoster, withIds } from "./roster.js";
 import * as TOKENS from "./tokens.js";
 
@@ -35,7 +36,7 @@ const inputStyle = { width: "100%", padding: "10px 13px", borderRadius: 11, bord
 
 async function callLogins(body) {
   const r = await fetch("/api/logins", {
-    method: "POST", headers: { "Content-Type": "application/json" },
+    method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) },
     body: JSON.stringify({ pin: savedPin(), ...body }),
   });
   const out = await r.json().catch(() => ({}));

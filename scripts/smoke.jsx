@@ -24,6 +24,8 @@ import { mediaSteps, liveStep, mediaKind } from "../src/engine/media.js";
 import { pathFor } from "../api/upload.js";
 import { baseCSS } from "../src/engine/themes.js";
 import RosterSheet from "../src/engine/RosterSheet.jsx";
+import LoginPage from "../src/LoginPage.jsx";
+import { whereTo, studentFor } from "../src/engine/session.js";
 import { parseRoster, mergeRoster } from "../src/engine/roster.js";
 import { makeCode, looksLikeEmail } from "../api/logins.js";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
@@ -941,7 +943,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
 {
   const admin = cfg0.storageKey + "-admin";
   const was = globalThis.localStorage.getItem;
-  globalThis.localStorage.getItem = (k) => (k === admin ? "1" : null);
+  globalThis.localStorage.getItem = (k) => (k === admin ? "1" : was(k));
   for (const [where, px] of [["laptop", LAPTOP], ["phone", PHONE]]) {
   try {
     const html = atWidth(px, () => renderToString(<ClassApp config={cfg0} />));
@@ -1018,7 +1020,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   // A student's own screen: the whole class site, under each theme.
   THEMES.forEach(t => {
     const was = globalThis.localStorage.getItem;
-    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : null);
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : was(k));
     [["laptop", LAPTOP], ["phone", PHONE]].forEach(([where, px]) => {
       try {
         const html = atWidth(px, () => renderToString(<ClassApp config={cfg0} />));
@@ -1031,7 +1033,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   // A theme nobody has heard of falls back rather than painting nothing.
   {
     const was = globalThis.localStorage.getItem;
-    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? "vaporwave" : null);
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? "vaporwave" : was(k));
     try {
       const html = renderToString(<ClassApp config={cfg0} />);
       if (!html.includes('data-theme="clean"')) say("an unknown theme did not fall back to Clean");
@@ -1077,7 +1079,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   // whole pass: cardStyle was exported and nothing called it.
   ["snapchat", "crashing"].forEach(t => {
     const was = globalThis.localStorage.getItem;
-    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : null);
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : was(k));
     try {
       const html = renderToString(<ClassApp config={cfg0} />);
       // Counted, not looked for, and looking for the right thing.
@@ -1126,7 +1128,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   // The two loud themes must not quietly render the calm one's face.
   ["snapchat", "crashing"].forEach(t => {
     const was = globalThis.localStorage.getItem;
-    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : null);
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : was(k));
     try {
       const html = renderToString(<ClassApp config={cfg0} />);
       if (!html.includes("var(--font-body)")) say(t + ": the class site hardcodes a face instead of taking the theme's");
@@ -1171,7 +1173,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   // And the pieces have to land on the class site, not just exist.
   const onSite = (t, needle, what) => {
     const was = globalThis.localStorage.getItem;
-    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : null);
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : was(k));
     try {
       const out = renderToString(<ClassApp config={cfg0} />);
       if (!out.includes(needle)) say(`${t}: ${what} never reaches the class site`);
@@ -1304,7 +1306,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   // And the choice reaches the page.
   [["auto", LAPTOP], ["night", PHONE]].forEach(([m, px]) => {
     const was = globalThis.localStorage.getItem;
-    globalThis.localStorage.getItem = (k) => (k.endsWith("-mode") ? m : k.endsWith("-theme") ? "clean" : null);
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-mode") ? m : k.endsWith("-theme") ? "clean" : was(k));
     try {
       const html = atWidth(px, () => renderToString(<ClassApp config={cfg0} />));
       if (!html.includes(`data-mode="${m}"`)) say(`asking for ${m} never reaches the page root`);
@@ -1314,7 +1316,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   // A mode nobody has heard of falls back rather than breaking the page.
   {
     const was = globalThis.localStorage.getItem;
-    globalThis.localStorage.getItem = (k) => (k.endsWith("-mode") ? "dusk" : null);
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-mode") ? "dusk" : was(k));
     try {
       const html = renderToString(<ClassApp config={cfg0} />);
       if (!html.includes('data-mode="auto"')) say("an unknown mode did not fall back to auto");
@@ -1336,7 +1338,7 @@ cases.push(["Snapchat, the story bar", <StoryBar theme="snapchat" roster={[{ nam
   const say = (m) => { console.error("  FAIL  chrome: " + m); failedEarly++; };
   const withTheme = (t, el) => {
     const was = globalThis.localStorage.getItem;
-    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : null);
+    globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : was(k));
     try { return renderToString(el); } catch (err) { say(t + ": " + err.message); return ""; }
     finally { globalThis.localStorage.getItem = was; }
   };
@@ -1852,6 +1854,27 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!looksLikeEmail("a@b.co") || looksLikeEmail("not an email")) { console.error("  FAIL  logins: the email check is wrong"); failedEarly++; }
   cases.push(["Roster sheet, empty", <RosterSheet students={[]} accent="#7c3aed" onSave={noop} />, "Paste the list below"]);
   cases.push(["Roster sheet, with students and sections", <RosterSheet students={merged.students} accent="#7c3aed" onSave={noop} sections />, "jhanna@scu.edu"]);
+}
+
+// Where a signed-in person goes. The roster answers by email: one class goes
+// there, two classes pick, no class is told, and the instructor gets the
+// front page whatever the rosters say.
+{
+  const c118 = { id: "comm118", path: "/comm118" }, c3 = { id: "comm3", path: "/comm3" };
+  const rosters = [
+    { cls: c118, students: [{ id: "a", name: "A", email: "a@scu.edu" }, { id: "b", name: "B", email: "b@scu.edu" }] },
+    { cls: c3, students: [{ id: "b3", name: "B", email: "B@scu.edu" }] },
+  ];
+  const one = whereTo("a@scu.edu", rosters);
+  if (one.kind !== "student" || one.path !== "/comm118") { console.error("  FAIL  login: a student in one class went to " + JSON.stringify(one)); failedEarly++; }
+  const two = whereTo("b@scu.edu", rosters);
+  if (two.kind !== "pick" || two.classes.length !== 2) { console.error("  FAIL  login: a student in two classes got " + JSON.stringify(two)); failedEarly++; }
+  const none = whereTo("z@scu.edu", rosters);
+  if (none.kind !== "nobody") { console.error("  FAIL  login: a stranger got " + JSON.stringify(none)); failedEarly++; }
+  const me = whereTo("AndrewIshak@gmail.com", rosters);
+  if (me.kind !== "instructor" || me.path !== "/") { console.error("  FAIL  login: the instructor got " + JSON.stringify(me)); failedEarly++; }
+  if (studentFor("B@SCU.EDU", rosters[0].students)?.id !== "b") { console.error("  FAIL  login: the roster lookup is case-sensitive"); failedEarly++; }
+  cases.push(["The sign-in page", <LoginPage />, "Email me a code"]);
 }
 
 let failed = failedEarly;

@@ -17,6 +17,8 @@ import PlanPage from "./PlanPage.jsx";
 import { ENGINE, currentClasses, archivedClasses } from "./config/registry.js";
 import InstructorLinks from "./InstructorLinks.jsx";
 import InstructorGate from "./InstructorGate.jsx";
+import LoginPage from "./LoginPage.jsx";
+import { useSession } from "./engine/session.js";
 
 // Classes that run on the shared engine live in config/registry.js, because the
 // Dashboard's class picker needs the same list and cannot import this file.
@@ -76,6 +78,7 @@ const navigate = (path) => {
 function LandingPage() {
   const current = currentClasses();
   const archived = archivedClasses();
+  const { session, signOut } = useSession();
 
   return (
     <div style={shell}>
@@ -87,7 +90,17 @@ function LandingPage() {
           <div style={{ fontSize: 15, color: TEXT_SECONDARY, marginTop: 4 }}>Department of Communication</div>
         </div>
 
-        <div style={{ ...sectionLabel, marginBottom: 10 }}>Classes</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
+          <div style={sectionLabel}>Classes</div>
+          {session ? (
+            <span style={{ marginLeft: "auto", fontSize: 13, color: TEXT_MUTED }}>
+              {session.user.email} · <button onClick={async () => { await signOut(); navigate("/login"); }}
+                style={{ background: "none", border: "none", fontFamily: F, fontSize: 13, color: TEXT_SECONDARY, cursor: "pointer", padding: 0, minHeight: 0 }}>sign out</button>
+            </span>
+          ) : (
+            <a href="/login" style={{ marginLeft: "auto", fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY, textDecoration: "none", minHeight: TAP_L, display: "inline-flex", alignItems: "center" }}>Sign in →</a>
+          )}
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {current.map(c => <ClassCard key={c.id} c={c} navigate={navigate} />)}
           {!current.length ? <div style={{ fontSize: 15, color: TEXT_MUTED }}>No classes running right now.</div> : null}
@@ -164,6 +177,10 @@ export default function App() {
   const engineGameId = params.get("game");
   if (engineGameId && presenterClass && ENGINE[presenterClass]) {
     return <EnginePresenter gameId={engineGameId} classKey={presenterClass} />;
+  }
+
+  if (path === "/login" || path === "/login/") {
+    return <LoginPage />;
   }
 
   if (path === "/plan" || path === "/plan/") {

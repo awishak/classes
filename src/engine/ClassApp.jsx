@@ -26,6 +26,7 @@ import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
+import { useSession, studentFor } from "./session.js";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
 } from "./ThemeChrome.jsx";
@@ -349,22 +350,39 @@ function NeedsYou({ items, accent, onOpen }) {
 // Same shape as the Ask page, same remembered key, so signing in on one gets
 // you into the other. Before this, a dropdown let anyone read any classmate's
 // grade and every message they had sent me.
-function SignIn({ config, data, onSignedIn }) {
-  const roster = (data?.students || config.students || []).map(s => s.name).filter(n => n !== config.testStudent);
+// The class site no longer asks "Who are you?". Everyone signs in at /login,
+// and the roster answers by email: a student on this roster is that student,
+// an instructor's email is the instructor, anybody else is told they are not
+// in this class. A visitor with no session is sent to the door and comes back
+// to the page they asked for.
+function NotInClass({ config, email, onSignOut }) {
   return (
     <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, display: "flex", justifyContent: "center", padding: "48px 20px" }}>
       <style>{CSS}</style>
       <div style={{ width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ fontSize: 13, color: TEXT_MUTED, fontWeight: 600 }}>{config.code} · {config.name}</div>
-        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, letterSpacing: "-.02em" }}>Who are you?</h1>
-        <Muted>Pick your name to get to your grade, your assignments, and your messages.</Muted>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {roster.map(n => (
-            <button key={n} className="ca-focus" onClick={() => onSignedIn(n)}
-              style={{ ...card, minHeight: TAP, padding: "12px 16px", fontSize: 16, fontWeight: 500, border: "1px solid " + BORDER_STRONG }}>{n}</button>
-          ))}
-          {!roster.length ? <Muted>No roster yet.</Muted> : null}
+        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, letterSpacing: "-.02em" }}>You are not in this class.</h1>
+        <Muted>{email} is signed in, and the {config.code} roster does not have that address. If you should be here, ask Andrew to add you.</Muted>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <a className="ca-focus" href="/login" style={{ ...card, minHeight: TAP, padding: "12px 16px", fontSize: 16, fontWeight: 600, border: "1px solid " + BORDER_STRONG, textDecoration: "none", color: TEXT_PRIMARY, display: "inline-flex", alignItems: "center" }}>My classes</a>
+          <button className="ca-focus" onClick={onSignOut} style={{ ...card, minHeight: TAP, padding: "12px 16px", fontSize: 16, fontWeight: 500, border: "1px solid " + BORDER_STRONG }}>Sign out</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function GoSignIn({ config }) {
+  const next = typeof window !== "undefined" ? window.location.pathname : config.path;
+  const href = "/login?next=" + encodeURIComponent(next);
+  useEffect(() => { window.location.replace(href); }, [href]);
+  return (
+    <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, display: "flex", justifyContent: "center", padding: "48px 20px" }}>
+      <style>{CSS}</style>
+      <div style={{ width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ fontSize: 13, color: TEXT_MUTED, fontWeight: 600 }}>{config.code} · {config.name}</div>
+        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, letterSpacing: "-.02em" }}>Sign in first.</h1>
+        <a className="ca-focus" href={href} style={{ ...card, minHeight: TAP, padding: "12px 16px", fontSize: 16, fontWeight: 600, border: "1px solid " + BORDER_STRONG, textDecoration: "none", color: TEXT_PRIMARY, display: "inline-flex", alignItems: "center", alignSelf: "flex-start" }}>Go to sign in →</a>
       </div>
     </div>
   );
@@ -505,18 +523,36 @@ export default function ClassApp({ config, initialCard }) {
     try { localStorage.setItem(REMEMBER, name); } catch { /* private mode */ }
     setSignedIn(name); setAsStudent(name);
   };
-  const signOut = () => {
+  const signOut = async () => {
     try { localStorage.removeItem(REMEMBER); localStorage.removeItem(ADMIN); } catch { /* private mode */ }
-    setSignedIn(null); setRole("student"); go(null);
+    setSignedIn(null); setRole("student");
+    await endSession();
+    window.location.href = "/login";
   };
+
+  // Who this is, from the session and the roster. The remembered name is what
+  // every card, board and game already keys on, so the session sets that name
+  // and the rest of the site carries on as before. The instructor's email
+  // makes the instructor; nobody has to press a role toggle to get in.
+  const { session, email: sessionEmail, instructor: sessionInstructor, signOut: endSession } = useSession();
+  const rosterNow = withIds(data?.students || config.students || []);
+  const me = session && !sessionInstructor ? studentFor(sessionEmail, rosterNow) : null;
+  useEffect(() => {
+    if (!session || data === null) return;
+    if (sessionInstructor) {
+      if (role !== "instructor") { try { localStorage.setItem(ADMIN, "1"); } catch { /* private mode */ } setRole("instructor"); }
+      return;
+    }
+    if (me && signedIn !== me.name) signIn(me.name);
+  }, [session, sessionInstructor, me?.name, data === null]);   // eslint-disable-line react-hooks/exhaustive-deps
   const pickRole = (r) => {
     try { if (r === "instructor") localStorage.setItem(ADMIN, "1"); else localStorage.removeItem(ADMIN); } catch { /* private mode */ }
     setRole(r); go(null);
   };
 
-  if (data !== null && role === "student" && !signedIn && !config.openAccess) {
-    return <SignIn config={config} data={data} onSignedIn={signIn} />;
-  }
+  if (!session) return <GoSignIn config={config} />;
+  if (data !== null && !sessionInstructor && !me) return <NotInClass config={config} email={sessionEmail} onSignOut={signOut} />;
+  if (data !== null && !sessionInstructor && me && signedIn !== me.name) return null;   // the effect is setting the name
 
   const RoleToggle = preview ? null : (
     <div style={{ display: "flex", gap: 4, background: BG, padding: 3, borderRadius: 999, border: "1px solid " + BORDER }}>

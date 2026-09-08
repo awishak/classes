@@ -13,7 +13,7 @@
 // The route checks the instructor PIN, the file's type and size, and nothing
 // else; the file itself never passes through here.
 
-import { pinMatches, readBody } from "./_auth.js";
+import { callerAllowed, readBody } from "./_auth.js";
 import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
 
 export const BUCKET = "notes";
@@ -37,9 +37,9 @@ export default async function handler(req, res) {
   const body = readBody(req);
   if (!body) return res.status(400).json({ error: "Invalid JSON body" });
 
-  if (!pinMatches(body.pin)) {
+  if (!(await callerAllowed(req, body))) {
     await new Promise(r => setTimeout(r, 1000));
-    return res.status(401).json({ ok: false, error: "That PIN does not match." });
+    return res.status(401).json({ ok: false, error: "That PIN does not match, and nobody is signed in." });
   }
 
   const type = String(body.type || "");

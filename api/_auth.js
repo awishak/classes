@@ -20,6 +20,25 @@ export function pinMatches(pin) {
   return same;
 }
 
+// Who is asking: the PIN in the body, or a Supabase session in the bearer
+// header whose email teaches. The instructor signs in the way a student does
+// now, so a route that used to want the PIN takes either.
+import { SUPABASE_URL, serviceHeaders } from "./_supabase.js";
+import { isInstructorEmail } from "../src/instructors.js";
+
+export async function callerAllowed(req, body) {
+  if (pinMatches(body?.pin)) return true;
+  const auth = req.headers?.authorization || req.headers?.Authorization || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!token) return false;
+  try {
+    const r = await fetch(SUPABASE_URL + "/auth/v1/user", { headers: { ...serviceHeaders(), Authorization: "Bearer " + token } });
+    if (!r.ok) return false;
+    const user = await r.json();
+    return isInstructorEmail(user?.email);
+  } catch { return false; }
+}
+
 export function readBody(req) {
   let body = req.body;
   if (typeof body === "string") {

@@ -16,7 +16,7 @@
 // POST /api/logins { pin, action: "reset", email }
 //   -> { ok, login: { email, code } }   a fresh code, for a student who lost theirs
 
-import { pinMatches, readBody } from "./_auth.js";
+import { callerAllowed, readBody } from "./_auth.js";
 import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
 
 const TABLE = "class_logins";
@@ -78,9 +78,9 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const body = readBody(req);
   if (!body) return res.status(400).json({ error: "Invalid JSON body" });
-  if (!pinMatches(body.pin)) {
+  if (!(await callerAllowed(req, body))) {
     await new Promise(r => setTimeout(r, 1000));
-    return res.status(401).json({ ok: false, error: "That PIN does not match." });
+    return res.status(401).json({ ok: false, error: "That PIN does not match, and nobody is signed in." });
   }
   if (!serviceKey()) return res.status(500).json({ ok: false, error: "No Supabase service key is configured on the server." });
 

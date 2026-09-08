@@ -13,7 +13,11 @@ globalThis.WebSocket = class {
   close() {}
 };
 
-globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+// A signed-in instructor, so the class site renders past the door. Everyone
+// signs in at /login now and a visitor with no session is sent there, which
+// is the right thing on a screen and the wrong thing in a render test.
+const SESSION = JSON.stringify({ access_token: "t", refresh_token: "r", expires_at: 4102444800, user: { id: "u-andrew", email: "andrewishak@gmail.com" } });
+globalThis.localStorage = { getItem: (k) => (k === "classes-session" ? SESSION : null), setItem() {}, removeItem() {} };
 globalThis.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
 globalThis.innerWidth = 1440;
 globalThis.location = { pathname: "/", search: "", hash: "", origin: "https://example.test", href: "https://example.test/" };

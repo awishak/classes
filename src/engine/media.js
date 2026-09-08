@@ -10,6 +10,7 @@
 // the upload itself. Nothing here renders.
 
 import { savedPin } from "../InstructorGate.jsx";
+import { authHeaders } from "./session.js";
 
 export const MEDIA_MAX = 50 * 1024 * 1024;   // the bucket's own cap
 export const MEDIA_ACCEPT = "video/*,image/*,audio/*";
@@ -66,11 +67,11 @@ export function uploadMedia(file, { classId, pin, onProgress } = {}) {
   if (!kind) return Promise.reject(new Error("Only a video, a photo or an audio file can go up."));
   if (file.size > MEDIA_MAX) return Promise.reject(new Error("The file has to be under 50 MB."));
 
-  return fetch("/api/upload", {
+  return authHeaders().then(auth => fetch("/api/upload", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...auth },
     body: JSON.stringify({ pin: pin ?? savedPin(), name: file.name, type: file.type, size: file.size, classId }),
-  })
+  }))
     .then(async r => {
       const out = await r.json().catch(() => ({}));
       if (!r.ok || !out.ok) throw new Error(out.error || "Could not get an upload link.");

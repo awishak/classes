@@ -8,6 +8,8 @@
 // projector that students look at and the other is where they are sent.
 
 import { useState, useEffect, useCallback } from "react";
+import { getSession, useSession } from "./engine/session.js";
+import { isInstructorEmail } from "./instructors.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -42,11 +44,19 @@ export async function checkPin(pin) {
 }
 
 // null while we are still asking, true / false once we know.
+//
+// Two ways to be the instructor: the PIN, remembered in this browser, or a
+// session whose email teaches. The session is the way in now that everyone
+// signs in at /login; the PIN stays for the podium machine until it goes.
 export function useInstructor() {
-  const [ok, setOk] = useState(null);
+  const { session, instructor } = useSession();
+  const [ok, setOk] = useState(() => (instructor ? true : null));
+
+  useEffect(() => { if (instructor) setOk(true); }, [instructor]);
 
   useEffect(() => {
     let alive = true;
+    if (isInstructorEmail(getSession()?.user?.email)) { setOk(true); return; }
     let saved = null;
     try { saved = localStorage.getItem(KEY); } catch { /* private mode */ }
     if (!saved) { setOk(false); return; }
@@ -74,7 +84,7 @@ export function useInstructor() {
     setOk(false);
   }, []);
 
-  return { ok, signIn, signOut };
+  return { ok, signIn, signOut, session };
 }
 
 export function PinForm({ title, note, onDone, compact }) {
