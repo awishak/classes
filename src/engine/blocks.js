@@ -84,6 +84,8 @@ export function makeBlock(patch, now) {
     concept: "",
     source: "",
     refId: "",        // an assignment block points at the assignment it details
+    media: null,      // a clip, a photo or a voice memo from my phone. See media.js.
+    ask: "",          // the question that follows the file on the wall
     created: todayStamp(now),
     scheduled: [],    // every class date it has been placed on. Filled in on placement.
     ...patch,

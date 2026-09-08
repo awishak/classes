@@ -25,6 +25,7 @@
 
 import { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { loadClass, saveClass } from "./store.js";
+import { uploadMedia, mediaLabel, sizeLabel, MEDIA_ACCEPT } from "./media.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { typeOf, allTypes, registerTypes, SHARED_KEY, SHARED_LABEL, makeBlock, writeBlock,
   deleteBlock, stampScheduled, todayStamp } from "./blocks.js";
@@ -1436,16 +1437,29 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
     type: block.type, title: block.title || "", headline: block.headline || "",
     url: block.url || "", body: block.body || "", concept: block.concept || "",
     source: block.source || "", tags: (block.tags || []).join(", "),
+    media: block.media || null, ask: block.ask || "",
   });
   const [saved, setSaved] = useState(false);
   const [sure, setSure] = useState(false);
   const set = (k, v) => { setDraft(d => ({ ...d, [k]: v })); setSaved(false); };
+
+  // The file on the way up: null, or a fraction, or an error to read.
+  const [sending, setSending] = useState(null);
+  const [sendWhy, setSendWhy] = useState("");
+  const attach = (file) => {
+    if (!file) return;
+    setSendWhy(""); setSending(0);
+    uploadMedia(file, { classId: block.uses?.[0]?.cls?.id || "shared", onProgress: setSending })
+      .then(media => { set("media", media); setSending(null); })
+      .catch(err => { setSending(null); setSendWhy(err.message); });
+  };
 
   const commit = () => {
     onSave({
       type: draft.type, title: draft.title.trim(), headline: draft.headline.trim(),
       url: draft.url.trim(), body: draft.body.trim(), concept: draft.concept.trim(),
       source: draft.source.trim(), tags: draft.tags.split(",").map(x => x.trim()).filter(Boolean),
+      media: draft.media || null, ask: draft.ask.trim(),
     });
     setSaved(true);
   };
@@ -1473,6 +1487,36 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
         <label className="repo-field">
           <span className="repo-label">Link</span>
           <input className="repo-input" value={draft.url} onChange={e => set("url", e.target.value)} placeholder="https://…" />
+        </label>
+        {/* A clip, a photo or a voice memo that plays on the wall after the
+            headline, and the question that follows the file. The upload goes
+            straight to Supabase on a link our API signs, so the file never
+            passes through the app. */}
+        <div className="repo-field">
+          <span className="repo-label">On the wall</span>
+          {draft.media?.src ? (
+            <div className="repo-row">
+              <a className="repo-focus repo-link" href={draft.media.src} target="_blank" rel="noopener noreferrer">
+                {mediaLabel(draft.media.kind)}{draft.media.name ? ", " + draft.media.name : ""}{draft.media.size ? ", " + sizeLabel(draft.media.size) : ""} ↗
+              </a>
+              <button className="repo-focus repo-chip" onClick={() => set("media", null)}>Take the file off</button>
+            </div>
+          ) : null}
+          <div className="repo-row">
+            <label className="repo-focus repo-chip" style={sending !== null ? { opacity: .6 } : undefined}>
+              {sending !== null
+                ? "Sending, " + Math.round(sending * 100) + "%"
+                : draft.media?.src ? "Swap the file" : "Attach a clip, a photo or a voice memo"}
+              <input type="file" accept={MEDIA_ACCEPT} disabled={sending !== null} style={{ display: "none" }}
+                onChange={e => { attach(e.target.files?.[0]); e.target.value = ""; }} />
+            </label>
+            {sendWhy ? <span className="repo-warn">{sendWhy}</span> : null}
+          </div>
+        </div>
+        <label className="repo-field">
+          <span className="repo-label">Ask after the file plays</span>
+          <input className="repo-input" value={draft.ask} onChange={e => set("ask", e.target.value)}
+            placeholder="The question the room answers next" />
         </label>
         <label className="repo-field">
           <span className="repo-label">Body</span>

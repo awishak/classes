@@ -19,6 +19,9 @@ import Dashboard, {
   ColorsSheet, NoteSheet, ShortcutSheet,
 } from "../src/engine/Dashboard.jsx";
 import ClassroomView, { Content as CastContent } from "../src/engine/ClassroomView.jsx";
+import { Castable } from "../src/engine/Dashboard.jsx";
+import { mediaSteps, liveStep, mediaKind } from "../src/engine/media.js";
+import { pathFor } from "../api/upload.js";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
 import GamePage, { RunGamePage } from "../src/engine/GamePage.jsx";
@@ -319,7 +322,10 @@ cases.push(["Repository", <RepoPage />]);
   cases.push(["Repository row, never used", table(<RepoRow block={bare} hue={hue} open onOpen={noop} onTag={noop}
     picked={false} onPick={noop} />), "Never"]);
   cases.push(["Repository open row", <RepoDetail block={blk} hue={hue} planOf={planOf} stores={stores}
-    onSave={noop} onDelete={noop} onPlace={noop} onAssign={noop} />, "Add this to class"]);
+    onSave={noop} onDelete={noop} onPlace={noop} onAssign={noop} />, "Attach a clip"]);
+  cases.push(["Repository open row, with a clip on it", <RepoDetail
+    block={{ ...blk, media: { kind: "video", src: "https://e.com/clip.mov", name: "clip.mov", size: 8 * 1024 * 1024 }, ask: "Who was that for?" }}
+    hue={hue} planOf={planOf} stores={stores} onSave={noop} onDelete={noop} onPlace={noop} onAssign={noop} />, "Take the file off"]);
   cases.push(["Repository placer", <RepoPlace block={blk} planOf={planOf} stores={stores}
     onPlace={noop} onAssign={noop} />, "Add to day plan"]);
 
@@ -1758,6 +1764,42 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (minutesLeft(one, at(9, 30)) !== 50) { console.error("  FAIL  meets: a class that meets once does not count down"); failedEarly++; }
   if (sittingLength(two, at(10, 45)) !== 65) { console.error("  FAIL  meets: a sitting came out the wrong length"); failedEarly++; }
   if (minutesLeft(bad, at(9, 30)) !== null) { console.error("  FAIL  meets: a class with no times is in session"); failedEarly++; }
+}
+
+// A note with a file plays as slides behind one button: the headline, the
+// clip, then the question. The rule that turns a block into those slides, and
+// the rule that says which slide is up, are checked here without a screen.
+{
+  const clip = { kind: "video", src: "https://e.com/clip.mov", name: "clip.mov", size: 12345678 };
+  const withAsk = { title: "The ad", headline: "The ad ran twice in one break.", media: clip, ask: "Who was that for?" };
+  const noAsk = { title: "The ad", headline: "The ad ran twice in one break.", media: clip, ask: "" };
+  const plain = { title: "The ad", headline: "The ad ran twice in one break." };
+  const s3 = mediaSteps(withAsk, withAsk.headline, "Open");
+  const s2 = mediaSteps(noAsk, noAsk.headline, "Open");
+  if (!s3 || s3.length !== 3) { console.error("  FAIL  media: a note with a clip and a question plays as " + (s3 ? s3.length : "no") + " slides, not three"); failedEarly++; }
+  if (!s2 || s2.length !== 2) { console.error("  FAIL  media: a note with a clip and no question plays as " + (s2 ? s2.length : "no") + " slides, not two"); failedEarly++; }
+  if (mediaSteps(plain, plain.headline, "Open") !== null) { console.error("  FAIL  media: a note with no file got slides"); failedEarly++; }
+  if (s3 && s3[1].payload.type !== "media") { console.error("  FAIL  media: the second slide is " + s3[1].payload.type + ", not the clip"); failedEarly++; }
+  if (s3 && s3[2].payload.title !== "Who was that for?") { console.error("  FAIL  media: the question slide lost the question"); failedEarly++; }
+  if (s3 && !s3.every(st => st.payload.label === withAsk.headline)) { console.error("  FAIL  media: the slides do not share a label, so the row would not read as live"); failedEarly++; }
+  if (liveStep(s3 && s3[1].payload, withAsk.headline) !== 1) { console.error("  FAIL  media: the clip slide is up and the row does not know"); failedEarly++; }
+  if (liveStep({ type: "quote", label: "something else" }, withAsk.headline) !== -1) { console.error("  FAIL  media: another row's cast counted as this row's"); failedEarly++; }
+  if (liveStep(null, withAsk.headline) !== -1) { console.error("  FAIL  media: an idle wall counted as live"); failedEarly++; }
+  if (mediaKind("video/quicktime") !== "video" || mediaKind("audio/m4a") !== "audio" || mediaKind("application/pdf") !== "") { console.error("  FAIL  media: a MIME type was filed under the wrong kind"); failedEarly++; }
+  // The path a file lands at: class, month, stamp, the file's own name cleaned
+  // up, and nothing Supabase would refuse.
+  const path = pathFor({ classId: "comm118", name: "Screen Recording 2026-09-04 at 8.12.03 PM.mov", now: new Date("2026-09-04T20:12:03Z") });
+  if (!/^comm118\/2026-09\/[a-z0-9]+-screen-recording-2026-09-04-at-8\.12\.03-pm\.mov$/.test(path)) { console.error("  FAIL  media: the upload path came out as " + path); failedEarly++; }
+
+  const row = (step) => (
+    <Castable num={3} kind="Note" kindColor="#646b75" title="The ad" claim={withAsk.headline} accent="#7c3aed"
+      live={step >= 0} onCast={noop} onDismiss={noop} onSaveClaim={noop} onTick={noop}
+      steps={s3} step={step} onStep={noop} />
+  );
+  cases.push(["Flow row with a clip, not live", row(-1), "→"]);
+  cases.push(["Flow row with a clip, headline up, offers the clip", row(0), "Clip →"]);
+  cases.push(["Flow row with a clip, clip up, offers the question", row(1), "Question →"]);
+  cases.push(["Flow row with a clip, question up, nothing left to offer", row(2), "Take it back down"]);
 }
 
 let failed = failedEarly;

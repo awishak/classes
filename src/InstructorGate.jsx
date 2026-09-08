@@ -20,6 +20,12 @@ const TAP = 44;
 
 const KEY = "classes-instructor-pin";
 
+// The PIN the browser remembered, for a route that needs to be told who is
+// asking. Empty when nobody has signed in here.
+export function savedPin() {
+  try { return localStorage.getItem(KEY) || ""; } catch { return ""; }
+}
+
 export async function checkPin(pin) {
   try {
     const res = await fetch("/api/instructor-auth", {

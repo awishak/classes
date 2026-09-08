@@ -15,6 +15,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useClassData } from "./store.js";
 import { useLive, ANIMS, BIG_ANIMS } from "./live.js";
+import { mediaSteps, liveStep, mediaLabel, sizeLabel } from "./media.js";
 import { useQuestions } from "./questions.js";
 import { usePoll } from "./poll.js";
 import PollPanel, { oneSentence } from "./PollPanel.jsx";
@@ -514,7 +515,11 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // Nothing goes up as a label. Before a thing can be cast it needs a headline —
 // one full sentence saying what it shows. "Media rights" is a topic; "Rights
 // fees have risen 45% in ten years" is what the room can actually read.
-function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, starred, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove }) {
+// A row with a file on its block plays as slides: the headline, the clip,
+// then the question. `steps` is that list, `step` is which one is up (-1 when
+// the row is not live), and `onStep(i)` puts slide i on the wall. In the room
+// the one button cycles forward; jumping around lives behind the number.
+export function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, starred, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove, steps, step = -1, onStep }) {
   const [editing, setEditing] = useState(false);
   const [menu, setMenu] = useState(false);
   // A row near the bottom of a long day opened its menu downward and off the
@@ -613,6 +618,12 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
               <button className="dash-focus" onClick={() => { setMenu(false); setEditing(true); }}>
                 <span className="flow-rowmenu-k">✎</span>{claim ? "Edit the headline" : "Write the headline"}
               </button>
+              {steps && onStep ? steps.map((st, i) => (
+                <button key={st.name} className="dash-focus" onClick={() => { setMenu(false); onStep(i); }}
+                  aria-current={step === i ? "true" : undefined}>
+                  <span className="flow-rowmenu-k">{i + 1}</span>{step === i ? st.name + ", up now" : "Jump to the " + st.name.toLowerCase()}
+                </button>
+              )) : null}
               {onAssign ? (
                 <button className="dash-focus" onClick={() => { setMenu(false); onAssign(); }}>
                   <span className="flow-rowmenu-k">{assigned ? "\u2713" : "+"}</span>
@@ -641,6 +652,11 @@ function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, on
       </span>
 
       <span className="flow-tools">
+        {live && steps && onStep && step >= 0 && step < steps.length - 1 ? (
+          <button className="dash-focus" style={{ ...sq, borderColor: accent, color: accent, fontWeight: 600 }}
+            title={"Next: the " + steps[step + 1].name.toLowerCase()}
+            onClick={() => onStep(step + 1)}>{steps[step + 1].name + " \u2192"}</button>
+        ) : null}
         {live ? (
           <button className="dash-focus" style={{ ...sq }}
             title="Take it back down" onClick={onDismiss}>×</button>
@@ -1688,7 +1704,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accent, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -1954,11 +1970,16 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, accen
                     canNest={i > 0 && (it.depth || 0) <= (normSlot(slotItems[s.slot]).items[i - 1].depth || 0)}
                     onNest={onNest ? (dir) => onNest(s.slot, it.id, dir) : null}
                     onRemove={() => onRemoveItem(s.slot, it.id)}
+                    steps={mediaSteps(blk, it.claim || blk?.headline || title, bucket.title || s.slot)}
+                    step={liveStep(liveCast, (it.claim || blk?.headline) || title)}
+                    onStep={blk?.media?.src ? (i) => castNow(mediaSteps(blk, it.claim || blk.headline || title, bucket.title || s.slot)[i].payload) : null}
                     onCast={(c) => (it.feature && onFeature
                       ? onFeature(it.feature)
-                      : castNow(blk?.url
-                        ? { ...castFromLink({ label: blk.title, url: blk.url }), title: c, label: c, pick: !!blk?.pick }
-                        : { type: "quote", tag: bucket.title || s.slot, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c, pick: !!blk?.pick }))} />
+                      : blk?.media?.src
+                        ? castNow(mediaSteps(blk, c, bucket.title || s.slot)[0].payload)
+                        : castNow(blk?.url
+                          ? { ...castFromLink({ label: blk.title, url: blk.url }), title: c, label: c, pick: !!blk?.pick }
+                          : { type: "quote", tag: bucket.title || s.slot, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c, pick: !!blk?.pick }))} />
                   {(it.links || []).map(l => (
                     <div key={l.id} style={{ paddingLeft: 16 }}>
                       <Castable kind="Link" kindColor={KIND_COLOR.Link} title={l.label} url={l.url}
@@ -3073,6 +3094,10 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
   const picked = !!block?.pick;
   const rows = [
     ["Headline", block ? block.headline : item?.claim],
+    ["On the wall", block?.media?.src
+      ? mediaLabel(block.media.kind) + (block.media.name ? ", " + block.media.name : "") + (block.media.size ? ", " + sizeLabel(block.media.size) : "")
+      : ""],
+    ["Ask after", block?.ask],
     ["What it says", block?.body],
     ["Concept", block?.concept],
     ["Source", block?.source],
@@ -4106,7 +4131,7 @@ export default function Dashboard({ config }) {
       roster={students.length} accent={config.accent}
       onCast={() => cast({ type: "poll", label: "Live poll" })} />,
     flow: () => <FlowPanel plan={plan} seq={seq} seeds={seeds} castNow={castNow} dismiss={dismiss}
-      liveLabel={liveLabel} accent={config.accent} onClaim={saveFlowClaim}
+      liveLabel={liveLabel} liveCast={live?.cast} accent={config.accent} onClaim={saveFlowClaim}
       features={features} onFeature={runFeature} planHref={config.path + "/dayplan"} classHref={config.path}
       onSlidesClaim={saveSlidesClaim} onBlockClaim={saveBlockClaim} where={config.code + " · " + day}
       loose={looseItems} onAddScheduled={(it, slot, date) => addScheduleItemToDay(update, config, date || day, it, slot)}
