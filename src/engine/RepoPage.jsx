@@ -88,6 +88,19 @@ export default function RepoPage() {
   // I can send it to myself, out of a saved view when I ask it again, and back
   // off the address bar when Back is pressed.
   const [f, setF] = useState(() => readFilters(window.location.search));
+  // The way back. The dashboard sends ?from=/comm118/dashboard, the filters
+  // rewrite the address as soon as a chip changes, so the origin is kept for
+  // the visit rather than read off the address bar each time.
+  const [from] = useState(() => {
+    let got = "";
+    try {
+      got = new URLSearchParams(window.location.search).get("from") || "";
+      if (got && !/^\/[a-z0-9-]+\/dashboard$/.test(got)) got = "";
+      if (got) sessionStorage.setItem("repo-from", got);
+      else got = sessionStorage.getItem("repo-from") || "";
+    } catch { /* private mode */ }
+    return got;
+  });
   const { q, kind, where, tag, flag, pick, lens } = f;
   const set = (patch) => setF(prev => ({ ...prev, ...patch }));
   const [adding, setAdding] = useState(false);
@@ -732,6 +745,7 @@ export default function RepoPage() {
 
       <header className="repo-head" ref={headRef}>
         <div className="repo-head-in">
+          {from ? <a href={from} className="repo-back">← Dashboard</a> : null}
           <a href="/" className="repo-back">← All classes</a>
           <h1 className="repo-title">Repository</h1>
           <span className="repo-count">{items.length} things</span>
@@ -1510,7 +1524,7 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
   return (
     <div className="repo-detail">
       <div className="repo-pane">
-        <div className="repo-row">
+        <div className="repo-row" style={{ alignItems: "center" }}>
           {allTypes().map(t => (
             <button key={t.id} className="repo-focus repo-chip" onClick={() => set("type", t.id)}
               aria-pressed={draft.type === t.id}
@@ -1518,6 +1532,8 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
               {t.label}
             </button>
           ))}
+          <button className="repo-focus repo-save" onClick={commit} style={{ marginLeft: "auto" }}>Save changes</button>
+          {saved ? <span className="repo-said">Saved</span> : null}
         </div>
         <label className="repo-field">
           <span className="repo-label">Title</span>
@@ -1866,7 +1882,7 @@ const CSS = `
 .repo-danger{min-height:32px;padding:0 12px;border-radius:999px;border:none;background:#9f1239;color:#fff;
   cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:600}
 .repo-warn{font-size:12.5px;color:#9f1239}
-.repo-said{font-family:${MONO};font-size:11.5px;color:#047857}
+.repo-said{font-family:${MONO};font-size:13px;color:#047857}
 .repo-link{font-size:13px;color:var(--kind);text-decoration:none;font-weight:500}
 .repo-link:hover{text-decoration:underline}
 .repo-place{display:flex;flex-direction:column;gap:7px;background:${SURFACE};border-radius:12px;padding:11px 12px}

@@ -2896,7 +2896,7 @@ function ClassMenu({ config }) {
       <a className="dash-focus" href={config.path} style={menuRow}>Class home</a>
       <a className="dash-focus" href={config.path + "/schedule"} style={menuRow}>The schedule</a>
       <a className="dash-focus" href={config.path + "/rungame"} style={menuRow}>Run the game</a>
-      <a className="dash-focus" href="/repo" style={menuRow}>The repository</a>
+      <a className="dash-focus" href={"/repo?from=" + encodeURIComponent(config.path + "/dashboard")} style={menuRow}>The repository</a>
       <a className="dash-focus" href="/plan" style={menuRow}>The Brief</a>
       <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
       <span style={{ ...label, padding: "2px 10px 4px" }}>Another class</span>
@@ -4134,7 +4134,7 @@ export default function Dashboard({ config }) {
   cmdTargets.push({ key: "o:hl", group: "Open", title: "Headlines board", run: () => setHlOpen(true) });
   cmdTargets.push({ key: "o:be", group: "Open", title: "Write the Enter and Exit boards", run: () => setBoardsOpen(true) });
   cmdTargets.push({ key: "o:notes", group: "Open", title: "My notes for this day", run: () => setNotesOpen(true) });
-  cmdTargets.push({ key: "o:repo", group: "Open", title: "The repository", run: () => { window.location.href = "/repo"; } });
+  cmdTargets.push({ key: "o:repo", group: "Open", title: "The repository", run: () => { window.location.href = "/repo?from=" + encodeURIComponent(config.path + "/dashboard"); } });
   cmdTargets.push({ key: "o:col", group: "Open", title: "Colour and type", run: () => setColorsOpen(true) });
   cmdTargets.push({ key: "o:here", group: "Open", title: "Who is here", run: () => setHereOpen(true) });
   cmdTargets.push({ key: "o:todo", group: "Open", title: "Still to do", run: () => setTodoOpen(true) });
@@ -4324,7 +4324,7 @@ export default function Dashboard({ config }) {
         </button>
         <button className="dash-focus dash-bar" onClick={() => setHornOpen(true)}>Around the Horn</button>
         <button className="dash-focus dash-bar" onClick={() => setColorsOpen(true)}>Look</button>
-        <a className="dash-focus dash-bar" href="/repo">Repo</a>
+        <a className="dash-focus dash-bar" href={"/repo?from=" + encodeURIComponent(config.path + "/dashboard")}>Repo</a>
         {/* Written months ago and never mounted. Its Keyboard row is the only
             way to reach the shortcut sheet without already knowing ⌘/, which
             made ten live shortcuts undiscoverable. */}
