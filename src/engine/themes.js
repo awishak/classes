@@ -142,8 +142,18 @@ export const hasNight = (name) => !!(THEME[name] || {}).dark;
 //   night  a rule outside the media query, selected on the theme and the mode
 //          together. Two attribute selectors outrank the one on the daytime
 //          block, so night wins in a light OS with no !important anywhere.
+const vars = (t) => Object.entries(varsOf(t)).map(([k, v]) => k + ":" + v).join(";");
+
+// The daytime values of Clean, on bare :root, and nothing else. Mounted once
+// at the root of the app so every route has them. Every surface reads its
+// colours as var(--text-primary) and friends, and for a week only the student
+// surfaces defined those, through ThemeStyle: the dashboard, the repository
+// and the plan drew with every variable undefined, which is a page with no
+// greys, no borders, and a white button on a white header. A themed surface
+// still mounts ThemeStyle after this block, and its rules win by coming later.
+export const baseCSS = () => ":root{" + vars(THEME.clean) + "}";
+
 export const themeCSS = () => {
-  const vars = (t) => Object.entries(varsOf(t)).map(([k, v]) => k + ":" + v).join(";");
   const light = [":root{" + vars(THEME.clean) + "}",
     ...THEMES.map(n => "[data-theme=\"" + n + "\"]{" + vars(THEME[n]) + "}")];
 

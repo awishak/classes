@@ -22,6 +22,7 @@ import ClassroomView, { Content as CastContent } from "../src/engine/ClassroomVi
 import { Castable } from "../src/engine/Dashboard.jsx";
 import { mediaSteps, liveStep, mediaKind } from "../src/engine/media.js";
 import { pathFor } from "../api/upload.js";
+import { baseCSS } from "../src/engine/themes.js";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
 import GamePage, { RunGamePage } from "../src/engine/GamePage.jsx";
@@ -1809,6 +1810,19 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   cases.push(["Flow row with a clip, headline up, offers the clip", row(0), "Clip →"]);
   cases.push(["Flow row with a clip, clip up, offers the question", row(1), "Question →"]);
   cases.push(["Flow row with a clip, question up, nothing left to offer", row(2), "Take it back down"]);
+}
+
+// Every variable a token reads has to be defined at the root of the app, or a
+// surface that never mounts a theme draws with nothing: no greys, no borders,
+// a white button on a white header. That is how the dashboard and the
+// repository looked for a week.
+{
+  const tokensSrc = readFileSync(new URL("../src/engine/tokens.js", import.meta.url), "utf8");
+  const used = [...new Set([...tokensSrc.matchAll(/var\((--[a-z0-9-]+)\)/g)].map(m => m[1]))];
+  const base = baseCSS();
+  const missing = used.filter(v => !base.includes(v + ":"));
+  if (missing.length) { console.error("  FAIL  tokens: read at the root but never defined there: " + missing.join(", ")); failedEarly++; }
+  if (!/^:root\{/.test(base)) { console.error("  FAIL  tokens: the base block is not on :root"); failedEarly++; }
 }
 
 let failed = failedEarly;
