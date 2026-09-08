@@ -2793,7 +2793,7 @@ export function NoteSheet({ sections, sources, accent, onAdd, onClose, classId }
   // for all of them and says which is which.
   const already = (sources || []).filter(x => (x.body || "").trim() || x.onSave);
   return (
-    <Sheet title="A new note" sub="It goes onto the day plan as a row" onClose={onClose} width={620}>
+    <Sheet title="A new note" sub="A row on the day plan, and a note in the repository" onClose={onClose} width={620}>
       <span className="read-field">
         <textarea autoFocus value={text} onChange={e => setText(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit(); }}
@@ -3881,12 +3881,12 @@ export default function Dashboard({ config }) {
   // {blockId}. A reading dragged out of Today's readings may have no block
   // behind it at all, only a title and a link, so the row carries the words
   // and a pointer back to the schedule item.
-  // A note from the sheet. Plain words stay a row, as they always have. With a
-  // file or a question on the note the words become a block in this class's
-  // store, so the clip has a home the repository can find, and the row points
-  // at the block like any other.
+  // A note from the sheet is a block in this class's store, and the row points
+  // at the block like any other. It used to stay a bare row of words unless a
+  // file was on it, which meant a note written on the dashboard never turned
+  // up in the repository and could not be edited there. Andrew: a note is a
+  // repo note like any other.
   const addNote = (slot, { text, media, ask }) => {
-    if (!media && !(ask || "").trim()) return addFlowItem(slot, { text });
     const made = makeBlock({ type: "note", title: text, media: media || null, ask: (ask || "").trim() });
     update(prev => ({ ...prev, blocks: { ...(prev.blocks || {}), [made.id]: made } }));
     pickBlock(slot, made);
