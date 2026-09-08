@@ -784,6 +784,13 @@ export default function ClassApp({ config, initialCard }) {
     ? <>{[0, 1, 2, 3].map(i => <SkeletonTile key={i} />)}</>
     : <>{enabledCards.map(CardTile)}</>;
 
+  // The door, after every hook above has run, so a render that turns somebody
+  // away calls the same hooks as a render that lets them in, and above both
+  // layouts, because the desktop one returns on its own.
+  if (!session) return <GoSignIn config={config} />;
+  if (data !== null && !sessionInstructor && !me) return <NotInClass config={config} email={sessionEmail} onSignOut={signOut} />;
+  if (data !== null && !sessionInstructor && me && signedIn !== me.name) return null;   // the effect is setting the name
+
   // ─── DESKTOP: top nav + side-by-side master/detail ───
   if (isDesktop) {
     return (
@@ -840,12 +847,6 @@ export default function ClassApp({ config, initialCard }) {
 
   // ─── MOBILE: single column, full-screen takeover, bottom tab bar ───
   const BAR_H = 72;
-  // The door, after every hook above has run, so a render that turns somebody
-  // away calls the same hooks as a render that lets them in.
-  if (!session) return <GoSignIn config={config} />;
-  if (data !== null && !sessionInstructor && !me) return <NotInClass config={config} email={sessionEmail} onSignOut={signOut} />;
-  if (data !== null && !sessionInstructor && me && signedIn !== me.name) return null;   // the effect is setting the name
-
   return (
     <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, paddingBottom: BAR_H + 12, "--ca-accent": a }}>
       <ThemeStyle theme={theme} />
