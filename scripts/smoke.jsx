@@ -866,6 +866,12 @@ cases.push(["On the wall, a discussion", <CastContent config={cfg0} plan={{}} da
 cases.push(["On the wall, the Enter board", <CastContent config={cfg0} plan={{}} data={{}}
   cast={{ type: "board", tag: "Enter", title: "Enter", idea: "One word for today",
     at: 0, count: 3, showAsk: true }} />, "Ask me anything"]);
+cases.push(["On the wall, a clip from my phone", <CastContent config={cfg0} plan={{}} data={{}}
+  cast={{ type: "media", media: "video", src: "https://e.com/clip.mov", title: "The ad that ran during the game" }} />]);
+cases.push(["On the wall, a photo", <CastContent config={cfg0} plan={{}} data={{}}
+  cast={{ type: "media", media: "image", src: "https://e.com/shot.jpg", title: "The billboard on 101" }} />]);
+cases.push(["On the wall, a voice memo", <CastContent config={cfg0} plan={{}} data={{}}
+  cast={{ type: "media", media: "audio", src: "https://e.com/memo.m4a", title: "What I noticed on the drive in" }} />]);
 cases.push(["On the wall, a question from the room", <CastContent config={cfg0} plan={{}} data={{}}
   cast={{ type: "question", tag: "From the room", title: "Why does that work?", cite: "Anonymous" }} />]);
 cases.push(["Ideas for the repository", <RepoIdeas />, "Merge the duplicates"]);

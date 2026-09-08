@@ -156,6 +156,36 @@ export function Content({ cast, config, plan, data }) {
     );
   }
 
+  // A file rather than a link: a clip, a photo or a voice memo that came up
+  // from a phone. The headline sits in the corner while the file has the
+  // wall, so the room knows what the clip is about without a second cast.
+  // autoPlay needs one click on this page first, and F for fullscreen is that
+  // click.
+  if (cast.type === "media" && cast.src) {
+    const corner = { position: "absolute", left: pad, bottom: pad, right: pad, ...eyebrow, color: "rgba(250,246,240,.8)",
+      textShadow: "0 1px 6px rgba(0,0,0,.7)", pointerEvents: "none" };
+    if (cast.media === "audio") {
+      return (
+        <div style={{ ...wrap, alignItems: "center", justifyContent: "center", textAlign: "center", gap: "3vh" }}>
+          <div style={eyebrow}>{cast.tag || "Listen"}</div>
+          <div style={{ fontSize: "clamp(28px,4.4vw,64px)", fontWeight: 500, letterSpacing: "-.025em", lineHeight: 1.24, maxWidth: "21ch" }}>
+            {cast.title}
+          </div>
+          <audio src={cast.src} autoPlay controls style={{ width: "min(640px,80vw)" }} />
+        </div>
+      );
+    }
+    return (
+      <div style={{ position: "absolute", inset: 0, background: "#000" }}>
+        {cast.media === "image"
+          ? <img src={cast.src} alt={cast.title || ""} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+          : <video src={cast.src} autoPlay playsInline controls poster={cast.poster}
+              style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "#000" }} />}
+        {cast.title ? <div style={corner}>{cast.title}</div> : null}
+      </div>
+    );
+  }
+
   if (cast.type === "reveal") {
     return (
       <div style={{ ...wrap, alignItems: "center", justifyContent: "center", textAlign: "center", gap: "2vh" }}>
