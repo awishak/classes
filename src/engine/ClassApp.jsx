@@ -682,13 +682,15 @@ export default function ClassApp({ config, initialCard }) {
             {rule}
             <div style={{ padding: "2px 8px 4px" }}>{RoleToggle}</div>
             {signedIn && !preview ? (
-              {ownCode ? (
-                <div style={{ ...menuRow, cursor: "default", justifyContent: "space-between" }} title="Your email and this code sign you in anywhere">
-                  <span style={{ fontSize: 14, color: TEXT_MUTED }}>Your sign-in code</span>
-                  <span style={{ fontFamily: "var(--font-label)", fontSize: 16, fontWeight: 600, letterSpacing: ".14em", color: TEXT_PRIMARY }}>{ownCode}</span>
-                </div>
-              ) : null}
-              <button className="ca-focus" onClick={signOut} style={{ ...menuRow, color: TEXT_SECONDARY }}>Sign out</button>
+              <>
+                {ownCode ? (
+                  <div style={{ ...menuRow, cursor: "default", justifyContent: "space-between" }} title="Your email and this code sign you in anywhere">
+                    <span style={{ fontSize: 14, color: TEXT_MUTED }}>Your sign-in code</span>
+                    <span style={{ fontFamily: "var(--font-label)", fontSize: 16, fontWeight: 600, letterSpacing: ".14em", color: TEXT_PRIMARY }}>{ownCode}</span>
+                  </div>
+                ) : null}
+                <button className="ca-focus" onClick={signOut} style={{ ...menuRow, color: TEXT_SECONDARY }}>Sign out</button>
+              </>
             ) : null}
           </div>
         </>
