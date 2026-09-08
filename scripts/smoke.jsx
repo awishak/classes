@@ -23,6 +23,9 @@ import { Castable } from "../src/engine/Dashboard.jsx";
 import { mediaSteps, liveStep, mediaKind } from "../src/engine/media.js";
 import { pathFor } from "../api/upload.js";
 import { baseCSS } from "../src/engine/themes.js";
+import RosterSheet from "../src/engine/RosterSheet.jsx";
+import { parseRoster, mergeRoster } from "../src/engine/roster.js";
+import { makeCode, looksLikeEmail } from "../api/logins.js";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
 import GamePage, { RunGamePage } from "../src/engine/GamePage.jsx";
@@ -1823,6 +1826,32 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const missing = used.filter(v => !base.includes(v + ":"));
   if (missing.length) { console.error("  FAIL  tokens: read at the root but never defined there: " + missing.join(", ")); failedEarly++; }
   if (!/^:root\{/.test(base)) { console.error("  FAIL  tokens: the base block is not on :root"); failedEarly++; }
+}
+
+// The roster, pasted. Commas or tabs, a header row, "Last, First" from a
+// registrar export, and a merge that never changes an id.
+{
+  const csv = "Name,Email,Section\nDan Patry, dpatry@scu.edu, 8:00\nJoe Hanna,jhanna@scu.edu\n\n";
+  const rows = parseRoster(csv);
+  if (rows.length !== 2) { console.error("  FAIL  roster: " + rows.length + " rows out of two, the header or the blank line got in"); failedEarly++; }
+  if (rows[0]?.name !== "Dan Patry" || rows[0]?.email !== "dpatry@scu.edu" || rows[0]?.section !== "8:00") { console.error("  FAIL  roster: the first row read as " + JSON.stringify(rows[0])); failedEarly++; }
+  const tsv = parseRoster("Hanna, Joe\tjhanna@scu.edu");
+  if (tsv[0]?.name !== "Joe Hanna") { console.error("  FAIL  roster: a registrar's Last, First came out as " + JSON.stringify(tsv[0]?.name)); failedEarly++; }
+  const emailOnly = parseRoster("someone@scu.edu");
+  if (emailOnly.length !== 1 || emailOnly[0].email !== "someone@scu.edu") { console.error("  FAIL  roster: an email on its own was dropped"); failedEarly++; }
+  const before = [{ id: "joe-hanna", name: "Joe Hanna", from: "", goals: "" }, { id: "dan-patry", name: "Dan Patry", from: "", goals: "" }];
+  const merged = mergeRoster(before, rows);
+  if (merged.added !== 0 || merged.updated !== 2) { console.error("  FAIL  roster: merging two known students added " + merged.added + " and updated " + merged.updated); failedEarly++; }
+  if (merged.students.find(s => s.name === "Joe Hanna")?.id !== "joe-hanna") { console.error("  FAIL  roster: a merge changed a student's id"); failedEarly++; }
+  if (merged.students.find(s => s.name === "Joe Hanna")?.email !== "jhanna@scu.edu") { console.error("  FAIL  roster: the email did not land on the student"); failedEarly++; }
+  const again = mergeRoster(merged.students, parseRoster("Kirellos Zamary, kzamary@scu.edu"));
+  if (again.added !== 1 || again.students.length !== 3) { console.error("  FAIL  roster: a new student was not added"); failedEarly++; }
+  const byEmail = mergeRoster(merged.students, parseRoster("J. Hanna, jhanna@scu.edu, 10:30"));
+  if (byEmail.added !== 0 || byEmail.students.find(s => s.id === "joe-hanna")?.section !== "10:30") { console.error("  FAIL  roster: a row with a known email and a different name made a duplicate"); failedEarly++; }
+  if (!/^[1-9]\d{5}$/.test(makeCode())) { console.error("  FAIL  logins: a code came out as " + makeCode()); failedEarly++; }
+  if (!looksLikeEmail("a@b.co") || looksLikeEmail("not an email")) { console.error("  FAIL  logins: the email check is wrong"); failedEarly++; }
+  cases.push(["Roster sheet, empty", <RosterSheet students={[]} accent="#7c3aed" onSave={noop} />, "Paste the list below"]);
+  cases.push(["Roster sheet, with students and sections", <RosterSheet students={merged.students} accent="#7c3aed" onSave={noop} sections />, "jhanna@scu.edu"]);
 }
 
 let failed = failedEarly;

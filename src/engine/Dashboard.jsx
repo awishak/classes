@@ -28,6 +28,7 @@ import { normSlot, sequenceOptions, sequenceFor, sectionsOf } from "./dayplan.js
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, makeBlock } from "./blocks.js";
 import { MEDIA_ACCEPT, mediaLabel, sizeLabel } from "./media.js";
 import { useUpload } from "./Attach.jsx";
+import RosterSheet from "./RosterSheet.jsx";
 import { readAdded, readLabels } from "./types.js";
 import PickMark from "./Pick.jsx";
 import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor, inkOf, LIBRARY_CARD, LIBRARY_CARD_HOVER } from "./colors.js";
@@ -2879,7 +2880,7 @@ const menuRow = {
 // Everything under the class name is a way out of this class, which is what
 // they have in common and why they were wrong scattered along the bar as if
 // they were actions.
-function ClassMenu({ config }) {
+function ClassMenu({ config, onRoster }) {
   const go = (href) => () => {
     window.history.pushState({}, "", href);
     window.dispatchEvent(new PopStateEvent("popstate"));
@@ -2898,6 +2899,7 @@ function ClassMenu({ config }) {
       <a className="dash-focus" href={config.path + "/rungame"} style={menuRow}>Run the game</a>
       <a className="dash-focus" href={"/repo?from=" + encodeURIComponent(config.path + "/dashboard")} style={menuRow}>The repository</a>
       <a className="dash-focus" href="/plan" style={menuRow}>The Brief</a>
+      {onRoster ? <button className="dash-focus" onClick={onRoster} style={menuRow}>The roster and the logins</button> : null}
       <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
       <span style={{ ...label, padding: "2px 10px 4px" }}>Another class</span>
       {ENGINE_LIST.filter(c => c.id !== config.id).map(c => (
@@ -3363,6 +3365,7 @@ export default function Dashboard({ config }) {
   const [hereOpen, setHereOpen] = useState(false);
   const [todoOpen, setTodoOpen] = useState(false);
   const [colorsOpen, setColorsOpen] = useState(false);
+  const [rosterOpen, setRosterOpen] = useState(false);
   const [boardsOpen, setBoardsOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   // Dragging a reading into the flow: does it stay assigned, or move?
@@ -4309,7 +4312,7 @@ export default function Dashboard({ config }) {
       <header ref={headRef} style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "10px 20px",
         display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap",
         position: "sticky", top: 0, zIndex: 30 }}>
-        <ClassMenu config={config} />
+        <ClassMenu config={config} onRoster={() => setRosterOpen(true)} />
         <span style={{ fontSize: 14, color: TEXT_MUTED, minWidth: 0,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{config.desc}</span>
 
@@ -4427,6 +4430,12 @@ export default function Dashboard({ config }) {
         </Sheet>
       ) : null}
 
+      {rosterOpen ? (
+        <Sheet title="The roster" sub="Who is in this class, their emails, and the code each one signs in with" onClose={() => setRosterOpen(false)} width={860}>
+          <RosterSheet students={students} accent={config.accent} sections={(config.meets || []).length > 1}
+            onSave={(next) => update(prev => ({ ...prev, students: next }))} />
+        </Sheet>
+      ) : null}
       {colorsOpen ? (
         <ColorsSheet colors={colors} fonts={fonts} bold={boldRows} accent={config.accent} onClose={() => setColorsOpen(false)}
           onPick={(kind, sw) => writeColor(updateShared, kind, sw)}

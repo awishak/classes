@@ -56,3 +56,64 @@ export const withIds = (students) =>
 // The same, for a whole class store.
 export const dataWithIds = (data) =>
   data && data.students ? { ...data, students: withIds(data.students) } : data;
+
+// ─── the roster, pasted ───
+//
+// A list of students arrives as whatever the registrar or a spreadsheet gives
+// me: one student per line, name and email, sometimes a section, separated by
+// commas or tabs, sometimes with a header row. This reads that into rows and
+// merges them into the roster without losing anybody's id, because the id is
+// what every answer, grade and seat is keyed on.
+
+const looksLikeEmail = (t) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(t || "").trim());
+
+// Rows out of pasted text. Each row is { name, email, section }, and a row
+// with neither a name nor an email is dropped. "Last, First" becomes
+// "First Last" when the line is tab-separated, since that is how a registrar
+// export reads; a comma-separated line takes the columns as given.
+export const parseRoster = (text) => {
+  const lines = String(text || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const rows = [];
+  lines.forEach((line, i) => {
+    const sep = line.includes("\t") ? "\t" : ",";
+    const cells = line.split(sep).map(c => c.trim().replace(/^"|"$/g, ""));
+    const low = cells.map(c => c.toLowerCase());
+    if (i === 0 && (low.includes("name") || low.includes("email") || low.includes("e-mail"))) return;
+    const email = cells.find(looksLikeEmail) || "";
+    const rest = cells.filter(c => c !== email && c);
+    let name = rest[0] || "";
+    if (sep === "\t" && name.includes(",")) {
+      const [last, first] = name.split(",").map(x => x.trim());
+      if (first) name = first + " " + last;
+    }
+    const section = rest[1] || "";
+    if (!name && !email) return;
+    rows.push({ name, email: email.toLowerCase(), section });
+  });
+  return rows;
+};
+
+// The roster with the pasted rows folded in. A row matches a student by email
+// first, then by the slug of the name; a match fills in what the student was
+// missing and never changes the id. A row that matches nobody is a new
+// student. Returns the roster and how many were added and updated.
+export const mergeRoster = (students, rows) => {
+  const out = withIds(students).map(s => ({ ...s }));
+  let added = 0, updated = 0;
+  rows.forEach(r => {
+    const email = String(r.email || "").toLowerCase();
+    const hit = out.find(s => (email && String(s.email || "").toLowerCase() === email) || (r.name && idOf(s) === slugOf(r.name)));
+    if (hit) {
+      let changed = false;
+      if (email && hit.email !== email) { hit.email = email; changed = true; }
+      if (r.section && hit.section !== r.section) { hit.section = r.section; changed = true; }
+      if (!hit.name && r.name) { hit.name = r.name; changed = true; }
+      if (changed) updated++;
+      return;
+    }
+    const name = r.name || email.split("@")[0];
+    out.push({ id: slugOf(name), name, email, section: r.section || "", from: "", goals: "" });
+    added++;
+  });
+  return { students: out, added, updated };
+};
