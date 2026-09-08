@@ -546,7 +546,6 @@ export function Castable({ kind, kindColor, title, url, claim, live, accent, onC
     // It used to return here and say nothing, so a two-word headline looked
     // like a broken button.
     if (!c) { setWhy("Write the headline first."); return; }
-    if (c.split(" ").length < 3) { setWhy("A headline is a sentence. Three words at least."); return; }
     setWhy("");
     onSaveClaim(c);
     setEditing(false);
@@ -651,6 +650,10 @@ export function Castable({ kind, kindColor, title, url, claim, live, accent, onC
         ) : null}
       </span>
 
+      {/* The arrow casts, always. It used to open the headline editor when the
+          row had no headline, and Andrew's verdict was that with the room
+          watching a button that asks a question is a button that does not
+          work. No headline means the title goes up. */}
       <span className="flow-tools">
         {live && steps && onStep && step >= 0 && step < steps.length - 1 ? (
           <button className="dash-focus" style={{ ...sq, borderColor: accent, color: accent, fontWeight: 600 }}
@@ -662,8 +665,8 @@ export function Castable({ kind, kindColor, title, url, claim, live, accent, onC
             title="Take it back down" onClick={onDismiss}>×</button>
         ) : (
           <button className="dash-focus" style={{ ...sq, fontSize: 16, lineHeight: 1 }}
-            title="Put it on the room screen"
-            onClick={() => { if (claim) onCast(claim); else setEditing(true); }}>→</button>
+            title="Put this row on the room screen"
+            onClick={() => onCast(claim || title)}>→</button>
         )}
       </span>
     </div>
