@@ -15,7 +15,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useClassData } from "./store.js";
 import { useLive, ANIMS, BIG_ANIMS } from "./live.js";
-import { mediaSteps, liveStep, mediaLabel, sizeLabel } from "./media.js";
+import { mediaSteps, liveStep } from "./media.js";
 import { useQuestions } from "./questions.js";
 import { usePoll } from "./poll.js";
 import PollPanel, { oneSentence } from "./PollPanel.jsx";
@@ -25,7 +25,9 @@ import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay, dayTitles } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { normSlot, sequenceOptions, sequenceFor, sectionsOf } from "./dayplan.js";
-import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled } from "./blocks.js";
+import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, makeBlock } from "./blocks.js";
+import { MEDIA_ACCEPT, mediaLabel, sizeLabel } from "./media.js";
+import { useUpload } from "./Attach.jsx";
 import { readAdded, readLabels } from "./types.js";
 import PickMark from "./Pick.jsx";
 import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor, inkOf, LIBRARY_CARD, LIBRARY_CARD_HOVER } from "./colors.js";
@@ -1712,7 +1714,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -2007,8 +2009,9 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
     <>
       <RowMenu at={rowMenu} onRemove={() => onRemoveItem(rowMenu.slot, rowMenu.id)} onClose={() => setRowMenu(null)} />
       {noting ? (
-        <NoteSheet sections={sectionList} sources={noteSources} accent={accent}
-          onAdd={(slot, text) => onAddItem(slot, { text })} onClose={() => setNoting(false)} />
+        <NoteSheet sections={sectionList} sources={noteSources} accent={accent} classId={classId}
+          onAdd={(slot, note) => (onAddNote ? onAddNote(slot, note) : onAddItem(slot, { text: note.text }))}
+          onClose={() => setNoting(false)} />
       ) : null}
 
       {merging ? (
@@ -2769,13 +2772,19 @@ function SourceNote({ from, body, onSave, accent, oneLine }) {
   );
 }
 
-export function NoteSheet({ sections, sources, accent, onAdd, onClose }) {
+export function NoteSheet({ sections, sources, accent, onAdd, onClose, classId }) {
   const [text, setText] = useState("");
   const [slot, setSlot] = useState(sections[0]?.[0] || "");
+  // A note can carry a clip, a photo or a voice memo, and the question that
+  // follows the file on the wall. With either of those the note is a block,
+  // so the repository can find the clip again; plain words stay a row.
+  const [media, setMedia] = useState(null);
+  const [ask, setAsk] = useState("");
+  const up = useUpload({ classId, onDone: setMedia });
   const commit = () => {
-    const t = text.trim();
-    if (!t || !slot) return;
-    onAdd(slot, t);
+    const t = text.trim() || (media ? media.name : "");
+    if (!t || !slot || up.busy) return;
+    onAdd(slot, { text: t, media, ask: ask.trim() });
     onClose();
   };
   // Everything already written for this day, wherever it lives. The first
@@ -2792,6 +2801,24 @@ export function NoteSheet({ sections, sources, accent, onAdd, onClose }) {
           style={{ ...inputStyle, minHeight: 90, fontSize: 15, lineHeight: 1.5, resize: "vertical", paddingRight: 42 }} />
         <Confirm onClick={commit} bottom title="Add the note" />
       </span>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <label className="dash-focus" style={{ ...mini, minHeight: HIT, cursor: up.busy ? "wait" : "pointer", opacity: up.busy ? .6 : 1 }}>
+          {up.label(media ? "Swap the file" : "Attach a clip, a photo or a voice memo")}
+          <input type="file" accept={MEDIA_ACCEPT} disabled={up.busy} style={{ display: "none" }}
+            onChange={e => { up.send(e.target.files?.[0]); e.target.value = ""; }} />
+        </label>
+        {media ? (
+          <>
+            <span style={{ fontSize: 13, color: TEXT_MUTED }}>{mediaLabel(media.kind)}, {media.name}{media.size ? ", " + sizeLabel(media.size) : ""}</span>
+            <button style={mini} onClick={() => setMedia(null)}>Take the file off</button>
+          </>
+        ) : null}
+        {up.why ? <span style={{ fontSize: 13, fontWeight: 600, color: WARN }}>{up.why}</span> : null}
+      </div>
+      {media ? (
+        <input value={ask} onChange={e => setAsk(e.target.value)} placeholder="Ask after the file plays"
+          aria-label="The question the room answers after the file" style={{ ...inputStyle, fontSize: 15 }} />
+      ) : null}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span style={label}>Into</span>
         <select value={slot} onChange={e => setSlot(e.target.value)}
@@ -3854,6 +3881,17 @@ export default function Dashboard({ config }) {
   // {blockId}. A reading dragged out of Today's readings may have no block
   // behind it at all, only a title and a link, so the row carries the words
   // and a pointer back to the schedule item.
+  // A note from the sheet. Plain words stay a row, as they always have. With a
+  // file or a question on the note the words become a block in this class's
+  // store, so the clip has a home the repository can find, and the row points
+  // at the block like any other.
+  const addNote = (slot, { text, media, ask }) => {
+    if (!media && !(ask || "").trim()) return addFlowItem(slot, { text });
+    const made = makeBlock({ type: "note", title: text, media: media || null, ask: (ask || "").trim() });
+    update(prev => ({ ...prev, blocks: { ...(prev.blocks || {}), [made.id]: made } }));
+    pickBlock(slot, made);
+  };
+
   const pickBlock = (slot, b, date, beforeId) => {
     const on = date || day;
     const blockId = b.id || b.blockId || "";
@@ -4143,7 +4181,7 @@ export default function Dashboard({ config }) {
       features={features} onFeature={runFeature} planHref={config.path + "/dayplan"} classHref={config.path}
       onSlidesClaim={saveSlidesClaim} onBlockClaim={saveBlockClaim} where={config.code + " · " + day}
       loose={looseItems} onAddScheduled={(it, slot, date) => addScheduleItemToDay(update, config, date || day, it, slot)}
-      onAddItem={addFlowItem} onRemoveItem={removeFlowItem} onMoveItem={moveFlowItem}
+      onAddItem={addFlowItem} onAddNote={addNote} classId={config.id} onRemoveItem={removeFlowItem} onMoveItem={moveFlowItem}
       onSetSequence={setSequence} onSetSlotTitle={setSlotTitle} sequences={seqs}
       onAddBlock={addBlock} onRemoveBlock={removeBlock} onMoveBlock={moveBlock}
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}

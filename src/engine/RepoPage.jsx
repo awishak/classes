@@ -25,7 +25,8 @@
 
 import { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { loadClass, saveClass } from "./store.js";
-import { uploadMedia, mediaLabel, sizeLabel, MEDIA_ACCEPT } from "./media.js";
+import { mediaLabel, sizeLabel, MEDIA_ACCEPT } from "./media.js";
+import { useUpload } from "./Attach.jsx";
 import { ENGINE_LIST } from "../config/registry.js";
 import { typeOf, allTypes, registerTypes, SHARED_KEY, SHARED_LABEL, makeBlock, writeBlock,
   deleteBlock, stampScheduled, todayStamp } from "./blocks.js";
@@ -1432,6 +1433,35 @@ export function Row({ block, hue, open, onOpen, onTag, picked, onPick, onStar, o
 // The open row: what the thing says, everywhere the thing has been, and the two
 // things I ever want to do to a thing from here — fix the words, or put the
 // thing on a day.
+// A clip, a photo or a voice memo on a block, and the button that puts one
+// there. The upload goes straight to Supabase on a link our API signs, so the
+// file never passes through the app. `onChange` gets the stored shape, or null
+// when the file comes off.
+export function Attach({ media, onChange, classId }) {
+  const up = useUpload({ classId, onDone: onChange });
+  return (
+    <div className="repo-field">
+      <span className="repo-label">On the wall</span>
+      {media?.src ? (
+        <div className="repo-row">
+          <a className="repo-focus repo-link" href={media.src} target="_blank" rel="noopener noreferrer">
+            {mediaLabel(media.kind)}{media.name ? ", " + media.name : ""}{media.size ? ", " + sizeLabel(media.size) : ""} ↗
+          </a>
+          <button className="repo-focus repo-chip" onClick={() => onChange(null)}>Take the file off</button>
+        </div>
+      ) : null}
+      <div className="repo-row">
+        <label className="repo-focus repo-chip" style={up.busy ? { opacity: .6 } : undefined}>
+          {up.label(media?.src ? "Swap the file" : "Attach a clip, a photo or a voice memo")}
+          <input type="file" accept={MEDIA_ACCEPT} disabled={up.busy} style={{ display: "none" }}
+            onChange={e => { up.send(e.target.files?.[0]); e.target.value = ""; }} />
+        </label>
+        {up.why ? <span className="repo-warn">{up.why}</span> : null}
+      </div>
+    </div>
+  );
+}
+
 export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, onAssign }) {
   const [draft, setDraft] = useState({
     type: block.type, title: block.title || "", headline: block.headline || "",
@@ -1443,22 +1473,11 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
   const [sure, setSure] = useState(false);
   const set = (k, v) => { setDraft(d => ({ ...d, [k]: v })); setSaved(false); };
 
-  // The file on the way up: null, or a fraction, or an error to read.
-  const [sending, setSending] = useState(null);
-  const [sendWhy, setSendWhy] = useState("");
-  const attach = (file) => {
-    if (!file) return;
-    setSendWhy(""); setSending(0);
-    uploadMedia(file, { classId: block.uses?.[0]?.cls?.id || "shared", onProgress: setSending })
-      .then(media => {
-        // Saved the moment the file lands. The first time round the file sat
-        // in the editor waiting for Save changes, Andrew never pressed Save,
-        // and the clip he had just sent up was on nothing.
-        setSending(null);
-        setDraft(d => { const next = { ...d, media }; commitDraft(next); return next; });
-      })
-      .catch(err => { setSending(null); setSendWhy(err.message); });
-  };
+  // Saved the moment the file lands, and the moment the file comes off. The
+  // first time round the file sat in the editor waiting for Save changes,
+  // Andrew never pressed Save, and the clip he had just sent up was on
+  // nothing.
+  const setMedia = (media) => setDraft(d => { const next = { ...d, media }; commitDraft(next); return next; });
 
   const commitDraft = (d) => {
     onSave({
@@ -1499,28 +1518,7 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
             headline, and the question that follows the file. The upload goes
             straight to Supabase on a link our API signs, so the file never
             passes through the app. */}
-        <div className="repo-field">
-          <span className="repo-label">On the wall</span>
-          {draft.media?.src ? (
-            <div className="repo-row">
-              <a className="repo-focus repo-link" href={draft.media.src} target="_blank" rel="noopener noreferrer">
-                {mediaLabel(draft.media.kind)}{draft.media.name ? ", " + draft.media.name : ""}{draft.media.size ? ", " + sizeLabel(draft.media.size) : ""} ↗
-              </a>
-              <button className="repo-focus repo-chip"
-                onClick={() => setDraft(d => { const next = { ...d, media: null }; commitDraft(next); return next; })}>Take the file off</button>
-            </div>
-          ) : null}
-          <div className="repo-row">
-            <label className="repo-focus repo-chip" style={sending !== null ? { opacity: .6 } : undefined}>
-              {sending !== null
-                ? "Sending, " + Math.round(sending * 100) + "%"
-                : draft.media?.src ? "Swap the file" : "Attach a clip, a photo or a voice memo"}
-              <input type="file" accept={MEDIA_ACCEPT} disabled={sending !== null} style={{ display: "none" }}
-                onChange={e => { attach(e.target.files?.[0]); e.target.value = ""; }} />
-            </label>
-            {sendWhy ? <span className="repo-warn">{sendWhy}</span> : null}
-          </div>
-        </div>
+        <Attach media={draft.media} onChange={setMedia} classId={block.uses?.[0]?.cls?.id || "shared"} />
         <label className="repo-field">
           <span className="repo-label">Ask after the file plays</span>
           <input className="repo-input" value={draft.ask} onChange={e => set("ask", e.target.value)}
@@ -1689,12 +1687,15 @@ function AddForm({ onAdd, onClose, hue }) {
   const [url, setUrl] = useState("");
   const [body, setBody] = useState("");
   const [tags, setTags] = useState("");
+  const [media, setMedia] = useState(null);
+  const [ask, setAsk] = useState("");
 
   const commit = () => {
-    if (!title.trim() && !url.trim()) return;
+    if (!title.trim() && !url.trim() && !media) return;
     onAdd(target, {
-      type, title: title.trim() || hostOf(url) || "Untitled", url: url.trim(), body: body.trim(),
+      type, title: title.trim() || hostOf(url) || (media ? media.name : "") || "Untitled", url: url.trim(), body: body.trim(),
       tags: tags.split(",").map(x => x.trim()).filter(Boolean),
+      media: media || null, ask: ask.trim(),
     });
   };
 
@@ -1711,6 +1712,8 @@ function AddForm({ onAdd, onClose, hue }) {
       </div>
       <input className="repo-input" value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" autoFocus />
       <input className="repo-input" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" />
+      <Attach media={media} onChange={setMedia} classId={target} />
+      <input className="repo-input" value={ask} onChange={e => setAsk(e.target.value)} placeholder="Ask after the file plays" />
       <textarea className="repo-input repo-area" value={body} onChange={e => setBody(e.target.value)}
         placeholder="Anything worth keeping alongside" />
       <input className="repo-input" value={tags} onChange={e => setTags(e.target.value)} placeholder="Tags, separated by commas" />
