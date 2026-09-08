@@ -77,7 +77,11 @@ function paragraphs(html) {
   const source = article ? article[0] : body;
   return [...source.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
     .map(m => cleanProse(decode(m[1].replace(/<[^>]+>/g, " "))))
-    .filter(t => t.length > 60 && !/^(advertisement|sign up|subscribe|share this)/i.test(t));
+    .filter(t => t.length > 60 && !/^(advertisement|sign up|subscribe|share this)/i.test(t))
+    // A hub page's menu comes through as one enormous paragraph of section
+    // names. Prose does not shout: three or more words in capitals, four
+    // letters or longer, is a menu.
+    .filter(t => (t.match(/\b[A-Z]{4,}\b/g) || []).length < 3);
 }
 
 export default async function handler(req, res) {

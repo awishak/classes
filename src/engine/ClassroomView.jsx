@@ -490,6 +490,11 @@ function PageScreen({ url, openUrl, claim, kind, pick }) {
     return <CardScreen url={openUrl} claim={claim} kind={kind} pick={pick} article={a}
       note={(a.site || hostOf(openUrl)) + " does not let its pages show inside another site. Open the page instead."} />;
   }
+  // A site that blocks the reader outright (ESPN answers a server with an
+  // empty page) tells us nothing about framing, and the frame may still come
+  // up black. So a line waits in the corner for that case, and the way out
+  // with it.
+  const blind = !a.loading && a.ok === false;
   return (
     <div style={{ position: "absolute", inset: 0, background: "#000" }}>
       <iframe
@@ -499,6 +504,14 @@ function PageScreen({ url, openUrl, claim, kind, pick }) {
         allow="autoplay; fullscreen; picture-in-picture"
         referrerPolicy="no-referrer"
       />
+      {blind ? (
+        <div style={{ position: "absolute", left: "clamp(20px,3vw,48px)", bottom: "clamp(20px,3vw,48px)", display: "flex", alignItems: "center", gap: "clamp(12px,1.5vw,24px)",
+          padding: "clamp(10px,1.2vw,18px) clamp(14px,1.8vw,28px)", borderRadius: 16, background: "rgba(15,13,12,.92)", color: DIM, fontFamily: F,
+          fontSize: "clamp(14px,1.4vw,21px)", lineHeight: 1.35, maxWidth: "min(60ch, 80vw)" }}>
+          <span>If the wall stays black, {hostOf(openUrl)} refuses to be shown inside another site.</span>
+          <a href={openUrl} target="_blank" rel="noopener noreferrer" style={openPill}>{"Open " + hostOf(openUrl) + " \u2197"}</a>
+        </div>
+      ) : null}
     </div>
   );
 }
