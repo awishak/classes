@@ -21,14 +21,23 @@
 //
 // `comment` goes to the student on release. `note` never leaves this page.
 
+// `blurb` is the short line under the column header, for Andrew. `means` is
+// the sentence a student reads under the letter on the deck card.
 export const BUCKETS = [
-  { id: "exceptional", label: "Exceptional", letter: "A", score: 100, blurb: "above an A" },
-  { id: "a", label: "A", letter: "A", score: 95, blurb: "did the work, did it well" },
-  { id: "b", label: "B", letter: "B", score: 85, blurb: "did the work" },
-  { id: "c", label: "C", letter: "C", score: 75, blurb: "missed some of the requirements" },
-  { id: "d", label: "D", letter: "D", score: 65, blurb: "bad work" },
-  { id: "incomplete", label: "Incomplete", letter: "Incomplete", score: 0, blurb: "counts as a zero" },
-  { id: "f", label: "F", letter: "F", score: 0, blurb: "zero" },
+  { id: "exceptional", label: "Exceptional", letter: "A", score: 100, blurb: "above an A",
+    means: "Work that stood out above the whole class. An A, and then some." },
+  { id: "a", label: "A", letter: "A", score: 95, blurb: "did the work, did it well",
+    means: "You did the assignment, and you did it well." },
+  { id: "b", label: "B", letter: "B", score: 85, blurb: "did the work",
+    means: "You did the assignment. Solid work, with room to sharpen." },
+  { id: "c", label: "C", letter: "C", score: 75, blurb: "missed some of the requirements",
+    means: "You turned something in, but the assignment asked for more than you gave. Some of the requirements were missed." },
+  { id: "d", label: "D", letter: "D", score: 65, blurb: "bad work",
+    means: "This fell well short of the assignment. Read the assignment again, and come talk to me." },
+  { id: "incomplete", label: "Incomplete", letter: "Incomplete", score: 0, blurb: "counts as a zero",
+    means: "Not finished, or not enough of the assignment to grade. An Incomplete counts as a zero until you finish." },
+  { id: "f", label: "F", letter: "F", score: 0, blurb: "zero",
+    means: "No credit for this one." },
 ];
 
 export const bucketOf = (id) => BUCKETS.find(b => b.id === id) || null;
@@ -112,7 +121,9 @@ export const sortedCount = (board) => Object.values(board?.cards || {}).filter(c
 // ─── the student's side ───
 
 // The released grades this student has not yet tapped through. One entry per
-// assignment, in assignment order.
+// assignment, in assignment order, carrying what the deck card shows: the
+// letter and what the letter means, the comment and when the grade went out,
+// and what the student turned in, with its link, note and time.
 export const unseenGrades = (config, data, name) => {
   if (!name) return [];
   const assignments = data?.assignments || config.assignments || [];
@@ -122,8 +133,23 @@ export const unseenGrades = (config, data, name) => {
     const b = card && bucketOf(card.bucket);
     if (!board.released || !b) return [];
     if ((board.seen?.[name] || 0) >= board.released.at) return [];
-    return [{ aid: asg.id, title: asg.title, letter: b.letter, bucket: b.id, comment: String(card.comment || "").trim() }];
+    const log = data?.assignmentLog?.[asg.id]?.[name] || [];
+    const subs = log.filter(e => e.type === "submission");
+    const last = subs[subs.length - 1] || null;
+    const linked = [...subs].reverse().find(e => e.link) || null;
+    return [{ aid: asg.id, title: asg.title, due: asg.due || "", letter: b.letter, bucket: b.id, means: b.means,
+      comment: String(card.comment || "").trim(), gradedAt: board.released.at,
+      link: linked?.link || "", note: String(last?.text || "").trim(), submittedAt: last?.ts || null }];
   });
+};
+
+// A meeting asked for from a deck card: the same message the You card's
+// Make a meeting button posts, so the request lands in the same thread and
+// draws the same way, with the assignment named in the text.
+export const meetingPatch = (data, name, title, now = Date.now()) => {
+  const threads = { ...(data?.threads || {}) };
+  threads[name] = [...(threads[name] || []), { id: eid(now), ts: now, from: "student", kind: "meeting", text: title ? "About " + title : "" }];
+  return { ...data, threads };
 };
 
 export const markSeen = (data, aid, name, now = Date.now()) =>

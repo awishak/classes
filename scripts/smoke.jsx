@@ -80,7 +80,7 @@ import { ENGINE_LIST } from "../src/config/registry.js";
 import { warmClassData } from "../src/engine/store.js";
 import GradeView from "../src/engine/GradeView.jsx";
 import GradeDeck from "../src/engine/GradeDeck.jsx";
-import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, unseenGrades, markSeen, BUCKETS } from "../src/engine/grades.js";
+import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, unseenGrades, markSeen, meetingPatch, BUCKETS } from "../src/engine/grades.js";
 import { computeGrade } from "../src/engine/AssignmentsCard.jsx";
 import { sectionsOf } from "../src/engine/dayplan.js";
 import { SHARED_KEY } from "../src/engine/blocks.js";
@@ -1933,8 +1933,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     ["Not sorted yet", "Cy Twombly", "Hide grades", "Open their file", "Exceptional", "Incomplete"].forEach(t => { if (!html.includes(t)) say("the page never showed " + JSON.stringify(t)); });
   } catch (err) { say("the page threw: " + err.message); }
   try {
-    const html = renderToString(<GradeDeck config={cfg} items={unseenGrades(cfg, again, "Ada Lovelace")} onSeen={noop} onDone={noop} />);
-    ["Exercise 1", ">B<", "Got it", "Sharp work."].forEach(t => { if (!html.includes(t)) say("the deck never showed " + JSON.stringify(t)); });
+    const deckCard = unseenGrades(cfg, again, "Ada Lovelace")[0];
+    if (!deckCard.link || !deckCard.means || !deckCard.gradedAt || !deckCard.submittedAt) say("the deck card is missing the file, the meaning or a time: " + JSON.stringify(deckCard));
+    const html = renderToString(<GradeDeck config={cfg} items={[deckCard]} onSeen={noop} onDone={noop} onMeeting={noop} />);
+    ["Exercise 1", ">B<", "Got it", "Sharp work.", "room to sharpen", "Open your file", "Open the assignment", "Make a meeting", "Graded "].forEach(t => { if (!html.includes(t)) say("the deck never showed " + JSON.stringify(t)); });
+    const met = meetingPatch(again, "Ada Lovelace", "Exercise 1", 60);
+    const msg = met.threads["Ada Lovelace"].slice(-1)[0];
+    if (msg.kind !== "meeting" || msg.from !== "student" || !msg.text.includes("Exercise 1")) say("a meeting from the deck did not land in the thread: " + JSON.stringify(msg));
   } catch (err) { say("the deck threw: " + err.message); }
   warmClassData(cfg0.storageKey, warmShapes(cfg0, true));
 }

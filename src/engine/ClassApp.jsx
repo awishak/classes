@@ -28,7 +28,7 @@ import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
 import { useSession, studentFor, myCode } from "./session.js";
 import GradeDeck from "./GradeDeck.jsx";
-import { unseenGrades, markSeen } from "./grades.js";
+import { unseenGrades, markSeen, meetingPatch } from "./grades.js";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
 } from "./ThemeChrome.jsx";
@@ -853,7 +853,8 @@ export default function ClassApp({ config, initialCard }) {
       <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a }}>
         <ThemeStyle theme={theme} />
         <style>{CSS}</style>
-        <GradeDeck config={config} items={unseen} onSeen={(aid) => write(prev => markSeen(prev, aid, seenAs))} onDone={() => setDeckDone(true)} />
+        <GradeDeck config={config} items={unseen} onSeen={(aid) => write(prev => markSeen(prev, aid, seenAs))} onDone={() => setDeckDone(true)}
+          onMeeting={(card) => write(prev => meetingPatch(prev, seenAs, card.title))} />
       </div>
     );
   }
