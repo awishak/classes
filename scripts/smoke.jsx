@@ -16,7 +16,7 @@ import { renderToString } from "react-dom/server";
 import Dashboard, {
   FlowPanel, TodoPanel, NowPanel, ScratchPanel, AttendancePanel, QuestionsPanel,
   BoardsPanel, StockedPanel, AssignmentsPanel, CommandBar, Readings, IdeasPanel,
-  ColorsSheet, NoteSheet, ShortcutSheet,
+  ColorsSheet, NoteSheet, ShortcutSheet, Reminders,
 } from "../src/engine/Dashboard.jsx";
 import ClassroomView, { Content as CastContent } from "../src/engine/ClassroomView.jsx";
 import { Castable } from "../src/engine/Dashboard.jsx";
@@ -898,6 +898,9 @@ cases.push(["On the wall, a question from the room", <CastContent config={cfg0} 
 cases.push(["Ideas for the repository", <RepoIdeas />, "Merge the duplicates"]);
 cases.push(["One idea", <Idea idea={{ n: 7, group: "reuse", size: "small", first: true,
   title: "Last used", what: "A last-used column.", why: "A count cannot say when." }} />, "Start here"]);
+// The reminders band, on its own, because <Dashboard/> stops at its loading
+// screen here. The big one has to be in the markup.
+cases.push(["Dashboard reminders", <Reminders />, "love of learning"]);
 cases.push(["The Brief", <PlanPage />]);
 cases.push(["Instructor links", <InstructorLinks />]);
 

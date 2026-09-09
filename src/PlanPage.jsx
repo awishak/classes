@@ -47,6 +47,23 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep9", date: "Wednesday, September 9", title: "A reminder at the top of the dashboard",
+    blurb: "Andrew asked for reminders built into the dashboard, and named the big one: inspire a love of learning in every student, and treat every student the way he would want his child treated. A band under the top bar carries the line now, on every class.",
+    groups: [
+      { name: "What landed", items: [
+        ["Under the bar, above the day", "The band is the first line read when the dashboard opens, and scrolls off the top once the day is under way. The bar stays pinned; the reminder does not, because a reminder read once at the start of class is the point."],
+        ["One list, every class", "The reminders are about the teacher rather than a class, so the same list shows on every dashboard. The list is one file, the first entry draws large, and any after the first draw smaller under the big one."],
+        ["The band has a test", "The dashboard alone reaches only its loading screen in the smoke test, so the band renders on its own there and the pass requires the reminder in the markup."],
+      ] },
+    ],
+    note: {
+      title: "Adding one is a line",
+      lines: [
+        "A second reminder is one entry in reminders.js. Editing the list in place on the dashboard is the obvious next step, and was left out on purpose so the first cut could be looked at before growing.",
+      ],
+    },
+  },
+  {
     id: "sep8", date: "Tuesday, September 8", title: "COMM 3 has a term",
     blurb: "Andrew handed over the COMM 3 plan built in chat: the calendar, a bank of 113 stories with his ratings, the course plan. The class site now carries the ten weeks, the nine graded pieces, and one plan for every class day, with the 47 stories rated great placed on the day whose question each one answers.",
     groups: [

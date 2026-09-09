@@ -37,6 +37,7 @@ import { FACES, SLOTS, readFonts, fontVars, writeFont, resetFonts, readBold, wri
 import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, setScheduleItemClaim, setScheduleItemNote, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
 import * as TOKENS from "./tokens.js";
+import { REMINDERS } from "./reminders.js";
 
 // Six items at 38px, plus the padding: the tallest a row menu gets. The flip
 // measures against this rather than against the menu that is about to open,
@@ -86,6 +87,15 @@ const CSS = `
 .dash-datechip{min-height:30px;padding:0 10px;border-radius:9px;border:1px solid rgba(23,19,16,.12);
   background:#fff;cursor:pointer;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#171310}
 .dash-datechip:hover{background:rgba(23,19,16,.05)}
+/* The reminders, under the bar and above the day. Read once as the page
+   opens, and gone off the top as soon as the day is under way. */
+.dash-remind{max-width:1760px;margin:0 auto;padding:16px 18px 0;display:flex;flex-wrap:wrap;
+  align-items:baseline;gap:4px 14px}
+.dash-remind-tag{flex:none;font-family:${MONO};font-size:13px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:${TEXT_MUTED}}
+.dash-remind-big{margin:0;font-size:17px;font-weight:500;line-height:1.4;color:${TEXT_PRIMARY}}
+.dash-remind-more{flex-basis:100%;margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:4px 18px;
+  font-size:15px;line-height:1.4;color:${TEXT_SECONDARY}}
 .dash-stage{display:grid;gap:0;padding:14px 18px 26px;align-items:start;max-width:1760px;margin:0 auto}
 /* The seam between two columns. Invisible until the pointer is near it, then a
    line you can grab. Sixteen pixels wide so it is catchable, drawn as three so
@@ -2943,6 +2953,23 @@ function ViewMenu({ railOpen, onRail, dense, onDense, onReset, onKeys, dragKeeps
   );
 }
 
+// The reminders. The list is in reminders.js; this draws the first one large
+// and the rest under it. Exported so the smoke test can render the band on its
+// own, because <Dashboard/> alone only reaches its loading screen there.
+export function Reminders({ items = REMINDERS }) {
+  const [big, ...rest] = items;
+  if (!big) return null;
+  return (
+    <aside className="dash-remind" aria-label="Reminders">
+      <span className="dash-remind-tag">Remember</span>
+      <p className="dash-remind-big">{big.text}</p>
+      {rest.length ? (
+        <ul className="dash-remind-more">{rest.map(r => <li key={r.id}>{r.text}</li>)}</ul>
+      ) : null}
+    </aside>
+  );
+}
+
 export function Sheet({ title, sub, onClose, children, width }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
@@ -4336,7 +4363,7 @@ export default function Dashboard({ config }) {
 
       </header>
 
-
+      <Reminders />
 
       <main ref={stageRef} className="dash-stage" data-rail={railOpen ? "open" : "shut"} data-teach={focus ? "on" : "off"}
         style={{ gridTemplateColumns: gridFor(cols, railOpen, focus),
