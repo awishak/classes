@@ -299,7 +299,8 @@ twice, because one edge can serve the old bundle briefly.
   and a plan for every class day, generated in `src/config/comm3-term.js`
   from the handoff in `teaching/comm3/`. Still missing: the roster, the
   exercise prompts, the audio and final specs, and campus examples. The story
-  links are searches until the resolving pass lands.
+  links are direct pages and videos, except the fourteen image links, which
+  are still image searches.
 - The COMM 3 roster filter is decided and unbuilt. The two sections are one
   class. A student belongs to a section, and the surfaces made of people (the
   roster, attendance, discussion boards, groups) filter down to the section in

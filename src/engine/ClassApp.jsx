@@ -414,6 +414,17 @@ function SkeletonTile() {
   );
 }
 
+// A short signature of a day plan's content, leaving out the signature
+// itself. djb2 over the JSON, which is enough to tell "still the seed" from
+// "edited since", and is not meant to survive a collision hunt.
+export function planSig(plan) {
+  const { seeded, ...rest } = plan || {};
+  const s = JSON.stringify(rest);
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
 export default function ClassApp({ config, initialCard }) {
   const REMEMBER = config.storageKey + "-user";
   const ADMIN = config.storageKey + "-admin";
@@ -504,15 +515,23 @@ export default function ClassApp({ config, initialCard }) {
       const patch = { seedVersion: config.seedVersion };
       if ((config.scheduleWeeks || []).length) patch.schedule = config.scheduleWeeks;
       if ((config.library || []).length) patch.library = config.library;
-      // A day plan seeded from config lands only on a day the store has
-      // nothing for. A day I have touched on the dashboard is mine, and a
-      // seed bump must never write over a plan for a class I have taught.
+      // A day plan seeded from config lands on a day the store has nothing
+      // for, and on a day still exactly as the seed left it. A day I have
+      // touched on the dashboard is mine, and a seed bump must never write
+      // over a plan for a class I have taught. "Exactly as the seed left it"
+      // is a signature of the plan's content stored on the plan: any edit
+      // changes the content, the signature stops matching, and the day is
+      // kept. Regenerating the term with better links reaches every day I
+      // have not been into yet, and no other.
       update(prev => {
         const next = { ...prev, ...patch };
         if (config.dayPlans) {
           const have = prev.dayPlans || {};
           const plans = { ...have };
-          Object.entries(config.dayPlans).forEach(([d, p]) => { if (!have[d]) plans[d] = p; });
+          Object.entries(config.dayPlans).forEach(([d, p]) => {
+            const cur = have[d];
+            if (!cur || (cur.seeded && cur.seeded === planSig(cur))) plans[d] = { ...p, seeded: planSig(p) };
+          });
           next.dayPlans = plans;
         }
         return next;

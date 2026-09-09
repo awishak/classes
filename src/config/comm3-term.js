@@ -12,8 +12,9 @@
 // whose body is how the day runs. "Stories" holds every story rated great
 // for that week, split between Monday and Wednesday by which question the
 // story answers, each carrying the move, why the story teaches the skill,
-// what happened, and every link from the bank. The links are searches, the
-// same ones the bank has. The goods sit on the week's lesson plan as a bench.
+// what happened, and every link from the bank, resolved from the bank's
+// searches to the page or video each one meant. The thirteen image links
+// are still image searches. The goods sit on the week's lesson plan as a bench.
 //
 // Rated by title rather than number, because the ratings file has 1.12 and
 // 1.13 swapped against the bank. Regenerate rather than hand-edit.
@@ -447,12 +448,12 @@ export const dayPlans = {
               {
                 "id": "c3-sep21-s0-l1",
                 "label": "Watch: News coverage",
-                "url": "https://www.youtube.com/results?search_query=Sycamore+Gap+tree+felled+news+coverage+reaction"
+                "url": "https://www.youtube.com/watch?v=plsrAIcEN-Y"
               },
               {
                 "id": "c3-sep21-s0-l2",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Sycamore+Gap+tree"
+                "url": "https://en.wikipedia.org/wiki/Sycamore_Gap_tree"
               }
             ]
           }
@@ -494,7 +495,7 @@ export const dayPlans = {
               {
                 "id": "c3-sep23-s0-l1",
                 "label": "Read: Background on the controversy",
-                "url": "https://en.wikipedia.org/w/index.php?search=Hurricane+Katrina+media+coverage+looting+finding"
+                "url": "https://en.wikipedia.org/wiki/Media_coverage_of_Hurricane_Katrina"
               }
             ]
           },
@@ -511,7 +512,7 @@ export const dayPlans = {
               {
                 "id": "c3-sep23-s1-l1",
                 "label": "Read: Background on outlet positioning",
-                "url": "https://en.wikipedia.org/w/index.php?search=Media+bias+in+the+United+States+news+outlets+political+leaning"
+                "url": "https://en.wikipedia.org/wiki/Media_bias_in_the_United_States"
               }
             ]
           }
@@ -573,7 +574,7 @@ export const dayPlans = {
               {
                 "id": "c3-sep28-s0-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=O.+J.+Simpson+murder+case+media+coverage+Time+cover"
+                "url": "https://en.wikipedia.org/wiki/Murder_trial_of_O._J._Simpson"
               }
             ]
           },
@@ -590,7 +591,7 @@ export const dayPlans = {
               {
                 "id": "c3-sep28-s1-l1",
                 "label": "Watch: Vucci describing how he made it",
-                "url": "https://www.youtube.com/results?search_query=Evan+Vucci+AP+photographer+interview+Trump+rally+photo+how+he+shot+it"
+                "url": "https://www.youtube.com/watch?v=gY-Y2iT9OYQ"
               }
             ]
           },
@@ -607,7 +608,7 @@ export const dayPlans = {
               {
                 "id": "c3-sep28-s2-l1",
                 "label": "Watch: Souza on making it",
-                "url": "https://www.youtube.com/results?search_query=Pete+Souza+Situation+Room+photo+how+it+was+taken+interview"
+                "url": "https://www.youtube.com/watch?v=xORHs89STSQ"
               }
             ]
           },
@@ -619,12 +620,12 @@ export const dayPlans = {
               {
                 "id": "c3-sep28-s3-l0",
                 "label": "Read: Background and the Esquire piece",
-                "url": "https://en.wikipedia.org/w/index.php?search=The+Falling+Man+photograph+Richard+Drew"
+                "url": "https://en.wikipedia.org/wiki/The_Falling_Man"
               },
               {
                 "id": "c3-sep28-s3-l1",
                 "label": "Watch: The 2006 documentary",
-                "url": "https://www.youtube.com/results?search_query=The+Falling+Man+documentary+2006"
+                "url": "https://www.youtube.com/watch?v=E5pYsqfzlHk"
               }
             ]
           },
@@ -641,7 +642,7 @@ export const dayPlans = {
               {
                 "id": "c3-sep28-s4-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Exxon+Valdez+oil+spill"
+                "url": "https://en.wikipedia.org/wiki/Exxon_Valdez_oil_spill"
               }
             ]
           }
@@ -678,17 +679,17 @@ export const dayPlans = {
               {
                 "id": "c3-sep30-s0-l0",
                 "label": "Watch: The original footage as broadcast",
-                "url": "https://www.youtube.com/results?search_query=George+Holliday+Rodney+King+video+1991+news+broadcast"
+                "url": "https://www.youtube.com/watch?v=QAK22f_OK-8"
               },
               {
                 "id": "c3-sep30-s0-l1",
                 "label": "Watch: How the defense used it",
-                "url": "https://www.youtube.com/results?search_query=Rodney+King+trial+defense+frame+by+frame+analysis"
+                "url": "https://www.youtube.com/watch?v=jh5xWmQ1QPw"
               },
               {
                 "id": "c3-sep30-s0-l2",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Rodney+King"
+                "url": "https://en.wikipedia.org/wiki/Rodney_King"
               }
             ]
           },
@@ -700,12 +701,12 @@ export const dayPlans = {
               {
                 "id": "c3-sep30-s1-l0",
                 "label": "Watch: Visual reconstruction of the timeline",
-                "url": "https://www.youtube.com/results?search_query=Astroworld+crowd+crush+visual+investigation+timeline+reconstruction"
+                "url": "https://www.youtube.com/watch?v=jccYp7a_FzI"
               },
               {
                 "id": "c3-sep30-s1-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Astroworld+Festival+crowd+crush"
+                "url": "https://en.wikipedia.org/wiki/Astroworld_Festival_crowd_crush"
               }
             ]
           },
@@ -717,17 +718,17 @@ export const dayPlans = {
               {
                 "id": "c3-sep30-s2-l0",
                 "label": "Watch: A classic NFL Films segment",
-                "url": "https://www.youtube.com/results?search_query=NFL+Films+classic+segment+Steve+Sabol+slow+motion+narration"
+                "url": "https://www.youtube.com/watch?v=08Wu_X63lJg"
               },
               {
                 "id": "c3-sep30-s2-l1",
                 "label": "Watch: How the style was built",
-                "url": "https://www.youtube.com/results?search_query=NFL+Films+Steve+Sabol+how+they+filmed+football+documentary"
+                "url": "https://www.youtube.com/watch?v=TTf3ejQtE6s"
               },
               {
                 "id": "c3-sep30-s2-l2",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=NFL+Films"
+                "url": "https://en.wikipedia.org/wiki/NFL_Films"
               }
             ]
           },
@@ -739,17 +740,17 @@ export const dayPlans = {
               {
                 "id": "c3-sep30-s3-l0",
                 "label": "Watch: Trailer",
-                "url": "https://www.youtube.com/results?search_query=Free+Solo+2018+documentary+trailer"
+                "url": "https://www.youtube.com/watch?v=urRVZ4SW7WU"
               },
               {
                 "id": "c3-sep30-s3-l1",
                 "label": "Watch: The crew discussing camera placement",
-                "url": "https://www.youtube.com/results?search_query=Free+Solo+behind+the+scenes+camera+crew+ethics+filming+Honnold"
+                "url": "https://www.youtube.com/watch?v=dtnjRoDa71Y"
               },
               {
                 "id": "c3-sep30-s3-l2",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Free+Solo+film"
+                "url": "https://en.wikipedia.org/wiki/Free_Solo_(film)"
               }
             ]
           }
@@ -811,7 +812,7 @@ export const dayPlans = {
               {
                 "id": "c3-oct5-s0-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=John+Snow+cholera+Broad+Street+pump+map"
+                "url": "https://en.wikipedia.org/wiki/1854_Broad_Street_cholera_outbreak"
               }
             ]
           },
@@ -828,7 +829,7 @@ export const dayPlans = {
               {
                 "id": "c3-oct5-s1-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Harry+Beck+Tube+map"
+                "url": "https://en.wikipedia.org/wiki/Tube_map"
               }
             ]
           },
@@ -845,7 +846,7 @@ export const dayPlans = {
               {
                 "id": "c3-oct5-s2-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Warming+stripes"
+                "url": "https://en.wikipedia.org/wiki/Warming_stripes"
               }
             ]
           },
@@ -857,12 +858,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct5-s3-l0",
                 "label": "Watch: The format",
-                "url": "https://www.youtube.com/results?search_query=New+York+Times+You+Draw+It+interactive+chart+explained"
+                "url": "https://www.nytimes.com/interactive/2015/05/28/upshot/you-draw-it-how-family-income-affects-childrens-college-chances.html"
               },
               {
                 "id": "c3-oct5-s3-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=The+Upshot+New+York+Times+interactive+journalism"
+                "url": "https://en.wikipedia.org/wiki/The_Upshot"
               }
             ]
           },
@@ -874,12 +875,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct5-s4-l0",
                 "label": "Watch: Wrapped design and reactions",
-                "url": "https://www.youtube.com/results?search_query=Spotify+Wrapped+design+how+it+works+data+storytelling"
+                "url": "https://www.youtube.com/watch?v=hpwv5tiQGKk"
               },
               {
                 "id": "c3-oct5-s4-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Spotify+Wrapped"
+                "url": "https://en.wikipedia.org/wiki/Spotify_Wrapped"
               }
             ]
           },
@@ -891,12 +892,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct5-s5-l0",
                 "label": "Watch: Their work",
-                "url": "https://www.youtube.com/results?search_query=The+Pudding+visual+essay+data+journalism+examples"
+                "url": "https://pudding.cool"
               },
               {
                 "id": "c3-oct5-s5-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=The+Pudding+data+journalism+publication"
+                "url": "https://en.wikipedia.org/wiki/The_Pudding"
               }
             ]
           }
@@ -938,7 +939,7 @@ export const dayPlans = {
               {
                 "id": "c3-oct7-s0-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Tropical+cyclone+forecast+cone+of+uncertainty"
+                "url": "https://en.wikipedia.org/wiki/Tropical_cyclone_track_forecasting"
               }
             ]
           },
@@ -950,12 +951,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct7-s1-l0",
                 "label": "Watch: The Inventor documentary trailer",
-                "url": "https://www.youtube.com/results?search_query=The+Inventor+Out+for+Blood+in+Silicon+Valley+trailer+Theranos"
+                "url": "https://www.youtube.com/watch?v=wtDaP18OGfw"
               },
               {
                 "id": "c3-oct7-s1-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Theranos"
+                "url": "https://en.wikipedia.org/wiki/Theranos"
               }
             ]
           },
@@ -972,7 +973,7 @@ export const dayPlans = {
               {
                 "id": "c3-oct7-s2-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Strava+heat+map+military+base+security"
+                "url": "https://en.wikipedia.org/wiki/Strava"
               }
             ]
           },
@@ -989,7 +990,7 @@ export const dayPlans = {
               {
                 "id": "c3-oct7-s3-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=W.+E.+B.+Du+Bois+Paris+Exposition+data+visualizations"
+                "url": "https://en.wikipedia.org/wiki/The_Exhibit_of_American_Negroes"
               }
             ]
           }
@@ -1046,7 +1047,7 @@ export const dayPlans = {
               {
                 "id": "c3-oct12-s0-l0",
                 "label": "Watch: The rescue broadcast",
-                "url": "https://www.youtube.com/results?search_query=Chilean+miners+rescue+2010+live+broadcast+first+miner"
+                "url": "https://www.youtube.com/watch?v=q_MQEp2foQg"
               },
               {
                 "id": "c3-oct12-s0-l1",
@@ -1056,7 +1057,7 @@ export const dayPlans = {
               {
                 "id": "c3-oct12-s0-l2",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=2010+Copiap%C3%B3+mining+accident"
+                "url": "https://en.wikipedia.org/wiki/2010_Copiap%C3%B3_mining_accident"
               }
             ]
           },
@@ -1068,12 +1069,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct12-s1-l0",
                 "label": "Watch: The mission and the coverage",
-                "url": "https://www.youtube.com/results?search_query=Apollo+13+mission+1970+coverage+NASA+rescue"
+                "url": "https://www.youtube.com/watch?v=MdvoA-sjs0A"
               },
               {
                 "id": "c3-oct12-s1-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Apollo+13"
+                "url": "https://en.wikipedia.org/wiki/Apollo_13"
               }
             ]
           }
@@ -1110,12 +1111,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct14-s0-l0",
                 "label": "Watch: The timeline",
-                "url": "https://www.youtube.com/results?search_query=Boston+Marathon+bombing+manhunt+timeline+2013"
+                "url": "https://www.youtube.com/watch?v=5nPoKb_29nw"
               },
               {
                 "id": "c3-oct14-s0-l1",
                 "label": "Read: The Reddit misidentification",
-                "url": "https://en.wikipedia.org/w/index.php?search=Reddit+Boston+Marathon+bombing+misidentification+apology"
+                "url": "https://en.wikipedia.org/wiki/Suicide_of_Sunil_Tripathi"
               }
             ]
           },
@@ -1127,12 +1128,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct14-s1-l0",
                 "label": "Watch: Overview",
-                "url": "https://www.youtube.com/results?search_query=Operation+Varsity+Blues+college+admissions+scandal+explained"
+                "url": "https://www.youtube.com/watch?v=TA8iaEgj9Os"
               },
               {
                 "id": "c3-oct14-s1-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=2019+college+admissions+bribery+scandal"
+                "url": "https://en.wikipedia.org/wiki/2019_college_admissions_bribery_scandal"
               }
             ]
           }
@@ -1189,12 +1190,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct19-s0-l0",
                 "label": "Watch: The persona on camera",
-                "url": "https://www.youtube.com/results?search_query=Elizabeth+Holmes+voice+turtleneck+interview+compilation"
+                "url": "https://www.youtube.com/watch?v=5E_yK2eX0xs"
               },
               {
                 "id": "c3-oct19-s0-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Elizabeth+Holmes"
+                "url": "https://en.wikipedia.org/wiki/Elizabeth_Holmes"
               }
             ]
           },
@@ -1206,12 +1207,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct19-s1-l0",
                 "label": "Watch: Contemporary coverage and the aftermath",
-                "url": "https://www.youtube.com/results?search_query=Richard+Jewell+1996+Olympic+bombing+news+coverage+suspect"
+                "url": "https://www.youtube.com/watch?v=qbx50Gsi9g0"
               },
               {
                 "id": "c3-oct19-s1-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Richard+Jewell"
+                "url": "https://en.wikipedia.org/wiki/Richard_Jewell"
               }
             ]
           },
@@ -1223,12 +1224,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct19-s2-l0",
                 "label": "Watch: The live coverage and the CNN interview",
-                "url": "https://www.youtube.com/results?search_query=Balloon+Boy+2009+CNN+interview+we+did+this+for+the+show"
+                "url": "https://www.youtube.com/watch?v=wI6UONWCq7A"
               },
               {
                 "id": "c3-oct19-s2-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Balloon+boy+hoax"
+                "url": "https://en.wikipedia.org/wiki/Balloon_boy_hoax"
               }
             ]
           }
@@ -1265,12 +1266,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct21-s0-l0",
                 "label": "Watch: Catching Hell, the ESPN documentary",
-                "url": "https://www.youtube.com/results?search_query=Catching+Hell+Steve+Bartman+ESPN+documentary+Alex+Gibney"
+                "url": "https://www.youtube.com/watch?v=lIUQZmo7F08"
               },
               {
                 "id": "c3-oct21-s0-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Steve+Bartman+incident"
+                "url": "https://en.wikipedia.org/wiki/Steve_Bartman_incident"
               }
             ]
           },
@@ -1282,17 +1283,17 @@ export const dayPlans = {
               {
                 "id": "c3-oct21-s1-l0",
                 "label": "Watch: Documentary treatment",
-                "url": "https://www.youtube.com/results?search_query=Mommy+Dead+and+Dearest+documentary+Gypsy+Rose+trailer"
+                "url": "https://www.youtube.com/watch?v=9L29EG8b8Gs"
               },
               {
                 "id": "c3-oct21-s1-l1",
                 "label": "Watch: Her own account after release",
-                "url": "https://www.youtube.com/results?search_query=Gypsy+Rose+Blanchard+interview+after+prison+release+2024"
+                "url": "https://www.youtube.com/watch?v=FRmtwvREfLA"
               },
               {
                 "id": "c3-oct21-s1-l2",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Gypsy-Rose+Blanchard"
+                "url": "https://en.wikipedia.org/wiki/Gypsy-Rose_Blanchard"
               }
             ]
           },
@@ -1304,17 +1305,17 @@ export const dayPlans = {
               {
                 "id": "c3-oct21-s2-l0",
                 "label": "Watch: 1998 coverage and late night treatment",
-                "url": "https://www.youtube.com/results?search_query=Monica+Lewinsky+1998+news+coverage+late+night+jokes"
+                "url": "https://www.youtube.com/watch?v=jwo6NHaRGBA"
               },
               {
                 "id": "c3-oct21-s2-l1",
                 "label": "Watch: Her TED talk",
-                "url": "https://www.youtube.com/results?search_query=Monica+Lewinsky+TED+talk+price+of+shame"
+                "url": "https://www.youtube.com/watch?v=H_8y0WLm78U"
               },
               {
                 "id": "c3-oct21-s2-l2",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Clinton-Lewinsky+scandal"
+                "url": "https://en.wikipedia.org/wiki/Clinton-Lewinsky_scandal"
               }
             ]
           },
@@ -1326,17 +1327,17 @@ export const dayPlans = {
               {
                 "id": "c3-oct21-s3-l0",
                 "label": "Watch: Coverage from multiple outlets",
-                "url": "https://www.youtube.com/results?search_query=Colin+Kaepernick+kneeling+coverage+2016+different+networks"
+                "url": "https://www.youtube.com/watch?v=ddTRuCsyQCA"
               },
               {
                 "id": "c3-oct21-s3-l1",
                 "label": "Watch: The Nike campaign",
-                "url": "https://www.youtube.com/results?search_query=Nike+Colin+Kaepernick+Dream+Crazy+ad+2018"
+                "url": "https://www.youtube.com/watch?v=jBnseji3tBk"
               },
               {
                 "id": "c3-oct21-s3-l2",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Colin+Kaepernick"
+                "url": "https://en.wikipedia.org/wiki/Colin_Kaepernick"
               }
             ]
           }
@@ -1413,12 +1414,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct28-s0-l0",
                 "label": "Watch: The clip",
-                "url": "https://www.youtube.com/results?search_query=Zoom+cat+lawyer+I+am+not+a+cat+court+hearing"
+                "url": "https://www.youtube.com/watch?v=lGOofzZOyl8"
               },
               {
                 "id": "c3-oct28-s0-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=I%27m+not+a+cat"
+                "url": "https://en.wikipedia.org/wiki/I%27m_not_a_cat"
               }
             ]
           },
@@ -1430,17 +1431,17 @@ export const dayPlans = {
               {
                 "id": "c3-oct28-s1-l0",
                 "label": "Watch: The broadcast version",
-                "url": "https://www.youtube.com/results?search_query=Howard+Dean+scream+2004+broadcast"
+                "url": "https://www.youtube.com/watch?v=l6i-gYRAwM0"
               },
               {
                 "id": "c3-oct28-s1-l1",
                 "label": "Watch: The room audio version",
-                "url": "https://www.youtube.com/results?search_query=Howard+Dean+scream+crowd+microphone+room+audio+comparison"
+                "url": "https://www.youtube.com/watch?v=-3Meg3CEyUM"
               },
               {
                 "id": "c3-oct28-s1-l2",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Howard+Dean+2004+presidential+campaign+scream"
+                "url": "https://en.wikipedia.org/wiki/Dean_scream"
               }
             ]
           },
@@ -1452,12 +1453,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct28-s2-l0",
                 "label": "Watch: Isolated bang audio matched to pitches",
-                "url": "https://www.youtube.com/results?search_query=Astros+sign+stealing+trash+can+bangs+audio+evidence"
+                "url": "https://www.youtube.com/watch?v=I9up10jsW1c"
               },
               {
                 "id": "c3-oct28-s2-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Houston+Astros+sign+stealing+scandal"
+                "url": "https://en.wikipedia.org/wiki/Houston_Astros_sign_stealing_scandal"
               }
             ]
           },
@@ -1469,12 +1470,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct28-s3-l0",
                 "label": "Watch: Episode one",
-                "url": "https://www.youtube.com/results?search_query=Serial+podcast+season+one+episode+one+Sarah+Koenig"
+                "url": "https://www.youtube.com/watch?v=qrJaonJt1QU"
               },
               {
                 "id": "c3-oct28-s3-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Serial+podcast"
+                "url": "https://en.wikipedia.org/wiki/Serial_(podcast)"
               }
             ]
           },
@@ -1486,12 +1487,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct28-s4-l0",
                 "label": "Watch: Coverage of the release",
-                "url": "https://www.youtube.com/results?search_query=Access+Hollywood+tape+2016+release+coverage"
+                "url": "https://www.youtube.com/watch?v=--6QO-Ewml0"
               },
               {
                 "id": "c3-oct28-s4-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Donald+Trump+Access+Hollywood+tape"
+                "url": "https://en.wikipedia.org/wiki/Donald_Trump_Access_Hollywood_tape"
               }
             ]
           },
@@ -1503,12 +1504,12 @@ export const dayPlans = {
               {
                 "id": "c3-oct28-s5-l0",
                 "label": "Watch: Criticism of the practice",
-                "url": "https://www.youtube.com/results?search_query=true+crime+podcast+ethics+911+calls+victims+families+criticism"
+                "url": "https://www.youtube.com/watch?v=RIpz9GiEAyc"
               },
               {
                 "id": "c3-oct28-s5-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=True+crime+podcast+ethics+criticism"
+                "url": "https://en.wikipedia.org/wiki/True_crime"
               }
             ]
           }
@@ -1565,12 +1566,12 @@ export const dayPlans = {
               {
                 "id": "c3-nov2-s0-l0",
                 "label": "Watch: Coverage and reaction",
-                "url": "https://www.youtube.com/results?search_query=Bad+Bunny+Super+Bowl+halftime+2026+reaction+coverage"
+                "url": "https://www.youtube.com/watch?v=I7ijebXncuk"
               },
               {
                 "id": "c3-nov2-s0-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Super+Bowl+LX+halftime+show"
+                "url": "https://en.wikipedia.org/wiki/Super_Bowl_LX_halftime_show"
               }
             ]
           },
@@ -1582,12 +1583,12 @@ export const dayPlans = {
               {
                 "id": "c3-nov2-s1-l0",
                 "label": "Watch: How the account works",
-                "url": "https://www.youtube.com/results?search_query=Duolingo+TikTok+strategy+explained+social+media+manager"
+                "url": "https://www.youtube.com/watch?v=7cvyjExiAZg"
               },
               {
                 "id": "c3-nov2-s1-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Duolingo+social+media"
+                "url": "https://en.wikipedia.org/wiki/Duolingo"
               }
             ]
           },
@@ -1599,12 +1600,12 @@ export const dayPlans = {
               {
                 "id": "c3-nov2-s2-l0",
                 "label": "Watch: How newsrooms adapted",
-                "url": "https://www.youtube.com/results?search_query=Trump+Twitter+how+news+covered+his+tweets+media+strategy"
+                "url": "https://www.youtube.com/watch?v=Hlk3TBJdWwE"
               },
               {
                 "id": "c3-nov2-s2-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Social+media+use+by+Donald+Trump"
+                "url": "https://en.wikipedia.org/wiki/Social_media_use_by_Donald_Trump"
               }
             ]
           },
@@ -1616,12 +1617,12 @@ export const dayPlans = {
               {
                 "id": "c3-nov2-s3-l0",
                 "label": "Watch: The stream and coverage of it",
-                "url": "https://www.youtube.com/results?search_query=AOC+Among+Us+Twitch+stream+2020+voter+registration"
+                "url": "https://www.youtube.com/watch?v=yfRsxD1b2lM"
               },
               {
                 "id": "c3-nov2-s3-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Alexandria+Ocasio-Cortez+Twitch+Among+Us+stream"
+                "url": "https://en.wikipedia.org/wiki/Alexandria_Ocasio-Cortez"
               }
             ]
           }
@@ -1658,12 +1659,12 @@ export const dayPlans = {
               {
                 "id": "c3-nov4-s0-l0",
                 "label": "Watch: The debate",
-                "url": "https://www.youtube.com/results?search_query=Kennedy+Nixon+1960+first+televised+debate"
+                "url": "https://www.youtube.com/watch?v=AYP8-oxq8ig"
               },
               {
                 "id": "c3-nov4-s0-l1",
                 "label": "Read: The disputed radio claim",
-                "url": "https://en.wikipedia.org/w/index.php?search=Kennedy+Nixon+debate+radio+listeners+myth"
+                "url": "https://en.wikipedia.org/wiki/1960_United_States_presidential_debates"
               }
             ]
           },
@@ -1675,12 +1676,12 @@ export const dayPlans = {
               {
                 "id": "c3-nov4-s1-l0",
                 "label": "Watch: Analysis of the video strategy",
-                "url": "https://www.youtube.com/results?search_query=Mamdani+campaign+vertical+video+social+media+strategy+analysis"
+                "url": "https://www.youtube.com/watch?v=v9o_j8JleMg"
               },
               {
                 "id": "c3-nov4-s1-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Zohran+Mamdani"
+                "url": "https://en.wikipedia.org/wiki/Zohran_Mamdani"
               }
             ]
           },
@@ -1692,12 +1693,12 @@ export const dayPlans = {
               {
                 "id": "c3-nov4-s2-l0",
                 "label": "Watch: How the localization works",
-                "url": "https://www.youtube.com/results?search_query=MrBeast+dubbing+channels+localization+strategy+explained"
+                "url": "https://www.youtube.com/watch?v=8bDRVP9xSfc"
               },
               {
                 "id": "c3-nov4-s2-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=MrBeast+YouTube+channels+localization"
+                "url": "https://en.wikipedia.org/wiki/MrBeast"
               }
             ]
           },
@@ -1709,12 +1710,12 @@ export const dayPlans = {
               {
                 "id": "c3-nov4-s3-l0",
                 "label": "Watch: What happened and the response",
-                "url": "https://www.youtube.com/results?search_query=Bud+Light+Dylan+Mulvaney+2023+boycott+sales+response"
+                "url": "https://www.youtube.com/watch?v=fFmRdYOOEYs"
               },
               {
                 "id": "c3-nov4-s3-l1",
                 "label": "Read: Background",
-                "url": "https://en.wikipedia.org/w/index.php?search=Bud+Light+Dylan+Mulvaney+boycott"
+                "url": "https://en.wikipedia.org/wiki/Bud_Light_boycott"
               }
             ]
           }

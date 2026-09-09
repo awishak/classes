@@ -62,7 +62,8 @@ const SESSIONS = [
         ["Finals is a word, plural", "Any week whose topic mentioned final read as Finals Week on the schedule and in the term view. COMM 3 has three weeks about the final project in a row. Only a topic saying Finals gets the name now."],
       ] },
       { name: "Worth knowing", items: [
-        ["Every link is a search", "All 251 links in the bank are Google image searches, YouTube result pages, or Wikipedia searches. None point at a page. They came across as they are, labelled watch, read, or see, and resolving them is a pass of its own."],
+        ["Every link in the bank was a search", "All 251 are Google image searches, YouTube result pages, or Wikipedia searches, and none point at a page. The 89 on the placed stories were resolved to the article or video each one meant, through the Wikipedia search API and YouTube\u2019s results page, with a dozen re-queried or picked by hand. The 14 image links are still searches, since nothing resolves an image search to one page."],
+        ["A seed bump refreshes untouched days", "Each seeded plan carries a signature of its own content. On the next bump a day whose signature still matches is replaced, and a day edited since is kept. Regenerating the term with better links reaches every day not yet opened, and no other."],
         ["Two numbers were swapped", "The ratings file has 1.12 and 1.13 the other way round from the bank. Placement went by title: the Trump story framed two ways is a great and Dukakis in the tank is a maybe."],
         ["Campus examples are still open", "Three plans say still to pick where a local example belongs. The course plan lists them as open for every week."],
       ] },

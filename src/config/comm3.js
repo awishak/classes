@@ -51,7 +51,7 @@ const comm3 = {
   library,
   assignments,
   dayPlans,
-  seedVersion: 2,
+  seedVersion: 3,
 };
 
 export default comm3;
