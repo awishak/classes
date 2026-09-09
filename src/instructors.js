@@ -10,6 +10,6 @@ export const isInstructorEmail = (email) =>
 // Where a student books a meeting: Andrew's Calendly page. One calendar for
 // every class, so the address lives here rather than in each config. A class
 // that carries its own under instructor.schedulingLink wins.
-export const SCHEDULING_LINK = "";
+export const SCHEDULING_LINK = "https://calendly.com/andrewishak/meet";
 
 export const schedulingLinkOf = (config) => config?.instructor?.schedulingLink || SCHEDULING_LINK;
