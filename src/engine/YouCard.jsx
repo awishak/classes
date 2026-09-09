@@ -5,7 +5,8 @@
 
 import { useState } from "react";
 import { genId } from "../utils.jsx";
-import { computeGrade, dueState, dueColor } from "./AssignmentsCard.jsx";
+import { computeGrade } from "./AssignmentsCard.jsx";
+import GradeParade from "./GradeParade.jsx";
 import * as TOKENS from "./tokens.js";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -240,62 +241,6 @@ function ProfileForm({ student, initial, update, accent }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// GRADE
-// ─────────────────────────────────────────────────────────────
-// One number with nothing behind it is the thing students ask me about most:
-// what is in it, and what is still outstanding. The percent is the weighted
-// average of what has been graded so far, so say which assignments those are
-// and what is still waiting.
-function GradeBreakdown({ config, data, name, accent }) {
-  const [open, setOpen] = useState(false);
-  const { pct, rows } = computeGrade(config, data, name);
-  const counted = rows.filter(r => r.score != null);
-  const outstanding = rows.filter(r => r.score == null);
-  const share = counted.reduce((n, r) => n + r.weight, 0);
-
-  return (
-    <div style={{ marginTop: 14 }}>
-      <div style={label}>Current grade</div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 32, fontWeight: 700, color: accent }}>{pct != null ? pct + "%" : "--"}</div>
-        <div style={{ fontSize: 15, color: TEXT_MUTED }}>
-          {pct != null ? "on " + share + "% of the course so far" : "nothing graded yet"}
-        </div>
-        <button onClick={() => setOpen(v => !v)}
-          style={{ background: "none", border: "none", color: accent, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer", minHeight: TAP, marginLeft: "auto" }}>
-          {open ? "Hide the maths" : "How is this worked out?"}
-        </button>
-      </div>
-
-      {open ? (
-        <div style={{ marginTop: 8, border: "1px solid " + BORDER, borderRadius: 12, overflow: "hidden" }}>
-          {rows.map(r => {
-            const st = r.score == null && !r.letter ? dueState(assignmentDue(config, data, r.id)) : null;
-            return (
-              <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderTop: "1px solid " + BORDER, fontSize: 15 }}>
-                <span style={{ flex: 1, minWidth: 0, color: r.score == null ? TEXT_MUTED : TEXT_PRIMARY }}>{r.title}</span>
-                <span style={{ flex: "none", fontSize: 13, color: TEXT_MUTED }}>{r.weight}%</span>
-                <span style={{ flex: "none", minWidth: 74, textAlign: "right", fontWeight: 600,
-                  color: r.score == null ? (st ? dueColor(st.tone) : TEXT_MUTED) : TEXT_PRIMARY }}>
-                  {r.letter ? r.letter : r.score != null ? r.score + "/100" : (st ? st.text : "Not graded")}
-                </span>
-              </div>
-            );
-          })}
-          {outstanding.length ? (
-            <div style={{ padding: "10px 14px", borderTop: "1px solid " + BORDER, fontSize: 15, color: TEXT_MUTED, background: BG }}>
-              The {100 - share}% still outstanding is not counted against you. It is simply not graded yet.
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-const assignmentDue = (config, data, id) =>
-  ((data?.assignments || config.assignments || []).find(a => a.id === id) || {}).due;
 
 // ─────────────────────────────────────────────────────────────
 // STUDENT VIEW
@@ -325,7 +270,10 @@ function StudentYou({ config, data, update, asStudent, setAsStudent }) {
         ) : null}
       </div>
 
-      <GradeBreakdown config={config} data={data} name={asStudent} accent={a} />
+      <div style={{ marginTop: 14 }}>
+        <div style={label}>Grades so far</div>
+        <div style={{ marginTop: 8 }}><GradeParade config={config} data={data} name={asStudent} accent={a} /></div>
+      </div>
 
       <div style={{ marginTop: 20 }}>
         <div style={label}>Message with Dr. Ishak</div>
@@ -432,14 +380,13 @@ export function YouSummary({ config, role, data, asStudent }) {
   }
   const m = lastMsg(data, asStudent);
   const fresh = m && m.from === "instructor";
-  const g = computeGrade(config, data, asStudent).pct;
   return (
     <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
       <div style={{ width: 44, height: 44, borderRadius: "50%", background: a + "22", border: "2px solid " + a + "55", flexShrink: 0 }} />
-      <div style={{ minWidth: 0 }}>
+      <div style={{ minWidth: 0, flex: 1 }}>
         {fresh
           ? <><div style={{ fontWeight: 600 }}>New note from instructor</div><Muted>Tap to read</Muted></>
-          : <><div style={{ fontWeight: 600 }}>Current grade</div><div style={{ fontSize: 22, fontWeight: 700, color: a }}>{g != null ? g + "%" : "--"}</div></>}
+          : <><div style={{ fontWeight: 600 }}>Grades so far</div><div style={{ marginTop: 6 }}><GradeParade config={config} data={data} name={asStudent} accent={a} compact /></div></>}
       </div>
     </div>
   );

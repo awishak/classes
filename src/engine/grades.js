@@ -155,6 +155,16 @@ export const meetingPatch = (data, name, title, now = Date.now()) => {
 export const markSeen = (data, aid, name, now = Date.now()) =>
   withBoard(data, aid, board => ({ ...board, seen: { ...(board.seen || {}), [name]: now } }));
 
+// A number out of 100 as the word the columns would have given. The older
+// grading flow wrote numbers, and the parade on the You card shows every
+// grade as a letter, so those get the plain bands: 90 and up is an A.
+export const letterOf = (score) => {
+  if (score == null || score === "") return null;
+  const n = Number(score);
+  if (!Number.isFinite(n)) return null;
+  return n >= 90 ? "A" : n >= 80 ? "B" : n >= 70 ? "C" : n >= 60 ? "D" : "F";
+};
+
 // What a grade event reads as on a card: the letter when the board wrote the
 // grade, the score when the grading flow did.
 export const gradeText = (g) => (g ? (g.letter || (g.score != null ? g.score + "/100" : "")) : "");

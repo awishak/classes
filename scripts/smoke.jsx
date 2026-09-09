@@ -80,7 +80,8 @@ import { ENGINE_LIST } from "../src/config/registry.js";
 import { warmClassData } from "../src/engine/store.js";
 import GradeView from "../src/engine/GradeView.jsx";
 import GradeDeck from "../src/engine/GradeDeck.jsx";
-import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, unseenGrades, markSeen, meetingPatch, BUCKETS } from "../src/engine/grades.js";
+import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, unseenGrades, markSeen, meetingPatch, letterOf, BUCKETS } from "../src/engine/grades.js";
+import GradeParade from "../src/engine/GradeParade.jsx";
 import { computeGrade } from "../src/engine/AssignmentsCard.jsx";
 import { sectionsOf } from "../src/engine/dayplan.js";
 import { SHARED_KEY } from "../src/engine/blocks.js";
@@ -1941,6 +1942,17 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const msg = met.threads["Ada Lovelace"].slice(-1)[0];
     if (msg.kind !== "meeting" || msg.from !== "student" || !msg.text.includes("Exercise 1")) say("a meeting from the deck did not land in the thread: " + JSON.stringify(msg));
   } catch (err) { say("the deck threw: " + err.message); }
+  // Grades so far: a tile per assignment, grey until graded, then the letter.
+  // An old number out of 100 reads as the same letter the columns would give.
+  if (letterOf(92) !== "A" || letterOf(80) !== "B" || letterOf(79.5) !== "C" || letterOf(60) !== "D" || letterOf(59) !== "F" || letterOf(null) !== null) say("letterOf bands are off");
+  try {
+    const html = renderToString(<GradeParade config={cfg} data={again} name="Ada Lovelace" accent={cfg.accent} />);
+    if (!html.includes(">B<")) say("the parade never showed Ada's B");
+    if (!html.includes("Exercise 2")) say("the parade dropped the ungraded assignment");
+    if (!html.includes("Exercise 1")) say("the parade dropped the graded assignment's title");
+    const small = renderToString(<GradeParade config={cfg} data={again} name="Ada Lovelace" accent={cfg.accent} compact />);
+    if (!small.includes(">B<") || !small.includes("not graded yet")) say("the compact parade is missing a tile");
+  } catch (err) { say("the parade threw: " + err.message); }
   warmClassData(cfg0.storageKey, warmShapes(cfg0, true));
 }
 
