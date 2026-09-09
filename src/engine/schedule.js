@@ -8,7 +8,7 @@
 // day, and which of it has not made it into the plan yet.
 
 import { genId } from "../utils.jsx";
-import { blankDay, normSlot, sequenceFor } from "./dayplan.js";
+import { blankDay, normSlot, sectionsOf } from "./dayplan.js";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -60,8 +60,10 @@ export function unplanned(data, config, date) {
     .filter(it => (it.loose ? !anywhereThisWeek.has(it.id) : !here.has(it.id)));
 }
 
-export const slotsOf = (config, plan) =>
-  (sequenceFor(config, plan.sequenceId || config.defaultSequenceId).slots || []).map(s => s.slot);
+// Every section the day has, sequence slots and hand-made ones alike. A
+// freeform day has no sequence slots at all, and reading only those said a
+// day with two sections on it had nowhere to put a reading.
+export const slotsOf = (config, plan) => sectionsOf(config, plan).map(([slot]) => slot);
 
 // Put a schedule item into a day, in the slot given or the first one there is.
 // The item keeps a pointer back to the schedule row so it stops showing up as

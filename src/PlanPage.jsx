@@ -47,6 +47,34 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep8", date: "Tuesday, September 8", title: "COMM 3 has a term",
+    blurb: "Andrew handed over the COMM 3 plan built in chat: the calendar, a bank of 113 stories with his ratings, the course plan. The class site now carries the ten weeks, the nine graded pieces, and one plan for every class day, with the 47 stories rated great placed on the day whose question each one answers.",
+    groups: [
+      { name: "What landed", items: [
+        ["The schedule", "Eleven week rows, MWF, including the three no-class days inside the term so they read as no class rather than vanishing. Sunday deadlines sit on the Friday before as items, since Sunday is not a class day. Thanksgiving week has no row, because nobody meets."],
+        ["The assignments", "Five exercises at three percent each, the visual and audio stories at twenty, the final at thirty-five, class culture at ten. Descriptions from the one-pager, rubrics empty, the open specs named as open."],
+        ["One plan per day", "A freeform day with two sections. Lesson plan first, one item whose body is how the day runs. Then Stories, each carrying the move, why the story teaches the skill, what happened, and every link from the bank. The goods sit on the week\u2019s lesson plan as a bench."],
+        ["Nothing on the projector", "The day note is empty on purpose. The room screen shows a day\u2019s note when nothing is cast, and a plan for running the room is not for the room."],
+      ] },
+      { name: "What the engine had to learn", items: [
+        ["Day plans seed from config", "Before today only the schedule and the library came across on a seed bump. A day plan from config now lands on any day the store has nothing for, and a day touched on the dashboard is left alone."],
+        ["A freeform day has sections", "Putting a reading on a day read the sequence\u2019s slots and found none on a freeform day, so a day with two sections on it had nowhere to land a reading. The day\u2019s sections are the slots now."],
+        ["Finals is a word, plural", "Any week whose topic mentioned final read as Finals Week on the schedule and in the term view. COMM 3 has three weeks about the final project in a row. Only a topic saying Finals gets the name now."],
+      ] },
+      { name: "Worth knowing", items: [
+        ["Every link is a search", "All 251 links in the bank are Google image searches, YouTube result pages, or Wikipedia searches. None point at a page. They came across as they are, labelled watch, read, or see, and resolving them is a pass of its own."],
+        ["Two numbers were swapped", "The ratings file has 1.12 and 1.13 the other way round from the bank. Placement went by title: the Trump story framed two ways is a great and Dukakis in the tank is a maybe."],
+        ["Campus examples are still open", "Three plans say still to pick where a local example belongs. The course plan lists them as open for every week."],
+      ] },
+    ],
+    note: {
+      title: "The seed is the safe direction",
+      lines: [
+        "Writing straight into the live store would have been faster. Seeding from config means the term is in the repo, the same file can be regenerated when the ratings change, and a day plan Andrew has edited can never be written over by a bump. The cost is one engine change, and the change is nine lines.",
+      ],
+    },
+  },
+  {
     id: "sep3h", date: "Thursday, September 3 \u00b7 evening", title: "Invalid Date, because the test invented the format",
     blurb: "Two cards in the rails were rebuilt and one of them shipped broken. The date on every card read \"Invalid Date\", and the check written to guard the date passed, because the fixture used a format the app has never stored.",
     groups: [

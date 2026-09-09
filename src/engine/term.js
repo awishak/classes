@@ -26,7 +26,9 @@ const weeksOf = (store, cls) => store?.schedule || cls.scheduleWeeks || [];
 
 // A week whose topic mentions "final" is Finals Week, the same reading the
 // class site gives it, so the two surfaces name a week the same way.
-const weekName = (w, i) => (/final/i.test(w.topic || "") ? "Finals Week" : "Week " + (i + 1));
+// The word is "finals", plural. A week whose topic is the final project is
+// a week of the term, and COMM 3 has three of those in a row.
+const weekName = (w, i) => (/\bfinals\b/i.test(w.topic || "") ? "Finals Week" : "Week " + (i + 1));
 
 // One row on a day, whatever the row points at.
 function rowOf(it, { blockOf, seeds, slot }) {

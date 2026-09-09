@@ -5,6 +5,7 @@
 // content, so what is left is the fields to fill in.
 
 import comm999 from "./comm999.js";
+import { scheduleWeeks, library, assignments, dayPlans } from "./comm3-term.js";
 
 const comm3 = {
   ...comm999,
@@ -40,15 +41,17 @@ const comm3 = {
   adminPin: "333333",
   openAccess: true,
 
-  // ─── cleared ───
   // The sequences and the seed library carry over, because those are how I
-  // teach rather than what this class is about. Everything else starts empty.
+  // teach rather than what this class is about. The term itself, the weeks,
+  // the assignments and one plan per class day, is generated in
+  // comm3-term.js from the September 8 handoff. Roster to come.
   testStudent: "",
   students: [],
-  scheduleWeeks: [],
-  library: [],
-  assignments: [],
-  seedVersion: 1,
+  scheduleWeeks,
+  library,
+  assignments,
+  dayPlans,
+  seedVersion: 2,
 };
 
 export default comm3;

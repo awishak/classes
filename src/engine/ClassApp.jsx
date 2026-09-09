@@ -504,7 +504,19 @@ export default function ClassApp({ config, initialCard }) {
       const patch = { seedVersion: config.seedVersion };
       if ((config.scheduleWeeks || []).length) patch.schedule = config.scheduleWeeks;
       if ((config.library || []).length) patch.library = config.library;
-      update(prev => ({ ...prev, ...patch }));
+      // A day plan seeded from config lands only on a day the store has
+      // nothing for. A day I have touched on the dashboard is mine, and a
+      // seed bump must never write over a plan for a class I have taught.
+      update(prev => {
+        const next = { ...prev, ...patch };
+        if (config.dayPlans) {
+          const have = prev.dayPlans || {};
+          const plans = { ...have };
+          Object.entries(config.dayPlans).forEach(([d, p]) => { if (!have[d]) plans[d] = p; });
+          next.dayPlans = plans;
+        }
+        return next;
+      });
     }
   }, [data, config]);
 

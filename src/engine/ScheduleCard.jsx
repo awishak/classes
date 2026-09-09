@@ -102,8 +102,9 @@ function ItemView({ item, picked }) {
   );
 }
 
-// A week whose topic mentions "final" reads "Finals Week"; otherwise "Week N".
-const isFinals = (w) => /final/i.test(w.topic || "");
+// A week whose topic says "Finals" reads "Finals Week"; otherwise "Week N".
+// The plural matters: "Final project" is a topic three weeks of COMM 3 share.
+const isFinals = (w) => /\bfinals\b/i.test(w.topic || "");
 const weekTag = (w, i) => isFinals(w) ? "Finals Week" : "Week " + (i + 1);
 const weekLabel = (w, i) => isFinals(w) ? "Finals Week" : "Week " + (i + 1) + (w.topic ? ": " + w.topic : "");
 

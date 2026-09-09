@@ -1,0 +1,317 @@
+{
+  "course": "COMM 3 Digital Storytelling",
+  "term": "Fall 2026",
+  "meets": "MWF",
+  "weeks": [
+    {
+      "week": 1,
+      "title": "Identifying stories and framing",
+      "days": [
+        {
+          "date": "2026-09-21",
+          "dow": "Mon",
+          "kind": "class",
+          "topic": "What makes something a story at all?"
+        },
+        {
+          "date": "2026-09-23",
+          "dow": "Wed",
+          "kind": "class",
+          "topic": "How does the same event become different stories?"
+        },
+        {
+          "date": "2026-09-25",
+          "dow": "Fri",
+          "kind": "workshop",
+          "topic": "Workshop for the identifying stories and framing exercise."
+        },
+        {
+          "date": "2026-09-27",
+          "dow": "Sun",
+          "kind": "due",
+          "topic": "Due: identifying stories and framing exercise."
+        }
+      ]
+    },
+    {
+      "week": 2,
+      "title": "Visual language",
+      "days": [
+        {
+          "date": "2026-09-28",
+          "dow": "Mon",
+          "kind": "class",
+          "topic": "How do angle, distance, framing, and treatment change what a photograph says?"
+        },
+        {
+          "date": "2026-09-30",
+          "dow": "Wed",
+          "kind": "class",
+          "topic": "How does editing change what we think we saw?"
+        },
+        {
+          "date": "2026-10-02",
+          "dow": "Fri",
+          "kind": "workshop",
+          "topic": "Workshop for the visual language exercise."
+        },
+        {
+          "date": "2026-10-04",
+          "dow": "Sun",
+          "kind": "due",
+          "topic": "Due: visual language exercise."
+        }
+      ]
+    },
+    {
+      "week": 3,
+      "title": "Graphics",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "dow": "Mon",
+          "kind": "class",
+          "topic": "What can a graphic show that words cannot?"
+        },
+        {
+          "date": "2026-10-07",
+          "dow": "Wed",
+          "kind": "class",
+          "topic": "How do graphics mislead, and what do we owe the people reading them?"
+        },
+        {
+          "date": "2026-10-09",
+          "dow": "Fri",
+          "kind": "workshop",
+          "topic": "Workshop for the visual story.",
+          "due": "Visual story pre-production."
+        },
+        {
+          "date": "2026-10-11",
+          "dow": "Sun",
+          "kind": "due",
+          "topic": "Due: graphics exercise."
+        }
+      ]
+    },
+    {
+      "week": 4,
+      "title": "Narrative arc",
+      "days": [
+        {
+          "date": "2026-10-12",
+          "dow": "Mon",
+          "kind": "class",
+          "topic": "What are the parts of a story, and what order do they come in?"
+        },
+        {
+          "date": "2026-10-14",
+          "dow": "Wed",
+          "kind": "class",
+          "topic": "How does a deadline turn events into a story?"
+        },
+        {
+          "date": "2026-10-16",
+          "dow": "Fri",
+          "kind": "workshop",
+          "topic": "Workshop for the visual story."
+        },
+        {
+          "date": "2026-10-18",
+          "dow": "Sun",
+          "kind": "due",
+          "topic": "Due: visual story."
+        }
+      ]
+    },
+    {
+      "week": 5,
+      "title": "Characters",
+      "days": [
+        {
+          "date": "2026-10-19",
+          "dow": "Mon",
+          "kind": "class",
+          "topic": "What turns a person into a character?"
+        },
+        {
+          "date": "2026-10-21",
+          "dow": "Wed",
+          "kind": "class",
+          "topic": "Who gets to decide who the hero and the villain are?"
+        },
+        {
+          "date": "2026-10-23",
+          "dow": "Fri",
+          "kind": "workshop",
+          "topic": "Workshop for the characters exercise."
+        },
+        {
+          "date": "2026-10-25",
+          "dow": "Sun",
+          "kind": "due",
+          "topic": "Due: characters exercise."
+        }
+      ]
+    },
+    {
+      "week": 6,
+      "title": "Audio quality",
+      "days": [
+        {
+          "date": "2026-10-26",
+          "dow": "Mon",
+          "kind": "no_class",
+          "topic": "No class. Students work on their audio story treatment."
+        },
+        {
+          "date": "2026-10-28",
+          "dow": "Wed",
+          "kind": "class",
+          "topic": "How does the recording itself change what people hear, and what do we owe the people we record?"
+        },
+        {
+          "date": "2026-10-30",
+          "dow": "Fri",
+          "kind": "workshop",
+          "topic": "Workshop for the audio story.",
+          "due": "Audio story pre-production."
+        },
+        {
+          "date": "2026-11-01",
+          "dow": "Sun",
+          "kind": "due",
+          "topic": "Due: audio exercise."
+        }
+      ]
+    },
+    {
+      "week": 7,
+      "title": "Audience and platform",
+      "days": [
+        {
+          "date": "2026-11-02",
+          "dow": "Mon",
+          "kind": "class",
+          "topic": "How do you identify the audience for a story?"
+        },
+        {
+          "date": "2026-11-04",
+          "dow": "Wed",
+          "kind": "class",
+          "topic": "How does the platform change the story, and what happens when the wrong audience finds it?"
+        },
+        {
+          "date": "2026-11-06",
+          "dow": "Fri",
+          "kind": "workshop",
+          "topic": "Workshop for the audio story."
+        },
+        {
+          "date": "2026-11-08",
+          "dow": "Sun",
+          "kind": "due",
+          "topic": "Due: audio story."
+        }
+      ]
+    },
+    {
+      "week": 8,
+      "title": "Final project",
+      "days": [
+        {
+          "date": "2026-11-09",
+          "dow": "Mon",
+          "kind": "class",
+          "topic": "What is the final project, and what does it ask of you?"
+        },
+        {
+          "date": "2026-11-11",
+          "dow": "Wed",
+          "kind": "class",
+          "topic": "What stories are worth the final? Groups form.",
+          "note": "Confirm SCU meets on Veterans Day."
+        },
+        {
+          "date": "2026-11-13",
+          "dow": "Fri",
+          "kind": "class",
+          "topic": "How do you shoot video that tells a story?"
+        }
+      ]
+    },
+    {
+      "week": 9,
+      "title": "Final project",
+      "days": [
+        {
+          "date": "2026-11-16",
+          "dow": "Mon",
+          "kind": "class",
+          "topic": "Groups pitch their story and get it approved or sent back."
+        },
+        {
+          "date": "2026-11-18",
+          "dow": "Wed",
+          "kind": "no_class",
+          "topic": "No class. Groups work on the final."
+        },
+        {
+          "date": "2026-11-20",
+          "dow": "Fri",
+          "kind": "no_class",
+          "topic": "No class. Groups work on the final."
+        }
+      ]
+    },
+    {
+      "week": "Thanksgiving",
+      "title": "No class",
+      "days": [
+        {
+          "date": "2026-11-23",
+          "dow": "Mon",
+          "kind": "break",
+          "topic": "Thanksgiving week. No class. Groups work on the final."
+        }
+      ]
+    },
+    {
+      "week": 10,
+      "title": "Final project",
+      "days": [
+        {
+          "date": "2026-11-30",
+          "dow": "Mon",
+          "kind": "class",
+          "topic": "How do you edit video so the story comes through?"
+        },
+        {
+          "date": "2026-12-02",
+          "dow": "Wed",
+          "kind": "class",
+          "topic": "Groups present their story to the class.",
+          "due": "Final pre-production document, due tonight."
+        },
+        {
+          "date": "2026-12-04",
+          "dow": "Fri",
+          "kind": "workshop",
+          "topic": "Workshop for the final."
+        }
+      ]
+    },
+    {
+      "week": "Finals",
+      "title": "Final due",
+      "days": [
+        {
+          "date": "2026-12-09",
+          "dow": "Wed",
+          "kind": "due",
+          "topic": "Due: final project."
+        }
+      ]
+    }
+  ]
+}
