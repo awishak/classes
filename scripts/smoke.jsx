@@ -78,6 +78,10 @@ import PlanPage from "../src/PlanPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
 import { ENGINE_LIST } from "../src/config/registry.js";
 import { warmClassData } from "../src/engine/store.js";
+import GradeView from "../src/engine/GradeView.jsx";
+import GradeDeck from "../src/engine/GradeDeck.jsx";
+import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, unseenGrades, markSeen, BUCKETS } from "../src/engine/grades.js";
+import { computeGrade } from "../src/engine/AssignmentsCard.jsx";
 import { sectionsOf } from "../src/engine/dayplan.js";
 import { SHARED_KEY } from "../src/engine/blocks.js";
 import { DEFAULT_REPO_FONTS } from "../src/engine/fonts.js";
@@ -189,7 +193,9 @@ cases.push(["Before & After", <BoardsPanel boards={{}} proposals={{ pre: { title
 cases.push(["Before & After, no proposals", <BoardsPanel boards={{}} proposals={{}} onSave={noop}
   castNow={noop} dismiss={noop} liveCast={null} accent={cfg0.accent} />]);
 cases.push(["Stocked", <StockedPanel shelves={{ day: [{ id: "s1", kind: "Link", title: "t", url: "https://e.com" }], week: [], any: [] }} onAdd={noop} onRemove={noop} onClaim={noop} castNow={noop} dismiss={noop} liveLabel={null} accent={cfg0.accent} />]);
-cases.push(["Assignments", <AssignmentsPanel assignments={cfg0.assignments || []} castNow={noop} dismiss={noop} liveLabel={null} />]);
+// With a path, so the Grade link on each row renders; a wrong name in that
+// link only ever throws once the link is drawn.
+cases.push(["Assignments", <AssignmentsPanel assignments={cfg0.assignments?.length ? cfg0.assignments : [{ id: "x", title: "An assignment", due: "Sep 3", weight: 10 }]} castNow={noop} dismiss={noop} liveLabel={null} path={cfg0.path} />, "/grade?a="]);
 // The rail panels, with a reading that has a long title and a URL — the shape
 // that was rendering one word per line.
 const longRead = [{ id: "r1", type: "reading", url: "https://www.nytimes.com/athletic/1/x/",
@@ -1878,6 +1884,59 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (me.kind !== "instructor" || me.path !== "/") { console.error("  FAIL  login: the instructor got " + JSON.stringify(me)); failedEarly++; }
   if (studentFor("B@SCU.EDU", rosters[0].students)?.id !== "b") { console.error("  FAIL  login: the roster lookup is case-sensitive"); failedEarly++; }
   cases.push(["The sign-in page", <LoginPage />, "Email me a code"]);
+}
+
+// Grade view: cards sorted into columns, released all at once, taken back
+// all at once. The logic is pure, so the shape of a release is asserted
+// here, and both surfaces render.
+{
+  const say = (m) => { console.error("  FAIL  grade view: " + m); failedEarly++; };
+  const cfg = { ...cfg0, assignments: [{ id: "ex1", title: "Exercise 1", weight: 50, due: "Sep 3" }, { id: "ex2", title: "Exercise 2", weight: 50, due: "Sep 10" }],
+    students: [{ name: "Ada Lovelace" }, { name: "Bob Ross" }, { name: "Cy Twombly" }] };
+  const sub = { id: "s1", ts: 1, type: "submission", link: "https://docs.google.com/x", text: "" };
+  let d = { assignments: cfg.assignments, students: cfg.students, assignmentLog: { ex1: { "Ada Lovelace": [sub], "Bob Ross": [sub] } } };
+  d = placeCard(d, "ex1", "Ada Lovelace", "exceptional", 10);
+  d = placeCard(d, "ex1", "Bob Ross", "incomplete", 10);
+  d = writeCard(d, "ex1", "Ada Lovelace", { comment: "Sharp work.\n\nKeep going.", note: "mine" }, 11);
+  // Nothing reaches a student before release.
+  if (computeGrade(cfg, d, "Ada Lovelace").pct != null) say("a sorted card counted before release");
+  if (unseenGrades(cfg, d, "Ada Lovelace").length) say("a deck card showed before release");
+  d = releasePatch(d, "ex1", 20);
+  const ada = d.assignmentLog.ex1["Ada Lovelace"];
+  const g = ada[ada.length - 1];
+  if (ada[0] !== sub) say("release lost the submission");
+  if (g.type !== "grade" || g.letter !== "A" || g.score !== 100 || g.bucket !== "exceptional") say("exceptional did not release as an A worth 100: " + JSON.stringify(g));
+  if (!g.html || !g.html.includes("<p>Sharp work.</p>")) say("the comment did not ride on the grade: " + g.html);
+  if (g.html.includes("mine")) say("the private note reached the student");
+  if (computeGrade(cfg, d, "Ada Lovelace").pct !== 100) say("the average did not take the released grade");
+  const bob = computeGrade(cfg, d, "Bob Ross");
+  if (bob.pct !== 0 || bob.rows[0].letter !== "Incomplete") say("an Incomplete did not count as a zero: " + JSON.stringify(bob));
+  if (d.assignmentLog.ex1["Cy Twombly"]) say("an unsorted student got a log entry");
+  const deck = unseenGrades(cfg, d, "Ada Lovelace");
+  if (deck.length !== 1 || deck[0].letter !== "A" || !deck[0].comment.startsWith("Sharp")) say("the deck card is wrong: " + JSON.stringify(deck));
+  if (unseenGrades(cfg, markSeen(d, "ex1", "Ada Lovelace", 30), "Ada Lovelace").length) say("Got it did not clear the deck card");
+  if (changedSinceRelease(d.gradeBoard.ex1)) say("a fresh release reads as changed");
+  const moved = placeCard(d, "ex1", "Ada Lovelace", "b", 40);
+  if (!changedSinceRelease(moved.gradeBoard.ex1)) say("moving a card after release does not read as changed");
+  const again = releasePatch(moved, "ex1", 50);
+  const adaAgain = again.assignmentLog.ex1["Ada Lovelace"];
+  if (adaAgain.filter(e => e.type === "grade").length !== 1 || adaAgain[adaAgain.length - 1].letter !== "B") say("releasing again stacked a second grade");
+  const hid = hidePatch(again, "ex1");
+  if (hid.assignmentLog.ex1["Ada Lovelace"].length !== 1 || hid.assignmentLog.ex1["Ada Lovelace"][0] !== sub) say("hide did not take the grade back, or took the submission");
+  if (hid.gradeBoard.ex1.cards["Ada Lovelace"].bucket !== "b") say("hide unsorted the board");
+  if (computeGrade(cfg, hid, "Ada Lovelace").pct != null) say("a hidden grade still counts");
+  if (BUCKETS.find(b => b.id === "exceptional").letter !== "A") say("exceptional shows as something other than A");
+  // Both surfaces render, on the board just built.
+  warmClassData(cfg.storageKey, again);
+  try {
+    const html = renderToString(<GradeView config={cfg} />);
+    ["Not sorted yet", "Cy Twombly", "Hide grades", "Open their file", "Exceptional", "Incomplete"].forEach(t => { if (!html.includes(t)) say("the page never showed " + JSON.stringify(t)); });
+  } catch (err) { say("the page threw: " + err.message); }
+  try {
+    const html = renderToString(<GradeDeck config={cfg} items={unseenGrades(cfg, again, "Ada Lovelace")} onSeen={noop} onDone={noop} />);
+    ["Exercise 1", ">B<", "Got it", "Sharp work."].forEach(t => { if (!html.includes(t)) say("the deck never showed " + JSON.stringify(t)); });
+  } catch (err) { say("the deck threw: " + err.message); }
+  warmClassData(cfg0.storageKey, warmShapes(cfg0, true));
 }
 
 let failed = failedEarly;

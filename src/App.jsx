@@ -13,6 +13,7 @@ import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
 import AskPage from "./engine/AskPage.jsx";
+import GradeView from "./engine/GradeView.jsx";
 import PlanPage from "./PlanPage.jsx";
 import { ENGINE, currentClasses, archivedClasses } from "./config/registry.js";
 import InstructorLinks from "./InstructorLinks.jsx";
@@ -210,14 +211,22 @@ export default function App() {
   }
 
   // Live teaching surfaces: /<class>/dashboard (me), /<class>/today (the room
-  // screen), /<class>/ask (where the room screen's QR sends students).
-  const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask|board|game|rungame)\/?$/);
+  // screen), /<class>/ask (where the room screen's QR sends students),
+  // /<class>/grade (the class as cards, sorted into columns).
+  const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask|board|game|rungame|grade)\/?$/);
   if (live && ENGINE[live[1]]) {
     const cfg = ENGINE[live[1]];
     if (live[2] === "dashboard") {
       return (
         <InstructorGate what={cfg.code + " Dashboard"}>
           <Dashboard key={cfg.id} config={cfg} />
+        </InstructorGate>
+      );
+    }
+    if (live[2] === "grade") {
+      return (
+        <InstructorGate what={cfg.code + " grade view"}>
+          <GradeView key={cfg.id} config={cfg} />
         </InstructorGate>
       );
     }

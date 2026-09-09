@@ -2587,10 +2587,19 @@ export function AssignmentsPanel({ assignments, castNow, dismiss, liveLabel, pat
   return (
     <>
       {assignments.map(a => (
-        <Item key={a.id} kind={a.due && a.due !== "Ongoing" ? a.due : "Due"} kindColor={TEXT_MUTED} title={a.title}
-          sub={a.weight ? a.weight + "% of the grade" : ""}
-          live={liveLabel === a.title} onDismiss={dismiss}
-          onCast={() => castNow({ type: "reveal", stamp: "Assignment", title: a.title, due: "Due " + a.due, big: true, label: a.title })} />
+        <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Item kind={a.due && a.due !== "Ongoing" ? a.due : "Due"} kindColor={TEXT_MUTED} title={a.title}
+              sub={a.weight ? a.weight + "% of the grade" : ""}
+              live={liveLabel === a.title} onDismiss={dismiss}
+              onCast={() => castNow({ type: "reveal", stamp: "Assignment", title: a.title, due: "Due " + a.due, big: true, label: a.title })} />
+          </div>
+          {path ? (
+            <a className="dash-focus" href={path + "/grade?a=" + encodeURIComponent(a.id)} title={"Grade " + a.title + " in grade view"}
+              style={{ flex: "none", minHeight: HIT, padding: "0 10px", display: "inline-flex", alignItems: "center", borderRadius: 8,
+                fontFamily: F, fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY, textDecoration: "none", border: "1px solid " + BORDER_STRONG }}>Grade</a>
+          ) : null}
+        </div>
       ))}
     </>
   );

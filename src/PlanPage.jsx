@@ -47,6 +47,29 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep9b", date: "Wednesday, September 9", title: "Grade view: the class as cards, sorted into columns",
+    blurb: "Andrew is tired of deciding between a 91 and a 95. Grade view puts every student on a card, on a white page, one assignment at a time, and he drags each card into a column: Exceptional, A, B, C, D, Incomplete, F. Nothing reaches a student until he presses Release, and Hide takes all of the grades back at once.",
+    groups: [
+      { name: "What landed", items: [
+        ["The page", "At /<class>/grade, from the class menu under Teach, from the Assignments card, and from a Grade button on each assignment in the dashboard's Assignments panel, which opens the board on that assignment. The pile reads in the order the work came in. A card carries the name, a link to the file they turned in, the date and whether the work was late, the grade once sorted, and the comment. Cards drag between the pile and the seven columns, and a card can also be picked up with a tap and put down on a column, for a trackpad or a finger."],
+        ["Two boxes on a card", "Add a comment opens a comment to the student and a note to himself. The comment goes out with the grade on release. The note never leaves the page."],
+        ["Release, and Hide", "Release writes every sorted card into the student's assignment log as one grade, with the comment on the grade, and asks once first. Hide takes those entries back out and leaves the board sorted as it was. Moving a card after a release marks the board as changed, and the button reads Release again."],
+        ["The deck", "A released grade is a full-screen card the next time the student opens the class: the assignment, the letter, the comment, and Got it. One per assignment, and the site waits behind the stack. Got it writes a seen stamp, so the card comes round once."],
+        ["What the student sees", "The word, on the assignment card and in the log. Exceptional shows as an A. Incomplete shows as Incomplete and counts as a zero until the card moves, which Andrew chose. The numbers behind the other columns are 100, 95, 85, 75, 65 and 0, chosen so the You card's weighted average still adds up; he said he does not care what they are."],
+      ] },
+      { name: "Worth knowing", items: [
+        ["The board is one object in the class store", "gradeBoard[assignmentId] holds the cards, the release stamp and who has seen theirs. The grades the board writes are marked, so Hide and a second Release take out exactly what the board wrote and never a grade from the older grading flow or anything a student posted."],
+        ["The logic has a test", "Release, Hide, the Incomplete rule, the deck card and the seen stamp are asserted in the smoke run, and both surfaces render there on a board with three students."],
+      ] },
+    ],
+    note: {
+      title: "Committed, not deployed",
+      lines: [
+        "Built while Andrew was away, on his answers to four questions, then adjusted on three more. The page has not been used on a real class yet.",
+      ],
+    },
+  },
+  {
     id: "sep9", date: "Wednesday, September 9", title: "A reminder at the top of the dashboard",
     blurb: "Andrew asked for reminders built into the dashboard, and named the big one: inspire a love of learning in every student, and treat every student the way he would want his child treated. A band under the top bar carries the line now, on every class.",
     groups: [

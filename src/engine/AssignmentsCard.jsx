@@ -13,6 +13,7 @@
 import { useState, useRef } from "react";
 import { genId } from "../utils.jsx";
 import { draftFeedback, textToHtml } from "./feedback.js";
+import { gradeText } from "./grades.js";
 import * as TOKENS from "./tokens.js";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -47,8 +48,9 @@ export function computeGrade(config, data, name) {
   let earned = 0, weight = 0;
   const rows = assignments.map(asg => {
     const g = currentGrade(data?.assignmentLog?.[asg.id]?.[name] || []);
-    if (g) { earned += g.score * (asg.weight || 0); weight += (asg.weight || 0); }
-    return { id: asg.id, title: asg.title, weight: asg.weight || 0, score: g ? g.score : null };
+    // A grade with no score is skipped rather than read as zero.
+    if (g && g.score != null) { earned += g.score * (asg.weight || 0); weight += (asg.weight || 0); }
+    return { id: asg.id, title: asg.title, weight: asg.weight || 0, score: g ? g.score : null, letter: g?.letter || null };
   });
   return { pct: weight > 0 ? Math.round(earned / weight) : null, rows };
 }
@@ -88,7 +90,7 @@ function ungradedQueue(assignments, data, onlyAid) {
 
 // ─── dates ───
 function parseDue(s) { const d = s ? new Date(s + ", 2026") : null; return d && !isNaN(d) ? d : null; }
-function isLate(ts, due) { const d = parseDue(due); if (!d) return false; const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59); return ts > end.getTime(); }
+export function isLate(ts, due) { const d = parseDue(due); if (!d) return false; const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59); return ts > end.getTime(); }
 function fmtTime(ts) { try { return new Date(ts).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); } catch { return ""; } }
 function fmtClose(s) { try { return new Date(s).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); } catch { return s; } }
 function nextDueOf(assignments) {
@@ -197,7 +199,7 @@ function AssignmentLog({ asg, log, accent, studentName, actor, onLike, onDelete 
                     <div style={{ ...label, color: accent }}>Grade</div>
                     <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 2 }}>{fmtTime(e.ts)}</div>
                   </div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: accent, flexShrink: 0 }}>{e.score}/100</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: accent, flexShrink: 0 }}>{gradeText(e)}</div>
                 </div>
                 {asg.rubric?.length > 0 && e.rubric && (
                   <div style={{ marginTop: 8 }}>
@@ -307,7 +309,7 @@ function StudentAssignmentRow({ asg, accent, config, data, update, name }) {
       </div>
       {asg.description && <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 6 }}>{asg.description}</div>}
       {asg.instructionsUrl && <a href={asg.instructionsUrl} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 15, fontWeight: 600, color: accent }}>Assignment instructions</a>}
-      {grade && <div style={{ marginTop: 10, fontSize: 22, fontWeight: 700, color: accent }}>Grade: {grade.score}/100</div>}
+      {grade && <div style={{ marginTop: 10, fontSize: 22, fontWeight: 700, color: accent }}>Grade: {gradeText(grade)}</div>}
 
       <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid " + BORDER }}>
         <AssignmentLog asg={asg} log={log} accent={accent} studentName={name} actor={name} onLike={(eid) => appreciate(update, asg.id, name, eid, name)} />
@@ -385,6 +387,7 @@ function GradeHub({ config, data, assignments, onStart }) {
         <div><span style={{ fontSize: 22, fontWeight: 700, color: a }}>{all.length}</span> <span style={{ color: TEXT_SECONDARY }}>to grade</span></div>
         {all.length > 0 && <Btn accent={a} onClick={() => onStart(all)}>Grade all</Btn>}
       </div>
+      <a href={config.path + "/grade"} style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, fontSize: 15, fontWeight: 600, color: a, textDecoration: "none", marginBottom: 12 }}>Open grade view: sort the class into columns →</a>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {assignments.map(asg => {
           const total = Object.keys(data?.assignmentLog?.[asg.id] || {}).filter(n => logOf(data, asg.id, n).some(e => e.type === "submission")).length;
@@ -396,7 +399,10 @@ function GradeHub({ config, data, assignments, onStart }) {
                 <div style={{ fontWeight: 600, fontSize: 16 }}>{asg.title}</div>
                 <Muted>{total} submitted · {ungraded.length} to grade</Muted>
               </button>
-              {ungraded.length > 0 && <div style={{ paddingRight: 14, flexShrink: 0 }}><Btn accent={a} ghost onClick={() => onStart(ungraded)}>Grade ({ungraded.length})</Btn></div>}
+              <div style={{ paddingRight: 14, flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
+                <a href={config.path + "/grade?a=" + encodeURIComponent(asg.id)} style={{ fontSize: 15, fontWeight: 600, color: a, textDecoration: "none", minHeight: TAP, display: "inline-flex", alignItems: "center" }}>Grade view</a>
+                {ungraded.length > 0 && <Btn accent={a} ghost onClick={() => onStart(ungraded)}>Grade ({ungraded.length})</Btn>}
+              </div>
             </div>
           );
         })}

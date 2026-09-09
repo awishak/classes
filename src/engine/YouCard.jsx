@@ -271,14 +271,14 @@ function GradeBreakdown({ config, data, name, accent }) {
       {open ? (
         <div style={{ marginTop: 8, border: "1px solid " + BORDER, borderRadius: 12, overflow: "hidden" }}>
           {rows.map(r => {
-            const st = r.score == null ? dueState(assignmentDue(config, data, r.id)) : null;
+            const st = r.score == null && !r.letter ? dueState(assignmentDue(config, data, r.id)) : null;
             return (
               <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderTop: "1px solid " + BORDER, fontSize: 15 }}>
                 <span style={{ flex: 1, minWidth: 0, color: r.score == null ? TEXT_MUTED : TEXT_PRIMARY }}>{r.title}</span>
                 <span style={{ flex: "none", fontSize: 13, color: TEXT_MUTED }}>{r.weight}%</span>
                 <span style={{ flex: "none", minWidth: 74, textAlign: "right", fontWeight: 600,
                   color: r.score == null ? (st ? dueColor(st.tone) : TEXT_MUTED) : TEXT_PRIMARY }}>
-                  {r.score != null ? r.score + "/100" : (st ? st.text : "Not graded")}
+                  {r.letter ? r.letter : r.score != null ? r.score + "/100" : (st ? st.text : "Not graded")}
                 </span>
               </div>
             );

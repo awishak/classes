@@ -27,6 +27,8 @@ import * as TOKENS from "./tokens.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
 import { useSession, studentFor, myCode } from "./session.js";
+import GradeDeck from "./GradeDeck.jsx";
+import { unseenGrades, markSeen } from "./grades.js";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
 } from "./ThemeChrome.jsx";
@@ -473,6 +475,10 @@ export default function ClassApp({ config, initialCard }) {
   // Auto by default, and an override for anybody who wants one.
   const [mode, pickMode] = useDayNight(config);
   const [preview, setPreview] = useState("");
+  // The grade deck has been tapped through this visit. Held here rather than
+  // read back from the store, because a preview writes nothing and would
+  // otherwise sit behind the deck for ever.
+  const [deckDone, setDeckDone] = useState(false);
   // What the page draws as. The person is still the instructor; the page is
   // drawn the way the chosen student would get the page drawn.
   const view = preview ? "student" : role;
@@ -682,6 +688,7 @@ export default function ClassApp({ config, initialCard }) {
                 <a className="ca-focus" style={menuRow} href={config.path + "/today"}>Room screen</a>
                 <a className="ca-focus" style={menuRow} href={config.path + "/ask"}>Ask</a>
                 <a className="ca-focus" style={menuRow} href={config.path + "/rungame"}>Run the game</a>
+                <a className="ca-focus" style={menuRow} href={config.path + "/grade"}>Grade view</a>
                 {rule}
                 <div style={menuLabel}>Class</div>
                 <select className="ca-focus" value={config.id} aria-label="Class"
@@ -837,6 +844,19 @@ export default function ClassApp({ config, initialCard }) {
   if (!session) return <GoSignIn config={config} />;
   if (data !== null && !sessionInstructor && !me) return <NotInClass config={config} email={sessionEmail} onSignOut={signOut} />;
   if (data !== null && !sessionInstructor && me && signedIn !== me.name) return null;   // the effect is setting the name
+
+  // A released grade is a card the student reads before the site. One per
+  // assignment, and the site waits until every one has been tapped through.
+  const unseen = data !== null && view !== "instructor" && !deckDone ? unseenGrades(config, data, seenAs) : [];
+  if (unseen.length) {
+    return (
+      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a }}>
+        <ThemeStyle theme={theme} />
+        <style>{CSS}</style>
+        <GradeDeck config={config} items={unseen} onSeen={(aid) => write(prev => markSeen(prev, aid, seenAs))} onDone={() => setDeckDone(true)} />
+      </div>
+    );
+  }
 
   // ─── DESKTOP: top nav + side-by-side master/detail ───
   if (isDesktop) {
