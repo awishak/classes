@@ -33,7 +33,11 @@ export default function GradeParade({ config, data, name, accent, compact }) {
       {rows.map(r => {
         const letter = r.letter || (r.score != null ? letterOf(r.score) : null);
         const graded = !!letter;
-        const tile = { width: size, minHeight: size, borderRadius: compact ? 8 : 12, fontFamily: F, display: "flex", flexDirection: "column",
+        // A full tile grows to its title rather than cutting the title to fit:
+        // "Intersections Proposal" reads whole, on as many lines as the words
+        // need, and no word is ever broken in the middle.
+        const tile = { width: compact ? size : "auto", minWidth: size, maxWidth: compact ? size : 200, minHeight: size,
+          borderRadius: compact ? 8 : 12, fontFamily: F, display: "flex", flexDirection: "column",
           alignItems: "center", justifyContent: "center", textAlign: "center", padding: compact ? 0 : "8px 6px", boxSizing: "border-box",
           background: graded ? accent : SUNK, border: "1px solid " + (graded ? accent : LINE), color: graded ? "#fff" : TEXT_MUTED };
         if (compact) {
@@ -47,7 +51,7 @@ export default function GradeParade({ config, data, name, accent, compact }) {
           <div key={r.id} style={tile}>
             {graded ? <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em" }}>{short(letter)}</div> : null}
             <div style={{ fontSize: 13, fontWeight: graded ? 600 : 500, lineHeight: 1.25, marginTop: graded ? 6 : 0,
-              overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", wordBreak: "break-word" }}>{r.title}</div>
+              whiteSpace: "normal", overflowWrap: "normal", wordBreak: "keep-all", hyphens: "none" }}>{r.title}</div>
           </div>
         );
       })}
