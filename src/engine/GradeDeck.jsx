@@ -11,6 +11,7 @@
 // stamp so the same card never comes round twice.
 
 import { useState } from "react";
+import { schedulingLinkOf } from "../instructors.js";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -41,11 +42,13 @@ export default function GradeDeck({ config, items, onSeen, onDone, onMeeting, ch
 
   const card = stack[i];
   const gotIt = () => { onSeen?.(card.aid); if (i + 1 >= stack.length) onDone?.(); setI(i + 1); };
+  // The Calendly page, when the class has one. The button is a real link to
+  // that page, so the tap opens the calendar in a new tab the way a link does,
+  // and the same tap posts the request into the student's thread.
+  const scheduling = schedulingLinkOf(config);
   const meet = () => {
     onMeeting?.(card);
     setAsked(s => new Set([...s, card.aid]));
-    const link = config.instructor?.schedulingLink;
-    if (link) window.open(link, "_blank", "noopener,noreferrer");
   };
   const paragraphs = card.comment ? card.comment.split(/\n{2,}/).filter(Boolean) : [];
   const who = config.instructor?.name || "your instructor";
@@ -101,10 +104,12 @@ export default function GradeDeck({ config, items, onSeen, onDone, onMeeting, ch
 
           {/* ways on from here */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <a href={config.path + "/assignments"} style={ghost}>Open the assignment</a>
+            <a href={config.path + "/assignments#asg-" + encodeURIComponent(card.aid)} style={ghost}>Open the assignment</a>
             {asked.has(card.aid)
               ? <span style={{ fontSize: 15, fontWeight: 600, color: OK, minHeight: TAP, display: "inline-flex", alignItems: "center" }}>Meeting requested. Andrew will reply on your You card.</span>
-              : <button onClick={meet} style={ghost}>Make a meeting with {who.split(" ")[0]}</button>}
+              : scheduling
+                ? <a href={scheduling} target="_blank" rel="noreferrer" onClick={meet} style={ghost}>Make a meeting with {who.split(" ")[0]}</a>
+                : <button onClick={meet} style={ghost}>Make a meeting with {who.split(" ")[0]}</button>}
           </div>
         </section>
 

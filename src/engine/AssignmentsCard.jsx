@@ -10,7 +10,7 @@
 // Scored out of 100; weight is the percent of the final grade. Rubric criteria
 // sum to 100, or leave the rubric empty for a free-form score.
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { genId } from "../utils.jsx";
 import { draftFeedback, textToHtml } from "./feedback.js";
 import { gradeText } from "./grades.js";
@@ -268,6 +268,16 @@ export function AssignmentsDetail({ config, role, data, update, asStudent }) {
 function StudentAssignments({ config, data, update, name }) {
   const a = config.accent;
   const assignments = getAssignments(data, config);
+  // A link can point at one assignment: /<class>/assignments#asg-<id>. The
+  // rows are not on the page when the browser looks for the anchor, so the
+  // scroll happens here once they are.
+  useEffect(() => {
+    let hash = "";
+    try { hash = decodeURIComponent(window.location.hash.slice(1)); } catch { /* not a hash we wrote */ }
+    if (!hash.startsWith("asg-")) return;
+    const el = document.getElementById(hash);
+    if (el) el.scrollIntoView({ block: "start" });
+  }, [assignments.length]);
   return (
     <div>
       <div style={{ ...h2, marginBottom: 16 }}>Assignments</div>
@@ -302,7 +312,7 @@ function StudentAssignmentRow({ asg, accent, config, data, update, name }) {
   const hasSubmitted = log.some(e => e.type === "submission");
 
   return (
-    <div style={{ background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, padding: 18 }}>
+    <div id={"asg-" + asg.id} style={{ background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, padding: 18, scrollMarginTop: 80 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
         <div style={{ fontSize: 17, fontWeight: 600 }}>{asg.title}</div>
         <DueBadge due={asg.due} weight={asg.weight} />

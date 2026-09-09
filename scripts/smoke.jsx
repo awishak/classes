@@ -1938,6 +1938,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (!deckCard.link || !deckCard.means || !deckCard.gradedAt || !deckCard.submittedAt) say("the deck card is missing the file, the meaning or a time: " + JSON.stringify(deckCard));
     const html = renderToString(<GradeDeck config={cfg} items={[deckCard]} onSeen={noop} onDone={noop} onMeeting={noop} />);
     ["Exercise 1", ">B<", "Got it", "Sharp work.", "room to sharpen", "Open your file", "Open the assignment", "Make a meeting", "Graded "].forEach(t => { if (!html.includes(t)) say("the deck never showed " + JSON.stringify(t)); });
+    if (!html.includes('/assignments#asg-ex1"')) say("Open the assignment does not point at the assignment itself");
+    // With a calendar on the class, the meeting control is a link to the calendar.
+    const withCal = renderToString(<GradeDeck config={{ ...cfg, instructor: { name: "Andrew Ishak", schedulingLink: "https://calendly.com/x" } }} items={[deckCard]} onSeen={noop} onDone={noop} onMeeting={noop} />);
+    if (!withCal.includes('href="https://calendly.com/x"')) say("the meeting button does not open the calendar");
     const met = meetingPatch(again, "Ada Lovelace", "Exercise 1", 60);
     const msg = met.threads["Ada Lovelace"].slice(-1)[0];
     if (msg.kind !== "meeting" || msg.from !== "student" || !msg.text.includes("Exercise 1")) say("a meeting from the deck did not land in the thread: " + JSON.stringify(msg));

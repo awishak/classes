@@ -7,6 +7,7 @@ import { useState } from "react";
 import { genId } from "../utils.jsx";
 import { computeGrade } from "./AssignmentsCard.jsx";
 import GradeParade from "./GradeParade.jsx";
+import { schedulingLinkOf } from "../instructors.js";
 import * as TOKENS from "./tokens.js";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -288,7 +289,7 @@ function StudentYou({ config, data, update, asStudent, setAsStudent }) {
       <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
         <GhostBtn accent={a} onClick={() => status("got_it")}>Done</GhostBtn>
         <GhostBtn accent={a} onClick={() => status("confused")}>I'm confused</GhostBtn>
-        <GhostBtn accent={a} href={config.instructor?.schedulingLink || undefined} onClick={() => status("meeting")}>Make a meeting</GhostBtn>
+        <GhostBtn accent={a} href={schedulingLinkOf(config) || undefined} onClick={() => status("meeting")}>Make a meeting</GhostBtn>
       </div>
 
       <div style={{ marginTop: 22 }}>
