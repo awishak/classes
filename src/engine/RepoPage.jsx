@@ -31,7 +31,8 @@ import { ENGINE_LIST } from "../config/registry.js";
 import { typeOf, allTypes, registerTypes, SHARED_KEY, SHARED_LABEL, makeBlock, writeBlock,
   deleteBlock, stampScheduled, todayStamp } from "./blocks.js";
 import { colorOfType, readColors, writeTypeColor } from "./colors.js";
-import { InstructorNavRow } from "./InstructorNav.jsx";
+import TopNav, { NAV_TEACH } from "./TopNav.jsx";
+import { lastClass } from "./InstructorNav.jsx";
 import { readTypes, readAdded, readLabels, addType, renameType, resetName, dropType,
   countTypes, orphanTypes } from "./types.js";
 import { FLAGS, carries, healthCounts, allClear } from "./health.js";
@@ -724,7 +725,7 @@ export default function RepoPage() {
   if (!stores) {
     return (
       <div style={{ minHeight: "100vh", background: BG, fontFamily: F }}>
-        <InstructorNavRow here="repo" focusClass="repo-focus" />
+        <TopNav config={lastClass()} tabs={NAV_TEACH} active="repo" />
         <div style={{ display: "grid", placeItems: "center", padding: "120px 20px", color: MUTED }}>Reading everything…</div>
       </div>
     );
@@ -748,7 +749,7 @@ export default function RepoPage() {
             dashboard. The pair of back-links that used to sit inside the title
             row went with them: one of the two only appeared if I had arrived
             from a dashboard, and neither reached the class page. */}
-        <InstructorNavRow here="repo" focusClass="repo-focus" />
+        <TopNav config={lastClass()} tabs={NAV_TEACH} active="repo" />
         <div className="repo-head-in">
           <a href="/" className="repo-back">← All classes</a>
           <h1 className="repo-title">Repository</h1>

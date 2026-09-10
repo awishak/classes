@@ -29,6 +29,7 @@ import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker }
 import { useSession, studentFor, myCode } from "./session.js";
 import GradeDeck from "./GradeDeck.jsx";
 import { unseenGrades, markSeen, meetingPatch } from "./grades.js";
+import TopNav, { NAV_STUDENT, NAV_TEACH, tabHref } from "./TopNav.jsx";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
 } from "./ThemeChrome.jsx";
@@ -88,19 +89,6 @@ const CSS = `
 // actually moves between is the class page, the dashboard and the repository.
 // So on his phone the bottom bar carries those instead — which is where the
 // three doors belong on a phone, rather than in a strip above the fold.
-const NAV = [
-  { id: "home", label: "Home", card: null },
-  { id: "schedule", label: "Schedule", card: "schedule" },
-  { id: "assignments", label: "Assignments", card: "assignments" },
-  { id: "community", label: "Community", card: "community" },
-  { id: "more", label: "More", card: "more" },
-];
-const NAV_TEACH = [
-  { id: "home", label: "Home", card: null },
-  { id: "dashboard", label: "Dashboard", suffix: "/dashboard" },
-  { id: "repo", label: "Repository", href: "/repo" },
-  { id: "more", label: "More", card: "more" },
-];
 const NAV_CARDS = new Set(["schedule", "assignments", "community"]);
 
 // ─────────────────────────────────────────────────────────────
@@ -574,7 +562,7 @@ export default function ClassApp({ config, initialCard }) {
   // without opening More. An instructor's tabs hold no cards at all, so every
   // card is under More for him — Schedule and Assignments did not disappear,
   // they went back to being cards like the rest.
-  const navTabs = view === "instructor" ? NAV_TEACH : NAV;
+  const navTabs = view === "instructor" ? NAV_TEACH : NAV_STUDENT;
   const tabCards = new Set(navTabs.map(n => n.card).filter(k => k && NAV_CARDS.has(k)));
   const moreCards = enabledCards.filter(k => !tabCards.has(k));
 
@@ -845,7 +833,7 @@ export default function ClassApp({ config, initialCard }) {
   // A tab is either a card on this page or a door to another surface. Both
   // wear the same shape, because to the person pressing them they are the same
   // kind of thing.
-  const tabTo = (n) => n.href || (n.suffix ? config.path + n.suffix : null);
+  const tabTo = (n) => tabHref(config, n);
   const tabStyle = (on) => ({
     fontSize: 15, fontWeight: on ? 600 : 500, color: on ? a : TEXT_SECONDARY, padding: "0 12px", minHeight: TAP,
     display: "inline-flex", alignItems: "center", borderRadius: 8, cursor: "pointer", border: "none",
@@ -903,20 +891,17 @@ export default function ClassApp({ config, initialCard }) {
         <ThemeTopper theme={theme} lines={tickerLines} seed={(seenAs || "").length + (config.code || "").length} />
         <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
         {PreviewBar}
-        <div style={{ background: "var(--surface-card)", borderBottom: "1px solid " + BORDER }}>
-          <div style={{ maxWidth: 1240, margin: "0 auto", padding: "14px 20px", display: "flex", alignItems: "center", gap: 20 }}>
-            {Logo}
-            <ThemeIdentity theme={theme} points={myPoints} />
-            {Nav}
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+        {/* The same bar the dashboard and the repository wear — literally the
+            same component, so the three cannot drift apart again. The theme's
+            own trimmings ride in its right-hand slot. */}
+        <TopNav config={config} tabs={navTabs} active={activeNav} onPick={go}
+          right={
+            <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <ThemeIdentity theme={theme} points={myPoints} />
               <ThemeBadge theme={theme} points={myPoints} />
               {HeaderMenu}
-            </div>
-          </div>
-        </div>
-        {/* The three doors. Same strip, same order, same place on the
-            dashboard and the repository. Instructor only: a student has no
-            dashboard and no repository to go to. */}
+            </span>
+          } />
         </div>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 24, alignItems: "start" }}>
           <div style={{ maxWidth: CARD_MAX * 2 + 12 }}>

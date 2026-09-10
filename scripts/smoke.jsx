@@ -85,6 +85,8 @@ import GradeParade from "../src/engine/GradeParade.jsx";
 import { computeGrade } from "../src/engine/AssignmentsCard.jsx";
 import { sectionsOf } from "../src/engine/dayplan.js";
 import { dayTitles } from "../src/engine/days.js";
+import { SHELVES, shelfOf } from "../src/engine/Drawer.jsx";
+import TermOutline from "../src/engine/TermOutline.jsx";
 import { SHARED_KEY } from "../src/engine/blocks.js";
 import { DEFAULT_REPO_FONTS } from "../src/engine/fonts.js";
 
@@ -1041,7 +1043,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
       // Only the strip's own markup. The class page marks the open card with
       // aria-current too, so counting across the whole page counts that.
       const strip = (html.split('aria-label="Teaching surfaces"')[1] || "").split("</nav>")[0];
-      for (const door of ["Class page", "Dashboard", "Repository"]) {
+      for (const door of ["Home", "Dashboard", "Repository"]) {
         if (!strip.includes(door)) {
           console.error(`  FAIL  ${where}: the strip has no way through to ${door}`); failedEarly++; }
       }
@@ -1572,32 +1574,38 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   }
   if (whenLabel("") !== "" || whenLabel(null) !== "") say("the date slot prints something on a thing placed on no day");
 
-  // Three columns, then two, then one. Andrew asked for the first two columns
-  // at a window of 800. A server render cannot run a media query, so the thing
-  // worth testing is the arithmetic: the bands have to tile the whole range
-  // with no gap and no width where two of them fight.
-  const bands = [...src.matchAll(/@media ([^{]*?)\{\s*\.dash-stage\{grid-template-columns:([^!]*)!important/g)]
+  // Two columns, then one. The stage was three — Materials, the day, the room
+  // — which made the day the narrowest thing on a screen that exists to run
+  // the day, and split finding a thing from putting it up across opposite
+  // edges. Now the day takes everything the rail does not.
+  //
+  // A server render cannot run a media query, so what is worth testing is the
+  // arithmetic: the wide default and the narrow band must not disagree, and
+  // below the break there must be no seam left pointing at a column that is
+  // no longer beside anything.
+  const wide = /const gridFor = \(cols, railOpen, teaching\) =>\s*\n?\s*\(railOpen && !teaching \? "minmax\(0,1fr\) 16px " \+ cols\.live \+ "px" : "minmax\(0,1fr\)"\)/.test(src);
+  if (!wide) say("the wide stage is no longer the day plus one rail");
+
+  const bands = [...src.matchAll(/@media ([^{]*?)\{[^@]*?\.dash-stage\{grid-template-columns:([^!]*)!important/g)]
     .map(m => {
       const q = m[1];
       const max = /max-width:(\d+)px/.exec(q), min = /min-width:(\d+)px/.exec(q);
       return { lo: min ? +min[1] : 0, hi: max ? +max[1] : Infinity, cols: m[2].trim() };
     });
-  if (bands.length !== 2) say(`the stage has ${bands.length} width bands, not the two that sit under the three-column default`);
+  if (bands.length !== 1) say(`the stage has ${bands.length} narrow bands, want exactly 1`);
   else {
-    const two = bands.find(b => b.lo <= 800 && 800 <= b.hi);
-    const one = bands.find(b => b !== two);
-    if (!two) say("a window of 800 falls through every band, so the stage keeps the three-column default");
-    else if (two.cols.split(/\s+(?![^(]*\))/).length < 3)
-      say(`at 800 the stage is "${two.cols}", which is not two columns and a seam`);
-    if (two && one && one.hi + 1 !== two.lo)
-      say(`the bands leave a gap: one column ends at ${one.hi} and two columns start at ${two.lo}`);
-    if (two && one && one.hi >= two.lo)
-      say(`the bands overlap between ${two.lo} and ${one.hi}, so two rules fight over the same window`);
+    const b = bands[0];
+    if (b.cols.split(/\s+(?![^(]*\))/).length !== 1)
+      say(`below ${b.hi} the stage is "${b.cols}", which is not a single column`);
+    if (b.hi !== 1240) say(`the stage stops being two columns at ${b.hi}, not 1240`);
+    // The rail has to actually go somewhere when the stage stops making room
+    // for it, or it lands under the day at 400px and wastes the width.
+    if (!/\.dash-room\{grid-column:1\/-1\}/.test(src))
+      say("below the break the rail does not take the full width");
   }
-  if (!/\.dash-seam\[data-which="live"\]\{display:none\}/.test(src))
-    say("the live seam is still drawn below 1240, where there is no column on the far side of it");
+  if (!/@media \(max-width:1240px\)\{[^@]*?\.dash-seam\{display:none\}/.test(src))
+    say("a seam is still drawn below 1240, where there is no column on the far side of it");
   if (!src.includes('data-which={which}')) say("the seam no longer says which column it resizes");
-  if (!/"--mat": cols\.material/.test(src)) say("the stage no longer publishes the width the material column was dragged to");
 
   const railStart = src.indexOf("function Rail({");
   const railFn = src.slice(railStart, src.indexOf("\n}", railStart));
@@ -2128,6 +2136,104 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // A title that is only whitespace is not a title.
   const blank = Object.fromEntries(sectionsOf(cfg, { sequenceId: "__freeform", slots: { x: { title: "   ", items: [{ id: "a" }] } } }));
   if (blank.x !== "Section 1") say("a whitespace title should be treated as no title, got " + JSON.stringify(blank.x));
+}
+
+// The drawer's three shelves, against every kind that actually exists.
+//
+// Media / Activities / Notes only works if every kind lands on exactly one
+// shelf. A kind that lands on none is a block that cannot be found from the
+// dashboard at all, which is the failure nobody would notice until they went
+// looking for a podcast during class.
+{
+  const say = (msg) => { console.error("  FAIL  drawer shelves: " + msg); failedEarly++; };
+  const kinds = ["note", "link", "story", "activity", "question", "assignment", "board", "set",
+    "video", "podcast", "book-chapter", "quote", "book", "post", "image", "study", "broadcast", "slides", "other"];
+  kinds.forEach(k => {
+    const hits = SHELVES.filter(s => s.holds(k)).map(s => s.id);
+    if (hits.length !== 1) say(`"${k}" lands on ${hits.length} shelves (${hits.join(", ") || "none"}), want exactly 1`);
+  });
+  // And the ones with an obvious home are in it.
+  const where = (k) => shelfOf(k);
+  [["link", "media"], ["video", "media"], ["podcast", "media"], ["book-chapter", "media"],
+   ["study", "media"], ["broadcast", "media"], ["slides", "media"], ["image", "media"],
+   ["activity", "activities"], ["board", "activities"],
+   ["note", "notes"], ["story", "notes"]].forEach(([k, want]) => {
+    if (where(k) !== want) say(`"${k}" should be on ${want}, is on ${where(k)}`);
+  });
+  // Every shelf can make something, and what it makes belongs to it.
+  SHELVES.forEach(s => {
+    if (!s.make) say(s.id + " has nothing New can make");
+    else if (shelfOf(s.make) !== s.id) say(`New on ${s.id} makes a "${s.make}", which files to ${shelfOf(s.make)}`);
+  });
+}
+
+// The whole term, both ways of reading it.
+//
+// It is a popup over the day, so nothing else on the dashboard renders it and
+// it would otherwise go untested until it threw in front of a class. Both
+// views get a real eleven-week shape with a built day, an empty day, a
+// nameless section and an assignment due.
+{
+  const say = (msg) => { console.error("  FAIL  the whole term: " + msg); failedEarly++; };
+  const weeks = [
+    { id: "w1", topic: "Week one", dates: ["Sep 21", "Sep 23", "Sep 25"], items: [{ type: "reading" }, { type: "reading" }] },
+    { id: "w2", topic: "", dates: ["Sep 28", "Sep 30"], items: [] },
+  ];
+  const plans = { "Sep 21": { sequenceId: "__freeform", done: ["r1"], slots: {
+    "sec-a": { title: "Introduction", items: [
+      { id: "r1", text: "Wear a 49ers helmet" },
+      { id: "r2", blockId: "b1" },
+    ] },
+    "sec-b": { items: [{ id: "r3", text: "A row in a nameless section" }] },
+  } } };
+  const block = { id: "b1", type: "link", title: "Are You Not Entertained?", url: "https://www.theatlantic.com/x", headline: "" };
+  const props = { config: cfg0, weeks, plans, assignments: [{ due: "Sep 30", title: "Interview Assignment" }],
+    day: "Sep 21", onPick: noop, onClose: noop, onWeekTopic: noop, onDayTitle: noop,
+    blockOf: (id) => (id === "b1" ? block : null) };
+
+  for (const view of ["outline", "map"]) {
+    try {
+      const raw = renderToString(<TermOutline {...props} startView={view} />);
+      // A sentence built from several expressions comes back with comment
+      // markers between them — "1<!-- --> of <!-- -->3 done" — so a plain
+      // includes() for the sentence fails on markup that is perfectly correct.
+      const html = raw.replace(/<!-- -->/g, "");
+      if (!html.includes(cfg0.name)) say(`${view}: the panel does not name the class`);
+      if (!html.includes("Sep 21")) say(`${view}: today is missing`);
+      if (!html.includes("Introduction")) say(`${view}: a named section is missing`);
+      // The nameless one still has to say something, and it must be the same
+      // words the day itself uses for it.
+      if (!/Section \d+/.test(html)) say(`${view}: a nameless section shows nothing at all`);
+      if (view === "outline") {
+        // One day of the five has rows on it, and one of its three is done.
+        if (!html.includes("1 of 3 done")) say("outline: the day does not say how far through it is");
+        if (!html.includes("1 of 5 days built")) say("outline: the header count is wrong");
+        if (!html.includes("Interview Assignment due")) say("outline: an assignment due date never shows");
+        if (!html.includes("2 on the week")) say("outline: what a week is carrying is not counted");
+        // An open day is the day, row for row — section headers alone were a
+        // summary of a summary, and the Map is where a day is a count.
+        if (!html.includes("Wear a 49ers helmet")) say("outline: an open day is not showing its rows");
+        if (!html.includes("Are You Not Entertained?")) say("outline: a row backed by a block shows nothing");
+        if (!html.includes("theatlantic.com")) say("outline: a row does not say where it came from");
+        if (!html.includes("A row in a nameless section")) say("outline: a nameless section hides its rows");
+        // Every day is nameable, not just every week.
+        if (!/term-dtitle/.test(html)) say("outline: a day cannot be named");
+        if ((html.match(/term-dtitle/g) || []).length < 3) say("outline: not every day of the open week can be named");
+      }
+      // And the Map stays a count: it must NOT print the rows.
+      if (view === "map") {
+        if (html.includes("Wear a 49ers helmet")) {
+          say("map: rows leaked into the map, which is meant to be section titles only");
+        }
+        // But it must say what each day is CALLED. A map of dates is not a map.
+        if (!html.includes("term-celltitle")) say("map: no day carries its title");
+        if (!html.includes("Week one")) say("map: a day is not showing the title it inherits");
+      }
+      if (view === "map" && !html.includes("empty")) say("map: an empty day is not marked as one");
+    } catch (err) {
+      say(view + ": " + err.message);
+    }
+  }
 }
 
 let failed = failedEarly;

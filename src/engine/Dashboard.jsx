@@ -24,7 +24,7 @@ import { useHeadlines } from "./headlines.js";
 import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay, dayTitles } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
-import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections } from "./dayplan.js";
+import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections, blankDay } from "./dayplan.js";
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, makeBlock } from "./blocks.js";
 import { MEDIA_ACCEPT, mediaLabel, sizeLabel } from "./media.js";
 import { useUpload } from "./Attach.jsx";
@@ -38,7 +38,9 @@ import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, s
 import { genId } from "../utils.jsx";
 import * as TOKENS from "./tokens.js";
 import { REMINDERS } from "./reminders.js";
-import { InstructorNavRow } from "./InstructorNav.jsx";
+import TopNav, { NAV_TEACH } from "./TopNav.jsx";
+import Drawer, { DRAWER_CSS } from "./Drawer.jsx";
+import TermOutline, { TERM_CSS } from "./TermOutline.jsx";
 
 // Six items at 38px, plus the padding: the tallest a row menu gets. The flip
 // measures against this rather than against the menu that is about to open,
@@ -116,23 +118,18 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
    In every band Live goes full width UNDER the flow rather than away. The room
    preview is the one thing on this screen that must never be the thing hidden
    to make room. */
+/* Below this the rail cannot hold a reading title beside the day, so it stops
+   being a rail: it goes full width under the day and lays itself out sideways,
+   the screen next to the drawer instead of above it. */
 @media (max-width:1240px){
+  .dash-stage{grid-template-columns:minmax(0,1fr)!important}
+  .dash-seam{display:none}
   .dash-room{grid-column:1/-1}
   .dash-room .dash-room-body{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,1fr);gap:12px;align-items:start}
   .dash-rail{position:static!important;max-height:none!important}
   .dash-rail-body{overflow:visible;max-height:none}
-  .dash-seam[data-which="live"]{display:none}}
-/* Two: Materials beside the day plan. The material column keeps the width I
-   dragged it to, capped at a third of the window so the plan never ends up the
-   narrower of the two. */
-@media (max-width:1240px) and (min-width:720px){
-  .dash-stage{grid-template-columns:clamp(200px,var(--mat,300px),33vw) 16px minmax(0,1fr)!important}
-  .dash-stage[data-rail="shut"],.dash-stage[data-teach="on"]{grid-template-columns:minmax(0,1fr)!important}}
-/* One. Below this a two-column split leaves neither column able to hold a
-   reading title, so Materials goes above the plan. */
+  .dash-drawer{max-height:none!important}}
 @media (max-width:719px){
-  .dash-stage{grid-template-columns:minmax(0,1fr)!important}
-  .dash-seam{display:none}
   .dash-room .dash-room-body{grid-template-columns:minmax(0,1fr)}}
 /* Each column says what it is. Three columns that look alike need naming once
    at the top, not explaining every time. Quiet enough to disappear after the
@@ -196,50 +193,63 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 /* One rhythm down the whole flow, so the eye can run the list instead of
    measuring each row. A calendar reads well because every entry is the same
    shape and the colour is on one edge. */
-.flow-row{display:flex;align-items:center;gap:11px;min-height:var(--row-h);flex-wrap:wrap;
-  padding:2px 10px 2px 8px;border-radius:12px;cursor:grab;color:#fff;
-  background:var(--row,#5b6068);transition:filter .13s,box-shadow .13s;position:relative}
-/* A nested row draws the elbow back to the row it sits under, so the outline
-   reads as an outline rather than as a row that drifted right. */
+/* THE CALL SHEET.
+   Every row used to be a solid bar of its kind's colour. Seven of them stacked
+   read as a chart rather than as a running order, and with everything shouting
+   the one row that actually mattered — the thing on the projector — had only a
+   ring to distinguish it from six other loud things.
+   So the rows go quiet: a hairline between them, ink on paper, and the kind
+   said in a word in its own colour rather than painted across the whole row.
+   Colour stops being decoration and goes back to meaning something. */
+.flow-row{display:flex;align-items:center;gap:14px;min-height:var(--row-h);flex-wrap:wrap;
+  padding:2px 4px;border-radius:0;cursor:grab;color:${TEXT_PRIMARY};
+  background:none;border-bottom:1px solid ${BORDER};
+  transition:background .13s,box-shadow .13s;position:relative}
 .flow-nested::before{content:"";position:absolute;left:-17px;top:-6px;bottom:50%;width:9px;
   border-left:2px solid rgba(23,19,16,.18);border-bottom:2px solid rgba(23,19,16,.18);
   border-bottom-left-radius:6px}
-.flow-row:hover{background:color-mix(in srgb,#fff 12%,var(--row,#5b6068))}
-@supports not (color:color-mix(in srgb,red 10%,#fff)){.flow-row:hover{opacity:.9}}
-/* Selected, up on the screen, or next. Each is a ring rather than a fill,
-   because the fill is already saying what the row is. */
-.flow-row.picked{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--dash-accent)}
-.flow-row.live{box-shadow:0 0 0 2px #fff,0 0 0 4px ${LIVE}}
-.flow-row.next{box-shadow:0 0 0 2px #fff,0 0 0 3px var(--dash-accent)}
-.flow-row.over{box-shadow:inset 0 3px 0 #fff}
-.flow-row.done{background:color-mix(in srgb,#fff 74%,var(--row,#5b6068))}
-.flow-row.done:hover{background:color-mix(in srgb,#fff 66%,var(--row,#5b6068))}
-@supports not (color:color-mix(in srgb,red 10%,#fff)){.flow-row.done{opacity:.42}}
-/* A row with its menu open sits above the rows after it. */
+.flow-row:hover{background:${SURFACE_2}}
+/* ON THE SCREEN RIGHT NOW: the one filled row on the page. It can afford to be
+   the only one, because everything around it is white. */
+/* The row keeps its size. It was growing three points and going semibold when
+   it went up, which shoved every row below it down the page at the exact
+   moment I am reading the list, and made the day reflow on every cast. The
+   tint, the spine and a chip that says so are plenty. */
+.flow-row.live{background:#fff1f2;box-shadow:inset 4px 0 0 ${LIVE};border-bottom-color:transparent;
+  border-radius:12px;padding-left:8px}
+.flow-row.live .flow-num{color:${LIVE};font-weight:600}
+.flow-onair{flex:none;display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;
+  background:${LIVE};color:#fff;font-family:${MONO};font-size:13px;font-weight:600;letter-spacing:.08em}
+.flow-onair::before{content:"";width:7px;height:7px;border-radius:50%;background:#fff}
+.flow-row.picked{background:${SURFACE_2};box-shadow:inset 3px 0 0 var(--dash-accent)}
+.flow-row.next .flow-num{color:var(--dash-accent);font-weight:600}
+.flow-row.over{box-shadow:inset 0 2px 0 var(--dash-accent)}
+.flow-row.done .flow-words{text-decoration:line-through;text-decoration-thickness:1.5px;color:${TEXT_MUTED}}
+.flow-row.done .flow-num{color:${OK}}
 .flow-row[data-menu="1"]{z-index:70}
-/* The number carries the colour of what the row is, filled rather than as a
-   stub on the edge — one chip per kind, the same chip everywhere it appears. */
-/* The number sits on the bar rather than carrying the colour itself. */
-.flow-num{flex:none;width:25px;height:25px;border-radius:8px;display:inline-flex;
-  align-items:center;justify-content:center;font-family:${MONO};font-size:12px;font-weight:600;
-  color:#fff;font-variant-numeric:tabular-nums;border:none;cursor:pointer;padding:0;
-  background:rgba(255,255,255,.22)!important;transition:transform .12s,background .12s}
-.flow-num:hover{transform:scale(1.12);background:rgba(255,255,255,.36)!important}
-.flow-row.done .flow-num{color:#fff}
-.flow-row.done .flow-words{text-decoration:line-through;text-decoration-thickness:1.5px;opacity:.85}
-.flow-main{flex:1 1 140px;min-width:0;display:flex;flex-direction:column;gap:1px;padding:4px 0}
+/* A numeral, not a chip. Tabular so the column of them lines up. */
+.flow-num{flex:none;width:30px;height:30px;display:inline-flex;
+  align-items:center;justify-content:center;font-family:${MONO};font-size:13px;font-weight:500;
+  color:${TEXT_MUTED};font-variant-numeric:tabular-nums;border:none;cursor:pointer;padding:0;
+  border-radius:8px;background:none!important;transition:background .12s,color .12s}
+.flow-num:hover{background:rgba(23,19,16,.06)!important;color:${TEXT_PRIMARY}}
+/* The words and where they came from, on one line. The source used to hang
+   under the title on a line of its own, which gave every row with a link two
+   lines and broke the one rhythm the day is supposed to have. */
+.flow-main{flex:1 1 140px;min-width:0;display:flex;align-items:baseline;gap:9px;padding:4px 0;flex-wrap:wrap}
+.flow-main .flow-words{flex:0 1 auto;width:auto}
 .flow-words{display:block;width:100%;font-size:var(--words,16px);line-height:1.35;letter-spacing:-.006em;
-  overflow-wrap:anywhere;background:none;border:none;padding:0;text-align:left;cursor:pointer;color:#fff;
+  overflow-wrap:anywhere;background:none;border:none;padding:0;text-align:left;cursor:pointer;color:${TEXT_PRIMARY};
   font-family:var(--font-row,${F});font-weight:var(--row-weight,400)}
-.flow-src{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;font-size:12px;
-  color:rgba(255,255,255,.88);text-decoration:none;border-radius:999px;padding:1px 7px;
-  background:rgba(255,255,255,.18);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.flow-src:hover{background:rgba(255,255,255,.3);color:#fff}
-/* The tools ride on the bar, so they are white on the colour rather than
-   bordered boxes fighting it. */
-.flow-row .flow-tools button{background:rgba(255,255,255,.18)!important;border-color:transparent!important;
-  color:#fff!important}
-.flow-row .flow-tools button:hover{background:rgba(255,255,255,.34)!important}
+/* What the row IS, in a word, in its kind's colour. This is where the colour
+   went when it came off the row. --ink is the swatch darkened to carry as text
+   on white, which is what check-contrast measures. */
+.flow-kind{flex:none;font-family:${MONO};font-size:13px;font-weight:500;
+  color:var(--ink,${TEXT_MUTED});white-space:nowrap}
+.flow-src{flex:none;display:inline-flex;align-items:center;gap:4px;font-size:13px;
+  color:${TEXT_SECONDARY};text-decoration:none;border-radius:999px;padding:1px 7px;
+  background:${SURFACE_2};max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flow-src:hover{background:rgba(23,19,16,.08);color:${TEXT_PRIMARY}}
 /* My note under a reading. Quiet until there is one, and indented to the
    width of the number chip so it hangs off the thing it is about. */
 .dash-note{display:block;width:100%;text-align:left;background:none;
@@ -340,26 +350,72 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-tools{display:flex;gap:4px;flex:none;opacity:0;transition:opacity .12s}
 .flow-row:hover .flow-tools,.flow-row:focus-within .flow-tools,.flow-row.live .flow-tools,
 .flow-row.picked .flow-tools{opacity:1}
-/* The heading recedes. Colour on this screen means live or means press me, and
-   a heading is neither. */
-.flow-sec{display:flex;flex-direction:column;gap:1px;padding-top:18px;position:relative;
-  padding-left:13px;border-radius:12px}
-.flow-sec::before{content:"";position:absolute;left:3px;top:24px;bottom:6px;width:3px;border-radius:2px;
-  background:var(--sec);opacity:.5}
-.flow-sec:hover::before{opacity:.95}
-/* A section heads the rows under it, so it is a bar like the rows rather than
-   a chip, which was a third visual language sitting between the cards and the
-   coloured bars. */
-/* Two full-colour bars stacked is a wall. The rows carry the fill, so the
-   header is a plain rule with the section colour in the words, which reads as
-   a heading rather than as a second row. */
-.flow-sec-head{display:flex;align-items:center;gap:6px;margin:0 0 6px;padding:0 4px 6px 0;
-  min-height:32px;border-bottom:1px solid rgba(23,19,16,.09)}
-.flow-name{flex:0 1 auto;min-width:0;background:none;border:none;padding:3px 6px;border-radius:7px;
-  cursor:text;font-family:var(--font-sec,${F});font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--sec);
-  text-transform:uppercase;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.flow-name:hover{background:rgba(23,19,16,.05)}
-.flow-tally{flex:none;font-family:${MONO};font-size:11.5px;font-weight:500;color:#8a9098}
+/* A SECTION IS STRUCTURE, NOT A CAPTION.
+   It used to be 13px uppercase in the section's colour, which read as a label
+   stuck above some rows rather than as the thing the rows belong to. Andrew's
+   words: section headers are almost an afterthought.
+   Now it is a heading: a mono numeral, the name at 20px, and a 2px rule the
+   rows hang off. The ladder down the page is 26 day / 20 section / 16 row /
+   13 meta, and each step is doing a different job. */
+.flow-sec{display:flex;flex-direction:column;gap:0;padding-top:26px;position:relative;border-radius:12px}
+.flow-sec-head{display:flex;align-items:flex-end;gap:12px;margin:0 0 2px;padding:0 4px 9px 0;
+  min-height:34px;border-bottom:2px solid ${TEXT_PRIMARY}}
+.flow-sec-n{flex:none;width:30px;font-family:${MONO};font-size:14px;font-weight:600;
+  color:var(--sec,var(--dash-accent));line-height:1;font-variant-numeric:tabular-nums}
+.flow-name{flex:0 1 auto;min-width:0;background:none;border:none;padding:2px 6px;border-radius:7px;
+  cursor:text;font-family:var(--font-sec,${F});font-size:20px;font-weight:600;letter-spacing:-.018em;
+  color:${TEXT_PRIMARY};line-height:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flow-name:hover{background:${SURFACE_2}}
+/* A section with no name of its own is called Section N. It says so in grey
+   rather than in ink, so the page shows at a glance which ones Andrew has
+   actually named — and the words themselves are the invitation to name it,
+   which is why there is no button next to them. */
+.flow-name[data-unnamed="1"]{color:${TEXT_MUTED};font-weight:500}
+.flow-tally{flex:none;font-family:${MONO};font-size:13px;font-weight:500;color:${TEXT_MUTED};
+  line-height:1;padding-bottom:2px}
+/* A folded section keeps its header and says what is inside, so folding one
+   leaves a summary rather than a hole. */
+.flow-sec[data-fold="1"] .flow-sec-head{border-bottom-color:${BORDER_STRONG}}
+.flow-sec[data-fold="1"] .flow-name{color:${TEXT_SECONDARY}}
+.flow-folded{display:flex;align-items:center;gap:8px;padding:9px 4px 2px 42px;
+  font-family:${F};font-size:14px;color:${TEXT_MUTED};line-height:1.4;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Move the whole section, and fold it. Three 30px controls, quiet until the
+   pointer is on the section. */
+.flow-secmove{flex:none;display:flex;gap:2px;margin-bottom:-7px}
+.flow-secmove button{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid ${BORDER_STRONG};background:#fff;border-radius:8px;cursor:pointer;color:${TEXT_SECONDARY};
+  font-size:12px;padding:0;line-height:1}
+.flow-secmove button:hover{background:${SURFACE_2};color:${TEXT_PRIMARY}}
+.flow-secmove button:disabled{border-color:transparent;background:none;color:${TOKENS.LINE.ghost};cursor:default}
+/* The foot of the day. */
+.flow-addsec{display:flex;align-items:center;gap:12px;width:100%;margin-top:22px;min-height:44px;
+  padding:0 4px;border:none;border-top:1px dashed ${BORDER_STRONG};background:none;cursor:pointer;
+  font-family:${F};text-align:left}
+.flow-addsec:hover .flow-addsec-w{color:${TEXT_PRIMARY}}
+.flow-addsec-n{flex:none;width:30px;font-family:${MONO};font-size:14px;font-weight:600;color:${TOKENS.LINE.ghost}}
+.flow-addsec-w{flex:1 1 auto;font-size:14px;color:${TEXT_MUTED}}
+.flow-addsec-p{flex:none;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:8px;font-size:16px;color:${TEXT_MUTED}}
+.flow-addsec:hover .flow-addsec-p{background:${SURFACE_2};color:${TEXT_PRIMARY}}
+/* Planning, folded away from teaching. */
+.flow-more-day{margin-top:20px;border-top:1px solid ${BORDER};padding-top:6px}
+.flow-more-day>summary{list-style:none;cursor:pointer;min-height:34px;display:flex;align-items:center;
+  font-family:${F};font-size:13px;color:${TEXT_MUTED};padding:0 4px;border-radius:8px}
+.flow-more-day>summary::-webkit-details-marker{display:none}
+.flow-more-day>summary::before{content:"\\25B8";display:inline-block;width:16px;font-size:11px;
+  transition:transform .13s;color:${TEXT_MUTED}}
+.flow-more-day[open]>summary::before{transform:rotate(90deg)}
+.flow-more-day>summary:hover{background:${SURFACE_2};color:${TEXT_PRIMARY}}
+.flow-more-body{display:flex;flex-direction:column;gap:12px;padding:10px 0 4px}
+.mon-again{margin:0}
+.mon-again>summary{list-style:none;cursor:pointer;min-height:32px;display:flex;align-items:center;gap:4px;
+  font-family:${F};font-size:13px;color:${TEXT_MUTED};padding:0 4px;border-radius:8px}
+.mon-again>summary::-webkit-details-marker{display:none}
+.mon-again>summary:hover{background:${SURFACE_2};color:${TEXT_PRIMARY}}
+.flow-sec .flow-secmove{opacity:0;transition:opacity .12s}
+.flow-sec:hover .flow-secmove,.flow-sec:focus-within .flow-secmove,
+.flow-sec[data-fold="1"] .flow-secmove{opacity:1}
 .flow-more{flex:none;min-width:26px;min-height:26px;border:none;border-radius:8px;background:none;
   cursor:pointer;color:#8a9098;font-size:10px;padding:0}
 .flow-more:hover{background:rgba(23,19,16,.06);color:#171310}
@@ -385,7 +441,8 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
    words, and the rename hint, which is meant to appear on hover, never went
    away. check-css now fails on a class used with no rule anywhere. */
 .dash-topic-wrap{display:flex;flex-direction:column;gap:2px;padding:2px 0 8px}
-.dash-topic-meta{display:flex;align-items:center;gap:9px;min-height:22px;
+.dash-topic-meta{display:flex;align-items:center;gap:9px;min-height:22px;flex-wrap:wrap;
+  margin-bottom:6px;
   font-family:${MONO};font-size:13px;font-weight:600;letter-spacing:.09em;
   text-transform:uppercase;color:${TEXT_MUTED}}
 .dash-topic-clear{flex:none;min-height:22px;padding:0 9px;border-radius:999px;
@@ -476,14 +533,18 @@ function Seam({ which, onDown, label }) {
 // Poll named a thing that started a screen's worth of monitor further down.
 // `head` puts the preview above the tabs instead, and a tab now sits directly
 // on the panel it opens.
-function Rail({ tabs, active, onPick, accent, children, head, side, className }) {
+function Rail({ tabs, active, onPick, accent, children, head, under, side, className }) {
   return (
     <div className={"dash-rail" + (className ? " " + className : "")}
       style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 8,
         position: "sticky", top: "calc(var(--head-h, 58px) + 14px)",
         maxHeight: "calc(100vh - var(--head-h, 58px) - 28px)" }}>
-      <h2 className="dash-col">{side}</h2>
       {head}
+      {under}
+      {/* A rail with no tabs draws no tab strip and no body. It used to draw
+          both as empty boxes, which is a hairline and a gap on the screen
+          saying nothing. */}
+      {!tabs.length ? null : (
       <div role="tablist" aria-label={side} className="dash-rail-tabs">
         {tabs.map(t => {
           const on = t.id === active;
@@ -498,7 +559,8 @@ function Rail({ tabs, active, onPick, accent, children, head, side, className })
           );
         })}
       </div>
-      <div className="dash-rail-body">{children}</div>
+      )}
+      {!tabs.length ? null : <div className="dash-rail-body">{children}</div>}
     </div>
   );
 }
@@ -667,6 +729,16 @@ export function Castable({ kind, kindColor, title, url, claim, live, accent, onC
             style={{ fontFamily: F }}>{hostOf(url)} ↗</a>
         ) : null}
       </span>
+
+      {/* What the row is, in a word, in its kind's colour.
+          This is where the colour went when the rows stopped being solid bars.
+          A row that says "article" in blue tells you the same thing the blue
+          bar did, and leaves the row itself readable as text. */}
+      {live ? <span className="flow-onair">ON SCREEN</span> : null}
+
+      {kind ? (
+        <span className="flow-kind" style={{ "--ink": inkOf(kindColor) }}>{String(kind).toLowerCase()}</span>
+      ) : null}
 
       {/* The arrow casts, always. It used to open the headline editor when the
           row had no headline, and Andrew's verdict was that with the room
@@ -1177,7 +1249,7 @@ export function secColor(key) {
 }
 export const SEC_ALL = SEC;
 
-function SlotName({ slot, title, accent, onSave, onDelete, onColor, count, tally }) {
+function SlotName({ slot, title, accent, onSave, onDelete, onColor, count, tally, unnamed }) {
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(title || "");
@@ -1199,8 +1271,14 @@ function SlotName({ slot, title, accent, onSave, onDelete, onColor, count, tally
 
   return (
     <>
+      {/* The words ARE the control. Hover tints them, a click puts a caret in
+          them; there is no pencil, because a pencil beside every name on the
+          page is the clutter Andrew asked me to keep out. A section with no
+          name of its own reads grey, so the invitation to name it sits in
+          exactly the place the name will go. */}
       <button onClick={() => setEditing(true)} onContextMenu={e => { e.preventDefault(); setOpen(true); }}
-        title="Rename this section. Right-click for more."
+        title={unnamed ? "Name this section" : "Rename this section. Right-click for more."}
+        data-unnamed={unnamed ? "1" : "0"}
         className="dash-focus flow-name">{title || slot}</button>
       {tally ? <span className="flow-tally">{tally}</span> : null}
       <span style={{ position: "relative", flex: "none", display: "inline-flex" }}>
@@ -1725,13 +1803,17 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
   const [rowMenu, setRowMenu] = useState(null);
   const [merging, setMerging] = useState(false);
   const [overSlot, setOverSlot] = useState(null);
+  // Which sections are folded shut. Held on the panel rather than in the class
+  // data, because folding is where I am looking right now and not a fact about
+  // the day — a folded section should not be folded for the room screen too.
+  const [foldedSecs, setFoldedSecs] = useState(() => new Set());
   const [overRow, setOverRow] = useState(null);
 
   // Dropping on a row puts it before that row; dropping on the section puts it
@@ -1829,6 +1911,15 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
     .filter(k => !named.has(k) && !isSection(k))
     .filter(k => normSlot(slotItems[k]).items.length);
 
+  // Everything after the sequence's own slots, in the order the day stores
+  // them. One list rather than sections-I-made followed by leftovers, because
+  // the move arrows reorder by rewriting that stored order — and across two
+  // separate groups a section could never move past the boundary between them.
+  // A section I made always shows, empty or not, because an empty one is where
+  // the next thing goes.
+  const restKeys = Object.keys(slotItems).filter(k =>
+    !named.has(k) && (isSection(k) || normSlot(slotItems[k]).items.length));
+
   // Every section of this day, ONCE, in the order the day is drawn, with the
   // nameless ones numbered by where they sit.
   //
@@ -1839,9 +1930,11 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
   // the order it is drawn in is the order it counts in.
   const sectionRows = nameSections([
     ...(seq?.slots || []).map(x => [x.slot, normSlot(slotItems[x.slot]).title || x.slot]),
-    ...orphanKeys.map(k => [k, normSlot(slotItems[k]).title || ""]),
-    ...myKeys.map(k => [k, normSlot(slotItems[k]).title || ""]),
+    ...restKeys.map(k => [k, normSlot(slotItems[k]).title || ""]),
   ]);
+  // Where the movable part of the day starts. A sequence slot's place is the
+  // sequence's business, so the arrows do not offer to move one.
+  const firstMovable = (seq?.slots || []).length;
   const labelOf = Object.fromEntries(sectionRows);
   const orphanSlots = orphanKeys.map(k => [k, labelOf[k]]);
   const mySections = myKeys.map(k => [k, labelOf[k]]);
@@ -1908,11 +2001,17 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
               none of them are things I do while teaching, so a row of them
               between the title and the day was four buttons of noise in the
               worst possible place. They are all still one press away. */}
+          {/* The foot of the day: the next section's number, greyed, and the
+              invitation to fill it. Same shape as a section header, so the day
+              reads as a list that has not finished rather than as a list with
+              a button parked under it. */}
           <DropMenu label="Build the day" width={250} side="left"
             trigger={(open, toggle) => (
-              <button className="dash-focus" style={{ ...mini, minHeight: 30 }} onClick={toggle}
+              <button className="dash-focus flow-addsec" onClick={toggle}
                 aria-expanded={open} aria-haspopup="menu">
-                Build the day<span style={{ opacity: .5, fontSize: 13, marginLeft: 5 }}>▾</span>
+                <span className="flow-addsec-n">{String(sectionRows.length + 1).padStart(2, "0")}</span>
+                <span className="flow-addsec-w">Add a section</span>
+                <span className="flow-addsec-p" aria-hidden="true">+</span>
               </button>
             )}>
             {(sequences || []).length > 1 ? (
@@ -1948,34 +2047,68 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
 
   // The extra zones are slots with reserved keys, so they get the library
   // picker, notes, links, reordering and removal without a line of new code.
-  const renderSlot = (s, overrideTitle) => {
+  const renderSlot = (s, overrideTitle, i = 0) => {
         const bucket = normSlot(slotItems[s.slot]);
         const items = bucket.items;
         const usedSeeds = new Set((seq?.slots || []).flatMap(x => normSlot(slotItems[x.slot]).items).map(x => x.seedId).filter(Boolean));
+        const unnamed = !(bucket.title || "").trim();
+        const folded = foldedSecs.has(s.slot);
+        const doneHere = items.filter(it => doneSet.has(it.id)).length;
         return (
-          <div key={s.slot} className="flow-sec"
+          <div key={s.slot} className="flow-sec" data-fold={folded ? "1" : "0"}
             onDragOver={e => { e.preventDefault(); setOverSlot(s.slot); }}
             onDragLeave={() => setOverSlot(null)}
             onDrop={e => { e.preventDefault(); setOverSlot(null); drop(e, s.slot); }}
             style={{ "--sec": secHue(bucket.title || s.slot),
               background: overSlot === s.slot ? accent + "0c" : "transparent" }}>
             <div className="flow-sec-head">
+              <span className="flow-sec-n">{String(i + 1).padStart(2, "0")}</span>
               <SlotName slot={s.slot} title={bucket.title || overrideTitle} accent={accent} count={items.length}
+                unnamed={unnamed}
                 onSave={(t) => onSetSlotTitle(s.slot, t)}
                 onDelete={named.has(s.slot) ? null : () => onDeleteSection(s.slot)}
                 onColor={onSectionColor ? (sw) => onSectionColor(bucket.title || overrideTitle || s.slot, sw) : null} />
+              <span style={{ flex: "1 1 auto" }} />
+              <span className="flow-tally">{items.length ? doneHere + " of " + items.length + " done" : "empty"}</span>
+              {/* Move the whole section, and fold it. */}
+              <span className="flow-secmove">
+                <button className="dash-focus" disabled={named.has(s.slot) || i <= firstMovable}
+                  title={named.has(s.slot) ? "The sequence sets where this one sits" : "Move this section up"}
+                  onClick={() => onMoveSection && onMoveSection(s.slot, -1)}>&#9650;</button>
+                <button className="dash-focus" disabled={named.has(s.slot) || i === sectionRows.length - 1}
+                  title={named.has(s.slot) ? "The sequence sets where this one sits" : "Move this section down"}
+                  onClick={() => onMoveSection && onMoveSection(s.slot, 1)}>&#9660;</button>
+                <button className="dash-focus" title={folded ? "Unfold this section" : "Fold this section"}
+                  aria-expanded={!folded}
+                  onClick={() => setFoldedSecs(prev => {
+                    const next = new Set(prev);
+                    if (next.has(s.slot)) next.delete(s.slot); else next.add(s.slot);
+                    return next;
+                  })}>{folded ? "▶" : "▼"}</button>
+              </span>
               <button className="dash-focus flow-add" onClick={() => setAdding(adding === s.slot ? null : s.slot)}>
                 {adding === s.slot ? "Close" : "+ Add"}
               </button>
             </div>
-            {adding === s.slot ? (
+            {/* Folded: the header stays and says what is inside. */}
+            {folded ? (
+              <div className="flow-folded">
+                {items.length
+                  ? items.map(it => {
+                      const b = it.blockId ? blockOf(it.blockId) : null;
+                      return (b ? b.headline || b.title : it.claim || it.text) || "a row";
+                    }).join(" · ")
+                  : "Nothing in here yet"}
+              </div>
+            ) : null}
+            {folded ? null : adding === s.slot ? (
               <AddToFlow slot={s.slot} seeds={seeds} used={usedSeeds} accent={accent}
                 onAdd={(item) => onAddItem(s.slot, item)} onClose={() => setAdding(null)}
                 scheduled={loose} onAddScheduled={onAddScheduled}
                 blocks={blocks2} onPickBlock={onPickBlock} days={days} today={today} />
             ) : null}
-            {!items.length && adding !== s.slot ? <Muted style={{ fontSize: 13, padding: "2px 6px" }}>Empty.</Muted> : null}
-            {items.map((it, i) => {
+            {!folded && !items.length && adding !== s.slot ? <Muted style={{ fontSize: 13, padding: "2px 6px" }}>Empty.</Muted> : null}
+            {(folded ? [] : items).map((it, i) => {
               const blk = it.blockId ? blockOf(it.blockId) : null;
               const seed = it.seedId ? seedById(it.seedId) : null;
               const title = blk ? (blk.title || "Untitled") : seed ? seed.title : (it.text || "Untitled");
@@ -1993,7 +2126,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
                   <Castable num={numberOf[it.id]} picked={pickedId === it.id} shared={!!it.blockId}
                     starred={!!blk?.pick}
                     done={doneSet.has(it.id)} next={nextId === it.id} onTick={() => onTick(it.id)}
-                    onSelect={() => onSelect({ blockId: it.blockId, item: it, where: bucket.title || s.slot, id: it.id })}
+                    onSelect={() => onSelect({ blockId: it.blockId, item: it, where: labelOf[s.slot], slot: s.slot, id: it.id })}
                     kind={it.feature ? "Activity" : blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
                     kindColor={it.feature ? hue("activity") : blk ? hue(blk.type) : hue(seed ? "story" : "note")}
                     title={title}
@@ -2049,22 +2182,37 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
         <PlaceMenu slots={sectionList} days={days || []} today={today} accent={accent}
           onPlace={(date, slot) => onAddScheduled(placing, slot, date)} onClose={() => setPlacing(null)} />
       ) : null}
-      {seqPicker}
-      {slidesBlock}
-      {unplannedBlock}
-      {featureBlock}
-      {addBlockRow}
-      {(seq?.slots || []).map(s => renderSlot(s))}
-      {orphanSlots.map(([slot, title]) => renderSlot({ slot }, title))}
+      {/* The day, and nothing above it.
+          Five blocks used to sit here before the first section — the sequence
+          picker, the slides, what the week had left unplaced, the six formats
+          and an add-a-section field — so the running order, the thing this
+          screen is for, started a third of the way down its own panel. The six
+          formats are gone outright: the drawer holds them now, and holding
+          them twice was how the old Activities column and this list drifted
+          apart. The rest moved below the day, where a thing you touch while
+          planning belongs. */}
+      {sectionRows.map(([slot, title], i) => renderSlot({ slot }, title, i))}
       {foldRow}
-      {mySections.map(([slot, title]) => renderSlot({ slot }, title))}
+      {addBlockRow}
       {blockBlock}
-      <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
-        extra={<GoTo href={classHref + "/assignments"} accent={accent}>All assignments</GoTo>} />
+
+      {/* Below the day. Everything here is a planning move, not a teaching one:
+          nothing in this group is something you press with the room watching. */}
+      <details className="flow-more-day">
+        <summary className="dash-focus">Sequence, slides and what is still unplaced</summary>
+        <div className="flow-more-body">
+          {seqPicker}
+          {slidesBlock}
+          {unplannedBlock}
+          <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
+            extra={<GoTo href={classHref + "/assignments"} accent={accent}>All assignments</GoTo>} />
+        </div>
+      </details>
+
       {!anyContent && !blockBlock && !freeform ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 10, borderTop: "1px solid " + BORDER }}>
           <Muted style={{ fontSize: 13 }}>
-            Nothing in <b style={{ color: TEXT_PRIMARY }}>{where}</b> yet. Add to a slot above, or build it out on the full page.
+            Nothing in <b style={{ color: TEXT_PRIMARY }}>{where}</b> yet. Add to a section above, or build it out on the full page.
           </Muted>
           <GoTo href={planHref} accent={accent}>Open Day Plan →</GoTo>
         </div>
@@ -2678,9 +2826,9 @@ const SHORTCUTS = [
   ["← →", "Step the board that is up, one idea at a time"],
   ["K J", "Walk down and up the run of show"],
   ["Enter", "Put the row I am on up on the room screen"],
-  ["⌘ E", "Teaching only. Shuts the Materials column and gives the day the room."],
+  ["⌘ E", "Teaching only. Shuts the rail and gives the day the whole screen."],
   ["1-9", "Jump straight to a tab, left rail then right"],
-  ["\\", "Show or hide the Materials column"],
+  ["\\", "Show or hide the rail"],
   ["⌘ /", "Show this list"],
 ];
 
@@ -2915,17 +3063,22 @@ const menuRow = {
 // Everything under the class name is a way out of this class, which is what
 // they have in common and why they were wrong scattered along the bar as if
 // they were actions.
-function ClassMenu({ config }) {
+function ClassMenu({ config, onLook, panels, onPanel }) {
   const go = (href) => () => {
     window.history.pushState({}, "", href);
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
+  // This is the bar's "More". It wears the same shape as the tabs beside it,
+  // because the bar is four words in four places on every surface and this is
+  // the fourth.
   return (
-    <DropMenu label="This class" width={250} side="left"
+    <DropMenu label="More" width={250} side="left"
       trigger={(open, toggle) => (
-        <button className="dash-focus dash-bar" onClick={toggle} aria-expanded={open} aria-haspopup="menu">
-          <span className="dash-bar-name">{config.code}</span>
-          <span className="dash-bar-caret">▾</span>
+        <button className="dash-focus" onClick={toggle} aria-expanded={open} aria-haspopup="menu"
+          style={{ fontSize: 15, fontWeight: 500, color: TEXT_SECONDARY, padding: "0 12px", minHeight: 44,
+            display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 8, cursor: "pointer",
+            border: "none", background: "transparent", fontFamily: F }}>
+          More<span style={{ fontSize: 9, opacity: .55 }}>▾</span>
         </button>
       )}>
       {/* Class home and the repository came out of here when the strip above
@@ -2934,8 +3087,25 @@ function ClassMenu({ config }) {
           reachable two ways from one header and no ways from the class page. */}
       <span style={{ ...label, padding: "6px 10px 4px" }}>Go to</span>
       <a className="dash-focus" href={config.path + "/schedule"} style={menuRow}>The schedule</a>
+      <a className="dash-focus" href={config.path + "/today"} style={menuRow}>The room screen</a>
       <a className="dash-focus" href={config.path + "/rungame"} style={menuRow}>Run the game</a>
+      <a className="dash-focus" href={config.path + "/grade"} style={menuRow}>Grade view</a>
       <a className="dash-focus" href="/plan" style={menuRow}>The Brief</a>
+      {onLook ? (
+        <button className="dash-focus" onClick={onLook} style={menuRow}>Colour and type</button>
+      ) : null}
+      {(panels || []).length ? (
+        <>
+          <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
+          <span style={{ ...label, padding: "2px 10px 4px" }}>Open</span>
+          {panels.map(p => (
+            <button key={p.id} className="dash-focus" onClick={() => onPanel(p.id)} style={menuRow}>
+              {p.label}
+              {p.n ? <span style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 13, color: TEXT_MUTED }}>{p.n}</span> : null}
+            </button>
+          ))}
+        </>
+      ) : null}
       <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
       <span style={{ ...label, padding: "2px 10px 4px" }}>Another class</span>
       {ENGINE_LIST.filter(c => c.id !== config.id).map(c => (
@@ -2960,7 +3130,7 @@ function ViewMenu({ railOpen, onRail, dense, onDense, onReset, onKeys, dragKeeps
           style={{ ...mini, minHeight: 36 }}>View<span style={{ fontSize: 9, opacity: .55, marginLeft: 5 }}>▾</span></button>
       )}>
       <button className="dash-focus" onClick={onRail} style={menuRow}>
-        {railOpen ? "Hide the Materials column" : "Show the Materials column"}
+        {railOpen ? "Hide the rail" : "Show the rail"}
         <kbd style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: TEXT_MUTED }}>\\</kbd>
       </button>
       <button className="dash-focus" onClick={onDense} style={menuRow}>{dense ? "Comfortable rows" : "Compact rows"}</button>
@@ -3044,7 +3214,7 @@ export function ShortcutSheet({ onClose }) {
 // ─────────────────────────────────────────────────────────────
 // live monitor: a real preview of what the room sees
 // ─────────────────────────────────────────────────────────────
-export function Monitor({ config, live, cast, push, recent, onRecast, info, onBoard, boardHue, onCastAnything }) {
+export function Monitor({ config, live, cast, push, recent, onRecast, info, onBoard, boardHue, onCastAnything, onNext, nextWords, nextNum, onPrev, hasPrev }) {
   const [anims, setAnims] = useState(false);
   const liveUrl = live?.cast?.openUrl || live?.cast?.url || "";
   const box = useRef(null);
@@ -3101,57 +3271,55 @@ export function Monitor({ config, live, cast, push, recent, onRecast, info, onBo
           style={{ width: 1280, height: 720, border: "none", transform: "scale(" + scale + ")", transformOrigin: "top left", position: "absolute", top: 0, left: 0 }} />
       </div>
 
-      {onCastAnything ? (
-        <button className="dash-focus" onClick={onCastAnything}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, width: "100%",
-            minHeight: TAP, borderRadius: 12, border: "none", background: config.accent, color: "#fff",
-            cursor: "pointer", fontFamily: F, fontSize: 15.5, fontWeight: 600 }}>
-          Cast anything
-          <kbd style={{ fontFamily: MONO, fontSize: 12, fontWeight: 500, opacity: .8,
-            border: "none", background: "none", padding: 0 }}>⌘K</kbd>
+      {/* One row: back, forward, black, and the real screen in its own window.
+          Eight buttons used to live here in four stacked pairs — Cast
+          anything, Enter screen, Exit screen, Idle screen, Black screen, Take
+          it down, Open room screen, and a Put it back list. That is a control
+          panel bolted under a picture, and it pushed the drawer below the fold
+          on a laptop. Casting anything is ⌘K and always was; the two board
+          screens are a teaching move that belongs with the boards.
+          Back and Next walk the running order, which is the only pair here you
+          press with the room watching, so they lead. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <button className="dash-focus" onClick={onPrev} disabled={!onPrev || !hasPrev}
+          title="Put the row before this one back up"
+          style={{ ...mini, flex: "none", width: 38, padding: 0, display: "inline-flex",
+            alignItems: "center", justifyContent: "center", ...(hasPrev ? {} : { opacity: .4 }) }}>◂</button>
+        <button className="dash-focus" onClick={onNext} disabled={!nextWords}
+          style={{ ...mini, flex: "none", display: "inline-flex", alignItems: "center", gap: 6,
+            ...(nextWords ? { background: config.accent, borderColor: config.accent, color: "#fff" } : { opacity: .45 }) }}>
+          Next <span aria-hidden="true">▸</span>
         </button>
-      ) : null}
-
-      {onBoard ? (
-        <div style={{ display: "flex", gap: 8 }}>
-          {["pre", "post"].map(which => {
-            const label = which === "pre" ? "Enter" : "Exit";
-            const up = live?.cast?.type === "board" && live.cast.boardLabel === label;
-            return (
-              <button key={which} className="dash-focus"
-                style={{ ...mini, flex: 1, ...(up ? { background: boardHue, borderColor: boardHue, color: "#fff" } : { borderColor: boardHue, color: boardHue }) }}
-                onClick={() => onBoard(which)}>{label} screen</button>
-            );
-          })}
-        </div>
-      ) : null}
-
-      <div style={{ display: "flex", gap: 8 }}>
-        <button style={{ ...mini, flex: 1, ...(on ? {} : { borderColor: config.accent, color: config.accent }) }}
-          onClick={() => cast(null)}>Idle screen</button>
-        <button style={{ ...mini, flex: 1, ...(live?.cast?.type === "black" ? { background: "#111", borderColor: "#111", color: "#fff" } : {}) }}
-          onClick={() => cast({ type: "black", label: "Black screen" })}>Black screen</button>
-      </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <button style={{ ...mini, flex: 1, ...(on ? { borderColor: LIVE, color: LIVE } : { opacity: .45 }) }}
-          disabled={!on} onClick={() => cast(null)}>Take it down</button>
-        <a href={config.path + "/today"} target="_blank" rel="noreferrer" style={{ ...mini, flex: 1, textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-          Open room screen ↗
+        <button className="dash-focus" style={{ ...mini, flex: "none", ...(live?.cast?.type === "black" ? { background: "#111", borderColor: "#111", color: "#fff" } : {}) }}
+          onClick={() => cast({ type: "black", label: "Black screen" })}>Black</button>
+        <span style={{ flex: "1 1 auto", minWidth: 4 }} />
+        <a className="dash-focus" href={config.path + "/today"} target="_blank" rel="noreferrer"
+          style={{ ...mini, flex: "none", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          Own window ↗
         </a>
       </div>
 
+      {/* What Next will put up, said before you press it. */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "0 4px" }}>
+        <span style={{ flex: "none", fontFamily: MONO, fontSize: 13, color: TEXT_MUTED }}>up next</span>
+        <span style={{ minWidth: 0, fontSize: 14, color: nextWords ? TEXT_SECONDARY : TEXT_MUTED,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {nextWords ? (nextNum ? nextNum + " · " : "") + nextWords : "everything on the day has been up"}
+        </span>
+      </div>
+
       {recent.length ? (
-        <div style={{ background: SURFACE_2, borderRadius: 12, padding: 13, display: "flex", flexDirection: "column", gap: 8 }}>
-          <span style={label}>Put it back</span>
+        <details className="mon-again">
+          <summary className="dash-focus">Put something back up</summary>
           {recent.map(r => (
             <button key={r.key} onClick={() => onRecast(r.payload)}
               style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", textAlign: "left", cursor: "pointer",
                 background: SURFACE_2, border: "1px solid transparent", borderRadius: 9, padding: "8px 10px", minHeight: 38, fontFamily: F, fontSize: 13, color: TEXT_PRIMARY }}>
               <span style={{ minWidth: 0, flex: 1, overflow: "hidden", wordBreak: "break-word", lineHeight: 1.4 }}>{r.label}</span>
-              <span style={{ flex: "none", fontFamily: MONO, fontSize: 12, letterSpacing: ".08em", color: TEXT_MUTED }}>AGAIN →</span>
+              <span style={{ flex: "none", fontFamily: MONO, fontSize: 13, letterSpacing: ".08em", color: TEXT_MUTED }}>AGAIN →</span>
             </button>
           ))}
-        </div>
+        </details>
       ) : null}
 
       {info}
@@ -3242,7 +3410,7 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
 // what goes up next.
 // The topic, editable where it sits. Click it, type, Enter. No punctuation is
 // added and none is required.
-function EditableTopic({ value, placeholder, onSave, own, weekLabel, weekday, span, nth, onClear }) {
+function EditableTopic({ value, placeholder, onSave, own, weekLabel, weekday, span, nth, onClear, date }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value || "");
   useEffect(() => { setDraft(value || ""); }, [value]);
@@ -3261,7 +3429,11 @@ function EditableTopic({ value, placeholder, onSave, own, weekLabel, weekday, sp
   const meta = [weekLabel, weekday].filter(Boolean).join(", ");
   return (
     <div className="dash-topic-wrap">
+      {/* The date sits with the day it names, not up on the nav bar. Picking a
+          different day is not navigating the app; it is changing what this
+          page is about. */}
       <div className="dash-topic-meta">
+        {date}
         <span>{meta}</span>
         {own && onClear ? (
           <button className="dash-focus dash-topic-clear" onClick={onClear}
@@ -3290,7 +3462,13 @@ function EditableTopic({ value, placeholder, onSave, own, weekLabel, weekday, sp
 // clocks across the whole width, and almost none of that was worth the space
 // it took. What is left is the one thing I actually do with it: get to a
 // different day. Every date in the term is one click away.
-function DateButton({ days, day, onPick, accent, today, counts }) {
+// The date, and the whole term behind it.
+//
+// The caret used to open a grid of date chips — every day of the term as a
+// number, with no way to see what was on any of them. It opens the term
+// outline now: the same question, answered properly. The chips are still here
+// underneath it, because jumping two days forward should not need a popup.
+function DateButton({ days, day, onPick, accent, today, counts, onTerm }) {
   const i = days.findIndex(d => d.date === day);
   const weekIds = [...new Set(days.map(d => d.weekId))];
   const wn = weekIds.indexOf(days[i]?.weekId);
@@ -3298,12 +3476,22 @@ function DateButton({ days, day, onPick, accent, today, counts }) {
     <DropMenu label="Which day" width={330} side="left"
       trigger={(open, toggle) => (
         <button className="dash-focus dash-bar" onClick={toggle} aria-expanded={open}
-          aria-haspopup="menu" title="Go to another day">
+          aria-haspopup="menu" title="Go to another day, or open the whole term">
           Week {wn + 1}
           <span className="dash-bar-sub">{day}</span>
           <span className="dash-bar-caret">▾</span>
         </button>
       )}>
+      {onTerm ? (
+        <button className="dash-focus" onClick={onTerm}
+          style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", textAlign: "left",
+            background: "none", border: "none", cursor: "pointer", padding: "0 10px", minHeight: 40,
+            borderRadius: 9, fontFamily: F, fontSize: 14.5, fontWeight: 600, color: accent,
+            borderBottom: "1px solid " + BORDER }}>
+          Plan the quarter
+          <span style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 13, opacity: .7 }}>{days.length} days</span>
+        </button>
+      ) : null}
       {weekIds.map((id, n) => {
         const wd = days.filter(d => d.weekId === id);
         const here = id === days[i]?.weekId;
@@ -3390,8 +3578,10 @@ function Picker({ title, opts, value, onPick, accent }) {
 //
 // Everything else is one press away: Coming up has a link through to the page
 // where assignments are actually written and graded.
-const MATERIAL = ["ideas", "readings"];
-const LIVE_RAIL = ["questions", "poll"];
+// Nothing left. The Materials column is gone; its two tabs are the drawer in
+// the rail and On the week beside Questions and Poll.
+const MATERIAL = [];
+const LIVE_RAIL = ["readings", "questions", "poll"];
 // Starting widths. Flow takes whatever is left, so it is the one column that
 // never needs a number. Both ends are draggable and the drag is remembered.
 const COL = { material: 300, live: 400 };
@@ -3400,10 +3590,20 @@ const COL_MAX = { material: 760, live: 620 };
 // Flow is always the middle and always takes the remainder, so it is the only
 // column with no number of its own. The seams are 16px each and count as
 // columns of the grid.
-const gridFor = (cols, railOpen, teaching) => {
-  const mat = railOpen && !teaching ? cols.material + "px 16px " : "";
-  return mat + "minmax(0,1fr) 16px " + cols.live + "px";
-};
+// Two columns: the day, and the rail.
+//
+// It was three — a Materials column on the left, the day in the middle, the
+// room on the right — which meant the day, the one thing this screen is for,
+// was the narrowest thing on it and had a column of other people's stuff on
+// either side. And it split the two halves of one job across opposite edges of
+// the screen: what is on the projector lived right, what you would put on it
+// next lived left.
+//
+// Now the day gets everything that is not the rail, and the rail holds the
+// screen and the drawer together, in that order, because finding a thing and
+// putting it up are the same motion.
+const gridFor = (cols, railOpen, teaching) =>
+  (railOpen && !teaching ? "minmax(0,1fr) 16px " + cols.live + "px" : "minmax(0,1fr)");
 
 export default function Dashboard({ config }) {
   const [data, update] = useClassData(config.storageKey);
@@ -3417,6 +3617,12 @@ export default function Dashboard({ config }) {
   const [hornOpen, setHornOpen] = useState(false);
   const [hereOpen, setHereOpen] = useState(false);
   const [todoOpen, setTodoOpen] = useState(false);
+  // Which of the three that came off the rail is open, by panel id.
+  const [roomOpen, setRoomOpen] = useState("");
+  // The whole term, over the day.
+  const [termOpen, setTermOpen] = useState(false);
+  // Putting the open thing on a day: "" | "add" | "move".
+  const [placing, setPlacing] = useState("");
   const [colorsOpen, setColorsOpen] = useState(false);
   const [boardsOpen, setBoardsOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -3809,6 +4015,28 @@ export default function Dashboard({ config }) {
     return { ...d, slots };
   }, "deleting that section");
 
+  // Move a whole section up or down the day.
+  //
+  // The order a day is drawn in is the order its slots are stored in, so
+  // moving one is rewriting that order. The sequence's own slots are held at
+  // the front and never move: where the opener sits is the sequence's business,
+  // and a day whose opener could drift into the middle is a day that no longer
+  // follows the shape Andrew picked for it.
+  const moveSection = (slot, delta) => writeDay(d => {
+    const slots = d.slots || {};
+    const seqKeys = new Set((sequenceFor(config, d.sequenceId || config.defaultSequenceId).slots || []).map(x => x.slot));
+    if (seqKeys.has(slot)) return d;
+    const movable = Object.keys(slots).filter(k => !seqKeys.has(k));
+    const at = movable.indexOf(slot);
+    const to = at + delta;
+    if (at < 0 || to < 0 || to >= movable.length) return d;
+    movable.splice(to, 0, movable.splice(at, 1)[0]);
+    const next = {};
+    Object.keys(slots).filter(k => seqKeys.has(k)).forEach(k => { next[k] = slots[k]; });
+    movable.forEach(k => { next[k] = slots[k]; });
+    return { ...d, slots: next };
+  }, "moving that section");
+
   // The one higher up the day keeps its name; the other empties into it and
   // goes. Items move across as they are, so nothing is rewritten on the way.
   const mergeSections = (top, bottom) => writeDay(d => {
@@ -3892,6 +4120,18 @@ export default function Dashboard({ config }) {
   // A move is something the room does and a seed is a story I tell, so they are
   // made as what they are: an activity tagged teaching move, or a story tagged
   // seed, which is the tag the seed library itself carries.
+  // Make one of a kind, from wherever I am, and open it straight away.
+  //
+  // It goes on the shared shelf rather than into this class, because a reading
+  // or an activity is mine before it is COMM 118's — the same reasoning that
+  // put the kinds themselves there. Filing it to a class is a move you make
+  // afterwards, from the repository, on the rare occasion it belongs to one.
+  const newBlock = (type) => {
+    const b = makeBlock({ type, title: "" });
+    updateShared(prev => ({ ...prev, blocks: { ...(prev.blocks || {}), [b.id]: b } }));
+    setPicked({ blockId: b.id, item: null, where: "the drawer", id: b.id });
+  };
+
   const addIdea = (title, body, kind) => updateShared(prev => {
     const id = genId();
     const seed = kind === "seed";
@@ -4202,7 +4442,7 @@ export default function Dashboard({ config }) {
   if (data === null) {
     return (
       <div style={{ minHeight: "100vh", background: BG, fontFamily: F }}>
-        <InstructorNavRow config={config} here="dashboard" focusClass="dash-focus" />
+        <TopNav config={config} tabs={NAV_TEACH} active="dashboard" />
         <div style={{ display: "grid", placeItems: "center", padding: "120px 20px", color: TEXT_MUTED }}>Loading…</div>
       </div>
     );
@@ -4214,7 +4454,7 @@ export default function Dashboard({ config }) {
   if (!day) {
     return (
       <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY }}>
-        <InstructorNavRow config={config} here="dashboard" focusClass="dash-focus" />
+        <TopNav config={config} tabs={NAV_TEACH} active="dashboard" />
         <div style={{ display: "grid", placeItems: "center", padding: "100px 24px" }}>
           <div style={{ maxWidth: 420, textAlign: "center", display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
             <span style={label}>{config.code}</span>
@@ -4269,7 +4509,7 @@ export default function Dashboard({ config }) {
             .map(it => "\u00b7 " + it.text.trim()).join("\n") },
       ]} onNest={nestItem}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
-      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMergeSections={mergeSections} onSelect={setPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
+      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMoveSection={moveSection} onMergeSections={mergeSections} onSelect={setPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
       doneSet={doneSet} onTick={tickItem} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
@@ -4285,6 +4525,19 @@ export default function Dashboard({ config }) {
       onPlaceFeature={(slot, name, date) => addFlowItem(slot, { text: name, feature: name }, date)}
       sections={sections} days={days} today={day} placed={placedDays}
       onPick={pickBlock} onAdd={addIdea} onEdit={editIdea} onRemove={removeIdea} onDuplicate={duplicateIdea} />,
+    // One search across everything, and the three shelves it sorts into.
+    find: () => <Drawer blocks={blocks2} accent={config.accent} hue={hueOf} placed={placedDays}
+      features={Object.keys(FEATURES)} onRunFeature={runFeature} featureBlurb={(n) => FEATURES[n] || ""}
+      onPick={(b) => setPicked({ blockId: b.id, item: null, where: "", id: b.id })}
+      onNew={newBlock}
+      picked={picked} blockOf={blockOf}
+      onSavePicked={(patch) => {
+        const b = picked?.blockId ? blockOf(picked.blockId) : null;
+        if (b) writeBlock(writeTo(b.id), { ...b, ...patch });
+      }}
+      onPlacePicked={() => setPlacing("add")}
+      onMovePicked={() => setPlacing("move")}
+      onClearPicked={() => setPicked(null)} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
       castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,
     scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch}
@@ -4295,7 +4548,7 @@ export default function Dashboard({ config }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} path={config.path} />,
   };
-  const TITLES = { todo: "To-do", poll: "Poll", flow: "Day Plan", boards: "Enter/Exit", readings: "Readings", ideas: "Activities & seeds", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Assignments" };
+  const TITLES = { todo: "To-do", poll: "Poll", flow: "Day Plan", boards: "Enter/Exit", find: "Find", readings: "On the week", ideas: "Activities & seeds", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Assignments" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   const outCount = Object.values(marks).filter(v => v === "out").length;
   // How far through the day I am, counted off the flow rather than the clock.
@@ -4315,7 +4568,7 @@ export default function Dashboard({ config }) {
   // Which colour each tab wears. The keys are the panels; the values are the
   // kinds I set in the Colours sheet.
   const TAB_HUE = {
-    readings: hueOfKind("readings"), ideas: hueOfKind("ideas"), scratch: hueOfKind("notes"),
+    find: "", readings: hueOfKind("readings"), ideas: hueOfKind("ideas"), scratch: hueOfKind("notes"),
     assignments: hueOfKind("assignments"), questions: hueOfKind("questions"),
     poll: hueOfKind("polls"), boards: hueOfKind("boards"), todo: "",
   };
@@ -4324,7 +4577,7 @@ export default function Dashboard({ config }) {
     readings: readings.length,
     assignments: assignments.length,
     poll: P.poll?.phase && P.poll.phase !== "idle" ? "\u25cf" : 0,
-    ideas: 0, todo: 0, scratch: 0, boards: 0,
+    ideas: 0, todo: 0, scratch: 0, boards: 0, find: 0,
   };
   // The order the flow is drawn in: the sequence's slots, then the sections I
   // made, then anything left over. Worked out here rather than read off a ref
@@ -4356,6 +4609,29 @@ export default function Dashboard({ config }) {
     const live = (flowOrderRef.current || []).find(r => r.id === upNextRow.id);
     if (live?.cast) live.cast();
   };
+
+  // Where the running order is up to. The room screen knows what it is showing
+  // by its words, so the row on the screen is the row whose words match — which
+  // is also how a row knows to draw itself as the live one.
+  const wordsOfRow = (r) => {
+    const b = r?.blockId ? blockOf(r.blockId) : null;
+    return (b ? b.headline || b.title : r?.item?.claim || r?.item?.text) || "";
+  };
+  const liveAt = liveLabel
+    ? (flowOrderRef.current || []).findIndex(r => wordsOfRow(r) === liveLabel)
+    : -1;
+  const hasPrev = liveAt > 0;
+  // Back puts the row before the one on screen back up, which is the move for
+  // "wait, go back to that" — the most common thing a room asks for.
+  const castPrev = () => {
+    const rows = flowOrderRef.current || [];
+    const before = liveAt > 0 ? rows[liveAt - 1] : null;
+    if (before?.cast) before.cast();
+  };
+  // The number Next will put up, counted the way the day numbers its rows.
+  const nextNum = upNextRow
+    ? (flowOrderRef.current || []).findIndex(r => r.id === upNextRow.id) + 1
+    : 0;
   const sinceMin = live?.engagedAt ? Math.floor((Date.now() - live.engagedAt) / 60000) : null;
   const minsLeft = minutesLeft(config);
   const onDeck = currentDay(weeks)?.date;
@@ -4364,7 +4640,7 @@ export default function Dashboard({ config }) {
     <div className={dense ? "dash-compact" : "dash-comfortable"}
       style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY,
         "--dash-accent": config.accent, "--row-weight": boldRows ? 600 : 400, ...fontVars(fonts) }}>
-      <style>{CSS}</style>
+      <style>{CSS + DRAWER_CSS + TERM_CSS}</style>
 
       {/* Four groups, and the grouping is what each control IS.
           The class tools are the things I press with the room watching, so they
@@ -4373,35 +4649,28 @@ export default function Dashboard({ config }) {
           the same attention. The ways out of this class live under the class
           name, because that is what they all are. Teaching stays out on its
           own — it is the one switch I hit at the moment class starts. */}
-      {/* The strip and the bar are one sticky block, and headRef measures both,
-          because the rails stick to whatever the whole thing comes to. */}
+      {/* THE ONE BAR. The same on the class page, here and the repository, and
+          it answers one question: where am I. What used to sit here — the date,
+          Here, Around the Horn, Look, View — are controls that act on the day,
+          not navigation, so they moved down to sit with the day they act on. */}
       <div ref={headRef} style={{ position: "sticky", top: 0, zIndex: 30 }}>
-      <InstructorNavRow config={config} here="dashboard" focusClass="dash-focus" />
-      <header style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "10px 20px",
-        display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <ClassMenu config={config} />
-
-        {/* Where I am, then what I can open, then the way out. Casting is not
-            here: it lives on the room preview, with the rest of the room. */}
-        <DateButton days={days} day={day} onPick={setDay} accent={config.accent} today={onDeck} counts={dayCounts} />
-
-        <span className="dash-bar-gap" />
-
-        <button className="dash-focus dash-bar" onClick={() => setHereOpen(true)}>
-          Here{students.length ? <span className="dash-bar-sub">{students.length - outCount}/{students.length}</span> : null}
-        </button>
-        <button className="dash-focus dash-bar" onClick={() => setHornOpen(true)}>Around the Horn</button>
-        <button className="dash-focus dash-bar" onClick={() => setColorsOpen(true)}>Look</button>
-        {/* Written months ago and never mounted. Its Keyboard row is the only
-            way to reach the shortcut sheet without already knowing ⌘/, which
-            made ten live shortcuts undiscoverable. */}
-        <ViewMenu railOpen={railOpen} onRail={toggleRail}
-          dense={dense} onDense={() => railSave.current({ dense: !dense })}
-          onReset={() => railSave.current({ cols: { ...COL } })}
-          onKeys={() => { setCmdOpen(false); setKeysOpen(true); }}
-          dragKeeps={dragKeeps} onDragKeeps={() => setDragKeeps(v => !v)} />
-
-      </header>
+        <TopNav config={config} tabs={NAV_TEACH} active="dashboard"
+          moreNode={<ClassMenu config={config} onLook={() => setColorsOpen(true)}
+            panels={LIVE_RAIL.map(id => ({ id, label: TITLES[id], n: RAIL_N[id] }))}
+            onPanel={setRoomOpen} />}
+          right={
+            <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <button className="dash-focus dash-bar" onClick={() => setHereOpen(true)}>
+                Here{students.length ? <span className="dash-bar-sub">{students.length - outCount}/{students.length}</span> : null}
+              </button>
+              <button className="dash-focus dash-bar" onClick={() => setHornOpen(true)}>Around the Horn</button>
+              <ViewMenu railOpen={railOpen} onRail={toggleRail}
+                dense={dense} onDense={() => railSave.current({ dense: !dense })}
+                onReset={() => railSave.current({ cols: { ...COL } })}
+                onKeys={() => { setCmdOpen(false); setKeysOpen(true); }}
+                dragKeeps={dragKeeps} onDragKeeps={() => setDragKeeps(v => !v)} />
+            </span>
+          } />
       </div>
 
       <Reminders />
@@ -4409,23 +4678,17 @@ export default function Dashboard({ config }) {
       <main ref={stageRef} className="dash-stage" data-rail={railOpen ? "open" : "shut"} data-teach={focus ? "on" : "off"}
         style={{ gridTemplateColumns: gridFor(cols, railOpen, focus),
           "--mat": cols.material + "px", "--live": cols.live + "px" }}>
-        {railOpen && !focus ? (
-          <>
-            <Rail side="Materials" tabs={MATERIAL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: i + 1, hue: TAB_HUE[id] }))}
-              active={prep} onPick={pickPrep} accent={config.accent}>
-              <Panel id={prep} title={null}>{render[prep]()}</Panel>
-            </Rail>
-            <Seam which="material" onDown={startSeam("material")} label="Material" />
-          </>
-        ) : null}
-
         <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-          <h2 className="dash-col">Day Plan</h2>
+          {/* The column no longer needs naming. The day's own headline is the
+              first thing in it, which says what this is better than the words
+              "Day Plan" ever did. */}
           <Panel id="flow" title={null}>
             <EditableTopic value={dayTitle.title} placeholder={config.name} onSave={saveDayTitle}
               own={dayTitle.own} weekLabel={weekLabel} weekday={weekdayFull}
               span={dayTitle.span} nth={dayTitle.nth}
-              onClear={dayTitle.own ? () => saveDayTitle("") : null} />
+              onClear={dayTitle.own ? () => saveDayTitle("") : null}
+              date={<DateButton days={days} day={day} onPick={setDay} accent={config.accent} today={onDeck} counts={dayCounts}
+                onTerm={() => setTermOpen(true)} />} />
             {render.flow()}
           </Panel>
           {undo ? (
@@ -4437,11 +4700,18 @@ export default function Dashboard({ config }) {
 
         <Seam which="live" onDown={startSeam("live")} label="Live" />
 
-        <Rail side="Live" className="dash-room" tabs={LIVE_RAIL.map((id, i) => ({ id, label: TITLES[id], count: RAIL_N[id], hot: MATERIAL.length + i + 1, hue: TAB_HUE[id] }))}
+        {/* No tabs. The rail is the screen and the drawer, which is what it is
+            for; three tabs under them were three more panels competing with
+            the day. On the week, Questions and Poll open from More, because
+            each is something you go and look at rather than something that
+            should be sitting on the screen all lesson. */}
+        <Rail side="Live" className="dash-room" tabs={[]}
           active={room} onPick={pickRoom} accent={config.accent}
           head={
             <Monitor config={config} live={live} cast={cast} push={push} recent={recent} onRecast={castNow}
               onCastAnything={() => setCmdOpen(true)}
+              onNext={castNext} nextWords={upNextWords} nextNum={nextNum}
+              onPrev={castPrev} hasPrev={hasPrev}
               boardHue={hueOfKind("boards")} onBoard={(which) => {
                 const b = boardFor(which);
                 const lbl = which === "pre" ? "Enter" : "Exit";
@@ -4456,10 +4726,13 @@ export default function Dashboard({ config }) {
                 <BlockInfo block={picked.blockId ? blockOf(picked.blockId) : null} item={picked.item}
                   where={picked.where} accent={config.accent} onClose={() => setPicked(null)} />
               ) : null} />
+          }
+          under={
+            /* The drawer, directly under the screen. Not a tab, because
+               finding the next thing is not a mode you switch into — it is
+               what you are doing all lesson, in between putting things up. */
+            <div className="dash-drawer">{render.find()}</div>
           }>
-          <div className="dash-room-body">
-            <Panel id={room} title={null}>{render[room]()}</Panel>
-          </div>
         </Rail>
       </main>
 
@@ -4506,6 +4779,44 @@ export default function Dashboard({ config }) {
       {todoOpen ? (
         <Sheet title="Still to do" sub={config.code + " \u00b7 " + day} onClose={() => setTodoOpen(false)}>
           {render.todo()}
+        </Sheet>
+      ) : null}
+
+      {/* Where the open thing goes. Add leaves it where it is; Move takes it
+          off the day it is on first, which is the difference between the two
+          buttons and the only reason there are two. */}
+      {placing && picked ? (
+        <PlaceMenu slots={sections} days={days} today={day} accent={config.accent}
+          onClose={() => setPlacing("")}
+          onPlace={(date, slot) => {
+            const b = picked.blockId ? blockOf(picked.blockId) : null;
+            if (b) pickBlock(slot, b, date);
+            if (placing === "move" && picked.item && picked.slot) removeFlowItem(picked.slot, picked.id);
+            setPlacing("");
+          }} />
+      ) : null}
+
+      {termOpen ? (
+        <TermOutline config={config} weeks={weeks} plans={data.dayPlans || {}}
+          assignments={assignments} day={day} blockOf={blockOf}
+          onPick={setDay} onClose={() => setTermOpen(false)}
+          onWeekTopic={(id, v) => update(prev => ({
+            ...prev,
+            schedule: (prev.schedule || config.scheduleWeeks || []).map(w => w.id === id ? { ...w, topic: v } : w),
+          }))}
+          // Naming a day from the outline writes the same field the dashboard's
+          // own headline writes, so a name given here is the name there.
+          onDayTitle={(date, v) => update(prev => ({
+            ...prev,
+            dayPlans: { ...(prev.dayPlans || {}),
+              [date]: { ...blankDay(config), ...((prev.dayPlans || {})[date] || {}), title: v || undefined } },
+          }))} />
+      ) : null}
+
+      {/* The three that came off the rail. Each opens from More. */}
+      {roomOpen ? (
+        <Sheet title={TITLES[roomOpen]} sub={config.code + " \u00b7 " + day} onClose={() => setRoomOpen("")}>
+          {render[roomOpen]()}
         </Sheet>
       ) : null}
 

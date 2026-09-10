@@ -47,6 +47,38 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep10b", date: "Thursday, September 10", title: "The dashboard is a call sheet now, and the quarter is one popup away",
+    blurb: "The dashboard was three columns of panels with the day squeezed in the middle, every row a filled colour bar, and no way to see past the day you were on. It is now a running order set like a printed call sheet, one rail holding the projector and a search, and the whole quarter behind the date. Built to the C2 mock-up Andrew picked after four rounds of options.",
+    groups: [
+      { name: "The day", items: [
+        ["Two columns, not three", "The Materials column is gone. The day takes everything the rail does not, because the day is the one thing this screen is for and it used to be the narrowest thing on it — with a column of other people's material on either side, and the two halves of one job (what is on the projector, what to put on next) split across opposite edges of the screen."],
+        ["The rows went quiet", "Every row was a solid bar of its kind's colour. Seven stacked read as a chart, and with everything shouting, the row that actually mattered had only a ring to tell it apart from six other loud things. Now: hairline rows, ink on paper, and the kind said in a word in its own colour. The row on the projector is the only filled row on the page, and it keeps its size — it used to grow three points and go semibold, which shoved the rest of the day down at the moment you were reading it."],
+        ["Sections are structure", "A mono numeral, the name at 20px, and a 2px rule the rows hang from, where it used to be 11px uppercase grey. The ladder down the page is 26 day, 20 section, 16 row, 13 meta. Sections fold, and a folded one keeps its header and lists what is inside on one line. Whole sections move up and down; a sequence's own slots do not, because where the opener sits is the sequence's business."],
+        ["Five blocks came off the top", "The sequence picker, the slides, what the week left unplaced, the six formats and an add-a-section field all sat above the first section, so the running order started a third of the way down its own panel. The six formats are gone outright — the drawer holds them. The rest folded away below the day, where a planning move belongs."],
+      ] },
+      { name: "The rail", items: [
+        ["The projector, at the top", "A live picture of the room screen was already being rendered and was buried under a tab. It leads now, with one row of controls under it: back, Next, Black, own window. Eight buttons in four stacked pairs used to live there and were pushing the drawer below the fold."],
+        ["Back and Next walk the day", "Next names what it will put up on its own line. Back puts the row before the live one back up, which is the thing a room asks for most and had no control at all."],
+        ["The drawer", "One search across everything, and three shelves: Media, Activities, Notes. Two shelves are defined by what they hold and Media takes everything else, so a kind added later cannot go missing — a first cut named every kind explicitly and quietly lost questions, assignments and sets. Kinds are a dropdown off the shelf rather than a row of chips. A result says what it is, who made it and whether it has been in front of the room already, on one line."],
+        ["And the drawer edits", "Clicking a row in the day opens it in the drawer, editable in place — title, headline, source, link, body, kind. It used to print read-only into the rail, so fixing a typo meant leaving for the repository. Add to a day and Move to a day are both there; Add leaves it where it is, Move takes it off first."],
+      ] },
+      { name: "The quarter", items: [
+        ["Plan the quarter", "From the date, because the date already means which day am I on and this is that question asked of the term. Outline reads week, day, section, row, each folding, with every week AND every day nameable in place. Map is the eleven weeks on one screen, three day cells each, showing each day's title and its section titles. Empty days say so and offer to be built."],
+        ["Built on what the store actually says", "COMM 118 has 7 of 32 days built and 61 readings sitting on weeks rather than on days, so an empty day is drawn as empty and counted, rather than left as a gap to be inferred."],
+      ] },
+      { name: "Worth knowing", items: [
+        ["One bar on all three surfaces", "Literally one component now, so the class page, the dashboard and the repository cannot drift apart again. It answers where am I and nothing else; the date and the room tools moved down to sit with the day they act on."],
+        ["What the tests caught", "That a due date on a folded week was invisible, and folded is the normal state for ten of eleven weeks. That a first cut of the shelves lost three kinds. That the row selection carried a section's name rather than its key, so Move would have emptied the wrong slot. That the responsive rules still described three columns."],
+      ] },
+    ],
+    note: {
+      title: "Four rounds to get here",
+      lines: [
+        "Andrew rejected the build three times — the layout was still three columns, old panels were still above the day, the drawer still looked like the old library. Each time the fix was to read the rendered page rather than trust that it looked right.",
+      ],
+    },
+  },
+  {
     id: "sep10", date: "Thursday, September 10", title: "The three doors, and the day plan stops lying about its own sections",
     blurb: "A long design session on the dashboard, and the first pieces of it shipped. The three surfaces Andrew moves between now reach each other from anywhere, every week of COMM 118 says its own name again instead of week one's, a nameless section is called Section 2 rather than “opener”, and the media kinds he asked for are on the shelf.",
     groups: [
