@@ -66,7 +66,13 @@ const SESSIONS = [
         ["Plan the quarter", "From the date, because the date already means which day am I on and this is that question asked of the term. Outline reads week, day, section, row, each folding, with every week AND every day nameable in place. Map is the eleven weeks on one screen, three day cells each, showing each day's title and its section titles. Empty days say so and offer to be built."],
         ["Built on what the store actually says", "COMM 118 has 7 of 32 days built and 61 readings sitting on weeks rather than on days, so an empty day is drawn as empty and counted, rather than left as a gap to be inferred."],
       ] },
+      { name: "Three things Andrew went looking for and could not find", items: [
+        ["Choosing a structure, and adding a section", "Both were behind a menu on a dashed row at the foot of the day. They sit in the day's own meta line now, beside the day's name: the sequence reads out by name, and + Section adds one. A new section arrives nameless — called Section N, with a caret in its name — rather than opening a dialog asking what to call a thing that does not exist yet."],
+        ["Adding something to a section", "Every section header has always had a + Add, and it faded in on hover, so the answer was invisible until the pointer happened to be over the right sixty pixels. Always visible now. Quiet is fine; absent is not."],
+        ["What clear was for", "It dropped the day's name so the day fell back to whatever came before, and the word “clear” said none of that. It reads “drop this name” now, and says in its tooltip how many days the name covers."],
+      ] },
       { name: "Worth knowing", items: [
+        ["The section numerals are one colour", "Each numeral used to take that section's own assigned colour — 01 crimson, 02 green, 03 teal — and none of it meant anything: the section colour only ever existed to tint the filled rows that are now hairlines. Different colours for the same kind of thing is a pattern the eye tries to read and cannot."],
         ["One bar on all three surfaces", "Literally one component now, so the class page, the dashboard and the repository cannot drift apart again. It answers where am I and nothing else; the date and the room tools moved down to sit with the day they act on."],
         ["What the tests caught", "That a due date on a folded week was invisible, and folded is the normal state for ten of eleven weeks. That a first cut of the shelves lost three kinds. That the row selection carried a section's name rather than its key, so Move would have emptied the wrong slot. That the responsive rules still described three columns."],
       ] },

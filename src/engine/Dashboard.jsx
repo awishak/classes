@@ -360,8 +360,15 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-sec{display:flex;flex-direction:column;gap:0;padding-top:26px;position:relative;border-radius:12px}
 .flow-sec-head{display:flex;align-items:flex-end;gap:12px;margin:0 0 2px;padding:0 4px 9px 0;
   min-height:34px;border-bottom:2px solid ${TEXT_PRIMARY}}
+/* One colour for every section numeral.
+   Each numeral used to take that section's own assigned colour, so 01 was
+   crimson, 02 green, 03 teal — and none of it meant anything, because the
+   section colour only ever existed to tint the filled rows that are now
+   hairlines. Different colours for the same kind of thing is a pattern the
+   eye tries to read and cannot. The numerals are the class colour; they are
+   all the same kind of thing, so they look it. */
 .flow-sec-n{flex:none;width:30px;font-family:${MONO};font-size:14px;font-weight:600;
-  color:var(--sec,var(--dash-accent));line-height:1;font-variant-numeric:tabular-nums}
+  color:var(--dash-accent);line-height:1;font-variant-numeric:tabular-nums}
 .flow-name{flex:0 1 auto;min-width:0;background:none;border:none;padding:2px 6px;border-radius:7px;
   cursor:text;font-family:var(--font-sec,${F});font-size:20px;font-weight:600;letter-spacing:-.018em;
   color:${TEXT_PRIMARY};line-height:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -422,9 +429,12 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-add{margin-left:auto;flex:none;min-height:26px;padding:0 10px;border:1px solid rgba(23,19,16,.14);
   border-radius:8px;background:#fff;color:#5b6068;cursor:pointer;font-family:${F};font-size:12.5px;font-weight:500}
 .flow-add:hover{background:rgba(23,19,16,.04);color:#171310}
-.flow-sec .flow-add{opacity:0;transition:opacity .12s}
-.flow-sec:hover .flow-add,.flow-sec:focus-within .flow-add{opacity:1}
-@media (hover:none){.flow-tools,.flow-sec .flow-add{opacity:1}}
+/* The way to put something in a section is always visible.
+   It faded in on hover, which meant the answer to "how do I add a note to this
+   section" was invisible until the pointer happened to be over the right
+   sixty pixels. Quiet is fine; absent is not. */
+.flow-sec .flow-add{opacity:1}
+@media (hover:none){.flow-tools{opacity:1}}
 /* Keyboard users had no idea where they were on this screen. */
 .dash-focus:focus-visible{outline:2px solid var(--dash-accent);outline-offset:2px;border-radius:8px}
 .dash-comfortable{--row-h:44px;--gap:11px;--pad:16px;--fs:15px;--topic:26px;--card:16px}
@@ -445,6 +455,12 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
   margin-bottom:6px;
   font-family:${MONO};font-size:13px;font-weight:600;letter-spacing:.09em;
   text-transform:uppercase;color:${TEXT_MUTED}}
+/* The day's own controls, beside the day's name. */
+.dash-topic-tool{flex:none;min-height:30px;padding:0 11px;border-radius:9px;
+  border:1px solid ${BORDER_STRONG};background:#fff;cursor:pointer;
+  font-family:${F};font-size:13px;font-weight:600;color:${TEXT_SECONDARY};
+  text-transform:none;letter-spacing:0}
+.dash-topic-tool:hover{background:${SURFACE_2};color:${TEXT_PRIMARY}}
 .dash-topic-clear{flex:none;min-height:22px;padding:0 9px;border-radius:999px;
   border:1px solid ${BORDER_STRONG};background:${SURFACE_2};cursor:pointer;
   font-family:${MONO};font-size:13px;font-weight:600;letter-spacing:.07em;
@@ -3410,7 +3426,7 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
 // what goes up next.
 // The topic, editable where it sits. Click it, type, Enter. No punctuation is
 // added and none is required.
-function EditableTopic({ value, placeholder, onSave, own, weekLabel, weekday, span, nth, onClear, date }) {
+function EditableTopic({ value, placeholder, onSave, own, weekLabel, weekday, span, nth, onClear, date, tools }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value || "");
   useEffect(() => { setDraft(value || ""); }, [value]);
@@ -3435,11 +3451,17 @@ function EditableTopic({ value, placeholder, onSave, own, weekLabel, weekday, sp
       <div className="dash-topic-meta">
         {date}
         <span>{meta}</span>
+        {/* The day's own controls, beside the one that was already here.
+            Choosing a structure and adding a section were behind a menu on a
+            dashed row at the foot of the day, and adding a note to a section
+            was a button that only appeared on hover — three things Andrew went
+            looking for and could not find. */}
+        {tools}
         {own && onClear ? (
           <button className="dash-focus dash-topic-clear" onClick={onClear}
             title={span > 1
-              ? "Drop this title. These " + span + " days go back to whatever came before."
-              : "Drop this title and go back to whatever came before."}>clear</button>
+              ? "This name covers " + span + " class days. Drop it and they go back to whatever came before."
+              : "Drop this name and the day goes back to whatever came before."}>drop this name</button>
         ) : null}
       </div>
       <h1 className="dash-topic">
@@ -4688,7 +4710,35 @@ export default function Dashboard({ config }) {
               span={dayTitle.span} nth={dayTitle.nth}
               onClear={dayTitle.own ? () => saveDayTitle("") : null}
               date={<DateButton days={days} day={day} onPick={setDay} accent={config.accent} today={onDeck} counts={dayCounts}
-                onTerm={() => setTermOpen(true)} />} />
+                onTerm={() => setTermOpen(true)} />}
+              tools={
+                <>
+                  {/* Which shape the day runs in. It was buried in a menu on a
+                      dashed row at the foot of the day. */}
+                  <DropMenu label="Structure" width={280} side="left"
+                    trigger={(open, toggle) => (
+                      <button className="dash-focus dash-topic-tool" onClick={toggle}
+                        aria-expanded={open} aria-haspopup="menu"
+                        title="The shape this day runs in">
+                        {seq?.name || "Freeform"}<span style={{ fontSize: 9, opacity: .55, marginLeft: 5 }}>▾</span>
+                      </button>
+                    )}>
+                    <span style={{ ...label, padding: "6px 10px 4px" }}>How this day runs</span>
+                    {seqs.map(x => (
+                      <button key={x.id} className="dash-focus" onClick={() => setSequence(x.id)}
+                        style={{ ...menuRow, color: x.id === seq?.id ? config.accent : TEXT_PRIMARY,
+                          fontWeight: x.id === seq?.id ? 600 : 400 }}>
+                        {x.name}
+                      </button>
+                    ))}
+                  </DropMenu>
+                  {/* A new section arrives nameless, called Section N, with a
+                      caret in its name. No dialog asking what to call a thing
+                      that does not exist yet. */}
+                  <button className="dash-focus dash-topic-tool" onClick={() => addBlock("")}
+                    title="Add a section to the end of this day">+ Section</button>
+                </>
+              } />
             {render.flow()}
           </Panel>
           {undo ? (
