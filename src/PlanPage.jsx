@@ -47,6 +47,36 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep10", date: "Thursday, September 10", title: "The three doors, and the day plan stops lying about its own sections",
+    blurb: "A long design session on the dashboard, and the first pieces of it shipped. The three surfaces Andrew moves between now reach each other from anywhere, every week of COMM 118 says its own name again instead of week one's, a nameless section is called Section 2 rather than “opener”, and the media kinds he asked for are on the shelf.",
+    groups: [
+      { name: "The three doors", items: [
+        ["One strip on the dashboard and the repository", "Class page, Dashboard, Repository, in that order, in a row of its own under each header. Where you are is drawn in the class colour and marked as the current page rather than linked, because a link to the page you are on is a dead control. Two of the nine ways across were simply missing before: the class page had no way to the repository, and the repository had no way to the class page."],
+        ["On the class page they are the tabs", "Rather than a second row. The instructor's tabs are Home, Dashboard, Repository, More — so on a phone the three doors ARE the bottom bar, which is where Andrew wanted them. Schedule, Assignments and Community left his tab bar because they were already cards in the grid underneath; a student's tabs are untouched, because for a student those three are the class."],
+        ["The repository knows which class", "It is one page across every class, so the first two doors need a class to point at. Being on a class surface records it; the repository reads it back and shows the code beside the strip. Opening it cold falls back to the first class still running. This replaces a dashboard URL kept in sessionStorage that only got written if you arrived from a dashboard."],
+        ["The menus lost their copies", "The dashboard's bar had a Repo chip and the This class menu had The repository again underneath it, plus Class home. All three came out. Each door is on the screen once."],
+      ] },
+      { name: "Two bugs, both found by looking at the real store", items: [
+        ["Every week of COMM 118 was called week one", "A day title carried forward until the next one was written, with no stop. Andrew wrote a title on Sep 21 and Sep 23 and none after, so week one's words were the name of all thirty-two days of the term, through to Dec 9, overriding every later week's topic. A carried title now stops at a week that names itself. A week with no topic still carries, so a title can still span a boundary on purpose."],
+        ["The day plan numbered its rows in the wrong order", "A day was drawn sequence, then leftover slots, then sections made by hand — but numbered sequence, sections, leftovers. A day holding both kinds numbered its rows out of order down the screen. One ordered list now does both."],
+      ] },
+      { name: "Sections and kinds", items: [
+        ["A section with no name is Section N", "Counting down the day. It used to be three different things at once: the words “Untitled section”, the raw storage key (so a Freeform day showed “opener” as if that were a title Andrew had written), and the sequence's own word. A slot the day's sequence declares keeps the sequence's word, because opener and problem are names. Everything else gets numbered."],
+        ["Seven media kinds added", "Book, Post, Image, Study, Broadcast, Slides and Other, on top of the Video, Podcast, Book Chapter and Quote already there. Study earns its place because a peer reviewed paper is not a news article and is not assigned like one. Kinds live in the shared shelf, so all eleven show up in every class."],
+      ] },
+      { name: "Worth knowing", items: [
+        ["Three new tests, each proved to bite", "The day titles, the section naming and the three doors are all asserted in the smoke run. Each was checked by breaking the fix on purpose and watching the test fail before putting it back — a test that has never failed is not yet a test."],
+        ["The repository keeps its strip while loading", "Both it and the dashboard used to return their loading screen before their header, so the page spent its first second with no way off it. The dashboard's “no sessions on the calendar yet” screen did too, which is the screen COMM 118 sits on until its term is built."],
+      ] },
+    ],
+    note: {
+      title: "The dashboard redesign is designed, not built",
+      lines: [
+        "The session settled a new dashboard on paper: the day set like a call sheet, one filled row for what is on the screen, a real picture of the projector, search as the handle on a Media / Activities / Notes drawer, folding sections, and the whole term behind the date. None of that is built yet. What shipped today is the plumbing under it.",
+      ],
+    },
+  },
+  {
     id: "sep9b", date: "Wednesday, September 9", title: "Grade view: the class as cards, sorted into columns",
     blurb: "Andrew is tired of deciding between a 91 and a 95. Grade view puts every student on a card, on a white page, one assignment at a time, and he drags each card into a column: Exceptional, A, B, C, D, Incomplete, F. Nothing reaches a student until he presses Release, and Hide takes all of the grades back at once.",
     groups: [

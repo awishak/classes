@@ -24,7 +24,7 @@ import { useHeadlines } from "./headlines.js";
 import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay, dayTitles } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
-import { normSlot, sequenceOptions, sequenceFor, sectionsOf } from "./dayplan.js";
+import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections } from "./dayplan.js";
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, makeBlock } from "./blocks.js";
 import { MEDIA_ACCEPT, mediaLabel, sizeLabel } from "./media.js";
 import { useUpload } from "./Attach.jsx";
@@ -38,6 +38,7 @@ import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, s
 import { genId } from "../utils.jsx";
 import * as TOKENS from "./tokens.js";
 import { REMINDERS } from "./reminders.js";
+import { InstructorNavRow } from "./InstructorNav.jsx";
 
 // Six items at 38px, plus the padding: the tallest a row menu gets. The flip
 // measures against this rather than against the menu that is about to open,
@@ -1823,28 +1824,41 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
   const named = new Set((seq?.slots || []).map(x => x.slot));
   // Sections I made always render, empty or not, because an empty one is where
   // the next thing goes. Anything else unnamed shows only if it holds something.
-  const mySections = Object.keys(slotItems).filter(isSection)
-    .map(k => [k, normSlot(slotItems[k]).title || "Untitled section"]);
-  const orphanSlots = Object.keys(slotItems)
+  const myKeys = Object.keys(slotItems).filter(isSection);
+  const orphanKeys = Object.keys(slotItems)
     .filter(k => !named.has(k) && !isSection(k))
-    .filter(k => normSlot(slotItems[k]).items.length)
-    .map(k => [k, normSlot(slotItems[k]).title || k]);
+    .filter(k => normSlot(slotItems[k]).items.length);
+
+  // Every section of this day, ONCE, in the order the day is drawn, with the
+  // nameless ones numbered by where they sit.
+  //
+  // The numbering used to walk a different order from the rendering — sequence,
+  // mine, orphans for the numbers against sequence, orphans, mine on screen —
+  // so a day holding both a section I made and a slot left over from an old
+  // sequence numbered its rows out of order down the page. One list now, and
+  // the order it is drawn in is the order it counts in.
+  const sectionRows = nameSections([
+    ...(seq?.slots || []).map(x => [x.slot, normSlot(slotItems[x.slot]).title || x.slot]),
+    ...orphanKeys.map(k => [k, normSlot(slotItems[k]).title || ""]),
+    ...myKeys.map(k => [k, normSlot(slotItems[k]).title || ""]),
+  ]);
+  const labelOf = Object.fromEntries(sectionRows);
+  const orphanSlots = orphanKeys.map(k => [k, labelOf[k]]);
+  const mySections = myKeys.map(k => [k, labelOf[k]]);
 
   const flatRows = [];
   const numberOf = (() => {
     const map = {};
     let n = 0;
-    [...(seq?.slots || []).map(x => x.slot),
-     ...mySections.map(([k]) => k),
-     ...orphanSlots.map(([k]) => k)].forEach(k => {
+    sectionRows.forEach(([k]) => {
       normSlot(slotItems[k]).items.forEach(it => {
         map[it.id] = ++n;
         const b = it.blockId ? blockOf(it.blockId) : null;
         const words = (b ? b.headline || b.title : it.claim || it.text) || "";
-        flatRows.push({ id: it.id, blockId: it.blockId, item: it, where: normSlot(slotItems[k]).title || k,
+        flatRows.push({ id: it.id, blockId: it.blockId, item: it, where: labelOf[k],
           cast: words ? () => castNow(b?.url
             ? { ...castFromLink({ label: b.title, url: b.url }), title: words, label: words }
-            : { type: "quote", tag: normSlot(slotItems[k]).title || k, title: words, label: words }) : null });
+            : { type: "quote", tag: labelOf[k], title: words, label: words }) : null });
       });
     });
     return map;
@@ -1864,10 +1878,13 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
 
 
 
-  // Every section this day has, named the way the panel names them.
+  // Somewhere to put a thing: the sequence's slots and the sections I made.
+  // An orphan slot is left out on purpose — it is where something ended up,
+  // not somewhere to aim at. Names come off the one list, so a section is
+  // called the same word in the menu as it is on the day.
   const sectionList = [
-    ...(seq?.slots || []).map(x => [x.slot, normSlot(slotItems[x.slot]).title || x.slot]),
-    ...Object.keys(slotItems).filter(isSection).map(k => [k, normSlot(slotItems[k]).title || "Untitled section"]),
+    ...(seq?.slots || []).map(x => [x.slot, labelOf[x.slot]]),
+    ...myKeys.map(k => [k, labelOf[k]]),
   ];
 
   const addBlockRow = (
@@ -2911,11 +2928,13 @@ function ClassMenu({ config }) {
           <span className="dash-bar-caret">▾</span>
         </button>
       )}>
+      {/* Class home and the repository came out of here when the strip above
+          the bar went in. A door that is on the screen already does not also
+          need a row in a menu; keeping both is how the repository ended up
+          reachable two ways from one header and no ways from the class page. */}
       <span style={{ ...label, padding: "6px 10px 4px" }}>Go to</span>
-      <a className="dash-focus" href={config.path} style={menuRow}>Class home</a>
       <a className="dash-focus" href={config.path + "/schedule"} style={menuRow}>The schedule</a>
       <a className="dash-focus" href={config.path + "/rungame"} style={menuRow}>Run the game</a>
-      <a className="dash-focus" href={"/repo?from=" + encodeURIComponent(config.path + "/dashboard")} style={menuRow}>The repository</a>
       <a className="dash-focus" href="/plan" style={menuRow}>The Brief</a>
       <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
       <span style={{ ...label, padding: "2px 10px 4px" }}>Another class</span>
@@ -4170,14 +4189,23 @@ export default function Dashboard({ config }) {
   cmdTargets.push({ key: "o:hl", group: "Open", title: "Headlines board", run: () => setHlOpen(true) });
   cmdTargets.push({ key: "o:be", group: "Open", title: "Write the Enter and Exit boards", run: () => setBoardsOpen(true) });
   cmdTargets.push({ key: "o:notes", group: "Open", title: "My notes for this day", run: () => setNotesOpen(true) });
-  cmdTargets.push({ key: "o:repo", group: "Open", title: "The repository", run: () => { window.location.href = "/repo?from=" + encodeURIComponent(config.path + "/dashboard"); } });
+  cmdTargets.push({ key: "o:repo", group: "Open", title: "The repository", run: () => { window.location.href = "/repo"; } });
   cmdTargets.push({ key: "o:col", group: "Open", title: "Colour and type", run: () => setColorsOpen(true) });
   cmdTargets.push({ key: "o:here", group: "Open", title: "Who is here", run: () => setHereOpen(true) });
   cmdTargets.push({ key: "o:todo", group: "Open", title: "Still to do", run: () => setTodoOpen(true) });
   cmdTargets.push({ key: "c:black", group: "Screen", title: "Black screen", run: () => cast({ type: "black", label: "Black screen" }) });
 
+  // The strip is on both of the screens below, for the same reason it is on the
+  // repository's: a dashboard that has not loaded, or a class with no dates on
+  // it yet, is exactly when I want to leave, and without the strip Back is the
+  // only way off. COMM 118 sits on the second of these until its term is built.
   if (data === null) {
-    return <div style={{ minHeight: "100vh", background: BG, fontFamily: F, display: "grid", placeItems: "center", color: TEXT_MUTED }}>Loading…</div>;
+    return (
+      <div style={{ minHeight: "100vh", background: BG, fontFamily: F }}>
+        <InstructorNavRow config={config} here="dashboard" focusClass="dash-focus" />
+        <div style={{ display: "grid", placeItems: "center", padding: "120px 20px", color: TEXT_MUTED }}>Loading…</div>
+      </div>
+    );
   }
 
   // A brand-new class has no weeks yet, so there is no session to open on. The
@@ -4185,16 +4213,19 @@ export default function Dashboard({ config }) {
   // good.
   if (!day) {
     return (
-      <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY, display: "grid", placeItems: "center", padding: 24 }}>
-        <div style={{ maxWidth: 420, textAlign: "center", display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
-          <span style={label}>{config.code}</span>
-          <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-.02em" }}>No sessions on the calendar yet</div>
-          <Muted>This class has no dates yet.</Muted>
-          <a className="dash-focus" href={config.path + "/schedule"}
-            style={{ ...mini, minHeight: TAP, padding: "0 18px", borderColor: config.accent, color: config.accent,
-              textDecoration: "none", display: "inline-flex", alignItems: "center", fontSize: 15 }}>
-            Build the schedule →
-          </a>
+      <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY }}>
+        <InstructorNavRow config={config} here="dashboard" focusClass="dash-focus" />
+        <div style={{ display: "grid", placeItems: "center", padding: "100px 24px" }}>
+          <div style={{ maxWidth: 420, textAlign: "center", display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
+            <span style={label}>{config.code}</span>
+            <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-.02em" }}>No sessions on the calendar yet</div>
+            <Muted>This class has no dates yet.</Muted>
+            <a className="dash-focus" href={config.path + "/schedule"}
+              style={{ ...mini, minHeight: TAP, padding: "0 18px", borderColor: config.accent, color: config.accent,
+                textDecoration: "none", display: "inline-flex", alignItems: "center", fontSize: 15 }}>
+              Build the schedule →
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -4342,12 +4373,13 @@ export default function Dashboard({ config }) {
           the same attention. The ways out of this class live under the class
           name, because that is what they all are. Teaching stays out on its
           own — it is the one switch I hit at the moment class starts. */}
-      <header ref={headRef} style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "10px 20px",
-        display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap",
-        position: "sticky", top: 0, zIndex: 30 }}>
+      {/* The strip and the bar are one sticky block, and headRef measures both,
+          because the rails stick to whatever the whole thing comes to. */}
+      <div ref={headRef} style={{ position: "sticky", top: 0, zIndex: 30 }}>
+      <InstructorNavRow config={config} here="dashboard" focusClass="dash-focus" />
+      <header style={{ background: "#fff", borderBottom: "1px solid " + BORDER, padding: "10px 20px",
+        display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
         <ClassMenu config={config} />
-        <span style={{ fontSize: 14, color: TEXT_MUTED, minWidth: 0,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{config.desc}</span>
 
         {/* Where I am, then what I can open, then the way out. Casting is not
             here: it lives on the room preview, with the rest of the room. */}
@@ -4360,7 +4392,6 @@ export default function Dashboard({ config }) {
         </button>
         <button className="dash-focus dash-bar" onClick={() => setHornOpen(true)}>Around the Horn</button>
         <button className="dash-focus dash-bar" onClick={() => setColorsOpen(true)}>Look</button>
-        <a className="dash-focus dash-bar" href={"/repo?from=" + encodeURIComponent(config.path + "/dashboard")}>Repo</a>
         {/* Written months ago and never mounted. Its Keyboard row is the only
             way to reach the shortcut sheet without already knowing ⌘/, which
             made ten live shortcuts undiscoverable. */}
@@ -4371,6 +4402,7 @@ export default function Dashboard({ config }) {
           dragKeeps={dragKeeps} onDragKeeps={() => setDragKeeps(v => !v)} />
 
       </header>
+      </div>
 
       <Reminders />
 

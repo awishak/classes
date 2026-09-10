@@ -84,6 +84,7 @@ import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, uns
 import GradeParade from "../src/engine/GradeParade.jsx";
 import { computeGrade } from "../src/engine/AssignmentsCard.jsx";
 import { sectionsOf } from "../src/engine/dayplan.js";
+import { dayTitles } from "../src/engine/days.js";
 import { SHARED_KEY } from "../src/engine/blocks.js";
 import { DEFAULT_REPO_FONTS } from "../src/engine/fonts.js";
 
@@ -993,6 +994,99 @@ cases.push(["Instructor links", <InstructorLinks />]);
   }
   }
   globalThis.localStorage.getItem = was;
+}
+
+// The three doors, on all three surfaces.
+//
+// The class page, the dashboard and the repository each used to know about some
+// of the others: two of the nine ways across were missing outright and the rest
+// were three different shapes in three different places. One strip fixed that,
+// and this is the check that keeps it fixed, because the way it broke the first
+// time was one surface at a time over months.
+//
+// Each surface must carry the strip, all three doors must be in it, and exactly
+// one must be marked as where I am — a strip with two current entries is a
+// strip that has stopped tracking the page it is on.
+{
+  const admin = cfg0.storageKey + "-admin";
+  const was = globalThis.localStorage.getItem;
+  globalThis.localStorage.getItem = (k) => (k === admin ? "1" : was(k));
+  warmClassData(cfg0.storageKey, warmShapes(cfg0, true));
+  // Every screen a surface can return, not just the one it settles on. The
+  // strip went in and was missing from four of these, because each of the three
+  // files returns early before its own header: a dashboard still loading, a
+  // class with no dates yet, and a repository still reading. Those are exactly
+  // the screens I want to leave, and Back was the only way off them.
+  //
+  // A class with no dates is not hypothetical. COMM 118 sits on that screen
+  // until its term is built.
+  const noDates = { ...cfg0, storageKey: "smoke-nav-nodates", scheduleWeeks: [] };
+  warmClassData(noDates.storageKey, { schedule: [] });
+  const unloaded = { ...cfg0, storageKey: "smoke-nav-unwarmed" };
+  // The class page carries the three doors as TABS rather than as the strip —
+  // on a phone they are the bottom bar, which is where Andrew wanted them. So
+  // it is checked separately, below.
+  const surfaces = [
+    ["dashboard", () => renderToString(<Dashboard config={cfg0} />)],
+    ["dashboard, still loading", () => renderToString(<Dashboard config={unloaded} />)],
+    ["dashboard, a class with no dates", () => renderToString(<Dashboard config={noDates} />)],
+    ["repository", () => renderToString(<RepoPage />)],
+  ];
+  for (const [where, render] of surfaces) {
+    try {
+      const html = render();
+      if (!html.includes('aria-label="Teaching surfaces"')) {
+        console.error(`  FAIL  ${where}: no strip, so two of the three doors are missing`); failedEarly++; continue;
+      }
+      // Only the strip's own markup. The class page marks the open card with
+      // aria-current too, so counting across the whole page counts that.
+      const strip = (html.split('aria-label="Teaching surfaces"')[1] || "").split("</nav>")[0];
+      for (const door of ["Class page", "Dashboard", "Repository"]) {
+        if (!strip.includes(door)) {
+          console.error(`  FAIL  ${where}: the strip has no way through to ${door}`); failedEarly++; }
+      }
+      const current = (strip.match(/aria-current="page"/g) || []).length;
+      if (current !== 1) {
+        console.error(`  FAIL  ${where}: ${current} entries in the strip marked as the current page, want exactly 1`); failedEarly++; }
+    } catch (err) {
+      console.error(`  FAIL  ${where}: ` + err.message); failedEarly++;
+    }
+  }
+
+  // The class page, both widths. An instructor's tabs are Home, Dashboard,
+  // Repository, More — the three doors among them — and the three cards that
+  // used to be tabs are gone from the bar because they are already in his grid.
+  // A student's tabs must not change at all.
+  for (const [where, px] of [["laptop", LAPTOP], ["phone", PHONE]]) {
+    try {
+      const html = atWidth(px, () => renderToString(<ClassApp config={cfg0} />));
+      if (!html.includes('href="' + cfg0.path + '/dashboard"')) {
+        console.error(`  FAIL  class page, instructor, ${where}: no tab through to the dashboard`); failedEarly++; }
+      if (!html.includes('href="/repo"')) {
+        console.error(`  FAIL  class page, instructor, ${where}: no tab through to the repository`); failedEarly++; }
+      // The duplicates are gone: a tab AND a card for the same thing was the
+      // whole complaint. Schedule still exists as a card, just not as a tab.
+      const bar = html.split('aria-haspopup="menu"')[0] || "";
+      if (/>Community</.test(bar)) {
+        console.error(`  FAIL  class page, instructor, ${where}: Community is still a tab as well as a card`); failedEarly++; }
+    } catch (err) {
+      console.error(`  FAIL  class page, instructor, ${where}: ` + err.message); failedEarly++;
+    }
+  }
+  globalThis.localStorage.getItem = was;
+
+  // And the student's bar is untouched.
+  try {
+    const html = atWidth(PHONE, () => renderToString(<ClassApp config={cfg0} />));
+    ["Schedule", "Assignments", "Community"].forEach(tab => {
+      if (!html.includes(">" + tab + "<")) {
+        console.error(`  FAIL  class page, student: ${tab} left the student's tabs`); failedEarly++; }
+    });
+    if (html.includes('href="/repo"')) {
+      console.error("  FAIL  class page, student: the repository is showing to a student"); failedEarly++; }
+  } catch (err) {
+    console.error("  FAIL  class page, student: " + err.message); failedEarly++;
+  }
 }
 
 // Four themes, and a student switching between them.
@@ -1958,6 +2052,82 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (!small.includes(">B<") || !small.includes("not graded yet")) say("the compact parade is missing a tile");
   } catch (err) { say("the parade threw: " + err.message); }
   warmClassData(cfg0.storageKey, warmShapes(cfg0, true));
+}
+
+// How far a day title reaches.
+//
+// COMM 118 had a title written on Sep 21 and Sep 23 and none after, and
+// dayTitles carried a written title forward until the next written one — so
+// week 1's title was the name of all thirty-two days of the term and every
+// later week's topic was overridden. Whatever date Andrew opened, the
+// dashboard said "What Our Sports Behaviors Can Tell Us About America".
+//
+// The rule: a carried title stops at a week that names itself. A week with no
+// topic still carries, so a title can still run across a boundary on purpose.
+{
+  const say = (msg) => { console.error("  FAIL  day titles: " + msg); failedEarly++; };
+  const weeks = [
+    { id: "w1", topic: "Week one", dates: ["Sep 21", "Sep 23", "Sep 25"] },
+    { id: "w2", topic: "Week two", dates: ["Sep 28", "Sep 30"] },
+    { id: "w3", topic: "", dates: ["Oct 5", "Oct 7"] },
+  ];
+  const t = dayTitles(weeks, { "Sep 21": { title: "A title I wrote" } });
+
+  if (t["Sep 21"].title !== "A title I wrote") say("the day it was written on lost it");
+  if (t["Sep 23"].title !== "A title I wrote") say("it did not carry to the next day of its own week");
+  if (t["Sep 25"].title !== "A title I wrote") say("it did not carry to the third day of its own week");
+  if (t["Sep 28"].title !== "Week two") say("a week that names itself did not take its name back: got " + JSON.stringify(t["Sep 28"].title));
+  if (t["Sep 30"].title !== "Week two") say("the second day of week two lost the week topic");
+  if (t["Sep 21"].span !== 3) say("the run should be the three days of week one, got " + t["Sep 21"].span);
+
+  // A week with no topic of its own still carries what came before.
+  const u = dayTitles(weeks, { "Sep 28": { title: "Written in week two" } });
+  if (u["Oct 5"].title !== "Written in week two") say("a week with no topic should still carry, got " + JSON.stringify(u["Oct 5"].title));
+
+  // And with nothing written anywhere, every day is its own week's topic.
+  const v = dayTitles(weeks, {});
+  if (v["Sep 21"].title !== "Week one" || v["Sep 28"].title !== "Week two") say("with no titles written, days should read their week topic");
+}
+
+// What a section with no name is called.
+//
+// It used to be three different things at once: the words "Untitled section"
+// on a section Andrew made, the raw storage key on a slot an old sequence left
+// behind (so a Freeform day showed the word "opener" as if it were a title),
+// and the sequence's own word on a sequence slot. Now: a sequence slot keeps
+// the sequence's word, and everything else is Section N, counting down the day.
+{
+  const say = (msg) => { console.error("  FAIL  section names: " + msg); failedEarly++; };
+  const cfg = { defaultSequenceId: "seq", sequences: [{ id: "seq", name: "A sequence", slots: [{ slot: "opener" }, { slot: "problem" }] }] };
+
+  // On a sequence, the sequence's words survive and a hand-made section numbers
+  // from where it sits in the whole day.
+  const onSeq = sectionsOf(cfg, { sequenceId: "seq", slots: {
+    opener: { items: [{ id: "a" }] },
+    "sec-1": { items: [{ id: "b" }] },
+    "sec-2": { title: "Fishbowl", items: [{ id: "c" }] },
+  } });
+  const seqMap = Object.fromEntries(onSeq);
+  if (seqMap.opener !== "opener") say("a sequence slot lost the sequence's own word: " + JSON.stringify(seqMap.opener));
+  if (seqMap["sec-2"] !== "Fishbowl") say("a section with a real title lost it");
+  if (seqMap["sec-1"] !== "Section 3") say("a nameless section should count down the whole day, got " + JSON.stringify(seqMap["sec-1"]));
+
+  // Freeform: no sequence slots at all, so the leftovers number 1, 2, 3.
+  const free = sectionsOf(cfg, { sequenceId: "__freeform", slots: {
+    opener: { items: [{ id: "a" }] },
+    two: { title: "Introduction", items: [{ id: "b" }] },
+    three: { items: [{ id: "c" }] },
+  } });
+  const freeMap = Object.fromEntries(free);
+  if (freeMap.two !== "Introduction") say("a written title was overwritten by a number");
+  if (freeMap.opener === "opener") say("a Freeform day is still showing the raw slot key as a title");
+  if (!/^Section \d+$/.test(freeMap.opener || "")) say("a leftover slot should be Section N, got " + JSON.stringify(freeMap.opener));
+  if (!/^Section \d+$/.test(freeMap.three || "")) say("a second leftover slot should be Section N, got " + JSON.stringify(freeMap.three));
+  if (freeMap.opener === freeMap.three) say("two nameless sections were given the same number");
+
+  // A title that is only whitespace is not a title.
+  const blank = Object.fromEntries(sectionsOf(cfg, { sequenceId: "__freeform", slots: { x: { title: "   ", items: [{ id: "a" }] } } }));
+  if (blank.x !== "Section 1") say("a whitespace title should be treated as no title, got " + JSON.stringify(blank.x));
 }
 
 let failed = failedEarly;

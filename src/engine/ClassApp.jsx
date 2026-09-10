@@ -77,12 +77,28 @@ const CSS = `
 @media (prefers-reduced-motion:reduce){.ca-skel{animation:none}}
 `;
 
-// Nav tabs map to real cards. "More" opens the cards that did not fit.
+// The tabs across the top, and along the bottom on a phone.
+//
+// A student gets the five: the three cards worth a tab of their own, plus Home
+// and More. For a student those three ARE the class, and a bottom bar of two
+// items on a phone is a worse bar.
+//
+// An instructor does not. Schedule, Assignments and Community are already in
+// the grid he is looking at, so a tab to each was the same door twice; what he
+// actually moves between is the class page, the dashboard and the repository.
+// So on his phone the bottom bar carries those instead — which is where the
+// three doors belong on a phone, rather than in a strip above the fold.
 const NAV = [
   { id: "home", label: "Home", card: null },
   { id: "schedule", label: "Schedule", card: "schedule" },
   { id: "assignments", label: "Assignments", card: "assignments" },
   { id: "community", label: "Community", card: "community" },
+  { id: "more", label: "More", card: "more" },
+];
+const NAV_TEACH = [
+  { id: "home", label: "Home", card: null },
+  { id: "dashboard", label: "Dashboard", suffix: "/dashboard" },
+  { id: "repo", label: "Repository", href: "/repo" },
   { id: "more", label: "More", card: "more" },
 ];
 const NAV_CARDS = new Set(["schedule", "assignments", "community"]);
@@ -554,7 +570,13 @@ export default function ClassApp({ config, initialCard }) {
     .filter(([, on]) => on)
     .map(([k]) => k)
     .filter(k => view === "instructor" || !INSTRUCTOR_ONLY.has(k));
-  const moreCards = enabledCards.filter(k => !NAV_CARDS.has(k));
+  // The tabs this person gets, and therefore which cards are already reachable
+  // without opening More. An instructor's tabs hold no cards at all, so every
+  // card is under More for him — Schedule and Assignments did not disappear,
+  // they went back to being cards like the rest.
+  const navTabs = view === "instructor" ? NAV_TEACH : NAV;
+  const tabCards = new Set(navTabs.map(n => n.card).filter(k => k && NAV_CARDS.has(k)));
+  const moreCards = enabledCards.filter(k => !tabCards.has(k));
 
   const signIn = (name) => {
     try { localStorage.setItem(REMEMBER, name); } catch { /* private mode */ }
@@ -755,7 +777,7 @@ export default function ClassApp({ config, initialCard }) {
 
   // Which nav tab is lit: the open card, or "More" when the open card is one
   // that lives under it.
-  const activeNav = !openKey ? "home" : (NAV_CARDS.has(openKey) ? openKey : "more");
+  const activeNav = !openKey ? "home" : (tabCards.has(openKey) ? openKey : "more");
 
   const CardTile = (key, i = 0) => {
     const s = summary(key, config, view, ctx);
@@ -820,15 +842,26 @@ export default function ClassApp({ config, initialCard }) {
     ...liveNow(config, live, poll, data).map(i => i.title),
   ].filter(Boolean);
 
+  // A tab is either a card on this page or a door to another surface. Both
+  // wear the same shape, because to the person pressing them they are the same
+  // kind of thing.
+  const tabTo = (n) => n.href || (n.suffix ? config.path + n.suffix : null);
+  const tabStyle = (on) => ({
+    fontSize: 15, fontWeight: on ? 600 : 500, color: on ? a : TEXT_SECONDARY, padding: "0 12px", minHeight: TAP,
+    display: "inline-flex", alignItems: "center", borderRadius: 8, cursor: "pointer", border: "none",
+    background: on ? a + "12" : "transparent", fontFamily: F, textDecoration: "none",
+  });
+
   const Nav = (
     <nav style={{ display: "flex", gap: 2, marginLeft: 8 }}>
-      {NAV.map(n => {
+      {navTabs.map(n => {
         const on = activeNav === n.id;
-        return (
+        const to = tabTo(n);
+        return to ? (
+          <a key={n.id} className="ca-focus" href={to} style={tabStyle(on)}>{n.label}</a>
+        ) : (
           <button key={n.id} className="ca-focus" onClick={() => go(n.card)} aria-current={on ? "page" : undefined}
-            style={{ fontSize: 15, fontWeight: on ? 600 : 500, color: on ? a : TEXT_SECONDARY, padding: "0 12px", minHeight: TAP,
-              display: "inline-flex", alignItems: "center", borderRadius: 8, cursor: "pointer", border: "none",
-              background: on ? a + "12" : "transparent", fontFamily: F }}>{n.label}</button>
+            style={tabStyle(on)}>{n.label}</button>
         );
       })}
     </nav>
@@ -877,16 +910,13 @@ export default function ClassApp({ config, initialCard }) {
             {Nav}
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
               <ThemeBadge theme={theme} points={myPoints} />
-              {view === "instructor" ? (
-                <a className="ca-focus" href={config.path + "/dashboard"}
-                  style={{ minHeight: TAP, padding: "0 18px", borderRadius: 999, background: a, color: "#fff",
-                    fontFamily: F, fontSize: 15, fontWeight: 600, textDecoration: "none",
-                    display: "inline-flex", alignItems: "center", whiteSpace: "nowrap" }}>Dashboard</a>
-              ) : null}
               {HeaderMenu}
             </div>
           </div>
         </div>
+        {/* The three doors. Same strip, same order, same place on the
+            dashboard and the repository. Instructor only: a student has no
+            dashboard and no repository to go to. */}
         </div>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 24, alignItems: "start" }}>
           <div style={{ maxWidth: CARD_MAX * 2 + 12 }}>
@@ -939,17 +969,6 @@ export default function ClassApp({ config, initialCard }) {
       </div>
       </div>
 
-      {view === "instructor" ? (
-        <div style={{ background: "var(--surface-card)", borderBottom: "1px solid " + BORDER, padding: "8px 16px",
-          display: "flex", gap: 10, alignItems: "center" }}>
-          <a className="ca-focus" href={config.path + "/dashboard"}
-            style={{ minHeight: TAP, padding: "0 18px", borderRadius: 999, background: a, color: "#fff",
-              fontFamily: F, fontSize: 15, fontWeight: 600, textDecoration: "none",
-              display: "inline-flex", alignItems: "center" }}>Dashboard</a>
-          <span style={{ fontSize: 15, color: TEXT_MUTED, minWidth: 0, overflow: "hidden",
-            textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{config.desc}</span>
-        </div>
-      ) : null}
 
       {/* content: grid OR full-screen takeover */}
       <div style={{ padding: 16 }}>
@@ -983,16 +1002,18 @@ export default function ClassApp({ config, initialCard }) {
 
       {/* bottom tab bar */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BAR_H, background: "var(--surface-card)", borderTop: "1px solid " + BORDER, display: "flex", zIndex: 20 }}>
-        {NAV.map((n, i) => {
+        {navTabs.map((n, i) => {
           const on = activeNav === n.id;
-          const mid = theme === "snapchat" && i === Math.floor(NAV.length / 2);
+          const mid = theme === "snapchat" && i === Math.floor(navTabs.length / 2);
           if (mid) return <ThemeCamera key="cam" theme={theme} />;
-          return (
+          const to = tabTo(n);
+          const barStyle = { flex: 1, minHeight: TAP, background: "none", border: "none", fontFamily: F, fontSize: 13, fontWeight: 600, color: on ? a : TEXT_SECONDARY, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, textDecoration: "none" };
+          const dot = <span style={{ width: 6, height: 6, borderRadius: "50%", background: on ? a : "transparent" }} />;
+          return to ? (
+            <a key={n.id} className="ca-focus" href={to} style={barStyle}>{dot}{n.label}</a>
+          ) : (
             <button key={n.id} className="ca-focus" onClick={() => go(n.card)} aria-current={on ? "page" : undefined}
-              style={{ flex: 1, minHeight: TAP, background: "none", border: "none", fontFamily: F, fontSize: 13, fontWeight: 600, color: on ? a : TEXT_SECONDARY, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: on ? a : "transparent" }} />
-              {n.label}
-            </button>
+              style={barStyle}>{dot}{n.label}</button>
           );
         })}
       </div>

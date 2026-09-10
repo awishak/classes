@@ -56,12 +56,32 @@ export function sectionsOf(config, plan) {
   const mine = Object.keys(sl).filter(k => k.startsWith("sec-"));
   const left = Object.keys(sl).filter(k =>
     !named.has(k) && !k.startsWith("sec-") && normSlot(sl[k]).items.length);
-  return [
+
+  // A section with no name of its own is called Section N, counting down the
+  // day. Not "Untitled section", which said the same nothing on every one of
+  // them, and not the storage key — a day set to Freeform keeps the slot keys
+  // an earlier sequence left behind, so the screen was showing the word
+  // "opener" as if that were a title Andrew had written.
+  //
+  // A slot the day's SEQUENCE declares keeps the sequence's own word, because
+  // opener and problem are names, chosen by picking that sequence. Only the
+  // ones with nothing behind them get numbered.
+  return nameSections([
     ...seqSlots.map(x => [x.slot, normSlot(sl[x.slot]).title || x.slot]),
-    ...mine.map(k => [k, normSlot(sl[k]).title || "Untitled section"]),
-    ...left.map(k => [k, normSlot(sl[k]).title || k]),
-  ];
+    ...mine.map(k => [k, normSlot(sl[k]).title || ""]),
+    ...left.map(k => [k, normSlot(sl[k]).title || ""]),
+  ]);
 }
+
+// The one place that decides what a nameless section is called. Exported
+// because the Dashboard builds its own ordered list of sections for numbering
+// the rows, and three files each carrying their own fallback string is how
+// "Untitled section", the raw slot key and a real title all ended up on screen
+// as if they were the same kind of thing.
+//
+// Takes [slot, title] pairs IN THE ORDER THE DAY RUNS and fills the blanks.
+export const nameSections = (rows) =>
+  rows.map(([slot, label], i) => [slot, (label || "").trim() || "Section " + (i + 1)]);
 
 // Which slot a seed wants: the first one it declares that this day's sequence
 // actually has, otherwise the front of the sequence.

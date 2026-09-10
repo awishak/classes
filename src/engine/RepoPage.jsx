@@ -31,6 +31,7 @@ import { ENGINE_LIST } from "../config/registry.js";
 import { typeOf, allTypes, registerTypes, SHARED_KEY, SHARED_LABEL, makeBlock, writeBlock,
   deleteBlock, stampScheduled, todayStamp } from "./blocks.js";
 import { colorOfType, readColors, writeTypeColor } from "./colors.js";
+import { InstructorNavRow } from "./InstructorNav.jsx";
 import { readTypes, readAdded, readLabels, addType, renameType, resetName, dropType,
   countTypes, orphanTypes } from "./types.js";
 import { FLAGS, carries, healthCounts, allClear } from "./health.js";
@@ -88,19 +89,11 @@ export default function RepoPage() {
   // I can send it to myself, out of a saved view when I ask it again, and back
   // off the address bar when Back is pressed.
   const [f, setF] = useState(() => readFilters(window.location.search));
-  // The way back. The dashboard sends ?from=/comm118/dashboard, the filters
-  // rewrite the address as soon as a chip changes, so the origin is kept for
-  // the visit rather than read off the address bar each time.
-  const [from] = useState(() => {
-    let got = "";
-    try {
-      got = new URLSearchParams(window.location.search).get("from") || "";
-      if (got && !/^\/[a-z0-9-]+\/dashboard$/.test(got)) got = "";
-      if (got) sessionStorage.setItem("repo-from", got);
-      else got = sessionStorage.getItem("repo-from") || "";
-    } catch { /* private mode */ }
-    return got;
-  });
+  // The way back used to be ?from=/comm118/dashboard, kept for the visit in
+  // sessionStorage. That only ever worked if I had arrived from a dashboard,
+  // so opening this page cold left it with no way back to a class at all.
+  // InstructorNav remembers the class instead, and every class surface writes
+  // it, so the strip in the header always has somewhere to point.
   const { q, kind, where, tag, flag, pick, lens } = f;
   const set = (patch) => setF(prev => ({ ...prev, ...patch }));
   const [adding, setAdding] = useState(false);
@@ -725,9 +718,16 @@ export default function RepoPage() {
     setRoomKept(prev => new Set(prev).add(item.key));
   };
 
+  // The strip stays up while the stores are still coming in. A page that spends
+  // its first second with no way off it is a page I have to use Back to leave,
+  // and Back is the one way out this strip exists to replace.
   if (!stores) {
-    return <div style={{ minHeight: "100vh", background: BG, fontFamily: F, display: "grid",
-      placeItems: "center", color: MUTED }}>Reading everything…</div>;
+    return (
+      <div style={{ minHeight: "100vh", background: BG, fontFamily: F }}>
+        <InstructorNavRow here="repo" focusClass="repo-focus" />
+        <div style={{ display: "grid", placeItems: "center", padding: "120px 20px", color: MUTED }}>Reading everything…</div>
+      </div>
+    );
   }
 
   const chip = (on, text, onClick, color) => (
@@ -744,8 +744,12 @@ export default function RepoPage() {
       <style>{CSS}</style>
 
       <header className="repo-head" ref={headRef}>
+        {/* The three doors, in the place they are on the class page and the
+            dashboard. The pair of back-links that used to sit inside the title
+            row went with them: one of the two only appeared if I had arrived
+            from a dashboard, and neither reached the class page. */}
+        <InstructorNavRow here="repo" focusClass="repo-focus" />
         <div className="repo-head-in">
-          {from ? <a href={from} className="repo-back">← Dashboard</a> : null}
           <a href="/" className="repo-back">← All classes</a>
           <h1 className="repo-title">Repository</h1>
           <span className="repo-count">{items.length} things</span>

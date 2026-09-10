@@ -17,18 +17,33 @@ export function allDays(weeks) {
 // What each day is called, and how far a title reaches.
 //
 // A title starts on the day I write it and covers every class day after it
-// until I write another one. So one title can run across two days of a week,
-// or across a week boundary, without a spans table or a pair of drag handles
-// to set the ends. Writing a title on a day starts a new one there; clearing
-// it hands the day back to whatever came before.
+// until I write another one. So one title can run across two days of a week
+// without a spans table or a pair of drag handles to set the ends. Writing a
+// title on a day starts a new one there; clearing it hands the day back to
+// whatever came before.
 //
-// Days before the first title fall back to the week's topic, which is what
-// every day used to show.
+// A carried title STOPS at a week that has a topic of its own.
+//
+// Without that stop, carrying forward never ended. COMM 118 had a title on
+// Sep 21 and Sep 23 and none after, so week 1's title was the name of all
+// thirty-two days of the term, right through to Dec 9 — every later week's
+// topic overridden by a sentence written for the first week. A week topic is
+// something Andrew set on purpose about that week; a title carried out of an
+// earlier week is a guess, and the thing set on purpose wins.
+//
+// A week with no topic still carries, which is what makes a title able to run
+// across a week boundary when that is what he meant.
 export function dayTitles(weeks, dayPlans) {
   const days = allDays(weeks);
   const out = {};
   let carried = null;          // { from, title }
+  let lastWeek = null;
   days.forEach(d => {
+    // A new week that names itself takes its own name back.
+    if (d.weekId !== lastWeek) {
+      if ((d.topic || "").trim()) carried = null;
+      lastWeek = d.weekId;
+    }
     const own = ((dayPlans || {})[d.date] || {}).title;
     if ((own || "").trim()) carried = { from: d.date, title: own.trim() };
     const title = carried ? carried.title : (d.topic || "");
