@@ -2370,6 +2370,29 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (Object.keys(move(seed(), "sec-a", 1)).sort().join() !== "opener,sec-a,sec-b") say("a slot went missing in the move");
 }
 
+// One menu on a right-click, not two.
+//
+// A row already had a context menu on its wrapper — a small one at the cursor
+// offering Remove — and a second was added inside the row itself. Right-click
+// fired both, and Andrew got two dropdowns. Only one handler may sit on the
+// path from a row to the page.
+{
+  const say = (m) => { console.error("  FAIL  right-click: " + m); failedEarly++; };
+  const src = readFileSync(new URL("../src/engine/Dashboard.jsx", import.meta.url), "utf8");
+  const hits = (src.match(/onContextMenu=/g) || []).length;
+  // One on the row, one on a section's name, and one inside a menu's own veil
+  // to dismiss it. Any more and two of them are on the same element's path.
+  if (hits > 3) say(hits + " context-menu handlers, which is more than the row, the section name and a veil");
+  if (/function RowMenu\(/.test(src)) say("the second row menu is back");
+  if (!/onContextMenu=\{e => \{ e\.preventDefault\(\); toggleMenu\(\); \}\}/.test(src)) {
+    say("the row no longer opens its menu on right-click");
+  }
+  // And the menu's Edit has to reach the thing that opens the editor.
+  if (!/onSelect \? \(\s*\n\s*<button className="dash-focus" onClick=\{\(\) => \{ setMenu\(false\); onSelect\(\); \}\}/.test(src)) {
+    say("Edit this no longer calls the handler that opens a row");
+  }
+}
+
 let failed = failedEarly;
 for (const [name, el, must] of cases) {
   try {

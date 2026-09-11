@@ -17,7 +17,7 @@
 // know what it meant, and the six under it — Headlines, Game, Fishbowl, This or
 // That, Around the Horn, Team Trivia — are activities. So they are activities.
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import * as TOKENS from "./tokens.js";
 import { typeOf, allTypes, makeBlock } from "./blocks.js";
 import { inkOf } from "./colors.js";
@@ -71,9 +71,21 @@ const sourceFrom = (url) => {
 // from the search that found it. So fixing a typo in a headline meant leaving
 // the dashboard for the repository. The drawer is already the place a thing
 // comes FROM; it is the obvious place for the thing to go back to.
-function DrawerEdit({ block, item, where, hue, onSave, onSaveItem, onPlace, onMove, onClose }) {
+function DrawerEdit({ block, item, where, hue, onSave, onSaveItem, onPlace, onMove, onClose, pickedId }) {
   const t = block ? typeOf(block.type) : null;
   const kinds = allTypes();
+
+  // Bring the editor to where Andrew is looking.
+  //
+  // Pressing Edit on a row already worked — it opened the thing right here —
+  // but the drawer sits under the room screen in the rail, which on a laptop
+  // is below the fold. So the button changed something he could not see, which
+  // is indistinguishable from a button that does nothing, and that is what he
+  // reported. The editor scrolls itself up when a new thing is opened in it.
+  const box = useRef(null);
+  useEffect(() => {
+    box.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [pickedId]);
 
   // A field that saves when you leave it. No Save button, for the same reason
   // section names have no pencil: the words are the control.
@@ -92,7 +104,7 @@ function DrawerEdit({ block, item, where, hue, onSave, onSaveItem, onPlace, onMo
   );
 
   return (
-    <div className="draw draw-edit">
+    <div className="draw draw-edit" ref={box}>
       <div className="draw-edithead">
         <span className="draw-spine" style={{ background: hue(block?.type || "note") }} />
         <span className="draw-editkind">{t ? t.label : "Note"}</span>
@@ -178,10 +190,10 @@ export default function Drawer({ blocks, accent, hue, onPick, onNew, features, o
   // A thing is open: the drawer becomes its editor until you close it.
   if (picked) {
     return (
-      <DrawerEdit block={picked.blockId ? blockOf(picked.blockId) : null} item={picked.item}
+      <DrawerEdit key={picked.id || picked.blockId} block={picked.blockId ? blockOf(picked.blockId) : null} item={picked.item}
         where={picked.where} hue={hue} onSave={onSavePicked} onSaveItem={onSaveItemPicked}
         onPlace={onPlacePicked} onMove={picked.item ? onMovePicked : null}
-        onClose={onClearPicked} />
+        onClose={onClearPicked} pickedId={picked.id} />
     );
   }
 

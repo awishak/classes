@@ -1373,23 +1373,6 @@ function SlotName({ slot, title, accent, onSave, onDelete, onColor, count, tally
 // Up, down, Move and a cross was four controls on every row to do two things.
 // Dragging covers reordering and moving between sections in one gesture, and
 // removing is rare and permanent enough to live behind a right-click.
-function RowMenu({ at, onRemove, onClose }) {
-  if (!at) return null;
-  const x = typeof window !== "undefined" ? Math.min(at.x, window.innerWidth - 190) : at.x;
-  return (
-    <div onMouseDown={onClose} onContextMenu={e => { e.preventDefault(); onClose(); }}
-      style={{ position: "fixed", inset: 0, zIndex: 75 }}>
-      <div onMouseDown={e => e.stopPropagation()}
-        style={{ position: "fixed", left: x, top: at.y, background: "#fff", border: "1px solid " + BORDER_STRONG,
-          borderRadius: 10, boxShadow: "0 12px 30px -10px rgba(23,19,16,.4)", padding: 5, minWidth: 170 }}>
-        <button className="dash-focus" onClick={() => { onRemove(); onClose(); }}
-          style={{ ...mini, width: "100%", minHeight: HIT, borderColor: "transparent", color: LIVE,
-            justifyContent: "flex-start", padding: "0 12px" }}>Take it out of the day</button>
-      </div>
-    </div>
-  );
-}
-
 // The day's readings, and the schedule is the same list. What I put here is
 // what students see under that date, and what was already assigned for that
 // date is already here — one answer to "what is assigned", not two.
@@ -1853,7 +1836,6 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
-  const [rowMenu, setRowMenu] = useState(null);
   const [merging, setMerging] = useState(false);
   const [overSlot, setOverSlot] = useState(null);
   // Which sections are folded shut. Held on the panel rather than in the class
@@ -2173,7 +2155,6 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
                   onDragOver={e => { e.preventDefault(); e.stopPropagation(); setOverRow(it.id); }}
                   onDragLeave={() => setOverRow(null)}
                   onDrop={e => { e.preventDefault(); e.stopPropagation(); setOverRow(null); drop(e, s.slot, it.id); }}
-                  onContextMenu={e => { e.preventDefault(); setRowMenu({ x: e.clientX, y: e.clientY, slot: s.slot, id: it.id }); }}
                   style={{ display: "flex", flexDirection: "column", gap: 2,
                     marginLeft: (it.depth || 0) * 26,
                     borderTop: "2px solid " + (overRow === it.id ? accent : "transparent") }}>
@@ -2222,7 +2203,6 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
 
   return (
     <>
-      <RowMenu at={rowMenu} onRemove={() => onRemoveItem(rowMenu.slot, rowMenu.id)} onClose={() => setRowMenu(null)} />
       {noting ? (
         <NoteSheet sections={sectionList} sources={noteSources} accent={accent} classId={classId}
           onAdd={(slot, note) => (onAddNote ? onAddNote(slot, note) : onAddItem(slot, { text: note.text }))}
