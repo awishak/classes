@@ -66,6 +66,15 @@ const SESSIONS = [
         ["Plan the quarter", "From the date, because the date already means which day am I on and this is that question asked of the term. Outline reads week, day, section, row, each folding, with every week AND every day nameable in place. Map is the eleven weeks on one screen, three day cells each, showing each day's title and its section titles. Empty days say so and offer to be built."],
         ["Built on what the store actually says", "COMM 118 has 7 of 32 days built and 61 readings sitting on weeks rather than on days, so an empty day is drawn as empty and counted, rather than left as a gap to be inferred."],
       ] },
+      { name: "Two bugs Andrew hit on the section controls", items: [
+        ["Move down and fold wore the same glyph", "Both were a filled triangle, so pressing what looked like move-down folded the section — and pressing again unfolded it, which is why it read as \"it just moves back\". Moving is an arrow now, folding is a chevron, and the fold sits apart from the pair rather than against it."],
+        ["And move really could do nothing", "A day keeps slots that are neither sections you made nor holding anything — a leftover opener from a sequence the day no longer runs. Those keys sit in the stored order but are never drawn, so stepping one place through the raw key list could swap a section past something invisible and the page came back identical. A move now steps past the next section you can SEE, and leaves the hidden ones where they are. Proved by running the old version against a day shaped like that and watching it report no change."],
+      ] },
+      { name: "On a row, on right-click", items: [
+        ["The menu opens on right-click", "It was only ever behind the 30px numeral, which is a small target for the thing holding everything a row can do."],
+        ["Edit this", "Opens the row in the drawer with every field, rather than the one field the menu could reach. A row typed straight onto the day had no editor at all before — the drawer said so and stopped. Its words are the whole row, so they are the whole editor now."],
+        ["Add a note under this", "An indented note directly below, opened for typing. A note by default, because that is the thing you have in your hand while looking at a row and wanting to say something about it."],
+      ] },
       { name: "The outline has hands", items: [
         ["Drag a row anywhere, including onto another day", "Rows in the outline drag between sections, and because the outline is the one surface that can see two days at once, it is the only place a row can move from one day to another. The day plan's own drag can only reach inside the day it is showing."],
         ["Add a line to any section of any day", "The same one box: words go in as a note, a web address goes in as a link. So a term can be built from the outline rather than by walking to each day and back."],

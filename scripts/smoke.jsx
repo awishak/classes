@@ -2318,6 +2318,58 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (all(same) !== "r1,r2,r3") say("a drop on its own section lost a row");
 }
 
+// Moving a section up and down the day.
+//
+// The day hides a slot that is neither one Andrew made nor holding anything —
+// a leftover `opener` from a sequence the day no longer runs. Those keys are
+// still in the stored order, so stepping one place through the RAW key list
+// could swap a section past a slot that is not drawn, and the page would come
+// back looking identical. A button that sometimes does nothing is a button you
+// stop trusting, which is exactly what Andrew reported.
+{
+  const say = (m) => { console.error("  FAIL  moving a section: " + m); failedEarly++; };
+  const isSec = (k) => k.startsWith("sec-");
+  // The same mover the dashboard uses, lifted out so it can be run alone.
+  const move = (slots, slot, delta) => {
+    const shown = (k) => isSec(k) || (normSlotT(slots[k]).items || []).length;
+    const all = Object.keys(slots);
+    const vis = all.filter(shown);
+    const at = vis.indexOf(slot);
+    const to = at + delta;
+    if (at < 0 || to < 0 || to >= vis.length) return slots;
+    const other = vis[to];
+    const ai = all.indexOf(slot), bi = all.indexOf(other);
+    [all[ai], all[bi]] = [all[bi], all[ai]];
+    const next = {};
+    all.forEach(k => { next[k] = slots[k]; });
+    return next;
+  };
+  const drawn = (slots) => Object.keys(slots).filter(k => isSec(k) || (normSlotT(slots[k]).items || []).length);
+
+  // A hidden empty `opener` sits between the two sections Andrew can see.
+  const seed = () => ({
+    "sec-a": { title: "Introduction", items: [{ id: "x" }] },
+    opener: { items: [] },                                   // drawn: no
+    "sec-b": { title: "The weekly game", items: [{ id: "y" }] },
+  });
+
+  let s = move(seed(), "sec-a", 1);
+  if (drawn(s).join() !== "sec-b,sec-a") {
+    say("down past a hidden slot did nothing on screen, got " + drawn(s).join());
+  }
+  s = move(seed(), "sec-b", -1);
+  if (drawn(s).join() !== "sec-b,sec-a") {
+    say("up past a hidden slot did nothing on screen, got " + drawn(s).join());
+  }
+  // The hidden slot stays where it was rather than being shuffled about.
+  if (!Object.keys(s).includes("opener")) say("the hidden slot was dropped");
+  // The ends do not wrap.
+  if (drawn(move(seed(), "sec-a", -1)).join() !== "sec-a,sec-b") say("the first section moved up off the top");
+  if (drawn(move(seed(), "sec-b", 1)).join() !== "sec-a,sec-b") say("the last section moved down off the end");
+  // Nothing is lost either way.
+  if (Object.keys(move(seed(), "sec-a", 1)).sort().join() !== "opener,sec-a,sec-b") say("a slot went missing in the move");
+}
+
 let failed = failedEarly;
 for (const [name, el, must] of cases) {
   try {

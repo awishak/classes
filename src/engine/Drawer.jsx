@@ -71,7 +71,7 @@ const sourceFrom = (url) => {
 // from the search that found it. So fixing a typo in a headline meant leaving
 // the dashboard for the repository. The drawer is already the place a thing
 // comes FROM; it is the obvious place for the thing to go back to.
-function DrawerEdit({ block, item, where, hue, onSave, onPlace, onMove, onClose }) {
+function DrawerEdit({ block, item, where, hue, onSave, onSaveItem, onPlace, onMove, onClose }) {
   const t = block ? typeOf(block.type) : null;
   const kinds = allTypes();
 
@@ -118,9 +118,24 @@ function DrawerEdit({ block, item, where, hue, onSave, onPlace, onMove, onClose 
             <div className="draw-used">On {block.scheduled.join(" · ")}</div>
           ) : null}
         </>
-      ) : (
-        <div className="draw-used">{item?.text || "This row is typed straight onto the day, so there is no block to edit."}</div>
-      )}
+      ) : item ? (
+        // A row typed straight onto the day has no block behind it, and used to
+        // have no way to be changed either — the drawer said so and stopped.
+        // Its words are the whole row, so they are the whole editor.
+        <>
+          <label className="draw-field">
+            <span>The row</span>
+            <textarea defaultValue={item.text || ""} rows={3} placeholder="What this row says"
+              onBlur={e => { if (e.target.value !== (item.text || "")) onSaveItem({ text: e.target.value }); }} />
+          </label>
+          <label className="draw-field">
+            <span>Headline</span>
+            <input defaultValue={item.claim || ""} placeholder="The one sentence the room reads"
+              onBlur={e => { if (e.target.value !== (item.claim || "")) onSaveItem({ claim: e.target.value }); }}
+              onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }} />
+          </label>
+        </>
+      ) : null}
 
       {/* Put it on another day, or take it off this one and put it there.
           The day-and-section picker is the dashboard's, opened from here —
@@ -137,7 +152,7 @@ function DrawerEdit({ block, item, where, hue, onSave, onPlace, onMove, onClose 
 }
 
 export default function Drawer({ blocks, accent, hue, onPick, onNew, features, onRunFeature, featureBlurb, placed,
-  picked, onSavePicked, onPlacePicked, onMovePicked, onClearPicked, days, today, sections, blockOf }) {
+  picked, onSavePicked, onSaveItemPicked, onPlacePicked, onMovePicked, onClearPicked, days, today, sections, blockOf }) {
   const [q, setQ] = useState("");
   const [shelf, setShelf] = useState("media");
   const [kind, setKind] = useState("");
@@ -164,7 +179,7 @@ export default function Drawer({ blocks, accent, hue, onPick, onNew, features, o
   if (picked) {
     return (
       <DrawerEdit block={picked.blockId ? blockOf(picked.blockId) : null} item={picked.item}
-        where={picked.where} hue={hue} onSave={onSavePicked}
+        where={picked.where} hue={hue} onSave={onSavePicked} onSaveItem={onSaveItemPicked}
         onPlace={onPlacePicked} onMove={picked.item ? onMovePicked : null}
         onClose={onClearPicked} />
     );

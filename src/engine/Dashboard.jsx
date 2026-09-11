@@ -389,7 +389,10 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Move the whole section, and fold it. Three 30px controls, quiet until the
    pointer is on the section. */
-.flow-secmove{flex:none;display:flex;gap:2px;margin-bottom:-7px}
+.flow-secmove{flex:none;display:flex;align-items:center;gap:2px;margin-bottom:-7px}
+/* The fold is not one of the move pair, so it does not sit against them. */
+.flow-secgap{width:7px}
+.flow-secfold{font-size:15px!important;line-height:1}
 .flow-secmove button{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;
   border:1px solid ${BORDER_STRONG};background:#fff;border-radius:8px;cursor:pointer;color:${TEXT_SECONDARY};
   font-size:12px;padding:0;line-height:1}
@@ -610,7 +613,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // then the question. `steps` is that list, `step` is which one is up (-1 when
 // the row is not live), and `onStep(i)` puts slide i on the wall. In the room
 // the one button cycles forward; jumping around lives behind the number.
-export function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, starred, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove, steps, step = -1, onStep }) {
+export function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, starred, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove, onAddUnder, steps, step = -1, onStep }) {
   const [editing, setEditing] = useState(false);
   const [menu, setMenu] = useState(false);
   // A row near the bottom of a long day opened its menu downward and off the
@@ -677,6 +680,10 @@ export function Castable({ kind, kindColor, title, url, claim, live, accent, onC
     <div className={"flow-row" + (live ? " live" : "") + (picked ? " picked" : "")
       + (done ? " done" : "") + (next ? " next" : "") + (depth ? " flow-nested" : "")}
       data-menu={menu ? "1" : "0"}
+      // Right-click anywhere on the row opens what the number opens. The menu
+      // was only ever behind a 30px numeral, which is a small target for the
+      // thing that holds everything a row can do.
+      onContextMenu={e => { e.preventDefault(); toggleMenu(); }}
       style={{ "--row": kindColor || TEXT_MUTED }}>
       {/* Everything a row can do, behind the number it already had.
           Five buttons on the right squeezed the words into a column of their
@@ -705,8 +712,24 @@ export function Castable({ kind, kindColor, title, url, claim, live, accent, onC
                   <span className="flow-rowmenu-k">→</span>Nest under the row above
                 </button>
               ) : null}
+              {/* Open it properly — the drawer, with every field. The menu
+                  could only ever edit the headline, which is one field of
+                  however many a thing has. */}
+              {onSelect ? (
+                <button className="dash-focus" onClick={() => { setMenu(false); onSelect(); }}>
+                  <span className="flow-rowmenu-k">✎</span>Edit this
+                </button>
+              ) : null}
+              {/* A note, indented under this row. A note is the default because
+                  it is the thing you have in your hand while looking at a row
+                  and wanting to say something about it. */}
+              {onAddUnder && depth < 1 ? (
+                <button className="dash-focus" onClick={() => { setMenu(false); onAddUnder(); }}>
+                  <span className="flow-rowmenu-k">↳</span>Add a note under this
+                </button>
+              ) : null}
               <button className="dash-focus" onClick={() => { setMenu(false); setEditing(true); }}>
-                <span className="flow-rowmenu-k">✎</span>{claim ? "Edit the headline" : "Write the headline"}
+                <span className="flow-rowmenu-k">“</span>{claim ? "Edit the headline" : "Write the headline"}
               </button>
               {steps && onStep ? steps.map((st, i) => (
                 <button key={st.name} className="dash-focus" onClick={() => { setMenu(false); onStep(i); }}
@@ -1826,7 +1849,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -2094,20 +2117,28 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
               <span style={{ flex: "1 1 auto" }} />
               <span className="flow-tally">{items.length ? doneHere + " of " + items.length + " done" : "empty"}</span>
               {/* Move the whole section, and fold it. */}
+              {/* Moving and folding wore the same glyph — a filled triangle
+                  for move-down and the same triangle for fold — so pressing
+                  what looked like move-down folded the section, and pressing
+                  again put it back. Two jobs, two shapes: moving is an ARROW,
+                  folding is a CHEVRON, and the fold sits apart from the pair. */}
               <span className="flow-secmove">
                 <button className="dash-focus" disabled={named.has(s.slot) || i <= firstMovable}
                   title={named.has(s.slot) ? "The sequence sets where this one sits" : "Move this section up"}
-                  onClick={() => onMoveSection && onMoveSection(s.slot, -1)}>&#9650;</button>
+                  aria-label="Move this section up"
+                  onClick={() => onMoveSection && onMoveSection(s.slot, -1)}>&#8593;</button>
                 <button className="dash-focus" disabled={named.has(s.slot) || i === sectionRows.length - 1}
                   title={named.has(s.slot) ? "The sequence sets where this one sits" : "Move this section down"}
-                  onClick={() => onMoveSection && onMoveSection(s.slot, 1)}>&#9660;</button>
-                <button className="dash-focus" title={folded ? "Unfold this section" : "Fold this section"}
-                  aria-expanded={!folded}
+                  aria-label="Move this section down"
+                  onClick={() => onMoveSection && onMoveSection(s.slot, 1)}>&#8595;</button>
+                <span className="flow-secgap" />
+                <button className="dash-focus flow-secfold" title={folded ? "Unfold this section" : "Fold this section"}
+                  aria-expanded={!folded} aria-label={folded ? "Unfold this section" : "Fold this section"}
                   onClick={() => setFoldedSecs(prev => {
                     const next = new Set(prev);
                     if (next.has(s.slot)) next.delete(s.slot); else next.add(s.slot);
                     return next;
-                  })}>{folded ? "▶" : "▼"}</button>
+                  })}>{folded ? "›" : "⌄"}</button>
               </span>
               <button className="dash-focus flow-add" onClick={() => setAdding(adding === s.slot ? null : s.slot)}>
                 {adding === s.slot ? "Close" : "+ Add"}
@@ -2163,6 +2194,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
                     canNest={i > 0 && (it.depth || 0) <= (normSlot(slotItems[s.slot]).items[i - 1].depth || 0)}
                     onNest={onNest ? (dir) => onNest(s.slot, it.id, dir) : null}
                     onRemove={() => onRemoveItem(s.slot, it.id)}
+                    onAddUnder={onAddUnder ? () => onAddUnder(s.slot, it.id, (it.depth || 0) + 1) : null}
                     steps={mediaSteps(blk, it.claim || blk?.headline || title, bucket.title || s.slot)}
                     step={liveStep(liveCast, (it.claim || blk?.headline) || title)}
                     onStep={blk?.media?.src ? (i) => castNow(mediaSteps(blk, it.claim || blk.headline || title, bucket.title || s.slot)[i].payload) : null}
@@ -3976,6 +4008,26 @@ export default function Dashboard({ config }) {
     slots[slot] = { ...bucket, items: [...bucket.items, { id: genId(), ...item }] };
     return { ...d, slots };
   }, "adding to the day plan");
+  // A note, indented under the row you right-clicked, and opened for typing.
+  //
+  // It arrives empty rather than asking what to call it first: the row you
+  // want is the one under the row you are looking at, and a dialog between the
+  // two is a dialog asking you to hold the thought.
+  const addUnder = (slot, afterId, depth) => {
+    const row = { id: genId(), text: "", depth };
+    writeDay(d => {
+      const slots = { ...(d.slots || {}) };
+      const bucket = normSlot(slots[slot]);
+      const i = (bucket.items || []).findIndex(x => x.id === afterId);
+      if (i < 0) return d;
+      const items = [...bucket.items];
+      items.splice(i + 1, 0, row);
+      slots[slot] = { ...bucket, items };
+      return { ...d, slots };
+    }, "that note");
+    setPicked({ blockId: "", item: row, where: "", slot, id: row.id });
+  };
+
   const removeFlowItem = (slot, itemId) => writeDay(d => {
     const slots = { ...(d.slots || {}) };
     const bucket = normSlot(slots[slot]);
@@ -4055,14 +4107,30 @@ export default function Dashboard({ config }) {
     const slots = d.slots || {};
     const seqKeys = new Set((sequenceFor(config, d.sequenceId || config.defaultSequenceId).slots || []).map(x => x.slot));
     if (seqKeys.has(slot)) return d;
-    const movable = Object.keys(slots).filter(k => !seqKeys.has(k));
-    const at = movable.indexOf(slot);
+
+    // Move it past the next section YOU CAN SEE, not the next key in the store.
+    //
+    // The day hides a slot that is neither one you made nor holding anything —
+    // a leftover `opener` from a sequence this day no longer runs, say. Those
+    // keys are still in the stored order, so stepping one place through the raw
+    // key list could swap a section with a slot that is not drawn, and the page
+    // would come back looking identical. A button that sometimes does nothing
+    // visible is a button you stop trusting.
+    const shown = (k) => isSection(k) || normSlot(slots[k]).items.length;
+    const all = Object.keys(slots).filter(k => !seqKeys.has(k));
+    const vis = all.filter(shown);
+    const at = vis.indexOf(slot);
     const to = at + delta;
-    if (at < 0 || to < 0 || to >= movable.length) return d;
-    movable.splice(to, 0, movable.splice(at, 1)[0]);
+    if (at < 0 || to < 0 || to >= vis.length) return d;
+
+    // Swap the two of them where they sit, so anything hidden stays put.
+    const other = vis[to];
+    const ai = all.indexOf(slot), bi = all.indexOf(other);
+    [all[ai], all[bi]] = [all[bi], all[ai]];
+
     const next = {};
     Object.keys(slots).filter(k => seqKeys.has(k)).forEach(k => { next[k] = slots[k]; });
-    movable.forEach(k => { next[k] = slots[k]; });
+    all.forEach(k => { next[k] = slots[k]; });
     return { ...d, slots: next };
   }, "moving that section");
 
@@ -4538,7 +4606,7 @@ export default function Dashboard({ config }) {
             .map(it => "\u00b7 " + it.text.trim()).join("\n") },
       ]} onNest={nestItem}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
-      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMoveSection={moveSection} onMergeSections={mergeSections} onSelect={setPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
+      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMoveSection={moveSection} onAddUnder={addUnder} onMergeSections={mergeSections} onSelect={setPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
       doneSet={doneSet} onTick={tickItem} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
@@ -4566,6 +4634,15 @@ export default function Dashboard({ config }) {
       }}
       onPlacePicked={() => setPlacing("add")}
       onMovePicked={() => setPlacing("move")}
+      onSaveItemPicked={(patch) => {
+        if (!picked?.slot || !picked?.id) return;
+        writeDay(d => {
+          const slots = { ...(d.slots || {}) };
+          const bucket = normSlot(slots[picked.slot]);
+          slots[picked.slot] = { ...bucket, items: (bucket.items || []).map(x => x.id === picked.id ? { ...x, ...patch } : x) };
+          return { ...d, slots };
+        }, "that row");
+      }}
       onClearPicked={() => setPicked(null)} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
       castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,
