@@ -64,11 +64,15 @@ const readDay = (config, plans, date) => {
   return { rows, done, sections };
 };
 
-export default function TermOutline({ config, weeks, plans, assignments, day, onPick, onClose, onWeekTopic, onDayTitle, blockOf, startView }) {
+export default function TermOutline({ config, weeks, plans, assignments, day, onPick, onClose, onWeekTopic, onDayTitle, onMoveRow, onAddRow, blockOf, startView }) {
   const [view, setView] = useState(startView || "outline");
   const [only, setOnly] = useState("");            // "" | "planned" | "empty"
   const [openWeeks, setOpenWeeks] = useState(() => new Set());
   const [openDays, setOpenDays] = useState(() => new Set([day]));
+  const [over, setOver] = useState("");        // the section a drag is hovering
+  const [dragging, setDragging] = useState("");
+  const [adding, setAdding] = useState("");   // "<date>|<slot>"
+  const [draft, setDraft] = useState("");
 
   const days = allDays(weeks);
   const titles = dayTitles(weeks, plans);
@@ -194,7 +198,18 @@ export default function TermOutline({ config, weeks, plans, assignments, day, on
                       {dayShut || !it.rows ? null : (
                         <div className="term-secs">
                           {it.sections.map(s => (
-                            <div key={s.slot} className="term-sec">
+                            <div key={s.slot} className="term-sec"
+                              data-over={over === d.date + "|" + s.slot ? "1" : "0"}
+                              onDragOver={e => { e.preventDefault(); setOver(d.date + "|" + s.slot); }}
+                              onDragLeave={() => setOver("")}
+                              onDrop={e => {
+                                e.preventDefault();
+                                setOver("");
+                                try {
+                                  const p = JSON.parse(e.dataTransfer.getData("text/plain") || "{}");
+                                  if (p.id && p.from && p.slot) onMoveRow(p.from, p.slot, p.id, d.date, s.slot);
+                                } catch { /* not ours */ }
+                              }}>
                               <div className="term-sechead">
                                 <span className="term-sname" data-unnamed={s.named ? "0" : "1"}>{s.name}</span>
                                 <span className="term-snum">{s.n}</span>
@@ -205,7 +220,15 @@ export default function TermOutline({ config, weeks, plans, assignments, day, on
                                 const kind = item.feature ? "activity" : b ? typeOf(b.type).label.toLowerCase() : "note";
                                 const src = b?.source || hostOf(b?.url);
                                 return (
-                                  <div key={id} className="term-row" data-done={done ? "1" : "0"}>
+                                  <div key={id} className="term-row" data-done={done ? "1" : "0"} draggable
+                                    onDragStart={e => {
+                                      e.dataTransfer.effectAllowed = "move";
+                                      e.dataTransfer.setData("text/plain", JSON.stringify({ from: d.date, slot: s.slot, id }));
+                                      setDragging(id);
+                                    }}
+                                    onDragEnd={() => setDragging("")}
+                                    title="Drag onto another section, on this day or any other">
+                                    <span className="term-grip" aria-hidden="true">&#10303;</span>
                                     <span className="term-rn">{done ? "✓" : n + 1}</span>
                                     <span className="term-rw">{words}</span>
                                     {src ? <span className="term-rsrc">{src}</span> : null}
@@ -213,6 +236,25 @@ export default function TermOutline({ config, weeks, plans, assignments, day, on
                                   </div>
                                 );
                               })}
+                              {/* Type a line straight into any section of any
+                                  day, the same box the day plan uses. */}
+                              {adding === d.date + "|" + s.slot ? (
+                                <div className="term-add">
+                                  <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+                                    placeholder="Type a note, or paste a link"
+                                    onKeyDown={e => {
+                                      if (e.key === "Enter" && draft.trim()) { onAddRow(d.date, s.slot, draft.trim()); setDraft(""); setAdding(""); }
+                                      if (e.key === "Escape") { setDraft(""); setAdding(""); }
+                                    }} />
+                                  <button className="dash-focus" disabled={!draft.trim()}
+                                    onClick={() => { onAddRow(d.date, s.slot, draft.trim()); setDraft(""); setAdding(""); }}>Add</button>
+                                </div>
+                              ) : (
+                                <button className="dash-focus term-addrow"
+                                  onClick={() => { setAdding(d.date + "|" + s.slot); setDraft(""); }}>
+                                  + Add to {s.name}
+                                </button>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -338,8 +380,25 @@ export const TERM_CSS = `
 /* A row of the day, the way the day sets one: a numeral, the words, where it
    came from, what it is. Set quieter than the dashboard's because here you are
    reading thirty of them rather than running one. */
+.term-sec[data-over="1"]{background:${SURFACE_2};border-radius:10px;
+  box-shadow:inset 0 0 0 2px var(--dash-accent)}
 .term-row{display:flex;align-items:baseline;gap:10px;min-height:30px;padding:2px 0;
-  border-bottom:1px solid ${BORDER}}
+  border-bottom:1px solid ${BORDER};cursor:grab}
+.term-row:hover{background:${SURFACE_2}}
+.term-grip{flex:none;width:12px;font-size:12px;color:${GHOST};line-height:1}
+.term-row:hover .term-grip{color:${TEXT_MUTED}}
+/* Adding a line to any section of any day, from here. */
+.term-addrow{display:flex;align-items:center;width:100%;min-height:30px;margin-top:3px;padding:0 4px;
+  border:none;border-radius:7px;background:none;cursor:pointer;text-align:left;
+  font-family:${F};font-size:13px;color:${TEXT_MUTED}}
+.term-addrow:hover{background:${SURFACE_2};color:${TEXT_PRIMARY}}
+.term-add{display:flex;gap:6px;margin-top:4px}
+.term-add input{flex:1 1 auto;min-width:0;border:1px solid ${BORDER_STRONG};border-radius:9px;
+  padding:6px 10px;font-family:${F};font-size:16px;color:${TEXT_PRIMARY}}
+.term-add input:focus{outline:none;border-color:var(--dash-accent)}
+.term-add button{flex:none;min-height:32px;padding:0 12px;border:none;border-radius:9px;
+  background:var(--dash-accent);color:#fff;cursor:pointer;font-family:${F};font-size:13px;font-weight:600}
+.term-add button:disabled{opacity:.45;cursor:default}
 .term-row:last-child{border-bottom:none}
 .term-rn{flex:none;width:22px;font-family:${MONO};font-size:13px;color:${TEXT_MUTED};
   font-variant-numeric:tabular-nums}

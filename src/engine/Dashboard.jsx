@@ -1072,7 +1072,9 @@ function LibraryPick({ blocks, accent, onPick, hue = defaultHue }) {
 }
 
 function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAddScheduled, blocks, onPickBlock, days, today }) {
-  const [mode, setMode] = useState(blocks?.length ? "lib" : "note");
+  // Nothing is chosen to begin with: the box at the top is always there, so a
+  // list only opens if you ask for one.
+  const [mode, setMode] = useState("");
   const [day, setDay] = useState(today);
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
@@ -1111,23 +1113,29 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: 11, borderRadius: 10, border: "1px solid " + accent, background: "#fff" }}>
-      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-        {blocks?.length ? tab("lib", "Library " + blocks.length) : null}
-        {tab("note", "Add")}
-        {(scheduled || []).length ? tab("sched", "Schedule " + scheduled.length) : null}
-        <button style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5, marginLeft: "auto", color: TEXT_MUTED }} onClick={onClose}>Cancel</button>
+      {/* Typing a line is not a mode. The box was a TAB called "Add", inside a
+          panel opened by a button called "+ Add", and it was not even the tab
+          that opened — with blocks on the shelf the panel opened on the library
+          list, so the answer to "how do I add a note" was a list of sixty-one
+          other people's readings. The box is always here now, at the top, with
+          the caret already in it. The lists below are for picking something
+          that already exists, which is a different job. */}
+      <div style={{ display: "flex", gap: 7 }}>
+        <input autoFocus value={text} onChange={e => setText(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") quick(); if (e.key === "Escape") onClose(); }}
+          placeholder="Type a note, or paste a link" style={inputStyle} />
+        <button style={{ ...solid(accent), flex: "none" }} onClick={quick} disabled={!text.trim()}>Add</button>
       </div>
+      <Muted style={{ fontSize: 13 }}>
+        {looksLikeUrl(text) ? "That is a web address, so the row goes in as a link."
+          : "Words go in as a note. Paste a web address and the row becomes a link."}
+      </Muted>
 
-      {mode === "note" ? (
-        <>
-          <input autoFocus value={text} onChange={e => setText(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") quick(); if (e.key === "Escape") onClose(); }}
-            placeholder="A line, or a link" style={inputStyle} />
-          <Muted style={{ fontSize: 12 }}>
-            {looksLikeUrl(text) ? "A web address goes in as a link." : "Paste a web address and the row becomes a link."}
-          </Muted>
-        </>
-      ) : null}
+      <div style={{ display: "flex", gap: 5, flexWrap: "wrap", paddingTop: 4, borderTop: "1px solid " + BORDER }}>
+        {blocks?.length ? tab("lib", "Or pick from " + blocks.length) : null}
+        {(scheduled || []).length ? tab("sched", "On the week " + scheduled.length) : null}
+        <button style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 13, marginLeft: "auto", color: TEXT_MUTED }} onClick={onClose}>Close</button>
+      </div>
 
       {mode === "link" ? (
         <>
@@ -1190,7 +1198,6 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
         </div>
       ) : null}
 
-      {mode === "note" ? <button style={solid(accent)} onClick={quick}>Add</button> : null}
       {mode === "link" ? <button style={solid(accent)} onClick={addLink}>Add</button> : null}
     </div>
   );
@@ -4860,7 +4867,42 @@ export default function Dashboard({ config }) {
             ...prev,
             dayPlans: { ...(prev.dayPlans || {}),
               [date]: { ...blankDay(config), ...((prev.dayPlans || {})[date] || {}), title: v || undefined } },
-          }))} />
+          }))}
+          // Dragging a row from one section to another, ACROSS DAYS. The day
+          // plan's own drag can only move within the day it is looking at;
+          // this is the one surface that can see two days at once, so it is
+          // the only place a row can move between them.
+          onMoveRow={(fromDate, fromSlot, itemId, toDate, toSlot) => update(prev => {
+            if (fromDate === toDate && fromSlot === toSlot) return prev;
+            const plans = { ...(prev.dayPlans || {}) };
+            const src = { ...blankDay(config), ...(plans[fromDate] || {}) };
+            const srcSlot = normSlot((src.slots || {})[fromSlot]);
+            const row = (srcSlot.items || []).find(x => x.id === itemId);
+            if (!row) return prev;
+            plans[fromDate] = { ...src, slots: { ...(src.slots || {}),
+              [fromSlot]: { ...srcSlot, items: srcSlot.items.filter(x => x.id !== itemId) } } };
+            const dst = { ...blankDay(config), ...(plans[toDate] || plans[fromDate === toDate ? fromDate : toDate] || {}) };
+            // Same day: read the destination back out of what we just wrote,
+            // or the removal is thrown away.
+            const dstBase = fromDate === toDate ? plans[toDate] : dst;
+            const dstSlot = normSlot((dstBase.slots || {})[toSlot]);
+            plans[toDate] = { ...dstBase, slots: { ...(dstBase.slots || {}),
+              [toSlot]: { ...dstSlot, items: [...(dstSlot.items || []), row] } } };
+            return { ...prev, dayPlans: plans };
+          })}
+          // A line typed into any section of any day. A web address arrives as
+          // a link, words arrive as a note — the same one box the day uses.
+          // This one goes through writeDayOn, so Undo covers it; the move above
+          // cannot, because undo remembers one day and a move touches two.
+          // Dragging it back is the way back.
+          onAddRow={(date, slot, text) => writeDayOn(date, d => {
+            const day0 = { ...blankDay(config), ...d };
+            const bucket = normSlot((day0.slots || {})[slot]);
+            const row = looksLikeUrl(text)
+              ? { id: genId(), text: hostOf(text) || "Link", links: [{ id: genId(), label: hostOf(text) || "Link", url: text }] }
+              : { id: genId(), text };
+            return { ...day0, slots: { ...(day0.slots || {}), [slot]: { ...bucket, items: [...(bucket.items || []), row] } } };
+          }, "that row")} />
       ) : null}
 
       {/* The three that came off the rail. Each opens from More. */}

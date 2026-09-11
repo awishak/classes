@@ -85,6 +85,7 @@ import GradeParade from "../src/engine/GradeParade.jsx";
 import { computeGrade } from "../src/engine/AssignmentsCard.jsx";
 import { sectionsOf } from "../src/engine/dayplan.js";
 import { dayTitles } from "../src/engine/days.js";
+import { normSlot as normSlotT } from "../src/engine/dayplan.js";
 import { SHELVES, shelfOf } from "../src/engine/Drawer.jsx";
 import TermOutline from "../src/engine/TermOutline.jsx";
 import { SHARED_KEY } from "../src/engine/blocks.js";
@@ -2219,6 +2220,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
         // Every day is nameable, not just every week.
         if (!/term-dtitle/.test(html)) say("outline: a day cannot be named");
         if ((html.match(/term-dtitle/g) || []).length < 3) say("outline: not every day of the open week can be named");
+        // The same hands as the day plan: drag a row, and add one.
+        if (!/draggable/.test(html)) say("outline: rows cannot be dragged");
+        if (!html.includes("+ Add to Introduction")) say("outline: a section offers no way to add to it");
+        if ((html.match(/term-addrow/g) || []).length < 2) say("outline: not every section can be added to");
       }
       // And the Map stays a count: it must NOT print the rows.
       if (view === "map") {
@@ -2234,6 +2239,83 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       say(view + ": " + err.message);
     }
   }
+}
+
+// How you add a note to a section.
+//
+// The box to type one was a TAB called "Add", inside a panel opened by a button
+// called "+ Add", and with blocks on the shelf the panel opened on the library
+// list instead — so the answer to "how do I add a note" was a list of sixty-one
+// readings somebody else wrote. Andrew asked how to do it, which is the only
+// evidence that matters.
+{
+  const say = (m) => { console.error("  FAIL  adding a note: " + m); failedEarly++; };
+  const src = readFileSync(new URL("../src/engine/Dashboard.jsx", import.meta.url), "utf8");
+  const start = src.indexOf("function AddToFlow(");
+  const fn = src.slice(start, src.indexOf("\n}", src.indexOf("// Move and remove, on the row itself", start)));
+  if (start < 0) say("AddToFlow is gone");
+
+  // Nothing is selected to begin with, so no list can hide the box.
+  if (/useState\(blocks\?\.length \? "lib"/.test(fn)) say("the panel opens on the library again, burying the box");
+  if (!/const \[mode, setMode\] = useState\(""\)/.test(fn)) say("the panel opens with a list chosen rather than none");
+  // The box is not behind a mode.
+  const boxAt = fn.indexOf("Type a note, or paste a link");
+  if (boxAt < 0) say("the box lost its placeholder, so nothing says what it takes");
+  const firstMode = fn.indexOf('mode === "');
+  if (boxAt < 0 || (firstMode >= 0 && boxAt > firstMode)) {
+    say("the box is behind a mode check again, so it is a tab rather than the first thing in the panel");
+  }
+  // And no tab is called the same thing as the button that opens the panel.
+  if (/tab\("note", "Add"\)/.test(fn)) say('a tab is called "Add" again, like the button that opened it');
+}
+
+// Moving a row between sections, which the outline can do across days.
+//
+// The same-day case is the one that eats a row: remove from one slot and add to
+// another, both on the same plan object, and reading the destination off the
+// ORIGINAL plan throws the removal away — the row lands in the new section and
+// is still sitting in the old one, or vanishes from both. So the arithmetic is
+// tested here rather than discovered on a term Andrew has built.
+{
+  const say = (m) => { console.error("  FAIL  moving a row: " + m); failedEarly++; };
+  const seed = () => ({
+    dayPlans: {
+      "Sep 21": { slots: { a: { items: [{ id: "r1" }, { id: "r2" }] }, b: { items: [{ id: "r3" }] } } },
+      "Sep 23": { slots: { c: { items: [] } } },
+    },
+  });
+  // The same mover the outline is given, lifted out so it can be run alone.
+  const move = (prev, fromDate, fromSlot, itemId, toDate, toSlot) => {
+    if (fromDate === toDate && fromSlot === toSlot) return prev;
+    const plans = { ...(prev.dayPlans || {}) };
+    const src = { ...(plans[fromDate] || {}) };
+    const srcSlot = normSlotT((src.slots || {})[fromSlot]);
+    const row = (srcSlot.items || []).find(x => x.id === itemId);
+    if (!row) return prev;
+    plans[fromDate] = { ...src, slots: { ...(src.slots || {}), [fromSlot]: { ...srcSlot, items: srcSlot.items.filter(x => x.id !== itemId) } } };
+    const dstBase = fromDate === toDate ? plans[toDate] : { ...(plans[toDate] || {}) };
+    const dstSlot = normSlotT((dstBase.slots || {})[toSlot]);
+    plans[toDate] = { ...dstBase, slots: { ...(dstBase.slots || {}), [toSlot]: { ...dstSlot, items: [...(dstSlot.items || []), row] } } };
+    return { ...prev, dayPlans: plans };
+  };
+  const ids = (st, date, slot) => (((st.dayPlans[date] || {}).slots || {})[slot]?.items || []).map(x => x.id);
+
+  // Same day, one section to another.
+  let st = move(seed(), "Sep 21", "a", "r1", "Sep 21", "b");
+  if (ids(st, "Sep 21", "a").join() !== "r2") say("same day: the row did not leave the section it came from, got " + ids(st, "Sep 21", "a").join());
+  if (ids(st, "Sep 21", "b").join() !== "r3,r1") say("same day: the row did not land where it was dropped, got " + ids(st, "Sep 21", "b").join());
+
+  // Across days.
+  st = move(seed(), "Sep 21", "b", "r3", "Sep 23", "c");
+  if (ids(st, "Sep 21", "b").length) say("across days: the row is still on the day it left");
+  if (ids(st, "Sep 23", "c").join() !== "r3") say("across days: the row never arrived, got " + ids(st, "Sep 23", "c").join());
+
+  // Nothing is lost or duplicated, whichever way it goes.
+  const all = (s) => Object.values(s.dayPlans).flatMap(p => Object.values(p.slots || {})).flatMap(x => (x.items || []).map(i => i.id)).sort().join();
+  if (all(st) !== "r1,r2,r3") say("across days: the set of rows changed, got " + all(st));
+  // A drop on the section it already sits in changes nothing.
+  const same = move(seed(), "Sep 21", "a", "r1", "Sep 21", "a");
+  if (all(same) !== "r1,r2,r3") say("a drop on its own section lost a row");
 }
 
 let failed = failedEarly;

@@ -66,6 +66,14 @@ const SESSIONS = [
         ["Plan the quarter", "From the date, because the date already means which day am I on and this is that question asked of the term. Outline reads week, day, section, row, each folding, with every week AND every day nameable in place. Map is the eleven weeks on one screen, three day cells each, showing each day's title and its section titles. Empty days say so and offer to be built."],
         ["Built on what the store actually says", "COMM 118 has 7 of 32 days built and 61 readings sitting on weeks rather than on days, so an empty day is drawn as empty and counted, rather than left as a gap to be inferred."],
       ] },
+      { name: "The outline has hands", items: [
+        ["Drag a row anywhere, including onto another day", "Rows in the outline drag between sections, and because the outline is the one surface that can see two days at once, it is the only place a row can move from one day to another. The day plan's own drag can only reach inside the day it is showing."],
+        ["Add a line to any section of any day", "The same one box: words go in as a note, a web address goes in as a link. So a term can be built from the outline rather than by walking to each day and back."],
+        ["The move arithmetic has a test", "A same-day move is the case that eats a row — remove from one slot, add to another, and if the destination is read off the original plan the removal is thrown away, so the row sits in both sections or in neither. The test was proved by writing the naive version and watching it report the row in both places."],
+      ] },
+      { name: "How you add a note", items: [
+        ["The box was a tab called Add, inside a button called + Add", "And with blocks on the shelf the panel opened on the library list instead, so the answer to \"how do I add a note\" was a list of sixty-one readings somebody else wrote. The box is the first thing in the panel now, always, with the caret in it. The lists below are for picking something that already exists, which is a different job."],
+      ] },
       { name: "Three things Andrew went looking for and could not find", items: [
         ["Choosing a structure, and adding a section", "Both were behind a menu on a dashed row at the foot of the day. They sit in the day's own meta line now, beside the day's name: the sequence reads out by name, and + Section adds one. A new section arrives nameless — called Section N, with a caret in its name — rather than opening a dialog asking what to call a thing that does not exist yet."],
         ["Adding something to a section", "Every section header has always had a + Add, and it faded in on hover, so the answer was invisible until the pointer happened to be over the right sixty pixels. Always visible now. Quiet is fine; absent is not."],
