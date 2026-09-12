@@ -52,12 +52,20 @@ const readDay = (config, plans, date) => {
   const secs = sectionsOf(config, plan);
   let rows = 0, done = 0;
   const doneSet = new Set(plan.done || []);
+  // A day can have a plan and no slots at all — a sequence was picked and
+  // nothing put in it yet, so the stored plan is `{ sequenceId }` and nothing
+  // more. sectionsOf still answers with that sequence's own slots, because the
+  // shape of the day is real even when it is empty. So the sections are named
+  // and the slots object they point into does not exist, and reading one threw
+  // the whole outline away: undefined["opener"].
+  const slots = plan.slots || {};
   const sections = secs.map(([slot, name]) => {
-    const items = normSlot(plan.slots[slot]).items || [];
+    const bucket = normSlot(slots[slot]);
+    const items = bucket.items || [];
     rows += items.length;
     items.forEach(it => { if (doneSet.has(it.id)) done++; });
     return {
-      slot, name, n: items.length, named: !!(normSlot(plan.slots[slot]).title || "").trim(),
+      slot, name, n: items.length, named: !!(bucket.title || "").trim(),
       items: items.map(it => ({ id: it.id, item: it, done: doneSet.has(it.id) })),
     };
   }).filter(s => s.n || s.slot.startsWith("sec-"));

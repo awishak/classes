@@ -2192,6 +2192,35 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     day: "Sep 21", onPick: noop, onClose: noop, onWeekTopic: noop, onDayTitle: noop,
     blockOf: (id) => (id === "b1" ? block : null) };
 
+  // The shapes a day plan actually comes in, including the two that threw.
+  //
+  // A day can have a plan and NO slots — a sequence picked and nothing put in
+  // it — so the stored plan is `{ sequenceId }` and nothing else. sectionsOf
+  // still answers with that sequence's own slots, because the shape of the day
+  // is real even when it is empty, so the outline asked an object that did not
+  // exist for its "opener" and took the whole panel down with it. Andrew hit
+  // this the first time he opened the quarter on a real term.
+  {
+    const rough = {
+      "Sep 21": { sequenceId: "__freeform", slots: { "sec-a": { title: "Introduction", items: [{ id: "r1" }] } } },
+      "Sep 23": { sequenceId: "motivated" },                 // a plan with no slots at all
+      "Sep 25": {},                                          // a plan with nothing in it
+      "Sep 28": { sequenceId: "motivated", slots: {} },       // slots present but empty
+      "Sep 30": { slots: { opener: null } },                  // a slot key holding nothing
+    };
+    const weeks2 = [
+      { id: "w1", topic: "Week one", dates: ["Sep 21", "Sep 23", "Sep 25"], items: [] },
+      { id: "w2", topic: "Week two", dates: ["Sep 28", "Sep 30"], items: [] },
+    ];
+    for (const view of ["outline", "map"]) {
+      try {
+        renderToString(<TermOutline {...props} weeks={weeks2} plans={rough} startView={view} />);
+      } catch (err) {
+        say(`${view}: a day plan with no slots threw — ` + err.message);
+      }
+    }
+  }
+
   for (const view of ["outline", "map"]) {
     try {
       const raw = renderToString(<TermOutline {...props} startView={view} />);
