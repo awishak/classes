@@ -10,7 +10,7 @@
 
 import { useState } from "react";
 import { genId } from "../utils.jsx";
-import { addSeedToDay, dayHasSeed } from "./dayplan.js";
+import { addSeedToDay, dayHasSeed, normSlot } from "./dayplan.js";
 import PickMark from "./Pick.jsx";
 import * as TOKENS from "./tokens.js";
 
@@ -84,19 +84,70 @@ const getDrag = (e) => { try { return JSON.parse(e.dataTransfer.getData("text/pl
 // ─────────────────────────────────────────────────────────────
 // Item row (used in both views)
 // ─────────────────────────────────────────────────────────────
-function ItemView({ item, picked }) {
+// Where a reading came from: the source written on its block, or the site the
+// link points at. theatlantic.com says enough, and www. in front of it says
+// nothing. A chapter with neither says nothing rather than something made up.
+const hostOf = (url) => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; } };
+const sourceOf = (item, block) => (block?.source || "").trim() || hostOf(item.url || block?.url || "");
+
+// A week's items in the order the week happens: Monday's first, then
+// Wednesday's, then Friday's, and within a day in the order they were added.
+// They were in the order they were added across the whole week, so a reading
+// put on Monday after the term was built landed under Friday's.
+const DAY_ORDER = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
+export const inWeekOrder = (items) => (items || [])
+  .map((it, i) => [it, i])
+  .sort((a, b) => (DAY_ORDER[a[0].date] || 9) - (DAY_ORDER[b[0].date] || 9) || a[1] - b[1])
+  .map(([it]) => it);
+
+// What students see on a week: the games and Headlines, the readings, and the
+// assignments. Nothing else.
+//
+// The games and Headlines come from the day plans, because the day plan is
+// where a class is actually built. The week carried activity rows of its own,
+// copied in from Spring, and those never followed the day: COMM 118's week
+// listed a Game on seven weeks while the games were really sets placed on
+// other days, and a Game or Headlines moved on the dashboard stayed put on the
+// schedule. Readings and assignments are the week's own, which is also where
+// the dashboard's readings list writes them.
+const GAME_FEATURES = new Set(["Game", "Team Trivia"]);
+const STUDENT_TYPES = new Set(["reading", "assignment"]);
+const isGameSet = (block, blockOf) => block?.type === "set" && (/\b(game|trivia)\b/i.test(block.title || "")
+  || (block.children || []).some(id => (blockOf(id)?.tags || []).some(t => /game|trivia/i.test(t))));
+
+export function studentItems(week, dayPlans, blockOf) {
+  const lookup = blockOf || (() => null);
+  const fromFlow = [];
+  (week.dates || []).forEach(date => {
+    const plan = (dayPlans || {})[date];
+    if (!plan) return;
+    const seen = new Set();
+    Object.values(plan.slots || {}).forEach(slot => normSlot(slot).items.forEach(it => {
+      const block = it.blockId ? lookup(it.blockId) : null;
+      const title = it.feature && (GAME_FEATURES.has(it.feature) || it.feature === "Headlines") ? it.feature
+        : isGameSet(block, lookup) ? block.title : "";
+      if (!title || seen.has(title)) return;
+      seen.add(title);
+      fromFlow.push({ id: "flow-" + date + "-" + it.id, type: "activity", title, date: dayOf(date) || "" });
+    }));
+  });
+  return [...(week.items || []).filter(it => STUDENT_TYPES.has(it.type)), ...fromFlow];
+}
+
+function ItemView({ item, picked, when, source }) {
   const m = TYPE_META[item.type] || {};
   const inner = (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
       <Dot color={m.color} />
       <span style={{ fontSize: 12, fontWeight: 700, color: m.color, textTransform: "uppercase", letterSpacing: "0.04em" }}>{m.label}</span>
       <span style={{ fontSize: 16, color: TEXT_PRIMARY }}>{item.title}</span>
+      {source ? <span style={{ fontSize: 14, color: TEXT_MUTED }}>{source}</span> : null}
     </span>
   );
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid " + BORDER }}>
-      <span style={{ width: 40, flexShrink: 0, fontSize: 13, fontWeight: 700, color: TEXT_SECONDARY }}>{item.date || ""}</span>
-      {item.url ? <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>{inner}</a> : inner}
+      <span style={{ width: 84, flexShrink: 0, fontSize: 13, fontWeight: 700, color: TEXT_SECONDARY }}>{when || item.date || ""}</span>
+      {item.url ? <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", minWidth: 0 }}>{inner}</a> : inner}
       {picked ? <PickMark size={26} label /> : null}
     </div>
   );
@@ -166,9 +217,15 @@ function StudentSchedule({ config, data, blockOf }) {
               <div style={{ fontSize: 17, fontWeight: 600 }}>{w.topic || "Untitled week"}</div>
               <div style={{ fontSize: 15, color: TEXT_MUTED, marginTop: 3 }}>{(w.dates || []).join(" · ")}</div>
               {w.text && <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 10, whiteSpace: "pre-wrap" }}>{w.text}</div>}
-              {(w.items || []).length > 0 && (
+              {studentItems(w, data?.dayPlans, blockOf).length > 0 && (
                 <div style={{ marginTop: 8 }}>
-                  {w.items.map(it => <ItemView key={it.id} item={it} picked={isPicked(it)} />)}
+                  {inWeekOrder(studentItems(w, data?.dayPlans, blockOf)).map(it => {
+                    const block = blockOf ? blockOf(it.blockId || it.libId) : null;
+                    // "Wed" on its own made a student work out which Wednesday.
+                    const date = (w.dates || []).find(d => dayOf(d) === it.date);
+                    return <ItemView key={it.id} item={it} picked={isPicked(it)}
+                      when={date ? it.date + " " + date : ""} source={sourceOf(it, block)} />;
+                  })}
                 </div>
               )}
             </div>
@@ -233,7 +290,25 @@ function ScheduleEditor({ config, data, update }) {
   };
 
   const addWeek = () => writeWeeks(ws => [...ws, { id: genId(), topic: "New week", dates: [], text: "", plan: "", slides: "", items: [] }]);
-  const removeWeek = (wid) => writeWeeks(ws => ws.filter(w => w.id !== wid));
+  // Deleting a week can be undone.
+  //
+  // The ✕ took a week and everything on it in one press, with nothing to take
+  // it back, and that is how COMM 118 lost its first week. The week is held
+  // here with where it sat, and Undo puts it back in the same place. The day
+  // plans for its dates are never touched by the delete.
+  const [removed, setRemoved] = useState(null);
+  const removeWeek = (wid) => {
+    const at = weeks.findIndex(w => w.id === wid);
+    if (at < 0) return;
+    setRemoved({ week: weeks[at], at, label: weekTag(weeks[at], at) });
+    writeWeeks(ws => ws.filter(w => w.id !== wid));
+  };
+  const undoRemove = () => {
+    if (!removed) return;
+    writeWeeks(ws => (ws.some(w => w.id === removed.week.id) ? ws
+      : [...ws.slice(0, removed.at), removed.week, ...ws.slice(removed.at)]));
+    setRemoved(null);
+  };
 
   // create a brand-new library item and drop it straight into a week
   const addNewToWeek = (wid, type, title) => {
@@ -248,6 +323,17 @@ function ScheduleEditor({ config, data, update }) {
       <div style={{ ...h2, marginBottom: 6 }}>Schedule · Planning</div>
 
       <WeekNav weeks={weeks} accent={a} />
+
+      {removed ? (
+        <div role="status" style={{ position: "sticky", top: 12, zIndex: 5, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+          marginBottom: 14, padding: "10px 12px 10px 16px", borderRadius: 12, background: TEXT_PRIMARY, color: "#fff", fontFamily: F, fontSize: 15 }}>
+          <span style={{ flex: "1 1 auto", minWidth: 0 }}>Deleted {removed.label}{removed.week.topic ? ": " + removed.week.topic : ""}</span>
+          <button onClick={undoRemove}
+            style={{ minHeight: TAP, padding: "0 16px", borderRadius: 10, border: "none", background: "#fff", color: TEXT_PRIMARY, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Undo</button>
+          <button onClick={() => setRemoved(null)} aria-label="Dismiss"
+            style={{ minHeight: TAP, minWidth: TAP, borderRadius: 10, border: "none", background: "transparent", color: "#fff", fontSize: 18, cursor: "pointer" }}>✕</button>
+        </div>
+      ) : null}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {weeks.map((w, i) => (

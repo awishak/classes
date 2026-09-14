@@ -88,6 +88,7 @@ import { dayTitles } from "../src/engine/days.js";
 import { normSlot as normSlotT } from "../src/engine/dayplan.js";
 import Drawer, { SHELVES, shelfOf } from "../src/engine/Drawer.jsx";
 import Slide, { slideOf } from "../src/engine/Slide.jsx";
+import { ScheduleDetail, studentItems } from "../src/engine/ScheduleCard.jsx";
 import TermOutline from "../src/engine/TermOutline.jsx";
 import { SHARED_KEY } from "../src/engine/blocks.js";
 import { DEFAULT_REPO_FONTS } from "../src/engine/fonts.js";
@@ -2207,6 +2208,60 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!html.includes("Gianna picture")) say("the Spring 2026 note is not under the day");
   if (!html.includes("off to Austin")) say("the Spring 2026 note for students is not under the day");
   if (!html.includes("a day note")) say("the day note is not under the day");
+}
+
+// The students' schedule: a week's items in day order, with their dates and sources.
+//
+// Items were listed in the order they were added, so a reading put on Monday
+// after the term was built sat under Friday's, and nothing said where a
+// reading came from.
+{
+  const say = (m) => { console.error("  FAIL  student schedule: " + m); failedEarly++; };
+  const week = { id: "w1", topic: "Week one", dates: ["Sep 21", "Sep 23", "Sep 25"], items: [
+    { id: "a", type: "reading", title: "Friday reading", url: "https://www.theatlantic.com/x", date: "Fri" },
+    { id: "b", type: "reading", title: "Wednesday reading", url: "https://www.nytimes.com/y", date: "Wed" },
+    { id: "c", type: "reading", title: "Monday reading", libId: "blk", date: "Mon" },
+  ] };
+  const blockOf = (id) => (id === "blk" ? { id: "blk", source: "Billings, Communication and Sport" } : null);
+  let html = "";
+  try {
+    html = renderToString(<ScheduleDetail config={{ accent: "#333", scheduleWeeks: [] }} role="student"
+      data={{ schedule: [week] }} blockOf={blockOf} />);
+  } catch (e) { say("threw: " + e.message); }
+  if (html) {
+    const at = (t) => html.indexOf(t);
+    if (!(at("Monday reading") < at("Wednesday reading") && at("Wednesday reading") < at("Friday reading"))) say("readings are not in day order");
+    if (!html.includes("theatlantic.com")) say("a link's site is not shown as its source");
+    if (!html.includes("Billings, Communication and Sport")) say("a block's written source is not shown");
+    if (!html.includes("Wed Sep 23")) say("a reading says Wed without saying which Wednesday");
+  }
+}
+
+// What students see on a week: games and Headlines from the day plans, and the
+// week's readings and assignments. The week's own activity rows, copied in from
+// Spring, never followed the day, so they are not shown.
+{
+  const say = (m) => { console.error("  FAIL  student schedule items: " + m); failedEarly++; };
+  const week = { id: "w1", dates: ["Sep 21", "Sep 23", "Sep 25"], items: [
+    { id: "a1", type: "activity", title: "Fishbowl", date: "Wed" },
+    { id: "a2", type: "activity", title: "Game", date: "Wed" },
+    { id: "r1", type: "reading", title: "A reading", date: "Mon" },
+    { id: "s1", type: "assignment", title: "Interview due", date: "Fri" },
+  ] };
+  const blocks = {
+    g: { id: "g", type: "set", title: "Weekly Game, week 1", children: ["q"] },
+    q: { id: "q", type: "question", title: "Q", tags: ["weekly game"] },
+    sv: { id: "sv", type: "set", title: "Eating habits", children: ["q2"] },
+    q2: { id: "q2", type: "question", title: "Q2", tags: ["survey"] },
+  };
+  const plans = {
+    "Sep 21": { slots: { open: { title: "Open", items: [{ id: "x1", feature: "Headlines" }, { id: "x2", text: "A note" }] } } },
+    "Sep 23": { slots: { mid: { title: "Mid", items: [{ id: "x3", blockId: "g" }, { id: "x4", blockId: "sv" }] } } },
+    "Sep 25": { slots: { end: { title: "End", items: [{ id: "x5", feature: "Around the Horn" }, { id: "x6", feature: "Game" }] } } },
+  };
+  const got = studentItems(week, plans, (id) => blocks[id]).map(it => (it.date || "") + " " + it.title);
+  const want = ["Mon A reading", "Fri Interview due", "Mon Headlines", "Wed Weekly Game, week 1", "Fri Game"];
+  if (JSON.stringify(got.slice().sort()) !== JSON.stringify(want.slice().sort())) say("got " + JSON.stringify(got) + ", want " + JSON.stringify(want));
 }
 
 // The day as a document, with each block's slide beside it.
