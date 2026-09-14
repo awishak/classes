@@ -25,7 +25,7 @@ import { useHeadlines } from "./headlines.js";
 import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay, dayTitles } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
-import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections, blankDay } from "./dayplan.js";
+import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections, blankDay, takeGroup, placeGroup } from "./dayplan.js";
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, makeBlock } from "./blocks.js";
 import { MEDIA_ACCEPT, mediaLabel, sizeLabel } from "./media.js";
 import { useUpload } from "./Attach.jsx";
@@ -1322,12 +1322,12 @@ function AddToFlow({ slot, seeds, used, accent, onAdd, onClose, scheduled, onAdd
       <div style={{ display: "flex", gap: 7 }}>
         <input autoFocus value={text} onChange={e => setText(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") quick(); if (e.key === "Escape") onClose(); }}
-          placeholder="Type a note, or paste a link" style={inputStyle} />
+          placeholder="Type an item, or paste a link" style={inputStyle} />
         <button style={{ ...solid(accent), flex: "none" }} onClick={quick} disabled={!text.trim()}>Add</button>
       </div>
       <Muted style={{ fontSize: 13 }}>
         {looksLikeUrl(text) ? "That is a web address, so the row goes in as a link."
-          : "Words go in as a note. Paste a web address and the row becomes a link."}
+          : "Words go in as an item. Paste a web address and the row becomes a link."}
       </Muted>
 
       <div style={{ display: "flex", gap: 5, flexWrap: "wrap", paddingTop: 4, borderTop: "1px solid " + BORDER }}>
@@ -2219,27 +2219,12 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
                 <span className="flow-addsec-p" aria-hidden="true">+</span>
               </button>
             )}>
-            {(sequences || []).length > 1 ? (
-              <>
-                <div style={{ ...label, color: TEXT_MUTED, padding: "8px 12px 3px" }}>Structure</div>
-                {sequences.map(x => (
-                  <button key={x.id} className="dash-focus" onClick={() => onSetSequence(x.id)}
-                    style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", textAlign: "left",
-                      background: "none", border: "none", cursor: "pointer", padding: "0 12px", minHeight: 38,
-                      borderRadius: 8, fontFamily: F, fontSize: 14,
-                      color: x.id === seq?.id ? accent : TEXT_PRIMARY, fontWeight: x.id === seq?.id ? 600 : 400 }}>
-                    {x.name}
-                  </button>
-                ))}
-                <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
-              </>
-            ) : null}
             <button className="dash-focus" onClick={() => setAddingBlock(true)}
               style={{ ...menuRow, color: accent, fontWeight: 600 }}>Add a section</button>
             {sectionList.length > 1 ? (
               <button className="dash-focus" onClick={() => setMerging(true)} style={menuRow}>Merge two sections</button>
             ) : null}
-            <button className="dash-focus" onClick={() => setNoting(true)} style={menuRow}>Add a note</button>
+            <button className="dash-focus" onClick={() => setNoting(true)} style={menuRow}>Add an item</button>
           </DropMenu>
         </>
       )}
@@ -2306,7 +2291,11 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
         onSetSlotTitle={onSetSlotTitle} onSaveItem={onSaveItem} onSaveBlock={onSaveBlock} onInsertRow={onInsertRow}
         onRemoveItem={onRemoveItem} onNest={onNest} onTick={onTick}
         isAssigned={isAssigned} onToggleAssigned={onToggleAssigned}
-        onDeleteSection={onDeleteSection} onMoveSection={onMoveSection} onEdit={onEdit} drop={drop} />
+        onDeleteSection={onDeleteSection} onMoveSection={onMoveSection} onEdit={onEdit} drop={drop}
+        onMoveItem={onMoveItem}
+        // A link put up from a line goes up the way the room screen shows any
+        // link: the page itself where the site allows it, the reader where not.
+        castLink={(url, name) => castNow({ ...castFromLink({ label: name, url }), title: name, label: name })} />
       {foldRow}
       {addBlockRow}
       {blockBlock}
@@ -3117,13 +3106,13 @@ export function NoteSheet({ sections, sources, accent, onAdd, onClose, classId }
   // for all of them and says which is which.
   const already = (sources || []).filter(x => (x.body || "").trim() || x.onSave);
   return (
-    <Sheet title="A new note" sub="A row on the day plan, and a note in the repository" onClose={onClose} width={620}>
+    <Sheet title="A new item" sub="A row on the day plan, and an item in the repository" onClose={onClose} width={620}>
       <span className="read-field">
         <textarea autoFocus value={text} onChange={e => setText(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit(); }}
-          placeholder="The note"
+          placeholder="The item"
           style={{ ...inputStyle, minHeight: 90, fontSize: 15, lineHeight: 1.5, resize: "vertical", paddingRight: 42 }} />
-        <Confirm onClick={commit} bottom title="Add the note" />
+        <Confirm onClick={commit} bottom title="Add the item" />
       </span>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <label className="dash-focus" style={{ ...mini, minHeight: HIT, cursor: up.busy ? "wait" : "pointer", opacity: up.busy ? .6 : 1 }}>
@@ -3149,7 +3138,7 @@ export function NoteSheet({ sections, sources, accent, onAdd, onClose, classId }
           style={{ ...inputStyle, minHeight: HIT, fontSize: 14, width: "auto", padding: "4px 8px" }}>
           {sections.map(([k, name]) => <option key={k} value={k}>{name}</option>)}
         </select>
-        <button style={{ ...solid(accent), marginLeft: "auto" }} onClick={commit}>Add the note</button>
+        <button style={{ ...solid(accent), marginLeft: "auto" }} onClick={commit}>Add the item</button>
       </div>
 
       {already.length ? (
@@ -3510,7 +3499,7 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
     <div style={{ background: "#fff", border: "1px solid " + accent, borderRadius: 14, padding: 14,
       display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ ...label, color: accent }}>{t ? t.label : "Note"}</span>
+        <span style={{ ...label, color: accent }}>{t ? t.label : "Item"}</span>
         {picked ? <PickMark size={22} label /> : null}
         <button className="dash-focus" onClick={onClose}
           style={{ ...label, fontSize: 12, marginLeft: "auto", color: TEXT_MUTED, background: "none", border: "none", cursor: "pointer" }}>Close</button>
@@ -4162,41 +4151,40 @@ export default function Dashboard({ config }) {
   // Dropped on a row it lands before that row; dropped on a section it lands at
   // the end. Reordering inside a section and moving between them are the same
   // write, which is why one gesture can do both.
+  // An item carries its notes wherever it goes: takeGroup lifts the item with
+  // every note under it, placeGroup puts them down together.
   const dragMove = (fromSlot, itemId, toSlot, beforeId) => writeDay(d => {
     const slots = { ...(d.slots || {}) };
     const from = normSlot(slots[fromSlot]);
-    const carried = from.items.find(x => x.id === itemId);
-    if (!carried) return d;
-    const fromItems = from.items.filter(x => x.id !== itemId);
-    slots[fromSlot] = { ...from, items: fromItems };
+    const { group, rest } = takeGroup(from.items, itemId);
+    if (!group.length || group.some(x => x.id === beforeId)) return d;
+    slots[fromSlot] = { ...from, items: rest };
     const to = normSlot(slots[toSlot]);
-    const toItems = toSlot === fromSlot ? fromItems : [...to.items];
-    const at = beforeId ? toItems.findIndex(x => x.id === beforeId) : -1;
-    if (at < 0) toItems.push(carried); else toItems.splice(at, 0, carried);
-    slots[toSlot] = { ...to, items: toItems };
+    slots[toSlot] = { ...to, items: placeGroup(toSlot === fromSlot ? rest : to.items, group, beforeId) };
     return { ...d, slots };
   });
 
   const moveItemTo = (fromSlot, itemId, toSlot, date) => {
     const on = date || day;
-    let carried = null;
+    let carried = [];
     writeDay(d => {
       const slots = { ...(d.slots || {}) };
       const from = normSlot(slots[fromSlot]);
-      carried = from.items.find(x => x.id === itemId) || null;
-      if (!carried) return d;
-      slots[fromSlot] = { ...from, items: from.items.filter(x => x.id !== itemId) };
+      const { group, rest } = takeGroup(from.items, itemId);
+      carried = group;
+      if (!group.length) return d;
+      slots[fromSlot] = { ...from, items: rest };
       if (on === day) {
         const to = normSlot(slots[toSlot]);
-        slots[toSlot] = { ...to, items: [...to.items, carried] };
+        slots[toSlot] = { ...to, items: placeGroup(toSlot === fromSlot ? rest : to.items, group, null) };
       }
       return { ...d, slots };
     });
-    if (carried && on !== day) {
+    if (carried.length && on !== day) {
       writeDayOn(on, d => {
         const slots = { ...(d.slots || {}) };
         const to = normSlot(slots[toSlot]);
-        return { ...d, slots: { ...slots, [toSlot]: { ...to, items: [...to.items, carried] } } };
+        return { ...d, slots: { ...slots, [toSlot]: { ...to, items: placeGroup(to.items, carried, null) } } };
       });
     }
   };
@@ -4914,25 +4902,6 @@ export default function Dashboard({ config }) {
                 onTerm={() => setTermOpen(true)} />}
               tools={
                 <>
-                  {/* Which shape the day runs in. It was buried in a menu on a
-                      dashed row at the foot of the day. */}
-                  <DropMenu label="Structure" width={280} side="left"
-                    trigger={(open, toggle) => (
-                      <button className="dash-focus dash-topic-tool" onClick={toggle}
-                        aria-expanded={open} aria-haspopup="menu"
-                        title="The shape this day runs in">
-                        {seq?.name || "Freeform"}<span style={{ fontSize: 9, opacity: .55, marginLeft: 5 }}>▾</span>
-                      </button>
-                    )}>
-                    <span style={{ ...label, padding: "6px 10px 4px" }}>How this day runs</span>
-                    {seqs.map(x => (
-                      <button key={x.id} className="dash-focus" onClick={() => setSequence(x.id)}
-                        style={{ ...menuRow, color: x.id === seq?.id ? config.accent : TEXT_PRIMARY,
-                          fontWeight: x.id === seq?.id ? 600 : 400 }}>
-                        {x.name}
-                      </button>
-                    ))}
-                  </DropMenu>
                   {/* A new section arrives nameless, called Section N, with a
                       caret in its name. No dialog asking what to call a thing
                       that does not exist yet. */}
@@ -5079,17 +5048,18 @@ export default function Dashboard({ config }) {
             const plans = { ...(prev.dayPlans || {}) };
             const src = { ...blankDay(config), ...(plans[fromDate] || {}) };
             const srcSlot = normSlot((src.slots || {})[fromSlot]);
-            const row = (srcSlot.items || []).find(x => x.id === itemId);
-            if (!row) return prev;
+            // The item and its notes, together.
+            const { group, rest } = takeGroup(srcSlot.items, itemId);
+            if (!group.length) return prev;
             plans[fromDate] = { ...src, slots: { ...(src.slots || {}),
-              [fromSlot]: { ...srcSlot, items: srcSlot.items.filter(x => x.id !== itemId) } } };
+              [fromSlot]: { ...srcSlot, items: rest } } };
             const dst = { ...blankDay(config), ...(plans[toDate] || plans[fromDate === toDate ? fromDate : toDate] || {}) };
             // Same day: read the destination back out of what we just wrote,
             // or the removal is thrown away.
             const dstBase = fromDate === toDate ? plans[toDate] : dst;
             const dstSlot = normSlot((dstBase.slots || {})[toSlot]);
             plans[toDate] = { ...dstBase, slots: { ...(dstBase.slots || {}),
-              [toSlot]: { ...dstSlot, items: [...(dstSlot.items || []), row] } } };
+              [toSlot]: { ...dstSlot, items: placeGroup(dstSlot.items, group, null) } } };
             return { ...prev, dayPlans: plans };
           })}
           // A line typed into any section of any day. A web address arrives as

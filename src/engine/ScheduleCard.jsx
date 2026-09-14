@@ -449,8 +449,8 @@ function SeedSuggestion({ seed, week, accent, config, data, update }) {
       {landed ? (
         <div style={{ fontSize: 14, marginTop: 8, color: landed.slot ? "#0f766e" : "#b45309", fontWeight: 600 }}>
           {landed.slot
-            ? "Added to " + landed.date + " in the " + landed.slot + " slot. It is on the dashboard now."
-            : "That day has no sequence to put it in. Pick one in Day Plan first."}
+            ? "Added to " + landed.date + ". It is on the dashboard now."
+            : "Already on " + landed.date + "."}
         </div>
       ) : null}
 

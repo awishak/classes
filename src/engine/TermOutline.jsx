@@ -288,7 +288,7 @@ export default function TermOutline({ config, weeks, plans, assignments, day, on
                               {adding === d.date + "|" + s.slot ? (
                                 <div className="term-add">
                                   <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
-                                    placeholder="Type a note, or paste a link"
+                                    placeholder="Type an item, or paste a link"
                                     onKeyDown={e => {
                                       if (e.key === "Enter" && draft.trim()) { onAddRow(d.date, s.slot, draft.trim()); setDraft(""); setAdding(""); }
                                       if (e.key === "Escape") { setDraft(""); setAdding(""); }

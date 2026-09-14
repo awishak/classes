@@ -24,7 +24,7 @@ export const SHARED_LABEL = "Shared";
 
 // The building blocks, in the order they are offered.
 export const TYPES = [
-  { id: "note",       label: "Note",       color: "#646b75", hint: "Something I want to say." },
+  { id: "note",       label: "Item",       color: "#646b75", hint: "Something I want to say." },
   { id: "link",       label: "Article",    color: "#0369a1", hint: "A reading, an article, a video." },
   { id: "story",      label: "Story",      color: "#9f1239", hint: "A story or hook I can tell." },
   { id: "activity",   label: "Activity",   color: "#047857", hint: "Something the room does." },

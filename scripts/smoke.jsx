@@ -83,7 +83,7 @@ import GradeDeck from "../src/engine/GradeDeck.jsx";
 import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, unseenGrades, markSeen, meetingPatch, letterOf, BUCKETS } from "../src/engine/grades.js";
 import GradeParade from "../src/engine/GradeParade.jsx";
 import { computeGrade } from "../src/engine/AssignmentsCard.jsx";
-import { sectionsOf } from "../src/engine/dayplan.js";
+import { sectionsOf, takeGroup, placeGroup } from "../src/engine/dayplan.js";
 import { dayTitles } from "../src/engine/days.js";
 import { normSlot as normSlotT } from "../src/engine/dayplan.js";
 import Drawer, { SHELVES, shelfOf } from "../src/engine/Drawer.jsx";
@@ -244,7 +244,7 @@ cases.push(["Look sheet, with choices", <ColorsSheet colors={{ readings: "purple
   onPick={noop} onFont={noop} onBold={noop} onReset={noop} onClose={noop} />, "Fraunces"]);
 cases.push(["Note sheet", <NoteSheet sections={[["opener", "The hook"]]} accent={cfg0.accent}
   sources={[{ from: "This day", body: "a note", onSave: noop }, { from: "The week", body: "", onSave: noop }]}
-  onAdd={noop} onClose={noop} />, "A new note"]);
+  onAdd={noop} onClose={noop} />, "A new item"]);
 cases.push(["Shortcut sheet", <ShortcutSheet onClose={noop} />]);
 cases.push(["Command bar", <CommandBar targets={[{ key: "k", group: "g", title: "t", run: noop }]} accent={cfg0.accent} onClose={noop} />]);
 
@@ -365,9 +365,10 @@ cases.push(["Repository", <RepoPage />]);
   if (found[0][1] !== "The hook") { console.error("  FAIL  sections: the section is called " + found[0][1]); failedEarly++; }
   if (found.some(([k]) => k === "empty")) { console.error("  FAIL  sections: an empty slot counted as a section"); failedEarly++; }
   if (sectionsOf(noSeq, { slots: {} }).length) { console.error("  FAIL  sections: a day with nothing on it claimed a section"); failedEarly++; }
-  // The template class has a sequence, and the sequence still leads.
-  const seqDay = sectionsOf(ENGINE_LIST.find(c => (c.sequences || []).length) || cfg0, { slots: {} });
-  if (!seqDay.length) { console.error("  FAIL  sections: a class with a sequence lost its sections"); failedEarly++; }
+  // Sequences are gone: a class that still carries them in its config draws
+  // none of their empty slots on a day with nothing in it.
+  const seqDay = sectionsOf(ENGINE_LIST.find(c => (c.sequences || []).length) || cfg0, { sequenceId: "motivated", slots: {} });
+  if (seqDay.length) { console.error("  FAIL  sections: a sequence's empty slots are drawing again"); failedEarly++; }
   // The placer names the sections rather than their keys.
   const planWithSections = () => handMade;
   cases.push(["Repository placer, a day with hand-made sections",
@@ -2100,6 +2101,30 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (v["Sep 21"].title !== "Week one" || v["Sep 28"].title !== "Week two") say("with no titles written, days should read their week topic");
 }
 
+// An item and its notes move together.
+//
+// Moving an item's row alone left its notes behind, where they became notes on
+// whatever item came before.
+{
+  const say = (msg) => { console.error("  FAIL  moving an item: " + msg); failedEarly++; };
+  const list = [
+    { id: "a" }, { id: "a1", depth: 1 }, { id: "a2", depth: 1 },
+    { id: "b" }, { id: "b1", depth: 1 },
+    { id: "c" },
+  ];
+  const ids = (xs) => xs.map(x => x.id).join(",");
+  const { group, rest } = takeGroup(list, "a");
+  if (ids(group) !== "a,a1,a2") say("lifting an item did not bring its notes: " + ids(group));
+  if (ids(placeGroup(rest, group, null)) !== "b,b1,c,a,a1,a2") say("dropping at the end went wrong");
+  if (ids(placeGroup(rest, group, "c")) !== "b,b1,a,a1,a2,c") say("dropping before an item went wrong");
+  // Dropped onto another item's note, the group goes after that item's notes, not in among them.
+  if (ids(placeGroup(rest, group, "b1")) !== "b,b1,a,a1,a2,c") say("an item dropped among another item's notes split them up");
+  // A note moves alone.
+  const one = takeGroup(list, "a1");
+  if (ids(one.group) !== "a1") say("lifting a note took more than the note");
+  if (ids(placeGroup(one.rest, one.group, "b1")) !== "a,a2,b,a1,b1,c") say("a note should land exactly before the note it was dropped on");
+}
+
 // What a section with no name is called.
 //
 // It used to be three different things at once: the words "Untitled section"
@@ -2111,17 +2136,20 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const say = (msg) => { console.error("  FAIL  section names: " + msg); failedEarly++; };
   const cfg = { defaultSequenceId: "seq", sequences: [{ id: "seq", name: "A sequence", slots: [{ slot: "opener" }, { slot: "problem" }] }] };
 
-  // On a sequence, the sequence's words survive and a hand-made section numbers
-  // from where it sits in the whole day.
+  // Sequences are gone. A day that stored one reads like any other: its slot
+  // has no word of its own any more, and the empty "problem" slot the sequence
+  // declared does not draw.
   const onSeq = sectionsOf(cfg, { sequenceId: "seq", slots: {
     opener: { items: [{ id: "a" }] },
     "sec-1": { items: [{ id: "b" }] },
     "sec-2": { title: "Fishbowl", items: [{ id: "c" }] },
   } });
   const seqMap = Object.fromEntries(onSeq);
-  if (seqMap.opener !== "opener") say("a sequence slot lost the sequence's own word: " + JSON.stringify(seqMap.opener));
+  if (seqMap.opener === "opener") say("a slot is still showing the sequence's word, which is gone");
+  if (!/^Section \d+$/.test(seqMap.opener || "")) say("a slot that held rows should be Section N, got " + JSON.stringify(seqMap.opener));
+  if ("problem" in seqMap) say("an empty slot the sequence declared is still drawing");
   if (seqMap["sec-2"] !== "Fishbowl") say("a section with a real title lost it");
-  if (seqMap["sec-1"] !== "Section 3") say("a nameless section should count down the whole day, got " + JSON.stringify(seqMap["sec-1"]));
+  if (seqMap["sec-1"] !== "Section 1") say("a nameless section should count down the whole day, got " + JSON.stringify(seqMap["sec-1"]));
 
   // Freeform: no sequence slots at all, so the leftovers number 1, 2, 3.
   const free = sectionsOf(cfg, { sequenceId: "__freeform", slots: {
@@ -2298,7 +2326,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // The day plan: a slide beside a block, none beside a note under it, and no arrow where the slide is the button.
   const day = { sequenceId: "s", slots: { opener: { title: "Open", items: [
     { id: "r1", text: "Start with headlines" },
-    { id: "r2", text: "A note under it", depth: 1 },
+    { id: "r2", text: "A note under it, see https://www.theatlantic.com/sports/story", depth: 1 },
   ] } } };
   const html = renderToString(<FlowPanel plan={day} seq={seq} seeds={[]} castNow={none} dismiss={none} liveLabel={null}
     accent="#333" onClaim={none} features={[]} onFeature={none} planHref="/x" onSlidesClaim={none} onBlockClaim={none}
@@ -2312,6 +2340,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if ((html.match(/doc-line lv-item/g) || []).length !== 1) say("the item is not a line you can type into");
   if ((html.match(/doc-line lv-comment/g) || []).length !== 1) say("the comment is not a line you can type into");
   if (/flow-sec-n|flow-tally|flow-secmove/.test(html)) say("the section still carries its numeral, tally or move arrows");
+  // A comment can be picked up, and a web address in a line is a link that goes on the room screen.
+  if (!html.includes("doc-grip")) say("a comment has no handle to drag it by");
+  if (!/doc-link-go[^>]*>theatlantic.com</.test(html)) say("a web address in a comment is not a link that can go on the room screen");
+  if (!html.includes('href="https://www.theatlantic.com/sports/story"')) say("the link cannot be opened in a tab");
   if (html.includes("Put this row on the room screen")) say("the arrow is still there beside a slide");
   if (!html.includes("Hide slides")) say("the slide column cannot be closed");
 }
@@ -2467,7 +2499,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (/useState\(blocks\?\.length \? "lib"/.test(fn)) say("the panel opens on the library again, burying the box");
   if (!/const \[mode, setMode\] = useState\(""\)/.test(fn)) say("the panel opens with a list chosen rather than none");
   // The box is not behind a mode.
-  const boxAt = fn.indexOf("Type a note, or paste a link");
+  const boxAt = fn.indexOf("Type an item, or paste a link");
   if (boxAt < 0) say("the box lost its placeholder, so nothing says what it takes");
   const firstMode = fn.indexOf('mode === "');
   if (boxAt < 0 || (firstMode >= 0 && boxAt > firstMode)) {

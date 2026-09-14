@@ -1,21 +1,27 @@
 // The day as a document you type into.
 //
-// Three levels, like headings in a document: a SECTION, an ITEM under it (a
-// note, an activity, an article, a game), and COMMENTS under an item. Every
-// line is text you can put the cursor in, and the keys move the way a document
-// does:
+// Three levels, like headings in a document: a SECTION, an ITEM under it (an
+// item, an activity, an article, a game), and NOTES under an item. Every line
+// is text you can put the cursor in, and the keys move the way a document does:
 //
 //   ↑ ↓        the line above or below, from the top or bottom of this one
 //   ← →        at the very start or end of a line, into the next one
-//   Enter      a new line below: an item after a section or an item, a comment
-//              after a comment. An empty comment becomes an item instead.
+//   Alt+↑ ↓    a note, moved one line
+//   Enter      a new line below: an item after a section or an item, a note
+//              after a note. An empty note becomes an item instead.
 //   Shift+Enter a line break inside this line
-//   Tab        an item becomes a comment on the item above it
-//   Shift+Tab  a comment becomes an item
+//   Tab        an item becomes a note on the item above it
+//   Shift+Tab  a note becomes an item
 //   Backspace  on an empty line, deletes it and goes to the end of the one above
 //
-// Sections and items each have a slide beside them; comments do not. A block's
-// content is a comment-level line under its item, edited the same way.
+// Sections and items each have a slide beside them; notes do not. A block's
+// content is a note-level line under its item, edited the same way.
+//
+// On the words. Andrew renamed both on 2026-09-14: the kind that was called
+// Note is called Item, and what were called comments are called notes. The
+// code still says "comment" for the third level (kind: "comment", lv-comment,
+// doc-comment) and the kind's id is still "note", because those are names in
+// the store and the stylesheet, not words on the screen.
 //
 // This replaced the section headers with numerals, colours, tallies, move
 // arrows and fold buttons, and the rows with their own editors. Andrew: remove
@@ -84,6 +90,30 @@ function Line({ id, value, placeholder, readOnly, className, onSave, onKey, regi
   );
 }
 
+// The web addresses in a line of text.
+const URLS = /https?:\/\/[^\s<>"')]+/g;
+export const urlsIn = (text) => (String(text || "").match(URLS) || []);
+
+// A link on a line: press the name and the page goes up on the room screen;
+// press ↗ and it opens in a tab here instead. Press the name again while it
+// is up to take it down. A web address typed or pasted into any line becomes
+// one of these once the line saves.
+function LinkChips({ urls, liveLabel, onCast, dismiss }) {
+  const list = [...new Set((urls || []).filter(Boolean))];
+  if (!list.length) return null;
+  return list.map(u => {
+    const name = hostOf(u) || "link";
+    const live = liveLabel === name;
+    return (
+      <span key={u} className={"doc-link" + (live ? " live" : "")}>
+        <button className="dash-focus doc-link-go" title={live ? "Take it back down" : "Put " + name + " on the room screen"}
+          onClick={() => (live ? dismiss() : onCast && onCast(u, name))}>{live ? name + " · on screen" : name}</button>
+        <a className="dash-focus doc-link-open" href={u} target="_blank" rel="noopener noreferrer" aria-label={"Open " + name + " in a new tab"}>↗</a>
+      </span>
+    );
+  });
+}
+
 // One box that holds a short list of choices, opened by a right-click or the
 // item's number, and closed by anything else.
 function Menu({ at, items, onClose }) {
@@ -104,12 +134,13 @@ export default function DayDoc({
   sections, slotItems, named, firstMovable, blockOf, seedById, doneSet, numberOf, nextId, pickedId,
   liveLabel, castItem, castSection, dismiss, features, hue, slidesOn, classHref, renderExtras,
   onSetSlotTitle, onSaveItem, onSaveBlock, onInsertRow, onRemoveItem, onNest, onTick, isAssigned, onToggleAssigned,
-  onDeleteSection, onMoveSection, onEdit, drop,
+  onDeleteSection, onMoveSection, onEdit, drop, castLink, onMoveItem,
 }) {
   const refs = useRef(new Map());
   const pending = useRef(null);
   const [menu, setMenu] = useState(null);
   const [over, setOver] = useState("");
+  const [dragging, setDragging] = useState("");
   const register = (id, el) => { if (el) refs.current.set(id, el); else refs.current.delete(id); };
 
   // Every line of the day, top to bottom, which is the order the arrows walk.
@@ -182,12 +213,12 @@ export default function DayDoc({
     const lh = parseFloat(getComputedStyle(el).lineHeight) || 22;
     const oneRow = el.scrollHeight <= lh * 1.6;
 
-    if (e.key === "ArrowUp" && !e.shiftKey && i > 0) {
+    if (e.key === "ArrowUp" && !e.shiftKey && !e.altKey && i > 0) {
       const onTop = oneRow ? !el.value.slice(0, at).includes("\n") : at === 0;
       if (onTop) { e.preventDefault(); flush(el.value); focusLine(lines[i - 1].key, col); }
       return;
     }
-    if (e.key === "ArrowDown" && !e.shiftKey && i < lines.length - 1) {
+    if (e.key === "ArrowDown" && !e.shiftKey && !e.altKey && i < lines.length - 1) {
       const onBottom = oneRow ? !el.value.slice(end).includes("\n") : end === len;
       if (onBottom) { e.preventDefault(); flush(el.value); focusLine(lines[i + 1].key, col); }
       return;
@@ -197,6 +228,17 @@ export default function DayDoc({
     }
     if (e.key === "ArrowRight" && !e.shiftKey && at === len && i < lines.length - 1) {
       e.preventDefault(); flush(el.value); focusLine(lines[i + 1].key, 0); return;
+    }
+
+    // Alt+↑ and Alt+↓ move a comment one line, past the lines around it. Past
+    // its own item it becomes a comment on the item above; past the next item,
+    // a comment on that one. The cursor stays where it was in the text.
+    if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && line.kind === "comment" && onMoveItem) {
+      e.preventDefault();
+      flush(el.value);
+      onMoveItem(line.slot, line.it.id, e.key === "ArrowUp" ? -1 : 1);
+      pending.current = { key: line.key, pos: at };
+      return;
     }
 
     if (e.key === "Enter" && !e.shiftKey) {
@@ -258,7 +300,7 @@ export default function DayDoc({
     return [
       [done ? "Put it back on the list" : "Done", () => onTick(it.id)],
       onEdit ? ["Edit this", () => onEdit({ blockId: it.blockId, item: it, where: "", slot, id: it.id })] : null,
-      line.kind === "item" && line.index > 0 && onNest ? ["Make it a comment", () => onNest(slot, it.id, 1)] : null,
+      line.kind === "item" && line.index > 0 && onNest ? ["Make it a note", () => onNest(slot, it.id, 1)] : null,
       line.kind === "comment" && onNest ? ["Make it an item", () => onNest(slot, it.id, -1)] : null,
       onToggleAssigned && line.kind === "item" ? [isAssigned(it) ? "Take off today's readings" : "Put on today's readings", () => onToggleAssigned(it)] : null,
       ["Take off the day", () => onRemoveItem(slot, it.id), true],
@@ -285,6 +327,28 @@ export default function DayDoc({
     onDragLeave: () => setOver(""),
     onDrop: (e) => { e.preventDefault(); e.stopPropagation(); setOver(""); drop(e, slot, beforeId); },
   });
+  // A comment is a drop target in two halves: the top half puts the dragged
+  // line above it, the bottom half below. With only "above", a comment could
+  // never be dragged to the end of its item's comments.
+  const commentDrop = (slot, id) => {
+    const half = (e) => {
+      const r = e.currentTarget.getBoundingClientRect();
+      return e.clientY > r.top + r.height / 2 ? "below" : "above";
+    };
+    const nextAfter = () => {
+      const items = normSlot(slotItems[slot]).items;
+      const i = items.findIndex(x => x.id === id);
+      return i >= 0 && i + 1 < items.length ? items[i + 1].id : null;
+    };
+    return {
+      onDragOver: (e) => { e.preventDefault(); e.stopPropagation(); setOver(slot + "|" + id + "|" + half(e)); },
+      onDragLeave: () => setOver(""),
+      onDrop: (e) => {
+        e.preventDefault(); e.stopPropagation(); setOver("");
+        drop(e, slot, half(e) === "below" ? nextAfter() : id);
+      },
+    };
+  };
 
   return (
     <div className="doc">
@@ -328,12 +392,8 @@ export default function DayDoc({
                         readOnly={!!(seed || it.feature)} onSave={saveItemWords(g.head)} onKey={keyHandler(g.head)} register={register}
                         onLeaveEmpty={leaveEmpty(g.head)} />
                       {kind ? <span className="doc-kind" style={{ "--ink": inkOf(kindColor) }}>{kind}</span> : null}
-                      {blk?.url ? (
-                        <a className="doc-src" href={blk.url} target="_blank" rel="noopener noreferrer">{hostOf(blk.url)} ↗</a>
-                      ) : null}
-                      {(it.links || []).map(l => (
-                        <a key={l.id} className="doc-src" href={l.url} target="_blank" rel="noopener noreferrer">{hostOf(l.url) || l.label} ↗</a>
-                      ))}
+                      <LinkChips urls={[blk?.url, ...(it.links || []).map(l => l.url), ...(blk ? [] : urlsIn(it.text))]}
+                        liveLabel={liveLabel} onCast={castLink} dismiss={dismiss} />
                       {live ? <button className="dash-focus doc-down" onClick={dismiss} title="Take it back down">On screen ×</button> : null}
                     </div>
 
@@ -341,6 +401,7 @@ export default function DayDoc({
                       <div className="doc-row doc-under">
                         <Line id={bodyLine.key} value={blk.body} placeholder="Content" className="lv-comment"
                           onSave={v => onSaveBlock(blk.id, { body: v })} onKey={keyHandler(bodyLine)} register={register} />
+                        <LinkChips urls={urlsIn(blk.body)} liveLabel={liveLabel} onCast={castLink} dismiss={dismiss} />
                       </div>
                     ) : null}
                     {blk && renderExtras ? renderExtras(blk, kids) : null}
@@ -348,19 +409,31 @@ export default function DayDoc({
                     {g.comments.map(c => {
                       const cBody = lines.find(l => l.key === "b:" + c.it.id);
                       return (
-                        <div key={c.it.id} className="doc-comment" draggable
-                          onDragStart={e => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", JSON.stringify({ slot: sec.slot, id: c.it.id })); }}
-                          onContextMenu={e => openMenu(e, itemMenu(c))} {...dragProps(sec.slot, c.it.id)}>
-                          <div className="doc-row doc-under">
-                            <Line id={c.it.id} value={itemWords(c.it, c.blk, c.seed)} placeholder="Comment" className="lv-comment"
+                        <div key={c.it.id} className={"doc-comment" + (dragging === c.it.id ? " dragging" : "")}
+                          data-over={over.startsWith(sec.slot + "|" + c.it.id + "|") ? over.split("|")[2] : ""}
+                          onContextMenu={e => openMenu(e, itemMenu(c))} {...commentDrop(sec.slot, c.it.id)}>
+                          <div className="doc-row doc-under doc-commentrow">
+                            {/* The handle. A comment is all text box, and a press on a
+                                text box selects words, so the drag needs somewhere
+                                that is not text. Alt+↑ and Alt+↓ move it too. */}
+                            <span className="doc-grip" draggable title="Drag to move this note" aria-hidden="true"
+                              onDragStart={e => {
+                                e.dataTransfer.effectAllowed = "move";
+                                e.dataTransfer.setData("text/plain", JSON.stringify({ slot: sec.slot, id: c.it.id }));
+                                setDragging(c.it.id);
+                              }}
+                              onDragEnd={() => setDragging("")}>⠿</span>
+                            <Line id={c.it.id} value={itemWords(c.it, c.blk, c.seed)} placeholder="Note" className="lv-comment"
                               done={doneSet.has(c.it.id)} readOnly={!!(c.seed || c.it.feature)}
                               onSave={saveItemWords(c)} onKey={keyHandler(c)} register={register} onLeaveEmpty={leaveEmpty(c)} />
-                            {c.blk?.url ? <a className="doc-src" href={c.blk.url} target="_blank" rel="noopener noreferrer">{hostOf(c.blk.url)} ↗</a> : null}
+                            <LinkChips urls={[c.blk?.url, ...(c.it.links || []).map(l => l.url), ...(c.blk ? [] : urlsIn(c.it.text))]}
+                              liveLabel={liveLabel} onCast={castLink} dismiss={dismiss} />
                           </div>
                           {cBody ? (
                             <div className="doc-row doc-under">
                               <Line id={cBody.key} value={c.blk.body} placeholder="Content" className="lv-comment lv-body"
                                 onSave={v => onSaveBlock(c.blk.id, { body: v })} onKey={keyHandler(cBody)} register={register} />
+                              <LinkChips urls={urlsIn(c.blk.body)} liveLabel={liveLabel} onCast={castLink} dismiss={dismiss} />
                             </div>
                           ) : null}
                         </div>
@@ -414,9 +487,26 @@ export const DOC_CSS = `
 .lv-item{font-size:16px;font-weight:500;line-height:1.45}
 .lv-comment{font-size:15px;font-weight:400;line-height:1.5;color:var(--text-secondary)}
 .doc-kind{flex:none;align-self:center;font-family:var(--font-label);font-size:13px;color:var(--ink,var(--text-muted));white-space:nowrap}
-.doc-src{flex:none;align-self:center;font-size:13px;color:var(--text-secondary);text-decoration:none;border-radius:999px;
-  padding:1px 7px;background:var(--surface-sunk);white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis}
-.doc-src:hover{color:var(--text-primary)}
+/* A link: its site name puts the page on the room screen, the arrow opens it
+   here. One pill, two halves. */
+.doc-link{flex:none;align-self:center;display:inline-flex;align-items:stretch;border-radius:999px;background:var(--surface-sunk);
+  overflow:hidden;max-width:220px}
+.doc-link-go{min-height:28px;padding:0 4px 0 10px;border:none;background:none;cursor:pointer;font-family:var(--font-body);
+  font-size:13px;font-weight:600;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.doc-link-go:hover{color:var(--dash-accent)}
+.doc-link-open{display:inline-flex;align-items:center;padding:0 9px 0 5px;font-size:13px;color:var(--text-muted);text-decoration:none}
+.doc-link-open:hover{color:var(--text-primary)}
+.doc-link.live{background:var(--state-live)}
+.doc-link.live .doc-link-go,.doc-link.live .doc-link-open{color:#fff}
+/* A comment's handle: quiet until the comment is under the pointer. */
+.doc-commentrow{position:relative}
+.doc-grip{position:absolute;left:36px;top:5px;width:18px;height:24px;display:inline-flex;align-items:center;justify-content:center;
+  font-size:13px;color:var(--text-muted);cursor:grab;border-radius:5px;opacity:0;user-select:none}
+.doc-comment:hover .doc-grip,.doc-comment:focus-within .doc-grip{opacity:1}
+.doc-grip:hover{background:rgba(23,19,16,.06);color:var(--text-primary)}
+.doc-comment.dragging{opacity:.45}
+.doc-comment[data-over="above"]{box-shadow:inset 0 2px 0 var(--dash-accent)}
+.doc-comment[data-over="below"]{box-shadow:inset 0 -2px 0 var(--dash-accent)}
 .doc-down{flex:none;align-self:center;min-height:28px;padding:0 9px;border:none;border-radius:999px;cursor:pointer;
   background:var(--state-live);color:#fff;font-family:var(--font-label);font-size:13px;font-weight:600}
 .doc-veil{position:fixed;inset:0;z-index:80}

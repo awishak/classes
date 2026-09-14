@@ -48,7 +48,7 @@ const IS_NOTE = (t) => t === "note" || t === "story";
 export const SHELVES = [
   { id: "media", label: "Media", make: "link", holds: (t) => !IS_ACTIVITY(t) && !IS_NOTE(t) },
   { id: "activities", label: "Activities", make: "activity", holds: IS_ACTIVITY },
-  { id: "notes", label: "Notes", make: "note", holds: IS_NOTE },
+  { id: "notes", label: "Items", make: "note", holds: IS_NOTE },
 ];
 
 export const shelfOf = (type) => (SHELVES.find(s => s.holds(type)) || SHELVES[0]).id;
@@ -148,7 +148,7 @@ function DrawerEdit({ block, item, where, hue, onSave, onSaveItem, onPlace, onMo
     <div className="draw draw-edit" ref={box}>
       <div className="draw-edithead">
         <span className="draw-spine" style={{ background: hue(block?.type || "note") }} />
-        <span className="draw-editkind">{t ? t.label : "Note"}</span>
+        <span className="draw-editkind">{t ? t.label : "Item"}</span>
         {where ? <span className="draw-editwhere">in {where}</span> : null}
         <span style={{ flex: "1 1 auto" }} />
         <button className="dash-focus draw-editx" onClick={onClose} aria-label="Back to the drawer">×</button>
