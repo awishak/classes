@@ -613,7 +613,7 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // then the question. `steps` is that list, `step` is which one is up (-1 when
 // the row is not live), and `onStep(i)` puts slide i on the wall. In the room
 // the one button cycles forward; jumping around lives behind the number.
-export function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, picked, starred, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove, onAddUnder, steps, step = -1, onStep }) {
+export function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, onEdit, picked, starred, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove, onAddUnder, steps, step = -1, onStep }) {
   const [editing, setEditing] = useState(false);
   const [menu, setMenu] = useState(false);
   // A row near the bottom of a long day opened its menu downward and off the
@@ -715,8 +715,8 @@ export function Castable({ kind, kindColor, title, url, claim, live, accent, onC
               {/* Open it properly — the drawer, with every field. The menu
                   could only ever edit the headline, which is one field of
                   however many a thing has. */}
-              {onSelect ? (
-                <button className="dash-focus" onClick={() => { setMenu(false); onSelect(); }}>
+              {onEdit || onSelect ? (
+                <button className="dash-focus" onClick={() => { setMenu(false); (onEdit || onSelect)(); }}>
                   <span className="flow-rowmenu-k">✎</span>Edit this
                 </button>
               ) : null}
@@ -1832,7 +1832,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -2162,6 +2162,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
                     starred={!!blk?.pick}
                     done={doneSet.has(it.id)} next={nextId === it.id} onTick={() => onTick(it.id)}
                     onSelect={() => onSelect({ blockId: it.blockId, item: it, where: labelOf[s.slot], slot: s.slot, id: it.id })}
+                    onEdit={onEdit ? () => onEdit({ blockId: it.blockId, item: it, where: labelOf[s.slot], slot: s.slot, id: it.id }) : null}
                     kind={it.feature ? "Activity" : blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
                     kindColor={it.feature ? hue("activity") : blk ? hue(blk.type) : hue(seed ? "story" : "note")}
                     title={title}
@@ -3988,6 +3989,15 @@ export default function Dashboard({ config }) {
     slots[slot] = { ...bucket, items: [...bucket.items, { id: genId(), ...item }] };
     return { ...d, slots };
   }, "adding to the day plan");
+  // Open a row of the day for editing. The editor is the drawer, and the drawer
+  // is in the rail, so a hidden rail or teaching mode meant Edit opened an
+  // editor nobody could see. Editing brings the rail back.
+  const editPicked = (p) => {
+    setPicked(p);
+    if (!railRef.current.railOpen) toggleRail();
+    setFocus(false);
+  };
+
   // A note, indented under the row you right-clicked, and opened for typing.
   //
   // It arrives empty rather than asking what to call it first: the row you
@@ -4005,7 +4015,7 @@ export default function Dashboard({ config }) {
       slots[slot] = { ...bucket, items };
       return { ...d, slots };
     }, "that note");
-    setPicked({ blockId: "", item: row, where: "", slot, id: row.id });
+    editPicked({ blockId: "", item: row, where: "", slot, id: row.id });
   };
 
   const removeFlowItem = (slot, itemId) => writeDay(d => {
@@ -4140,6 +4150,20 @@ export default function Dashboard({ config }) {
   // A block belongs to one store, and a shared block edited from inside a class
   // has to change in the shared store or the next class would not see it.
   const writeTo = (id) => ((data?.blocks || {})[id] ? update : updateShared);
+  // A change to one field of a block, merged into the block as the store holds
+  // it at the moment of writing rather than as this render last saw it.
+  const saveBlockPatch = (id, patch) => writeTo(id)(prev => {
+    const blocks = prev.blocks || {};
+    if (!blocks[id]) return prev;
+    return { ...prev, blocks: { ...blocks, [id]: { ...blocks[id], ...patch } } };
+  });
+  // The same for a row typed onto the day, which has no block to hold its words.
+  const saveItemPatch = (slot, itemId, patch) => writeDay(d => {
+    const slots = { ...(d.slots || {}) };
+    const bucket = normSlot(slots[slot]);
+    slots[slot] = { ...bucket, items: (bucket.items || []).map(x => x.id === itemId ? { ...x, ...patch } : x) };
+    return { ...d, slots };
+  }, "that row");
 
   // The day's readings ARE the schedule's readings. One list, written from
   // whichever screen I happen to be on.
@@ -4586,7 +4610,7 @@ export default function Dashboard({ config }) {
             .map(it => "\u00b7 " + it.text.trim()).join("\n") },
       ]} onNest={nestItem}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
-      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMoveSection={moveSection} onAddUnder={addUnder} onMergeSections={mergeSections} onSelect={setPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
+      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMoveSection={moveSection} onAddUnder={addUnder} onMergeSections={mergeSections} onSelect={setPicked} onEdit={editPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
       doneSet={doneSet} onTick={tickItem} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
@@ -4608,21 +4632,10 @@ export default function Dashboard({ config }) {
       onPick={(b) => setPicked({ blockId: b.id, item: null, where: "", id: b.id })}
       onNew={newBlock}
       picked={picked} blockOf={blockOf}
-      onSavePicked={(patch) => {
-        const b = picked?.blockId ? blockOf(picked.blockId) : null;
-        if (b) writeBlock(writeTo(b.id), { ...b, ...patch });
-      }}
+      onSavePicked={(patch) => { if (picked?.blockId) saveBlockPatch(picked.blockId, patch); }}
       onPlacePicked={() => setPlacing("add")}
       onMovePicked={() => setPlacing("move")}
-      onSaveItemPicked={(patch) => {
-        if (!picked?.slot || !picked?.id) return;
-        writeDay(d => {
-          const slots = { ...(d.slots || {}) };
-          const bucket = normSlot(slots[picked.slot]);
-          slots[picked.slot] = { ...bucket, items: (bucket.items || []).map(x => x.id === picked.id ? { ...x, ...patch } : x) };
-          return { ...d, slots };
-        }, "that row");
-      }}
+      onSaveItemPicked={(patch) => { if (picked?.slot && picked?.id) saveItemPatch(picked.slot, picked.id, patch); }}
       onClearPicked={() => setPicked(null)} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
       castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,
@@ -4904,8 +4917,16 @@ export default function Dashboard({ config }) {
           onClose={() => setPlacing("")}
           onPlace={(date, slot) => {
             const b = picked.blockId ? blockOf(picked.blockId) : null;
-            if (b) pickBlock(slot, b, date);
-            if (placing === "move" && picked.item && picked.slot) removeFlowItem(picked.slot, picked.id);
+            // Move carries the row itself, headline and all. It used to take the
+            // row off and then place only its block, so a row typed onto the day,
+            // which has no block, was taken off and put nowhere.
+            if (placing === "move" && picked.item && picked.slot) moveItemTo(picked.slot, picked.id, slot, date);
+            else if (b) pickBlock(slot, b, date);
+            else if (picked.item) {
+              const now = normSlot((plan?.slots || {})[picked.slot]).items.find(x => x.id === picked.id);
+              const { id: _id, ...copy } = now || picked.item;
+              addFlowItem(slot, copy, date);
+            }
             setPlacing("");
           }} />
       ) : null}

@@ -47,6 +47,30 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep14", date: "Monday, September 14", title: "The drawer saves what you type",
+    blurb: "Andrew could not edit a note from the day, and a new note or video went onto the day as an untitled article. Both were one missing import. Every field in the drawer called a function Dashboard.jsx never imported, so leaving a field threw an error and saved nothing.",
+    groups: [
+      { name: "What was broken", items: [
+        ["writeBlock was never imported", "The drawer's save handler called writeBlock, and Dashboard.jsx had no import for it. Rendering was fine, so the smoke run passed. The error only happened when you left a field, and the field looked saved until the next redraw. A new thing from + New starts as an Article with a blank title, which is exactly what landed on the day."],
+        ["The drawer's inputs were rebuilt on every redraw", "Field was declared inside the editor, so each render made a new component and React replaced the inputs. The dashboard redraws whenever anything in the class changes, so words typed and not yet saved could vanish mid-sentence. Field sits at the top of Drawer.jsx now."],
+        ["Saves could land out of order", "Every save sends the whole class, and they went out all at once. The first save of the day takes a backup before writing, so a blank title saved first could land after the real title saved a second later, and the server kept the blank. Saves now go one at a time per class, edits made in the meantime go out together, and a late echo of an older save no longer rolls the screen back."],
+        ["Move to a day deleted a typed row", "Move took the row off its day and then placed only the block behind the row. A row typed straight onto the day has no block, so it was taken off and put nowhere. Move carries the row itself now, headline included, and Add copies a typed row."],
+      ] },
+      { name: "Editing from the day", items: [
+        ["Brings the rail back", "The editor is the drawer, and the drawer is in the rail. With the rail hidden or in teaching mode, Edit this opened an editor nobody could see. Edit this and Add a note under this both open the rail now."],
+      ] },
+      { name: "A check for the whole class of bug", items: [
+        ["check-names", "Reads every engine file with its scope and fails the build on any name used and never defined or imported. Run against Friday's code it names writeBlock at the exact line. It runs in npm run check, and it uses the Babel that Vite's React plugin already installs."],
+      ] },
+    ],
+    note: {
+      title: "Not tried in a browser",
+      lines: [
+        "The build, every check and the smoke run pass. Nobody has pressed + New, typed a title and put the thing on a day in a real browser yet, because the local app writes to the live store.",
+      ],
+    },
+  },
+  {
     id: "sep10b", date: "Thursday, September 10", title: "The dashboard is a call sheet now, and the quarter is one popup away",
     blurb: "The dashboard was three columns of panels with the day squeezed in the middle, every row a filled colour bar, and no way to see past the day you were on. It is now a running order set like a printed call sheet, one rail holding the projector and a search, and the whole quarter behind the date. Built to the C2 mock-up Andrew picked after four rounds of options.",
     groups: [

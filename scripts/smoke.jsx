@@ -2417,9 +2417,25 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     say("the row no longer opens its menu on right-click");
   }
   // And the menu's Edit has to reach the thing that opens the editor.
-  if (!/onSelect \? \(\s*\n\s*<button className="dash-focus" onClick=\{\(\) => \{ setMenu\(false\); onSelect\(\); \}\}/.test(src)) {
+  // onEdit is the same open, plus bringing the rail back so the editor can be seen.
+  if (!/onEdit \|\| onSelect \? \(\s*\n\s*<button className="dash-focus" onClick=\{\(\) => \{ setMenu\(false\); \(onEdit \|\| onSelect\)\(\); \}\}/.test(src)) {
     say("Edit this no longer calls the handler that opens a row");
   }
+  if (!/const editPicked = \(p\) => \{\s*\n\s*setPicked\(p\);\s*\n\s*if \(!railRef\.current\.railOpen\) toggleRail\(\);/.test(src)) {
+    say("Edit this no longer opens the rail the editor lives in");
+  }
+}
+
+// The drawer's fields keep what you type.
+//
+// Field was declared inside the editor, which made it a new component on every
+// render: each redraw of the dashboard threw the inputs away, with whatever had
+// been typed and not yet saved.
+{
+  const say = (m) => { console.error("  FAIL  drawer fields: " + m); failedEarly++; };
+  const src = readFileSync(new URL("../src/engine/Drawer.jsx", import.meta.url), "utf8");
+  if (!/^function Field\(/m.test(src)) say("Field is no longer declared at the top of the module");
+  if (/^\s+const Field = /m.test(src)) say("a Field is declared inside a component again");
 }
 
 let failed = failedEarly;

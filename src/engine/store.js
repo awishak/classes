@@ -34,6 +34,20 @@ export async function saveClass(key, data) {
 const WARM = new Map();
 export const warmClassData = (key, data) => { WARM.set(key, data); };
 
+// The same data written out the same way whatever order its keys are in.
+// Postgres hands a row back with its keys re-sorted, so the echo of a save never
+// matches the string that was sent.
+// Kept as a short hash, because a class is a large object and a page holds
+// several of them.
+const canon = (v) => {
+  const s = JSON.stringify(v, (k, x) => (x && typeof x === "object" && !Array.isArray(x)
+    ? Object.keys(x).sort().reduce((o, key) => { o[key] = x[key]; return o; }, {})
+    : x));
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return s.length + ":" + h;
+};
+
 export function useClassData(key) {
   const [data, setData] = useState(() => WARM.get(key) || null);
   const dataRef = useRef({});
@@ -43,6 +57,34 @@ export function useClassData(key) {
   // the storage shim takes a daily backup before each one. So while we have
   // writes outstanding, we already hold the newest state: ignore the echo.
   const pending = useRef(0);
+  // One save at a time, and only the newest state waiting behind it.
+  //
+  // Saves used to go out all at once. Every save is the whole class, and the
+  // first save of the day takes a backup before it writes, so two saves a
+  // second apart could land in either order. Make a thing, type its title, and
+  // the save holding the blank title could arrive after the one holding the
+  // real one. The server kept the blank, and so did the screen once the echo
+  // came back. Now a save waits for the one ahead of it, and edits made in the
+  // meantime go out together as one.
+  const flying = useRef(false);
+  // Waiting saves, at most one per key in a row. Almost always zero or one.
+  const queued = useRef([]);
+  // The last few states this page sent, so a late echo of an older one can be
+  // told apart from somebody else's write.
+  const sent = useRef([]);
+
+  const pump = useCallback(() => {
+    if (flying.current || !queued.current.length) return;
+    const [{ k, v }, ...rest] = queued.current;
+    queued.current = rest;
+    flying.current = true;
+    sent.current = [...sent.current.slice(-9), canon(v)];
+    Promise.resolve(saveClass(k, v)).finally(() => {
+      flying.current = false;
+      pending.current--;
+      pump();
+    });
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -58,6 +100,10 @@ export function useClassData(key) {
       if (pending.current > 0) return;
       try {
         const d = JSON.parse(val);
+        // Our own save coming back. If it is what we hold, there is nothing to
+        // do; if it is an older one arriving late, taking it would undo
+        // whatever was saved after it.
+        if (sent.current.length && sent.current.includes(canon(d))) return;
         dataRef.current = d;
         setData(d);
       } catch { /* ignore */ }
@@ -70,9 +116,13 @@ export function useClassData(key) {
     dataRef.current = next;
     WARM.set(key, next);
     setData({ ...next });
-    pending.current++;
-    Promise.resolve(saveClass(key, next)).finally(() => { pending.current--; });
-  }, [key]);
+    // A state still waiting is replaced rather than queued behind, so it is
+    // counted once.
+    const q = queued.current;
+    if (q.length && q[q.length - 1].k === key) q[q.length - 1] = { k: key, v: next };
+    else { q.push({ k: key, v: next }); pending.current++; }
+    pump();
+  }, [key, pump]);
 
   return [data, update];
 }

@@ -63,6 +63,64 @@ const sourceFrom = (url) => {
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
 };
 
+// A field that saves when you leave it. No Save button, for the same reason
+// section names have no pencil: the words are the control.
+//
+// It lives out here, at the top of the module, and not inside the editor that
+// uses it. Declared inside, it was a new component on every render, so React
+// threw the input away and built a fresh one each time the dashboard redrew —
+// which it does whenever anything in the class changes. Whatever had been typed
+// and not yet saved went with it, and a new thing went onto the day untitled.
+function Field({ value, label: lbl, area, ph, onSave, autoFocus }) {
+  const had = value || "";
+  const save = (e) => { if (e.target.value !== had) onSave(e.target.value); };
+  return (
+    <label className="draw-field">
+      <span>{lbl}</span>
+      {area ? (
+        <textarea defaultValue={had} rows={4} placeholder={ph} onBlur={save} />
+      ) : (
+        <input defaultValue={had} placeholder={ph} onBlur={save} autoFocus={autoFocus}
+          onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }} />
+      )}
+    </label>
+  );
+}
+
+// Every field a block has.
+function BlockFields({ block, onSave }) {
+  const kinds = allTypes();
+  // A thing with no title is a thing just made, and the title is what you
+  // came to type.
+  const fresh = !block.title;
+  return (
+    <>
+      <Field value={block.title} label="Title" ph="What it is called" autoFocus={fresh} onSave={v => onSave({ title: v })} />
+      <Field value={block.headline} label="Headline" ph="The one sentence the room reads" onSave={v => onSave({ headline: v })} />
+      <Field value={block.source} label="Source" ph="Who made it" onSave={v => onSave({ source: v })} />
+      <Field value={block.url} label="Link" ph="https://" onSave={v => onSave({ url: v })} />
+      <Field value={block.body} label="What it says" area ph="Notes to yourself, or the whole thing" onSave={v => onSave({ body: v })} />
+      <label className="draw-field">
+        <span>Kind</span>
+        <select defaultValue={block.type} onChange={e => onSave({ type: e.target.value })}>
+          {kinds.map(k => <option key={k.id} value={k.id}>{k.label}</option>)}
+        </select>
+      </label>
+    </>
+  );
+}
+
+// A row typed straight onto the day has no block behind it. Its words are the
+// whole row, so they are the whole editor.
+function RowFields({ item, onSave }) {
+  return (
+    <>
+      <Field value={item.text} label="The row" area ph="What this row says" onSave={v => onSave({ text: v })} />
+      <Field value={item.claim} label="Headline" ph="The one sentence the room reads" onSave={v => onSave({ claim: v })} />
+    </>
+  );
+}
+
 // The drawer, doing its second job: the thing you just clicked in the day,
 // open and editable, where the drawer already is.
 //
@@ -73,7 +131,6 @@ const sourceFrom = (url) => {
 // comes FROM; it is the obvious place for the thing to go back to.
 function DrawerEdit({ block, item, where, hue, onSave, onSaveItem, onPlace, onMove, onClose, pickedId }) {
   const t = block ? typeOf(block.type) : null;
-  const kinds = allTypes();
 
   // Bring the editor to where Andrew is looking.
   //
@@ -87,22 +144,6 @@ function DrawerEdit({ block, item, where, hue, onSave, onSaveItem, onPlace, onMo
     box.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [pickedId]);
 
-  // A field that saves when you leave it. No Save button, for the same reason
-  // section names have no pencil: the words are the control.
-  const Field = ({ k, label: lbl, area, ph }) => (
-    <label className="draw-field">
-      <span>{lbl}</span>
-      {area ? (
-        <textarea defaultValue={block?.[k] || ""} rows={4} placeholder={ph}
-          onBlur={e => { if (e.target.value !== (block?.[k] || "")) onSave({ [k]: e.target.value }); }} />
-      ) : (
-        <input defaultValue={block?.[k] || ""} placeholder={ph}
-          onBlur={e => { if (e.target.value !== (block?.[k] || "")) onSave({ [k]: e.target.value }); }}
-          onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }} />
-      )}
-    </label>
-  );
-
   return (
     <div className="draw draw-edit" ref={box}>
       <div className="draw-edithead">
@@ -115,38 +156,13 @@ function DrawerEdit({ block, item, where, hue, onSave, onSaveItem, onPlace, onMo
 
       {block ? (
         <>
-          <Field k="title" label="Title" ph="What it is called" />
-          <Field k="headline" label="Headline" ph="The one sentence the room reads" />
-          <Field k="source" label="Source" ph="Who made it" />
-          <Field k="url" label="Link" ph="https://" />
-          <Field k="body" label="What it says" area ph="Notes to yourself, or the whole thing" />
-          <label className="draw-field">
-            <span>Kind</span>
-            <select defaultValue={block.type} onChange={e => onSave({ type: e.target.value })}>
-              {kinds.map(k => <option key={k.id} value={k.id}>{k.label}</option>)}
-            </select>
-          </label>
+          <BlockFields block={block} onSave={onSave} />
           {(block.scheduled || []).length ? (
             <div className="draw-used">On {block.scheduled.join(" · ")}</div>
           ) : null}
         </>
       ) : item ? (
-        // A row typed straight onto the day has no block behind it, and used to
-        // have no way to be changed either — the drawer said so and stopped.
-        // Its words are the whole row, so they are the whole editor.
-        <>
-          <label className="draw-field">
-            <span>The row</span>
-            <textarea defaultValue={item.text || ""} rows={3} placeholder="What this row says"
-              onBlur={e => { if (e.target.value !== (item.text || "")) onSaveItem({ text: e.target.value }); }} />
-          </label>
-          <label className="draw-field">
-            <span>Headline</span>
-            <input defaultValue={item.claim || ""} placeholder="The one sentence the room reads"
-              onBlur={e => { if (e.target.value !== (item.claim || "")) onSaveItem({ claim: e.target.value }); }}
-              onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }} />
-          </label>
-        </>
+        <RowFields item={item} onSave={onSaveItem} />
       ) : null}
 
       {/* Put it on another day, or take it off this one and put it there.
