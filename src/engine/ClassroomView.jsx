@@ -9,6 +9,7 @@ import { useLive } from "./live.js";
 import { useClassData } from "./store.js";
 import { currentDay } from "./days.js";
 import QRCode from "./QRCode.jsx";
+import RoomSlide, { ROOM_FONTS_HREF } from "./RoomSlide.jsx";
 import { usePoll, tally, written, isFreeForm } from "./poll.js";
 import { useHeadlines, liveSession, activeItem, pickTally } from "./headlines.js";
 import { ENGINE_LIST } from "../config/registry.js";
@@ -86,6 +87,11 @@ export function Content({ cast, config, plan, data }) {
         <AskBlock base={base} />
       </div>
     );
+  }
+
+  // A slide template, on the class's own ground: paper or slate.
+  if (cast.type === "slide") {
+    return <RoomSlide slide={cast} ground={data?.roomGround} fit />;
   }
 
   if (cast.type === "black") {
@@ -683,6 +689,7 @@ export default function ClassroomView({ config }) {
       <ThemeStyle theme={theme} />
       <ThemeChrome theme={theme} />
       <style>{CSS}</style>
+      <link rel="stylesheet" href={ROOM_FONTS_HREF} />
       {/* The wall gets the theme's furniture too, at the size a room reads.
           Crashing Out runs its marquee across the top and stands Tubey in the
           corner; every other theme leaves the wall to whatever is cast. */}

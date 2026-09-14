@@ -73,7 +73,7 @@ const readDay = (config, plans, date) => {
   return { rows, done, sections };
 };
 
-export default function TermOutline({ config, weeks, plans, assignments, day, onPick, onClose, onWeekTopic, onDayTitle, onMoveRow, onAddRow, blockOf, startView, features }) {
+export default function TermOutline({ config, weeks, plans, assignments, day, onPick, onClose, onWeekTopic, onDayTitle, onMoveRow, onAddRow, blockOf, startView, features, ground }) {
   const [view, setView] = useState(startView || "outline");
   const [only, setOnly] = useState("");            // "" | "planned" | "empty"
   const [openWeeks, setOpenWeeks] = useState(() => new Set());
@@ -248,7 +248,7 @@ export default function TermOutline({ config, weeks, plans, assignments, day, on
                                 // row. Here it is a preview: the outline is where
                                 // a term is planned, not where a class is run.
                                 const slide = slidesOn && !depth
-                                  ? slideOf({ item, block: b, title: (b ? b.title : item.text) || "", claim: item.claim || b?.headline || "", tag: s.name, features })
+                                  ? slideOf({ item, block: b, title: (b ? b.title : item.text) || "", claim: item.claim || b?.headline || "", tag: s.name, features, assignments })
                                   : null;
                                 return { id, slide, words, node: (
                                   <div key={id} className="term-row" data-done={done ? "1" : "0"} draggable
@@ -277,7 +277,7 @@ export default function TermOutline({ config, weeks, plans, assignments, day, on
                                     <div className="term-grouptext">{parts.map(p => p.node)}</div>
                                     {slidesOn ? (
                                       <span className="term-rslide">
-                                        {parts[0].slide ? <Slide cast={parts[0].slide} config={{ path: config.path || "" }} label={parts[0].words} /> : null}
+                                        {parts[0].slide ? <Slide cast={parts[0].slide} config={{ path: config.path || "" }} ground={ground} label={parts[0].words} /> : null}
                                       </span>
                                     ) : null}
                                   </div>

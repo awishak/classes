@@ -226,7 +226,7 @@ function Pop({ pop, list, onPick }) {
 // notes under them to read from, the slide the room sees, and what is next.
 // Space or → goes forward and puts the next slide up; ← goes back; Escape
 // leaves. It is the document read out, so what is planned is what is taught.
-function TeachView({ steps, liveLabel, dismiss, classHref, onExit }) {
+function TeachView({ steps, liveLabel, dismiss, classHref, onExit, ground }) {
   const startAt = () => {
     const live = steps.findIndex(s => s.label && s.label === liveLabel);
     if (live >= 0) return live;
@@ -271,7 +271,7 @@ function TeachView({ steps, liveLabel, dismiss, classHref, onExit }) {
           ) : null}
         </div>
         <div className="teach-slide">
-          {cur.cast ? <Slide big cast={cur.cast} config={{ path: classHref || "" }} live={live} label={cur.label}
+          {cur.cast ? <Slide big cast={cur.cast} config={{ path: classHref || "" }} ground={ground} live={live} label={cur.label}
             onClick={() => (live ? dismiss() : cur.go())} /> : null}
         </div>
       </div>
@@ -301,6 +301,7 @@ export default function DayDoc({
   onSetSlotTitle, onSaveItem, onSaveBlock, onInsertRow, onRemoveItem, onNest, onTick, isAssigned, onToggleAssigned,
   onDeleteSection, onMoveSection, onEdit, drop, castLink, onMoveItem, onConvertRow, onLinkRow, library,
   onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, teach, onTeach,
+  ground, assignments,
 }) {
   const refs = useRef(new Map());
   const pending = useRef(null);
@@ -337,6 +338,11 @@ export default function DayDoc({
     return { slot, title, si, groups, items };
   });
 
+  // Each item's notes as words, for a slide that shows them.
+  const notesOf = {};
+  groupsBySection.forEach(sec => sec.groups.forEach(g => {
+    notesOf[g.head.it.id] = g.comments.map(c => (c.it.feature || (c.blk ? c.blk.title : c.seed ? c.seed.title : c.it.text) || "").trim()).filter(Boolean);
+  }));
   const indexOf = (key) => lines.findIndex(l => l.key === key);
   // Items are numbered down the day; notes are not, so they take no number.
   const itemNumber = {};
@@ -378,7 +384,8 @@ export default function DayDoc({
     const w = itemWords(line.it, line.blk, line.seed);
     const cl = line.it.claim || line.blk?.headline || "";
     const tag = tagOf(line.slot);
-    const cast = slideOf({ item: line.it, block: line.blk, seed: line.seed, title: w, claim: cl, tag, features });
+    const notes = line.kind === "item" && line.it.slideNotes ? (notesOf[line.it.id] || []) : undefined;
+    const cast = slideOf({ item: line.it, block: line.blk, seed: line.seed, title: w, claim: cl, tag, features, notes, assignments });
     return { cast, label: cl || w, go: () => castItem(line.it, line.blk, line.seed, w, cl, tag, cast) };
   };
 
@@ -424,6 +431,9 @@ export default function DayDoc({
           { hint: features[n], swatch: hue("activity") }));
       }
       add("Screen", "Put on screen", () => castLine(line).go());
+      if (line.kind === "item" && onSaveItem) {
+        add("Screen", it.slideNotes ? "Hide notes on slide" : "Show notes on slide", () => onSaveItem(line.slot, it.id, { slideNotes: !it.slideNotes }));
+      }
       if (line.kind === "comment" && onSaveItem) {
         add("Screen", it.slide ? "Remove slide" : "Create slide", () => onSaveItem(line.slot, it.id, { slide: !it.slide }));
       }
@@ -655,6 +665,8 @@ export default function DayDoc({
     const done = doneSet.has(it.id);
     return [
       [done ? "Mark not done" : "Mark done", () => onTick(it.id)],
+      // His notes on the slide, or not, item by item.
+      line.kind === "item" && onSaveItem ? [it.slideNotes ? "Hide notes on slide" : "Show notes on slide", () => onSaveItem(slot, it.id, { slideNotes: !it.slideNotes })] : null,
       ["Put on screen", () => castLine(line).go()],
       onEdit ? ["Edit details", () => onEdit({ blockId: it.blockId, item: it, where: "", slot, id: it.id })] : null,
       line.kind === "item" && line.index > 0 && onNest ? ["Make note", () => onNest(slot, it.id, 1)] : null,
@@ -679,9 +691,9 @@ export default function DayDoc({
   // item's own, then one for each of its notes that was given a slide.
   const slideCell = (cast, live, label, onClick, more) => (slidesOn ? (
     <div className="doc-slide">
-      {cast ? <Slide cast={cast} config={{ path: classHref || "" }} live={live} label={label} onClick={onClick} /> : null}
+      {cast ? <Slide cast={cast} config={{ path: classHref || "" }} ground={ground} live={live} label={label} onClick={onClick} /> : null}
       {(more || []).map(s => (
-        <Slide key={s.key} cast={s.cast} config={{ path: classHref || "" }} live={s.live} label={s.label} onClick={s.onClick} />
+        <Slide key={s.key} cast={s.cast} config={{ path: classHref || "" }} ground={ground} live={s.live} label={s.label} onClick={s.onClick} />
       ))}
     </div>
   ) : null);
@@ -771,7 +783,7 @@ export default function DayDoc({
         });
       });
     });
-    return <TeachView steps={steps} liveLabel={liveLabel} dismiss={dismiss} classHref={classHref} onExit={() => onTeach && onTeach(false)} />;
+    return <TeachView steps={steps} liveLabel={liveLabel} dismiss={dismiss} classHref={classHref} ground={ground} onExit={() => onTeach && onTeach(false)} />;
   }
 
   // What the day adds up to, from every section given a time.
@@ -828,7 +840,8 @@ export default function DayDoc({
               const words = itemWords(it, blk, seed);
               const claim = it.claim || blk?.headline || "";
               const tag = raw || sec.title;
-              const slide = slideOf({ item: it, block: blk, seed, title: words, claim, tag, features });
+              const slide = slideOf({ item: it, block: blk, seed, title: words, claim, tag, features, assignments,
+                notes: it.slideNotes ? (notesOf[it.id] || []) : undefined });
               const live = liveLabel === (claim || words) || (it.feature && liveLabel === it.feature);
               const kind = it.feature ? "activity" : blk ? typeOf(blk.type).label.toLowerCase() : seed ? "seed" : "";
               const kindColor = it.feature ? hue("activity") : blk ? hue(blk.type) : hue("note");

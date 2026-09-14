@@ -229,6 +229,9 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-slidetoggle{min-height:32px;padding:0 12px;border:1px solid ${BORDER_STRONG};border-radius:8px;background:#fff;
   font-family:${F};font-size:13px;font-weight:600;color:${TEXT_SECONDARY};cursor:pointer}
 .flow-slidetoggle:hover{color:${TEXT_PRIMARY};background:${SURFACE_2}}
+.flow-ground{display:inline-flex;border:1px solid ${BORDER_STRONG};border-radius:8px;overflow:hidden;background:#fff}
+.flow-ground button{min-height:32px;padding:0 11px;border:none;background:none;cursor:pointer;font-family:${F};font-size:13px;font-weight:600;color:${TEXT_SECONDARY}}
+.flow-ground button[data-on="1"]{background:${TEXT_PRIMARY};color:#fff}
 @media (max-width:1100px){.flow-item.with-slides{grid-template-columns:minmax(0,1fr) 150px}}
 .flow-row:hover{background:${SURFACE_2}}
 /* ON THE SCREEN RIGHT NOW: the one filled row on the page. It can afford to be
@@ -2009,7 +2012,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -2272,21 +2275,31 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
           <button className="dash-focus flow-slidetoggle" aria-pressed={slidesOn}
             onClick={() => setSlidesOn(!slidesOn)}>{slidesOn ? "Hide slides" : "Show slides"}</button>
         )}
+        {/* The room screen's ground, for this class: paper or slate. */}
+        {onSetGround ? (
+          <span className="flow-ground" role="group" aria-label="Choose ground">
+            {["paper", "slate"].map(gr => (
+              <button key={gr} className="dash-focus" aria-pressed={(roomGround || "slate") === gr} data-on={(roomGround || "slate") === gr ? "1" : "0"}
+                onClick={() => onSetGround(gr)}>{gr === "paper" ? "Paper" : "Slate"}</button>
+            ))}
+          </span>
+        ) : null}
       </div>
       <DayDoc sections={sectionRows} slotItems={slotItems} named={named} firstMovable={firstMovable}
         blockOf={blockOf} seedById={seedById} doneSet={doneSet} numberOf={numberOf} nextId={nextId} pickedId={pickedId}
         liveLabel={liveLabel} dismiss={dismiss} features={FEATURES} hue={hue} slidesOn={slidesOn} classHref={classHref}
+        ground={roomGround || "slate"} assignments={assignmentList}
+        // A slide goes up as the slide: the template the row's thumbnail draws.
+        // An activity runs itself, and a clip or voice memo plays as a file.
         castItem={(it, blk, seed, words, claim, tag, slide) => {
           if (it.feature && onFeature) return onFeature(it.feature);
-          if (slide && slide.type === "media") return castNow(slide);
+          if (slide) return castNow(slide);
           const c = claim || words;
-          return castNow(blk?.url
-            ? { ...castFromLink({ label: blk.title, url: blk.url }), title: c, label: c, pick: !!blk?.pick }
-            : { type: "quote", tag, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c, pick: !!blk?.pick });
+          return castNow({ type: "quote", tag, title: c, label: c });
         }}
         // A section's slide is its name on the wall, the title card for what comes next.
         castSection={(slot, name, go) => {
-          const cast = { type: "quote", title: name, label: name };
+          const cast = { type: "slide", template: "section", title: name, label: name };
           if (go) castNow(cast);
           return cast;
         }}
@@ -4799,6 +4812,7 @@ export default function Dashboard({ config }) {
       onLinkRow={linkRow} onSetSlotTime={setSlotTime} onPlaceSection={placeSectionAt} onSplitSection={splitSectionAt}
       classMinutes={(() => { const s = sittingsOf(config)[0]; return s ? s.end - s.start : null; })()}
       onOpenTemplates={() => setTemplatesOpen(true)} onOpenHistory={() => setHistoryOpen(true)}
+      roomGround={data?.roomGround} onSetGround={(gr) => update(prev => ({ ...prev, roomGround: gr }))} assignmentList={assignments}
       onSaveSpring={(patch) => writeDay(d => ({ ...d, spring: { ...(d.spring || {}), ...patch } }), "that note")}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
       onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMoveSection={moveSection} onAddUnder={addUnder} onMergeSections={mergeSections} onSelect={setPicked} onEdit={editPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
@@ -5129,7 +5143,7 @@ export default function Dashboard({ config }) {
 
       {termOpen ? (
         <TermOutline config={config} weeks={weeks} plans={data.dayPlans || {}}
-          assignments={assignments} day={day} blockOf={blockOf} features={FEATURES}
+          assignments={assignments} day={day} blockOf={blockOf} features={FEATURES} ground={data?.roomGround || "slate"}
           onPick={setDay} onClose={() => setTermOpen(false)}
           onWeekTopic={(id, v) => update(prev => ({
             ...prev,

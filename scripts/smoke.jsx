@@ -88,6 +88,7 @@ import { dayTitles } from "../src/engine/days.js";
 import { normSlot as normSlotT } from "../src/engine/dayplan.js";
 import Drawer, { SHELVES, shelfOf } from "../src/engine/Drawer.jsx";
 import Slide, { slideOf } from "../src/engine/Slide.jsx";
+import RoomSlide from "../src/engine/RoomSlide.jsx";
 import DayDoc from "../src/engine/DayDoc.jsx";
 import { ScheduleDetail, studentItems } from "../src/engine/ScheduleCard.jsx";
 import TermOutline from "../src/engine/TermOutline.jsx";
@@ -2360,33 +2361,65 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
 
 // The day as a document, with each block's slide beside it.
 //
-// A slide is the cast the row would send, drawn by the room screen's own
-// Content. So every kind of row has to choose the right cast, and the room
-// screen has to draw each one without throwing.
+// A slide is one of the slide templates, chosen by the row's kind, drawn by the
+// same component on the wall and in the column. So every kind has to land on
+// its template, carry only words it was given, and draw without throwing, on
+// both grounds.
 {
   const say = (m) => { console.error("  FAIL  slides: " + m); failedEarly++; };
   const none = () => {}; // smoke render, never pressed
   const cfg = { path: "/comm118" };
+  const I = { id: "i" };
+  const assignments = [{ title: "Interview Assignment", due: "Oct 9", dueTime: "11:59 PM", instructionsUrl: "https://docs.google.com/d/1" }];
   const cases2 = [
-    ["note", { item: { id: "i" }, block: { type: "note", title: "Tiger" }, title: "Tiger", tag: "Open" }, "quote"],
-    ["headline wins", { item: { id: "i" }, block: { type: "note", title: "Tiger", headline: "Tiger changed golf." }, title: "Tiger", claim: "Tiger changed golf.", tag: "Open" }, "quote"],
-    ["link", { item: { id: "i" }, block: { type: "link", title: "Story", url: "https://www.theatlantic.com/x" }, title: "Story" }, "doc"],
-    ["photo", { item: { id: "i" }, block: { type: "note", title: "Theo", media: { kind: "image", src: "https://e.com/t.jpg" } }, title: "Theo" }, "media"],
-    ["clip", { item: { id: "i" }, block: { type: "note", title: "Clip", media: { kind: "video", src: "https://e.com/c.mp4" } }, title: "Clip" }, "media"],
-    ["memo", { item: { id: "i" }, block: { type: "note", title: "Memo", media: { kind: "audio", src: "https://e.com/m.m4a" } }, title: "Memo" }, "media"],
-    ["image url", { item: { id: "i" }, block: { type: "image", title: "Chart", url: "https://e.com/chart.png" }, title: "Chart" }, "media"],
-    ["activity", { item: { id: "i", feature: "Around the Horn" }, title: "Around the Horn", features: { "Around the Horn": "Everyone answers." } }, "feature"],
-    ["typed row", { item: { id: "i", text: "Start with headlines" }, title: "Start with headlines" }, "quote"],
+    ["item", { item: I, block: { type: "note", title: "Tiger", body: "(while wearing a helmet)" }, title: "Tiger" }, "item"],
+    ["headline wins", { item: I, block: { type: "note", title: "Tiger", headline: "Tiger changed golf." }, title: "Tiger", claim: "Tiger changed golf." }, "item"],
+    ["article", { item: I, block: { type: "link", title: "Story", url: "https://www.theatlantic.com/x" }, title: "Story" }, "article"],
+    ["photo", { item: I, block: { type: "note", title: "Theo", media: { kind: "image", src: "https://e.com/t.jpg" } }, title: "Theo" }, "image"],
+    ["clip", { item: I, block: { type: "note", title: "Clip", media: { kind: "video", src: "https://e.com/c.mp4" } }, title: "Clip" }, "media"],
+    ["memo", { item: I, block: { type: "note", title: "Memo", media: { kind: "audio", src: "https://e.com/m.m4a" } }, title: "Memo" }, "media"],
+    ["image url", { item: I, block: { type: "image", title: "Chart", url: "https://e.com/chart.png" }, title: "Chart" }, "image"],
+    ["activity row", { item: { id: "i", feature: "Around the Horn" }, title: "Around the Horn" }, "activity"],
+    ["headlines", { item: { id: "i", feature: "Headlines" }, title: "Headlines" }, "headlines"],
+    ["typed row", { item: { id: "i", text: "Start with headlines" }, title: "Start with headlines" }, "item"],
+    ["game", { item: I, block: { type: "set", title: "Weekly Game, week 1", children: ["a", "b", "c"] }, title: "Weekly Game, week 1" }, "game"],
+    ["question", { item: I, block: { type: "question", title: "Why?", q: { options: ["One", "Two", "Three"], correct: 1 } }, title: "Why?" }, "question"],
+    ["board", { item: I, block: { type: "board", title: "Why care?", body: "Alec Berger: Sports matter. More here.\nJack L: They teach.\nSam C: Community!" }, title: "Why care?" }, "board"],
+    ["assignment", { item: I, block: { type: "assignment", title: "Interview Assignment" }, title: "Interview Assignment", assignments }, "assignment"],
+    ["quote", { item: I, block: { type: "quote", title: "Attention, not will.", body: "Simone Weil", url: "https://x.com/q" }, title: "Attention, not will." }, "quote"],
+    ["podcast", { item: I, block: { type: "podcast", title: "A show", url: "https://www.nytimes.com/p" }, title: "A show" }, "podcast"],
+    ["chapter", { item: I, block: { type: "book-chapter", title: "Communication and Sport, Chapter 8: Sport and Mythology", body: "Billings" }, title: "Communication and Sport, Chapter 8: Sport and Mythology" }, "chapter"],
+    ["video", { item: I, block: { type: "link", title: "A clip", url: "https://www.youtube.com/watch?v=x" }, title: "A clip" }, "video"],
   ];
   cases2.forEach(([name, input, want]) => {
     const cast = slideOf(input);
     if (!cast) { say(name + " has no slide"); return; }
-    if (cast.type !== want) say(name + " makes a " + cast.type + " slide, want " + want);
-    if (want === "doc" && cast.mode !== "card") say("a link's slide is not its card, so every link would load its live page");
-    try { renderToString(<Slide cast={cast} config={cfg} />); } catch (e) { say(name + " slide threw: " + e.message); }
+    const got = cast.type === "slide" ? cast.template : cast.type;
+    if (got !== want) say(name + " makes a " + got + " slide, want " + want);
+    for (const ground of ["paper", "slate"]) {
+      try { renderToString(<Slide cast={cast} config={cfg} ground={ground} />); } catch (e) { say(name + " slide threw on " + ground + ": " + e.message); }
+    }
   });
-  if (slideOf(cases2[1][1]).title !== "Tiger changed golf.") say("the slide does not carry the headline");
-  const clip = renderToString(<Slide cast={slideOf(cases2[4][1])} config={cfg} />);
+  const sl = (i) => slideOf(cases2[i][1]);
+  if (sl(1).label !== "Tiger changed golf.") say("the slide does not go up under its headline");
+  if (sl(10).count !== 3) say("a game's ticket does not count its questions");
+  if (sl(12).posts.join("|") !== "Sports matter.|They teach.|Community!") say("a board's posts keep their names, or more than a first sentence: " + JSON.stringify(sl(12).posts));
+  if (sl(13).due !== "Oct 9" || sl(13).dueTime !== "11:59 PM") say("an assignment does not carry its due date from the class");
+  if (sl(13).url !== "https://docs.google.com/d/1") say("an assignment does not link to its instructions");
+  if (sl(16).chapter !== "Chapter 8" || sl(16).chapterName !== "Sport and Mythology" || sl(16).book !== "Communication and Sport") say("a chapter's title is not split into book and chapter");
+  // Notes are on a slide only when the row asks.
+  if (sl(0).notes) say("notes arrived on a slide nobody asked for");
+  const withNotes = slideOf({ ...cases2[0][1], notes: ["Daejon Love", "The World Cup"] });
+  const nh = renderToString(<RoomSlide slide={withNotes} ground="paper" />);
+  if (!nh.includes("Daejon Love") || !nh.includes("The World Cup")) say("notes asked for are not on the slide");
+  // Nothing in the corners, and a link on the words that name the thing.
+  const ah = renderToString(<RoomSlide slide={sl(2)} ground="slate" />);
+  if (!ah.includes('href="https://www.theatlantic.com/x"')) say("an article's slide has no link to the article");
+  const all = cases2.map((c, i) => (sl(i)?.type === "slide" ? renderToString(<RoomSlide slide={sl(i)} ground="paper" />) : "")).join("");
+  for (const word of [">activity<", ">article<", ">note<", ">item<", ">question<", ">link<"]) {
+    if (all.toLowerCase().includes(word)) say("a slide carries a kind label: " + word);
+  }
+  const clip = renderToString(<Slide cast={sl(4)} config={cfg} />);
   if (/autoplay/i.test(clip)) say("a clip plays in its slide");
 
   // The day plan: a slide beside a block, none beside a note under it, and no arrow where the slide is the button.

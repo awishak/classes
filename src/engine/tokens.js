@@ -70,6 +70,21 @@ export const ROOM = {
   line: "var(--room-line)",
 };
 
+// The slide templates (RoomSlide.jsx) on the two grounds Andrew chooses between
+// for a class: paper, and slate. Plain values rather than theme variables,
+// because a slide is the same picture wherever it is drawn: on the wall, in the
+// dashboard's slide column, in Teach. The crimson is COMM 118's own red, used
+// for objects (the ticket, the book, the calendar) that keep their colour on
+// either ground; the accent is that red lifted on slate to clear 4.5:1.
+export const SLIDE = {
+  crimson: "#9f1239",
+  crimsonDeep: "#7f0e2d",
+  paper: { bg: "#f5f1eb", ink: "#1c1917", dim: "#57534e", rule: "#e3ded8", accent: "#9f1239", card: "#ffffff",
+    shadow: "0 30px 60px -24px rgba(28,25,23,.35)" },
+  slate: { bg: "#0f0d0c", ink: "#f6f2ec", dim: "#a79c92", rule: "#2b2622", accent: "#ec5f85", card: "#1c1917",
+    shadow: "0 30px 60px -20px rgba(0,0,0,.8)" },
+};
+
 // A card is more than a background: the themes differ by border and shadow more
 // than by colour. Snapchat is 3px of black with a hard offset; Crashing Out
 // stacks two shadows; Clean is a hairline and nothing else.
