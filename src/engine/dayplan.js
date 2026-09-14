@@ -21,7 +21,10 @@ export const blankDay = (config) => ({
 // goes through here.
 export function normSlot(s) {
   if (!s) return { items: [] };
-  if (Array.isArray(s.items)) return { title: s.title, note: s.note, items: s.items };
+  // Everything a section carries comes through, not a list of fields: when this
+  // named title and note, a section's time was dropped by every write that went
+  // through here, so adding an item to a timed section erased the time.
+  if (Array.isArray(s.items)) return { ...s, items: s.items };
   const { seedId, text, bodyOverride, links, title, note } = s;
   const items = (seedId || text) ? [{ id: "legacy", seedId, text, bodyOverride, links: links || [] }] : [];
   return { title, note, items };
@@ -156,3 +159,108 @@ export const dayHasSeed = (data, config, date, seedId) => {
   const plan = dayPlanFor(data, config, date);
   return Object.values(plan.slots || {}).some(s => normSlot(s).items.some(it => it.seedId === seedId));
 };
+
+// ─── time on a section ───
+//
+// A section can say how long it takes, as one number or a range: "10", "5-10",
+// "5–10 min". Andrew plans in ranges, so the day totals both ends: five
+// sections of 5-10 is 25–50 minutes, which says more about whether a class fits
+// than one guessed number would.
+export function parseRange(text) {
+  const m = String(text || "").trim().match(/^(\d+)\s*(?:(?:-|–|—|to)\s*(\d+))?\s*(?:m|min|mins|minutes)?$/i);
+  if (!m) return null;
+  const a = Number(m[1]);
+  const b = m[2] != null ? Number(m[2]) : a;
+  return { lo: Math.min(a, b), hi: Math.max(a, b) };
+}
+
+// The day's total, over every section that has a time. `n` is how many did.
+export const sumRanges = (texts) => (texts || []).reduce((t, x) => {
+  const r = parseRange(x);
+  return r ? { lo: t.lo + r.lo, hi: t.hi + r.hi, n: t.n + 1 } : t;
+}, { lo: 0, hi: 0, n: 0 });
+
+// "25–50" or "30" when both ends agree.
+export const rangeLabel = (r) => (r.lo === r.hi ? String(r.lo) : r.lo + "–" + r.hi);
+
+// ─── moving and splitting sections ───
+//
+// The order a day draws its sections in is the order of the keys in its slots
+// object, so moving a section is writing those keys in a new order. Every
+// section keeps its key, its title, its time and its rows.
+export function placeSection(slots, slot, beforeSlot) {
+  const all = slots || {};
+  if (!(slot in all) || slot === beforeSlot) return all;
+  const keys = Object.keys(all).filter(k => k !== slot);
+  const at = beforeSlot ? keys.indexOf(beforeSlot) : -1;
+  if (at < 0) keys.push(slot); else keys.splice(at, 0, slot);
+  const next = {};
+  keys.forEach(k => { next[k] = all[k]; });
+  return next;
+}
+
+// A line turned into a section, the way a heading splits a document: the rows
+// after the line move into a new section straight after this one, and the
+// line itself becomes that section's name. The new section's key comes back
+// so the cursor can be put in its name.
+export function splitSection(slots, slot, itemId, title, newKey) {
+  const all = slots || {};
+  const bucket = normSlot(all[slot]);
+  const i = bucket.items.findIndex(x => x.id === itemId);
+  if (i < 0) return { slots: all, key: null };
+  const key = newKey || "sec-" + genId();
+  const next = {};
+  Object.keys(all).forEach(k => {
+    if (k === slot) {
+      next[k] = { ...bucket, items: bucket.items.slice(0, i) };
+      next[key] = { title: title || "", items: bucket.items.slice(i + 1) };
+    } else next[k] = all[k];
+  });
+  // The first row of the new section cannot be a note: there is no item above it.
+  const moved = [...next[key].items];
+  if (moved.length && (moved[0].depth || 0) > 0) moved[0] = { ...moved[0], depth: 0 };
+  next[key] = { ...next[key], items: moved };
+  return { slots: next, key };
+}
+
+// ─── templates ───
+//
+// A template is the shape of a day Andrew taught and wants again: its sections,
+// in order, with their names, times and rows. Rows keep what they point at (a
+// block, an activity) and what they say, and lose their ids, their done ticks
+// and anything else about the day they came from.
+export function templateOf(plan, sectionKeys) {
+  const slots = plan?.slots || {};
+  return (sectionKeys || Object.keys(slots)).map(k => {
+    const b = normSlot(slots[k]);
+    return {
+      title: b.title || "",
+      time: b.time || "",
+      items: b.items.map(it => {
+        const row = {};
+        ["text", "blockId", "feature", "seedId", "claim", "depth", "slide"].forEach(f => { if (it[f] != null && it[f] !== "" && it[f] !== 0 && it[f] !== false) row[f] = it[f]; });
+        if ((it.links || []).length) row.links = it.links.map(l => ({ label: l.label, url: l.url }));
+        return row;
+      }),
+    };
+  }).filter(s => s.title || s.items.length);
+}
+
+// A template put onto a day, after whatever the day already has. Nothing on
+// the day is replaced, so applying one by mistake is undone by deleting what
+// arrived.
+export function applyTemplate(slots, tpl, makeId) {
+  const id = makeId || genId;
+  const next = { ...(slots || {}) };
+  (tpl?.sections || []).forEach(s => {
+    next["sec-" + id()] = {
+      title: s.title || "",
+      ...(s.time ? { time: s.time } : {}),
+      items: (s.items || []).map(r => ({
+        ...r, id: id(),
+        ...(r.links ? { links: r.links.map(l => ({ ...l, id: id() })) } : {}),
+      })),
+    };
+  });
+  return next;
+}

@@ -70,7 +70,7 @@ function Face({ cast, config }) {
   return <Content cast={cast} config={config} />;
 }
 
-export default function Slide({ cast, config, onClick, live, label }) {
+export default function Slide({ cast, config, onClick, live, label, big }) {
   const box = useRef(null);
   // With no way to tell what is on screen (the build's server render, an old
   // browser) every slide draws straight away.
@@ -103,7 +103,7 @@ export default function Slide({ cast, config, onClick, live, label }) {
   } : { "aria-hidden": "true" };
 
   return (
-    <div ref={box} className={"slide" + (onClick ? " slide-press" : "") + (live ? " slide-live" : "")} {...press}>
+    <div ref={box} className={"slide" + (big ? " big" : "") + (onClick ? " slide-press" : "") + (live ? " slide-live" : "")} {...press}>
       {near ? (
         <div className="slide-stage" style={{ width: W, height: H, transform: "scale(" + scale + ")" }}>
           <Face cast={cast} config={config || { path: "" }} />
@@ -123,4 +123,6 @@ export const SLIDE_CSS = `
 .slide-press:hover{box-shadow:0 0 0 2px var(--dash-accent)}
 .slide-press:focus-visible{outline:none;box-shadow:0 0 0 3px var(--dash-accent)}
 .slide-live{box-shadow:0 0 0 3px ${TOKENS.STATE.live}}
+/* The Teach view shows one slide, as wide as its column allows. */
+.slide.big{max-width:none;max-height:none;border-radius:14px}
 `;

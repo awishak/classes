@@ -83,11 +83,12 @@ import GradeDeck from "../src/engine/GradeDeck.jsx";
 import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, unseenGrades, markSeen, meetingPatch, letterOf, BUCKETS } from "../src/engine/grades.js";
 import GradeParade from "../src/engine/GradeParade.jsx";
 import { computeGrade } from "../src/engine/AssignmentsCard.jsx";
-import { sectionsOf, takeGroup, placeGroup } from "../src/engine/dayplan.js";
+import { sectionsOf, takeGroup, placeGroup, parseRange, sumRanges, rangeLabel, placeSection, splitSection, templateOf, applyTemplate } from "../src/engine/dayplan.js";
 import { dayTitles } from "../src/engine/days.js";
 import { normSlot as normSlotT } from "../src/engine/dayplan.js";
 import Drawer, { SHELVES, shelfOf } from "../src/engine/Drawer.jsx";
 import Slide, { slideOf } from "../src/engine/Slide.jsx";
+import DayDoc from "../src/engine/DayDoc.jsx";
 import { ScheduleDetail, studentItems } from "../src/engine/ScheduleCard.jsx";
 import TermOutline from "../src/engine/TermOutline.jsx";
 import { SHARED_KEY } from "../src/engine/blocks.js";
@@ -2101,6 +2102,71 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (v["Sep 21"].title !== "Week one" || v["Sep 28"].title !== "Week two") say("with no titles written, days should read their week topic");
 }
 
+// Teach: the day one thing at a time. And the day's total from section times.
+{
+  const say = (msg) => { console.error("  FAIL  teach and totals: " + msg); failedEarly++; };
+  const none = () => {}; // smoke render, never pressed
+  const slotItems = {
+    open: { title: "Open", time: "5-10", items: [{ id: "i1", text: "Start with headlines" }, { id: "n1", text: "Ask about the weekend", depth: 1 }] },
+    talk: { title: "Talk", time: "20-25", items: [{ id: "i2", text: "Why we care" }] },
+  };
+  const props = { sections: [["open", "Open"], ["talk", "Talk"]], slotItems, named: new Set(), firstMovable: 0,
+    blockOf: () => null, seedById: () => null, doneSet: new Set(), nextId: "i1", pickedId: null, liveLabel: null,
+    castItem: none, castSection: (s, n) => ({ type: "quote", title: n, label: n }), dismiss: none, features: {}, hue: () => "#333",
+    slidesOn: true, classHref: "/comm118", onSetSlotTitle: none, onSaveItem: none, onSaveBlock: none, onInsertRow: () => "x",
+    onRemoveItem: none, onNest: none, onTick: none, isAssigned: () => false, onToggleAssigned: none, drop: none,
+    onSetSlotTime: none, onPlaceSection: none, classMinutes: 65 };
+  let html = "";
+  try { html = renderToString(<DayDoc {...props} />); } catch (e) { say("the document threw: " + e.message); }
+  if (!/25–35(<!-- -->)? min/.test(html)) say("the day's total of 5-10 and 20-25 is not shown as 25–35 min");
+  if (!/planned of (<!-- -->)?65/.test(html)) say("the total does not say out of how many minutes");
+  if ((html.match(/class="doc-time"/g) || []).length !== 2) say("a section has no place for its time");
+  if ((html.match(/doc-secgrip/g) || []).length !== 2) say("a section has no handle to drag it by");
+  try { html = renderToString(<DayDoc {...props} teach onTeach={none} />); } catch (e) { say("teach threw: " + e.message); html = ""; }
+  if (!html.includes('class="teach"')) say("teach does not draw");
+  if (!html.includes("Start with headlines")) say("teach does not open on the next thing to do");
+  if (!html.includes("Ask about the weekend")) say("teach does not show the notes under the item");
+  if (!html.includes("Next: Talk")) say("teach does not say what comes next");
+}
+
+// Time on sections, as ranges, and the day's total.
+{
+  const say = (msg) => { console.error("  FAIL  section times: " + msg); failedEarly++; };
+  const r = (t) => JSON.stringify(parseRange(t));
+  if (r("5-10") !== '{"lo":5,"hi":10}') say("5-10 read as " + r("5-10"));
+  if (r("5–10 min") !== '{"lo":5,"hi":10}') say("an en dash and 'min' did not read");
+  if (r("10") !== '{"lo":10,"hi":10}') say("a single number did not read");
+  if (r("10 to 5") !== '{"lo":5,"hi":10}') say("a range written backwards did not read");
+  if (parseRange("about ten") !== null) say("words were read as a time");
+  const t = sumRanges(["5-10", "10", "", "nonsense", "15-20m"]);
+  if (t.lo !== 30 || t.hi !== 40 || t.n !== 3) say("the total came to " + JSON.stringify(t) + ", want 30 to 40 over 3 sections");
+  if (rangeLabel({ lo: 30, hi: 40 }) !== "30–40" || rangeLabel({ lo: 20, hi: 20 }) !== "20") say("the total is written wrong");
+  // A section's time survives the reader every write goes through.
+  if (normSlotT({ title: "Open", time: "5-10", items: [] }).time !== "5-10") say("reading a section drops its time, so the next write erases it");
+}
+
+// Sections move, split, and come from templates.
+{
+  const say = (msg) => { console.error("  FAIL  sections and templates: " + msg); failedEarly++; };
+  const slots = { a: { title: "A", items: [{ id: "1" }] }, b: { title: "B", items: [] }, c: { title: "C", items: [] } };
+  if (Object.keys(placeSection(slots, "c", "a")).join() !== "c,a,b") say("a section dragged above another did not land there");
+  if (Object.keys(placeSection(slots, "a", null)).join() !== "b,c,a") say("a section dragged to the end did not land there");
+  const day = { a: { title: "Open", items: [{ id: "x" }, { id: "y", text: "Discussion" }, { id: "z" }, { id: "z1", depth: 1 }] } };
+  const split = splitSection(day, "a", "y", "Discussion", "sec-new");
+  if (Object.keys(split.slots).join() !== "a,sec-new") say("the new section is not straight after the one it split");
+  if (split.slots.a.items.map(i => i.id).join() !== "x") say("rows before the line did not stay");
+  if (split.slots["sec-new"].title !== "Discussion" || split.slots["sec-new"].items.map(i => i.id).join() !== "z,z1") say("rows after the line did not move into the new section");
+  const tpl = { sections: templateOf({ slots: { a: { title: "Game day", time: "5-10", items: [{ id: "old", blockId: "g1", depth: 0 }, { id: "n", text: "Rules", depth: 1 }] } } }) };
+  if (JSON.stringify(tpl.sections[0].items[0]) !== '{"blockId":"g1"}') say("a template kept more than what a row points at: " + JSON.stringify(tpl.sections[0].items[0]));
+  let n = 0;
+  const applied = applyTemplate({ keep: { title: "Already here", items: [] } }, tpl, () => "id" + (++n));
+  const keys = Object.keys(applied);
+  if (keys[0] !== "keep") say("applying a template replaced what the day had");
+  const added = applied[keys[1]];
+  if (!added || added.title !== "Game day" || added.time !== "5-10") say("the template's section did not arrive with its name and time");
+  if (added && added.items.some(i => i.id === "old")) say("a template row kept an id from the day it came from");
+}
+
 // An item and its notes move together.
 //
 // Moving an item's row alone left its notes behind, where they became notes on
@@ -2355,7 +2421,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (/flow-sec-n|flow-tally|flow-secmove/.test(html)) say("the section still carries its numeral, tally or move arrows");
   // A comment can be picked up, and a web address in a line is a link that goes on the room screen.
   if (!html.includes("doc-grip")) say("a comment has no handle to drag it by");
-  if (!/doc-link-go[^>]*>theatlantic.com</.test(html)) say("a web address in a comment is not a link that can go on the room screen");
+  // The address typed into the note is a link inside the note's own words now,
+  // and pressing it offers the room screen; the pill beside a line is for a
+  // block's own link, so the same address is not shown twice.
+  if (/doc-link-go[^>]*>theatlantic.com</.test(html)) say("a web address typed into a note shows twice, in the words and as a pill");
   if (!html.includes('href="https://www.theatlantic.com/sports/story"')) say("the link cannot be opened in a tab");
   if (html.includes("Put this row on the room screen")) say("the arrow is still there beside a slide");
   if (!html.includes("Hide slides")) say("the slide column cannot be closed");

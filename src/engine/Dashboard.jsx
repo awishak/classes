@@ -25,7 +25,7 @@ import { useHeadlines } from "./headlines.js";
 import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay, dayTitles } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
-import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections, blankDay, takeGroup, placeGroup } from "./dayplan.js";
+import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections, blankDay, takeGroup, placeGroup, placeSection, splitSection, templateOf, applyTemplate } from "./dayplan.js";
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, makeBlock } from "./blocks.js";
 import { MEDIA_ACCEPT, mediaLabel, sizeLabel } from "./media.js";
 import { useUpload } from "./Attach.jsx";
@@ -33,7 +33,7 @@ import { readAdded, readLabels } from "./types.js";
 import PickMark from "./Pick.jsx";
 import { PALETTE, KINDS, readColors, colorOfKind, colorOfType, writeColor, resetColors, sectionColor, writeSectionColor, inkOf, LIBRARY_CARD, LIBRARY_CARD_HOVER } from "./colors.js";
 import { useBoards } from "./boards.js";
-import { minutesLeft, sittingLength } from "./meets.js";
+import { minutesLeft, sittingLength, sittingsOf } from "./meets.js";
 import { FACES, SLOTS, readFonts, fontVars, writeFont, resetFonts, readBold, writeBold } from "./fonts.js";
 import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, setScheduleItemClaim, setScheduleItemNote, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
@@ -44,6 +44,7 @@ import Drawer, { DRAWER_CSS } from "./Drawer.jsx";
 import TermOutline, { TERM_CSS } from "./TermOutline.jsx";
 import Slide, { slideOf, SLIDE_CSS, readSlidesOn, writeSlidesOn } from "./Slide.jsx";
 import DayDoc, { DOC_CSS } from "./DayDoc.jsx";
+import { TemplatesPanel, HistoryPanel } from "./DayTools.jsx";
 
 // Eight items at 39px, plus the padding: the tallest a row menu usually gets,
 // now that a block's content has an item of its own. The flip measures against
@@ -224,7 +225,7 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-itemtext{min-width:0;display:flex;flex-direction:column}
 .flow-rowwrap{display:flex;flex-direction:column;min-width:0}
 .flow-slidecell{padding-top:6px;display:flex;justify-content:flex-end}
-.flow-slidebar{display:flex;justify-content:flex-end;margin-bottom:-18px;position:relative;z-index:1}
+.flow-slidebar{display:flex;justify-content:flex-end;gap:6px;margin-bottom:-18px;position:relative;z-index:1}
 .flow-slidetoggle{min-height:32px;padding:0 12px;border:1px solid ${BORDER_STRONG};border-radius:8px;background:#fff;
   font-family:${F};font-size:13px;font-weight:600;color:${TEXT_SECONDARY};cursor:pointer}
 .flow-slidetoggle:hover{color:${TEXT_PRIMARY};background:${SURFACE_2}}
@@ -2008,7 +2009,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -2019,6 +2020,8 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
   // the day — a folded section should not be folded for the room screen too.
   const [foldedSecs, setFoldedSecs] = useState(() => new Set());
   const [slidesOn, setSlidesOnState] = useState(readSlidesOn);
+  // Teach: the day as a running order, one thing at a time.
+  const [teach, setTeach] = useState(false);
   const setSlidesOn = (on) => { setSlidesOnState(on); writeSlidesOn(on); };
   const [overRow, setOverRow] = useState(null);
 
@@ -2263,8 +2266,12 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
           planning belongs. */}
       {/* The slide column's own control, over the column it opens and closes. */}
       <div className="flow-slidebar">
-        <button className="dash-focus flow-slidetoggle" aria-pressed={slidesOn}
-          onClick={() => setSlidesOn(!slidesOn)}>{slidesOn ? "Hide slides" : "Show slides"}</button>
+        <button className="dash-focus flow-slidetoggle" aria-pressed={teach}
+          onClick={() => setTeach(!teach)}>{teach ? "Exit teach" : "Teach"}</button>
+        {teach ? null : (
+          <button className="dash-focus flow-slidetoggle" aria-pressed={slidesOn}
+            onClick={() => setSlidesOn(!slidesOn)}>{slidesOn ? "Hide slides" : "Show slides"}</button>
+        )}
       </div>
       <DayDoc sections={sectionRows} slotItems={slotItems} named={named} firstMovable={firstMovable}
         blockOf={blockOf} seedById={seedById} doneSet={doneSet} numberOf={numberOf} nextId={nextId} pickedId={pickedId}
@@ -2292,7 +2299,9 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
         onRemoveItem={onRemoveItem} onNest={onNest} onTick={onTick}
         isAssigned={isAssigned} onToggleAssigned={onToggleAssigned}
         onDeleteSection={onDeleteSection} onMoveSection={onMoveSection} onEdit={onEdit} drop={drop}
-        onMoveItem={onMoveItem} onConvertRow={onConvertRow}
+        onMoveItem={onMoveItem} onConvertRow={onConvertRow} onLinkRow={onLinkRow} library={blocks2}
+        onSetSlotTime={onSetSlotTime} onPlaceSection={onPlaceSection} onSplitSection={onSplitSection} classMinutes={classMinutes}
+        onOpenTemplates={onOpenTemplates} onOpenHistory={onOpenHistory} teach={teach} onTeach={setTeach}
         // A link put up from a line goes up the way the room screen shows any
         // link: the page itself where the site allows it, the reader where not.
         castLink={(url, name) => castNow({ ...castFromLink({ label: name, url }), title: name, label: name })} />
@@ -4022,11 +4031,25 @@ export default function Dashboard({ config }) {
 
   // ─── writes ───
   const [undo, setUndo] = useState(null);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  // Versions of each day, kept in this browser as the day is edited, for
+  // version history. One is taken before a write when the last is more than a
+  // minute old, so a burst of typing is one version rather than forty. The
+  // store's own daily backups sit alongside these in the history sheet.
+  const versionsRef = useRef({});
   const writeDayOn = (date, fn, what) => update(prev => {
     const plans = { ...(prev.dayPlans || {}) };
     const before = plans[date];
     plans[date] = fn(plans[date] || {});
-    if (plans[date] !== before) setUndo({ date, plan: before, what: what || "that" });
+    if (plans[date] !== before) {
+      setUndo({ date, plan: before, what: what || "that" });
+      const list = versionsRef.current[date] || [];
+      const last = list[list.length - 1];
+      if (before && (!last || Date.now() - last.at > 60000)) {
+        versionsRef.current[date] = [...list.slice(-39), { at: Date.now(), plan: before }];
+      }
+    }
     return { ...prev, dayPlans: plans };
   });
   const doUndo = () => {
@@ -4099,8 +4122,9 @@ export default function Dashboard({ config }) {
   // A new line in the day, typed where the cursor is: after the row named, or
   // first in the section when none is. Hands back the new row's id so the
   // document can put the cursor in it.
-  const insertRow = (slot, afterId, depth) => {
-    const row = { id: genId(), text: "", depth: depth || 0 };
+  const insertRow = (slot, afterId, depth, extra) => {
+    const row = { id: genId(), text: "", depth: depth || 0, ...(extra || {}) };
+    if (row.blockId) stampScheduled(writeTo(row.blockId), row.blockId, day);
     writeDay(d => {
       const slots = { ...(d.slots || {}) };
       const bucket = normSlot(slots[slot]);
@@ -4117,13 +4141,52 @@ export default function Dashboard({ config }) {
   // the line's words as its title and its first web address as its link. The
   // row keeps its place, its id, its depth and its headline, and points at the
   // block from then on, so it turns up in the repository like anything else.
-  const convertRow = (slot, itemId, type) => {
-    const row = normSlot((plan?.slots || {})[slot]).items.find(x => x.id === itemId);
-    if (!row || row.blockId || row.feature || row.seedId) return;
-    const url = (row.links || [])[0]?.url || ((row.text || "").match(/https?:\/\/[^\s<>"')]+/) || [])[0] || "";
-    const made = makeBlock({ type, title: (row.text || "").trim() || hostOf(url) || "", url });
-    update(prev => ({ ...prev, blocks: { ...(prev.blocks || {}), [made.id]: made } }));
-    saveItemPatch(slot, itemId, { blockId: made.id, links: [] });
+  // The words come in with the call, because a slash command has just taken
+  // "/video" out of the line and the day this render read has not caught up.
+  const convertRow = (slot, itemId, type, words) => {
+    let made = null;
+    update(prev => {
+      const plans = { ...(prev.dayPlans || {}) };
+      const d = plans[day] || {};
+      const bucket = normSlot((d.slots || {})[slot]);
+      const row = bucket.items.find(x => x.id === itemId);
+      if (!row || row.blockId || row.feature || row.seedId) return prev;
+      const text = words != null ? words : (row.text || "");
+      const url = (row.links || [])[0]?.url || (text.match(/https?:\/\/[^\s<>"')]+/) || [])[0] || "";
+      made = makeBlock({ type, title: text.trim() || hostOf(url) || "", url });
+      plans[day] = { ...d, slots: { ...(d.slots || {}), [slot]: { ...bucket,
+        items: bucket.items.map(x => (x.id === itemId ? { ...x, blockId: made.id, text: "", links: [] } : x)) } } };
+      return { ...prev, dayPlans: plans, blocks: { ...(prev.blocks || {}), [made.id]: made } };
+    });
+    return made?.id || null;
+  };
+
+  // A line pointed at something already in the library, from @.
+  const linkRow = (slot, itemId, blockId) => {
+    writeDay(d => {
+      const bucket = normSlot((d.slots || {})[slot]);
+      return { ...d, slots: { ...(d.slots || {}), [slot]: { ...bucket,
+        items: bucket.items.map(x => (x.id === itemId ? { ...x, blockId, text: "", links: [], feature: undefined } : x)) } } };
+    }, "that line");
+    stampScheduled(writeTo(blockId), blockId, day);
+  };
+
+  // A section's time, a range like 5-10.
+  const setSlotTime = (slot, time) => writeDay(d => {
+    const slots = { ...(d.slots || {}) };
+    slots[slot] = { ...normSlot(slots[slot]), time };
+    return { ...d, slots };
+  }, "that time");
+
+  // A section dragged to a new place in the day.
+  const placeSectionAt = (slot, beforeSlot) => writeDay(d => ({ ...d, slots: placeSection(d.slots, slot, beforeSlot) }), "moving that section");
+
+  // A line turned into a section: the rows after it go with it. Hands back the
+  // new section's key so its name can take the cursor.
+  const splitSectionAt = (slot, itemId, title) => {
+    const key = "sec-" + genId();
+    writeDay(d => ({ ...d, slots: splitSection(d.slots, slot, itemId, title, key).slots }), "that section");
+    return key;
   };
 
   const addUnder = (slot, afterId, depth) => {
@@ -4733,6 +4796,9 @@ export default function Dashboard({ config }) {
       ]} onNest={nestItem}
       onSaveBlock={saveBlockPatch} onSaveDayNote={(v) => saveDayNote(v)}
       onSaveItem={saveItemPatch} onInsertRow={insertRow} onConvertRow={convertRow}
+      onLinkRow={linkRow} onSetSlotTime={setSlotTime} onPlaceSection={placeSectionAt} onSplitSection={splitSectionAt}
+      classMinutes={(() => { const s = sittingsOf(config)[0]; return s ? s.end - s.start : null; })()}
+      onOpenTemplates={() => setTemplatesOpen(true)} onOpenHistory={() => setHistoryOpen(true)}
       onSaveSpring={(patch) => writeDay(d => ({ ...d, spring: { ...(d.spring || {}), ...patch } }), "that note")}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
       onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMoveSection={moveSection} onAddUnder={addUnder} onMergeSections={mergeSections} onSelect={setPicked} onEdit={editPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
@@ -4920,6 +4986,10 @@ export default function Dashboard({ config }) {
                       that does not exist yet. */}
                   <button className="dash-focus dash-topic-tool" onClick={() => addBlock("")}
                     title="Add a section to the end of this day">+ Section</button>
+                  <button className="dash-focus dash-topic-tool" onClick={() => setTemplatesOpen(true)}
+                    title="Save this day as a template, or start a day from a template">Templates</button>
+                  <button className="dash-focus dash-topic-tool" onClick={() => setHistoryOpen(true)}
+                    title="Earlier versions of this day">History</button>
                 </>
               } />
             {render.flow()}
@@ -5007,6 +5077,26 @@ export default function Dashboard({ config }) {
           onFont={(slot, f) => writeFont(updateShared, slot, f)}
           onBold={(v) => writeBold(updateShared, v)}
           onReset={() => { resetColors(updateShared); resetFonts(updateShared); }} />
+      ) : null}
+
+      {templatesOpen ? (
+        <Sheet title="Templates" sub={config.code + " · " + day} onClose={() => setTemplatesOpen(false)} width={620}>
+          <TemplatesPanel templates={shared?.dayTemplates || []} plan={plan} blockOf={blockOf}
+            onSave={(name) => updateShared(prev => ({ ...prev, dayTemplates: [...(prev.dayTemplates || []), {
+              id: genId(), name, from: config.code + " " + day, created: new Date().toISOString().slice(0, 10),
+              sections: templateOf(plan, sections.map(([k]) => k)),
+            }] }))}
+            onApply={(tpl) => { writeDay(d => ({ ...d, slots: applyTemplate(d.slots, tpl) }), "that template"); setTemplatesOpen(false); }}
+            onDelete={(tpl) => updateShared(prev => ({ ...prev, dayTemplates: (prev.dayTemplates || []).filter(t => t.id !== tpl.id) }))} />
+        </Sheet>
+      ) : null}
+
+      {historyOpen ? (
+        <Sheet title="History" sub={config.code + " · " + day} onClose={() => setHistoryOpen(false)} width={620}>
+          <HistoryPanel storageKey={config.storageKey} day={day} plan={plan} blockOf={blockOf}
+            local={versionsRef.current[day] || []}
+            onRestore={(version) => { writeDay(() => version, "that restore"); setHistoryOpen(false); }} />
+        </Sheet>
       ) : null}
 
       {todoOpen ? (
