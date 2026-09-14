@@ -147,13 +147,17 @@ function NotesBeside({ s, g, children, width }) {
   );
 }
 
+// An article is a clipping or its picture beside its headline. Left to itself
+// it uses the picture when the article's page has one, which is why two
+// articles on one day can look different; `look` on the row settles it.
 function Article({ s, g }) {
-  const img = useLeadImage(s.image ? "" : s.url, s.image);
-  if (img) {
+  const clipping = s.look === "clipping";
+  const img = useLeadImage(s.image || clipping ? "" : s.url, s.image);
+  if (!clipping && (img || s.look === "picture")) {
     return (
       <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "700px minmax(0, 1fr)" }}>
-        <L url={s.url}><div style={{ position: "relative", overflow: "hidden", height: H }}>
-          <img src={img} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        <L url={s.url}><div style={{ position: "relative", overflow: "hidden", height: H, background: g.card }}>
+          {img ? <img src={img} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : null}
         </div></L>
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 28, padding: "0 72px 0 64px" }}>
           <Site s={s} g={g} />
@@ -409,7 +413,8 @@ const IMAGE_URL = /\.(png|jpe?g|gif|webp|avif)(\?|#|$)/i;
 export function slideFor({ item, block, seed, title, claim, notes, tag, assignments, features }) {
   const words = claim || title || "";
   const url = block?.url || (item?.links || [])[0]?.url || (String(item?.text || "").match(/https?:\/\/[^\s<>"')]+/) || [])[0] || "";
-  const base = { type: "slide", label: words, title: title || "", headline: claim || "", url, site: hostOf(url), notes: notes && notes.length ? notes : undefined };
+  const base = { type: "slide", label: words, title: title || "", headline: claim || "", url, site: hostOf(url), notes: notes && notes.length ? notes : undefined,
+    look: item?.slideLook || undefined };
   const sub = block?.type !== "board" ? (block?.body || "").trim() : "";
 
   if (item?.feature) {

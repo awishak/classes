@@ -2415,6 +2415,12 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // Nothing in the corners, and a link on the words that name the thing.
   const ah = renderToString(<RoomSlide slide={sl(2)} ground="slate" />);
   if (!ah.includes('href="https://www.theatlantic.com/x"')) say("an article's slide has no link to the article");
+  // A row can settle an article's look: clipping, or picture beside the headline.
+  const lookOf = (look) => slideOf({ ...cases2[2][1], item: { id: "i", slideLook: look } });
+  if (lookOf("clipping").look !== "clipping") say("an article row's chosen look does not reach its slide");
+  const asClip = renderToString(<RoomSlide slide={lookOf("clipping")} ground="paper" />);
+  const asPic = renderToString(<RoomSlide slide={lookOf("picture")} ground="paper" />);
+  if (asClip.includes("grid-template-columns:700px") || !asPic.includes("grid-template-columns:700px")) say("clipping and picture draw the same article slide");
   const all = cases2.map((c, i) => (sl(i)?.type === "slide" ? renderToString(<RoomSlide slide={sl(i)} ground="paper" />) : "")).join("");
   for (const word of [">activity<", ">article<", ">note<", ">item<", ">question<", ">link<"]) {
     if (all.toLowerCase().includes(word)) say("a slide carries a kind label: " + word);

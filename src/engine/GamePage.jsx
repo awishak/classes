@@ -153,16 +153,16 @@ export function RunGamePage({ config }) {
   const [theme] = useStudentTheme(config);
   const [mode] = useDayNight(config);
   const [data, take] = useClassState(config.storageKey);
-  useEffect(() => { document.title = config.code + " — Run the game"; }, [config.code]);
+  useEffect(() => { document.title = config.code + " — Games"; }, [config.code]);
 
   if (data === null) {
-    return <div data-theme={theme} data-mode={mode} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed /><Head config={config} what="Run the game" />
+    return <div data-theme={theme} data-mode={mode} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed /><Head config={config} what="Games" />
       <p style={{ margin: 0, fontSize: 17, color: MUTED }}>Reading the class.</p></div>;
   }
 
   return (
     <div data-theme={theme} data-mode={mode} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["GAME ON", config.code]} fixed />
-      <Head config={config} what="Run the game" />
+      <Head config={config} what="Games" />
       <GameAdmin config={config} data={data} setData={take} />
     </div>
   );

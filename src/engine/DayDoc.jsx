@@ -389,6 +389,8 @@ export default function DayDoc({
     return { cast, label: cl || w, go: () => castItem(line.it, line.blk, line.seed, w, cl, tag, cast) };
   };
 
+  const isArticle = (line) => line.kind === "item" && castLine(line).cast?.template === "article";
+
   const openMenu = (e, items) => {
     e.preventDefault();
     const x = Math.min(e.clientX, (typeof window !== "undefined" ? window.innerWidth : 1200) - 260);
@@ -433,6 +435,10 @@ export default function DayDoc({
       add("Screen", "Put on screen", () => castLine(line).go());
       if (line.kind === "item" && onSaveItem) {
         add("Screen", it.slideNotes ? "Hide notes on slide" : "Show notes on slide", () => onSaveItem(line.slot, it.id, { slideNotes: !it.slideNotes }));
+      }
+      if (isArticle(line) && onSaveItem) {
+        if (it.slideLook !== "clipping") add("Screen", "Use clipping", () => onSaveItem(line.slot, it.id, { slideLook: "clipping" }));
+        if (it.slideLook !== "picture") add("Screen", "Use picture", () => onSaveItem(line.slot, it.id, { slideLook: "picture" }));
       }
       if (line.kind === "comment" && onSaveItem) {
         add("Screen", it.slide ? "Remove slide" : "Create slide", () => onSaveItem(line.slot, it.id, { slide: !it.slide }));
@@ -667,6 +673,11 @@ export default function DayDoc({
       [done ? "Mark not done" : "Mark done", () => onTick(it.id)],
       // His notes on the slide, or not, item by item.
       line.kind === "item" && onSaveItem ? [it.slideNotes ? "Hide notes on slide" : "Show notes on slide", () => onSaveItem(slot, it.id, { slideNotes: !it.slideNotes })] : null,
+      // An article's slide is a clipping or its picture; left alone it follows the page.
+      ...(isArticle(line) && onSaveItem ? [
+        it.slideLook !== "clipping" ? ["Use clipping", () => onSaveItem(slot, it.id, { slideLook: "clipping" })] : null,
+        it.slideLook !== "picture" ? ["Use picture", () => onSaveItem(slot, it.id, { slideLook: "picture" })] : null,
+      ] : []),
       ["Put on screen", () => castLine(line).go()],
       onEdit ? ["Edit details", () => onEdit({ blockId: it.blockId, item: it, where: "", slot, id: it.id })] : null,
       line.kind === "item" && line.index > 0 && onNest ? ["Make note", () => onNest(slot, it.id, 1)] : null,

@@ -697,7 +697,7 @@ export default function ClassApp({ config, initialCard }) {
                 <div style={menuLabel}>Teach</div>
                 <a className="ca-focus" style={menuRow} href={config.path + "/today"}>Room screen</a>
                 <a className="ca-focus" style={menuRow} href={config.path + "/ask"}>Ask</a>
-                <a className="ca-focus" style={menuRow} href={config.path + "/rungame"}>Run the game</a>
+                <a className="ca-focus" style={menuRow} href={config.path + "/rungame"}>Games</a>
                 <a className="ca-focus" style={menuRow} href={config.path + "/grade"}>Grade view</a>
                 {rule}
                 <div style={menuLabel}>Class</div>

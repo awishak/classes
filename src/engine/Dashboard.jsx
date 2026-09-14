@@ -3237,9 +3237,9 @@ function ClassMenu({ config, onLook, panels, onPanel }) {
           need a row in a menu; keeping both is how the repository ended up
           reachable two ways from one header and no ways from the class page. */}
       <span style={{ ...label, padding: "6px 10px 4px" }}>Go to</span>
-      <a className="dash-focus" href={config.path + "/schedule"} style={menuRow}>The schedule</a>
-      <a className="dash-focus" href={config.path + "/today"} style={menuRow}>The room screen</a>
-      <a className="dash-focus" href={config.path + "/rungame"} style={menuRow}>Run the game</a>
+      <a className="dash-focus" href={config.path + "/schedule"} style={menuRow}>Schedule</a>
+      <a className="dash-focus" href={config.path + "/today"} style={menuRow}>Room screen</a>
+      <a className="dash-focus" href={config.path + "/rungame"} style={menuRow}>Games</a>
       <a className="dash-focus" href={config.path + "/grade"} style={menuRow}>Grade view</a>
       <a className="dash-focus" href="/plan" style={menuRow}>The Brief</a>
       {onLook ? (
