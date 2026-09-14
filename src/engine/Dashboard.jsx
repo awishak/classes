@@ -16,6 +16,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useClassData } from "./store.js";
 import { useLive, ANIMS, BIG_ANIMS } from "./live.js";
 import { mediaSteps, liveStep } from "./media.js";
+import { questionOf } from "./qbank.js";
 import { useQuestions } from "./questions.js";
 import { usePoll } from "./poll.js";
 import PollPanel, { oneSentence } from "./PollPanel.jsx";
@@ -42,10 +43,11 @@ import TopNav, { NAV_TEACH } from "./TopNav.jsx";
 import Drawer, { DRAWER_CSS } from "./Drawer.jsx";
 import TermOutline, { TERM_CSS } from "./TermOutline.jsx";
 
-// Six items at 38px, plus the padding: the tallest a row menu gets. The flip
-// measures against this rather than against the menu that is about to open,
-// because the menu is not in the document until after the press.
-const ROWMENU_H = 244;
+// Eight items at 39px, plus the padding: the tallest a row menu usually gets,
+// now that a block's content has an item of its own. The flip measures against
+// this rather than against the menu that is about to open, because the menu is
+// not in the document until after the press.
+const ROWMENU_H = 322;
 
 // One fallback for every component that takes a `hue`, so a panel rendered on
 // its own never has to know that colours exist.
@@ -250,6 +252,33 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
   color:${TEXT_SECONDARY};text-decoration:none;border-radius:999px;padding:1px 7px;
   background:${SURFACE_2};max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .flow-src:hover{background:rgba(23,19,16,.08);color:${TEXT_PRIMARY}}
+/* THE BLOCK UNDER ITS ROW. Indented to the words, past the numeral, so it
+   reads as belonging to the row above it and not as a row of its own. */
+.flow-block{flex:0 0 100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;gap:6px;
+  padding:0 8px 10px 44px;cursor:auto}
+.flow-body{font-family:${F};font-size:15px;line-height:1.5;color:${TEXT_SECONDARY};white-space:pre-wrap;
+  overflow-wrap:anywhere;max-width:72ch;border-radius:8px;margin:0 -6px;padding:2px 6px}
+.flow-body.editable{cursor:text}
+.flow-body.editable:hover{background:rgba(23,19,16,.045)}
+.flow-body.folded{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.flow-link{color:var(--dash-accent);text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere}
+.flow-bodyedit{width:100%;max-width:72ch;box-sizing:border-box;border:1px solid var(--dash-accent);border-radius:10px;
+  background:#fff;padding:8px 11px;font-family:${F};font-size:16px;line-height:1.5;color:${TEXT_PRIMARY};resize:vertical;
+  box-shadow:0 0 0 3px var(--dash-accent)18;outline:none}
+.flow-blockbtn{min-height:32px;padding:0 10px;border:1px solid ${BORDER_STRONG};border-radius:8px;background:#fff;
+  font-family:${F};font-size:13px;font-weight:600;color:${TEXT_SECONDARY};cursor:pointer}
+.flow-blockbtn:hover{color:${TEXT_PRIMARY};background:${SURFACE_2}}
+.flow-media{display:block;max-width:min(100%,420px);max-height:260px;border-radius:10px;background:${SURFACE_2};object-fit:contain}
+.flow-audio{width:min(100%,360px)}
+.flow-ask{font-family:${F};font-size:15px;line-height:1.45;color:${TEXT_PRIMARY}}
+.flow-ask span{font-family:${MONO};font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:${TEXT_MUTED};margin-right:8px}
+.flow-questions{margin:2px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:8px;max-width:72ch}
+.flow-questions li{font-family:${F};font-size:14.5px;line-height:1.45;color:${TEXT_PRIMARY}}
+.flow-q{display:block}
+.flow-opts{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:2px;font-size:13px;color:${TEXT_MUTED}}
+.flow-opts .right{color:${OK};font-weight:600}
+/* The day's notes, under the day. */
+.flow-daynotes{display:flex;flex-direction:column;gap:8px;padding-top:18px}
 /* My note under a reading. Quiet until there is one, and indented to the
    width of the number chip so it hangs off the thing it is about. */
 .dash-note{display:block;width:100%;text-align:left;background:none;
@@ -613,8 +642,128 @@ function Item({ kind, kindColor, title, sub, live, onCast, onDismiss }) {
 // then the question. `steps` is that list, `step` is which one is up (-1 when
 // the row is not live), and `onStep(i)` puts slide i on the wall. In the room
 // the one button cycles forward; jumping around lives behind the number.
-export function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, onEdit, picked, starred, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove, onAddUnder, steps, step = -1, onStep }) {
+// Words with their web addresses made into links.
+const URL_IN_TEXT = /(https?:\/\/[^\s<>"')]+)/g;
+export function Linked({ text }) {
+  return String(text || "").split(URL_IN_TEXT).map((part, i) => (i % 2
+    ? <a key={i} className="flow-link" href={part} target="_blank" rel="noopener noreferrer"
+        onClick={e => e.stopPropagation()}>{part}</a>
+    : part));
+}
+
+const IMAGE_URL = /\.(png|jpe?g|gif|webp|avif)(\?|#|$)/i;
+// Content longer than this folds to a few lines until you open it. A board's
+// content is every post on it, and one COMM 118 board runs to 17,000 characters.
+const LONG_BODY = 600;
+
+// Letting go of a row's drag while typing in it.
+//
+// The row is draggable, and a text box inside something draggable turns a
+// click-and-drag to select words into dragging the whole row. So the row stops
+// being draggable while the box has the cursor.
+const holdDrag = (e) => {
+  const row = e.currentTarget.closest('[draggable="true"]');
+  if (row) { row.setAttribute("draggable", "false"); row.dataset.held = "1"; }
+};
+const releaseDrag = (e) => {
+  const row = e.currentTarget.closest('[data-held="1"]');
+  if (row) { row.setAttribute("draggable", "true"); delete row.dataset.held; }
+};
+
+// The block under its row.
+//
+// A row in the day is the header of a block, and it used to be only the
+// header: a note's content, a photo, the questions in a game were all a click
+// away in the drawer. Now the whole block is on the day. The content is
+// edited where it sits, the way a section's name is.
+export function FlowBlock({ block, kids, editing, setEditing, onSaveBody }) {
+  const body = block?.body || "";
+  const [draft, setDraft] = useState(body);
+  const [full, setFull] = useState(false);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { if (!editing) setDraft(body); }, [body, editing]);
+  if (!block) return null;
+
+  const media = block.media?.src ? block.media : null;
+  const image = !media && IMAGE_URL.test(block.url || "") ? block.url : "";
+  const questions = (kids || []).filter(k => k && k.type === "question");
+  const ask = (block.ask || "").trim();
+  if (!body && !media && !image && !ask && !questions.length && !editing) return null;
+
+  const long = body.length > LONG_BODY;
+  const save = () => { if (draft !== body) onSaveBody(draft); setEditing(false); };
+
+  return (
+    <div className="flow-block" onContextMenu={e => e.stopPropagation()}>
+      {media?.kind === "image" || image ? (
+        <img className="flow-media" src={media ? media.src : image} alt={media?.name || block.title || ""} loading="lazy" />
+      ) : null}
+      {media?.kind === "video" ? (
+        <video className="flow-media" src={media.src} poster={media.poster || undefined} controls preload="metadata" />
+      ) : null}
+      {media?.kind === "audio" ? <audio className="flow-audio" src={media.src} controls preload="metadata" /> : null}
+      {ask ? (
+        <div className="flow-ask"><span>Ask after</span>{ask}</div>
+      ) : null}
+
+      {editing ? (
+        <textarea className="flow-bodyedit" autoFocus value={draft} rows={Math.min(14, Math.max(3, draft.split("\n").length + 1))}
+          placeholder="Content"
+          onChange={e => setDraft(e.target.value)}
+          onFocus={holdDrag}
+          onBlur={e => { releaseDrag(e); save(); }}
+          onKeyDown={e => {
+            if (e.key === "Escape") { setDraft(body); setEditing(false); }
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) e.currentTarget.blur();
+          }} />
+      ) : body ? (
+        <>
+          <div className={"flow-body" + (long && !full ? " folded" : "") + (onSaveBody ? " editable" : "")}
+            onClick={onSaveBody ? () => setEditing(true) : undefined}
+            title={onSaveBody ? "Click to edit the content" : undefined}>
+            <Linked text={body} />
+          </div>
+          {long ? (
+            <button className="dash-focus flow-blockbtn" onClick={() => setFull(v => !v)}>
+              {full ? "Show less" : "Show all"}
+            </button>
+          ) : null}
+        </>
+      ) : null}
+
+      {questions.length ? (
+        <>
+          <button className="dash-focus flow-blockbtn" aria-expanded={open} onClick={() => setOpen(v => !v)}>
+            {(open ? "Hide " : "Show ") + questions.length + (questions.length === 1 ? " question" : " questions")}
+          </button>
+          {open ? (
+            <ol className="flow-questions">
+              {questions.map(k => {
+                const q = questionOf(k);
+                return (
+                  <li key={k.id}>
+                    <span className="flow-q">{q.text || "Untitled"}</span>
+                    {q.options.length ? (
+                      <span className="flow-opts">
+                        {q.options.map((o, i) => (
+                          <span key={i} className={i === q.correct ? "right" : ""}>{o}</span>
+                        ))}
+                      </span>
+                    ) : q.answer ? <span className="flow-opts"><span className="right">{q.answer}</span></span> : null}
+                  </li>
+                );
+              })}
+            </ol>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+export function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, onEdit, picked, block, kids, onSaveBody, starred, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove, onAddUnder, steps, step = -1, onStep }) {
   const [editing, setEditing] = useState(false);
+  const [bodyEdit, setBodyEdit] = useState(false);
   const [menu, setMenu] = useState(false);
   // A row near the bottom of a long day opened its menu downward and off the
   // end of the card, so the last rows of a day were the ones I could not act
@@ -731,6 +880,11 @@ export function Castable({ kind, kindColor, title, url, claim, live, accent, onC
               <button className="dash-focus" onClick={() => { setMenu(false); setEditing(true); }}>
                 <span className="flow-rowmenu-k">“</span>{claim ? "Edit the headline" : "Write the headline"}
               </button>
+              {onSaveBody ? (
+                <button className="dash-focus" onClick={() => { setMenu(false); setBodyEdit(true); }}>
+                  <span className="flow-rowmenu-k">¶</span>{block?.body ? "Edit the content" : "Write the content"}
+                </button>
+              ) : null}
               {steps && onStep ? steps.map((st, i) => (
                 <button key={st.name} className="dash-focus" onClick={() => { setMenu(false); onStep(i); }}
                   aria-current={step === i ? "true" : undefined}>
@@ -798,6 +952,10 @@ export function Castable({ kind, kindColor, title, url, claim, live, accent, onC
             onClick={() => onCast(claim || title)}>→</button>
         )}
       </span>
+
+      {block ? (
+        <FlowBlock block={block} kids={kids} editing={bodyEdit} setEditing={setBodyEdit} onSaveBody={onSaveBody} />
+      ) : null}
     </div>
   );
 }
@@ -1832,7 +1990,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -2160,6 +2318,10 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
                     borderTop: "2px solid " + (overRow === it.id ? accent : "transparent") }}>
                   <Castable num={numberOf[it.id]} picked={pickedId === it.id} shared={!!it.blockId}
                     starred={!!blk?.pick}
+                    block={blk}
+                    kids={blk?.type === "set" && blockOf ? (blk.children || []).map(id => blockOf(id)).filter(Boolean) : null}
+                    // A board's content is what students posted, so it is shown and not edited here.
+                    onSaveBody={blk && onSaveBlock && blk.type !== "board" ? (v) => onSaveBlock(blk.id, { body: v }) : null}
                     done={doneSet.has(it.id)} next={nextId === it.id} onTick={() => onTick(it.id)}
                     onSelect={() => onSelect({ blockId: it.blockId, item: it, where: labelOf[s.slot], slot: s.slot, id: it.id })}
                     onEdit={onEdit ? () => onEdit({ blockId: it.blockId, item: it, where: labelOf[s.slot], slot: s.slot, id: it.id }) : null}
@@ -2231,6 +2393,31 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
       {foldRow}
       {addBlockRow}
       {blockBlock}
+
+      {/* The notes for this day, directly under it.
+          They were only reachable through the command bar, under My notes, so
+          a note written for a day was never on the day. Two kinds, kept apart
+          because one of them is public: the day note shows on the room screen
+          whenever nothing is up, and the Spring 2026 notes never do. */}
+      {plan?.spring?.mine || plan?.spring?.students || onSaveDayNote || plan?.notes ? (
+        <div className="flow-daynotes">
+          {plan?.spring?.mine || plan?.spring?.students ? (
+            <>
+              {plan.spring.mine ? (
+                <Note from="Spring 2026" scope={plan.spring.date || ""} body={plan.spring.mine}
+                  accent={accent} onSave={onSaveSpring ? (v) => onSaveSpring({ mine: v }) : null} placeholder="Spring 2026" />
+              ) : null}
+              {plan.spring.students ? (
+                <Note from="Notes for students" scope={"Spring 2026" + (plan.spring.date ? ", " + plan.spring.date : "")}
+                  body={plan.spring.students} accent={accent}
+                  onSave={onSaveSpring ? (v) => onSaveSpring({ students: v }) : null} placeholder="What students saw" />
+              ) : null}
+            </>
+          ) : null}
+          <Note from="Day note" scope="on the room screen" body={plan?.notes} accent={accent}
+            onSave={onSaveDayNote || null} placeholder="This day" />
+        </div>
+      ) : null}
 
       {/* Below the day. Everything here is a planning move, not a teaching one:
           nothing in this group is something you press with the room watching. */}
@@ -3392,7 +3579,7 @@ function BlockInfo({ block, item, where, accent, onClose, onOpen }) {
       ? mediaLabel(block.media.kind) + (block.media.name ? ", " + block.media.name : "") + (block.media.size ? ", " + sizeLabel(block.media.size) : "")
       : ""],
     ["Ask after", block?.ask],
-    ["What it says", block?.body],
+    ["Content", block?.body],
     ["Concept", block?.concept],
     ["Source", block?.source],
     ["Tags", (block?.tags || []).join(" · ")],
@@ -4609,6 +4796,8 @@ export default function Dashboard({ config }) {
             .filter(it => !it.blockId && (it.text || "").trim())
             .map(it => "\u00b7 " + it.text.trim()).join("\n") },
       ]} onNest={nestItem}
+      onSaveBlock={saveBlockPatch} onSaveDayNote={(v) => saveDayNote(v)}
+      onSaveSpring={(patch) => writeDay(d => ({ ...d, spring: { ...(d.spring || {}), ...patch } }), "that note")}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
       onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMoveSection={moveSection} onAddUnder={addUnder} onMergeSections={mergeSections} onSelect={setPicked} onEdit={editPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
       doneSet={doneSet} onTick={tickItem} />,

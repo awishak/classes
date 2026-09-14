@@ -99,7 +99,7 @@ function BlockFields({ block, onSave }) {
       <Field value={block.headline} label="Headline" ph="The one sentence the room reads" onSave={v => onSave({ headline: v })} />
       <Field value={block.source} label="Source" ph="Who made it" onSave={v => onSave({ source: v })} />
       <Field value={block.url} label="Link" ph="https://" onSave={v => onSave({ url: v })} />
-      <Field value={block.body} label="What it says" area ph="Notes to yourself, or the whole thing" onSave={v => onSave({ body: v })} />
+      <Field value={block.body} label="Content" area ph="Notes to yourself, or the whole thing" onSave={v => onSave({ body: v })} />
       <label className="draw-field">
         <span>Kind</span>
         <select defaultValue={block.type} onChange={e => onSave({ type: e.target.value })}>

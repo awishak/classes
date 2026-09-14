@@ -2168,6 +2168,46 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   });
 }
 
+// The whole block under its row, and the day's notes under the day.
+//
+// A row was only the header of its block. A note's content, a photo and a
+// game's questions were a click away in the drawer.
+{
+  const say = (m) => { console.error("  FAIL  block in the day: " + m); failedEarly++; };
+  const none = () => {}; // smoke render, never pressed
+  const draw = (el) => { try { return renderToString(el); } catch (e) { say("threw: " + e.message); return ""; } };
+
+  const note = { id: "n1", type: "note", title: "All the summer's big sports stories",
+    body: "Start with the Olympics, then https://example.com/story" };
+  let html = draw(<Castable kind="Note" title={note.title} block={note} onSaveBody={none} onCast={none} onTick={none} />);
+  if (!html.includes("Start with the Olympics")) say("a note's content is not on the day");
+  if (!html.includes('href="https://example.com/story"')) say("a web address in the content is not a link");
+  if (!html.includes("editable")) say("a note's content cannot be edited on the day");
+
+  const photo = { id: "p1", type: "note", title: "Theo", media: { kind: "image", src: "https://example.com/theo.jpg" } };
+  html = draw(<Castable kind="Note" title="Theo" block={photo} onCast={none} onTick={none} />);
+  if (!html.includes('src="https://example.com/theo.jpg"')) say("a photo on a block is not shown");
+
+  const game = { id: "g1", type: "set", title: "Weekly Game", children: ["q1", "q2"] };
+  const kids = [{ id: "q1", type: "question", title: "One?" }, { id: "q2", type: "question", title: "Two?" }];
+  html = draw(<Castable kind="Set" title="Weekly Game" block={game} kids={kids} onCast={none} onTick={none} />);
+  if (!html.includes("Show 2 questions")) say("a game does not offer its questions");
+
+  const board = { id: "bd", type: "board", title: "Exit", body: "x".repeat(900) };
+  html = draw(<Castable kind="Board" title="Exit" block={board} onCast={none} onTick={none} />);
+  if (!html.includes("Show all")) say("long content does not fold");
+  if (html.includes("flow-body folded editable")) say("a board's posts are editable from the day");
+
+  const spring = { ...fullPlan, spring: { date: "Apr 6", mine: "Gianna picture", students: "I'm off to Austin" } };
+  html = draw(<FlowPanel plan={spring} seq={seq} seeds={seeds} castNow={none} dismiss={none} liveLabel={null}
+    accent="#333" onClaim={none} features={[]} onFeature={none} planHref="/x" onSlidesClaim={none} onBlockClaim={none}
+    where="COMM 1 · Sep 1" loose={[]} onAddScheduled={none} onAddItem={none} onRemoveItem={none}
+    onMoveItem={none} onSetSequence={none} onSetSlotTitle={none} sequences={[seq]} onSaveDayNote={none} onSaveSpring={none} />);
+  if (!html.includes("Gianna picture")) say("the Spring 2026 note is not under the day");
+  if (!html.includes("off to Austin")) say("the Spring 2026 note for students is not under the day");
+  if (!html.includes("a day note")) say("the day note is not under the day");
+}
+
 // Activities by kind, with a game's questions inside the game.
 //
 // Ninety-six questions listed one by one buried the ten teaching moves and the

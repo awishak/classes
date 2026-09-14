@@ -1558,7 +1558,7 @@ export function Detail({ block, hue, planOf, stores, onSave, onDelete, onPlace, 
             placeholder="The question the room answers next" />
         </label>
         <label className="repo-field">
-          <span className="repo-label">Body</span>
+          <span className="repo-label">Content</span>
           <textarea className="repo-input repo-area" value={draft.body} onChange={e => set("body", e.target.value)} />
         </label>
         <div className="repo-pair">

@@ -59,6 +59,16 @@ const SESSIONS = [
       { name: "Editing from the day", items: [
         ["Brings the rail back", "The editor is the drawer, and the drawer is in the rail. With the rail hidden or in teaching mode, Edit this opened an editor nobody could see. Edit this and Add a note under this both open the rail now."],
       ] },
+      { name: "A row is the header of its block", items: [
+        ["The whole block is on the day", "A row used to be only its title, and everything else about the block was a click away in the drawer. Under each row now: the content, with any web address in it clickable; a photo on the block, or a clip or voice memo to play; the question asked after the file; and on a game, its questions, which open with the answer marked. Content over 600 characters folds to four lines until opened, because a board's content is every post on it and one COMM 118 board runs to 17,000 characters."],
+        ["Content is edited where it sits", "Click a note's content on the day and it becomes a box, saved when you click away. Write the content and Edit the content are on the row's menu too. A board's content is what students posted, so it is shown and not edited from the day."],
+        ["What it says is called Content", "In the drawer, the details panel and the repository, which called it Body."],
+      ] },
+      { name: "Notes under the day", items: [
+        ["The day's notes sit under its sections", "They were reachable only through the command bar, under My notes, so a note written for a day was never on the day."],
+        ["The day note shows on the room screen", "Whenever nothing is up, the room screen shows the day note under the day's title. So the Spring notes were not moved into the day note, which would have put \"text Sofia\" on the projector. The day note says it is on the room screen."],
+        ["Spring 2026 notes, back on their days", "The port had merged COMM 118's Spring notes into each week, instructor notes under \"— Wed —\" headers and student notes as \"Wed note:\" lines, which also meant fall students could read \"I'm off to Austin and San Diego with my daughter\" on the schedule. Each one now sits on the fall day with the same weekday, on a private field shown under the day as Spring 2026, with the Spring date beside it. Twenty-three days, checked character for character before writing, with a backup of the class taken first."],
+      ] },
       { name: "Activities in the drawer", items: [
         ["Grouped by kind", "The Activities shelf reads in kind order under a heading for each kind with its count: activities, boards, sets. It was one list sorted by nothing in particular."],
         ["Questions live inside their game", "COMM 118 has 96 trivia and weekly game questions, and every one belongs to one of nine games, so the shelf was five screens of questions with the ten teaching moves somewhere underneath. A game now says how many questions it holds and opens to show them. A search that finds a question opens its game. A question in no game stays on the shelf, and choosing Question from the kind menu still lists every question flat. The shelf's count went from 118 to 22."],
