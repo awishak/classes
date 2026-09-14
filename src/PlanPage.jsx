@@ -59,6 +59,12 @@ const SESSIONS = [
       { name: "Editing from the day", items: [
         ["Brings the rail back", "The editor is the drawer, and the drawer is in the rail. With the rail hidden or in teaching mode, Edit this opened an editor nobody could see. Edit this and Add a note under this both open the rail now."],
       ] },
+      { name: "The day plan is a document you type into", items: [
+        ["Three levels", "A section is a heading, an item under it is a line (a note, an activity, an article, a game), and comments under an item are quieter and set in. A block's content is a comment-level line under its item. Every line is text the cursor can go into, and it saves when you leave it or stop typing for a second."],
+        ["The keys move like a document", "Up and down go to the line above or below, left and right at the ends of a line carry on into the next one, Enter starts a new line (an item after a section or an item, a comment after a comment), Shift+Enter breaks a line inside itself, Tab turns an item into a comment on the item above and Shift+Tab turns it back, and Backspace on an empty line deletes it. A line started with Enter and left empty does not stay on the day."],
+        ["The section fanciness is gone", "No numerals, no colours, no done tally, no move arrows, no fold, no + Add on a section. Right-click a section to move it, delete it or add an item. Right-click an item, or click its number, for Done, Edit this, readings and taking it off the day. Items are numbered; comments take no number."],
+        ["Sections have slides too", "A section's slide is its name, the title card for what comes next. Items have their slides as before; comments have none. Pressing a slide that is up takes it down."],
+      ] },
       { name: "The students' schedule", items: [
         ["Readings in the order the week happens", "A week's items were listed in the order they were added, so a reading put on Monday from the dashboard sat under the Wednesday readings the port brought in. Monday's come first now, then Wednesday's, then Friday's."],
         ["Which Wednesday", "Each item says its weekday and its date, Wed Sep 23, where it said Wed."],

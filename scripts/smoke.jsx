@@ -2305,7 +2305,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     where="COMM 1 · Sep 1" loose={[]} onAddScheduled={none} onAddItem={none} onRemoveItem={none}
     onMoveItem={none} onSetSequence={none} onSetSlotTitle={none} sequences={[seq]} classHref="/comm118" />);
   const slides = (html.match(/class="slide slide-press/g) || []).length;
-  if (slides !== 1) say(slides + " slides on a day with one block and one note under it, want 1");
+  // One for the section, one for the item, none for the comment under the item.
+  if (slides !== 2) say(slides + " slides on a day with one section, one item and one comment under it, want 2");
+  // The day is a document: every line a text box, at one of three levels.
+  if (!html.includes("lv-section")) say("the section is not a line you can type into");
+  if ((html.match(/doc-line lv-item/g) || []).length !== 1) say("the item is not a line you can type into");
+  if ((html.match(/doc-line lv-comment/g) || []).length !== 1) say("the comment is not a line you can type into");
+  if (/flow-sec-n|flow-tally|flow-secmove/.test(html)) say("the section still carries its numeral, tally or move arrows");
   if (html.includes("Put this row on the room screen")) say("the arrow is still there beside a slide");
   if (!html.includes("Hide slides")) say("the slide column cannot be closed");
 }

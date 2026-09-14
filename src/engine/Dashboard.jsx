@@ -43,6 +43,7 @@ import TopNav, { NAV_TEACH } from "./TopNav.jsx";
 import Drawer, { DRAWER_CSS } from "./Drawer.jsx";
 import TermOutline, { TERM_CSS } from "./TermOutline.jsx";
 import Slide, { slideOf, SLIDE_CSS, readSlidesOn, writeSlidesOn } from "./Slide.jsx";
+import DayDoc, { DOC_CSS } from "./DayDoc.jsx";
 
 // Eight items at 39px, plus the padding: the tallest a row menu usually gets,
 // now that a block's content has an item of its own. The flip measures against
@@ -2007,7 +2008,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -2214,7 +2215,6 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
             trigger={(open, toggle) => (
               <button className="dash-focus flow-addsec" onClick={toggle}
                 aria-expanded={open} aria-haspopup="menu">
-                <span className="flow-addsec-n">{String(sectionRows.length + 1).padStart(2, "0")}</span>
                 <span className="flow-addsec-w">Add a section</span>
                 <span className="flow-addsec-p" aria-hidden="true">+</span>
               </button>
@@ -2250,180 +2250,6 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
     ? seq.slots.some(x => normSlot(slotItems[x.slot]).items.length)
     : false;
 
-  // The extra zones are slots with reserved keys, so they get the library
-  // picker, notes, links, reordering and removal without a line of new code.
-  const renderSlot = (s, overrideTitle, i = 0) => {
-        const bucket = normSlot(slotItems[s.slot]);
-        const items = bucket.items;
-        const usedSeeds = new Set((seq?.slots || []).flatMap(x => normSlot(slotItems[x.slot]).items).map(x => x.seedId).filter(Boolean));
-        const unnamed = !(bucket.title || "").trim();
-        const folded = foldedSecs.has(s.slot);
-        const doneHere = items.filter(it => doneSet.has(it.id)).length;
-        return (
-          <div key={s.slot} className="flow-sec" data-fold={folded ? "1" : "0"}
-            onDragOver={e => { e.preventDefault(); setOverSlot(s.slot); }}
-            onDragLeave={() => setOverSlot(null)}
-            onDrop={e => { e.preventDefault(); setOverSlot(null); drop(e, s.slot); }}
-            style={{ "--sec": secHue(bucket.title || s.slot),
-              background: overSlot === s.slot ? accent + "0c" : "transparent" }}>
-            <div className="flow-sec-head">
-              <span className="flow-sec-n">{String(i + 1).padStart(2, "0")}</span>
-              <SlotName slot={s.slot} title={bucket.title || overrideTitle} accent={accent} count={items.length}
-                unnamed={unnamed}
-                onSave={(t) => onSetSlotTitle(s.slot, t)}
-                onDelete={named.has(s.slot) ? null : () => onDeleteSection(s.slot)}
-                onColor={onSectionColor ? (sw) => onSectionColor(bucket.title || overrideTitle || s.slot, sw) : null} />
-              <span style={{ flex: "1 1 auto" }} />
-              <span className="flow-tally">{items.length ? doneHere + " of " + items.length + " done" : "empty"}</span>
-              {/* Move the whole section, and fold it. */}
-              {/* Moving and folding wore the same glyph — a filled triangle
-                  for move-down and the same triangle for fold — so pressing
-                  what looked like move-down folded the section, and pressing
-                  again put it back. Two jobs, two shapes: moving is an ARROW,
-                  folding is a CHEVRON, and the fold sits apart from the pair. */}
-              <span className="flow-secmove">
-                <button className="dash-focus" disabled={named.has(s.slot) || i <= firstMovable}
-                  title={named.has(s.slot) ? "The sequence sets where this one sits" : "Move this section up"}
-                  aria-label="Move this section up"
-                  onClick={() => onMoveSection && onMoveSection(s.slot, -1)}>&#8593;</button>
-                <button className="dash-focus" disabled={named.has(s.slot) || i === sectionRows.length - 1}
-                  title={named.has(s.slot) ? "The sequence sets where this one sits" : "Move this section down"}
-                  aria-label="Move this section down"
-                  onClick={() => onMoveSection && onMoveSection(s.slot, 1)}>&#8595;</button>
-                <span className="flow-secgap" />
-                <button className="dash-focus flow-secfold" title={folded ? "Unfold this section" : "Fold this section"}
-                  aria-expanded={!folded} aria-label={folded ? "Unfold this section" : "Fold this section"}
-                  onClick={() => setFoldedSecs(prev => {
-                    const next = new Set(prev);
-                    if (next.has(s.slot)) next.delete(s.slot); else next.add(s.slot);
-                    return next;
-                  })}>{folded ? "›" : "⌄"}</button>
-              </span>
-              <button className="dash-focus flow-add" onClick={() => setAdding(adding === s.slot ? null : s.slot)}>
-                {adding === s.slot ? "Close" : "+ Add"}
-              </button>
-            </div>
-            {/* Folded: the header stays and says what is inside. */}
-            {folded ? (
-              <div className="flow-folded">
-                {items.length
-                  ? items.map(it => {
-                      const b = it.blockId ? blockOf(it.blockId) : null;
-                      return (b ? b.headline || b.title : it.claim || it.text) || "a row";
-                    }).join(" · ")
-                  : "Nothing in here yet"}
-              </div>
-            ) : null}
-            {folded ? null : adding === s.slot ? (
-              <AddToFlow slot={s.slot} seeds={seeds} used={usedSeeds} accent={accent}
-                onAdd={(item) => onAddItem(s.slot, item)} onClose={() => setAdding(null)}
-                scheduled={loose} onAddScheduled={onAddScheduled}
-                blocks={blocks2} onPickBlock={onPickBlock} days={days} today={today} />
-            ) : null}
-            {!folded && !items.length && adding !== s.slot ? <Muted style={{ fontSize: 13, padding: "2px 6px" }}>Empty.</Muted> : null}
-            {(() => {
-            const rowOf = (it, i) => {
-              const blk = it.blockId ? blockOf(it.blockId) : null;
-              const seed = it.seedId ? seedById(it.seedId) : null;
-              const title = blk ? (blk.title || "Untitled") : seed ? seed.title : (it.text || "Untitled");
-              const depth = it.depth || 0;
-              const claimOf = it.claim || (blk ? blk.headline : "");
-              const tag = bucket.title || s.slot;
-              // A note under a row is part of that row and has no slide of its own.
-              const slide = slidesOn && !depth ? slideOf({ item: it, block: blk, seed, title, claim: claimOf, tag, features: FEATURES }) : null;
-              const isLive = liveLabel === (claimOf || title) || (it.feature && liveLabel === it.feature);
-              // Pressing a slide puts up what the arrow would: a link goes up the
-              // way the room screen shows links, not as the card the slide draws.
-              // A file or a picture goes up as the slide shows it.
-              const castRow = (c) => (blk?.url
-                ? castNow({ ...castFromLink({ label: blk.title, url: blk.url }), title: c, label: c, pick: !!blk?.pick })
-                : castNow({ type: "quote", tag, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c, pick: !!blk?.pick }));
-              const castSlide = () => (it.feature && onFeature
-                ? onFeature(it.feature)
-                : slide && slide.type === "media"
-                  ? castNow(slide)
-                  : castRow(claimOf || title));
-              const node = (
-                <div key={it.id} draggable className="flow-rowwrap"
-                  onDragStart={e => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", JSON.stringify({ slot: s.slot, id: it.id })); }}
-                  onDragOver={e => { e.preventDefault(); e.stopPropagation(); setOverRow(it.id); }}
-                  onDragLeave={() => setOverRow(null)}
-                  onDrop={e => { e.preventDefault(); e.stopPropagation(); setOverRow(null); drop(e, s.slot, it.id); }}
-                  style={{ marginLeft: depth * 30, borderTop: "2px solid " + (overRow === it.id ? accent : "transparent") }}>
-                  <Castable num={numberOf[it.id]} picked={pickedId === it.id} shared={!!it.blockId}
-                    noCastButton={slidesOn}
-                    starred={!!blk?.pick}
-                    block={blk}
-                    kids={blk?.type === "set" && blockOf ? (blk.children || []).map(id => blockOf(id)).filter(Boolean) : null}
-                    // A board's content is what students posted, so it is shown and not edited here.
-                    onSaveBody={blk && onSaveBlock && blk.type !== "board" ? (v) => onSaveBlock(blk.id, { body: v }) : null}
-                    done={doneSet.has(it.id)} next={nextId === it.id} onTick={() => onTick(it.id)}
-                    onSelect={() => onSelect({ blockId: it.blockId, item: it, where: labelOf[s.slot], slot: s.slot, id: it.id })}
-                    onEdit={onEdit ? () => onEdit({ blockId: it.blockId, item: it, where: labelOf[s.slot], slot: s.slot, id: it.id }) : null}
-                    kind={it.feature ? "Activity" : blk ? typeOf(blk.type).label : seed ? "Seed" : "Note"}
-                    kindColor={it.feature ? hue("activity") : blk ? hue(blk.type) : hue(seed ? "story" : "note")}
-                    title={title}
-                    url={blk?.url || ""}
-                    claim={it.claim || (blk ? blk.headline : "")} accent={accent}
-                    live={liveLabel === ((it.claim || (blk ? blk.headline : "")) || title)} onDismiss={dismiss}
-                    onSaveClaim={(c) => onClaim(s.slot, it.id, c)}
-                    assigned={onToggleAssigned ? !!isAssigned(it) : null}
-                    onAssign={onToggleAssigned ? () => onToggleAssigned(it) : null}
-                    depth={it.depth || 0}
-                    canNest={i > 0 && (it.depth || 0) <= (normSlot(slotItems[s.slot]).items[i - 1].depth || 0)}
-                    onNest={onNest ? (dir) => onNest(s.slot, it.id, dir) : null}
-                    onRemove={() => onRemoveItem(s.slot, it.id)}
-                    onAddUnder={onAddUnder ? () => onAddUnder(s.slot, it.id, (it.depth || 0) + 1) : null}
-                    steps={mediaSteps(blk, it.claim || blk?.headline || title, bucket.title || s.slot)}
-                    step={liveStep(liveCast, (it.claim || blk?.headline) || title)}
-                    onStep={blk?.media?.src ? (i) => castNow(mediaSteps(blk, it.claim || blk.headline || title, bucket.title || s.slot)[i].payload) : null}
-                    onCast={(c) => (it.feature && onFeature
-                      ? onFeature(it.feature)
-                      : blk?.media?.src
-                        ? castNow(mediaSteps(blk, c, bucket.title || s.slot)[0].payload)
-                        : castNow(blk?.url
-                          ? { ...castFromLink({ label: blk.title, url: blk.url }), title: c, label: c, pick: !!blk?.pick }
-                          : { type: "quote", tag: bucket.title || s.slot, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c, pick: !!blk?.pick }))} />
-                  {(it.links || []).map(l => (
-                    <div key={l.id} style={{ paddingLeft: 16 }}>
-                      <Castable kind="Link" kindColor={KIND_COLOR.Link} title={l.label} url={l.url}
-                        claim={l.claim} accent={accent} live={liveLabel === (l.claim || l.label)} onDismiss={dismiss}
-                        onSaveClaim={(c) => onClaim(s.slot, it.id, c, l.id)}
-                        onCast={(c) => castNow({ ...castFromLink(l), title: c, label: c })} />
-                    </div>
-                  ))}
-                </div>
-              );
-              return { id: it.id, slide, isLive, castSlide, label: claimOf || title, node };
-            };
-
-            // A block and the notes under it are one group, and the slide sits
-            // beside the group. Laid out one row at a time, a block's slide made
-            // its row a slide tall and pushed the notes under it down below the
-            // slide, further from the block they belong to.
-            const groups = [];
-            (folded ? [] : items).forEach((it, i) => {
-              const part = rowOf(it, i);
-              if ((it.depth || 0) > 0 && groups.length) groups[groups.length - 1].push(part);
-              else groups.push([part]);
-            });
-            return groups.map(g => (
-              <div key={g[0].id} className={"flow-item" + (slidesOn ? " with-slides" : "")}>
-                <div className="flow-itemtext">{g.map(p => p.node)}</div>
-                {slidesOn ? (
-                  <div className="flow-slidecell">
-                    {g[0].slide ? (
-                      <Slide cast={g[0].slide} config={{ path: classHref || "" }} live={!!g[0].isLive}
-                        label={g[0].label} onClick={g[0].castSlide} />
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            ));
-            })()}
-          </div>
-        );
-  };
 
   return (
     <>
@@ -2455,7 +2281,32 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
         <button className="dash-focus flow-slidetoggle" aria-pressed={slidesOn}
           onClick={() => setSlidesOn(!slidesOn)}>{slidesOn ? "Hide slides" : "Show slides"}</button>
       </div>
-      {sectionRows.map(([slot, title], i) => renderSlot({ slot }, title, i))}
+      <DayDoc sections={sectionRows} slotItems={slotItems} named={named} firstMovable={firstMovable}
+        blockOf={blockOf} seedById={seedById} doneSet={doneSet} numberOf={numberOf} nextId={nextId} pickedId={pickedId}
+        liveLabel={liveLabel} dismiss={dismiss} features={FEATURES} hue={hue} slidesOn={slidesOn} classHref={classHref}
+        castItem={(it, blk, seed, words, claim, tag, slide) => {
+          if (it.feature && onFeature) return onFeature(it.feature);
+          if (slide && slide.type === "media") return castNow(slide);
+          const c = claim || words;
+          return castNow(blk?.url
+            ? { ...castFromLink({ label: blk.title, url: blk.url }), title: c, label: c, pick: !!blk?.pick }
+            : { type: "quote", tag, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c, pick: !!blk?.pick });
+        }}
+        // A section's slide is its name on the wall, the title card for what comes next.
+        castSection={(slot, name, go) => {
+          const cast = { type: "quote", title: name, label: name };
+          if (go) castNow(cast);
+          return cast;
+        }}
+        renderExtras={(blk, kids) => (
+          <div className="doc-under">
+            <FlowBlock block={{ ...blk, body: blk.type === "board" ? blk.body : "" }} kids={kids} editing={false} setEditing={() => {}} onSaveBody={null} />{/* content is its own line above */}
+          </div>
+        )}
+        onSetSlotTitle={onSetSlotTitle} onSaveItem={onSaveItem} onSaveBlock={onSaveBlock} onInsertRow={onInsertRow}
+        onRemoveItem={onRemoveItem} onNest={onNest} onTick={onTick}
+        isAssigned={isAssigned} onToggleAssigned={onToggleAssigned}
+        onDeleteSection={onDeleteSection} onMoveSection={onMoveSection} onEdit={onEdit} drop={drop} />
       {foldRow}
       {addBlockRow}
       {blockBlock}
@@ -4256,6 +4107,23 @@ export default function Dashboard({ config }) {
   // It arrives empty rather than asking what to call it first: the row you
   // want is the one under the row you are looking at, and a dialog between the
   // two is a dialog asking you to hold the thought.
+  // A new line in the day, typed where the cursor is: after the row named, or
+  // first in the section when none is. Hands back the new row's id so the
+  // document can put the cursor in it.
+  const insertRow = (slot, afterId, depth) => {
+    const row = { id: genId(), text: "", depth: depth || 0 };
+    writeDay(d => {
+      const slots = { ...(d.slots || {}) };
+      const bucket = normSlot(slots[slot]);
+      const items = [...(bucket.items || [])];
+      const i = afterId ? items.findIndex(x => x.id === afterId) : -1;
+      items.splice(i + 1, 0, row);
+      slots[slot] = { ...bucket, items };
+      return { ...d, slots };
+    }, "that line");
+    return row.id;
+  };
+
   const addUnder = (slot, afterId, depth) => {
     const row = { id: genId(), text: "", depth };
     writeDay(d => {
@@ -4863,6 +4731,7 @@ export default function Dashboard({ config }) {
             .map(it => "\u00b7 " + it.text.trim()).join("\n") },
       ]} onNest={nestItem}
       onSaveBlock={saveBlockPatch} onSaveDayNote={(v) => saveDayNote(v)}
+      onSaveItem={saveItemPatch} onInsertRow={insertRow}
       onSaveSpring={(patch) => writeDay(d => ({ ...d, spring: { ...(d.spring || {}), ...patch } }), "that note")}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
       onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMoveSection={moveSection} onAddUnder={addUnder} onMergeSections={mergeSections} onSelect={setPicked} onEdit={editPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
@@ -4994,7 +4863,7 @@ export default function Dashboard({ config }) {
     <div className={dense ? "dash-compact" : "dash-comfortable"}
       style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY,
         "--dash-accent": config.accent, "--row-weight": boldRows ? 600 : 400, ...fontVars(fonts) }}>
-      <style>{CSS + DRAWER_CSS + TERM_CSS + SLIDE_CSS}</style>
+      <style>{CSS + DRAWER_CSS + TERM_CSS + SLIDE_CSS + DOC_CSS}</style>
 
       {/* Four groups, and the grouping is what each control IS.
           The class tools are the things I press with the room watching, so they
