@@ -30,18 +30,41 @@
 
 import { useEffect, useRef, useState } from "react";
 import Slide, { slideOf } from "./Slide.jsx";
-import { typeOf } from "./blocks.js";
+import { typeOf, allTypes } from "./blocks.js";
 import { normSlot } from "./dayplan.js";
 import { inkOf } from "./colors.js";
 
 const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; } };
 
+// Where in a line of text a click landed, as a position in the text.
+function offsetAt(e, root) {
+  const d = typeof document !== "undefined" ? document : null;
+  let node = null, off = 0;
+  if (d?.caretPositionFromPoint) { const p = d.caretPositionFromPoint(e.clientX, e.clientY); if (p) { node = p.offsetNode; off = p.offset; } }
+  else if (d?.caretRangeFromPoint) { const r = d.caretRangeFromPoint(e.clientX, e.clientY); if (r) { node = r.startContainer; off = r.startOffset; } }
+  if (!node || !root.contains(node)) return "end";
+  let n = 0;
+  const walk = d.createTreeWalker(root, 4);
+  for (let t = walk.nextNode(); t; t = walk.nextNode()) {
+    if (t === node) return n + off;
+    n += t.nodeValue.length;
+  }
+  return "end";
+}
+
 // A text box that grows with what is in it and saves when you leave it, or
 // after a second of not typing. It keeps its own draft while it has the
 // cursor, so a save arriving from elsewhere does not move the text under you.
-function Line({ id, value, placeholder, readOnly, className, onSave, onKey, register, onFocusLine, done, onLeaveEmpty }) {
+function Line({ id, value, placeholder, readOnly, className, onSave, onKey, register, onFocusLine, done, onLeaveEmpty, onLink }) {
   const box = useRef(null);
+  const shown = useRef(null);
   const [draft, setDraft] = useState(value || "");
+  // A line holding a web address shows as text with the address as a real
+  // link, and turns into a text box the moment you click anywhere else in it
+  // or arrow into it. A text box cannot hold a link you can press, and a link
+  // you cannot press in a document is a link that does not work.
+  const [editing, setEditing] = useState(false);
+  const want = useRef(null);
   const focused = useRef(false);
   const timer = useRef(null);
 
@@ -51,14 +74,42 @@ function Line({ id, value, placeholder, readOnly, className, onSave, onKey, regi
     if (!el) return;
     el.style.height = "auto";
     el.style.height = el.scrollHeight + "px";
-  }, [draft]);
-  useEffect(() => { register(id, box.current); return () => register(id, null); }, [id]);
+  }, [draft, editing]);
+  const focusAt = (pos) => {
+    const el = box.current;
+    if (!el) { want.current = pos == null ? "end" : pos; setEditing(true); return; }
+    el.focus();
+    const p = pos === "end" || pos == null ? el.value.length : Math.min(pos, el.value.length);
+    try { el.setSelectionRange(p, p); } catch { /* read-only lines */ }
+  };
+  useEffect(() => { register(id, { focus: focusAt }); });
+  useEffect(() => () => register(id, null), [id]);
+  useEffect(() => {
+    if (want.current != null && box.current) { const p = want.current; want.current = null; focusAt(p); }
+  });
   useEffect(() => () => clearTimeout(timer.current), []);
 
   const flush = (v) => {
     clearTimeout(timer.current);
     if (!readOnly && v !== (value || "")) onSave(v);
   };
+
+  if (onLink && !editing && urlsIn(draft).length) {
+    const parts = String(draft).split(/(https?:\/\/[^\s<>"')]+)/g);
+    return (
+      <div ref={shown} className={"doc-line doc-linetext " + className + (done ? " done" : "")}
+        onMouseDown={e => {
+          if (e.target.closest("a")) return;
+          e.preventDefault();
+          want.current = offsetAt(e, shown.current);
+          setEditing(true);
+        }}>
+        {parts.map((p, i) => (i % 2
+          ? <a key={i} className="doc-inlink" href={p} onClick={e => { e.preventDefault(); onLink(p, e); }}>{p}</a>
+          : p))}
+      </div>
+    );
+  }
 
   return (
     <textarea ref={box} rows={1} spellCheck className={"doc-line " + className + (done ? " done" : "")}
@@ -71,6 +122,7 @@ function Line({ id, value, placeholder, readOnly, className, onSave, onKey, regi
       }}
       onFocus={e => {
         focused.current = true;
+        setEditing(true);
         // The row around this line is draggable; a drag started inside a text
         // box is a text selection, not a move.
         const row = e.currentTarget.closest('[draggable="true"]');
@@ -82,6 +134,7 @@ function Line({ id, value, placeholder, readOnly, className, onSave, onKey, regi
         const row = e.currentTarget.closest('[data-held="1"]');
         if (row) { row.setAttribute("draggable", "true"); delete row.dataset.held; }
         flush(e.currentTarget.value);
+        setEditing(false);
         // A typed line left empty is a line nobody wrote. Pressing Enter and
         // then moving away leaves nothing behind on the day.
         if (onLeaveEmpty && !e.currentTarget.value.trim()) onLeaveEmpty();
@@ -134,7 +187,7 @@ export default function DayDoc({
   sections, slotItems, named, firstMovable, blockOf, seedById, doneSet, numberOf, nextId, pickedId,
   liveLabel, castItem, castSection, dismiss, features, hue, slidesOn, classHref, renderExtras,
   onSetSlotTitle, onSaveItem, onSaveBlock, onInsertRow, onRemoveItem, onNest, onTick, isAssigned, onToggleAssigned,
-  onDeleteSection, onMoveSection, onEdit, drop, castLink, onMoveItem,
+  onDeleteSection, onMoveSection, onEdit, drop, castLink, onMoveItem, onConvertRow,
 }) {
   const refs = useRef(new Map());
   const pending = useRef(null);
@@ -179,11 +232,9 @@ export default function DayDoc({
   const itemNumber = {};
   lines.filter(l => l.kind === "item").forEach((l, n) => { itemNumber[l.it.id] = n + 1; });
   const focusLine = (key, pos) => {
-    const el = refs.current.get(key);
-    if (!el) { pending.current = { key, pos }; return; }
-    el.focus();
-    const p = pos === "end" || pos == null ? el.value.length : Math.min(pos, el.value.length);
-    try { el.setSelectionRange(p, p); } catch { /* read-only lines */ }
+    const line = refs.current.get(key);
+    if (!line) { pending.current = { key, pos }; return; }
+    line.focus(pos);
   };
   // A line made a moment ago is not in the document until the next render.
   useEffect(() => {
@@ -287,10 +338,34 @@ export default function DayDoc({
     else if (!line.seed && !line.it.feature) onSaveItem(line.slot, line.it.id, { text: v });
   };
 
+  // Pressing a link in a line asks what to do with it, the way a document
+  // does: put the page on the room screen, open it here, or edit the line.
+  const linkMenu = (key) => (url, e) => {
+    const name = hostOf(url) || "link";
+    const live = liveLabel === name;
+    openMenu(e, [
+      live ? ["Take it off the room screen", () => dismiss()] : ["Put on the room screen", () => castLink && castLink(url, name)],
+      ["Open in a new tab", () => { if (typeof window !== "undefined") window.open(url, "_blank", "noopener,noreferrer"); }],
+      ["Edit the line", () => focusLine(key, "end")],
+    ]);
+  };
+
+  // The kinds, to choose from by pressing the kind on a line. A typed line has
+  // no block behind it, so choosing a kind for one makes it a block of that kind.
+  const kindMenu = (line) => {
+    const current = line.blk ? line.blk.type : "";
+    return allTypes().map(t => [(t.id === current ? "✓ " : "") + t.label, () => {
+      if (t.id === current) return;
+      if (line.blk) onSaveBlock(line.blk.id, { type: t.id });
+      else if (onConvertRow) onConvertRow(line.slot, line.it.id, t.id);
+    }]);
+  };
+
   const openMenu = (e, items) => {
     e.preventDefault();
     const x = Math.min(e.clientX, (typeof window !== "undefined" ? window.innerWidth : 1200) - 260);
-    const y = Math.min(e.clientY, (typeof window !== "undefined" ? window.innerHeight : 800) - 220);
+    const tall = Math.min(420, 12 + items.filter(Boolean).length * 39);
+    const y = Math.max(8, Math.min(e.clientY, (typeof window !== "undefined" ? window.innerHeight : 800) - tall - 8));
     setMenu({ at: { x, y }, items });
   };
 
@@ -302,6 +377,8 @@ export default function DayDoc({
       onEdit ? ["Edit this", () => onEdit({ blockId: it.blockId, item: it, where: "", slot, id: it.id })] : null,
       line.kind === "item" && line.index > 0 && onNest ? ["Make it a note", () => onNest(slot, it.id, 1)] : null,
       line.kind === "comment" && onNest ? ["Make it an item", () => onNest(slot, it.id, -1)] : null,
+      // A note has no slide of its own unless you give it one.
+      line.kind === "comment" && onSaveItem ? [it.slide ? "Remove its slide" : "Give it a slide", () => onSaveItem(slot, it.id, { slide: !it.slide })] : null,
       onToggleAssigned && line.kind === "item" ? [isAssigned(it) ? "Take off today's readings" : "Put on today's readings", () => onToggleAssigned(it)] : null,
       ["Take off the day", () => onRemoveItem(slot, it.id), true],
     ];
@@ -316,9 +393,14 @@ export default function DayDoc({
     ];
   };
 
-  const slideCell = (cast, live, label, onClick) => (slidesOn ? (
+  // The slide column beside a line or a group. More than one slide stacks: an
+  // item's own, then one for each of its notes that was given a slide.
+  const slideCell = (cast, live, label, onClick, more) => (slidesOn ? (
     <div className="doc-slide">
       {cast ? <Slide cast={cast} config={{ path: classHref || "" }} live={live} label={label} onClick={onClick} /> : null}
+      {(more || []).map(s => (
+        <Slide key={s.key} cast={s.cast} config={{ path: classHref || "" }} live={s.live} label={s.label} onClick={s.onClick} />
+      ))}
     </div>
   ) : null);
 
@@ -377,6 +459,15 @@ export default function DayDoc({
               const kindColor = it.feature ? hue("activity") : blk ? hue(blk.type) : hue("note");
               const kids = blk?.type === "set" ? (blk.children || []).map(id => blockOf(id)).filter(Boolean) : null;
               const bodyLine = lines.find(l => l.key === "b:" + it.id);
+              const noteSlides = g.comments.filter(c => c.it.slide).map(c => {
+                const w = itemWords(c.it, c.blk, c.seed);
+                const cl = c.it.claim || c.blk?.headline || "";
+                const cast = slideOf({ item: c.it, block: c.blk, seed: c.seed, title: w, claim: cl, tag, features });
+                const on = liveLabel === (cl || w);
+                return { key: c.it.id, cast, live: on, label: cl || w,
+                  onClick: () => (on ? dismiss() : castItem(c.it, c.blk, c.seed, w, cl, tag, cast)) };
+              });
+              const canKind = !seed && !it.feature;
               return (
                 <div key={it.id} className={"doc-group" + (slidesOn ? " with-slides" : "") + (pickedId === it.id ? " picked" : "")
                   + (nextId === it.id ? " next" : "")} data-over={over === sec.slot + "|" + it.id ? "1" : "0"} {...dragProps(sec.slot, it.id)}>
@@ -390,8 +481,13 @@ export default function DayDoc({
                       </button>
                       <Line id={it.id} value={words} placeholder="Item" className="lv-item" done={doneSet.has(it.id)}
                         readOnly={!!(seed || it.feature)} onSave={saveItemWords(g.head)} onKey={keyHandler(g.head)} register={register}
-                        onLeaveEmpty={leaveEmpty(g.head)} />
-                      {kind ? <span className="doc-kind" style={{ "--ink": inkOf(kindColor) }}>{kind}</span> : null}
+                        onLeaveEmpty={leaveEmpty(g.head)} onLink={linkMenu(it.id)} />
+                      {canKind ? (
+                        <button className="dash-focus doc-kind" style={{ "--ink": inkOf(kindColor) }} title="Choose kind"
+                          onClick={e => { const r = e.currentTarget.getBoundingClientRect(); openMenu({ preventDefault() {}, clientX: r.left, clientY: r.bottom + 4 }, kindMenu(g.head)); }}>
+                          {kind || typeOf("note").label.toLowerCase()} <span aria-hidden="true">▾</span>
+                        </button>
+                      ) : kind ? <span className="doc-kind" style={{ "--ink": inkOf(kindColor) }}>{kind}</span> : null}
                       <LinkChips urls={[blk?.url, ...(it.links || []).map(l => l.url), ...(blk ? [] : urlsIn(it.text))]}
                         liveLabel={liveLabel} onCast={castLink} dismiss={dismiss} />
                       {live ? <button className="dash-focus doc-down" onClick={dismiss} title="Take it back down">On screen ×</button> : null}
@@ -400,7 +496,7 @@ export default function DayDoc({
                     {bodyLine ? (
                       <div className="doc-row doc-under">
                         <Line id={bodyLine.key} value={blk.body} placeholder="Content" className="lv-comment"
-                          onSave={v => onSaveBlock(blk.id, { body: v })} onKey={keyHandler(bodyLine)} register={register} />
+                          onSave={v => onSaveBlock(blk.id, { body: v })} onKey={keyHandler(bodyLine)} register={register} onLink={linkMenu(bodyLine.key)} />
                         <LinkChips urls={urlsIn(blk.body)} liveLabel={liveLabel} onCast={castLink} dismiss={dismiss} />
                       </div>
                     ) : null}
@@ -425,14 +521,14 @@ export default function DayDoc({
                               onDragEnd={() => setDragging("")}>⠿</span>
                             <Line id={c.it.id} value={itemWords(c.it, c.blk, c.seed)} placeholder="Note" className="lv-comment"
                               done={doneSet.has(c.it.id)} readOnly={!!(c.seed || c.it.feature)}
-                              onSave={saveItemWords(c)} onKey={keyHandler(c)} register={register} onLeaveEmpty={leaveEmpty(c)} />
+                              onSave={saveItemWords(c)} onKey={keyHandler(c)} register={register} onLeaveEmpty={leaveEmpty(c)} onLink={linkMenu(c.it.id)} />
                             <LinkChips urls={[c.blk?.url, ...(c.it.links || []).map(l => l.url), ...(c.blk ? [] : urlsIn(c.it.text))]}
                               liveLabel={liveLabel} onCast={castLink} dismiss={dismiss} />
                           </div>
                           {cBody ? (
                             <div className="doc-row doc-under">
                               <Line id={cBody.key} value={c.blk.body} placeholder="Content" className="lv-comment lv-body"
-                                onSave={v => onSaveBlock(c.blk.id, { body: v })} onKey={keyHandler(cBody)} register={register} />
+                                onSave={v => onSaveBlock(c.blk.id, { body: v })} onKey={keyHandler(cBody)} register={register} onLink={linkMenu(cBody.key)} />
                               <LinkChips urls={urlsIn(c.blk.body)} liveLabel={liveLabel} onCast={castLink} dismiss={dismiss} />
                             </div>
                           ) : null}
@@ -440,7 +536,7 @@ export default function DayDoc({
                       );
                     })}
                   </div>
-                  {slideCell(slide, !!live, claim || words, () => (live ? dismiss() : castItem(it, blk, seed, words, claim, tag, slide)))}
+                  {slideCell(slide, !!live, claim || words, () => (live ? dismiss() : castItem(it, blk, seed, words, claim, tag, slide)), noteSlides)}
                 </div>
               );
             })}
@@ -487,6 +583,15 @@ export const DOC_CSS = `
 .lv-item{font-size:16px;font-weight:500;line-height:1.45}
 .lv-comment{font-size:15px;font-weight:400;line-height:1.5;color:var(--text-secondary)}
 .doc-kind{flex:none;align-self:center;font-family:var(--font-label);font-size:13px;color:var(--ink,var(--text-muted));white-space:nowrap}
+button.doc-kind{min-height:28px;padding:0 8px;border:none;border-radius:7px;background:none;cursor:pointer}
+button.doc-kind span{font-size:9px;opacity:.6}
+button.doc-kind:hover{background:rgba(23,19,16,.06)}
+/* A line showing its links: the same text, set the same way, with the web
+   address as a link you can press. */
+.doc-linetext{cursor:text;white-space:pre-wrap;overflow-wrap:anywhere}
+.doc-inlink{color:var(--dash-accent);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.doc-slide{flex-direction:column;align-items:flex-end;gap:8px}
+.doc-menu{max-height:420px;overflow-y:auto}
 /* A link: its site name puts the page on the room screen, the arrow opens it
    here. One pill, two halves. */
 .doc-link{flex:none;align-self:center;display:inline-flex;align-items:stretch;border-radius:999px;background:var(--surface-sunk);

@@ -2338,7 +2338,20 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // The day is a document: every line a text box, at one of three levels.
   if (!html.includes("lv-section")) say("the section is not a line you can type into");
   if ((html.match(/doc-line lv-item/g) || []).length !== 1) say("the item is not a line you can type into");
-  if ((html.match(/doc-line lv-comment/g) || []).length !== 1) say("the comment is not a line you can type into");
+  // The note holds a web address, so until the cursor goes into it the note is
+  // shown as text with a link you can press.
+  if ((html.match(/doc-line doc-linetext lv-comment/g) || []).length !== 1) say("a note holding a link is not shown as text you can click into");
+  if (!/class="doc-inlink" href="https:\/\/www.theatlantic.com\/sports\/story"/.test(html)) say("the web address in a note is not a link you can press");
+  // Every item that is not an activity or a seed can have its kind chosen.
+  if (!html.includes('title="Choose kind"')) say("an item's kind cannot be chosen by pressing it");
+  // A note given a slide gets one, stacked with its item's.
+  const withNoteSlide = { ...day, slots: { opener: { ...day.slots.opener, items: day.slots.opener.items.map(r => (r.id === "r2" ? { ...r, slide: true } : r)) } } };
+  const html2 = renderToString(<FlowPanel plan={withNoteSlide} seq={seq} seeds={[]} castNow={none} dismiss={none} liveLabel={null}
+    accent="#333" onClaim={none} features={[]} onFeature={none} planHref="/x" onSlidesClaim={none} onBlockClaim={none}
+    where="COMM 1 · Sep 1" loose={[]} onAddScheduled={none} onAddItem={none} onRemoveItem={none}
+    onMoveItem={none} onSetSequence={none} onSetSlotTitle={none} sequences={[seq]} classHref="/comm118" />);
+  const slides2 = (html2.match(/class="slide slide-press/g) || []).length;
+  if (slides2 !== 3) say(slides2 + " slides once the note was given one, want 3");
   if (/flow-sec-n|flow-tally|flow-secmove/.test(html)) say("the section still carries its numeral, tally or move arrows");
   // A comment can be picked up, and a web address in a line is a link that goes on the room screen.
   if (!html.includes("doc-grip")) say("a comment has no handle to drag it by");

@@ -2008,7 +2008,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -2292,7 +2292,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
         onRemoveItem={onRemoveItem} onNest={onNest} onTick={onTick}
         isAssigned={isAssigned} onToggleAssigned={onToggleAssigned}
         onDeleteSection={onDeleteSection} onMoveSection={onMoveSection} onEdit={onEdit} drop={drop}
-        onMoveItem={onMoveItem}
+        onMoveItem={onMoveItem} onConvertRow={onConvertRow}
         // A link put up from a line goes up the way the room screen shows any
         // link: the page itself where the site allows it, the reader where not.
         castLink={(url, name) => castNow({ ...castFromLink({ label: name, url }), title: name, label: name })} />
@@ -4113,6 +4113,19 @@ export default function Dashboard({ config }) {
     return row.id;
   };
 
+  // A typed line given a kind becomes a block of that kind, in this class, with
+  // the line's words as its title and its first web address as its link. The
+  // row keeps its place, its id, its depth and its headline, and points at the
+  // block from then on, so it turns up in the repository like anything else.
+  const convertRow = (slot, itemId, type) => {
+    const row = normSlot((plan?.slots || {})[slot]).items.find(x => x.id === itemId);
+    if (!row || row.blockId || row.feature || row.seedId) return;
+    const url = (row.links || [])[0]?.url || ((row.text || "").match(/https?:\/\/[^\s<>"')]+/) || [])[0] || "";
+    const made = makeBlock({ type, title: (row.text || "").trim() || hostOf(url) || "", url });
+    update(prev => ({ ...prev, blocks: { ...(prev.blocks || {}), [made.id]: made } }));
+    saveItemPatch(slot, itemId, { blockId: made.id, links: [] });
+  };
+
   const addUnder = (slot, afterId, depth) => {
     const row = { id: genId(), text: "", depth };
     writeDay(d => {
@@ -4719,7 +4732,7 @@ export default function Dashboard({ config }) {
             .map(it => "\u00b7 " + it.text.trim()).join("\n") },
       ]} onNest={nestItem}
       onSaveBlock={saveBlockPatch} onSaveDayNote={(v) => saveDayNote(v)}
-      onSaveItem={saveItemPatch} onInsertRow={insertRow}
+      onSaveItem={saveItemPatch} onInsertRow={insertRow} onConvertRow={convertRow}
       onSaveSpring={(patch) => writeDay(d => ({ ...d, spring: { ...(d.spring || {}), ...patch } }), "that note")}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
       onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMoveSection={moveSection} onAddUnder={addUnder} onMergeSections={mergeSections} onSelect={setPicked} onEdit={editPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
