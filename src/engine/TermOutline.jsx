@@ -26,6 +26,7 @@ import * as TOKENS from "./tokens.js";
 import { allDays, dayTitles } from "./days.js";
 import { normSlot, sectionsOf } from "./dayplan.js";
 import { typeOf } from "./blocks.js";
+import Slide, { slideOf, readSlidesOn, writeSlidesOn } from "./Slide.jsx";
 
 // Where a thing came from, for the second half of a row.
 const hostOf = (url) => {
@@ -72,7 +73,7 @@ const readDay = (config, plans, date) => {
   return { rows, done, sections };
 };
 
-export default function TermOutline({ config, weeks, plans, assignments, day, onPick, onClose, onWeekTopic, onDayTitle, onMoveRow, onAddRow, blockOf, startView }) {
+export default function TermOutline({ config, weeks, plans, assignments, day, onPick, onClose, onWeekTopic, onDayTitle, onMoveRow, onAddRow, blockOf, startView, features }) {
   const [view, setView] = useState(startView || "outline");
   const [only, setOnly] = useState("");            // "" | "planned" | "empty"
   const [openWeeks, setOpenWeeks] = useState(() => new Set());
@@ -81,6 +82,8 @@ export default function TermOutline({ config, weeks, plans, assignments, day, on
   const [dragging, setDragging] = useState("");
   const [adding, setAdding] = useState("");   // "<date>|<slot>"
   const [draft, setDraft] = useState("");
+  const [slidesOn, setSlidesOnState] = useState(readSlidesOn);
+  const setSlidesOn = (on) => { setSlidesOnState(on); writeSlidesOn(on); };
 
   const days = allDays(weeks);
   const titles = dayTitles(weeks, plans);
@@ -118,6 +121,10 @@ export default function TermOutline({ config, weeks, plans, assignments, day, on
             </div>
             <span className="term-count">{built} of {days.length} days built</span>
             <span style={{ flex: "1 1 auto" }} />
+            {view === "outline" ? (
+              <button className="dash-focus term-slidetoggle" aria-pressed={slidesOn}
+                onClick={() => setSlidesOn(!slidesOn)}>{slidesOn ? "Hide slides" : "Show slides"}</button>
+            ) : null}
             <button className="dash-focus term-x" onClick={onClose} aria-label="Close">×</button>
           </div>
           {view === "outline" ? (
@@ -222,12 +229,28 @@ export default function TermOutline({ config, weeks, plans, assignments, day, on
                                 <span className="term-sname" data-unnamed={s.named ? "0" : "1"}>{s.name}</span>
                                 <span className="term-snum">{s.n}</span>
                               </div>
-                              {s.items.map(({ id, item, done }, n) => {
+                              {/* A row and the notes under it are one group, with
+                                  the row's slide beside the whole group, so the
+                                  notes stay right under the row they belong to. */}
+                              {s.items.reduce((groups, entry) => {
+                                if ((entry.item.depth || 0) > 0 && groups.length) groups[groups.length - 1].push(entry);
+                                else groups.push([entry]);
+                                return groups;
+                              }, []).map(group => {
+                                const parts = group.map(({ id, item, done }) => {
+                                const n = s.items.findIndex(x => x.id === id);
                                 const b = item.blockId ? blockOf(item.blockId) : null;
                                 const words = (b ? b.headline || b.title : item.claim || item.text) || "a row";
                                 const kind = item.feature ? "activity" : b ? typeOf(b.type).label.toLowerCase() : "note";
                                 const src = b?.source || hostOf(b?.url);
-                                return (
+                                const depth = item.depth || 0;
+                                // The same slide the day plan draws beside this
+                                // row. Here it is a preview: the outline is where
+                                // a term is planned, not where a class is run.
+                                const slide = slidesOn && !depth
+                                  ? slideOf({ item, block: b, title: (b ? b.title : item.text) || "", claim: item.claim || b?.headline || "", tag: s.name, features })
+                                  : null;
+                                return { id, slide, words, node: (
                                   <div key={id} className="term-row" data-done={done ? "1" : "0"} draggable
                                     onDragStart={e => {
                                       e.dataTransfer.effectAllowed = "move";
@@ -236,11 +259,27 @@ export default function TermOutline({ config, weeks, plans, assignments, day, on
                                     }}
                                     onDragEnd={() => setDragging("")}
                                     title="Drag onto another section, on this day or any other">
-                                    <span className="term-grip" aria-hidden="true">&#10303;</span>
-                                    <span className="term-rn">{done ? "✓" : n + 1}</span>
-                                    <span className="term-rw">{words}</span>
-                                    {src ? <span className="term-rsrc">{src}</span> : null}
-                                    <span className="term-rk">{kind}</span>
+                                    <span className="term-rtext" style={{ marginLeft: depth * 30 }}>
+                                      <span className="term-rline">
+                                        <span className="term-grip" aria-hidden="true">&#10303;</span>
+                                        <span className="term-rn">{done ? "✓" : n + 1}</span>
+                                        <span className="term-rw">{words}</span>
+                                        {src ? <span className="term-rsrc">{src}</span> : null}
+                                        <span className="term-rk">{kind}</span>
+                                      </span>
+                                      {b?.body ? <span className="term-rbody">{b.body}</span> : null}
+                                    </span>
+                                  </div>
+                                ) };
+                                });
+                                return (
+                                  <div key={parts[0].id} className={"term-group" + (slidesOn ? " with-slides" : "")}>
+                                    <div className="term-grouptext">{parts.map(p => p.node)}</div>
+                                    {slidesOn ? (
+                                      <span className="term-rslide">
+                                        {parts[0].slide ? <Slide cast={parts[0].slide} config={{ path: config.path || "" }} label={parts[0].words} /> : null}
+                                      </span>
+                                    ) : null}
                                   </div>
                                 );
                               })}
@@ -390,9 +429,21 @@ export const TERM_CSS = `
    reading thirty of them rather than running one. */
 .term-sec[data-over="1"]{background:${SURFACE_2};border-radius:10px;
   box-shadow:inset 0 0 0 2px var(--dash-accent)}
-.term-row{display:flex;align-items:baseline;gap:10px;min-height:30px;padding:2px 0;
-  border-bottom:1px solid ${BORDER};cursor:grab}
+/* The outline reads as the same document as the day: no rule under each row,
+   the content right under the words, and the slide in a column beside it. */
+.term-group{display:grid;grid-template-columns:minmax(0,1fr);column-gap:18px;align-items:start;padding:2px 0}
+.term-group.with-slides{grid-template-columns:minmax(0,1fr) 200px}
+.term-grouptext{min-width:0;display:flex;flex-direction:column}
+.term-row{display:flex;flex-direction:column;padding:2px 4px;border-radius:8px;cursor:grab}
 .term-row:hover{background:${SURFACE_2}}
+.term-rtext{min-width:0;display:flex;flex-direction:column;gap:0}
+.term-rline{display:flex;align-items:baseline;gap:10px;min-height:26px;padding-top:3px}
+.term-rbody{padding-left:56px;margin-top:-1px;padding-bottom:3px;font-size:14px;line-height:1.45;color:${TEXT_SECONDARY};white-space:pre-wrap;
+  overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;max-width:72ch}
+.term-rslide{display:flex;justify-content:flex-end;padding:3px 0}
+.term-slidetoggle{min-height:32px;padding:0 12px;border:1px solid ${BORDER_STRONG};border-radius:8px;background:#fff;
+  font-family:${F};font-size:13px;font-weight:600;color:${TEXT_SECONDARY};cursor:pointer}
+.term-slidetoggle:hover{color:${TEXT_PRIMARY};background:${SURFACE_2}}
 .term-grip{flex:none;width:12px;font-size:12px;color:${GHOST};line-height:1}
 .term-row:hover .term-grip{color:${TEXT_MUTED}}
 /* Adding a line to any section of any day, from here. */

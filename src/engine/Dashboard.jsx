@@ -42,6 +42,7 @@ import { REMINDERS } from "./reminders.js";
 import TopNav, { NAV_TEACH } from "./TopNav.jsx";
 import Drawer, { DRAWER_CSS } from "./Drawer.jsx";
 import TermOutline, { TERM_CSS } from "./TermOutline.jsx";
+import Slide, { slideOf, SLIDE_CSS, readSlidesOn, writeSlidesOn } from "./Slide.jsx";
 
 // Eight items at 39px, plus the padding: the tallest a row menu usually gets,
 // now that a block's content has an item of its own. The flip measures against
@@ -203,13 +204,30 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
    So the rows go quiet: a hairline between them, ink on paper, and the kind
    said in a word in its own colour rather than painted across the whole row.
    Colour stops being decoration and goes back to meaning something. */
-.flow-row{display:flex;align-items:center;gap:14px;min-height:var(--row-h);flex-wrap:wrap;
-  padding:2px 4px;border-radius:0;cursor:grab;color:${TEXT_PRIMARY};
-  background:none;border-bottom:1px solid ${BORDER};
+/* A DOCUMENT, WITH A SLIDE BESIDE EACH BLOCK.
+   The hairline under every row came off: rows ruled like a spreadsheet read as
+   a table, and the day is a document with numbered blocks in it. Row-gap is
+   zero so a block's content sits right under its title rather than a line's
+   height below it. */
+.flow-row{display:flex;align-items:center;gap:0 14px;min-height:var(--row-h);flex-wrap:wrap;
+  padding:2px 4px;border-radius:8px;cursor:grab;color:${TEXT_PRIMARY};
+  background:none;
   transition:background .13s,box-shadow .13s;position:relative}
-.flow-nested::before{content:"";position:absolute;left:-17px;top:-6px;bottom:50%;width:9px;
+.flow-row.flow-nested{min-height:32px}
+.flow-nested::before{content:"";position:absolute;left:-20px;top:-4px;bottom:50%;width:12px;
   border-left:2px solid rgba(23,19,16,.18);border-bottom:2px solid rgba(23,19,16,.18);
   border-bottom-left-radius:6px}
+/* One block: the words on the left, its slide in a 200px column on the right. */
+.flow-item{display:grid;grid-template-columns:minmax(0,1fr);column-gap:18px;align-items:start;padding:3px 0}
+.flow-item.with-slides{grid-template-columns:minmax(0,1fr) 200px}
+.flow-itemtext{min-width:0;display:flex;flex-direction:column}
+.flow-rowwrap{display:flex;flex-direction:column;min-width:0}
+.flow-slidecell{padding-top:6px;display:flex;justify-content:flex-end}
+.flow-slidebar{display:flex;justify-content:flex-end;margin-bottom:-18px;position:relative;z-index:1}
+.flow-slidetoggle{min-height:32px;padding:0 12px;border:1px solid ${BORDER_STRONG};border-radius:8px;background:#fff;
+  font-family:${F};font-size:13px;font-weight:600;color:${TEXT_SECONDARY};cursor:pointer}
+.flow-slidetoggle:hover{color:${TEXT_PRIMARY};background:${SURFACE_2}}
+@media (max-width:1100px){.flow-item.with-slides{grid-template-columns:minmax(0,1fr) 150px}}
 .flow-row:hover{background:${SURFACE_2}}
 /* ON THE SCREEN RIGHT NOW: the one filled row on the page. It can afford to be
    the only one, because everything around it is white. */
@@ -254,8 +272,8 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-src:hover{background:rgba(23,19,16,.08);color:${TEXT_PRIMARY}}
 /* THE BLOCK UNDER ITS ROW. Indented to the words, past the numeral, so it
    reads as belonging to the row above it and not as a row of its own. */
-.flow-block{flex:0 0 100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;gap:6px;
-  padding:0 8px 10px 44px;cursor:auto}
+.flow-block{flex:0 0 100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;gap:5px;
+  margin-top:-5px;padding:0 8px 8px 58px;cursor:auto}
 .flow-body{font-family:${F};font-size:15px;line-height:1.5;color:${TEXT_SECONDARY};white-space:pre-wrap;
   overflow-wrap:anywhere;max-width:72ch;border-radius:8px;margin:0 -6px;padding:2px 6px}
 .flow-body.editable{cursor:text}
@@ -761,7 +779,7 @@ export function FlowBlock({ block, kids, editing, setEditing, onSaveBody }) {
   );
 }
 
-export function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, onEdit, picked, block, kids, onSaveBody, starred, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove, onAddUnder, steps, step = -1, onStep }) {
+export function Castable({ kind, kindColor, title, url, claim, live, accent, onCast, onDismiss, onSaveClaim, num, onSelect, onEdit, picked, block, kids, onSaveBody, starred, shared, done, next, onTick, assigned, onAssign, depth, canNest, onNest, onRemove, onAddUnder, steps, step = -1, onStep, noCastButton }) {
   const [editing, setEditing] = useState(false);
   const [bodyEdit, setBodyEdit] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -921,22 +939,21 @@ export function Castable({ kind, kindColor, title, url, claim, live, accent, onC
             onClick={e => e.stopPropagation()} title={"Open " + url + " in a new tab"}
             style={{ fontFamily: F }}>{hostOf(url)} ↗</a>
         ) : null}
+        {/* What the row is, in a word, in its kind's colour, beside the words.
+            It sat out at the right edge, a column of its own, which made the
+            day read as a table. In a document it is an aside on the line. */}
+        {kind ? (
+          <span className="flow-kind" style={{ "--ink": inkOf(kindColor) }}>{String(kind).toLowerCase()}</span>
+        ) : null}
       </span>
 
-      {/* What the row is, in a word, in its kind's colour.
-          This is where the colour went when the rows stopped being solid bars.
-          A row that says "article" in blue tells you the same thing the blue
-          bar did, and leaves the row itself readable as text. */}
       {live ? <span className="flow-onair">ON SCREEN</span> : null}
-
-      {kind ? (
-        <span className="flow-kind" style={{ "--ink": inkOf(kindColor) }}>{String(kind).toLowerCase()}</span>
-      ) : null}
 
       {/* The arrow casts, always. It used to open the headline editor when the
           row had no headline, and Andrew's verdict was that with the room
           watching a button that asks a question is a button that does not
-          work. No headline means the title goes up. */}
+          work. No headline means the title goes up. With the slide column
+          open, the slide is the button and the arrow goes. */}
       <span className="flow-tools">
         {live && steps && onStep && step >= 0 && step < steps.length - 1 ? (
           <button className="dash-focus" style={{ ...sq, borderColor: accent, color: accent, fontWeight: 600 }}
@@ -946,7 +963,7 @@ export function Castable({ kind, kindColor, title, url, claim, live, accent, onC
         {live ? (
           <button className="dash-focus" style={{ ...sq }}
             title="Take it back down" onClick={onDismiss}>×</button>
-        ) : (
+        ) : noCastButton ? null : (
           <button className="dash-focus" style={{ ...sq, fontSize: 16, lineHeight: 1 }}
             title="Put this row on the room screen"
             onClick={() => onCast(claim || title)}>→</button>
@@ -2000,6 +2017,8 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
   // data, because folding is where I am looking right now and not a fact about
   // the day — a folded section should not be folded for the room screen too.
   const [foldedSecs, setFoldedSecs] = useState(() => new Set());
+  const [slidesOn, setSlidesOnState] = useState(readSlidesOn);
+  const setSlidesOn = (on) => { setSlidesOnState(on); writeSlidesOn(on); };
   const [overRow, setOverRow] = useState(null);
 
   // Dropping on a row puts it before that row; dropping on the section puts it
@@ -2302,21 +2321,37 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
                 blocks={blocks2} onPickBlock={onPickBlock} days={days} today={today} />
             ) : null}
             {!folded && !items.length && adding !== s.slot ? <Muted style={{ fontSize: 13, padding: "2px 6px" }}>Empty.</Muted> : null}
-            {(folded ? [] : items).map((it, i) => {
+            {(() => {
+            const rowOf = (it, i) => {
               const blk = it.blockId ? blockOf(it.blockId) : null;
               const seed = it.seedId ? seedById(it.seedId) : null;
               const title = blk ? (blk.title || "Untitled") : seed ? seed.title : (it.text || "Untitled");
-              const body = blk ? blk.body : (it.bodyOverride || (seed ? seed.body : ""));
-              return (
-                <div key={it.id} draggable
+              const depth = it.depth || 0;
+              const claimOf = it.claim || (blk ? blk.headline : "");
+              const tag = bucket.title || s.slot;
+              // A note under a row is part of that row and has no slide of its own.
+              const slide = slidesOn && !depth ? slideOf({ item: it, block: blk, seed, title, claim: claimOf, tag, features: FEATURES }) : null;
+              const isLive = liveLabel === (claimOf || title) || (it.feature && liveLabel === it.feature);
+              // Pressing a slide puts up what the arrow would: a link goes up the
+              // way the room screen shows links, not as the card the slide draws.
+              // A file or a picture goes up as the slide shows it.
+              const castRow = (c) => (blk?.url
+                ? castNow({ ...castFromLink({ label: blk.title, url: blk.url }), title: c, label: c, pick: !!blk?.pick })
+                : castNow({ type: "quote", tag, title: c, cite: blk?.concept || (seed ? seed.concept : ""), label: c, pick: !!blk?.pick }));
+              const castSlide = () => (it.feature && onFeature
+                ? onFeature(it.feature)
+                : slide && slide.type === "media"
+                  ? castNow(slide)
+                  : castRow(claimOf || title));
+              const node = (
+                <div key={it.id} draggable className="flow-rowwrap"
                   onDragStart={e => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", JSON.stringify({ slot: s.slot, id: it.id })); }}
                   onDragOver={e => { e.preventDefault(); e.stopPropagation(); setOverRow(it.id); }}
                   onDragLeave={() => setOverRow(null)}
                   onDrop={e => { e.preventDefault(); e.stopPropagation(); setOverRow(null); drop(e, s.slot, it.id); }}
-                  style={{ display: "flex", flexDirection: "column", gap: 2,
-                    marginLeft: (it.depth || 0) * 26,
-                    borderTop: "2px solid " + (overRow === it.id ? accent : "transparent") }}>
+                  style={{ marginLeft: depth * 30, borderTop: "2px solid " + (overRow === it.id ? accent : "transparent") }}>
                   <Castable num={numberOf[it.id]} picked={pickedId === it.id} shared={!!it.blockId}
+                    noCastButton={slidesOn}
                     starred={!!blk?.pick}
                     block={blk}
                     kids={blk?.type === "set" && blockOf ? (blk.children || []).map(id => blockOf(id)).filter(Boolean) : null}
@@ -2359,7 +2394,33 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
                   ))}
                 </div>
               );
-            })}
+              return { id: it.id, slide, isLive, castSlide, label: claimOf || title, node };
+            };
+
+            // A block and the notes under it are one group, and the slide sits
+            // beside the group. Laid out one row at a time, a block's slide made
+            // its row a slide tall and pushed the notes under it down below the
+            // slide, further from the block they belong to.
+            const groups = [];
+            (folded ? [] : items).forEach((it, i) => {
+              const part = rowOf(it, i);
+              if ((it.depth || 0) > 0 && groups.length) groups[groups.length - 1].push(part);
+              else groups.push([part]);
+            });
+            return groups.map(g => (
+              <div key={g[0].id} className={"flow-item" + (slidesOn ? " with-slides" : "")}>
+                <div className="flow-itemtext">{g.map(p => p.node)}</div>
+                {slidesOn ? (
+                  <div className="flow-slidecell">
+                    {g[0].slide ? (
+                      <Slide cast={g[0].slide} config={{ path: classHref || "" }} live={!!g[0].isLive}
+                        label={g[0].label} onClick={g[0].castSlide} />
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ));
+            })()}
           </div>
         );
   };
@@ -2389,6 +2450,11 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
           them twice was how the old Activities column and this list drifted
           apart. The rest moved below the day, where a thing you touch while
           planning belongs. */}
+      {/* The slide column's own control, over the column it opens and closes. */}
+      <div className="flow-slidebar">
+        <button className="dash-focus flow-slidetoggle" aria-pressed={slidesOn}
+          onClick={() => setSlidesOn(!slidesOn)}>{slidesOn ? "Hide slides" : "Show slides"}</button>
+      </div>
       {sectionRows.map(([slot, title], i) => renderSlot({ slot }, title, i))}
       {foldRow}
       {addBlockRow}
@@ -4928,7 +4994,7 @@ export default function Dashboard({ config }) {
     <div className={dense ? "dash-compact" : "dash-comfortable"}
       style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY,
         "--dash-accent": config.accent, "--row-weight": boldRows ? 600 : 400, ...fontVars(fonts) }}>
-      <style>{CSS + DRAWER_CSS + TERM_CSS}</style>
+      <style>{CSS + DRAWER_CSS + TERM_CSS + SLIDE_CSS}</style>
 
       {/* Four groups, and the grouping is what each control IS.
           The class tools are the things I press with the room watching, so they
@@ -5122,7 +5188,7 @@ export default function Dashboard({ config }) {
 
       {termOpen ? (
         <TermOutline config={config} weeks={weeks} plans={data.dayPlans || {}}
-          assignments={assignments} day={day} blockOf={blockOf}
+          assignments={assignments} day={day} blockOf={blockOf} features={FEATURES}
           onPick={setDay} onClose={() => setTermOpen(false)}
           onWeekTopic={(id, v) => update(prev => ({
             ...prev,

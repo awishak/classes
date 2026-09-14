@@ -87,6 +87,7 @@ import { sectionsOf } from "../src/engine/dayplan.js";
 import { dayTitles } from "../src/engine/days.js";
 import { normSlot as normSlotT } from "../src/engine/dayplan.js";
 import Drawer, { SHELVES, shelfOf } from "../src/engine/Drawer.jsx";
+import Slide, { slideOf } from "../src/engine/Slide.jsx";
 import TermOutline from "../src/engine/TermOutline.jsx";
 import { SHARED_KEY } from "../src/engine/blocks.js";
 import { DEFAULT_REPO_FONTS } from "../src/engine/fonts.js";
@@ -2206,6 +2207,52 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!html.includes("Gianna picture")) say("the Spring 2026 note is not under the day");
   if (!html.includes("off to Austin")) say("the Spring 2026 note for students is not under the day");
   if (!html.includes("a day note")) say("the day note is not under the day");
+}
+
+// The day as a document, with each block's slide beside it.
+//
+// A slide is the cast the row would send, drawn by the room screen's own
+// Content. So every kind of row has to choose the right cast, and the room
+// screen has to draw each one without throwing.
+{
+  const say = (m) => { console.error("  FAIL  slides: " + m); failedEarly++; };
+  const none = () => {}; // smoke render, never pressed
+  const cfg = { path: "/comm118" };
+  const cases2 = [
+    ["note", { item: { id: "i" }, block: { type: "note", title: "Tiger" }, title: "Tiger", tag: "Open" }, "quote"],
+    ["headline wins", { item: { id: "i" }, block: { type: "note", title: "Tiger", headline: "Tiger changed golf." }, title: "Tiger", claim: "Tiger changed golf.", tag: "Open" }, "quote"],
+    ["link", { item: { id: "i" }, block: { type: "link", title: "Story", url: "https://www.theatlantic.com/x" }, title: "Story" }, "doc"],
+    ["photo", { item: { id: "i" }, block: { type: "note", title: "Theo", media: { kind: "image", src: "https://e.com/t.jpg" } }, title: "Theo" }, "media"],
+    ["clip", { item: { id: "i" }, block: { type: "note", title: "Clip", media: { kind: "video", src: "https://e.com/c.mp4" } }, title: "Clip" }, "media"],
+    ["memo", { item: { id: "i" }, block: { type: "note", title: "Memo", media: { kind: "audio", src: "https://e.com/m.m4a" } }, title: "Memo" }, "media"],
+    ["image url", { item: { id: "i" }, block: { type: "image", title: "Chart", url: "https://e.com/chart.png" }, title: "Chart" }, "media"],
+    ["activity", { item: { id: "i", feature: "Around the Horn" }, title: "Around the Horn", features: { "Around the Horn": "Everyone answers." } }, "feature"],
+    ["typed row", { item: { id: "i", text: "Start with headlines" }, title: "Start with headlines" }, "quote"],
+  ];
+  cases2.forEach(([name, input, want]) => {
+    const cast = slideOf(input);
+    if (!cast) { say(name + " has no slide"); return; }
+    if (cast.type !== want) say(name + " makes a " + cast.type + " slide, want " + want);
+    if (want === "doc" && cast.mode !== "card") say("a link's slide is not its card, so every link would load its live page");
+    try { renderToString(<Slide cast={cast} config={cfg} />); } catch (e) { say(name + " slide threw: " + e.message); }
+  });
+  if (slideOf(cases2[1][1]).title !== "Tiger changed golf.") say("the slide does not carry the headline");
+  const clip = renderToString(<Slide cast={slideOf(cases2[4][1])} config={cfg} />);
+  if (/autoplay/i.test(clip)) say("a clip plays in its slide");
+
+  // The day plan: a slide beside a block, none beside a note under it, and no arrow where the slide is the button.
+  const day = { sequenceId: "s", slots: { opener: { title: "Open", items: [
+    { id: "r1", text: "Start with headlines" },
+    { id: "r2", text: "A note under it", depth: 1 },
+  ] } } };
+  const html = renderToString(<FlowPanel plan={day} seq={seq} seeds={[]} castNow={none} dismiss={none} liveLabel={null}
+    accent="#333" onClaim={none} features={[]} onFeature={none} planHref="/x" onSlidesClaim={none} onBlockClaim={none}
+    where="COMM 1 · Sep 1" loose={[]} onAddScheduled={none} onAddItem={none} onRemoveItem={none}
+    onMoveItem={none} onSetSequence={none} onSetSlotTitle={none} sequences={[seq]} classHref="/comm118" />);
+  const slides = (html.match(/class="slide slide-press/g) || []).length;
+  if (slides !== 1) say(slides + " slides on a day with one block and one note under it, want 1");
+  if (html.includes("Put this row on the room screen")) say("the arrow is still there beside a slide");
+  if (!html.includes("Hide slides")) say("the slide column cannot be closed");
 }
 
 // Activities by kind, with a game's questions inside the game.
