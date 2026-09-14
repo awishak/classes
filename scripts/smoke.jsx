@@ -86,7 +86,7 @@ import { computeGrade } from "../src/engine/AssignmentsCard.jsx";
 import { sectionsOf } from "../src/engine/dayplan.js";
 import { dayTitles } from "../src/engine/days.js";
 import { normSlot as normSlotT } from "../src/engine/dayplan.js";
-import { SHELVES, shelfOf } from "../src/engine/Drawer.jsx";
+import Drawer, { SHELVES, shelfOf } from "../src/engine/Drawer.jsx";
 import TermOutline from "../src/engine/TermOutline.jsx";
 import { SHARED_KEY } from "../src/engine/blocks.js";
 import { DEFAULT_REPO_FONTS } from "../src/engine/fonts.js";
@@ -2166,6 +2166,37 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (!s.make) say(s.id + " has nothing New can make");
     else if (shelfOf(s.make) !== s.id) say(`New on ${s.id} makes a "${s.make}", which files to ${shelfOf(s.make)}`);
   });
+}
+
+// Activities by kind, with a game's questions inside the game.
+//
+// Ninety-six questions listed one by one buried the ten teaching moves and the
+// boards. A question in a game is drawn inside the game; a question in no game
+// stays on the shelf, so none can go missing.
+{
+  const say = (m) => { console.error("  FAIL  activities shelf: " + m); failedEarly++; };
+  const blocks = [
+    { id: "a1", type: "activity", title: "Fishbowl move" },
+    { id: "bd", type: "board", title: "Exit board" },
+    { id: "g1", type: "set", title: "Weekly Game, week 1", children: ["q1", "q2", "q3"] },
+    { id: "q1", type: "question", title: "Tucked question one" },
+    { id: "q2", type: "question", title: "Tucked question two" },
+    { id: "q3", type: "question", title: "Tucked question three" },
+    { id: "q9", type: "question", title: "Loose question" },
+  ];
+  let html = "";
+  try {
+    html = renderToString(<Drawer blocks={blocks} hue={() => "#047857"} startShelf="activities"
+      features={[]} onPick={() => {}} onNew={() => {}} blockOf={() => null} />); // smoke render, never clicked
+  } catch (e) { say("threw: " + e.message); }
+  if (html) {
+    if (html.includes("Tucked question")) say("a question inside a game is listed on the shelf");
+    if (!html.includes("Loose question")) say("a question in no game went missing");
+    if (!html.includes("3 questions")) say("the game does not say how many questions it holds");
+    const heads = (html.match(/class="draw-grouphead"/g) || []).length;
+    if (heads !== 4) say(heads + " kind headings, want 4 (activity, question, board, set)");
+    if (html.indexOf("Fishbowl move") > html.indexOf("Weekly Game")) say("kinds are out of order");
+  }
 }
 
 // The whole term, both ways of reading it.

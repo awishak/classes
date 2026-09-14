@@ -59,6 +59,10 @@ const SESSIONS = [
       { name: "Editing from the day", items: [
         ["Brings the rail back", "The editor is the drawer, and the drawer is in the rail. With the rail hidden or in teaching mode, Edit this opened an editor nobody could see. Edit this and Add a note under this both open the rail now."],
       ] },
+      { name: "Activities in the drawer", items: [
+        ["Grouped by kind", "The Activities shelf reads in kind order under a heading for each kind with its count: activities, boards, sets. It was one list sorted by nothing in particular."],
+        ["Questions live inside their game", "COMM 118 has 96 trivia and weekly game questions, and every one belongs to one of nine games, so the shelf was five screens of questions with the ten teaching moves somewhere underneath. A game now says how many questions it holds and opens to show them. A search that finds a question opens its game. A question in no game stays on the shelf, and choosing Question from the kind menu still lists every question flat. The shelf's count went from 118 to 22."],
+      ] },
       { name: "A check for the whole class of bug", items: [
         ["check-names", "Reads every engine file with its scope and fails the build on any name used and never defined or imported. Run against Friday's code it names writeBlock at the exact line. It runs in npm run check, and it uses the Babel that Vite's React plugin already installs."],
       ] },

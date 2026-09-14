@@ -179,29 +179,98 @@ function DrawerEdit({ block, item, where, hue, onSave, onSaveItem, onPlace, onMo
   );
 }
 
+// One result. A spine in its kind's colour, two lines, and the way to put it on
+// the day.
+function DrawerRow({ b, hue, placed, onPick, extra }) {
+  const t = typeOf(b.type);
+  const when = placed && placed.get ? placed.get("b:" + b.id) : "";
+  return (
+    <button className="dash-focus draw-row" onClick={() => onPick(b)}
+      draggable
+      onDragStart={e => { e.currentTarget.dataset.drag = "1"; e.dataTransfer.effectAllowed = "copy";
+        e.dataTransfer.setData("text/plain", JSON.stringify({ blockId: b.id })); }}
+      onDragEnd={e => { e.currentTarget.dataset.drag = "0"; }}
+      style={{ "--ink": inkOf(hue(b.type)) }}
+      title="Drag onto the day, or click to open">
+      <span className="draw-spine" style={{ background: hue(b.type) }} />
+      <span className="draw-lines">
+        <span className="draw-title">{b.title || "Untitled"}</span>
+        {/* One line under the title: what it is, who made it, and whether it
+            has been in front of them already. Only the parts that exist — a
+            note has no source, and a thing on no day says nothing rather than
+            saying "never". */}
+        <span className="draw-sub">
+          {[t.label.toLowerCase(), extra, b.source || sourceFrom(b.url), when ? "already on " + when : ""]
+            .filter(Boolean).join(" · ")}
+        </span>
+      </span>
+      <span className="draw-add" aria-hidden="true">+</span>
+    </button>
+  );
+}
+
 export default function Drawer({ blocks, accent, hue, onPick, onNew, features, onRunFeature, featureBlurb, placed,
-  picked, onSavePicked, onSaveItemPicked, onPlacePicked, onMovePicked, onClearPicked, days, today, sections, blockOf }) {
+  picked, onSavePicked, onSaveItemPicked, onPlacePicked, onMovePicked, onClearPicked, days, today, sections, blockOf,
+  startShelf = "media" }) {
   const [q, setQ] = useState("");
-  const [shelf, setShelf] = useState("media");
+  const [shelf, setShelf] = useState(startShelf);
   const [kind, setKind] = useState("");
   const [newOpen, setNewOpen] = useState(false);
   const [kindOpen, setKindOpen] = useState(false);
+  // The games opened to show their questions.
+  const [openSets, setOpenSets] = useState(() => new Set());
 
   const text = q.trim().toLowerCase();
   const matches = (blocks || []).filter(b => !text || hay(b).includes(text));
 
-  // What each shelf is holding for this search, so a shelf can say whether it
-  // is worth opening before you open it.
-  const counts = {};
-  SHELVES.forEach(s => { counts[s.id] = matches.filter(b => s.holds(b.type)).length; });
+  // A question inside a game is tucked into that game.
+  //
+  // COMM 118 has 96 questions and every one of them belongs to one of nine
+  // games, so listed one by one they were five screens of Activities with the
+  // ten teaching moves and three boards somewhere underneath. A question with
+  // no game stays on the shelf, so one can never go missing.
+  const byId = new Map((blocks || []).map(b => [b.id, b]));
+  const tucked = new Set();
+  (blocks || []).forEach(b => {
+    if (b.type === "set") (b.children || []).forEach(id => { if (byId.get(id)?.type === "question") tucked.add(id); });
+  });
+  const hit = new Set(matches.map(b => b.id));
+  const kidsOf = (set) => (set.children || []).map(id => byId.get(id)).filter(c => c && tucked.has(c.id));
 
-  const onShelf = matches.filter(b => (SHELVES.find(s => s.id === shelf) || SHELVES[0]).holds(b.type));
+  // What each shelf is holding for this search, so a shelf can say whether it
+  // is worth opening before you open it. A tucked question counts as part of
+  // its game.
+  const counts = {};
+  SHELVES.forEach(s => { counts[s.id] = matches.filter(b => s.holds(b.type) && !tucked.has(b.id)).length; });
+
+  const shelfDef = SHELVES.find(s => s.id === shelf) || SHELVES[0];
+  const onShelf = matches.filter(b => shelfDef.holds(b.type));
   // The kinds actually present on this shelf right now, so the chips are a map
   // of what is there rather than a list of everything that could be.
   const kindCounts = {};
   onShelf.forEach(b => { kindCounts[b.type] = (kindCounts[b.type] || 0) + 1; });
   const kinds = allTypes().filter(t => kindCounts[t.id]);
-  const rows = onShelf.filter(b => !kind || b.type === kind).slice(0, 60);
+
+  // Activities, with no kind chosen, are grouped by kind with the questions
+  // inside their games. Choosing Question from the kind menu still lists every
+  // question flat, for when a question is the thing you are after.
+  const grouped = shelf === "activities" && !kind;
+  const every = grouped
+    ? (blocks || []).filter(b => shelfDef.holds(b.type) && !tucked.has(b.id)
+        && (hit.has(b.id) || (text && b.type === "set" && kidsOf(b).some(c => hit.has(c.id)))))
+    : onShelf.filter(b => !kind || b.type === kind);
+  const shown = every.length;
+  const rows = every.slice(0, 60);
+  const groups = grouped
+    ? [...new Set(rows.map(b => b.type))]
+        .sort((a, b) => allTypes().findIndex(t => t.id === a) - allTypes().findIndex(t => t.id === b))
+        .map(id => ({ t: typeOf(id), list: rows.filter(b => b.type === id) }))
+    : [{ t: null, list: rows }];
+  const toggleSet = (id) => setOpenSets(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   // A thing is open: the drawer becomes its editor until you close it.
   if (picked) {
@@ -320,40 +389,47 @@ export default function Drawer({ blocks, accent, hue, onPick, onNew, features, o
             carries what the row IS and where it already sits, because the
             question the drawer answers is not only "what have I got" but "have
             I put this in front of them already". */}
-        {rows.map(b => {
-          const t = typeOf(b.type);
-          const when = placed && placed.get ? placed.get("b:" + b.id) : "";
-          return (
-            <button key={b.id} className="dash-focus draw-row" onClick={() => onPick(b)}
-              draggable
-              onDragStart={e => { e.currentTarget.dataset.drag = "1"; e.dataTransfer.effectAllowed = "copy";
-                e.dataTransfer.setData("text/plain", JSON.stringify({ blockId: b.id })); }}
-              onDragEnd={e => { e.currentTarget.dataset.drag = "0"; }}
-              style={{ "--ink": inkOf(hue(b.type)) }}
-              title="Drag onto the day, or click to open">
-              <span className="draw-spine" style={{ background: hue(b.type) }} />
-              <span className="draw-lines">
-                <span className="draw-title">{b.title || "Untitled"}</span>
-                {/* One line under the title: what it is, who made it, and
-                    whether it has been in front of them already. Only the
-                    parts that exist — a note has no source, and a thing on no
-                    day says nothing rather than saying "never". */}
-                <span className="draw-sub">
-                  {[t.label.toLowerCase(), b.source || sourceFrom(b.url), when ? "already on " + when : ""]
-                    .filter(Boolean).join(" · ")}
-                </span>
-              </span>
-              <span className="draw-add" aria-hidden="true">+</span>
-            </button>
-          );
-        })}
+        {groups.map(({ t: gt, list }) => (
+          <div key={gt ? gt.id : "all"} className="draw-group">
+            {gt ? (
+              <div className="draw-grouphead">{gt.label}<span>{list.length}</span></div>
+            ) : null}
+            {list.map(b => {
+              if (!grouped || b.type !== "set") return <DrawerRow key={b.id} b={b} hue={hue} placed={placed} onPick={onPick} />;
+              // A game, and the questions inside it. Open when you open it, or
+              // when a search found one of its questions.
+              const kids = kidsOf(b).filter(c => !text || hit.has(c.id) || hit.has(b.id));
+              const found = text && kidsOf(b).some(c => hit.has(c.id));
+              const open = openSets.has(b.id) || found;
+              const all = kidsOf(b).length;
+              return (
+                <div key={b.id} className="draw-set">
+                  <div className="draw-setline">
+                    <DrawerRow b={b} hue={hue} placed={placed} onPick={onPick}
+                      extra={all ? all + (all === 1 ? " question" : " questions") : ""} />
+                    {all ? (
+                      <button className="dash-focus draw-settoggle" onClick={() => toggleSet(b.id)}
+                        aria-expanded={open} aria-label={open ? "Hide questions" : "Show questions"}
+                        title={open ? "Hide questions" : "Show questions"}>{open ? "⌄" : "›"}</button>
+                    ) : null}
+                  </div>
+                  {open && kids.length ? (
+                    <div className="draw-kids">
+                      {kids.map(c => <DrawerRow key={c.id} b={c} hue={hue} placed={placed} onPick={onPick} />)}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ))}
         {!rows.length ? (
           <div className="draw-none">
             {text ? "Nothing on this shelf matches " + JSON.stringify(q) + "." : "Nothing on this shelf yet."}
           </div>
         ) : null}
-        {onShelf.length > rows.length ? (
-          <div className="draw-none">{onShelf.length - rows.length} more. Keep typing to narrow it.</div>
+        {shown > rows.length ? (
+          <div className="draw-none">{shown - rows.length} more. Keep typing to narrow it.</div>
         ) : null}
       </div>
     </div>
@@ -425,6 +501,20 @@ export const DRAWER_CSS = `
   background:#fff;color:${TEXT_SECONDARY};cursor:pointer;font-family:${F};font-size:13px;font-weight:600}
 .draw-run-go:hover{color:${TEXT_PRIMARY}}
 .draw-rows{display:flex;flex-direction:column;gap:4px;min-height:0}
+/* Activities by kind. The heading is the kind's name and how many. */
+.draw-group{display:flex;flex-direction:column;gap:4px}
+.draw-group+.draw-group{padding-top:8px}
+.draw-grouphead{display:flex;align-items:baseline;gap:7px;padding:4px 2px 2px;border-bottom:1px solid ${BORDER_STRONG};
+  font-family:${MONO};font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:${TEXT_SECONDARY}}
+.draw-grouphead span{font-weight:500;letter-spacing:0;color:${TEXT_MUTED}}
+/* A game, with its questions folded inside. */
+.draw-set{display:flex;flex-direction:column}
+.draw-setline{display:flex;align-items:center;gap:4px;border-bottom:1px solid ${BORDER}}
+.draw-setline .draw-row{flex:1 1 auto;min-width:0;border-bottom:none}
+.draw-settoggle{flex:none;width:44px;height:44px;border:none;border-radius:9px;background:none;cursor:pointer;
+  color:${TEXT_SECONDARY};font-size:18px;line-height:1;padding:0}
+.draw-settoggle:hover{background:${SURFACE_2};color:${TEXT_PRIMARY}}
+.draw-kids{display:flex;flex-direction:column;margin-left:6px;padding-left:12px;border-left:2px solid ${BORDER_STRONG}}
 .draw-kind{flex:none;font-family:${MONO};font-size:13px;font-weight:500;color:var(--ink,${TEXT_MUTED})}
 .draw-none{padding:10px 4px;font-family:${F};font-size:13px;color:${TEXT_MUTED};line-height:1.45}
 /* The drawer as an editor. */
