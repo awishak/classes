@@ -9,6 +9,7 @@ import Dashboard from "./engine/Dashboard.jsx";
 import ClassroomView from "./engine/ClassroomView.jsx";
 import BoardPage from "./engine/BoardPage.jsx";
 import GamePage, { RunGamePage } from "./engine/GamePage.jsx";
+import GamesPage from "./engine/GamesPage.jsx";
 import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
@@ -213,7 +214,7 @@ export default function App() {
   // Live teaching surfaces: /<class>/dashboard (me), /<class>/today (the room
   // screen), /<class>/ask (where the room screen's QR sends students),
   // /<class>/grade (the class as cards, sorted into columns).
-  const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask|board|game|rungame|grade)\/?$/);
+  const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask|board|game|rungame|games|grade)\/?$/);
   if (live && ENGINE[live[1]]) {
     const cfg = ENGINE[live[1]];
     if (live[2] === "dashboard") {
@@ -227,6 +228,15 @@ export default function App() {
       return (
         <InstructorGate what={cfg.code + " grade view"}>
           <GradeView key={cfg.id} config={cfg} />
+        </InstructorGate>
+      );
+    }
+    // Games, one answer per row (decks). /rungame is the spring system, kept
+    // reachable until the new games have run a class.
+    if (live[2] === "games") {
+      return (
+        <InstructorGate what={cfg.code + " games"}>
+          <GamesPage key={cfg.id} config={cfg} />
         </InstructorGate>
       );
     }

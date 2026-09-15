@@ -89,6 +89,8 @@ import { normSlot as normSlotT } from "../src/engine/dayplan.js";
 import Drawer, { SHELVES, shelfOf } from "../src/engine/Drawer.jsx";
 import Slide, { slideOf } from "../src/engine/Slide.jsx";
 import RoomSlide from "../src/engine/RoomSlide.jsx";
+import { castFor } from "../src/engine/gameCast.js";
+import GamesPage from "../src/engine/GamesPage.jsx";
 import DayDoc from "../src/engine/DayDoc.jsx";
 import { ScheduleDetail, studentItems } from "../src/engine/ScheduleCard.jsx";
 import TermOutline from "../src/engine/TermOutline.jsx";
@@ -2768,6 +2770,52 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const src = readFileSync(new URL("../src/engine/Drawer.jsx", import.meta.url), "utf8");
   if (!/^function Field\(/m.test(src)) say("Field is no longer declared at the top of the module");
   if (/^\s+const Field = /m.test(src)) say("a Field is declared inside a component again");
+}
+
+// Games on the room screen: each Put on screen view becomes a slide, and no
+// student's name reaches the wall.
+{
+  const say = (m) => { console.error("  FAIL  game slides: " + m); failedEarly++; };
+  const game = {
+    deck: { id: "d", title: "Week 1", teams: "none", time_limit_min: 20, opened_at: "2026-09-14T10:00:00Z" },
+    cards: [
+      { id: "c1", type: "question", position: 0, config: { text: "What did Gregg Popovich do that earned the Spurs a $250K fine?", answer: "choice", options: ["He complained about the schedule", "He had his four best players skip the game"] } },
+      { id: "c2", type: "question", position: 1, config: { text: "What does Lacrosse mean?", answer: "typed" } },
+    ],
+    keys: { c1: [1], c2: ["The stick"] },
+    accepts: [],
+    responses: [
+      { card_id: "c1", viewer_id: "ada@scu.edu", answer: { value: 1 }, review: false },
+      { card_id: "c1", viewer_id: "ben@scu.edu", answer: { value: 0 }, review: true },
+      { card_id: "c2", viewer_id: "ada@scu.edu", answer: { value: "the stick" } },
+      { card_id: "c2", viewer_id: "ben@scu.edu", answer: { value: "Lake cross" }, review: true },
+    ],
+    progress: [{ viewer_id: "ada@scu.edu", completed_at: "2026-09-14T10:05:00Z" }, { viewer_id: "ben@scu.edu", completed_at: null }],
+    teams: [],
+  };
+  const views = [{ view: "during" }, { view: "spread" }, { view: "questions" }, { view: "question", cardId: "c1" }, { view: "question", cardId: "c2" }];
+  const want = { during: "gameDuring", spread: "gameSpread", questions: "gameQuestions", question: "gameQuestion" };
+  for (const v of views) {
+    const payload = castFor(v, game, 30);
+    if (payload.template !== want[v.view]) say(v.view + " makes " + payload.template);
+    for (const ground of ["paper", "slate"]) {
+      try {
+        const html = renderToString(<RoomSlide slide={payload} ground={ground} />);
+        if (/ada@|ben@/.test(html)) say(v.view + " puts a student on the wall");
+      } catch (e) { say(v.view + " threw on " + ground + ": " + e.message); }
+    }
+  }
+  const during = castFor({ view: "during" }, game, 30);
+  if (during.submitted !== 1 || during.of !== 30) say("during counts " + during.submitted + " of " + during.of);
+  const q1 = castFor({ view: "question", cardId: "c1" }, game);
+  if (JSON.stringify(q1.counts) !== "[1,1]" || JSON.stringify(q1.reviewBy) !== "[1,0]") say("a question does not carry picked and Please review per answer");
+  const q2 = castFor({ view: "question", cardId: "c2" }, game);
+  if (!q2.groups?.some(g => g.right && g.picked === 1)) say("a free-form question does not group its answers");
+  const all = renderToString(<RoomSlide slide={castFor({ view: "questions" }, game)} ground="slate" />);
+  if (!/All questions/.test(all) || !/Right/.test(all)) say("All questions lost its heading or axis");
+  const spread = renderToString(<RoomSlide slide={castFor({ view: "spread" }, game)} ground="slate" />);
+  if (!/Students/.test(spread) || !/Score/.test(spread)) say("the spread lost its axis labels");
+  cases.push(["games page", <GamesPage config={comm999} />]);
 }
 
 let failed = failedEarly;

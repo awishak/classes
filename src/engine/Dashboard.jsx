@@ -3239,7 +3239,7 @@ function ClassMenu({ config, onLook, panels, onPanel }) {
       <span style={{ ...label, padding: "6px 10px 4px" }}>Go to</span>
       <a className="dash-focus" href={config.path + "/schedule"} style={menuRow}>Schedule</a>
       <a className="dash-focus" href={config.path + "/today"} style={menuRow}>Room screen</a>
-      <a className="dash-focus" href={config.path + "/rungame"} style={menuRow}>Games</a>
+      <a className="dash-focus" href={config.path + "/games"} style={menuRow}>Games</a>
       <a className="dash-focus" href={config.path + "/grade"} style={menuRow}>Grade view</a>
       <a className="dash-focus" href="/plan" style={menuRow}>The Brief</a>
       {onLook ? (
@@ -4619,7 +4619,7 @@ export default function Dashboard({ config }) {
     if (GAME_FEATURES.has(name)) {
       castNow({ type: "feature", title: name, body: FEATURES[name] || "", label: name });
       markEngaged();
-      window.open(config.path + "/rungame", "_blank", "noopener");
+      window.open(config.path + "/games", "_blank", "noopener");
       return;
     }
     castNow({ type: "feature", title: name, body: FEATURES[name] || "", label: name });

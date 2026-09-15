@@ -27,6 +27,8 @@ import * as TOKENS from "./tokens.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
 import { useSession, studentFor, myCode } from "./session.js";
+import { useOpenGames, GameStart, GamePlay, GamesNow } from "@ishak/decks";
+import { gameClient } from "./gameClient.js";
 import GradeDeck from "./GradeDeck.jsx";
 import { unseenGrades, markSeen, meetingPatch } from "./grades.js";
 import TopNav, { NAV_STUDENT, NAV_TEACH, tabHref } from "./TopNav.jsx";
@@ -105,7 +107,7 @@ function summary(key, config, role, ctx) {
     case "schedule":
       return { title: "Schedule", body: <ScheduleSummary config={config} data={ctx.data} /> };
     case "community":
-      return { title: "Community", body: <CommunitySummary config={config} live={ctx.live} poll={ctx.poll} data={ctx.data} /> };
+      return { title: "Community", body: <CommunitySummary config={config} live={ctx.live} poll={ctx.poll} data={ctx.data} games={ctx.games} /> };
     case "leaderboard":
       return { title: "Leaderboard", body: <Muted>In-class game standings.</Muted> };
     case "roster":
@@ -147,7 +149,7 @@ function detail(key, config, role, ctx) {
       </Panel>
     );
   }
-  if (key === "community") return <Panel title="Community"><CommunityDetail config={config} live={ctx.live} poll={ctx.poll} data={ctx.data} /></Panel>;
+  if (key === "community") return <Panel title="Community"><CommunityDetail config={config} live={ctx.live} poll={ctx.poll} data={ctx.data} games={ctx.games} onStartGame={ctx.startGame} /></Panel>;
   if (key === "leaderboard") return <Panel title="Leaderboard"><Muted>In-class game leaderboard.</Muted></Panel>;
   return <Panel title={key}><Muted>Coming soon.</Muted></Panel>;
 }
@@ -269,8 +271,11 @@ function liveNow(config, live, poll, data) {
   return out;
 }
 
-function CommunitySummary({ config, live, poll, data }) {
-  const items = liveNow(config, live, poll, data);
+function CommunitySummary({ config, live, poll, data, games = [] }) {
+  const items = [
+    ...games.filter(g => g.open).map(g => ({ id: "deck-" + g.deck.id, title: g.deck.title })),
+    ...liveNow(config, live, poll, data),
+  ];
   if (!items.length) return <Muted>Nothing live right now.</Muted>;
   return (
     <div>
@@ -283,11 +288,12 @@ function CommunitySummary({ config, live, poll, data }) {
   );
 }
 
-function CommunityDetail({ config, live, poll, data }) {
+function CommunityDetail({ config, live, poll, data, games = [], onStartGame }) {
   const items = liveNow(config, live, poll, data);
-  if (!items.length) return <Muted>Games, boards and live activities appear here while they run.</Muted>;
+  if (!items.length && !games.length) return <Muted>Games, boards and live activities appear here while they run.</Muted>;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {onStartGame ? <GamesNow games={games} onStart={onStartGame} /> : null}
       {items.map(it => (
         <div key={it.id} style={{ border: "1px solid " + BORDER, borderRadius: 14, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -592,6 +598,21 @@ export default function ClassApp({ config, initialCard }) {
     return () => { alive = false; };
   }, [session?.user?.id, sessionInstructor]);   // eslint-disable-line react-hooks/exhaustive-deps
   const me = session && !sessionInstructor ? studentFor(sessionEmail, rosterNow) : null;
+
+  // Games. When the instructor opens one, a card comes up over the site with
+  // the game, the agreement box and Start, and the game also sits in
+  // Community. Each answer is its own row (decks), signed as this student.
+  const gameViewer = me && sessionEmail ? { id: String(sessionEmail).trim().toLowerCase(), name: me.name } : null;
+  const { games } = useOpenGames({ supabase: gameClient, groupKey: config.id, viewerId: gameViewer?.id });
+  const [playing, setPlaying] = useState(null);
+  const gameRoster = rosterNow.filter(s => s.email).map(s => ({ id: String(s.email).trim().toLowerCase(), name: s.name }));
+  ctx.games = games;
+  ctx.startGame = gameViewer ? setPlaying : null;
+  const openGame = !preview && gameViewer ? games.find(g => g.open) : null;
+  const GameLayer = !gameViewer || preview ? null
+    : playing ? <GamePlay supabase={gameClient} game={playing} viewer={gameViewer} roster={gameRoster} onExit={() => setPlaying(null)} onError={e => console.error(e)} />
+    : openGame ? <GameStart game={openGame} onStart={setPlaying} />
+    : null;
   useEffect(() => {
     if (!session || data === null) return;
     if (sessionInstructor) {
@@ -697,7 +718,7 @@ export default function ClassApp({ config, initialCard }) {
                 <div style={menuLabel}>Teach</div>
                 <a className="ca-focus" style={menuRow} href={config.path + "/today"}>Room screen</a>
                 <a className="ca-focus" style={menuRow} href={config.path + "/ask"}>Ask</a>
-                <a className="ca-focus" style={menuRow} href={config.path + "/rungame"}>Games</a>
+                <a className="ca-focus" style={menuRow} href={config.path + "/games"}>Games</a>
                 <a className="ca-focus" style={menuRow} href={config.path + "/grade"}>Grade view</a>
                 {rule}
                 <div style={menuLabel}>Class</div>
@@ -887,6 +908,7 @@ export default function ClassApp({ config, initialCard }) {
         <ThemeStyle theme={theme} />
         <ThemeChrome theme={theme} />
         <style>{CSS}</style>
+        {GameLayer}
         <ThemeStickers theme={theme} />
         <ThemeTopper theme={theme} lines={tickerLines} seed={(seenAs || "").length + (config.code || "").length} />
         <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
@@ -935,6 +957,7 @@ export default function ClassApp({ config, initialCard }) {
       <ThemeStyle theme={theme} />
         <ThemeChrome theme={theme} />
       <style>{CSS}</style>
+      {GameLayer}
 
       <ThemeStickers theme={theme} />
       <ThemeTopper theme={theme} lines={tickerLines} seed={(seenAs || "").length + (config.code || "").length} />

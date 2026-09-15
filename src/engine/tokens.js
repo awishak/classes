@@ -79,10 +79,12 @@ export const ROOM = {
 export const SLIDE = {
   crimson: "#9f1239",
   crimsonDeep: "#7f0e2d",
+  // `ok` is a right answer on a game slide: state.ok on paper, lifted on slate.
+  // `bar` is a bar that is not the right answer, and never carries text.
   paper: { bg: "#f5f1eb", ink: "#1c1917", dim: "#57534e", rule: "#e3ded8", accent: "#9f1239", card: "#ffffff",
-    shadow: "0 30px 60px -24px rgba(28,25,23,.35)" },
+    ok: "#0f766e", bar: "#c9c2ba", shadow: "0 30px 60px -24px rgba(28,25,23,.35)" },
   slate: { bg: "#0f0d0c", ink: "#f6f2ec", dim: "#a79c92", rule: "#2b2622", accent: "#ec5f85", card: "#1c1917",
-    shadow: "0 30px 60px -20px rgba(0,0,0,.8)" },
+    ok: "#5eead4", bar: "#6b625b", shadow: "0 30px 60px -20px rgba(0,0,0,.8)" },
 };
 
 // A card is more than a background: the themes differ by border and shadow more

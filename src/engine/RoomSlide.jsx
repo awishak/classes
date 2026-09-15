@@ -16,6 +16,7 @@
 
 import { useEffect, useState } from "react";
 import { SLIDE } from "./tokens.js";
+import { GameDuring, GameSpread, GameQuestions, GameQuestion, GameTeams } from "./GameSlides.jsx";
 
 const FONT = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, monospace";
@@ -377,6 +378,7 @@ function Assignment({ s, g }) {
 const TEMPLATES = {
   section: Section, item: Item, article: Article, video: Video, image: Image, podcast: Podcast, chapter: Chapter,
   quote: Quote, activity: Activity, headlines: Headlines, game: Game, question: Question, board: Board, assignment: Assignment,
+  gameDuring: GameDuring, gameSpread: GameSpread, gameQuestions: GameQuestions, gameQuestion: GameQuestion, gameTeams: GameTeams,
 };
 
 // A slide, drawn. `fit` scales the stage to the window, for the room screen;
