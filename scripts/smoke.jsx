@@ -1106,6 +1106,24 @@ cases.push(["Instructor links", <InstructorLinks />]);
     }
     if (html.includes(">Community<")) {
       console.error("  FAIL  class page, student: Community is still on the page"); failedEarly++; }
+  } catch (err) {
+    console.error("  FAIL  class page, student: " + err.message); failedEarly++;
+  }
+
+  // A student cannot switch themselves to the instructor side. The switch sat
+  // in every student's menu and the page believed the flag it set.
+  try {
+    const was = globalThis.localStorage.getItem;
+    const cfgS = { ...cfg0, students: [{ id: "ada", name: "Ada Lovelace", email: "ada@student.test" }] };
+    const SESSION_S = JSON.stringify({ access_token: "t", refresh_token: "r", expires_at: 4102444800, user: { id: "u-ada", email: "ada@student.test" } });
+    globalThis.localStorage.getItem = (k) => (k === "classes-session" ? SESSION_S : k === cfgS.storageKey + "-admin" ? "1" : k === cfgS.storageKey + "-user" ? "Ada Lovelace" : null);
+    warmClassData(cfgS.storageKey, { ...warmShapes(cfgS, true), students: cfgS.students });
+    const html = atWidth(PHONE, () => renderToString(<ClassApp config={cfgS} />));
+    globalThis.localStorage.getItem = was;
+    if (!html.includes('aria-label="Next class"')) {
+      console.error("  FAIL  class page, student with the old instructor flag: the page did not render as the student"); failedEarly++; }
+    if (html.includes('href="' + cfgS.path + '/dashboard"') || html.includes("Nothing to grade") || html.includes("Pin link")) {
+      console.error("  FAIL  class page, student with the old instructor flag: the student got the instructor side"); failedEarly++; }
     if (html.includes('href="/repo"')) {
       console.error("  FAIL  class page, student: the repository is showing to a student"); failedEarly++; }
   } catch (err) {
@@ -2179,8 +2197,25 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       const off = { ...hdata, dayPlans: Object.fromEntries(Object.entries(hdata.dayPlans).map(([k, p]) => [k, { ...p, noMeeting: true }])) };
       const none = renderToString(<NextClassHero config={hcfg} data={off} blockOf={() => null} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
       if (!none.includes("No in-person meeting")) say("a day with no meeting has no badge");
-      if (!none.includes("dashed")) say("a day with no meeting has no dashed outline");
+      if (none.includes("dashed") || plain.includes("solid var(--ca-accent)")) say("the hero still has an outline");
+      if (!/background:var\(--state-warn\)[^"]*"[^>]*>No in-person meeting/.test(none)) say("the no-meeting badge is not orange");
       if (none.includes("Vari 133")) say("a day with no meeting still names the room");
+      // Directions under the room, the note above the readings only when there
+      // is one, and Drew's Pick on a picked reading.
+      const withAll = { ...hdata, dayPlans: { ...hdata.dayPlans, "Sep 23": { ...hdata.dayPlans["Sep 23"], studentNote: "Bring the Katrina photo." } } };
+      const pickOf = (id) => (id === "r1" ? { id: "r1", pick: true } : null);
+      const hcfgD = { ...hcfg, directionsUrl: "https://maps.example/vari" };
+      const realNow = Date.now;
+      Date.now = () => mon;
+      const full = renderToString(<NextClassHero config={hcfgD} data={{ ...withAll, schedule: [{ ...withAll.schedule[0], items: withAll.schedule[0].items.map(it => ({ ...it, libId: it.id })) }] }} blockOf={pickOf} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
+      const bare = renderToString(<NextClassHero config={hcfgD} data={hdata} blockOf={() => null} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
+      const edit = renderToString(<NextClassHero config={hcfgD} data={withAll} blockOf={() => null} section="" onOpen={noop} seat={{}} instructor update={noop} />).replace(/<!-- -->/g, "");
+      Date.now = realNow;
+      if (!full.includes('href="https://maps.example/vari"') || full.indexOf("Directions") < full.indexOf("Vari 133")) say("Directions is not under the time and the room");
+      if (!full.includes("Bring the Katrina photo.") || full.indexOf("Bring the Katrina photo.") > full.indexOf("Readings")) say("the note to students is not above the readings");
+      if (bare.includes("Note to students")) say("a student sees a note box with no note in it");
+      if (!full.includes("Drew&#x27;s Pick") && !full.includes("Drew's Pick")) say("a picked reading has no Drew's Pick mark");
+      if (!edit.includes("Note to students") || !edit.includes("<textarea")) say("the instructor has no box for the note on the front page");
       const pins = renderToString(<PinnedLinks data={{ pins: [{ id: "p", title: "Discussion doc", url: "https://docs.google.com/d" }] }} update={noop} seat={{}} />);
       if (!pins.includes("Discussion doc") || !pins.includes('href="https://docs.google.com/d"')) say("a pinned link does not show");
       if (renderToString(<PinnedLinks data={{}} update={noop} seat={{}} />)) say("a student with nothing pinned sees an empty Pinned box");
@@ -2482,6 +2517,16 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (Date.now() < new Date(2026, 11, 20).getTime() && dueText("Dec 31", "11:59 PM") !== "Due Thu Dec 31, 11:59 PM")
     say("an assignment's due badge does not say the weekday and the time: " + dueText("Dec 31", "11:59 PM"));
   if (dueText("Ongoing", "") !== "Ongoing") say("an ongoing assignment does not say Ongoing");
+  // Thursday noon, due Friday night: tomorrow, not two days.
+  {
+    const was = Date.now;
+    Date.now = () => new Date(2026, 9, 8, 12, 0).getTime();
+    const t = dueText("Oct 9", "11:59 PM"), same = dueText("Oct 8", "11:59 PM"), gone = dueText("Oct 7", "11:59 PM");
+    Date.now = was;
+    if (t !== "Due tomorrow, 11:59 PM") say("Thursday noon, something due Friday night reads " + JSON.stringify(t));
+    if (same !== "Due today, 11:59 PM") say("something due tonight reads " + JSON.stringify(same));
+    if (gone !== "1 day past due") say("something due yesterday reads " + JSON.stringify(gone));
+  }
 }
 
 // What students see on a week: games and Headlines from the day plans, and the

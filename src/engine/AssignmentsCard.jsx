@@ -122,8 +122,11 @@ export function dueState(due) {
   if (!due || due === "Ongoing") return null;
   const d = parseDue(due);
   if (!d) return null;
-  const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).getTime();
-  const days = Math.ceil((end - Date.now()) / 86400000);
+  // Calendar days, not hours rounded up. Counting hours made Thursday noon
+  // "Due in 2 days" for something due Friday night, which is tomorrow.
+  const now = new Date(Date.now());
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - today) / 86400000);
   if (days < 0) { const n = -days; return { text: n === 1 ? "1 day past due" : n + " days past due", tone: "late" }; }
   if (days === 0) return { text: "Due today", tone: "now" };
   if (days === 1) return { text: "Due tomorrow", tone: "soon" };

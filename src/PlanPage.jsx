@@ -47,6 +47,29 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep15-hero", date: "Tuesday, September 15", title: "Next class in grey, with directions and a note",
+    blurb: "Andrew looked at samples of the new home page rendered from the live class, and asked for the hero without the light red and the outline, directions under the room, Drew's Pick on the readings, and a note to students he writes from the front page.",
+    groups: [
+      { name: "The Next class card", items: [
+        ["Stone grey, no outline", "The card is a light mix of the theme's own ink over the card colour, so the card stands apart from the white cards without the class colour, and after dark the same mix sits a step lighter than the cards. No outline on any day."],
+        ["An orange badge", "A day with no in-person meeting carries No in-person meeting in the theme's warning orange, in place of the dashed outline."],
+        ["Directions", "A link under the time and the room, to Vari Hall on Google Maps, set in the class's config. Left off on a day with no meeting."],
+        ["Drew's Pick on the readings", "A picked reading carries the chef mark, the same one the schedule uses."],
+        ["A note to students", "Between the day's title and the readings. On Andrew's own view of the front page the card has a box for the note, saved when he clicks away. Students see the note in that spot, and nothing at all when there is no note. The note belongs to that class day, as dayPlans[date].studentNote, apart from the day plan's own notes."],
+        ["A chevron to the schedule", "The top of the card is no longer one big button, because the card holds links now. A chevron at the top right opens the schedule."],
+      ] },
+      { name: "Everywhere", items: [
+        ["Chevrons on the cards", "Andrew picked the chevron from three samples. The open → on every card and on the notices above them is a grey chevron now."],
+        ["Due tomorrow means tomorrow", "The count of days rounded hours up, so Thursday noon read Due in 2 days for something due Friday night. The count is calendar days now, on every due badge and on the due card."],
+        ["Students cannot switch to the instructor side", "The Student and Instructor switch sat in every student's menu, and pressing Instructor set a flag in that student's browser that the class page believed. The switch shows only for Andrew's own sign-in now, and a signed-in student gets the student page whatever the flag says. The build checks this with the flag set, and the check fails on the old code."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "The Directions link searches Google Maps for Vari Hall, Santa Clara University. Check the link lands on the right building.",
+      "The Assignments card keeps its amber outline inside a week of a deadline, and its fill inside two days.",
+    ] },
+  },
+  {
     id: "sep15-home", date: "Tuesday, September 15", title: "The class home leads with the next class",
     blurb: "Andrew looked at the class page as a student and rearranged it: the next class as the hero, then Assignments, Class, Grades and Games, with More holding the theme and a requests and bugs form, and a way to pin a Google Doc on the front page instead of running discussion boards.",
     groups: [

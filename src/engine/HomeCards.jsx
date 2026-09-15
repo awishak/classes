@@ -18,6 +18,7 @@ import { dayTitles } from "./days.js";
 import { studentItems, sourceOf } from "./ScheduleCard.jsx";
 import { Avatar, profileOf } from "./RosterCard.jsx";
 import { dueState } from "./AssignmentsCard.jsx";
+import PickMark from "./Pick.jsx";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -105,7 +106,7 @@ export function nextClassFacts(config, data, blockOf, section, now = Date.now())
   const onDay = studentItems(next.week, plans, blockOf).filter(it => it.date === weekday.slice(0, 3));
   const readings = onDay.filter(it => it.type === "reading").map(it => {
     const block = blockOf ? blockOf(it.blockId || it.libId) : null;
-    return { id: it.id, title: it.title, url: it.url || block?.url || "", source: sourceOf(it, block) };
+    return { id: it.id, title: it.title, url: it.url || block?.url || "", source: sourceOf(it, block), pick: !!block?.pick };
   });
   const games = onDay.filter(it => it.type === "activity" && it.title !== "Headlines").map(it => it.title);
   return {
@@ -113,18 +114,47 @@ export function nextClassFacts(config, data, blockOf, section, now = Date.now())
     time: sittingsFor(config, section).map(timeText).filter(Boolean).join(" and "),
     location: locationOf(config),
     noMeeting: !!plan.noMeeting,
+    note: String(plan.studentNote || "").trim(),
+    directions: config.directionsUrl || "",
     readings, games,
   };
 }
 
-// The hero. A different colour from every other card, and on a day with no
-// meeting in the room a dashed outline and a badge that says so.
-export function NextClassHero({ config, data, blockOf, section, onOpen, seat }) {
+// The note an instructor leaves for the next class, typed on the front page.
+// Saved when the box loses focus, so there is no Save button to forget.
+function NoteEditor({ date, value, update }) {
+  const [draft, setDraft] = useState(value);
+  const [saved, setSaved] = useState(false);
+  const save = () => {
+    const next = draft.trim();
+    if (next === value) return;
+    update(prev => {
+      const plans = { ...(prev.dayPlans || {}) };
+      plans[date] = { ...(plans[date] || {}), studentNote: next };
+      return { ...prev, dayPlans: plans };
+    });
+    setSaved(true);
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <label htmlFor={"note-" + date} style={small}>Note to students</label>
+      <textarea id={"note-" + date} value={draft} onChange={e => { setDraft(e.target.value); setSaved(false); }} onBlur={save}
+        style={{ fontFamily: F, fontSize: 16, minHeight: 84, padding: 12, borderRadius: 10, border: "1px solid " + BORDER_STRONG,
+          background: "var(--surface-card)", color: TEXT_PRIMARY, lineHeight: 1.5, resize: "vertical" }} />
+      {saved ? <span style={{ fontSize: 13, fontWeight: 600, color: TOKENS.STATE.ok }}>Saved</span> : null}
+    </div>
+  );
+}
+
+// The hero. A stone grey drawn from the theme's own ink, so the card stands
+// apart from the white cards without the class colour and without an outline,
+// and after dark the same mix lands a step lighter than the cards. A day with
+// no meeting in the room carries an orange badge.
+export function NextClassHero({ config, data, blockOf, section, onOpen, seat, instructor, update }) {
   const facts = nextClassFacts(config, data, blockOf, section);
-  const tint = "color-mix(in srgb, var(--ca-accent) 9%, var(--surface-card))";
   const frame = {
     ...seat, padding: 20, fontFamily: F, textAlign: "left", width: "100%",
-    background: tint, border: "2px " + (facts?.noMeeting ? "dashed" : "solid") + " var(--ca-accent)",
+    background: "color-mix(in srgb, var(--text-primary) 7%, var(--surface-card))", border: "none", boxShadow: "none",
     display: "flex", flexDirection: "column", gap: 14,
   };
   if (!facts) {
@@ -137,22 +167,41 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat }) 
   }
   return (
     <section aria-label="Next class" style={frame}>
-      <button className="ca-focus" onClick={onOpen}
-        style={{ background: "none", border: "none", padding: 0, textAlign: "left", fontFamily: F, cursor: "pointer", display: "flex", flexDirection: "column", gap: 6, minHeight: TAP, color: TEXT_PRIMARY }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minHeight: 28 }}>
           <span style={{ ...small, color: TEXT_SECONDARY }}>Next class</span>
           {facts.noMeeting ? (
-            <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY, border: "1.5px dashed " + TEXT_PRIMARY, borderRadius: 999, padding: "3px 10px" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--surface-card)", background: WARN, borderRadius: 999, padding: "4px 10px" }}>
               No in-person meeting
             </span>
           ) : null}
+          <button className="ca-focus" onClick={onOpen} aria-label="Schedule"
+            style={{ marginLeft: "auto", minHeight: TAP, minWidth: TAP, background: "none", border: "none", cursor: "pointer", fontSize: 26, lineHeight: 1, color: TEXT_MUTED, padding: 0 }}>
+            ›
+          </button>
         </span>
-        <span style={{ ...DISPLAY, fontSize: 26, lineHeight: 1.15, letterSpacing: "-0.02em" }}>{facts.weekday}, {facts.date}</span>
+        <span style={{ ...DISPLAY, fontSize: 26, lineHeight: 1.15, letterSpacing: "-0.02em", color: TEXT_PRIMARY }}>{facts.weekday}, {facts.date}</span>
         {!facts.noMeeting && (facts.time || facts.location) ? (
           <span style={{ fontSize: 17, color: TEXT_SECONDARY }}>{[facts.time, facts.location].filter(Boolean).join(" · ")}</span>
         ) : null}
-        {facts.title ? <span style={{ fontSize: 19, fontWeight: 600, lineHeight: 1.3, marginTop: 4 }}>{facts.title}</span> : null}
-      </button>
+        {!facts.noMeeting && facts.directions ? (
+          <a className="ca-focus" href={facts.directions} target="_blank" rel="noreferrer"
+            style={{ alignSelf: "flex-start", minHeight: TAP, display: "inline-flex", alignItems: "center", fontSize: 16, fontWeight: 600, color: "var(--ca-accent)", textDecoration: "none" }}>
+            Directions
+          </a>
+        ) : null}
+        {facts.title ? <span style={{ fontSize: 19, fontWeight: 600, lineHeight: 1.3, marginTop: 4, color: TEXT_PRIMARY }}>{facts.title}</span> : null}
+      </div>
+
+      {instructor && update ? (
+        <div style={{ borderTop: "1px solid " + BORDER_STRONG, paddingTop: 12 }}>
+          <NoteEditor key={facts.date} date={facts.date} value={facts.note} update={update} />
+        </div>
+      ) : facts.note ? (
+        <div style={{ borderTop: "1px solid " + BORDER_STRONG, paddingTop: 12, fontSize: 17, lineHeight: 1.5, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>
+          {facts.note}
+        </div>
+      ) : null}
 
       {facts.readings.length ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 2, borderTop: "1px solid " + BORDER_STRONG, paddingTop: 12 }}>
@@ -160,11 +209,14 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat }) 
           {facts.readings.map(r => {
             const inner = (
               <>
-                <span style={{ fontSize: 16, fontWeight: 600, color: TEXT_PRIMARY }}>{r.title}</span>
-                {r.source ? <span style={{ fontSize: 14, color: TEXT_MUTED }}>{r.source}</span> : null}
+                <span style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+                  <span style={{ fontSize: 16, fontWeight: 600, color: TEXT_PRIMARY }}>{r.title}</span>
+                  {r.source ? <span style={{ fontSize: 14, color: TEXT_MUTED }}>{r.source}</span> : null}
+                </span>
+                {r.pick ? <PickMark size={24} /> : null}
               </>
             );
-            const row = { display: "flex", flexDirection: "column", justifyContent: "center", minHeight: TAP, padding: "4px 0", textDecoration: "none" };
+            const row = { display: "flex", alignItems: "center", gap: 10, minHeight: TAP, padding: "4px 0", textDecoration: "none" };
             return r.url
               ? <a key={r.id} className="ca-focus" href={r.url} target="_blank" rel="noreferrer" style={row}>{inner}</a>
               : <div key={r.id} style={row}>{inner}</div>;

@@ -350,7 +350,7 @@ function NeedsYou({ items, accent, onOpen }) {
             borderLeft: "4px solid " + (it.tone === "late" ? LIVE : accent),
             borderRadius: 12, padding: "12px 16px", minHeight: TAP, fontFamily: F }}>
           <span style={{ flex: 1, fontSize: 15, fontWeight: 500, color: TEXT_PRIMARY }}>{it.text}</span>
-          <span style={{ flex: "none", fontSize: 15, fontWeight: 600, color: accent }}>open →</span>
+          <span aria-hidden="true" style={{ flex: "none", fontSize: 26, lineHeight: 1, color: TEXT_MUTED }}>›</span>
         </button>
       ))}
     </div>
@@ -496,7 +496,16 @@ export default function ClassApp({ config, initialCard }) {
   const [dueDone, setDueDone] = useState(false);
   // What the page draws as. The person is still the instructor; the page is
   // drawn the way the chosen student would get the page drawn.
-  const view = preview ? "student" : role;
+  // Who this is, from the session and the roster. The remembered name is what
+  // every card, board and game already keys on, so the session sets that name
+  // and the rest of the site carries on as before. The instructor's email
+  // makes the instructor; nobody has to press a role toggle to get in.
+  const { session, email: sessionEmail, instructor: sessionInstructor, signOut: endSession } = useSession();
+  // Only the instructor's own sign-in can draw the instructor side. The
+  // Student and Instructor switch sat in every student's menu, and pressing
+  // Instructor set a flag in that student's browser that the page believed.
+  // A student signed in is a student, whatever the flag says.
+  const view = preview || (session && !sessionInstructor) ? "student" : role;
 
   // ─── the URL is the state ───
   // /comm999/assignments is a link you can send someone, and Back goes back to
@@ -593,11 +602,6 @@ export default function ClassApp({ config, initialCard }) {
     window.location.href = "/login";
   };
 
-  // Who this is, from the session and the roster. The remembered name is what
-  // every card, board and game already keys on, so the session sets that name
-  // and the rest of the site carries on as before. The instructor's email
-  // makes the instructor; nobody has to press a role toggle to get in.
-  const { session, email: sessionEmail, instructor: sessionInstructor, signOut: endSession } = useSession();
   const rosterNow = withIds(data?.students || config.students || []);
   // The student's own code, read off the row only they can see, for the menu.
   const [ownCode, setOwnCode] = useState("");
@@ -759,7 +763,7 @@ export default function ClassApp({ config, initialCard }) {
               <DayNightPicker theme={theme} mode={mode} onPick={pickMode} />
             </div>
             {rule}
-            <div style={{ padding: "2px 8px 4px" }}>{RoleToggle}</div>
+            {sessionInstructor ? <div style={{ padding: "2px 8px 4px" }}>{RoleToggle}</div> : null}
             {signedIn && !preview ? (
               <>
                 {ownCode ? (
@@ -815,7 +819,9 @@ export default function ClassApp({ config, initialCard }) {
         {i === 0 ? <TubeyPeek theme={theme} /> : null}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{ ...tileTitle(theme), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{s.title}</span>
-          <span style={{ fontSize: 15, fontWeight: 600, color: a, whiteSpace: "nowrap", flexShrink: 0 }}>open →</span>
+          {/* A quiet chevron says the card opens. Andrew picked this over
+              "open →", which read as an instruction rather than a door. */}
+          <span aria-hidden="true" style={{ fontSize: 26, lineHeight: 1, color: TEXT_MUTED, flexShrink: 0 }}>›</span>
         </div>
         {s.body}
       </button>
@@ -915,7 +921,8 @@ export default function ClassApp({ config, initialCard }) {
     : <>
         <div key="hero" style={{ gridColumn: "1 / -1" }}>
           <NextClassHero config={config} data={data} blockOf={ctx.blockOf} section={sectionOf}
-            onOpen={() => go("schedule")} seat={cardStyle(theme, 0)} />
+            onOpen={() => go("schedule")} seat={cardStyle(theme, 0)}
+            instructor={view === "instructor"} update={write} />
         </div>
         {(data?.pins || []).length || view === "instructor" ? (
           <div key="pins" style={{ gridColumn: "1 / -1" }}>

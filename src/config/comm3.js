@@ -16,6 +16,8 @@ const comm3 = {
   name: "Digital Storytelling",
   quarter: "Fall 2026",
   desc: "MWF 8:00 to 9:05 am and 10:30 to 11:35 am \u00b7 Vari 133",
+  // The Directions link on the Next class card.
+  directionsUrl: "https://www.google.com/maps/search/?api=1&query=Vari+Hall%2C+Santa+Clara+University",
 
   // Two sittings on the same day, which is why `meets` takes a list. The Now
   // panel counts down whichever sitting the clock is inside.
