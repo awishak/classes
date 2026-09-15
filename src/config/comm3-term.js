@@ -343,6 +343,7 @@ export const library = [
 export const assignments = [
   {
     "id": "ex1",
+    "scale": "complete",
     "title": "Identifying stories and framing exercise",
     "due": "Sep 27",
     "dueTime": "11:59 PM",
@@ -353,6 +354,7 @@ export const assignments = [
   },
   {
     "id": "ex2",
+    "scale": "complete",
     "title": "Visual language exercise",
     "due": "Oct 4",
     "dueTime": "11:59 PM",
@@ -363,6 +365,7 @@ export const assignments = [
   },
   {
     "id": "visual-pre",
+    "scale": "complete",
     "title": "Visual story pre-production",
     "due": "Oct 9",
     "dueTime": "11:59 PM",
@@ -373,6 +376,7 @@ export const assignments = [
   },
   {
     "id": "ex3",
+    "scale": "complete",
     "title": "Graphics exercise",
     "due": "Oct 11",
     "dueTime": "11:59 PM",
@@ -393,6 +397,7 @@ export const assignments = [
   },
   {
     "id": "ex4",
+    "scale": "complete",
     "title": "Characters exercise",
     "due": "Oct 25",
     "dueTime": "11:59 PM",
@@ -403,6 +408,7 @@ export const assignments = [
   },
   {
     "id": "audio-pre",
+    "scale": "complete",
     "title": "Audio story pre-production",
     "due": "Oct 30",
     "dueTime": "11:59 PM",
@@ -413,6 +419,7 @@ export const assignments = [
   },
   {
     "id": "ex5",
+    "scale": "complete",
     "title": "Audio exercise",
     "due": "Nov 1",
     "dueTime": "11:59 PM",
@@ -433,6 +440,7 @@ export const assignments = [
   },
   {
     "id": "final-pre",
+    "scale": "complete",
     "title": "Final pre-production document",
     "due": "Dec 2",
     "dueTime": "11:59 PM",

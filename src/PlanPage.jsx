@@ -47,6 +47,37 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep15-one-bar", date: "Tuesday, September 15", title: "The same bar on every page",
+    blurb: "Andrew made a rule: every page he opens as instructor, grade view included, has exactly the same top bar.",
+    groups: [
+      { name: "The rule", items: [
+        ["One bar, nothing added", "The class, the five tabs and Apps, the same on every page. The class page, the dashboard, the repository and Games already drew it. Grade view, Ideas, the old game runner, Ask, the discussion board, the old game page, The Brief, Progress, the class list, Archive and the spring class pages now draw it too. The pages behind the instructor gate always show the bar; the rest show the bar when Andrew is the one signed in, so a student on Ask sees Ask as before."],
+        ["The dashboard's bar matches", "Here, Around the Horn, the View menu and the class menu were sitting inside the dashboard's bar. They are in a row of their own right under it now, so the bar itself is the same as everywhere else. Grade view's own Dashboard link is gone, since Apps holds the dashboard."],
+        ["The build holds the rule", "Every page routed in App.jsx has to draw the bar or be wrapped in it, and no page may add its own controls to the bar. Taking the bar off The Brief fails the build."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "The room screen and the presenter window have no bar, because they are what the projector shows. That is the one exception, and Andrew can overrule it.",
+      "The sign-in page has no bar, because nobody is signed in there yet.",
+    ] },
+  },
+  {
+    id: "sep15-complete", date: "Tuesday, September 15", title: "Some challenges are Complete or Not quite",
+    blurb: "Andrew does not want letter grades on every challenge. On some, the question is whether the student did what was asked, so a challenge can be graded as Complete, Not quite, Incomplete or Not submitted, chosen when the challenge is made.",
+    groups: [
+      { name: "The scale", items: [
+        ["Graded with", "The challenge editor has a choice, Letters or Complete. Letters are the seven columns as before. Complete is four: Complete counts 100, Not quite 50, Incomplete 0 and Not submitted 0. Andrew named Not quite, and set the numbers."],
+        ["Grade view", "A Complete challenge sorts into its four columns, with the same drag, the same release and the same grade sent once. A card sorted under letters before a challenge changed scale goes back to the pile. Not submitted is a column Andrew can drag into as well as what a missed deadline already shows."],
+        ["What a student sees", "Your grade: Complete, or Not quite, on the light blue card, and the same on the challenge's page and the grade card, with no sentence under the word. Complete keeps the green check. Not quite is the yellow neutral face, Incomplete moved to an amber circle with a dash so the two never look alike, and Not submitted is red."],
+        ["COMM 3", "The five creative exercises and the three pre-production pieces are graded as Complete. The visual story, the audio story, the final project and class culture stay on letters."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "Not deployed yet.",
+      "Nothing in COMM 118 is on the Complete scale; its challenge list is to be redone.",
+    ] },
+  },
+  {
     id: "sep15-challenges", date: "Tuesday, September 15", title: "Challenges, and one bar for everyone",
     blurb: "Andrew named assignments challenges, asked for graded cards in light blue with the grade as a plain line, and set the rule for the bar: apps at the top for everyone, with him seeing more, and More as the admin page in either view.",
     groups: [

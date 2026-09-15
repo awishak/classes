@@ -15,6 +15,7 @@ import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
 import AskPage from "./engine/AskPage.jsx";
 import GradeView from "./engine/GradeView.jsx";
+import InstructorBar from "./engine/InstructorBar.jsx";
 import PlanPage from "./PlanPage.jsx";
 import ProgressPage from "./ProgressPage.jsx";
 import { ENGINE, currentClasses, archivedClasses } from "./config/registry.js";
@@ -187,23 +188,23 @@ export default function App() {
   }
 
   if (path === "/plan" || path === "/plan/") {
-    return <PlanPage />;
+    return <InstructorBar><PlanPage /></InstructorBar>;
   }
 
   // The long view of September 14 and 15: what was built, with its links.
   if (path === "/progress" || path === "/progress/") {
-    return <ProgressPage />;
+    return <InstructorBar><ProgressPage /></InstructorBar>;
   }
 
   if (path === "/archive" || path === "/archive/") {
-    return <ArchivePage />;
+    return <InstructorBar><ArchivePage /></InstructorBar>;
   }
 
   // The backlog for the repository, behind the same gate as the repository.
   if (path === "/repo/ideas" || path === "/repo/ideas/") {
     return (
       <InstructorGate what="Ideas for the repository">
-        <RepoIdeas />
+        <InstructorBar always><RepoIdeas /></InstructorBar>
       </InstructorGate>
     );
   }
@@ -233,7 +234,7 @@ export default function App() {
     if (live[2] === "grade") {
       return (
         <InstructorGate what={cfg.code + " grade view"}>
-          <GradeView key={cfg.id} config={cfg} />
+          <InstructorBar config={cfg} always><GradeView key={cfg.id} config={cfg} /></InstructorBar>
         </InstructorGate>
       );
     }
@@ -249,14 +250,14 @@ export default function App() {
     if (live[2] === "rungame") {
       return (
         <InstructorGate what={cfg.code + " game"}>
-          <RunGamePage key={cfg.id} config={cfg} />
+          <InstructorBar config={cfg} always><RunGamePage key={cfg.id} config={cfg} /></InstructorBar>
         </InstructorGate>
       );
     }
     if (live[2] === "today") return <ClassroomView key={cfg.id} config={cfg} />;
-    if (live[2] === "board") return <BoardPage key={cfg.id} config={cfg} />;
-    if (live[2] === "game") return <GamePage key={cfg.id} config={cfg} />;
-    return <AskPage key={cfg.id} config={cfg} />;
+    if (live[2] === "board") return <InstructorBar config={cfg}><BoardPage key={cfg.id} config={cfg} /></InstructorBar>;
+    if (live[2] === "game") return <InstructorBar config={cfg}><GamePage key={cfg.id} config={cfg} /></InstructorBar>;
+    return <InstructorBar config={cfg}><AskPage key={cfg.id} config={cfg} /></InstructorBar>;
   }
 
   // The old forked hubs. COMM 2 and COMM 4 handed their public URL to the
@@ -266,7 +267,7 @@ export default function App() {
   const legacy = path.match(/^\/(comm\w+)\/legacy\/?$/);
   if (legacy && LEGACY_PAGE[legacy[1]]) {
     const Page = LEGACY_PAGE[legacy[1]];
-    return <Page />;
+    return <InstructorBar config={ENGINE[legacy[1]]}><Page /></InstructorBar>;
   }
 
   // /<class>/<card>, and /<class>/challenges/<id> for one challenge.
@@ -275,5 +276,5 @@ export default function App() {
     return <ClassApp key={site[1]} config={ENGINE[site[1]]} initialCard={site[2] ? site[2] + (site[3] ? "/" + site[3] : "") : null} />;
   }
 
-  return <LandingPage />;
+  return <InstructorBar><LandingPage /></InstructorBar>;
 }

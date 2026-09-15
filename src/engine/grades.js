@@ -40,7 +40,25 @@ export const BUCKETS = [
     means: "No credit for this one." },
 ];
 
-export const bucketOf = (id) => BUCKETS.find(b => b.id === id) || null;
+// The other way to grade a challenge: did the student do what was asked.
+// Andrew, 2026-09-15: "on some challenges, i don't want to give letter
+// grades. For some, it's complete, off the mark, and incomplete, and not
+// submitted." Off the mark became Not quite. Complete counts 100, Not quite
+// 50, Incomplete and Not submitted 0. No sentence under these on the grade
+// card: the word is the whole message.
+export const COMPLETE_BUCKETS = [
+  { id: "complete", label: "Complete", letter: "Complete", score: 100, blurb: "did what was asked", means: "" },
+  { id: "notquite", label: "Not quite", letter: "Not quite", score: 50, blurb: "tried, not what was asked", means: "" },
+  { id: "incomplete-c", label: "Incomplete", letter: "Incomplete", score: 0, blurb: "counts as a zero", means: "" },
+  { id: "notsubmitted", label: "Not submitted", letter: "Not submitted", score: 0, blurb: "counts as a zero", means: "" },
+];
+
+// How a challenge is graded: "letters", the default, or "complete".
+export const SCALES = { letters: "Letters", complete: "Complete" };
+export const scaleOf = (asg) => (asg?.scale === "complete" ? "complete" : "letters");
+export const bucketsFor = (asg) => (scaleOf(asg) === "complete" ? COMPLETE_BUCKETS : BUCKETS);
+
+export const bucketOf = (id) => BUCKETS.find(b => b.id === id) || COMPLETE_BUCKETS.find(b => b.id === id) || null;
 
 export const boardOf = (data, aid) => data?.gradeBoard?.[aid] || { cards: {}, released: null, seen: {} };
 

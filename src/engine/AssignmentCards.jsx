@@ -6,8 +6,10 @@
 // page." Then, answering questions about it:
 //
 //   - a green circle with a check when the work is turned in, and still green
-//     once graded; an Incomplete is a yellow neutral face, an F a red X, and
-//     a deadline gone by with nothing in is red
+//     once graded; Not quite is a yellow neutral face, Incomplete an amber
+//     dash, an F a red X, and a deadline gone by with nothing in is red
+//   - a challenge is graded in letters or as Complete, Not quite, Incomplete
+//     and Not submitted, chosen in the editor
 //   - a circle marker and an outline together; graded work is solid light
 //     blue, every other card is white
 //   - a graded card shows the comment and Details, New until the grade is
@@ -97,12 +99,16 @@ export function inDueOrder(assignments) {
   }).map(([a]) => a);
 }
 
-// Green once the work is in, and still green once graded. An Incomplete is a
-// yellow face that is neither happy nor sad, an F is a red X, and a deadline
-// that went by with nothing in is a red circle with an exclamation mark.
+// Green once the work is in, and still green once graded. An F is a red X,
+// and a deadline that went by with nothing in is a red circle with an
+// exclamation mark. Not quite is the yellow neutral face; Incomplete is an
+// amber circle with a dash, so the two never look alike; Not submitted is
+// red like a missed deadline.
 function Marker({ st, size = 26 }) {
   const { state, letter } = st;
-  if (state === "graded" && letter === "Incomplete") return <NeutralFace size={size} />;
+  if (state === "graded" && letter === "Not quite") return <NeutralFace size={size} label="Not quite" />;
+  if (state === "graded" && letter === "Incomplete") return <Dot bg={WARN} fg="#fff" size={size} label="Incomplete">–</Dot>;
+  if (state === "graded" && letter === "Not submitted") return <Dot bg={LATE} fg="#fff" size={size} label="Not submitted">!</Dot>;
   if (state === "graded" && letter === "F") return <Dot bg={LATE} fg="#fff" size={size} label="F">✕</Dot>;
   if (state === "turnedIn" || state === "graded") return <Dot bg={OK} fg="#fff" size={size} label={state === "graded" ? "Graded" : "Turned in"}>✓</Dot>;
   if (state === "missed") return <Dot bg={LATE} fg="#fff" size={size} label="Missed">!</Dot>;
@@ -110,8 +116,8 @@ function Marker({ st, size = 26 }) {
 }
 
 // Drawn rather than an emoji, so every phone draws the same face.
-const NeutralFace = ({ size }) => (
-  <svg role="img" aria-label="Incomplete" width={size} height={size} viewBox="0 0 24 24" style={{ flex: "none" }}>
+const NeutralFace = ({ size, label = "Not quite" }) => (
+  <svg role="img" aria-label={label} width={size} height={size} viewBox="0 0 24 24" style={{ flex: "none" }}>
     <circle cx="12" cy="12" r="12" fill="#facc15" />
     <circle cx="8.3" cy="9.6" r="1.6" fill="#1c1917" />
     <circle cx="15.7" cy="9.6" r="1.6" fill="#1c1917" />

@@ -10,7 +10,7 @@ import { useClassData } from "./store.js";
 import { ThemeStyle } from "./ThemeShell.jsx";
 import { withIds } from "./roster.js";
 import { isLate } from "./AssignmentsCard.jsx";
-import { BUCKETS, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText } from "./grades.js";
+import { bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText } from "./grades.js";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -117,7 +117,12 @@ export default function GradeView({ config }) {
   // is the first card grabbed. Anyone with nothing turned in sits at the end,
   // in roster order.
   const firstIn = (s) => { const subs = (data?.assignmentLog?.[aid]?.[s.name] || []).filter(e => e.type === "submission"); return subs.length ? subs[0].ts : Infinity; };
-  const pile = roster.filter(s => !board.cards?.[s.name]?.bucket)
+  // The columns this challenge is graded in: letters, or Complete, Not quite,
+  // Incomplete and Not submitted. A card sorted under the other scale before
+  // the challenge changed scale goes back to the pile.
+  const columns = bucketsFor(asg);
+  const inScale = new Set(columns.map(b => b.id));
+  const pile = roster.filter(s => !inScale.has(board.cards?.[s.name]?.bucket))
     .map((s, i) => ({ s, i, ts: firstIn(s) }))
     .sort((x, y) => (x.ts - y.ts) || (x.i - y.i))
     .map(x => x.s);
@@ -143,7 +148,6 @@ export default function GradeView({ config }) {
 
       <header style={{ position: "sticky", top: 0, zIndex: 5, background: WHITE, borderBottom: "1px solid " + LINE }}>
         <div style={{ maxWidth: 1600, margin: "0 auto", padding: "10px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-          <a className="gv-focus" href={config.path + "/dashboard"} style={{ color: a, fontSize: 15, fontWeight: 600, textDecoration: "none", minHeight: HIT, display: "inline-flex", alignItems: "center" }}>← Dashboard</a>
           <div style={{ fontSize: 15, fontWeight: 600 }}>{config.code} · Grade view</div>
           {assignments.length ? (
             <select className="gv-focus" value={aid} onChange={e => pick(e.target.value)} aria-label="Challenge"
@@ -215,7 +219,7 @@ export default function GradeView({ config }) {
 
           {/* the columns */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, alignItems: "stretch" }}>
-            {BUCKETS.map(b => {
+            {columns.map(b => {
               const here = inBucket(b.id);
               return (
                 <section key={b.id} {...zoneProps(b.id)} aria-label={b.label}
@@ -246,7 +250,7 @@ function Card({ student, due, card, work, accent, dragging, picked, editing, onD
 
   const late = work.last ? isLate(work.last.ts, due) : false;
   const link = work.link;
-  const grade = card.bucket ? BUCKETS.find(b => b.id === card.bucket) : null;
+  const grade = card.bucket ? bucketOf(card.bucket) : null;
 
   return (
     <div className="gv-card" draggable={!editing} data-dragging={dragging ? "1" : "0"}

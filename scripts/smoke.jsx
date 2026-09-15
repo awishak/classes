@@ -85,8 +85,9 @@ import { NextClassHero, nextClassFacts, timeText, PinnedLinks, RequestForm } fro
 import comm118Cfg from "../src/config/comm118.js";
 import { AssignmentCards, AssignmentPage, statusOf, inDueOrder } from "../src/engine/AssignmentCards.jsx";
 import { appsFor } from "../src/engine/apps.js";
+import InstructorBar from "../src/engine/InstructorBar.jsx";
 import comm3Cfg from "../src/config/comm3.js";
-import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, unseenGrades, markSeen, meetingPatch, letterOf, BUCKETS } from "../src/engine/grades.js";
+import { bucketsFor, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, unseenGrades, markSeen, meetingPatch, letterOf, BUCKETS } from "../src/engine/grades.js";
 import GradeParade from "../src/engine/GradeParade.jsx";
 import { computeGrade, dueText } from "../src/engine/AssignmentsCard.jsx";
 import { sectionsOf, takeGroup, placeGroup, parseRange, sumRanges, rangeLabel, placeSection, splitSection, templateOf, applyTemplate } from "../src/engine/dayplan.js";
@@ -1144,6 +1145,37 @@ cases.push(["Instructor links", <InstructorLinks />]);
   } catch (err) {
     console.error("  FAIL  class page, student: " + err.message); failedEarly++;
   }
+}
+
+// One bar on every page Andrew opens. Andrew, 2026-09-15: "every page that i
+// access as instructor, including grade view, has to have the exact same top
+// nav." Checked from the source, because the pages are routed in App.jsx and
+// a new page added there without the bar is exactly the mistake to catch.
+{
+  const say = (m) => { console.error("  FAIL  one bar: " + m); failedEarly++; };
+  const { readFileSync: readSrc } = await import("node:fs");
+  const app = readSrc(new URL("../src/App.jsx", import.meta.url), "utf8");
+  // Pages that draw TopNav themselves.
+  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GamesPage: "engine/GamesPage.jsx" };
+  // What the projector shows, and the page you sign in on before you are anybody.
+  const EXEMPT = new Set(["ClassroomView", "EnginePresenter", "TriviaPresenter4", "TriviaPresenter118", "LoginPage", "InstructorGate", "InstructorBar"]);
+  const routed = [...app.matchAll(/return\s*\(?\s*<([A-Z]\w*)/g), ...app.matchAll(/<InstructorGate[^>]*>\s*<([A-Z]\w*)/g)].map(m => m[1]);
+  [...new Set(routed)].forEach(name => {
+    if (EXEMPT.has(name) || SELF[name]) return;
+    if (!new RegExp("<InstructorBar[^>]*>\\s*<" + name + "\\b").test(app)) say(name + " is routed without the top bar");
+  });
+  Object.entries(SELF).forEach(([name, file]) => {
+    const src = readSrc(new URL("../src/" + file, import.meta.url), "utf8");
+    if (!src.includes("<TopNav")) say(name + " draws no top bar");
+    // Exactly the same bar: nothing handed into it but the theme furniture
+    // the class page carries for a student's theme.
+    const calls = [...src.matchAll(/<TopNav[\s\S]*?\/>/g)].map(m => m[0]);
+    calls.forEach(c => { if (/moreNode=/.test(c) || (name !== "ClassApp" && /right=/.test(c))) say(name + " adds its own controls to the top bar"); });
+  });
+  try {
+    const html = renderToString(<InstructorBar config={cfg0} always><div>page</div></InstructorBar>);
+    if (!html.includes('aria-label="Teaching surfaces"') || !/>Apps<span/.test(html) || !html.includes(">Challenges<")) say("the wrapper does not draw the same bar");
+  } catch (err) { say("the wrapper threw: " + err.message); }
 }
 
 // Four themes, and a student switching between them.
@@ -2297,8 +2329,27 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
         return renderToString(<AssignmentCards config={acfg} data={d2} name={N} go={noop} />);
       };
       if (!/aria-label="Graded"[^>]*background:var\(--state-ok\)|background:var\(--state-ok\)[^>]*aria-label="Graded"|aria-label="Graded" style="[^"]*background:var\(--state-ok\)/.test(cards)) say("a graded card's marker is not green");
-      if (!withLetter("incomplete").includes('aria-label="Incomplete"')) say("an Incomplete does not get the neutral face");
+      if (!withLetter("incomplete").includes('aria-label="Incomplete"')) say("an Incomplete has no marker");
       if (!/aria-label="F"[^>]*>✕/.test(withLetter("f"))) say("an F does not get the red X");
+      // Graded as Complete: Complete 100, Not quite 50, Incomplete and Not
+      // submitted 0; Not quite is the yellow face and Incomplete is not.
+      const byScale = { ...acfg, assignments: acfg.assignments.map(x => x.id === "graded" ? { ...x, scale: "complete" } : x) };
+      const scaled = (bucket) => releasePatch(placeCard({ ...ad, assignments: byScale.assignments }, "graded", N, bucket, 20), "graded", N, now - 5e6);
+      const scoreOf = (bucket) => computeGrade(byScale, scaled(bucket), N).rows.find(r => r.id === "graded");
+      [["complete", 100, "Complete"], ["notquite", 50, "Not quite"], ["incomplete-c", 0, "Incomplete"], ["notsubmitted", 0, "Not submitted"]].forEach(([b, score, word]) => {
+        const r = scoreOf(b);
+        if (r.score !== score || r.letter !== word) say(`${word} does not count ${score}: ` + JSON.stringify(r));
+      });
+      const nq = renderToString(<AssignmentCards config={byScale} data={scaled("notquite")} name={N} go={noop} />);
+      if (!/<svg[^>]*aria-label="Not quite"/.test(nq) || !/Your grade: <strong[^>]*>Not quite</.test(nq)) say("Not quite has no yellow face, or no Your grade: Not quite");
+      if (/<svg[^>]*aria-label="Incomplete"/.test(renderToString(<AssignmentCards config={byScale} data={scaled("incomplete-c")} name={N} go={noop} />))) say("Incomplete still wears the face that means Not quite");
+      if (bucketsFor(byScale.assignments.find(x => x.id === "graded")).map(b => b.label).join("|") !== "Complete|Not quite|Incomplete|Not submitted") say("a Complete challenge has the wrong columns");
+      if (bucketsFor({}).length !== 7) say("a challenge with no scale is not graded in letters");
+      const gcfg = { ...cfg, storageKey: "smoke-complete-scale", assignments: [{ id: "cx", title: "Exercise", due: "Sep 27", weight: 3, scale: "complete" }] };
+      warmClassData(gcfg.storageKey, { assignments: gcfg.assignments, students: cfg.students });
+      const gv = renderToString(<GradeView config={gcfg} />);
+      ['aria-label="Complete"', 'aria-label="Not quite"', 'aria-label="Not submitted"'].forEach(t => { if (!gv.includes(t)) say("Grade view has no column " + t); });
+      if (gv.includes('aria-label="Exceptional"')) say("Grade view shows letter columns for a Complete challenge");
       ["Tighten the ending.", ">New<", 'aria-label="Turned in"', 'aria-label="Missed"', 'aria-label="Graded"', "Details", "Ongoing"].forEach(t => { if (!cards.includes(t)) say("the assignment cards never show " + JSON.stringify(t)); });
       if (!/data-current="1"[^>]*>[\s\S]{0,400}Leadership Guide/.test(cards)) say("the page does not scroll to the next thing due");
       if (/Instructions/.test(cards)) say("a card still says Instructions");

@@ -4982,23 +4982,26 @@ export default function Dashboard({ config }) {
           Here, Around the Horn, Look, View — are controls that act on the day,
           not navigation, so they moved down to sit with the day they act on. */}
       <div ref={headRef} style={{ position: "sticky", top: 0, zIndex: 30 }}>
-        <TopNav config={config} tabs={NAV_TEACH} active="dashboard"
-          moreNode={<ClassMenu config={config} onLook={() => setColorsOpen(true)}
-            panels={LIVE_RAIL.map(id => ({ id, label: TITLES[id], n: RAIL_N[id] }))}
-            onPanel={setRoomOpen} />}
-          right={
-            <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <button className="dash-focus dash-bar" onClick={() => setHereOpen(true)}>
-                Here{students.length ? <span className="dash-bar-sub">{students.length - outCount}/{students.length}</span> : null}
-              </button>
-              <button className="dash-focus dash-bar" onClick={() => setHornOpen(true)}>Around the Horn</button>
-              <ViewMenu railOpen={railOpen} onRail={toggleRail}
-                dense={dense} onDense={() => railSave.current({ dense: !dense })}
-                onReset={() => railSave.current({ cols: { ...COL } })}
-                onKeys={() => { setCmdOpen(false); setKeysOpen(true); }}
-                dragKeeps={dragKeeps} onDragKeeps={() => setDragKeeps(v => !v)} />
-            </span>
-          } />
+        <TopNav config={config} tabs={NAV_TEACH} active="dashboard" />
+        {/* The bar is the same on every page, with nothing added, so the
+            dashboard's own controls sit in a row of their own under it. */}
+        <div style={{ background: "var(--surface-card)", borderBottom: "1px solid var(--line-soft)" }}>
+          <div style={{ maxWidth: 1760, margin: "0 auto", padding: "6px 20px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <ClassMenu config={config} onLook={() => setColorsOpen(true)}
+              panels={LIVE_RAIL.map(id => ({ id, label: TITLES[id], n: RAIL_N[id] }))}
+              onPanel={setRoomOpen} />
+            <span style={{ flex: "1 1 auto" }} />
+            <button className="dash-focus dash-bar" onClick={() => setHereOpen(true)}>
+              Here{students.length ? <span className="dash-bar-sub">{students.length - outCount}/{students.length}</span> : null}
+            </button>
+            <button className="dash-focus dash-bar" onClick={() => setHornOpen(true)}>Around the Horn</button>
+            <ViewMenu railOpen={railOpen} onRail={toggleRail}
+              dense={dense} onDense={() => railSave.current({ dense: !dense })}
+              onReset={() => railSave.current({ cols: { ...COL } })}
+              onKeys={() => { setCmdOpen(false); setKeysOpen(true); }}
+              dragKeeps={dragKeeps} onDragKeeps={() => setDragKeeps(v => !v)} />
+          </div>
+        </div>
       </div>
 
       <Reminders />

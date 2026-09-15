@@ -13,7 +13,7 @@
 import { useState, useRef, useEffect } from "react";
 import { genId } from "../utils.jsx";
 import { draftFeedback, textToHtml } from "./feedback.js";
-import { gradeText } from "./grades.js";
+import { gradeText, scaleOf, SCALES } from "./grades.js";
 import * as TOKENS from "./tokens.js";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -654,6 +654,7 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
   const [instructionsUrl, setInstructionsUrl] = useState(asg?.instructionsUrl || "");
   const [closeAt, setCloseAt] = useState(asg?.closeAt || "");
   const [rubric, setRubric] = useState(asg?.rubric || []);
+  const [scale, setScale] = useState(scaleOf(asg));
 
   const setCrit = (id, field, val) => setRubric(r => r.map(c => c.id === id ? { ...c, [field]: val } : c));
   const rubricTotal = rubric.reduce((s, c) => s + (Number(c.points) || 0), 0);
@@ -666,7 +667,7 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
     // edited.
     onSave({
       ...(asg || {}),
-      id: asg?.id || genId(), title: title.trim(), due: due.trim(), dueTime: dueTime.trim(), weight: Number(weight) || 0,
+      id: asg?.id || genId(), title: title.trim(), due: due.trim(), dueTime: dueTime.trim(), weight: Number(weight) || 0, scale,
       description: description.trim(), instructionsUrl: instructionsUrl.trim(), closeAt: closeAt || "",
       rubric: rubric.filter(c => c.name.trim()).map(c => ({ id: c.id, name: c.name.trim(), points: Number(c.points) || 0 })),
     });
@@ -683,6 +684,20 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
         <div style={{ flex: 1 }}><div style={fieldL}>Due time</div><input value={dueTime} onChange={e => setDueTime(e.target.value)} placeholder="11:59 PM" style={{ ...inputStyle, marginTop: 6 }} /></div>
         <div style={{ width: 120 }}><div style={fieldL}>Weight %</div><input type="number" min="0" value={weight} onChange={e => setWeight(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} /></div>
       </div>
+      {/* How the challenge is graded, chosen when it is made. Letters are the
+          seven columns; Complete is Complete, Not quite, Incomplete and Not
+          submitted. */}
+      <div style={fieldL}>Graded with</div>
+      <div role="radiogroup" aria-label="Graded with" style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+        {Object.entries(SCALES).map(([id, name]) => (
+          <button key={id} role="radio" aria-checked={scale === id} onClick={() => setScale(id)}
+            style={{ minHeight: TAP, padding: "0 18px", borderRadius: 999, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer",
+              border: "1px solid " + (scale === id ? a : BORDER_STRONG), background: scale === id ? a : "#fff", color: scale === id ? "#fff" : TEXT_PRIMARY }}>
+            {name}
+          </button>
+        ))}
+      </div>
+      <Muted style={{ marginTop: 6 }}>{scale === "complete" ? "Complete, Not quite, Incomplete or Not submitted." : "A, B, C, D, Incomplete or F."}</Muted>
       <div style={fieldL}>Short description</div>
       <textarea value={description} onChange={e => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical", marginTop: 6 }} />
       <div style={fieldL}>Details link</div>
