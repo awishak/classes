@@ -47,6 +47,22 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep15-hero-white", date: "Tuesday, September 15", title: "Next class goes white, and the picks come first",
+    blurb: "Andrew looked at the live card. The stone grey was not working, and Drew's Pick sat in a white box on it, so the card is white. Directions went to Varsi Hall instead of Vari Hall, so the link is off.",
+    groups: [
+      { name: "The Next class card", items: [
+        ["White", "The card takes the same white and the same card edge as every other card, so the Drew's Pick drawing, which has a white ground of its own, sits on white."],
+        ["Tighter under the date", "The time and the room sit closer under the date, and Directions, when a class has a link, sits tight under the room while keeping its full height to tap."],
+        ["Drew's Picks first", "Picked readings lead the list, and the rest follow in the order the day has them."],
+        ["Show all past three", "The card shows three readings. With more, a Show all button opens the rest, and Show fewer folds them back."],
+        ["Directions is off", "The Google Maps search for Vari Hall, Santa Clara University landed on Varsi Hall, which is a different building. Both classes' links are removed, and the build fails if one comes back into either config without being changed. The card still draws Directions for a class whose config has a link."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "A Directions link that goes to Vari Hall itself, when there is one to use.",
+    ] },
+  },
+  {
     id: "sep15-hero", date: "Tuesday, September 15", title: "Next class in grey, with directions and a note",
     blurb: "Andrew looked at samples of the new home page rendered from the live class, and asked for the hero without the light red and the outline, directions under the room, Drew's Pick on the readings, and a note to students he writes from the front page.",
     groups: [

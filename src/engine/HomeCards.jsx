@@ -42,7 +42,10 @@ export const tileTitle = (theme) => theme === "clean"
 
 // ─── the next class ───
 
-const WEEKDAY_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+// Readings on the card before the rest fold behind Show all.
+export const READINGS_SHOWN = 3;
+
+const WEEKDAY_FULL =["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const dateOf = (s) => { const d = s ? new Date(s + ", 2026") : null; return d && !isNaN(d) ? d : null; };
 const meetsOf = (config) => (Array.isArray(config.meets) ? config.meets : config.meets ? [config.meets] : []);
 
@@ -107,7 +110,9 @@ export function nextClassFacts(config, data, blockOf, section, now = Date.now())
   const readings = onDay.filter(it => it.type === "reading").map(it => {
     const block = blockOf ? blockOf(it.blockId || it.libId) : null;
     return { id: it.id, title: it.title, url: it.url || block?.url || "", source: sourceOf(it, block), pick: !!block?.pick };
-  });
+  })
+    // Drew's Picks first, and otherwise the order the day lists them.
+    .map((r, i) => [r, i]).sort((x, y) => (y[0].pick - x[0].pick) || (x[1] - y[1])).map(([r]) => r);
   const games = onDay.filter(it => it.type === "activity" && it.title !== "Headlines").map(it => it.title);
   return {
     date: next.date, weekday, title,
@@ -152,9 +157,13 @@ function NoteEditor({ date, value, update }) {
 // no meeting in the room carries an orange badge.
 export function NextClassHero({ config, data, blockOf, section, onOpen, seat, instructor, update }) {
   const facts = nextClassFacts(config, data, blockOf, section);
+  const [allReadings, setAllReadings] = useState(false);
+  // White, like every other card. The tinted versions did not work, and the
+  // Drew's Pick drawing has a white ground of its own that showed as a box on
+  // anything else.
   const frame = {
     ...seat, padding: 20, fontFamily: F, textAlign: "left", width: "100%",
-    background: "color-mix(in srgb, var(--text-primary) 7%, var(--surface-card))", border: "none", boxShadow: "none",
+    background: "var(--surface-card)",
     display: "flex", flexDirection: "column", gap: 14,
   };
   if (!facts) {
@@ -167,7 +176,7 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat, in
   }
   return (
     <section aria-label="Next class" style={frame}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minHeight: 28 }}>
           <span style={{ ...small, color: TEXT_SECONDARY }}>Next class</span>
           {facts.noMeeting ? (
@@ -182,15 +191,17 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat, in
         </span>
         <span style={{ ...DISPLAY, fontSize: 26, lineHeight: 1.15, letterSpacing: "-0.02em", color: TEXT_PRIMARY }}>{facts.weekday}, {facts.date}</span>
         {!facts.noMeeting && (facts.time || facts.location) ? (
-          <span style={{ fontSize: 17, color: TEXT_SECONDARY }}>{[facts.time, facts.location].filter(Boolean).join(" · ")}</span>
+          <span style={{ fontSize: 17, lineHeight: 1.3, color: TEXT_SECONDARY }}>{[facts.time, facts.location].filter(Boolean).join(" · ")}</span>
         ) : null}
+        {/* Tight under the room line: the link keeps its 44px to tap in, and
+            the negative margin takes the extra height back out of the gap. */}
         {!facts.noMeeting && facts.directions ? (
           <a className="ca-focus" href={facts.directions} target="_blank" rel="noreferrer"
-            style={{ alignSelf: "flex-start", minHeight: TAP, display: "inline-flex", alignItems: "center", fontSize: 16, fontWeight: 600, color: "var(--ca-accent)", textDecoration: "none" }}>
+            style={{ alignSelf: "flex-start", minHeight: TAP, margin: "-10px 0", display: "inline-flex", alignItems: "center", fontSize: 16, fontWeight: 600, lineHeight: 1.3, color: "var(--ca-accent)", textDecoration: "none" }}>
             Directions
           </a>
         ) : null}
-        {facts.title ? <span style={{ fontSize: 19, fontWeight: 600, lineHeight: 1.3, marginTop: 4, color: TEXT_PRIMARY }}>{facts.title}</span> : null}
+        {facts.title ? <span style={{ fontSize: 19, fontWeight: 600, lineHeight: 1.3, marginTop: 10, color: TEXT_PRIMARY }}>{facts.title}</span> : null}
       </div>
 
       {instructor && update ? (
@@ -206,7 +217,7 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat, in
       {facts.readings.length ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 2, borderTop: "1px solid " + BORDER_STRONG, paddingTop: 12 }}>
           <span style={small}>Readings</span>
-          {facts.readings.map(r => {
+          {(allReadings ? facts.readings : facts.readings.slice(0, READINGS_SHOWN)).map(r => {
             const inner = (
               <>
                 <span style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
@@ -221,6 +232,13 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat, in
               ? <a key={r.id} className="ca-focus" href={r.url} target="_blank" rel="noreferrer" style={row}>{inner}</a>
               : <div key={r.id} style={row}>{inner}</div>;
           })}
+          {facts.readings.length > READINGS_SHOWN ? (
+            <button className="ca-focus" onClick={() => setAllReadings(v => !v)} aria-expanded={allReadings}
+              style={{ alignSelf: "flex-start", minHeight: TAP, background: "none", border: "none", padding: 0, cursor: "pointer",
+                fontFamily: F, fontSize: 16, fontWeight: 600, color: "var(--ca-accent)" }}>
+              {allReadings ? "Show fewer" : "Show all " + facts.readings.length + " readings"}
+            </button>
+          ) : null}
         </div>
       ) : null}
 

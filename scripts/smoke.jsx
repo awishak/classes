@@ -82,6 +82,8 @@ import GradeView from "../src/engine/GradeView.jsx";
 import GradeDeck from "../src/engine/GradeDeck.jsx";
 import DueDeck, { dueSoon, dismissDue, deadlineOf } from "../src/engine/DueCard.jsx";
 import { NextClassHero, nextClassFacts, timeText, PinnedLinks, RequestForm } from "../src/engine/HomeCards.jsx";
+import comm118Cfg from "../src/config/comm118.js";
+import comm3Cfg from "../src/config/comm3.js";
 import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, unseenGrades, markSeen, meetingPatch, letterOf, BUCKETS } from "../src/engine/grades.js";
 import GradeParade from "../src/engine/GradeParade.jsx";
 import { computeGrade, dueText } from "../src/engine/AssignmentsCard.jsx";
@@ -2216,6 +2218,19 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       if (bare.includes("Note to students")) say("a student sees a note box with no note in it");
       if (!full.includes("Drew&#x27;s Pick") && !full.includes("Drew's Pick")) say("a picked reading has no Drew's Pick mark");
       if (!edit.includes("Note to students") || !edit.includes("<textarea")) say("the instructor has no box for the note on the front page");
+      // White, like the other cards: the Drew's Pick drawing has a white ground.
+      if (plain.includes("color-mix") || !plain.includes("background:var(--surface-card)")) say("the hero is not white");
+      // No class sends students anywhere by a Directions link until the link is right.
+      [comm118Cfg, comm3Cfg].forEach(c => { if (c.directionsUrl) say(c.code + " has a Directions link again; the last one landed on Varsi Hall"); });
+      // Drew's Picks first, and past three readings the rest fold behind Show all.
+      const many = { ...hdata, schedule: [{ ...hdata.schedule[0], items: ["a", "b", "c", "d", "e"].map((x, i) => ({ id: x, libId: x, type: "reading", title: "Reading " + x.toUpperCase(), url: "https://x.test/" + x, date: "Wed" })) }] };
+      Date.now = () => mon;
+      const folded = nextClassFacts(hcfg, many, (id) => (id === "d" ? { id: "d", pick: true } : null), "");
+      const five = renderToString(<NextClassHero config={hcfg} data={many} blockOf={(id) => (id === "d" ? { id: "d", pick: true } : null)} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
+      Date.now = realNow;
+      if (folded.readings[0].title !== "Reading D") say("Drew's Pick is not the first reading: " + folded.readings.map(r => r.title).join(", "));
+      if (!five.includes("Show all 5 readings")) say("five readings have no Show all");
+      if (five.includes("Reading C") || five.includes("Reading E") || !five.includes("Reading B")) say("the card does not show exactly the pick and the next two before Show all");
       const pins = renderToString(<PinnedLinks data={{ pins: [{ id: "p", title: "Discussion doc", url: "https://docs.google.com/d" }] }} update={noop} seat={{}} />);
       if (!pins.includes("Discussion doc") || !pins.includes('href="https://docs.google.com/d"')) say("a pinned link does not show");
       if (renderToString(<PinnedLinks data={{}} update={noop} seat={{}} />)) say("a student with nothing pinned sees an empty Pinned box");

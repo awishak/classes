@@ -18,8 +18,8 @@ const comm118 = {
   name: "Communication and Sport",
   quarter: "Fall 2026",
   desc: "MWF 9:15 to 10:20 am \u00b7 Vari 133",
-  // The Directions link on the Next class card.
-  directionsUrl: "https://www.google.com/maps/search/?api=1&query=Vari+Hall%2C+Santa+Clara+University",
+  // directionsUrl: a link here puts Directions under the room on the Next
+  // class card. Off for now: the Vari Hall search landed on Varsi Hall.
 
   // Used by the Now panel to count down the minutes left in the session.
   meets: { start: "09:15", end: "10:20" },
