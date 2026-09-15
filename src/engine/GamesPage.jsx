@@ -21,6 +21,8 @@ import { gameClient } from "./gameClient.js";
 import { castFor } from "./gameCast.js";
 import { normSlot } from "./dayplan.js";
 import * as TOKENS from "./tokens.js";
+import TopNav, { NAV_TEACH } from "./TopNav.jsx";
+import { ClassMenu } from "./Dashboard.jsx";
 
 const emailOf = (s) => String(s?.email || "").trim().toLowerCase();
 
@@ -29,6 +31,21 @@ export default function GamesPage({ config }) {
   const [live, cast, push] = useLive(config.storageKey);
   const { session, instructor } = useSession();
   const [error, setError] = useState("");
+  // The bar is pinned, and the games list down the left sits just under it.
+  const barRef = useRef(null);
+  const [barH, setBarH] = useState(0);
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(([e]) => setBarH(Math.round(e.target.getBoundingClientRect().height)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [session, instructor]);
+  const bar = (
+    <div ref={barRef} style={{ position: "sticky", top: 0, zIndex: 30 }}>
+      <TopNav config={config} tabs={NAV_TEACH} active="more" moreNode={<ClassMenu config={config} />} />
+    </div>
+  );
 
   useEffect(() => {
     document.title = config.code + " · Games";
@@ -69,15 +86,19 @@ export default function GamesPage({ config }) {
 
   if (!session || !instructor) {
     return (
-      <div style={{ minHeight: "100vh", background: TOKENS.SURFACE.page, color: TOKENS.TEXT.primary, fontFamily: TOKENS.FONT.body, padding: 32 }}>
-        <p style={{ fontSize: 17, margin: "0 0 12px" }}>Games run on your email sign-in.</p>
-        <a href="/login" style={{ fontSize: 17, fontWeight: 600, color: config.accent }}>Sign in</a>
+      <div style={{ minHeight: "100vh", background: TOKENS.SURFACE.page, color: TOKENS.TEXT.primary, fontFamily: TOKENS.FONT.body }}>
+        {bar}
+        <div style={{ padding: 32 }}>
+          <p style={{ fontSize: 17, margin: "0 0 12px" }}>Games run on your email sign-in.</p>
+          <a href="/login" style={{ fontSize: 17, fontWeight: 600, color: config.accent }}>Sign in</a>
+        </div>
       </div>
     );
   }
 
   return (
     <>
+      {bar}
       {error ? (
         <div role="alert" style={{ position: "fixed", left: 16, right: 16, bottom: 16, zIndex: 50, maxWidth: 720, margin: "0 auto", padding: "12px 16px", borderRadius: 12,
           background: TOKENS.SURFACE.card, color: TOKENS.STATE.late, boxShadow: "0 0 0 1px " + TOKENS.LINE.strong + ", 0 12px 32px -12px rgba(28,25,23,.3)",
@@ -87,7 +108,7 @@ export default function GamesPage({ config }) {
         </div>
       ) : null}
       <GamesHome supabase={gameClient} groupKey={config.id} context={config.code} roster={roster}
-        onScreen={(view, game) => cast(castFor(view, game, roster.length))} onGame={onGame} onError={onError}  places={places} />
+        onScreen={(view, game) => cast(castFor(view, game, roster.length))} onGame={onGame} onError={onError} places={places} top={barH} />
     </>
   );
 }

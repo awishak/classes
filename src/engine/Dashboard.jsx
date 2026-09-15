@@ -3216,7 +3216,7 @@ const menuRow = {
 // Everything under the class name is a way out of this class, which is what
 // they have in common and why they were wrong scattered along the bar as if
 // they were actions.
-function ClassMenu({ config, onLook, panels, onPanel }) {
+export function ClassMenu({ config, onLook, panels, onPanel }) {
   const go = (href) => () => {
     window.history.pushState({}, "", href);
     window.dispatchEvent(new PopStateEvent("popstate"));
