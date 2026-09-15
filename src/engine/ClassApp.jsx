@@ -603,7 +603,7 @@ export default function ClassApp({ config, initialCard }) {
   // the game, the agreement box and Start, and the game also sits in
   // Community. Each answer is its own row (decks), signed as this student.
   const gameViewer = me && sessionEmail ? { id: String(sessionEmail).trim().toLowerCase(), name: me.name } : null;
-  const { games } = useOpenGames({ supabase: gameClient, groupKey: config.id, viewerId: gameViewer?.id });
+  const { games } = useOpenGames({ supabase: gameClient, groupKey: config.id, viewerId: gameViewer?.id, section: me?.section ? String(me.section).trim() : null });
   const [playing, setPlaying] = useState(null);
   const gameRoster = rosterNow.filter(s => s.email).map(s => ({ id: String(s.email).trim().toLowerCase(), name: s.name }));
   ctx.games = games;

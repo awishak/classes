@@ -15,7 +15,7 @@
     "tidy": "esbuild scripts/tidy-report.mjs --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.tidy-report.mjs --log-level=error --loader:.js=jsx --loader:.jsx=jsx && node node_modules/.tidy-report.mjs"
   },
   "dependencies": {
-    "@ishak/decks": "git+https://github.com/awishak/decks.git#v0.4.2",
+    "@ishak/decks": "git+https://github.com/awishak/decks.git#v0.5.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

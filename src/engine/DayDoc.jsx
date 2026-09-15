@@ -72,7 +72,11 @@ function Line({ id, value, placeholder, readOnly, className, onSave, onKey, regi
   const focused = useRef(false);
   const timer = useRef(null);
 
-  useEffect(() => { if (!focused.current) setDraft(value || ""); }, [value]);
+  // A line you are typing in keeps its own words, except a line that has just
+  // become something you cannot type into (a game or an activity picked from
+  // the slash menu): that one shows its new name at once. Holding on to the
+  // emptied draft left a game row nameless until the page was reloaded.
+  useEffect(() => { if (!focused.current || readOnly) setDraft(value || ""); }, [value, readOnly]);
   useEffect(() => {
     const el = box.current;
     if (!el) return;

@@ -23,6 +23,7 @@ import { normSlot } from "./dayplan.js";
 import * as TOKENS from "./tokens.js";
 import TopNav, { NAV_TEACH } from "./TopNav.jsx";
 import { ClassMenu } from "./Dashboard.jsx";
+import { ENGINE_LIST } from "../config/registry.js";
 
 const emailOf = (s) => String(s?.email || "").trim().toLowerCase();
 
@@ -68,6 +69,20 @@ export default function GamesPage({ config }) {
     .filter(s => emailOf(s))
     .map(s => ({ id: emailOf(s), name: s.name }));
 
+  // Who a game can run for: every class this term, and a class with more than
+  // one section as each section. This class's sections are its roster's, so a
+  // run's section is the same words a student's row carries; another class's
+  // are its meeting times.
+  const ownSections = [...new Set(withIds(data?.students || config.students || []).map(s => String(s.section || "").trim()).filter(Boolean))];
+  const groups = ENGINE_LIST.filter(c => c.status !== "archived").flatMap(c => {
+    const name = [c.code, c.quarter].filter(Boolean).join(" · ");
+    const sections = c.id === config.id && ownSections.length > 1 ? ownSections
+      : (c.meets || []).length > 1 ? c.meets.map(m => m.label) : [];
+    return sections.length
+      ? sections.map(sec => ({ groupKey: c.id, section: sec, label: name + " · " + sec }))
+      : [{ groupKey: c.id, section: null, label: name }];
+  }).sort((a, b) => (a.groupKey === config.id ? 0 : 1) - (b.groupKey === config.id ? 0 : 1));
+
   // While a game's during slide is up, keep its count current without
   // re-running the slide's entrance each time.
   const liveRef = useRef(live);
@@ -108,7 +123,7 @@ export default function GamesPage({ config }) {
         </div>
       ) : null}
       <GamesHome supabase={gameClient} groupKey={config.id} context={config.code} roster={roster}
-        onScreen={(view, game) => cast(castFor(view, game, roster.length))} onGame={onGame} onError={onError} places={places} top={barH} />
+        onScreen={(view, game) => cast(castFor(view, game, roster.length))} onGame={onGame} onError={onError} places={places} groups={groups} top={barH} />
     </>
   );
 }
