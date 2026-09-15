@@ -12,7 +12,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { GamesHome, FONT_HREF } from "@ishak/decks";
-import { useClassState, useClassData } from "./store.js";
+import { useClassState } from "./store.js";
 import { parseDay } from "./days.js";
 import { useLive } from "./live.js";
 import { withIds } from "./roster.js";
@@ -20,17 +20,12 @@ import { useSession } from "./session.js";
 import { gameClient } from "./gameClient.js";
 import { castFor } from "./gameCast.js";
 import { normSlot } from "./dayplan.js";
-import { SHARED_KEY, blockById } from "./blocks.js";
 import * as TOKENS from "./tokens.js";
 
 const emailOf = (s) => String(s?.email || "").trim().toLowerCase();
-const normTitle = (t) => String(t || "").trim().toLowerCase().replace(/[\p{P}\p{S}]+/gu, "").replace(/\s+/g, " ").trim();
-// Day plan rows that hold a game: a Game or Team Trivia row, or a set named for one.
-const GAME_FEATURES = new Set(["Game", "Team Trivia"]);
-const GAMEY = /\b(game|trivia|ten on ten)\b/i;
 
 export default function GamesPage({ config }) {
-  const [data, update] = useClassData(config.storageKey);
+  const [data] = useClassState(config.storageKey);
   const [live, cast, push] = useLive(config.storageKey);
   const { session, instructor } = useSession();
   const [error, setError] = useState("");
@@ -45,44 +40,12 @@ export default function GamesPage({ config }) {
     }
   }, [config.code]);
 
-  // Where a game sits in the day plans. The day plan names a game its own way
-  // (a set called "Weekly Game, week 1", a Game row) and the game panel names it
-  // another ("Week 1"), so the Games table lets Andrew link a game to its row,
-  // kept in the class record as gameLinks: { [row key]: game id }. A row whose
-  // words are the game's own title counts too, without a link.
-  const [shared] = useClassState(SHARED_KEY);
+  // Where a game sits in the day plans: the days whose rows point at it. A day
+  // gets a game from the dashboard's slash menu, @ or the drawer, which only
+  // offer the games built here, so nothing needs linking by hand.
   const byDate = Object.keys(data?.dayPlans || {}).sort((a, b) => (parseDay(a)?.getTime() || 0) - (parseDay(b)?.getTime() || 0));
-  const gameRows = [];
-  byDate.forEach(date => {
-    Object.values(data.dayPlans[date]?.slots || {}).forEach(slot => normSlot(slot).items.forEach(it => {
-      const block = it.blockId ? blockById(data, shared, it.blockId) : null;
-      const title = block?.title || it.text || "";
-      const gamey = GAME_FEATURES.has(it.feature) || (block?.type === "set" && GAMEY.test(block.title || ""));
-      if (!gamey) return;
-      gameRows.push({ key: block ? "block:" + it.blockId : "row:" + date + ":" + it.id, date, title: it.feature && !block ? it.feature : title });
-    }));
-  });
-  const links = data?.gameLinks || {};
-  const places = (deck) => {
-    const want = normTitle(deck.title);
-    const days = new Set(gameRows.filter(r => links[r.key] === deck.id).map(r => r.date));
-    if (want) {
-      byDate.forEach(date => Object.values(data.dayPlans[date]?.slots || {}).forEach(slot => normSlot(slot).items.forEach(it => {
-        const block = it.blockId ? blockById(data, shared, it.blockId) : null;
-        if (normTitle(it.text) === want || normTitle(block?.title) === want) days.add(date);
-      })));
-    }
-    return byDate.filter(d => days.has(d));
-  };
-  const dayLink = {
-    options: gameRows.map(r => ({ key: r.key, label: r.date + " · " + r.title })),
-    value: (deck) => Object.keys(links).find(k => links[k] === deck.id && gameRows.some(r => r.key === k)) || "",
-    onChange: (deck, key) => update(prev => {
-      const next = Object.fromEntries(Object.entries(prev.gameLinks || {}).filter(([, id]) => id !== deck.id));
-      if (key) next[key] = deck.id;
-      return { ...prev, gameLinks: next };
-    }),
-  };
+  const places = (deck) => byDate.filter(date => Object.values(data.dayPlans[date]?.slots || {})
+    .some(slot => normSlot(slot).items.some(it => it.gameId === deck.id)));
 
   const roster = withIds(data?.students || config.students || [])
     .filter(s => emailOf(s))
@@ -124,7 +87,7 @@ export default function GamesPage({ config }) {
         </div>
       ) : null}
       <GamesHome supabase={gameClient} groupKey={config.id} context={config.code} roster={roster}
-        onScreen={(view, game) => cast(castFor(view, game, roster.length))} onGame={onGame} onError={onError} places={places} dayLink={dayLink} />
+        onScreen={(view, game) => cast(castFor(view, game, roster.length))} onGame={onGame} onError={onError}  places={places} />
     </>
   );
 }

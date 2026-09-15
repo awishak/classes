@@ -295,13 +295,17 @@ function TeachView({ steps, liveLabel, dismiss, classHref, onExit, ground }) {
   );
 }
 
+// Day plan rows and library sets that were games before the game panel existed.
+const GAME_FEATURES = new Set(["Game", "Team Trivia"]);
+const GAMEY = /\b(game|trivia|ten on ten)\b/i;
+
 export default function DayDoc({
   sections, slotItems, named, firstMovable, blockOf, seedById, doneSet, nextId, pickedId,
   liveLabel, castItem, castSection, dismiss, features, hue, slidesOn, classHref, renderExtras,
   onSetSlotTitle, onSaveItem, onSaveBlock, onInsertRow, onRemoveItem, onNest, onTick, isAssigned, onToggleAssigned,
   onDeleteSection, onMoveSection, onEdit, drop, castLink, onMoveItem, onConvertRow, onLinkRow, library,
   onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, teach, onTeach,
-  ground, assignments,
+  ground, assignments, games, gamesHref,
 }) {
   const refs = useRef(new Map());
   const pending = useRef(null);
@@ -370,12 +374,14 @@ export default function DayDoc({
     return items[j]?.id || itemId;
   };
 
-  const itemWords = (it, blk, seed) => it.feature || (blk ? blk.title : seed ? seed.title : it.text) || "";
-  const isTyped = (line) => !!line.it && !line.it.blockId && !line.it.feature && !line.it.seedId && !(line.it.links || []).length;
+  // A game row points at a game built in the game panel and wears its name.
+  const gameOf = (id) => (games || []).find(g => g.id === id) || null;
+  const itemWords = (it, blk, seed) => (it.gameId ? (gameOf(it.gameId)?.title || it.text) : "") || it.feature || (blk ? blk.title : seed ? seed.title : it.text) || "";
+  const isTyped = (line) => !!line.it && !line.it.blockId && !line.it.feature && !line.it.gameId && !line.it.seedId && !(line.it.links || []).length;
   const leaveEmpty = (line) => (isTyped(line) && onRemoveItem ? () => onRemoveItem(line.slot, line.it.id) : null);
   const saveItemWords = (line) => (v) => {
     if (line.blk) onSaveBlock(line.blk.id, { title: v });
-    else if (!line.seed && !line.it.feature) onSaveItem(line.slot, line.it.id, { text: v });
+    else if (!line.seed && !line.it.feature && !line.it.gameId) onSaveItem(line.slot, line.it.id, { text: v });
   };
   const tagOf = (slot) => normSlot(slotItems[slot]).title || (sections.find(([k]) => k === slot) || [])[1] || "";
 
@@ -385,7 +391,7 @@ export default function DayDoc({
     const cl = line.it.claim || line.blk?.headline || "";
     const tag = tagOf(line.slot);
     const notes = line.kind === "item" && line.it.slideNotes ? (notesOf[line.it.id] || []) : undefined;
-    const cast = slideOf({ item: line.it, block: line.blk, seed: line.seed, title: w, claim: cl, tag, features, notes, assignments });
+    const cast = slideOf({ item: line.it, block: line.blk, seed: line.seed, title: w, claim: cl, tag, features, notes, assignments, games });
     return { cast, label: cl || w, go: () => castItem(line.it, line.blk, line.seed, w, cl, tag, cast) };
   };
 
@@ -429,8 +435,11 @@ export default function DayDoc({
         }, { hint: t.hint, swatch: hue(t.id), keys: t.id }));
       }
       if (typed) {
-        Object.keys(features || {}).forEach(n => add("Activity", n, () => onSaveItem(line.slot, it.id, { feature: n, text: n }),
+        // Games come from the game panel, so the old Game and Team Trivia rows are not offered.
+        Object.keys(features || {}).filter(n => !games || !GAME_FEATURES.has(n)).forEach(n => add("Activity", n, () => onSaveItem(line.slot, it.id, { feature: n, text: n }),
           { hint: features[n], swatch: hue("activity") }));
+        (games || []).forEach(g => add("Game", g.title, () => onSaveItem(line.slot, it.id, { gameId: g.id, text: g.title }),
+          { hint: g.questions + (g.questions === 1 ? " question" : " questions"), swatch: hue("set"), keys: "game" }));
       }
       add("Screen", "Put on screen", () => castLine(line).go());
       if (line.kind === "item" && onSaveItem) {
@@ -458,7 +467,27 @@ export default function DayDoc({
 
   const findInLibrary = (q) => {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
-    return (library || [])
+    const line0 = pop?.line;
+    const place = (extra, rest) => {
+      const line = pop?.line;
+      if (!line) return;
+      if (line.kind !== "section" && isTyped(line) && !rest) {
+        onSaveItem(line.slot, line.it.id, extra);
+        focusLine(line.it.id, "end");
+      } else if (onInsertRow) {
+        const slot = line.slot;
+        const after = line.kind === "section" ? null : line.kind === "item" ? endOfGroup(slot, line.it.id) : line.it.id;
+        const depth = line.kind === "comment" ? 1 : 0;
+        focusLine(onInsertRow(slot, after, depth, extra), "end");
+      }
+    };
+    const gameHits = line0 ? (games || [])
+      .filter(g => words.every(w => (g.title + " game").toLowerCase().includes(w)))
+      .slice(0, 6)
+      .map(g => ({ id: "game:" + g.id, group: "Game", label: g.title, hint: g.questions + (g.questions === 1 ? " question" : " questions"),
+        swatch: hue("set"), run: (rest) => place({ gameId: g.id, text: g.title }, rest) })) : [];
+    return [...gameHits, ...(library || [])
+      .filter(b => !(games && b.type === "set" && GAMEY.test(b.title || "")))
       .filter(b => {
         const hay = [b.title, b.source, b.headline, typeOf(b.type).label].filter(Boolean).join(" ").toLowerCase();
         return words.every(w => hay.includes(w));
@@ -484,7 +513,7 @@ export default function DayDoc({
             focusLine(onInsertRow(slot, after, depth, { blockId: b.id }), "end");
           }
         },
-      }));
+      }))];
   };
 
   const filtered = (() => {
@@ -851,11 +880,11 @@ export default function DayDoc({
               const words = itemWords(it, blk, seed);
               const claim = it.claim || blk?.headline || "";
               const tag = raw || sec.title;
-              const slide = slideOf({ item: it, block: blk, seed, title: words, claim, tag, features, assignments,
+              const slide = slideOf({ item: it, block: blk, seed, title: words, claim, tag, features, assignments, games,
                 notes: it.slideNotes ? (notesOf[it.id] || []) : undefined });
               const live = liveLabel === (claim || words) || (it.feature && liveLabel === it.feature);
-              const kind = it.feature ? "activity" : blk ? typeOf(blk.type).label.toLowerCase() : seed ? "seed" : "";
-              const kindColor = it.feature ? hue("activity") : blk ? hue(blk.type) : hue("note");
+              const kind = it.gameId ? "game" : it.feature ? "activity" : blk ? typeOf(blk.type).label.toLowerCase() : seed ? "seed" : "";
+              const kindColor = it.gameId ? hue("set") : it.feature ? hue("activity") : blk ? hue(blk.type) : hue("note");
               const kids = blk?.type === "set" ? (blk.children || []).map(id => blockOf(id)).filter(Boolean) : null;
               const bodyLine = lines.find(l => l.key === "b:" + it.id);
               const noteSlides = g.comments.filter(c => c.it.slide).map(c => {
@@ -863,7 +892,7 @@ export default function DayDoc({
                 const on = liveLabel === nc.label;
                 return { key: c.it.id, cast: nc.cast, live: on, label: nc.label, onClick: () => (on ? dismiss() : nc.go()) };
               });
-              const canKind = !seed && !it.feature;
+              const canKind = !seed && !it.feature && !it.gameId;
               const leave = (k) => { if (pop && pop.key === k) setPop(null); };
               return (
                 <div key={it.id} className={"doc-group" + (slidesOn ? " with-slides" : "") + (pickedId === it.id ? " picked" : "")
@@ -877,13 +906,16 @@ export default function DayDoc({
                         {doneSet.has(it.id) ? "✓" : itemNumber[it.id] || ""}
                       </button>
                       <Line id={it.id} value={words} placeholder="Item, or / for commands" className="lv-item" done={doneSet.has(it.id)}
-                        readOnly={!!(seed || it.feature)} onSave={saveItemWords(g.head)} onKey={keyHandler(g.head)} register={register}
+                        readOnly={!!(seed || it.feature || it.gameId)} onSave={saveItemWords(g.head)} onKey={keyHandler(g.head)} register={register}
                         onLeaveEmpty={leaveEmpty(g.head)} onLink={linkMenu(it.id)} onType={typing(g.head)} onLeave={leave} />
                       {canKind ? (
                         <button className="dash-focus doc-kind" style={{ "--ink": inkOf(kindColor) }} title="Choose kind"
                           onClick={e => { const r = e.currentTarget.getBoundingClientRect(); openMenu({ preventDefault() {}, clientX: r.left, clientY: r.bottom + 4 }, kindMenu(g.head)); }}>
                           {kind || typeOf("note").label.toLowerCase()} <span aria-hidden="true">▾</span>
                         </button>
+                      ) : it.gameId && gamesHref ? (
+                        <a className="dash-focus doc-kind" style={{ "--ink": inkOf(kindColor), textDecoration: "none" }} title="Open in Games"
+                          href={gamesHref + "#game=" + it.gameId} target="_blank" rel="noopener noreferrer">{kind}</a>
                       ) : kind ? <span className="doc-kind" style={{ "--ink": inkOf(kindColor) }}>{kind}</span> : null}
                       <LinkChips urls={[blk?.url, ...(it.links || []).map(l => l.url)]}
                         liveLabel={liveLabel} onCast={castLink} dismiss={dismiss} />

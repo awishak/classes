@@ -44,6 +44,7 @@ const SURFACE_2 = TOKENS.SURFACE.sunk;
 // A story is a note, because a story is something Andrew says.
 const IS_ACTIVITY = (t) => t === "activity" || t === "board" || t === "question" || t === "set";
 const IS_NOTE = (t) => t === "note" || t === "story";
+const GAMEY = /\b(game|trivia|ten on ten)\b/i;
 
 export const SHELVES = [
   { id: "media", label: "Media", make: "link", holds: (t) => !IS_ACTIVITY(t) && !IS_NOTE(t) },
@@ -211,7 +212,7 @@ function DrawerRow({ b, hue, placed, onPick, extra }) {
 
 export default function Drawer({ blocks, accent, hue, onPick, onNew, features, onRunFeature, featureBlurb, placed,
   picked, onSavePicked, onSaveItemPicked, onPlacePicked, onMovePicked, onClearPicked, days, today, sections, blockOf,
-  startShelf = "media" }) {
+  startShelf = "media", games, onPlaceGame, gamesHref }) {
   const [q, setQ] = useState("");
   const [shelf, setShelf] = useState(startShelf);
   const [kind, setKind] = useState("");
@@ -221,7 +222,10 @@ export default function Drawer({ blocks, accent, hue, onPick, onNew, features, o
   const [openSets, setOpenSets] = useState(() => new Set());
 
   const text = q.trim().toLowerCase();
-  const matches = (blocks || []).filter(b => !text || hay(b).includes(text));
+  // Games are built in the game panel now, so a set that was a game before it
+  // is not offered here; its questions stay tucked away with it.
+  const oldGame = (b) => !!games && b.type === "set" && GAMEY.test(b.title || "");
+  const matches = (blocks || []).filter(b => !oldGame(b) && (!text || hay(b).includes(text)));
 
   // A question inside a game is tucked into that game.
   //
@@ -256,7 +260,7 @@ export default function Drawer({ blocks, accent, hue, onPick, onNew, features, o
   // question flat, for when a question is the thing you are after.
   const grouped = shelf === "activities" && !kind;
   const every = grouped
-    ? (blocks || []).filter(b => shelfDef.holds(b.type) && !tucked.has(b.id)
+    ? (blocks || []).filter(b => shelfDef.holds(b.type) && !tucked.has(b.id) && !oldGame(b)
         && (hit.has(b.id) || (text && b.type === "set" && kidsOf(b).some(c => hit.has(c.id)))))
     : onShelf.filter(b => !kind || b.type === kind);
   const shown = every.length;
@@ -365,6 +369,25 @@ export default function Drawer({ blocks, accent, hue, onPick, onNew, features, o
       {/* The six the app runs. They live on the Activities shelf because that
           is what they are, and they are marked because the app runs these and
           reads the rest out to you. */}
+      {/* The class's games, from the game panel. Drag one onto a day, or Add to a day. */}
+      {shelf === "activities" && !kind && (games || []).length ? (
+        <div className="draw-runs">
+          {(games || []).filter(g => !text || g.title.toLowerCase().includes(text)).map(g => (
+            <div key={g.id} className="draw-run" draggable
+              onDragStart={e => { e.dataTransfer.effectAllowed = "copy";
+                e.dataTransfer.setData("text/plain", JSON.stringify({ gameId: g.id, title: g.title })); }}
+              title={g.title}>
+              <span className="draw-swatch" style={{ background: hue("set") }} />
+              <span className="draw-run-name">
+                {gamesHref ? <a href={gamesHref + "#game=" + g.id} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>{g.title}</a> : g.title}
+                <span style={{ marginLeft: 8, fontFamily: MONO, fontSize: 13, color: TEXT_MUTED }}>{g.questions}</span>
+              </span>
+              {onPlaceGame ? <button className="dash-focus draw-run-go" onClick={() => onPlaceGame(g)}>Add to a day</button> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       {shelf === "activities" && !kind && (features || []).length ? (
         <div className="draw-runs">
           {(features || []).filter(n => !text || n.toLowerCase().includes(text)).map(n => (

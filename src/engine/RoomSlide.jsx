@@ -412,13 +412,19 @@ export const ROOM_FONTS_HREF = "https://fonts.googleapis.com/css2?family=Outfit:
 const VIDEO_HOST = /(^|\.)(youtube\.com|youtu\.be|vimeo\.com)$/;
 const IMAGE_URL = /\.(png|jpe?g|gif|webp|avif)(\?|#|$)/i;
 
-export function slideFor({ item, block, seed, title, claim, notes, tag, assignments, features }) {
+export function slideFor({ item, block, seed, title, claim, notes, tag, assignments, features, games }) {
   const words = claim || title || "";
   const url = block?.url || (item?.links || [])[0]?.url || (String(item?.text || "").match(/https?:\/\/[^\s<>"')]+/) || [])[0] || "";
   const base = { type: "slide", label: words, title: title || "", headline: claim || "", url, site: hostOf(url), notes: notes && notes.length ? notes : undefined,
     look: item?.slideLook || undefined };
   const sub = block?.type !== "board" ? (block?.body || "").trim() : "";
 
+  // A game from the game panel is its ticket, with the count of its questions.
+  if (item?.gameId) {
+    const g = (games || []).find(x => x.id === item.gameId);
+    const name = g?.title || title || item.text || "";
+    return { ...base, template: "game", title: name, label: name, count: g?.questions || 0 };
+  }
   if (item?.feature) {
     return item.feature === "Headlines"
       ? { ...base, template: "headlines", title: item.feature, label: item.feature }

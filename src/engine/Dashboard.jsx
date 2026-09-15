@@ -40,6 +40,8 @@ import { genId } from "../utils.jsx";
 import * as TOKENS from "./tokens.js";
 import { REMINDERS } from "./reminders.js";
 import TopNav, { NAV_TEACH } from "./TopNav.jsx";
+import { listGames } from "@ishak/decks";
+import { gameClient } from "./gameClient.js";
 import Drawer, { DRAWER_CSS } from "./Drawer.jsx";
 import TermOutline, { TERM_CSS } from "./TermOutline.jsx";
 import Slide, { slideOf, SLIDE_CSS, readSlidesOn, writeSlidesOn } from "./Slide.jsx";
@@ -2012,7 +2014,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList, games, gamesHref }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -2288,7 +2290,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
       <DayDoc sections={sectionRows} slotItems={slotItems} named={named} firstMovable={firstMovable}
         blockOf={blockOf} seedById={seedById} doneSet={doneSet} numberOf={numberOf} nextId={nextId} pickedId={pickedId}
         liveLabel={liveLabel} dismiss={dismiss} features={FEATURES} hue={hue} slidesOn={slidesOn} classHref={classHref}
-        ground={roomGround || "slate"} assignments={assignmentList}
+        ground={roomGround || "slate"} assignments={assignmentList} games={games} gamesHref={gamesHref}
         // A slide goes up as the slide: the template the row's thumbnail draws.
         // An activity runs itself, and a clip or voice memo plays as a file.
         castItem={(it, blk, seed, words, claim, tag, slide) => {
@@ -3764,6 +3766,18 @@ const gridFor = (cols, railOpen, teaching) =>
 
 export default function Dashboard({ config }) {
   const [data, update] = useClassData(config.storageKey);
+  // The class's games, as built in the game panel: the only games a day can hold.
+  // Read again whenever this window comes back into focus, so a game made in
+  // the Games tab is here when you return.
+  const [games, setGames] = useState([]);
+  const [placingGame, setPlacingGame] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () => listGames(gameClient, { groupKey: config.id }).then(g => { if (alive) setGames(g); }).catch(() => {});
+    load();
+    window.addEventListener("focus", load);
+    return () => { alive = false; window.removeEventListener("focus", load); };
+  }, [config.id]);
   // Blocks that belong to me rather than to any one class. Same store shape,
   // its own key, and every class sees it.
   const [shared, updateShared] = useClassData(SHARED_KEY);
@@ -4497,6 +4511,8 @@ export default function Dashboard({ config }) {
     // Headlines and the games are not blocks, so a dropped one carries the
     // feature name and the row runs it rather than casting words.
     if (b.feature) row.feature = b.feature;
+    // A game from the game panel: the row points at the game and keeps its name.
+    if (b.gameId) row.gameId = b.gameId;
     if (!blockId && !row.text) return;
     if (b.schedItemId) row.schedItemId = b.schedItemId;
     writeDayOn(on, d => {
@@ -4813,6 +4829,7 @@ export default function Dashboard({ config }) {
       classMinutes={(() => { const s = sittingsOf(config)[0]; return s ? s.end - s.start : null; })()}
       onOpenTemplates={() => setTemplatesOpen(true)} onOpenHistory={() => setHistoryOpen(true)}
       roomGround={data?.roomGround} onSetGround={(gr) => update(prev => ({ ...prev, roomGround: gr }))} assignmentList={assignments}
+      games={games} gamesHref={config.path + "/games"}
       onSaveSpring={(patch) => writeDay(d => ({ ...d, spring: { ...(d.spring || {}), ...patch } }), "that note")}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
       onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMoveSection={moveSection} onAddUnder={addUnder} onMergeSections={mergeSections} onSelect={setPicked} onEdit={editPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
@@ -4827,13 +4844,15 @@ export default function Dashboard({ config }) {
       onDropIn={assignDropped} hue={hueOf}
       blocks={blocks2} onPickBlock={pickReading} />,
     ideas: () => <IdeasPanel blocks={blocks2} accent={config.accent} hue={hueOf}
-      features={Object.keys(FEATURES)} onRunFeature={runFeature} featureBlurb={(n) => FEATURES[n] || ""}
+      features={Object.keys(FEATURES).filter(n => !GAME_FEATURES.has(n))} onRunFeature={runFeature} featureBlurb={(n) => FEATURES[n] || ""}
+      games={games} onPlaceGame={(g) => setPlacingGame(g)} gamesHref={config.path + "/games"}
       onPlaceFeature={(slot, name, date) => addFlowItem(slot, { text: name, feature: name }, date)}
       sections={sections} days={days} today={day} placed={placedDays}
       onPick={pickBlock} onAdd={addIdea} onEdit={editIdea} onRemove={removeIdea} onDuplicate={duplicateIdea} />,
     // One search across everything, and the three shelves it sorts into.
     find: () => <Drawer blocks={blocks2} accent={config.accent} hue={hueOf} placed={placedDays}
-      features={Object.keys(FEATURES)} onRunFeature={runFeature} featureBlurb={(n) => FEATURES[n] || ""}
+      features={Object.keys(FEATURES).filter(n => !GAME_FEATURES.has(n))} onRunFeature={runFeature} featureBlurb={(n) => FEATURES[n] || ""}
+      games={games} onPlaceGame={(g) => setPlacingGame(g)} gamesHref={config.path + "/games"}
       onPick={(b) => setPicked({ blockId: b.id, item: null, where: "", id: b.id })}
       onNew={newBlock}
       picked={picked} blockOf={blockOf}
@@ -5122,6 +5141,11 @@ export default function Dashboard({ config }) {
       {/* Where the open thing goes. Add leaves it where it is; Move takes it
           off the day it is on first, which is the difference between the two
           buttons and the only reason there are two. */}
+      {placingGame ? (
+        <PlaceMenu slots={sections} days={days} today={day} accent={config.accent}
+          onClose={() => setPlacingGame(null)}
+          onPlace={(date, slot) => { pickBlock(slot, { gameId: placingGame.id, title: placingGame.title }, date); setPlacingGame(null); }} />
+      ) : null}
       {placing && picked ? (
         <PlaceMenu slots={sections} days={days} today={day} accent={config.accent}
           onClose={() => setPlacing("")}

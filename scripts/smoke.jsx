@@ -2818,6 +2818,26 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   cases.push(["games page", <GamesPage config={comm999} />]);
 }
 
+// A day plan row that holds a game from the game panel: it wears the game's
+// name, its slide is the game's ticket, and students see it on the schedule.
+{
+  const say = (m) => { console.error("  FAIL  game rows: " + m); failedEarly++; };
+  const games = [{ id: "g1", title: "Weekly Game, week 1", questions: 10 }];
+  const row = { id: "r1", gameId: "g1", text: "Weekly Game, week 1" };
+  const slide = slideOf({ item: row, title: "Weekly Game, week 1", games });
+  if (slide?.template !== "game" || slide.count !== 10) say("a game row's slide is " + slide?.template + " with " + slide?.count + " questions");
+  const day = { slots: { opener: { title: "Open", items: [row] } } };
+  const html = renderToString(<FlowPanel plan={day} seq={seq} seeds={[]} castNow={() => {}} dismiss={() => {}} liveLabel={null}
+    accent="#333" onClaim={() => {}} features={[]} onFeature={() => {}} planHref="/x" onSlidesClaim={() => {}} onBlockClaim={() => {}}
+    where="COMM 1 · Sep 23" loose={[]} onAddScheduled={() => {}} onAddItem={() => {}} onRemoveItem={() => {}}
+    onMoveItem={() => {}} onSetSequence={() => {}} onSetSlotTitle={() => {}} sequences={[seq]} classHref="/comm118"
+    games={games} gamesHref="/comm118/games" />);
+  if (!html.includes("Weekly Game, week 1")) say("the row does not show the game's name");
+  if (!html.includes('href="/comm118/games#game=g1"')) say("the row's kind does not open the game in Games");
+  const items = studentItems({ dates: ["Sep 23"], items: [] }, { "Sep 23": day }, () => null);
+  if (!items.some(i => i.title === "Weekly Game, week 1")) say("students do not see the game on the schedule");
+}
+
 let failed = failedEarly;
 for (const [name, el, must] of cases) {
   try {
