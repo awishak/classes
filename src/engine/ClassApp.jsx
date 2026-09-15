@@ -808,6 +808,14 @@ export default function ClassApp({ config, initialCard }) {
   const MorePage = (
     <Panel title="More">
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {view === "instructor" ? (
+          <a className="ca-focus" href={config.path + "/games"}
+            style={{ display: "flex", alignItems: "center", minHeight: TAP, padding: "0 16px", borderRadius: 12,
+              border: "1px solid " + BORDER_STRONG, background: "var(--surface-card)", color: TEXT_PRIMARY,
+              fontSize: 17, fontWeight: 600, textDecoration: "none" }}>
+            Games
+          </a>
+        ) : null}
         {moreCards.map(CardTile)}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
           <span style={{ ...label, color: TEXT_MUTED }}>Theme</span>
