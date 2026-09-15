@@ -24,10 +24,10 @@ const label = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform:
 const h2 = { fontSize: 22, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.02em" };
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 
-const profileOf = (data, name) => (data?.profiles?.[name] || {});
+export const profileOf = (data, name) => (data?.profiles?.[name] || {});
 const threadOf = (data, name) => (data?.threads?.[name] || []);
 
-function Avatar({ profile, name, accent, size = 44 }) {
+export function Avatar({ profile, name, accent, size = 44 }) {
   const photo = profile?.avatar && String(profile.avatar).startsWith("data:") ? profile.avatar : null;
   const initials = (name || "").split(" ").map(p => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
   return (
@@ -50,7 +50,7 @@ function Field({ title, value }) {
 
 // ─────────────────────────────────────────────────────────────
 export function RosterSummary({ config, data }) {
-  const students = config.students || [];
+  const students = data?.students || config.students || [];
   const shown = students.slice(0, 5);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -218,7 +218,7 @@ function StudentPage({ config, data, name, email, code, onBack }) {
 function StudentRoster({ config, data }) {
   const a = config.accent;
   const [open, setOpen] = useState(null);
-  const students = config.students || [];
+  const students = data?.students || config.students || [];
 
   if (open) {
     const p = profileOf(data, open);

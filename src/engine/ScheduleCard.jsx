@@ -104,7 +104,7 @@ const getDrag = (e) => { try { return JSON.parse(e.dataTransfer.getData("text/pl
 // link points at. theatlantic.com says enough, and www. in front of it says
 // nothing. A chapter with neither says nothing rather than something made up.
 const hostOf = (url) => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; } };
-const sourceOf = (item, block) => (block?.source || "").trim() || hostOf(item.url || block?.url || "");
+export const sourceOf = (item, block) => (block?.source || "").trim() || hostOf(item.url || block?.url || "");
 
 // A week's items in the order the week happens: Monday's first, then
 // Wednesday's, then Friday's, and within a day in the order they were added.

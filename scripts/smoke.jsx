@@ -81,6 +81,7 @@ import { warmClassData } from "../src/engine/store.js";
 import GradeView from "../src/engine/GradeView.jsx";
 import GradeDeck from "../src/engine/GradeDeck.jsx";
 import DueDeck, { dueSoon, dismissDue, deadlineOf } from "../src/engine/DueCard.jsx";
+import { NextClassHero, nextClassFacts, timeText, PinnedLinks, RequestForm } from "../src/engine/HomeCards.jsx";
 import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, unseenGrades, markSeen, meetingPatch, letterOf, BUCKETS } from "../src/engine/grades.js";
 import GradeParade from "../src/engine/GradeParade.jsx";
 import { computeGrade, dueText } from "../src/engine/AssignmentsCard.jsx";
@@ -1089,10 +1090,22 @@ cases.push(["Instructor links", <InstructorLinks />]);
   // And the student's bar is untouched.
   try {
     const html = atWidth(PHONE, () => renderToString(<ClassApp config={cfg0} />));
-    ["Schedule", "Assignments", "Community"].forEach(tab => {
+    ["Schedule", "Assignments", "Class"].forEach(tab => {
       if (!html.includes(">" + tab + "<")) {
         console.error(`  FAIL  class page, student: ${tab} left the student's tabs`); failedEarly++; }
     });
+    // Andrew, 2026-09-15: the next class is the hero, then Assignments, then
+    // Class, Grades toward the bottom and Games at the very bottom.
+    const at = (t) => html.indexOf(t);
+    if (html.includes('aria-label="Next class"')) {
+      const order = ['aria-label="Next class"', ">Assignments</span>", ">Class</span>", ">Grades</span>", ">Games</span>"].map(at);
+      if (order.some(n => n < 0) || order.some((n, i) => i && n < order[i - 1])) {
+        console.error("  FAIL  class page, student: the home page is not Next class, Assignments, Class, Grades, Games: " + JSON.stringify(order)); failedEarly++; }
+    } else {
+      console.error("  FAIL  class page, student: the home page has no Next class hero"); failedEarly++;
+    }
+    if (html.includes(">Community<")) {
+      console.error("  FAIL  class page, student: Community is still on the page"); failedEarly++; }
     if (html.includes('href="/repo"')) {
       console.error("  FAIL  class page, student: the repository is showing to a student"); failedEarly++; }
   } catch (err) {
@@ -2130,6 +2143,49 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       const html = renderToString(<DueDeck config={cfg} items={[asgs[1], asgs[2]]} onDismiss={noop} onOpen={noop} onDone={noop} />).replace(/<!-- -->/g, "");
       ["Short piece", "Got it", "Go to assignments", "1 of 2"].forEach(t => { if (!html.includes(t)) say("the due card never showed " + JSON.stringify(t)); });
     } catch (err) { say("the due card threw: " + err.message); }
+  }
+
+  // The Next class hero: the day, the time for this student's sitting, the
+  // room, the day's title, that day's readings and games, and a day with no
+  // meeting in the room says so.
+  {
+    const hcfg = { ...cfg, path: "/comm3", desc: "MWF 8:00 to 9:05 am and 10:30 to 11:35 am · Vari 133",
+      meets: [{ label: "8:00", start: "08:00", end: "09:05" }, { label: "10:30", start: "10:30", end: "11:35" }] };
+    const hdata = {
+      schedule: [{ id: "w1", topic: "Framing", dates: ["Sep 21", "Sep 23"], items: [
+        { id: "r1", type: "reading", title: "Katrina captions", url: "https://www.nytimes.com/k", date: "Wed" },
+        { id: "r2", type: "reading", title: "A Monday reading", url: "https://x.com/m", date: "Mon" },
+      ] }],
+      dayPlans: {
+        "Sep 21": { title: "What makes something a story at all?" },
+        "Sep 23": { title: "Same event, different stories", slots: { a: { items: [{ id: "g", gameId: "x", text: "Week 1" }, { id: "h", feature: "Headlines" }] } } },
+      },
+    };
+    const mon = new Date(2026, 8, 21, 12, 0).getTime();     // Monday after both sittings end
+    const f = nextClassFacts(hcfg, hdata, () => null, "10:30", mon);
+    if (!f || f.date !== "Sep 23" || f.weekday !== "Wednesday") say("the hero is not on the next class after today's sittings end: " + JSON.stringify(f));
+    else {
+      if (f.time !== "10:30 to 11:35 am") say("a student in the 10:30 section sees the wrong time: " + f.time);
+      if (f.location !== "Vari 133") say("the hero has no room: " + f.location);
+      if (f.title !== "Same event, different stories") say("the hero shows the wrong title: " + f.title);
+      if (f.readings.map(r => r.title).join("|") !== "Katrina captions") say("the hero shows the wrong readings: " + JSON.stringify(f.readings));
+      if (f.games.join("|") !== "Week 1") say("the hero shows the wrong games, or counts Headlines as a game: " + JSON.stringify(f.games));
+    }
+    if (nextClassFacts(hcfg, hdata, () => null, "", new Date(2026, 8, 21, 8, 30).getTime())?.date !== "Sep 21") say("the hero skipped today while class was still on");
+    if (timeText({ start: "11:00", end: "12:05" }) !== "11:00 am to 12:05 pm") say("a sitting across noon reads wrong: " + timeText({ start: "11:00", end: "12:05" }));
+    try {
+      const plain = renderToString(<NextClassHero config={hcfg} data={hdata} blockOf={() => null} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
+      if (plain.includes("No in-person meeting")) say("a day that meets shows the no-meeting badge");
+      const off = { ...hdata, dayPlans: Object.fromEntries(Object.entries(hdata.dayPlans).map(([k, p]) => [k, { ...p, noMeeting: true }])) };
+      const none = renderToString(<NextClassHero config={hcfg} data={off} blockOf={() => null} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
+      if (!none.includes("No in-person meeting")) say("a day with no meeting has no badge");
+      if (!none.includes("dashed")) say("a day with no meeting has no dashed outline");
+      if (none.includes("Vari 133")) say("a day with no meeting still names the room");
+      const pins = renderToString(<PinnedLinks data={{ pins: [{ id: "p", title: "Discussion doc", url: "https://docs.google.com/d" }] }} update={noop} seat={{}} />);
+      if (!pins.includes("Discussion doc") || !pins.includes('href="https://docs.google.com/d"')) say("a pinned link does not show");
+      if (renderToString(<PinnedLinks data={{}} update={noop} seat={{}} />)) say("a student with nothing pinned sees an empty Pinned box");
+      if (!renderToString(<RequestForm update={noop} name="Ada" />).includes("Requests and bugs")) say("the requests and bugs form does not render");
+    } catch (err) { say("the home cards threw: " + err.message); }
   }
 
   // Grades so far: a tile per assignment, grey until graded, then the letter.

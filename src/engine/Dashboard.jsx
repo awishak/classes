@@ -5023,6 +5023,15 @@ export default function Dashboard({ config }) {
                     title="Save this day as a template, or start a day from a template">Templates</button>
                   <button className="dash-focus dash-topic-tool" onClick={() => setHistoryOpen(true)}
                     title="Earlier versions of this day">History</button>
+                  {/* A class day that does not meet in the room. Students see
+                      the day on the class page with a dashed outline and a
+                      No in-person meeting badge. */}
+                  <button className="dash-focus dash-topic-tool" aria-pressed={!!data?.dayPlans?.[day]?.noMeeting}
+                    onClick={() => writeDay(d => ({ ...d, noMeeting: !d.noMeeting }), "changing whether the class meets")}
+                    style={data?.dayPlans?.[day]?.noMeeting ? { color: TEXT_PRIMARY, boxShadow: "inset 0 0 0 1px " + TEXT_PRIMARY } : undefined}
+                    title="Mark whether this class day meets in person">
+                    {data?.dayPlans?.[day]?.noMeeting ? "No in-person meeting" : "Meets in person"}
+                  </button>
                 </>
               } />
             {render.flow()}

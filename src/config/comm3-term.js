@@ -152,7 +152,7 @@ export const scheduleWeeks = [
       "Oct 28",
       "Oct 30"
     ],
-    "text": "How does the recording itself change what people hear, and what do we owe the people we record? No class Monday; work on your treatment. Audio story pre-production due Friday. Exercise due Sunday, November 1.",
+    "text": "How does the recording itself change what people hear, and what do we owe the people we record? No class Monday. Audio story pre-production due Friday. Exercise due Sunday, November 1.",
     "plan": "On the bench: 6.4 S-Town.",
     "slides": "",
     "items": [
@@ -1418,6 +1418,7 @@ export const dayPlans = {
   "Oct 26": {
     "sequenceId": "__freeform",
     "title": "No class. Students work on their audio story treatment.",
+    "noMeeting": true,
     "notes": "",
     "slides": "",
     "blocks": [],
@@ -1876,6 +1877,7 @@ export const dayPlans = {
   "Nov 18": {
     "sequenceId": "__freeform",
     "title": "No class. Groups work on the final.",
+    "noMeeting": true,
     "notes": "",
     "slides": "",
     "blocks": [],
@@ -1896,6 +1898,7 @@ export const dayPlans = {
   "Nov 20": {
     "sequenceId": "__freeform",
     "title": "No class. Groups work on the final.",
+    "noMeeting": true,
     "notes": "",
     "slides": "",
     "blocks": [],

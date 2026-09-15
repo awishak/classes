@@ -100,6 +100,21 @@ function nextDueOf(assignments) {
   return best || assignments[0] || null;
 }
 
+// The next thing this student still has to turn in: due today or later, and
+// nothing submitted for it yet. Something already handed in is not what a
+// student needs pointed at.
+export function nextOwed(assignments, data, name) {
+  let best = null, bestAt = Infinity;
+  (assignments || []).forEach(asg => {
+    const st = dueState(asg.due);
+    if (!st || st.tone === "late") return;
+    if ((data?.assignmentLog?.[asg.id]?.[name] || []).some(e => e.type === "submission")) return;
+    const at = parseDue(asg.due).getTime();
+    if (at < bestAt) { bestAt = at; best = asg; }
+  });
+  return best;
+}
+
 // A date on its own makes a student do the arithmetic, and the thing students
 // say most about every LMS they have used is that they could not tell what was
 // actually due. So say the number of days, and say it in a colour.
@@ -256,7 +271,7 @@ function AssignmentLog({ asg, log, accent, studentName, actor, onLike, onDelete 
 }
 
 // ─────────────────────────────────────────────────────────────
-export function AssignmentsSummary({ config, data, role }) {
+export function AssignmentsSummary({ config, data, role, name }) {
   const assignments = getAssignments(data, config);
   if (role === "instructor") {
     const n = ungradedQueue(assignments, data).length;
@@ -264,7 +279,7 @@ export function AssignmentsSummary({ config, data, role }) {
       ? <div><div style={{ fontSize: 22, fontWeight: 700, color: config.accent }}>{n}</div><Muted>to grade</Muted></div>
       : <Muted>Nothing to grade.</Muted>;
   }
-  const next = nextDueOf(assignments);
+  const next = name ? nextOwed(assignments, data, name) : nextDueOf(assignments);
   if (!next) return <Muted>No upcoming assignments.</Muted>;
   const st = dueState(next.due);
   return (

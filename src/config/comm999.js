@@ -51,15 +51,18 @@ const comm999 = {
   lastNameOverrides: {},
 
   // ─── Cards ───
-  // Every class ships ALL cards. Toggle them off per class from the admin page.
-  // Order here is the order shown on the home grid.
+  // Every class ships ALL cards. Turn one off here and the page leaves the card
+  // out. The home page's order is set in ClassApp: Next class, pinned links,
+  // Assignments, Class, Grades, Games. Your card, the roster and your
+  // instructor live inside Class.
   cards: {
     dayplan: true, // instructor-only; never shown on the student home
-    you: true,
-    assignments: true,
     schedule: true,
-    community: true,
-    leaderboard: true,
+    assignments: true,
+    class: true,
+    grades: true,
+    games: true,
+    you: true,
     roster: true,
     instructor: true,
   },

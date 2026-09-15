@@ -246,6 +246,8 @@ function ProfileForm({ student, initial, update, accent }) {
 // ─────────────────────────────────────────────────────────────
 // STUDENT VIEW
 // ─────────────────────────────────────────────────────────────
+// Your card. The profile comes first, because this page is where a student
+// fills in who they are; grades have a card of their own on the home page.
 function StudentYou({ config, data, update, asStudent, setAsStudent }) {
   const a = config.accent;
   const [reply, setReply] = useState("");
@@ -259,7 +261,7 @@ function StudentYou({ config, data, update, asStudent, setAsStudent }) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <div style={h2}>You</div>
+        <div style={h2}>Your card</div>
         {setAsStudent ? (
           <label style={{ fontSize: 13, color: TEXT_SECONDARY, display: "flex", alignItems: "center", gap: 6 }}>
             Viewing as
@@ -271,9 +273,8 @@ function StudentYou({ config, data, update, asStudent, setAsStudent }) {
         ) : null}
       </div>
 
-      <div style={{ marginTop: 14 }}>
-        <div style={label}>Grades so far</div>
-        <div style={{ marginTop: 8 }}><GradeParade config={config} data={data} name={asStudent} accent={a} /></div>
+      <div style={{ marginTop: 14, paddingBottom: 24, borderBottom: "1px solid " + BORDER }}>
+        <ProfileForm key={asStudent} student={asStudent} initial={data?.profiles?.[asStudent] || {}} update={update} accent={a} />
       </div>
 
       <div style={{ marginTop: 20 }}>
@@ -296,10 +297,6 @@ function StudentYou({ config, data, update, asStudent, setAsStudent }) {
         <div style={label}>I don't understand something</div>
         <div style={{ marginTop: 8 }}><Field value={question} onChange={setQuestion} placeholder="This is a good place to ask questions about material or assignments that the whole class might want to know about." /></div>
         <div style={{ marginTop: 8 }}><SendBtn accent={a} onClick={ask} disabled={!question.trim()}>Ask</SendBtn></div>
-      </div>
-
-      <div style={{ marginTop: 28, paddingTop: 24, borderTop: "1px solid " + BORDER }}>
-        <ProfileForm key={asStudent} student={asStudent} initial={data?.profiles?.[asStudent] || {}} update={update} accent={a} />
       </div>
     </div>
   );

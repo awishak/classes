@@ -21,7 +21,7 @@ import { usePoll } from "./poll.js";
 import { YouSummary, YouDetail } from "./YouCard.jsx";
 import { ScheduleSummary, ScheduleDetail } from "./ScheduleCard.jsx";
 import { RosterSummary, RosterDetail } from "./RosterCard.jsx";
-import { AssignmentsSummary, AssignmentsDetail, dueState, nextDue, ungradedCount } from "./AssignmentsCard.jsx";
+import { AssignmentsSummary, AssignmentsDetail, ungradedCount } from "./AssignmentsCard.jsx";
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
@@ -32,6 +32,10 @@ import { gameClient } from "./gameClient.js";
 import GradeDeck from "./GradeDeck.jsx";
 import { unseenGrades, markSeen, meetingPatch } from "./grades.js";
 import DueDeck, { dueSoon, dismissDue } from "./DueCard.jsx";
+import GradeParade from "./GradeParade.jsx";
+import { NextClassHero, PinnedLinks, ClassSummary, YourCardSummary, GamesSummary, RequestForm, RequestInbox,
+  openRequests, tileTitle, owedStyle } from "./HomeCards.jsx";
+import { nextOwed } from "./AssignmentsCard.jsx";
 import TopNav, { NAV_STUDENT, NAV_TEACH, tabHref } from "./TopNav.jsx";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
@@ -92,7 +96,7 @@ const CSS = `
 // actually moves between is the class page, the dashboard and the repository.
 // So on his phone the bottom bar carries those instead — which is where the
 // three doors belong on a phone, rather than in a strip above the fold.
-const NAV_CARDS = new Set(["schedule", "assignments", "community"]);
+const NAV_CARDS = new Set(["schedule", "assignments", "class"]);
 
 // ─────────────────────────────────────────────────────────────
 // Card summaries (left grid). Each returns { title, body } given config + role.
@@ -102,19 +106,27 @@ function summary(key, config, role, ctx) {
     case "dayplan":
       return { title: "Day Plan", body: <DayPlanSummary config={config} data={ctx.data} blockOf={ctx.blockOf} /> };
     case "you":
-      return { title: "You", body: <YouSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> };
+      return role === "instructor"
+        ? { title: "You", body: <YouSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> }
+        : { title: "Your card", body: <YourCardSummary config={config} data={ctx.data} name={ctx.asStudent} /> };
     case "assignments":
-      return { title: "Assignments", body: <AssignmentsSummary config={config} data={ctx.data} role={role} /> };
+      return { title: "Assignments", body: <AssignmentsSummary config={config} data={ctx.data} role={role} name={role === "instructor" ? "" : ctx.asStudent} /> };
+    case "class":
+      return { title: "Class", body: <ClassSummary config={config} data={ctx.data} /> };
+    case "grades":
+      return role === "instructor"
+        ? { title: "Grades", body: <Muted>Grade view</Muted> }
+        : { title: "Grades", body: <GradeParade config={config} data={ctx.data} name={ctx.asStudent} accent={config.accent} compact /> };
+    case "games":
+      return { title: "Games", body: <GamesSummary games={ctx.games} /> };
     case "schedule":
       return { title: "Schedule", body: <ScheduleSummary config={config} data={ctx.data} /> };
-    case "community":
-      return { title: "Community", body: <CommunitySummary config={config} live={ctx.live} poll={ctx.poll} data={ctx.data} games={ctx.games} /> };
     case "leaderboard":
       return { title: "Leaderboard", body: <Muted>In-class game standings.</Muted> };
     case "roster":
       return { title: "Roster", body: <RosterSummary config={config} data={ctx.data} /> };
     case "instructor":
-      return { title: "Your Instructor", body: <div style={{ fontWeight: 600 }}>{config.instructor?.name}</div> };
+      return { title: "Your instructor", body: <div style={{ fontWeight: 600 }}>{config.instructor?.name}</div> };
     default:
       return { title: key, body: null };
   }
@@ -143,15 +155,42 @@ function detail(key, config, role, ctx) {
   if (key === "instructor") {
     const ins = config.instructor || {};
     return (
-      <Panel title="Your Instructor">
+      <Panel title="Your instructor">
         <div style={{ fontWeight: 700, fontSize: 17 }}>{ins.name}</div>
         <div style={{ marginTop: 6, color: TEXT_SECONDARY }}>{ins.bio}</div>
         {ins.email ? <a className="ca-focus" href={"mailto:" + ins.email} style={{ display: "inline-block", marginTop: 10, fontSize: 15, fontWeight: 600, color: config.accent }}>{ins.email}</a> : null}
       </Panel>
     );
   }
-  if (key === "community") return <Panel title="Community"><CommunityDetail config={config} live={ctx.live} poll={ctx.poll} data={ctx.data} games={ctx.games} onStartGame={ctx.startGame} /></Panel>;
-  if (key === "leaderboard") return <Panel title="Leaderboard"><Muted>In-class game leaderboard.</Muted></Panel>;
+  // Class: your card, the roster and your instructor, each a card of its own.
+  if (key === "class") {
+    return (
+      <Panel title="Class">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {["you", "roster", "instructor"].map((k, i) => ctx.tile(k, i))}
+        </div>
+      </Panel>
+    );
+  }
+  if (key === "grades") {
+    return role === "instructor"
+      ? <Panel title="Grades"><a className="ca-focus" href={config.path + "/grade"} style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, fontSize: 17, fontWeight: 600, color: config.accent, textDecoration: "none" }}>Grade view</a></Panel>
+      : <Panel title="Grades"><GradeParade config={config} data={ctx.data} name={ctx.asStudent} accent={config.accent} /></Panel>;
+  }
+  // Games: the one that is open, with Start, and every game this student
+  // finished, with the score once the scores are released.
+  if (key === "games") {
+    return (
+      <Panel title="Games">
+        {(ctx.games || []).length
+          ? <GamesNow games={ctx.games} onStart={ctx.startGame || (() => {})} />
+          : <Muted>No games yet.</Muted>}
+        {role === "instructor" ? (
+          <a className="ca-focus" href={config.path + "/games"} style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, marginTop: 12, fontSize: 17, fontWeight: 600, color: config.accent, textDecoration: "none" }}>Games</a>
+        ) : null}
+      </Panel>
+    );
+  }
   return <Panel title={key}><Muted>Coming soon.</Muted></Panel>;
 }
 
@@ -272,43 +311,6 @@ function liveNow(config, live, poll, data) {
   return out;
 }
 
-function CommunitySummary({ config, live, poll, data, games = [] }) {
-  const items = [
-    ...games.filter(g => g.open).map(g => ({ id: "deck-" + g.deck.id, title: g.deck.title })),
-    ...liveNow(config, live, poll, data),
-  ];
-  if (!items.length) return <Muted>Nothing live right now.</Muted>;
-  return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ width: 8, height: 8, borderRadius: "50%", background: LIVE, flexShrink: 0 }} />
-        <span style={{ fontWeight: 600 }}>{items[0].title}</span>
-      </div>
-      {items.length > 1 ? <Muted>and {items.length - 1} more</Muted> : null}
-    </div>
-  );
-}
-
-function CommunityDetail({ config, live, poll, data, games = [], onStartGame }) {
-  const items = liveNow(config, live, poll, data);
-  if (!items.length && !games.length) return <Muted>Games, boards and live activities appear here while they run.</Muted>;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {onStartGame ? <GamesNow games={games} onStart={onStartGame} /> : null}
-      {items.map(it => (
-        <div key={it.id} style={{ border: "1px solid " + BORDER, borderRadius: 14, padding: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: LIVE, flexShrink: 0 }} />
-            <span style={{ fontWeight: 600, fontSize: 17 }}>{it.title}</span>
-          </div>
-          {it.what ? <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 6 }}>{it.what}</div> : null}
-          <a className="ca-focus" href={it.href} style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, fontSize: 15, fontWeight: 600, color: config.accent, textDecoration: "none" }}>Join in →</a>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ─────────────────────────────────────────────────────────────
 // Needs you — the answer to "what do I do now?"
 // ─────────────────────────────────────────────────────────────
@@ -325,17 +327,15 @@ function needsYou(config, data, role, asStudent) {
       return last && last.from === "student";
     }).length;
     if (waiting) out.push({ id: "inbox", card: "you", text: waiting + " student" + (waiting === 1 ? "" : "s") + " waiting on a reply" });
+    const asks = openRequests(data);
+    if (asks) out.push({ id: "requests", card: "more", text: asks + " request" + (asks === 1 ? "" : "s") + " and bugs waiting" });
     return out;
   }
   const thread = data?.threads?.[asStudent] || [];
   const last = thread[thread.length - 1];
   if (last && last.from === "instructor") out.push({ id: "note", card: "you", text: "A new note from " + (config.instructor?.name || "your instructor") });
-  const next = nextDue(config, data);
-  if (next) {
-    const d = dueState(next.due);
-    const submitted = ((data?.assignmentLog?.[next.id] || {})[asStudent] || []).some(e => e.type === "submission");
-    if (d && d.tone !== "calm" && !submitted) out.push({ id: "due", card: "assignments", text: next.title + " is " + d.text.toLowerCase(), tone: d.tone });
-  }
+  // A deadline coming up is the Assignments card's own highlight now, so it
+  // is not said a second time up here.
   return out;
 }
 
@@ -461,7 +461,9 @@ export default function ClassApp({ config, initialCard }) {
   // the Ask page writes, so a student who signed in to ask a question is in.
   const remembered = () => { try { return localStorage.getItem(REMEMBER); } catch { return null; } };
   const [role, setRole] = useState(() => { try { return localStorage.getItem(ADMIN) === "1" ? "instructor" : "student"; } catch { return "student"; } });
-  const [open, setOpen] = useState(initialCard || null);
+  // Community was renamed Class, and a link somebody saved still says community.
+  const cardKey = (k) => (k === "community" ? "class" : k);
+  const [open, setOpen] = useState(cardKey(initialCard) || null);
   // Which day the Day Plan card is showing, held here so the card itself can
   // stay a mirror with no state of its own.
   const [day, setDay] = useState("");
@@ -508,7 +510,7 @@ export default function ClassApp({ config, initialCard }) {
   useEffect(() => {
     const onPop = () => {
       const rest = window.location.pathname.replace(config.path, "").replace(/^\/|\/$/g, "");
-      setOpen(rest || null);
+      setOpen(cardKey(rest) || null);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -573,7 +575,12 @@ export default function ClassApp({ config, initialCard }) {
   // they went back to being cards like the rest.
   const navTabs = view === "instructor" ? NAV_TEACH : NAV_STUDENT;
   const tabCards = new Set(navTabs.map(n => n.card).filter(k => k && NAV_CARDS.has(k)));
-  const moreCards = enabledCards.filter(k => !tabCards.has(k));
+  // The home page, top to bottom, under the Next class hero and the pinned
+  // links. Andrew, 2026-09-15: schedule first, then assignments, then class,
+  // grades toward the bottom, and games at the very bottom.
+  const HOME = ["assignments", "class", "grades", "games"].filter(k => enabledCards.includes(k));
+  // What lives inside Class, and lights the Class tab when open.
+  const IN_CLASS = new Set(["you", "roster", "instructor"]);
 
   const signIn = (name) => {
     try { localStorage.setItem(REMEMBER, name); } catch { /* private mode */ }
@@ -789,18 +796,25 @@ export default function ClassApp({ config, initialCard }) {
 
   // Which nav tab is lit: the open card, or "More" when the open card is one
   // that lives under it.
-  const activeNav = !openKey ? "home" : (tabCards.has(openKey) ? openKey : "more");
+  const activeNav = !openKey ? "home"
+    : tabCards.has(openKey) ? openKey
+    : IN_CLASS.has(openKey) && tabCards.has("class") ? "class"
+    : openKey === "more" ? "more" : "home";
+
+  // The thing this student still owes, which lights the Assignments card as
+  // the deadline gets close.
+  const owed = view === "instructor" ? null : nextOwed(data?.assignments || config.assignments || [], data, preview || asStudent);
 
   const CardTile = (key, i = 0) => {
     const s = summary(key, config, view, ctx);
-    const seat = { ...cardStyle(theme, i), ...card };
+    const seat = { ...cardStyle(theme, i), ...card, ...(key === "assignments" ? owedStyle(owed) : null) };
     return (
       <button key={key} className="ca-focus" onClick={() => go(key)}
         style={{ ...seat, position: "relative",
           outline: openKey === key ? "2px solid " + a : "none" }}>
         {i === 0 ? <TubeyPeek theme={theme} /> : null}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{ ...label, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{s.title}</span>
+          <span style={{ ...tileTitle(theme), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{s.title}</span>
           <span style={{ fontSize: 15, fontWeight: 600, color: a, whiteSpace: "nowrap", flexShrink: 0 }}>open →</span>
         </div>
         {s.body}
@@ -819,8 +833,8 @@ export default function ClassApp({ config, initialCard }) {
             Games
           </a>
         ) : null}
-        {moreCards.map(CardTile)}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
+        {view === "instructor" ? <RequestInbox data={data} update={write} /> : null}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: view === "instructor" ? 12 : 0, borderTop: view === "instructor" ? "1px solid " + BORDER : "none" }}>
           <span style={{ ...label, color: TEXT_MUTED }}>Theme</span>
           <p style={{ margin: 0, fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5 }}>
             Your choice, on your screen. Nobody else in the class sees it.
@@ -828,11 +842,17 @@ export default function ClassApp({ config, initialCard }) {
           <ThemePicker theme={theme} onPick={pickTheme} />
           <DayNightPicker theme={theme} mode={mode} onPick={pickMode} />
         </div>
+        {view === "instructor" ? null : (
+          <div style={{ paddingTop: 12, borderTop: "1px solid " + BORDER }}>
+            <RequestForm update={write} name={preview || asStudent} />
+          </div>
+        )}
       </div>
     </Panel>
   );
 
   const detailFor = (key) => key === "more" ? MorePage : detail(key, config, view, ctx);
+  ctx.tile = CardTile;
 
   // Class is on the projector right now. Students following remotely get the
   // same screen the room is looking at.
@@ -887,9 +907,23 @@ export default function ClassApp({ config, initialCard }) {
     </nav>
   );
 
+  // The home page. The hero and the pinned links take the full width of the
+  // two-across grid on a laptop; on a phone everything is one column anyway.
+  const sectionOf = (roster.find(s => s.name === (preview || asStudent)) || me || {}).section;
   const Grid = data === null
     ? <>{[0, 1, 2, 3].map(i => <SkeletonTile key={i} />)}</>
-    : <>{enabledCards.map(CardTile)}</>;
+    : <>
+        <div key="hero" style={{ gridColumn: "1 / -1" }}>
+          <NextClassHero config={config} data={data} blockOf={ctx.blockOf} section={sectionOf}
+            onOpen={() => go("schedule")} seat={cardStyle(theme, 0)} />
+        </div>
+        {(data?.pins || []).length || view === "instructor" ? (
+          <div key="pins" style={{ gridColumn: "1 / -1" }}>
+            <PinnedLinks data={data} update={write} instructor={view === "instructor"} seat={cardStyle(theme, 1)} />
+          </div>
+        ) : null}
+        {HOME.map((k, i) => CardTile(k, i + 2))}
+      </>;
 
   // The door, after every hook above has run, so a render that turns somebody
   // away calls the same hooks as a render that lets them in, and above both

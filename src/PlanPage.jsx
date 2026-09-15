@@ -47,6 +47,31 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep15-home", date: "Tuesday, September 15", title: "The class home leads with the next class",
+    blurb: "Andrew looked at the class page as a student and rearranged it: the next class as the hero, then Assignments, Class, Grades and Games, with More holding the theme and a requests and bugs form, and a way to pin a Google Doc on the front page instead of running discussion boards.",
+    groups: [
+      { name: "Top to bottom", items: [
+        ["Next class is the hero", "The first card is the next class day: the weekday and date, the time and the room, the day's title, that day's readings with their sources, and the game if there is one. The day stays up until the last sitting ends, then the next date takes over. A student in a section sees that section's time. The card is the class colour, tinted, with a solid outline, and pressing the top of the card opens the schedule."],
+        ["No in-person meeting", "A class day can be marked as not meeting in the room, from a new button among the day's tools on the dashboard. That day's hero has a dashed outline and a No in-person meeting badge, and leaves out the time and the room. Oct 26, Nov 18 and Nov 20 in COMM 3, and Oct 26 and Nov 18 in COMM 118, are marked, because Andrew titled each of those days No class."],
+        ["Pinned", "Under the hero, the links Andrew pins. On his own view of the class page there is a box for a name and a link, and Unpin beside each one. A student with nothing pinned sees nothing there."],
+        ["Assignments lights up", "The card shows the next thing this student has not turned in, and takes an amber outline inside a week of the deadline and an amber fill inside two days. The line above the cards that said an assignment was due in some days is gone, because the card says so now."],
+        ["Class", "Community is Class, in the tabs and on the home page. The card shows the overlapping faces and the count, and the page holds three cards: Your card, the roster and your instructor. An old /community link opens Class."],
+        ["Your card", "The page a student fills in about themselves, with the profile first and the messages with Andrew under that."],
+        ["Grades, then Games", "Grades sit near the bottom as the row of letters. Games are last: the game that is open, with Start, and every game a student finished, with the score once scores are released."],
+        ["More", "The theme, Auto, Day and Night, and Requests and bugs: Request or Bug, a box, and Send. Andrew's own More lists what came in, with Done on each, and his home page says how many are waiting."],
+      ] },
+      { name: "Type", items: [
+        ["Card titles on Clean", "The titles were the small uppercase mono label. On Clean they are the bottom bar's face at 20px now. Snapchat and Crashing Out keep their own label faces."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "The open → on each card is unchanged, waiting on Andrew's pick.",
+      "The Leaderboard card is gone from the student pages. The card only ever said In-class game standings.",
+      "Discussion boards are not on the home page. The board page still works for anybody with the link.",
+      "The Student and Instructor switch is still in every student's menu.",
+    ] },
+  },
+  {
     id: "sep15-cards", date: "Tuesday, September 15", title: "A grade goes out once, and a deadline gets a card",
     blurb: "Andrew asked for two things. A release after grading more students should not send the same grade card to the students who already had theirs. And a student with an assignment due inside 48 hours and nothing turned in should get a card, once.",
     groups: [

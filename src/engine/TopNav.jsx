@@ -34,7 +34,7 @@ export const NAV_STUDENT = [
   { id: "home", label: "Home", card: null },
   { id: "schedule", label: "Schedule", card: "schedule" },
   { id: "assignments", label: "Assignments", card: "assignments" },
-  { id: "community", label: "Community", card: "community" },
+  { id: "class", label: "Class", card: "class" },
   { id: "more", label: "More", card: "more" },
 ];
 
