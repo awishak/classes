@@ -2007,7 +2007,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
           kindColor={days <= 1 ? LIVE : days <= 7 ? WARN : TEXT_MUTED}
           title={a.title} sub={"Due " + a.due + (a.weight ? " · " + a.weight + "%" : "")}
           live={liveLabel === a.title} onDismiss={dismiss}
-          onCast={() => castNow({ type: "reveal", stamp: "Assignment", title: a.title, due: "Due " + a.due, big: true, label: a.title })} />
+          onCast={() => castNow({ type: "reveal", stamp: "Challenge", title: a.title, due: "Due " + a.due, big: true, label: a.title })} />
       ))}
       {extra}
     </div>
@@ -2358,7 +2358,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
           {slidesBlock}
           {unplannedBlock}
           <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
-            extra={<GoTo href={classHref + "/assignments"} accent={accent}>All assignments</GoTo>} />
+            extra={<GoTo href={classHref + "/challenges"} accent={accent}>All challenges</GoTo>} />
         </div>
       </details>
 
@@ -2876,7 +2876,7 @@ export function TodoPanel({ plan, seq, features, boards, assignments, shelves, s
       { ok: days > 3, tone: days <= 1 ? "late" : "warn",
         good: "Due " + a.due + ", " + days + " days out",
         bad: days === 0 ? "Due today" : days === 1 ? "Due tomorrow" : "Due in " + days + " days" },
-      { ok: !!(a.instructionsUrl || a.description), good: "Instructions are posted", bad: "No instructions posted yet" },
+      { ok: !!(a.instructionsUrl || a.description), good: "Details are posted", bad: "No details posted yet" },
       { ok: !!a.closeAt, good: "Submissions close " + String(a.closeAt).slice(0, 10), bad: "No close date set, so late work lands silently" },
       { ok: submitted >= roster, good: "All " + roster + " have submitted", bad: submitted + " of " + roster + " have submitted" },
       { ok: ungraded === 0, good: "Nothing waiting to be graded", bad: ungraded + " submission" + (ungraded === 1 ? "" : "s") + " waiting to be graded" },
@@ -2899,8 +2899,8 @@ export function TodoPanel({ plan, seq, features, boards, assignments, shelves, s
 
 export function AssignmentsPanel({ assignments, castNow, dismiss, liveLabel, path }) {
   if (!assignments.length) return (
-    <a className="dash-focus dash-empty" href={path ? path + "/assignments" : "#"}
-      style={{ textDecoration: "none" }}>+ Set up the assignments for this class</a>
+    <a className="dash-focus dash-empty" href={path ? path + "/challenges" : "#"}
+      style={{ textDecoration: "none" }}>+ Set up the challenges for this class</a>
   );
   return (
     <>
@@ -2910,7 +2910,7 @@ export function AssignmentsPanel({ assignments, castNow, dismiss, liveLabel, pat
             <Item kind={a.due && a.due !== "Ongoing" ? a.due : "Due"} kindColor={TEXT_MUTED} title={a.title}
               sub={a.weight ? a.weight + "% of the grade" : ""}
               live={liveLabel === a.title} onDismiss={dismiss}
-              onCast={() => castNow({ type: "reveal", stamp: "Assignment", title: a.title, due: "Due " + a.due, big: true, label: a.title })} />
+              onCast={() => castNow({ type: "reveal", stamp: "Challenge", title: a.title, due: "Due " + a.due, big: true, label: a.title })} />
           </div>
           {path ? (
             <a className="dash-focus" href={path + "/grade?a=" + encodeURIComponent(a.id)} title={"Grade " + a.title + " in grade view"}
@@ -3885,6 +3885,11 @@ export default function Dashboard({ config }) {
   const looseItems = unplanned(data, config, day).filter(it => !MEDIA_SET.has(it.type));
 
   useEffect(() => { document.title = config.code + " — Dashboard"; }, [config.code]);
+  // Around the Horn is an app of its own in the More list, and opens the
+  // dashboard with the board already up: /<class>/dashboard?app=horn.
+  useEffect(() => {
+    try { if (new URLSearchParams(window.location.search).get("app") === "horn") setHornOpen(true); } catch { /* no URL */ }
+  }, []);
 
   // Keyboard, because during class my hands are the slow part. Nothing fires
   // while I am typing into a field, so the claim editors keep working.
@@ -4736,7 +4741,7 @@ export default function Dashboard({ config }) {
         count: b.ideas.length, showAsk: which === "pre", label: lbl + " · " + (i + 1) }) }));
   });
   assignments.forEach(a => cmdTargets.push({ key: "a:" + a.id, group: "Reveal", title: a.title,
-    run: () => castNow({ type: "reveal", stamp: "Assignment", title: a.title, due: "Due " + a.due, big: true, label: a.title }) }));
+    run: () => castNow({ type: "reveal", stamp: "Challenge", title: a.title, due: "Due " + a.due, big: true, label: a.title }) }));
   (q.items || []).filter(x => x.state === "open").forEach(x => cmdTargets.push({ key: "q:" + x.id, group: "Question", title: x.text,
     run: () => { castNow({ type: "question", tag: "From the room", title: x.text, cite: x.anon ? "Anonymous" : (x.who || ""), label: "Question · " + (x.anon ? "anonymous" : x.who) }); markEngaged(); } }));
   cmdTargets.push({ key: "c:poll", group: "Screen", title: "Live poll", run: () => castNow({ type: "poll", label: "Live poll" }) });
@@ -4871,7 +4876,7 @@ export default function Dashboard({ config }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} path={config.path} />,
   };
-  const TITLES = { todo: "To-do", poll: "Poll", flow: "Day Plan", boards: "Enter/Exit", find: "Find", readings: "On the week", ideas: "Activities & seeds", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Assignments" };
+  const TITLES = { todo: "To-do", poll: "Poll", flow: "Day Plan", boards: "Enter/Exit", find: "Find", readings: "On the week", ideas: "Activities & seeds", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Challenges" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   const outCount = Object.values(marks).filter(v => v === "out").length;
   // How far through the day I am, counted off the flow rather than the clock.

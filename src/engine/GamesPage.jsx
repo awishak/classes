@@ -44,7 +44,7 @@ export default function GamesPage({ config }) {
   }, [session, instructor]);
   const bar = (
     <div ref={barRef} style={{ position: "sticky", top: 0, zIndex: 30 }}>
-      <TopNav config={config} tabs={NAV_TEACH} active="more" moreNode={<ClassMenu config={config} />} />
+      <TopNav config={config} tabs={NAV_TEACH} active="" />
     </div>
   );
 

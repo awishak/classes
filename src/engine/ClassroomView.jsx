@@ -190,7 +190,7 @@ export function Content({ cast, config, plan, data }) {
     return (
       <div style={{ ...wrap, alignItems: "center", justifyContent: "center", textAlign: "center", gap: "2vh" }}>
         <div style={{ ...eyebrow, color: "#e11d48", border: "1px solid rgba(225,29,72,.45)", borderRadius: 8, padding: "6px 14px" }}>
-          {cast.stamp || "New assignment"}
+          {cast.stamp || "New challenge"}
         </div>
         <div style={{ fontSize: "clamp(34px,5.6vw,84px)", fontWeight: 700, letterSpacing: "-.035em", lineHeight: 1.06, maxWidth: "17ch" }}>
           {cast.title}

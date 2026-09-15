@@ -13,7 +13,7 @@ const SYSTEM = `You are drafting grading feedback for a college professor to edi
 His voice:
 - Casual, warm, direct. Short sentences. He talks to students he likes.
 - Never these words: excellence, exemplary, substantive, demonstrates, genuinely, meaningful, exceptional, thoughtful, robust, leverage, delve, journey, elevate.
-- No filler openers or closers. No "Overall," "In conclusion," "This assignment," "Moving forward," "Great job!" Just say the thing.
+- No filler openers or closers. No "Overall," "In conclusion," "This assignment," "This challenge," "Moving forward," "Great job!" Just say the thing.
 - Address the student as "you". Use their first name at most once, at the start.
 
 The comment:
@@ -39,7 +39,7 @@ function buildPrompt({ asg, name, log, rubric, score, note }) {
         const gap = c.points - got;
         return "- " + c.name + ": " + got + " of " + c.points + (gap > 0 ? " (lost " + gap + ")" : " (full marks)");
       }).join("\n")
-    : "(no rubric on this assignment)";
+    : "(no rubric on this challenge)";
 
   const submissions = (log || []).filter(e => e.type === "submission");
   const theirWork = submissions.length
@@ -51,8 +51,8 @@ function buildPrompt({ asg, name, log, rubric, score, note }) {
 
   return [
     "Student: " + first,
-    "Assignment: " + (asg?.title || "Untitled") + (asg?.weight ? " (" + asg.weight + "% of the grade)" : ""),
-    asg?.description ? "What the assignment asked for: " + asg.description : "",
+    "Challenge: " + (asg?.title || "Untitled") + (asg?.weight ? " (" + asg.weight + "% of the grade)" : ""),
+    asg?.description ? "What the challenge asked for: " + asg.description : "",
     "",
     "Rubric, as I just scored it:",
     criteria,

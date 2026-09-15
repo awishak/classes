@@ -93,7 +93,7 @@ export function Tubey({ size = 84, title = "Tubey the Worm" }) {
 
 // He talks. He is contractually barred from being useful.
 const TUBEY_LINES = [
-  "hi. i live in the tubes. i am not allowed near your assignment but i am rooting for you extremely hard.",
+  "hi. i live in the tubes. i am not allowed near your challenge but i am rooting for you extremely hard.",
   "i read every reading. i cannot tell you what happens. i can tell you it is short.",
   "if you are behind, being behind on purpose and being behind by accident feel identical. pick one and act like it.",
   "i have said the wrong thing in a mall in front of two hundred people. you can post on the board.",

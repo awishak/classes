@@ -295,7 +295,7 @@ function StudentYou({ config, data, update, asStudent, setAsStudent }) {
 
       <div style={{ marginTop: 22 }}>
         <div style={label}>I don't understand something</div>
-        <div style={{ marginTop: 8 }}><Field value={question} onChange={setQuestion} placeholder="This is a good place to ask questions about material or assignments that the whole class might want to know about." /></div>
+        <div style={{ marginTop: 8 }}><Field value={question} onChange={setQuestion} placeholder="This is a good place to ask questions about material or challenges that the whole class might want to know about." /></div>
         <div style={{ marginTop: 8 }}><SendBtn accent={a} onClick={ask} disabled={!question.trim()}>Ask</SendBtn></div>
       </div>
     </div>

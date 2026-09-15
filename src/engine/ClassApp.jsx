@@ -32,11 +32,13 @@ import { gameClient } from "./gameClient.js";
 import GradeDeck from "./GradeDeck.jsx";
 import { unseenGrades, markSeen, meetingPatch } from "./grades.js";
 import DueDeck, { dueSoon, dismissDue } from "./DueCard.jsx";
-import GradeParade from "./GradeParade.jsx";
 import { NextClassHero, PinnedLinks, ClassSummary, YourCardSummary, GamesSummary, RequestForm, RequestInbox,
   openRequests, tileTitle, owedStyle } from "./HomeCards.jsx";
 import { nextOwed } from "./AssignmentsCard.jsx";
-import TopNav, { NAV_STUDENT, NAV_TEACH, tabHref } from "./TopNav.jsx";
+import { AssignmentCards, AssignmentPage } from "./AssignmentCards.jsx";
+
+import TopNav, { NAV_CLASS, tabHref } from "./TopNav.jsx";
+import AppsMenu from "./AppsMenu.jsx";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
 } from "./ThemeChrome.jsx";
@@ -85,17 +87,9 @@ const CSS = `
 @media (prefers-reduced-motion:reduce){.ca-skel{animation:none}}
 `;
 
-// The tabs across the top, and along the bottom on a phone.
-//
-// A student gets the five: the three cards worth a tab of their own, plus Home
-// and More. For a student those three ARE the class, and a bottom bar of two
-// items on a phone is a worse bar.
-//
-// An instructor does not. Schedule, Assignments and Community are already in
-// the grid he is looking at, so a tab to each was the same door twice; what he
-// actually moves between is the class page, the dashboard and the repository.
-// So on his phone the bottom bar carries those instead — which is where the
-// three doors belong on a phone, rather than in a strip above the fold.
+// The tabs across the top, and along the bottom on a phone: Home, Schedule,
+// Challenges, Class and More, the same for Andrew and for a student. The
+// apps sit behind the Apps button; More is the admin page.
 const NAV_CARDS = new Set(["schedule", "assignments", "class"]);
 
 // ─────────────────────────────────────────────────────────────
@@ -110,13 +104,9 @@ function summary(key, config, role, ctx) {
         ? { title: "You", body: <YouSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> }
         : { title: "Your card", body: <YourCardSummary config={config} data={ctx.data} name={ctx.asStudent} /> };
     case "assignments":
-      return { title: "Assignments", body: <AssignmentsSummary config={config} data={ctx.data} role={role} name={role === "instructor" ? "" : ctx.asStudent} /> };
+      return { title: "Challenges", body: <AssignmentsSummary config={config} data={ctx.data} role={role} name={role === "instructor" ? "" : ctx.asStudent} /> };
     case "class":
       return { title: "Class", body: <ClassSummary config={config} data={ctx.data} /> };
-    case "grades":
-      return role === "instructor"
-        ? { title: "Grades", body: <Muted>Grade view</Muted> }
-        : { title: "Grades", body: <GradeParade config={config} data={ctx.data} name={ctx.asStudent} accent={config.accent} compact /> };
     case "games":
       return { title: "Games", body: <GamesSummary games={ctx.games} /> };
     case "schedule":
@@ -144,7 +134,10 @@ function detail(key, config, role, ctx) {
     return <YouDetail config={config} role={role} data={ctx.data} update={ctx.update} asStudent={ctx.asStudent} setAsStudent={ctx.setAsStudent} />;
   }
   if (key === "assignments") {
-    return <AssignmentsDetail config={config} role={role} data={ctx.data} update={ctx.update} asStudent={ctx.asStudent} />;
+    if (role === "instructor") return <AssignmentsDetail config={config} role={role} data={ctx.data} update={ctx.update} asStudent={ctx.asStudent} />;
+    return ctx.sub
+      ? <AssignmentPage config={config} data={ctx.data} update={ctx.update} name={ctx.asStudent} id={ctx.sub} go={ctx.go} />
+      : <AssignmentCards config={config} data={ctx.data} name={ctx.asStudent} go={ctx.go} />;
   }
   if (key === "schedule") {
     return <ScheduleDetail config={config} role={role} data={ctx.data} update={ctx.update} blockOf={ctx.blockOf} />;
@@ -171,11 +164,6 @@ function detail(key, config, role, ctx) {
         </div>
       </Panel>
     );
-  }
-  if (key === "grades") {
-    return role === "instructor"
-      ? <Panel title="Grades"><a className="ca-focus" href={config.path + "/grade"} style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, fontSize: 17, fontWeight: 600, color: config.accent, textDecoration: "none" }}>Grade view</a></Panel>
-      : <Panel title="Grades"><GradeParade config={config} data={ctx.data} name={ctx.asStudent} accent={config.accent} /></Panel>;
   }
   // Games: the one that is open, with Start, and every game this student
   // finished, with the score once the scores are released.
@@ -240,8 +228,8 @@ export function onScreenNow(config, live, poll) {
     return { kind: "Question", title: c.title || c.label || "A question is up", cta: "Answer the question", href: ask };
   }
   if (c.type === "reveal") {
-    return { kind: "Assignment", title: c.title || "An assignment", sub: c.due || "",
-      cta: "Read the assignment", href: config.path };
+    return { kind: "Challenge", title: c.title || "A challenge", sub: c.due || "",
+      cta: "Read the challenge", href: config.path };
   }
   if (c.type === "feature") {
     return { kind: c.title || "Activity", title: c.body || c.title || "An activity is running",
@@ -462,7 +450,12 @@ export default function ClassApp({ config, initialCard }) {
   const remembered = () => { try { return localStorage.getItem(REMEMBER); } catch { return null; } };
   const [role, setRole] = useState(() => { try { return localStorage.getItem(ADMIN) === "1" ? "instructor" : "student"; } catch { return "student"; } });
   // Community was renamed Class, and a link somebody saved still says community.
-  const cardKey = (k) => (k === "community" ? "class" : k);
+  // The open card can carry a second part: "assignments/interview" is one
+  // assignment's own page.
+  // Assignments are Challenges to anyone reading, the URL included, while the
+  // card underneath keeps its key: /challenges/<id> opens "assignments/<id>",
+  // and an old /assignments link still lands.
+  const cardKey = (k) => (k ? String(k).replace(/^community(?=\/|$)/, "class").replace(/^challenges(?=\/|$)/, "assignments") : k);
   const [open, setOpen] = useState(cardKey(initialCard) || null);
   // Which day the Day Plan card is showing, held here so the card itself can
   // stay a mirror with no state of its own.
@@ -512,7 +505,7 @@ export default function ClassApp({ config, initialCard }) {
   // the grid instead of leaving the site.
   const go = useCallback((key) => {
     setOpen(key);
-    const path = config.path + (key ? "/" + key : "");
+    const path = config.path + (key ? "/" + String(key).replace(/^assignments(?=\/|$)/, "challenges") : "");
     if (window.location.pathname !== path) window.history.pushState({}, "", path);
   }, [config.path]);
 
@@ -582,12 +575,12 @@ export default function ClassApp({ config, initialCard }) {
   // without opening More. An instructor's tabs hold no cards at all, so every
   // card is under More for him — Schedule and Assignments did not disappear,
   // they went back to being cards like the rest.
-  const navTabs = view === "instructor" ? NAV_TEACH : NAV_STUDENT;
+  const navTabs = NAV_CLASS;
   const tabCards = new Set(navTabs.map(n => n.card).filter(k => k && NAV_CARDS.has(k)));
   // The home page, top to bottom, under the Next class hero and the pinned
   // links. Andrew, 2026-09-15: schedule first, then assignments, then class,
   // grades toward the bottom, and games at the very bottom.
-  const HOME = ["assignments", "class", "grades", "games"].filter(k => enabledCards.includes(k));
+  const HOME = ["assignments", "class", "games"].filter(k => enabledCards.includes(k));
   // What lives inside Class, and lights the Class tab when open.
   const IN_CLASS = new Set(["you", "roster", "instructor"]);
 
@@ -689,97 +682,13 @@ export default function ClassApp({ config, initialCard }) {
     </div>
   ) : null;
 
-  // The header had thirteen controls on the instructor side: four theme
-  // buttons, a view-as select, a class select, four teaching links, sign out
-  // and a two-button role toggle. Everything competed and nothing led.
-  //
-  // One thing stays out: the Dashboard, which is the button pressed with a
-  // class about to start. Everything else is a setting, and settings go behind
-  // a menu. A student sees the same menu with the teaching half missing.
-  const [menuOpen, setMenuOpen] = useState(false);
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onKey = (e) => { if (e.key === "Escape") setMenuOpen(false); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [menuOpen]);
-
-  const menuRow = { display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: TAP,
-    padding: "0 14px", background: "none", border: "none", borderRadius: 10, cursor: "pointer",
-    fontFamily: F, fontSize: 15, fontWeight: 500, color: TEXT_PRIMARY, textAlign: "left", textDecoration: "none" };
-  const menuLabel = { ...label, color: TEXT_MUTED, padding: "10px 14px 4px" };
-  const rule = <div style={{ height: 1, background: BORDER, margin: "6px 0" }} />;
-
-  const HeaderMenu = (
-    <div style={{ position: "relative" }}>
-      <button className="ca-focus" onClick={() => setMenuOpen(v => !v)}
-        aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Menu"
-        style={{ minHeight: TAP, padding: "0 14px", borderRadius: 999, cursor: "pointer",
-          background: "var(--surface-card)", border: "1px solid " + BORDER_STRONG,
-          fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_SECONDARY,
-          display: "inline-flex", alignItems: "center", gap: 8 }}>
-        {signedIn ? signedIn.split(" ")[0] : "Menu"}
-        <span aria-hidden="true" style={{ fontSize: 13, color: TEXT_MUTED }}>▾</span>
-      </button>
-      {menuOpen ? (
-        <>
-          <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-          <div role="menu" style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", zIndex: 41,
-            width: 288, maxWidth: "calc(100vw - 32px)", padding: 6, background: "var(--surface-card)", border: "var(--card-border)",
-            borderRadius: "var(--card-radius)", boxShadow: "0 20px 44px -14px rgba(23,19,16,.34)" }}>
-            {view === "instructor" ? (
-              <>
-                <div style={menuLabel}>Teach</div>
-                <a className="ca-focus" style={menuRow} href={config.path + "/today"}>Room screen</a>
-                <a className="ca-focus" style={menuRow} href={config.path + "/ask"}>Ask</a>
-                <a className="ca-focus" style={menuRow} href={config.path + "/games"}>Games</a>
-                <a className="ca-focus" style={menuRow} href={config.path + "/grade"}>Grade view</a>
-                {rule}
-                <div style={menuLabel}>Class</div>
-                <select className="ca-focus" value={config.id} aria-label="Class"
-                  onChange={e => {
-                    const next = ENGINE_LIST.find(c => c.id === e.target.value);
-                    if (!next) return;
-                    window.history.pushState({}, "", next.path);
-                    window.dispatchEvent(new PopStateEvent("popstate"));
-                  }}
-                  style={{ ...menuRow, cursor: "pointer" }}>
-                  {ENGINE_LIST.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
-                </select>
-                {roster.length ? (
-                  <select className="ca-focus" value={preview} aria-label="Which student"
-                    onChange={e => { setPreview(e.target.value); setMenuOpen(false); go(null); }}
-                    style={{ ...menuRow, cursor: "pointer" }}>
-                    <option value="">View as a student</option>
-                    {roster.map(st => <option key={st.name} value={st.name}>{st.name}</option>)}
-                  </select>
-                ) : null}
-                {rule}
-              </>
-            ) : null}
-            <div style={menuLabel}>Theme</div>
-            <div style={{ padding: "2px 14px 8px", display: "flex", flexDirection: "column", gap: 6 }}>
-              <ThemePicker theme={theme} onPick={pickTheme} compact />
-              <DayNightPicker theme={theme} mode={mode} onPick={pickMode} />
-            </div>
-            {rule}
-            {sessionInstructor ? <div style={{ padding: "2px 8px 4px" }}>{RoleToggle}</div> : null}
-            {signedIn && !preview ? (
-              <>
-                {ownCode ? (
-                  <div style={{ ...menuRow, cursor: "default", justifyContent: "space-between" }} title="Your email and this code sign you in anywhere">
-                    <span style={{ fontSize: 14, color: TEXT_MUTED }}>Your sign-in code</span>
-                    <span style={{ fontFamily: "var(--font-label)", fontSize: 16, fontWeight: 600, letterSpacing: ".14em", color: TEXT_PRIMARY }}>{ownCode}</span>
-                  </div>
-                ) : null}
-                <button className="ca-focus" onClick={signOut} style={{ ...menuRow, color: TEXT_SECONDARY }}>Sign out</button>
-              </>
-            ) : null}
-          </div>
-        </>
-      ) : null}
-    </div>
-  );
+  // The top-right button is Apps, the same button on every surface, for
+  // Andrew and for a student alike; Andrew's holds more. The class switcher,
+  // the student preview, the theme and the account moved to More, which is
+  // the admin page in either view.
+  const HeaderMenu = <AppsMenu config={config} role={view} onPick={go} />;
+  const adminSelect = { fontFamily: F, fontSize: 16, fontWeight: 500, minHeight: TAP, padding: "0 12px", borderRadius: 10,
+    border: "1px solid " + BORDER_STRONG, background: "var(--surface-card)", color: TEXT_PRIMARY, cursor: "pointer", maxWidth: 360 };
 
   const Logo = (
     <button className="ca-focus" onClick={() => go(null)}
@@ -796,7 +705,10 @@ export default function ClassApp({ config, initialCard }) {
 
   // A card key can arrive from the address bar, so it gets the same check the
   // grid does: unknown or not-yours falls back to the home grid.
-  const openKey = open && (open === "more" || enabledCards.includes(open)) ? open : null;
+  const [openBase, openSub = ""] = String(open || "").split("/");
+  const openKey = openBase && (openBase === "more" || enabledCards.includes(openBase)) ? openBase : null;
+  ctx.sub = openKey ? openSub : "";
+  ctx.go = go;
 
   // Which nav tab is lit: the open card, or "More" when the open card is one
   // that lives under it.
@@ -831,15 +743,32 @@ export default function ClassApp({ config, initialCard }) {
   const MorePage = (
     <Panel title="More">
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {/* More is the admin page, in either view. The apps are behind the
+            Apps button in the top bar. */}
         {view === "instructor" ? (
-          <a className="ca-focus" href={config.path + "/games"}
-            style={{ display: "flex", alignItems: "center", minHeight: TAP, padding: "0 16px", borderRadius: 12,
-              border: "1px solid " + BORDER_STRONG, background: "var(--surface-card)", color: TEXT_PRIMARY,
-              fontSize: 17, fontWeight: 600, textDecoration: "none" }}>
-            Games
-          </a>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <span style={{ ...label, color: TEXT_MUTED }}>Class</span>
+            <select className="ca-focus" value={config.id} aria-label="Class" id="more-class"
+              onChange={e => {
+                const next = ENGINE_LIST.find(c => c.id === e.target.value);
+                if (!next) return;
+                window.history.pushState({}, "", next.path);
+                window.dispatchEvent(new PopStateEvent("popstate"));
+              }}
+              style={adminSelect}>
+              {ENGINE_LIST.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
+            </select>
+            {roster.length ? (
+              <select className="ca-focus" value={preview} aria-label="Which student" id="more-preview"
+                onChange={e => { setPreview(e.target.value); go(null); }}
+                style={adminSelect}>
+                <option value="">View as a student</option>
+                {roster.map(st => <option key={st.name} value={st.name}>{st.name}</option>)}
+              </select>
+            ) : null}
+          </div>
         ) : null}
-        {view === "instructor" ? <RequestInbox data={data} update={write} /> : null}
+        {view === "instructor" ? <div style={{ paddingTop: 12, borderTop: "1px solid " + BORDER }}><RequestInbox data={data} update={write} /></div> : null}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: view === "instructor" ? 12 : 0, borderTop: view === "instructor" ? "1px solid " + BORDER : "none" }}>
           <span style={{ ...label, color: TEXT_MUTED }}>Theme</span>
           <p style={{ margin: 0, fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5 }}>
@@ -853,6 +782,23 @@ export default function ClassApp({ config, initialCard }) {
             <RequestForm update={write} name={preview || asStudent} />
           </div>
         )}
+        {/* The account, for a student: moved here from the top-right menu,
+            which is Apps now. */}
+        {session && !preview ? (
+          <div style={{ paddingTop: 12, borderTop: "1px solid " + BORDER, display: "flex", flexDirection: "column", gap: 4 }}>
+            {sessionInstructor ? <div style={{ alignSelf: "flex-start" }}>{RoleToggle}</div> : null}
+            {ownCode ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: TAP }} title="Your email and this code sign you in anywhere">
+                <span style={{ fontSize: 15, color: TEXT_MUTED }}>Your sign-in code</span>
+                <span style={{ fontFamily: "var(--font-label)", fontSize: 16, fontWeight: 600, letterSpacing: ".14em", color: TEXT_PRIMARY }}>{ownCode}</span>
+              </div>
+            ) : null}
+            <button className="ca-focus" onClick={signOut}
+              style={{ alignSelf: "flex-start", minHeight: TAP, background: "none", border: "none", padding: 0, fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_SECONDARY, cursor: "pointer" }}>
+              {view === "instructor" || !signedIn ? "Sign out" : "Sign out " + signedIn}
+            </button>
+          </div>
+        ) : null}
       </div>
     </Panel>
   );
@@ -962,7 +908,7 @@ export default function ClassApp({ config, initialCard }) {
         <ThemeStyle theme={theme} />
         <style>{CSS}</style>
         <DueDeck config={config} items={dueCards} onDismiss={(asg) => write(prev => dismissDue(prev, asg, seenAs))} onDone={() => setDueDone(true)}
-          onOpen={(asg) => { go("assignments"); window.history.replaceState({}, "", config.path + "/assignments#asg-" + encodeURIComponent(asg.id)); }} />
+          onOpen={(asg) => go("assignments/" + asg.id)} />
       </div>
     );
   }
@@ -982,12 +928,11 @@ export default function ClassApp({ config, initialCard }) {
         {/* The same bar the dashboard and the repository wear — literally the
             same component, so the three cannot drift apart again. The theme's
             own trimmings ride in its right-hand slot. */}
-        <TopNav config={config} tabs={navTabs} active={activeNav} onPick={go}
+        <TopNav config={config} tabs={navTabs} active={activeNav} onPick={go} role={view}
           right={
             <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <ThemeIdentity theme={theme} points={myPoints} />
               <ThemeBadge theme={theme} points={myPoints} />
-              {HeaderMenu}
             </span>
           } />
         </div>
@@ -1033,7 +978,7 @@ export default function ClassApp({ config, initialCard }) {
       <div style={{ background: "var(--surface-card)", borderBottom: "1px solid " + BORDER }}>
         <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           {openKey ? (
-            <button className="ca-focus" onClick={() => go(null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 17, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: "0 4px 0 0" }}>← Back</button>
+            <button className="ca-focus" onClick={() => go(openSub ? openKey : IN_CLASS.has(openKey) ? "class" : null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 17, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: "0 4px 0 0" }}>← Back</button>
           ) : Logo}
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flex: "none" }}>
             <ThemeBadge theme={theme} points={myPoints} />

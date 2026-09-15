@@ -115,7 +115,7 @@ export default function GradeDeck({ config, items, onSeen, onDone, onMeeting, ch
 
           {/* ways on from here */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <a href={config.path + "/assignments#asg-" + encodeURIComponent(card.aid)} style={ghost}>Open the assignment</a>
+            <a href={config.path + "/challenges/" + encodeURIComponent(card.aid)} style={ghost}>Open the challenge</a>
             {asked.has(card.aid)
               ? <span style={{ fontSize: 15, fontWeight: 600, color: OK, minHeight: TAP, display: "inline-flex", alignItems: "center" }}>Meeting requested. Andrew will reply on your You card.</span>
               : scheduling

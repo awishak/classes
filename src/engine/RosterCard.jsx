@@ -174,7 +174,7 @@ function StudentPage({ config, data, name, email, code, onBack }) {
             return (
               <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid " + BORDER }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-                  <div style={label}>Grades & assignments</div>
+                  <div style={label}>Grades & challenges</div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: a }}>{pct != null ? pct + "%" : "--"}</div>
                 </div>
                 <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>

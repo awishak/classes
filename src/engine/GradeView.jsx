@@ -146,11 +146,11 @@ export default function GradeView({ config }) {
           <a className="gv-focus" href={config.path + "/dashboard"} style={{ color: a, fontSize: 15, fontWeight: 600, textDecoration: "none", minHeight: HIT, display: "inline-flex", alignItems: "center" }}>← Dashboard</a>
           <div style={{ fontSize: 15, fontWeight: 600 }}>{config.code} · Grade view</div>
           {assignments.length ? (
-            <select className="gv-focus" value={aid} onChange={e => pick(e.target.value)} aria-label="Assignment"
+            <select className="gv-focus" value={aid} onChange={e => pick(e.target.value)} aria-label="Challenge"
               style={{ minHeight: HIT, padding: "0 10px", borderRadius: 8, border: "1px solid " + LINE_STRONG, fontFamily: F, fontSize: 16, background: WHITE, color: TEXT_PRIMARY, maxWidth: 360 }}>
               {assignments.map(x => <option key={x.id} value={x.id}>{x.title}</option>)}
             </select>
-          ) : <span style={{ color: TEXT_MUTED, fontSize: 15 }}>No assignments in this class yet.</span>}
+          ) : <span style={{ color: TEXT_MUTED, fontSize: 15 }}>No challenges in this class yet.</span>}
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <span style={{ fontSize: 15, color: TEXT_SECONDARY }}>{sorted} of {roster.length} sorted</span>
             {released ? (

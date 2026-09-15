@@ -269,9 +269,10 @@ export default function App() {
     return <Page />;
   }
 
-  const site = path.match(/^\/(comm\w+)(?:\/([a-z]+))?\/?$/);
+  // /<class>/<card>, and /<class>/challenges/<id> for one challenge.
+  const site = path.match(/^\/(comm\w+)(?:\/([a-z]+)(?:\/([A-Za-z0-9_.~-]+))?)?\/?$/);
   if (site && ENGINE[site[1]] && !LEGACY_HUBS.has(site[1])) {
-    return <ClassApp key={site[1]} config={ENGINE[site[1]]} initialCard={site[2] || null} />;
+    return <ClassApp key={site[1]} config={ENGINE[site[1]]} initialCard={site[2] ? site[2] + (site[3] ? "/" + site[3] : "") : null} />;
   }
 
   return <LandingPage />;

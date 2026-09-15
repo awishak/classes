@@ -17,6 +17,7 @@
 // never moves under you when you cross between surfaces.
 
 import * as TOKENS from "./tokens.js";
+import AppsMenu from "./AppsMenu.jsx";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -24,34 +25,27 @@ const TEXT_SECONDARY = TOKENS.TEXT.secondary;
 const BORDER = TOKENS.LINE.soft;
 const TAP = 44;
 
-// What a student sees, and what Andrew sees.
-//
-// A student's three are cards on the class page, because for a student those
-// three ARE the class. Andrew's three are surfaces, because Schedule and
-// Assignments are already cards in the grid he is looking at and a tab to each
-// was the same door twice.
-export const NAV_STUDENT = [
+// The same tabs for everyone. Andrew, 2026-09-15: "you have to standardize for
+// me and for students." The class's pages are the tabs; the apps are behind
+// the Apps button at the right; More is the admin page in either view.
+export const NAV_CLASS = [
   { id: "home", label: "Home", card: null },
   { id: "schedule", label: "Schedule", card: "schedule" },
-  { id: "assignments", label: "Assignments", card: "assignments" },
+  { id: "assignments", label: "Challenges", card: "assignments" },
   { id: "class", label: "Class", card: "class" },
   { id: "more", label: "More", card: "more" },
 ];
+export const NAV_STUDENT = NAV_CLASS;
+export const NAV_TEACH = NAV_CLASS;
 
-export const NAV_TEACH = [
-  { id: "home", label: "Home", href: "" },
-  { id: "dashboard", label: "Dashboard", href: "/dashboard" },
-  { id: "repo", label: "Repository", href: "/repo", absolute: true },
-  { id: "more", label: "More", card: "more" },
-];
-
-// Where a tab goes, or null when it opens a card on the page you are already
-// on. `absolute` is the repository, which belongs to Andrew rather than to a
-// class and so does not hang off the class path.
+// The address of a tab's page. On the class page a tab opens its card in
+// place; everywhere else the tab is a link back to that page.
+const segment = (card) => String(card).replace(/^assignments$/, "challenges");
 export const tabHref = (config, n) =>
-  n.href == null ? null : (n.absolute ? n.href : config.path + n.href);
+  n.href != null ? (n.absolute ? n.href : config.path + n.href) : null;
+const linkOf = (config, n) => config.path + (n.card ? "/" + segment(n.card) : "");
 
-export default function TopNav({ config, tabs, active, onPick, right, accent, moreNode }) {
+export default function TopNav({ config, tabs, active, onPick, right, accent, moreNode, role = "instructor" }) {
   // The repository resolves its class from what it remembers, and on a machine
   // that has never opened one there is nothing to remember. A bar with no class
   // in it would be worse than no bar.
@@ -93,7 +87,7 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
             // so the surface can hand its own control in. The bar keeps the
             // same four words in the same places either way.
             if (n.id === "more" && moreNode) return <span key="more">{moreNode}</span>;
-            const to = tabHref(config, n);
+            const to = tabHref(config, n) ?? (onPick ? null : linkOf(config, n));
             return to !== null ? (
               <a key={n.id} className="dash-focus ca-focus repo-focus" href={to}
                 aria-current={on ? "page" : undefined} style={tabStyle(on)}>{n.label}</a>
@@ -106,6 +100,7 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
 
         <span style={{ flex: "1 1 auto", minWidth: 8 }} />
         {right}
+        <AppsMenu config={config} role={role} onPick={onPick} />
       </div>
     </div>
   );

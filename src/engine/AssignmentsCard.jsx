@@ -208,7 +208,7 @@ function AssignmentLog({ asg, log, accent, studentName, actor, onLike, onDelete 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <style>{APPR_CSS}</style>
-      <div style={{ textAlign: "center" }}><span style={{ fontSize: 13, color: TEXT_MUTED, background: BG, padding: "4px 12px", borderRadius: 999 }}>Assignment posted · Due {asg.due || "TBD"}</span></div>
+      <div style={{ textAlign: "center" }}><span style={{ fontSize: 13, color: TEXT_MUTED, background: BG, padding: "4px 12px", borderRadius: 999 }}>Challenge posted · Due {asg.due || "TBD"}</span></div>
       {log.map(e => {
         if (e.type === "submission") {
           const late = isLate(e.ts, asg.due);
@@ -283,7 +283,7 @@ export function AssignmentsSummary({ config, data, role, name }) {
       : <Muted>Nothing to grade.</Muted>;
   }
   const next = name ? nextOwed(assignments, data, name) : nextDueOf(assignments);
-  if (!next) return <Muted>No upcoming assignments.</Muted>;
+  if (!next) return <Muted>No upcoming challenges.</Muted>;
   const st = dueState(next.due);
   return (
     <div>
@@ -295,36 +295,16 @@ export function AssignmentsSummary({ config, data, role, name }) {
   );
 }
 
-export function AssignmentsDetail({ config, role, data, update, asStudent }) {
-  if (role === "instructor") return <InstructorAssignments config={config} data={data} update={update} />;
-  return <StudentAssignments config={config} data={data} update={update} name={asStudent} />;
+// The instructor's Assignments page. A student's side is the cards and the
+// page for each assignment, in AssignmentCards.jsx.
+export function AssignmentsDetail({ config, data, update }) {
+  return <InstructorAssignments config={config} data={data} update={update} />;
 }
 
 // ─── STUDENT ───
-function StudentAssignments({ config, data, update, name }) {
-  const a = config.accent;
-  const assignments = getAssignments(data, config);
-  // A link can point at one assignment: /<class>/assignments#asg-<id>. The
-  // rows are not on the page when the browser looks for the anchor, so the
-  // scroll happens here once they are.
-  useEffect(() => {
-    let hash = "";
-    try { hash = decodeURIComponent(window.location.hash.slice(1)); } catch { /* not a hash we wrote */ }
-    if (!hash.startsWith("asg-")) return;
-    const el = document.getElementById(hash);
-    if (el) el.scrollIntoView({ block: "start" });
-  }, [assignments.length]);
-  return (
-    <div>
-      <div style={{ ...h2, marginBottom: 16 }}>Assignments</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {assignments.map(asg => <StudentAssignmentRow key={asg.id} asg={asg} accent={a} config={config} data={data} update={update} name={name} />)}
-      </div>
-    </div>
-  );
-}
-
-function StudentAssignmentRow({ asg, accent, config, data, update, name }) {
+// `bare` leaves out the title, due, description, Details and grade, for the
+// assignment's own page, which draws those itself above the log.
+export function StudentAssignmentRow({ asg, accent, config, data, update, name, bare }) {
   const log = logOf(data, asg.id, name);
   const grade = currentGrade(log);
   const [link, setLink] = useState("");
@@ -348,16 +328,20 @@ function StudentAssignmentRow({ asg, accent, config, data, update, name }) {
   const hasSubmitted = log.some(e => e.type === "submission");
 
   return (
-    <div id={"asg-" + asg.id} style={{ background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, padding: 18, scrollMarginTop: 80 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
-        <div style={{ fontSize: 17, fontWeight: 600 }}>{asg.title}</div>
-        <DueBadge due={asg.due} time={asg.dueTime} weight={asg.weight} />
-      </div>
-      {asg.description && <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 6 }}>{asg.description}</div>}
-      {asg.instructionsUrl && <a href={asg.instructionsUrl} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 15, fontWeight: 600, color: accent }}>Assignment instructions</a>}
-      {grade && <div style={{ marginTop: 10, fontSize: 22, fontWeight: 700, color: accent }}>Grade: {gradeText(grade)}</div>}
+    <div id={"asg-" + asg.id} style={bare ? {} : { background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, padding: 18, scrollMarginTop: 80 }}>
+      {bare ? null : (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+            <div style={{ fontSize: 17, fontWeight: 600 }}>{asg.title}</div>
+            <DueBadge due={asg.due} time={asg.dueTime} weight={asg.weight} />
+          </div>
+          {asg.description && <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 6 }}>{asg.description}</div>}
+          {asg.instructionsUrl && <a href={asg.instructionsUrl} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 15, fontWeight: 600, color: accent }}>Details</a>}
+          {grade && <div style={{ marginTop: 10, fontSize: 22, fontWeight: 700, color: accent }}>Grade: {gradeText(grade)}</div>}
+        </>
+      )}
 
-      <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid " + BORDER }}>
+      <div style={bare ? {} : { marginTop: 14, paddingTop: 14, borderTop: "1px solid " + BORDER }}>
         <AssignmentLog asg={asg} log={log} accent={accent} studentName={name} actor={name} onLike={(eid) => appreciate(update, asg.id, name, eid, name)} />
       </div>
 
@@ -402,7 +386,7 @@ function InstructorAssignments({ config, data, update }) {
 
   return (
     <div>
-      <div style={{ ...h2, marginBottom: 12 }}>Assignments</div>
+      <div style={{ ...h2, marginBottom: 12 }}>Challenges</div>
       <div style={{ display: "flex", gap: 4, background: BG, padding: 3, borderRadius: 999, border: "1px solid " + BORDER, width: "fit-content", marginBottom: 16 }}>
         {[["grade", "To grade"], ["manage", "Manage"]].map(([k, lbl]) => (
           <span key={k} onClick={() => setView(k)}
@@ -426,7 +410,7 @@ function GradeHub({ config, data, assignments, onStart }) {
       {needInstructions.length > 0 && (
         <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: 12, marginBottom: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: "#b45309" }}>Reminders</div>
-          {needInstructions.map(x => <div key={x.id} style={{ fontSize: 15, color: "#92400e", marginTop: 4 }}>Post instructions for {x.title}</div>)}
+          {needInstructions.map(x => <div key={x.id} style={{ fontSize: 15, color: "#92400e", marginTop: 4 }}>Post details for {x.title}</div>)}
         </div>
       )}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
@@ -467,7 +451,7 @@ function GradeFlow({ config, data, update, queue, onExit }) {
       <div style={{ textAlign: "center", padding: "30px 0" }}>
         <div style={{ ...h2, marginBottom: 8 }}>All done</div>
         <Muted style={{ marginBottom: 16 }}>Worked through {queue.length} submission{queue.length === 1 ? "" : "s"}.</Muted>
-        <Btn accent={a} onClick={onExit}>Back to assignments</Btn>
+        <Btn accent={a} onClick={onExit}>Back to challenges</Btn>
       </div>
     );
   }
@@ -503,7 +487,7 @@ function GradeFlow({ config, data, update, queue, onExit }) {
   );
 }
 
-const CANT_ACCESS_HTML = "<i>I cannot access your link. This assignment currently is scored as a 0. Please resubmit within 24 hours for credit.</i>";
+const CANT_ACCESS_HTML = "<i>I cannot access your link. This challenge currently is scored as a 0. Please resubmit within 24 hours for credit.</i>";
 
 function GradeForm({ config, asg, name, log, draftHtml, onDraft, onSubmit, onSkip, onLike, onDelete }) {
   const a = config.accent;
@@ -655,7 +639,7 @@ function ManageAssignments({ config, data, assignments, writeAssignments }) {
           </button>
         ))}
       </div>
-      <button onClick={() => setEditing("new")} style={{ marginTop: 12, minHeight: TAP, padding: "0 18px", borderRadius: 999, border: "1px dashed " + BORDER_STRONG, background: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_SECONDARY, cursor: "pointer" }}>+ Add assignment</button>
+      <button onClick={() => setEditing("new")} style={{ marginTop: 12, minHeight: TAP, padding: "0 18px", borderRadius: 999, border: "1px dashed " + BORDER_STRONG, background: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_SECONDARY, cursor: "pointer" }}>+ Add challenge</button>
     </div>
   );
 }
@@ -701,7 +685,7 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
       </div>
       <div style={fieldL}>Short description</div>
       <textarea value={description} onChange={e => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical", marginTop: 6 }} />
-      <div style={fieldL}>Instructions link</div>
+      <div style={fieldL}>Details link</div>
       <input value={instructionsUrl} onChange={e => setInstructionsUrl(e.target.value)} placeholder="https://..." style={{ ...inputStyle, marginTop: 6 }} />
       <div style={fieldL}>Submissions close (optional)</div>
       <input type="datetime-local" value={closeAt} onChange={e => setCloseAt(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} />

@@ -83,6 +83,8 @@ import GradeDeck from "../src/engine/GradeDeck.jsx";
 import DueDeck, { dueSoon, dismissDue, deadlineOf } from "../src/engine/DueCard.jsx";
 import { NextClassHero, nextClassFacts, timeText, PinnedLinks, RequestForm } from "../src/engine/HomeCards.jsx";
 import comm118Cfg from "../src/config/comm118.js";
+import { AssignmentCards, AssignmentPage, statusOf, inDueOrder } from "../src/engine/AssignmentCards.jsx";
+import { appsFor } from "../src/engine/apps.js";
 import comm3Cfg from "../src/config/comm3.js";
 import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, unseenGrades, markSeen, meetingPatch, letterOf, BUCKETS } from "../src/engine/grades.js";
 import GradeParade from "../src/engine/GradeParade.jsx";
@@ -979,8 +981,9 @@ cases.push(["Instructor links", <InstructorLinks />]);
     // What that costs, said out loud: the roster picker, the class switcher and
     // the teaching links are inside the menu and no longer appear in the
     // markup until somebody clicks. Nothing checks their contents any more.
-    if (!html.includes("Dashboard")) {
-      console.error(`  FAIL  class site, instructor, ${where}: no way through to the dashboard`); failedEarly++; }
+    // The Dashboard is an app now, behind the Apps button in the bar.
+    if (!/>Apps<span/.test(html)) {
+      console.error(`  FAIL  class site, instructor, ${where}: no Apps button, so the dashboard is unreachable`); failedEarly++; }
     if (!html.includes('aria-haspopup="menu"')) {
       console.error(`  FAIL  class site, instructor, ${where}: no menu, so everything behind it is unreachable`); failedEarly++; }
     // And the header stays small. Counting the tap targets across the top is a
@@ -1055,13 +1058,17 @@ cases.push(["Instructor links", <InstructorLinks />]);
       // Only the strip's own markup. The class page marks the open card with
       // aria-current too, so counting across the whole page counts that.
       const strip = (html.split('aria-label="Teaching surfaces"')[1] || "").split("</nav>")[0];
-      for (const door of ["Home", "Dashboard", "Repository"]) {
-        if (!strip.includes(door)) {
-          console.error(`  FAIL  ${where}: the strip has no way through to ${door}`); failedEarly++; }
+      // The same five tabs as the class page, each a link back to it, and the
+      // Apps button, which is where the Dashboard and the Repository live now.
+      for (const door of ["Home", "Schedule", "Challenges", "Class", "More"]) {
+        if (!strip.includes(">" + door + "<")) {
+          console.error(`  FAIL  ${where}: the strip has no ${door} tab`); failedEarly++; }
       }
+      if (!/>Apps<span/.test(html)) {
+        console.error(`  FAIL  ${where}: the bar has no Apps button`); failedEarly++; }
       const current = (strip.match(/aria-current="page"/g) || []).length;
-      if (current !== 1) {
-        console.error(`  FAIL  ${where}: ${current} entries in the strip marked as the current page, want exactly 1`); failedEarly++; }
+      if (current > 1) {
+        console.error(`  FAIL  ${where}: ${current} entries in the strip marked as the current page`); failedEarly++; }
     } catch (err) {
       console.error(`  FAIL  ${where}: ` + err.message); failedEarly++;
     }
@@ -1074,10 +1081,13 @@ cases.push(["Instructor links", <InstructorLinks />]);
   for (const [where, px] of [["laptop", LAPTOP], ["phone", PHONE]]) {
     try {
       const html = atWidth(px, () => renderToString(<ClassApp config={cfg0} />));
-      if (!html.includes('href="' + cfg0.path + '/dashboard"')) {
-        console.error(`  FAIL  class page, instructor, ${where}: no tab through to the dashboard`); failedEarly++; }
-      if (!html.includes('href="/repo"')) {
-        console.error(`  FAIL  class page, instructor, ${where}: no tab through to the repository`); failedEarly++; }
+      // Andrew's tabs are the students' tabs; his extra reach is in Apps.
+      ["Schedule", "Challenges", "Class", "More"].forEach(tab => {
+        if (!html.includes(">" + tab + "<")) {
+          console.error(`  FAIL  class page, instructor, ${where}: no ${tab} tab`); failedEarly++; }
+      });
+      if (!/>Apps<span/.test(html)) {
+        console.error(`  FAIL  class page, instructor, ${where}: no Apps button`); failedEarly++; }
       // The duplicates are gone: a tab AND a card for the same thing was the
       // whole complaint. Schedule still exists as a card, just not as a tab.
       const bar = html.split('aria-haspopup="menu"')[0] || "";
@@ -1092,7 +1102,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   // And the student's bar is untouched.
   try {
     const html = atWidth(PHONE, () => renderToString(<ClassApp config={cfg0} />));
-    ["Schedule", "Assignments", "Class"].forEach(tab => {
+    ["Schedule", "Challenges", "Class"].forEach(tab => {
       if (!html.includes(">" + tab + "<")) {
         console.error(`  FAIL  class page, student: ${tab} left the student's tabs`); failedEarly++; }
     });
@@ -1100,9 +1110,9 @@ cases.push(["Instructor links", <InstructorLinks />]);
     // Class, Grades toward the bottom and Games at the very bottom.
     const at = (t) => html.indexOf(t);
     if (html.includes('aria-label="Next class"')) {
-      const order = ['aria-label="Next class"', ">Assignments</span>", ">Class</span>", ">Grades</span>", ">Games</span>"].map(at);
+      const order = ['aria-label="Next class"', ">Challenges</span>", ">Class</span>", ">Games</span>"].map(at);
       if (order.some(n => n < 0) || order.some((n, i) => i && n < order[i - 1])) {
-        console.error("  FAIL  class page, student: the home page is not Next class, Assignments, Class, Grades, Games: " + JSON.stringify(order)); failedEarly++; }
+        console.error("  FAIL  class page, student: the home page is not Next class, Challenges, Class, Games: " + JSON.stringify(order)); failedEarly++; }
     } else {
       console.error("  FAIL  class page, student: the home page has no Next class hero"); failedEarly++;
     }
@@ -1126,6 +1136,9 @@ cases.push(["Instructor links", <InstructorLinks />]);
       console.error("  FAIL  class page, student with the old instructor flag: the page did not render as the student"); failedEarly++; }
     if (html.includes('href="' + cfgS.path + '/dashboard"') || html.includes("Nothing to grade") || html.includes("Pin link")) {
       console.error("  FAIL  class page, student with the old instructor flag: the student got the instructor side"); failedEarly++; }
+    // The top-right button is Apps for a student, not their name.
+    if (!/aria-label="Menu"[^>]*>Apps<span/.test(html)) {
+      console.error("  FAIL  class page, student: the top-right button does not say Apps"); failedEarly++; }
     if (html.includes('href="/repo"')) {
       console.error("  FAIL  class page, student: the repository is showing to a student"); failedEarly++; }
   } catch (err) {
@@ -1703,7 +1716,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // Nothing becomes unreachable: Coming up covers three weeks and the link
   // covers everything past that, plus anything marked Ongoing, which has no
   // date to sort by at all.
-  if (!src.includes("All assignments")) say("nothing on the dashboard reaches the assignments beyond three weeks");
+  if (!src.includes("All challenges")) say("nothing on the dashboard reaches the challenges beyond three weeks");
   // The row never scrolls out of sight again.
   if (src.includes(".dash-rail-tabs{display:flex;gap:4px") && !src.includes("flex-wrap:wrap"))
     say("the tab row can still hide a tab off its edge");
@@ -2129,8 +2142,8 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const deckCard = unseenGrades(cfg, again, "Ada Lovelace")[0];
     if (!deckCard.link || !deckCard.means || !deckCard.gradedAt || !deckCard.submittedAt) say("the deck card is missing the file, the meaning or a time: " + JSON.stringify(deckCard));
     const html = renderToString(<GradeDeck config={cfg} items={[deckCard]} onSeen={noop} onDone={noop} onMeeting={noop} />);
-    ["Exercise 1", ">B<", "Got it", "Sharp work.", "room to sharpen", "Open your file", "Open the assignment", "Make a meeting", "Graded "].forEach(t => { if (!html.includes(t)) say("the deck never showed " + JSON.stringify(t)); });
-    if (!html.includes('/assignments#asg-ex1"')) say("Open the assignment does not point at the assignment itself");
+    ["Exercise 1", ">B<", "Got it", "Sharp work.", "room to sharpen", "Open your file", "Open the challenge", "Make a meeting", "Graded "].forEach(t => { if (!html.includes(t)) say("the deck never showed " + JSON.stringify(t)); });
+    if (!html.includes('/challenges/ex1"')) say("Open the assignment does not point at the assignment itself");
     // With a calendar on the class, the meeting control is a link to the calendar.
     const withCal = renderToString(<GradeDeck config={{ ...cfg, instructor: { name: "Andrew Ishak", schedulingLink: "https://calendly.com/x" } }} items={[deckCard]} onSeen={noop} onDone={noop} onMeeting={noop} />);
     if (!withCal.includes('href="https://calendly.com/x"')) say("the meeting button does not open the calendar");
@@ -2161,7 +2174,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (!dueSoon(cfg, moved, "Ada Lovelace", now).some(a => a.id === "sat")) say("a deadline moved after a dismissal never brought the card back");
     try {
       const html = renderToString(<DueDeck config={cfg} items={[asgs[1], asgs[2]]} onDismiss={noop} onOpen={noop} onDone={noop} />).replace(/<!-- -->/g, "");
-      ["Short piece", "Got it", "Go to assignments", "1 of 2"].forEach(t => { if (!html.includes(t)) say("the due card never showed " + JSON.stringify(t)); });
+      ["Short piece", "Got it", "Go to challenges", "1 of 2"].forEach(t => { if (!html.includes(t)) say("the due card never showed " + JSON.stringify(t)); });
     } catch (err) { say("the due card threw: " + err.message); }
   }
 
@@ -2236,6 +2249,68 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       if (renderToString(<PinnedLinks data={{}} update={noop} seat={{}} />)) say("a student with nothing pinned sees an empty Pinned box");
       if (!renderToString(<RequestForm update={noop} name="Ada" />).includes("Requests and bugs")) say("the requests and bugs form does not render");
     } catch (err) { say("the home cards threw: " + err.message); }
+  }
+
+  // Assignments as cards, in the order they come due, and a page for each one.
+  // Andrew, 2026-09-15: graded is solid with the letter, a green circle for
+  // turned in, yellow for came back, red for a missed deadline, New until the
+  // grade is read, small pieces at half height once in.
+  {
+    const now = new Date(2026, 8, 20, 12).getTime();
+    const acfg = { ...cfg, path: "/comm118", assignments: [
+      { id: "later", title: "Leadership Guide", due: "Nov 20", dueTime: "11:59 PM", weight: 15 },
+      { id: "inclass", title: "In-Class", due: "Ongoing", weight: 25, description: "Weekly Game" },
+      { id: "missed", title: "Missed piece", due: "Sep 10", dueTime: "11:59 PM", weight: 20 },
+      { id: "graded", title: "Graded piece", due: "Sep 12", dueTime: "11:59 PM", weight: 30, instructionsUrl: "https://docs.test/g" },
+      { id: "small", title: "Small piece", due: "Sep 14", dueTime: "11:59 PM", weight: 3 },
+      { id: "waiting", title: "Waiting piece", due: "Sep 18", dueTime: "11:59 PM", weight: 20 },
+    ] };
+    const N = "Ada Lovelace";
+    let ad = { assignments: acfg.assignments, assignmentLog: {
+      graded: { [N]: [{ id: "s1", ts: now - 9e8, type: "submission", link: "https://x.test" }] },
+      small: { [N]: [{ id: "s2", ts: now - 5e8, type: "submission", link: "https://x.test" }] },
+      waiting: { [N]: [{ id: "s3", ts: now - 1e8, type: "submission", link: "https://x.test" }] },
+    } };
+    ad = releasePatch(writeCard(placeCard(ad, "graded", N, "b", 10), "graded", N, { comment: "Tighten the ending." }, 11), "graded", N, now - 1e7);
+    const order = inDueOrder(acfg.assignments).map(a => a.id).join(",");
+    if (order !== "inclass,missed,graded,small,waiting,later") say("the assignment cards are not ongoing first, then by due date: " + order);
+    const realNow = Date.now;
+    Date.now = () => now;
+    try {
+      const unseen = new Set(unseenGrades(acfg, ad, N).map(u => u.aid));
+      const st = (id) => statusOf(acfg, ad, acfg.assignments.find(a => a.id === id), N, unseen, now);
+      if (st("graded").state !== "graded" || st("graded").letter !== "B" || !st("graded").isNew) say("a released grade is not a graded, New card: " + JSON.stringify(st("graded")));
+      if (st("waiting").state !== "turnedIn") say("work turned in reads " + st("waiting").state);
+      if (st("missed").state !== "missed") say("a deadline gone by with nothing in reads " + st("missed").state);
+      if (st("later").state !== "open") say("work not due yet reads " + st("later").state);
+      if (!st("small").small || st("waiting").small) say("half height is not exactly the small piece that is in");
+      if (st("inclass").state !== "ongoing") say("the ongoing bucket reads " + st("inclass").state);
+      const cards = renderToString(<AssignmentCards config={acfg} data={ad} name={N} go={noop} />).replace(/<!-- -->/g, "");
+      // Graded is light blue, not black, and the grade is one ordinary line.
+      if (!/background:color-mix\(in srgb, #276fce 12%, var\(--surface-card\)\)[^>]*>[\s\S]*?Graded piece/.test(cards)) say("the graded card is not light blue");
+      if (/background:var\(--text-primary\)[^>]*>[\s\S]{0,200}Graded piece/.test(cards)) say("the graded card is black again");
+      if (!/Your grade: <strong[^>]*>B<\/strong>/.test(cards)) say("the graded card does not say Your grade: B");
+      if (/font-size:36px/.test(cards)) say("the grade is drawn big again");
+      // Graded stays green; Incomplete is the yellow neutral face; F is a red X.
+      const withLetter = (bucket) => {
+        const d2 = releasePatch(placeCard(ad, "graded", N, bucket, 20), "graded", N, now - 5e6);
+        return renderToString(<AssignmentCards config={acfg} data={d2} name={N} go={noop} />);
+      };
+      if (!/aria-label="Graded"[^>]*background:var\(--state-ok\)|background:var\(--state-ok\)[^>]*aria-label="Graded"|aria-label="Graded" style="[^"]*background:var\(--state-ok\)/.test(cards)) say("a graded card's marker is not green");
+      if (!withLetter("incomplete").includes('aria-label="Incomplete"')) say("an Incomplete does not get the neutral face");
+      if (!/aria-label="F"[^>]*>✕/.test(withLetter("f"))) say("an F does not get the red X");
+      ["Tighten the ending.", ">New<", 'aria-label="Turned in"', 'aria-label="Missed"', 'aria-label="Graded"', "Details", "Ongoing"].forEach(t => { if (!cards.includes(t)) say("the assignment cards never show " + JSON.stringify(t)); });
+      if (!/data-current="1"[^>]*>[\s\S]{0,400}Leadership Guide/.test(cards)) say("the page does not scroll to the next thing due");
+      if (/Instructions/.test(cards)) say("a card still says Instructions");
+      const pg = renderToString(<AssignmentPage config={acfg} data={ad} update={noop} name={N} id="graded" go={noop} />).replace(/<!-- -->/g, "");
+      ["Graded piece", "All challenges", "Your grade: <strong", "Tighten the ending.", "room to sharpen", "Details", "Before", "After", "Submit another link"].forEach(t => { if (!pg.includes(t)) say("the assignment page never shows " + JSON.stringify(t)); });
+      if (!pg.includes("days early") && !pg.includes("a day early")) say("the assignment page does not say how early the work went in");
+    } catch (err) { say("the assignment cards threw: " + err.message); }
+    Date.now = realNow;
+    // Apps: yours in More, a student's behind the top-right button.
+    const mine = appsFor(acfg, "instructor").map(a => a.label).join(", ");
+    if (!/Dashboard/.test(mine) || !/Repository/.test(mine) || !/Games/.test(mine) || !/Around the Horn/.test(mine)) say("your apps are missing one: " + mine);
+    if (appsFor(acfg, "student").some(a => /Dashboard|Repository|Grade view/.test(a.label))) say("a student's apps include an instructor surface");
   }
 
   // Grades so far: a tile per assignment, grey until graded, then the letter.
@@ -2525,7 +2600,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       data={{ schedule: [due] }} blockOf={() => null} />);
   } catch (e) { say("a deadline threw: " + e.message); }
   if (dueHtml && !dueHtml.includes("Sun Sep 27")) say("a Sunday deadline does not say which Sunday");
-  if (dueHtml && !dueHtml.includes('href="/comm3/assignments#asg-ex1"')) say("a deadline does not open its assignment");
+  if (dueHtml && !dueHtml.includes('href="/comm3/challenges/ex1"')) say("a deadline does not open its assignment");
   if (dateInWeek({ dates: ["Dec 7", "Dec 9"] }, "Fri") !== "Dec 11") say("the Friday of a two-day finals week is not Dec 11");
   // The badge names the weekday and the time. Dates carry no year and are read
   // as 2026, so this only means something while Dec 31 is more than a week off.

@@ -27,7 +27,7 @@ const TAP = 44;
 
 const TYPE_META = {
   reading: { color: "#2563eb", label: "Reading" },
-  assignment: { color: "#d97706", label: "Assignment" },
+  assignment: { color: "#d97706", label: "Challenge" },
   activity: { color: "#047857", label: "Activity" },
 };
 const TYPES = ["reading", "assignment", "activity"];
@@ -244,7 +244,7 @@ function StudentSchedule({ config, data, blockOf }) {
                     // A deadline opens the assignment itself, where the
                     // instructions link and the place to hand the work in are.
                     const href = it.type === "assignment" && it.asgId && config.path
-                      ? config.path + "/assignments#asg-" + encodeURIComponent(it.asgId) : "";
+                      ? config.path + "/challenges/" + encodeURIComponent(it.asgId) : "";
                     return <ItemView key={it.id} item={it} picked={isPicked(it)} href={href}
                       when={date ? it.date + " " + date : ""} source={href ? "" : sourceOf(it, block)} />;
                   })}
@@ -380,7 +380,7 @@ function LibraryPicker({ library, accent, onPick, onCreate, onClose }) {
     const rest = trimmed.slice(1);
     const sp = rest.indexOf(" ");
     const word = (sp === -1 ? rest : rest.slice(0, sp)).toLowerCase();
-    const map = { reading: "reading", readings: "reading", activity: "activity", activities: "activity", assignment: "assignment", assignments: "assignment" };
+    const map = { reading: "reading", readings: "reading", activity: "activity", activities: "activity", assignment: "assignment", assignments: "assignment", challenge: "assignment", challenges: "assignment" };
     typeFilter = map[word] || null;
     text = sp === -1 ? "" : rest.slice(sp + 1).trim();
   }

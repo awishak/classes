@@ -26,7 +26,7 @@ const short = (letter) => (letter === "Incomplete" ? "Inc" : letter);
 
 export default function GradeParade({ config, data, name, accent, compact }) {
   const { rows } = computeGrade(config, data, name);
-  if (!rows.length) return <div style={{ fontSize: 15, color: TEXT_MUTED }}>No assignments yet.</div>;
+  if (!rows.length) return <div style={{ fontSize: 15, color: TEXT_MUTED }}>No challenges yet.</div>;
   const size = compact ? 36 : 84;
   return (
     <div aria-label="Grades so far" style={{ display: "flex", flexWrap: "wrap", gap: compact ? 6 : 8 }}>

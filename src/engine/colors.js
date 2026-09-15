@@ -78,7 +78,7 @@ export const KINDS = [
   { id: "readings",    label: "Readings",   fallback: "blue-light",   types: ["link"] },
   { id: "ideas",       label: "Ideas",      fallback: "green-light",  types: ["activity"] },
   { id: "notes",       label: "Notes",      fallback: "yellow-light", types: ["note"] },
-  { id: "assignments", label: "Assignments", fallback: "red-light",   types: ["assignment"] },
+  { id: "assignments", label: "Challenges", fallback: "red-light",   types: ["assignment"] },
   { id: "questions",   label: "Questions",  fallback: "orange-light", types: ["question"] },
   { id: "polls",       label: "Poll",       fallback: "orange-mid",   types: [] },
   { id: "boards",      label: "Enter/Exit", fallback: "purple-light", types: ["board"] },

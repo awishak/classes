@@ -53,14 +53,13 @@ const comm999 = {
   // ─── Cards ───
   // Every class ships ALL cards. Turn one off here and the page leaves the card
   // out. The home page's order is set in ClassApp: Next class, pinned links,
-  // Assignments, Class, Grades, Games. Your card, the roster and your
+  // Assignments, Class, Games. Grades live on the assignment cards. Your card, the roster and your
   // instructor live inside Class.
   cards: {
     dayplan: true, // instructor-only; never shown on the student home
     schedule: true,
     assignments: true,
     class: true,
-    grades: true,
     games: true,
     you: true,
     roster: true,

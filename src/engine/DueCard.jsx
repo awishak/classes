@@ -6,7 +6,7 @@
 // student has not yet submitted, can we add a card for them to dismiss once?
 // to say: this is due, go to assignments to submit?"
 //
-// Once means once per deadline. Got it, or Go to assignments, writes the
+// Once means once per deadline. Got it, or Go to challenges, writes the
 // dismissal into the class store under data.dueCards[assignmentId][name],
 // so the card stays gone on every device. The dismissal remembers which due
 // date it was for, so a deadline moved later brings the card back for the new
@@ -99,7 +99,7 @@ export default function DueDeck({ config, items, onDismiss, onOpen, onDone }) {
           </button>
           <button onClick={open}
             style={{ flex: 1, minHeight: 52, padding: "0 20px", borderRadius: 12, background: a, color: "#fff", border: "none", fontFamily: F, fontSize: 18, fontWeight: 600, cursor: "pointer" }}>
-            Go to assignments
+            Go to challenges
           </button>
         </div>
       </div>

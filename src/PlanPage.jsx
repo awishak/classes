@@ -47,6 +47,50 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep15-challenges", date: "Tuesday, September 15", title: "Challenges, and one bar for everyone",
+    blurb: "Andrew named assignments challenges, asked for graded cards in light blue with the grade as a plain line, and set the rule for the bar: apps at the top for everyone, with him seeing more, and More as the admin page in either view.",
+    groups: [
+      { name: "Challenges", items: [
+        ["The word, everywhere", "Every place a person reads assignment now says challenge: the tab, the home card, the cards and each challenge's page, the grade card and the due card, the instructor's page and editor, the dashboard, the grade view, the room screen's stamp, the kinds in the repository, and the sentences under each letter. The address is /<class>/challenges and /<class>/challenges/<id>; an old /assignments link still lands. Stored data keeps its names."],
+        ["Light blue, and the grade as a line", "A graded card is light blue, the palette's reading blue mixed into the card colour, with ordinary ink on top. The big letter is gone: the card ends with Details on the left and Your grade: C on the right, the same size as everything else, with the letter in bold. The challenge's page does the same."],
+        ["The markers", "Green with a check once the work is in, and still green once graded. An Incomplete is a yellow face that is neither happy nor sad. An F is a red X. A deadline that went by with nothing in stays a red circle. New is dark now, so the only yellow means Incomplete."],
+      ] },
+      { name: "One bar", items: [
+        ["The same tabs", "Home, Schedule, Challenges, Class and More, for Andrew and for a student, on the class page and along the bottom on a phone. On the dashboard, the repository and Games, the same tabs are links back to the class page."],
+        ["Apps at the top right, everywhere", "One Apps button, the same on the class page, the dashboard, the repository and Games. Andrew's holds Dashboard, Repository, Games, Grade view, Around the Horn, Room screen and Ask; a student's holds Games, Ask and Room screen."],
+        ["More is the admin page", "In either view: the theme and day or night, requests and bugs, the sign-in code and Sign out. Andrew's also has the class switcher, View as a student, the Student and Instructor switch, and the requests inbox. The old name menu is gone."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "The COMM 118 challenge list is to be redone.",
+      "The ongoing card still needs a name.",
+      "The Brief's older entries still say assignments, because they record what was true then.",
+    ] },
+  },
+  {
+    id: "sep15-cards-apps", date: "Tuesday, September 15", title: "Every assignment is a card, and the apps have a name",
+    blurb: "Andrew asked for each assignment to be a card in date order that turns solid with the grade once graded, with a page of its own, and for the Dashboard, the Repository, Games and the rest to be called apps: in More for him, behind an Apps button for a student.",
+    groups: [
+      { name: "Assignments", items: [
+        ["Cards in date order", "The Assignments tab is a card for every assignment, the ongoing one first as a short card, then by due date. The page opens at the top and glides down to the next thing due, with the card before it showing above."],
+        ["What a card says", "A green circle with a check once the work is in, a yellow circle once a grade has come back, a red circle when the deadline went by with nothing in, each with an outline to match. Graded cards are solid, all in one colour, the theme's ink, with the letter, the first lines of the comment, Details, and New until the student has read the grade. Something due within a week keeps the amber outline."],
+        ["Half height once in", "A piece worth 5% or less drops to one line once the work is in: the creative exercises and pre-production in COMM 3, and the Interview Assignment and Intersections Proposal in COMM 118."],
+        ["A page for each one", "Tapping a card opens /<class>/assignments/<id>: the title, where the work stands and how early or late the work went in, the due date and weight, the grade with what the letter means and every comment, the description and Details, the days the assignment sits on the schedule, the hand-in box and the history as before, and the assignments before and after. Opening a graded page reads the grade, so New goes and the grade card does not come round again. Links from the grade card, the due card and the schedule open the page, and an old #asg- link lands there too."],
+        ["No more Grades card", "Grades live on the assignment cards, so the home page is Next class, Pinned, Assignments, Class and Games."],
+        ["Details, not instructions", "The link to an assignment's document is Details everywhere a person reads the word, on the cards, the page, the editor and the dashboard's checklist."],
+      ] },
+      { name: "Apps", items: [
+        ["Yours, in More", "Dashboard, Repository, Games, Grade view, Around the Horn, Room screen and Ask, as a grid at the top of More. Around the Horn opens the dashboard with the board already up."],
+        ["A student's, behind Apps", "The top-right button says Apps for a student and holds Games, Ask and Room screen. The theme, day or night, requests and bugs, the sign-in code and Sign out are on the More tab."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "Names: Andrew would like a word for assignments rooted in coaching and growth, and a name for the ongoing card.",
+      "The ongoing card holds the ongoing assignment's own line. What else belongs there beyond in-class points and games is not decided.",
+      "Not deployed yet.",
+    ] },
+  },
+  {
     id: "sep15-hero-white", date: "Tuesday, September 15", title: "Next class goes white, and the picks come first",
     blurb: "Andrew looked at the live card. The stone grey was not working, and Drew's Pick sat in a white box on it, so the card is white. Directions went to Varsi Hall instead of Vari Hall, so the link is off.",
     groups: [
