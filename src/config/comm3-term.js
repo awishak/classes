@@ -343,123 +343,123 @@ export const library = [
 export const assignments = [
   {
     "id": "ex1",
-    "title": "Exercise 1: identifying stories and framing",
+    "title": "Identifying stories and framing exercise",
     "due": "Sep 27",
+    "dueTime": "11:59 PM",
     "weight": 3,
-    "description": "Applies the week's skill to something from your own life and something from the world. Individual. Low stakes on its own, but a student who skips these will not do well in the course. Covers both identifying a story and framing one.",
+    "description": "",
     "instructionsUrl": "",
-    "rubric": [],
-    "dueTime": "11:59 PM"
+    "rubric": []
   },
   {
     "id": "ex2",
-    "title": "Exercise 2: visual language",
+    "title": "Visual language exercise",
     "due": "Oct 4",
+    "dueTime": "11:59 PM",
     "weight": 3,
-    "description": "Applies the week's skill to something from your own life and something from the world. Individual. Low stakes on its own, but a student who skips these will not do well in the course.",
+    "description": "",
     "instructionsUrl": "",
-    "rubric": [],
-    "dueTime": "11:59 PM"
+    "rubric": []
   },
   {
     "id": "visual-pre",
     "title": "Visual story pre-production",
     "due": "Oct 9",
+    "dueTime": "11:59 PM",
     "weight": 0,
+    "description": "",
     "instructionsUrl": "",
-    "rubric": [],
-    "description": "Pairs. The treatment lives inside pre-production. A treatment says what the story is, why, and lists a few sources. I approve it or send it back. Pre-production counts toward the project it belongs to, not toward the creative exercise grade.",
-    "dueTime": "11:59 PM"
+    "rubric": []
   },
   {
     "id": "ex3",
-    "title": "Exercise 3: graphics",
+    "title": "Graphics exercise",
     "due": "Oct 11",
+    "dueTime": "11:59 PM",
     "weight": 3,
-    "description": "Applies the week's skill to something from your own life and something from the world. Individual. Low stakes on its own, but a student who skips these will not do well in the course. Two graphics on an assigned topic.",
+    "description": "",
     "instructionsUrl": "",
-    "rubric": [],
-    "dueTime": "11:59 PM"
+    "rubric": []
   },
   {
     "id": "visual",
     "title": "Visual story",
     "due": "Oct 18",
+    "dueTime": "11:59 PM",
     "weight": 20,
-    "description": "Pairs. About 500 words, four or five photographs, and two or three graphics, interspersed. Pre-production, including the treatment, is due Friday, October 9: what the story is, why, and a few sources. I approve the treatment or send the treatment back. Phones are fine. Strong photography can earn extra credit. AI graphics are allowed, with less control; Flourish is the alternative.",
+    "description": "",
     "instructionsUrl": "",
-    "rubric": [],
-    "dueTime": "11:59 PM"
+    "rubric": []
   },
   {
     "id": "ex4",
-    "title": "Exercise 4: characters",
+    "title": "Characters exercise",
     "due": "Oct 25",
+    "dueTime": "11:59 PM",
     "weight": 3,
-    "description": "Applies the week's skill to something from your own life and something from the world. Individual. Low stakes on its own, but a student who skips these will not do well in the course. A character from your own life and one from the world.",
+    "description": "",
     "instructionsUrl": "",
-    "rubric": [],
-    "dueTime": "11:59 PM"
+    "rubric": []
   },
   {
     "id": "audio-pre",
     "title": "Audio story pre-production",
     "due": "Oct 30",
+    "dueTime": "11:59 PM",
     "weight": 0,
+    "description": "",
     "instructionsUrl": "",
-    "rubric": [],
-    "description": "Pairs. The treatment lives inside pre-production. A treatment says what the story is, why, and lists a few sources. I approve it or send it back. Pre-production counts toward the project it belongs to, not toward the creative exercise grade.",
-    "dueTime": "11:59 PM"
+    "rubric": []
   },
   {
     "id": "ex5",
-    "title": "Exercise 5: audio",
+    "title": "Audio exercise",
     "due": "Nov 1",
+    "dueTime": "11:59 PM",
     "weight": 3,
-    "description": "Applies the week's skill to something from your own life and something from the world. Individual. Low stakes on its own, but a student who skips these will not do well in the course.",
+    "description": "",
     "instructionsUrl": "",
-    "rubric": [],
-    "dueTime": "11:59 PM"
+    "rubric": []
   },
   {
     "id": "audio",
     "title": "Audio story",
     "due": "Nov 8",
+    "dueTime": "11:59 PM",
     "weight": 20,
-    "description": "Pairs. An audio story, modeled on the audio assignment in Lotta's version of the course. Pre-production, including the treatment, is due Friday, October 30. Length and spec to come.",
+    "description": "",
     "instructionsUrl": "",
-    "rubric": [],
-    "dueTime": "11:59 PM"
+    "rubric": []
   },
   {
     "id": "final-pre",
     "title": "Final pre-production document",
     "due": "Dec 2",
+    "dueTime": "11:59 PM",
     "weight": 0,
+    "description": "",
     "instructionsUrl": "",
-    "rubric": [],
-    "description": "Groups of four. The final's pre-production is due the night of the group presentations, Wednesday, December 2. The treatment lives inside pre-production. A treatment says what the story is, why, and lists a few sources. I approve it or send it back.",
-    "dueTime": "11:59 PM"
+    "rubric": []
   },
   {
     "id": "final",
     "title": "Final project",
     "due": "Dec 9",
+    "dueTime": "11:59 PM",
     "weight": 35,
-    "description": "Groups of four. Video, audio, and multimedia together, on a research-based social justice story. Groups pitch Monday, November 16, and present Wednesday, December 2. Pre-production is due the night of the presentations. Lengths and group formation to come.",
+    "description": "",
     "instructionsUrl": "",
-    "rubric": [],
-    "dueTime": "11:59 PM"
+    "rubric": []
   },
   {
     "id": "culture",
     "title": "Class culture",
     "due": "Ongoing",
+    "dueTime": "",
     "weight": 10,
-    "description": "How you show up for the room across the quarter. What earns the ten percent is still being written.",
+    "description": "",
     "instructionsUrl": "",
-    "rubric": [],
-    "dueTime": ""
+    "rubric": []
   }
 ];
 

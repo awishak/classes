@@ -80,7 +80,8 @@ import { ENGINE_LIST } from "../src/config/registry.js";
 import { warmClassData } from "../src/engine/store.js";
 import GradeView from "../src/engine/GradeView.jsx";
 import GradeDeck from "../src/engine/GradeDeck.jsx";
-import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, unseenGrades, markSeen, meetingPatch, letterOf, BUCKETS } from "../src/engine/grades.js";
+import DueDeck, { dueSoon, dismissDue, deadlineOf } from "../src/engine/DueCard.jsx";
+import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, unseenGrades, markSeen, meetingPatch, letterOf, BUCKETS } from "../src/engine/grades.js";
 import GradeParade from "../src/engine/GradeParade.jsx";
 import { computeGrade, dueText } from "../src/engine/AssignmentsCard.jsx";
 import { sectionsOf, takeGroup, placeGroup, parseRange, sumRanges, rangeLabel, placeSection, splitSection, templateOf, applyTemplate } from "../src/engine/dayplan.js";
@@ -2037,6 +2038,54 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (hid.gradeBoard.ex1.cards["Ada Lovelace"].bucket !== "b") say("hide unsorted the board");
   if (computeGrade(cfg, hid, "Ada Lovelace").pct != null) say("a hidden grade still counts");
   if (BUCKETS.find(b => b.id === "exceptional").letter !== "A") say("exceptional shows as something other than A");
+
+  // A grade is sent once. Andrew, 2026-09-15: release, grade more, release
+  // again, and the students who already had theirs get no second card unless
+  // the letter or the comment changed.
+  {
+    let r = releasePatch(d, "ex1", 20);                       // Ada A with a comment, Bob Incomplete
+    r = markSeen(r, "ex1", "Ada Lovelace", 25);
+    r = markSeen(r, "ex1", "Bob Ross", 25);
+    const adaEvent = r.assignmentLog.ex1["Ada Lovelace"].slice(-1)[0];
+    r = placeCard(r, "ex1", "Cy Twombly", "b", 30);             // grade one more
+    r = writeCard(r, "ex1", "Bob Ross", { note: "private" }, 31); // a note only Andrew sees
+    const counts = releaseCounts(r, "ex1");
+    if (counts.new !== 1 || counts.changed !== 0 || counts.same !== 2) say("the next release counts the wrong students: " + JSON.stringify(counts));
+    r = releasePatch(r, "ex1", 40);
+    if (r.assignmentLog.ex1["Ada Lovelace"].slice(-1)[0] !== adaEvent) say("a second release rewrote a grade that had not changed");
+    if (unseenGrades(cfg, r, "Ada Lovelace").length) say("a second release brought back a card the student had already read");
+    if (unseenGrades(cfg, r, "Bob Ross").length) say("a change to the private note brought the card back");
+    if (unseenGrades(cfg, r, "Cy Twombly").length !== 1) say("the newly graded student got no card");
+    if (changedSinceRelease(r.gradeBoard.ex1, r, "ex1")) say("a release with nothing left to send reads as changed");
+    // A new comment is a change.
+    let c = writeCard(r, "ex1", "Bob Ross", { comment: "Finish the second half." }, 50);
+    if (unseenGrades(cfg, c, "Bob Ross").length) say("an unreleased comment reached the deck");
+    if (!changedSinceRelease(c.gradeBoard.ex1, c, "ex1")) say("a new comment does not read as changed");
+    c = releasePatch(c, "ex1", 60);
+    const bobCard = unseenGrades(cfg, c, "Bob Ross");
+    if (bobCard.length !== 1 || !bobCard[0].comment.includes("second half")) say("a changed comment did not bring the card back: " + JSON.stringify(bobCard));
+    if (unseenGrades(cfg, c, "Ada Lovelace").length) say("releasing Bob's comment brought Ada's card back");
+    // A comment on the assignment is a comment on the grade: the card comes
+    // back with the comment on it, and only for that student.
+    const commented = { ...r, assignmentLog: { ...r.assignmentLog, ex1: { ...r.assignmentLog.ex1,
+      "Ada Lovelace": [...r.assignmentLog.ex1["Ada Lovelace"], { id: "c9", ts: 55, type: "comment", from: "instructor", html: "<p>One more thing.</p>" }] } } };
+    const adaMore = unseenGrades(cfg, commented, "Ada Lovelace");
+    if (adaMore.length !== 1 || adaMore[0].more?.[0]?.text !== "One more thing.") say("a comment posted on the assignment did not bring the grade card back: " + JSON.stringify(adaMore));
+    if (unseenGrades(cfg, markSeen(commented, "ex1", "Ada Lovelace", 56), "Ada Lovelace").length) say("Got it on a commented card did not clear the card");
+    if (unseenGrades(cfg, commented, "Bob Ross").length) say("a comment to Ada brought Bob's card back");
+    const withStudentNote = { ...r, assignmentLog: { ...r.assignmentLog, ex1: { ...r.assignmentLog.ex1,
+      "Ada Lovelace": [...r.assignmentLog.ex1["Ada Lovelace"], { id: "c8", ts: 55, type: "comment", from: "student", text: "Thanks" }] } } };
+    if (unseenGrades(cfg, withStudentNote, "Ada Lovelace").length) say("the student's own comment brought their card back");
+    // A card moved and not released yet: the deck shows what was sent.
+    const early = placeCard(markSeen(r, "ex1", "Cy Twombly", 45), "ex1", "Cy Twombly", "a", 46);
+    const unseenCy = unseenGrades(cfg, placeCard(r, "ex1", "Cy Twombly", "a", 46), "Cy Twombly");
+    if (unseenCy.length !== 1 || unseenCy[0].letter !== "B") say("the deck showed a letter that was never released: " + JSON.stringify(unseenCy));
+    if (unseenGrades(cfg, early, "Cy Twombly").length) say("a moved card that was not released came back as a card");
+    // Hide and release the same grades again: no second card.
+    const back = releasePatch(hidePatch(r, "ex1"), "ex1", 70);
+    if (unseenGrades(cfg, back, "Ada Lovelace").length) say("hide then release brought back a card the student had read");
+    if (computeGrade(cfg, back, "Ada Lovelace").pct !== 100) say("hide then release did not put the grade back");
+  }
   // Both surfaces render, on the board just built.
   warmClassData(cfg.storageKey, again);
   try {
@@ -2056,6 +2105,33 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const msg = met.threads["Ada Lovelace"].slice(-1)[0];
     if (msg.kind !== "meeting" || msg.from !== "student" || !msg.text.includes("Exercise 1")) say("a meeting from the deck did not land in the thread: " + JSON.stringify(msg));
   } catch (err) { say("the deck threw: " + err.message); }
+  // Due inside 48 hours with nothing turned in: one card, dismissed once.
+  {
+    const now = new Date(2026, 8, 25, 12, 0).getTime();          // Fri Sep 25, noon
+    const asgs = [
+      { id: "sun", title: "Framing exercise", due: "Sep 27", dueTime: "11:59 PM" },   // Sun night, 60 hours out
+      { id: "sat", title: "Short piece", due: "Sep 26", dueTime: "11:59 PM" },        // 36 hours out
+      { id: "fri", title: "Pre-production", due: "Sep 25", dueTime: "5:00 PM" },      // 5 hours out
+      { id: "gone", title: "Last week", due: "Sep 24", dueTime: "11:59 PM" },         // past
+      { id: "done", title: "Handed in", due: "Sep 26", dueTime: "" },
+    ];
+    const dd = { assignments: asgs, assignmentLog: { done: { "Ada Lovelace": [sub] } } };
+    if (deadlineOf("Sep 25", "5:00 PM") !== new Date(2026, 8, 25, 17, 0, 59).getTime()) say("5:00 PM does not read as five in the evening");
+    if (deadlineOf("Sep 25", "12:00 AM") !== new Date(2026, 8, 25, 0, 0, 59).getTime()) say("12:00 AM does not read as midnight");
+    const ids = dueSoon(cfg, dd, "Ada Lovelace", now).map(a => a.id).join(",");
+    if (ids !== "sat,fri") say("the due-soon cards are for the wrong assignments: " + ids);
+    const dismissed = dismissDue(dd, asgs[1], "Ada Lovelace", now);
+    if (dueSoon(cfg, dismissed, "Ada Lovelace", now).map(a => a.id).join(",") !== "fri") say("Got it did not dismiss the due card");
+    // Bob turned nothing in, so he also gets a card for the one Ada handed in.
+    if (dueSoon(cfg, dismissed, "Bob Ross", now).map(a => a.id).join(",") !== "sat,fri,done") say("one student's dismissal hid another student's card");
+    const moved = { ...dismissed, assignments: asgs.map(a => a.id === "sat" ? { ...a, due: "Sep 27", dueTime: "9:00 AM" } : a) };
+    if (!dueSoon(cfg, moved, "Ada Lovelace", now).some(a => a.id === "sat")) say("a deadline moved after a dismissal never brought the card back");
+    try {
+      const html = renderToString(<DueDeck config={cfg} items={[asgs[1], asgs[2]]} onDismiss={noop} onOpen={noop} onDone={noop} />).replace(/<!-- -->/g, "");
+      ["Short piece", "Got it", "Go to assignments", "1 of 2"].forEach(t => { if (!html.includes(t)) say("the due card never showed " + JSON.stringify(t)); });
+    } catch (err) { say("the due card threw: " + err.message); }
+  }
+
   // Grades so far: a tile per assignment, grey until graded, then the letter.
   // An old number out of 100 reads as the same letter the columns would give.
   if (letterOf(92) !== "A" || letterOf(80) !== "B" || letterOf(79.5) !== "C" || letterOf(60) !== "D" || letterOf(59) !== "F" || letterOf(null) !== null) say("letterOf bands are off");

@@ -73,6 +73,12 @@ export const writeCard = (data, aid, name, fields, now = Date.now()) =>
 export const toHtml = (text) => String(text || "").trim().split(/\n{2,}/).filter(Boolean)
   .map(p => "<p>" + p.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>") + "</p>").join("");
 
+// The other way: a comment written in the rich editor, as the plain text a
+// deck card or a grade card draws.
+export const htmlToText = (html) => String(html || "")
+  .replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div)>\s*<(p|div)[^>]*>/gi, "\n\n").replace(/<[^>]+>/g, "")
+  .replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&#39;/g, "'").replace(/&amp;/g, "&").trim();
+
 // The board's own events are the ones marked `board`, so Hide and a second
 // Release can take out exactly what the board wrote and nothing a student
 // posted or an earlier grading flow left behind.
@@ -81,39 +87,99 @@ const notBoard = (log) => (log || []).filter(e => !e.board);
 let seq = 0;
 const eid = (now) => "gb-" + now.toString(36) + "-" + (seq++).toString(36);
 
+// The grade a student was last sent from this board: the board's event in
+// their log, or the one Hide put aside.
+const sentTo = (board, log, name) => {
+  const inLog = (log || []).filter(e => e.board);
+  return inLog[inLog.length - 1] || board.hidden?.[name] || null;
+};
+
+// What a release would do for one student: "new" or "changed" when the card
+// differs from what the student was last sent, "same" when the letter and the
+// comment are what the student already has, "withdrawn" when the card was
+// taken out of every column, and null when there is nothing to send.
+const releaseStateOf = (board, log, name) => {
+  const card = board.cards?.[name] || {};
+  const b = bucketOf(card.bucket);
+  const sent = sentTo(board, log, name);
+  if (!b) return sent && (log || []).some(e => e.board) ? "withdrawn" : null;
+  if (!sent) return "new";
+  const same = sent.bucket === b.id && (sent.html || null) === (toHtml(card.comment) || null);
+  return same ? "same" : "changed";
+};
+
 // Release: every sorted card becomes a grade in that student's log, with the
-// comment on the grade, and the board stamps the time so the deck knows who
-// has not seen theirs yet.
+// comment on the grade.
+//
+// Andrew, 2026-09-15: "i don't want to have a grade released twice, unless i
+// modified it or added a comment to it." A release used to rewrite every grade
+// with a new time and wipe every seen stamp, so a second release after grading
+// five more students put the same card in front of the thirty who had already
+// read theirs. Now a grade whose letter and comment are unchanged keeps its
+// original event, time and all, so the student's seen stamp still covers
+// that grade and no card comes round again. The private note never counts
+// as a change, because the student never sees the note.
 export const releasePatch = (data, aid, now = Date.now()) => {
   const board = boardOf(data, aid);
   const logs = { ...((data?.assignmentLog || {})[aid] || {}) };
-  Object.entries(board.cards || {}).forEach(([name, card]) => {
+  const names = new Set([...Object.keys(board.cards || {}), ...Object.keys(board.hidden || {})]);
+  names.forEach(name => {
+    const card = board.cards?.[name] || {};
     const b = bucketOf(card.bucket);
+    const state = releaseStateOf(board, logs[name], name);
     const kept = notBoard(logs[name]);
-    if (!b) { logs[name] = kept; return; }
+    if (!b) { if (logs[name]) logs[name] = kept; return; }
+    if (state === "same") {
+      logs[name] = [...kept, sentTo(board, logs[name], name)];
+      return;
+    }
     const html = toHtml(card.comment);
     logs[name] = [...kept, { id: eid(now), ts: now, type: "grade", board: true,
       score: b.score, letter: b.letter, bucket: b.id, html: html || null }];
   });
-  const next = withBoard(data, aid, brd => ({ ...brd, released: { at: now }, seen: {} }));
+  const next = withBoard(data, aid, brd => {
+    const { hidden, ...rest } = brd;
+    return { ...rest, released: { at: now }, seen: brd.seen || {} };
+  });
   return { ...next, assignmentLog: { ...(data?.assignmentLog || {}), [aid]: logs } };
 };
 
 // Hide: the board's events come out of every log and the release stamp goes.
-// The cards stay sorted.
+// The cards stay sorted, and each taken-back grade is put aside on the board,
+// so releasing the same grade again later is not a second card.
 export const hidePatch = (data, aid) => {
+  const board = boardOf(data, aid);
   const logs = { ...((data?.assignmentLog || {})[aid] || {}) };
-  Object.keys(logs).forEach(name => { logs[name] = notBoard(logs[name]); });
-  const next = withBoard(data, aid, brd => ({ ...brd, released: null, seen: {} }));
+  const hidden = { ...(board.hidden || {}) };
+  Object.keys(logs).forEach(name => {
+    const sent = (logs[name] || []).filter(e => e.board);
+    if (sent.length) hidden[name] = sent[sent.length - 1];
+    logs[name] = notBoard(logs[name]);
+  });
+  const next = withBoard(data, aid, brd => ({ ...brd, released: null, hidden }));
   return { ...next, assignmentLog: { ...(data?.assignmentLog || {}), [aid]: logs } };
 };
 
-// True when a card moved or changed after the last release, so the button can
-// say the students are looking at an older sort.
-export const changedSinceRelease = (board) => {
-  const at = board?.released?.at;
-  if (!at) return false;
-  return Object.values(board.cards || {}).some(c => (c.at || 0) > at);
+// Who the next release would reach: the students getting a grade for the
+// first time, the ones whose letter or comment changed, and the ones whose
+// grade comes back out. Everyone else already has what the board says.
+export const releaseCounts = (data, aid) => {
+  const board = boardOf(data, aid);
+  const logs = (data?.assignmentLog || {})[aid] || {};
+  const out = { new: 0, changed: 0, same: 0, withdrawn: 0 };
+  const names = new Set([...Object.keys(board.cards || {}), ...Object.keys(logs)]);
+  names.forEach(name => {
+    const s = releaseStateOf(board, logs[name], name);
+    if (s) out[s]++;
+  });
+  return out;
+};
+
+// True when a release would change what any student has.
+export const changedSinceRelease = (board, data, aid) => {
+  if (!board?.released?.at) return false;
+  if (data && aid) { const c = releaseCounts(data, aid); return c.new + c.changed + c.withdrawn > 0; }
+  return Object.values(board.cards || {}).some(c => (c.at || 0) > board.released.at);
 };
 
 export const sortedCount = (board) => Object.values(board?.cards || {}).filter(c => c.bucket).length;
@@ -129,16 +195,38 @@ export const unseenGrades = (config, data, name) => {
   const assignments = data?.assignments || config.assignments || [];
   return assignments.flatMap(asg => {
     const board = boardOf(data, asg.id);
-    const card = board.cards?.[name];
-    const b = card && bucketOf(card.bucket);
-    if (!board.released || !b) return [];
-    if ((board.seen?.[name] || 0) >= board.released.at) return [];
+    if (!board.released) return [];
     const log = data?.assignmentLog?.[asg.id]?.[name] || [];
+    // The card shows the grade the student was sent, not the board as it
+    // stands. A card moved after a release and not released again is still
+    // private, and the deck used to show the new letter anyway.
+    const sentAll = log.filter(e => e.board);
+    const sent = sentAll[sentAll.length - 1];
+    const b = sent && bucketOf(sent.bucket);
+    if (!b) return [];
+    // The time on the student's own grade, not the time of the last release,
+    // so a release that left this grade alone does not bring the card back.
+    const gradedAt = sent.ts;
+    const card = board.cards?.[name] || {};
+    const comment = (sent.html || null) === (toHtml(card.comment) || null)
+      ? String(card.comment || "").trim()
+      : htmlToText(sent.html);
+    // A comment on the student's assignment is a comment on the grade.
+    // Andrew, 2026-09-15: "commenting on a grade for a student is the same as
+    // commenting on their assignment." Posted from the Assignments page, a
+    // comment went into the log and never brought the card back, so the
+    // student only found the comment by opening the assignment. Every
+    // instructor comment posted after the grade went out is on the card, and
+    // the newest one decides whether the card is new to the student.
+    const more = log.filter(e => e.type === "comment" && e.from !== "student" && e.ts > sent.ts)
+      .map(e => ({ text: htmlToText(e.html || e.text), at: e.ts })).filter(m => m.text);
+    const changedAt = more.length ? Math.max(gradedAt, more[more.length - 1].at) : gradedAt;
+    if ((board.seen?.[name] || 0) >= changedAt) return [];
     const subs = log.filter(e => e.type === "submission");
     const last = subs[subs.length - 1] || null;
     const linked = [...subs].reverse().find(e => e.link) || null;
     return [{ aid: asg.id, title: asg.title, due: asg.due || "", letter: b.letter, bucket: b.id, means: b.means,
-      comment: String(card.comment || "").trim(), gradedAt: board.released.at,
+      comment, more, gradedAt,
       link: linked?.link || "", note: String(last?.text || "").trim(), submittedAt: last?.ts || null }];
   });
 };

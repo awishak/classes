@@ -86,6 +86,17 @@ export default function GradeDeck({ config, items, onSeen, onDone, onMeeting, ch
             </div>
           ) : null}
 
+          {/* comments on the assignment since the grade went out */}
+          {(card.more || []).map((m, k) => (
+            <div key={k} style={{ borderTop: "1px solid " + LINE, paddingTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                <span style={label}>From {who}</span>
+                <span style={{ fontSize: 13, color: TEXT_MUTED }}>{when(m.at)}</span>
+              </div>
+              {m.text.split(/\n{2,}/).filter(Boolean).map((p, j) => <p key={j} style={{ margin: 0, fontSize: 17, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{p}</p>)}
+            </div>
+          ))}
+
           {/* what they turned in */}
           {card.link || card.note ? (
             <div style={{ background: SUNK, borderRadius: 12, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>

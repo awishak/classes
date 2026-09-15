@@ -47,11 +47,33 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep15-cards", date: "Tuesday, September 15", title: "A grade goes out once, and a deadline gets a card",
+    blurb: "Andrew asked for two things. A release after grading more students should not send the same grade card to the students who already had theirs. And a student with an assignment due inside 48 hours and nothing turned in should get a card, once.",
+    groups: [
+      { name: "Releasing grades", items: [
+        ["Only new or changed grades go out", "A release used to rewrite every grade with a new time and wipe every seen stamp, so releasing after grading five more students put the same card in front of everyone. Now a grade whose letter and comment are the same as what the student already has keeps its original entry, and no card comes round again. A new letter or a new comment is a change and brings the card back. The private note is never a change, because the student never sees the note."],
+        ["The button says how many", "After a release, the button reads Release 5 more, and the confirmation says how many are new or changed and that the rest stay as they are. With nothing left to send, the button is off."],
+        ["Hide and release again is not a second card", "Hide puts each taken-back grade aside on the board, so releasing the same grades later puts them back without a card for anybody who already read theirs."],
+        ["A comment on the assignment is a comment on the grade", "A comment posted from the Assignments page went into the student's log and never brought the grade card back, so a student only found the comment by opening the assignment. Now any comment Andrew posts on an assignment after the grade went out puts the card back in front of that student, with the comment on the card. The Grade view card lists those comments too, under the comment typed there, so both places show one conversation."],
+        ["The card shows what was released", "The deck read the letter off the board as it stands, so a card moved after a release and not released again showed its new letter to a student who had not opened the class yet. The card reads the grade the student was sent now."],
+      ] },
+      { name: "The due-soon card", items: [
+        ["Due inside 48 hours, nothing turned in", "A card comes up before the class site, after any grade cards: the assignment's name, when the assignment is due (Due tomorrow, 11:59 PM), Got it, and Go to assignments, which opens that assignment on the Assignments page."],
+        ["Once per deadline", "Either button dismisses the card, and the dismissal is saved in the class, so the card stays gone on a phone and a laptop alike. The dismissal remembers the due date, so a deadline moved later brings the card back for the new date. The due time counts: something due at 5:00 PM Friday is inside 48 hours from Wednesday at 5:01 PM."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "A grade entered as a number in the older grading flow on the Assignments page still sends no card. Only Grade view releases do.",
+      "The due card shows no description and no instructions link, only the name, the due time and the way to the assignment.",
+    ] },
+  },
+  {
     id: "sep15-deadlines", date: "Tuesday, September 15", title: "Every deadline, with its day and its time",
-    blurb: "Andrew asked for the assignments and due dates in COMM 118 and COMM 3 to be filled in, from what was already written for both classes. Nothing new was written for students. Every description is a sentence from the COMM 3 course plan and calendar, or from spring's COMM 118.",
+    blurb: "Andrew asked for the assignments and due dates in COMM 118 and COMM 3 to be filled in, from what was already written for both classes.",
     groups: [
       { name: "COMM 3", items: [
         ["Twelve rows, in the order they come due", "The five exercises, the visual story, the audio story, the final and class culture, plus a row for each of the three pre-production pieces, so a pair has somewhere to hand in a treatment. Pre-production carries no weight of its own, since the course plan counts pre-production toward its project, and the badge leaves the percent off rather than saying 0%. Class culture reads Ongoing instead of Dec 9. Everything is due at 11:59 PM, the time COMM 118 already used."],
+        ["His names, and no made-up descriptions", "Every row is named the way the September 8 calendar names it: Identifying stories and framing exercise, Visual story pre-production, Final pre-production document. The descriptions that were on the rows were paraphrases of the course plan with lines added, like \"Length and spec to come\", and Andrew asked for that language to come out, so every COMM 3 description is empty until he writes one. The Exercise 1 to 5 numbering went with them."],
         ["The Sunday deadlines sit on Sunday", "Each exercise and project was a row under Friday reading \"Due Sunday, Sep 27: identifying stories and framing exercise\". Each one is now \"Identifying stories and framing exercise due\" on Sun Sep 27, and pre-production sits on its Friday. The library entries have the same names."],
       ] },
       { name: "COMM 118", items: [

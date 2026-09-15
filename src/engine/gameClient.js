@@ -43,6 +43,7 @@ function query(table, method, body, opts = {}) {
     not(k, op, v) { params.push([k, `not.${op}.${literal(v)}`]); return q; },
     or(expr) { params.push(["or", `(${expr})`]); return q; },
     order(col, o = {}) { params.push(["order", `${col}.${o.ascending === false ? "desc" : "asc"}`]); return q; },
+    range(from, to) { params.push(["offset", String(from)], ["limit", String(to - from + 1)]); return q; },
     then(resolve, reject) { return run().then(resolve, reject); },
   };
   async function run() {

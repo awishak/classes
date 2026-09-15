@@ -31,6 +31,7 @@ import { useOpenGames, GameStart, GamePlay, GamesNow } from "@ishak/decks";
 import { gameClient } from "./gameClient.js";
 import GradeDeck from "./GradeDeck.jsx";
 import { unseenGrades, markSeen, meetingPatch } from "./grades.js";
+import DueDeck, { dueSoon, dismissDue } from "./DueCard.jsx";
 import TopNav, { NAV_STUDENT, NAV_TEACH, tabHref } from "./TopNav.jsx";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
@@ -489,6 +490,8 @@ export default function ClassApp({ config, initialCard }) {
   // read back from the store, because a preview writes nothing and would
   // otherwise sit behind the deck for ever.
   const [deckDone, setDeckDone] = useState(false);
+  // The same, for the due-soon cards.
+  const [dueDone, setDueDone] = useState(false);
   // What the page draws as. The person is still the instructor; the page is
   // drawn the way the chosen student would get the page drawn.
   const view = preview ? "student" : role;
@@ -905,6 +908,20 @@ export default function ClassApp({ config, initialCard }) {
         <style>{CSS}</style>
         <GradeDeck config={config} items={unseen} onSeen={(aid) => write(prev => markSeen(prev, aid, seenAs))} onDone={() => setDeckDone(true)}
           onMeeting={(card) => write(prev => meetingPatch(prev, seenAs, card.title))} />
+      </div>
+    );
+  }
+
+  // Due inside 48 hours with nothing turned in: a card, once per deadline,
+  // after any grade cards and before the site.
+  const dueCards = data !== null && view !== "instructor" && !dueDone ? dueSoon(config, data, seenAs) : [];
+  if (dueCards.length) {
+    return (
+      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a }}>
+        <ThemeStyle theme={theme} />
+        <style>{CSS}</style>
+        <DueDeck config={config} items={dueCards} onDismiss={(asg) => write(prev => dismissDue(prev, asg, seenAs))} onDone={() => setDueDone(true)}
+          onOpen={(asg) => { go("assignments"); window.history.replaceState({}, "", config.path + "/assignments#asg-" + encodeURIComponent(asg.id)); }} />
       </div>
     );
   }

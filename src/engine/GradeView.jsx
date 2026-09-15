@@ -10,7 +10,7 @@ import { useClassData } from "./store.js";
 import { ThemeStyle } from "./ThemeShell.jsx";
 import { withIds } from "./roster.js";
 import { isLate } from "./AssignmentsCard.jsx";
-import { BUCKETS, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, sortedCount, gradeText } from "./grades.js";
+import { BUCKETS, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText } from "./grades.js";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -49,7 +49,11 @@ const workOf = (data, aid, name) => {
   const last = subs[subs.length - 1] || null;
   const linked = [...subs].reverse().find(e => e.link) || null;
   const grades = log.filter(e => e.type === "grade" && !e.board);
-  return { last, link: linked?.link || "", earlier: grades[grades.length - 1] || null, count: subs.length };
+  // Comments posted on the assignment itself, so the card holds the whole
+  // conversation with the student rather than only the comment typed here.
+  const comments = log.filter(e => e.type === "comment" && e.from !== "student")
+    .map(e => ({ id: e.id, text: htmlToText(e.html || e.text), at: e.ts })).filter(c => c.text);
+  return { last, link: linked?.link || "", earlier: grades[grades.length - 1] || null, count: subs.length, comments };
 };
 
 export default function GradeView({ config }) {
@@ -120,7 +124,14 @@ export default function GradeView({ config }) {
   const inBucket = (id) => roster.filter(s => board.cards?.[s.name]?.bucket === id);
   const sorted = sortedCount(board);
   const released = !!board.released;
-  const stale = changedSinceRelease(board);
+  const stale = changedSinceRelease(board, data, aid);
+  // Who a press on Release would actually reach. A grade the student already
+  // has, with the same letter and comment, is not sent again.
+  const counts = releaseCounts(data, aid);
+  const sending = counts.new + counts.changed;
+  // After Hide nothing is up, so Release puts every sorted grade back, and a
+  // grade that is back unchanged still brings no second card.
+  const toSend = released ? sending + counts.withdrawn : sorted;
 
   const btn = (solid) => ({ minHeight: HIT, padding: "0 14px", borderRadius: 8, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer",
     background: solid ? a : WHITE, color: solid ? "#fff" : TEXT_PRIMARY, border: "1px solid " + (solid ? a : LINE_STRONG) });
@@ -149,7 +160,14 @@ export default function GradeView({ config }) {
             ) : null}
             {confirm === "release" ? (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 15 }}>Send {sorted} grade{sorted === 1 ? "" : "s"} and the comments to the students?</span>
+                <span style={{ fontSize: 15 }}>
+                  {!released
+                    ? "Send " + sorted + " grade" + (sorted === 1 ? "" : "s") + " and the comments to the students?"
+                    : counts.same
+                    ? "Send " + sending + " new or changed grade" + (sending === 1 ? "" : "s") + "? The " + counts.same + " already released stay as they are."
+                    : "Send " + sending + " grade" + (sending === 1 ? "" : "s") + " and the comments to the students?"}
+                  {released && counts.withdrawn ? " " + counts.withdrawn + " moved back to the pile will be taken back." : ""}
+                </span>
                 <button className="gv-focus" style={btn(true)} onClick={release}>Yes, release</button>
                 <button className="gv-focus" style={btn(false)} onClick={() => setConfirm("")}>Not yet</button>
               </span>
@@ -161,8 +179,8 @@ export default function GradeView({ config }) {
               </span>
             ) : (
               <>
-                <button className="gv-focus" style={{ ...btn(true), opacity: sorted ? 1 : .5 }} disabled={!sorted} onClick={() => setConfirm("release")}>
-                  {released && stale ? "Release again" : "Release grades"}
+                <button className="gv-focus" style={{ ...btn(true), opacity: toSend ? 1 : .5 }} disabled={!toSend} onClick={() => setConfirm("release")}>
+                  {released && stale ? "Release " + toSend + " more" : "Release grades"}
                 </button>
                 {released ? <button className="gv-focus" style={btn(false)} onClick={() => setConfirm("hide")}>Hide grades</button> : null}
               </>
@@ -272,6 +290,11 @@ function Card({ student, due, card, work, accent, dragging, picked, editing, onD
       ) : (
         <>
           {card.comment ? <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{card.comment}</div> : null}
+          {(work.comments || []).map(c => (
+            <div key={c.id} style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
+              <span style={{ fontSize: 13, color: TEXT_MUTED }}>{fmtDay(c.at)} · </span>{c.text}
+            </div>
+          ))}
           {card.note ? <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.45, whiteSpace: "pre-wrap", background: SUNK, borderRadius: 8, padding: "6px 8px" }}><span style={{ fontWeight: 700 }}>Note: </span>{card.note}</div> : null}
           <button className="gv-focus" onClick={onEdit}
             style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, fontFamily: F, fontSize: 15, fontWeight: 600, color: accent, cursor: "pointer", minHeight: HIT }}>
