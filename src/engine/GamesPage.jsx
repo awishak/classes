@@ -18,9 +18,14 @@ import { withIds } from "./roster.js";
 import { useSession } from "./session.js";
 import { gameClient } from "./gameClient.js";
 import { castFor } from "./gameCast.js";
+import { normSlot } from "./dayplan.js";
+import { SHARED_KEY, blockById } from "./blocks.js";
 import * as TOKENS from "./tokens.js";
 
 const emailOf = (s) => String(s?.email || "").trim().toLowerCase();
+const normTitle = (t) => String(t || "").trim().toLowerCase().replace(/[\p{P}\p{S}]+/gu, "").replace(/\s+/g, " ").trim();
+// Fall 2026's day plans; spring's notes moved onto fall days live after this too.
+const TERM_START = "2026-08-01";
 
 export default function GamesPage({ config }) {
   const [data] = useClassState(config.storageKey);
@@ -37,6 +42,25 @@ export default function GamesPage({ config }) {
       document.head.appendChild(link);
     }
   }, [config.code]);
+
+  // Where a game sits in this term's day plans: a row that names the game, by
+  // its own words or by the block it points at, or a row linked to it.
+  const [shared] = useClassState(SHARED_KEY);
+  const places = (deck) => {
+    const want = normTitle(deck.title);
+    if (!want) return [];
+    const out = [];
+    Object.entries(data?.dayPlans || {}).sort(([a], [b]) => a.localeCompare(b)).forEach(([date, plan]) => {
+      if (date < TERM_START) return;
+      const hit = Object.values(plan?.slots || {}).some(slot => normSlot(slot).items.some(it => {
+        if (it.gameId === deck.id) return true;
+        const block = it.blockId ? blockById(data, shared, it.blockId) : null;
+        return normTitle(it.text) === want || normTitle(block?.title) === want;
+      }));
+      if (hit) out.push(new Date(date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }));
+    });
+    return out;
+  };
 
   const roster = withIds(data?.students || config.students || [])
     .filter(s => emailOf(s))
@@ -78,7 +102,7 @@ export default function GamesPage({ config }) {
         </div>
       ) : null}
       <GamesHome supabase={gameClient} groupKey={config.id} context={config.code} roster={roster}
-        onScreen={(view, game) => cast(castFor(view, game, roster.length))} onGame={onGame} onError={onError} />
+        onScreen={(view, game) => cast(castFor(view, game, roster.length))} onGame={onGame} onError={onError} places={places} />
     </>
   );
 }
