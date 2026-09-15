@@ -28,6 +28,16 @@ import { normSlot, sectionsOf } from "./dayplan.js";
 import { typeOf } from "./blocks.js";
 import Slide, { slideOf, readSlidesOn, writeSlidesOn } from "./Slide.jsx";
 
+const dayStamp = (s) => { const d = s ? new Date(s + ", 2026") : null; return d && !isNaN(d) ? d : null; };
+function inWeek(week, date) {
+  const first = dayStamp((week.dates || [])[0]);
+  const d = dayStamp(date);
+  if (!first || !d) return false;
+  const monday = new Date(first.getFullYear(), first.getMonth(), first.getDate() - ((first.getDay() + 6) % 7));
+  const days = Math.round((d - monday) / 86400000);
+  return days >= 0 && days < 7;
+}
+
 // Where a thing came from, for the second half of a row.
 const hostOf = (url) => {
   if (!url) return "";
@@ -95,7 +105,10 @@ export default function TermOutline({ config, weeks, plans, assignments, day, on
   const dueOn = {};
   (assignments || []).forEach(a => { if (a.due) (dueOn[a.due] = dueOn[a.due] || []).push(a.title); });
 
-  const dueThisWeek = (w) => (w.dates || []).flatMap(date => dueOn[date] || []);
+  // A deadline belongs to the week it falls inside, Monday to Sunday, not only
+  // to the days the class meets: COMM 3's exercises are due on Sundays, and a
+  // week listing only its class dates never said so.
+  const dueThisWeek = (w) => Object.keys(dueOn).filter(due => inWeek(w, due)).flatMap(due => dueOn[due]);
 
   const show = (d) => only === "planned" ? info[d.date].rows > 0
     : only === "empty" ? !info[d.date].rows : true;

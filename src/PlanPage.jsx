@@ -47,6 +47,37 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep15-deadlines", date: "Tuesday, September 15", title: "Every deadline, with its day and its time",
+    blurb: "Andrew asked for the assignments and due dates in COMM 118 and COMM 3 to be filled in, from what was already written for both classes. Nothing new was written for students. Every description is a sentence from the COMM 3 course plan and calendar, or from spring's COMM 118.",
+    groups: [
+      { name: "COMM 3", items: [
+        ["Twelve rows, in the order they come due", "The five exercises, the visual story, the audio story, the final and class culture, plus a row for each of the three pre-production pieces, so a pair has somewhere to hand in a treatment. Pre-production carries no weight of its own, since the course plan counts pre-production toward its project, and the badge leaves the percent off rather than saying 0%. Class culture reads Ongoing instead of Dec 9. Everything is due at 11:59 PM, the time COMM 118 already used."],
+        ["The Sunday deadlines sit on Sunday", "Each exercise and project was a row under Friday reading \"Due Sunday, Sep 27: identifying stories and framing exercise\". Each one is now \"Identifying stories and framing exercise due\" on Sun Sep 27, and pre-production sits on its Friday. The library entries have the same names."],
+      ] },
+      { name: "COMM 118", items: [
+        ["The final project is on the schedule", "Teach Me Something New was due Dec 11 with no row anywhere a student would look. Finals week lists Dec 7 and Dec 9, so the row sits on the Friday and shows as Fri Dec 11."],
+        ["The Interview Assignment says what it is", "The description was blank. It carries spring's line now: Interview someone who works in sports in a job you're interested in."],
+        ["Week 5 said due tomorrow on a Wednesday", "The Intersections Proposal is due Friday, Oct 23, and the week's text says so."],
+      ] },
+      { name: "What students see", items: [
+        ["A deadline says which day", "A schedule row on a day with no class, a Sunday or the Friday of finals week, read \"Sun\" with no date, because a week only knew its class dates. The date is worked out from the week's Monday now."],
+        ["A deadline opens its assignment", "Pressing a due row on the schedule goes to that assignment on the Assignments page, where the instructions link and the place to hand in are."],
+        ["The badge names the weekday and the time", "Due Sun Sep 27, 11:59 PM, instead of Due Sep 27."],
+      ] },
+      { name: "For me", items: [
+        ["Editing an assignment kept its due time", "Saving the editor rebuilt the assignment from its boxes, so every COMM 118 assignment would have lost its 11:59 PM the first time anybody opened one. The editor starts from the stored assignment now and has a Due time box."],
+        ["The outline shows Sunday deadlines", "The week's due tag only looked at class dates, so no COMM 3 exercise and no Dec 11 final ever showed on a folded week."],
+        ["Friday, Saturday and Sunday in the week's day menu", "A row due Sunday read as no day in the schedule editor."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "Both stores were backed up first, as comm118-f26-v1-before-deadlines-2026-09-15 and comm3-f26-v1-before-deadlines-2026-09-15, named outside the daily backup pattern so the rotation leaves those two rows alone.",
+      "COMM 118's final is due Friday Dec 11 and COMM 3's is due Wednesday Dec 9. The Dec 11 date came over from The Brief's fall calendar and nobody has checked Dec 11 against the exam schedule.",
+      "The Intersections Proposal description still has a broken first sentence from spring, \"which will explore.\" The words are Andrew's and were left alone.",
+      "COMM 3's exercise prompts, the audio and final specs, and what earns class culture are still unwritten.",
+    ] },
+  },
+  {
     id: "sep14", date: "Monday, September 14", title: "The drawer saves what you type",
     blurb: "Andrew could not edit a note from the day, and a new note or video went onto the day as an untitled article. Both were one missing import. Every field in the drawer called a function Dashboard.jsx never imported, so leaving a field threw an error and saved nothing.",
     groups: [

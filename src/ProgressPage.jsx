@@ -111,7 +111,6 @@ export default function ProgressPage() {
             <div style={{ background: SUNK, borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
               <Tag>Next</Tag>
               <List items={[
-                <>Updating assignments in your classes.</>,
                 <>Game scores into the gradebook, and released answers shown to students.</>,
               ]} />
             </div>

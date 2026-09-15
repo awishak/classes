@@ -36,9 +36,10 @@ export const scheduleWeeks = [
         "id": "i-w1-0",
         "libId": "lib-w1-0",
         "type": "assignment",
-        "title": "Due Sunday, Sep 27: identifying stories and framing exercise",
+        "title": "Identifying stories and framing exercise due",
         "url": "",
-        "date": "Fri"
+        "date": "Sun",
+        "asgId": "ex1"
       }
     ]
   },
@@ -58,9 +59,10 @@ export const scheduleWeeks = [
         "id": "i-w2-1",
         "libId": "lib-w2-1",
         "type": "assignment",
-        "title": "Due Sunday, Oct 4: visual language exercise",
+        "title": "Visual language exercise due",
         "url": "",
-        "date": "Fri"
+        "date": "Sun",
+        "asgId": "ex2"
       }
     ]
   },
@@ -80,17 +82,19 @@ export const scheduleWeeks = [
         "id": "i-w3-2",
         "libId": "lib-w3-2",
         "type": "assignment",
-        "title": "Due today: visual story pre-production",
+        "title": "Visual story pre-production due",
         "url": "",
-        "date": "Fri"
+        "date": "Fri",
+        "asgId": "visual-pre"
       },
       {
         "id": "i-w3-3",
         "libId": "lib-w3-3",
         "type": "assignment",
-        "title": "Due Sunday, Oct 11: graphics exercise",
+        "title": "Graphics exercise due",
         "url": "",
-        "date": "Fri"
+        "date": "Sun",
+        "asgId": "ex3"
       }
     ]
   },
@@ -110,9 +114,10 @@ export const scheduleWeeks = [
         "id": "i-w4-4",
         "libId": "lib-w4-4",
         "type": "assignment",
-        "title": "Due Sunday, Oct 18: visual story",
+        "title": "Visual story due",
         "url": "",
-        "date": "Fri"
+        "date": "Sun",
+        "asgId": "visual"
       }
     ]
   },
@@ -132,9 +137,10 @@ export const scheduleWeeks = [
         "id": "i-w5-5",
         "libId": "lib-w5-5",
         "type": "assignment",
-        "title": "Due Sunday, Oct 25: characters exercise",
+        "title": "Characters exercise due",
         "url": "",
-        "date": "Fri"
+        "date": "Sun",
+        "asgId": "ex4"
       }
     ]
   },
@@ -154,17 +160,19 @@ export const scheduleWeeks = [
         "id": "i-w6-6",
         "libId": "lib-w6-6",
         "type": "assignment",
-        "title": "Due today: audio story pre-production",
+        "title": "Audio story pre-production due",
         "url": "",
-        "date": "Fri"
+        "date": "Fri",
+        "asgId": "audio-pre"
       },
       {
         "id": "i-w6-7",
         "libId": "lib-w6-7",
         "type": "assignment",
-        "title": "Due Sunday, Nov 1: audio exercise",
+        "title": "Audio exercise due",
         "url": "",
-        "date": "Fri"
+        "date": "Sun",
+        "asgId": "ex5"
       }
     ]
   },
@@ -184,9 +192,10 @@ export const scheduleWeeks = [
         "id": "i-w7-8",
         "libId": "lib-w7-8",
         "type": "assignment",
-        "title": "Due Sunday, Nov 8: audio story",
+        "title": "Audio story due",
         "url": "",
-        "date": "Fri"
+        "date": "Sun",
+        "asgId": "audio"
       }
     ]
   },
@@ -232,9 +241,10 @@ export const scheduleWeeks = [
         "id": "i-w10-9",
         "libId": "lib-w10-9",
         "type": "assignment",
-        "title": "Due tonight: final pre-production",
+        "title": "Final pre-production document due",
         "url": "",
-        "date": "Wed"
+        "date": "Wed",
+        "asgId": "final-pre"
       }
     ]
   },
@@ -252,9 +262,10 @@ export const scheduleWeeks = [
         "id": "i-w11-10",
         "libId": "lib-w11-10",
         "type": "assignment",
-        "title": "Due today: final project",
+        "title": "Final project due",
         "url": "",
-        "date": "Wed"
+        "date": "Wed",
+        "asgId": "final"
       }
     ]
   }
@@ -264,67 +275,67 @@ export const library = [
   {
     "id": "lib-w1-0",
     "type": "assignment",
-    "title": "Due Sunday, Sep 27: identifying stories and framing exercise",
+    "title": "Identifying stories and framing exercise due",
     "url": ""
   },
   {
     "id": "lib-w2-1",
     "type": "assignment",
-    "title": "Due Sunday, Oct 4: visual language exercise",
+    "title": "Visual language exercise due",
     "url": ""
   },
   {
     "id": "lib-w3-2",
     "type": "assignment",
-    "title": "Due today: visual story pre-production",
+    "title": "Visual story pre-production due",
     "url": ""
   },
   {
     "id": "lib-w3-3",
     "type": "assignment",
-    "title": "Due Sunday, Oct 11: graphics exercise",
+    "title": "Graphics exercise due",
     "url": ""
   },
   {
     "id": "lib-w4-4",
     "type": "assignment",
-    "title": "Due Sunday, Oct 18: visual story",
+    "title": "Visual story due",
     "url": ""
   },
   {
     "id": "lib-w5-5",
     "type": "assignment",
-    "title": "Due Sunday, Oct 25: characters exercise",
+    "title": "Characters exercise due",
     "url": ""
   },
   {
     "id": "lib-w6-6",
     "type": "assignment",
-    "title": "Due today: audio story pre-production",
+    "title": "Audio story pre-production due",
     "url": ""
   },
   {
     "id": "lib-w6-7",
     "type": "assignment",
-    "title": "Due Sunday, Nov 1: audio exercise",
+    "title": "Audio exercise due",
     "url": ""
   },
   {
     "id": "lib-w7-8",
     "type": "assignment",
-    "title": "Due Sunday, Nov 8: audio story",
+    "title": "Audio story due",
     "url": ""
   },
   {
     "id": "lib-w10-9",
     "type": "assignment",
-    "title": "Due tonight: final pre-production",
+    "title": "Final pre-production document due",
     "url": ""
   },
   {
     "id": "lib-w11-10",
     "type": "assignment",
-    "title": "Due today: final project",
+    "title": "Final project due",
     "url": ""
   }
 ];
@@ -337,7 +348,8 @@ export const assignments = [
     "weight": 3,
     "description": "Applies the week's skill to something from your own life and something from the world. Individual. Low stakes on its own, but a student who skips these will not do well in the course. Covers both identifying a story and framing one.",
     "instructionsUrl": "",
-    "rubric": []
+    "rubric": [],
+    "dueTime": "11:59 PM"
   },
   {
     "id": "ex2",
@@ -346,7 +358,18 @@ export const assignments = [
     "weight": 3,
     "description": "Applies the week's skill to something from your own life and something from the world. Individual. Low stakes on its own, but a student who skips these will not do well in the course.",
     "instructionsUrl": "",
-    "rubric": []
+    "rubric": [],
+    "dueTime": "11:59 PM"
+  },
+  {
+    "id": "visual-pre",
+    "title": "Visual story pre-production",
+    "due": "Oct 9",
+    "weight": 0,
+    "instructionsUrl": "",
+    "rubric": [],
+    "description": "Pairs. The treatment lives inside pre-production. A treatment says what the story is, why, and lists a few sources. I approve it or send it back. Pre-production counts toward the project it belongs to, not toward the creative exercise grade.",
+    "dueTime": "11:59 PM"
   },
   {
     "id": "ex3",
@@ -355,25 +378,8 @@ export const assignments = [
     "weight": 3,
     "description": "Applies the week's skill to something from your own life and something from the world. Individual. Low stakes on its own, but a student who skips these will not do well in the course. Two graphics on an assigned topic.",
     "instructionsUrl": "",
-    "rubric": []
-  },
-  {
-    "id": "ex4",
-    "title": "Exercise 4: characters",
-    "due": "Oct 25",
-    "weight": 3,
-    "description": "Applies the week's skill to something from your own life and something from the world. Individual. Low stakes on its own, but a student who skips these will not do well in the course. A character from your own life and one from the world.",
-    "instructionsUrl": "",
-    "rubric": []
-  },
-  {
-    "id": "ex5",
-    "title": "Exercise 5: audio",
-    "due": "Nov 1",
-    "weight": 3,
-    "description": "Applies the week's skill to something from your own life and something from the world. Individual. Low stakes on its own, but a student who skips these will not do well in the course.",
-    "instructionsUrl": "",
-    "rubric": []
+    "rubric": [],
+    "dueTime": "11:59 PM"
   },
   {
     "id": "visual",
@@ -382,7 +388,38 @@ export const assignments = [
     "weight": 20,
     "description": "Pairs. About 500 words, four or five photographs, and two or three graphics, interspersed. Pre-production, including the treatment, is due Friday, October 9: what the story is, why, and a few sources. I approve the treatment or send the treatment back. Phones are fine. Strong photography can earn extra credit. AI graphics are allowed, with less control; Flourish is the alternative.",
     "instructionsUrl": "",
-    "rubric": []
+    "rubric": [],
+    "dueTime": "11:59 PM"
+  },
+  {
+    "id": "ex4",
+    "title": "Exercise 4: characters",
+    "due": "Oct 25",
+    "weight": 3,
+    "description": "Applies the week's skill to something from your own life and something from the world. Individual. Low stakes on its own, but a student who skips these will not do well in the course. A character from your own life and one from the world.",
+    "instructionsUrl": "",
+    "rubric": [],
+    "dueTime": "11:59 PM"
+  },
+  {
+    "id": "audio-pre",
+    "title": "Audio story pre-production",
+    "due": "Oct 30",
+    "weight": 0,
+    "instructionsUrl": "",
+    "rubric": [],
+    "description": "Pairs. The treatment lives inside pre-production. A treatment says what the story is, why, and lists a few sources. I approve it or send it back. Pre-production counts toward the project it belongs to, not toward the creative exercise grade.",
+    "dueTime": "11:59 PM"
+  },
+  {
+    "id": "ex5",
+    "title": "Exercise 5: audio",
+    "due": "Nov 1",
+    "weight": 3,
+    "description": "Applies the week's skill to something from your own life and something from the world. Individual. Low stakes on its own, but a student who skips these will not do well in the course.",
+    "instructionsUrl": "",
+    "rubric": [],
+    "dueTime": "11:59 PM"
   },
   {
     "id": "audio",
@@ -391,7 +428,18 @@ export const assignments = [
     "weight": 20,
     "description": "Pairs. An audio story, modeled on the audio assignment in Lotta's version of the course. Pre-production, including the treatment, is due Friday, October 30. Length and spec to come.",
     "instructionsUrl": "",
-    "rubric": []
+    "rubric": [],
+    "dueTime": "11:59 PM"
+  },
+  {
+    "id": "final-pre",
+    "title": "Final pre-production document",
+    "due": "Dec 2",
+    "weight": 0,
+    "instructionsUrl": "",
+    "rubric": [],
+    "description": "Groups of four. The final's pre-production is due the night of the group presentations, Wednesday, December 2. The treatment lives inside pre-production. A treatment says what the story is, why, and lists a few sources. I approve it or send it back.",
+    "dueTime": "11:59 PM"
   },
   {
     "id": "final",
@@ -400,16 +448,18 @@ export const assignments = [
     "weight": 35,
     "description": "Groups of four. Video, audio, and multimedia together, on a research-based social justice story. Groups pitch Monday, November 16, and present Wednesday, December 2. Pre-production is due the night of the presentations. Lengths and group formation to come.",
     "instructionsUrl": "",
-    "rubric": []
+    "rubric": [],
+    "dueTime": "11:59 PM"
   },
   {
     "id": "culture",
     "title": "Class culture",
-    "due": "Dec 9",
+    "due": "Ongoing",
     "weight": 10,
     "description": "How you show up for the room across the quarter. What earns the ten percent is still being written.",
     "instructionsUrl": "",
-    "rubric": []
+    "rubric": [],
+    "dueTime": ""
   }
 ];
 

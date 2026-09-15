@@ -82,7 +82,7 @@ import GradeView from "../src/engine/GradeView.jsx";
 import GradeDeck from "../src/engine/GradeDeck.jsx";
 import { placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, unseenGrades, markSeen, meetingPatch, letterOf, BUCKETS } from "../src/engine/grades.js";
 import GradeParade from "../src/engine/GradeParade.jsx";
-import { computeGrade } from "../src/engine/AssignmentsCard.jsx";
+import { computeGrade, dueText } from "../src/engine/AssignmentsCard.jsx";
 import { sectionsOf, takeGroup, placeGroup, parseRange, sumRanges, rangeLabel, placeSection, splitSection, templateOf, applyTemplate } from "../src/engine/dayplan.js";
 import { dayTitles } from "../src/engine/days.js";
 import { normSlot as normSlotT } from "../src/engine/dayplan.js";
@@ -92,7 +92,7 @@ import RoomSlide from "../src/engine/RoomSlide.jsx";
 import { castFor } from "../src/engine/gameCast.js";
 import GamesPage from "../src/engine/GamesPage.jsx";
 import DayDoc from "../src/engine/DayDoc.jsx";
-import { ScheduleDetail, studentItems } from "../src/engine/ScheduleCard.jsx";
+import { ScheduleDetail, studentItems, dateInWeek } from "../src/engine/ScheduleCard.jsx";
 import TermOutline from "../src/engine/TermOutline.jsx";
 import { SHARED_KEY } from "../src/engine/blocks.js";
 import { DEFAULT_REPO_FONTS } from "../src/engine/fonts.js";
@@ -2332,6 +2332,24 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (!html.includes("Billings, Communication and Sport")) say("a block's written source is not shown");
     if (!html.includes("Wed Sep 23")) say("a reading says Wed without saying which Wednesday");
   }
+
+  // A deadline on a day the class does not meet. COMM 3's exercises are due on
+  // Sundays, and the item sat under Friday reading "Due Sunday, Sep 27: ...",
+  // because a week only knew its class dates.
+  const due = { ...week, items: [{ id: "d", type: "assignment", title: "Framing exercise due", date: "Sun", asgId: "ex1" }] };
+  let dueHtml = "";
+  try {
+    dueHtml = renderToString(<ScheduleDetail config={{ accent: "#333", path: "/comm3", scheduleWeeks: [] }} role="student"
+      data={{ schedule: [due] }} blockOf={() => null} />);
+  } catch (e) { say("a deadline threw: " + e.message); }
+  if (dueHtml && !dueHtml.includes("Sun Sep 27")) say("a Sunday deadline does not say which Sunday");
+  if (dueHtml && !dueHtml.includes('href="/comm3/assignments#asg-ex1"')) say("a deadline does not open its assignment");
+  if (dateInWeek({ dates: ["Dec 7", "Dec 9"] }, "Fri") !== "Dec 11") say("the Friday of a two-day finals week is not Dec 11");
+  // The badge names the weekday and the time. Dates carry no year and are read
+  // as 2026, so this only means something while Dec 31 is more than a week off.
+  if (Date.now() < new Date(2026, 11, 20).getTime() && dueText("Dec 31", "11:59 PM") !== "Due Thu Dec 31, 11:59 PM")
+    say("an assignment's due badge does not say the weekday and the time: " + dueText("Dec 31", "11:59 PM"));
+  if (dueText("Ongoing", "") !== "Ongoing") say("an ongoing assignment does not say Ongoing");
 }
 
 // What students see on a week: games and Headlines from the day plans, and the
@@ -2573,6 +2591,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
         if (!html.includes("1 of 3 done")) say("outline: the day does not say how far through it is");
         if (!html.includes("1 of 5 days built")) say("outline: the header count is wrong");
         if (!html.includes("Interview Assignment due")) say("outline: an assignment due date never shows");
+        // A Sunday deadline is inside its week even though the class never meets on a Sunday.
+        const sunday = renderToString(<TermOutline {...props} startView={view}
+          assignments={[{ due: "Sep 27", title: "Framing exercise" }]} />).replace(/<!-- -->/g, "");
+        if (!sunday.includes("Framing exercise due")) say("outline: a deadline on a day with no class never shows");
         if (!html.includes("2 on the week")) say("outline: what a week is carrying is not counted");
         // An open day is the day, row for row — section headers alone were a
         // summary of a summary, and the Map is where a day is a count.

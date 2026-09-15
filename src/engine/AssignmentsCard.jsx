@@ -122,12 +122,30 @@ export const dueColor = (tone) => tone === "late" ? LATE : (tone === "now" || to
 export const nextDue = (config, data) => nextDueOf(getAssignments(data, config));
 export const ungradedCount = (config, data) => ungradedQueue(getAssignments(data, config), data).length;
 
-function DueBadge({ due, weight }) {
+// The badge says the weekday and the time as well as the date. COMM 3's
+// exercises are due on Sundays, a day the class never meets, and "Due Sep 27"
+// left a student to work out that Sep 27 is a Sunday and whether that means
+// the morning or the night.
+const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+export function dueText(due, time) {
+  const st = dueState(due);
+  if (!st) return "Ongoing";
+  const at = time ? ", " + time : "";
+  if (st.tone === "calm") { const d = parseDue(due); return "Due " + WEEKDAY[d.getDay()] + " " + due + at; }
+  if (st.tone === "late") return st.text;
+  return st.text.startsWith("Due in") ? st.text : st.text + at;
+}
+
+// A piece that counts toward another one, like pre-production toward its
+// project, carries no weight of its own, and "0%" beside it read as worthless.
+const weightText = (weight) => weight ? " · " + weight + "%" : "";
+
+function DueBadge({ due, time, weight }) {
   const st = dueState(due);
   const c = st ? dueColor(st.tone) : TEXT_MUTED;
   return (
     <span style={{ fontSize: 15, color: c, fontWeight: st && st.tone !== "calm" ? 700 : 400, flexShrink: 0 }}>
-      {st ? st.text : "Ongoing"}{weight != null ? " · " + weight + "%" : ""}
+      {dueText(due, time)}{weightText(weight)}
     </span>
   );
 }
@@ -253,7 +271,7 @@ export function AssignmentsSummary({ config, data, role }) {
     <div>
       <div style={{ fontWeight: 600 }}>{next.title}</div>
       <div style={{ fontSize: 15, marginTop: 2, color: st ? dueColor(st.tone) : TEXT_MUTED, fontWeight: st && st.tone !== "calm" ? 700 : 400 }}>
-        {st ? st.text : "Ongoing"} · {next.weight}%
+        {dueText(next.due, next.dueTime)}{weightText(next.weight)}
       </div>
     </div>
   );
@@ -315,7 +333,7 @@ function StudentAssignmentRow({ asg, accent, config, data, update, name }) {
     <div id={"asg-" + asg.id} style={{ background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, padding: 18, scrollMarginTop: 80 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
         <div style={{ fontSize: 17, fontWeight: 600 }}>{asg.title}</div>
-        <DueBadge due={asg.due} weight={asg.weight} />
+        <DueBadge due={asg.due} time={asg.dueTime} weight={asg.weight} />
       </div>
       {asg.description && <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 6 }}>{asg.description}</div>}
       {asg.instructionsUrl && <a href={asg.instructionsUrl} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 15, fontWeight: 600, color: accent }}>Assignment instructions</a>}
@@ -614,7 +632,7 @@ function ManageAssignments({ config, data, assignments, writeAssignments }) {
         {assignments.map(asg => (
           <button key={asg.id} onClick={() => setEditing(asg.id)}
             style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER, borderRadius: 12, padding: 14, cursor: "pointer", fontFamily: F, minHeight: TAP }}>
-            <div><div style={{ fontWeight: 600, fontSize: 16 }}>{asg.title}</div><Muted>Due {asg.due} · {asg.weight}% · {asg.rubric?.length ? asg.rubric.length + " criteria" : "free-form"}</Muted></div>
+            <div><div style={{ fontWeight: 600, fontSize: 16 }}>{asg.title}</div><Muted>Due {asg.due}{asg.dueTime ? ", " + asg.dueTime : ""} · {asg.weight || 0}% · {asg.rubric?.length ? asg.rubric.length + " criteria" : "free-form"}</Muted></div>
             <span style={{ color: a, fontSize: 15, fontWeight: 600 }}>Edit</span>
           </button>
         ))}
@@ -628,6 +646,7 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
   const a = config.accent;
   const [title, setTitle] = useState(asg?.title || "");
   const [due, setDue] = useState(asg?.due || "");
+  const [dueTime, setDueTime] = useState(asg?.dueTime || "");
   const [weight, setWeight] = useState(asg?.weight != null ? String(asg.weight) : "");
   const [description, setDescription] = useState(asg?.description || "");
   const [instructionsUrl, setInstructionsUrl] = useState(asg?.instructionsUrl || "");
@@ -639,8 +658,13 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
 
   const save = () => {
     if (!title.trim()) return;
+    // Starts from the assignment as stored, so a field this form has no box
+    // for survives a save. Saving used to rebuild the object from the boxes,
+    // and every COMM 118 assignment lost its 11:59 PM the first time it was
+    // edited.
     onSave({
-      id: asg?.id || genId(), title: title.trim(), due: due.trim(), weight: Number(weight) || 0,
+      ...(asg || {}),
+      id: asg?.id || genId(), title: title.trim(), due: due.trim(), dueTime: dueTime.trim(), weight: Number(weight) || 0,
       description: description.trim(), instructionsUrl: instructionsUrl.trim(), closeAt: closeAt || "",
       rubric: rubric.filter(c => c.name.trim()).map(c => ({ id: c.id, name: c.name.trim(), points: Number(c.points) || 0 })),
     });
@@ -654,6 +678,7 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
       <input value={title} onChange={e => setTitle(e.target.value)} autoFocus style={{ ...inputStyle, marginTop: 6 }} />
       <div style={{ display: "flex", gap: 10 }}>
         <div style={{ flex: 1 }}><div style={fieldL}>Due</div><input value={due} onChange={e => setDue(e.target.value)} placeholder="Oct 9" style={{ ...inputStyle, marginTop: 6 }} /></div>
+        <div style={{ flex: 1 }}><div style={fieldL}>Due time</div><input value={dueTime} onChange={e => setDueTime(e.target.value)} placeholder="11:59 PM" style={{ ...inputStyle, marginTop: 6 }} /></div>
         <div style={{ width: 120 }}><div style={fieldL}>Weight %</div><input type="number" min="0" value={weight} onChange={e => setWeight(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} /></div>
       </div>
       <div style={fieldL}>Short description</div>

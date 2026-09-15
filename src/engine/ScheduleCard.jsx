@@ -50,6 +50,22 @@ function parseDate(s) {
 }
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const dayOf = (s) => { const d = parseDate(s); return d ? WEEKDAYS[d.getDay()] : null; };
+
+// The date a week's item falls on. A class day is one of the week's own dates.
+// A deadline can land on a day with no class, the Sunday after the week or the
+// Friday of finals week, and that date is worked out from the week's Monday,
+// because "Sun" on its own made a student work out which Sunday.
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+export function dateInWeek(week, day) {
+  const own = (week.dates || []).find(d => dayOf(d) === day);
+  if (own) return own;
+  const first = parseDate((week.dates || [])[0]);
+  const want = WEEKDAYS.indexOf(day);
+  if (!first || want < 0) return "";
+  const monday = new Date(first.getFullYear(), first.getMonth(), first.getDate() - ((first.getDay() + 6) % 7));
+  const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + ((want + 6) % 7));
+  return MONTHS[d.getMonth()] + " " + d.getDate();
+}
 function nearestWeekId(weeks) {
   const today = new Date();
   const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
@@ -135,7 +151,7 @@ export function studentItems(week, dayPlans, blockOf) {
   return [...(week.items || []).filter(it => STUDENT_TYPES.has(it.type)), ...fromFlow];
 }
 
-function ItemView({ item, picked, when, source }) {
+function ItemView({ item, picked, when, source, href }) {
   const m = TYPE_META[item.type] || {};
   const inner = (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -148,7 +164,8 @@ function ItemView({ item, picked, when, source }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid " + BORDER }}>
       <span style={{ width: 84, flexShrink: 0, fontSize: 13, fontWeight: 700, color: TEXT_SECONDARY }}>{when || item.date || ""}</span>
-      {item.url ? <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", minWidth: 0 }}>{inner}</a> : inner}
+      {href ? <a href={href} style={{ textDecoration: "none", minWidth: 0 }}>{inner}</a>
+        : item.url ? <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", minWidth: 0 }}>{inner}</a> : inner}
       {picked ? <PickMark size={26} label /> : null}
     </div>
   );
@@ -223,9 +240,13 @@ function StudentSchedule({ config, data, blockOf }) {
                   {inWeekOrder(studentItems(w, data?.dayPlans, blockOf)).map(it => {
                     const block = blockOf ? blockOf(it.blockId || it.libId) : null;
                     // "Wed" on its own made a student work out which Wednesday.
-                    const date = (w.dates || []).find(d => dayOf(d) === it.date);
-                    return <ItemView key={it.id} item={it} picked={isPicked(it)}
-                      when={date ? it.date + " " + date : ""} source={sourceOf(it, block)} />;
+                    const date = dateInWeek(w, it.date);
+                    // A deadline opens the assignment itself, where the
+                    // instructions link and the place to hand the work in are.
+                    const href = it.type === "assignment" && it.asgId && config.path
+                      ? config.path + "/assignments#asg-" + encodeURIComponent(it.asgId) : "";
+                    return <ItemView key={it.id} item={it} picked={isPicked(it)} href={href}
+                      when={date ? it.date + " " + date : ""} source={href ? "" : sourceOf(it, block)} />;
                   })}
                 </div>
               )}
@@ -484,7 +505,9 @@ function WeekEditor({ w, wIndex, accent, config, library, data, update, setWeekF
   const savePlan = () => { setWeekField(w.id, "plan", planDraft); setWeekField(w.id, "slides", slidesDraft.trim()); setEditPlan(false); };
   const dayOptions = (() => {
     const fromDates = (w.dates || []).map(dayOf).filter(Boolean);
-    return fromDates.length ? [...new Set(fromDates)] : ["Mon", "Tue", "Wed", "Thu", "Fri"];
+    // Friday through Sunday stay on offer for a deadline on a day with no class,
+    // so an item due Sunday does not read as "no day" here.
+    return fromDates.length ? [...new Set([...fromDates, "Fri", "Sat", "Sun"])].sort((a, b) => DAY_ORDER[a] - DAY_ORDER[b]) : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   })();
 
   const seeds = (config.seeds || []).filter(s => {
