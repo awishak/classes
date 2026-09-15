@@ -16,6 +16,7 @@ import RepoIdeas from "./engine/RepoIdeas.jsx";
 import AskPage from "./engine/AskPage.jsx";
 import GradeView from "./engine/GradeView.jsx";
 import PlanPage from "./PlanPage.jsx";
+import ProgressPage from "./ProgressPage.jsx";
 import { ENGINE, currentClasses, archivedClasses } from "./config/registry.js";
 import InstructorLinks from "./InstructorLinks.jsx";
 import InstructorGate from "./InstructorGate.jsx";
@@ -187,6 +188,11 @@ export default function App() {
 
   if (path === "/plan" || path === "/plan/") {
     return <PlanPage />;
+  }
+
+  // The long view of September 14 and 15: what was built, with its links.
+  if (path === "/progress" || path === "/progress/") {
+    return <ProgressPage />;
   }
 
   if (path === "/archive" || path === "/archive/") {
