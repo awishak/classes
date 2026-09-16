@@ -5,7 +5,7 @@
 // fits the window, so the page fills a projector at any resolution and never
 // scrolls.
 
-import { SAMPLE, QUESTIONS } from "./retreat-answers.js";
+import { SAMPLE, FORM_URL, QUESTIONS } from "./retreat-answers.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const INK = "#1c1917";
@@ -38,7 +38,7 @@ function Panel({ q, tone }) {
     <section style={{ background: CARD, borderRadius: u(1.4), boxShadow: `0 0 0 1px ${LINE}`, padding: `${u(2)} ${u(2.6)}`,
       display: "flex", flexDirection: "column", gap: u(1.6), minHeight: 0 }}>
       <div>
-        <div style={{ fontSize: u(1), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: tone }}>{q.total} answers</div>
+        {q.total ? <div style={{ fontSize: u(1), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: tone }}>{q.total} answers</div> : null}
         <h2 style={{ margin: `${u(0.5)} 0 0`, fontSize: u(2.1), fontWeight: 600, lineHeight: 1.15, letterSpacing: "-0.02em", color: INK }}>{q.question}</h2>
       </div>
       <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, gap: u(1) }}>
@@ -76,6 +76,10 @@ export default function RetreatPage() {
             <div style={{ fontSize: u(1.1), fontWeight: 600, color: WARN, background: "#fdf5ea", borderRadius: 999, padding: `${u(0.3)} ${u(1)}` }}>Sample answers</div>
           ) : null}
         </div>
+        <a href={FORM_URL} target="_blank" rel="noopener noreferrer"
+          style={{ fontSize: u(2.4), fontWeight: 600, color: TONES[0], textDecoration: "underline", textUnderlineOffset: u(0.3), letterSpacing: "-0.01em" }}>
+          Please answer the two questions at this link.
+        </a>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: u(2), flex: 1, minHeight: 0 }}>
           {questions.map((q, i) => <Panel key={q.id} q={q} tone={TONES[i % TONES.length]} />)}
         </div>
