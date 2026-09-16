@@ -47,6 +47,90 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep15-call-sheet", date: "Tuesday, September 15", title: "A message can be deleted, and COMM 118 goes blue",
+    blurb: "Andrew: \"i don't get how i am supposed to update my profile, or how i can remove a message i sent to a student. now this is crucial. i and students have to be able to delete messages.\"",
+    groups: [
+      { name: "Messages and profiles", items: [
+        ["Delete takes a message down", "Either side can delete their own message. It leaves every card, every count and the other person's screen, and stays in the record with who deleted it and when, so nothing is actually lost."],
+        ["A profile is editable from the site", "Name, title, office, office hours, calendar link and photo, from More. Until now the instructor's card was whatever was written in the class file."],
+      ] },
+      { name: "The class colours", items: [
+        ["COMM 118 is blue", "Deep royal, #1e40af. White on it clears 8.7:1, and it sits far enough from COMM 3's purple that the two are never confused on the dashboard."],
+        ["Every colour has a night twin", "The class colour as text on a dark card was failing badly: purple 3.03:1, crimson 2.15:1, blue 1.17:1. Each class now carries a lifted version for dark mode, and the build fails if one drops under 4.5:1. COMM 4's green was caught by that check at 3.77:1 and darkened."],
+      ] },
+      { name: "Next class", items: [
+        ["The card reads like a call sheet", "The weekday is the headline, and one mono line under it carries the date, the sitting and the room with the figures lined up. Readings became a numbered running order with the source under each title, a Pick's number in amber. One label face on the card instead of two, and hairlines between its sections."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "Andrew on the call sheet: \"eh, i don't think this is all that great. it's fine.\"",
+      "A showcase page of the whole term's work, for a meeting.",
+    ] },
+  },
+  {
+    id: "sep15-apps-tabs", date: "Tuesday, September 15", title: "The apps are tabs in my bar",
+    blurb: "Andrew: \"students can have the apps thing up top, but i want all my apps in top nav bar.\"",
+    groups: [
+      { name: "The bar", items: [
+        ["His apps are tabs", "After Home, Schedule, Challenges, Class and More, a hairline, then Dashboard, Repository, Games, Grade view, Around the Horn, Room screen and Ask. On every page he opens, so the same twelve words sit in the same order wherever he is. The Apps button is gone from his bar, since the tabs are the apps."],
+        ["A student's bar is unchanged", "Five tabs and the Apps button at the right, holding Games, Ask and the room screen. A student's bar with twelve doors in it would be a wall."],
+        ["His phone keeps the button", "The phone's compact header has no room for tabs, so the Apps button stays there for him."],
+      ] },
+    ],
+  },
+  {
+    id: "sep15-appreciate", date: "Tuesday, September 15", title: "Appreciate answers a message, and a rough grade brings the calendar",
+    blurb: "Andrew: sometimes a student's message needs no reply, and a meeting should not be a button on a card. So Appreciate clears a message, and a grade rough enough to need a conversation sends the calendar link into that student's challenge by itself.",
+    groups: [
+      { name: "Messages", items: [
+        ["Appreciate answers it", "In Grade view a student's own messages sit on their card with the class colour down the side, each with Appreciate. Pressing it says Appreciated there, tells the student \"Andrew appreciated this\" under their message, and takes the message off everything that counts what is waiting."],
+      ] },
+      { name: "The meeting", items: [
+        ["Automatic, in the conversation", "Releasing an Incomplete, a D, an F, a Not submitted or anything worth zero writes one message into that student's challenge: \"Automated message: here's a link to make a meeting with Dr. Ishak,\" with the calendar link under it. Once per grade, and only for those grades."],
+        ["Off the grade card", "The grade card is one sentence and Open the challenge. The Make a meeting button, and the thread message it used to post, are gone."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "The automated message names Dr. Ishak, in Andrew's words, rather than reading the instructor's name off the class.",
+    ] },
+  },
+  {
+    id: "sep15-waiting", date: "Tuesday, September 15", title: "A grade card says one thing, and messages come to me",
+    blurb: "Three notes from Andrew on the live pages: the Next class card was too wide and wanted the class colour around it, the grade card was carrying everything the challenge page already holds, and there was no way to know a student had written.",
+    groups: [
+      { name: "The pages", items: [
+        ["Next class fits its column", "The card was spanning both columns on a laptop, which made it far wider than anything in it. It is one column wide now, like every other card, with a two-pixel outline in the class's own colour: purple in COMM 3, crimson in COMM 118."],
+        ["The grade card says one thing", "\"Your Visual story has been evaluated,\" or \"You didn't submit your Visual story, so you received a grade of 0,\" and then Open the challenge. The letter, what it means, the comments and what was turned in are all on the challenge's page, one press away."],
+      ] },
+      { name: "Knowing a student wrote", items: [
+        ["The Challenges card lists what is waiting", "On Andrew's home page the card names each challenge with something outstanding and how much: 3 to grade, 1 message. A submission counts while nothing has been graded since it arrived; a message counts while the last word on that student's challenge is theirs."],
+        ["And so does the rest of the way in", "The line above the cards says how many messages are waiting for a reply, the instructor's Challenges page counts messages beside submissions on every challenge, and in Grade view a student whose message has no answer wears a New message badge on their card."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "A message is answered by anything Andrew writes after it on that challenge, a grade included.",
+    ] },
+  },
+  {
+    id: "sep15-thread", date: "Tuesday, September 15", title: "A challenge is a conversation",
+    blurb: "Andrew read the challenge cards and the page and sent both back. The cards are one shape now, and the page is a box saying what the challenge is, then one thread: his grade, his comments and every due date on the right, the student's messages and links on the left, newest first.",
+    groups: [
+      { name: "The cards", items: [
+        ["One shape", "The whole name, never cut short, then the date and the weight, then the comment and the grade when there is one. The marker is in the top right corner on every card. Nothing is half height any more; a half-height card could not hold the name, the date and the weight."],
+        ["An outline on every state", "Green once the work is in, blue and shaded once graded, red once a deadline has gone by with nothing in, amber inside a week of one. A challenge with nothing turned in carries a chevron, to say there is something to open."],
+      ] },
+      { name: "The page", items: [
+        ["What the challenge is", "A box at the top: the name, the short description if there is one, and Details. The marker sits in its corner. The second back link is gone, and the one at the top of the page says Back to Challenges."],
+        ["One thread", "Newest at the top. Andrew's messages sit right: the grade, what the letter means, his comments, and every due date the challenge has had, so a date that moves arrives as a message of its own. The student's sit left: what they sent, with their links live. The date is said once, in the message that carries it, instead of five times down the page."],
+        ["One box to send", "The separate link field is gone. A student writes a message, a link, or both, and presses Send. A message with a web address in it is work turned in; anything else is a note."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "A due date only becomes a message from the moment it is changed in the editor; the first one reads as the date the challenge carries.",
+      "The samples page for a student view uses placeholder comments written for the sample, not Andrew's words.",
+    ] },
+  },
+  {
     id: "sep15-one-bar", date: "Tuesday, September 15", title: "The same bar on every page",
     blurb: "Andrew made a rule: every page he opens as instructor, grade view included, has exactly the same top bar.",
     groups: [
@@ -73,7 +157,6 @@ const SESSIONS = [
       ] },
     ],
     note: { title: "Still open", lines: [
-      "Not deployed yet.",
       "Nothing in COMM 118 is on the Complete scale; its challenge list is to be redone.",
     ] },
   },
@@ -118,7 +201,6 @@ const SESSIONS = [
     note: { title: "Still open", lines: [
       "Names: Andrew would like a word for assignments rooted in coaching and growth, and a name for the ongoing card.",
       "The ongoing card holds the ongoing assignment's own line. What else belongs there beyond in-class points and games is not decided.",
-      "Not deployed yet.",
     ] },
   },
   {

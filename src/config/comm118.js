@@ -24,8 +24,11 @@ const comm118 = {
   // Used by the Now panel to count down the minutes left in the session.
   meets: { start: "09:15", end: "10:20" },
 
-  accent: "#9f1239",
-  accentLight: "#fff1f2",
+  // The same colour lifted for text after dark: the class colour reads on
+  // white and vanishes on the dark card (crimson 2.15:1, purple 3.03:1).
+  accent: "#1e40af",
+  accentDark: "#93b9ff",
+  accentLight: "#eef2ff",
 
   storageKey: "comm118-f26-v1",
 

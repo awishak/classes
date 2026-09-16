@@ -33,7 +33,10 @@ const comm3 = {
     { label: "10:30", start: "10:30", end: "11:35" },
   ],
 
+  // The same colour lifted for text after dark: the class colour reads on
+  // white and vanishes on the dark card (crimson 2.15:1, purple 3.03:1).
   accent: "#7c3aed",
+  accentDark: "#b794f6",
   accentLight: "#f5f3ff",
 
   storageKey: "comm3-f26-v1",

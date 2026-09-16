@@ -23,12 +23,12 @@
 //
 // The Grades card is gone from the home page; this is where grades live.
 
-import { useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import * as TOKENS from "./tokens.js";
-import { StudentAssignmentRow, dueText, dueState, isLate } from "./AssignmentsCard.jsx";
-import { unseenGrades, markSeen, bucketOf, htmlToText, letterOf } from "./grades.js";
+import { dueText, dueState, isLate, deletePatch } from "./AssignmentsCard.jsx";
+import { unseenGrades, markSeen, bucketOf, htmlToText, letterOf, alive } from "./grades.js";
 import { deadlineOf } from "./DueCard.jsx";
-import { dateInWeek } from "./ScheduleCard.jsx";
+import { genId } from "../utils.jsx";
 import { swatch } from "./colors.js";
 
 const F = TOKENS.FONT.body;
@@ -54,8 +54,6 @@ const BLUE = swatch("blue-light").hex;
 const SOLID = "color-mix(in srgb, " + BLUE + " 12%, var(--surface-card))";
 const SOLID_EDGE = "color-mix(in srgb, " + BLUE + " 28%, var(--surface-card))";
 
-// Pieces this size or smaller drop to half height once they are turned in.
-export const SMALL_WEIGHT = 5;
 
 const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const dateOf = (s) => { const d = s ? new Date(s + ", 2026") : null; return d && !isNaN(d) ? d : null; };
@@ -64,7 +62,7 @@ const isOngoing = (asg) => !asg.due || asg.due === "Ongoing" || !dateOf(asg.due)
 
 // Where one student stands on one assignment.
 export function statusOf(config, data, asg, name, unseen, now = Date.now()) {
-  const log = data?.assignmentLog?.[asg.id]?.[name] || [];
+  const log = alive(data?.assignmentLog?.[asg.id]?.[name]);
   const subs = log.filter(e => e.type === "submission");
   const grades = log.filter(e => e.type === "grade");
   const grade = grades[grades.length - 1] || null;
@@ -84,7 +82,6 @@ export function statusOf(config, data, asg, name, unseen, now = Date.now()) {
     state, letter, grade, comments, last, deadline: at,
     isNew: !!letter && unseen.has(asg.id),
     soon: state === "open" && (tone === "soon" || tone === "now"),
-    small: (asg.weight || 0) <= SMALL_WEIGHT && (state === "turnedIn" || state === "graded"),
     late: last ? isLate(last.ts, asg.due) : false,
   };
 }
@@ -176,83 +173,67 @@ export function AssignmentCards({ config, data, name, go }) {
   );
 }
 
-// "Your grade: C", the same size as every other line, at the bottom and to
-// the right. The grade is not the headline of the card.
+// "Your grade: C", the same size as every other line. The grade is not the
+// headline of a card or of the page.
 const YourGrade = ({ letter }) => (
-  <span style={{ fontSize: 15, color: TEXT_SECONDARY, flex: "none" }}>Your grade: <strong style={{ color: TEXT_PRIMARY }}>{letter}</strong></span>
+  <span style={{ fontSize: 15, color: TEXT_SECONDARY }}>Your grade: <strong style={{ color: TEXT_PRIMARY }}>{letter}</strong></span>
 );
 
+// Every card reads the same way: the name in full, the date and the weight
+// under it, and one marker in the top right corner. Andrew, 2026-09-15: "you
+// can't have some of the green/yellow/red icons on one side and one on the
+// other," and "we need to see the entire assignment name and the weight and
+// the date." Nothing is half height any more, because a half-height card
+// could not hold all three.
+//
+// Every state carries an outline: green once the work is in, blue and shaded
+// once graded, red once a deadline has gone by with nothing in, amber inside
+// a week of one. A challenge with nothing turned in yet carries a chevron, to
+// say there is something to open.
 function AssignmentCard({ asg, st, current, onOpen }) {
-  const solid = st.state === "graded";
-  const edge = solid ? "1px solid " + SOLID_EDGE
+  const graded = st.state === "graded";
+  const edge = graded ? "2px solid " + SOLID_EDGE
     : st.state === "turnedIn" ? "2px solid " + OK
     : st.state === "missed" ? "2px solid " + LATE
     : st.soon ? "2px solid " + WARN
     : "1px solid " + LINE_STRONG;
   const open = (e) => { if (e.type === "click" || e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } };
-  const weight = asg.weight ? asg.weight + "%" : "";
-  const ongoing = st.state === "ongoing" || (solid && isOngoing(asg));
+  const ongoing = st.state === "ongoing";
+  const showChevron = !graded && st.state !== "turnedIn";
 
-  const base = { background: solid ? SOLID : CARD, color: TEXT_PRIMARY, border: edge, borderRadius: 16, fontFamily: F, cursor: "pointer",
-    scrollMarginTop: 96, textAlign: "left" };
-
-  // Half height: one line, for a small piece already in.
-  if (st.small) {
-    return (
-      <div role="link" tabIndex={0} className="ca-focus" data-current={current ? "1" : "0"} onClick={open} onKeyDown={open}
-        style={{ ...base, padding: "10px 14px", minHeight: TAP, display: "flex", alignItems: "center", gap: 12 }}>
-        <Marker st={st} size={22} />
-        <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{asg.title}</span>
-        {st.isNew ? <NewPill /> : null}
-        {st.letter ? <YourGrade letter={st.letter} />
-          : <span style={{ fontSize: 14, color: TEXT_SECONDARY, flex: "none" }}>{WEEKDAY[dateOf(asg.due).getDay()]} {asg.due}</span>}
-      </div>
-    );
-  }
+  const when2 = ongoing ? "Ongoing"
+    : st.state === "missed" ? dueText(asg.due, asg.dueTime)
+    : st.state === "open" ? dueText(asg.due, asg.dueTime)
+    : "Due " + WEEKDAY[dateOf(asg.due).getDay()] + " " + asg.due + (asg.dueTime ? ", " + asg.dueTime : "");
+  const tone = st.state === "missed" ? LATE : st.soon ? WARN : TEXT_SECONDARY;
 
   return (
     <div role="link" tabIndex={0} className="ca-focus" data-current={current ? "1" : "0"} onClick={open} onKeyDown={open}
-      style={{ ...base, padding: ongoing ? "12px 16px" : 18, display: "flex", flexDirection: "column", gap: ongoing ? 2 : 8 }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-        <span style={{ flex: 1, minWidth: 0, fontSize: ongoing ? 16 : 18, fontWeight: 600, lineHeight: 1.3 }}>{asg.title}</span>
+      style={{ background: graded ? SOLID : CARD, color: TEXT_PRIMARY, border: edge, borderRadius: 16, fontFamily: F,
+        cursor: "pointer", scrollMarginTop: 96, textAlign: "left", padding: 16, display: "flex", gap: 12 }}>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+        <span style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.3 }}>{asg.title}</span>
+        <span style={{ fontSize: 15, color: tone, fontWeight: st.state === "missed" || st.soon ? 700 : 400 }}>
+          {when2}{asg.weight ? <span style={{ color: TEXT_SECONDARY, fontWeight: 400 }}>{" \u00b7 " + asg.weight + "%"}</span> : null}
+        </span>
+        {st.state === "turnedIn" && st.last ? <span style={{ fontSize: 15, color: TEXT_SECONDARY }}>Turned in {when(st.last.ts)}</span> : null}
+        {graded && st.comments[0] ? (
+          <span style={{ fontSize: 15, lineHeight: 1.45, color: TEXT_SECONDARY, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{st.comments[0]}</span>
+        ) : null}
+        {st.letter ? <span style={{ marginTop: 2 }}><YourGrade letter={st.letter} /></span> : null}
+      </div>
+      {/* One corner, always: the marker, or the chevron when there is nothing
+          turned in yet. */}
+      <div style={{ flex: "none", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
         {st.isNew ? <NewPill /> : null}
         <Marker st={st} />
+        {showChevron ? <span aria-hidden="true" style={{ fontSize: 24, lineHeight: 1, color: TEXT_MUTED }}>›</span> : null}
       </div>
-
-      {ongoing ? (
-        <span style={{ fontSize: 14, color: TEXT_SECONDARY }}>{["Ongoing", weight].filter(Boolean).join(" · ")}{asg.description ? " · " + asg.description : ""}</span>
-      ) : solid ? (
-        <>
-          <span style={{ fontSize: 15, color: TEXT_SECONDARY }}>
-            {[st.last ? "Turned in " + when(st.last.ts) : WEEKDAY[dateOf(asg.due).getDay()] + " " + asg.due, weight].filter(Boolean).join(" · ")}
-          </span>
-          {st.comments[0] ? (
-            <span style={{ fontSize: 15, lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{st.comments[0]}</span>
-          ) : null}
-        </>
-      ) : (
-        <span style={{ fontSize: 15, color: st.state === "missed" ? LATE : st.soon ? WARN : TEXT_SECONDARY, fontWeight: st.state === "missed" || st.soon ? 700 : 400 }}>
-          {st.state === "turnedIn" && st.last ? "Turned in " + when(st.last.ts) : dueText(asg.due, asg.dueTime)}
-          {weight ? <span style={{ fontWeight: 400, color: TEXT_SECONDARY }}>{" · " + weight}</span> : null}
-        </span>
-      )}
-
-      {(!ongoing && asg.instructionsUrl) || st.letter ? (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, minHeight: 28 }}>
-          {!ongoing && asg.instructionsUrl ? (
-            <a href={asg.instructionsUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}
-              style={{ minHeight: TAP, margin: "-8px 0", display: "inline-flex", alignItems: "center", fontSize: 15, fontWeight: 600, color: "var(--ca-accent)", textDecoration: "none" }}>
-              Details
-            </a>
-          ) : <span />}
-          {st.letter ? <YourGrade letter={st.letter} /> : null}
-        </div>
-      ) : null}
     </div>
   );
 }
 
-// ─── one assignment's page ───
+// ─── one challenge's page ───
 
 // How the work went in against the deadline, in days, said the way a person
 // would: "a day early", "on the day", "2 days late".
@@ -264,12 +245,44 @@ function timing(ts, deadline) {
   return n === 0 ? "on the day" : n === 1 ? "a day early" : n + " days early";
 }
 
+const dueLine = (due, dueTime) => "Due " + (dateOf(due) ? WEEKDAY[dateOf(due).getDay()] + " " + due : due) + (dueTime ? ", " + dueTime : "");
+
+// A student's words with their links live. Everything they send goes in one
+// box: a message, a link, or both. Andrew, 2026-09-15: "forget about having a
+// different link field."
+const LINK = /(https?:\/\/[^\s]+)/g;
+const withLinks = (text, color) => String(text || "").split(LINK).map((part, i) => (
+  LINK.test(part) && /^https?:/.test(part)
+    ? <a key={i} href={part} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color, fontWeight: 600, wordBreak: "break-all" }}>{part}</a>
+    : <span key={i}>{part}</span>
+));
+
+// The conversation on a challenge, newest first: what the student sent, what
+// Andrew wrote, the grade, and every due date the challenge has had.
+export function feedOf(config, data, asg, name) {
+  const log = alive(data?.assignmentLog?.[asg.id]?.[name]);
+  const out = [];
+  log.forEach(e => {
+    if (e.type === "submission") out.push({ id: e.id, at: e.ts, from: "student", kind: "sent", liked: e.appreciatedBy, text: [e.text, e.link].filter(Boolean).join("\n") });
+    else if (e.type === "comment") out.push({ id: e.id, at: e.ts, from: e.from === "student" ? "student" : "instructor", kind: "note", liked: e.appreciatedBy, text: htmlToText(e.html || e.text) });
+    else if (e.type === "grade") {
+      const b = e.bucket ? bucketOf(e.bucket) : null;
+      out.push({ id: e.id, at: e.ts, from: "instructor", kind: "grade", letter: e.letter || letterOf(e.score), means: b?.means || "", text: htmlToText(e.html) });
+    }
+  });
+  const dues = data?.dueLog?.[asg.id] || [];
+  if (dues.length) dues.forEach((d, i) => out.push({ id: "due-" + i, at: d.at, from: "instructor", kind: "due", text: dueLine(d.due, d.dueTime) }));
+  else if (asg.due) out.push({ id: "due-0", at: 0, from: "instructor", kind: "due", text: dueLine(asg.due, asg.dueTime) });
+  return out.sort((x, y) => y.at - x.at);
+}
+
 export function AssignmentPage({ config, data, update, name, id, go }) {
   const ordered = inDueOrder(data?.assignments || config.assignments || []);
   const i = ordered.findIndex(a => a.id === id);
   const asg = ordered[i];
   const unseen = new Set(unseenGrades(config, data, name).map(u => u.aid));
   const st = asg ? statusOf(config, data, asg, name, unseen) : null;
+  const [draft, setDraft] = useState("");
 
   // Opening the page is reading the grade: New goes, and so does the grade
   // card in front of the site.
@@ -278,86 +291,72 @@ export function AssignmentPage({ config, data, update, name, id, go }) {
   }, [id, st?.isNew]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { try { window.scrollTo({ top: 0 }); } catch { /* server */ } }, [id]);
 
-  const back = (
-    <button className="ca-focus" onClick={() => go && go("assignments")}
-      style={{ alignSelf: "flex-start", minHeight: TAP, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: F, fontSize: 16, fontWeight: 600, color: "var(--ca-accent)" }}>
-      ‹ All challenges
-    </button>
-  );
-  if (!asg) return <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{back}<div style={{ fontSize: 15, color: TEXT_MUTED }}>No challenge here.</div></div>;
+  if (!asg) return <div style={{ fontSize: 15, color: TEXT_MUTED }}>No challenge here.</div>;
 
-  const due = dateOf(asg.due);
-  const rel = dueState(asg.due);
-  const bucket = st.grade?.bucket ? bucketOf(st.grade.bucket) : null;
-  const weeks = data?.schedule || config.scheduleWeeks || [];
-  const onSchedule = weeks.flatMap(w => (w.items || []).filter(it => it.asgId === asg.id).map(it => ({ day: it.date, date: dateInWeek(w, it.date) })));
+  const accent = "var(--ca-accent)";
+  const feed = feedOf(config, data, asg, name);
   const prev = ordered[i - 1], next = ordered[i + 1];
-  const stateWord = { graded: "Graded", turnedIn: "Turned in", missed: "Missed", open: "Not turned in yet", ongoing: "Ongoing" }[st.state];
+
+  // A message with a web address in it is work turned in; anything else is a
+  // note. Either way the student wrote one thing in one box.
+  const send = () => {
+    const text = draft.trim();
+    if (!text || !update) return;
+    const link = (text.match(LINK) || [])[0] || "";
+    update(prev2 => {
+      const al = { ...(prev2.assignmentLog || {}) };
+      const byStudent = { ...(al[asg.id] || {}) };
+      const event = link
+        ? { id: genId(), ts: Date.now(), type: "submission", link, text: text.replace(link, "").trim() }
+        : { id: genId(), ts: Date.now(), type: "comment", from: "student", text };
+      byStudent[name] = [...(byStudent[name] || []), event];
+      al[asg.id] = byStudent;
+      return { ...prev2, assignmentLog: al };
+    });
+    setDraft("");
+  };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      {back}
-
-      <header style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <h2 style={{ ...DISPLAY, margin: 0, fontSize: 28, lineHeight: 1.15, letterSpacing: "-0.02em", color: TEXT_PRIMARY, textWrap: "balance" }}>{asg.title}</h2>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <Marker st={st} size={22} />
-          <span style={{ fontSize: 16, fontWeight: 600, color: st.state === "missed" ? LATE : TEXT_PRIMARY }}>{stateWord}</span>
-          {st.state === "turnedIn" || st.state === "graded" ? (
-            st.last ? <span style={{ fontSize: 15, color: TEXT_SECONDARY }}>{when(st.last.ts)}{timing(st.last.ts, st.deadline) ? ", " + timing(st.last.ts, st.deadline) : ""}</span> : null
-          ) : null}
-        </div>
-        {due ? (
-          <div style={{ fontSize: 16, color: TEXT_SECONDARY }}>
-            Due {WEEKDAY[due.getDay()]} {asg.due}{asg.dueTime ? ", " + asg.dueTime : ""}
-            {rel && rel.tone !== "calm" && st.state === "open" ? <strong style={{ color: WARN }}>{" · " + rel.text}</strong> : null}
-            {asg.weight ? " · " + asg.weight + "%" : ""}
-          </div>
-        ) : (
-          <div style={{ fontSize: 16, color: TEXT_SECONDARY }}>{["Ongoing", asg.weight ? asg.weight + "%" : ""].filter(Boolean).join(" · ")}</div>
-        )}
-      </header>
-
-      {st.letter ? (
-        <section aria-label="Grade" style={{ background: SOLID, border: "1px solid " + SOLID_EDGE, color: TEXT_PRIMARY, borderRadius: 16, padding: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-          {bucket?.means ? <p style={{ margin: 0, fontSize: 16, lineHeight: 1.5 }}>{bucket.means}</p> : null}
-          {st.comments.map((c, k) => (
-            <p key={k} style={{ margin: 0, fontSize: 16, lineHeight: 1.5, whiteSpace: "pre-wrap", paddingTop: k || bucket?.means ? 10 : 0, borderTop: k || bucket?.means ? "1px solid " + SOLID_EDGE : "none" }}>{c}</p>
-          ))}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            {st.grade?.ts ? <span style={{ fontSize: 15, color: TEXT_SECONDARY }}>Graded {when(st.grade.ts)}</span> : <span />}
-            <YourGrade letter={st.letter} />
-          </div>
-        </section>
-      ) : null}
-
-      {asg.instructionsUrl || asg.description ? (
-        <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {asg.description ? <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: TEXT_PRIMARY, maxWidth: "65ch" }}>{asg.description}</p> : null}
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* What the challenge is. Nothing else lives up here. */}
+      <section style={{ background: CARD, border: "1px solid " + LINE_STRONG, borderRadius: 16, padding: 18, display: "flex", gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+          <h2 style={{ ...DISPLAY, margin: 0, fontSize: 24, lineHeight: 1.2, letterSpacing: "-0.02em", color: TEXT_PRIMARY, textWrap: "balance" }}>{asg.title}</h2>
+          {asg.description ? <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: TEXT_SECONDARY, maxWidth: "65ch" }}>{asg.description}</p> : null}
           {asg.instructionsUrl ? (
             <a className="ca-focus" href={asg.instructionsUrl} target="_blank" rel="noreferrer"
-              style={{ alignSelf: "flex-start", minHeight: TAP, padding: "0 18px", borderRadius: 12, background: "var(--ca-accent)", color: "#fff",
+              style={{ alignSelf: "flex-start", minHeight: TAP, padding: "0 18px", borderRadius: 12, background: accent, color: "#fff",
                 display: "inline-flex", alignItems: "center", fontSize: 16, fontWeight: 600, textDecoration: "none" }}>
               Details
             </a>
           ) : null}
-        </section>
-      ) : null}
-
-      {onSchedule.length ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span style={small}>On the schedule</span>
-          {onSchedule.map((s, k) => (
-            <button key={k} className="ca-focus" onClick={() => go && go("schedule")}
-              style={{ minHeight: TAP, padding: "0 14px", borderRadius: 999, border: "1px solid " + LINE_STRONG, background: CARD, color: TEXT_PRIMARY, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
-              {s.day} {s.date}
-            </button>
-          ))}
         </div>
-      ) : null}
+        <div style={{ flex: "none" }}><Marker st={st} /></div>
+      </section>
 
-      <div style={{ borderTop: "1px solid " + LINE, paddingTop: 16 }}>
-        <StudentAssignmentRow asg={asg} accent={config.accent} config={config} data={data} update={update} name={name} bare />
+      {/* One box for anything the student sends: a message, a link, or both. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <textarea aria-label="Send a message or a link" value={draft} onChange={e => setDraft(e.target.value)}
+          placeholder="A message, a link, or both"
+          style={{ fontFamily: F, fontSize: 16, minHeight: 72, padding: 12, borderRadius: 12, border: "1px solid " + LINE_STRONG,
+            background: CARD, color: TEXT_PRIMARY, lineHeight: 1.5, resize: "vertical" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button className="ca-focus" onClick={send} disabled={!draft.trim()}
+            style={{ minHeight: TAP, padding: "0 20px", borderRadius: 12, border: "none", background: accent, color: "#fff",
+              fontFamily: F, fontSize: 16, fontWeight: 600, cursor: draft.trim() ? "pointer" : "default", opacity: draft.trim() ? 1 : .5 }}>
+            Send
+          </button>
+          <span style={{ fontSize: 14, color: TEXT_MUTED }}>{config.instructor?.email || "Your instructor"} needs access to your link.</span>
+        </div>
+      </div>
+
+      {/* The conversation, newest first. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {feed.map(m => (
+          <Message key={m.id} m={m} deadline={st.deadline} who={config.instructor?.name || "your instructor"}
+            onDelete={m.from === "student" && m.kind !== "grade" && update
+              ? () => update(prev => deletePatch(prev, asg.id, name, m.id, name)) : null} />
+        ))}
       </div>
 
       {prev || next ? (
@@ -374,6 +373,48 @@ export function AssignmentPage({ config, data, update, name, id, go }) {
           ) : <span />}
         </nav>
       ) : null}
+    </div>
+  );
+}
+
+// A message in the conversation. The student's sit left, Andrew's sit right,
+// the way a phone draws a thread.
+function Message({ m, deadline, who, onDelete }) {
+  const mine = m.from === "student";
+  const grade = m.kind === "grade";
+  const bubble = {
+    maxWidth: "88%", padding: "10px 14px", borderRadius: 16, fontSize: 16, lineHeight: 1.5,
+    background: grade ? SOLID : mine ? "var(--surface-sunk)" : "color-mix(in srgb, var(--ca-accent) 10%, var(--surface-card))",
+    border: grade ? "1px solid " + SOLID_EDGE : "none", color: TEXT_PRIMARY, whiteSpace: "pre-wrap", overflowWrap: "anywhere",
+  };
+  return (
+    <div style={{ display: "flex", justifyContent: mine ? "flex-start" : "flex-end" }}>
+      <div style={{ maxWidth: "88%", display: "flex", flexDirection: "column", gap: 4, alignItems: mine ? "flex-start" : "flex-end" }}>
+        <div style={bubble}>
+          {grade ? (
+            <span style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <YourGrade letter={m.letter} />
+              {m.means ? <span style={{ color: TEXT_SECONDARY }}>{m.means}</span> : null}
+              {m.text ? <span>{m.text}</span> : null}
+            </span>
+          ) : withLinks(m.text, mine ? "var(--ca-accent-ink)" : TEXT_PRIMARY)}
+        </div>
+        {m.liked === "instructor" && mine ? <span style={{ fontSize: 13, fontWeight: 700, color: OK }}>{who.split(" ")[0]} appreciated this</span> : null}
+        <span style={{ fontSize: 13, color: TEXT_MUTED, display: "flex", alignItems: "center", gap: 8 }}>
+          <span>
+            {mine ? "You" : who}
+            {m.at ? " \u00b7 " + when(m.at) : ""}
+            {m.kind === "sent" && m.at && deadline && timing(m.at, deadline) ? " \u00b7 " + timing(m.at, deadline) : ""}
+          </span>
+          {/* Your own words are yours to take back. The class keeps the record. */}
+          {onDelete ? (
+            <button className="ca-focus" onClick={onDelete}
+              style={{ background: "none", border: "none", padding: 0, minHeight: TAP, fontFamily: F, fontSize: 13, fontWeight: 600, color: LATE, cursor: "pointer" }}>
+              Delete
+            </button>
+          ) : null}
+        </span>
+      </div>
     </div>
   );
 }

@@ -18,6 +18,7 @@
 
 import * as TOKENS from "./tokens.js";
 import AppsMenu from "./AppsMenu.jsx";
+import { appsFor } from "./apps.js";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -79,7 +80,11 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
           </span>
         </a>
 
-        <nav aria-label="Teaching surfaces" style={{ display: "flex", gap: 2, minWidth: 0, flexWrap: "wrap" }}>
+        {/* Andrew's apps are tabs in the bar rather than a menu: "students can
+            have the apps thing up top, but i want all my apps in top nav bar."
+            A student keeps the Apps button, because a student's bar would be
+            a wall of doors otherwise. */}
+        <nav aria-label="Teaching surfaces" style={{ display: "flex", gap: 2, minWidth: 0, flexWrap: "wrap", alignItems: "center" }}>
           {(tabs || []).map(n => {
             const on = active === n.id;
             // "More" holds different things on different surfaces — the extra
@@ -96,11 +101,20 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
                 aria-current={on ? "page" : undefined} style={tabStyle(on)}>{n.label}</button>
             );
           })}
+          {role === "instructor" ? (
+            <>
+              <span aria-hidden="true" style={{ width: 1, alignSelf: "stretch", margin: "6px 8px", background: BORDER }} />
+              {appsFor(config, role).map(app => (
+                <a key={app.id} className="dash-focus ca-focus repo-focus" href={app.href || config.path + "/" + app.card}
+                  aria-current={active === app.id ? "page" : undefined} style={tabStyle(active === app.id)}>{app.label}</a>
+              ))}
+            </>
+          ) : null}
         </nav>
 
         <span style={{ flex: "1 1 auto", minWidth: 8 }} />
         {right}
-        <AppsMenu config={config} role={role} onPick={onPick} />
+        {role === "instructor" ? null : <AppsMenu config={config} role={role} onPick={onPick} />}
       </div>
     </div>
   );

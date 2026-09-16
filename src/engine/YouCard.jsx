@@ -121,7 +121,7 @@ const PRIORITIES = ["Learning new material", "Getting a good grade", "Getting co
 const inputStyle = { width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: TAP, background: "#fff", color: TEXT_PRIMARY };
 
 // Downscale an uploaded image to a small square data URL so it fits in the store.
-function fileToAvatar(file, cb) {
+export function fileToAvatar(file, cb) {
   const reader = new FileReader();
   reader.onload = (e) => {
     const img = new Image();
@@ -140,7 +140,7 @@ function fileToAvatar(file, cb) {
   reader.readAsDataURL(file);
 }
 
-function AvatarPreview({ value, accent, size = 72 }) {
+export function AvatarPreview({ value, accent, size = 72 }) {
   const isPhoto = typeof value === "string" && value.startsWith("data:");
   return (
     <div style={{ width: size, height: size, borderRadius: "50%", flexShrink: 0, overflow: "hidden",

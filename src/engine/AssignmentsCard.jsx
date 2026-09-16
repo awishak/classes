@@ -13,7 +13,7 @@
 import { useState, useRef, useEffect } from "react";
 import { genId } from "../utils.jsx";
 import { draftFeedback, textToHtml } from "./feedback.js";
-import { gradeText, scaleOf, SCALES } from "./grades.js";
+import { gradeText, scaleOf, SCALES, alive } from "./grades.js";
 import * as TOKENS from "./tokens.js";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -32,11 +32,14 @@ const TAP = 44;
 const label = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
 const h2 = { fontSize: 22, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.02em" };
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
+const Pill = ({ accent, children }) => (
+  <span style={{ flex: "none", fontSize: 13, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "3px 9px", whiteSpace: "nowrap" }}>{children}</span>
+);
 const inputStyle = { width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: TAP, background: "#fff", color: TEXT_PRIMARY };
 
 // ─── data ───
 const getAssignments = (data, config) => data?.assignments || config.assignments || [];
-const logOf = (data, aid, name) => data?.assignmentLog?.[aid]?.[name] || [];
+const logOf = (data, aid, name) => alive(data?.assignmentLog?.[aid]?.[name]);
 const lastOf = (log, type) => { for (let i = log.length - 1; i >= 0; i--) if (log[i].type === type) return log[i]; return null; };
 const currentGrade = (log) => lastOf(log, "grade");
 const needsGrade = (log) => { const s = lastOf(log, "submission"); const g = lastOf(log, "grade"); return !!s && (!g || s.ts > g.ts); };
@@ -47,7 +50,7 @@ export function computeGrade(config, data, name) {
   const assignments = getAssignments(data, config);
   let earned = 0, weight = 0;
   const rows = assignments.map(asg => {
-    const g = currentGrade(data?.assignmentLog?.[asg.id]?.[name] || []);
+    const g = currentGrade(logOf(data, asg.id, name));
     // A grade with no score is skipped rather than read as zero.
     if (g && g.score != null) { earned += g.score * (asg.weight || 0); weight += (asg.weight || 0); }
     return { id: asg.id, title: asg.title, weight: asg.weight || 0, score: g ? g.score : null, letter: g?.letter || null };
@@ -76,14 +79,14 @@ function mutateLog(update, aid, name, fn) {
 }
 // actor is "instructor" or the student's full name; toggles their appreciation.
 const appreciate = (update, aid, name, eid, actor) => mutateLog(update, aid, name, log => log.map(e => e.id === eid ? { ...e, appreciatedBy: e.appreciatedBy === actor ? null : actor } : e));
-const deleteEvent = (update, aid, name, eid) => mutateLog(update, aid, name, log => log.filter(e => e.id !== eid));
+const deleteEvent = (update, aid, name, eid) => mutateLog(update, aid, name, log => log.map(e => e.id === eid ? { ...e, deleted: { at: Date.now(), by: "instructor" } } : e));
 
 function ungradedQueue(assignments, data, onlyAid) {
   const q = [];
   assignments.forEach(asg => {
     if (onlyAid && asg.id !== onlyAid) return;
     const byStudent = data?.assignmentLog?.[asg.id] || {};
-    Object.keys(byStudent).forEach(name => { if (needsGrade(byStudent[name])) q.push({ aid: asg.id, name }); });
+    Object.keys(byStudent).forEach(name => { if (needsGrade(alive(byStudent[name]))) q.push({ aid: asg.id, name }); });
   });
   return q;
 }
@@ -108,12 +111,76 @@ export function nextOwed(assignments, data, name) {
   (assignments || []).forEach(asg => {
     const st = dueState(asg.due);
     if (!st || st.tone === "late") return;
-    if ((data?.assignmentLog?.[asg.id]?.[name] || []).some(e => e.type === "submission")) return;
+    if (logOf(data, asg.id, name).some(e => e.type === "submission")) return;
     const at = parseDue(asg.due).getTime();
     if (at < bestAt) { bestAt = at; best = asg; }
   });
   return best;
 }
+
+// What is waiting on Andrew, challenge by challenge. Andrew, 2026-09-15:
+// "how will i know if a student has written a new message to me on their
+// assignment? or submitted? ... on the challenges card, it should show each
+// assignment that has an outstanding comment or assignment submission with
+// the number of comments and number of submissions."
+//
+// A submission counts while nothing has been graded since it arrived. A
+// message counts while the last word on that student's challenge is theirs.
+export function lastFrom(log, who) {
+  for (let i = (log || []).length - 1; i >= 0; i--) {
+    const e = log[i];
+    if (who === "student" && e.type === "comment" && e.from === "student") return e;
+    if (who === "instructor" && ((e.type === "comment" && e.from !== "student") || e.type === "grade")) return e;
+  }
+  return null;
+}
+// Appreciating a message answers it. Andrew, 2026-09-15: "sometimes i don't
+// need to respond to a student message ... if i click that, it should say
+// 'andrew appreciated this' and clear the message."
+export const unanswered = (log) => {
+  const theirs = lastFrom(log, "student");
+  if (!theirs || theirs.appreciatedBy === "instructor") return false;
+  const mine = lastFrom(log, "instructor");
+  return !mine || mine.ts < theirs.ts;
+};
+
+// Taking a message back. Andrew, 2026-09-15: "i and students have to be able
+// to delete messages. yes keep a log of them somewhere, but we need to be
+// able to delete messages." So a deleted message is marked rather than
+// removed: it leaves every screen and every count, and the words stay in the
+// class record with who deleted it and when.
+export const deletePatch = (data, aid, name, eid, by, now = Date.now()) => {
+  const al = { ...(data?.assignmentLog || {}) };
+  const byStudent = { ...(al[aid] || {}) };
+  byStudent[name] = (byStudent[name] || []).map(e => e.id === eid ? { ...e, deleted: { at: now, by } } : e);
+  al[aid] = byStudent;
+  return { ...data, assignmentLog: al };
+};
+
+// The same toggle as the log's Appreciate, as a patch, so Grade view can use
+// it without the log component.
+export const appreciatePatch = (data, aid, name, eid, actor) => {
+  const al = { ...(data?.assignmentLog || {}) };
+  const byStudent = { ...(al[aid] || {}) };
+  byStudent[name] = (byStudent[name] || []).map(e => e.id === eid ? { ...e, appreciatedBy: e.appreciatedBy === actor ? null : actor } : e);
+  al[aid] = byStudent;
+  return { ...data, assignmentLog: al };
+};
+
+export function waitingOn(data, assignments) {
+  return (assignments || []).map(asg => {
+    const byStudent = data?.assignmentLog?.[asg.id] || {};
+    let toGrade = 0, messages = 0;
+    Object.keys(byStudent).forEach(name => {
+      const log = alive(byStudent[name]);
+      if (needsGrade(log)) toGrade++;
+      if (unanswered(log)) messages++;
+    });
+    return { id: asg.id, title: asg.title, toGrade, messages };
+  }).filter(r => r.toGrade || r.messages);
+}
+export const waitingCount = (data, assignments) => waitingOn(data, assignments)
+  .reduce((n, r) => ({ toGrade: n.toGrade + r.toGrade, messages: n.messages + r.messages }), { toGrade: 0, messages: 0 });
 
 // A date on its own makes a student do the arithmetic, and the thing students
 // say most about every LMS they have used is that they could not tell what was
@@ -277,10 +344,22 @@ function AssignmentLog({ asg, log, accent, studentName, actor, onLike, onDelete 
 export function AssignmentsSummary({ config, data, role, name }) {
   const assignments = getAssignments(data, config);
   if (role === "instructor") {
-    const n = ungradedQueue(assignments, data).length;
-    return n > 0
-      ? <div><div style={{ fontSize: 22, fontWeight: 700, color: config.accent }}>{n}</div><Muted>to grade</Muted></div>
-      : <Muted>Nothing to grade.</Muted>;
+    // Each challenge with something waiting, and what is waiting on it, so
+    // a message from a student is not something to go looking for.
+    const rows = waitingOn(data, assignments);
+    if (!rows.length) return <Muted>Nothing waiting.</Muted>;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {rows.slice(0, 4).map(r => (
+          <div key={r.id} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</span>
+            {r.toGrade ? <Pill accent={config.accent}>{r.toGrade} to grade</Pill> : null}
+            {r.messages ? <Pill accent={config.accent}>{r.messages} message{r.messages === 1 ? "" : "s"}</Pill> : null}
+          </div>
+        ))}
+        {rows.length > 4 ? <Muted>and {rows.length - 4} more</Muted> : null}
+      </div>
+    );
   }
   const next = name ? nextOwed(assignments, data, name) : nextDueOf(assignments);
   if (!next) return <Muted>No upcoming challenges.</Muted>;
@@ -395,7 +474,7 @@ function InstructorAssignments({ config, data, update }) {
       </div>
       {view === "grade"
         ? <GradeHub config={config} data={data} assignments={assignments} onStart={setQueue} />
-        : <ManageAssignments config={config} data={data} assignments={assignments} writeAssignments={writeAssignments} />}
+        : <ManageAssignments config={config} data={data} update={update} assignments={assignments} writeAssignments={writeAssignments} />}
     </div>
   );
 }
@@ -422,12 +501,13 @@ function GradeHub({ config, data, assignments, onStart }) {
         {assignments.map(asg => {
           const total = Object.keys(data?.assignmentLog?.[asg.id] || {}).filter(n => logOf(data, asg.id, n).some(e => e.type === "submission")).length;
           const ungraded = ungradedQueue(assignments, data, asg.id);
+          const waiting = Object.keys(data?.assignmentLog?.[asg.id] || {}).filter(n => unanswered(logOf(data, asg.id, n))).length;
           const roster = (config.students || []).map(s => ({ aid: asg.id, name: s.name }));
           return (
             <div key={asg.id} style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, overflow: "hidden" }}>
               <button onClick={() => onStart(roster)} style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", fontFamily: F, padding: 14 }}>
                 <div style={{ fontWeight: 600, fontSize: 16 }}>{asg.title}</div>
-                <Muted>{total} submitted · {ungraded.length} to grade</Muted>
+                <Muted>{total} submitted · {ungraded.length} to grade{waiting ? " · " + waiting + " message" + (waiting === 1 ? "" : "s") : ""}</Muted>
               </button>
               <div style={{ paddingRight: 14, flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
                 <a href={config.path + "/grade?a=" + encodeURIComponent(asg.id)} style={{ fontSize: 15, fontWeight: 600, color: a, textDecoration: "none", minHeight: TAP, display: "inline-flex", alignItems: "center" }}>Grade view</a>
@@ -616,7 +696,7 @@ function RichEditor({ editorRef, initialHtml, onDraft }) {
   );
 }
 
-function ManageAssignments({ config, data, assignments, writeAssignments }) {
+function ManageAssignments({ config, data, update, assignments, writeAssignments }) {
   const a = config.accent;
   const [editing, setEditing] = useState(null);
 
@@ -624,7 +704,19 @@ function ManageAssignments({ config, data, assignments, writeAssignments }) {
     const asg = editing === "new" ? null : assignments.find(x => x.id === editing);
     return <AssignmentEditor config={config} asg={asg}
       onCancel={() => setEditing(null)}
-      onSave={(next) => { writeAssignments(list => asg ? list.map(x => x.id === asg.id ? next : x) : [...list, next]); setEditing(null); }}
+      onSave={(next) => {
+        // A due date that moves is news, so it lands in the conversation on
+        // the challenge's page as a message of its own.
+        update(prev => {
+          const list = prev.assignments || config.assignments || [];
+          const before = list.find(x => x.id === next.id);
+          const moved = !before || before.due !== next.due || (before.dueTime || "") !== (next.dueTime || "");
+          const log = { ...(prev.dueLog || {}) };
+          if (moved && next.due) log[next.id] = [...(log[next.id] || []), { at: Date.now(), due: next.due, dueTime: next.dueTime || "" }];
+          return { ...prev, dueLog: log, assignments: asg ? list.map(x => x.id === asg.id ? next : x) : [...list, next] };
+        });
+        setEditing(null);
+      }}
       onDelete={asg ? () => { writeAssignments(list => list.filter(x => x.id !== asg.id)); setEditing(null); } : null} />;
   }
 

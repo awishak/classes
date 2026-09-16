@@ -21,18 +21,19 @@ import { usePoll } from "./poll.js";
 import { YouSummary, YouDetail } from "./YouCard.jsx";
 import { ScheduleSummary, ScheduleDetail } from "./ScheduleCard.jsx";
 import { RosterSummary, RosterDetail } from "./RosterCard.jsx";
-import { AssignmentsSummary, AssignmentsDetail, ungradedCount } from "./AssignmentsCard.jsx";
+import { AssignmentsSummary, AssignmentsDetail, ungradedCount, waitingCount } from "./AssignmentsCard.jsx";
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
 import { useSession, studentFor, myCode } from "./session.js";
+import { instructorOf } from "../instructors.js";
 import { useOpenGames, GameStart, GamePlay, GamesNow } from "@ishak/decks";
 import { gameClient } from "./gameClient.js";
 import GradeDeck from "./GradeDeck.jsx";
-import { unseenGrades, markSeen, meetingPatch } from "./grades.js";
+import { unseenGrades, markSeen } from "./grades.js";
 import DueDeck, { dueSoon, dismissDue } from "./DueCard.jsx";
-import { NextClassHero, PinnedLinks, ClassSummary, YourCardSummary, GamesSummary, RequestForm, RequestInbox,
+import { NextClassHero, PinnedLinks, ClassSummary, YourCardSummary, GamesSummary, RequestForm, RequestInbox, InstructorProfile,
   openRequests, tileTitle, owedStyle } from "./HomeCards.jsx";
 import { nextOwed } from "./AssignmentsCard.jsx";
 import { AssignmentCards, AssignmentPage } from "./AssignmentCards.jsx";
@@ -80,6 +81,17 @@ const h2 = { ...DISPLAY, fontSize: 22, color: TEXT_PRIMARY, letterSpacing: "-0.0
 
 // Keyboard users could not see where they were. Everything focusable now says
 // so, and the skeleton tiles breathe while the class data is on its way.
+// The class colour, lifted for text after dark. A class colour is picked to
+// carry white on top and to read on white, and both of those leave it too
+// dark to read ON the dark card: crimson lands at 2.15:1 there and purple at
+// 3.03:1. So every accent-coloured WORD takes --ca-accent-ink, which is the
+// accent by day and the class's own accentDark at night. Backgrounds keep
+// --ca-accent, because white on the accent is the same in either mode.
+const accentCSS = (a, dark) => !dark ? "" : `
+@media (prefers-color-scheme: dark){.ca-root[data-theme="clean"]:not([data-mode="day"]){--ca-accent-ink:${dark}}}
+.ca-root[data-theme="clean"][data-mode="night"]{--ca-accent-ink:${dark}}
+`;
+
 const CSS = `
 .ca-focus:focus-visible{outline:2px solid var(--ca-accent);outline-offset:2px;border-radius:10px}
 @keyframes caShimmer{0%{opacity:.55}50%{opacity:1}100%{opacity:.55}}
@@ -309,6 +321,9 @@ function needsYou(config, data, role, asStudent) {
   if (role === "instructor") {
     const n = ungradedCount(config, data);
     if (n) out.push({ id: "grade", card: "assignments", text: n + " submission" + (n === 1 ? "" : "s") + " waiting to be graded" });
+    // A message on a challenge is as easy to miss as a submission.
+    const said = waitingCount(data, data?.assignments || config.assignments || []).messages;
+    if (said) out.push({ id: "said", card: "assignments", text: said + " message" + (said === 1 ? "" : "s") + " on challenges waiting for a reply" });
     const waiting = (config.students || []).filter(s => {
       const t = data?.threads?.[s.name] || [];
       const last = t[t.length - 1];
@@ -426,15 +441,18 @@ export function planSig(plan) {
   return h.toString(36);
 }
 
-export default function ClassApp({ config, initialCard }) {
-  const REMEMBER = config.storageKey + "-user";
-  const ADMIN = config.storageKey + "-admin";
+export default function ClassApp({ config: classConfig, initialCard }) {
+  const REMEMBER = classConfig.storageKey + "-user";
+  const ADMIN = classConfig.storageKey + "-admin";
 
-  const [data, update] = useClassData(config.storageKey);
+  const [data, update] = useClassData(classConfig.storageKey);
   // The shared shelf as well, because a reading on the schedule can be a block
   // that belongs to me rather than to this class, and the pick that says read
   // this one first lives on the block.
-  const [shared] = useClassData(SHARED_KEY);
+  const [shared, updateShared] = useClassData(SHARED_KEY);
+  // Andrew's own card comes off the shared store, over whatever the class
+  // config ships, so every surface below reads the profile he can edit.
+  const config = { ...classConfig, instructor: instructorOf(classConfig, shared) };
   // The types Andrew has added or renamed, so a block on this site says what
   // he calls it rather than the id underneath. The repository and the
   // dashboard do the same; every reader goes through typeOf.
@@ -768,6 +786,11 @@ export default function ClassApp({ config, initialCard }) {
             ) : null}
           </div>
         ) : null}
+        {view === "instructor" ? (
+          <div style={{ paddingTop: 12, borderTop: "1px solid " + BORDER }}>
+            <InstructorProfile config={config} shared={shared} updateShared={preview ? () => {} : updateShared} />
+          </div>
+        ) : null}
         {view === "instructor" ? <div style={{ paddingTop: 12, borderTop: "1px solid " + BORDER }}><RequestInbox data={data} update={write} /></div> : null}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: view === "instructor" ? 12 : 0, borderTop: view === "instructor" ? "1px solid " + BORDER : "none" }}>
           <span style={{ ...label, color: TEXT_MUTED }}>Theme</span>
@@ -865,7 +888,9 @@ export default function ClassApp({ config, initialCard }) {
   const Grid = data === null
     ? <>{[0, 1, 2, 3].map(i => <SkeletonTile key={i} />)}</>
     : <>
-        <div key="hero" style={{ gridColumn: "1 / -1" }}>
+        {/* One column wide, like every other card. Spanning both columns on a
+            laptop made the card far wider than anything it holds. */}
+        <div key="hero">
           <NextClassHero config={config} data={data} blockOf={ctx.blockOf} section={sectionOf}
             onOpen={() => go("schedule")} seat={cardStyle(theme, 0)}
             instructor={view === "instructor"} update={write} />
@@ -890,11 +915,10 @@ export default function ClassApp({ config, initialCard }) {
   const unseen = data !== null && view !== "instructor" && !deckDone ? unseenGrades(config, data, seenAs) : [];
   if (unseen.length) {
     return (
-      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a }}>
+      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">
         <ThemeStyle theme={theme} />
-        <style>{CSS}</style>
-        <GradeDeck config={config} items={unseen} onSeen={(aid) => write(prev => markSeen(prev, aid, seenAs))} onDone={() => setDeckDone(true)}
-          onMeeting={(card) => write(prev => meetingPatch(prev, seenAs, card.title))} />
+        <style>{CSS + accentCSS(a, config.accentDark)}</style>
+        <GradeDeck config={config} items={unseen} onSeen={(aid) => write(prev => markSeen(prev, aid, seenAs))} onDone={() => setDeckDone(true)} />
       </div>
     );
   }
@@ -904,9 +928,9 @@ export default function ClassApp({ config, initialCard }) {
   const dueCards = data !== null && view !== "instructor" && !dueDone ? dueSoon(config, data, seenAs) : [];
   if (dueCards.length) {
     return (
-      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a }}>
+      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">
         <ThemeStyle theme={theme} />
-        <style>{CSS}</style>
+        <style>{CSS + accentCSS(a, config.accentDark)}</style>
         <DueDeck config={config} items={dueCards} onDismiss={(asg) => write(prev => dismissDue(prev, asg, seenAs))} onDone={() => setDueDone(true)}
           onOpen={(asg) => go("assignments/" + asg.id)} />
       </div>
@@ -916,10 +940,10 @@ export default function ClassApp({ config, initialCard }) {
   // ─── DESKTOP: top nav + side-by-side master/detail ───
   if (isDesktop) {
     return (
-      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a }}>
+      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">
         <ThemeStyle theme={theme} />
         <ThemeChrome theme={theme} />
-        <style>{CSS}</style>
+        <style>{CSS + accentCSS(a, config.accentDark)}</style>
         {GameLayer}
         <ThemeStickers theme={theme} />
         <ThemeTopper theme={theme} lines={tickerLines} seed={(seenAs || "").length + (config.code || "").length} />
@@ -964,10 +988,10 @@ export default function ClassApp({ config, initialCard }) {
   // ─── MOBILE: single column, full-screen takeover, bottom tab bar ───
   const BAR_H = 72;
   return (
-    <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, paddingBottom: BAR_H + 12, "--ca-accent": a }}>
+    <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, paddingBottom: BAR_H + 12, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">
       <ThemeStyle theme={theme} />
         <ThemeChrome theme={theme} />
-      <style>{CSS}</style>
+      <style>{CSS + accentCSS(a, config.accentDark)}</style>
       {GameLayer}
 
       <ThemeStickers theme={theme} />
@@ -977,8 +1001,11 @@ export default function ClassApp({ config, initialCard }) {
       {PreviewBar}
       <div style={{ background: "var(--surface-card)", borderBottom: "1px solid " + BORDER }}>
         <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          {/* The one way back, and it says where back is. */}
           {openKey ? (
-            <button className="ca-focus" onClick={() => go(openSub ? openKey : IN_CLASS.has(openKey) ? "class" : null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 17, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: "0 4px 0 0" }}>← Back</button>
+            <button className="ca-focus" onClick={() => go(openSub ? openKey : IN_CLASS.has(openKey) ? "class" : null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 17, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: "0 4px 0 0" }}>
+              ← Back{openSub && openKey === "assignments" ? " to Challenges" : IN_CLASS.has(openKey) ? " to Class" : ""}
+            </button>
           ) : Logo}
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flex: "none" }}>
             <ThemeBadge theme={theme} points={myPoints} />

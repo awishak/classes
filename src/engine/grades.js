@@ -60,6 +60,10 @@ export const bucketsFor = (asg) => (scaleOf(asg) === "complete" ? COMPLETE_BUCKE
 
 export const bucketOf = (id) => BUCKETS.find(b => b.id === id) || COMPLETE_BUCKETS.find(b => b.id === id) || null;
 
+// A message somebody deleted is out of every screen and every count, and
+// stays in the record with who deleted it and when.
+export const alive = (log) => (log || []).filter(e => !e.deleted);
+
 export const boardOf = (data, aid) => data?.gradeBoard?.[aid] || { cards: {}, released: null, seen: {} };
 
 const withBoard = (data, aid, fn) => {
@@ -137,7 +141,13 @@ const releaseStateOf = (board, log, name) => {
 // original event, time and all, so the student's seen stamp still covers
 // that grade and no card comes round again. The private note never counts
 // as a change, because the student never sees the note.
-export const releasePatch = (data, aid, now = Date.now()) => {
+// A grade this rough comes with a way to talk about it. Andrew, 2026-09-15:
+// "make a meeting should automatically go into the chat with a student who
+// gets an incomplete or a D or an F or a 0."
+const NEEDS_MEETING = new Set(["d", "f", "incomplete", "incomplete-c", "notsubmitted"]);
+export const MEETING_LINE = "Automated message: here's a link to make a meeting with Dr. Ishak";
+
+export const releasePatch = (data, aid, now = Date.now(), opts = {}) => {
   const board = boardOf(data, aid);
   const logs = { ...((data?.assignmentLog || {})[aid] || {}) };
   const names = new Set([...Object.keys(board.cards || {}), ...Object.keys(board.hidden || {})]);
@@ -154,6 +164,12 @@ export const releasePatch = (data, aid, now = Date.now()) => {
     const html = toHtml(card.comment);
     logs[name] = [...kept, { id: eid(now), ts: now, type: "grade", board: true,
       score: b.score, letter: b.letter, bucket: b.id, html: html || null }];
+    // An Incomplete, a D, an F or a zero brings the calendar with it, once
+    // per grade, as a message of its own on the challenge.
+    if (opts.meetingLink && (NEEDS_MEETING.has(b.id) || b.score === 0)) {
+      logs[name] = [...logs[name], { id: eid(now), ts: now + 1, type: "comment", from: "instructor", auto: true,
+        text: MEETING_LINE + "\n" + opts.meetingLink }];
+    }
   });
   const next = withBoard(data, aid, brd => {
     const { hidden, ...rest } = brd;
@@ -214,7 +230,7 @@ export const unseenGrades = (config, data, name) => {
   return assignments.flatMap(asg => {
     const board = boardOf(data, asg.id);
     if (!board.released) return [];
-    const log = data?.assignmentLog?.[asg.id]?.[name] || [];
+    const log = alive(data?.assignmentLog?.[asg.id]?.[name]);
     // The card shows the grade the student was sent, not the board as it
     // stands. A card moved after a release and not released again is still
     // private, and the deck used to show the new letter anyway.
@@ -247,15 +263,6 @@ export const unseenGrades = (config, data, name) => {
       comment, more, gradedAt,
       link: linked?.link || "", note: String(last?.text || "").trim(), submittedAt: last?.ts || null }];
   });
-};
-
-// A meeting asked for from a deck card: the same message the You card's
-// Make a meeting button posts, so the request lands in the same thread and
-// draws the same way, with the assignment named in the text.
-export const meetingPatch = (data, name, title, now = Date.now()) => {
-  const threads = { ...(data?.threads || {}) };
-  threads[name] = [...(threads[name] || []), { id: eid(now), ts: now, from: "student", kind: "meeting", text: title ? "About " + title : "" }];
-  return { ...data, threads };
 };
 
 export const markSeen = (data, aid, name, now = Date.now()) =>

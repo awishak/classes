@@ -9,8 +9,9 @@ import { useState, useEffect, useMemo } from "react";
 import { useClassData } from "./store.js";
 import { ThemeStyle } from "./ThemeShell.jsx";
 import { withIds } from "./roster.js";
-import { isLate } from "./AssignmentsCard.jsx";
-import { bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText } from "./grades.js";
+import { schedulingLinkOf } from "../instructors.js";
+import { isLate, unanswered, appreciatePatch, deletePatch } from "./AssignmentsCard.jsx";
+import { alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText } from "./grades.js";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -44,16 +45,18 @@ const fmtDay = (ts) => ts ? new Date(ts).toLocaleDateString("en-US", { month: "s
 // The latest thing a student turned in, and whether a grade from the old
 // grading flow is already on the log.
 const workOf = (data, aid, name) => {
-  const log = data?.assignmentLog?.[aid]?.[name] || [];
+  const log = alive(data?.assignmentLog?.[aid]?.[name]);
   const subs = log.filter(e => e.type === "submission");
   const last = subs[subs.length - 1] || null;
   const linked = [...subs].reverse().find(e => e.link) || null;
   const grades = log.filter(e => e.type === "grade" && !e.board);
   // Comments posted on the assignment itself, so the card holds the whole
   // conversation with the student rather than only the comment typed here.
-  const comments = log.filter(e => e.type === "comment" && e.from !== "student")
-    .map(e => ({ id: e.id, text: htmlToText(e.html || e.text), at: e.ts })).filter(c => c.text);
-  return { last, link: linked?.link || "", earlier: grades[grades.length - 1] || null, count: subs.length, comments };
+  // Both sides of the conversation, so a message from the student is read
+  // where the grading happens rather than somewhere else.
+  const comments = log.filter(e => e.type === "comment")
+    .map(e => ({ id: e.id, text: htmlToText(e.html || e.text), at: e.ts, mine: e.from !== "student", liked: e.appreciatedBy })).filter(c => c.text);
+  return { last, link: linked?.link || "", earlier: grades[grades.length - 1] || null, count: subs.length, comments, waiting: unanswered(log) };
 };
 
 export default function GradeView({ config }) {
@@ -91,7 +94,7 @@ export default function GradeView({ config }) {
     setPicked(""); setDragging(""); setOver("");
   };
   const save = (name, fields) => { update(prev => writeCard(prev, aid, name, fields)); setEditing(""); };
-  const release = () => { update(prev => releasePatch(prev, aid)); setConfirm(""); };
+  const release = () => { update(prev => releasePatch(prev, aid, Date.now(), { meetingLink: schedulingLinkOf(config) })); setConfirm(""); };
   const hide = () => { update(prev => hidePatch(prev, aid)); setConfirm(""); };
 
   const zoneProps = (bucket) => ({
@@ -110,7 +113,9 @@ export default function GradeView({ config }) {
       onDragEnd={() => { setDragging(""); setOver(""); }}
       onPick={() => setPicked(p => p === s.name ? "" : s.name)}
       onEdit={() => setEditing(s.name)} onCancel={() => setEditing("")}
-      onSave={(fields) => save(s.name, fields)} />;
+      onSave={(fields) => save(s.name, fields)}
+      onAppreciate={(eid) => update(prev => appreciatePatch(prev, aid, s.name, eid, "instructor"))}
+      onDelete={(eid) => update(prev => deletePatch(prev, aid, s.name, eid, "instructor"))} />;
   };
 
   // The pile reads in the order the work came in, so the first file turned in
@@ -243,7 +248,7 @@ export default function GradeView({ config }) {
   );
 }
 
-function Card({ student, due, card, work, accent, dragging, picked, editing, onDragStart, onDragEnd, onPick, onEdit, onCancel, onSave }) {
+function Card({ student, due, card, work, accent, dragging, picked, editing, onDragStart, onDragEnd, onPick, onEdit, onCancel, onSave, onAppreciate, onDelete }) {
   const [comment, setComment] = useState(card.comment || "");
   const [note, setNote] = useState(card.note || "");
   useEffect(() => { if (editing) { setComment(card.comment || ""); setNote(card.note || ""); } }, [editing]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -262,6 +267,8 @@ function Card({ student, due, card, work, accent, dragging, picked, editing, onD
           style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", padding: 0, fontFamily: F, fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY, cursor: "pointer", minHeight: 28, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {student.name}
         </button>
+        {/* The student wrote and nobody has answered: say so where the card is. */}
+        {work.waiting ? <span style={{ flex: "none", fontSize: 12, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "2px 8px" }}>New message</span> : null}
         {grade ? <span style={{ flex: "none", fontSize: 13, fontWeight: 700, color: accent }}>{grade.label}</span>
           : work.earlier ? <span style={{ flex: "none", fontSize: 13, color: TEXT_MUTED }}>earlier: {gradeText(work.earlier)}</span> : null}
       </div>
@@ -295,8 +302,24 @@ function Card({ student, due, card, work, accent, dragging, picked, editing, onD
         <>
           {card.comment ? <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{card.comment}</div> : null}
           {(work.comments || []).map(c => (
-            <div key={c.id} style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
-              <span style={{ fontSize: 13, color: TEXT_MUTED }}>{fmtDay(c.at)} · </span>{c.text}
+            <div key={c.id} style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap",
+              borderLeft: c.mine ? "none" : "3px solid " + accent, paddingLeft: c.mine ? 0 : 8 }}>
+              <span style={{ fontSize: 13, color: TEXT_MUTED }}>{fmtDay(c.at)}{c.mine ? "" : " · " + first(student.name)} · </span>{c.text}
+              {/* Appreciating a message is an answer: it says so to the
+                  student and takes the message off the waiting list. */}
+              {c.mine ? (onDelete ? (
+                <button className="gv-focus" onClick={() => onDelete(c.id)}
+                  style={{ display: "block", background: "none", border: "none", padding: 0, fontFamily: F, fontSize: 13, fontWeight: 700, color: LATE, cursor: "pointer", minHeight: HIT }}>
+                  Delete
+                </button>
+              ) : null) : c.liked === "instructor"
+                ? <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: OK }}>Appreciated</span>
+                : onAppreciate ? (
+                  <button className="gv-focus" onClick={() => onAppreciate(c.id)}
+                    style={{ display: "block", background: "none", border: "none", padding: 0, fontFamily: F, fontSize: 13, fontWeight: 700, color: accent, cursor: "pointer", minHeight: HIT }}>
+                    Appreciate
+                  </button>
+                ) : null}
             </div>
           ))}
           {card.note ? <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.45, whiteSpace: "pre-wrap", background: SUNK, borderRadius: 8, padding: "6px 8px" }}><span style={{ fontWeight: 700 }}>Note: </span>{card.note}</div> : null}

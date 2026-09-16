@@ -17,7 +17,10 @@ const comm4 = {
 
   meets: { start: "11:45", end: "12:50" },
 
-  accent: "#059669",
+  // The same colour lifted for text after dark: the class colour reads on
+  // white and vanishes on the dark card (crimson 2.15:1, purple 3.03:1).
+  accent: "#047857",
+  accentDark: "#5ecfa8",
   accentLight: "#ecfdf5",
 
   storageKey: "comm4-s26-v1",

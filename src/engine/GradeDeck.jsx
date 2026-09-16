@@ -4,14 +4,12 @@
 // card, one thing, the way forward as the only control, and the way back to
 // the card before as the only other.
 //
-// The card reads top to bottom the way a conversation would: the assignment,
-// the letter and what the letter means, Andrew's comment with its date, the
-// student's own note and file under that with their date, then a way to
-// open the assignment and a way to ask for a meeting. Got it writes the seen
-// stamp so the same card never comes round twice.
+// The card says one thing — the challenge was evaluated, or nothing was
+// turned in and the grade is a zero — and points at the challenge, where the
+// grade, what it means, the comments and the work all live. Got it writes the
+// seen stamp so the same card never comes round twice.
 
 import { useState } from "react";
-import { schedulingLinkOf } from "../instructors.js";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -30,27 +28,18 @@ const label = { fontSize: 13, fontWeight: 700, color: TEXT_MUTED, textTransform:
 const when = (ts) => ts ? new Date(ts).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
 const hostOf = (url) => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return "your link"; } };
 
-export default function GradeDeck({ config, items, onSeen, onDone, onMeeting, children }) {
+export default function GradeDeck({ config, items, onSeen, onDone, children }) {
   // The stack is fixed when the deck opens. Got it writes a seen stamp, and
   // that write comes back through the store and would shorten a live list
   // under the reader's thumb.
   const [stack] = useState(() => items || []);
   const [i, setI] = useState(0);
-  const [asked, setAsked] = useState(() => new Set());
   const a = config.accent;
   if (i >= stack.length) return children || null;
 
   const card = stack[i];
   const gotIt = () => { onSeen?.(card.aid); if (i + 1 >= stack.length) onDone?.(); setI(i + 1); };
-  // The Calendly page, when the class has one. The button is a real link to
-  // that page, so the tap opens the calendar in a new tab the way a link does,
-  // and the same tap posts the request into the student's thread.
-  const scheduling = schedulingLinkOf(config);
-  const meet = () => {
-    onMeeting?.(card);
-    setAsked(s => new Set([...s, card.aid]));
-  };
-  const paragraphs = card.comment ? card.comment.split(/\n{2,}/).filter(Boolean) : [];
+  const missed = !card.submittedAt && !card.link && (card.bucket === "notsubmitted" || card.letter === "F" || card.letter === "Incomplete");
   const who = config.instructor?.name || "your instructor";
   const ghost = { minHeight: TAP, padding: "0 16px", borderRadius: 12, background: WHITE, border: "1px solid " + LINE_STRONG,
     fontFamily: F, fontSize: 16, fontWeight: 600, color: a, cursor: "pointer", display: "inline-flex", alignItems: "center", textDecoration: "none" };
@@ -64,63 +53,21 @@ export default function GradeDeck({ config, items, onSeen, onDone, onMeeting, ch
         </div>
 
         <section style={{ background: WHITE, border: "1px solid " + LINE, borderRadius: 16, padding: "24px", display: "flex", flexDirection: "column", gap: 20, boxShadow: "0 12px 32px -20px rgba(23,19,16,.35)" }}>
-          {/* the assignment, and the grade */}
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.3 }}>{card.title}</div>
-            {card.due ? <div style={{ fontSize: 15, color: TEXT_MUTED, marginTop: 4 }}>Due {card.due}</div> : null}
-          </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 32, fontWeight: 700, color: a, lineHeight: 1, letterSpacing: "-0.02em" }}>{card.letter}</span>
-            <span style={{ fontSize: 15, color: TEXT_MUTED }}>Graded {when(card.gradedAt)}</span>
-          </div>
-          {card.means ? <p style={{ margin: 0, fontSize: 17, lineHeight: 1.5, color: TEXT_SECONDARY }}>{card.means}</p> : null}
-
-          {/* the comment */}
-          {paragraphs.length ? (
-            <div style={{ borderTop: "1px solid " + LINE, paddingTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                <span style={label}>From {who}</span>
-                <span style={{ fontSize: 13, color: TEXT_MUTED }}>{when(card.gradedAt)}</span>
-              </div>
-              {paragraphs.map((p, k) => <p key={k} style={{ margin: 0, fontSize: 17, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{p}</p>)}
-            </div>
-          ) : null}
-
-          {/* comments on the assignment since the grade went out */}
-          {(card.more || []).map((m, k) => (
-            <div key={k} style={{ borderTop: "1px solid " + LINE, paddingTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                <span style={label}>From {who}</span>
-                <span style={{ fontSize: 13, color: TEXT_MUTED }}>{when(m.at)}</span>
-              </div>
-              {m.text.split(/\n{2,}/).filter(Boolean).map((p, j) => <p key={j} style={{ margin: 0, fontSize: 17, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{p}</p>)}
-            </div>
-          ))}
-
-          {/* what they turned in */}
-          {card.link || card.note ? (
-            <div style={{ background: SUNK, borderRadius: 12, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                <span style={label}>What you turned in</span>
-                <span style={{ fontSize: 13, color: TEXT_MUTED }}>{when(card.submittedAt)}</span>
-              </div>
-              {card.note ? <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: TEXT_SECONDARY, whiteSpace: "pre-wrap" }}>{card.note}</p> : null}
-              {card.link ? (
-                <a href={card.link} target="_blank" rel="noreferrer" style={{ fontSize: 15, fontWeight: 600, color: a, textDecoration: "none", minHeight: TAP, display: "inline-flex", alignItems: "center", gap: 6 }}>
-                  Open your file ↗ <span style={{ fontWeight: 400, color: TEXT_MUTED, fontSize: 13 }}>{hostOf(card.link)}</span>
-                </a>
-              ) : null}
-            </div>
-          ) : null}
-
-          {/* ways on from here */}
+          {/* One sentence, and the way to the challenge. Andrew, 2026-09-15:
+              "it doesn't need to include all the info. in fact, it should say:
+              your Visual Story has been evaluated / you didn't submit your
+              Visual Story so you received a grade of 0." Everything else — the
+              grade, what it means, the comments, what they turned in — is on
+              the challenge's own page, one press away. */}
+          <p style={{ margin: 0, fontSize: 20, lineHeight: 1.45 }}>
+            {missed
+              ? <>You didn't submit your <strong>{card.title}</strong>, so you received a grade of 0.</>
+              : <>Your <strong>{card.title}</strong> has been evaluated.</>}
+          </p>
+          {/* No meeting button here: a grade rough enough to need one sends
+              the link into the challenge's conversation on its own. */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <a href={config.path + "/challenges/" + encodeURIComponent(card.aid)} style={ghost}>Open the challenge</a>
-            {asked.has(card.aid)
-              ? <span style={{ fontSize: 15, fontWeight: 600, color: OK, minHeight: TAP, display: "inline-flex", alignItems: "center" }}>Meeting requested. Andrew will reply on your You card.</span>
-              : scheduling
-                ? <a href={scheduling} target="_blank" rel="noreferrer" onClick={meet} style={ghost}>Make a meeting with {who.split(" ")[0]}</a>
-                : <button onClick={meet} style={ghost}>Make a meeting with {who.split(" ")[0]}</button>}
           </div>
         </section>
 

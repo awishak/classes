@@ -19,6 +19,8 @@ import { studentItems, sourceOf } from "./ScheduleCard.jsx";
 import { Avatar, profileOf } from "./RosterCard.jsx";
 import { dueState } from "./AssignmentsCard.jsx";
 import PickMark from "./Pick.jsx";
+import { instructorOf } from "../instructors.js";
+import { fileToAvatar, AvatarPreview } from "./YouCard.jsx";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -30,7 +32,10 @@ const WARN = TOKENS.STATE.warn;
 const TAP = TOKENS.TAP;
 
 const DISPLAY = { fontFamily: TOKENS.FONT.display, fontWeight: TOKENS.FONT.displayWeight, textShadow: TOKENS.FONT.displayShadow };
-const small = { fontSize: 13, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
+const small = { fontFamily: TOKENS.FONT.label, fontSize: 13, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
+// Dates, times, rooms and counts are set in the mono face, which is what the
+// design system keeps that face for, and what makes a page look typeset.
+const MONO = { fontFamily: TOKENS.FONT.label, fontVariantNumeric: "tabular-nums" };
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 
 // The card title. On Clean the uppercase mono label read as a caption, so the
@@ -163,8 +168,9 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat, in
   // anything else.
   const frame = {
     ...seat, padding: 20, fontFamily: F, textAlign: "left", width: "100%",
-    background: "var(--surface-card)",
-    display: "flex", flexDirection: "column", gap: 14,
+    // White, with the class's own colour around it.
+    background: "var(--surface-card)", border: "2px solid var(--ca-accent)",
+    display: "flex", flexDirection: "column", gap: 16,
   };
   if (!facts) {
     return (
@@ -189,45 +195,50 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat, in
             ›
           </button>
         </span>
-        <span style={{ ...DISPLAY, fontSize: 26, lineHeight: 1.15, letterSpacing: "-0.02em", color: TEXT_PRIMARY }}>{facts.weekday}, {facts.date}</span>
-        {!facts.noMeeting && (facts.time || facts.location) ? (
-          <span style={{ fontSize: 17, lineHeight: 1.3, color: TEXT_SECONDARY }}>{[facts.time, facts.location].filter(Boolean).join(" · ")}</span>
-        ) : null}
+        <span style={{ ...DISPLAY, fontSize: 32, lineHeight: 1.05, letterSpacing: "-0.03em", color: TEXT_PRIMARY, marginTop: 2 }}>{facts.weekday}</span>
+        <span style={{ ...MONO, fontSize: 15, fontWeight: 500, lineHeight: 1.4, color: TEXT_SECONDARY, marginTop: 6 }}>
+          {[facts.date, !facts.noMeeting && facts.time, !facts.noMeeting && facts.location].filter(Boolean).join(" · ")}
+        </span>
         {/* Tight under the room line: the link keeps its 44px to tap in, and
             the negative margin takes the extra height back out of the gap. */}
         {!facts.noMeeting && facts.directions ? (
           <a className="ca-focus" href={facts.directions} target="_blank" rel="noreferrer"
-            style={{ alignSelf: "flex-start", minHeight: TAP, margin: "-10px 0", display: "inline-flex", alignItems: "center", fontSize: 16, fontWeight: 600, lineHeight: 1.3, color: "var(--ca-accent)", textDecoration: "none" }}>
+            style={{ alignSelf: "flex-start", minHeight: TAP, margin: "-10px 0", display: "inline-flex", alignItems: "center", fontSize: 16, fontWeight: 600, lineHeight: 1.3, color: "var(--ca-accent-ink)", textDecoration: "none" }}>
             Directions
           </a>
         ) : null}
-        {facts.title ? <span style={{ fontSize: 19, fontWeight: 600, lineHeight: 1.3, marginTop: 10, color: TEXT_PRIMARY }}>{facts.title}</span> : null}
+        {facts.title ? <span style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.25, marginTop: 12, color: TEXT_PRIMARY, textWrap: "balance" }}>{facts.title}</span> : null}
       </div>
 
       {instructor && update ? (
-        <div style={{ borderTop: "1px solid " + BORDER_STRONG, paddingTop: 12 }}>
+        <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 12 }}>
           <NoteEditor key={facts.date} date={facts.date} value={facts.note} update={update} />
         </div>
       ) : facts.note ? (
-        <div style={{ borderTop: "1px solid " + BORDER_STRONG, paddingTop: 12, fontSize: 17, lineHeight: 1.5, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>
-          {facts.note}
+        <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 12 }}>
+          <div style={{ borderLeft: "3px solid " + BORDER_STRONG, paddingLeft: 12, fontSize: 17, lineHeight: 1.5, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>
+            {facts.note}
+          </div>
         </div>
       ) : null}
 
       {facts.readings.length ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, borderTop: "1px solid " + BORDER_STRONG, paddingTop: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, borderTop: "1px solid " + BORDER, paddingTop: 12 }}>
           <span style={small}>Readings</span>
-          {(allReadings ? facts.readings : facts.readings.slice(0, READINGS_SHOWN)).map(r => {
+          {(allReadings ? facts.readings : facts.readings.slice(0, READINGS_SHOWN)).map((r, i) => {
             const inner = (
               <>
+                <span style={{ ...MONO, width: 24, flex: "none", fontSize: 13, fontWeight: 600, color: r.pick ? WARN : TEXT_MUTED, paddingTop: 3 }}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
                 <span style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
-                  <span style={{ fontSize: 16, fontWeight: 600, color: TEXT_PRIMARY }}>{r.title}</span>
-                  {r.source ? <span style={{ fontSize: 14, color: TEXT_MUTED }}>{r.source}</span> : null}
+                  <span style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.3, color: TEXT_PRIMARY }}>{r.title}</span>
+                  {r.source ? <span style={{ ...MONO, fontSize: 13, color: TEXT_MUTED }}>{r.source}</span> : null}
                 </span>
                 {r.pick ? <PickMark size={24} /> : null}
               </>
             );
-            const row = { display: "flex", alignItems: "center", gap: 10, minHeight: TAP, padding: "4px 0", textDecoration: "none" };
+            const row = { display: "flex", alignItems: "flex-start", gap: 10, minHeight: TAP, padding: "6px 0", textDecoration: "none" };
             return r.url
               ? <a key={r.id} className="ca-focus" href={r.url} target="_blank" rel="noreferrer" style={row}>{inner}</a>
               : <div key={r.id} style={row}>{inner}</div>;
@@ -235,7 +246,7 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat, in
           {facts.readings.length > READINGS_SHOWN ? (
             <button className="ca-focus" onClick={() => setAllReadings(v => !v)} aria-expanded={allReadings}
               style={{ alignSelf: "flex-start", minHeight: TAP, background: "none", border: "none", padding: 0, cursor: "pointer",
-                fontFamily: F, fontSize: 16, fontWeight: 600, color: "var(--ca-accent)" }}>
+                fontFamily: F, fontSize: 16, fontWeight: 600, color: "var(--ca-accent-ink)" }}>
               {allReadings ? "Show fewer" : "Show all " + facts.readings.length + " readings"}
             </button>
           ) : null}
@@ -243,9 +254,9 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat, in
       ) : null}
 
       {facts.games.length ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, borderTop: "1px solid " + BORDER_STRONG, paddingTop: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, borderTop: "1px solid " + BORDER, paddingTop: 12 }}>
           <span style={small}>Game</span>
-          {facts.games.map(g => <span key={g} style={{ fontSize: 16, fontWeight: 600, color: TEXT_PRIMARY }}>{g}</span>)}
+          {facts.games.map(g => <span key={g} style={{ fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY }}>{g}</span>)}
         </div>
       ) : null}
     </section>
@@ -284,7 +295,7 @@ export function PinnedLinks({ data, update, instructor, seat }) {
       {pins.map(p => (
         <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <a className="ca-focus" href={p.url} target="_blank" rel="noreferrer"
-            style={{ flex: 1, minWidth: 0, minHeight: TAP, display: "flex", alignItems: "center", fontSize: 17, fontWeight: 600, color: "var(--ca-accent)", textDecoration: "none", overflowWrap: "anywhere" }}>
+            style={{ flex: 1, minWidth: 0, minHeight: TAP, display: "flex", alignItems: "center", fontSize: 17, fontWeight: 600, color: "var(--ca-accent-ink)", textDecoration: "none", overflowWrap: "anywhere" }}>
             {p.title || p.url}
           </a>
           {instructor ? (
@@ -361,6 +372,58 @@ export function GamesSummary({ games = [] }) {
     );
   }
   return <Muted>No games yet.</Muted>;
+}
+
+// ─── the instructor's own card ───
+
+// Andrew, 2026-09-15: "i don't get how i am supposed to update my profile."
+// He could not: the name, the bio, the email and the calendar came off the
+// class config, which is code. They live in his shared store now, the same
+// place his colours and blocks live, so one edit reaches every class, and a
+// field he leaves empty falls back to what the class ships.
+export function InstructorProfile({ config, shared, updateShared }) {
+  const from = instructorOf(config, shared);
+  const [f, setF] = useState({ name: from.name || "", bio: from.bio || "", email: from.email || "",
+    schedulingLink: from.schedulingLink || "", photo: from.photo || "" });
+  const [saved, setSaved] = useState(false);
+  const set = (k, v) => { setF(p => ({ ...p, [k]: v })); setSaved(false); };
+  const save = () => {
+    updateShared(prev => ({ ...prev, instructor: { ...f } }));
+    setSaved(true);
+  };
+  const input = { fontFamily: F, fontSize: 16, minHeight: TAP, padding: "0 12px", borderRadius: 10,
+    border: "1px solid " + BORDER_STRONG, background: "var(--surface-card)", color: TEXT_PRIMARY, width: "100%" };
+  const row = (label2, key, placeholder) => (
+    <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <span style={small}>{label2}</span>
+      <input value={f[key]} onChange={e => set(key, e.target.value)} placeholder={placeholder} style={input} />
+    </label>
+  );
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <span style={small}>Your card</span>
+      <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+        <AvatarPreview value={f.photo} accent={config.accent} size={64} />
+        <label style={{ minHeight: TAP, display: "inline-flex", alignItems: "center", padding: "0 16px", borderRadius: 10,
+          border: "1px solid " + BORDER_STRONG, background: "var(--surface-card)", color: TEXT_PRIMARY, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
+          Choose a photo
+          <input type="file" accept="image/*" style={{ display: "none" }}
+            onChange={e => { const file = e.target.files?.[0]; if (file) fileToAvatar(file, (url) => set("photo", url)); }} />
+        </label>
+      </div>
+      {row("Name", "name", "")}
+      {row("What you teach", "bio", "")}
+      {row("Email", "email", "")}
+      {row("Calendar link", "schedulingLink", "https://")}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button className="ca-focus" onClick={save}
+          style={{ minHeight: TAP, padding: "0 20px", borderRadius: 10, border: "none", background: "var(--ca-accent)", color: "#fff",
+            fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Save</button>
+        {saved ? <span style={{ fontSize: 15, fontWeight: 600, color: TOKENS.STATE.ok }}>Saved</span> : null}
+        <span style={{ fontSize: 14, color: TEXT_MUTED }}>Every class you teach.</span>
+      </div>
+    </div>
+  );
 }
 
 // ─── requests and bugs ───

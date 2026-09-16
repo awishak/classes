@@ -13,3 +13,12 @@ export const isInstructorEmail = (email) =>
 export const SCHEDULING_LINK = "https://calendly.com/andrewishak/meet";
 
 export const schedulingLinkOf = (config) => config?.instructor?.schedulingLink || SCHEDULING_LINK;
+
+// The profile a class shows for its instructor: what the config ships, with
+// whatever Andrew has since written about himself over the top. It lives in
+// the shared store rather than in a class, because it is the same person in
+// every class, and it was only editable by changing the code before this.
+export const instructorOf = (config, shared) => ({
+  ...(config?.instructor || {}),
+  ...Object.fromEntries(Object.entries(shared?.instructor || {}).filter(([, v]) => v !== "" && v != null)),
+});

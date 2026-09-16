@@ -13,7 +13,10 @@ const comm999 = {
   desc: "MWF 0:00 to 0:00 · Room TBD",
 
   // ─── Branding ───
+  // The same colour lifted for text after dark: the class colour reads on
+  // white and vanishes on the dark card (crimson 2.15:1, purple 3.03:1).
   accent: "#9f1239",
+  accentDark: "#f4869f",
   accentLight: "#fff1f2",
 
   // ─── Storage & auth ───

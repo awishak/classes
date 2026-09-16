@@ -81,15 +81,16 @@ import { warmClassData } from "../src/engine/store.js";
 import GradeView from "../src/engine/GradeView.jsx";
 import GradeDeck from "../src/engine/GradeDeck.jsx";
 import DueDeck, { dueSoon, dismissDue, deadlineOf } from "../src/engine/DueCard.jsx";
-import { NextClassHero, nextClassFacts, timeText, PinnedLinks, RequestForm } from "../src/engine/HomeCards.jsx";
+import { NextClassHero, nextClassFacts, timeText, PinnedLinks, RequestForm, InstructorProfile } from "../src/engine/HomeCards.jsx";
+import { instructorOf } from "../src/instructors.js";
 import comm118Cfg from "../src/config/comm118.js";
-import { AssignmentCards, AssignmentPage, statusOf, inDueOrder } from "../src/engine/AssignmentCards.jsx";
+import { AssignmentCards, AssignmentPage, statusOf, inDueOrder, feedOf } from "../src/engine/AssignmentCards.jsx";
 import { appsFor } from "../src/engine/apps.js";
 import InstructorBar from "../src/engine/InstructorBar.jsx";
 import comm3Cfg from "../src/config/comm3.js";
-import { bucketsFor, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, unseenGrades, markSeen, meetingPatch, letterOf, BUCKETS } from "../src/engine/grades.js";
+import { bucketsFor, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, unseenGrades, markSeen, letterOf, BUCKETS } from "../src/engine/grades.js";
 import GradeParade from "../src/engine/GradeParade.jsx";
-import { computeGrade, dueText } from "../src/engine/AssignmentsCard.jsx";
+import { computeGrade, dueText, AssignmentsSummary, waitingOn, waitingCount, appreciatePatch, deletePatch } from "../src/engine/AssignmentsCard.jsx";
 import { sectionsOf, takeGroup, placeGroup, parseRange, sumRanges, rangeLabel, placeSection, splitSection, templateOf, applyTemplate } from "../src/engine/dayplan.js";
 import { dayTitles } from "../src/engine/days.js";
 import { normSlot as normSlotT } from "../src/engine/dayplan.js";
@@ -982,11 +983,11 @@ cases.push(["Instructor links", <InstructorLinks />]);
     // What that costs, said out loud: the roster picker, the class switcher and
     // the teaching links are inside the menu and no longer appear in the
     // markup until somebody clicks. Nothing checks their contents any more.
-    // The Dashboard is an app now, behind the Apps button in the bar.
-    if (!/>Apps<span/.test(html)) {
-      console.error(`  FAIL  class site, instructor, ${where}: no Apps button, so the dashboard is unreachable`); failedEarly++; }
-    if (!html.includes('aria-haspopup="menu"')) {
-      console.error(`  FAIL  class site, instructor, ${where}: no menu, so everything behind it is unreachable`); failedEarly++; }
+    // Andrew's apps are tabs in his bar; on a phone, where the bar is the
+    // compact header, they stay behind the Apps button.
+    const reachable = html.includes('href="' + cfg0.path + '/dashboard"') || /aria-haspopup="menu"/.test(html);
+    if (!reachable) {
+      console.error(`  FAIL  class site, instructor, ${where}: no way through to the dashboard`); failedEarly++; }
     // And the header stays small. Counting the tap targets across the top is a
     // blunt measure and it is the one that would have caught this drifting.
     // Every bar across the top, not the first one. The phone and the desktop are
@@ -1065,8 +1066,12 @@ cases.push(["Instructor links", <InstructorLinks />]);
         if (!strip.includes(">" + door + "<")) {
           console.error(`  FAIL  ${where}: the strip has no ${door} tab`); failedEarly++; }
       }
-      if (!/>Apps<span/.test(html)) {
-        console.error(`  FAIL  ${where}: the bar has no Apps button`); failedEarly++; }
+      for (const app of ["Dashboard", "Repository", "Grade view", "Around the Horn"]) {
+        if (!strip.includes(">" + app + "<")) {
+          console.error(`  FAIL  ${where}: the bar has no ${app} tab`); failedEarly++; }
+      }
+      if (/>Apps<span/.test(html)) {
+        console.error(`  FAIL  ${where}: the instructor's bar still has the Apps button`); failedEarly++; }
       const current = (strip.match(/aria-current="page"/g) || []).length;
       if (current > 1) {
         console.error(`  FAIL  ${where}: ${current} entries in the strip marked as the current page`); failedEarly++; }
@@ -1087,8 +1092,8 @@ cases.push(["Instructor links", <InstructorLinks />]);
         if (!html.includes(">" + tab + "<")) {
           console.error(`  FAIL  class page, instructor, ${where}: no ${tab} tab`); failedEarly++; }
       });
-      if (!/>Apps<span/.test(html)) {
-        console.error(`  FAIL  class page, instructor, ${where}: no Apps button`); failedEarly++; }
+      if (where === "laptop" && !html.includes(">Grade view<")) {
+        console.error(`  FAIL  class page, instructor, ${where}: the apps are not tabs in the bar`); failedEarly++; }
       // The duplicates are gone: a tab AND a card for the same thing was the
       // whole complaint. Schedule still exists as a card, just not as a tab.
       const bar = html.split('aria-haspopup="menu"')[0] || "";
@@ -1147,6 +1152,36 @@ cases.push(["Instructor links", <InstructorLinks />]);
   }
 }
 
+// Every class colour, measured where it is actually used.
+//
+// check-tokens measures the theme's own palette; a class colour lives in its
+// config and nothing measured it. Crimson as text on the dark card is 2.15:1
+// and purple is 3.03:1, so Directions, a pinned link and Show all were close
+// to invisible after dark. Each class carries accentDark for those words.
+{
+  const say = (m) => { console.error("  FAIL  class colours: " + m); failedEarly++; };
+  const chan = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+  const lum = (h) => { const [r, g, b] = chan(h).map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const ratio = (x, y) => { const p = lum(x), q = lum(y); return (Math.max(p, q) + 0.05) / (Math.min(p, q) + 0.05); };
+  const DAY = { card: "#ffffff", page: "#fafaf9" };
+  const NIGHT = { card: "#1f1a16", page: "#171310" };
+  ENGINE_LIST.forEach(c => {
+    if (!/^#[0-9a-f]{6}$/i.test(c.accent || "")) { say(c.code + " has no accent to measure"); return; }
+    // White sits on the accent, so the accent is a background anywhere.
+    if (ratio(c.accent, "#ffffff") < 4.5) say(`${c.code}: white on ${c.accent} is ${ratio(c.accent, "#ffffff").toFixed(2)}:1`);
+    Object.entries(DAY).forEach(([where, g]) => {
+      if (ratio(c.accent, g) < 4.5) say(`${c.code}: ${c.accent} as text on the ${where} by day is ${ratio(c.accent, g).toFixed(2)}:1`);
+    });
+    if (!c.accentDark) { say(c.code + " has no accentDark, so its links vanish after dark"); return; }
+    Object.entries(NIGHT).forEach(([where, g]) => {
+      if (ratio(c.accentDark, g) < 4.5) say(`${c.code}: ${c.accentDark} as text on the ${where} at night is ${ratio(c.accentDark, g).toFixed(2)}:1`);
+    });
+  });
+  // And the page actually hands the lifted value to the words.
+  const html = renderToString(<ClassApp config={cfg0} />);
+  if (!html.includes("--ca-accent-ink")) say("the class site never sets the lifted accent");
+}
+
 // One bar on every page Andrew opens. Andrew, 2026-09-15: "every page that i
 // access as instructor, including grade view, has to have the exact same top
 // nav." Checked from the source, because the pages are routed in App.jsx and
@@ -1174,7 +1209,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   });
   try {
     const html = renderToString(<InstructorBar config={cfg0} always><div>page</div></InstructorBar>);
-    if (!html.includes('aria-label="Teaching surfaces"') || !/>Apps<span/.test(html) || !html.includes(">Challenges<")) say("the wrapper does not draw the same bar");
+    if (!html.includes('aria-label="Teaching surfaces"') || !html.includes(">Challenges<") || !html.includes(">Grade view<")) say("the wrapper does not draw the same bar");
   } catch (err) { say("the wrapper threw: " + err.message); }
 }
 
@@ -2174,14 +2209,29 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const deckCard = unseenGrades(cfg, again, "Ada Lovelace")[0];
     if (!deckCard.link || !deckCard.means || !deckCard.gradedAt || !deckCard.submittedAt) say("the deck card is missing the file, the meaning or a time: " + JSON.stringify(deckCard));
     const html = renderToString(<GradeDeck config={cfg} items={[deckCard]} onSeen={noop} onDone={noop} onMeeting={noop} />);
-    ["Exercise 1", ">B<", "Got it", "Sharp work.", "room to sharpen", "Open your file", "Open the challenge", "Make a meeting", "Graded "].forEach(t => { if (!html.includes(t)) say("the deck never showed " + JSON.stringify(t)); });
+    // One sentence and a way through, and nothing else.
+    ["Exercise 1", "has been evaluated", "Got it", "Open the challenge"].forEach(t => { if (!html.includes(t)) say("the deck never showed " + JSON.stringify(t)); });
+    ["Sharp work.", "room to sharpen", "Open your file", "Graded "].forEach(t => { if (html.includes(t)) say("the deck is still carrying " + JSON.stringify(t)); });
+    const nothingIn = renderToString(<GradeDeck config={cfg} items={[{ ...deckCard, letter: "Incomplete", bucket: "incomplete", link: "", submittedAt: null }]} onSeen={noop} onDone={noop} onMeeting={noop} />).replace(/<!-- -->/g, "");
+    if (!nothingIn.includes("so you received a grade of 0")) say("a challenge with nothing turned in does not say so on the card");
     if (!html.includes('/challenges/ex1"')) say("Open the assignment does not point at the assignment itself");
-    // With a calendar on the class, the meeting control is a link to the calendar.
-    const withCal = renderToString(<GradeDeck config={{ ...cfg, instructor: { name: "Andrew Ishak", schedulingLink: "https://calendly.com/x" } }} items={[deckCard]} onSeen={noop} onDone={noop} onMeeting={noop} />);
-    if (!withCal.includes('href="https://calendly.com/x"')) say("the meeting button does not open the calendar");
-    const met = meetingPatch(again, "Ada Lovelace", "Exercise 1", 60);
-    const msg = met.threads["Ada Lovelace"].slice(-1)[0];
-    if (msg.kind !== "meeting" || msg.from !== "student" || !msg.text.includes("Exercise 1")) say("a meeting from the deck did not land in the thread: " + JSON.stringify(msg));
+    // The calendar is not a button here any more: a rough grade sends the
+    // link into the challenge's conversation when it is released.
+    const withCal = renderToString(<GradeDeck config={{ ...cfg, instructor: { name: "Andrew Ishak", schedulingLink: "https://calendly.com/x" } }} items={[deckCard]} onSeen={noop} onDone={noop} />);
+    if (withCal.includes("https://calendly.com/x")) say("the grade card still carries the calendar");
+    const rough = releasePatch(placeCard(d, "ex1", "Bob Ross", "d", 70), "ex1", 80, { meetingLink: "https://calendly.com/x" });
+    const auto = (rough.assignmentLog.ex1["Bob Ross"] || []).slice(-1)[0];
+    if (!auto || auto.type !== "comment" || auto.from !== "instructor" || !auto.auto || !auto.text.includes("make a meeting with Dr. Ishak") || !auto.text.includes("https://calendly.com/x")) {
+      say("a D does not send the meeting link into the conversation: " + JSON.stringify(auto)); }
+    const fine = releasePatch(placeCard(d, "ex1", "Bob Ross", "a", 70), "ex1", 80, { meetingLink: "https://calendly.com/x" });
+    if ((fine.assignmentLog.ex1["Bob Ross"] || []).some(e => e.auto)) say("an A sends the meeting link too");
+    // Appreciating a message answers it.
+    const asked2 = { ...d, assignmentLog: { ...d.assignmentLog, ex1: { ...d.assignmentLog.ex1,
+      "Cy Twombly": [{ id: "q1", ts: 90, type: "comment", from: "student", text: "Is the deadline firm?" }] } } };
+    if (!waitingOn(asked2, cfg.assignments).find(r => r.id === "ex1")?.messages) say("a student message is not waiting");
+    const liked = appreciatePatch(asked2, "ex1", "Cy Twombly", "q1", "instructor");
+    if (waitingOn(liked, cfg.assignments).find(r => r.id === "ex1")?.messages) say("an appreciated message is still waiting");
+    if (liked.assignmentLog.ex1["Cy Twombly"][0].appreciatedBy !== "instructor") say("Appreciate did not mark the message");
   } catch (err) { say("the deck threw: " + err.message); }
   // Due inside 48 hours with nothing turned in: one card, dismissed once.
   {
@@ -2244,7 +2294,8 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       const off = { ...hdata, dayPlans: Object.fromEntries(Object.entries(hdata.dayPlans).map(([k, p]) => [k, { ...p, noMeeting: true }])) };
       const none = renderToString(<NextClassHero config={hcfg} data={off} blockOf={() => null} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
       if (!none.includes("No in-person meeting")) say("a day with no meeting has no badge");
-      if (none.includes("dashed") || plain.includes("solid var(--ca-accent)")) say("the hero still has an outline");
+      if (!plain.includes("border:2px solid var(--ca-accent)")) say("the hero has no outline in the class colour");
+      if (none.includes("dashed")) say("a day with no meeting is back to a dashed outline");
       if (!/background:var\(--state-warn\)[^"]*"[^>]*>No in-person meeting/.test(none)) say("the no-meeting badge is not orange");
       if (none.includes("Vari 133")) say("a day with no meeting still names the room");
       // Directions under the room, the note above the readings only when there
@@ -2280,6 +2331,14 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       if (!pins.includes("Discussion doc") || !pins.includes('href="https://docs.google.com/d"')) say("a pinned link does not show");
       if (renderToString(<PinnedLinks data={{}} update={noop} seat={{}} />)) say("a student with nothing pinned sees an empty Pinned box");
       if (!renderToString(<RequestForm update={noop} name="Ada" />).includes("Requests and bugs")) say("the requests and bugs form does not render");
+      // Andrew's own card: the class ships one, the shared store overrides it,
+      // and an empty field falls back rather than blanking the name.
+      const merged = instructorOf({ instructor: { name: "Andrew Ishak", email: "aishak@scu.edu", bio: "From the config." } },
+        { instructor: { name: "Dr. Andrew Ishak", bio: "", schedulingLink: "https://calendly.com/x" } });
+      if (merged.name !== "Dr. Andrew Ishak" || merged.bio !== "From the config." || merged.email !== "aishak@scu.edu" || merged.schedulingLink !== "https://calendly.com/x") {
+        say("the instructor's card does not merge over the class config: " + JSON.stringify(merged)); }
+      const prof = renderToString(<InstructorProfile config={hcfg} shared={{}} updateShared={noop} />);
+      ["Your card", "Name", "Calendar link", "Choose a photo"].forEach(t => { if (!prof.includes(t)) say("the profile editor has no " + JSON.stringify(t)); });
     } catch (err) { say("the home cards threw: " + err.message); }
   }
 
@@ -2303,7 +2362,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       small: { [N]: [{ id: "s2", ts: now - 5e8, type: "submission", link: "https://x.test" }] },
       waiting: { [N]: [{ id: "s3", ts: now - 1e8, type: "submission", link: "https://x.test" }] },
     } };
-    ad = releasePatch(writeCard(placeCard(ad, "graded", N, "b", 10), "graded", N, { comment: "Tighten the ending." }, 11), "graded", N, now - 1e7);
+    ad = releasePatch(writeCard(placeCard(ad, "graded", N, "b", 10), "graded", N, { comment: "Tighten the ending." }, 11), "graded", now - 1e7);
     const order = inDueOrder(acfg.assignments).map(a => a.id).join(",");
     if (order !== "inclass,missed,graded,small,waiting,later") say("the assignment cards are not ongoing first, then by due date: " + order);
     const realNow = Date.now;
@@ -2315,7 +2374,14 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       if (st("waiting").state !== "turnedIn") say("work turned in reads " + st("waiting").state);
       if (st("missed").state !== "missed") say("a deadline gone by with nothing in reads " + st("missed").state);
       if (st("later").state !== "open") say("work not due yet reads " + st("later").state);
-      if (!st("small").small || st("waiting").small) say("half height is not exactly the small piece that is in");
+      // Every card is the same shape now: the whole name, the date and the
+      // weight, one marker in the corner, and a chevron on anything with
+      // nothing turned in.
+      const cardsHtml = renderToString(<AssignmentCards config={acfg} data={ad} name={N} go={noop} />).replace(/<!-- -->/g, "");
+      ["Leadership Guide", "Nov 20", "15%", "Missed piece", "20%"].forEach(t => { if (!cardsHtml.includes(t)) say("a card does not show " + JSON.stringify(t)); });
+      if (/text-overflow:ellipsis/.test(cardsHtml)) say("a card is still cutting a name short");
+      const chevrons = (cardsHtml.match(/›/g) || []).length;
+      if (chevrons !== 3) say("the chevron is not on exactly the three challenges with nothing turned in: " + chevrons);
       if (st("inclass").state !== "ongoing") say("the ongoing bucket reads " + st("inclass").state);
       const cards = renderToString(<AssignmentCards config={acfg} data={ad} name={N} go={noop} />).replace(/<!-- -->/g, "");
       // Graded is light blue, not black, and the grade is one ordinary line.
@@ -2325,7 +2391,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       if (/font-size:36px/.test(cards)) say("the grade is drawn big again");
       // Graded stays green; Incomplete is the yellow neutral face; F is a red X.
       const withLetter = (bucket) => {
-        const d2 = releasePatch(placeCard(ad, "graded", N, bucket, 20), "graded", N, now - 5e6);
+        const d2 = releasePatch(placeCard(ad, "graded", N, bucket, 20), "graded", now - 5e6);
         return renderToString(<AssignmentCards config={acfg} data={d2} name={N} go={noop} />);
       };
       if (!/aria-label="Graded"[^>]*background:var\(--state-ok\)|background:var\(--state-ok\)[^>]*aria-label="Graded"|aria-label="Graded" style="[^"]*background:var\(--state-ok\)/.test(cards)) say("a graded card's marker is not green");
@@ -2334,7 +2400,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       // Graded as Complete: Complete 100, Not quite 50, Incomplete and Not
       // submitted 0; Not quite is the yellow face and Incomplete is not.
       const byScale = { ...acfg, assignments: acfg.assignments.map(x => x.id === "graded" ? { ...x, scale: "complete" } : x) };
-      const scaled = (bucket) => releasePatch(placeCard({ ...ad, assignments: byScale.assignments }, "graded", N, bucket, 20), "graded", N, now - 5e6);
+      const scaled = (bucket) => releasePatch(placeCard({ ...ad, assignments: byScale.assignments }, "graded", N, bucket, 20), "graded", now - 5e6);
       const scoreOf = (bucket) => computeGrade(byScale, scaled(bucket), N).rows.find(r => r.id === "graded");
       [["complete", 100, "Complete"], ["notquite", 50, "Not quite"], ["incomplete-c", 0, "Incomplete"], ["notsubmitted", 0, "Not submitted"]].forEach(([b, score, word]) => {
         const r = scoreOf(b);
@@ -2350,14 +2416,53 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       const gv = renderToString(<GradeView config={gcfg} />);
       ['aria-label="Complete"', 'aria-label="Not quite"', 'aria-label="Not submitted"'].forEach(t => { if (!gv.includes(t)) say("Grade view has no column " + t); });
       if (gv.includes('aria-label="Exceptional"')) say("Grade view shows letter columns for a Complete challenge");
-      ["Tighten the ending.", ">New<", 'aria-label="Turned in"', 'aria-label="Missed"', 'aria-label="Graded"', "Details", "Ongoing"].forEach(t => { if (!cards.includes(t)) say("the assignment cards never show " + JSON.stringify(t)); });
+      ["Tighten the ending.", ">New<", 'aria-label="Turned in"', 'aria-label="Missed"', 'aria-label="Graded"', "Ongoing", "Small piece", "Waiting piece"].forEach(t => { if (!cards.includes(t)) say("the assignment cards never show " + JSON.stringify(t)); });
       if (!/data-current="1"[^>]*>[\s\S]{0,400}Leadership Guide/.test(cards)) say("the page does not scroll to the next thing due");
       if (/Instructions/.test(cards)) say("a card still says Instructions");
       const pg = renderToString(<AssignmentPage config={acfg} data={ad} update={noop} name={N} id="graded" go={noop} />).replace(/<!-- -->/g, "");
-      ["Graded piece", "All challenges", "Your grade: <strong", "Tighten the ending.", "room to sharpen", "Details", "Before", "After", "Submit another link"].forEach(t => { if (!pg.includes(t)) say("the assignment page never shows " + JSON.stringify(t)); });
+      ["Graded piece", "Your grade: <strong", "Tighten the ending.", "room to sharpen", "Details", "Before", "After", "Send", "A message, a link, or both"].forEach(t => { if (!pg.includes(t)) say("the assignment page never shows " + JSON.stringify(t)); });
       if (!pg.includes("days early") && !pg.includes("a day early")) say("the assignment page does not say how early the work went in");
+      // The conversation: newest first, the grade and the due date from
+      // Andrew, the student's own message and link from them, and one box to
+      // send with. Andrew, 2026-09-15: "it's like imessage."
+      const withDue = { ...ad, dueLog: { graded: [{ at: now - 8e8, due: "Sep 12", dueTime: "11:59 PM" }, { at: now - 2e8, due: "Sep 14", dueTime: "11:59 PM" }] } };
+      const chat = feedOf(acfg, withDue, acfg.assignments.find(x => x.id === "graded"), N);
+      const kinds = chat.map(m => m.kind + ":" + m.from).join(",");
+      if (kinds !== "grade:instructor,due:instructor,due:instructor,sent:student") say("the conversation is not newest first, or is missing a message: " + kinds);
+      if (!chat.find(m => m.kind === "due").text.startsWith("Due Mon Sep 14")) say("a moved due date does not read as its own message");
+      const pg2 = renderToString(<AssignmentPage config={acfg} data={withDue} update={noop} name={N} id="graded" go={noop} />).replace(/<!-- -->/g, "");
+      if (!/href="https:\/\/x.test"/.test(pg2)) say("a link a student sent is not a link in the conversation");
+      if ((pg2.match(/Sep 14/g) || []).length > 2) say("the page is repeating the date all over again");
+      if (pg2.includes("Submit a link") || pg2.includes("All challenges")) say("the page still has the old submit box or the second back link");
     } catch (err) { say("the assignment cards threw: " + err.message); }
     Date.now = realNow;
+    // What is waiting on Andrew: work turned in and not graded, and messages
+    // with no reply after them, counted per challenge.
+    {
+      const said = (aid, ts, from, text) => ({ ...ad, assignmentLog: { ...ad.assignmentLog, [aid]: { ...ad.assignmentLog[aid],
+        [N]: [...(ad.assignmentLog[aid]?.[N] || []), { id: "m" + ts, ts, type: "comment", from, text }] } } });
+      const asked = said("waiting", now - 1e6, "student", "Can I hand this in late?");
+      const rows = waitingOn(asked, acfg.assignments);
+      const row = rows.find(r => r.id === "waiting");
+      if (!row || row.toGrade !== 1 || row.messages !== 1) say("what is waiting on a challenge is counted wrong: " + JSON.stringify(rows));
+      if (rows.find(r => r.id === "graded")) say("a graded challenge with nothing new is still listed as waiting");
+      const answered = { ...asked, assignmentLog: { ...asked.assignmentLog, waiting: { [N]: [...asked.assignmentLog.waiting[N], { id: "r1", ts: now - 5e5, type: "comment", from: "instructor", text: "Yes, by Friday." }] } } };
+      if (waitingOn(answered, acfg.assignments).find(r => r.id === "waiting")?.messages) say("a message that was answered is still waiting");
+      const tile = renderToString(<AssignmentsSummary config={acfg} data={asked} role="instructor" />).replace(/<!-- -->/g, "");
+      ["Waiting piece", "1 to grade", "1 message"].forEach(t => { if (!tile.includes(t)) say("the instructor's Challenges card never shows " + JSON.stringify(t)); });
+      if (waitingCount(asked, acfg.assignments).messages !== 1) say("the messages waiting are counted wrong for the home page");
+      // Deleting a message takes it off every screen and every count, and
+      // leaves the words in the class record.
+      const gone = deletePatch(asked, "waiting", N, "m" + (now - 1e6), N);
+      if (waitingOn(gone, acfg.assignments).find(r => r.id === "waiting")?.messages) say("a deleted message is still waiting");
+      const kept = gone.assignmentLog.waiting[N].find(e => e.id === "m" + (now - 1e6));
+      if (!kept || kept.text !== "Can I hand this in late?" || kept.deleted?.by !== N) say("a deleted message did not stay in the record: " + JSON.stringify(kept));
+      if (feedOf(acfg, gone, acfg.assignments.find(x => x.id === "waiting"), N).some(m => m.text === "Can I hand this in late?")) say("a deleted message is still in the conversation");
+      // Deleting the work turned in puts the challenge back to not turned in.
+      const undone = deletePatch(ad, "waiting", N, "s3", N);
+      if (statusOf(acfg, undone, acfg.assignments.find(x => x.id === "waiting"), N, new Set(), now).state === "turnedIn") say("deleting the work still reads as turned in");
+    }
+
     // Apps: yours in More, a student's behind the top-right button.
     const mine = appsFor(acfg, "instructor").map(a => a.label).join(", ");
     if (!/Dashboard/.test(mine) || !/Repository/.test(mine) || !/Games/.test(mine) || !/Around the Horn/.test(mine)) say("your apps are missing one: " + mine);
