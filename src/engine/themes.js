@@ -44,7 +44,8 @@ export const THEME = {
     card:    { border: "1px solid #f0edea", shadow: "none", radius: "16px" },
     font:    { body: "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif",
                display: "'Outfit', -apple-system, sans-serif",
-               label: "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace" },
+               label: "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
+               section: "'Nunito', 'Avenir Next', -apple-system, sans-serif" },
     weight:  { display: "600", shadow: "none" },
     grounds: ["#ffffff", "#fafaf9", "#f6f4f1"],
 
@@ -78,7 +79,8 @@ export const THEME = {
     card:    { border: "3px solid #000000", shadow: "4px 4px 0 #000000", radius: "16px" },
     font:    { body: "'Nunito', 'Avenir Next', -apple-system, sans-serif",
                display: "'Nunito', 'Avenir Next', sans-serif",
-               label: "'Nunito', sans-serif" },
+               label: "'Nunito', sans-serif",
+               section: "'Nunito', sans-serif" },
     weight:  { display: "900", shadow: "none" },
     grounds: ["#ffffff", "#FFFC00"],
   },
@@ -120,6 +122,7 @@ export const varsOf = (t) => ({
   "--room-stage": t.room.stage, "--room-ink": t.room.ink, "--room-dim": t.room.dim, "--room-line": t.room.line,
   "--card-border": t.card.border, "--card-shadow": t.card.shadow, "--card-radius": t.card.radius,
   "--font-body": t.font.body, "--font-display": t.font.display, "--font-label": t.font.label,
+  "--font-section": t.font.section || t.font.label,
   "--display-weight": t.weight.display, "--display-shadow": t.weight.shadow,
 });
 
@@ -180,7 +183,7 @@ export const MODE_DESCS = { auto: "Follow this device", day: "Always light", nig
 
 // Which fonts a theme needs, so a surface loads those and no others.
 export const THEME_FONTS = {
-  clean: "family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600",
+  clean: "family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Nunito:wght@700;800;900",
   business: "family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600",
   snapchat: "family=Nunito:wght@400;600;700;800;900",
   crashing: "family=Bangers&family=Lilita+One&family=Shantell+Sans:ital,wght@0,300..800;1,300..800&family=Rubik+Mono+One&family=Press+Start+2P&family=Fredoka:wght@400;500;600;700",

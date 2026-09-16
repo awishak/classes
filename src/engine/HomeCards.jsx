@@ -32,7 +32,7 @@ const WARN = TOKENS.STATE.warn;
 const TAP = TOKENS.TAP;
 
 const DISPLAY = { fontFamily: TOKENS.FONT.display, fontWeight: TOKENS.FONT.displayWeight, textShadow: TOKENS.FONT.displayShadow };
-const small = { fontFamily: TOKENS.FONT.label, fontSize: 13, fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
+const small = { fontFamily: TOKENS.FONT.section, fontSize: 14, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" };
 // Dates, times, rooms and counts are set in the mono face, which is what the
 // design system keeps that face for, and what makes a page look typeset.
 const MONO = { fontFamily: TOKENS.FONT.label, fontVariantNumeric: "tabular-nums" };
@@ -51,6 +51,7 @@ export const tileTitle = (theme) => theme === "clean"
 export const READINGS_SHOWN = 3;
 
 const WEEKDAY_FULL =["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTH_FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const dateOf = (s) => { const d = s ? new Date(s + ", 2026") : null; return d && !isNaN(d) ? d : null; };
 const meetsOf = (config) => (Array.isArray(config.meets) ? config.meets : config.meets ? [config.meets] : []);
 
@@ -121,6 +122,7 @@ export function nextClassFacts(config, data, blockOf, section, now = Date.now())
   const games = onDay.filter(it => it.type === "activity" && it.title !== "Headlines").map(it => it.title);
   return {
     date: next.date, weekday, title,
+    longDate: MONTH_FULL[next.d.getMonth()] + " " + next.d.getDate(),
     time: sittingsFor(config, section).map(timeText).filter(Boolean).join(" and "),
     location: locationOf(config),
     noMeeting: !!plan.noMeeting,
@@ -160,18 +162,28 @@ function NoteEditor({ date, value, update }) {
 // apart from the white cards without the class colour and without an outline,
 // and after dark the same mix lands a step lighter than the cards. A day with
 // no meeting in the room carries an orange badge.
-export function NextClassHero({ config, data, blockOf, section, onOpen, seat, instructor, update }) {
+export function NextClassHero({ config, data, blockOf, section, onOpen, seat, instructor, update, wide }) {
   const facts = nextClassFacts(config, data, blockOf, section);
   const [allReadings, setAllReadings] = useState(false);
   // White, like every other card. The tinted versions did not work, and the
   // Drew's Pick drawing has a white ground of its own that showed as a box on
   // anything else.
   const frame = {
-    ...seat, padding: 20, fontFamily: F, textAlign: "left", width: "100%",
+    ...seat, padding: wide ? 28 : 20, fontFamily: F, textAlign: "left", width: "100%",
     // White, with the class's own colour around it.
     background: "var(--surface-card)", border: "2px solid var(--ca-accent)",
     display: "flex", flexDirection: "column", gap: 16,
   };
+  // On a laptop the card runs the width of the page, so the day sits in one
+  // column and what to do before it in the other. Narrower than that, or with
+  // nothing to do before class, it is one column like every other card.
+  const twoUp = !!wide && !!facts && !!(facts.readings.length || facts.games.length);
+  const columns = twoUp
+    ? { display: "grid", gridTemplateColumns: "minmax(0, 5fr) minmax(0, 6fr)", gap: 32, alignItems: "start" }
+    : { display: "flex", flexDirection: "column", gap: 16 };
+  // The rule above a section separates it from the one it sits under. The
+  // first section of the second column sits under nothing.
+  const sideRule = twoUp ? { borderTop: "none", paddingTop: 0 } : null;
   if (!facts) {
     return (
       <section aria-label="Next class" style={frame}>
@@ -180,8 +192,10 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat, in
       </section>
     );
   }
-  return (
-    <section aria-label="Next class" style={frame}>
+  // The day itself: what it is about, when it is, and where. The left column
+  // on a laptop, the top of the card on a phone.
+  const theDay = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minHeight: 28 }}>
           <span style={{ ...small, color: TEXT_SECONDARY }}>Next class</span>
@@ -195,10 +209,17 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat, in
             ›
           </button>
         </span>
-        <span style={{ ...DISPLAY, fontSize: 32, lineHeight: 1.05, letterSpacing: "-0.03em", color: TEXT_PRIMARY, marginTop: 2 }}>{facts.weekday}</span>
-        <span style={{ ...MONO, fontSize: 15, fontWeight: 500, lineHeight: 1.4, color: TEXT_SECONDARY, marginTop: 6 }}>
-          {[facts.date, !facts.noMeeting && facts.time, !facts.noMeeting && facts.location].filter(Boolean).join(" · ")}
+        {facts.title
+          ? <span style={{ ...DISPLAY, fontSize: wide ? 30 : 26, lineHeight: 1.15, letterSpacing: "-0.02em", color: TEXT_PRIMARY, marginTop: 2, textWrap: "balance" }}>{facts.title}</span>
+          : null}
+        <span style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.3, color: TEXT_PRIMARY, marginTop: facts.title ? 10 : 2 }}>
+          {facts.weekday}, {facts.longDate}
         </span>
+        {!facts.noMeeting && (facts.time || facts.location) ? (
+          <span style={{ ...MONO, fontSize: 15, fontWeight: 500, lineHeight: 1.4, color: TEXT_SECONDARY, marginTop: 4 }}>
+            {[facts.time, facts.location].filter(Boolean).join(" · ")}
+          </span>
+        ) : null}
         {/* Tight under the room line: the link keeps its 44px to tap in, and
             the negative margin takes the extra height back out of the gap. */}
         {!facts.noMeeting && facts.directions ? (
@@ -207,7 +228,6 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat, in
             Directions
           </a>
         ) : null}
-        {facts.title ? <span style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.25, marginTop: 12, color: TEXT_PRIMARY, textWrap: "balance" }}>{facts.title}</span> : null}
       </div>
 
       {instructor && update ? (
@@ -221,9 +241,15 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat, in
           </div>
         </div>
       ) : null}
+    </div>
+  );
 
+  // What to do about it: the running order, and the game. The right column on
+  // a laptop, the bottom of the card on a phone.
+  const beforeClass = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {facts.readings.length ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, borderTop: "1px solid " + BORDER, paddingTop: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, borderTop: "1px solid " + BORDER, paddingTop: 12, ...sideRule }}>
           <span style={small}>Readings</span>
           {(allReadings ? facts.readings : facts.readings.slice(0, READINGS_SHOWN)).map((r, i) => {
             const inner = (
@@ -254,11 +280,21 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat, in
       ) : null}
 
       {facts.games.length ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, borderTop: "1px solid " + BORDER, paddingTop: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, borderTop: "1px solid " + BORDER, paddingTop: 12,
+          ...(facts.readings.length ? null : sideRule) }}>
           <span style={small}>Game</span>
           {facts.games.map(g => <span key={g} style={{ fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY }}>{g}</span>)}
         </div>
       ) : null}
+    </div>
+  );
+
+  return (
+    <section aria-label="Next class" style={frame}>
+      <div style={columns}>
+        {theDay}
+        {beforeClass}
+      </div>
     </section>
   );
 }

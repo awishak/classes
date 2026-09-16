@@ -888,11 +888,13 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const Grid = data === null
     ? <>{[0, 1, 2, 3].map(i => <SkeletonTile key={i} />)}</>
     : <>
-        {/* One column wide, like every other card. Spanning both columns on a
-            laptop made the card far wider than anything it holds. */}
-        <div key="hero">
+        {/* The width of the page on a laptop, where the card reads in two
+            columns: the day on the left, what to do before it on the right.
+            One column of the grid held the day in a slot too narrow for it,
+            and the full width with everything stacked was emptier still. */}
+        <div key="hero" style={{ gridColumn: "1 / -1" }}>
           <NextClassHero config={config} data={data} blockOf={ctx.blockOf} section={sectionOf}
-            onOpen={() => go("schedule")} seat={cardStyle(theme, 0)}
+            onOpen={() => go("schedule")} seat={cardStyle(theme, 0)} wide={isDesktop}
             instructor={view === "instructor"} update={write} />
         </div>
         {(data?.pins || []).length || view === "instructor" ? (

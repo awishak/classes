@@ -47,6 +47,19 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep15-topic-first", date: "Tuesday, September 15", title: "The topic leads, and the headings take Nunito",
+    blurb: "Andrew on the call sheet, from a laptop: \"it kinda sucks on laptop now. bc its narrow ... insteadf of Monday being the big term on the hero, how about the class topic?\"",
+    groups: [
+      { name: "Next class", items: [
+        ["The day's question is the headline", "The topic first, then Wednesday, September 23 spelled out, then the sitting and the room in the mono. The weekday had the big type and the question a student is walking into was below it."],
+        ["Two columns on a laptop", "The card runs the width of the page, with the day on the left and the readings and the game on the right. One column of the grid was a slot too narrow for it; the full width with everything stacked down one side was emptier still. A day with no readings and no game stays one column."],
+      ] },
+      { name: "The type", items: [
+        ["A face for a heading", "A section heading inside a card takes Nunito at 800, which is the face the Snapchat theme uses for its headings. It is a fourth face in the system rather than a hard-coded font, so each theme says which face a heading takes: Clean borrows Nunito, Snapchat already had it, Crashing Out keeps its own."],
+      ] },
+    ],
+  },
+  {
     id: "sep15-call-sheet", date: "Tuesday, September 15", title: "A message can be deleted, and COMM 118 goes blue",
     blurb: "Andrew: \"i don't get how i am supposed to update my profile, or how i can remove a message i sent to a student. now this is crucial. i and students have to be able to delete messages.\"",
     groups: [

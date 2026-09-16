@@ -100,6 +100,7 @@ export const FONT = {
   body: "var(--font-body)",
   display: "var(--font-display)",
   label: "var(--font-label)",
+  section: "var(--font-section)",   // a heading inside a card
   displayWeight: "var(--display-weight)",
   displayShadow: "var(--display-shadow)",
 };
