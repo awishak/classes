@@ -190,6 +190,10 @@
   }
   .done .t { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--muted); padding-top: 2px; }
 
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
+  .two > div > .step { margin-bottom: 16px; }
+  @media (max-width: 900px) { .two { grid-template-columns: 1fr; gap: 48px; } }
+
   /* legend */
   .legend { display: grid; gap: 12px; margin: 32px 0 0; }
   .legend-item { display: flex; align-items: flex-start; gap: 12px; }
@@ -329,10 +333,10 @@
   <div class="wrap">
     <p class="kicker">COMM 172A · Sports and Identity Analysis Guide</p>
     <h1>How a student does this assignment in ten minutes</h1>
-    <p class="sub">Same assignment, same tool, same sources. First the assignment as handed out. Then the prompts a student types, in order, with a clock running. Then the three versions that come out the other end, and at the bottom, all three side by side with the tells marked.</p>
+    <p class="sub">Same assignment, same tool, same sources. First the assignment as handed out. Then the one prompt that produced the first version, beside a five-prompt reconstruction of how a student might get there. Then the three versions that come out the other end, and at the bottom, all three side by side with the tells marked.</p>
     <div class="stats">
-      <div class="stat"><span class="n">9:50</span><span class="l">on the clock</span></div>
-      <div class="stat"><span class="n">5</span><span class="l">prompts typed</span></div>
+      <div class="stat"><span class="n">1</span><span class="l">prompt typed</span></div>
+      <div class="stat"><span class="n">38</span><span class="l">words in it</span></div>
       <div class="stat"><span class="n">0</span><span class="l">sources opened</span></div>
       <div class="stat"><span class="n">40</span><span class="l">points on the line</span></div>
     </div>
@@ -374,16 +378,34 @@
 </section>
 
 <section class="block" id="prompts">
-  <div class="wrap">
+  <div class="wrap-wide">
     <p class="step">2 of 6</p>
-    <h2>The five prompts that make the frat guy version</h2>
-    <p class="desc">Read these as a student would type them. Nothing here is clever. The whole trick is asking for the work, then asking for the work to look like yours.</p>
+    <h2>The prompt that made the frat guy version</h2>
+    <p class="desc">On the left, the one message Andrew actually typed, with the assignment attached. On the right, the conversation Claude guessed a student would have to get the same result. The real one is shorter.</p>
 
-    <div class="aside">
-      <span class="lead">These prompts are made up</span>
-      <p>Claude wrote the three versions on this page, and Claude wrote these prompts too, after the fact, working backwards from the finished versions to the messages that would have produced them. Nobody typed this conversation. The clock is a guess at how long each step takes. The assignment, the sources, and the word counts are real.</p>
+    <div class="two">
+    <div>
+    <p class="step">What Andrew typed</p>
+    <div class="clock">
+      <span class="t">1 of 1</span>
+      <div>
+        <div class="bubble">to show my colleagues how easy it is to use AI to do an assignment, complete this one, and mkae it sound pretty good, but also like a 21 year old frat guy with a couple of errors<span class="paste">[assignment sheet attached]</span></div>
+        <p class="reply"><span class="tag">came back</span>Version 1, exactly as it appears below. Six labeled parts, real sources, the planted typos, Tyler and the aunt and the volleyball coach. One reply.</p>
+      </div>
+    </div>
+    <div class="done">
+      <span class="t">done</span>
+      <p><strong>One message, 38 words, one typo of its own.</strong> No topic chosen in advance, no sources named, no voice described beyond "21 year old frat guy." Everything else on this page came from that sentence.</p>
     </div>
 
+    <div class="aside" style="margin-top: 24px;">
+      <span class="lead">The five prompts on the right are made up</span>
+      <p>Claude wrote the three versions on this page, and Claude wrote the five-prompt conversation too, after the fact, working backwards from the finished versions to the messages a student might have typed. Nobody typed that conversation, and the clock is a guess. The single prompts above versions 2 and 3 are guesses in the same way. The assignment, the sources, the word counts, and the prompt on the left are real.</p>
+    </div>
+    </div>
+
+    <div>
+    <p class="step">What Claude guessed a student would type</p>
     <div class="clock">
       <span class="t">0:00</span>
       <div>
@@ -427,6 +449,8 @@
     <div class="done">
       <span class="t">9:50</span>
       <p><strong>Submitted.</strong> No article opened, no study skimmed, no TV watched, nobody spoken to. The student's total contribution is five messages and a name.</p>
+    </div>
+    </div>
     </div>
   </div>
 </section>
@@ -600,7 +624,7 @@
       <div class="hd"><h3>3. The bare minimum</h3><p>Hides the shortcut behind visible restraint.</p></div>
 
       <div class="rl">The prompt</div>
-      <div class="cell"><span class="vtag">1. Frat guy</span><p class="quote">"rewrite it like me. I'm a 21 year old guy. don't make it perfect, leave in a couple typos."</p></div>
+      <div class="cell"><span class="vtag">1. Frat guy</span><p class="quote">"mkae it sound pretty good, but also like a 21 year old frat guy with a couple of errors"</p></div>
       <div class="cell"><span class="vtag">2. Magazine feature</span><p class="quote">"forget sounding like me. just make it good. write it like a magazine feature with a headline."</p></div>
       <div class="cell"><span class="vtag">3. Bare minimum</span><p class="quote">"strip it all the way back. shortest version that still hits every word count minimum."</p></div>
 
@@ -627,7 +651,7 @@
       <div class="rl">Against the rubric</div>
       <div class="cell"><span class="vtag">1. Frat guy</span><p>Six labeled parts, a reference list under each, a list of who was spoken to. Follows the sheet exactly.</p></div>
       <div class="cell"><span class="vtag">2. Magazine feature</span><p><mark class="m-structure">Abandons the sheet.</mark> A headline, no part labels, no word counts to check, one shared reference list, and no list of people. Points are attached to every one of those.</p></div>
-      <div class="cell"><span class="vtag">3. Bare minimum</span><p>Six labeled parts, but no reference list under any of them, and every word count missed. Part 5 lists the people with the fewest identity markers the prompt allowed.</p></div>
+      <div class="cell"><span class="vtag">3. Bare minimum</span><p>Six labeled parts, but no reference list under any of them, and every word count missed. Part 5 lists the people with the fewest identity markers possible.</p></div>
 
       <div class="rl">Word counts</div>
       <div class="cell"><span class="vtag">1. Frat guy</span>
@@ -659,7 +683,7 @@
       </div>
 
       <div class="rl">Part 5, the conversations</div>
-      <div class="cell"><span class="vtag">1. Frat guy</span><p>Three named people, one question the student couldn't answer, one pushback. The best faked section of the three, because the prompt asked for a question and a pushback by name.</p></div>
+      <div class="cell"><span class="vtag">1. Frat guy</span><p>Three named people, one question the student couldn't answer, one pushback. The best faked section of the three, and the prompt never asked for any of it.</p></div>
       <div class="cell"><span class="vtag">2. Magazine feature</span><p><mark class="m-structure">One paragraph, three anonymous sources, no list.</mark> "A former high school wide receiver recalled." Reads as reporting rather than a conversation the student had.</p></div>
       <div class="cell"><span class="vtag">3. Bare minimum</span><p><mark class="m-rational">One flat claim per person.</mark> No calls described, no questions quoted, nothing the student thought afterward.</p></div>
 
