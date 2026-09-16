@@ -18,6 +18,7 @@ import GradeView from "./engine/GradeView.jsx";
 import InstructorBar from "./engine/InstructorBar.jsx";
 import PlanPage from "./PlanPage.jsx";
 import ProgressPage from "./ProgressPage.jsx";
+import FeaturesPage from "./FeaturesPage.jsx";
 import { ENGINE, currentClasses, archivedClasses } from "./config/registry.js";
 import InstructorLinks from "./InstructorLinks.jsx";
 import InstructorGate from "./InstructorGate.jsx";
@@ -189,6 +190,12 @@ export default function App() {
 
   if (path === "/plan" || path === "/plan/") {
     return <InstructorBar><PlanPage /></InstructorBar>;
+  }
+
+  // The site, shown: screenshots of every surface with placeholder students.
+  // Public, because the page exists to be shown to people who are not signed in.
+  if (path === "/features" || path === "/features/") {
+    return <InstructorBar><FeaturesPage /></InstructorBar>;
   }
 
   // The long view of September 14 and 15: what was built, with its links.

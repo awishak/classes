@@ -47,6 +47,21 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep16-features", date: "Wednesday, September 16", title: "The site, shown: a features page",
+    blurb: "Andrew: \"i'm presenting my learning management software today ... light on words, more on screenshots with fake students in there. can you also show some of the students from spring 2026 as well?\"",
+    groups: [
+      { name: "The page", items: [
+        ["/features, public", "Sixteen screenshots of the real app in three sections: for students, for teachers, Spring 2026. Six phone screens, the three themes side by side, the site on a laptop, then the dashboard, the room screen, the grade view, the repository and Around the Horn, then the spring roster and leaderboard. One line under each picture."],
+        ["The pictures are the app", "Taken by a headless browser against the local dev server with the store served from a fixture: the live COMM 118 fall records, the ten placeholder students the template class ships, five answers on the \"Why are sports worth caring about?\" board, three questions on the Ask page, a board cast on the room screen and Sit-Down 1 sorted into columns. Nothing was written to the live store."],
+        ["Spring 2026 is the old hub", "The legacy COMM 118 hub signed in as the instructor, with that term's real roster and leaderboard."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "The spring pictures carry real students' names, photos and hometowns on a public page.",
+      "The fixture and the screenshot script live in the session scratchpad rather than the repo, so a new set of pictures means writing them again.",
+    ] },
+  },
+  {
     id: "sep15-map", date: "Tuesday, September 15", title: "The map says what kind of day it is",
     blurb: "Andrew, on a screenshot of the planning map: \"if something is due but not on a class day, it doesn't show in my planning map. that's a problem.\"",
     groups: [
