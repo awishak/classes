@@ -6,6 +6,7 @@
 // scrolls.
 
 import { SAMPLE, FORM_URL, QUESTIONS } from "./retreat-answers.js";
+import QRCode from "./engine/QRCode.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const INK = "#1c1917";
@@ -70,16 +71,21 @@ export default function RetreatPage() {
     <div style={{ height: "100vh", overflow: "hidden", background: PAGE, fontFamily: F, color: INK, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
       <div style={{ width: u(100), height: u(56.25), boxSizing: "border-box", padding: `${u(2)} ${u(3)}`, display: "flex", flexDirection: "column", gap: u(1.6) }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: u(1.2), fontWeight: 600, color: INK2 }}>Department Retreat - Questions about AI Usage</div>
-          {SAMPLE ? (
-            <div style={{ fontSize: u(1.1), fontWeight: 600, color: WARN, background: "#fdf5ea", borderRadius: 999, padding: `${u(0.3)} ${u(1)}` }}>Sample answers</div>
-          ) : null}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: u(3) }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: u(1.2) }}>
+            <div style={{ fontSize: u(1.2), fontWeight: 600, color: INK2 }}>Department Retreat - Questions about AI Usage</div>
+            <a href={FORM_URL} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: u(2.8), fontWeight: 600, color: TONES[0], textDecoration: "underline", textUnderlineOffset: u(0.3), letterSpacing: "-0.01em" }}>
+              Please answer the two questions at this link.
+            </a>
+            {SAMPLE ? (
+              <div style={{ alignSelf: "flex-start", fontSize: u(1.1), fontWeight: 600, color: WARN, background: "#fdf5ea", borderRadius: 999, padding: `${u(0.3)} ${u(1)}` }}>Sample answers</div>
+            ) : null}
+          </div>
+          <a href={FORM_URL} target="_blank" rel="noopener noreferrer" style={{ width: u(14), flexShrink: 0 }}>
+            <QRCode value={FORM_URL} size="100%" dark={INK} light={CARD} quiet={2} />
+          </a>
         </div>
-        <a href={FORM_URL} target="_blank" rel="noopener noreferrer"
-          style={{ fontSize: u(2.4), fontWeight: 600, color: TONES[0], textDecoration: "underline", textUnderlineOffset: u(0.3), letterSpacing: "-0.01em" }}>
-          Please answer the two questions at this link.
-        </a>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: u(2), flex: 1, minHeight: 0 }}>
           {questions.map((q, i) => <Panel key={q.id} q={q} tone={TONES[i % TONES.length]} />)}
         </div>
