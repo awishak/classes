@@ -163,6 +163,9 @@
   }
   .sheet li .pt { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--muted); padding-top: 4px; }
   .sheet li strong { display: block; font-weight: 600; }
+  .sheet ol.plain li { display: block; padding: 8px 0; border-top: 0; }
+  .sheet ol.plain li strong { display: inline; }
+  .desc a { text-decoration: underline; text-underline-offset: 3px; }
 
   /* transcript */
   .clock { display: grid; grid-template-columns: 64px 1fr; gap: 16px; margin: 0 0 24px; }
@@ -348,9 +351,9 @@
     <ol>
       <li><a href="#assignment"><span class="num">1</span>The assignment</a></li>
       <li><a href="#prompts"><span class="num">2</span>The prompts</a></li>
-      <li><a href="#v1"><span class="num">3</span>The frat guy</a></li>
-      <li><a href="#v2"><span class="num">4</span>The magazine feature</a></li>
-      <li><a href="#v3"><span class="num">5</span>The bare minimum</a></li>
+      <li><a href="#v1"><span class="num">3</span>Gabriel</a></li>
+      <li><a href="#v2"><span class="num">4</span>Emily</a></li>
+      <li><a href="#v3"><span class="num">5</span>Seb</a></li>
       <li><a href="#compare"><span class="num">6</span>Side by side</a></li>
     </ol>
   </div>
@@ -360,18 +363,17 @@
   <div class="wrap">
     <p class="step">1 of 6</p>
     <h2>The assignment, as handed out</h2>
-    <p class="desc">Forty points, six parts, every part with its own word count and its own reference list. That structure matters later, because the points are attached to the structure.</p>
+    <p class="desc">Forty points, six parts, every part with its own word count and its own reference list. That structure matters later, because the points are attached to the structure. Andrew's wording, unchanged. <a href="/AIexample/Sports-and-Identity-Analysis-Guide.docx">Download the guide as a Word doc.</a></p>
     <div class="sheet">
-      <h3>Sports and Identity Analysis Guide</h3>
-      <p class="pts">COMM 172A · 40 pts</p>
-      <p><strong>Purpose:</strong> research and analyze a topic that sits at the intersection of sports and identity. The intersection has to be specific enough to make the reader think, "oh, that's interesting," and something broad like "gender in sports" does not clear that bar. Research subject must be approved before starting.</p>
-      <ol>
-        <li><span class="pt">2 pts</span><span><strong>Research intersection</strong> State it clearly, and explain why it's interesting.</span></li>
-        <li><span class="pt">10 pts</span><span><strong>Popular press research</strong> 200 to 300 word summary of at least three high-quality popular press articles, long-form analysis rather than quick news pieces, plus a reference list.</span></li>
-        <li><span class="pt">6 pts</span><span><strong>Visual media</strong> 150 to 200 word summary of at least 30 minutes of TV or similar programming from a reputable source, plus a citation.</span></li>
-        <li><span class="pt">12 pts</span><span><strong>Academic research</strong> 200 to 300 word summary of at least three academic articles, plus a reference list.</span></li>
-        <li><span class="pt">5 pts</span><span><strong>Personal conversations</strong> 200 to 300 word summary of conversations with at least three thoughtful people you shared the research with, including their analysis, questions, and future directions, plus a list of who you spoke with and relevant identity markers.</span></li>
-        <li><span class="pt">5 pts</span><span><strong>Summary</strong> 150 to 250 word summary of what the topic is, why it matters, what's interesting, and its effects.</span></li>
+      <h3>Sports and Identity Analysis Guide, COMM 172A, 40 pts</h3>
+      <p><strong>Purpose:</strong> research and analyze a topic that sits at the intersection of sports and identity. The intersection has to be specific enough to make the reader think, "oh, that's interesting," not something broad like "gender in sports." Research subject must be approved before starting.</p>
+      <ol class="plain">
+        <li>1. <strong>Research intersection (2 pts):</strong> state it clearly, and explain why it's interesting.</li>
+        <li>2. <strong>Popular press research (10 pts):</strong> 200 to 300 word summary of at least three high-quality popular press articles, long-form analysis rather than quick news pieces, plus a reference list.</li>
+        <li>3. <strong>Visual media (6 pts):</strong> 150 to 200 word summary of at least 30 minutes of TV or similar programming from a reputable source, plus a citation.</li>
+        <li>4. <strong>Academic research (12 pts):</strong> 200 to 300 word summary of at least three academic articles, plus a reference list.</li>
+        <li>5. <strong>Personal conversations (5 pts):</strong> 200 to 300 word summary of conversations with at least three thoughtful people you shared the research with, including their analysis, questions, and future directions, plus a list of who you spoke with and relevant identity markers.</li>
+        <li>6. <strong>Summary (5 pts):</strong> 150 to 250 word summary of what the topic is, why it matters, what's interesting, and its effects.</li>
       </ol>
     </div>
   </div>
@@ -380,7 +382,7 @@
 <section class="block" id="prompts">
   <div class="wrap-wide">
     <p class="step">2 of 6</p>
-    <h2>The prompt that made the frat guy version</h2>
+    <h2>The prompt that made Gabriel's version</h2>
     <p class="desc">On the left, the one message Andrew actually typed, with the assignment attached. On the right, the conversation Claude guessed a student would have to get the same result. The real one is shorter.</p>
 
     <div class="two">
@@ -458,7 +460,7 @@
 <section class="block" id="v1">
   <div class="wrap">
     <p class="step">3 of 6</p>
-    <h2>Version 1: the frat guy</h2>
+    <h2>Version 1: Gabriel</h2>
     <p class="desc">Casual voice, a couple of planted errors, sounds like one sitting the night before. This is the version most people picture when they imagine a student using AI badly. Highlights mark the tells; the key is below.</p>
 
     <div class="legend" style="margin: 0 0 32px;">
@@ -519,7 +521,7 @@
 <section class="block" id="v2">
   <div class="wrap">
     <p class="step">4 of 6</p>
-    <h2>Version 2: the magazine feature</h2>
+    <h2>Version 2: Emily</h2>
     <p class="desc">This is what happens when a student asks for the work to be good instead of asking for the work to sound like them. One more prompt on top of the same conversation.</p>
 
     <div class="one-prompt">
@@ -564,7 +566,7 @@
 <section class="block" id="v3">
   <div class="wrap">
     <p class="step">5 of 6</p>
-    <h2>Version 3: the bare minimum</h2>
+    <h2>Version 3: Seb</h2>
     <p class="desc">The hardest to catch on a skim and the most worth talking about. Six labeled parts, every source cited, and the thinness is the strategy. Then you count the words.</p>
 
     <div class="one-prompt">
@@ -619,42 +621,42 @@
 
     <div class="compare">
       <div class="rl"></div>
-      <div class="hd"><h3>1. The frat guy</h3><p>Hides the shortcut behind personality.</p></div>
-      <div class="hd"><h3>2. The magazine feature</h3><p>Hides the shortcut behind quality.</p></div>
-      <div class="hd"><h3>3. The bare minimum</h3><p>Hides the shortcut behind visible restraint.</p></div>
+      <div class="hd"><h3>1. Gabriel</h3><p>Hides the shortcut behind personality.</p></div>
+      <div class="hd"><h3>2. Emily</h3><p>Hides the shortcut behind quality.</p></div>
+      <div class="hd"><h3>3. Seb</h3><p>Hides the shortcut behind visible restraint.</p></div>
 
       <div class="rl">The prompt</div>
-      <div class="cell"><span class="vtag">1. Frat guy</span><p class="quote">"mkae it sound pretty good, but also like a 21 year old frat guy with a couple of errors"</p></div>
-      <div class="cell"><span class="vtag">2. Magazine feature</span><p class="quote">"forget sounding like me. just make it good. write it like a magazine feature with a headline."</p></div>
-      <div class="cell"><span class="vtag">3. Bare minimum</span><p class="quote">"strip it all the way back. shortest version that still hits every word count minimum."</p></div>
+      <div class="cell"><span class="vtag">1. Gabriel</span><p class="quote">"mkae it sound pretty good, but also like a 21 year old frat guy with a couple of errors"</p></div>
+      <div class="cell"><span class="vtag">2. Emily</span><p class="quote">"forget sounding like me. just make it good. write it like a magazine feature with a headline."</p></div>
+      <div class="cell"><span class="vtag">3. Seb</span><p class="quote">"strip it all the way back. shortest version that still hits every word count minimum."</p></div>
 
       <div class="rl">The opening</div>
-      <div class="cell"><span class="vtag">1. Frat guy</span><p class="quote b"><mark class="m-voice">My topic is how football broadcasters describe Black and white players using totally different language</mark>, even when they're doing the exact same thing on the field. This is interesting to me because I've watched football my whole life and never really clocked it until I started looking, and now I literally can't unhear it.</p></div>
-      <div class="cell"><span class="vtag">2. Magazine feature</span><p class="quote b"><mark class="m-structure">The Quiet Bias in the Booth: How Broadcasters Talk Themselves Into Racial Stereotypes.</mark> Turn on any football broadcast for long enough and a pattern emerges that most viewers never consciously register.</p></div>
-      <div class="cell"><span class="vtag">3. Bare minimum</span><p class="quote b">My topic is how sports broadcasters describe Black and white football players differently, usually calling white players smart and Black players athletic. <mark class="m-rational">This is interesting because it happens on every broadcast and most people don't notice it.</mark></p></div>
+      <div class="cell"><span class="vtag">1. Gabriel</span><p class="quote b"><mark class="m-voice">My topic is how football broadcasters describe Black and white players using totally different language</mark>, even when they're doing the exact same thing on the field. This is interesting to me because I've watched football my whole life and never really clocked it until I started looking, and now I literally can't unhear it.</p></div>
+      <div class="cell"><span class="vtag">2. Emily</span><p class="quote b"><mark class="m-structure">The Quiet Bias in the Booth: How Broadcasters Talk Themselves Into Racial Stereotypes.</mark> Turn on any football broadcast for long enough and a pattern emerges that most viewers never consciously register.</p></div>
+      <div class="cell"><span class="vtag">3. Seb</span><p class="quote b">My topic is how sports broadcasters describe Black and white football players differently, usually calling white players smart and Black players athletic. <mark class="m-rational">This is interesting because it happens on every broadcast and most people don't notice it.</mark></p></div>
 
       <div class="rl">How it tries to beat a detector</div>
-      <div class="cell"><span class="vtag">1. Frat guy</span><p class="bet">Raise the unpredictability score.</p><p>Slang, "literally," "honestly," and planted misspellings push each next word away from the obvious one. Run-on sentences and short asides vary the rhythm.</p></div>
-      <div class="cell"><span class="vtag">2. Magazine feature</span><p class="bet">Make no attempt at all.</p><p>Bets that the grader reads quality as effort and never runs a detector. Every sentence is the predictable, even, well-formed kind a detector scores highest.</p></div>
-      <div class="cell"><span class="vtag">3. Bare minimum</span><p class="bet">Look too thin to be a machine.</p><p>Bets that short flat sentences read as a tired human, and that work this plain looks like work the student had to type themselves. Flat, predictable prose is also the most machine-like text of the three, so the dodge backfires on the tool it's dodging.</p></div>
+      <div class="cell"><span class="vtag">1. Gabriel</span><p class="bet">Raise the unpredictability score.</p><p>Slang, "literally," "honestly," and planted misspellings push each next word away from the obvious one. Run-on sentences and short asides vary the rhythm.</p></div>
+      <div class="cell"><span class="vtag">2. Emily</span><p class="bet">Make no attempt at all.</p><p>Bets that the grader reads quality as effort and never runs a detector. Every sentence is the predictable, even, well-formed kind a detector scores highest.</p></div>
+      <div class="cell"><span class="vtag">3. Seb</span><p class="bet">Look too thin to be a machine.</p><p>Bets that short flat sentences read as a tired human, and that work this plain looks like work the student had to type themselves. Flat, predictable prose is also the most machine-like text of the three, so the dodge backfires on the tool it's dodging.</p></div>
 
       <div class="rl">Voice</div>
-      <div class="cell"><span class="vtag">1. Frat guy</span><p><mark class="m-voice">First person, casual, one specific person.</mark> "I literally can't unhear it." Hedges once, in Part 5, where the roommate asks a question the student can't answer.</p></div>
-      <div class="cell"><span class="vtag">2. Magazine feature</span><p>Third person, authoritative, nobody in particular. No hedging anywhere. Every paragraph resolves cleanly.</p></div>
-      <div class="cell"><span class="vtag">3. Bare minimum</span><p>First person, but with no personality attached. "I watched." "I talked to three people." No opinion, no reaction, no question.</p></div>
+      <div class="cell"><span class="vtag">1. Gabriel</span><p><mark class="m-voice">First person, casual, one specific person.</mark> "I literally can't unhear it." Hedges once, in Part 5, where the roommate asks a question the student can't answer.</p></div>
+      <div class="cell"><span class="vtag">2. Emily</span><p>Third person, authoritative, nobody in particular. No hedging anywhere. Every paragraph resolves cleanly.</p></div>
+      <div class="cell"><span class="vtag">3. Seb</span><p>First person, but with no personality attached. "I watched." "I talked to three people." No opinion, no reaction, no question.</p></div>
 
       <div class="rl">Errors</div>
-      <div class="cell"><span class="vtag">1. Frat guy</span><p><mark class="m-typo">Eight, all planted.</mark> "its" for "it's" six times, "effects" for "affects" twice. Every other sentence is clean.</p></div>
-      <div class="cell"><span class="vtag">2. Magazine feature</span><p>None. Publishable as written.</p></div>
-      <div class="cell"><span class="vtag">3. Bare minimum</span><p>None. Sentences too short to go wrong in.</p></div>
+      <div class="cell"><span class="vtag">1. Gabriel</span><p><mark class="m-typo">Eight, all planted.</mark> "its" for "it's" six times, "effects" for "affects" twice. Every other sentence is clean.</p></div>
+      <div class="cell"><span class="vtag">2. Emily</span><p>None. Publishable as written.</p></div>
+      <div class="cell"><span class="vtag">3. Seb</span><p>None. Sentences too short to go wrong in.</p></div>
 
       <div class="rl">Against the rubric</div>
-      <div class="cell"><span class="vtag">1. Frat guy</span><p>Six labeled parts, a reference list under each, a list of who was spoken to. Follows the sheet exactly.</p></div>
-      <div class="cell"><span class="vtag">2. Magazine feature</span><p><mark class="m-structure">Abandons the sheet.</mark> A headline, no part labels, no word counts to check, one shared reference list, and no list of people. Points are attached to every one of those.</p></div>
-      <div class="cell"><span class="vtag">3. Bare minimum</span><p>Six labeled parts, but no reference list under any of them, and every word count missed. Part 5 lists the people with the fewest identity markers possible.</p></div>
+      <div class="cell"><span class="vtag">1. Gabriel</span><p>Six labeled parts, a reference list under each, a list of who was spoken to. Follows the sheet exactly.</p></div>
+      <div class="cell"><span class="vtag">2. Emily</span><p><mark class="m-structure">Abandons the sheet.</mark> A headline, no part labels, no word counts to check, one shared reference list, and no list of people. Points are attached to every one of those.</p></div>
+      <div class="cell"><span class="vtag">3. Seb</span><p>Six labeled parts, but no reference list under any of them, and every word count missed. Part 5 lists the people with the fewest identity markers possible.</p></div>
 
       <div class="rl">Word counts</div>
-      <div class="cell"><span class="vtag">1. Frat guy</span>
+      <div class="cell"><span class="vtag">1. Gabriel</span>
         <table class="counts">
           <tr><td>Part 2 (200-300)</td><td>267</td></tr>
           <tr><td>Part 3 (150-200)</td><td>165</td></tr>
@@ -664,14 +666,14 @@
         </table>
         <p style="margin-top:8px">Every part inside its range and never near a limit. The counting was done for the student, and done well.</p>
       </div>
-      <div class="cell"><span class="vtag">2. Magazine feature</span>
+      <div class="cell"><span class="vtag">2. Emily</span>
         <table class="counts">
           <tr><td>Whole piece</td><td>730</td></tr>
           <tr><td>Per part</td><td>none</td></tr>
         </table>
         <p style="margin-top:8px">No parts to count. The grader has to reverse-engineer which paragraph answers which rubric line.</p>
       </div>
-      <div class="cell"><span class="vtag">3. Bare minimum</span>
+      <div class="cell"><span class="vtag">3. Seb</span>
         <table class="counts">
           <tr><td>Part 2 (200-300)</td><td><span class="under">121</span></td></tr>
           <tr><td>Part 3 (150-200)</td><td><span class="under">74</span></td></tr>
@@ -683,14 +685,14 @@
       </div>
 
       <div class="rl">Part 5, the conversations</div>
-      <div class="cell"><span class="vtag">1. Frat guy</span><p>Three named people, one question the student couldn't answer, one pushback. The best faked section of the three, and the prompt never asked for any of it.</p></div>
-      <div class="cell"><span class="vtag">2. Magazine feature</span><p><mark class="m-structure">One paragraph, three anonymous sources, no list.</mark> "A former high school wide receiver recalled." Reads as reporting rather than a conversation the student had.</p></div>
-      <div class="cell"><span class="vtag">3. Bare minimum</span><p><mark class="m-rational">One flat claim per person.</mark> No calls described, no questions quoted, nothing the student thought afterward.</p></div>
+      <div class="cell"><span class="vtag">1. Gabriel</span><p>Three named people, one question the student couldn't answer, one pushback. The best faked section of the three, and the prompt never asked for any of it.</p></div>
+      <div class="cell"><span class="vtag">2. Emily</span><p><mark class="m-structure">One paragraph, three anonymous sources, no list.</mark> "A former high school wide receiver recalled." Reads as reporting rather than a conversation the student had.</p></div>
+      <div class="cell"><span class="vtag">3. Seb</span><p><mark class="m-rational">One flat claim per person.</mark> No calls described, no questions quoted, nothing the student thought afterward.</p></div>
 
       <div class="rl">The giveaway</div>
-      <div class="cell"><span class="vtag">1. Frat guy</span><p><strong>Uniformly polished with cosmetic damage on top.</strong> A real rushed student gets sloppier in the parts they cared least about. This one never does.</p></div>
-      <div class="cell"><span class="vtag">2. Magazine feature</span><p><strong>Nobody chasing forty points throws out the structure the points are attached to.</strong> And nothing in it shows a thought in progress.</p></div>
-      <div class="cell"><span class="vtag">3. Bare minimum</span><p><strong>Misses every word count, and the student never noticed.</strong> Rushed people undershoot what bores them and overshoot what interests them. This undershoots everything by the same margin, which is how a tool misses and how a person doesn't.</p></div>
+      <div class="cell"><span class="vtag">1. Gabriel</span><p><strong>Uniformly polished with cosmetic damage on top.</strong> A real rushed student gets sloppier in the parts they cared least about. This one never does.</p></div>
+      <div class="cell"><span class="vtag">2. Emily</span><p><strong>Nobody chasing forty points throws out the structure the points are attached to.</strong> And nothing in it shows a thought in progress.</p></div>
+      <div class="cell"><span class="vtag">3. Seb</span><p><strong>Misses every word count, and the student never noticed.</strong> Rushed people undershoot what bores them and overshoot what interests them. This undershoots everything by the same margin, which is how a tool misses and how a person doesn't.</p></div>
     </div>
     <p class="key">Word count key: <mark class="m-structure">over the range</mark> · <mark class="m-rational">under the range</mark> · <mark class="m-typo">within five words of a limit</mark>. Counts exclude the reference lists.</p>
   </div>
@@ -699,7 +701,7 @@
 <section class="close">
   <div class="wrap">
     <h2>Different disguises, same shortcut</h2>
-    <p>The frat voice hides the shortcut behind personality. The feature hides it behind quality, and in doing so stops resembling student work at all. The bare minimum hides it behind visible restraint, betting that an answer this thin must have been typed by a tired human rather than accepted, unedited, from a machine that could have done far more. None of the three required the student to do the one thing the assignment wanted, which was to sit with three articles, three studies, and three real conversations long enough to have an opinion about how they fit together.</p>
+    <p>Gabriel's version hides the shortcut behind personality. Emily's hides the shortcut behind quality, and in doing so stops resembling student work at all. Seb's hides the shortcut behind visible restraint, betting that an answer this thin must have been typed by a tired human rather than accepted, unedited, from a machine that could have done far more. None of the three required the student to do the one thing the assignment wanted, which was to sit with three articles, three studies, and three real conversations long enough to have an opinion about how they fit together.</p>
   </div>
 </section>
 
