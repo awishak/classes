@@ -169,9 +169,16 @@ const SPRING = {
     "Every day titled. 53 readings moved and none lost. Six duplicate readings and six markers for assignments that no longer exist taken off.",
     "Every spring note sits under its fall day with the same weekday, 23 days of them, where I can read them while I plan.",
   ] },
+};
+
+// The schedule, both terms, at the bottom. The same class, one row per day
+// on the old hub and one row per reading on the new site.
+const SCHEDULES = {
+  title: "The schedule, spring and fall",
+  body: ["The same class on both sites. On the left, Spring 2026 on the old hub: a note per day, the readings under the day. On the right, Fall 2026 on Classes: every reading its own row, on the day I assigned it, with the link and Drew's Pick."],
   shots: [
-    { src: "sp-schedule", line: "Spring 2026, week 1, on the old hub." },
-    { src: "d-date", line: "Fall 2026, the whole quarter, on the new hub." },
+    { src: "sched-spring", w: 800, h: 1360, line: "Spring 2026, weeks 1 to 3, on the old hub." },
+    { src: "sched-fall", w: 600, h: 1020, line: "Fall 2026, week 1, on Classes." },
   ],
 };
 
@@ -341,6 +348,7 @@ export default function FeaturesPage() {
             <a href="#ai">What the AI does</a>
             <a href="#spring">Spring to fall</a>
             <a href="#next">What's next</a>
+            <a href="#schedules">Side by side</a>
           </nav>
         </header>
 
@@ -396,19 +404,28 @@ export default function FeaturesPage() {
             <h3 className="ft-h3" style={{ fontSize: 20 }}>{SPRING.result.title}</h3>
             <ul>{SPRING.result.lines.map((l, i) => <li key={i}>{l}</li>)}</ul>
           </div>
-          <div className="ft-pair">
-            {SPRING.shots.map(s => (
-              <figure key={s.src} className="ft-fig">
-                <Screen src={s.src} title={s.line} />
-                <figcaption className="ft-cap">{s.line}</figcaption>
-              </figure>
-            ))}
-          </div>
         </Section>
 
         <Section id="next" title="What's next">
           <div className="ft-next">
             <Body title={NEXT.title} body={NEXT.body} />
+          </div>
+        </Section>
+
+        <Section id="schedules" title="Side by side">
+          <div className="ft-gallery">
+            <Body title={SCHEDULES.title} body={SCHEDULES.body} />
+            <div className="ft-pair">
+              {SCHEDULES.shots.map(s => (
+                <figure key={s.src} className="ft-fig">
+                  <div className="ft-screen">
+                    <div className="ft-bar"><i /><i /><i /></div>
+                    <img src={"/features/" + s.src + ".jpg"} alt={s.line} loading="lazy" width={s.w} height={s.h} />
+                  </div>
+                  <figcaption className="ft-cap">{s.line}</figcaption>
+                </figure>
+              ))}
+            </div>
           </div>
         </Section>
 
