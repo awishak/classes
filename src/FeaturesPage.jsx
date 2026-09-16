@@ -1,6 +1,6 @@
 // Features: the site, shown and sold. One screenshot per feature with a
 // short explanation beside each one, written in Andrew's voice for a room
-// deciding between this and Canvas. The dashboard, the room screen and the
+// seeing the site for the first time. The dashboard, the room screen and the
 // repository get a gallery of full-width pictures instead of one.
 //
 // Every picture is the real app, taken against a fixture of the COMM 118 fall
@@ -32,9 +32,12 @@ const fonts = <link rel="stylesheet" href="https://fonts.googleapis.com/css2?fam
 
 // ─── the pitch ───
 
+// Andrew, 2026-09-16: "i want better teaching and learning experiences. i
+// want it to be more robust and fun and be mine and i want to explore
+// possibilities."
 const PITCH = [
-  "I built Classes because Canvas is where assignments get turned in, and that's about all a student does there. Classes is where my class actually happens. Students see what's on the room screen right now, from their phones. They ask me questions during class without raising a hand. They vote, they argue with the person next to them, and they vote again. They play games in teams and watch the score on the projector. And when a grade comes in, the grade arrives as a card on their phone with a note from me.",
-  "The other difference is that I can change Classes whenever my students want something. Last week I decided students should see every grade at once instead of one percentage, and that was on the site the same day. A card that says a challenge is due in 48 hours took an afternoon. With Canvas, you get what Canvas offers. With Classes, my students get what they ask for.",
+  "I built Classes because I wanted better teaching and learning experiences, for my students and for me. I wanted something more robust and more fun than what I had. I wanted the site to be mine. And I wanted to explore the possibilities.",
+  "Everything below is on the site now, running for COMM 118 this fall. Students see what's on the room screen from their phones, ask me questions during class, vote, play games in teams, and get their grades as cards with a note from me. I run class from one screen. And when my students want something new, I can build the new thing the same week.",
 ];
 
 // ─── what is on the page ───
