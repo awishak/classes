@@ -72,17 +72,17 @@ export default function RetreatPage() {
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
       <div style={{ width: u(100), height: u(56.25), boxSizing: "border-box", padding: `${u(2)} ${u(3)}`, display: "flex", flexDirection: "column", gap: u(1.6) }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: u(3) }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: u(1.2) }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: u(0.8) }}>
             <div style={{ fontSize: u(1.2), fontWeight: 600, color: INK2 }}>Department Retreat - Questions about AI Usage</div>
             <a href={FORM_URL} target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: u(2.8), fontWeight: 600, color: TONES[0], textDecoration: "underline", textUnderlineOffset: u(0.3), letterSpacing: "-0.01em" }}>
+              style={{ fontSize: u(2.2), fontWeight: 600, color: TONES[0], textDecoration: "underline", textUnderlineOffset: u(0.3), letterSpacing: "-0.01em" }}>
               Please answer the two questions at this link.
             </a>
             {SAMPLE ? (
               <div style={{ alignSelf: "flex-start", fontSize: u(1.1), fontWeight: 600, color: WARN, background: "#fdf5ea", borderRadius: 999, padding: `${u(0.3)} ${u(1)}` }}>Sample answers</div>
             ) : null}
           </div>
-          <a href={FORM_URL} target="_blank" rel="noopener noreferrer" style={{ width: u(14), flexShrink: 0 }}>
+          <a href={FORM_URL} target="_blank" rel="noopener noreferrer" style={{ width: u(8), flexShrink: 0 }}>
             <QRCode value={FORM_URL} size="100%" dark={INK} light={CARD} quiet={2} />
           </a>
         </div>
