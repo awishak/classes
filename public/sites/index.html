@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Sites</title>
+<meta name="description" content="Everything Andrew Ishak has built, in one list.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --page: #fafaf9;
+    --card: #ffffff;
+    --sunk: #f6f4f1;
+    --ink: #1c1917;
+    --ink-2: #57534e;
+    --muted: #6b655f;
+    --line: #e3ded8;
+    --line-soft: #f0edea;
+    --accent: #0f766e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #0f0d0c;
+      --card: #171412;
+      --sunk: #1f1b18;
+      --ink: #f6f2ec;
+      --ink-2: #cfc6bc;
+      --muted: #a79c92;
+      --line: #2b2622;
+      --line-soft: #241f1b;
+      --accent: #5eead4;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #0f0d0c;
+    --card: #171412;
+    --sunk: #1f1b18;
+    --ink: #f6f2ec;
+    --ink-2: #cfc6bc;
+    --muted: #a79c92;
+    --line: #2b2622;
+    --line-soft: #241f1b;
+    --accent: #5eead4;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: Outfit, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 17px;
+    line-height: 1.5;
+  }
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 48px 16px 64px;
+  }
+  h1 {
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 0 0 8px;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--ink-2);
+    margin: 0 0 32px;
+  }
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 32px 0 8px;
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  li + li { border-top: 1px solid var(--line-soft); }
+  a.row, .row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 44px;
+    padding: 12px 16px;
+    color: inherit;
+    text-decoration: none;
+  }
+  a.row:hover { background: var(--sunk); }
+  a.row:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    border-radius: 8px;
+  }
+  .name {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .row:not(a) .name { color: var(--ink); }
+  .what {
+    font-size: 15px;
+    color: var(--ink-2);
+  }
+  .url {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  @media (min-width: 560px) {
+    a.row, .row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-areas: "name url" "what url";
+      column-gap: 16px;
+      align-items: center;
+    }
+    .name { grid-area: name; }
+    .what { grid-area: what; }
+    .url { grid-area: url; text-align: right; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Everything I've made</h1>
+  <p class="lead">Sites, games and pages, all in one list. The ones with links are live right now.</p>
+
+  <h2>Live</h2>
+  <ul>
+    <li><a class="row" href="https://classes.andrewishak.com"><span class="name">Ishak Classes</span><span class="what">The class site. Every course I teach lives here.</span><span class="url">classes.andrewishak.com</span></a></li>
+    <li><a class="row" href="https://f5.andrewishak.com"><span class="name">Formula 5 Picks</span><span class="what">The F1 pick'em league.</span><span class="url">f5.andrewishak.com</span></a></li>
+    <li><a class="row" href="https://encore-five-gamma.vercel.app"><span class="name">ENCORE</span><span class="what">A party music game show.</span><span class="url">encore-five-gamma.vercel.app</span></a></li>
+    <li><a class="row" href="https://fieldtime.net"><span class="name">FieldTime</span><span class="what">Little league practice schedules.</span><span class="url">fieldtime.net</span></a></li>
+    <li><a class="row" href="https://pcaleague.com"><span class="name">PCAL</span><span class="what">Pacific Coptic Athletic League basketball: stats and registration.</span><span class="url">pcaleague.com</span></a></li>
+    <li><a class="row" href="https://dead-pot.vercel.app"><span class="name">Dead Pot</span><span class="what">The World Cup 2026 pool.</span><span class="url">dead-pot.vercel.app</span></a></li>
+    <li><a class="row" href="https://opus.andrewishak.com"><span class="name">Opus</span><span class="what">Find your true favorite songs, two at a time.</span><span class="url">opus.andrewishak.com</span></a></li>
+    <li><a class="row" href="https://www.watchabouna.com"><span class="name">Abouna</span><span class="what">A film series. The story continues October 2026.</span><span class="url">watchabouna.com</span></a></li>
+    <li><a class="row" href="https://www.homeworktubes.com"><span class="name">Homework Tubes</span><span class="what">Where learning gets tubular.</span><span class="url">homeworktubes.com</span></a></li>
+    <li><a class="row" href="https://fish.ishaks.com"><span class="name">Ishak Custom Aquariums</span><span class="what">Freshwater tanks and paludariums, built in the Bay Area.</span><span class="url">fish.ishaks.com</span></a></li>
+    <li><a class="row" href="https://dist-five-kappa-78.vercel.app"><span class="name">Davis 04Ever</span><span class="what">A weekend picker.</span><span class="url">dist-five-kappa-78.vercel.app</span></a></li>
+    <li><a class="row" href="https://formulapickem.vercel.app"><span class="name">F1 Pick'em, the old one</span><span class="what">The first version, before Formula 5 Picks.</span><span class="url">formulapickem.vercel.app</span></a></li>
+  </ul>
+
+  <h2>Pages</h2>
+  <ul>
+    <li><a class="row" href="https://claude.ai/code/artifact/79d0a622-b606-4fce-9953-bb7cb5a8fe10"><span class="name">AFL</span><span class="what">My AFL page.</span><span class="url">claude.ai</span></a></li>
+    <li><a class="row" href="https://claude.ai/code/artifact/2ce5c05c-4252-433b-aa6a-31114fb47adf"><span class="name">The Tube Book</span><span class="what">The Homework Tubes options package.</span><span class="url">claude.ai</span></a></li>
+    <li><a class="row" href="https://github.com/awishak/decks"><span class="name">Decks</span><span class="what">The gated card system behind the class site login.</span><span class="url">github.com/awishak/decks</span></a></li>
+  </ul>
+
+  <h2>In the works</h2>
+  <ul>
+    <li><div class="row"><span class="name">andrewishak.com</span><span class="what">The new personal site. This list moves there when it's ready.</span></div></li>
+    <li><div class="row"><span class="name">One Score</span><span class="what">Which sport spends the most time within one score of a different result.</span></div></li>
+    <li><div class="row"><span class="name">Readbox</span><span class="what">A shared reading list for two people and one passcode.</span></div></li>
+    <li><div class="row"><span class="name">Mixtape</span><span class="what">Not much to say yet.</span></div></li>
+    <li><div class="row"><span class="name">DiDi Bot</span><span class="what">A chat bot for my mother-in-law. Paused.</span></div></li>
+  </ul>
+</main>
+</body>
+</html>
