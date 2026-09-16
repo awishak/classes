@@ -19,6 +19,7 @@ import InstructorBar from "./engine/InstructorBar.jsx";
 import PlanPage from "./PlanPage.jsx";
 import ProgressPage from "./ProgressPage.jsx";
 import FeaturesPage from "./FeaturesPage.jsx";
+import RetreatPage from "./RetreatPage.jsx";
 import { ENGINE, currentClasses, archivedClasses } from "./config/registry.js";
 import InstructorLinks from "./InstructorLinks.jsx";
 import InstructorGate from "./InstructorGate.jsx";
@@ -164,6 +165,7 @@ export default function App() {
     if (path === "/comm118" || path === "/comm118/") document.title = "COMM 118 Hub - Spring 2026";
     else if (path === "/comm4" || path === "/comm4/") document.title = "COMM 4 Hub - Spring 2026";
     else if (path === "/comm2" || path === "/comm2/") document.title = "COMM 2 Hub - Spring 2026";
+    else if (path === "/retreat" || path === "/retreat/") document.title = "Retreat";
     else document.title = "Ishak Classes";
   }, [path]);
 
@@ -182,6 +184,11 @@ export default function App() {
   const engineGameId = params.get("game");
   if (engineGameId && presenterClass && ENGINE[presenterClass]) {
     return <EnginePresenter gameId={engineGameId} classKey={presenterClass} />;
+  }
+
+  // The retreat answers on the projector. No bar, because a bar there is a bar on the wall.
+  if (path === "/retreat" || path === "/retreat/") {
+    return <RetreatPage />;
   }
 
   if (path === "/login" || path === "/login/") {

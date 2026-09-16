@@ -75,6 +75,7 @@ import { linkables, verdict, linkPatches } from "../src/engine/links.js";
 import { findDuplicates, findLooseEnds, applyMerge } from "../src/engine/tidy.js";
 import AskPage from "../src/engine/AskPage.jsx";
 import PlanPage from "../src/PlanPage.jsx";
+import RetreatPage from "../src/RetreatPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
 import { ENGINE_LIST } from "../src/config/registry.js";
 import { warmClassData } from "../src/engine/store.js";
@@ -928,6 +929,8 @@ cases.push(["One idea", <Idea idea={{ n: 7, group: "reuse", size: "small", first
 // screen here. The big one has to be in the markup.
 cases.push(["Dashboard reminders", <Reminders />, "love of learning"]);
 cases.push(["The Brief", <PlanPage />]);
+// Throws when a theme's quote is not tagged with the theme.
+cases.push(["Retreat", <RetreatPage />]);
 cases.push(["Instructor links", <InstructorLinks />]);
 
 // A surface can render clean and still be the loading screen — that is how the
@@ -1193,7 +1196,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   // Pages that draw TopNav themselves.
   const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GamesPage: "engine/GamesPage.jsx" };
   // What the projector shows, and the page you sign in on before you are anybody.
-  const EXEMPT = new Set(["ClassroomView", "EnginePresenter", "TriviaPresenter4", "TriviaPresenter118", "LoginPage", "InstructorGate", "InstructorBar"]);
+  const EXEMPT = new Set(["ClassroomView", "EnginePresenter", "TriviaPresenter4", "TriviaPresenter118", "LoginPage", "InstructorGate", "InstructorBar", "RetreatPage"]);
   const routed = [...app.matchAll(/return\s*\(?\s*<([A-Z]\w*)/g), ...app.matchAll(/<InstructorGate[^>]*>\s*<([A-Z]\w*)/g)].map(m => m[1]);
   [...new Set(routed)].forEach(name => {
     if (EXEMPT.has(name) || SELF[name]) return;

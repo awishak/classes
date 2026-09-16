@@ -22,6 +22,7 @@ COMM 118, COMM 2, COMM 4, COMM 3, COMM 999. Deployed at
 | `/<class>/game` | students | where the room plays |
 | `/<class>/rungame` | me | where I run the game |
 | `/plan` | me | The Brief, the changelog |
+| `/retreat` | the room | retreat answers on AI, read for themes, one projector screen |
 
 The presenter screen opens in a window of its own at
 `/<class>?game=<gameId>&class=<class>`. The frozen forks still answer to
