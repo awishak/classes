@@ -5197,6 +5197,15 @@ export default function Dashboard({ config }) {
             dayPlans: { ...(prev.dayPlans || {}),
               [date]: { ...blankDay(config), ...((prev.dayPlans || {})[date] || {}), title: v || undefined } },
           }))}
+          // What kind of day it is. "off" is the field the class site already
+          // reads to drop the time and the room off the next-class card; a
+          // sit-down still meets, so it does not set that.
+          onDayKind={(date, kind) => update(prev => ({
+            ...prev,
+            dayPlans: { ...(prev.dayPlans || {}),
+              [date]: { ...blankDay(config), ...((prev.dayPlans || {})[date] || {}),
+                kind: kind === "class" ? undefined : kind, noMeeting: kind === "off" } },
+          }))}
           // Dragging a row from one section to another, ACROSS DAYS. The day
           // plan's own drag can only move within the day it is looking at;
           // this is the one surface that can see two days at once, so it is

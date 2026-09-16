@@ -2952,7 +2952,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
 {
   const say = (msg) => { console.error("  FAIL  the whole term: " + msg); failedEarly++; };
   const weeks = [
-    { id: "w1", topic: "Week one", dates: ["Sep 21", "Sep 23", "Sep 25"], items: [{ type: "reading" }, { type: "reading" }] },
+    // Two readings and a game, hung on the Wednesday the way the real term
+    // hangs them, so the map can count what is on a day.
+    { id: "w1", topic: "Week one", dates: ["Sep 21", "Sep 23", "Sep 25"], items: [
+      { id: "i1", type: "reading", date: "Wed", title: "A reading" },
+      { id: "i2", type: "reading", date: "Wed", title: "Another reading" },
+      { id: "i3", type: "activity", date: "Wed", title: "Game" },
+    ] },
     { id: "w2", topic: "", dates: ["Sep 28", "Sep 30"], items: [] },
   ];
   const plans = { "Sep 21": { sequenceId: "__freeform", done: ["r1"], slots: {
@@ -2961,10 +2967,12 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       { id: "r2", blockId: "b1" },
     ] },
     "sec-b": { items: [{ id: "r3", text: "A row in a nameless section" }] },
-  } } };
+  } },
+  // A day the room does not meet on, which the map draws in its own colour.
+  "Sep 25": { noMeeting: true } };
   const block = { id: "b1", type: "link", title: "Are You Not Entertained?", url: "https://www.theatlantic.com/x", headline: "" };
   const props = { config: cfg0, weeks, plans, assignments: [{ due: "Sep 30", title: "Interview Assignment" }],
-    day: "Sep 21", onPick: noop, onClose: noop, onWeekTopic: noop, onDayTitle: noop,
+    day: "Sep 21", onPick: noop, onClose: noop, onWeekTopic: noop, onDayTitle: noop, onDayKind: noop,
     blockOf: (id) => (id === "b1" ? block : null) };
 
   // The shapes a day plan actually comes in, including the two that threw.
@@ -3005,11 +3013,11 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       const html = raw.replace(/<!-- -->/g, "");
       if (!html.includes(cfg0.name)) say(`${view}: the panel does not name the class`);
       if (!html.includes("Sep 21")) say(`${view}: today is missing`);
-      if (!html.includes("Introduction")) say(`${view}: a named section is missing`);
-      // The nameless one still has to say something, and it must be the same
-      // words the day itself uses for it.
-      if (!/Section \d+/.test(html)) say(`${view}: a nameless section shows nothing at all`);
       if (view === "outline") {
+        if (!html.includes("Introduction")) say("outline: a named section is missing");
+        // The nameless one still has to say something, and it must be the same
+        // words the day itself uses for it.
+        if (!/Section \d+/.test(html)) say("outline: a nameless section shows nothing at all");
         // One day of the five has rows on it, and one of its three is done.
         if (!html.includes("1 of 3 done")) say("outline: the day does not say how far through it is");
         if (!html.includes("1 of 5 days built")) say("outline: the header count is wrong");
@@ -3018,7 +3026,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
         const sunday = renderToString(<TermOutline {...props} startView={view}
           assignments={[{ due: "Sep 27", title: "Framing exercise" }]} />).replace(/<!-- -->/g, "");
         if (!sunday.includes("Framing exercise due")) say("outline: a deadline on a day with no class never shows");
-        if (!html.includes("2 on the week")) say("outline: what a week is carrying is not counted");
+        if (!html.includes("3 on the week")) say("outline: what a week is carrying is not counted");
         // An open day is the day, row for row — section headers alone were a
         // summary of a summary, and the Map is where a day is a count.
         if (!html.includes("Wear a 49ers helmet")) say("outline: an open day is not showing its rows");
@@ -3041,6 +3049,28 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
         // But it must say what each day is CALLED. A map of dates is not a map.
         if (!html.includes("term-celltitle")) say("map: no day carries its title");
         if (!html.includes("Week one")) say("map: a day is not showing the title it inherits");
+        // The sections came out of the map. What is left is how much of the
+        // day exists: slides, readings, and whether there is a game.
+        if (html.includes("Introduction") || /Section \d+/.test(html)) say("map: the sections are back");
+        if (!/\d+ slides?/.test(html)) say("map: a built day does not say how many slides it holds");
+        if (!/\d+ readings?/.test(html)) say("map: the readings on a day are not counted");
+        if (!html.includes("Game")) say("map: a day with a game does not say so");
+        // Every day can be named as a class, a day with no in-person meeting,
+        // or a sit-down, and the cell carries the kind so colour can follow.
+        if (!html.includes("term-cellkind")) say("map: a day cannot be told what kind of day it is");
+        if (!html.includes('data-kind="off"')) say("map: a day with no in-person meeting is not marked");
+        const sat = renderToString(<TermOutline {...props} startView="map"
+          plans={{ ...props.plans, "Sep 23": { ...(props.plans["Sep 23"] || {}), kind: "sitdown" } }} />);
+        if (!sat.includes('data-kind="sitdown"')) say("map: a sit-down is not marked");
+        // A deadline off a class day lands on the next class day, with its own
+        // date on it, rather than falling off the map.
+        const sunday = renderToString(<TermOutline {...props} startView="map"
+          assignments={[{ due: "Sep 27", title: "Framing exercise" }]} />).replace(/<!-- -->/g, "");
+        if (!sunday.includes("Framing exercise due Sep 27")) say("map: a deadline on a day with no class never shows");
+        // And one on a class day says nothing extra.
+        const onDay = renderToString(<TermOutline {...props} startView="map"
+          assignments={[{ due: "Sep 23", title: "Framing exercise" }]} />).replace(/<!-- -->/g, "");
+        if (!onDay.includes("Framing exercise due<")) say("map: a deadline on a class day is not plain");
       }
       if (view === "map" && !html.includes("empty")) say("map: an empty day is not marked as one");
     } catch (err) {

@@ -56,6 +56,47 @@ const SURFACE_2 = TOKENS.SURFACE.sunk;
 const LIVE = TOKENS.STATE.live;
 const WARN = TOKENS.STATE.warn;
 
+// What a day is: a class in the room, a day with no in-person meeting, or a
+// day of sit-downs. `noMeeting` came first and still decides what a student
+// sees, so a day that only has that still reads as one with no meeting.
+export const kindOf = (plan) => (plan || {}).kind || ((plan || {}).noMeeting ? "off" : "class");
+export const KINDS = [["class", "In person"], ["off", "No in-person meeting"], ["sitdown", "Sit-down"]];
+
+// The three class days of a week, in order, are its Mon, Wed and Fri markers,
+// which is where the readings and the games hang.
+const MARKERS = ["Mon", "Wed", "Fri"];
+const weekDayInfo = (weeks, days) => {
+  const out = {};
+  weeks.forEach(w => {
+    days.filter(d => d.weekId === w.id).forEach((d, i) => {
+      const on = (w.items || []).filter(it => (it.date || "") === MARKERS[i]);
+      out[d.date] = {
+        readings: on.filter(it => it.type === "reading").length,
+        game: on.some(it => it.type === "activity" && /game/i.test(it.title || "")),
+      };
+    });
+  });
+  return out;
+};
+
+// A deadline that lands on a Sunday belonged to nobody: the map draws class
+// days, and a due date off a class day was drawn nowhere at all. Every
+// deadline now lands on the first class day on or after it, carrying its own
+// date, and one after the last class day lands on the last one.
+export function deadlinesByDay(assignments, dates) {
+  const stamps = dates.map(dayStamp);
+  const out = {};
+  (assignments || []).forEach(a => {
+    const t = dayStamp(a.due);
+    if (!t) return;                                   // "Ongoing" is not a date
+    let i = stamps.findIndex(s => s && s >= t);
+    if (i < 0) i = dates.length - 1;
+    if (i < 0) return;
+    (out[dates[i]] = out[dates[i]] || []).push({ title: a.title, due: a.due, onTheDay: a.due === dates[i] });
+  });
+  return out;
+}
+
 // What a day amounts to: its sections, how many rows, how many done.
 const readDay = (config, plans, date) => {
   const plan = (plans || {})[date];
@@ -83,7 +124,7 @@ const readDay = (config, plans, date) => {
   return { rows, done, sections };
 };
 
-export default function TermOutline({ config, weeks, plans, assignments, day, onPick, onClose, onWeekTopic, onDayTitle, onMoveRow, onAddRow, blockOf, startView, features, ground }) {
+export default function TermOutline({ config, weeks, plans, assignments, day, onPick, onClose, onWeekTopic, onDayTitle, onDayKind, onMoveRow, onAddRow, blockOf, startView, features, ground }) {
   const [view, setView] = useState(startView || "outline");
   const [only, setOnly] = useState("");            // "" | "planned" | "empty"
   const [openWeeks, setOpenWeeks] = useState(() => new Set());
@@ -104,6 +145,8 @@ export default function TermOutline({ config, weeks, plans, assignments, day, on
   const onWeek = (w) => (w.items || []).length;
   const dueOn = {};
   (assignments || []).forEach(a => { if (a.due) (dueOn[a.due] = dueOn[a.due] || []).push(a.title); });
+  const onDay = weekDayInfo(weeks, days);
+  const deadlines = deadlinesByDay(assignments, days.map(d => d.date));
 
   // A deadline belongs to the week it falls inside, Monday to Sunday, not only
   // to the days the class meets: COMM 3's exercises are due on Sundays, and a
@@ -343,29 +386,50 @@ export default function TermOutline({ config, weeks, plans, assignments, day, on
                       const d = wd[n];
                       if (!d) return <span key={n} />;
                       const it = info[d.date];
+                      const kind = kindOf(plans[d.date]);
+                      // Slides, readings, and whether there is a game. The
+                      // section names were a summary of a summary; what a day
+                      // is planning-wise is how much of it exists.
+                      const slides = it.sections.reduce((n2, s) => n2 + s.items.filter(x => !(x.item.depth || 0)).length, 0);
+                      const counts = [
+                        slides ? slides + (slides === 1 ? " slide" : " slides") : "",
+                        onDay[d.date]?.readings ? onDay[d.date].readings + (onDay[d.date].readings === 1 ? " reading" : " readings") : "",
+                        onDay[d.date]?.game ? "Game" : "",
+                      ].filter(Boolean);
+                      const due = deadlines[d.date] || [];
                       return (
-                        <button key={d.date} className="dash-focus term-cell" onClick={() => go(d.date)}
-                          data-empty={it.rows ? "0" : "1"} data-today={d.date === day ? "1" : "0"}>
-                          <span className="term-cellday">
-                            {d.date}{d.date === day ? <b> today</b> : null}
-                          </span>
-                          {/* What the day is called. The sections say what
-                              happens in it; the title says what it is about,
-                              and a map of thirty-two days without that is a
-                              map of thirty-two dates. */}
-                          {titles[d.date]?.title ? (
-                            <span className="term-celltitle" data-own={titles[d.date].own ? "1" : "0"}>
-                              {titles[d.date].title}
+                        <div key={d.date} className="term-cell" data-kind={kind}
+                          data-empty={it.rows || counts.length ? "0" : "1"} data-today={d.date === day ? "1" : "0"}>
+                          <button className="dash-focus term-cellopen" onClick={() => go(d.date)}>
+                            <span className="term-cellday">
+                              {d.date}{d.date === day ? <b> today</b> : null}
                             </span>
+                            {/* What the day is called. The counts say how much
+                                of it exists; the title says what it is about,
+                                and a map of thirty-two days without that is a
+                                map of thirty-two dates. */}
+                            {titles[d.date]?.title ? (
+                              <span className="term-celltitle" data-own={titles[d.date].own ? "1" : "0"}>
+                                {titles[d.date].title}
+                              </span>
+                            ) : null}
+                            <span className="term-cellcounts">{counts.length ? counts.join(" · ") : "empty"}</span>
+                            {/* A deadline off a class day lands on the next one
+                                and says its own date, so nothing is due on a
+                                Sunday the map never draws. */}
+                            {due.map(x => (
+                              <span key={x.title} className="term-due">
+                                {x.title}{x.onTheDay ? " due" : " due " + x.due}
+                              </span>
+                            ))}
+                          </button>
+                          {onDayKind ? (
+                            <select className="dash-focus term-cellkind" value={kind} aria-label={"What kind of day " + d.date + " is"}
+                              onChange={e => onDayKind(d.date, e.target.value)}>
+                              {KINDS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+                            </select>
                           ) : null}
-                          {it.sections.length ? it.sections.map(s => (
-                            <span key={s.slot} className="term-cellsec">
-                              <span data-unnamed={s.named ? "0" : "1"}>{s.name}</span>
-                              <span className="term-snum">{s.n}</span>
-                            </span>
-                          )) : <span className="term-cellempty">empty</span>}
-                          {dueOn[d.date] ? <span className="term-due">{dueOn[d.date].join(", ")} due</span> : null}
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -487,11 +551,30 @@ export const TERM_CSS = `
 .term-mapweek{display:flex;flex-direction:column;gap:1px;justify-content:center;padding-right:6px;min-width:0}
 .term-mapname{font-size:14px;font-weight:600;color:${TEXT_PRIMARY};line-height:1.25}
 .term-mapsub{font-family:${MONO};font-size:13px;color:${TEXT_MUTED}}
-.term-cell{display:flex;flex-direction:column;gap:3px;align-items:stretch;text-align:left;min-height:56px;
-  padding:8px 11px;border-radius:11px;border:none;background:${SURFACE_2};cursor:pointer;font-family:${F}}
+.term-cell{display:flex;flex-direction:column;min-height:56px;border-radius:11px;background:${SURFACE_2};font-family:${F}}
+.term-cellopen{flex:1 1 auto;display:flex;flex-direction:column;gap:3px;align-items:stretch;text-align:left;
+  padding:8px 11px;border:none;border-radius:11px;background:none;cursor:pointer;font-family:${F}}
 .term-cell:hover{background:rgba(23,19,16,.07)}
-.term-cell[data-empty="1"]{background:none;border:1.5px dashed ${BORDER_STRONG};justify-content:center}
+.term-cell[data-empty="1"]{background:none;box-shadow:inset 0 0 0 1.5px ${BORDER_STRONG};justify-content:center}
+/* What kind of day it is, in colour. A day with no in-person meeting takes the
+   warning amber the rest of the system uses for "this is not the usual"; a
+   sit-down takes the class's own colour, because it is still a day in a room
+   with students in it. Both beat the empty state: a day can be a sit-down and
+   have nothing planned on it, and the colour is the more important fact. */
+.term-cell[data-kind="off"], .term-cell[data-kind="off"][data-empty="1"]{
+  background:color-mix(in srgb, ${WARN} 10%, #fff);box-shadow:inset 0 0 0 1.5px color-mix(in srgb, ${WARN} 45%, #fff)}
+.term-cell[data-kind="off"]:hover{background:color-mix(in srgb, ${WARN} 16%, #fff)}
+.term-cell[data-kind="sitdown"], .term-cell[data-kind="sitdown"][data-empty="1"]{
+  background:color-mix(in srgb, var(--dash-accent) 11%, #fff);box-shadow:inset 0 0 0 1.5px color-mix(in srgb, var(--dash-accent) 45%, #fff)}
+.term-cell[data-kind="sitdown"]:hover{background:color-mix(in srgb, var(--dash-accent) 17%, #fff)}
 .term-cell[data-today="1"]{background:#fff1f2;box-shadow:inset 0 0 0 2px ${LIVE}}
+/* The picker sits at the foot of the cell and stays quiet until it is wanted. */
+.term-cellkind{flex:none;margin:0 8px 8px;min-height:28px;border:1px solid transparent;border-radius:8px;
+  background:none;font-family:${F};font-size:13px;color:${TEXT_MUTED};cursor:pointer;padding:0 4px;
+  appearance:none;-webkit-appearance:none;text-overflow:ellipsis}
+.term-cell:hover .term-cellkind,.term-cellkind:focus{border-color:${BORDER_STRONG};background:#fff;color:${TEXT_SECONDARY}}
+.term-cell[data-kind="off"] .term-cellkind{color:${WARN};font-weight:600}
+.term-cell[data-kind="sitdown"] .term-cellkind{color:var(--dash-accent);font-weight:600}
 .term-cellday{font-family:${MONO};font-size:13px;color:${TEXT_MUTED}}
 .term-cell[data-today="1"] .term-cellday{color:${LIVE};font-weight:600}
 /* A title Andrew wrote reads as ink. One carried in from an earlier day, or
@@ -504,6 +587,12 @@ export const TERM_CSS = `
 .term-cellsec span:first-child{flex:1 1 auto;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .term-cellsec span[data-unnamed="1"]{font-weight:500;color:${TEXT_MUTED}}
 .term-cellempty{font-size:13px;color:${TEXT_MUTED}}
+/* How much of the day exists: slides, readings, and whether there is a game. */
+.term-cellcounts{font-family:${MONO};font-size:13px;color:${TEXT_SECONDARY};line-height:1.35}
+/* A deadline is a whole assignment name, so it wraps rather than running off
+   the edge of the cell. One line per deadline, and the cell grows. */
+.term-map .term-due{white-space:normal;overflow-wrap:anywhere;line-height:1.35;padding:3px 9px;
+  align-self:flex-start;max-width:100%;text-align:left}
 @media (max-width:900px){
   .term-maprow{grid-template-columns:minmax(0,1fr)}
   .term-maphead{display:none}

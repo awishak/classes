@@ -47,6 +47,27 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep15-map", date: "Tuesday, September 15", title: "The map says what kind of day it is",
+    blurb: "Andrew, on a screenshot of the planning map: \"if something is due but not on a class day, it doesn't show in my planning map. that's a problem.\"",
+    groups: [
+      { name: "The map", items: [
+        ["A deadline off a class day lands on the next one", "It carries its own date: Weekly Challenge 1 is due Sunday September 27, so Monday September 28 says \"due Sep 27\". Every weekly challenge and both memos are Sunday deadlines, so six of COMM 118's eleven were drawn nowhere at all."],
+        ["Every day can say what kind of day it is", "A picker at the foot of each cell: in person, no in-person meeting, or sit-down. The middle one writes the field the class site already reads, so a day marked here also drops the time and the room off the next-class card."],
+        ["And the kind is a colour", "Amber for a day with no in-person meeting, the class's own colour for a sit-down. COMM 118 has five of the first and four of the second."],
+        ["A deadline wraps", "The whole name of the assignment, on as many lines as it takes, and the cell grows. It was running off the edge."],
+        ["Counts instead of sections", "How many slides, how many readings, and whether there is a game. The readings come off the week, which is where a reading lives, so the map is showing something it never showed."],
+      ] },
+      { name: "COMM 118", items: [
+        ["The term moved onto the new arc", "Media in weeks 1 to 4, youth sports and Sit-Down 1 in 5, informal play and coaching in 6, teams in 7, Sit-Down 2 in 8, power in 9, the Field Guide in 10 and 11. Every day titled, 53 readings moved and none lost, six duplicate readings and six markers for assignments that no longer exist taken off."],
+        ["Eleven challenges, 100%", "Four weekly challenges on the Complete scale, two sit-downs at 15% with a 5% memo in front of each, the Field Guide at 30% in pairs with a topic stage, and In-Class at 20%."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "Weekly Challenge 2 has no subject.",
+      "October 19 and November 4 have no readings on them.",
+    ] },
+  },
+  {
     id: "sep15-topic-first", date: "Tuesday, September 15", title: "The topic leads, and the headings take Nunito",
     blurb: "Andrew on the call sheet, from a laptop: \"it kinda sucks on laptop now. bc its narrow ... insteadf of Monday being the big term on the hero, how about the class topic?\"",
     groups: [
