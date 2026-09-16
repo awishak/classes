@@ -47,17 +47,19 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
-    id: "sep16-features", date: "Wednesday, September 16", title: "The site, shown: a features page",
-    blurb: "Andrew: \"i'm presenting my learning management software today ... light on words, more on screenshots with fake students in there. can you also show some of the students from spring 2026 as well?\"",
+    id: "sep16-features", date: "Wednesday, September 16", title: "The site, shown and sold: a features page",
+    blurb: "Andrew, on the first draft: \"this is really messy. i want one screen shot, and then next to it, you might have a quick explanation of what it is in my language ... how would you sell this to someone who was deciding between using this and canvas?\"",
     groups: [
       { name: "The page", items: [
-        ["/features, public", "Sixteen screenshots of the real app in three sections: for students, for teachers, Spring 2026. Six phone screens, the three themes side by side, the site on a laptop, then the dashboard, the room screen, the grade view, the repository and Around the Horn, then the spring roster and leaderboard. One line under each picture."],
-        ["The pictures are the app", "Taken by a headless browser against the local dev server with the store served from a fixture: the live COMM 118 fall records, the ten placeholder students the template class ships, five answers on the \"Why are sports worth caring about?\" board, three questions on the Ask page, a board cast on the room screen and Sit-Down 1 sorted into columns. Nothing was written to the live store."],
-        ["Spring 2026 is the old hub", "The legacy COMM 118 hub signed in as the instructor, with that term's real roster and leaderboard."],
+        ["/features, public", "A pitch against Canvas at the top, then one screenshot per feature with a paragraph beside each, in his voice. Seven student screens, the three themes side by side (the one row with more than one picture), the site on a laptop, six teacher screens, two from Spring 2026, and a panel for connected assignments, which is next."],
+        ["The pictures are the app", "Taken by a headless browser against the local dev server with the store served from a fixture: the live COMM 118 fall records, the ten placeholder students the template class ships, five answers on the \"Why are sports worth caring about?\" board, a poll mid-vote on a spring weekly-game question, three items selected in the repository, Sit-Down 1 sorted and released so the grade deck shows. Nothing was written to the live store."],
+        ["Spring 2026 is the old hub", "The legacy COMM 118 hub signed in as the instructor: the PTI tab with the Around the Horn tally, the leaderboard, and a Week 7 team trivia presenter."],
       ] },
     ],
     note: { title: "Still open", lines: [
-      "The spring pictures carry real students' names, photos and hometowns on a public page.",
+      "Connected assignments is described on the page and has no code behind the description: a memo feeding its sit-down, two assignments side by side in Grade view, a comment carrying forward.",
+      "Andrew said he can compare two assignments today. No surface in the engine does that yet; the page puts the comparison under connected assignments.",
+      "The spring pictures carry real students' names, photos and points on a public page.",
       "The fixture and the screenshot script live in the session scratchpad rather than the repo, so a new set of pictures means writing them again.",
     ] },
   },
