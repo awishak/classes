@@ -51,14 +51,16 @@ const SESSIONS = [
     blurb: "Andrew, on the first draft: \"this is really messy. i want one screen shot, and then next to it, you might have a quick explanation of what it is in my language ... how would you sell this to someone who was deciding between using this and canvas?\"",
     groups: [
       { name: "The page", items: [
-        ["/features, public", "A pitch against Canvas at the top, then one screenshot per feature with a paragraph beside each, in his voice. Seven student screens, the three themes side by side (the one row with more than one picture), the site on a laptop, six teacher screens, two from Spring 2026, and a panel for connected assignments, which is next."],
-        ["The pictures are the app", "Taken by a headless browser against the local dev server with the store served from a fixture: the live COMM 118 fall records, the ten placeholder students the template class ships, five answers on the \"Why are sports worth caring about?\" board, a poll mid-vote on a spring weekly-game question, three items selected in the repository, Sit-Down 1 sorted and released so the grade deck shows. Nothing was written to the live store."],
-        ["Spring 2026 is the old hub", "The legacy COMM 118 hub signed in as the instructor: the PTI tab with the Around the Horn tally, the leaderboard, and a Week 7 team trivia presenter."],
+        ["/features, public", "A pitch against Canvas at the top, then one screenshot per feature with a paragraph beside each, in his voice. Eight student screens, the three themes side by side, the site on a laptop, then galleries: the dashboard five ways (paper, slate, teach, the quarter outline, the map), the room screen four ways (a section on paper, an item on slate, a reading, a poll), the repository with the link checker and the bulk bar, the spring game admin and the trivia presenter. A section on what the AI does, and the spring-to-fall conversation quoted from the session logs, with a spring week beside the fall quarter."],
+        ["The pictures are the app", "Taken by a headless browser against the local dev server with the store served from a fixture: the live COMM 118 fall records, the ten placeholder students the template class ships, three readings moved onto Sep 21 so the hero card shows them, five answers on the \"Why are sports worth caring about?\" board, a poll mid-vote on a spring weekly-game question, three items selected in the repository, Sit-Down 1 released, and one invented D with an invented comment so the meeting link shows. Nothing was written to the live store."],
+        ["Spring 2026 is the old hub", "The legacy COMM 118 hub signed in as the instructor: the PTI tab with the Around the Horn tally, the leaderboard, week 1's scored game, the spring schedule, and a Week 7 team trivia presenter."],
       ] },
     ],
     note: { title: "Still open", lines: [
       "Connected assignments is described on the page and has no code behind the description: a memo feeding its sit-down, two assignments side by side in Grade view, a comment carrying forward.",
       "Andrew said he can compare two assignments today. No surface in the engine does that yet; the page puts the comparison under connected assignments.",
+      "The Review button on quiz questions is on the page as next, since the game system does not have one yet.",
+      "The D and its comment on the challenge page are invented, at his request, and the page says so.",
       "The spring pictures carry real students' names, photos and points on a public page.",
       "The fixture and the screenshot script live in the session scratchpad rather than the repo, so a new set of pictures means writing them again.",
     ] },
