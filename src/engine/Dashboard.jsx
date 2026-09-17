@@ -304,6 +304,26 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-opts .right{color:${OK};font-weight:600}
 /* The day's notes, under the day. */
 .flow-daynotes{display:flex;flex-direction:column;gap:8px;padding-top:18px}
+/* THE ENTER AND EXIT BOARDS, set like the day: a heading, numbered lines at
+   the item size, and the board's colour as a rule down the left. */
+.flow-board-doc{display:flex;flex-direction:column;gap:2px;padding:14px 0 6px 14px;border-left:3px solid var(--hue,var(--dash-accent))}
+.flow-board-head{display:flex;align-items:baseline;gap:10px;min-width:0;padding:0 6px 4px}
+.flow-board-tag{flex:none;font-family:${MONO};font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--hue,var(--dash-accent))}
+.flow-board-title{flex:1 1 auto;min-width:0;font-size:21px;font-weight:600;letter-spacing:-.015em;line-height:1.3;color:${TEXT_PRIMARY}}
+.flow-board-edit{flex:none;align-self:center;min-height:28px;padding:0 9px;border:none;border-radius:7px;background:none;cursor:pointer;
+  font-family:${F};font-size:13px;font-weight:600;color:${TEXT_MUTED}}
+.flow-board-edit:hover{background:rgba(23,19,16,.06);color:${TEXT_PRIMARY}}
+.flow-board-row{display:flex;align-items:flex-start;gap:6px;min-width:0;border-radius:8px;cursor:grab}
+.flow-board-row:hover{background:rgba(23,19,16,.03)}
+.flow-board-row.live{background:#fff1f2;box-shadow:inset 4px 0 0 ${LIVE}}
+.flow-board-num{flex:none;width:30px;min-height:30px;margin-top:1px;display:inline-flex;align-items:center;justify-content:center;
+  font-family:${MONO};font-size:13px;color:${TEXT_MUTED};font-variant-numeric:tabular-nums}
+.flow-board-row.live .flow-board-num{color:${LIVE};font-weight:600}
+.flow-board-words{flex:1 1 auto;min-width:0;text-align:left;border:none;background:none;cursor:pointer;padding:3px 6px;border-radius:6px;
+  font-family:${F};font-size:16px;font-weight:500;line-height:1.45;color:${TEXT_PRIMARY}}
+.flow-board-words:hover{background:rgba(23,19,16,.045)}
+.flow-board-none{padding:3px 6px;font-size:15px;color:${TEXT_MUTED}}
+.flow-board-nav{display:flex;gap:7px;padding:6px 6px 0}
 /* My note under a reading. Quiet until there is one, and indented to the
    width of the number chip so it hangs off the thing it is about. */
 .dash-note{display:block;width:100%;text-align:left;background:none;
@@ -2041,8 +2061,8 @@ function BoardRow({ which, boards, proposals, hue, accent, liveCast, onSave, onC
   const board = saved || (proposals || {})[which] || { title: label3, ideas: [] };
   const liveHere = liveCast?.type === "board" && liveCast.boardLabel === label3;
   return (
-    <div style={{ borderLeft: "4px solid " + (hue || accent), borderRadius: 10 }}>
-      <BoardEditor label={label3} board={board} isProposal={!saved} accent={accent}
+    <div>
+      <BoardEditor label={label3} board={board} isProposal={!saved} accent={accent} doc which={which} hue={hue || accent}
         onSave={(b) => onSave(which, b)} onReset={() => onSave(which, null)}
         liveIndex={liveHere ? liveCast.at : null}
         onCast={(i) => onCast(which, i)} onDismiss={onDismiss} />
@@ -2050,7 +2070,7 @@ function BoardRow({ which, boards, proposals, hue, accent, liveCast, onSave, onC
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList, games, gamesHref, boards, proposals, onSaveBoard, onCastBoard, boardHue, schedToday, onCastScheduled }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList, games, gamesHref, boards, proposals, onSaveBoard, onCastBoard, boardHue, schedToday, onCastScheduled, onTakeIdea }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -2078,7 +2098,13 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
     if (!from) return;
     // From the Material column, or out of Today's readings. Neither carries a
     // slot, because neither was ever in the flow.
-    if (!from.slot && (from.blockId || from.title)) { onPickBlock(toSlot, from, null, beforeId); return; }
+    if (!from.slot && (from.blockId || from.title)) {
+      onPickBlock(toSlot, from, null, beforeId);
+      // Out of the Enter or Exit board: the idea is a row of the day now, and
+      // the board lets go of it unless dragging is set to keep.
+      if (from.board && onTakeIdea) onTakeIdea(from.board, from.index);
+      return;
+    }
     if (!from.id || (from.slot === toSlot && from.id === beforeId)) return;
     onDragMove(from.slot, from.id, toSlot, beforeId);
   };
@@ -2659,7 +2685,48 @@ export function BoardsPanel({ boards, proposals, onSave, castNow, dismiss, liveC
   );
 }
 
-function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIndex, onCast, onDismiss }) {
+// A board drawn the way the day is drawn. Andrew, 2026-09-17: "make enter and
+// exit seem more like the rest of the outline. sure it can be a different
+// color but make it fit better." The Flow's boards were two grey cards with
+// their ideas in white pills, between sections set as a document. Now the
+// headline is a section heading, each idea is a numbered line at the item
+// size, and the board's colour is a rule down the left. An idea drags into any
+// section the way a reading does: "let me drag and drop anything out of enter
+// and exit."
+function BoardDoc({ which, label, board, isProposal, hue, liveIndex, onCast, onDismiss, onEdit }) {
+  const ideas = board.ideas || [];
+  const live = liveIndex != null;
+  return (
+    <div className="flow-board-doc" style={{ "--hue": hue }}>
+      <div className="flow-board-head">
+        <span className="flow-board-tag">{label}{isProposal ? " · proposed" : ""}</span>
+        <span className="flow-board-title">{board.title}</span>
+        <button className="dash-focus flow-board-edit" onClick={onEdit} title={"Edit the " + label + " board"}>Edit</button>
+      </div>
+      {ideas.map((idea, i) => (
+        <div key={i} className={"flow-board-row" + (liveIndex === i ? " live" : "")} draggable
+          onDragStart={e => {
+            e.dataTransfer.effectAllowed = "copyMove";
+            e.dataTransfer.setData("text/plain", JSON.stringify({ title: idea, board: which, index: i }));
+          }}>
+          <span className="flow-board-num" aria-hidden="true" title="Drag into a section">{i + 1}</span>
+          <button className="dash-focus flow-board-words" onClick={() => (liveIndex === i ? onDismiss() : onCast(i))}
+            title={liveIndex === i ? "Take off screen" : "Put on the room screen"}>{idea}</button>
+          {liveIndex === i ? <button className="dash-focus doc-down" onClick={onDismiss} title="Take off screen">On screen ×</button> : null}
+        </div>
+      ))}
+      {!ideas.length ? <div className="flow-board-none">No ideas yet.</div> : null}
+      {live ? (
+        <div className="flow-board-nav">
+          <button style={mini} disabled={liveIndex <= 0} onClick={() => onCast(liveIndex - 1)}>‹ Back</button>
+          <button style={mini} disabled={liveIndex >= ideas.length - 1} onClick={() => onCast(liveIndex + 1)}>Next ›</button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIndex, onCast, onDismiss, doc, which, hue }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(board.title);
   const [text, setText] = useState((board.ideas || []).join("\n"));
@@ -2668,6 +2735,11 @@ function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIn
 
   const ideas = board.ideas || [];
   const live = liveIndex != null;
+
+  if (!editing && doc) {
+    return <BoardDoc which={which} label={label} board={board} isProposal={isProposal} hue={hue}
+      liveIndex={liveIndex} onCast={onCast} onDismiss={onDismiss} onEdit={() => setEditing(true)} />;
+  }
 
   if (editing) {
     return (
@@ -3833,7 +3905,7 @@ export default function Dashboard({ config }) {
   // Which of the three that came off the rail is open, by panel id.
   const [roomOpen, setRoomOpen] = useState("");
   // The whole term, over the day.
-  const [termOpen, setTermOpen] = useState(false);
+  const [termOpen, setTermOpen] = useState("");  // "" | "outline" | "map"
   // Putting the open thing on a day: "" | "add" | "move".
   const [placing, setPlacing] = useState("");
   const [colorsOpen, setColorsOpen] = useState(false);
@@ -4887,6 +4959,14 @@ export default function Dashboard({ config }) {
       games={games} gamesHref={config.path + "/games"}
       boards={plan?.boards || {}} proposals={proposals} onSaveBoard={saveBoard} onCastBoard={castBoard} boardHue={hueOfKind("boards")}
       schedToday={schedToday} onCastScheduled={castScheduled}
+      // An idea dragged off a board into a section leaves the board, the way a
+      // reading dragged into the flow leaves Today's readings, and the same
+      // View menu switch keeps it there instead.
+      onTakeIdea={(which, i) => {
+        if (railRef.current.dragKeeps) return;
+        const b = boardFor(which) || { title: which === "pre" ? "Enter" : "Exit", ideas: [] };
+        saveBoard(which, { ...b, ideas: (b.ideas || []).filter((_, n) => n !== i) });
+      }}
       onSaveSpring={(patch) => writeDay(d => ({ ...d, spring: { ...(d.spring || {}), ...patch } }), "that note")}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
       onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMoveSection={moveSection} onAddUnder={addUnder} onMergeSections={mergeSections} onSelect={setPicked} onEdit={editPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
@@ -5047,6 +5127,15 @@ export default function Dashboard({ config }) {
               Here{students.length ? <span className="dash-bar-sub">{students.length - outCount}/{students.length}</span> : null}
             </button>
             <button className="dash-focus dash-bar" onClick={openHorn}>Around the Horn</button>
+            {/* The two ways to read the quarter, on the bar. Andrew,
+                2026-09-17: "you gotta put links to the quarter outline and
+                map on the front page of the dashboard." They were one press
+                inside the date menu, under Plan the quarter, and a thing you
+                have to know is there is not on the front page. */}
+            <button className="dash-focus dash-bar" onClick={() => setTermOpen("outline")}
+              title="The quarter as a document: week, day, section, row">Outline</button>
+            <button className="dash-focus dash-bar" onClick={() => setTermOpen("map")}
+              title="The quarter on one screen">Map</button>
             <ViewMenu railOpen={railOpen} onRail={toggleRail}
               dense={dense} onDense={() => railSave.current({ dense: !dense })}
               onReset={() => railSave.current({ cols: { ...COL } })}
@@ -5071,7 +5160,7 @@ export default function Dashboard({ config }) {
               span={dayTitle.span} nth={dayTitle.nth}
               onClear={dayTitle.own ? () => saveDayTitle("") : null}
               date={<DateButton days={days} day={day} onPick={setDay} accent={config.accent} today={onDeck} counts={dayCounts}
-                onTerm={() => setTermOpen(true)} />}
+                onTerm={() => setTermOpen("outline")} />}
               tools={
                 <>
                   {/* A new section arrives nameless, called Section N, with a
@@ -5232,7 +5321,7 @@ export default function Dashboard({ config }) {
       {termOpen ? (
         <TermOutline config={config} weeks={weeks} plans={data.dayPlans || {}}
           assignments={assignments} day={day} blockOf={blockOf} features={FEATURES} ground={data?.roomGround || "slate"}
-          onPick={setDay} onClose={() => setTermOpen(false)}
+          onPick={setDay} onClose={() => setTermOpen("")} startView={termOpen}
           onWeekTopic={(id, v) => update(prev => ({
             ...prev,
             schedule: (prev.schedule || config.scheduleWeeks || []).map(w => w.id === id ? { ...w, topic: v } : w),

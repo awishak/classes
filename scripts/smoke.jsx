@@ -2493,6 +2493,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
         if (/>Add</.test(game)) say("a placed activity still offers Add");
       }
       if (html.includes("what is still unplaced")) say("the fold still claims to hold the unplaced");
+      // An idea on a board is a line that drags into a section, and the
+      // board's headline is set as a heading, the way a section's name is.
+      if (!/class="flow-board-row" draggable="true"/.test(html)) say("a board idea is not draggable");
+      if (!/flow-board-title[^>]*>Enter headline</.test(html)) say("the Enter headline is not set as a heading");
       const bare = renderToString(<FlowPanel {...props} schedToday={undefined} boards={undefined} proposals={undefined} onSaveBoard={undefined} />);
       if (bare.includes("Enter headline")) say("a Flow with no board handler still draws a board");
     } catch (err) { say("the Flow threw: " + err.message); }
