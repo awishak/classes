@@ -1766,6 +1766,20 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // the View menu is gone now and the row sits in the dashboard's More, so
   // the check follows the row rather than the menu.
   if (/<ViewMenu\b/.test(src)) say("the View menu is back on the dashboard");
+
+  // No hook below the loading returns. The dashboard returns early while its
+  // class loads, so a hook placed after those returns runs on the second
+  // render and not the first, and React throws its hook-order error the
+  // moment the class arrives. Rendering <Dashboard/> here only reaches the
+  // loading screen, which is exactly why this has to be read off the source.
+  const firstReturn = src.indexOf("\n  if (data === null) {");
+  const stage = src.indexOf("<main ref={stageRef}");
+  if (firstReturn < 0 || stage < 0) say("the dashboard's loading return or its stage has moved; the hook check cannot find them");
+  else {
+    const below = src.slice(firstReturn, stage);
+    const hooks = [...below.matchAll(/\buse(State|Effect|Ref|Callback|Memo|LayoutEffect)\(/g)].map(m => m[0]);
+    if (hooks.length) say(`${hooks.length} hook(s) sit below the dashboard's loading return: ${hooks.join(", ")}`);
+  }
   const menu = src.slice(src.indexOf("export function ClassMenu"), src.indexOf("export function ClassMenu") + 6000);
   if (!menu.includes("onKeys") || !menu.includes(">Keyboard<") && !/Keyboard<kbd/.test(menu)) say("the dashboard's More no longer opens the shortcut sheet");
   if (!/<ClassMenu[\s\S]*?onKeys=/.test(src)) say("the dashboard's More is not handed the shortcut sheet");

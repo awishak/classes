@@ -3907,6 +3907,11 @@ export default function Dashboard({ config }) {
   const day = (picked_ && days.some(d => d.date === picked_)) ? picked_
     : (currentDay(weeks)?.date || days[0]?.date || null);
   const setDay = setPicked_;
+  // A new day starts Next from its top. The effect sits up here, above the
+  // loading returns further down, so the hooks run in the same order on the
+  // first paint and the next: below them, React threw its hook-order error
+  // the moment the class loaded.
+  useEffect(() => { setLastCast(null); }, [day]);
 
   const plan = (data?.dayPlans || {})[day] || null;
   // sequenceOptions adds Freeform, which config.sequences does not carry, so
@@ -5131,8 +5136,6 @@ export default function Dashboard({ config }) {
     else if (upNextRow.item?.board) castBoard(upNextRow.item.board, upNextRow.item.index);
     setLastCast(upNextRow.id);
   };
-  // A new day starts Next from its top.
-  useEffect(() => { setLastCast(null); }, [day]);
 
   // Where the running order is up to. The room screen knows what it is showing
   // by its words, so the row on the screen is the row whose words match — which
