@@ -420,7 +420,7 @@ export function GamesSummary({ games = [] }) {
 export function InstructorProfile({ config, shared, updateShared }) {
   const from = instructorOf(config, shared);
   const [f, setF] = useState({ name: from.name || "", bio: from.bio || "", email: from.email || "",
-    schedulingLink: from.schedulingLink || "", photo: from.photo || "" });
+    schedulingLink: from.schedulingLink || "", officeHours: from.officeHours || "", photo: from.photo || "" });
   const [saved, setSaved] = useState(false);
   const set = (k, v) => { setF(p => ({ ...p, [k]: v })); setSaved(false); };
   const save = () => {
@@ -450,6 +450,7 @@ export function InstructorProfile({ config, shared, updateShared }) {
       {row("Name", "name", "")}
       {row("What you teach", "bio", "")}
       {row("Email", "email", "")}
+      {row("Office hours", "officeHours", "")}
       {row("Calendar link", "schedulingLink", "https://")}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button className="ca-focus" onClick={save}

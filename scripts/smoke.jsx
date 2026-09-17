@@ -2341,7 +2341,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       if (merged.name !== "Dr. Andrew Ishak" || merged.bio !== "From the config." || merged.email !== "aishak@scu.edu" || merged.schedulingLink !== "https://calendly.com/x") {
         say("the instructor's card does not merge over the class config: " + JSON.stringify(merged)); }
       const prof = renderToString(<InstructorProfile config={hcfg} shared={{}} updateShared={noop} />);
-      ["Your card", "Name", "Calendar link", "Choose a photo"].forEach(t => { if (!prof.includes(t)) say("the profile editor has no " + JSON.stringify(t)); });
+      ["Your card", "Name", "Office hours", "Calendar link", "Choose a photo"].forEach(t => { if (!prof.includes(t)) say("the profile editor has no " + JSON.stringify(t)); });
     } catch (err) { say("the home cards threw: " + err.message); }
   }
 

@@ -27,7 +27,7 @@ import * as TOKENS from "./tokens.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
 import { useSession, studentFor, myCode } from "./session.js";
-import { instructorOf } from "../instructors.js";
+import { instructorOf, schedulingLinkOf } from "../instructors.js";
 import { useOpenGames, GameStart, GamePlay, GamesNow } from "@ishak/decks";
 import { gameClient } from "./gameClient.js";
 import GradeDeck from "./GradeDeck.jsx";
@@ -163,7 +163,9 @@ function detail(key, config, role, ctx) {
       <Panel title="Your instructor">
         <div style={{ fontWeight: 700, fontSize: 17 }}>{ins.name}</div>
         <div style={{ marginTop: 6, color: TEXT_SECONDARY }}>{ins.bio}</div>
+        {ins.officeHours ? <div style={{ marginTop: 10, fontSize: 15, color: TEXT_SECONDARY }}><span style={{ fontWeight: 600, color: TEXT_PRIMARY }}>Office hours</span> {ins.officeHours}</div> : null}
         {ins.email ? <a className="ca-focus" href={"mailto:" + ins.email} style={{ display: "inline-block", marginTop: 10, fontSize: 15, fontWeight: 600, color: config.accent }}>{ins.email}</a> : null}
+        {schedulingLinkOf(config) ? <a className="ca-focus" href={schedulingLinkOf(config)} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 6, fontSize: 15, fontWeight: 600, color: config.accent }}>Book a meeting</a> : null}
       </Panel>
     );
   }

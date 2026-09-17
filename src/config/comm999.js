@@ -283,6 +283,7 @@ const comm999 = {
     name: "Andrew Ishak",
     bio: "Department of Communication, Santa Clara University.",
     email: "aishak@scu.edu",
+    officeHours: "",
     photo: "",
     schedulingLink: "",
   },

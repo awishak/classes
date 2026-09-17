@@ -47,6 +47,24 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep17-fall-card", date: "Thursday, September 17", title: "The spring card comes to fall, with office hours",
+    blurb: "Andrew: \"gtta strat loadig my classes up. how do students update their profiles/ and can you update mine from last spring to this fall?\"",
+    groups: [
+      { name: "The instructor's card", items: [
+        ["The fall card was blank", "COMM 118 and COMM 3 ship no instructor block, and the shared store had no card, so Your instructor on both fall sites showed nothing. The spring card, read out of the three old hubs' stores, went in: name, title as what you teach, email, the Calendly link, and the spring photo resized the way the form does it. A dated backup of the shared row was written first, the way the app does before a write."],
+        ["Office hours are a field", "The card had no place for them, so spring's Tuesdays 9:30 to 11:30 had nowhere to go. Your card under More carries an Office hours row now, and the student's tile shows the line under the bio, with Book a meeting under the email, since the extra times live at the calendar link."],
+        ["Andrew W. Ishak", "Spring COMM 118 said that; COMM 2 and 4 said Andrew Ishak. His call: the W stays. No motto."],
+      ] },
+      { name: "Students", items: [
+        ["Class, then Your card", "Email, photo, about me, year, hometown, motto, goals and what matters most, saved to the class store. He sees the result on the Roster by tapping a name."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "The photo is saved on the card and shown in the editor, and nowhere a student looks.",
+      "The September 15 entry says the card holds title, office and office hours. Until today the form had name, what you teach, email and the calendar link.",
+    ] },
+  },
+  {
     id: "sep16-features", date: "Wednesday, September 16", title: "The site, shown and sold: a features page",
     blurb: "Andrew, on the first draft: \"this is really messy. i want one screen shot, and then next to it, you might have a quick explanation of what it is in my language ... how would you sell this to someone who was deciding between using this and canvas?\"",
     groups: [
