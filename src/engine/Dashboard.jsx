@@ -1181,31 +1181,6 @@ function PlaceMenu({ slots, days, today, accent, onPlace, onClose }) {
   );
 }
 
-function Unplanned({ items, accent, onAdd, castNow }) {
-  if (!items.length) return null;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-      <div style={{ ...label, color: WARN }}>On the schedule, not in the flow</div>
-      {items.map(it => (
-        <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap",
-          background: "rgba(180,83,9,.07)", border: "1px solid rgba(180,83,9,.3)", borderRadius: 10, padding: "8px 11px", minHeight: TAP }}>
-          <span style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: TYPE_COLOR[it.type] || TEXT_MUTED }} />
-          <span style={{ fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase",
-            color: TYPE_COLOR[it.type] || TEXT_MUTED }}>{typeLabel(it.type)}</span>
-          <span style={{ flex: 1, minWidth: 110, fontSize: 14, color: TEXT_PRIMARY, overflow: "hidden", wordBreak: "break-word", lineHeight: 1.4 }}>{it.title}</span>
-          {it.loose ? <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", color: TEXT_MUTED }}>THIS WEEK</span> : null}
-          {it.url ? (
-            <a href={it.url} target="_blank" rel="noreferrer" className="dash-focus"
-              style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Open ↗</a>
-          ) : null}
-          <button className="dash-focus" style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5, borderColor: accent, color: accent }}
-            onClick={() => onAdd(it)}>Add</button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // Building the day is the job this screen exists for, so it happens here
 // rather than on another page. Three ways in, because that is all a slot ever
 // holds: something I say, something from the seed library, or something to open.
@@ -2014,7 +1989,68 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList, games, gamesHref }) {
+// What the schedule has for this day, at the top of the Flow. Andrew,
+// 2026-09-17: "why am i not seeing game and headline on oct 5, or the
+// readings on oct 7? shouldn't the dashboard make this really easy for me to
+// see?" It did not: an item on the schedule that was not yet in a section sat
+// under a fold at the foot of the day, and a reading never reached the Flow
+// at all. Every reading and activity dated to the day is here now, castable
+// from its row, with Add for anything not yet in a section.
+function ScheduleToday({ items, accent, onAdd, onCast }) {
+  if (!items.length) return null;
+  return (
+    <div className="flow-sched" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ ...label, color: accent }}>On the schedule today</div>
+      {items.map(it => (
+        <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap",
+          background: SURFACE_2, border: "1px solid " + BORDER, borderRadius: 10, padding: "6px 11px", minHeight: TAP }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: TYPE_COLOR[it.type] || TEXT_MUTED }} />
+          <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase",
+            color: TYPE_COLOR[it.type] || TEXT_MUTED }}>{typeLabel(it.type)}</span>
+          <span style={{ flex: 1, minWidth: 110, fontSize: 14, color: TEXT_PRIMARY, overflow: "hidden", wordBreak: "break-word", lineHeight: 1.4 }}>{it.title}</span>
+          {it.loose ? <span style={{ fontFamily: MONO, fontSize: 13, letterSpacing: ".08em", color: TEXT_MUTED }}>THIS WEEK</span> : null}
+          {it.placed ? <span style={{ fontFamily: MONO, fontSize: 13, letterSpacing: ".08em", color: TEXT_MUTED }}>IN THE FLOW</span> : null}
+          {it.url ? (
+            <a href={it.url} target="_blank" rel="noreferrer" className="dash-focus"
+              style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 13, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Open ↗</a>
+          ) : null}
+          {onCast ? (
+            <button className="dash-focus" style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 13 }}
+              onClick={() => onCast(it)}>Cast</button>
+          ) : null}
+          {!it.placed ? (
+            <button className="dash-focus" style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 13, borderColor: accent, color: accent }}
+              onClick={() => onAdd(it)}>Add</button>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// The Enter board above the day and the Exit board below it, as rows of the
+// Flow. Andrew, 2026-09-17: "didn't we work on having an entry and exit part
+// of each day on the dashboard?" We had: the two buttons came off the room
+// monitor on September 15 and writing the boards moved behind the command
+// bar, which left nothing on the day saying what either board says. Each row
+// shows the headline and the ideas, opens to edit, and casts an idea from its
+// line the way the boards sheet does.
+function BoardRow({ which, boards, proposals, hue, accent, liveCast, onSave, onCast, onDismiss }) {
+  const label3 = which === "pre" ? "Enter" : "Exit";
+  const saved = (boards || {})[which];
+  const board = saved || (proposals || {})[which] || { title: label3, ideas: [] };
+  const liveHere = liveCast?.type === "board" && liveCast.boardLabel === label3;
+  return (
+    <div className={"flow-board flow-board-" + which} style={{ borderLeft: "4px solid " + (hue || accent), borderRadius: 10 }}>
+      <BoardEditor label={label3} board={board} isProposal={!saved} accent={accent}
+        onSave={(b) => onSave(which, b)} onReset={() => onSave(which, null)}
+        liveIndex={liveHere ? liveCast.at : null}
+        onCast={(i) => onCast(which, i)} onDismiss={onDismiss} />
+    </div>
+  );
+}
+
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList, games, gamesHref, boards, proposals, onSaveBoard, onCastBoard, boardHue, schedToday, onCastScheduled }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -2049,7 +2085,6 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
   const [addingBlock, setAddingBlock] = useState(false);
   const [noting, setNoting] = useState(false);
   const [blockDraft, setBlockDraft] = useState("");
-  const unplannedBlock = <Unplanned items={loose || []} accent={accent} onAdd={(it) => setPlacing(it)} castNow={castNow} />;
 
   const seqPicker = null;
   // The deck. Day Plan has had a slides field on every day since it was built
@@ -2287,6 +2322,11 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
           </span>
         ) : null}
       </div>
+      {onSaveBoard ? (
+        <BoardRow which="pre" boards={boards} proposals={proposals} hue={boardHue} accent={accent} liveCast={liveCast}
+          onSave={onSaveBoard} onCast={onCastBoard} onDismiss={dismiss} />
+      ) : null}
+      <ScheduleToday items={schedToday || loose || []} accent={accent} onAdd={(it) => setPlacing(it)} onCast={onCastScheduled} />
       <DayDoc sections={sectionRows} slotItems={slotItems} named={named} firstMovable={firstMovable}
         blockOf={blockOf} seedById={seedById} doneSet={doneSet} numberOf={numberOf} nextId={nextId} pickedId={pickedId}
         liveLabel={liveLabel} dismiss={dismiss} features={FEATURES} hue={hue} slidesOn={slidesOn} classHref={classHref}
@@ -2323,6 +2363,10 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
       {foldRow}
       {addBlockRow}
       {blockBlock}
+      {onSaveBoard ? (
+        <BoardRow which="post" boards={boards} proposals={proposals} hue={boardHue} accent={accent} liveCast={liveCast}
+          onSave={onSaveBoard} onCast={onCastBoard} onDismiss={dismiss} />
+      ) : null}
 
       {/* The notes for this day, directly under it.
           They were only reachable through the command bar, under My notes, so
@@ -2352,11 +2396,10 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
       {/* Below the day. Everything here is a planning move, not a teaching one:
           nothing in this group is something you press with the room watching. */}
       <details className="flow-more-day">
-        <summary className="dash-focus">Sequence, slides and what is still unplaced</summary>
+        <summary className="dash-focus">Slides and coming up</summary>
         <div className="flow-more-body">
           {seqPicker}
           {slidesBlock}
-          {unplannedBlock}
           <ComingUp rows={comingRows || []} accent={accent} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel}
             extra={<GoTo href={classHref + "/challenges"} accent={accent}>All challenges</GoTo>} />
         </div>
@@ -4668,6 +4711,26 @@ export default function Dashboard({ config }) {
   // Arrow keys walk the board that is up. The board panel already knows how to
   // do this; the keyboard needed the same move without the mouse.
   const boardFor = (which) => (plan?.boards || {})[which] || proposals[which];
+  // An idea from an Enter or Exit row goes up the way the monitor's button put
+  // it up, and the first Enter idea opens the thread so the first student to
+  // arrive finds it.
+  const castBoard = (which, i) => {
+    const b = boardFor(which);
+    const lbl = which === "pre" ? "Enter" : "Exit";
+    const ideas = b?.ideas || [];
+    if (i === 0) DB.open(ideas[0] || b?.title || lbl);
+    castNow({ type: "board", tag: lbl, boardLabel: lbl, title: b?.title || lbl,
+      idea: ideas[i] || "", at: i, count: ideas.length, showAsk: which === "pre", label: lbl + " \u00b7 " + (i + 1) });
+    markEngaged();
+  };
+  // Every reading and activity the schedule dates to this day, marked when
+  // it is already in a section. A reading goes up as the page; an activity
+  // runs the way its row in the Flow would.
+  const unplacedIds = new Set(unplanned(data, config, day).map(u => u.id));
+  const schedToday = scheduledFor(weeks, day).map(it => ({ ...it, placed: !unplacedIds.has(it.id) }));
+  const castScheduled = (it) => (MEDIA_SET.has(it.type) && it.url
+    ? castNow({ ...castFromLink({ label: it.title, url: it.url }), title: it.title, label: it.title })
+    : runFeature(it.title));
   stepRef.current = (dir) => {
     const c = liveRef.current?.cast;
     if (!c || c.type !== "board") return;
@@ -4822,6 +4885,8 @@ export default function Dashboard({ config }) {
       onOpenTemplates={() => setTemplatesOpen(true)} onOpenHistory={() => setHistoryOpen(true)}
       roomGround={data?.roomGround} onSetGround={(gr) => update(prev => ({ ...prev, roomGround: gr }))} assignmentList={assignments}
       games={games} gamesHref={config.path + "/games"}
+      boards={plan?.boards || {}} proposals={proposals} onSaveBoard={saveBoard} onCastBoard={castBoard} boardHue={hueOfKind("boards")}
+      schedToday={schedToday} onCastScheduled={castScheduled}
       onSaveSpring={(patch) => writeDay(d => ({ ...d, spring: { ...(d.spring || {}), ...patch } }), "that note")}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
       onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMoveSection={moveSection} onAddUnder={addUnder} onMergeSections={mergeSections} onSelect={setPicked} onEdit={editPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}

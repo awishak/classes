@@ -2460,6 +2460,44 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     } catch (err) { say("the Horn threw: " + err.message); }
   }
 
+  // The day's schedule at the top of the Flow, Enter above the day and Exit
+  // below it. Andrew, 2026-09-17: "why am i not seeing game and headline on
+  // oct 5, or the readings on oct 7?" and "didn't we work on having an entry
+  // and exit part of each day on the dashboard?"
+  {
+    const say = (m) => { console.error("  FAIL  flow strip: " + m); failedEarly++; };
+    try {
+      const sched = [
+        { id: "s1", type: "reading", title: "Chapter 8 on the day", url: "https://example.com/8", placed: false },
+        { id: "s2", type: "activity", title: "Game on the day", placed: true },
+      ];
+      const props = { plan: fullPlan, seq, seeds, castNow: noop, dismiss: noop, liveLabel: null, accent: "#123456", onClaim: noop,
+        features: ["Headlines"], onFeature: noop, planHref: "/x", onSlidesClaim: noop, onBlockClaim: noop, where: "COMM 1 · Sep 1",
+        loose: [], onAddScheduled: noop, onAddItem: noop, onRemoveItem: noop, onMoveItem: noop, onSetSequence: noop, onSetSlotTitle: noop, sequences: [seq],
+        schedToday: sched, onCastScheduled: noop, boards: {}, proposals: { pre: { title: "Enter headline", ideas: ["first idea"] }, post: { title: "Exit headline", ideas: ["last idea"] } },
+        onSaveBoard: noop, onCastBoard: noop, boardHue: "#7c3aed" };
+      const html = renderToString(<FlowPanel {...props} />).replace(/<!-- -->/g, "");
+      const at = (t) => html.indexOf(t);
+      ["On the schedule today", "Chapter 8 on the day", "Game on the day", "Enter headline", "first idea", "Exit headline", "last idea"]
+        .forEach(t => { if (at(t) < 0) say("the Flow does not show " + JSON.stringify(t)); });
+      if (!(at("Enter headline") < at("On the schedule today"))) say("Enter is not above the schedule");
+      const firstSection = Object.values(fullPlan.slots || {}).map(s => s.title).filter(Boolean)[0];
+      if (firstSection && !(at("On the schedule today") < at(firstSection))) say("the schedule is not above the day");
+      if (firstSection && !(at(firstSection) < at("Exit headline"))) say("Exit is not below the day");
+      if (/IN THE FLOW[\s\S]*Chapter 8 on the day|Chapter 8 on the day[\s\S]{0,300}IN THE FLOW[\s\S]{0,100}<\/div>\s*<div[^>]*>[\s\S]{0,200}Game on the day/.test(html) === false) {
+        // The placed one says so and has no Add; the unplaced one has Add.
+        const chapter = html.slice(at("Chapter 8 on the day"), at("Game on the day"));
+        if (!/>Add</.test(chapter)) say("an unplaced reading has no Add");
+        const game = html.slice(at("Game on the day"), at("Game on the day") + 900);
+        if (!/IN THE FLOW/.test(game)) say("a placed activity does not say it is in the flow");
+        if (/>Add</.test(game)) say("a placed activity still offers Add");
+      }
+      if (html.includes("what is still unplaced")) say("the fold still claims to hold the unplaced");
+      const bare = renderToString(<FlowPanel {...props} schedToday={undefined} boards={undefined} proposals={undefined} onSaveBoard={undefined} />);
+      if (bare.includes("Enter headline")) say("a Flow with no board handler still draws a board");
+    } catch (err) { say("the Flow threw: " + err.message); }
+  }
+
   // Assignments as cards, in the order they come due, and a page for each one.
   // Andrew, 2026-09-15: graded is solid with the letter, a green circle for
   // turned in, yellow for came back, red for a missed deadline, New until the
