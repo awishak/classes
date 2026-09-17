@@ -157,12 +157,14 @@ function Line({ id, value, placeholder, readOnly, className, onSave, onKey, regi
 // A link on a line: press the name and the page goes up on the room screen;
 // press ↗ and it opens in a tab here instead. Press the name again while it
 // is up to take it down.
-function LinkChips({ urls, liveLabel, onCast, dismiss, rowId }) {
+function LinkChips({ urls, liveLabel, liveUrl, onCast, dismiss, rowId }) {
   const list = [...new Set((urls || []).filter(Boolean))];
   if (!list.length) return null;
   return list.map(u => {
     const name = hostOf(u) || "link";
-    const live = liveLabel === name;
+    // By address, not by host: every Wikipedia link shares a host, and matching
+    // on the host lit every one of them when one went up.
+    const live = liveUrl ? liveUrl === u : liveLabel === name;
     return (
       <span key={u} className={"doc-link" + (live ? " live" : "")}>
         <button className="dash-focus doc-link-go" title={live ? "Take off screen" : "Put on screen"}
@@ -305,7 +307,7 @@ const GAMEY = /\b(game|trivia|ten on ten)\b/i;
 
 export default function DayDoc({
   sections, slotItems, named, firstMovable, blockOf, seedById, doneSet, nextId, pickedId,
-  liveLabel, castItem, castSection, dismiss, features, hue, slidesOn, classHref, renderExtras,
+  liveLabel, liveUrl, castItem, castSection, dismiss, features, hue, slidesOn, classHref, renderExtras,
   onSetSlotTitle, onSaveItem, onSaveBlock, onInsertRow, onRemoveItem, onNest, onTick, isAssigned, onToggleAssigned,
   onDeleteSection, onMoveSection, onEdit, drop, castLink, onMoveItem, onConvertRow, onLinkRow, library,
   onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, teach, onTeach,
@@ -683,7 +685,9 @@ export default function DayDoc({
   // does: put the page on the room screen, open it here, or edit the line.
   const linkMenu = (key) => (url, e) => {
     const name = hostOf(url) || "link";
-    const live = liveLabel === name;
+    // By address, not by host: every Wikipedia link shares a host, and matching
+    // on the host lit every one of them when one went up.
+    const live = liveUrl ? liveUrl === u : liveLabel === name;
     openMenu(e, [
       live ? ["Take off screen", () => dismiss()] : ["Put on screen", () => castLink && castLink(url, name)],
       ["Open in new tab", () => { if (typeof window !== "undefined") window.open(url, "_blank", "noopener,noreferrer"); }],
@@ -931,7 +935,7 @@ export default function DayDoc({
                           href={gamesHref + "#game=" + it.gameId} target="_blank" rel="noopener noreferrer">{kind}</a>
                       ) : kind ? <span className="doc-kind" style={{ "--ink": inkOf(kindColor) }}>{kind}</span> : null}
                       <LinkChips rowId={it.id} urls={[blk?.url, ...(it.links || []).map(l => l.url)]}
-                        liveLabel={liveLabel} onCast={castLink} dismiss={dismiss} />
+                        liveLabel={liveLabel} liveUrl={liveUrl} onCast={castLink} dismiss={dismiss} />
                       {live ? <button className="dash-focus doc-down" onClick={dismiss} title="Take off screen">On screen ×</button> : null}
                     </div>
 
@@ -966,7 +970,7 @@ export default function DayDoc({
                               onSave={saveItemWords(c)} onKey={keyHandler(c)} register={register} onLeaveEmpty={leaveEmpty(c)}
                               onLink={linkMenu(c.it.id)} onType={typing(c)} onLeave={leave} />
                             <LinkChips rowId={c.it.id} urls={[c.blk?.url, ...(c.it.links || []).map(l => l.url)]}
-                              liveLabel={liveLabel} onCast={castLink} dismiss={dismiss} />
+                              liveLabel={liveLabel} liveUrl={liveUrl} onCast={castLink} dismiss={dismiss} />
                           </div>
                           {cBody ? (
                             <div className="doc-row doc-under">

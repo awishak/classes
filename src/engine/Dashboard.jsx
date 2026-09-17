@@ -113,6 +113,8 @@ const CSS = `
 .dash-remind-more{flex-basis:100%;margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:4px 18px;
   font-size:15px;line-height:1.4;color:${TEXT_SECONDARY}}
 .dash-stage{display:grid;gap:0;padding:14px 18px 26px;align-items:start;max-width:1760px;margin:0 auto}
+/* The day's housekeeping, at the foot of the day column. */
+.dash-dayfoot{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px;padding-top:12px;border-top:1px solid ${BORDER}}
 /* The seam between two columns. Invisible until the pointer is near it, then a
    line you can grab. Sixteen pixels wide so it is catchable, drawn as three so
    it is not a gutter. */
@@ -2350,7 +2352,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
       <ScheduleToday items={schedToday || loose || []} accent={accent} onAdd={(it) => setPlacing(it)} onCast={onCastScheduled} />
       <DayDoc sections={docSections} slotItems={docSlotItems} named={docNamed} firstMovable={withBoards ? firstMovable + 1 : firstMovable}
         blockOf={blockOf} seedById={seedById} doneSet={doneSet} numberOf={numberOf} nextId={nextId} pickedId={pickedId}
-        liveLabel={liveLabel} dismiss={dismiss} features={FEATURES} hue={hue} slidesOn={slidesOn} classHref={classHref}
+        liveLabel={liveLabel} liveUrl={liveCast?.openUrl || liveCast?.url || ""} dismiss={dismiss} features={FEATURES} hue={hue} slidesOn={slidesOn} classHref={classHref}
         ground={roomGround || "slate"} assignments={assignmentList} games={games} gamesHref={gamesHref}
         // A slide goes up as the slide: the template the row's thumbnail draws.
         // An activity runs itself, and a clip or voice memo plays as a file.
@@ -3697,10 +3699,7 @@ function EditableTopic({ value, placeholder, onSave, own, weekLabel, weekday, sp
 // number, with no way to see what was on any of them. It opens the term
 // outline now: the same question, answered properly. The chips are still here
 // underneath it, because jumping two days forward should not need a popup.
-// The day's own tools live in here too. Andrew, 2026-09-17: "we are getting
-// way too cluttered on screen ... we don't need templates, history or meets
-// in person. those can be in the menu for when i click on week 1 sep 21."
-function DateButton({ days, day, onPick, accent, today, counts, onTerm, tools }) {
+function DateButton({ days, day, onPick, accent, today, counts, onTerm }) {
   const i = days.findIndex(d => d.date === day);
   const weekIds = [...new Set(days.map(d => d.weekId))];
   const wn = weekIds.indexOf(days[i]?.weekId);
@@ -3722,17 +3721,6 @@ function DateButton({ days, day, onPick, accent, today, counts, onTerm, tools })
           Plan the quarter
           <span style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 13, opacity: .7 }}>{days.length} days</span>
         </button>
-      ) : null}
-      {(tools || []).length ? (
-        <>
-          <span style={{ ...label, padding: "4px 10px 2px" }}>This day</span>
-          {tools.map(t => (
-            <button key={t.label} className="dash-focus" onClick={t.run} style={menuRow} aria-pressed={t.on} title={t.title}>
-              {t.label}
-              {t.on != null ? <span style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 12, color: t.on ? TEXT_PRIMARY : TEXT_MUTED }}>{t.on ? "on" : "off"}</span> : null}
-            </button>
-          ))}
-        </>
       ) : null}
       <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
       {weekIds.map((id, n) => {
@@ -5225,17 +5213,7 @@ export default function Dashboard({ config }) {
               span={dayTitle.span} nth={dayTitle.nth}
               onClear={dayTitle.own ? () => saveDayTitle("") : null}
               date={<DateButton days={days} day={day} onPick={setDay} accent={config.accent} today={onDeck} counts={dayCounts}
-                onTerm={() => setTermOpen("outline")}
-                // Templates, History and whether the day meets in person were
-                // three buttons on the title row. They are rows of this menu
-                // now, under the day they act on.
-                tools={[
-                  { label: "Templates", title: "Save this day as a template, or start a day from a template", run: () => setTemplatesOpen(true) },
-                  { label: "History", title: "Earlier versions of this day", run: () => setHistoryOpen(true) },
-                  { label: "Meets in person", title: "Mark whether this class day meets in person. Off, students see the day with a dashed outline and a No in-person meeting badge.",
-                    on: !data?.dayPlans?.[day]?.noMeeting,
-                    run: () => writeDay(d => ({ ...d, noMeeting: !d.noMeeting }), "changing whether the class meets") },
-                ]} />}
+                onTerm={() => setTermOpen("outline")} />}
               tools={
                 /* A new section arrives nameless, called Section N, with a
                    caret in its name. No dialog asking what to call a thing
@@ -5250,6 +5228,22 @@ export default function Dashboard({ config }) {
               <button className="dash-focus" style={{ ...mini, borderColor: WARN, color: WARN }} onClick={doUndo}>Undo {undo.what}</button>
             </div>
           ) : null}
+          {/* The day's housekeeping, at the foot of the day. Andrew,
+              2026-09-17: "templates history and meets in person... just put
+              those at the bottom of the dashboard." They were on the title
+              row, then for an hour inside the date menu. */}
+          <div className="dash-dayfoot">
+            <button className="dash-focus dash-topic-tool" onClick={() => setTemplatesOpen(true)}
+              title="Save this day as a template, or start a day from a template">Templates</button>
+            <button className="dash-focus dash-topic-tool" onClick={() => setHistoryOpen(true)}
+              title="Earlier versions of this day">History</button>
+            <button className="dash-focus dash-topic-tool" aria-pressed={!!data?.dayPlans?.[day]?.noMeeting}
+              onClick={() => writeDay(d => ({ ...d, noMeeting: !d.noMeeting }), "changing whether the class meets")}
+              style={data?.dayPlans?.[day]?.noMeeting ? { color: TEXT_PRIMARY, boxShadow: "inset 0 0 0 1px " + TEXT_PRIMARY } : undefined}
+              title="Mark whether this class day meets in person. Off, students see the day with a dashed outline and a No in-person meeting badge.">
+              {data?.dayPlans?.[day]?.noMeeting ? "No in-person meeting" : "Meets in person"}
+            </button>
+          </div>
         </div>
 
         <Seam which="live" onDown={startSeam("live")} label="Live" />
