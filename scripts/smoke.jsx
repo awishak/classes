@@ -1209,10 +1209,21 @@ cases.push(["Instructor links", <InstructorLinks />]);
   Object.entries(SELF).forEach(([name, file]) => {
     const src = readSrc(new URL("../src/" + file, import.meta.url), "utf8");
     if (!src.includes("<TopNav")) say(name + " draws no top bar");
-    // Exactly the same bar: nothing handed into it but the theme furniture
-    // the class page carries for a student's theme.
+    // The same bar. The class page hands in the theme furniture for a
+    // student's theme. The dashboard hands in its More and its Here, and
+    // nothing else: Andrew, 2026-09-17, "i don't want that second menu bar
+    // at all ... here should be on the bar above and all the stuff in more
+    // can be in more." The repository and Games add nothing.
     const calls = [...src.matchAll(/<TopNav[\s\S]*?\/>/g)].map(m => m[0]);
-    calls.forEach(c => { if (/moreNode=/.test(c) || (name !== "ClassApp" && /right=/.test(c))) say(name + " adds its own controls to the top bar"); });
+    calls.forEach(c => {
+      if (name === "ClassApp" && /moreNode=/.test(c)) say(name + " adds its own More to the top bar");
+      if (name !== "ClassApp" && name !== "Dashboard" && /moreNode=|right=/.test(c)) say(name + " adds its own controls to the top bar");
+      if (name === "Dashboard" && /right=/.test(c) && !/right=\{\s*<button[^>]*>\s*Here/.test(c)) say("the dashboard puts something other than Here at the bar's right");
+    });
+    if (name === "Dashboard") {
+      if (!calls.some(c => /moreNode=/.test(c))) say("the dashboard's More is not in the top bar's More slot");
+      if (/dash-bar" onClick=\{openHorn\}/.test(src)) say("the dashboard says Around the Horn twice");
+    }
   });
   try {
     const html = renderToString(<InstructorBar config={cfg0} always><div>page</div></InstructorBar>);
@@ -1751,11 +1762,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const src = readFileSync(new URL("../src/engine/Dashboard.jsx", import.meta.url), "utf8");
 
   // Ten shortcuts were live and the only way to see the list was a shortcut.
-  // ViewMenu carries the Keyboard row and was written months ago and never
-  // mounted, so the component existed and nothing rendered it.
-  if (!/<ViewMenu\b/.test(src)) say("ViewMenu is defined and never rendered, so the shortcut list is unreachable without knowing a shortcut");
-  const menu = src.slice(src.indexOf("function ViewMenu"), src.indexOf("function ViewMenu") + 1800);
-  if (!menu.includes("onKeys")) say("the view menu no longer opens the shortcut sheet");
+  // The Keyboard row lived in a View menu that was written and never mounted;
+  // the View menu is gone now and the row sits in the dashboard's More, so
+  // the check follows the row rather than the menu.
+  if (/<ViewMenu\b/.test(src)) say("the View menu is back on the dashboard");
+  const menu = src.slice(src.indexOf("export function ClassMenu"), src.indexOf("export function ClassMenu") + 6000);
+  if (!menu.includes("onKeys") || !menu.includes(">Keyboard<") && !/Keyboard<kbd/.test(menu)) say("the dashboard's More no longer opens the shortcut sheet");
+  if (!/<ClassMenu[\s\S]*?onKeys=/.test(src)) say("the dashboard's More is not handed the shortcut sheet");
 
   // The row under the day title: four planning controls sitting on the line I
   // read off the screen while talking.
@@ -2480,10 +2493,20 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       const at = (t) => html.indexOf(t);
       ["On the schedule today", "Chapter 8 on the day", "Game on the day", "Enter headline", "first idea", "Exit headline", "last idea"]
         .forEach(t => { if (at(t) < 0) say("the Flow does not show " + JSON.stringify(t)); });
-      if (!(at("Enter headline") < at("On the schedule today"))) say("Enter is not above the schedule");
+      // The boards are the first and last sections of the day, under the
+      // schedule strip: Andrew, 2026-09-17, "entry and exit should be part of
+      // the outline, not a separate thing that i have to edit differently."
+      if (!(at("On the schedule today") < at("Enter headline"))) say("Enter is not inside the day, under the schedule");
+      // The first section by its heading, not by its first mention: a section
+      // called Open also matches the schedule strip's Open link.
       const firstSection = Object.values(fullPlan.slots || {}).map(s => s.title).filter(Boolean)[0];
-      if (firstSection && !(at("On the schedule today") < at(firstSection))) say("the schedule is not above the day");
-      if (firstSection && !(at(firstSection) < at("Exit headline"))) say("Exit is not below the day");
+      const headAt = (t) => html.search(new RegExp("lv-section[^>]*>\\s*" + t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "<"));
+      if (firstSection && headAt(firstSection) < 0) say("the first section is not a heading: " + JSON.stringify(firstSection));
+      if (firstSection && !(headAt("Enter headline") < headAt(firstSection))) say("Enter is not the first section of the day");
+      if (firstSection && !(headAt(firstSection) < headAt("Exit headline"))) say("Exit is not the last section of the day");
+      if (!/doc-sectag[^>]*>Enter</.test(html)) say("the Enter section does not say Enter");
+      if (!/lv-section[^>]*>Enter headline</.test(html) && !/lv-section[\s\S]{0,400}Enter headline/.test(html)) say("the Enter headline is not a section heading");
+      if (!/lv-item[\s\S]{0,400}first idea/.test(html)) say("an Enter idea is not a line of the day");
       if (/IN THE FLOW[\s\S]*Chapter 8 on the day|Chapter 8 on the day[\s\S]{0,300}IN THE FLOW[\s\S]{0,100}<\/div>\s*<div[^>]*>[\s\S]{0,200}Game on the day/.test(html) === false) {
         // The placed one says so and has no Add; the unplaced one has Add.
         const chapter = html.slice(at("Chapter 8 on the day"), at("Game on the day"));
@@ -2493,10 +2516,6 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
         if (/>Add</.test(game)) say("a placed activity still offers Add");
       }
       if (html.includes("what is still unplaced")) say("the fold still claims to hold the unplaced");
-      // An idea on a board is a line that drags into a section, and the
-      // board's headline is set as a heading, the way a section's name is.
-      if (!/class="flow-board-row" draggable="true"/.test(html)) say("a board idea is not draggable");
-      if (!/flow-board-title[^>]*>Enter headline</.test(html)) say("the Enter headline is not set as a heading");
       const bare = renderToString(<FlowPanel {...props} schedToday={undefined} boards={undefined} proposals={undefined} onSaveBoard={undefined} />);
       if (bare.includes("Enter headline")) say("a Flow with no board handler still draws a board");
     } catch (err) { say("the Flow threw: " + err.message); }

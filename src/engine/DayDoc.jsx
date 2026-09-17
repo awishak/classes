@@ -157,7 +157,7 @@ function Line({ id, value, placeholder, readOnly, className, onSave, onKey, regi
 // A link on a line: press the name and the page goes up on the room screen;
 // press ↗ and it opens in a tab here instead. Press the name again while it
 // is up to take it down.
-function LinkChips({ urls, liveLabel, onCast, dismiss }) {
+function LinkChips({ urls, liveLabel, onCast, dismiss, rowId }) {
   const list = [...new Set((urls || []).filter(Boolean))];
   if (!list.length) return null;
   return list.map(u => {
@@ -166,7 +166,7 @@ function LinkChips({ urls, liveLabel, onCast, dismiss }) {
     return (
       <span key={u} className={"doc-link" + (live ? " live" : "")}>
         <button className="dash-focus doc-link-go" title={live ? "Take off screen" : "Put on screen"}
-          onClick={() => (live ? dismiss() : onCast && onCast(u, name))}>{live ? name + " · on screen" : name}</button>
+          onClick={() => (live ? dismiss() : onCast && onCast(u, name, rowId))}>{live ? name + " · on screen" : name}</button>
         <a className="dash-focus doc-link-open" href={u} target="_blank" rel="noopener noreferrer" aria-label="Open in new tab">↗</a>
       </span>
     );
@@ -326,7 +326,10 @@ export default function DayDoc({
 
   // Every line of the day, top to bottom, which is the order the arrows walk.
   const lines = [];
-  const groupsBySection = sections.map(([slot, title], si) => {
+  // A section may carry a mark: the Enter and Exit boards are sections of the
+  // day with a word and a colour of their own, and no time, because they are
+  // the room's reading before and after the day rather than minutes of it.
+  const groupsBySection = sections.map(([slot, title, mark], si) => {
     const items = normSlot(slotItems[slot]).items;
     lines.push({ key: "s:" + slot, kind: "section", slot, title, si });
     const groups = [];
@@ -343,7 +346,7 @@ export default function DayDoc({
         lines.push({ key: "b:" + it.id, kind: "body", slot, it, blk });
       }
     });
-    return { slot, title, si, groups, items };
+    return { slot, title, si, groups, items, mark: mark || null };
   });
 
   // Each item's notes as words, for a slide that shows them.
@@ -831,7 +834,7 @@ export default function DayDoc({
   }
 
   // What the day adds up to, from every section given a time.
-  const times = sections.map(([k]) => normSlot(slotItems[k]).time || "");
+  const times = sections.filter(([, , mark]) => !mark).map(([k]) => normSlot(slotItems[k]).time || "");
   const total = sumRanges(times);
   const untimed = times.filter(t => !parseRange(t)).length;
 
@@ -851,10 +854,12 @@ export default function DayDoc({
         const secLive = !!raw && liveLabel === raw;
         const overHere = over.startsWith("sec|" + sec.slot + "|") ? over.split("|")[2] : "";
         return (
-          <div key={sec.slot} className={"doc-sec" + (secDrag === sec.slot ? " dragging" : "")}
+          <div key={sec.slot} className={"doc-sec" + (secDrag === sec.slot ? " dragging" : "") + (sec.mark ? " marked" : "")}
+            style={sec.mark?.color ? { "--mark": sec.mark.color } : undefined}
             data-over={over === sec.slot + "|" ? "1" : "0"} data-secover={overHere} {...sectionDrop(sec.slot)}>
             <div className={"doc-group" + (slidesOn ? " with-slides" : "")}>
               <div className="doc-text doc-secline" onContextMenu={e => openMenu(e, sectionMenu(sec))}>
+                {sec.mark ? <span className="doc-sectag">{sec.mark.tag}</span> : null}
                 {!named.has(sec.slot) && onPlaceSection ? (
                   <span className="doc-grip doc-secgrip" draggable title="Drag to move this section" aria-hidden="true"
                     onDragStart={e => {
@@ -867,7 +872,7 @@ export default function DayDoc({
                 <Line id={"s:" + sec.slot} value={raw} placeholder={sec.title || "Section"} className="lv-section"
                   onSave={v => onSetSlotTitle(sec.slot, v.trim())} onKey={keyHandler(lines[indexOf("s:" + sec.slot)])} register={register}
                   onType={typing(lines[indexOf("s:" + sec.slot)])} onLeave={(k) => { if (pop && pop.key === k) setPop(null); }} />
-                {onSetSlotTime ? (
+                {onSetSlotTime && !sec.mark ? (
                   <input key={sec.slot + "|" + (bucket.time || "")} className="doc-time" defaultValue={bucket.time || ""}
                     placeholder="5-10 min" aria-label="Minutes for this section"
                     data-bad={bucket.time && !parseRange(bucket.time) ? "1" : "0"}
@@ -886,8 +891,12 @@ export default function DayDoc({
               const tag = raw || sec.title;
               const slide = slideOf({ item: it, block: blk, seed, title: words, claim, tag, features, assignments, games,
                 notes: it.slideNotes ? (notesOf[it.id] || []) : undefined });
-              const live = liveLabel === (claim || words) || (it.feature && liveLabel === it.feature);
-              const kind = it.gameId ? "game" : it.feature ? "activity" : blk ? typeOf(blk.type).label.toLowerCase() : seed ? "seed" : "";
+              // A board's idea goes up as that board, one idea at a time, and
+              // the room says which one is up as "Enter · 2".
+              const boardLabel = it.board ? (it.board === "pre" ? "Enter" : "Exit") + " · " + (it.index + 1) : "";
+              const live = it.board ? liveLabel === boardLabel
+                : liveLabel === (claim || words) || (it.feature && liveLabel === it.feature);
+              const kind = it.board ? "" : it.gameId ? "game" : it.feature ? "activity" : blk ? typeOf(blk.type).label.toLowerCase() : seed ? "seed" : "";
               const kindColor = it.gameId ? hue("set") : it.feature ? hue("activity") : blk ? hue(blk.type) : hue("note");
               const kids = blk?.type === "set" ? (blk.children || []).map(id => blockOf(id)).filter(Boolean) : null;
               const bodyLine = lines.find(l => l.key === "b:" + it.id);
@@ -896,7 +905,7 @@ export default function DayDoc({
                 const on = liveLabel === nc.label;
                 return { key: c.it.id, cast: nc.cast, live: on, label: nc.label, onClick: () => (on ? dismiss() : nc.go()) };
               });
-              const canKind = !seed && !it.feature && !it.gameId;
+              const canKind = !seed && !it.feature && !it.gameId && !it.board;
               const leave = (k) => { if (pop && pop.key === k) setPop(null); };
               return (
                 <div key={it.id} className={"doc-group" + (slidesOn ? " with-slides" : "") + (pickedId === it.id ? " picked" : "")
@@ -921,7 +930,7 @@ export default function DayDoc({
                         <a className="dash-focus doc-kind" style={{ "--ink": inkOf(kindColor), textDecoration: "none" }} title="Open in Games"
                           href={gamesHref + "#game=" + it.gameId} target="_blank" rel="noopener noreferrer">{kind}</a>
                       ) : kind ? <span className="doc-kind" style={{ "--ink": inkOf(kindColor) }}>{kind}</span> : null}
-                      <LinkChips urls={[blk?.url, ...(it.links || []).map(l => l.url)]}
+                      <LinkChips rowId={it.id} urls={[blk?.url, ...(it.links || []).map(l => l.url)]}
                         liveLabel={liveLabel} onCast={castLink} dismiss={dismiss} />
                       {live ? <button className="dash-focus doc-down" onClick={dismiss} title="Take off screen">On screen ×</button> : null}
                     </div>
@@ -956,7 +965,7 @@ export default function DayDoc({
                               done={doneSet.has(c.it.id)} readOnly={!!(c.seed || c.it.feature)}
                               onSave={saveItemWords(c)} onKey={keyHandler(c)} register={register} onLeaveEmpty={leaveEmpty(c)}
                               onLink={linkMenu(c.it.id)} onType={typing(c)} onLeave={leave} />
-                            <LinkChips urls={[c.blk?.url, ...(c.it.links || []).map(l => l.url)]}
+                            <LinkChips rowId={c.it.id} urls={[c.blk?.url, ...(c.it.links || []).map(l => l.url)]}
                               liveLabel={liveLabel} onCast={castLink} dismiss={dismiss} />
                           </div>
                           {cBody ? (
@@ -997,14 +1006,23 @@ export const DOC_CSS = `
 .doc-sec[data-secover="above"]{box-shadow:inset 0 3px 0 var(--dash-accent)}
 .doc-sec[data-secover="below"]{box-shadow:inset 0 -3px 0 var(--dash-accent)}
 .doc-sec.dragging{opacity:.45}
-.doc-text.doc-secline{position:relative;flex-direction:row;align-items:flex-start;gap:6px}
-.doc-secline .doc-line{flex:1 1 auto}
+.doc-text.doc-secline{position:relative;flex-direction:row;align-items:center;gap:8px;flex-wrap:wrap}
+/* The heading is as wide as its words, so the time chip sits beside them
+   rather than at the far edge of the column. */
+.doc-secline .doc-line{flex:0 1 auto;width:auto;min-width:140px;max-width:100%}
 .doc-secgrip{position:absolute;left:-20px;top:9px}
 .doc-sec:hover .doc-secgrip,.doc-secline:focus-within .doc-secgrip{opacity:1}
-.doc-time{flex:none;align-self:center;width:88px;min-height:32px;box-sizing:border-box;padding:0 9px;border:1px solid transparent;border-radius:8px;
-  background:none;font-family:var(--font-body);font-size:14px;color:var(--text-secondary);text-align:right;font-variant-numeric:tabular-nums}
-.doc-time::placeholder{color:var(--text-muted)}
-.doc-time:hover{border-color:var(--line-strong)}
+/* A section with a mark: Enter or Exit. The word sits before the heading and
+   the board's colour runs down the section's left edge. */
+.doc-sec.marked{border-left:3px solid var(--mark,var(--dash-accent));padding-left:12px}
+.doc-sectag{flex:none;font-family:var(--font-label);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--mark,var(--dash-accent))}
+/* The time a section is planned to take, as a chip beside its name. */
+.doc-time{flex:none;align-self:center;width:auto;min-width:64px;min-height:26px;box-sizing:border-box;padding:0 11px;border:1px solid transparent;border-radius:999px;
+  background:var(--surface-sunk);font-family:var(--font-label);font-size:13px;font-weight:600;color:var(--text-secondary);text-align:center;font-variant-numeric:tabular-nums}
+.doc-time::placeholder{color:var(--text-muted);font-weight:500}
+.doc-time:placeholder-shown{background:none;border:1px dashed var(--line-strong)}
+.doc-time:hover{border-color:var(--line-strong);background:var(--surface-sunk)}
 .doc-time:focus{outline:none;border-color:var(--dash-accent);background:#fff;color:var(--text-primary)}
 .doc-time[data-bad="1"]{color:var(--state-live)}
 .doc-group{display:grid;grid-template-columns:minmax(0,1fr);column-gap:18px;align-items:start;border-radius:8px}

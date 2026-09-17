@@ -82,6 +82,20 @@ const SESSIONS = [
         ["An idea drags off a board", "Andrew: \"let me drag and drop anything out of enter and exit.\" Every line of the Enter and Exit boards drags into any section of the day, above the row the pointer is on or at the end. The board lets go of the line, the way Today's readings let go of a reading dragged into the flow, and the same View menu switch keeps it on the board instead."],
         ["The boards fit the day", "Andrew: \"make enter and exit seem more like the rest of the outline. sure it can be a different color but make it fit better.\" The two grey cards with white pills are gone. The headline is a heading at the section size, each idea is a numbered line at the item size, and the board's colour is a rule down the left edge."],
       ] },
+      { name: "The second bar is gone", items: [
+        ["One bar", "Andrew: \"i don't want that second menu bar at all. view is unnecessary, around the horn is listed in both bars, here should be on the bar above and all the stuff in more can be in more, unless it's redundant.\" The row under the top bar is gone. Here sits at the top bar's right end. Around the Horn was on both bars and is on the top one only."],
+        ["What was redundant", "The second bar's More linked to Schedule, Room screen, Games and Grade view, all four of them tabs on the bar above. Those four rows are gone. The Brief, Colour and type, the three room panels and the other classes had no other door, so they stay."],
+        ["More is More", "The top bar's More tab is the dashboard's More menu now, with the More page as its first row so the word still leads where it leads everywhere else. The View menu's five rows, the rail, row height, what dragging does, the columns and the keyboard list, sit at the bottom of that menu under This screen."],
+        ["Outline and Map beside the reminder", "Andrew: \"move outline and map next to my reminder.\" The two buttons went from the bar to the right end of the Remember line."],
+      ] },
+      { name: "Less on the screen", items: [
+        ["The date button reads in the body face", "Andrew: \"change the font of the Week 1 Sep 21 button.\" The row around it is small mono capitals, and the button was inheriting that. It is set in the body face now, like the day under it."],
+        ["Three buttons into the date menu", "Andrew: \"we don't need templates, history or meets in person. those can be in the menu for when i click on week 1 sep 21.\" They are rows of that menu now, under This day, with Meets in person reading on or off. Only + Section stays on the row."],
+        ["Week 1, Monday is gone", "Andrew: \"we don't need week 1 monday either. it's redundant.\" The button beside it already says the week and the date."],
+        ["Enter and Exit are sections of the day", "Andrew: \"entry and exit should be part of the outline, not a separate thing that i have to edit differently.\" Enter is the first section and Exit the last, each with its word and colour, a heading that is the headline, and a line for every idea. Type, add, delete, drag and put up a line the way you would any line; a board line goes up as the board at that idea. The store keeps the board's own shape, so the room screen and the command bar read it as before."],
+        ["The time is a chip", "Andrew: \"put the projected time in a chip next to the section.\" The heading is as wide as its words and the minutes sit beside them in a pill, dashed while empty."],
+        ["Next follows what was last put up", "Andrew: \"i click on a wikipedia link for strava heat map on week 3 oct 7, and then i press next slides and goes to how the day runs. if i click on strava, shouldn't the next one be WEB dubois?\" Next was the first row nobody had ticked, wherever you were. Every cast from a row, its link or a board line now says which row it was, and Next is the first unticked row after that one."],
+      ] },
       { name: "Students", items: [
         ["Class, then Your card", "Email, photo, about me, year, hometown, motto, goals and what matters most, saved to the class store. He sees the result on the Roster by tapping a name."],
       ] },

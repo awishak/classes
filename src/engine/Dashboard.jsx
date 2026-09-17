@@ -91,6 +91,11 @@ const CSS = `
 .dash-bar kbd,.dash-bar .dash-bar-sub{font-family:${MONO};font-size:11.5px;font-weight:500;
   color:${TEXT_MUTED};border:none;background:none;padding:0}
 .dash-bar-caret{font-size:10px;opacity:.5}
+/* The date button on the title row. The row around it is small mono caps, and
+   the button was inheriting that: Andrew, 2026-09-17, "change the font of the
+   Week 1 Sep 21 button." It reads in the body face, like the day under it. */
+.dash-datebtn{font-family:${F};font-size:15px;font-weight:600;letter-spacing:0;text-transform:none;color:${TEXT_PRIMARY}}
+.dash-datebtn .dash-bar-sub{font-family:${F};font-size:14px;font-weight:500;letter-spacing:0;text-transform:none;color:${TEXT_SECONDARY}}
 .dash-bar-gap{flex:1 1 auto;min-width:8px}
 .dash-bar-name{font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--dash-accent)}
 /* The date button, and the dates inside it. */
@@ -104,6 +109,7 @@ const CSS = `
 .dash-remind-tag{flex:none;font-family:${MONO};font-size:13px;font-weight:600;letter-spacing:.08em;
   text-transform:uppercase;color:${TEXT_MUTED}}
 .dash-remind-big{margin:0;font-size:17px;font-weight:500;line-height:1.4;color:${TEXT_PRIMARY}}
+.dash-remind-actions{flex:none;margin-left:auto;display:flex;align-items:center;gap:6px;align-self:center}
 .dash-remind-more{flex-basis:100%;margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:4px 18px;
   font-size:15px;line-height:1.4;color:${TEXT_SECONDARY}}
 .dash-stage{display:grid;gap:0;padding:14px 18px 26px;align-items:start;max-width:1760px;margin:0 auto}
@@ -304,26 +310,6 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 .flow-opts .right{color:${OK};font-weight:600}
 /* The day's notes, under the day. */
 .flow-daynotes{display:flex;flex-direction:column;gap:8px;padding-top:18px}
-/* THE ENTER AND EXIT BOARDS, set like the day: a heading, numbered lines at
-   the item size, and the board's colour as a rule down the left. */
-.flow-board-doc{display:flex;flex-direction:column;gap:2px;padding:14px 0 6px 14px;border-left:3px solid var(--hue,var(--dash-accent))}
-.flow-board-head{display:flex;align-items:baseline;gap:10px;min-width:0;padding:0 6px 4px}
-.flow-board-tag{flex:none;font-family:${MONO};font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--hue,var(--dash-accent))}
-.flow-board-title{flex:1 1 auto;min-width:0;font-size:21px;font-weight:600;letter-spacing:-.015em;line-height:1.3;color:${TEXT_PRIMARY}}
-.flow-board-edit{flex:none;align-self:center;min-height:28px;padding:0 9px;border:none;border-radius:7px;background:none;cursor:pointer;
-  font-family:${F};font-size:13px;font-weight:600;color:${TEXT_MUTED}}
-.flow-board-edit:hover{background:rgba(23,19,16,.06);color:${TEXT_PRIMARY}}
-.flow-board-row{display:flex;align-items:flex-start;gap:6px;min-width:0;border-radius:8px;cursor:grab}
-.flow-board-row:hover{background:rgba(23,19,16,.03)}
-.flow-board-row.live{background:#fff1f2;box-shadow:inset 4px 0 0 ${LIVE}}
-.flow-board-num{flex:none;width:30px;min-height:30px;margin-top:1px;display:inline-flex;align-items:center;justify-content:center;
-  font-family:${MONO};font-size:13px;color:${TEXT_MUTED};font-variant-numeric:tabular-nums}
-.flow-board-row.live .flow-board-num{color:${LIVE};font-weight:600}
-.flow-board-words{flex:1 1 auto;min-width:0;text-align:left;border:none;background:none;cursor:pointer;padding:3px 6px;border-radius:6px;
-  font-family:${F};font-size:16px;font-weight:500;line-height:1.45;color:${TEXT_PRIMARY}}
-.flow-board-words:hover{background:rgba(23,19,16,.045)}
-.flow-board-none{padding:3px 6px;font-size:15px;color:${TEXT_MUTED}}
-.flow-board-nav{display:flex;gap:7px;padding:6px 6px 0}
 /* My note under a reading. Quiet until there is one, and indented to the
    width of the number chip so it hangs off the thing it is about. */
 .dash-note{display:block;width:100%;text-align:left;background:none;
@@ -2055,22 +2041,26 @@ function ScheduleToday({ items, accent, onAdd, onCast }) {
 // bar, which left nothing on the day saying what either board says. Each row
 // shows the headline and the ideas, opens to edit, and casts an idea from its
 // line the way the boards sheet does.
-function BoardRow({ which, boards, proposals, hue, accent, liveCast, onSave, onCast, onDismiss }) {
-  const label3 = which === "pre" ? "Enter" : "Exit";
-  const saved = (boards || {})[which];
-  const board = saved || (proposals || {})[which] || { title: label3, ideas: [] };
-  const liveHere = liveCast?.type === "board" && liveCast.boardLabel === label3;
-  return (
-    <div>
-      <BoardEditor label={label3} board={board} isProposal={!saved} accent={accent} doc which={which} hue={hue || accent}
-        onSave={(b) => onSave(which, b)} onReset={() => onSave(which, null)}
-        liveIndex={liveHere ? liveCast.at : null}
-        onCast={(i) => onCast(which, i)} onDismiss={onDismiss} />
-    </div>
-  );
+// The Enter and Exit boards are the first and last sections of the day, drawn
+// and edited like every other section. Andrew, 2026-09-17: "entry and exit
+// should be part of the outline, not a separate thing that i have to edit
+// differently." The board keeps its own shape in the store, a headline and a
+// list of ideas, and the Flow reads that shape as a section whose lines are
+// the ideas: the heading is the headline, a line is an idea, and a line put
+// up goes up as the board, one idea at a time.
+export const BOARD_SLOTS = { "board-pre": "pre", "board-post": "post" };
+export const boardOfSlot = (slot) => BOARD_SLOTS[slot] || "";
+export const boardIdeaId = (which, i) => "board-" + which + "-" + i;
+export const boardIdeaIndex = (id) => { const n = parseInt(String(id).split("-").pop(), 10); return isNaN(n) ? -1 : n; };
+export function boardSection(which, boards, proposals) {
+  const b = (boards || {})[which] || (proposals || {})[which] || { title: "", ideas: [] };
+  return {
+    title: b.title || "",
+    items: (b.ideas || []).map((idea, i) => ({ id: boardIdeaId(which, i), text: idea, board: which, index: i })),
+  };
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList, games, gamesHref, boards, proposals, onSaveBoard, onCastBoard, boardHue, schedToday, onCastScheduled, onTakeIdea }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList, games, gamesHref, boards, proposals, onSaveBoard, onCastBoard, boardHue, schedToday, onCastScheduled, onCastRow }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -2098,13 +2088,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
     if (!from) return;
     // From the Material column, or out of Today's readings. Neither carries a
     // slot, because neither was ever in the flow.
-    if (!from.slot && (from.blockId || from.title)) {
-      onPickBlock(toSlot, from, null, beforeId);
-      // Out of the Enter or Exit board: the idea is a row of the day now, and
-      // the board lets go of it unless dragging is set to keep.
-      if (from.board && onTakeIdea) onTakeIdea(from.board, from.index);
-      return;
-    }
+    if (!from.slot && (from.blockId || from.title)) { onPickBlock(toSlot, from, null, beforeId); return; }
     if (!from.id || (from.slot === toSlot && from.id === beforeId)) return;
     onDragMove(from.slot, from.id, toSlot, beforeId);
   };
@@ -2214,19 +2198,34 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
   const orphanSlots = orphanKeys.map(k => [k, labelOf[k]]);
   const mySections = myKeys.map(k => [k, labelOf[k]]);
 
+  // The day as the document draws it: Enter first, the sections, Exit last.
+  // The boards are sections here and nowhere else in the store, so their
+  // slot keys never reach a day plan; the handlers route them to the board.
+  const withBoards = !!onSaveBoard;
+  const docSections = withBoards
+    ? [["board-pre", "Enter", { tag: "Enter", color: boardHue || accent }], ...sectionRows, ["board-post", "Exit", { tag: "Exit", color: boardHue || accent }]]
+    : sectionRows;
+  const docSlotItems = withBoards
+    ? { ...slotItems, "board-pre": boardSection("pre", boards, proposals), "board-post": boardSection("post", boards, proposals) }
+    : slotItems;
+  const docNamed = withBoards ? new Set([...named, "board-pre", "board-post"]) : named;
+  const docLabelOf = { ...labelOf, "board-pre": "Enter", "board-post": "Exit" };
+  const said = (id) => { if (onCastRow) onCastRow(id); };
+
   const flatRows = [];
   const numberOf = (() => {
     const map = {};
     let n = 0;
-    sectionRows.forEach(([k]) => {
-      normSlot(slotItems[k]).items.forEach(it => {
+    docSections.forEach(([k]) => {
+      normSlot(docSlotItems[k]).items.forEach(it => {
         map[it.id] = ++n;
         const b = it.blockId ? blockOf(it.blockId) : null;
         const words = (b ? b.headline || b.title : it.claim || it.text) || "";
-        flatRows.push({ id: it.id, blockId: it.blockId, item: it, where: labelOf[k],
-          cast: words ? () => castNow(b?.url
+        const cast = it.board && onCastBoard ? () => { said(it.id); onCastBoard(it.board, it.index); }
+          : words ? () => { said(it.id); castNow(b?.url
             ? { ...castFromLink({ label: b.title, url: b.url }), title: words, label: words }
-            : { type: "quote", tag: labelOf[k], title: words, label: words }) : null });
+            : { type: "quote", tag: docLabelOf[k], title: words, label: words }); } : null;
+        flatRows.push({ id: it.id, blockId: it.blockId, item: it, where: docLabelOf[k], cast });
       });
     });
     return map;
@@ -2348,18 +2347,18 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
           </span>
         ) : null}
       </div>
-      {onSaveBoard ? (
-        <BoardRow which="pre" boards={boards} proposals={proposals} hue={boardHue} accent={accent} liveCast={liveCast}
-          onSave={onSaveBoard} onCast={onCastBoard} onDismiss={dismiss} />
-      ) : null}
       <ScheduleToday items={schedToday || loose || []} accent={accent} onAdd={(it) => setPlacing(it)} onCast={onCastScheduled} />
-      <DayDoc sections={sectionRows} slotItems={slotItems} named={named} firstMovable={firstMovable}
+      <DayDoc sections={docSections} slotItems={docSlotItems} named={docNamed} firstMovable={withBoards ? firstMovable + 1 : firstMovable}
         blockOf={blockOf} seedById={seedById} doneSet={doneSet} numberOf={numberOf} nextId={nextId} pickedId={pickedId}
         liveLabel={liveLabel} dismiss={dismiss} features={FEATURES} hue={hue} slidesOn={slidesOn} classHref={classHref}
         ground={roomGround || "slate"} assignments={assignmentList} games={games} gamesHref={gamesHref}
         // A slide goes up as the slide: the template the row's thumbnail draws.
         // An activity runs itself, and a clip or voice memo plays as a file.
+        // A board's line goes up as the board, at that idea. Every one of
+        // them says which row went up, so Next knows where to go from.
         castItem={(it, blk, seed, words, claim, tag, slide) => {
+          said(it.id);
+          if (it.board && onCastBoard) return onCastBoard(it.board, it.index);
           if (it.feature && onFeature) return onFeature(it.feature);
           if (slide) return castNow(slide);
           const c = claim || words;
@@ -2385,14 +2384,10 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
         onOpenTemplates={onOpenTemplates} onOpenHistory={onOpenHistory} teach={teach} onTeach={setTeach}
         // A link put up from a line goes up the way the room screen shows any
         // link: the page itself where the site allows it, the reader where not.
-        castLink={(url, name) => castNow({ ...castFromLink({ label: name, url }), title: name, label: name })} />
+        castLink={(url, name, rowId) => { if (rowId) said(rowId); castNow({ ...castFromLink({ label: name, url }), title: name, label: name }); }} />
       {foldRow}
       {addBlockRow}
       {blockBlock}
-      {onSaveBoard ? (
-        <BoardRow which="post" boards={boards} proposals={proposals} hue={boardHue} accent={accent} liveCast={liveCast}
-          onSave={onSaveBoard} onCast={onCastBoard} onDismiss={dismiss} />
-      ) : null}
 
       {/* The notes for this day, directly under it.
           They were only reachable through the command bar, under My notes, so
@@ -2685,48 +2680,7 @@ export function BoardsPanel({ boards, proposals, onSave, castNow, dismiss, liveC
   );
 }
 
-// A board drawn the way the day is drawn. Andrew, 2026-09-17: "make enter and
-// exit seem more like the rest of the outline. sure it can be a different
-// color but make it fit better." The Flow's boards were two grey cards with
-// their ideas in white pills, between sections set as a document. Now the
-// headline is a section heading, each idea is a numbered line at the item
-// size, and the board's colour is a rule down the left. An idea drags into any
-// section the way a reading does: "let me drag and drop anything out of enter
-// and exit."
-function BoardDoc({ which, label, board, isProposal, hue, liveIndex, onCast, onDismiss, onEdit }) {
-  const ideas = board.ideas || [];
-  const live = liveIndex != null;
-  return (
-    <div className="flow-board-doc" style={{ "--hue": hue }}>
-      <div className="flow-board-head">
-        <span className="flow-board-tag">{label}{isProposal ? " · proposed" : ""}</span>
-        <span className="flow-board-title">{board.title}</span>
-        <button className="dash-focus flow-board-edit" onClick={onEdit} title={"Edit the " + label + " board"}>Edit</button>
-      </div>
-      {ideas.map((idea, i) => (
-        <div key={i} className={"flow-board-row" + (liveIndex === i ? " live" : "")} draggable
-          onDragStart={e => {
-            e.dataTransfer.effectAllowed = "copyMove";
-            e.dataTransfer.setData("text/plain", JSON.stringify({ title: idea, board: which, index: i }));
-          }}>
-          <span className="flow-board-num" aria-hidden="true" title="Drag into a section">{i + 1}</span>
-          <button className="dash-focus flow-board-words" onClick={() => (liveIndex === i ? onDismiss() : onCast(i))}
-            title={liveIndex === i ? "Take off screen" : "Put on the room screen"}>{idea}</button>
-          {liveIndex === i ? <button className="dash-focus doc-down" onClick={onDismiss} title="Take off screen">On screen ×</button> : null}
-        </div>
-      ))}
-      {!ideas.length ? <div className="flow-board-none">No ideas yet.</div> : null}
-      {live ? (
-        <div className="flow-board-nav">
-          <button style={mini} disabled={liveIndex <= 0} onClick={() => onCast(liveIndex - 1)}>‹ Back</button>
-          <button style={mini} disabled={liveIndex >= ideas.length - 1} onClick={() => onCast(liveIndex + 1)}>Next ›</button>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIndex, onCast, onDismiss, doc, which, hue }) {
+function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIndex, onCast, onDismiss }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(board.title);
   const [text, setText] = useState((board.ideas || []).join("\n"));
@@ -2735,11 +2689,6 @@ function BoardEditor({ label, board, isProposal, accent, onSave, onReset, liveIn
 
   const ideas = board.ideas || [];
   const live = liveIndex != null;
-
-  if (!editing && doc) {
-    return <BoardDoc which={which} label={label} board={board} isProposal={isProposal} hue={hue}
-      liveIndex={liveIndex} onCast={onCast} onDismiss={onDismiss} onEdit={() => setEditing(true)} />;
-  }
 
   if (editing) {
     return (
@@ -3301,17 +3250,31 @@ export function NoteSheet({ sections, sources, accent, onAdd, onClose, classId }
 // both permanently in the way and too narrow to use.
 // A little menu that hangs off a button. Both header menus are the same shape,
 // so they are the same component.
-function DropMenu({ trigger, label, width, children, side }) {
+function DropMenu({ trigger, label, width, children, side, fixed }) {
   const [open, setOpen] = useState(false);
+  // Inside the top bar the tabs scroll sideways, and a panel hung off a tab
+  // with position absolute is cut off at the row's edge. A fixed panel is
+  // placed from the trigger's place on screen when it opens instead.
+  const [at, setAt] = useState(null);
+  const box = useRef(null);
+  const toggle = () => {
+    if (!open && fixed && box.current) {
+      const r = box.current.getBoundingClientRect();
+      setAt({ left: r.left, right: Math.max(0, window.innerWidth - r.right), top: r.bottom + 6 });
+    }
+    setOpen(v => !v);
+  };
+  const place = fixed && at
+    ? { position: "fixed", top: at.top, ...(side === "left" ? { left: at.left } : { right: at.right }) }
+    : { position: "absolute", top: "calc(100% + 6px)", ...(side === "left" ? { left: 0 } : { right: 0 }) };
   return (
-    <span style={{ position: "relative", flex: "none" }}>
-      {trigger(open, () => setOpen(v => !v))}
+    <span ref={box} style={{ position: "relative", flex: "none" }}>
+      {trigger(open, toggle)}
       {open ? (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 70 }} />
           <div role="menu" aria-label={label} onClick={() => setOpen(false)}
-            style={{ position: "absolute", ...(side === "left" ? { left: 0 } : { right: 0 }),
-              top: "calc(100% + 6px)", zIndex: 71, background: "#fff",
+            style={{ ...place, zIndex: 71, background: "#fff",
               border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 6, width: width || 240,
               boxShadow: "0 18px 44px -14px rgba(23,19,16,.35)", display: "flex", flexDirection: "column", gap: 1 }}>
             {children}
@@ -3331,33 +3294,37 @@ const menuRow = {
 // Everything under the class name is a way out of this class, which is what
 // they have in common and why they were wrong scattered along the bar as if
 // they were actions.
-export function ClassMenu({ config, onLook, panels, onPanel }) {
+// The dashboard's More, in the top bar's More slot. Andrew, 2026-09-17: "i
+// don't want that second menu bar at all. view is unnecessary, around the
+// horn is listed in both bars, here should be on the bar above and all the
+// stuff in more can be in more, unless it's redundant."
+//
+// What the second bar's More held, checked against the bar above it:
+//   Schedule, Room screen, Games, Grade view — tabs on the bar. Gone.
+//   The Brief, Colour and type, the three room panels, the other classes —
+//   nowhere else on the screen. Here.
+//   The View menu's five rows — the rail, row height, what dragging a reading
+//   does, the columns, the keyboard list — nowhere else either. Here, at the
+//   bottom, under This screen.
+// The More page itself is the first row, so the word on the bar still leads
+// where it leads on every other surface.
+export function ClassMenu({ config, onLook, panels, onPanel, railOpen, onRail, dense, onDense, onReset, onKeys, dragKeeps, onDragKeeps }) {
   const go = (href) => () => {
     window.history.pushState({}, "", href);
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
-  // This is the bar's "More". It wears the same shape as the tabs beside it,
-  // because the bar is four words in four places on every surface and this is
-  // the fourth.
   return (
-    <DropMenu label="More" width={250} side="left"
+    <DropMenu label="More" width={270} side="left" fixed
       trigger={(open, toggle) => (
-        <button className="dash-focus" onClick={toggle} aria-expanded={open} aria-haspopup="menu"
-          style={{ fontSize: 15, fontWeight: 500, color: TEXT_SECONDARY, padding: "0 12px", minHeight: 44,
+        <button className="dash-focus ca-focus repo-focus" onClick={toggle} aria-expanded={open} aria-haspopup="menu"
+          style={{ fontSize: 14, fontWeight: 500, color: TEXT_SECONDARY, padding: "0 10px", minHeight: 44,
             display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 8, cursor: "pointer",
-            border: "none", background: "transparent", fontFamily: F }}>
+            border: "none", background: "transparent", fontFamily: F, whiteSpace: "nowrap" }}>
           More<span style={{ fontSize: 9, opacity: .55 }}>▾</span>
         </button>
       )}>
-      {/* Class home and the repository came out of here when the strip above
-          the bar went in. A door that is on the screen already does not also
-          need a row in a menu; keeping both is how the repository ended up
-          reachable two ways from one header and no ways from the class page. */}
       <span style={{ ...label, padding: "6px 10px 4px" }}>Go to</span>
-      <a className="dash-focus" href={config.path + "/schedule"} style={menuRow}>Schedule</a>
-      <a className="dash-focus" href={config.path + "/today"} style={menuRow}>Room screen</a>
-      <a className="dash-focus" href={config.path + "/games"} style={menuRow}>Games</a>
-      <a className="dash-focus" href={config.path + "/grade"} style={menuRow}>Grade view</a>
+      <a className="dash-focus" href={config.path + "/more"} style={menuRow}>More page</a>
       <a className="dash-focus" href="/plan" style={menuRow}>The Brief</a>
       {onLook ? (
         <button className="dash-focus" onClick={onLook} style={menuRow}>Colour and type</button>
@@ -3384,37 +3351,29 @@ export function ClassMenu({ config, onLook, panels, onPanel }) {
             textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.desc}</span>
         </button>
       ))}
-    </DropMenu>
-  );
-}
-
-// How the screen is laid out. Set rarely, so it does not need to be on the bar
-// at the same weight as the buttons I press in front of people.
-function ViewMenu({ railOpen, onRail, dense, onDense, onReset, onKeys, dragKeeps, onDragKeeps }) {
-  return (
-    <DropMenu label="View" width={230}
-      trigger={(open, toggle) => (
-        <button className="dash-focus" onClick={toggle} aria-expanded={open} aria-haspopup="menu"
-          style={{ ...mini, minHeight: 36 }}>View<span style={{ fontSize: 9, opacity: .55, marginLeft: 5 }}>▾</span></button>
-      )}>
-      <button className="dash-focus" onClick={onRail} style={menuRow}>
-        {railOpen ? "Hide the rail" : "Show the rail"}
-        <kbd style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: TEXT_MUTED }}>\\</kbd>
-      </button>
-      <button className="dash-focus" onClick={onDense} style={menuRow}>{dense ? "Comfortable rows" : "Compact rows"}</button>
-      <button className="dash-focus" onClick={onDragKeeps} style={menuRow} aria-pressed={dragKeeps}>
-        <span style={{ flex: "none", width: 26, height: 15, borderRadius: 999, position: "relative",
-          background: dragKeeps ? "var(--dash-accent)" : BORDER_STRONG, transition: "background .14s" }}>
-          <i style={{ position: "absolute", top: 2, left: dragKeeps ? 13 : 2, width: 11, height: 11,
-            borderRadius: "50%", background: "#fff", transition: "left .14s" }} />
-        </span>
-        Dragging a reading into the Flow keeps it assigned
-      </button>
-      <button className="dash-focus" onClick={onReset} style={menuRow}>Reset the columns</button>
-      <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
-      <button className="dash-focus" onClick={onKeys} style={menuRow}>
-        Keyboard<kbd style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: TEXT_MUTED }}>⌘/</kbd>
-      </button>
+      {onKeys ? (
+        <>
+          <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
+          <span style={{ ...label, padding: "2px 10px 4px" }}>This screen</span>
+          <button className="dash-focus" onClick={onRail} style={menuRow}>
+            {railOpen ? "Hide the rail" : "Show the rail"}
+            <kbd style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: TEXT_MUTED }}>\\</kbd>
+          </button>
+          <button className="dash-focus" onClick={onDense} style={menuRow}>{dense ? "Comfortable rows" : "Compact rows"}</button>
+          <button className="dash-focus" onClick={onDragKeeps} style={menuRow} aria-pressed={dragKeeps}>
+            <span style={{ flex: "none", width: 26, height: 15, borderRadius: 999, position: "relative",
+              background: dragKeeps ? "var(--dash-accent)" : BORDER_STRONG, transition: "background .14s" }}>
+              <i style={{ position: "absolute", top: 2, left: dragKeeps ? 13 : 2, width: 11, height: 11,
+                borderRadius: "50%", background: "#fff", transition: "left .14s" }} />
+            </span>
+            Dragging into the Flow keeps it where it was
+          </button>
+          <button className="dash-focus" onClick={onReset} style={menuRow}>Reset the columns</button>
+          <button className="dash-focus" onClick={onKeys} style={menuRow}>
+            Keyboard<kbd style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: TEXT_MUTED }}>⌘/</kbd>
+          </button>
+        </>
+      ) : null}
     </DropMenu>
   );
 }
@@ -3422,13 +3381,14 @@ function ViewMenu({ railOpen, onRail, dense, onDense, onReset, onKeys, dragKeeps
 // The reminders. The list is in reminders.js; this draws the first one large
 // and the rest under it. Exported so the smoke test can render the band on its
 // own, because <Dashboard/> alone only reaches its loading screen there.
-export function Reminders({ items = REMINDERS }) {
+export function Reminders({ items = REMINDERS, actions }) {
   const [big, ...rest] = items;
   if (!big) return null;
   return (
     <aside className="dash-remind" aria-label="Reminders">
       <span className="dash-remind-tag">Remember</span>
       <p className="dash-remind-big">{big.text}</p>
+      {actions ? <span className="dash-remind-actions">{actions}</span> : null}
       {rest.length ? (
         <ul className="dash-remind-more">{rest.map(r => <li key={r.id}>{r.text}</li>)}</ul>
       ) : null}
@@ -3694,20 +3654,15 @@ function EditableTopic({ value, placeholder, onSave, own, weekLabel, weekday, sp
           outline: "none", padding: "0 0 2px", width: "100%" }} />
     );
   }
-  const meta = [weekLabel, weekday].filter(Boolean).join(", ");
   return (
     <div className="dash-topic-wrap">
       {/* The date sits with the day it names, not up on the nav bar. Picking a
           different day is not navigating the app; it is changing what this
-          page is about. */}
+          page is about. The week and weekday used to be written out beside
+          the button that already says the week and the date: Andrew,
+          2026-09-17, "we don't need week 1 monday either. it's redundant." */}
       <div className="dash-topic-meta">
         {date}
-        <span>{meta}</span>
-        {/* The day's own controls, beside the one that was already here.
-            Choosing a structure and adding a section were behind a menu on a
-            dashed row at the foot of the day, and adding a note to a section
-            was a button that only appeared on hover — three things Andrew went
-            looking for and could not find. */}
         {tools}
         {own && onClear ? (
           <button className="dash-focus dash-topic-clear" onClick={onClear}
@@ -3742,14 +3697,17 @@ function EditableTopic({ value, placeholder, onSave, own, weekLabel, weekday, sp
 // number, with no way to see what was on any of them. It opens the term
 // outline now: the same question, answered properly. The chips are still here
 // underneath it, because jumping two days forward should not need a popup.
-function DateButton({ days, day, onPick, accent, today, counts, onTerm }) {
+// The day's own tools live in here too. Andrew, 2026-09-17: "we are getting
+// way too cluttered on screen ... we don't need templates, history or meets
+// in person. those can be in the menu for when i click on week 1 sep 21."
+function DateButton({ days, day, onPick, accent, today, counts, onTerm, tools }) {
   const i = days.findIndex(d => d.date === day);
   const weekIds = [...new Set(days.map(d => d.weekId))];
   const wn = weekIds.indexOf(days[i]?.weekId);
   return (
     <DropMenu label="Which day" width={330} side="left"
       trigger={(open, toggle) => (
-        <button className="dash-focus dash-bar" onClick={toggle} aria-expanded={open}
+        <button className="dash-focus dash-bar dash-datebtn" onClick={toggle} aria-expanded={open}
           aria-haspopup="menu" title="Go to another day, or open the whole term">
           Week {wn + 1}
           <span className="dash-bar-sub">{day}</span>
@@ -3760,12 +3718,23 @@ function DateButton({ days, day, onPick, accent, today, counts, onTerm }) {
         <button className="dash-focus" onClick={onTerm}
           style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", textAlign: "left",
             background: "none", border: "none", cursor: "pointer", padding: "0 10px", minHeight: 40,
-            borderRadius: 9, fontFamily: F, fontSize: 14.5, fontWeight: 600, color: accent,
-            borderBottom: "1px solid " + BORDER }}>
+            borderRadius: 9, fontFamily: F, fontSize: 14.5, fontWeight: 600, color: accent }}>
           Plan the quarter
           <span style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 13, opacity: .7 }}>{days.length} days</span>
         </button>
       ) : null}
+      {(tools || []).length ? (
+        <>
+          <span style={{ ...label, padding: "4px 10px 2px" }}>This day</span>
+          {tools.map(t => (
+            <button key={t.label} className="dash-focus" onClick={t.run} style={menuRow} aria-pressed={t.on} title={t.title}>
+              {t.label}
+              {t.on != null ? <span style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 12, color: t.on ? TEXT_PRIMARY : TEXT_MUTED }}>{t.on ? "on" : "off"}</span> : null}
+            </button>
+          ))}
+        </>
+      ) : null}
+      <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />
       {weekIds.map((id, n) => {
         const wd = days.filter(d => d.weekId === id);
         const here = id === days[i]?.weekId;
@@ -3923,6 +3892,8 @@ export default function Dashboard({ config }) {
   const [recent, setRecent] = useState([]);
   // What I last clicked on in the flow, so the sidebar can say what it is.
   const [picked, setPicked] = useState(null);
+  // The row most recently put up from the day, for Next. See upNextRow.
+  const [lastCast, setLastCast] = useState(null);
   const pickedSync = picked;
   const HL = useHeadlines(config.storageKey, { categories: data?.headlineCategories, concepts: config.concepts });
 
@@ -4795,6 +4766,85 @@ export default function Dashboard({ config }) {
       idea: ideas[i] || "", at: i, count: ideas.length, showAsk: which === "pre", label: lbl + " \u00b7 " + (i + 1) });
     markEngaged();
   };
+
+  // The boards as sections. The Flow draws Enter and Exit as the first and
+  // last sections of the day, with slot keys of their own, and every handler
+  // that takes a slot routes those two to the board instead of the day plan:
+  // the heading is the headline, a line is an idea. Andrew, 2026-09-17:
+  // "entry and exit should be part of the outline, not a separate thing that
+  // i have to edit differently."
+  const writeBoard = (which, fn, what) => {
+    const b = boardFor(which) || { title: "", ideas: [] };
+    const next = fn({ title: b.title || "", ideas: [...(b.ideas || [])] });
+    if (next) saveBoard(which, next);
+  };
+  const forBoard = (plain, onBoard) => (slot, ...rest) => {
+    const which = boardOfSlot(slot);
+    return which ? onBoard(which, ...rest) : plain(slot, ...rest);
+  };
+  const wordsOf = (it) => {
+    const b = it?.blockId ? blockOf(it.blockId) : null;
+    return ((b ? b.headline || b.title : it?.claim || it?.text) || "").trim();
+  };
+  const saveItemB = forBoard(saveItemPatch, (which, id, patch) => {
+    if (patch.text == null) return;
+    writeBoard(which, b => { const i = boardIdeaIndex(id); if (i < 0 || i >= b.ideas.length) return null; b.ideas[i] = patch.text; return b; });
+  });
+  const insertRowB = forBoard(insertRow, (which, afterId, depth, extra) => {
+    const b = boardFor(which) || { ideas: [] };
+    const at = afterId ? boardIdeaIndex(afterId) + 1 : 0;
+    const text = extra?.text || (extra?.blockId ? wordsOf({ blockId: extra.blockId }) : "");
+    writeBoard(which, bb => { bb.ideas.splice(at, 0, text); return bb; });
+    return boardIdeaId(which, Math.min(at, (b.ideas || []).length));
+  });
+  const removeItemB = forBoard(removeFlowItem, (which, id) =>
+    writeBoard(which, b => { const i = boardIdeaIndex(id); if (i < 0) return null; b.ideas.splice(i, 1); return b; }));
+  const setSlotTitleB = forBoard(setSlotTitle, (which, title) => writeBoard(which, b => ({ ...b, title })));
+  const deleteSectionB = forBoard(deleteSection, (which) => saveBoard(which, { title: "", ideas: [] }));
+  const nothing = () => {};
+  const nestB = forBoard(nestItem, nothing);
+  const setSlotTimeB = forBoard(setSlotTime, nothing);
+  const moveSectionB = forBoard(moveSection, nothing);
+  const placeSectionB = forBoard(placeSectionAt, nothing);
+  const splitSectionB = forBoard(splitSectionAt, nothing);
+  const convertRowB = forBoard(convertRow, nothing);
+  const linkRowB = forBoard(linkRow, nothing);
+  // A line dragged between a board and a section, either way, or within a board.
+  const dragMoveB = (fromSlot, itemId, toSlot, beforeId) => {
+    const from = boardOfSlot(fromSlot), to = boardOfSlot(toSlot);
+    if (!from && !to) return dragMove(fromSlot, itemId, toSlot, beforeId);
+    if (from && to) {
+      const i = boardIdeaIndex(itemId);
+      if (from === to) {
+        writeBoard(from, b => {
+          const [idea] = b.ideas.splice(i, 1);
+          let at = beforeId ? boardIdeaIndex(beforeId) : b.ideas.length;
+          if (beforeId && boardIdeaIndex(beforeId) > i) at -= 1;
+          b.ideas.splice(Math.max(0, at), 0, idea);
+          return b;
+        });
+        return;
+      }
+      const idea = (boardFor(from)?.ideas || [])[i];
+      if (idea == null) return;
+      writeBoard(from, b => { b.ideas.splice(i, 1); return b; });
+      writeBoard(to, b => { b.ideas.splice(beforeId ? boardIdeaIndex(beforeId) : b.ideas.length, 0, idea); return b; });
+      return;
+    }
+    if (from) {
+      const i = boardIdeaIndex(itemId);
+      const idea = (boardFor(from)?.ideas || [])[i];
+      if (!idea) return;
+      pickBlock(toSlot, { title: idea }, null, beforeId);
+      writeBoard(from, b => { b.ideas.splice(i, 1); return b; });
+      return;
+    }
+    const it = normSlot((plan?.slots || {})[fromSlot]).items.find(x => x.id === itemId);
+    const words = wordsOf(it);
+    if (!words) return;
+    removeFlowItem(fromSlot, itemId);
+    writeBoard(to, b => { b.ideas.splice(beforeId ? boardIdeaIndex(beforeId) : b.ideas.length, 0, words); return b; });
+  };
   // Every reading and activity the schedule dates to this day, marked when
   // it is already in a section. A reading goes up as the page; an activity
   // runs the way its row in the Flow would.
@@ -4930,8 +4980,8 @@ export default function Dashboard({ config }) {
       features={features} onFeature={runFeature} planHref={config.path + "/dayplan"} classHref={config.path}
       onSlidesClaim={saveSlidesClaim} onBlockClaim={saveBlockClaim} where={config.code + " · " + day}
       loose={looseItems} onAddScheduled={(it, slot, date) => addScheduleItemToDay(update, config, date || day, it, slot)}
-      onAddItem={addFlowItem} onAddNote={addNote} classId={config.id} onRemoveItem={removeFlowItem} onMoveItem={moveFlowItem}
-      onSetSequence={setSequence} onSetSlotTitle={setSlotTitle} sequences={seqs}
+      onAddItem={addFlowItem} onAddNote={addNote} classId={config.id} onRemoveItem={removeItemB} onMoveItem={moveFlowItem}
+      onSetSequence={setSequence} onSetSlotTitle={setSlotTitleB} sequences={seqs}
       onAddBlock={addBlock} onRemoveBlock={removeBlock} onMoveBlock={moveBlock}
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
       readings={readings} comingRows={comingRows}
@@ -4949,27 +4999,20 @@ export default function Dashboard({ config }) {
             .flatMap(b => normSlot(b).items)
             .filter(it => !it.blockId && (it.text || "").trim())
             .map(it => "\u00b7 " + it.text.trim()).join("\n") },
-      ]} onNest={nestItem}
+      ]} onNest={nestB}
       onSaveBlock={saveBlockPatch} onSaveDayNote={(v) => saveDayNote(v)}
-      onSaveItem={saveItemPatch} onInsertRow={insertRow} onConvertRow={convertRow}
-      onLinkRow={linkRow} onSetSlotTime={setSlotTime} onPlaceSection={placeSectionAt} onSplitSection={splitSectionAt}
+      onSaveItem={saveItemB} onInsertRow={insertRowB} onConvertRow={convertRowB}
+      onLinkRow={linkRowB} onSetSlotTime={setSlotTimeB} onPlaceSection={placeSectionB} onSplitSection={splitSectionB}
       classMinutes={(() => { const s = sittingsOf(config)[0]; return s ? s.end - s.start : null; })()}
       onOpenTemplates={() => setTemplatesOpen(true)} onOpenHistory={() => setHistoryOpen(true)}
       roomGround={data?.roomGround} onSetGround={(gr) => update(prev => ({ ...prev, roomGround: gr }))} assignmentList={assignments}
       games={games} gamesHref={config.path + "/games"}
       boards={plan?.boards || {}} proposals={proposals} onSaveBoard={saveBoard} onCastBoard={castBoard} boardHue={hueOfKind("boards")}
       schedToday={schedToday} onCastScheduled={castScheduled}
-      // An idea dragged off a board into a section leaves the board, the way a
-      // reading dragged into the flow leaves Today's readings, and the same
-      // View menu switch keeps it there instead.
-      onTakeIdea={(which, i) => {
-        if (railRef.current.dragKeeps) return;
-        const b = boardFor(which) || { title: which === "pre" ? "Enter" : "Exit", ideas: [] };
-        saveBoard(which, { ...b, ideas: (b.ideas || []).filter((_, n) => n !== i) });
-      }}
+      onCastRow={setLastCast}
       onSaveSpring={(patch) => writeDay(d => ({ ...d, spring: { ...(d.spring || {}), ...patch } }), "that note")}
       onAddReading={addReading} onRemoveReading={dropReading} onPickReading={pickReading}
-      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMove} onDeleteSection={deleteSection} onMoveSection={moveSection} onAddUnder={addUnder} onMergeSections={mergeSections} onSelect={setPicked} onEdit={editPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
+      onAddIdea={addIdea} days={days} today={day} onFold={foldSlots} onDragMove={dragMoveB} onDeleteSection={deleteSectionB} onMoveSection={moveSectionB} onAddUnder={addUnder} onMergeSections={mergeSections} onSelect={setPicked} onEdit={editPicked} pickedId={picked?.id} onOrder={(rows) => { flowOrderRef.current = rows; }}
       doneSet={doneSet} onTick={tickItem} />,
     boards: () => <BoardsPanel boards={plan?.boards || {}} proposals={proposals} onSave={saveBoard}
       castNow={castNow} dismiss={dismiss} liveCast={live?.cast} accent={config.accent} />,
@@ -5052,10 +5095,27 @@ export default function Dashboard({ config }) {
       ...Object.keys(slots).filter(k => !named.has(k) && !isSection(k)),
     ];
     const out = [];
+    // Enter's ideas open the day and Exit's close it, the way the Flow draws them.
+    boardSection("pre", plan?.boards, proposals).items.forEach(it => out.push({ id: it.id, slot: "board-pre", item: it }));
     keys.forEach(k => normSlot(slots[k]).items.forEach(it => out.push({ id: it.id, slot: k, item: it, blockId: it.blockId })));
+    boardSection("post", plan?.boards, proposals).items.forEach(it => out.push({ id: it.id, slot: "board-post", item: it }));
     return out;
   })();
-  const upNextRow = flowOrder.find(r => !doneSet.has(r.id));
+  // Next follows what was last put up from the day, not the first row nobody
+  // has ticked. Andrew, 2026-09-17: "i click on a wikipedia link for strava
+  // heat map on week 3 oct 7, and then i press next slides and goes to how the
+  // day runs. if i click on strava, shouldn't the next one be WEB dubois?"
+  // It should. Every cast from a row, its link or its board line says which
+  // row it was, and Next is the first unticked row after that one. With
+  // nothing up yet, or the last row up, it is the first unticked row.
+  const afterLast = (() => {
+    if (!lastCast) return null;
+    const at = flowOrder.findIndex(r => r.id === lastCast);
+    if (at < 0) return null;
+    return flowOrder.slice(at + 1).find(r => !doneSet.has(r.id)) || null;
+  })();
+  const lastIsOnDay = !!lastCast && flowOrder.some(r => r.id === lastCast);
+  const upNextRow = afterLast || (lastIsOnDay ? null : flowOrder.find(r => !doneSet.has(r.id)));
   const upNextWords = upNextRow ? (() => {
     const b = upNextRow.blockId ? blockOf(upNextRow.blockId) : null;
     return (b ? b.headline || b.title : upNextRow.item?.claim || upNextRow.item?.text) || "";
@@ -5068,7 +5128,11 @@ export default function Dashboard({ config }) {
     if (!upNextRow) return;
     const live = (flowOrderRef.current || []).find(r => r.id === upNextRow.id);
     if (live?.cast) live.cast();
+    else if (upNextRow.item?.board) castBoard(upNextRow.item.board, upNextRow.item.index);
+    setLastCast(upNextRow.id);
   };
+  // A new day starts Next from its top.
+  useEffect(() => { setLastCast(null); }, [day]);
 
   // Where the running order is up to. The room screen knows what it is showing
   // by its words, so the row on the screen is the row whose words match — which
@@ -5110,42 +5174,40 @@ export default function Dashboard({ config }) {
           name, because that is what they all are. Teaching stays out on its
           own — it is the one switch I hit at the moment class starts. */}
       {/* THE ONE BAR. The same on the class page, here and the repository, and
-          it answers one question: where am I. What used to sit here — the date,
-          Here, Around the Horn, Look, View — are controls that act on the day,
-          not navigation, so they moved down to sit with the day they act on. */}
+          it answers one question: where am I. For a while the dashboard kept a
+          second row under it, and Andrew, 2026-09-17: "i don't want that
+          second menu bar at all." So the bar's More is the dashboard's More
+          here, Here sits at the bar's right end, and Around the Horn, which
+          the bar already carries, is not said twice. */}
       <div ref={headRef} style={{ position: "sticky", top: 0, zIndex: 30 }}>
-        <TopNav config={config} tabs={NAV_TEACH} />
-        {/* The bar is the same on every page, with nothing added, so the
-            dashboard's own controls sit in a row of their own under it. */}
-        <div style={{ background: "var(--surface-card)", borderBottom: "1px solid var(--line-soft)" }}>
-          <div style={{ maxWidth: 1760, margin: "0 auto", padding: "6px 20px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <TopNav config={config} tabs={NAV_TEACH}
+          moreNode={
             <ClassMenu config={config} onLook={() => setColorsOpen(true)}
               panels={LIVE_RAIL.map(id => ({ id, label: TITLES[id], n: RAIL_N[id] }))}
-              onPanel={setRoomOpen} />
-            <span style={{ flex: "1 1 auto" }} />
-            <button className="dash-focus dash-bar" onClick={() => setHereOpen(true)}>
-              Here{students.length ? <span className="dash-bar-sub">{students.length - outCount}/{students.length}</span> : null}
-            </button>
-            <button className="dash-focus dash-bar" onClick={openHorn}>Around the Horn</button>
-            {/* The two ways to read the quarter, on the bar. Andrew,
-                2026-09-17: "you gotta put links to the quarter outline and
-                map on the front page of the dashboard." They were one press
-                inside the date menu, under Plan the quarter, and a thing you
-                have to know is there is not on the front page. */}
-            <button className="dash-focus dash-bar" onClick={() => setTermOpen("outline")}
-              title="The quarter as a document: week, day, section, row">Outline</button>
-            <button className="dash-focus dash-bar" onClick={() => setTermOpen("map")}
-              title="The quarter on one screen">Map</button>
-            <ViewMenu railOpen={railOpen} onRail={toggleRail}
+              onPanel={setRoomOpen}
+              railOpen={railOpen} onRail={toggleRail}
               dense={dense} onDense={() => railSave.current({ dense: !dense })}
               onReset={() => railSave.current({ cols: { ...COL } })}
               onKeys={() => { setCmdOpen(false); setKeysOpen(true); }}
               dragKeeps={dragKeeps} onDragKeeps={() => setDragKeeps(v => !v)} />
-          </div>
-        </div>
+          }
+          right={
+            <button className="dash-focus dash-bar" onClick={() => setHereOpen(true)}>
+              Here{students.length ? <span className="dash-bar-sub">{students.length - outCount}/{students.length}</span> : null}
+            </button>
+          } />
       </div>
 
-      <Reminders />
+      {/* The two ways to read the quarter, beside the reminder. Andrew,
+          2026-09-17: "move outline and map next to my reminder." */}
+      <Reminders actions={
+        <>
+          <button className="dash-focus dash-bar" onClick={() => setTermOpen("outline")}
+            title="The quarter as a document: week, day, section, row">Outline</button>
+          <button className="dash-focus dash-bar" onClick={() => setTermOpen("map")}
+            title="The quarter on one screen">Map</button>
+        </>
+      } />
 
       <main ref={stageRef} className="dash-stage" data-rail={railOpen ? "open" : "shut"} data-teach={focus ? "on" : "off"}
         style={{ gridTemplateColumns: gridFor(cols, railOpen, focus),
@@ -5160,28 +5222,23 @@ export default function Dashboard({ config }) {
               span={dayTitle.span} nth={dayTitle.nth}
               onClear={dayTitle.own ? () => saveDayTitle("") : null}
               date={<DateButton days={days} day={day} onPick={setDay} accent={config.accent} today={onDeck} counts={dayCounts}
-                onTerm={() => setTermOpen("outline")} />}
+                onTerm={() => setTermOpen("outline")}
+                // Templates, History and whether the day meets in person were
+                // three buttons on the title row. They are rows of this menu
+                // now, under the day they act on.
+                tools={[
+                  { label: "Templates", title: "Save this day as a template, or start a day from a template", run: () => setTemplatesOpen(true) },
+                  { label: "History", title: "Earlier versions of this day", run: () => setHistoryOpen(true) },
+                  { label: "Meets in person", title: "Mark whether this class day meets in person. Off, students see the day with a dashed outline and a No in-person meeting badge.",
+                    on: !data?.dayPlans?.[day]?.noMeeting,
+                    run: () => writeDay(d => ({ ...d, noMeeting: !d.noMeeting }), "changing whether the class meets") },
+                ]} />}
               tools={
-                <>
-                  {/* A new section arrives nameless, called Section N, with a
-                      caret in its name. No dialog asking what to call a thing
-                      that does not exist yet. */}
-                  <button className="dash-focus dash-topic-tool" onClick={() => addBlock("")}
-                    title="Add a section to the end of this day">+ Section</button>
-                  <button className="dash-focus dash-topic-tool" onClick={() => setTemplatesOpen(true)}
-                    title="Save this day as a template, or start a day from a template">Templates</button>
-                  <button className="dash-focus dash-topic-tool" onClick={() => setHistoryOpen(true)}
-                    title="Earlier versions of this day">History</button>
-                  {/* A class day that does not meet in the room. Students see
-                      the day on the class page with a dashed outline and a
-                      No in-person meeting badge. */}
-                  <button className="dash-focus dash-topic-tool" aria-pressed={!!data?.dayPlans?.[day]?.noMeeting}
-                    onClick={() => writeDay(d => ({ ...d, noMeeting: !d.noMeeting }), "changing whether the class meets")}
-                    style={data?.dayPlans?.[day]?.noMeeting ? { color: TEXT_PRIMARY, boxShadow: "inset 0 0 0 1px " + TEXT_PRIMARY } : undefined}
-                    title="Mark whether this class day meets in person">
-                    {data?.dayPlans?.[day]?.noMeeting ? "No in-person meeting" : "Meets in person"}
-                  </button>
-                </>
+                /* A new section arrives nameless, called Section N, with a
+                   caret in its name. No dialog asking what to call a thing
+                   that does not exist yet. */
+                <button className="dash-focus dash-topic-tool" onClick={() => addBlock("")}
+                  title="Add a section to the end of this day">+ Section</button>
               } />
             {render.flow()}
           </Panel>
