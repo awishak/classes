@@ -1999,7 +1999,7 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
 function ScheduleToday({ items, accent, onAdd, onCast }) {
   if (!items.length) return null;
   return (
-    <div className="flow-sched" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <div style={{ ...label, color: accent }}>On the schedule today</div>
       {items.map(it => (
         <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap",
@@ -2041,7 +2041,7 @@ function BoardRow({ which, boards, proposals, hue, accent, liveCast, onSave, onC
   const board = saved || (proposals || {})[which] || { title: label3, ideas: [] };
   const liveHere = liveCast?.type === "board" && liveCast.boardLabel === label3;
   return (
-    <div className={"flow-board flow-board-" + which} style={{ borderLeft: "4px solid " + (hue || accent), borderRadius: 10 }}>
+    <div style={{ borderLeft: "4px solid " + (hue || accent), borderRadius: 10 }}>
       <BoardEditor label={label3} board={board} isProposal={!saved} accent={accent}
         onSave={(b) => onSave(which, b)} onReset={() => onSave(which, null)}
         liveIndex={liveHere ? liveCast.at : null}
