@@ -18,7 +18,7 @@ import { readAdded, readLabels } from "./types.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { useLive } from "./live.js";
 import { usePoll } from "./poll.js";
-import { YouSummary, YouDetail } from "./YouCard.jsx";
+import { YouDetail, MessagesDetail, MessagesSummary } from "./YouCard.jsx";
 import { ScheduleSummary, ScheduleDetail } from "./ScheduleCard.jsx";
 import { RosterSummary, RosterDetail } from "./RosterCard.jsx";
 import { AssignmentsSummary, AssignmentsDetail, ungradedCount, waitingCount } from "./AssignmentsCard.jsx";
@@ -114,8 +114,12 @@ function summary(key, config, role, ctx) {
       return { title: "Day Plan", body: <DayPlanSummary config={config} data={ctx.data} blockOf={ctx.blockOf} /> };
     case "you":
       return role === "instructor"
-        ? { title: "You", body: <YouSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> }
+        ? { title: "You", body: <MessagesSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> }
         : { title: "Your card", body: <YourCardSummary config={config} data={ctx.data} name={ctx.asStudent} /> };
+    case "messages":
+      return role === "instructor"
+        ? { title: "Inbox", body: <MessagesSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> }
+        : { title: "Message with Dr. Ishak", body: <MessagesSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> };
     case "assignments":
       return { title: "Challenges", body: <AssignmentsSummary config={config} data={ctx.data} role={role} name={role === "instructor" ? "" : ctx.asStudent} /> };
     case "class":
@@ -146,6 +150,9 @@ function detail(key, config, role, ctx) {
   if (key === "you") {
     return <YouDetail config={config} role={role} data={ctx.data} update={ctx.update} asStudent={ctx.asStudent} setAsStudent={ctx.setAsStudent} />;
   }
+  if (key === "messages") {
+    return <MessagesDetail config={config} role={role} data={ctx.data} update={ctx.update} asStudent={ctx.asStudent} />;
+  }
   if (key === "assignments") {
     if (role === "instructor") return <AssignmentsDetail config={config} role={role} data={ctx.data} update={ctx.update} asStudent={ctx.asStudent} />;
     return ctx.sub
@@ -171,11 +178,12 @@ function detail(key, config, role, ctx) {
     );
   }
   // Class: your card, the roster and your instructor, each a card of its own.
+  // Andrew has no card of his own here; his inbox is on the home page.
   if (key === "class") {
     return (
       <Panel title="Class">
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {["you", "roster", "instructor"].map((k, i) => ctx.tile(k, i))}
+          {(role === "instructor" ? ["roster", "instructor"] : ["you", "roster", "instructor"]).map((k, i) => ctx.tile(k, i))}
         </div>
       </Panel>
     );
@@ -332,14 +340,14 @@ function needsYou(config, data, role, asStudent) {
       const last = t[t.length - 1];
       return last && last.from === "student";
     }).length;
-    if (waiting) out.push({ id: "inbox", card: "you", text: waiting + " student" + (waiting === 1 ? "" : "s") + " waiting on a reply" });
+    if (waiting) out.push({ id: "inbox", card: "messages", text: waiting + " student" + (waiting === 1 ? "" : "s") + " waiting on a reply" });
     const asks = openRequests(data);
     if (asks) out.push({ id: "requests", card: "more", text: asks + " request" + (asks === 1 ? "" : "s") + " and bugs waiting" });
     return out;
   }
   const thread = data?.threads?.[asStudent] || [];
   const last = thread[thread.length - 1];
-  if (last && last.from === "instructor") out.push({ id: "note", card: "you", text: "A new note from " + (config.instructor?.name || "your instructor") });
+  if (last && last.from === "instructor") out.push({ id: "note", card: "messages", text: "A new note from " + (config.instructor?.name || "your instructor") });
   // The first-week challenge, until every field on the card is filled.
   const task = profileTaskOf(config);
   if (task && !profileComplete(data?.profiles?.[asStudent])) out.push({ id: "card", card: "you", text: task.title });
@@ -603,8 +611,9 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const tabCards = new Set(navTabs.map(n => n.card).filter(k => k && NAV_CARDS.has(k)));
   // The home page, top to bottom, under the Next class hero and the pinned
   // links. Andrew, 2026-09-15: schedule first, then assignments, then class,
-  // grades toward the bottom, and games at the very bottom.
-  const HOME = ["assignments", "class", "games"].filter(k => enabledCards.includes(k));
+  // grades toward the bottom, and games at the very bottom. Messages sit
+  // under Challenges since 2026-09-17, a card of their own off the profile.
+  const HOME = ["assignments", "messages", "class", "games"].filter(k => enabledCards.includes(k));
   // What lives inside Class, and lights the Class tab when open.
   const IN_CLASS = new Set(["you", "roster", "instructor"]);
 

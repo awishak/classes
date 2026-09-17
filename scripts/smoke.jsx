@@ -85,7 +85,7 @@ import DueDeck, { dueSoon, dismissDue, deadlineOf } from "../src/engine/DueCard.
 import { NextClassHero, nextClassFacts, timeText, PinnedLinks, RequestForm, InstructorProfile } from "../src/engine/HomeCards.jsx";
 import { instructorOf } from "../src/instructors.js";
 import { assignmentsOf } from "../src/engine/profileTask.js";
-import { YouDetail } from "../src/engine/YouCard.jsx";
+import { YouDetail, MessagesDetail, MessagesSummary } from "../src/engine/YouCard.jsx";
 import comm118Cfg from "../src/config/comm118.js";
 import { AssignmentCards, AssignmentPage, statusOf, inDueOrder, feedOf } from "../src/engine/AssignmentCards.jsx";
 import { appsFor } from "../src/engine/apps.js";
@@ -1121,9 +1121,9 @@ cases.push(["Instructor links", <InstructorLinks />]);
     // Class, Grades toward the bottom and Games at the very bottom.
     const at = (t) => html.indexOf(t);
     if (html.includes('aria-label="Next class"')) {
-      const order = ['aria-label="Next class"', ">Challenges</span>", ">Class</span>", ">Games</span>"].map(at);
+      const order = ['aria-label="Next class"', ">Challenges</span>", ">Message with Dr. Ishak</span>", ">Class</span>", ">Games</span>"].map(at);
       if (order.some(n => n < 0) || order.some((n, i) => i && n < order[i - 1])) {
-        console.error("  FAIL  class page, student: the home page is not Next class, Challenges, Class, Games: " + JSON.stringify(order)); failedEarly++; }
+        console.error("  FAIL  class page, student: the home page is not Next class, Challenges, Messages, Class, Games: " + JSON.stringify(order)); failedEarly++; }
     } else {
       console.error("  FAIL  class page, student: the home page has no Next class hero"); failedEarly++;
     }
@@ -2383,6 +2383,31 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
         .forEach(t => { if (!form.includes(t)) say("the form does not mark " + JSON.stringify(t)); });
       ["About me (this is only", "Motto (this is only", "Hometown (this is only"].forEach(t => { if (form.includes(t)) say("a field classmates see is marked private: " + t); });
     } catch (err) { say("the card challenge threw: " + err.message); }
+  }
+
+  // Messages are a card of their own on the front page. Andrew, 2026-09-17:
+  // "can we move them from the bottom of the bio card to a card on the front
+  // page please?" Your card keeps the profile; the thread, Done / I'm
+  // confused / Make a meeting and the question moved.
+  {
+    const say = (m) => { console.error("  FAIL  messages card: " + m); failedEarly++; };
+    const N = "Sam Student";
+    const mcfg = { ...cfg, students: [{ name: N }] };
+    const talked = { threads: { [N]: [{ id: "m1", ts: 1, from: "student", kind: "question", text: "What is framing?" }] } };
+    try {
+      const you = renderToString(<YouDetail config={mcfg} role="student" data={{}} update={noop} asStudent={N} />);
+      if (!you.includes("Your profile")) say("Your card lost the profile");
+      ["I don&#x27;t understand something", "I&#x27;m confused", "Message with Dr. Ishak"].forEach(t => { if (you.includes(t)) say("Your card still carries " + JSON.stringify(t)); });
+      const msgs = renderToString(<MessagesDetail config={mcfg} role="student" data={talked} update={noop} asStudent={N} />);
+      ["Message with Dr. Ishak", "I don&#x27;t understand something", "I&#x27;m confused", "Make a meeting", "What is framing?"].forEach(t => { if (!msgs.includes(t)) say("the messages card has no " + JSON.stringify(t)); });
+      if (msgs.includes("Your profile")) say("the messages card carries the profile");
+      const inbox = renderToString(<MessagesDetail config={mcfg} role="instructor" data={talked} update={noop} />);
+      if (!inbox.includes("Inbox") || !inbox.includes(N)) say("Andrew's messages card is not the inbox");
+      const tile = renderToString(<MessagesSummary config={mcfg} role="instructor" data={talked} />);
+      if (!tile.includes("waiting on your reply")) say("Andrew's tile does not count who is waiting");
+      const mine = renderToString(<MessagesSummary config={mcfg} role="student" data={talked} asStudent={N} />);
+      if (!mine.includes("What is framing?")) say("the student's tile does not show the last thing said");
+    } catch (err) { say("the messages card threw: " + err.message); }
   }
 
   // Assignments as cards, in the order they come due, and a page for each one.

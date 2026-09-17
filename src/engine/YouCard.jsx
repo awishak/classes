@@ -5,8 +5,6 @@
 
 import { useState } from "react";
 import { genId } from "../utils.jsx";
-import { computeGrade } from "./AssignmentsCard.jsx";
-import GradeParade from "./GradeParade.jsx";
 import { schedulingLinkOf } from "../instructors.js";
 import * as TOKENS from "./tokens.js";
 
@@ -250,13 +248,7 @@ function ProfileForm({ student, initial, update, accent }) {
 // fills in who they are; grades have a card of their own on the home page.
 function StudentYou({ config, data, update, asStudent, setAsStudent }) {
   const a = config.accent;
-  const [reply, setReply] = useState("");
-  const [question, setQuestion] = useState("");
   const roster = config.students || [];
-
-  const send = (text) => { if (!text.trim()) return; addMessage(update, asStudent, { from: "student", kind: "reply", text: text.trim() }); setReply(""); };
-  const ask = () => { if (!question.trim()) return; addMessage(update, asStudent, { from: "student", kind: "question", text: question.trim() }); setQuestion(""); };
-  const status = (kind) => addMessage(update, asStudent, { from: "student", kind, text: "" });
 
   return (
     <div>
@@ -273,14 +265,30 @@ function StudentYou({ config, data, update, asStudent, setAsStudent }) {
         ) : null}
       </div>
 
-      <div style={{ marginTop: 14, paddingBottom: 24, borderBottom: "1px solid " + BORDER }}>
+      <div style={{ marginTop: 14 }}>
         <ProfileForm key={asStudent} student={asStudent} initial={data?.profiles?.[asStudent] || {}} update={update} accent={a} />
       </div>
+    </div>
+  );
+}
 
-      <div style={{ marginTop: 20 }}>
-        <div style={label}>Message with Dr. Ishak</div>
-        <div style={{ marginTop: 10 }}><Thread data={data} name={asStudent} accent={a} /></div>
-      </div>
+// Messages with Andrew: the thread, a reply, Done / I'm confused / Make a
+// meeting, and a question for the class. These sat at the foot of the
+// profile before. Andrew, 2026-09-17: "can we move them from the bottom of
+// the bio card to a card on the front page please?" A card of their own now.
+function StudentMessages({ config, data, update, asStudent }) {
+  const a = config.accent;
+  const [reply, setReply] = useState("");
+  const [question, setQuestion] = useState("");
+
+  const send = (text) => { if (!text.trim()) return; addMessage(update, asStudent, { from: "student", kind: "reply", text: text.trim() }); setReply(""); };
+  const ask = () => { if (!question.trim()) return; addMessage(update, asStudent, { from: "student", kind: "question", text: question.trim() }); setQuestion(""); };
+  const status = (kind) => addMessage(update, asStudent, { from: "student", kind, text: "" });
+
+  return (
+    <div>
+      <div style={h2}>Message with Dr. Ishak</div>
+      <div style={{ marginTop: 14 }}><Thread data={data} name={asStudent} accent={a} /></div>
 
       <div style={{ marginTop: 18, display: "flex", gap: 8, alignItems: "flex-start" }}>
         <div style={{ flex: 1 }}><Field value={reply} onChange={setReply} placeholder="Write a reply..." /></div>
@@ -363,12 +371,22 @@ function InstructorYou({ config, data, update }) {
 // ─────────────────────────────────────────────────────────────
 // Exports used by ClassApp
 // ─────────────────────────────────────────────────────────────
+// Your card: the profile. For Andrew, the same key still opens the inbox, so
+// a saved link keeps working.
 export function YouDetail({ config, role, data, update, asStudent, setAsStudent }) {
   if (role === "instructor") return <InstructorYou config={config} data={data} update={update} />;
   return <StudentYou config={config} data={data} update={update} asStudent={asStudent} setAsStudent={setAsStudent} />;
 }
 
-export function YouSummary({ config, role, data, asStudent }) {
+// Messages: the student's thread with Andrew, or Andrew's inbox.
+export function MessagesDetail({ config, role, data, update, asStudent }) {
+  if (role === "instructor") return <InstructorYou config={config} data={data} update={update} />;
+  return <StudentMessages config={config} data={data} update={update} asStudent={asStudent} />;
+}
+
+// The home page tile. Andrew's counts who is waiting on him; a student's
+// shows the last thing said.
+export function MessagesSummary({ config, role, data, asStudent }) {
   const a = config.accent;
   if (role === "instructor") {
     const waiting = (config.students || []).filter(s => waitingOnInstructor(data, s.name)).length;
@@ -377,15 +395,8 @@ export function YouSummary({ config, role, data, asStudent }) {
       : <Muted>Inbox: no replies needed.</Muted>;
   }
   const m = lastMsg(data, asStudent);
-  const fresh = m && m.from === "instructor";
-  return (
-    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-      <div style={{ width: 44, height: 44, borderRadius: "50%", background: a + "22", border: "2px solid " + a + "55", flexShrink: 0 }} />
-      <div style={{ minWidth: 0, flex: 1 }}>
-        {fresh
-          ? <><div style={{ fontWeight: 600 }}>New note from instructor</div><Muted>Tap to read</Muted></>
-          : <><div style={{ fontWeight: 600 }}>Grades so far</div><div style={{ marginTop: 6 }}><GradeParade config={config} data={data} name={asStudent} accent={a} compact /></div></>}
-      </div>
-    </div>
-  );
+  if (!m) return <Muted>No messages yet.</Muted>;
+  if (m.from === "instructor") return <><div style={{ fontWeight: 600 }}>New note from instructor</div><Muted>Tap to read</Muted></>;
+  const preview = m.kind === "got_it" ? "Done" : m.kind === "confused" ? "I'm confused" : m.kind === "meeting" ? "Requested a meeting" : m.kind === "question" ? "Q: " + m.text : m.text;
+  return <div style={{ fontSize: 15, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>You: {preview}</div>;
 }

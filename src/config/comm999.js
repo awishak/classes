@@ -65,6 +65,7 @@ const comm999 = {
     class: true,
     games: true,
     you: true,
+    messages: true,
     roster: true,
     instructor: true,
   },

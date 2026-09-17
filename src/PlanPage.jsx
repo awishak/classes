@@ -47,7 +47,7 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
-    id: "sep17-fall-card", date: "Thursday, September 17", title: "The spring card comes to fall, and the first challenge is to fill in yours",
+    id: "sep17-fall-card", date: "Thursday, September 17", title: "The spring card comes to fall, the first challenge is to fill in yours, and messages get a card",
     blurb: "Andrew: \"gtta strat loadig my classes up. how do students update their profiles/ and can you update mine from last spring to this fall?\"",
     groups: [
       { name: "The instructor's card", items: [
@@ -59,6 +59,10 @@ const SESSIONS = [
         ["Please tell me about yourself", "His idea: a task in the first week to fill in their info. Every field, no weight, both fall classes, due Sep 22, the second day of the term. The challenge lives in the engine rather than in a class file, because COMM 118's store carries its own challenge list and a config entry would never reach it."],
         ["The card is the submission", "There is nothing to send. Every field on Your card filled and the challenge marks itself Complete; one short and the page says Please tell me about yourself until it is. The challenge page has a Your card button where the message box would be. Nothing for him to grade, and the grade does not move."],
         ["This is only for your instructor", "Email, goals and what matters most are marked with his phrase, because those three never show on the roster; about me, motto, year and hometown do. His roster reads Profile not filled in yet under anyone short a field."],
+      ] },
+      { name: "Messages on the front page", items: [
+        ["Message with Dr. Ishak is a card", "Andrew: \"can we move them from the bottom of the bio card to a card on the front page please?\" The thread, the reply, Done, I'm confused, Make a meeting and I don't understand something sat under the profile on Your card. They are a card of their own now, under Challenges on the home page, and Your card is the profile alone. His side of the same card is the inbox, so it left his Class page."],
+        ["Where a message goes", "Into the class store under the student's name, one thread each, questions marked as questions. He reads it in the inbox, on the roster's student page under Messages, and the home page says how many students are waiting on a reply. Nothing goes to email."],
       ] },
       { name: "Students", items: [
         ["Class, then Your card", "Email, photo, about me, year, hometown, motto, goals and what matters most, saved to the class store. He sees the result on the Roster by tapping a name."],
