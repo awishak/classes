@@ -20,7 +20,7 @@ import { questionOf } from "./qbank.js";
 import { useQuestions } from "./questions.js";
 import { usePoll } from "./poll.js";
 import PollPanel, { oneSentence } from "./PollPanel.jsx";
-import HornBoard from "./HornBoard.jsx";
+import { openHorn } from "./HornApp.jsx";
 import { useHeadlines } from "./headlines.js";
 import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay, dayTitles } from "./days.js";
@@ -3785,7 +3785,6 @@ export default function Dashboard({ config }) {
   const q = useQuestions(config.storageKey);
   const DB = useBoards(config.storageKey);
   const P = usePoll(config.storageKey);
-  const [hornOpen, setHornOpen] = useState(false);
   const [hereOpen, setHereOpen] = useState(false);
   const [todoOpen, setTodoOpen] = useState(false);
   // Which of the three that came off the rail is open, by panel id.
@@ -3885,12 +3884,6 @@ export default function Dashboard({ config }) {
   const looseItems = unplanned(data, config, day).filter(it => !MEDIA_SET.has(it.type));
 
   useEffect(() => { document.title = config.code + " — Dashboard"; }, [config.code]);
-  // Around the Horn is an app of its own in the More list, and opens the
-  // dashboard with the board already up: /<class>/dashboard?app=horn.
-  useEffect(() => {
-    try { if (new URLSearchParams(window.location.search).get("app") === "horn") setHornOpen(true); } catch { /* no URL */ }
-  }, []);
-
   // Keyboard, because during class my hands are the slow part. Nothing fires
   // while I am typing into a field, so the claim editors keep working.
   const liveRef = useRef(null);
@@ -4630,7 +4623,7 @@ export default function Dashboard({ config }) {
   const markEngaged = () => push({ engagedAt: Date.now() });
 
   const runFeature = (name) => {
-    if (name === "Around the Horn") { setHornOpen(true); markEngaged(); return; }
+    if (name === "Around the Horn") { openHorn(); markEngaged(); return; }
     if (name === "Headlines") { setHlOpen(true); castNow({ type: "headlines", label: "Headlines" }); markEngaged(); return; }
     // The game rows used to put their own name on the room screen and stop
     // there, because the thing they named lived in a forked class file this
@@ -4646,12 +4639,6 @@ export default function Dashboard({ config }) {
     castNow({ type: "feature", title: name, body: FEATURES[name] || "", label: name });
     markEngaged();
   };
-
-  const setSeats = (seats) => update(prev => ({ ...prev, athSeats: seats }));
-  const awardHorn = (name, amount) => update(prev => ({
-    ...prev,
-    log: [...(prev.log || []), { id: genId(), student: name, amount, source: "Around the Horn", ts: Date.now(), date: day }],
-  }));
 
   // What the boards say unless I edit them. Built from the schedule so there is
   // always something on the screen worth reading.
@@ -4994,7 +4981,7 @@ export default function Dashboard({ config }) {
             <button className="dash-focus dash-bar" onClick={() => setHereOpen(true)}>
               Here{students.length ? <span className="dash-bar-sub">{students.length - outCount}/{students.length}</span> : null}
             </button>
-            <button className="dash-focus dash-bar" onClick={() => setHornOpen(true)}>Around the Horn</button>
+            <button className="dash-focus dash-bar" onClick={openHorn}>Around the Horn</button>
             <ViewMenu railOpen={railOpen} onRail={toggleRail}
               dense={dense} onDense={() => railSave.current({ dense: !dense })}
               onReset={() => railSave.current({ cols: { ...COL } })}
@@ -5096,11 +5083,6 @@ export default function Dashboard({ config }) {
         <HeadlinesBoard hl={HL.hl} api={HL} accent={config.accent}
           onCast={() => { cast({ type: "headlines", label: "Headlines" }); markEngaged(); }}
           onClose={() => setHlOpen(false)} />
-      ) : null}
-
-      {hornOpen ? (
-        <HornBoard students={students} seats={data.athSeats || {}} log={data.log || []} accent={config.accent}
-          onSeats={setSeats} onAward={(n, a) => { awardHorn(n, a); markEngaged(); }} onClose={() => setHornOpen(false)} />
       ) : null}
 
       {hereOpen ? (

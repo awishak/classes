@@ -68,6 +68,10 @@ const SESSIONS = [
         ["One rule for the lit tab", "Andrew: \"can we have some consistency for how the top nav is highlighted?\" Each surface used to say which tab it was, and most said nothing: Grade view, Ask, Run the game and Games lit no tab, and the dashboard stayed lit with Around the Horn up. The bar reads the address now, the same way on every page. A class page lights its tab, an app lights its app, and the Horn lights the Horn."],
         ["One row, always", "Andrew: \"making sure it doesn't wrap around for two levels.\" The bar wrapped when the five tabs, the seven apps and the class name outran the window. The tabs scroll sideways inside their row now, with the class pinned at the left and the badge at the right. The class page carried a second, unused copy of the tab styling; gone."],
       ] },
+      { name: "Around the Horn, anywhere", items: [
+        ["The board opens over the page you are on", "Andrew: \"around the horn should not load on top of the dashboard. it should load on top of whatever page i'm on and that's it.\" The tab was a link to the dashboard with the board up, so opening it from Grade view meant leaving Grade view. The board is mounted by the top bar now, so it is on every page he opens, and the tab and the dashboard's own button both bring it up in place. A saved link to the dashboard with the board up still works."],
+        ["Two readers, one newest state", "The bar and the dashboard each read the class; a point awarded from the board over the dashboard is written from the newest state the page holds rather than from the board's own copy, so an edit the dashboard has not saved yet is not written over. An award from the board no longer marks the day as engaged; that was the dashboard's own bookkeeping."],
+      ] },
       { name: "Students", items: [
         ["Class, then Your card", "Email, photo, about me, year, hometown, motto, goals and what matters most, saved to the class store. He sees the result on the Roster by tapping a name."],
       ] },

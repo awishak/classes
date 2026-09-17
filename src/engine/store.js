@@ -105,6 +105,7 @@ export function useClassData(key) {
         // whatever was saved after it.
         if (sent.current.length && sent.current.includes(canon(d))) return;
         dataRef.current = d;
+        WARM.set(key, d);
         setData(d);
       } catch { /* ignore */ }
     });
@@ -112,7 +113,10 @@ export function useClassData(key) {
   }, [key]);
 
   const update = useCallback((mutator) => {
-    const next = mutator(dataRef.current || {});
+    // From the newest state this page holds, not this hook's own copy: two
+    // hooks can read one class (the bar's Horn over the dashboard), and a
+    // write from one must not undo what the other has not saved yet.
+    const next = mutator(WARM.get(key) || dataRef.current || {});
     dataRef.current = next;
     WARM.set(key, next);
     setData({ ...next });

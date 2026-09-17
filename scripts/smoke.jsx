@@ -85,6 +85,7 @@ import DueDeck, { dueSoon, dismissDue, deadlineOf } from "../src/engine/DueCard.
 import { NextClassHero, nextClassFacts, timeText, PinnedLinks, RequestForm, InstructorProfile } from "../src/engine/HomeCards.jsx";
 import { instructorOf } from "../src/instructors.js";
 import TopNav, { NAV_CLASS, activeFor } from "../src/engine/TopNav.jsx";
+import HornApp from "../src/engine/HornApp.jsx";
 import { assignmentsOf } from "../src/engine/profileTask.js";
 import { YouDetail, MessagesDetail, MessagesSummary } from "../src/engine/YouCard.jsx";
 import comm118Cfg from "../src/config/comm118.js";
@@ -2426,7 +2427,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       [p + "/today"]: "today", [p + "/ask"]: "ask",
     };
     Object.entries(want).forEach(([path, id]) => { if (at(path) !== id) say(path + " lights " + JSON.stringify(at(path)) + ", not " + id); });
-    if (at(p + "/dashboard", "?app=horn") !== "horn") say("the dashboard with the Horn up lights " + JSON.stringify(at(p + "/dashboard", "?app=horn")));
+    if (at(p + "/dashboard", "?app=horn") !== "dashboard") say("the dashboard with the Horn up lights " + JSON.stringify(at(p + "/dashboard", "?app=horn")));
     if (at(p + "/board") !== "") say("a board page lights " + JSON.stringify(at(p + "/board")));
     try {
       // A page that says nothing gets the tab off the address; the smoke
@@ -2440,6 +2441,23 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       if (/flex-wrap:wrap/.test(bar)) say("the bar still wraps");
       if (!/overflow-x:auto/.test(bar)) say("the tabs do not scroll sideways when the bar is short of room");
     } catch (err) { say("the bar threw: " + err.message); }
+  }
+
+  // Around the Horn opens over whatever page is up. Andrew, 2026-09-17: "it
+  // should load on top of whatever page i'm on and that's it." The tab is a
+  // button, not a link to the dashboard, and the board is mounted by the bar.
+  {
+    const say = (m) => { console.error("  FAIL  the Horn: " + m); failedEarly++; };
+    try {
+      const bar = renderToString(<TopNav config={cfg0} tabs={NAV_CLASS} active="" />);
+      if (!/<button[^>]*>Around the Horn<\/button>/.test(bar)) say("Around the Horn is not a button in the bar");
+      if (bar.includes("app=horn")) say("the bar still links the Horn to the dashboard");
+      const closed = renderToString(<HornApp config={cfg0} />);
+      if (closed.trim() !== "") say("the Horn draws something while closed: " + closed.slice(0, 80));
+      const dash = readFileSync(new URL("../src/engine/Dashboard.jsx", import.meta.url), "utf8");
+      if (dash.includes("<HornBoard")) say("the dashboard still mounts a board of its own");
+      if (!dash.includes("openHorn()")) say("the dashboard's own button no longer opens the Horn");
+    } catch (err) { say("the Horn threw: " + err.message); }
   }
 
   // Assignments as cards, in the order they come due, and a page for each one.

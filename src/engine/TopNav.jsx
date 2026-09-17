@@ -19,6 +19,7 @@
 import * as TOKENS from "./tokens.js";
 import AppsMenu from "./AppsMenu.jsx";
 import { appsFor } from "./apps.js";
+import HornApp, { openHorn } from "./HornApp.jsx";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -57,8 +58,8 @@ const CLASS_CARDS = new Set(["class", "you", "roster", "instructor", "messages"]
 export function activeFor(config, role, pathname, search = "") {
   if (!config) return "";
   const here = String(pathname || "").replace(/\/$/, "") + (search || "");
-  // The apps first, longest address first, so /dashboard?app=horn is the
-  // Horn and not the dashboard.
+  // The apps with an address first, longest first. The Horn has none: it
+  // opens over the page, so no page is the Horn.
   const apps = appsFor(config, role).filter(app => app.href).sort((x, y) => y.href.length - x.href.length);
   for (const app of apps) {
     const at = app.href.replace(/\/$/, "");
@@ -143,7 +144,9 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
           {role === "instructor" ? (
             <>
               <span aria-hidden="true" style={{ width: 1, flex: "none", alignSelf: "stretch", margin: "6px 8px", background: BORDER }} />
-              {appsFor(config, role).map(app => (
+              {appsFor(config, role).map(app => app.opens === "horn" ? (
+                <button key={app.id} className="dash-focus ca-focus repo-focus" onClick={openHorn} style={tabStyle(false)}>{app.label}</button>
+              ) : (
                 <a key={app.id} className="dash-focus ca-focus repo-focus" href={app.href || config.path + "/" + app.card}
                   aria-current={lit === app.id ? "page" : undefined} style={tabStyle(lit === app.id)}>{app.label}</a>
               ))}
@@ -156,6 +159,7 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
           {role === "instructor" ? null : <AppsMenu config={config} role={role} onPick={onPick} />}
         </span>
       </div>
+      {role === "instructor" ? <HornApp config={config} /> : null}
     </div>
   );
 }
