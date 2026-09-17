@@ -84,6 +84,8 @@ import GradeDeck from "../src/engine/GradeDeck.jsx";
 import DueDeck, { dueSoon, dismissDue, deadlineOf } from "../src/engine/DueCard.jsx";
 import { NextClassHero, nextClassFacts, timeText, PinnedLinks, RequestForm, InstructorProfile } from "../src/engine/HomeCards.jsx";
 import { instructorOf } from "../src/instructors.js";
+import { assignmentsOf } from "../src/engine/profileTask.js";
+import { YouDetail } from "../src/engine/YouCard.jsx";
 import comm118Cfg from "../src/config/comm118.js";
 import { AssignmentCards, AssignmentPage, statusOf, inDueOrder, feedOf } from "../src/engine/AssignmentCards.jsx";
 import { appsFor } from "../src/engine/apps.js";
@@ -2119,7 +2121,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
 // here, and both surfaces render.
 {
   const say = (m) => { console.error("  FAIL  grade view: " + m); failedEarly++; };
-  const cfg = { ...cfg0, assignments: [{ id: "ex1", title: "Exercise 1", weight: 50, due: "Sep 3" }, { id: "ex2", title: "Exercise 2", weight: 50, due: "Sep 10" }],
+  const cfg = { ...cfg0, profileTask: null, assignments: [{ id: "ex1", title: "Exercise 1", weight: 50, due: "Sep 3" }, { id: "ex2", title: "Exercise 2", weight: 50, due: "Sep 10" }],
     students: [{ name: "Ada Lovelace" }, { name: "Bob Ross" }, { name: "Cy Twombly" }] };
   const sub = { id: "s1", ts: 1, type: "submission", link: "https://docs.google.com/x", text: "" };
   let d = { assignments: cfg.assignments, students: cfg.students, assignmentLog: { ex1: { "Ada Lovelace": [sub], "Bob Ross": [sub] } } };
@@ -2345,13 +2347,51 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     } catch (err) { say("the home cards threw: " + err.message); }
   }
 
+  // The first-week challenge: fill in your card. Andrew, 2026-09-17: "we make
+  // it a task in the first week to fill in their info ... need all fields
+  // filled. this assignment/challenge has no weight." The card is the
+  // submission: every field filled and the challenge is Complete on its own.
+  {
+    const say = (m) => { console.error("  FAIL  card challenge: " + m); failedEarly++; };
+    const N = "Sam Student";
+    const pcfg = { ...cfg, path: "/comm118", profileTask: { due: "Sep 27" }, assignments: [{ id: "ex1", title: "Exercise 1", due: "Oct 4", dueTime: "11:59 PM", weight: 10 }] };
+    const full = { email: "s@scu.edu", avatar: "data:image/jpeg;base64,x", about: "Me", year: "Junior", hometown: "Reno", motto: "Go", goals: "Learn", priority: "Family" };
+    const short = { profiles: { [N]: { ...full, motto: "" } } };
+    const done = { profiles: { [N]: full } };
+    const now = new Date(2026, 8, 22, 12).getTime();
+    try {
+      const list = assignmentsOf(pcfg, {});
+      if (list[0]?.id !== "card" || list.length !== 2) say("the card challenge is not in front of the class's list: " + list.map(a => a.id).join(","));
+      if (assignmentsOf(pcfg, { assignments: [{ id: "wc1", title: "Weekly Challenge 1" }] })[0]?.id !== "card") say("a store carrying its own list loses the card challenge");
+      if (assignmentsOf({ ...pcfg, profileTask: null }, {}).length !== 1) say("a class that did not ask for it got the card challenge");
+      if (list[0].weight !== 0 || list[0].title !== "Please tell me about yourself") say("the card challenge is not his title at no weight: " + JSON.stringify(list[0]));
+      const task = list[0];
+      const at = (d, t) => statusOf(pcfg, d, task, N, new Set(), t);
+      if (at(short, now).state !== "open") say("one field short still reads " + at(short, now).state);
+      if (at(done, now).state !== "graded" || at(done, now).letter !== "Complete") say("a filled card is not Complete: " + JSON.stringify(at(done, now)));
+      const late = new Date(2026, 8, 28, 12).getTime();
+      if (at(short, late).state !== "missed") say("an empty card after the deadline is not missed");
+      if (at(done, late).state !== "graded") say("a filled card is missed once the deadline passes");
+      if (computeGrade(pcfg, done, N).pct !== null) say("the card challenge moved the grade: " + JSON.stringify(computeGrade(pcfg, done, N)));
+      if (dueSoon(pcfg, done, N, new Date(2026, 8, 27, 12).getTime()).length) say("a filled card still gets a due-soon card");
+      if (!dueSoon(pcfg, short, N, new Date(2026, 8, 27, 12).getTime()).some(a => a.id === "card")) say("a card one field short gets no due-soon card");
+      const page = renderToString(<AssignmentPage config={pcfg} data={short} name={N} id="card" go={noop} />);
+      if (!page.includes("Your card")) say("the card challenge's page has no way to the card");
+      if (page.includes("A message, a link, or both")) say("the card challenge's page still has a box to send from");
+      const form = renderToString(<YouDetail config={pcfg} role="student" data={short} update={noop} asStudent={N} />);
+      ["Email address (this is only for your instructor)", "Goals for the class (this is only for your instructor)", "What matters to you most? (this is only for your instructor)"]
+        .forEach(t => { if (!form.includes(t)) say("the form does not mark " + JSON.stringify(t)); });
+      ["About me (this is only", "Motto (this is only", "Hometown (this is only"].forEach(t => { if (form.includes(t)) say("a field classmates see is marked private: " + t); });
+    } catch (err) { say("the card challenge threw: " + err.message); }
+  }
+
   // Assignments as cards, in the order they come due, and a page for each one.
   // Andrew, 2026-09-15: graded is solid with the letter, a green circle for
   // turned in, yellow for came back, red for a missed deadline, New until the
   // grade is read, small pieces at half height once in.
   {
     const now = new Date(2026, 8, 20, 12).getTime();
-    const acfg = { ...cfg, path: "/comm118", assignments: [
+    const acfg = { ...cfg, path: "/comm118", profileTask: null, assignments: [
       { id: "later", title: "Leadership Guide", due: "Nov 20", dueTime: "11:59 PM", weight: 15 },
       { id: "inclass", title: "In-Class", due: "Ongoing", weight: 25, description: "Weekly Game" },
       { id: "missed", title: "Missed piece", due: "Sep 10", dueTime: "11:59 PM", weight: 20 },
@@ -2414,7 +2454,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       if (/<svg[^>]*aria-label="Incomplete"/.test(renderToString(<AssignmentCards config={byScale} data={scaled("incomplete-c")} name={N} go={noop} />))) say("Incomplete still wears the face that means Not quite");
       if (bucketsFor(byScale.assignments.find(x => x.id === "graded")).map(b => b.label).join("|") !== "Complete|Not quite|Incomplete|Not submitted") say("a Complete challenge has the wrong columns");
       if (bucketsFor({}).length !== 7) say("a challenge with no scale is not graded in letters");
-      const gcfg = { ...cfg, storageKey: "smoke-complete-scale", assignments: [{ id: "cx", title: "Exercise", due: "Sep 27", weight: 3, scale: "complete" }] };
+      const gcfg = { ...cfg, storageKey: "smoke-complete-scale", profileTask: null, assignments: [{ id: "cx", title: "Exercise", due: "Sep 27", weight: 3, scale: "complete" }] };
       warmClassData(gcfg.storageKey, { assignments: gcfg.assignments, students: cfg.students });
       const gv = renderToString(<GradeView config={gcfg} />);
       ['aria-label="Complete"', 'aria-label="Not quite"', 'aria-label="Not submitted"'].forEach(t => { if (!gv.includes(t)) say("Grade view has no column " + t); });

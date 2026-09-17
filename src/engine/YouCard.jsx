@@ -184,7 +184,7 @@ function ProfileForm({ student, initial, update, accent }) {
       <div style={h2}>Your profile</div>
       <Muted>Tell the class a little about yourself.</Muted>
 
-      <FieldRow title="Email address">
+      <FieldRow title="Email address (this is only for your instructor)">
         <input type="email" value={f.email} onChange={e => set("email", e.target.value)} style={inputStyle} />
       </FieldRow>
 
@@ -219,12 +219,12 @@ function ProfileForm({ student, initial, update, accent }) {
         <input value={f.motto} onChange={e => set("motto", e.target.value)} style={inputStyle} />
       </FieldRow>
 
-      <FieldRow title="Goals for the class">
+      <FieldRow title="Goals for the class (this is only for your instructor)">
         <textarea value={f.goals} onChange={e => set("goals", e.target.value)}
           style={{ ...inputStyle, minHeight: 80, lineHeight: 1.5, resize: "vertical" }} />
       </FieldRow>
 
-      <FieldRow title="What matters to you most?">
+      <FieldRow title="What matters to you most? (this is only for your instructor)">
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {PRIORITIES.map(p => (
             <button key={p} onClick={() => set("priority", p)}

@@ -41,6 +41,10 @@ const comm3 = {
 
   storageKey: "comm3-f26-v1",
 
+  // The first-week challenge: fill in your card, every field, due Sep 22.
+  // No weight. The challenge itself lives in engine/profileTask.js.
+  profileTask: { due: "Sep 22" },
+
   // "current" | "archived" — what the front page does with it.
   status: "current",
   adminPin: "333333",

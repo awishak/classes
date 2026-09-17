@@ -28,6 +28,7 @@ import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
 import { useSession, studentFor, myCode } from "./session.js";
 import { instructorOf, schedulingLinkOf } from "../instructors.js";
+import { assignmentsOf, profileTaskOf, profileComplete } from "./profileTask.js";
 import { useOpenGames, GameStart, GamePlay, GamesNow } from "@ishak/decks";
 import { gameClient } from "./gameClient.js";
 import GradeDeck from "./GradeDeck.jsx";
@@ -324,7 +325,7 @@ function needsYou(config, data, role, asStudent) {
     const n = ungradedCount(config, data);
     if (n) out.push({ id: "grade", card: "assignments", text: n + " submission" + (n === 1 ? "" : "s") + " waiting to be graded" });
     // A message on a challenge is as easy to miss as a submission.
-    const said = waitingCount(data, data?.assignments || config.assignments || []).messages;
+    const said = waitingCount(data, assignmentsOf(config, data)).messages;
     if (said) out.push({ id: "said", card: "assignments", text: said + " message" + (said === 1 ? "" : "s") + " on challenges waiting for a reply" });
     const waiting = (config.students || []).filter(s => {
       const t = data?.threads?.[s.name] || [];
@@ -339,6 +340,9 @@ function needsYou(config, data, role, asStudent) {
   const thread = data?.threads?.[asStudent] || [];
   const last = thread[thread.length - 1];
   if (last && last.from === "instructor") out.push({ id: "note", card: "you", text: "A new note from " + (config.instructor?.name || "your instructor") });
+  // The first-week challenge, until every field on the card is filled.
+  const task = profileTaskOf(config);
+  if (task && !profileComplete(data?.profiles?.[asStudent])) out.push({ id: "card", card: "you", text: task.title });
   // A deadline coming up is the Assignments card's own highlight now, so it
   // is not said a second time up here.
   return out;
@@ -739,7 +743,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
 
   // The thing this student still owes, which lights the Assignments card as
   // the deadline gets close.
-  const owed = view === "instructor" ? null : nextOwed(data?.assignments || config.assignments || [], data, preview || asStudent);
+  const owed = view === "instructor" ? null : nextOwed(assignmentsOf(config, data), data, preview || asStudent);
 
   const CardTile = (key, i = 0) => {
     const s = summary(key, config, view, ctx);

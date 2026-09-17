@@ -28,6 +28,7 @@ import * as TOKENS from "./tokens.js";
 import { dueText, dueState, isLate, deletePatch } from "./AssignmentsCard.jsx";
 import { unseenGrades, markSeen, bucketOf, htmlToText, letterOf, alive } from "./grades.js";
 import { deadlineOf } from "./DueCard.jsx";
+import { assignmentsOf, isProfileTask, profileComplete } from "./profileTask.js";
 import { genId } from "../utils.jsx";
 import { swatch } from "./colors.js";
 
@@ -67,6 +68,15 @@ export function statusOf(config, data, asg, name, unseen, now = Date.now()) {
   const grades = log.filter(e => e.type === "grade");
   const grade = grades[grades.length - 1] || null;
   const at = deadlineOf(asg.due, asg.dueTime);
+  // The card challenge reads the profile rather than the log: every field
+  // filled is Complete, and there is nothing to turn in.
+  if (isProfileTask(asg)) {
+    const done = profileComplete(data?.profiles?.[name]);
+    const pstate = done ? "graded" : at && at < now ? "missed" : "open";
+    const ptone = dueState(asg.due)?.tone;
+    return { state: pstate, letter: done ? "Complete" : null, grade: null, comments: [], last: null, deadline: at,
+      isNew: false, soon: pstate === "open" && (ptone === "soon" || ptone === "now"), late: false };
+  }
   const letter = grade ? (grade.letter || letterOf(grade.score)) : null;
   const comments = grade
     ? [htmlToText(grade.html), ...log.filter(e => e.type === "comment" && e.from !== "student" && e.ts > grade.ts).map(e => htmlToText(e.html || e.text))].filter(Boolean)
@@ -133,7 +143,7 @@ const NewPill = () => (
 // ─── the cards ───
 
 export function AssignmentCards({ config, data, name, go }) {
-  const assignments = inDueOrder(data?.assignments || config.assignments || []);
+  const assignments = inDueOrder(assignmentsOf(config, data));
   const unseen = new Set(unseenGrades(config, data, name).map(u => u.aid));
   const now = Date.now();
   const listRef = useRef(null);
@@ -277,7 +287,7 @@ export function feedOf(config, data, asg, name) {
 }
 
 export function AssignmentPage({ config, data, update, name, id, go }) {
-  const ordered = inDueOrder(data?.assignments || config.assignments || []);
+  const ordered = inDueOrder(assignmentsOf(config, data));
   const i = ordered.findIndex(a => a.id === id);
   const asg = ordered[i];
   const unseen = new Set(unseenGrades(config, data, name).map(u => u.aid));
@@ -334,7 +344,16 @@ export function AssignmentPage({ config, data, update, name, id, go }) {
         <div style={{ flex: "none" }}><Marker st={st} /></div>
       </section>
 
-      {/* One box for anything the student sends: a message, a link, or both. */}
+      {/* One box for anything the student sends: a message, a link, or both.
+          The card challenge has no box: the card is the work, so the button
+          goes there. */}
+      {isProfileTask(asg) ? (
+        <button className="ca-focus" onClick={() => go && go("you")}
+          style={{ alignSelf: "flex-start", minHeight: TAP, padding: "0 20px", borderRadius: 12, border: "none", background: accent, color: "#fff",
+            fontFamily: F, fontSize: 16, fontWeight: 600, cursor: "pointer" }}>
+          Your card
+        </button>
+      ) : (
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <textarea aria-label="Send a message or a link" value={draft} onChange={e => setDraft(e.target.value)}
           placeholder="A message, a link, or both"
@@ -349,6 +368,7 @@ export function AssignmentPage({ config, data, update, name, id, go }) {
           <span style={{ fontSize: 14, color: TEXT_MUTED }}>{config.instructor?.email || "Your instructor"} needs access to your link.</span>
         </div>
       </div>
+      )}
 
       {/* The conversation, newest first. */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

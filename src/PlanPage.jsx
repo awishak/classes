@@ -47,13 +47,18 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
-    id: "sep17-fall-card", date: "Thursday, September 17", title: "The spring card comes to fall, with office hours",
+    id: "sep17-fall-card", date: "Thursday, September 17", title: "The spring card comes to fall, and the first challenge is to fill in yours",
     blurb: "Andrew: \"gtta strat loadig my classes up. how do students update their profiles/ and can you update mine from last spring to this fall?\"",
     groups: [
       { name: "The instructor's card", items: [
         ["The fall card was blank", "COMM 118 and COMM 3 ship no instructor block, and the shared store had no card, so Your instructor on both fall sites showed nothing. The spring card, read out of the three old hubs' stores, went in: name, title as what you teach, email, the Calendly link, and the spring photo resized the way the form does it. A dated backup of the shared row was written first, the way the app does before a write."],
         ["Office hours are a field", "The card had no place for them, so spring's Tuesdays 9:30 to 11:30 had nowhere to go. Your card under More carries an Office hours row now, and the student's tile shows the line under the bio, with Book a meeting under the email, since the extra times live at the calendar link."],
         ["Andrew W. Ishak", "Spring COMM 118 said that; COMM 2 and 4 said Andrew Ishak. His call: the W stays. No motto."],
+      ] },
+      { name: "The first-week challenge", items: [
+        ["Please tell me about yourself", "His idea: a task in the first week to fill in their info. Every field, no weight, both fall classes, due Sep 22, the second day of the term. The challenge lives in the engine rather than in a class file, because COMM 118's store carries its own challenge list and a config entry would never reach it."],
+        ["The card is the submission", "There is nothing to send. Every field on Your card filled and the challenge marks itself Complete; one short and the page says Please tell me about yourself until it is. The challenge page has a Your card button where the message box would be. Nothing for him to grade, and the grade does not move."],
+        ["This is only for your instructor", "Email, goals and what matters most are marked with his phrase, because those three never show on the roster; about me, motto, year and hometown do. His roster reads Profile not filled in yet under anyone short a field."],
       ] },
       { name: "Students", items: [
         ["Class, then Your card", "Email, photo, about me, year, hometown, motto, goals and what matters most, saved to the class store. He sees the result on the Roster by tapping a name."],

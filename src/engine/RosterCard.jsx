@@ -5,6 +5,7 @@
 // placeholder for grades/assignments (filled in once the gradebook exists).
 
 import { useState, useEffect } from "react";
+import { profileComplete } from "./profileTask.js";
 import { computeGrade } from "./AssignmentsCard.jsx";
 import RosterSheet, { callLogins } from "./RosterSheet.jsx";
 import * as TOKENS from "./tokens.js";
@@ -130,7 +131,7 @@ function InstructorRoster({ config, data, update }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {results.map(s => {
           const p = profileOf(data, s.name);
-          const sub = [p.year, p.hometown || s.from].filter(Boolean).join(" · ");
+          const sub = profileComplete(p) ? [p.year, p.hometown || s.from].filter(Boolean).join(" · ") : "Profile not filled in yet";
           return (
             <button key={s.name} onClick={() => setSelected(s.name)}
               style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 12, cursor: "pointer", fontFamily: F, minHeight: TAP }}>

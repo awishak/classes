@@ -13,6 +13,7 @@
 // date rather than staying silent.
 
 import { useState } from "react";
+import { assignmentsOf, isProfileTask, profileComplete } from "./profileTask.js";
 import { dueText } from "./AssignmentsCard.jsx";
 import * as TOKENS from "./tokens.js";
 
@@ -51,8 +52,9 @@ const dueKey = (asg) => (asg.due || "") + " " + (asg.dueTime || "");
 // The assignments this student should get a card for right now.
 export function dueSoon(config, data, name, now = Date.now()) {
   if (!name) return [];
-  const assignments = data?.assignments || config.assignments || [];
+  const assignments = assignmentsOf(config, data);
   return assignments.filter(asg => {
+    if (isProfileTask(asg) && profileComplete(data?.profiles?.[name])) return false;
     const at = deadlineOf(asg.due, asg.dueTime);
     if (!at || at <= now || at - now > DUE_SOON_HOURS * 3600000) return false;
     const log = data?.assignmentLog?.[asg.id]?.[name] || [];

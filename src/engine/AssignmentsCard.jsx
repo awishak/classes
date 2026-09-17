@@ -11,6 +11,7 @@
 // sum to 100, or leave the rubric empty for a free-form score.
 
 import { useState, useRef, useEffect } from "react";
+import { assignmentsOf, isProfileTask, profileComplete } from "./profileTask.js";
 import { genId } from "../utils.jsx";
 import { draftFeedback, textToHtml } from "./feedback.js";
 import { gradeText, scaleOf, SCALES, alive } from "./grades.js";
@@ -38,7 +39,7 @@ const Pill = ({ accent, children }) => (
 const inputStyle = { width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: TAP, background: "#fff", color: TEXT_PRIMARY };
 
 // ─── data ───
-const getAssignments = (data, config) => data?.assignments || config.assignments || [];
+const getAssignments = (data, config) => assignmentsOf(config, data);
 const logOf = (data, aid, name) => alive(data?.assignmentLog?.[aid]?.[name]);
 const lastOf = (log, type) => { for (let i = log.length - 1; i >= 0; i--) if (log[i].type === type) return log[i]; return null; };
 const currentGrade = (log) => lastOf(log, "grade");
@@ -112,6 +113,7 @@ export function nextOwed(assignments, data, name) {
     const st = dueState(asg.due);
     if (!st || st.tone === "late") return;
     if (logOf(data, asg.id, name).some(e => e.type === "submission")) return;
+    if (isProfileTask(asg) && profileComplete(data?.profiles?.[name])) return;
     const at = parseDue(asg.due).getTime();
     if (at < bestAt) { bestAt = at; best = asg; }
   });
