@@ -687,9 +687,9 @@ export default function DayDoc({
     const name = hostOf(url) || "link";
     // By address, not by host: every Wikipedia link shares a host, and matching
     // on the host lit every one of them when one went up.
-    const live = liveUrl ? liveUrl === u : liveLabel === name;
+    const live = liveUrl ? liveUrl === url : liveLabel === name;
     openMenu(e, [
-      live ? ["Take off screen", () => dismiss()] : ["Put on screen", () => castLink && castLink(url, name)],
+      live ? ["Take off screen", () => dismiss()] : ["Put on screen", () => castLink && castLink(url, name, key)],
       ["Open in new tab", () => { if (typeof window !== "undefined") window.open(url, "_blank", "noopener,noreferrer"); }],
       ["Edit", () => focusLine(key, "end")],
     ]);
