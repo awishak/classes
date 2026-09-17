@@ -64,6 +64,10 @@ const SESSIONS = [
         ["Message with Dr. Ishak is a card", "Andrew: \"can we move them from the bottom of the bio card to a card on the front page please?\" The thread, the reply, Done, I'm confused, Make a meeting and I don't understand something sat under the profile on Your card. They are a card of their own now, under Challenges on the home page, and Your card is the profile alone. His side of the same card is the inbox, so it left his Class page."],
         ["Where a message goes", "Into the class store under the student's name, one thread each, questions marked as questions. He reads it in the inbox, on the roster's student page under Messages, and the home page says how many students are waiting on a reply. Nothing goes to email."],
       ] },
+      { name: "The top bar", items: [
+        ["One rule for the lit tab", "Andrew: \"can we have some consistency for how the top nav is highlighted?\" Each surface used to say which tab it was, and most said nothing: Grade view, Ask, Run the game and Games lit no tab, and the dashboard stayed lit with Around the Horn up. The bar reads the address now, the same way on every page. A class page lights its tab, an app lights its app, and the Horn lights the Horn."],
+        ["One row, always", "Andrew: \"making sure it doesn't wrap around for two levels.\" The bar wrapped when the five tabs, the seven apps and the class name outran the window. The tabs scroll sideways inside their row now, with the class pinned at the left and the badge at the right. The class page carried a second, unused copy of the tab styling; gone."],
+      ] },
       { name: "Students", items: [
         ["Class, then Your card", "Email, photo, about me, year, hometown, motto, goals and what matters most, saved to the class store. He sees the result on the Roster by tapping a name."],
       ] },

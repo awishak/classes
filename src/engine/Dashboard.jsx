@@ -4762,7 +4762,7 @@ export default function Dashboard({ config }) {
   if (data === null) {
     return (
       <div style={{ minHeight: "100vh", background: BG, fontFamily: F }}>
-        <TopNav config={config} tabs={NAV_TEACH} active="dashboard" />
+        <TopNav config={config} tabs={NAV_TEACH} />
         <div style={{ display: "grid", placeItems: "center", padding: "120px 20px", color: TEXT_MUTED }}>Loading…</div>
       </div>
     );
@@ -4774,7 +4774,7 @@ export default function Dashboard({ config }) {
   if (!day) {
     return (
       <div style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY }}>
-        <TopNav config={config} tabs={NAV_TEACH} active="dashboard" />
+        <TopNav config={config} tabs={NAV_TEACH} />
         <div style={{ display: "grid", placeItems: "center", padding: "100px 24px" }}>
           <div style={{ maxWidth: 420, textAlign: "center", display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
             <span style={label}>{config.code}</span>
@@ -4982,7 +4982,7 @@ export default function Dashboard({ config }) {
           Here, Around the Horn, Look, View — are controls that act on the day,
           not navigation, so they moved down to sit with the day they act on. */}
       <div ref={headRef} style={{ position: "sticky", top: 0, zIndex: 30 }}>
-        <TopNav config={config} tabs={NAV_TEACH} active="dashboard" />
+        <TopNav config={config} tabs={NAV_TEACH} />
         {/* The bar is the same on every page, with nothing added, so the
             dashboard's own controls sit in a row of their own under it. */}
         <div style={{ background: "var(--surface-card)", borderBottom: "1px solid var(--line-soft)" }}>

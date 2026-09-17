@@ -84,6 +84,7 @@ import GradeDeck from "../src/engine/GradeDeck.jsx";
 import DueDeck, { dueSoon, dismissDue, deadlineOf } from "../src/engine/DueCard.jsx";
 import { NextClassHero, nextClassFacts, timeText, PinnedLinks, RequestForm, InstructorProfile } from "../src/engine/HomeCards.jsx";
 import { instructorOf } from "../src/instructors.js";
+import TopNav, { NAV_CLASS, activeFor } from "../src/engine/TopNav.jsx";
 import { assignmentsOf } from "../src/engine/profileTask.js";
 import { YouDetail, MessagesDetail, MessagesSummary } from "../src/engine/YouCard.jsx";
 import comm118Cfg from "../src/config/comm118.js";
@@ -2408,6 +2409,37 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       const mine = renderToString(<MessagesSummary config={mcfg} role="student" data={talked} asStudent={N} />);
       if (!mine.includes("What is framing?")) say("the student's tile does not show the last thing said");
     } catch (err) { say("the messages card threw: " + err.message); }
+  }
+
+  // The top bar lights the tab the address says, on every page the same way,
+  // and never wraps. Andrew, 2026-09-17: "can we have some consistency for
+  // how the top nav is highlighted? and making sure it doesn't wrap around
+  // for two levels."
+  {
+    const say = (m) => { console.error("  FAIL  top bar: " + m); failedEarly++; };
+    const p = cfg0.path;
+    const at = (path, search) => activeFor(cfg0, "instructor", path, search);
+    const want = {
+      [p]: "home", [p + "/"]: "home", [p + "/schedule"]: "schedule", [p + "/challenges"]: "assignments", [p + "/challenges/wc1"]: "assignments",
+      [p + "/class"]: "class", [p + "/you"]: "class", [p + "/roster"]: "class", [p + "/messages"]: "class", [p + "/more"]: "more",
+      [p + "/dashboard"]: "dashboard", ["/repo"]: "repo", [p + "/games"]: "games", [p + "/rungame"]: "games", [p + "/grade"]: "grade",
+      [p + "/today"]: "today", [p + "/ask"]: "ask",
+    };
+    Object.entries(want).forEach(([path, id]) => { if (at(path) !== id) say(path + " lights " + JSON.stringify(at(path)) + ", not " + id); });
+    if (at(p + "/dashboard", "?app=horn") !== "horn") say("the dashboard with the Horn up lights " + JSON.stringify(at(p + "/dashboard", "?app=horn")));
+    if (at(p + "/board") !== "") say("a board page lights " + JSON.stringify(at(p + "/board")));
+    try {
+      // A page that says nothing gets the tab off the address; the smoke
+      // globals put the address at /, so a class path is set for the render.
+      const was = globalThis.location;
+      globalThis.location = { ...was, pathname: p + "/grade", search: "" };
+      const bar = renderToString(<TopNav config={cfg0} tabs={NAV_CLASS} active="" />);
+      globalThis.location = was;
+      const lit = (bar.match(/aria-current="page"[^>]*>([^<]*)</g) || []).map(s => s.replace(/.*>([^<]*)</, "$1"));
+      if (lit.join() !== "Grade view") say("on Grade view the lit tabs are " + JSON.stringify(lit));
+      if (/flex-wrap:wrap/.test(bar)) say("the bar still wraps");
+      if (!/overflow-x:auto/.test(bar)) say("the tabs do not scroll sideways when the bar is short of room");
+    } catch (err) { say("the bar threw: " + err.message); }
   }
 
   // Assignments as cards, in the order they come due, and a page for each one.

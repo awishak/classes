@@ -46,24 +46,63 @@ export const tabHref = (config, n) =>
   n.href != null ? (n.absolute ? n.href : config.path + n.href) : null;
 const linkOf = (config, n) => config.path + (n.card ? "/" + segment(n.card) : "");
 
+// Which tab is lit, read off the address. Andrew, 2026-09-17: "can we have
+// some consistency for how the top nav is highlighted?" Before this each
+// surface said which tab it was, and most of them said nothing: Grade view,
+// Ask, Run the game and Games lit no tab at all, and the dashboard stayed lit
+// with Around the Horn up. The address already says where you are, so the
+// bar reads it, the same way on every page. A surface can still pass
+// `active` to say otherwise.
+const CLASS_CARDS = new Set(["class", "you", "roster", "instructor", "messages"]);
+export function activeFor(config, role, pathname, search = "") {
+  if (!config) return "";
+  const here = String(pathname || "").replace(/\/$/, "") + (search || "");
+  // The apps first, longest address first, so /dashboard?app=horn is the
+  // Horn and not the dashboard.
+  const apps = appsFor(config, role).filter(app => app.href).sort((x, y) => y.href.length - x.href.length);
+  for (const app of apps) {
+    const at = app.href.replace(/\/$/, "");
+    if (here === at || here.startsWith(at + (at.includes("?") ? "" : "?"))) return app.id;
+  }
+  if (here.replace(/\?.*$/, "") === config.path + "/rungame") return "games";
+  const rest = here.replace(/\?.*$/, "").replace(config.path, "").replace(/^\//, "");
+  if (rest === "") return "home";
+  const [head] = rest.split("/");
+  if (head === "schedule") return "schedule";
+  if (head === "challenges" || head === "assignments") return "assignments";
+  if (head === "community" || CLASS_CARDS.has(head)) return "class";
+  if (head === "more") return "more";
+  return "";
+}
+
+const whereAmI = () => {
+  try { return window.location; } catch { return null; }
+};
+
 export default function TopNav({ config, tabs, active, onPick, right, accent, moreNode, role = "instructor" }) {
   // The repository resolves its class from what it remembers, and on a machine
   // that has never opened one there is nothing to remember. A bar with no class
   // in it would be worse than no bar.
   if (!config) return null;
   const a = accent || config.accent;
+  const loc = whereAmI();
+  const lit = active || activeFor(config, role, loc?.pathname, loc?.search);
 
+  // One row, always. Andrew, 2026-09-17: "making sure it doesn't wrap around
+  // for two levels." The bar used to wrap when the tabs and the apps outran
+  // the window; the tabs scroll sideways inside their row now, and the class
+  // stays pinned at the left.
   const tabStyle = (on) => ({
-    fontSize: 15, fontWeight: on ? 600 : 500, color: on ? a : TEXT_SECONDARY,
-    padding: "0 12px", minHeight: TAP, display: "inline-flex", alignItems: "center",
-    borderRadius: 8, cursor: "pointer", border: "none", fontFamily: F,
+    fontSize: 14, fontWeight: on ? 600 : 500, color: on ? a : TEXT_SECONDARY,
+    padding: "0 10px", minHeight: TAP, display: "inline-flex", alignItems: "center",
+    borderRadius: 8, cursor: "pointer", border: "none", fontFamily: F, flex: "none",
     background: on ? a + "12" : "transparent", textDecoration: "none", whiteSpace: "nowrap",
   });
 
   return (
     <div style={{ background: "var(--surface-card, #ffffff)", borderBottom: "1px solid " + BORDER }}>
       <div style={{ maxWidth: 1760, margin: "0 auto", padding: "10px 20px",
-        display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+        display: "flex", alignItems: "center", gap: 14, flexWrap: "nowrap" }}>
 
         {/* The class, and a way home. Same block on all three. */}
         <a className="dash-focus ca-focus repo-focus" href={config.path}
@@ -76,7 +115,7 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
           <span style={{ display: "block" }}>
             <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: a,
               textTransform: "uppercase", letterSpacing: "0.08em" }}>{config.code}</span>
-            <span style={{ display: "block", fontFamily: TOKENS.FONT.display, fontWeight: TOKENS.FONT.displayWeight, textShadow: TOKENS.FONT.displayShadow, fontSize: 16, lineHeight: 1.1, color: TEXT_PRIMARY }}>{config.name}</span>
+            <span style={{ display: "block", fontFamily: TOKENS.FONT.display, fontWeight: TOKENS.FONT.displayWeight, textShadow: TOKENS.FONT.displayShadow, fontSize: 16, lineHeight: 1.1, color: TEXT_PRIMARY, whiteSpace: "nowrap" }}>{config.name}</span>
           </span>
         </a>
 
@@ -84,14 +123,14 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
             have the apps thing up top, but i want all my apps in top nav bar."
             A student keeps the Apps button, because a student's bar would be
             a wall of doors otherwise. */}
-        <nav aria-label="Teaching surfaces" style={{ display: "flex", gap: 2, minWidth: 0, flexWrap: "wrap", alignItems: "center" }}>
+        <nav aria-label="Teaching surfaces" style={{ display: "flex", gap: 2, minWidth: 0, flex: "1 1 auto", flexWrap: "nowrap", alignItems: "center", overflowX: "auto", scrollbarWidth: "none" }}>
           {(tabs || []).map(n => {
-            const on = active === n.id;
+            const on = lit === n.id;
             // "More" holds different things on different surfaces — the extra
             // cards on the class page, this surface's own extras elsewhere —
             // so the surface can hand its own control in. The bar keeps the
             // same four words in the same places either way.
-            if (n.id === "more" && moreNode) return <span key="more">{moreNode}</span>;
+            if (n.id === "more" && moreNode) return <span key="more" style={{ flex: "none" }}>{moreNode}</span>;
             const to = tabHref(config, n) ?? (onPick ? null : linkOf(config, n));
             return to !== null ? (
               <a key={n.id} className="dash-focus ca-focus repo-focus" href={to}
@@ -103,18 +142,19 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
           })}
           {role === "instructor" ? (
             <>
-              <span aria-hidden="true" style={{ width: 1, alignSelf: "stretch", margin: "6px 8px", background: BORDER }} />
+              <span aria-hidden="true" style={{ width: 1, flex: "none", alignSelf: "stretch", margin: "6px 8px", background: BORDER }} />
               {appsFor(config, role).map(app => (
                 <a key={app.id} className="dash-focus ca-focus repo-focus" href={app.href || config.path + "/" + app.card}
-                  aria-current={active === app.id ? "page" : undefined} style={tabStyle(active === app.id)}>{app.label}</a>
+                  aria-current={lit === app.id ? "page" : undefined} style={tabStyle(lit === app.id)}>{app.label}</a>
               ))}
             </>
           ) : null}
         </nav>
 
-        <span style={{ flex: "1 1 auto", minWidth: 8 }} />
-        {right}
-        {role === "instructor" ? null : <AppsMenu config={config} role={role} onPick={onPick} />}
+        <span style={{ flex: "none", display: "flex", alignItems: "center", gap: 10 }}>
+          {right}
+          {role === "instructor" ? null : <AppsMenu config={config} role={role} onPick={onPick} />}
+        </span>
       </div>
     </div>
   );

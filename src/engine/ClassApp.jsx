@@ -876,26 +876,6 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // wear the same shape, because to the person pressing them they are the same
   // kind of thing.
   const tabTo = (n) => tabHref(config, n);
-  const tabStyle = (on) => ({
-    fontSize: 15, fontWeight: on ? 600 : 500, color: on ? a : TEXT_SECONDARY, padding: "0 12px", minHeight: TAP,
-    display: "inline-flex", alignItems: "center", borderRadius: 8, cursor: "pointer", border: "none",
-    background: on ? a + "12" : "transparent", fontFamily: F, textDecoration: "none",
-  });
-
-  const Nav = (
-    <nav style={{ display: "flex", gap: 2, marginLeft: 8 }}>
-      {navTabs.map(n => {
-        const on = activeNav === n.id;
-        const to = tabTo(n);
-        return to ? (
-          <a key={n.id} className="ca-focus" href={to} style={tabStyle(on)}>{n.label}</a>
-        ) : (
-          <button key={n.id} className="ca-focus" onClick={() => go(n.card)} aria-current={on ? "page" : undefined}
-            style={tabStyle(on)}>{n.label}</button>
-        );
-      })}
-    </nav>
-  );
 
   // The home page. The hero and the pinned links take the full width of the
   // two-across grid on a laptop; on a phone everything is one column anyway.
