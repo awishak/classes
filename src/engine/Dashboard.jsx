@@ -3475,6 +3475,15 @@ export function Monitor({ config, live, cast, push, recent, onRecast, info, onBo
           {on ? (live.cast.label || live.cast.title) : "Idle screen"}
         </span>
         <span style={{ marginLeft: "auto", color: TEXT_MUTED, flex: "none" }}>{since}</span>
+        {/* Off, right where it says what is on. Andrew, 2026-09-17: "when
+            something is live on screen, i need a button above the preview
+            on the right to take it off live." Esc did this and nothing on
+            the screen said so. Black is a different thing: the wall goes
+            dark and stays dark. This puts the idle screen back. */}
+        {on ? (
+          <button className="dash-focus" style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 12.5, flex: "none", borderColor: LIVE, color: LIVE }}
+            onClick={() => cast(null)} title="Take this off the room screen (Esc)">Take down</button>
+        ) : null}
       </div>
 
       {liveUrl ? (
