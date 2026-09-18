@@ -2727,8 +2727,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     onSetSlotTime: none, onPlaceSection: none, classMinutes: 65 };
   let html = "";
   try { html = renderToString(<DayDoc {...props} />); } catch (e) { say("the document threw: " + e.message); }
-  if (!/25–35(<!-- -->)? min/.test(html)) say("the day's total of 5-10 and 20-25 is not shown as 25–35 min");
-  if (!/planned of (<!-- -->)?65/.test(html)) say("the total does not say out of how many minutes");
+  // The foot says what is left: 65 less 25–35 planned is 30–40 left. Andrew, 2026-09-17: "what i want at the bottom is this: how much time would i have left."
+  if (!/30–40(<!-- -->)? min left/.test(html)) say("5-10 and 20-25 planned of 65 does not leave 30–40 min");
+  if (!/of (<!-- -->)?65(<!-- -->)?, with (<!-- -->)?25–35(<!-- -->)? planned/.test(html)) say("the foot does not say out of how many minutes, or what is planned");
+  if (html.indexOf("min left") < html.lastIndexOf('class="doc-time"')) say("the time left is not at the foot of the day");
   if ((html.match(/class="doc-time"/g) || []).length !== 2) say("a section has no place for its time");
   if ((html.match(/doc-secgrip/g) || []).length !== 2) say("a section has no handle to drag it by");
   try { html = renderToString(<DayDoc {...props} teach onTeach={none} />); } catch (e) { say("teach threw: " + e.message); html = ""; }

@@ -2058,6 +2058,7 @@ export function boardSection(which, boards, proposals) {
   const b = (boards || {})[which] || (proposals || {})[which] || { title: "", ideas: [] };
   return {
     title: b.title || "",
+    time: b.time || "",
     items: (b.ideas || []).map((idea, i) => ({ id: boardIdeaId(which, i), text: idea, board: which, index: i })),
   };
 }
@@ -4786,7 +4787,7 @@ export default function Dashboard({ config, daySlug = "" }) {
   // i have to edit differently."
   const writeBoard = (which, fn, what) => {
     const b = boardFor(which) || { title: "", ideas: [] };
-    const next = fn({ title: b.title || "", ideas: [...(b.ideas || [])] });
+    const next = fn({ title: b.title || "", ideas: [...(b.ideas || [])], time: b.time || "" });
     if (next) saveBoard(which, next);
   };
   const forBoard = (plain, onBoard) => (slot, ...rest) => {
@@ -4814,7 +4815,9 @@ export default function Dashboard({ config, daySlug = "" }) {
   const deleteSectionB = forBoard(deleteSection, (which) => saveBoard(which, { title: "", ideas: [] }));
   const nothing = () => {};
   const nestB = forBoard(nestItem, nothing);
-  const setSlotTimeB = forBoard(setSlotTime, nothing);
+  // A board takes a time like any section. Andrew, 2026-09-17: "i have to be
+  // able to give a time estimate for entry and exit."
+  const setSlotTimeB = forBoard(setSlotTime, (which, time) => writeBoard(which, b => ({ ...b, time })));
   const moveSectionB = forBoard(moveSection, nothing);
   const placeSectionB = forBoard(placeSectionAt, nothing);
   const splitSectionB = forBoard(splitSectionAt, nothing);

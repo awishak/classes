@@ -838,20 +838,31 @@ export default function DayDoc({
   }
 
   // What the day adds up to, from every section given a time.
-  const times = sections.filter(([, , mark]) => !mark).map(([k]) => normSlot(slotItems[k]).time || "");
+  const times = sections.map(([k]) => normSlot(slotItems[k]).time || "");
   const total = sumRanges(times);
   const untimed = times.filter(t => !parseRange(t)).length;
 
+  // What is left of the class once every timed section has had its minutes.
+  // Andrew, 2026-09-17: "what i want at the bottom is this: how much time
+  // would i have left." A range planned leaves a range: 65 minutes less 40
+  // to 50 planned is 15 to 25 left. Over by any amount reads as over.
+  const overTime = classMinutes && total.lo > classMinutes;
+  const left = classMinutes ? { lo: Math.max(0, classMinutes - total.hi), hi: Math.max(0, classMinutes - total.lo) } : null;
+  const foot = total.n ? (
+    <div className={"doc-total doc-foot" + (overTime ? " over" : "")}>
+      {overTime ? (
+        <span className="doc-total-n">Over by {rangeLabel({ lo: total.lo - classMinutes, hi: total.hi - classMinutes })} min</span>
+      ) : left ? (
+        <><span className="doc-total-n">{rangeLabel(left)} min left</span><span> of {classMinutes}, with {rangeLabel(total)} planned</span></>
+      ) : (
+        <><span className="doc-total-n">{rangeLabel(total)} min</span><span> planned</span></>
+      )}
+      {untimed ? <span className="doc-total-more"> · {untimed} {untimed === 1 ? "section" : "sections"} without a time</span> : null}
+    </div>
+  ) : null;
+
   return (
     <div className="doc">
-      {total.n ? (
-        <div className={"doc-total" + (classMinutes && total.lo > classMinutes ? " over" : "")}>
-          <span className="doc-total-n">{rangeLabel(total)} min</span>
-          {classMinutes ? <span> planned of {classMinutes}</span> : <span> planned</span>}
-          {untimed ? <span className="doc-total-more"> · {untimed} {untimed === 1 ? "section" : "sections"} without a time</span> : null}
-        </div>
-      ) : null}
-
       {groupsBySection.map(sec => {
         const bucket = normSlot(slotItems[sec.slot]);
         const raw = bucket.title || "";
@@ -876,7 +887,7 @@ export default function DayDoc({
                 <Line id={"s:" + sec.slot} value={raw} placeholder={sec.title || "Section"} className="lv-section"
                   onSave={v => onSetSlotTitle(sec.slot, v.trim())} onKey={keyHandler(lines[indexOf("s:" + sec.slot)])} register={register}
                   onType={typing(lines[indexOf("s:" + sec.slot)])} onLeave={(k) => { if (pop && pop.key === k) setPop(null); }} />
-                {onSetSlotTime && !sec.mark ? (
+                {onSetSlotTime ? (
                   <input key={sec.slot + "|" + (bucket.time || "")} className="doc-time" defaultValue={bucket.time || ""}
                     placeholder="5-10 min" aria-label="Minutes for this section"
                     data-bad={bucket.time && !parseRange(bucket.time) ? "1" : "0"}
@@ -990,6 +1001,7 @@ export default function DayDoc({
           </div>
         );
       })}
+      {foot}
       <Menu at={menu?.at} items={menu?.items || []} onClose={() => setMenu(null)} />
       <Pop pop={pop} list={filtered} onPick={applyPop} />
     </div>
@@ -1004,6 +1016,7 @@ export const DOC_CSS = `
 .doc-total{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 4px;padding:6px 2px 0;font-family:var(--font-body);font-size:14px;color:var(--text-secondary)}
 .doc-total-n{font-weight:600;color:var(--text-primary);font-variant-numeric:tabular-nums}
 .doc-total.over .doc-total-n{color:var(--state-live)}
+.doc-foot{margin-top:22px;padding-top:12px;border-top:1px solid var(--line-soft)}
 .doc-total-more{color:var(--text-muted)}
 .doc-sec{display:flex;flex-direction:column;padding-top:18px;border-radius:10px}
 .doc-sec[data-over="1"]{background:rgba(23,19,16,.035)}
