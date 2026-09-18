@@ -235,13 +235,16 @@ export default function App() {
   // Live teaching surfaces: /<class>/dashboard (me), /<class>/today (the room
   // screen), /<class>/ask (where the room screen's QR sends students),
   // /<class>/grade (the class as cards, sorted into columns).
-  const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask|board|game|rungame|games|grade)\/?$/);
+  // The dashboard may name its day: /<class>/dashboard/oct-7, or
+  // /<class>/dashboard/week-3-wed. See daySlug in days.js.
+  const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask|board|game|rungame|games|grade)\/?$/)
+    || path.match(/^\/(comm\w+)\/(dashboard)\/([a-z0-9-]+)\/?$/);
   if (live && ENGINE[live[1]]) {
     const cfg = ENGINE[live[1]];
     if (live[2] === "dashboard") {
       return (
         <InstructorGate what={cfg.code + " Dashboard"}>
-          <Dashboard key={cfg.id} config={cfg} />
+          <Dashboard key={cfg.id} config={cfg} daySlug={live[3] || ""} />
         </InstructorGate>
       );
     }

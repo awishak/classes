@@ -92,3 +92,41 @@ export function currentDay(weeks) {
   });
   return best || days[days.length - 1];
 }
+
+// A day as part of an address, and back.
+//
+// Andrew, 2026-09-17: "what would it take for each day to be a url ... on
+// the dashboard." The address names the day, so a refresh stays put and a
+// link can point at a day: /comm3/dashboard/oct-7.
+//
+// Two spellings resolve, and only the first is ever written:
+//
+//   oct-7         the date, the way it reads on the day. Written on every
+//                 change of day, because it is what you would type.
+//   week-3-wed    the week and the weekday. Never written, always read. This
+//                 is the spelling that survives a quarter: a term's dates all
+//                 move, and its third Wednesday is still its third Wednesday,
+//                 so a link from a template, a reminder or the Brief that
+//                 wants to outlive the term uses this one. week-3 alone is
+//                 that week's first class day.
+//
+// A slug that names no day of the term resolves to nothing, and the
+// dashboard falls back to today's rule, so a last-quarter date link opens the
+// dashboard rather than a dead page.
+const SHORT = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+export const daySlug = (date) => String(date || "").trim().toLowerCase().replace(/\s+/g, "-");
+export function dayFromSlug(slug, weeks) {
+  const s = String(slug || "").trim().toLowerCase();
+  if (!s) return null;
+  const days = allDays(weeks);
+  const byDate = days.find(d => daySlug(d.date) === s);
+  if (byDate) return byDate.date;
+  const m = s.match(/^week-(\d+)(?:-([a-z]{3}))?$/);
+  if (!m) return null;
+  const wi = parseInt(m[1], 10) - 1;
+  const inWeek = days.filter(d => d.weekIndex === wi);
+  if (!inWeek.length) return null;
+  if (!m[2]) return inWeek[0].date;
+  const hit = inWeek.find(d => { const p = parseDay(d.date); return p && SHORT[p.getDay()] === m[2]; });
+  return hit ? hit.date : null;
+}

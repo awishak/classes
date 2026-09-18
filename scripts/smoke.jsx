@@ -97,7 +97,7 @@ import { bucketsFor, placeCard, writeCard, releasePatch, hidePatch, changedSince
 import GradeParade from "../src/engine/GradeParade.jsx";
 import { computeGrade, dueText, AssignmentsSummary, waitingOn, waitingCount, appreciatePatch, deletePatch } from "../src/engine/AssignmentsCard.jsx";
 import { sectionsOf, takeGroup, placeGroup, parseRange, sumRanges, rangeLabel, placeSection, splitSection, templateOf, applyTemplate } from "../src/engine/dayplan.js";
-import { dayTitles } from "../src/engine/days.js";
+import { dayTitles, daySlug, dayFromSlug } from "../src/engine/days.js";
 import { normSlot as normSlotT } from "../src/engine/dayplan.js";
 import Drawer, { SHELVES, shelfOf } from "../src/engine/Drawer.jsx";
 import Slide, { slideOf } from "../src/engine/Slide.jsx";
@@ -3504,6 +3504,29 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!html.includes('href="/comm118/games#game=g1"')) say("the row's kind does not open the game in Games");
   const items = studentItems({ dates: ["Sep 23"], items: [] }, { "Sep 23": day }, () => null);
   if (!items.some(i => i.title === "Weekly Game, week 1")) say("students do not see the game on the schedule");
+}
+
+// Each day is an address. /comm3/dashboard/oct-7 is that day; week-3-wed is
+// the same day spelled so that a link survives the quarter; anything else
+// is nothing, and the dashboard falls back to today.
+{
+  const say = (m) => { console.error("  FAIL  day address: " + m); failedEarly++; };
+  const weeks = [
+    { id: "w1", dates: ["Sep 21", "Sep 23", "Sep 25"] },
+    { id: "w2", dates: ["Sep 28", "Sep 30", "Oct 2"] },
+    { id: "w3", dates: ["Oct 5", "Oct 7", "Oct 9"] },
+  ];
+  if (daySlug("Oct 7") !== "oct-7") say("Oct 7 does not spell oct-7: " + daySlug("Oct 7"));
+  if (dayFromSlug("oct-7", weeks) !== "Oct 7") say("oct-7 does not resolve to Oct 7");
+  if (dayFromSlug("OCT-7", weeks) !== "Oct 7") say("the address is case-sensitive");
+  if (dayFromSlug("week-3-wed", weeks) !== "Oct 7") say("week-3-wed does not resolve to the third Wednesday: " + dayFromSlug("week-3-wed", weeks));
+  if (dayFromSlug("week-3", weeks) !== "Oct 5") say("week-3 does not resolve to that week's first day");
+  if (dayFromSlug("week-9", weeks) !== null) say("a week the term does not have resolves to something");
+  if (dayFromSlug("jun-9", weeks) !== null) say("last quarter's date resolves to something");
+  if (dayFromSlug("", weeks) !== null) say("an empty address resolves to something");
+  const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  if (!/dashboard\)\\\/\(\[a-z0-9-\]\+\)/.test(app)) say("the app does not route /dashboard/<day>");
+  if (!/daySlug=\{live\[3\]/.test(app)) say("the app does not hand the day to the dashboard");
 }
 
 let failed = failedEarly;

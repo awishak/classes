@@ -23,7 +23,7 @@ import PollPanel, { oneSentence } from "./PollPanel.jsx";
 import { openHorn } from "./HornApp.jsx";
 import { useHeadlines } from "./headlines.js";
 import HeadlinesBoard from "./HeadlinesBoard.jsx";
-import { allDays, currentDay, parseDay, dayTitles } from "./days.js";
+import { allDays, currentDay, parseDay, dayTitles, daySlug as slugOfDay, dayFromSlug } from "./days.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections, blankDay, takeGroup, placeGroup, placeSection, splitSection, templateOf, applyTemplate } from "./dayplan.js";
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, makeBlock } from "./blocks.js";
@@ -3836,7 +3836,7 @@ const COL_MAX = { material: 760, live: 620 };
 const gridFor = (cols, railOpen, teaching) =>
   (railOpen && !teaching ? "minmax(0,1fr) 16px " + cols.live + "px" : "minmax(0,1fr)");
 
-export default function Dashboard({ config }) {
+export default function Dashboard({ config, daySlug = "" }) {
   const [data, update] = useClassData(config.storageKey);
   // The class's games, as built in the game panel: the only games a day can hold.
   // Read again whenever this window comes back into focus, so a game made in
@@ -3892,9 +3892,27 @@ export default function Dashboard({ config }) {
   // at all, which is a frame of "No sessions on the calendar yet" on a class
   // that has eleven weeks of them.
   const [picked_, setPicked_] = useState(null);
+  // Each day is an address. Andrew, 2026-09-17: "what would it take for each
+  // day to be a url ... on the dashboard." The address names the day when it
+  // has one; picking a day writes the address, so a refresh stays put and
+  // the back button walks back through the days. An address that names no
+  // day of this term, such as last quarter's, falls through to today's rule.
+  const fromUrl = daySlug ? dayFromSlug(daySlug, weeks) : null;
   const day = (picked_ && days.some(d => d.date === picked_)) ? picked_
-    : (currentDay(weeks)?.date || days[0]?.date || null);
-  const setDay = setPicked_;
+    : fromUrl || (currentDay(weeks)?.date || days[0]?.date || null);
+  const setDay = (d) => {
+    setPicked_(d);
+    try {
+      if (!d || !window.history) return;
+      const here = window.location.pathname;
+      const base = here.replace(/\/dashboard(\/[^/]*)?\/?$/, "/dashboard");
+      if (!/\/dashboard$/.test(base)) return;
+      const next = base + "/" + slugOfDay(d) + window.location.search;
+      if (next !== here + window.location.search) window.history.pushState({}, "", next);
+    } catch { /* server, or no window */ }
+  };
+  // The back button changes the address, and the day follows the address.
+  useEffect(() => { setPicked_(null); }, [daySlug]);
   // A new day starts Next from its top. The effect sits up here, above the
   // loading returns further down, so the hooks run in the same order on the
   // first paint and the next: below them, React threw its hook-order error
