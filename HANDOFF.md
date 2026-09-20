@@ -1,6 +1,6 @@
 # Where things stand
 
-Written 2026-08-28, at the end of a long session, so that clearing the
+Written 2026-08-28 and brought up to date 2026-09-20, so that clearing the
 conversation costs nothing. The Brief at `/plan` is the running changelog and
 carries the reasoning; this file is the shape of the thing.
 
@@ -15,64 +15,199 @@ COMM 118, COMM 2, COMM 4, COMM 3, COMM 999. Deployed at
 | Route | Who | What |
 | --- | --- | --- |
 | `/<class>` | students | the class home, cards |
-| `/<class>/dashboard` | me | where I plan and teach |
+| `/<class>/schedule`, `/challenges`, `/class`, `/more` | students | the same home with that card open, so a card is a link you can send |
+| `/<class>/dashboard` | me | where I plan and teach, opened on today |
+| `/<class>/dashboard/<day>` | me | one day of the term, named in the address |
 | `/<class>/today` | the room | the projector screen |
 | `/<class>/ask` | students | questions and headlines |
 | `/<class>/board` | students | discussion boards |
 | `/<class>/game` | students | where the room plays |
-| `/<class>/rungame` | me | where I run the game |
+| `/<class>/games` | me | the games, written and run |
+| `/<class>/grade` | me | the class as cards, sorted into columns |
+| `/<class>/rungame` | me | the spring game system, kept reachable |
+| `/repo`, `/repo/ideas` | me | everything across every class, and its backlog |
 | `/plan` | me | The Brief, the changelog |
+| `/features` | anyone | the site, shown, with placeholder students |
+| `/progress`, `/archive` | me | what got built, and what came off |
 | `/retreat` | the room | retreat answers on AI, read for themes, one projector screen |
+
+Around the Horn has no address of its own. It is mounted once inside the top
+bar, so it opens over whatever page I am on rather than sending me to the
+dashboard. `src/engine/HornApp.jsx`.
 
 The presenter screen opens in a window of its own at
 `/<class>?game=<gameId>&class=<class>`. The frozen forks still answer to
 `?presenter=`, and the two read different stores under the same class id, which
 is why the engine's presenter has a parameter of its own.
 
+**Each day of the dashboard is an address.** `/comm3/dashboard/oct-7` opens
+October 7, and picking a day writes the address, so a refresh stays put and the
+back button walks back through the days. A second spelling is read and never
+written: `week-3-wed` is the third Wednesday of whatever term is loaded, and
+`week-3` alone is that week's first class day. That is the spelling a link from
+a template or from the Brief uses, because a term's dates all move and its
+third Wednesday is still its third Wednesday. A slug that names no day of the
+term resolves to nothing and the dashboard falls back to today, so a link from
+last quarter opens the dashboard rather than a dead page. `daySlug` and
+`dayFromSlug` in `src/engine/days.js`.
+
 ## The dashboard, in its current shape
 
-Three columns with fixed jobs, named at the top, each seam draggable:
+Two columns: the day, and the rail. It was three, with Materials on the left
+and the room on the right, which made the day the narrowest thing on the screen
+and split one job across opposite edges: what is on the projector lived right,
+what you would put up next lived left. Now the day takes everything the rail
+does not, and the rail holds the screen and the drawer together, in that order,
+because finding a thing and putting it up are the same motion. Teaching mode
+shuts the rail and the day takes the room it leaves. The seam is draggable and
+the drag is remembered.
 
-- **Materials** — Activities, Readings, Assignments
-- **Flow** — the day itself, and nothing else
-- **Live** — Questions, Poll, Answers, with the room preview pinned above
+**One bar.** Left to right: the class, which is a menu of every other page; the
+day, with a step either way and the date button between them; Outline and Map,
+which open the quarter as a document and on one screen; Doc and Slides, the two
+ways to read the day; Around the Horn; and Here at the right end, carrying
+who is in the room over who is on the roster. The second menu bar under it is
+gone, and so is the Remember line. `WEEK 1, MONDAY` is gone from beside the
+button that already says so.
 
-The top bar: class name (a menu holding the other classes and the ways out),
-the date button, then Cast · Look · Around the Horn · Here.
+**The Flow is a document.** Three levels, like headings: a SECTION, an ITEM
+under it, and NOTES under an item. Every line takes the cursor and the keys move
+the way a document moves. Arrows cross between lines at the ends, `Alt` plus an
+arrow moves a line, `Tab` and `Shift+Tab` change its level, `Enter` opens the
+next line of the same kind and `Backspace` on an empty one deletes it. `/` opens
+the command menu, `@` finds something already in the library, `# ` at the start
+of a line makes it a section and `- ` makes it a note. `src/engine/DayDoc.jsx`.
 
-Above the Flow: `WEEK 1, MONDAY`, then the day's title, editable in place.
+**Nothing on a row at rest.** The margin holds the item's number and gives way
+to Put on screen under the pointer. A plain item wears no kind word, a link is
+one chip, and the row on the room screen is the only filled row. Right click or
+hold any line for one menu: Put on screen, Put link on screen, Open in new tab,
+Highlight, and the rest. Highlight takes the selected words, or the whole line
+when nothing is selected.
 
-A row in the Flow is a full-colour bar with white text. Its number opens
-everything that row can do — done, nest under the row above, write the
-headline, put on today's readings, take off the day. Only Cast sits out on the
-right.
+**Doc and Slides are two views of the same day.** A brush under each slide steps
+its look: every slide can take the other ground, an item or a section can be a
+sticky note or an index card, and an article can be a clipping or its picture.
+The brush beside a section's name steps every slide under it at once.
 
-## The class site's top bar
+**Time is on the sections and the sum is at the foot.** A section carries its
+minutes in a chip beside its name, and the foot of the day says what is left
+rather than what is planned: 15 to 25 min left of 65, with 40 to 50 planned.
+Over reads as over by so many minutes. The day's housekeeping sits on the same
+line: Templates, History and Meets in person.
 
-Two controls. **Dashboard**, which is the button pressed with a class about to
-start, and a **menu** holding everything else: the room screen, Ask, Run the
-game, the class switcher, View as a student, the theme picker, the role toggle
-and sign out. That section is headed **Theme**, and both shapes of the picker
-name every theme: four unlabelled swatches is a row of dots asking you to
-guess, and Crashing Out and Snapchat are not colours anybody can infer. A student sees the same menu with the teaching half missing.
+**The rail is the picture and the drawer.** The picture is a live frame of
+`/<class>/today` with five controls under it: back, Next, Take down, Black, and
+three dots. What I press with the room watching stays out; everything else is
+behind the dots, which holds the screen in its own window, how a link is shown
+(Read, Page, Card), the ground, the transitions and putting something back up.
+Under the controls, one line says what Next will put up, numbered the way the
+day numbers its rows. Next is the first unticked row after whatever last went
+up, so a cast from a row, a link or a line moves the running order with it.
 
-The bar carried thirteen controls before: four theme buttons, a view-as select,
-a class select, four teaching links, sign out and a two-button role toggle.
-Everything competed and nothing led.
+The drawer sits directly under the screen rather than behind a tab, because
+finding the next thing is what I am doing all lesson. With nothing typed it
+opens on everything dated to the day; typing searches everything, including the
+games and the activities by name. Every row takes the same menu a line of the
+Flow takes. Three shelves under the search: Media, Activities and Items, with
+Media taking anything the other two do not claim, so a kind I add later cannot
+go missing.
 
-The phone and the desktop are separate headers in the same file. The desktop got
-this tidy a day before the phone did, because an edit to the phone header threw
-before it wrote and nothing noticed: **`innerWidth` is 1440 in the test globals,
-so every test in this repo had only ever rendered the desktop layout.** The
-class site's phone column, which is what students actually use, had no coverage
-at all. Every class-site check runs at both widths now, and the failure message
-names which one.
+**What is not on the screen.** Attendance is not a tab: Here opens over
+everything. To-do opens off the day itself. Questions, Poll and On the week
+open from the class menu, because each is something I go and look at rather
+than something that should sit there all lesson. Enter and Exit are out of the
+dashboard; a day's written boards stay in the store and nothing reads them.
 
-**What that costs:** the roster picker, the class switcher and the teaching
-links live inside a closed menu, so they are not in the markup until somebody
-clicks, and no render test covers their contents any more. The build counts tap
-targets across the bar instead and fails over six, which is the blunt measure
-that would have caught the drift in the first place.
+## One top bar, worn by three surfaces
+
+`src/engine/TopNav.jsx` is the bar, and the class page, the dashboard and the
+repository all wear the same component, so the three cannot drift apart again.
+Before this each had its own, with its own height and its own idea of where the
+way out lives, and then a strip of doors on top of two of them, which is a
+second bar admitting the first one was wrong.
+
+The bar answers one question, WHERE AM I, and nothing else. A control that acts
+on the thing you are looking at is not navigation and does not belong here,
+which is why the dashboard's date and its room tools sit with the day.
+
+**The tabs are the same five words in the same order for everybody:** Home,
+Schedule, Challenges, Class, More. I get my apps as tabs after a divider, since
+a student's bar would be a wall of doors otherwise. The apps are Dashboard,
+Repository, Games, Grade view, Around the Horn, Room screen and Ask for me, and
+Games, Ask and Room screen for a student. `src/engine/apps.js`.
+
+**The class name at the left is a menu**, on the class site as well as on the
+dashboard. `src/engine/ClassMenu.jsx` holds it and both surfaces wear it: mine
+opens every page of the class, then the apps, the room panels, The Brief,
+Colour and type, the keyboard list and the other classes; a student's opens the
+apps and nothing else, since a student's five tabs are already across the bar.
+The Apps button that stood at the right end is gone, and that end of the bar is
+free for a message or a game to announce itself.
+
+**The lit tab is read off the address**, the same way on every page. Before
+this each surface said which tab it was and most said nothing, so Grade view,
+Ask, Run the game and Games lit nothing at all and the dashboard stayed lit
+with Around the Horn up. A surface can still pass `active` to say otherwise.
+
+**One row, always.** The tabs scroll sideways inside their row and the class
+stays pinned at the left, so the bar cannot wrap into two levels.
+
+The theme picker is not in the bar. It lives under More, with Auto, Day and
+Night beneath it, and the Apps button holds apps and nothing else.
+
+## The class site, in its current shape
+
+The home is a grid of cards with the full page beside it on a laptop and a
+full-screen takeover on a phone. The order is Challenges, Messages, Class,
+Games, under the next-class hero and the pinned links.
+
+**The next class card is the day and two ways on.** Next class, the day's
+title, the weekday and the date, the time and the room, my note to the class,
+then the readings counted as a link and the full schedule. The count opens the
+schedule at the top of that day: `/<class>/schedule/sep-23`, with the anchor on
+the first row of that day. The readings listed out with their sources and
+Drew's Picks, the game line, Directions and the badge for a day that does not
+meet in the room all came off the card on 2026-09-20, because a card that lists
+the readings is a card a student reads instead of the schedule.
+
+**Challenges says both words** on the student's card, `Challenges
+(Assignments)`, until the class has the new one. The card is the next one by
+name, when it is due, and how many more the class holds, counted across every
+challenge rather than only the ones still owed.
+
+- **Your card** is the profile alone. Email, goals and what matters most say
+  they are only for the instructor, since those three never reach the roster.
+- **Messages** are a card of their own rather than a strip under the profile:
+  the thread, the reply, Done, I'm confused, Make a meeting. My side of the
+  same card is the inbox.
+- **Challenges** opens the list, and `/challenges/<id>` opens one.
+- **Class** holds Your card, the roster and the instructor's card, which
+  carries office hours and Book a meeting.
+- **More** is the admin page in either view: the theme, the account, the
+  sign-in code, the role toggle and View as a student.
+
+**The first challenge is to fill in your card.** `src/engine/profileTask.js`
+holds it: Please tell me about yourself, no weight, and the card is the
+submission. Every field on Your card filled and the challenge marks itself
+Complete, with nothing to send and nothing to grade. A class opts in with
+`profileTask` on its config, carrying the due date, and the challenge is added
+at the door, so COMM 118's store, which carries its own assignments list, gets
+it too.
+
+The phone and the desktop are separate layouts in the same file. The desktop
+got the last tidy a day before the phone did, because an edit to the phone
+header threw before it wrote and nothing noticed: **`innerWidth` is 1440 in the
+test globals, so every test in this repo had only ever rendered the desktop
+layout.** The class site's phone column, which is what students actually use,
+had no coverage at all. Every class-site check runs at both widths now, and the
+failure message names which one.
+
+**What that costs:** the roster picker, the class switcher and the apps live
+inside a closed menu, so they are not in the markup until somebody clicks, and
+no render test covers their contents. The build counts tap targets across the
+bar instead and fails over six, which is the blunt measure that would have
+caught the drift in the first place.
 
 ## Three themes, and a student picks one
 
@@ -88,7 +223,7 @@ version of either would be a different theme rather than the same theme after
 dark. The bare `:root` turns down too, so a surface that sets no theme does not
 stay bright at midnight.
 
-**Auto, Day and Night** sit under Theme in the menu and on the More page, and
+**Auto, Day and Night** sit under Theme on the More page, and
 only for a theme that has a night: on Snapchat or Crashing Out those three
 buttons would all do the same nothing. Auto is the default. The choice lives in
 the student's browser at `${storageKey}-mode`, beside the theme, and reaches the
@@ -269,20 +404,21 @@ character and those are what drifted. Font sizes are not held to `TYPE` yet.
 - **My colours, fonts and blocks live in the shared store**, so they hold
   across all five classes. Everything else is per class.
 
-## The build refuses to ship five kinds of mistake
+## The build refuses to ship nine kinds of mistake
 
 `npm run build` runs all of these, then the smoke test, then vite.
 
 | Check | Catches |
 | --- | --- |
 | `check-refs` | a JSX component used with no definition |
+| `check-names` | a name called from a handler that is neither declared, imported nor a global |
 | `check-handlers` | a handler wired to `() => {}` |
 | `check-contrast` | a colour under 4.5:1 |
 | `check-voice` | a clause closing on a bare "it", an em dash in UI copy |
 | `check-jsx-text` | an escape sequence stranded in JSX text |
 | `check-css` | a stylesheet that lost a rule, or a class name with nothing behind the name |
 | `check-tokens` | a surface with a colour of its own, a theme missing a token, or a colour that fails where it sits |
-| `smoke` | 147 surfaces rendered server-side, a game played through, and every theme's colours and furniture |
+| `smoke` | 159 surfaces rendered server-side, a game played through, every theme's colours and furniture, the class site at both widths, and no hook below the dashboard's loading return |
 
 Each was written after the matching mistake reached production. Do not remove
 one because it is inconvenient; add the case instead.
@@ -318,6 +454,10 @@ twice, because one edge can serve the old bundle briefly.
   checked and every surface renders, and neither of those is a phone answering
   a question over the realtime channel. Do that before running a game in front
   of a room. `teaching/testing-a-game.md` says how.
+- **The Enter and Exit boards are orphaned.** They were rows of the Flow for
+  a day and then came out of the dashboard. A day's written boards are still
+  in the store and nothing reads them, so either they come back somewhere or
+  the data goes.
 - Nothing was migrated out of the forks. The three legacy files still hold a
   term of games and grades at their own keys, and an engine class starts with
   no games.
