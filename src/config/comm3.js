@@ -55,7 +55,14 @@ const comm3 = {
   // the assignments and one plan per class day, is generated in
   // comm3-term.js from the September 8 handoff. Roster to come.
   testStudent: "",
-  students: [],
+  // Nobody real yet. Pepe LeFritz is the fake one Andrew looks at his own
+  // site through and writes test messages as: his on his roster and in View
+  // as a student, and nobody else's, so he stays out of the roster students
+  // read and out of every count of who is in the class.
+  testStudent: "Pepe LeFritz",
+  students: [
+    { id: "pepe-lefritz", name: "Pepe LeFritz", email: "pepe@example.test", section: "10:30", from: "", goals: "" },
+  ],
   scheduleWeeks,
   library,
   assignments,

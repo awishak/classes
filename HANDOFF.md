@@ -15,7 +15,8 @@ COMM 118, COMM 2, COMM 4, COMM 3, COMM 999. Deployed at
 | Route | Who | What |
 | --- | --- | --- |
 | `/<class>` | students | the class home, cards |
-| `/<class>/schedule`, `/challenges`, `/class`, `/more` | students | the same home with that card open, so a card is a link you can send |
+| `/<class>/schedule`, `/challenges`, `/questions`, `/class`, `/more` | students | the same home with that card open, so a card is a link you can send |
+| `/<class>/schedule/<day>` | students | the schedule at the top of one day |
 | `/<class>/dashboard` | me | where I plan and teach, opened on today |
 | `/<class>/dashboard/<day>` | me | one day of the term, named in the address |
 | `/<class>/today` | the room | the projector screen |
@@ -174,7 +175,64 @@ the readings is a card a student reads instead of the schedule.
 **Challenges says both words** on the student's card, `Challenges
 (Assignments)`, until the class has the new one. The card is the next one by
 name, when it is due, and how many more the class holds, counted across every
-challenge rather than only the ones still owed.
+challenge rather than only the ones still owed. My side of the same card is
+what is coming up, each with how much of each room has handed it in: `8:00
+12/18 · 10:30 9/16`, plus what is waiting to be graded or answered.
+
+**Messages are one thumb and a link.** Done and I'm confused are gone. They sat
+under the reply box answering nothing in particular, and the same tap was
+called Done on the button and Got it in the inbox. One thumbs up, drawn rather
+than taken from an emoji font, and Make a meeting, which is the calendar link.
+A thread that already holds an I'm confused still renders it. Office hours sit
+under the whole thing, from the profile, and a class with none written shows
+nothing.
+
+## The question sheet
+
+`src/engine/QuestionsCard.jsx` over the store the ask page already writes,
+`${storageKey}-questions`. One store, two doors: a question typed in the room
+on the ask page and a question typed on the front page are the same kind of
+thing, and one asked in week two is worth answering in week three.
+
+**An answer is what publishes it.** A question sits waiting until I write an
+answer; writing one puts it on the sheet students read, and clearing the words
+takes it back off. A student sees the answered ones and their own while it
+waits, so nobody asks it twice.
+
+**No names on the sheet, ever.** I see who asked unless the student ticks the
+box, which is the rule the ask page has always used. The box on the Messages
+card, "I don't understand something", posts here rather than into the private
+thread it used to go to, which is what its own words always promised. The
+thread with me is still where something private goes.
+
+## Two sittings of one class
+
+`src/engine/sections.js`. COMM 3 meets at 8:00 and at 10:30, and the two are
+one class. The rule: **anything made of people belongs to a section, and
+everything else is single.**
+
+- **A section is the label of a sitting**, carried on the student. Nothing else
+  identifies one, so a class with one sitting has no sections and every
+  function in that file is a pass-through.
+- **The section in the room** is read off the clock, and the dashboard's bar
+  says otherwise when I am teaching the 8:00 day again at 10:30. The choice is
+  kept in the browser for six hours, so the Horn board opening over another
+  page agrees with the dashboard and tomorrow starts from the clock again.
+- **Who follows it:** Here, the Horn board's seats and points, the roster a
+  student reads, and the game, which the games package already opens per
+  `groupKey + section`.
+- **What does not:** the day, the schedule, a challenge, a block, a reading.
+  Change one and both sittings have it.
+- **Counts are by room.** A challenge reads `8:00 12/18 · 10:30 9/16` rather
+  than one figure covering two rooms.
+
+**The test student.** A class can name one fake student, `testStudent`. Pepe
+LeFritz is his on COMM 3 and COMM 999. He is mine to see, on my roster and in
+View as a student, and nobody else's: out of the roster students read, out of
+every count, and out of both rooms. **View as a student writes nothing**, which
+is what stopped me testing a conversation with myself, so the preview bar
+carries a switch. It starts on for the test student, who exists for exactly
+that, and off for a real student, whose name a press would otherwise post in.
 
 - **Your card** is the profile alone. Email, goals and what matters most say
   they are only for the instructor, since those three never reach the roster.
@@ -458,6 +516,13 @@ twice, because one edge can serve the old bundle briefly.
   a day and then came out of the dashboard. A day's written boards are still
   in the store and nothing reads them, so either they come back somewhere or
   the data goes.
+- **Boards and the leaderboard are not split by section yet.** People-shaped
+  surfaces are meant to follow the room, and those two still show the whole
+  class. Undecided rather than missed: one conversation across both sittings
+  may be what a board is for.
+- The games page works its sections out from the roster's own values, while
+  `sections.js` reads the labels on `meets`. They agree while a roster is
+  pasted with those labels and nothing checks that they do.
 - Nothing was migrated out of the forks. The three legacy files still hold a
   term of games and grades at their own keys, and an engine class starts with
   no games.

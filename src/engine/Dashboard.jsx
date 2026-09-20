@@ -25,6 +25,10 @@ import { useHeadlines } from "./headlines.js";
 import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay, dayTitles, daySlug as slugOfDay, dayFromSlug } from "./days.js";
 import { ClassMenu, DropMenu, menuRow } from "./ClassMenu.jsx";
+// The class's sittings. Aliased, because on this screen "section" already
+// means a part of the day: dayplan.js exports its own sectionsOf and meets.js
+// its own sittingsOf.
+import { hasSections as twoSittings, sectionsOf as sectionLabels, studentsIn, realStudents, readRoomSection, writeRoomSection } from "./sections.js";
 import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections, blankDay, takeGroup, placeGroup, placeSection, splitSection, templateOf, applyTemplate } from "./dayplan.js";
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, makeBlock } from "./blocks.js";
 import { MEDIA_ACCEPT, mediaLabel, sizeLabel } from "./media.js";
@@ -3679,6 +3683,11 @@ export default function Dashboard({ config, daySlug = "" }) {
   // Doc or Slides: two ways to read the same day.
   const [view, setViewState] = useState(() => { try { return localStorage.getItem("dash-view-v1") === "slides" ? "slides" : "doc"; } catch { return "doc"; } });
   const setView = (v) => { setViewState(v); try { localStorage.setItem("dash-view-v1", v); } catch { /* private window */ } };
+  // Which sitting is in the room. The clock says, unless the bar says
+  // otherwise, and what the bar says holds for a few hours so the Horn board
+  // opening over another page agrees with the dashboard.
+  const [roomSection, setRoomState] = useState(() => readRoomSection(config));
+  const setRoomSection = (sec) => { setRoomState(sec); writeRoomSection(config, sec); };
   const [notesOpen, setNotesOpen] = useState(false);
   // Dragging a reading into the flow: does it stay assigned, or move?
   // Two facts about one reading, so which one the drag changes is mine to say.
@@ -3739,7 +3748,11 @@ export default function Dashboard({ config, daySlug = "" }) {
   const seqs = sequenceOptions(config);
   const seq = sequenceFor(config, plan?.sequenceId || config.defaultSequenceId);
   const seeds = data?.seeds || config.seeds || [];
-  const students = data?.students || config.students || [];
+  // The people in the room, which is not the same as the people in the class.
+  // COMM 3 sits twice on the same day, so who is here, who is on the Horn
+  // board and who the game is for all belong to one sitting. The clock picks
+  // it and the bar can say otherwise. The test student is in neither room.
+  const students = studentsIn(realStudents(config, data?.students || config.students || []), roomSection);
   const assignments = data?.assignments || config.assignments || [];
   const week = days.find(d => d.date === day);
   const weekId = week?.weekId || "w?";
@@ -5110,9 +5123,23 @@ export default function Dashboard({ config, daySlug = "" }) {
             </>
           }
           right={
-            <button className="dash-focus dash-bar dash-plain" onClick={() => setHereOpen(true)}>
-              Here{students.length ? <span className="dash-bar-sub">{students.length - outCount}/{students.length}</span> : null}
-            </button>
+            <>
+              {/* Which sitting is in the room, when there are two of them.
+                  Andrew, 2026-09-20: "bc i have two sections of comm 3." The
+                  clock picks it; this says otherwise, and Here, the Horn
+                  board and the game follow whatever it says. */}
+              {twoSittings(config) ? (
+                <span className="dash-views" role="group" aria-label="The section in the room">
+                  {sectionLabels(config).map(sec => (
+                    <button key={sec} className="dash-focus" aria-pressed={roomSection === sec} data-on={roomSection === sec ? "1" : "0"}
+                      onClick={() => setRoomSection(sec)} title={"The " + sec + " section is in the room"}>{sec}</button>
+                  ))}
+                </span>
+              ) : null}
+              <button className="dash-focus dash-bar dash-plain" onClick={() => setHereOpen(true)}>
+                Here{students.length ? <span className="dash-bar-sub">{students.length - outCount}/{students.length}</span> : null}
+              </button>
+            </>
           } />
       </div>
 
@@ -5176,7 +5203,7 @@ export default function Dashboard({ config, daySlug = "" }) {
       ) : null}
 
       {hereOpen ? (
-        <Sheet title="Who is here" sub={config.code + " \u00b7 " + day} onClose={() => setHereOpen(false)}>
+        <Sheet title="Who is here" sub={config.code + (roomSection ? " \u00b7 " + roomSection : "") + " \u00b7 " + day} onClose={() => setHereOpen(false)}>
           <AttendancePanel students={students} marks={marks} onMark={mark} onReset={resetAttendance} />
         </Sheet>
       ) : null}

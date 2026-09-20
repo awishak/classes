@@ -21,6 +21,7 @@ import { usePoll } from "./poll.js";
 import { YouDetail, MessagesDetail, MessagesSummary } from "./YouCard.jsx";
 import { ScheduleSummary, ScheduleDetail } from "./ScheduleCard.jsx";
 import { RosterSummary, RosterDetail } from "./RosterCard.jsx";
+import { QuestionsSummary, QuestionsDetail } from "./QuestionsCard.jsx";
 import { AssignmentsSummary, AssignmentsDetail, ungradedCount, waitingCount } from "./AssignmentsCard.jsx";
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
@@ -42,6 +43,7 @@ import { AssignmentCards, AssignmentPage } from "./AssignmentCards.jsx";
 import TopNav, { NAV_CLASS, tabHref } from "./TopNav.jsx";
 import { ClassMenu } from "./ClassMenu.jsx";
 import { daySlug } from "./days.js";
+import { isTestStudent, realStudents, sectionFor, hasSections } from "./sections.js";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
 } from "./ThemeChrome.jsx";
@@ -127,6 +129,8 @@ function summary(key, config, role, ctx) {
       // a tab is a place rather than a lesson in what he calls things.
       return { title: role === "instructor" ? "Challenges" : "Challenges (Assignments)",
         body: <AssignmentsSummary config={config} data={ctx.data} role={role} name={role === "instructor" ? "" : ctx.asStudent} /> };
+    case "questions":
+      return { title: "Questions", body: <QuestionsSummary config={config} role={role} asStudent={ctx.asStudent} /> };
     case "class":
       return { title: "Class", body: <ClassSummary config={config} data={ctx.data} /> };
     case "games":
@@ -136,7 +140,7 @@ function summary(key, config, role, ctx) {
     case "leaderboard":
       return { title: "Leaderboard", body: <Muted>In-class game standings.</Muted> };
     case "roster":
-      return { title: "Roster", body: <RosterSummary config={config} data={ctx.data} /> };
+      return { title: "Roster", body: <RosterSummary config={config} data={ctx.data} role={role} name={ctx.asStudent} /> };
     case "instructor":
       return { title: "Your instructor", body: <div style={{ fontWeight: 600 }}>{config.instructor?.name}</div> };
     default:
@@ -164,11 +168,14 @@ function detail(key, config, role, ctx) {
       ? <AssignmentPage config={config} data={ctx.data} update={ctx.update} name={ctx.asStudent} id={ctx.sub} go={ctx.go} />
       : <AssignmentCards config={config} data={ctx.data} name={ctx.asStudent} go={ctx.go} />;
   }
+  if (key === "questions") {
+    return <QuestionsDetail config={config} role={role} asStudent={ctx.asStudent} />;
+  }
   if (key === "schedule") {
     return <ScheduleDetail config={config} role={role} data={ctx.data} update={ctx.update} blockOf={ctx.blockOf} focusDay={ctx.sub} />;
   }
   if (key === "roster") {
-    return <RosterDetail config={config} role={role} data={ctx.data} update={ctx.update} />;
+    return <RosterDetail config={config} role={role} data={ctx.data} update={ctx.update} name={ctx.asStudent} />;
   }
   if (key === "instructor") {
     const ins = config.instructor || {};
@@ -518,6 +525,13 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // Auto by default, and an override for anybody who wants one.
   const [mode, pickMode] = useDayNight(config);
   const [preview, setPreview] = useState("");
+  // Whether a preview writes. Andrew, 2026-09-20: "i need to be able to test
+  // the messaging with dr ishak. let me post a fake message as [a fake
+  // student]." A look that writes nothing cannot test a conversation, and a
+  // look that writes as a real student posts in their name. So it is a switch
+  // on the preview bar, and it starts on for the class's test student, who is
+  // fake and exists for exactly this.
+  const [saving, setSaving] = useState(false);
   // The grade deck has been tapped through this visit. Held here rather than
   // read back from the store, because a preview writes nothing and would
   // otherwise sit behind the deck for ever.
@@ -556,9 +570,10 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   }, [config.path]);
 
   // A preview is a look, not a login. The class store is shared and real, so a
-  // press on the student side would post a message from that student or rewrite
-  // that student's profile. While the lens is on, writes go nowhere.
-  const write = preview ? () => {} : update;
+  // press on the student side would post a message from that student or
+  // rewrite that student's profile. While the lens is on, writes go nowhere,
+  // unless he has said to save them.
+  const write = preview && !saving ? () => {} : update;
   const ctx = { data: data || {}, update: write, asStudent: preview || asStudent,
     setAsStudent: preview ? setPreview : null, live, poll,
     blockOf: (id) => (id ? blockById(data, shared, id) : null), day, setDay };
@@ -618,7 +633,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // links. Andrew, 2026-09-15: schedule first, then assignments, then class,
   // grades toward the bottom, and games at the very bottom. Messages sit
   // under Challenges since 2026-09-17, a card of their own off the profile.
-  const HOME = ["assignments", "messages", "class", "games"].filter(k => enabledCards.includes(k));
+  const HOME = ["assignments", "messages", "questions", "class", "games"].filter(k => enabledCards.includes(k));
   // What lives inside Class, and lights the Class tab when open.
   const IN_CLASS = new Set(["you", "roster", "instructor"]);
 
@@ -692,7 +707,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
 
   const StudentPicker = (
     <select className="ca-focus" value={preview} aria-label="Which student"
-      onChange={e => { setPreview(e.target.value); go(null); }}
+      onChange={e => { setPreview(e.target.value); setSaving(isTestStudent(config, e.target.value)); go(null); }}
       style={{ fontFamily: F, fontSize: 15, fontWeight: 600, minHeight: TAP, padding: "0 10px", maxWidth: 230,
         borderRadius: 999, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY, cursor: "pointer" }}>
       <option value="">View as a student</option>
@@ -707,7 +722,15 @@ export default function ClassApp({ config: classConfig, initialCard }) {
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "10px 16px", display: "flex",
         alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <span style={{ fontSize: 15, fontWeight: 600 }}>Seeing the class as {preview}</span>
-        <span style={{ fontSize: 15, opacity: .85 }}>This is a look, not a login. Nothing you press is saved.</span>
+        <span style={{ fontSize: 15, opacity: .85 }}>
+          {saving ? "Everything you press is saved as " + preview + "." : "This is a look, not a login. Nothing you press is saved."}
+        </span>
+        <button className="ca-focus" onClick={() => setSaving(v => !v)} aria-pressed={saving}
+          style={{ minHeight: TAP, padding: "0 14px", borderRadius: 999, border: "1px solid rgba(255,255,255,.55)",
+            background: saving ? "#fff" : "transparent", color: saving ? a : "#fff",
+            fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
+          {saving ? "Stop saving" : "Save what I press"}
+        </button>
         <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {StudentPicker}
           <button className="ca-focus" onClick={() => { setPreview(""); go(null); }}
@@ -789,7 +812,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
             </select>
             {roster.length ? (
               <select className="ca-focus" value={preview} aria-label="Which student" id="more-preview"
-                onChange={e => { setPreview(e.target.value); go(null); }}
+                onChange={e => { setPreview(e.target.value); setSaving(isTestStudent(config, e.target.value)); go(null); }}
                 style={adminSelect}>
                 <option value="">View as a student</option>
                 {roster.map(st => <option key={st.name} value={st.name}>{st.name}</option>)}

@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { profileComplete } from "./profileTask.js";
+import { realStudents, hasSections, studentsIn, sectionFor } from "./sections.js";
 import { computeGrade } from "./AssignmentsCard.jsx";
 import RosterSheet, { callLogins } from "./RosterSheet.jsx";
 import * as TOKENS from "./tokens.js";
@@ -50,8 +51,8 @@ function Field({ title, value }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-export function RosterSummary({ config, data }) {
-  const students = data?.students || config.students || [];
+export function RosterSummary({ config, data, role, name }) {
+  const students = classmatesOf(config, data, role, name);
   const shown = students.slice(0, 5);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -67,9 +68,22 @@ export function RosterSummary({ config, data }) {
   );
 }
 
-export function RosterDetail({ config, role, data, update }) {
+export function RosterDetail({ config, role, data, update, name }) {
   if (role === "instructor") return <InstructorRoster config={config} data={data} update={update} />;
-  return <StudentRoster config={config} data={data} />;
+  return <StudentRoster config={config} data={data} name={name} />;
+}
+
+// Who a student sees when they open the roster. Andrew, 2026-09-20: "I will
+// actually need a way for students to ONLY see students in their class for
+// the roster." A class with one sitting has no sections, so everyone sees
+// everyone; a class with two shows you the people in the room you are in.
+// The test student is in nobody's class.
+export function classmatesOf(config, data, role, name) {
+  const all = data?.students || config.students || [];
+  if (role === "instructor") return all;
+  const mine = realStudents(config, all);
+  if (!hasSections(config)) return mine;
+  return studentsIn(mine, sectionFor(all, name));
 }
 
 // ─── instructor: list + full student page ───
@@ -216,10 +230,10 @@ function StudentPage({ config, data, name, email, code, onBack }) {
 }
 
 // ─── student: classmates grid ───
-function StudentRoster({ config, data }) {
+function StudentRoster({ config, data, name }) {
   const a = config.accent;
   const [open, setOpen] = useState(null);
-  const students = data?.students || config.students || [];
+  const students = classmatesOf(config, data, "student", name);
 
   if (open) {
     const p = profileOf(data, open);

@@ -23,8 +23,34 @@ const files = [];
 const LEGACY = /^src\/(Comm\d+|Grades\d*|components|AdminDash|QuizSystem|GameSystem\d*)\.jsx$/;
 const BUILT_IN = new Set(["React", "Fragment"]);
 
-// Comments hold example JSX that is not a real reference.
-const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
+// Comments hold example JSX that is not a real reference, so they come out
+// before anything is counted. Taking them out needs to know where a string is:
+// `accept="image/*"` is not the start of a comment, and pairing it with the
+// next `*/` swallowed everything between, so a file failed for two components
+// it defines a hundred lines further down. A line comment is still only one
+// that starts its line, because https:// is not a comment either.
+const strip = (src) => {
+  let out = "", i = 0, bare = true;   // bare: nothing but whitespace on this line so far
+  while (i < src.length) {
+    const c = src[i], d = src[i + 1];
+    if (c === "/" && d === "*") { const end = src.indexOf("*/", i + 2); i = end < 0 ? src.length : end + 2; continue; }
+    if (c === "/" && d === "/" && bare) { const end = src.indexOf("\n", i); i = end < 0 ? src.length : end; continue; }
+    if (c === '"' || c === "'" || c === "`") {
+      out += c; i++;
+      while (i < src.length) {
+        const ch = src[i]; out += ch; i++;
+        if (ch === "\\") { out += src[i] ?? ""; i++; continue; }
+        if (ch === c) break;
+      }
+      bare = false;
+      continue;
+    }
+    if (c === "\n") bare = true;
+    else if (c !== " " && c !== "\t" && c !== "\r") bare = false;
+    out += c; i++;
+  }
+  return out;
+};
 
 let failed = 0, warned = 0;
 

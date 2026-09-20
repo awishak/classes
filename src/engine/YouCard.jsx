@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { genId } from "../utils.jsx";
 import { schedulingLinkOf } from "../instructors.js";
+import { useQuestions } from "./questions.js";
 import * as TOKENS from "./tokens.js";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -61,17 +62,25 @@ function SendBtn({ accent, onClick, children, disabled }) {
   );
 }
 
-function GhostBtn({ accent, onClick, children, href }) {
+function GhostBtn({ accent, onClick, children, href, label }) {
   const style = { minHeight: TAP, padding: "0 16px", borderRadius: 999, border: "1px solid " + BORDER_STRONG, background: "#fff",
     fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, cursor: "pointer", display: "inline-flex", alignItems: "center", textDecoration: "none" };
-  if (href) return <a href={href} target="_blank" rel="noreferrer" style={{ ...style, color: accent }}>{children}</a>;
-  return <button onClick={onClick} style={style}>{children}</button>;
+  if (href) return <a href={href} target="_blank" rel="noreferrer" style={{ ...style, color: accent }} aria-label={label}>{children}</a>;
+  return <button onClick={onClick} style={style} aria-label={label} title={label}>{children}</button>;
 }
+
+const ThumbsUp = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M7 10.5V20H4.6A1.6 1.6 0 0 1 3 18.4v-6.3A1.6 1.6 0 0 1 4.6 10.5H7z" />
+    <path d="M7 10.5l4.2-7.1a1.3 1.3 0 0 1 2.4.7V9h4.7a2 2 0 0 1 2 2.5l-1.6 6.6A2.4 2.4 0 0 1 16.4 20H7" />
+  </svg>
+);
 
 function Bubble({ m, accent }) {
   // status messages render centered
   if (m.kind === "got_it" || m.kind === "confused" || m.kind === "meeting") {
-    const text = m.kind === "got_it" ? "Got it" : m.kind === "confused" ? "Said: I'm confused" : "Requested a meeting";
+    const text = m.kind === "got_it" ? "Thumbs up" : m.kind === "confused" ? "Said: I'm confused" : "Requested a meeting";
     const color = m.kind === "got_it" ? "#059669" : m.kind === "confused" ? "#d97706" : accent;
     return (
       <div style={{ textAlign: "center", margin: "4px 0" }}>
@@ -280,9 +289,20 @@ function StudentMessages({ config, data, update, asStudent }) {
   const a = config.accent;
   const [reply, setReply] = useState("");
   const [question, setQuestion] = useState("");
+  const [asked, setAsked] = useState(false);
+  const questions = useQuestions(config.storageKey);
 
   const send = (text) => { if (!text.trim()) return; addMessage(update, asStudent, { from: "student", kind: "reply", text: text.trim() }); setReply(""); };
-  const ask = () => { if (!question.trim()) return; addMessage(update, asStudent, { from: "student", kind: "question", text: question.trim() }); setQuestion(""); };
+  // This box was a message to him alone, while its own words promised the
+  // class: "questions about material or challenges that the whole class might
+  // want to know about." Andrew, 2026-09-20: "where does that box go to? I
+  // almost want like an anonymous question sheet." So it goes to the sheet,
+  // with his name on it for Andrew and no name for anybody else.
+  const ask = () => {
+    if (!question.trim()) return;
+    questions.add({ text: question.trim(), who: asStudent || "", anon: false });
+    setQuestion(""); setAsked(true);
+  };
   const status = (kind) => addMessage(update, asStudent, { from: "student", kind, text: "" });
 
   return (
@@ -295,17 +315,46 @@ function StudentMessages({ config, data, update, asStudent }) {
         <SendBtn accent={a} onClick={() => send(reply)} disabled={!reply.trim()}>Send</SendBtn>
       </div>
 
-      <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <GhostBtn accent={a} onClick={() => status("got_it")}>Done</GhostBtn>
-        <GhostBtn accent={a} onClick={() => status("confused")}>I'm confused</GhostBtn>
+      {/* Andrew, 2026-09-20: "let's remove the got it and i'm confused
+          buttons, and go with a thumbs up. make a meeting is a link, which is
+          good." Done and I'm confused were two words answering nothing in
+          particular, and the record called the first one two different things.
+          One thumb, which says the only thing a tap can say. The thumb is
+          drawn rather than taken from an emoji font, like everything else
+          here. Threads that already hold an I'm confused still render it. */}
+      <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <GhostBtn accent={a} onClick={() => status("got_it")} label="Thumbs up"><ThumbsUp /></GhostBtn>
         <GhostBtn accent={a} href={schedulingLinkOf(config) || undefined} onClick={() => status("meeting")}>Make a meeting</GhostBtn>
       </div>
 
       <div style={{ marginTop: 22 }}>
         <div style={label}>I don't understand something</div>
         <div style={{ marginTop: 8 }}><Field value={question} onChange={setQuestion} placeholder="This is a good place to ask questions about material or challenges that the whole class might want to know about." /></div>
-        <div style={{ marginTop: 8 }}><SendBtn accent={a} onClick={ask} disabled={!question.trim()}>Ask</SendBtn></div>
+        <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <SendBtn accent={a} onClick={ask} disabled={!question.trim()}>Ask</SendBtn>
+          <span style={{ fontSize: 14, color: TEXT_MUTED }}>
+            {asked ? "Asked. It turns up on Questions once it is answered." : "This goes on the class's Questions sheet, with no name on it."}
+          </span>
+        </div>
       </div>
+
+      {/* Andrew, 2026-09-20: "always list my office hours underneath the
+          messaging system." A student deciding whether to write to him is a
+          student who may be better off turning up, and the hours were on the
+          instructor's card where they had to go looking for them. */}
+      <OfficeHours config={config} />
+    </div>
+  );
+}
+
+// When he is there, under every way of writing to him.
+function OfficeHours({ config }) {
+  const hours = String(config.instructor?.officeHours || "").trim();
+  if (!hours) return null;
+  return (
+    <div style={{ marginTop: 22, paddingTop: 14, borderTop: "1px solid " + BORDER }}>
+      <div style={label}>Office hours</div>
+      <div style={{ marginTop: 6, fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5 }}>{hours}</div>
     </div>
   );
 }
@@ -350,7 +399,7 @@ function InstructorYou({ config, data, update }) {
         {sorted.map(s => {
           const m = lastMsg(data, s.name);
           const waiting = waitingOnInstructor(data, s.name);
-          const preview = m ? (m.kind === "got_it" ? "Got it" : m.kind === "confused" ? "I'm confused" : m.kind === "meeting" ? "Requested a meeting" : m.kind === "question" ? "Q: " + m.text : m.text) : "No messages yet";
+          const preview = m ? (m.kind === "got_it" ? "Thumbs up" : m.kind === "confused" ? "I'm confused" : m.kind === "meeting" ? "Requested a meeting" : m.kind === "question" ? "Q: " + m.text : m.text) : "No messages yet";
           return (
             <button key={s.name} onClick={() => setSelected(s.name)}
               style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 14, cursor: "pointer", fontFamily: F, display: "flex", alignItems: "center", gap: 12, minHeight: TAP }}>
@@ -397,6 +446,6 @@ export function MessagesSummary({ config, role, data, asStudent }) {
   const m = lastMsg(data, asStudent);
   if (!m) return <Muted>No messages yet.</Muted>;
   if (m.from === "instructor") return <><div style={{ fontWeight: 600 }}>New note from instructor</div><Muted>Tap to read</Muted></>;
-  const preview = m.kind === "got_it" ? "Done" : m.kind === "confused" ? "I'm confused" : m.kind === "meeting" ? "Requested a meeting" : m.kind === "question" ? "Q: " + m.text : m.text;
+  const preview = m.kind === "got_it" ? "Thumbs up" : m.kind === "confused" ? "I'm confused" : m.kind === "meeting" ? "Requested a meeting" : m.kind === "question" ? "Q: " + m.text : m.text;
   return <div style={{ fontSize: 15, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>You: {preview}</div>;
 }

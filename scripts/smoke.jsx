@@ -87,6 +87,10 @@ import { instructorOf } from "../src/instructors.js";
 import TopNav, { NAV_CLASS, activeFor } from "../src/engine/TopNav.jsx";
 import HornApp from "../src/engine/HornApp.jsx";
 import { assignmentsOf } from "../src/engine/profileTask.js";
+import { QuestionsSummary, QuestionsDetail, answeredOf } from "../src/engine/QuestionsCard.jsx";
+import { sectionsOf as sittingLabels, hasSections, studentsIn, sectionFor, realStudents, isTestStudent, sectionNow } from "../src/engine/sections.js";
+import { classmatesOf } from "../src/engine/RosterCard.jsx";
+import { comingUp, turnedIn } from "../src/engine/AssignmentsCard.jsx";
 import { YouDetail, MessagesDetail, MessagesSummary } from "../src/engine/YouCard.jsx";
 import comm118Cfg from "../src/config/comm118.js";
 import { AssignmentCards, AssignmentPage, statusOf, inDueOrder, feedOf } from "../src/engine/AssignmentCards.jsx";
@@ -156,6 +160,9 @@ for (const cfg of ENGINE_LIST) {
   cases.push([cfg.code + " class site", <ClassApp config={cfg} />]);
   cases.push([cfg.code + " class site, on a phone", atWidth(PHONE, () => <ClassApp config={cfg} />)]);
   cases.push([cfg.code + " ask page", <AskPage config={cfg} />]);
+  cases.push([cfg.code + " questions, student", <QuestionsDetail config={cfg} role="student" asStudent="Ada Lovelace" />]);
+  cases.push([cfg.code + " questions, mine", <QuestionsDetail config={cfg} role="instructor" />]);
+  cases.push([cfg.code + " questions tile", <QuestionsSummary config={cfg} role="instructor" />]);
 }
 // and again with a day that has things on it
 for (const cfg of ENGINE_LIST) {
@@ -1134,9 +1141,9 @@ cases.push(["Instructor links", <InstructorLinks />]);
     // Class, Grades toward the bottom and Games at the very bottom.
     const at = (t) => html.indexOf(t);
     if (html.includes('aria-label="Next class"')) {
-      const order = ['aria-label="Next class"', ">Challenges (Assignments)</span>", ">Message with Dr. Ishak</span>", ">Class</span>", ">Games</span>"].map(at);
+      const order = ['aria-label="Next class"', ">Challenges (Assignments)</span>", ">Message with Dr. Ishak</span>", ">Questions</span>", ">Class</span>", ">Games</span>"].map(at);
       if (order.some(n => n < 0) || order.some((n, i) => i && n < order[i - 1])) {
-        console.error("  FAIL  class page, student: the home page is not Next class, Challenges, Messages, Class, Games: " + JSON.stringify(order)); failedEarly++; }
+        console.error("  FAIL  class page, student: the home page is not Next class, Challenges, Messages, Questions, Class, Games: " + JSON.stringify(order)); failedEarly++; }
     } else {
       console.error("  FAIL  class page, student: the home page has no Next class hero"); failedEarly++;
     }
@@ -2440,8 +2447,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
 
   // Messages are a card of their own on the front page. Andrew, 2026-09-17:
   // "can we move them from the bottom of the bio card to a card on the front
-  // page please?" Your card keeps the profile; the thread, Done / I'm
-  // confused / Make a meeting and the question moved.
+  // page please?" Your card keeps the profile; the thread, the thumb, Make a
+  // meeting and the question moved.
+  //
+  // Andrew, 2026-09-20: "let's remove the got it and i'm confused buttons, and
+  // go with a thumbs up ... always list my office hours underneath the
+  // messaging system." A thread that already holds an I'm confused still
+  // renders it; nothing new can send one.
   {
     const say = (m) => { console.error("  FAIL  messages card: " + m); failedEarly++; };
     const N = "Sam Student";
@@ -2450,10 +2462,22 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     try {
       const you = renderToString(<YouDetail config={mcfg} role="student" data={{}} update={noop} asStudent={N} />);
       if (!you.includes("Your profile")) say("Your card lost the profile");
-      ["I don&#x27;t understand something", "I&#x27;m confused", "Message with Dr. Ishak"].forEach(t => { if (you.includes(t)) say("Your card still carries " + JSON.stringify(t)); });
-      const msgs = renderToString(<MessagesDetail config={mcfg} role="student" data={talked} update={noop} asStudent={N} />);
-      ["Message with Dr. Ishak", "I don&#x27;t understand something", "I&#x27;m confused", "Make a meeting", "What is framing?"].forEach(t => { if (!msgs.includes(t)) say("the messages card has no " + JSON.stringify(t)); });
+      ["I don&#x27;t understand something", "Message with Dr. Ishak"].forEach(t => { if (you.includes(t)) say("Your card still carries " + JSON.stringify(t)); });
+      const hcfg2 = { ...mcfg, instructor: { ...(mcfg.instructor || {}), officeHours: "Tue and Thu, 1 to 3 pm, Vari 234" } };
+      const msgs = renderToString(<MessagesDetail config={hcfg2} role="student" data={talked} update={noop} asStudent={N} />);
+      ["Message with Dr. Ishak", "I don&#x27;t understand something", "Make a meeting", "What is framing?"].forEach(t => { if (!msgs.includes(t)) say("the messages card has no " + JSON.stringify(t)); });
       if (msgs.includes("Your profile")) say("the messages card carries the profile");
+      // One tap, and it is a thumb rather than a word.
+      ["Done<", "Got it<", "I&#x27;m confused<"].forEach(t => { if (msgs.includes(t)) say("the card still has a " + JSON.stringify(t) + " button"); });
+      if (!msgs.includes('aria-label="Thumbs up"')) say("the card has no thumbs up");
+      // Office hours, under every way of writing to him, and nothing where a
+      // class has none written.
+      if (!msgs.includes("Office hours") || !msgs.includes("Tue and Thu, 1 to 3 pm, Vari 234")) say("the messages card does not carry the office hours");
+      if (msgs.indexOf("Office hours") < msgs.indexOf("I don&#x27;t understand something")) say("the office hours are not underneath the messaging");
+      if (renderToString(<MessagesDetail config={mcfg} role="student" data={talked} update={noop} asStudent={N} />).includes("Office hours")) say("a class with no office hours shows an empty Office hours");
+      // A thread that already holds one still reads it back.
+      const old = { threads: { [N]: [{ id: "m0", ts: 1, from: "student", kind: "confused", text: "" }] } };
+      if (!renderToString(<MessagesDetail config={mcfg} role="student" data={old} update={noop} asStudent={N} />).includes("I&#x27;m confused")) say("an I'm confused already in the thread stopped rendering");
       const inbox = renderToString(<MessagesDetail config={mcfg} role="instructor" data={talked} update={noop} />);
       if (!inbox.includes("Inbox") || !inbox.includes(N)) say("Andrew's messages card is not the inbox");
       const tile = renderToString(<MessagesSummary config={mcfg} role="instructor" data={talked} />);
@@ -2463,7 +2487,110 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     } catch (err) { say("the messages card threw: " + err.message); }
   }
 
-  // The top bar lights the tab the address says, on every page the same way,
+  // Two sittings of one class. Andrew, 2026-09-20: "bc i have two sections of
+// comm 3, give me numbers by section ... I will actually need a way for
+// students to ONLY see students in their class for the roster." Anything made
+// of people belongs to a section; everything else is the class's and single.
+{
+  const say = (m) => { console.error("  FAIL  sections: " + m); failedEarly++; };
+  const two = { code: "COMM 3", storageKey: "sec-test", testStudent: "Pepe LeFritz",
+    meets: [{ label: "8:00", start: "08:00", end: "09:05" }, { label: "10:30", start: "10:30", end: "11:35" }] };
+  const one = { code: "COMM 118", storageKey: "one-test", meets: { label: "", start: "09:15", end: "10:20" } };
+  const roll = [
+    { name: "Ada Lovelace", section: "8:00" },
+    { name: "Grace Hopper", section: "8:00" },
+    { name: "Alan Turing", section: "10:30" },
+    { name: "Pepe LeFritz", section: "10:30" },
+  ];
+  if (!hasSections(two) || hasSections(one)) say("a class with one sitting has sections, or a class with two has none");
+  if (sittingLabels(two).join("|") !== "8:00|10:30") say("the sittings are not the labels: " + JSON.stringify(sittingLabels(two)));
+  if (sittingLabels(one).length) say("a single sitting with no label is a section");
+  if (studentsIn(roll, "8:00").length !== 2) say("the 8:00 room is the wrong size");
+  if (sectionFor(roll, "Alan Turing") !== "10:30") say("a student is in the wrong room");
+  if (!isTestStudent(two, "Pepe LeFritz") || isTestStudent(two, "Ada Lovelace")) say("the test student is not the one the class names");
+  if (realStudents(two, roll).length !== 3) say("the test student is counted in the class");
+  // The clock picks the room: inside a sitting, then the next one, then the first.
+  const at = (h, m) => new Date(2026, 8, 21, h, m).getTime();
+  if (sectionNow(two, at(8, 30)) !== "8:00") say("the clock is not in the 8:00 room at 8:30");
+  if (sectionNow(two, at(10, 0)) !== "10:30") say("at 10:00 the next sitting is not the room");
+  if (sectionNow(two, at(16, 0)) !== "8:00") say("after both sittings the room is not the first one");
+  if (sectionNow(one, at(9, 30)) !== "") say("a class with one sitting has a section in the room");
+  // What a student sees of the roster: their own room, and no fake student.
+  const data = { students: roll };
+  const seen = classmatesOf(two, data, "student", "Ada Lovelace").map(s => s.name);
+  if (seen.join("|") !== "Ada Lovelace|Grace Hopper") say("a student sees the wrong roster: " + JSON.stringify(seen));
+  if (classmatesOf(two, data, "instructor", "").length !== 4) say("Andrew cannot see the whole class, test student and all");
+  if (classmatesOf(one, data, "student", "Ada Lovelace").length !== 4) say("a class with one sitting hides classmates");
+  // The counts he asked for, by room, with the card challenge reading the
+  // profile and everything else reading what was turned in.
+  const asgs = [
+    { id: "ex1", title: "Exercise 1", due: "Sep 25", dueTime: "11:59 PM", weight: 10 },
+    { id: "card", title: "Please tell me about yourself", due: "Sep 22", weight: 0, completes: "profile" },
+    { id: "inclass", title: "In-Class", due: "Ongoing", weight: 25 },
+  ];
+  const full = { email: "a@b.c", avatar: "x", about: "x", year: "Junior", hometown: "x", motto: "x", goals: "x", priority: "x" };
+  const store = { students: roll, assignments: asgs,
+    profiles: { "Ada Lovelace": full, "Pepe LeFritz": full },
+    assignmentLog: { ex1: {
+      "Ada Lovelace": [{ id: "s1", ts: 1, type: "submission", link: "x" }],
+      "Alan Turing": [{ id: "s2", ts: 2, type: "submission", link: "x" }],
+      "Pepe LeFritz": [{ id: "s3", ts: 3, type: "submission", link: "x" }],
+    } } };
+  const ex1 = asgs[0], card = asgs[1];
+  if (JSON.stringify(turnedIn(two, store, ex1, "8:00")) !== JSON.stringify({ section: "8:00", in: 1, of: 2 })) {
+    say("the 8:00 count is wrong: " + JSON.stringify(turnedIn(two, store, ex1, "8:00"))); }
+  if (JSON.stringify(turnedIn(two, store, ex1, "10:30")) !== JSON.stringify({ section: "10:30", in: 1, of: 1 })) {
+    say("the 10:30 count counts the test student: " + JSON.stringify(turnedIn(two, store, ex1, "10:30"))); }
+  if (turnedIn(two, store, card, "8:00").in !== 1) say("the card challenge does not read the profile");
+  const rows = comingUp(two, store, asgs, 4);
+  if (rows.map(r => r.id).join("|") !== "card|ex1") say("what is coming up is wrong, or Ongoing is on the list: " + JSON.stringify(rows.map(r => r.id)));
+  if (rows[1].counts.map(c => c.section + " " + c.in + "/" + c.of).join(" \u00b7 ") !== "8:00 1/2 \u00b7 10:30 1/1") {
+    say("the counts are not by room: " + JSON.stringify(rows[1].counts)); }
+  if (comingUp(one, store, asgs, 4)[0].counts.length !== 1 || comingUp(one, store, asgs, 4)[0].counts[0].section !== "") {
+    say("a class with one sitting is split by section anyway"); }
+}
+
+// A preview writes nothing, unless he says otherwise. Andrew, 2026-09-20: "i
+// need to be able to test the messaging with dr ishak. let me post a fake
+// message as [a fake student]." Read from the source, because the switch is a
+// press and a press is not a render.
+{
+  const say = (m) => { console.error("  FAIL  preview: " + m); failedEarly++; };
+  const src = readFileSync(new URL("../src/engine/ClassApp.jsx", import.meta.url), "utf8");
+  if (!src.includes("const write = preview && !saving ? () => {} : update;")) say("a preview no longer decides whether it writes");
+  if (!src.includes("Save what I press")) say("the preview bar has no way to start saving");
+  if (!src.includes("setSaving(isTestStudent(config, e.target.value))")) say("looking as the test student does not start out saving");
+  // A class need not name a fake student. One that does has him on its
+  // roster, where View as a student can find him, and nowhere a classmate
+  // looks. COMM 2 and COMM 4 are done and name nobody.
+  for (const c of ENGINE_LIST) {
+    const roll = c.students || [];
+    if (!c.testStudent) continue;
+    if (!roll.some(st => st.name === c.testStudent)) say(c.code + " names a test student who is not on its roster: " + c.testStudent);
+    if (classmatesOf(c, { students: roll }, "student", roll[0]?.name).some(st => st.name === c.testStudent)) {
+      say(c.code + " shows the test student to the class"); }
+  }
+}
+
+// The question sheet: what students read is what he has answered.
+{
+  const say = (m) => { console.error("  FAIL  question sheet: " + m); failedEarly++; };
+  const items = [
+    { id: "q1", text: "What counts as a source?", who: "Ada Lovelace", anon: false, at: 10, state: "answered", answer: "Anything you can point at.", answeredAt: 20 },
+    { id: "q2", text: "When is the exam?", who: "", anon: true, at: 30, state: "open" },
+    { id: "q3", text: "Is the reading on the site?", who: "Grace Hopper", anon: false, at: 40, state: "answered", answer: "   ", answeredAt: 50 },
+    { id: "q4", text: "Old one", who: "", anon: true, at: 5, state: "answered", answer: "Yes.", answeredAt: 6 },
+  ];
+  const sheet = answeredOf(items);
+  if (sheet.map(q => q.id).join("|") !== "q1|q4") say("the sheet is not the answered ones, newest first: " + JSON.stringify(sheet.map(q => q.id)));
+  if (sheet.some(q => q.text.includes("exam"))) say("an unanswered question is on the sheet");
+  if (sheet.some(q => q.id === "q3")) say("an answer of spaces puts a question on the sheet");
+  // No name reaches the sheet. The card renders no `who` for a student, so
+  // the check is on the words the component is given.
+  if (sheet.some(q => !q.text)) say("a question on the sheet has no words");
+}
+
+// The top bar lights the tab the address says, on every page the same way,
   // and never wraps. Andrew, 2026-09-17: "can we have some consistency for
   // how the top nav is highlighted? and making sure it doesn't wrap around
   // for two levels."

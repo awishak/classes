@@ -12,6 +12,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { assignmentsOf, isProfileTask, profileComplete } from "./profileTask.js";
+import { realStudents, studentsIn, hasSections, sectionsOf } from "./sections.js";
 import { genId } from "../utils.jsx";
 import { draftFeedback, textToHtml } from "./feedback.js";
 import { gradeText, scaleOf, SCALES, alive } from "./grades.js";
@@ -184,6 +185,48 @@ export function waitingOn(data, assignments) {
 export const waitingCount = (data, assignments) => waitingOn(data, assignments)
   .reduce((n, r) => ({ toGrade: n.toGrade + r.toGrade, messages: n.messages + r.messages }), { toGrade: 0, messages: 0 });
 
+// What is coming up, and how much of the class has handed it in.
+//
+// Andrew, 2026-09-20: "you should show me what challenges are coming up, and
+// how many students have turned them in out of how many students i have in
+// the class", and then: "bc i have two sections of comm 3, give me numbers by
+// section." A class with two sittings is two rooms, and 21 out of 34 says
+// nothing about which room is behind.
+//
+// The card challenge has nothing to hand in, so its numerator is the students
+// whose card is filled in. The test student is in nobody's count.
+export function turnedIn(config, data, asg, section) {
+  const all = realStudents(config, data?.students || config?.students || []);
+  const roll = studentsIn(all, section);
+  const byStudent = data?.assignmentLog?.[asg.id] || {};
+  const done = roll.filter(st => isProfileTask(asg)
+    ? profileComplete(data?.profiles?.[st.name])
+    : alive(byStudent[st.name] || []).some(e => e.type === "submission"));
+  return { section: section || "", in: done.length, of: roll.length };
+}
+
+// Every challenge with a date, nearest first, from a week back so something
+// still coming in does not fall off the day it was due. Ongoing pieces have
+// no date and nothing to hand in, so they are not on this list.
+export function comingUp(config, data, assignments, limit = 4) {
+  const day = 86400000;
+  const now = Date.now();
+  const rows = (assignments || []).map(asg => {
+    const d = parseDue(asg.due);
+    return d ? { asg, at: d.getTime() } : null;
+  }).filter(Boolean)
+    .filter(r => r.at > now - 7 * day)
+    .sort((x, y) => x.at - y.at)
+    .slice(0, limit);
+  const secs = hasSections(config) ? sectionsOf(config) : [""];
+  const waiting = waitingOn(data, assignments);
+  return rows.map(({ asg }) => ({
+    id: asg.id, title: asg.title, due: asg.due, dueTime: asg.dueTime,
+    counts: secs.map(sec => turnedIn(config, data, asg, sec)),
+    ...(waiting.find(w => w.id === asg.id) || { toGrade: 0, messages: 0 }),
+  }));
+}
+
 // A date on its own makes a student do the arithmetic, and the thing students
 // say most about every LMS they have used is that they could not tell what was
 // actually due. So say the number of days, and say it in a colour.
@@ -346,20 +389,35 @@ function AssignmentLog({ asg, log, accent, studentName, actor, onLike, onDelete 
 export function AssignmentsSummary({ config, data, role, name }) {
   const assignments = getAssignments(data, config);
   if (role === "instructor") {
-    // Each challenge with something waiting, and what is waiting on it, so
-    // a message from a student is not something to go looking for.
-    const rows = waitingOn(data, assignments);
-    if (!rows.length) return <Muted>Nothing waiting.</Muted>;
+    // What is coming up, how much of each room has handed it in, and what is
+    // waiting on him. The card used to hold the waiting rows alone, which
+    // said nothing about what was coming or how many people were behind.
+    const rows = comingUp(config, data, assignments);
+    if (!rows.length) return <Muted>No challenge has a due date yet.</Muted>;
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {rows.slice(0, 4).map(r => (
-          <div key={r.id} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</span>
-            {r.toGrade ? <Pill accent={config.accent}>{r.toGrade} to grade</Pill> : null}
-            {r.messages ? <Pill accent={config.accent}>{r.messages} message{r.messages === 1 ? "" : "s"}</Pill> : null}
-          </div>
-        ))}
-        {rows.length > 4 ? <Muted>and {rows.length - 4} more</Muted> : null}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {rows.map(r => {
+          const st = dueState(r.due);
+          return (
+            <div key={r.id} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</span>
+                {r.toGrade ? <Pill accent={config.accent}>{r.toGrade} to grade</Pill> : null}
+                {r.messages ? <Pill accent={config.accent}>{r.messages} message{r.messages === 1 ? "" : "s"}</Pill> : null}
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 14, color: st ? dueColor(st.tone) : TEXT_MUTED, fontWeight: st && st.tone !== "calm" ? 700 : 400 }}>
+                  {dueText(r.due, r.dueTime)}
+                </span>
+                {r.counts.map(c => (
+                  <span key={c.section || "all"} style={{ fontSize: 14, color: TEXT_SECONDARY }}>
+                    {c.section ? <b style={{ fontWeight: 600 }}>{c.section}</b> : null}{c.section ? " " : ""}{c.in}/{c.of} in
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -514,7 +572,9 @@ function GradeHub({ config, data, assignments, onStart }) {
       <a href={config.path + "/grade"} style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, fontSize: 15, fontWeight: 600, color: a, textDecoration: "none", marginBottom: 12 }}>Open grade view: sort the class into columns →</a>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {assignments.map(asg => {
-          const total = Object.keys(data?.assignmentLog?.[asg.id] || {}).filter(n => logOf(data, asg.id, n).some(e => e.type === "submission")).length;
+          // Out of how many, and by room where there are two of them.
+          const counts = (hasSections(config) ? sectionsOf(config) : [""]).map(sec => turnedIn(config, data, asg, sec));
+          const inWords = counts.map(c => (c.section ? c.section + " " : "") + c.in + "/" + c.of).join(" · ");
           const ungraded = ungradedQueue(assignments, data, asg.id);
           const waiting = Object.keys(data?.assignmentLog?.[asg.id] || {}).filter(n => unanswered(logOf(data, asg.id, n))).length;
           const roster = (config.students || []).map(s => ({ aid: asg.id, name: s.name }));
@@ -522,7 +582,7 @@ function GradeHub({ config, data, assignments, onStart }) {
             <div key={asg.id} style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, overflow: "hidden" }}>
               <button onClick={() => onStart(roster)} style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", fontFamily: F, padding: 14 }}>
                 <div style={{ fontWeight: 600, fontSize: 16 }}>{asg.title}</div>
-                <Muted>{total} submitted · {ungraded.length} to grade{waiting ? " · " + waiting + " message" + (waiting === 1 ? "" : "s") : ""}</Muted>
+                <Muted>{inWords} turned in · {ungraded.length} to grade{waiting ? " · " + waiting + " message" + (waiting === 1 ? "" : "s") : ""}</Muted>
               </button>
               <div style={{ paddingRight: 14, flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
                 <a href={config.path + "/grade?a=" + encodeURIComponent(asg.id)} style={{ fontSize: 15, fontWeight: 600, color: a, textDecoration: "none", minHeight: TAP, display: "inline-flex", alignItems: "center" }}>Grade view</a>

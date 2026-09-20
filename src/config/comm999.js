@@ -34,8 +34,11 @@ const comm999 = {
 
   // ─── People ───
   // Goals get filled in on day one (first-day "what are your goals" seed).
-  testStudent: "Zack Girgis",
+  // The fake one, for looking at the site as a student and writing test
+  // messages. Zack Girgis is a real name and was standing in for this.
+  testStudent: "Pepe LeFritz",
   students: [
+    { id: "pepe-lefritz", name: "Pepe LeFritz", email: "pepe@example.test", from: "", goals: "" },
     { id: "zack-girgis", name: "Zack Girgis", from: "", goals: "" },
     { id: "joe-hanna", name: "Joe Hanna", from: "", goals: "" },
     { id: "hanni-fakhoury", name: "Hanni Fakhoury", from: "", goals: "" },
@@ -66,6 +69,7 @@ const comm999 = {
     games: true,
     you: true,
     messages: true,
+    questions: true,   // the class's question sheet
     roster: true,
     instructor: true,
   },

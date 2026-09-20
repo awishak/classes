@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import HornBoard from "./HornBoard.jsx";
 import { useClassData } from "./store.js";
 import { currentDay } from "./days.js";
+import { studentsIn, realStudents, readRoomSection } from "./sections.js";
 import { genId } from "../utils.jsx";
 
 const OPEN = "ishak:horn";
@@ -40,7 +41,9 @@ export default function HornApp({ config }) {
   }, []);
 
   if (!open || !data) return null;
-  const students = data.students || config.students || [];
+  // The room, not the class: a board of seats belongs to the sitting in front
+  // of him, and it reads the same choice the dashboard's bar writes.
+  const students = studentsIn(realStudents(config, data.students || config.students || []), readRoomSection(config));
   const weeks = data.schedule || config.scheduleWeeks || [];
   const day = currentDay(weeks)?.date || null;
   const setSeats = (seats) => update(prev => ({ ...prev, athSeats: seats }));
