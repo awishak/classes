@@ -17,7 +17,6 @@
 // never moves under you when you cross between surfaces.
 
 import * as TOKENS from "./tokens.js";
-import AppsMenu from "./AppsMenu.jsx";
 import { appsFor } from "./apps.js";
 import HornApp, { openHorn } from "./HornApp.jsx";
 
@@ -125,8 +124,8 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
 
         {/* Andrew's apps are tabs in the bar rather than a menu: "students can
             have the apps thing up top, but i want all my apps in top nav bar."
-            A student keeps the Apps button, because a student's bar would be
-            a wall of doors otherwise. */}
+            A student's apps are in the class menu at the left, because a
+            student's bar would be a wall of doors otherwise. */}
         {middle ? (
           <div style={{ display: "flex", gap: 6, minWidth: 0, flex: "1 1 auto", flexWrap: "nowrap", alignItems: "center" }}>{middle}</div>
         ) : null}
@@ -160,9 +159,13 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
           ) : null}
         </nav>
 
+        {/* The right end holds whatever the surface puts there and nothing
+            else. The Apps button stood here until 2026-09-20, when the apps
+            went under the class name for a student the way they already had
+            for Andrew, and this end came free for a message or a game to
+            announce itself. */}
         <span style={{ flex: "none", display: "flex", alignItems: "center", gap: 10 }}>
           {right}
-          {role === "instructor" ? null : <AppsMenu config={config} role={role} onPick={onPick} />}
         </span>
       </div>
       {role === "instructor" ? <HornApp config={config} /> : null}

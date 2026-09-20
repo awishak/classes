@@ -24,7 +24,7 @@ import { openHorn } from "./HornApp.jsx";
 import { useHeadlines } from "./headlines.js";
 import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay, dayTitles, daySlug as slugOfDay, dayFromSlug } from "./days.js";
-import { ENGINE_LIST } from "../config/registry.js";
+import { ClassMenu, DropMenu, menuRow } from "./ClassMenu.jsx";
 import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections, blankDay, takeGroup, placeGroup, placeSection, splitSection, templateOf, applyTemplate } from "./dayplan.js";
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, makeBlock } from "./blocks.js";
 import { MEDIA_ACCEPT, mediaLabel, sizeLabel } from "./media.js";
@@ -3216,117 +3216,6 @@ export function NoteSheet({ sections, sources, accent, onAdd, onClose, classId }
 // both permanently in the way and too narrow to use.
 // A little menu that hangs off a button. Both header menus are the same shape,
 // so they are the same component.
-function DropMenu({ trigger, label, width, children, side, fixed }) {
-  const [open, setOpen] = useState(false);
-  // Inside the top bar the tabs scroll sideways, and a panel hung off a tab
-  // with position absolute is cut off at the row's edge. A fixed panel is
-  // placed from the trigger's place on screen when it opens instead.
-  const [at, setAt] = useState(null);
-  const box = useRef(null);
-  const toggle = () => {
-    if (!open && fixed && box.current) {
-      const r = box.current.getBoundingClientRect();
-      setAt({ left: r.left, right: Math.max(0, window.innerWidth - r.right), top: r.bottom + 6 });
-    }
-    setOpen(v => !v);
-  };
-  const place = fixed && at
-    ? { position: "fixed", top: at.top, ...(side === "left" ? { left: at.left } : { right: at.right }) }
-    : { position: "absolute", top: "calc(100% + 6px)", ...(side === "left" ? { left: 0 } : { right: 0 }) };
-  return (
-    <span ref={box} style={{ position: "relative", flex: "none" }}>
-      {trigger(open, toggle)}
-      {open ? (
-        <>
-          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 70 }} />
-          <div role="menu" aria-label={label} onClick={() => setOpen(false)}
-            style={{ ...place, zIndex: 71, background: "#fff",
-              border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 6, width: width || 240,
-              boxShadow: "0 18px 44px -14px rgba(23,19,16,.35)", display: "flex", flexDirection: "column", gap: 1 }}>
-            {children}
-          </div>
-        </>
-      ) : null}
-    </span>
-  );
-}
-
-const menuRow = {
-  display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "none",
-  border: "none", cursor: "pointer", padding: "0 10px", minHeight: 40, borderRadius: 9,
-  fontFamily: F, fontSize: 14.5, color: TEXT_PRIMARY, textDecoration: "none",
-};
-
-// The class's name is the way to everything else in the class. Andrew,
-// 2026-09-20: "My feeling is that maybe dashboard doesn't need schedule,
-// challenges, class, more, or that could be a drop down from home?" So the
-// dashboard's bar carries no tabs. The name at its left end opens every page
-// the tabs and the apps led to, then the three room panels, then The Brief,
-// Colour and type and the keyboard list, then the other classes. Around the
-// Horn is not in it: the Horn opens over this page and has its own place on
-// the bar.
-export function ClassMenu({ config, onLook, panels, onPanel, onKeys }) {
-  const go = (href) => () => {
-    window.history.pushState({}, "", href);
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  };
-  const rule = <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />;
-  const row = { ...menuRow, minHeight: 36, fontSize: 15 };
-  const pages = [["Home", ""], ["Schedule", "/schedule"], ["Challenges", "/challenges"], ["Class", "/class"], ["More page", "/more"]];
-  return (
-    <DropMenu label={config.code} width={270} side="left" fixed
-      trigger={(open, toggle) => (
-        <button className="dash-focus ca-focus repo-focus" onClick={toggle} aria-expanded={open} aria-haspopup="menu"
-          title="Every other page of this class"
-          style={{ display: "inline-flex", alignItems: "center", gap: 10, minHeight: 44, padding: "0 8px 0 0", border: "none",
-            background: "transparent", borderRadius: 8, cursor: "pointer", fontFamily: F, whiteSpace: "nowrap" }}>
-          <span style={{ width: 30, height: 30, borderRadius: 8, background: config.accent, color: "#fff",
-            fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {(config.code || "").split(" ")[1]}
-          </span>
-          <span style={{ fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY }}>{config.code}</span>
-          <span aria-hidden="true" style={{ fontSize: 13, color: TEXT_MUTED }}>▾</span>
-        </button>
-      )}>
-      {pages.map(([name, to]) => <a key={name} className="dash-focus" href={config.path + to} style={row}>{name}</a>)}
-      {rule}
-      {appsFor(config, "instructor").filter(app => app.opens !== "horn").map(app => (
-        <a key={app.id} className="dash-focus" href={app.href || config.path + "/" + app.card}
-          aria-current={app.id === "dashboard" ? "page" : undefined}
-          style={{ ...row, ...(app.id === "dashboard" ? { color: config.accent, fontWeight: 600 } : {}) }}>{app.label}</a>
-      ))}
-      {(panels || []).length ? (
-        <>
-          {rule}
-          {panels.map(p => (
-            <button key={p.id} className="dash-focus" onClick={() => onPanel(p.id)} style={row}>
-              {p.label}
-              {p.n ? <span style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 13, color: TEXT_MUTED }}>{p.n}</span> : null}
-            </button>
-          ))}
-        </>
-      ) : null}
-      {rule}
-      <a className="dash-focus" href="/plan" style={row}>The Brief</a>
-      {onLook ? <button className="dash-focus" onClick={onLook} style={row}>Colour and type</button> : null}
-      {onKeys ? (
-        <button className="dash-focus" onClick={onKeys} style={row}>
-          Keyboard<kbd style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 13, color: TEXT_MUTED }}>⌘/</kbd>
-        </button>
-      ) : null}
-      {ENGINE_LIST.filter(c => c.id !== config.id).length ? rule : null}
-      {ENGINE_LIST.filter(c => c.id !== config.id).map(c => (
-        <button key={c.id} className="dash-focus" onClick={go(c.path + "/dashboard")} style={row}>
-          <span style={{ flex: "none", width: 8, height: 8, borderRadius: "50%", background: c.accent }} />
-          <b style={{ fontWeight: 600 }}>{c.code}</b>
-          <span style={{ minWidth: 0, color: TEXT_MUTED, fontSize: 13, overflow: "hidden",
-            textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.desc}</span>
-        </button>
-      ))}
-    </DropMenu>
-  );
-}
-
 export function Sheet({ title, sub, onClose, children, width }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };

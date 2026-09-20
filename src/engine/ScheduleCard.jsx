@@ -8,7 +8,7 @@
 // seeded from config.scheduleWeeks / config.library on first edit. Native HTML5
 // drag-and-drop, no dependencies.
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { genId } from "../utils.jsx";
 import { addSeedToDay, dayHasSeed, normSlot } from "./dayplan.js";
 import PickMark from "./Pick.jsx";
@@ -151,7 +151,7 @@ export function studentItems(week, dayPlans, blockOf) {
   return [...(week.items || []).filter(it => STUDENT_TYPES.has(it.type)), ...fromFlow];
 }
 
-function ItemView({ item, picked, when, source, href }) {
+function ItemView({ item, picked, when, source, href, anchor }) {
   const m = TYPE_META[item.type] || {};
   const inner = (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -162,7 +162,7 @@ function ItemView({ item, picked, when, source, href }) {
     </span>
   );
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid " + BORDER }}>
+    <div id={anchor || undefined} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid " + BORDER, scrollMarginTop: 130 }}>
       <span style={{ width: 84, flexShrink: 0, fontSize: 13, fontWeight: 700, color: TEXT_SECONDARY }}>{when || item.date || ""}</span>
       {href ? <a href={href} style={{ textDecoration: "none", minWidth: 0 }}>{inner}</a>
         : item.url ? <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", minWidth: 0 }}>{inner}</a> : inner}
@@ -207,18 +207,32 @@ export function ScheduleSummary({ config, data }) {
   );
 }
 
-export function ScheduleDetail({ config, role, data, update, blockOf }) {
+export function ScheduleDetail({ config, role, data, update, blockOf, focusDay }) {
   if (role === "instructor") return <ScheduleEditor config={config} data={data} update={update} />;
-  return <StudentSchedule config={config} data={data} blockOf={blockOf} />;
+  return <StudentSchedule config={config} data={data} blockOf={blockOf} focusDay={focusDay} />;
 }
 
-function StudentSchedule({ config, data, blockOf }) {
+// A day of the schedule, as part of an address: /comm3/schedule/sep-23, which
+// is what the readings link on the front page opens. Andrew, 2026-09-20: "when
+// you click, it goes to the TOP of that day on the schedule." The first row of
+// that day carries the anchor, because a week has no heading for a day inside
+// it and the row is where that day starts.
+export const dayAnchor = (date) => "day-" + String(date || "").trim().toLowerCase().replace(/\s+/g, "-");
+
+function StudentSchedule({ config, data, blockOf, focusDay }) {
   const weeks = getWeeks(data, config);
   // A week item points at a block, and the pick lives on the block, so what
   // the students see is worked out from the block rather than stamped on the
   // row when the pick was made.
   const isPicked = (it) => !!(blockOf && blockOf(it.blockId || it.libId)?.pick);
   const current = nearestWeekId(weeks);
+  // The day named in the address, scrolled to after the weeks are drawn. A day
+  // the term does not have leaves the page where it opened.
+  useEffect(() => {
+    if (!focusDay) return;
+    const el = document.getElementById(dayAnchor(focusDay));
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [focusDay]);
   return (
     <div>
       <div style={{ ...h2, marginBottom: 16 }}>Schedule</div>
@@ -237,17 +251,21 @@ function StudentSchedule({ config, data, blockOf }) {
               {w.text && <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 10, whiteSpace: "pre-wrap" }}>{w.text}</div>}
               {studentItems(w, data?.dayPlans, blockOf).length > 0 && (
                 <div style={{ marginTop: 8 }}>
-                  {inWeekOrder(studentItems(w, data?.dayPlans, blockOf)).map(it => {
+                  {(seen => inWeekOrder(studentItems(w, data?.dayPlans, blockOf)).map(it => {
                     const block = blockOf ? blockOf(it.blockId || it.libId) : null;
                     // "Wed" on its own made a student work out which Wednesday.
                     const date = dateInWeek(w, it.date);
+                    // The first row of a day wears that day's anchor.
+                    const first = date && !seen.has(date);
+                    if (first) seen.add(date);
                     // A deadline opens the assignment itself, where the
                     // instructions link and the place to hand the work in are.
                     const href = it.type === "assignment" && it.asgId && config.path
                       ? config.path + "/challenges/" + encodeURIComponent(it.asgId) : "";
                     return <ItemView key={it.id} item={it} picked={isPicked(it)} href={href}
+                      anchor={first ? dayAnchor(date) : ""}
                       when={date ? it.date + " " + date : ""} source={href ? "" : sourceOf(it, block)} />;
-                  })}
+                  }))(new Set())}
                 </div>
               )}
             </div>

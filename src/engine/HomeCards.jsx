@@ -15,10 +15,9 @@ import { useState } from "react";
 import { genId } from "../utils.jsx";
 import * as TOKENS from "./tokens.js";
 import { dayTitles } from "./days.js";
-import { studentItems, sourceOf } from "./ScheduleCard.jsx";
+import { studentItems } from "./ScheduleCard.jsx";
 import { Avatar, profileOf } from "./RosterCard.jsx";
 import { dueState } from "./AssignmentsCard.jsx";
-import PickMark from "./Pick.jsx";
 import { instructorOf } from "../instructors.js";
 import { fileToAvatar, AvatarPreview } from "./YouCard.jsx";
 
@@ -46,9 +45,6 @@ export const tileTitle = (theme) => theme === "clean"
   : { fontFamily: TOKENS.FONT.label, fontSize: 15, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
 
 // ─── the next class ───
-
-// Readings on the card before the rest fold behind Show all.
-export const READINGS_SHOWN = 3;
 
 const WEEKDAY_FULL =["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTH_FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -103,7 +99,12 @@ export function nextMeeting(config, data, now = Date.now()) {
 }
 
 // What a student needs to know for that class: the day, the time and room,
-// the day's title, the readings and any game.
+// the day's title, the note, and the readings set for it.
+//
+// The game, the Directions link and whether the day meets in the room came
+// off on 2026-09-20 with the parts of the card that showed them. The readings
+// are still a list rather than a number, because the card names how many and
+// the schedule is where they are read.
 export function nextClassFacts(config, data, blockOf, section, now = Date.now()) {
   const next = nextMeeting(config, data, now);
   if (!next) return null;
@@ -115,20 +116,15 @@ export function nextClassFacts(config, data, blockOf, section, now = Date.now())
   const onDay = studentItems(next.week, plans, blockOf).filter(it => it.date === weekday.slice(0, 3));
   const readings = onDay.filter(it => it.type === "reading").map(it => {
     const block = blockOf ? blockOf(it.blockId || it.libId) : null;
-    return { id: it.id, title: it.title, url: it.url || block?.url || "", source: sourceOf(it, block), pick: !!block?.pick };
-  })
-    // Drew's Picks first, and otherwise the order the day lists them.
-    .map((r, i) => [r, i]).sort((x, y) => (y[0].pick - x[0].pick) || (x[1] - y[1])).map(([r]) => r);
-  const games = onDay.filter(it => it.type === "activity" && it.title !== "Headlines").map(it => it.title);
+    return { id: it.id, title: it.title, url: it.url || block?.url || "" };
+  });
   return {
     date: next.date, weekday, title,
     longDate: MONTH_FULL[next.d.getMonth()] + " " + next.d.getDate(),
     time: sittingsFor(config, section).map(timeText).filter(Boolean).join(" and "),
     location: locationOf(config),
-    noMeeting: !!plan.noMeeting,
     note: String(plan.studentNote || "").trim(),
-    directions: config.directionsUrl || "",
-    readings, games,
+    readings,
   };
 }
 
@@ -158,32 +154,26 @@ function NoteEditor({ date, value, update }) {
   );
 }
 
-// The hero. A stone grey drawn from the theme's own ink, so the card stands
-// apart from the white cards without the class colour and without an outline,
-// and after dark the same mix lands a step lighter than the cards. A day with
-// no meeting in the room carries an orange badge.
-export function NextClassHero({ config, data, blockOf, section, onOpen, seat, instructor, update, wide }) {
+// The hero: what a student needs for the next class, and nothing else.
+//
+// Andrew drew it on 2026-09-20: Next class, the day's title, Monday September
+// 21, the time and the room, his note, the readings as a link that says how
+// many, and the full schedule. What came off the card with it: the readings
+// listed out with their numbers, their sources and Drew's Picks, the game
+// line, Directions, and the badge for a day that does not meet in the room.
+//
+// A card that lists the readings is a card a student reads instead of the
+// schedule. A card that counts them is a card that sends them there, which is
+// why the count is the link: "when you click, it goes to the TOP of that day
+// on the schedule."
+export function NextClassHero({ config, data, blockOf, section, onOpen, onOpenDay, seat, instructor, update, wide }) {
   const facts = nextClassFacts(config, data, blockOf, section);
-  const [allReadings, setAllReadings] = useState(false);
-  // White, like every other card. The tinted versions did not work, and the
-  // Drew's Pick drawing has a white ground of its own that showed as a box on
-  // anything else.
+  // White, like every other card, with the class's own colour around it.
   const frame = {
     ...seat, padding: wide ? 28 : 20, fontFamily: F, textAlign: "left", width: "100%",
-    // White, with the class's own colour around it.
     background: "var(--surface-card)", border: "2px solid var(--ca-accent)",
     display: "flex", flexDirection: "column", gap: 16,
   };
-  // On a laptop the card runs the width of the page, so the day sits in one
-  // column and what to do before it in the other. Narrower than that, or with
-  // nothing to do before class, it is one column like every other card.
-  const twoUp = !!wide && !!facts && !!(facts.readings.length || facts.games.length);
-  const columns = twoUp
-    ? { display: "grid", gridTemplateColumns: "minmax(0, 5fr) minmax(0, 6fr)", gap: 32, alignItems: "start" }
-    : { display: "flex", flexDirection: "column", gap: 16 };
-  // The rule above a section separates it from the one it sits under. The
-  // first section of the second column sits under nothing.
-  const sideRule = twoUp ? { borderTop: "none", paddingTop: 0 } : null;
   if (!facts) {
     return (
       <section aria-label="Next class" style={frame}>
@@ -192,108 +182,49 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, seat, in
       </section>
     );
   }
-  // The day itself: what it is about, when it is, and where. The left column
-  // on a laptop, the top of the card on a phone.
-  const theDay = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+  // A way on, at the foot of the card. The words are the whole control, and
+  // the count is the reason to press this one rather than the other.
+  const wayOn = (words, press, key) => (
+    <button key={key} className="ca-focus" onClick={press}
+      style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: TAP, padding: "0 0 0 12px",
+        background: "none", border: "none", borderLeft: "3px solid " + BORDER_STRONG,
+        cursor: "pointer", textAlign: "left",
+        fontFamily: F, fontSize: 17, fontWeight: 600, color: "var(--ca-accent-ink)" }}>
+      <span style={{ minWidth: 0, flex: 1 }}>{words}</span>
+      <span aria-hidden="true" style={{ flex: "none", fontSize: 22, lineHeight: 1, color: TEXT_MUTED }}>›</span>
+    </button>
+  );
+  const readingWords = facts.readings.length === 1 ? "1 reading" : facts.readings.length + " readings";
+  return (
+    <section aria-label="Next class" style={frame}>
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minHeight: 28 }}>
-          <span style={{ ...small, color: TEXT_SECONDARY }}>Next class</span>
-          {facts.noMeeting ? (
-            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--surface-card)", background: WARN, borderRadius: 999, padding: "4px 10px" }}>
-              No in-person meeting
-            </span>
-          ) : null}
-          <button className="ca-focus" onClick={onOpen} aria-label="Schedule"
-            style={{ marginLeft: "auto", minHeight: TAP, minWidth: TAP, background: "none", border: "none", cursor: "pointer", fontSize: 26, lineHeight: 1, color: TEXT_MUTED, padding: 0 }}>
-            ›
-          </button>
-        </span>
+        <span style={{ ...small, color: TEXT_SECONDARY }}>Next class</span>
         {facts.title
           ? <span style={{ ...DISPLAY, fontSize: wide ? 30 : 26, lineHeight: 1.15, letterSpacing: "-0.02em", color: TEXT_PRIMARY, marginTop: 2, textWrap: "balance" }}>{facts.title}</span>
           : null}
         <span style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.3, color: TEXT_PRIMARY, marginTop: facts.title ? 10 : 2 }}>
           {facts.weekday}, {facts.longDate}
         </span>
-        {!facts.noMeeting && (facts.time || facts.location) ? (
+        {facts.time || facts.location ? (
           <span style={{ ...MONO, fontSize: 15, fontWeight: 500, lineHeight: 1.4, color: TEXT_SECONDARY, marginTop: 4 }}>
             {[facts.time, facts.location].filter(Boolean).join(" · ")}
           </span>
         ) : null}
-        {/* Tight under the room line: the link keeps its 44px to tap in, and
-            the negative margin takes the extra height back out of the gap. */}
-        {!facts.noMeeting && facts.directions ? (
-          <a className="ca-focus" href={facts.directions} target="_blank" rel="noreferrer"
-            style={{ alignSelf: "flex-start", minHeight: TAP, margin: "-10px 0", display: "inline-flex", alignItems: "center", fontSize: 16, fontWeight: 600, lineHeight: 1.3, color: "var(--ca-accent-ink)", textDecoration: "none" }}>
-            Directions
-          </a>
-        ) : null}
       </div>
 
       {instructor && update ? (
-        <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 12 }}>
-          <NoteEditor key={facts.date} date={facts.date} value={facts.note} update={update} />
-        </div>
+        <NoteEditor key={facts.date} date={facts.date} value={facts.note} update={update} />
       ) : facts.note ? (
-        <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 12 }}>
-          <div style={{ borderLeft: "3px solid " + BORDER_STRONG, paddingLeft: 12, fontSize: 17, lineHeight: 1.5, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>
-            {facts.note}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-
-  // What to do about it: the running order, and the game. The right column on
-  // a laptop, the bottom of the card on a phone.
-  const beforeClass = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {facts.readings.length ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, borderTop: "1px solid " + BORDER, paddingTop: 12, ...sideRule }}>
-          <span style={small}>Readings</span>
-          {(allReadings ? facts.readings : facts.readings.slice(0, READINGS_SHOWN)).map((r, i) => {
-            const inner = (
-              <>
-                <span style={{ ...MONO, width: 24, flex: "none", fontSize: 13, fontWeight: 600, color: r.pick ? WARN : TEXT_MUTED, paddingTop: 3 }}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
-                  <span style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.3, color: TEXT_PRIMARY }}>{r.title}</span>
-                  {r.source ? <span style={{ ...MONO, fontSize: 13, color: TEXT_MUTED }}>{r.source}</span> : null}
-                </span>
-                {r.pick ? <PickMark size={24} /> : null}
-              </>
-            );
-            const row = { display: "flex", alignItems: "flex-start", gap: 10, minHeight: TAP, padding: "6px 0", textDecoration: "none" };
-            return r.url
-              ? <a key={r.id} className="ca-focus" href={r.url} target="_blank" rel="noreferrer" style={row}>{inner}</a>
-              : <div key={r.id} style={row}>{inner}</div>;
-          })}
-          {facts.readings.length > READINGS_SHOWN ? (
-            <button className="ca-focus" onClick={() => setAllReadings(v => !v)} aria-expanded={allReadings}
-              style={{ alignSelf: "flex-start", minHeight: TAP, background: "none", border: "none", padding: 0, cursor: "pointer",
-                fontFamily: F, fontSize: 16, fontWeight: 600, color: "var(--ca-accent-ink)" }}>
-              {allReadings ? "Show fewer" : "Show all " + facts.readings.length + " readings"}
-            </button>
-          ) : null}
+        <div style={{ borderLeft: "3px solid " + BORDER_STRONG, paddingLeft: 12, fontSize: 17, lineHeight: 1.5, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>
+          {facts.note}
         </div>
       ) : null}
 
-      {facts.games.length ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, borderTop: "1px solid " + BORDER, paddingTop: 12,
-          ...(facts.readings.length ? null : sideRule) }}>
-          <span style={small}>Game</span>
-          {facts.games.map(g => <span key={g} style={{ fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY }}>{g}</span>)}
-        </div>
-      ) : null}
-    </div>
-  );
-
-  return (
-    <section aria-label="Next class" style={frame}>
-      <div style={columns}>
-        {theDay}
-        {beforeClass}
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {facts.readings.length
+          ? wayOn(readingWords, () => (onOpenDay ? onOpenDay(facts.date) : onOpen && onOpen()), "readings")
+          : null}
+        {wayOn("Full schedule", () => onOpen && onOpen(), "schedule")}
       </div>
     </section>
   );

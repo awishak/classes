@@ -366,12 +366,25 @@ export function AssignmentsSummary({ config, data, role, name }) {
   const next = name ? nextOwed(assignments, data, name) : nextDueOf(assignments);
   if (!next) return <Muted>No upcoming challenges.</Muted>;
   const st = dueState(next.due);
+  // Andrew drew this on 2026-09-20: the next one by name, when it is due, and
+  // then how many others the class holds. The rest is the whole list rather
+  // than the ones still owed, because a student asking "how much is there"
+  // is asking about the class and not about their own pile.
+  const rest = assignments.length - 1;
   return (
     <div>
-      <div style={{ fontWeight: 600 }}>{next.title}</div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+        <span style={{ ...label, color: TEXT_MUTED, flex: "none" }}>Next</span>
+        <span style={{ minWidth: 0, fontWeight: 600 }}>{next.title}</span>
+      </div>
       <div style={{ fontSize: 15, marginTop: 2, color: st ? dueColor(st.tone) : TEXT_MUTED, fontWeight: st && st.tone !== "calm" ? 700 : 400 }}>
         {dueText(next.due, next.dueTime)}{weightText(next.weight)}
       </div>
+      {rest > 0 ? (
+        <div style={{ fontSize: 15, marginTop: 8, color: TEXT_SECONDARY }}>
+          {rest} more challenge{rest === 1 ? "" : "s"}
+        </div>
+      ) : null}
     </div>
   );
 }

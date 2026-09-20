@@ -40,7 +40,8 @@ import { nextOwed } from "./AssignmentsCard.jsx";
 import { AssignmentCards, AssignmentPage } from "./AssignmentCards.jsx";
 
 import TopNav, { NAV_CLASS, tabHref } from "./TopNav.jsx";
-import AppsMenu from "./AppsMenu.jsx";
+import { ClassMenu } from "./ClassMenu.jsx";
+import { daySlug } from "./days.js";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
 } from "./ThemeChrome.jsx";
@@ -121,7 +122,11 @@ function summary(key, config, role, ctx) {
         ? { title: "Inbox", body: <MessagesSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> }
         : { title: "Message with Dr. Ishak", body: <MessagesSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> };
     case "assignments":
-      return { title: "Challenges", body: <AssignmentsSummary config={config} data={ctx.data} role={role} name={role === "instructor" ? "" : ctx.asStudent} /> };
+      // Andrew, 2026-09-20: "can you label it as Challenges (Assignments) so
+      // students get used to the terminology?" The tab stays one word, since
+      // a tab is a place rather than a lesson in what he calls things.
+      return { title: role === "instructor" ? "Challenges" : "Challenges (Assignments)",
+        body: <AssignmentsSummary config={config} data={ctx.data} role={role} name={role === "instructor" ? "" : ctx.asStudent} /> };
     case "class":
       return { title: "Class", body: <ClassSummary config={config} data={ctx.data} /> };
     case "games":
@@ -160,7 +165,7 @@ function detail(key, config, role, ctx) {
       : <AssignmentCards config={config} data={ctx.data} name={ctx.asStudent} go={ctx.go} />;
   }
   if (key === "schedule") {
-    return <ScheduleDetail config={config} role={role} data={ctx.data} update={ctx.update} blockOf={ctx.blockOf} />;
+    return <ScheduleDetail config={config} role={role} data={ctx.data} update={ctx.update} blockOf={ctx.blockOf} focusDay={ctx.sub} />;
   }
   if (key === "roster") {
     return <RosterDetail config={config} role={role} data={ctx.data} update={ctx.update} />;
@@ -715,26 +720,17 @@ export default function ClassApp({ config: classConfig, initialCard }) {
     </div>
   ) : null;
 
-  // The top-right button is Apps, the same button on every surface, for
-  // Andrew and for a student alike; Andrew's holds more. The class switcher,
-  // the student preview, the theme and the account moved to More, which is
-  // the admin page in either view.
-  const HeaderMenu = <AppsMenu config={config} role={view} onPick={go} />;
+  // The class's name, and everything else the class holds behind it. Andrew,
+  // 2026-09-20: "the way you changed the top menu to be a dropdown from the
+  // class name, let's do that for the students as well. get rid of the apps
+  // drop down in top right." So the apps sit under the name at the left, the
+  // way his already did, and the right end of the bar is free for a message
+  // or a game to announce itself. The class switcher, the student preview,
+  // the theme and the account stay on More, which is the admin page in either
+  // view.
+  const TheClass = <ClassMenu config={config} role={view} onPick={go} />;
   const adminSelect = { fontFamily: F, fontSize: 16, fontWeight: 500, minHeight: TAP, padding: "0 12px", borderRadius: 10,
     border: "1px solid " + BORDER_STRONG, background: "var(--surface-card)", color: TEXT_PRIMARY, cursor: "pointer", maxWidth: 360 };
-
-  const Logo = (
-    <button className="ca-focus" onClick={() => go(null)}
-      style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: F, textAlign: "left" }}>
-      <div style={{ width: 30, height: 30, borderRadius: 8, background: a, color: "#fff", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {config.code.split(" ")[1]}
-      </div>
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 700, color: a, textTransform: "uppercase", letterSpacing: "0.08em" }}>{config.code}</div>
-        <div style={{ ...DISPLAY, fontSize: 16, lineHeight: 1.1 }}>{config.name}</div>
-      </div>
-    </button>
-  );
 
   // A card key can arrive from the address bar, so it gets the same check the
   // grid does: unknown or not-yours falls back to the home grid.
@@ -889,7 +885,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
             and the full width with everything stacked was emptier still. */}
         <div key="hero" style={{ gridColumn: "1 / -1" }}>
           <NextClassHero config={config} data={data} blockOf={ctx.blockOf} section={sectionOf}
-            onOpen={() => go("schedule")} seat={cardStyle(theme, 0)} wide={isDesktop}
+            onOpen={() => go("schedule")} onOpenDay={(date) => go("schedule/" + daySlug(date))}
+            seat={cardStyle(theme, 0)} wide={isDesktop}
             instructor={view === "instructor"} update={write} />
         </div>
         {(data?.pins || []).length || view === "instructor" ? (
@@ -950,6 +947,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
             same component, so the three cannot drift apart again. The theme's
             own trimmings ride in its right-hand slot. */}
         <TopNav config={config} tabs={navTabs} active={activeNav} onPick={go} role={view}
+          brand={TheClass}
           right={
             <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <ThemeIdentity theme={theme} points={myPoints} />
@@ -1003,10 +1001,9 @@ export default function ClassApp({ config: classConfig, initialCard }) {
             <button className="ca-focus" onClick={() => go(openSub ? openKey : IN_CLASS.has(openKey) ? "class" : null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 17, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: "0 4px 0 0" }}>
               ← Back{openSub && openKey === "assignments" ? " to Challenges" : IN_CLASS.has(openKey) ? " to Class" : ""}
             </button>
-          ) : Logo}
+          ) : TheClass}
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flex: "none" }}>
             <ThemeBadge theme={theme} points={myPoints} />
-            {HeaderMenu}
           </span>
         </div>
       </div>

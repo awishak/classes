@@ -22,7 +22,7 @@ import { castFor } from "./gameCast.js";
 import { normSlot } from "./dayplan.js";
 import * as TOKENS from "./tokens.js";
 import TopNav, { NAV_TEACH } from "./TopNav.jsx";
-import { ClassMenu } from "./Dashboard.jsx";
+import { ClassMenu } from "./ClassMenu.jsx";
 import { ENGINE_LIST } from "../config/registry.js";
 
 const emailOf = (s) => String(s?.email || "").trim().toLowerCase();

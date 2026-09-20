@@ -105,7 +105,7 @@ import RoomSlide from "../src/engine/RoomSlide.jsx";
 import { castFor } from "../src/engine/gameCast.js";
 import GamesPage from "../src/engine/GamesPage.jsx";
 import DayDoc from "../src/engine/DayDoc.jsx";
-import { ScheduleDetail, studentItems, dateInWeek } from "../src/engine/ScheduleCard.jsx";
+import { ScheduleDetail, studentItems, dateInWeek, dayAnchor } from "../src/engine/ScheduleCard.jsx";
 import TermOutline from "../src/engine/TermOutline.jsx";
 import { SHARED_KEY } from "../src/engine/blocks.js";
 import { DEFAULT_REPO_FONTS } from "../src/engine/fonts.js";
@@ -1134,7 +1134,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
     // Class, Grades toward the bottom and Games at the very bottom.
     const at = (t) => html.indexOf(t);
     if (html.includes('aria-label="Next class"')) {
-      const order = ['aria-label="Next class"', ">Challenges</span>", ">Message with Dr. Ishak</span>", ">Class</span>", ">Games</span>"].map(at);
+      const order = ['aria-label="Next class"', ">Challenges (Assignments)</span>", ">Message with Dr. Ishak</span>", ">Class</span>", ">Games</span>"].map(at);
       if (order.some(n => n < 0) || order.some((n, i) => i && n < order[i - 1])) {
         console.error("  FAIL  class page, student: the home page is not Next class, Challenges, Messages, Class, Games: " + JSON.stringify(order)); failedEarly++; }
     } else {
@@ -1160,9 +1160,13 @@ cases.push(["Instructor links", <InstructorLinks />]);
       console.error("  FAIL  class page, student with the old instructor flag: the page did not render as the student"); failedEarly++; }
     if (html.includes('href="' + cfgS.path + '/dashboard"') || html.includes("Nothing to grade") || html.includes("Pin link")) {
       console.error("  FAIL  class page, student with the old instructor flag: the student got the instructor side"); failedEarly++; }
-    // The top-right button is Apps for a student, not their name.
-    if (!/aria-label="Menu"[^>]*>Apps<span/.test(html)) {
-      console.error("  FAIL  class page, student: the top-right button does not say Apps"); failedEarly++; }
+    // Andrew, 2026-09-20: "get rid of the apps drop down in top right." The
+    // apps are under the class name at the left, the way his are, and the
+    // right end of the bar is free for a message or a game.
+    if (/>Apps<span/.test(html)) {
+      console.error("  FAIL  class page, student: the Apps button is back in the top bar"); failedEarly++; }
+    if (!/aria-haspopup="menu"[\s\S]{0,900}>COMM/.test(html)) {
+      console.error("  FAIL  class page, student: the class name is not a menu"); failedEarly++; }
     if (html.includes('href="/repo"')) {
       console.error("  FAIL  class page, student: the repository is showing to a student"); failedEarly++; }
   } catch (err) {
@@ -1233,10 +1237,12 @@ cases.push(["Instructor links", <InstructorLinks />]);
     });
     if (name === "Dashboard") {
       if (!src.includes("brand={") || !src.includes("middle={")) say("the dashboard's bar is not its own: the class menu and the day's controls");
+      // The menu itself lives in ClassMenu.jsx, which the class site wears too.
+      const menuSrc = readSrc(new URL("../src/engine/ClassMenu.jsx", import.meta.url), "utf8");
       // The Horn is on the bar, so the class menu leaves it out.
-      if (!src.includes('app.opens !== "horn"')) say("the dashboard says Around the Horn twice");
+      if (!menuSrc.includes('app.opens !== "horn"')) say("the dashboard says Around the Horn twice");
       for (const page of ["Home", "Schedule", "Challenges", "Class", "More page"]) {
-        if (!src.includes('["' + page + '", ')) say("the class menu does not lead to " + page);
+        if (!menuSrc.includes('["' + page + '", ')) say("the class menu does not lead to " + page);
       }
     }
   });
@@ -1794,7 +1800,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const hooks = [...below.matchAll(/\buse(State|Effect|Ref|Callback|Memo|LayoutEffect)\(/g)].map(m => m[0]);
     if (hooks.length) say(`${hooks.length} hook(s) sit below the dashboard's loading return: ${hooks.join(", ")}`);
   }
-  const menu = src.slice(src.indexOf("export function ClassMenu"), src.indexOf("export function ClassMenu") + 6000);
+  const menu = readFileSync(new URL("../src/engine/ClassMenu.jsx", import.meta.url), "utf8");
   if (!menu.includes("onKeys") || !menu.includes(">Keyboard<") && !/Keyboard<kbd/.test(menu)) say("the dashboard's More no longer opens the shortcut sheet");
   if (!/<ClassMenu[\s\S]*?onKeys=/.test(src)) say("the dashboard's More is not handed the shortcut sheet");
 
@@ -1831,7 +1837,8 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // Nothing becomes unreachable: Coming up covers three weeks and the link
   // covers everything past that, plus anything marked Ongoing, which has no
   // date to sort by at all.
-  if (!src.includes('["Challenges", "/challenges"]')) say("nothing on the dashboard reaches the challenges");
+  if (!readFileSync(new URL("../src/engine/ClassMenu.jsx", import.meta.url), "utf8").includes('["Challenges", "/challenges"]')) {
+    say("nothing on the dashboard reaches the challenges"); }
   // The row never scrolls out of sight again.
   if (src.includes(".dash-rail-tabs{display:flex;gap:4px") && !src.includes("flex-wrap:wrap"))
     say("the tab row can still hide a tab off its edge");
@@ -2332,49 +2339,52 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       if (f.location !== "Vari 133") say("the hero has no room: " + f.location);
       if (f.title !== "Same event, different stories") say("the hero shows the wrong title: " + f.title);
       if (f.readings.map(r => r.title).join("|") !== "Katrina captions") say("the hero shows the wrong readings: " + JSON.stringify(f.readings));
-      if (f.games.join("|") !== "Week 1") say("the hero shows the wrong games, or counts Headlines as a game: " + JSON.stringify(f.games));
     }
     if (nextClassFacts(hcfg, hdata, () => null, "", new Date(2026, 8, 21, 8, 30).getTime())?.date !== "Sep 21") say("the hero skipped today while class was still on");
     if (timeText({ start: "11:00", end: "12:05" }) !== "11:00 am to 12:05 pm") say("a sitting across noon reads wrong: " + timeText({ start: "11:00", end: "12:05" }));
     try {
-      const plain = renderToString(<NextClassHero config={hcfg} data={hdata} blockOf={() => null} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
-      if (plain.includes("No in-person meeting")) say("a day that meets shows the no-meeting badge");
-      const off = { ...hdata, dayPlans: Object.fromEntries(Object.entries(hdata.dayPlans).map(([k, p]) => [k, { ...p, noMeeting: true }])) };
-      const none = renderToString(<NextClassHero config={hcfg} data={off} blockOf={() => null} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
-      if (!none.includes("No in-person meeting")) say("a day with no meeting has no badge");
-      if (!plain.includes("border:2px solid var(--ca-accent)")) say("the hero has no outline in the class colour");
-      if (none.includes("dashed")) say("a day with no meeting is back to a dashed outline");
-      if (!/background:var\(--state-warn\)[^"]*"[^>]*>No in-person meeting/.test(none)) say("the no-meeting badge is not orange");
-      if (none.includes("Vari 133")) say("a day with no meeting still names the room");
-      // Directions under the room, the note above the readings only when there
-      // is one, and Drew's Pick on a picked reading.
-      const withAll = { ...hdata, dayPlans: { ...hdata.dayPlans, "Sep 23": { ...hdata.dayPlans["Sep 23"], studentNote: "Bring the Katrina photo." } } };
-      const pickOf = (id) => (id === "r1" ? { id: "r1", pick: true } : null);
-      const hcfgD = { ...hcfg, directionsUrl: "https://maps.example/vari" };
+      // The card Andrew drew on 2026-09-20: the day, the time and the room,
+      // his note, the readings counted, and the full schedule. Everything the
+      // sketch left out is checked for by its absence, because the reason it
+      // came off is that the card was doing the schedule's job.
       const realNow = Date.now;
+      const withNote = { ...hdata, dayPlans: { ...hdata.dayPlans, "Sep 23": { ...hdata.dayPlans["Sep 23"], studentNote: "Bring the Katrina photo." } } };
+      const hcfgD = { ...hcfg, directionsUrl: "https://maps.example/vari" };
       Date.now = () => mon;
-      const full = renderToString(<NextClassHero config={hcfgD} data={{ ...withAll, schedule: [{ ...withAll.schedule[0], items: withAll.schedule[0].items.map(it => ({ ...it, libId: it.id })) }] }} blockOf={pickOf} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
-      const bare = renderToString(<NextClassHero config={hcfgD} data={hdata} blockOf={() => null} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
-      const edit = renderToString(<NextClassHero config={hcfgD} data={withAll} blockOf={() => null} section="" onOpen={noop} seat={{}} instructor update={noop} />).replace(/<!-- -->/g, "");
+      const plain = renderToString(<NextClassHero config={hcfgD} data={hdata} blockOf={() => null} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
+      const full = renderToString(<NextClassHero config={hcfgD} data={withNote} blockOf={() => null} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
+      const edit = renderToString(<NextClassHero config={hcfgD} data={withNote} blockOf={() => null} section="" onOpen={noop} seat={{}} instructor update={noop} />).replace(/<!-- -->/g, "");
+      const off = { ...hdata, dayPlans: Object.fromEntries(Object.entries(hdata.dayPlans).map(([k, pl]) => [k, { ...pl, noMeeting: true }])) };
+      const none = renderToString(<NextClassHero config={hcfgD} data={off} blockOf={() => null} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
+      const many = { ...hdata, schedule: [{ ...hdata.schedule[0], items: ["a", "b", "c"].map(x => ({ id: x, libId: x, type: "reading", title: "Reading " + x.toUpperCase(), url: "https://x.test/" + x, date: "Wed" })) }] };
+      const three = renderToString(<NextClassHero config={hcfg} data={many} blockOf={() => null} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
       Date.now = realNow;
-      if (!full.includes('href="https://maps.example/vari"') || full.indexOf("Directions") < full.indexOf("Vari 133")) say("Directions is not under the time and the room");
-      if (!full.includes("Bring the Katrina photo.") || full.indexOf("Bring the Katrina photo.") > full.indexOf("Readings")) say("the note to students is not above the readings");
-      if (bare.includes("Note to students")) say("a student sees a note box with no note in it");
-      if (!full.includes("Drew&#x27;s Pick") && !full.includes("Drew's Pick")) say("a picked reading has no Drew's Pick mark");
+      // What the card says.
+      ["Wednesday, September 23", "10:30 to 11:35 am · Vari 133", "Same event, different stories"].forEach(t => {
+        if (!plain.includes(t)) say("the card does not say " + JSON.stringify(t)); });
+      if (!plain.includes("1 reading") || plain.includes("1 readings")) say("one reading does not read as one: " + plain.slice(plain.indexOf("reading") - 40, plain.indexOf("reading") + 20));
+      if (!three.includes("3 readings")) say("the card does not count the readings");
+      if (!plain.includes("Full schedule")) say("the card has no way to the full schedule");
+      if (!plain.includes("background:var(--surface-card)") || !plain.includes("border:2px solid var(--ca-accent)")) say("the hero lost its white ground or the class colour around it");
+      // The note, his side and theirs.
+      if (!full.includes("Bring the Katrina photo.") || full.indexOf("Bring the Katrina photo.") > full.indexOf("reading")) say("the note to students is not above the ways on");
+      if (plain.includes("Note to students")) say("a student sees a note box with no note in it");
       if (!edit.includes("Note to students") || !edit.includes("<textarea")) say("the instructor has no box for the note on the front page");
-      // White, like the other cards: the Drew's Pick drawing has a white ground.
-      if (plain.includes("color-mix") || !plain.includes("background:var(--surface-card)")) say("the hero is not white");
+      // And what came off it, which stays off.
+      [["Directions", plain], ["maps.example", plain], ["Week 1", plain], ["Drew&#x27;s Pick", plain], ["No in-person meeting", none]].forEach(([t, where]) => {
+        if (where.includes(t)) say("the card is showing " + JSON.stringify(t) + " again"); });
       // No class sends students anywhere by a Directions link until the link is right.
       [comm118Cfg, comm3Cfg].forEach(c => { if (c.directionsUrl) say(c.code + " has a Directions link again; the last one landed on Varsi Hall"); });
-      // Drew's Picks first, and past three readings the rest fold behind Show all.
-      const many = { ...hdata, schedule: [{ ...hdata.schedule[0], items: ["a", "b", "c", "d", "e"].map((x, i) => ({ id: x, libId: x, type: "reading", title: "Reading " + x.toUpperCase(), url: "https://x.test/" + x, date: "Wed" })) }] };
-      Date.now = () => mon;
-      const folded = nextClassFacts(hcfg, many, (id) => (id === "d" ? { id: "d", pick: true } : null), "");
-      const five = renderToString(<NextClassHero config={hcfg} data={many} blockOf={(id) => (id === "d" ? { id: "d", pick: true } : null)} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
-      Date.now = realNow;
-      if (folded.readings[0].title !== "Reading D") say("Drew's Pick is not the first reading: " + folded.readings.map(r => r.title).join(", "));
-      if (!five.includes("Show all 5 readings")) say("five readings have no Show all");
-      if (five.includes("Reading C") || five.includes("Reading E") || !five.includes("Reading B")) say("the card does not show exactly the pick and the next two before Show all");
+      // The count is the link, and it lands on that day of the schedule.
+      // Andrew, 2026-09-20: "when you click, it goes to the TOP of that day
+      // on the schedule." The anchor the card aims at and the anchor the
+      // schedule writes are the same string, or the link goes nowhere.
+      const appSrc = readFileSync(new URL("../src/engine/ClassApp.jsx", import.meta.url), "utf8");
+      if (!appSrc.includes('go("schedule/" + daySlug(date))')) say("the readings count does not open the schedule at that day");
+      if (dayAnchor("Sep 23") !== "day-" + daySlug("Sep 23")) say("the schedule's anchor and the address spell the day differently: " + dayAnchor("Sep 23"));
+      const sched = renderToString(<ScheduleDetail config={hcfg} role="student" data={hdata} update={noop} blockOf={() => null} focusDay={daySlug("Sep 23")} />);
+      if (!sched.includes('id="' + dayAnchor("Sep 23") + '"')) say("the schedule has no anchor on Sep 23");
+      if ((sched.match(/id="day-/g) || []).length !== 2) say("the schedule anchors something other than the first row of each day: " + JSON.stringify(sched.match(/id="day-[a-z0-9-]*"/g)));
       const pins = renderToString(<PinnedLinks data={{ pins: [{ id: "p", title: "Discussion doc", url: "https://docs.google.com/d" }] }} update={noop} seat={{}} />);
       if (!pins.includes("Discussion doc") || !pins.includes('href="https://docs.google.com/d"')) say("a pinned link does not show");
       if (renderToString(<PinnedLinks data={{}} update={noop} seat={{}} />)) say("a student with nothing pinned sees an empty Pinned box");
@@ -2649,6 +2659,15 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       if (waitingOn(answered, acfg.assignments).find(r => r.id === "waiting")?.messages) say("a message that was answered is still waiting");
       const tile = renderToString(<AssignmentsSummary config={acfg} data={asked} role="instructor" />).replace(/<!-- -->/g, "");
       ["Waiting piece", "1 to grade", "1 message"].forEach(t => { if (!tile.includes(t)) say("the instructor's Challenges card never shows " + JSON.stringify(t)); });
+      // A student's side of the same card, drawn 2026-09-20: the next one by
+      // name, when it is due, and how many more the class holds. The count is
+      // every other challenge in the class rather than the ones still owed.
+      const mine = renderToString(<AssignmentsSummary config={acfg} data={asked} role="student" name={N} />).replace(/<!-- -->/g, "");
+      if (!mine.includes("Next")) say("the student's Challenges card does not label the next one");
+      const more = acfg.assignments.length - 1;
+      if (!mine.includes(more + " more challenge" + (more === 1 ? "" : "s"))) say("the student's Challenges card does not count the rest: " + mine);
+      const one = renderToString(<AssignmentsSummary config={acfg} data={{ ...asked, assignments: [acfg.assignments[0]] }} role="student" name={N} />).replace(/<!-- -->/g, "");
+      if (one.includes("more challenge")) say("a class with one challenge says there are more");
       if (waitingCount(asked, acfg.assignments).messages !== 1) say("the messages waiting are counted wrong for the home page");
       // Deleting a message takes it off every screen and every count, and
       // leaves the words in the class record.
