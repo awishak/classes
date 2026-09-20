@@ -1,7 +1,7 @@
 // The two lenses that make the repository hold more than my own blocks.
 //
 // Seeds: the library I write in markdown, offered as blocks I can teach with.
-// Room: the posts, questions, headlines and polls the students made, which is
+// Room: the posts and questions the students made, which is
 // the material that actually accumulates across a quarter and has never been
 // searchable anywhere.
 //
@@ -155,7 +155,7 @@ export function Seeds({ seeds, fresh, onBring, onBringAll }) {
 }
 
 export function Room({ items, counts, kind, setKind, busy, kept, onKeep }) {
-  if (busy) return <p className="repo-empty">Reading the boards, the questions, the headlines and the polls…</p>;
+  if (busy) return <p className="repo-empty">Reading the boards and the questions…</p>;
   if (!items.length) {
     return (
       <p className="repo-empty">
@@ -167,9 +167,9 @@ export function Room({ items, counts, kind, setKind, busy, kept, onKeep }) {
   return (
     <div className="repo-lens">
       <p className="repo-lens-say">
-        What the students made, across every class at once: posts on a board, questions asked during a session,
-        headlines they brought in, and how a poll went. The search box above reads all of it. Keeping a row puts a
-        block on that class's shelf, so a question asked last year can be taught with next year.
+        What the students made, across every class at once: posts on a board and questions they asked.
+        The search box above reads all of it. Keeping a row puts a block on that class's shelf, so a
+        question asked last year can be taught with next year.
       </p>
       <div className="repo-row">
         {ROOM_KINDS.filter(k => counts[k.id]).map(k => (
@@ -197,7 +197,6 @@ function RoomItem({ item, kept, onKeep }) {
         <span className="repo-kind">{k.label}</span>
         <span className="repo-owner" style={{ color: item.cls.accent }}>{item.cls.code}</span>
         <span className="repo-copy-n">{stampOf(item.at)}</span>
-        {item.kind === "poll" && !item.over ? <span className="repo-flagged">On the floor now</span> : null}
         {kept
           ? <span className="repo-verdict repo-verdict-good" style={{ marginLeft: "auto" }}>Added</span>
           : <button className="repo-focus repo-chip" style={{ marginLeft: "auto" }} onClick={onKeep}>Add item</button>}
@@ -229,44 +228,7 @@ function RoomItem({ item, kept, onKeep }) {
         </div>
       ) : null}
 
-      {item.kind === "headline" ? (
-        <div className="repo-row">
-          {item.who ? <span className="repo-verdict">Brought in by {item.who}</span> : null}
-          {item.url ? (
-            <a className="repo-focus repo-link" href={item.url} target="_blank" rel="noopener noreferrer">
-              {hostOf(item.url)} ↗
-            </a>
-          ) : null}
-          {(item.reads || []).map(r => <span key={r} className="repo-alike-tag">{r}</span>)}
-        </div>
-      ) : null}
-
-      {item.kind === "poll" ? <PollRow item={item} /> : null}
     </section>
   );
 }
 
-// Both rounds side by side, because the second vote is the whole point of a
-// peer-instruction poll and a single set of counts hides the movement.
-function PollRow({ item }) {
-  if (!item.options?.length) {
-    return (
-      <ul className="repo-list">
-        {item.said.map((s, i) => <li key={i} className="repo-post"><b>{s.who}</b> {s.text}</li>)}
-        {!item.said.length ? <li className="repo-unused">Nobody wrote an answer.</li> : null}
-      </ul>
-    );
-  }
-  return (
-    <ul className="repo-list">
-      {item.options.map((o, i) => (
-        <li key={i} className="repo-poll-row">
-          <span className="repo-copy-words">{o}</span>
-          {item.correct === i ? <span className="repo-verdict repo-verdict-good">Correct</span> : null}
-          <span className="repo-copy-n">{item.r1.counts[i]} first</span>
-          <span className="repo-copy-n">{item.r2.counts[i]} after the argument</span>
-        </li>
-      ))}
-    </ul>
-  );
-}

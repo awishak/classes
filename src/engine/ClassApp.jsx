@@ -17,7 +17,6 @@ import { SHARED_KEY, blockById, registerTypes } from "./blocks.js";
 import { readAdded, readLabels } from "./types.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { useLive } from "./live.js";
-import { usePoll } from "./poll.js";
 import { YouDetail, MessagesDetail, MessagesSummary } from "./YouCard.jsx";
 import { ScheduleSummary, ScheduleDetail } from "./ScheduleCard.jsx";
 import { RosterSummary, RosterDetail } from "./RosterCard.jsx";
@@ -235,10 +234,10 @@ const Panel = ({ title, children }) => (
 // none of which is the thing the room is looking at this second. So the thing
 // on the screen comes to the top and brings its own door: a board prompt asks
 // to be answered, a reading asks to be opened, an assignment asks to be read,
-// a poll asks for a vote. The prompt itself is the headline, because a box
+// a discussion asks for an answer. The prompt itself is the headline, because a box
 // saying "a discussion board is running" is a box that makes you go find the
 // question.
-export function onScreenNow(config, live, poll) {
+export function onScreenNow(config, live) {
   const c = live?.cast;
   // The ask page is gone: Andrew, 2026-09-20, "remove the whole ask feature
   // for now. it's confusing." Anything that used to send a phone there now
@@ -246,21 +245,12 @@ export function onScreenNow(config, live, poll) {
   // which has one of its own.
   const room = config.path + "/today";
 
-  if (poll && (poll.phase === "vote1" || poll.phase === "vote2")) {
-    return { kind: "Poll", title: poll.question || "A poll is open" };
-  }
   if (!c) return null;
 
   if (c.type === "board") {
     return { kind: c.boardLabel || "Discussion",
       title: c.idea || c.title || "A discussion is open",
       cta: "Add to the discussion", href: config.path + "/board" };
-  }
-  if (c.type === "headlines") {
-    return { kind: "Headlines", title: "Bring a headline to the room" };
-  }
-  if (c.type === "poll") {
-    return { kind: "Poll", title: c.label || "A poll is open" };
   }
   if (c.type === "question") {
     return { kind: "Question", title: c.title || c.label || "A question is up" };
@@ -283,8 +273,8 @@ export function onScreenNow(config, live, poll) {
   return null;
 }
 
-export function OnScreenNow({ config, live, poll }) {
-  const it = onScreenNow(config, live, poll);
+export function OnScreenNow({ config, live }) {
+  const it = onScreenNow(config, live);
   if (!it) return null;
   const accent = config.accent;
   return (
@@ -302,9 +292,8 @@ export function OnScreenNow({ config, live, poll }) {
       <h2 style={{ margin: 0, fontSize: "clamp(20px,3.2vw,27px)", fontWeight: 600, letterSpacing: "-.025em",
         lineHeight: 1.2, color: TEXT_PRIMARY, wordBreak: "break-word" }}>{it.title}</h2>
       {it.sub ? <div style={{ fontSize: 14, color: TEXT_MUTED }}>{it.sub}</div> : null}
-      {/* Some of what goes up has nowhere for a phone to go: a poll and
-          Headlines are answered in the room and the ask page they used is
-          gone. The banner still says what is up. */}
+      {/* Some of what goes up has nowhere for a phone to go: a question is
+          answered out loud in the room. The banner still says what is up. */}
       {it.href ? <a className="ca-focus" href={it.href}
         {...(it.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
         style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 8,
@@ -316,12 +305,11 @@ export function OnScreenNow({ config, live, poll }) {
   );
 }
 
-// "Nothing live right now" was a lie whenever a poll was open. This reads the
-// same cast bus the room screen reads, so the card and the projector agree.
-function liveNow(config, live, poll, data) {
+// What a student can join right now. It reads the same cast bus the room
+// screen reads, so the card and the projector agree.
+function liveNow(config, live, data) {
   const out = [];
-  // A game that is open is the most joinable thing there is, so the game goes
-  // at the top rather than under the poll.
+  // A game that is open is the most joinable thing there is, so it goes first.
   const trivia = Object.values(data?.triviaGames || {}).find(g => g.phase === "live");
   if (trivia) out.push({ id: "trivia", title: "Team Trivia is running",
     what: "Answer with your team.", href: config.path + "/game" });
@@ -486,7 +474,6 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // dashboard do the same; every reader goes through typeOf.
   registerTypes({ added: readAdded(shared), labels: readLabels(shared) });
   const [live] = useLive(config.storageKey);
-  const { poll } = usePoll(config.storageKey);
   const isDesktop = useIsDesktop();
   const a = config.accent;
 
@@ -577,7 +564,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // unless he has said to save them.
   const write = preview && !saving ? () => {} : update;
   const ctx = { data: data || {}, update: write, asStudent: preview || asStudent,
-    setAsStudent: preview ? setPreview : null, live, poll,
+    setAsStudent: preview ? setPreview : null, live,
     blockOf: (id) => (id ? blockById(data, shared, id) : null), day, setDay };
 
   // Push updated seed content (schedule + library) to the store when the seed
@@ -870,8 +857,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const roomLive = live?.cast && live.at && (Date.now() - live.at) < 3 * 60 * 60 * 1000;
   // The thing on the projector, with its own door, above everything else. The
   // old banner said class was on and made you go looking; this says what is on.
-  const onNow = roomLive ? onScreenNow(config, live, poll) : null;
-  const LiveBanner = onNow ? <OnScreenNow config={config} live={live} poll={poll} /> : roomLive ? (
+  const onNow = roomLive ? onScreenNow(config, live) : null;
+  const LiveBanner = onNow ? <OnScreenNow config={config} live={live} /> : roomLive ? (
     <a className="ca-focus" href={config.path + "/today"}
       style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none",
         background: "var(--surface-card)", border: "1px solid " + LIVE, borderRadius: "var(--card-radius)", padding: "12px 16px", minHeight: TAP, marginBottom: 14 }}>
@@ -890,7 +877,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const tickerLines = [
     config.code + " " + (config.name || ""),
     ...actions.map(a => a.text),
-    ...liveNow(config, live, poll, data).map(i => i.title),
+    ...liveNow(config, live, data).map(i => i.title),
   ].filter(Boolean);
 
   // A tab is either a card on this page or a door to another surface. Both

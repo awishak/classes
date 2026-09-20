@@ -8,10 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLive } from "./live.js";
 import { useClassData } from "./store.js";
 import { currentDay } from "./days.js";
-import QRCode from "./QRCode.jsx";
 import RoomSlide, { ROOM_FONTS_HREF } from "./RoomSlide.jsx";
-import { usePoll, tally, written, isFreeForm } from "./poll.js";
-import { useHeadlines, liveSession, activeItem, pickTally } from "./headlines.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import PickMark from "./Pick.jsx";
 import * as TOKENS from "./tokens.js";
@@ -118,7 +115,7 @@ export function Content({ cast, config, plan, data }) {
             ))}
           </div>
         ) : null}
-        {cast.join === "board" ? <JoinBlock base={origin + config.path} compact /> : null}
+        {cast.join === "board" ? <JoinBlock base={origin + config.path} /> : null}
       </div>
     );
   }
@@ -135,13 +132,7 @@ export function Content({ cast, config, plan, data }) {
     );
   }
 
-  if (cast.type === "poll") {
-    return <PollScreen config={config} />;
-  }
 
-  if (cast.type === "headlines") {
-    return <HeadlinesScreen config={config} data={data} />;
-  }
 
   if (cast.mode === "read" && (cast.openUrl || cast.url)) {
     return <ReadScreen url={cast.openUrl || cast.url} claim={cast.title} kind={cast.kind} pick={cast.pick} />;
@@ -224,162 +215,6 @@ export function Content({ cast, config, plan, data }) {
       </div>
       {cast.body ? (
         <div style={{ color: DIM, fontSize: "clamp(15px,1.8vw,26px)", maxWidth: "42ch", lineHeight: 1.45 }}>{cast.body}</div>
-      ) : null}
-    </div>
-  );
-}
-
-const LETTERS = ["A", "B", "C", "D", "E"];
-
-// The poll reads its own live state rather than the cast payload, so the room
-// screen updates as votes land instead of only when I click something.
-function PollScreen({ config }) {
-  const { poll } = usePoll(config.storageKey);
-  if (!poll || poll.phase === "idle") return null;
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const voting = poll.phase === "vote1" || poll.phase === "vote2";
-  const done = poll.phase === "done";
-  const shown = done ? poll.r2 : (poll.phase === "discuss" ? poll.r1 : null);
-  const inCount = Object.keys(poll[poll.phase === "vote2" ? "r2" : "r1"] || {}).length;
-  const t = shown ? tally(shown, poll.options.length) : null;
-  const base = done ? tally(poll.r1, poll.options.length) : null;
-
-  return (
-    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
-      padding: "clamp(28px,5vw,80px)", color: INK, fontFamily: F, justifyContent: "center", gap: "2.6vh" }}>
-      <div style={eyebrow}>{voting ? (poll.phase === "vote2" ? "Second vote" : "Vote") : done ? "What moved" : "Talk it out"}</div>
-      <div style={{ fontSize: "clamp(24px,3.4vw,50px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.18, maxWidth: "26ch" }}>
-        {poll.question}
-      </div>
-
-      {isFreeForm(poll) ? (
-        // No options to draw bars for. While the floor is open the room sees
-        // the count and nothing else, because seeing the answers is how you
-        // stop writing your own. Once it closes, they all go up.
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.2vh", marginTop: "1vh" }}>
-          {voting ? (
-            <div style={{ fontFamily: MONO, fontSize: "clamp(28px,5vw,72px)", color: DIM }}>{inCount} in</div>
-          ) : (
-            written({ ...poll.r1, ...poll.r2 }).slice(0, 8).map((r, i) => (
-              <div key={i} style={{ fontSize: "clamp(16px,1.9vw,30px)", lineHeight: 1.35, color: INK }}>
-                {r.text}
-                <span style={{ color: DIM, fontSize: "0.7em" }}>{"  \u2014 " + r.who}</span>
-              </div>
-            ))
-          )}
-        </div>
-      ) : (
-      <div style={{ display: "flex", flexDirection: "column", gap: "1.5vh", marginTop: "1vh" }}>
-        {poll.options.map((o, i) => {
-          const pct = t && t.total ? Math.round((t.counts[i] / t.total) * 100) : null;
-          const wasPct = done && base && base.total ? Math.round((base.counts[i] / base.total) * 100) : null;
-          const right = poll.correct === i && !voting;
-          return (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: "clamp(12px,1.4vw,22px)" }}>
-              <span style={{ fontFamily: MONO, fontSize: "clamp(15px,1.8vw,26px)", fontWeight: 600, width: "1.4em",
-                color: right ? "#34d399" : "#e11d48" }}>{LETTERS[i]}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "clamp(16px,2vw,30px)", lineHeight: 1.3 }}>{o}</div>
-                {pct != null ? (
-                  <div style={{ position: "relative", height: "clamp(7px,.8vw,12px)", borderRadius: 6, background: "#221e1c", marginTop: "0.7vh", overflow: "hidden" }}>
-                    {wasPct != null ? <i style={{ position: "absolute", inset: 0, width: wasPct + "%", background: "#3a332f" }} /> : null}
-                    <i style={{ position: "absolute", inset: 0, width: pct + "%", background: right ? "#34d399" : "#e11d48" }} />
-                  </div>
-                ) : null}
-              </div>
-              {pct != null ? (
-                <span style={{ fontFamily: MONO, fontSize: "clamp(14px,1.6vw,24px)", color: DIM, width: "4.5em", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                  {wasPct != null ? wasPct + "\u2192" : ""}{pct}%
-                </span>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-      )}
-
-      {voting ? (
-        <div style={{ display: "flex", gap: "clamp(20px,3vw,44px)", alignItems: "center", marginTop: "2vh", flexWrap: "wrap" }}>
-          <div style={{ fontSize: "clamp(15px,1.7vw,24px)", fontWeight: 500 }}>Vote now</div>
-          <div style={{ marginLeft: "auto", fontFamily: MONO, fontSize: "clamp(22px,3vw,44px)", color: "#e11d48", fontVariantNumeric: "tabular-nums" }}>
-            {inCount} in
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-// Headlines reads its own state so the bars fill as the room locks in.
-function HeadlinesScreen({ config, data }) {
-  const { hl } = useHeadlines(config.storageKey, { categories: data?.headlineCategories, concepts: config.concepts });
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const session = hl ? liveSession(hl) : null;
-  const item = hl ? activeItem(hl, session) : null;
-  const phase = session?.phase || "surface";
-
-  if (!hl || !session || !item) {
-    return (
-      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center",
-        justifyContent: "center", textAlign: "center", gap: "2.4vh", padding: "clamp(28px,5vw,80px)", color: INK, fontFamily: F }}>
-        <div style={{ ...eyebrow, color: "#e11d48" }}>Right now</div>
-        <div style={{ fontSize: "clamp(38px,6.4vw,104px)", fontWeight: 700, letterSpacing: "-.04em", lineHeight: 1 }}>Headlines</div>
-        <div style={{ color: DIM, fontSize: "clamp(15px,1.9vw,28px)" }}>Bring me a headline.</div>
-      </div>
-    );
-  }
-
-  const Bars = ({ options, votes, real, nameOf }) => {
-    const { counts, voters } = pickTally(votes);
-    const ranked = [...options].filter(o => counts[o]).sort((a, b) => counts[b] - counts[a]).slice(0, 6);
-    if (!voters) return null;
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "1.1vh" }}>
-        {ranked.map(o => {
-          const pct = Math.round((counts[o] / voters) * 100);
-          const isReal = (real || []).includes(o);
-          return (
-            <div key={o} style={{ display: "flex", alignItems: "center", gap: "clamp(10px,1.2vw,20px)" }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "clamp(15px,1.7vw,26px)", fontWeight: isReal ? 700 : 400, color: isReal ? "#34d399" : INK }}>
-                  {nameOf ? nameOf(o) : o}{isReal ? " ✓" : ""}
-                </div>
-                <div style={{ height: "clamp(6px,.7vw,10px)", background: "#221e1c", borderRadius: 5, marginTop: "0.5vh", overflow: "hidden" }}>
-                  <i style={{ display: "block", height: "100%", width: pct + "%", background: isReal ? "#34d399" : "#e11d48" }} />
-                </div>
-              </div>
-              <span style={{ fontFamily: MONO, fontSize: "clamp(13px,1.4vw,20px)", color: DIM, width: "2.4em", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{counts[o]}</span>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const concepts = hl.concepts || [];
-  const conceptName = (id) => (concepts.find(c => c.id === id) || {}).name || id;
-  const inCount = Object.keys((phase === "surface" ? session.votes : session.conceptVotes) || {}).length;
-
-  return (
-    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
-      padding: "clamp(28px,5vw,80px)", color: INK, fontFamily: F, justifyContent: "center", gap: "2.4vh" }}>
-      <div style={{ ...eyebrow, color: "#e11d48" }}>
-        {phase === "surface" ? "What does the headline say, on its face?" : phase === "concept" ? "Now, what is going on underneath?" : "Both reads"}
-      </div>
-      <div style={{ fontSize: "clamp(24px,3.4vw,52px)", fontWeight: 600, letterSpacing: "-.03em", lineHeight: 1.2, maxWidth: "24ch" }}>
-        {item.text}
-      </div>
-      {item.submittedBy ? <div style={{ ...eyebrow, letterSpacing: ".08em" }}>{item.submittedBy}</div> : null}
-
-      {phase === "surface" ? <Bars options={hl.categories || []} votes={session.votes} /> : null}
-      {phase !== "surface" ? <Bars options={hl.categories || []} votes={session.votes} real={session.realCategories} /> : null}
-      {phase === "concept" ? <Bars options={concepts.map(c => c.id)} votes={session.conceptVotes} nameOf={conceptName} /> : null}
-      {phase === "done" ? <Bars options={concepts.map(c => c.id)} votes={session.conceptVotes} real={session.realConcepts} nameOf={conceptName} /> : null}
-
-      {phase !== "done" ? (
-        <div style={{ display: "flex", gap: "clamp(18px,2.6vw,40px)", alignItems: "center", marginTop: "1vh", flexWrap: "wrap" }}>
-          <div style={{ marginLeft: "auto", fontFamily: MONO, fontSize: "clamp(20px,2.6vw,38px)", color: "#e11d48", fontVariantNumeric: "tabular-nums" }}>{inCount} in</div>
-        </div>
       ) : null}
     </div>
   );
@@ -548,19 +383,15 @@ function CardScreen({ url, claim, kind, pick, article, note }) {
 
 const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return "the page"; } };
 
-// Where to answer a discussion prompt. A board is the one thing on the wall
-// that still asks for a phone, so it keeps its code: a student reading a
-// prompt off the screen needs to know the answers go somewhere.
-function JoinBlock({ base, compact }) {
-  const px = compact ? 96 : 132;
+// Where to answer a discussion prompt. Andrew, 2026-09-20: "I don't want the
+// QR code or the ask page on the slides at all." So the address, said plainly
+// and big enough to read from the back, and no code to scan.
+function JoinBlock({ base }) {
   return (
-    <div style={{ display: "flex", gap: "clamp(22px,3.4vw,52px)", marginTop: "2.5vh", alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-      <QRCode value={base + "/board"} size={px} />
-      <div style={{ textAlign: "left" }}>
-        <div style={{ fontSize: "clamp(15px,1.6vw,22px)", fontWeight: 500 }}>Answer on your phone</div>
-        <div style={{ ...eyebrow, marginTop: 4, letterSpacing: ".06em" }}>{base.replace(/^https?:\/\//, "")}/board</div>
-        <div style={{ color: DIM, fontSize: "clamp(12px,1.1vw,15px)", marginTop: 6 }}>Everyone reads what everyone writes.</div>
-      </div>
+    <div style={{ marginTop: "2.5vh", textAlign: "center" }}>
+      <div style={{ fontSize: "clamp(15px,1.6vw,22px)", fontWeight: 500 }}>Answer on your phone</div>
+      <div style={{ ...eyebrow, marginTop: 4, letterSpacing: ".06em" }}>{base.replace(/^https?:\/\//, "")}/board</div>
+      <div style={{ color: DIM, fontSize: "clamp(12px,1.1vw,15px)", marginTop: 6 }}>Everyone reads what everyone writes.</div>
     </div>
   );
 }

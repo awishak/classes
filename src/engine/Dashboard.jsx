@@ -18,11 +18,7 @@ import { useLive, ANIMS, BIG_ANIMS } from "./live.js";
 import { mediaSteps, liveStep } from "./media.js";
 import { questionOf } from "./qbank.js";
 import { useQuestions } from "./questions.js";
-import { usePoll } from "./poll.js";
-import PollPanel, { oneSentence } from "./PollPanel.jsx";
 import { openHorn } from "./HornApp.jsx";
-import { useHeadlines } from "./headlines.js";
-import HeadlinesBoard from "./HeadlinesBoard.jsx";
 import { allDays, currentDay, parseDay, dayTitles, daySlug as slugOfDay, dayFromSlug } from "./days.js";
 import { ClassMenu, DropMenu, menuRow } from "./ClassMenu.jsx";
 // The class's sittings. Aliased, because on this screen "section" already
@@ -564,6 +560,17 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 }
 `;
 
+// Enforced everywhere a headline is written: one sentence, nothing after it.
+// It lived in PollPanel.jsx, which went when the poll did on 2026-09-20; the
+// rule is about what goes up on the screen rather than about polls.
+export function oneSentence(text) {
+  const t = (text || "").trim().replace(/\s+/g, " ");
+  if (!t) return "";
+  const m = t.match(/^[^.!?]*[.!?]/);
+  const first = (m ? m[0] : t).trim();
+  return /[.!?]$/.test(first) ? first : first + ".";
+}
+
 // One badge, used everywhere something is on the room screen. The word carries
 // the meaning; the colour only reinforces it.
 const LiveTag = () => <span className="dash-live"><i />LIVE</span>;
@@ -1003,7 +1010,6 @@ export function Castable({ kind, kindColor, title, url, claim, live, accent, onC
 export const GAME_FEATURES = new Set(["Game", "Team Trivia"]);
 
 export const FEATURES = {
-  "Headlines": "Students bring real headlines. The room votes them into categories.",
   "Game": "The weekly game. Six On Topic, four Sports World.",
   "Fishbowl": "Rotating fishbowl on the assigned readings.",
   "This or That": "Fast forced choice.",
@@ -3622,9 +3628,10 @@ function Picker({ title, opts, value, onPick, accent }) {
 // Everything else is one press away: Coming up has a link through to the page
 // where assignments are actually written and graded.
 // Nothing left. The Materials column is gone; its two tabs are the drawer in
-// the rail and On the week beside Questions and Poll.
+// the rail and On the week beside Questions.
 const MATERIAL = [];
-const LIVE_RAIL = ["readings", "questions", "poll"];
+// Andrew, 2026-09-20: "for now, let's cut the poll and the headlines."
+const LIVE_RAIL = ["readings", "questions"];
 // Starting widths. Flow takes whatever is left, so it is the one column that
 // never needs a number. Both ends are draggable and the drag is remembered.
 const COL = { material: 300, live: 400 };
@@ -3670,7 +3677,6 @@ export default function Dashboard({ config, daySlug = "" }) {
   const [live, cast, push] = useLive(config.storageKey);
   const q = useQuestions(config.storageKey);
   const DB = useBoards(config.storageKey);
-  const P = usePoll(config.storageKey);
   const [hereOpen, setHereOpen] = useState(false);
   const [todoOpen, setTodoOpen] = useState(false);
   // Which of the three that came off the rail is open, by panel id.
@@ -3692,7 +3698,6 @@ export default function Dashboard({ config, daySlug = "" }) {
   // Dragging a reading into the flow: does it stay assigned, or move?
   // Two facts about one reading, so which one the drag changes is mine to say.
   const [dragKeeps, setDragKeeps] = useState(true);
-  const [hlOpen, setHlOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
   // What has been up today. Taking something down and wanting it back is the
@@ -3704,7 +3709,6 @@ export default function Dashboard({ config, daySlug = "" }) {
   // The row most recently put up from the day, for Next. See upNextRow.
   const [lastCast, setLastCast] = useState(null);
   const pickedSync = picked;
-  const HL = useHeadlines(config.storageKey, { categories: data?.headlineCategories, concepts: config.concepts });
 
   const weeks = data?.schedule || config.scheduleWeeks || [];
   const days = allDays(weeks);
@@ -4546,7 +4550,6 @@ export default function Dashboard({ config, daySlug = "" }) {
 
   const runFeature = (name) => {
     if (name === "Around the Horn") { openHorn(); markEngaged(); return; }
-    if (name === "Headlines") { setHlOpen(true); castNow({ type: "headlines", label: "Headlines" }); markEngaged(); return; }
     // The game rows used to put their own name on the room screen and stop
     // there, because the thing they named lived in a forked class file this
     // screen could not reach. The game is in the engine now, so running one of
@@ -4816,9 +4819,7 @@ export default function Dashboard({ config, daySlug = "" }) {
     run: () => castNow({ type: "reveal", stamp: "Challenge", title: a.title, due: "Due " + a.due, big: true, label: a.title }) }));
   (q.items || []).filter(x => x.state === "open").forEach(x => cmdTargets.push({ key: "q:" + x.id, group: "Question", title: x.text,
     run: () => { castNow({ type: "question", tag: "From the room", title: x.text, cite: x.anon ? "Anonymous" : (x.who || ""), label: "Question · " + (x.anon ? "anonymous" : x.who) }); markEngaged(); } }));
-  cmdTargets.push({ key: "c:poll", group: "Screen", title: "Live poll", run: () => castNow({ type: "poll", label: "Live poll" }) });
   cmdTargets.push({ key: "c:idle", group: "Screen", title: "Idle screen", run: () => cast(null) });
-  cmdTargets.push({ key: "o:hl", group: "Open", title: "Headlines board", run: () => setHlOpen(true) });
   cmdTargets.push({ key: "o:notes", group: "Open", title: "My notes for this day", run: () => setNotesOpen(true) });
   cmdTargets.push({ key: "o:repo", group: "Open", title: "The repository", run: () => { window.location.href = "/repo"; } });
   cmdTargets.push({ key: "o:col", group: "Open", title: "Colour and type", run: () => setColorsOpen(true) });
@@ -4869,11 +4870,6 @@ export default function Dashboard({ config, daySlug = "" }) {
     now: () => <NowPanel config={config} plan={plan} seq={seq} engagedAt={live?.engagedAt}
       onEngaged={markEngaged}
       onSlot={(x) => writeDay(d => ({ ...d, currentSlot: x, slotAt: x ? { ...(d.slotAt || {}), [x]: Date.now() } : (d.slotAt || {}) }))} />,
-    poll: () => <PollPanel poll={P.poll} start={(qq, oo) => { P.start(qq, oo); markEngaged(); }}
-      setPhase={(ph) => { P.setPhase(ph); if (ph === "vote2") markEngaged(); }}
-      setCorrect={P.setCorrect} clear={() => { P.clear(); if (live?.cast?.type === "poll") cast(null); }}
-      roster={students.length} accent={config.accent}
-      onCast={() => cast({ type: "poll", label: "Live poll" })} />,
     flow: () => <FlowPanel plan={plan} seq={seq} seeds={seeds} castNow={castNow} dismiss={dismiss}
       liveLabel={liveLabel} liveCast={live?.cast} accent={config.accent} onClaim={saveFlowClaim}
       features={features} onFeature={runFeature} planHref={config.path + "/dayplan"} classHref={config.path}
@@ -4973,7 +4969,7 @@ export default function Dashboard({ config, daySlug = "" }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} path={config.path} />,
   };
-  const TITLES = { todo: "To-do", poll: "Poll", flow: "Day Plan", boards: "Enter/Exit", find: "Find", readings: "On the week", ideas: "Activities & seeds", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Challenges" };
+  const TITLES = { todo: "To-do", flow: "Day Plan", boards: "Enter/Exit", find: "Find", readings: "On the week", ideas: "Activities & seeds", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Challenges" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   const outCount = Object.values(marks).filter(v => v === "out").length;
   // How far through the day I am, counted off the flow rather than the clock.
@@ -4995,13 +4991,12 @@ export default function Dashboard({ config, daySlug = "" }) {
   const TAB_HUE = {
     find: "", readings: hueOfKind("readings"), ideas: hueOfKind("ideas"), scratch: hueOfKind("notes"),
     assignments: hueOfKind("assignments"), questions: hueOfKind("questions"),
-    poll: hueOfKind("polls"), boards: hueOfKind("boards"), todo: "",
+    boards: hueOfKind("boards"), todo: "",
   };
   const RAIL_N = {
     questions: openQ,
     readings: readings.length,
     assignments: assignments.length,
-    poll: P.poll?.phase && P.poll.phase !== "idle" ? "\u25cf" : 0,
     ideas: 0, todo: 0, scratch: 0, boards: 0, find: 0,
   };
   // The order the flow is drawn in: the sequence's slots, then the sections I
@@ -5169,7 +5164,7 @@ export default function Dashboard({ config, daySlug = "" }) {
 
         {/* No tabs. The rail is the screen and the drawer, which is what it is
             for; three tabs under them were three more panels competing with
-            the day. On the week, Questions and Poll open from More, because
+            the day. On the week and Questions open from More, because
             each is something you go and look at rather than something that
             should be sitting on the screen all lesson. */}
         <Rail side="Live" className="dash-room" tabs={[]}
@@ -5195,12 +5190,6 @@ export default function Dashboard({ config, daySlug = "" }) {
 
       {cmdOpen ? <CommandBar targets={cmdTargets} accent={config.accent} onClose={() => setCmdOpen(false)} /> : null}
       {keysOpen ? <ShortcutSheet onClose={() => setKeysOpen(false)} /> : null}
-
-      {hlOpen ? (
-        <HeadlinesBoard hl={HL.hl} api={HL} accent={config.accent}
-          onCast={() => { cast({ type: "headlines", label: "Headlines" }); markEngaged(); }}
-          onClose={() => setHlOpen(false)} />
-      ) : null}
 
       {hereOpen ? (
         <Sheet title="Who is here" sub={config.code + (roomSection ? " \u00b7 " + roomSection : "") + " \u00b7 " + day} onClose={() => setHereOpen(false)}>

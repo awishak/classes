@@ -66,7 +66,6 @@ import { readFilters, filterQuery, isStep, viewWords, readViews, saveView, dropV
 import { tagPatches, typePatches, sharePatches, wouldShare, tagsAcross } from "../src/engine/bulk.js";
 import { parseSeeds, seedPatch, newSeeds } from "../src/engine/seeds.js";
 import { roomItems, roomCounts, blockFromRoom, stampOf } from "../src/engine/room.js";
-import { archived, pastPolls, worthKeeping } from "../src/engine/poll.js";
 import { SEEDS } from "../src/config/seed-library.js";
 import RepoIdeas, { Idea } from "../src/engine/RepoIdeas.jsx";
 import { Duplicates, LooseEnds, Tags, Links } from "../src/engine/RepoTidy.jsx";
@@ -279,13 +278,11 @@ cases.push(["Command bar", <CommandBar targets={[{ key: "k", group: "g", title: 
     ["an article", { type: "reading", title: "A reading", openUrl: "https://example.com", tag: "Reading" }, null],
     ["an assignment", { type: "reveal", title: "Media Diary", due: "Due Oct 9" }, null],
     ["a game", { type: "feature", title: "Team Trivia", body: "Teams and buzzers." }, null],
-    ["headlines", { type: "headlines" }, null],
-    ["a poll", null, { phase: "vote1", question: "Which one?" }],
     ["a quote", { type: "quote", tag: "The hook", title: "Rights fees are up." }, null],
   ];
-  for (const [what, cast, poll] of NOW) {
+  for (const [what, cast] of NOW) {
     cases.push(["On the screen now, " + what,
-      <OnScreenNow config={c0} live={cast ? { cast, at: 1 } : null} poll={poll} />, "On the screen now"]);
+      <OnScreenNow config={c0} live={cast ? { cast, at: 1 } : null} />, "On the screen now"]);
   }
 }
 // The one mark, at the two sizes it is drawn at: small on a row, and big
@@ -857,50 +854,30 @@ cases.push(["Repository", <RepoPage />]);
     "All seeds added"]);
 
   // ─── what the room made ───
+  //
+  // Two stores now. Headlines and polls were two more kinds until 2026-09-20,
+  // when both features came out of the app; what a class already collected is
+  // still in its store and unread.
   const roomRaw = {
     boards: { boards: { b1: { id: "b1", prompt: "What would you read more about?", at: 1756600000000,
       posts: [{ id: "pp1", who: "Sam", text: "Sports betting and the law", at: 1756600100000 }] } } },
-    questions: { items: [{ id: "q1", text: "How does framing work in a headline?", who: "Alex", at: 1756600200000, state: "answered" }] },
-    headlines: { items: [{ id: "h1", text: "Rights fees are up again", url: "https://example.com/rights",
-      submittedBy: "Jo", ts: 1756600300000, realCategories: ["Money"], realConcepts: ["Framing"] }] },
-    poll: { id: "p", question: "Which one moved you?", options: ["The first", "The second"],
-      r1: { Sam: 0, Alex: 1 }, r2: { Sam: 1, Alex: 1 }, correct: 1, at: 1756600400000 },
+    questions: { items: [{ id: "q1", text: "How does framing work in a headline?", who: "Alex", at: 1756600200000, state: "published" }] },
   };
   const made = roomItems(cfg0, roomRaw);
-  if (made.length !== 4) { console.error("  FAIL  room: read " + made.length + " things out of four"); failedEarly++; }
-
-  // ─── a term of polls, rather than the last one ───
-  // A poll is kept when the next question starts, so the archive has to hold
-  // the votes and the room lens has to read the archive alongside the live one.
-  if (worthKeeping({ question: "Asked and never answered", r1: {}, r2: {} })) {
-    console.error("  FAIL  poll: a question nobody answered was kept as history"); failedEarly++; }
-  const kept1 = archived(roomRaw.poll);
-  if (kept1.length !== 1 || kept1[0].question !== "Which one moved you?") {
-    console.error("  FAIL  poll: the finished poll was not archived"); failedEarly++; }
-  if (kept1[0].past) { console.error("  FAIL  poll: the archive carried itself into the archive"); failedEarly++; }
-  if (kept1[0].r2.Sam !== 1) { console.error("  FAIL  poll: the second round did not survive archiving"); failedEarly++; }
-  const twicePolled = archived({ ...roomRaw.poll, past: kept1 });
-  if (twicePolled.length !== 1) { console.error("  FAIL  poll: the same poll was kept twice"); failedEarly++; }
-  const withHistory = { ...roomRaw, poll: { ...roomRaw.poll, id: "p2", question: "And now?",
-    past: [{ ...roomRaw.poll, endedAt: 1756500000000 }] } };
-  const both = roomItems(cfg0, withHistory).filter(i => i.kind === "poll");
-  if (both.length !== 2) { console.error("  FAIL  room: read " + both.length + " polls where two were kept"); failedEarly++; }
-  if (both.some(i => !i.title)) { console.error("  FAIL  room: an archived poll came back with no question"); failedEarly++; }
-  if (pastPolls({ past: [{ id: "a", at: 1 }, { id: "b", at: 2 }] })[0].id !== "b") {
-    console.error("  FAIL  poll: the archive is not newest first"); failedEarly++; }
+  if (made.length !== 2) { console.error("  FAIL  room: read " + made.length + " things out of two"); failedEarly++; }
   const counts2 = roomCounts(made);
-  if (counts2.board !== 1 || counts2.question !== 1 || counts2.headline !== 1 || counts2.poll !== 1) {
+  if (counts2.board !== 1 || counts2.question !== 1) {
     console.error("  FAIL  room: the counts by kind came out wrong"); failedEarly++; }
+  if (counts2.headline || counts2.poll) { console.error("  FAIL  room: a kind that was cut is still read"); failedEarly++; }
   if (!made.every(i => i.words === i.words.toLowerCase())) { console.error("  FAIL  room: a row is not searchable in lower case"); failedEarly++; }
   const askedAbout = made.filter(i => i.words.includes("framing"));
-  if (askedAbout.length !== 2) { console.error("  FAIL  room: searching for framing found " + askedAbout.length); failedEarly++; }
-  const asBlock = blockFromRoom(made.find(i => i.kind === "headline"));
-  if (asBlock.type !== "link" || !asBlock.url) { console.error("  FAIL  room: a headline kept badly"); failedEarly++; }
+  if (askedAbout.length !== 1) { console.error("  FAIL  room: searching for framing found " + askedAbout.length); failedEarly++; }
+  if (blockFromRoom(made.find(i => i.kind === "question")).type !== "question") { console.error("  FAIL  room: a question kept badly"); failedEarly++; }
   if (blockFromRoom(made.find(i => i.kind === "board")).type !== "board") { console.error("  FAIL  room: a board kept badly"); failedEarly++; }
   if (!stampOf(1756600000000)) { console.error("  FAIL  room: no day on a room row"); failedEarly++; }
 
   cases.push(["Repository room", <RepoRoom items={made} counts={counts2} kind="" setKind={noop} busy={false}
-    kept={new Set()} onKeep={noop} />, "Rights fees are up again"]);
+    kept={new Set()} onKeep={noop} />, "How does framing work in a headline?"]);
   cases.push(["Repository room, reading", <RepoRoom items={[]} counts={{}} kind="" setKind={noop} busy
     kept={new Set()} onKeep={noop} />, "Reading the boards"]);
   cases.push(["Repository room, nothing matched", <RepoRoom items={[]} counts={{}} kind="" setKind={noop}
@@ -2586,9 +2563,11 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (/\|ask\||\(ask\|/.test(appSrc)) say("the ask page still has a route");
   const room = readFileSync(new URL("../src/engine/ClassroomView.jsx", import.meta.url), "utf8");
   if (room.includes('"/ask"')) say("the room screen still sends a phone to the ask page");
-  if (/<QRCode[^>]*\/ask/.test(room)) say("the ask QR code is back on the wall");
-  // The board keeps its code, because a board is answered on a phone.
-  if (!room.includes('base + "/board"')) say("the discussion board lost the way on to it");
+  // Andrew, 2026-09-20: "I don't want the QR code or the ask page on the
+  // slides at all." Not one code anywhere on the wall; the board still says
+  // its address in words, because a board is answered on a phone.
+  if (room.includes("QRCode")) say("a QR code is back on the wall");
+  if (!/\/board</.test(room)) say("the discussion board no longer says where to answer");
   const site = readFileSync(new URL("../src/engine/ClassApp.jsx", import.meta.url), "utf8");
   if (site.includes('"/ask"')) say("the class site still links to the ask page");
   const qSrc = readFileSync(new URL("../src/engine/QuestionsCard.jsx", import.meta.url), "utf8");

@@ -2,34 +2,32 @@
 //
 // Everything on the shelf so far is material I wrote or found. The other half
 // of a quarter is what the students put into the machine: posts on a
-// discussion board, questions asked during class, headlines they brought in,
-// and how a poll went. That material accumulates faster than mine, none of it
-// has ever been searchable, and there has never been an instructor view of a
-// board at all. So "what did students ask about framing last year" has no
-// answer today.
+// discussion board and questions they asked. That material accumulates faster
+// than mine, none of it has ever been searchable, and there has never been an
+// instructor view of a board at all. So "what did students ask about framing
+// last year" has no answer today.
 //
-// Four extra stores per class hold it, one key each, because a burst of posts
-// during class must never collide with a day-plan save. This reads all four
-// and puts them in one shape the repository can search beside the blocks.
+// Two extra stores per class hold it, one key each, because a burst of posts
+// during class must never collide with a day-plan save. This reads both and
+// puts them in one shape the repository can search beside the blocks.
+//
+// Headlines and polls were two more kinds here until 2026-09-20, when both
+// features came out of the app. Anything a class already collected is still
+// in its store and unread, so bringing either back brings its history with
+// it.
 //
 // Reading is deliberately separate from the shelf. Twenty more fetches on a
 // page I open to find one article is a page that got slower for nothing, so
 // the room is read when I ask for the room and not before.
 
-import { tally, written, isFreeForm, pastPolls } from "./poll.js";
-
 export const roomKeys = (storageKey) => ({
   boards: storageKey + "-boards",
   questions: storageKey + "-questions",
-  headlines: storageKey + "-headlines",
-  poll: storageKey + "-poll",
 });
 
 export const ROOM_KINDS = [
   { id: "board", label: "Board posts", hex: "#0f766e" },
   { id: "question", label: "Questions", hex: "#7c3aed" },
-  { id: "headline", label: "Headlines", hex: "#b45309" },
-  { id: "poll", label: "Polls", hex: "#0369a1" },
 ];
 
 // The day something happened, written the way a block writes the day it was
@@ -44,15 +42,13 @@ export function stampOf(at) {
 
 const words = (...bits) => bits.filter(Boolean).join(" ").toLowerCase();
 
-// One class's four stores, as rows. Newest first, because a question asked
+// One class's two stores, as rows. Newest first, because a question asked
 // last Tuesday is worth more than a question asked in the first week of a
 // quarter that has finished.
 export function roomItems(cls, got) {
   const out = [];
   const boards = (got?.boards || {}).boards || {};
   const questions = (got?.questions || {}).items || [];
-  const headlines = (got?.headlines || {}).items || [];
-  const poll = got?.poll || null;
 
   Object.values(boards).forEach(b => {
     const posts = (b.posts || []).slice().sort((x, y) => (x.at || 0) - (y.at || 0));
@@ -71,29 +67,6 @@ export function roomItems(cls, got) {
     words: words(q.text, q.anon ? "" : q.who),
   }));
 
-  headlines.forEach(h => out.push({
-    key: cls.id + "-headline-" + h.id, kind: "headline", cls, at: h.ts || 0,
-    title: h.text || "", url: h.url || "", who: h.submittedBy || "",
-    reads: [...(h.realCategories || []), ...(h.realConcepts || [])],
-    words: words(h.text, h.url, h.submittedBy, (h.realCategories || []).join(" "), (h.realConcepts || []).join(" ")),
-  }));
-
-  // The one on the floor, and every one that has finished. A poll used to be
-  // overwritten by the next question, so anything from before the archive
-  // existed is one poll per class and the rest is gone.
-  [poll, ...pastPolls(poll)].forEach(p => {
-    if (!p || !p.question) return;
-    const options = p.options || [];
-    const free = isFreeForm(p);
-    const r1 = free ? null : tally(p.r1, options.length);
-    const r2 = free ? null : tally(p.r2, options.length);
-    const said = free ? [...written(p.r1), ...written(p.r2)] : [];
-    out.push({
-      key: cls.id + "-poll-" + (p.id || "last"), kind: "poll", cls, at: p.at || 0,
-      title: p.question, options, r1, r2, said, correct: p.correct, over: !!p.endedAt,
-      words: words(p.question, options.join(" "), said.map(x => x.text).join(" ")),
-    });
-  });
 
   return out.sort((a, b) => (b.at || 0) - (a.at || 0));
 }
@@ -104,25 +77,16 @@ export const roomCounts = (items) => {
   return c;
 };
 
-// What one room item says, as a block, so a headline a student found or a
-// question a student asked can be kept and taught with next year.
+// What one room item says, as a block, so a question a student asked or a
+// board they filled can be kept and taught with next year.
 //
 // The id is made from where the item came from, so keeping the same post twice
 // writes one block rather than two.
 export function blockFromRoom(item) {
   const base = { id: "room-" + item.key, tags: ["from the room", item.cls.code] };
-  if (item.kind === "headline") {
-    return { ...base, type: "link", title: item.title, url: item.url || "",
-      source: item.who ? "Brought in by " + item.who : "",
-      body: item.reads?.length ? "The room read it as: " + item.reads.join(", ") : "" };
-  }
   if (item.kind === "question") {
     return { ...base, type: "question", title: item.title,
       body: item.who ? "Asked by " + item.who : "" };
-  }
-  if (item.kind === "poll") {
-    return { ...base, type: "question", title: item.title,
-      body: (item.options || []).join("\n") };
   }
   return { ...base, type: "board", title: item.title,
     body: (item.posts || []).map(p => p.who + ": " + p.text).join("\n") };

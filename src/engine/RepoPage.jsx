@@ -213,10 +213,8 @@ export default function RepoPage() {
       const got = {};
       await Promise.all(ENGINE_LIST.map(async c => {
         const k = roomKeys(c.storageKey);
-        const [boards, questions, headlines, poll] = await Promise.all([
-          loadClass(k.boards), loadClass(k.questions), loadClass(k.headlines), loadClass(k.poll),
-        ]);
-        got[c.id] = { boards, questions, headlines, poll };
+        const [boards, questions] = await Promise.all([loadClass(k.boards), loadClass(k.questions)]);
+        got[c.id] = { boards, questions };
       }));
       if (!alive) return;
       setRoom(ENGINE_LIST.flatMap(c => roomItems(c, got[c.id])));

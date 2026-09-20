@@ -220,12 +220,19 @@ the whole ask feature for now. it's confusing." The QR code came off the room
 screen with it, so the wall shows the class's address instead. An old `/ask`
 link falls through to the class home rather than a dead page.
 
-**What that took with it:** the poll and Headlines had their only student door
-on that page. Both still run on the dashboard and still draw on the room
-screen, and neither can take an answer from a phone until they are given a door
-of their own. The discussion board keeps its QR code, because a board is
-answered on a phone and that is the one thing on the wall that still asks for
-one.
+**The poll and Headlines went with it.** Andrew, 2026-09-20: "for now, let's
+cut the poll and the headlines." Both had their only student door on the ask
+page. `poll.js`, `PollPanel.jsx`, `headlines.js` and `HeadlinesBoard.jsx` are
+deleted, with their rail tab, their screens on the wall, their casts and their
+two kinds in the repository's room lens. What a class already collected is
+still in its store and unread, so bringing either back brings its history.
+`oneSentence`, the one-sentence rule for a headline on the day, moved to
+`Dashboard.jsx`, which is the only thing that used it.
+
+**No QR codes on the wall at all.** "I don't want the QR code or the ask page
+on the slides at all." The room screen says addresses in words: the class's
+home on the idle screen, and `/board` under a discussion prompt. `QRCode.jsx`
+stays for the retreat page, which is not a class surface.
 
 ## Two sittings of one class
 
@@ -538,9 +545,6 @@ twice, because one edge can serve the old bundle briefly.
   a day and then came out of the dashboard. A day's written boards are still
   in the store and nothing reads them, so either they come back somewhere or
   the data goes.
-- **The poll and Headlines have no student door.** The ask page that carried
-  both is gone. The panels are still on the dashboard, so either they get a
-  door back or they come out.
 - **Boards and the leaderboard are not split by section yet.** People-shaped
   surfaces are meant to follow the room, and those two still show the whole
   class. Undecided rather than missed: one conversation across both sittings
