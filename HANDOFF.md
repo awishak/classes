@@ -172,6 +172,13 @@ Drew's Picks, the game line, Directions and the badge for a day that does not
 meet in the room all came off the card on 2026-09-20, because a card that lists
 the readings is a card a student reads instead of the schedule.
 
+**A week of the schedule is its days.** Each class day gets a heading in full,
+`Monday, September 22`, the day's own title under it, and what is on it. A day
+the class does not meet joins the week when something is due on it, marked No
+class, which is how a Sunday deadline gets a place of its own. A row under a
+day heading no longer repeats the date the heading has said, and each day
+carries the anchor the next class card links to.
+
 **Challenges says both words** on the student's card, `Challenges
 (Assignments)`, until the class has the new one. The card is the next one by
 name, when it is due, and how many more the class holds, counted across every

@@ -3067,11 +3067,15 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!html.includes("a day note")) say("the day note is not under the day");
 }
 
-// The students' schedule: a week's items in day order, with their dates and sources.
+// The students' schedule: a week, broken into its days, each with a heading,
+// the day's title and what is on it.
 //
 // Items were listed in the order they were added, so a reading put on Monday
 // after the term was built sat under Friday's, and nothing said where a
-// reading came from.
+// reading came from. Then they were one list under a week with a "Wed Sep 23"
+// column. Andrew, 2026-09-20: "each week should have individual days with
+// readings, a topic, and assignments due, so that means include sundays if
+// there is something due on sundays. make the headings clear." 
 {
   const say = (m) => { console.error("  FAIL  student schedule: " + m); failedEarly++; };
   const week = { id: "w1", topic: "Week one", dates: ["Sep 21", "Sep 23", "Sep 25"], items: [
@@ -3090,7 +3094,14 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (!(at("Monday reading") < at("Wednesday reading") && at("Wednesday reading") < at("Friday reading"))) say("readings are not in day order");
     if (!html.includes("theatlantic.com")) say("a link's site is not shown as its source");
     if (!html.includes("Billings, Communication and Sport")) say("a block's written source is not shown");
-    if (!html.includes("Wed Sep 23")) say("a reading says Wed without saying which Wednesday");
+    // The heading says the day in full, and the class days are all there
+    // even when nothing is set for one.
+    ["Monday, September 21", "Wednesday, September 23", "Friday, September 25"].forEach(t => {
+      if (!html.includes(t)) say("no heading for " + JSON.stringify(t)); });
+    if (html.indexOf("Monday, September 21") > html.indexOf("Monday reading")) say("the day's heading is under its readings");
+    if (!html.includes('id="day-sep-23"')) say("a day of the week has no anchor to link to");
+    if ((html.match(/id="day-/g) || []).length !== 3) say("the anchors are not one per day: " + JSON.stringify(html.match(/id="day-[a-z0-9-]*"/g)));
+    if (html.includes("Wed Sep 23")) say("a row still carries the date its heading already says");
   }
 
   // A deadline on a day the class does not meet. COMM 3's exercises are due on
@@ -3102,8 +3113,21 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     dueHtml = renderToString(<ScheduleDetail config={{ accent: "#333", path: "/comm3", scheduleWeeks: [] }} role="student"
       data={{ schedule: [due] }} blockOf={() => null} />);
   } catch (e) { say("a deadline threw: " + e.message); }
-  if (dueHtml && !dueHtml.includes("Sun Sep 27")) say("a Sunday deadline does not say which Sunday");
+  // The Sunday is a day of the week now, headed and marked as no class,
+  // because COMM 3's exercises are due on Sundays.
+  if (dueHtml && !dueHtml.includes("Sunday, September 27")) say("a Sunday deadline has no day of its own");
+  if (dueHtml && dueHtml.indexOf("Sunday, September 27") < dueHtml.indexOf("Friday, September 25")) say("the Sunday is not after the Friday");
+  if (dueHtml && !dueHtml.includes("No class")) say("a day the class does not meet is not marked");
+  if (dueHtml && (dueHtml.match(/id="day-/g) || []).length !== 4) say("the Sunday did not join the week's days");
   if (dueHtml && !dueHtml.includes('href="/comm3/challenges/ex1"')) say("a deadline does not open its assignment");
+  // A day says what it is about, the same title the dashboard carries and the
+  // same rule: written on a day, it covers the days after it until the next.
+  {
+    const titled = renderToString(<ScheduleDetail config={{ accent: "#333", scheduleWeeks: [] }} role="student"
+      data={{ schedule: [week], dayPlans: { "Sep 23": { title: "Same event, different stories" } } }} blockOf={() => null} />);
+    if (!titled.includes("Same event, different stories")) say("a day does not carry its title");
+    if (titled.indexOf("Same event, different stories") < titled.indexOf("Wednesday, September 23")) say("the title is above the day it belongs to");
+  }
   if (dateInWeek({ dates: ["Dec 7", "Dec 9"] }, "Fri") !== "Dec 11") say("the Friday of a two-day finals week is not Dec 11");
   // The badge names the weekday and the time. Dates carry no year and are read
   // as 2026, so this only means something while Dec 31 is more than a week off.

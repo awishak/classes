@@ -11,6 +11,7 @@
 import { useState, useEffect } from "react";
 import { genId } from "../utils.jsx";
 import { addSeedToDay, dayHasSeed, normSlot } from "./dayplan.js";
+import { dayTitles } from "./days.js";
 import PickMark from "./Pick.jsx";
 import * as TOKENS from "./tokens.js";
 
@@ -66,6 +67,43 @@ export function dateInWeek(week, day) {
   const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + ((want + 6) % 7));
   return MONTHS[d.getMonth()] + " " + d.getDate();
 }
+// A week, broken into the days it happens on.
+//
+// Andrew, 2026-09-20: "each week should have individual days with readings, a
+// topic, and assignments due, so that means include sundays if there is
+// something due on sundays." So the class days are always there, in order,
+// and any other day of that week turns up when something is due on it. A
+// deadline on a Sunday is the reason the list is not just the class days.
+//
+// An item with no day on it belongs to the week rather than to a day, and
+// sits above them.
+export function daysOfWeek(week, items) {
+  const rows = new Map();
+  const touch = (date) => {
+    if (!rows.has(date)) rows.set(date, { date, classDay: (week.dates || []).includes(date), items: [] });
+    return rows.get(date);
+  };
+  (week.dates || []).forEach(d => touch(d));
+  const loose = [];
+  (items || []).forEach(it => {
+    const date = it.date ? dateInWeek(week, it.date) : "";
+    if (!date) { loose.push(it); return; }
+    touch(date).items.push(it);
+  });
+  const days = [...rows.values()]
+    .filter(d => d.classDay || d.items.length)
+    .sort((a, b) => (parseDate(a.date)?.getTime() || 0) - (parseDate(b.date)?.getTime() || 0));
+  return { days, loose };
+}
+
+// "Monday, September 22", which is a heading a student can read at a glance.
+const WEEKDAY_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTH_FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+export function dayHeading(date) {
+  const d = parseDate(date);
+  return d ? WEEKDAY_FULL[d.getDay()] + ", " + MONTH_FULL[d.getMonth()] + " " + d.getDate() : date;
+}
+
 function nearestWeekId(weeks) {
   const today = new Date();
   const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
@@ -161,9 +199,13 @@ function ItemView({ item, picked, when, source, href, anchor }) {
       {source ? <span style={{ fontSize: 14, color: TEXT_MUTED }}>{source}</span> : null}
     </span>
   );
+  // The date column is for the instructor's list, where a row has to say which
+  // day it is on. Under a day's heading the heading has said it, so the column
+  // is left out rather than left empty.
+  const stamp = when === "" ? "" : (when || item.date || "");
   return (
     <div id={anchor || undefined} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid " + BORDER, scrollMarginTop: 130 }}>
-      <span style={{ width: 84, flexShrink: 0, fontSize: 13, fontWeight: 700, color: TEXT_SECONDARY }}>{when || item.date || ""}</span>
+      {stamp ? <span style={{ width: 84, flexShrink: 0, fontSize: 13, fontWeight: 700, color: TEXT_SECONDARY }}>{stamp}</span> : null}
       {href ? <a href={href} style={{ textDecoration: "none", minWidth: 0 }}>{inner}</a>
         : item.url ? <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", minWidth: 0 }}>{inner}</a> : inner}
       {picked ? <PickMark size={26} label /> : null}
@@ -226,6 +268,9 @@ function StudentSchedule({ config, data, blockOf, focusDay }) {
   // row when the pick was made.
   const isPicked = (it) => !!(blockOf && blockOf(it.blockId || it.libId)?.pick);
   const current = nearestWeekId(weeks);
+  // What each class day is about, carried the way the rest of the app carries
+  // it: a title written on a day covers the days after it until the next one.
+  const titles = dayTitles(weeks, data?.dayPlans);
   // The day named in the address, scrolled to after the weeks are drawn. A day
   // the term does not have leaves the page where it opened.
   useEffect(() => {
@@ -247,27 +292,41 @@ function StudentSchedule({ config, data, blockOf, focusDay }) {
                 {isNow && <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: config.accent, padding: "3px 10px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.06em" }}>This week</span>}
               </div>
               <div style={{ fontSize: 17, fontWeight: 600 }}>{w.topic || "Untitled week"}</div>
-              <div style={{ fontSize: 15, color: TEXT_MUTED, marginTop: 3 }}>{(w.dates || []).join(" · ")}</div>
               {w.text && <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 10, whiteSpace: "pre-wrap" }}>{w.text}</div>}
-              {studentItems(w, data?.dayPlans, blockOf).length > 0 && (
-                <div style={{ marginTop: 8 }}>
-                  {(seen => inWeekOrder(studentItems(w, data?.dayPlans, blockOf)).map(it => {
-                    const block = blockOf ? blockOf(it.blockId || it.libId) : null;
-                    // "Wed" on its own made a student work out which Wednesday.
-                    const date = dateInWeek(w, it.date);
-                    // The first row of a day wears that day's anchor.
-                    const first = date && !seen.has(date);
-                    if (first) seen.add(date);
-                    // A deadline opens the assignment itself, where the
-                    // instructions link and the place to hand the work in are.
-                    const href = it.type === "assignment" && it.asgId && config.path
-                      ? config.path + "/challenges/" + encodeURIComponent(it.asgId) : "";
-                    return <ItemView key={it.id} item={it} picked={isPicked(it)} href={href}
-                      anchor={first ? dayAnchor(date) : ""}
-                      when={date ? it.date + " " + date : ""} source={href ? "" : sourceOf(it, block)} />;
-                  }))(new Set())}
-                </div>
-              )}
+              {(() => {
+                const { days, loose } = daysOfWeek(w, studentItems(w, data?.dayPlans, blockOf));
+                const row = (it) => {
+                  const block = blockOf ? blockOf(it.blockId || it.libId) : null;
+                  // A deadline opens the challenge itself, where the
+                  // instructions link and the place to hand the work in are.
+                  const href = it.type === "assignment" && it.asgId && config.path
+                    ? config.path + "/challenges/" + encodeURIComponent(it.asgId) : "";
+                  return <ItemView key={it.id} item={it} picked={isPicked(it)} href={href} when=""
+                    source={href ? "" : sourceOf(it, block)} />;
+                };
+                return (
+                  <>
+                    {loose.length ? <div style={{ marginTop: 10 }}>{inWeekOrder(loose).map(row)}</div> : null}
+                    {days.map(d => (
+                      <div key={d.date} id={dayAnchor(d.date)} style={{ marginTop: 16, scrollMarginTop: 130 }}>
+                        {/* The heading says the day out loud. "Wed" on its own
+                            made a student work out which Wednesday, and a
+                            deadline on a Sunday needs to say Sunday. */}
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY }}>{dayHeading(d.date)}</span>
+                          {d.classDay ? null : <span style={{ ...label, color: TEXT_MUTED }}>No class</span>}
+                        </div>
+                        {titles[d.date]?.title ? (
+                          <div style={{ fontSize: 16, color: TEXT_SECONDARY, lineHeight: 1.4, marginTop: 2 }}>{titles[d.date].title}</div>
+                        ) : null}
+                        {d.items.length
+                          ? <div style={{ marginTop: 6 }}>{inWeekOrder(d.items).map(row)}</div>
+                          : <div style={{ fontSize: 15, color: TEXT_MUTED, marginTop: 6 }}>Nothing set for this day yet.</div>}
+                      </div>
+                    ))}
+                  </>
+                );
+              })()}
             </div>
           );
         })}
