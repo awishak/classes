@@ -8,10 +8,11 @@
 //
 // Then: "the way you changed the top menu to be a dropdown from the class
 // name, let's do that for the students as well. get rid of the apps drop down
-// in top right." A student's tabs stay across the bar, so a student's menu is
-// the apps and nothing else: the same three doors the Apps button held, moved
-// under the class name where his are. The right end of the bar is now free,
-// which is where a message or a game will announce itself.
+// in top right." And then, on 2026-09-20: "tabs go in the dropdown. same on
+// phone i think." So the class site has no tabs on its bar either, and this
+// menu is the whole of the class's navigation for everybody: the pages first,
+// then the apps. The bar is the class and what is happening right now, which
+// is where a message or a game will announce itself.
 //
 // Around the Horn is in neither: it opens over the page you are on and has a
 // place of its own on the dashboard's bar.
@@ -69,7 +70,7 @@ export const menuRow = {
   fontFamily: F, fontSize: 14.5, color: TEXT_PRIMARY, textDecoration: "none",
 };
 
-export function ClassMenu({ config, role = "instructor", onPick, onLook, panels, onPanel, onKeys }) {
+export function ClassMenu({ config, role = "instructor", onPick, onLook, panels, onPanel, onKeys, active, compact }) {
   const student = role !== "instructor";
   const go = (href) => () => {
     window.history.pushState({}, "", href);
@@ -77,7 +78,23 @@ export function ClassMenu({ config, role = "instructor", onPick, onLook, panels,
   };
   const rule = <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />;
   const row = { ...menuRow, minHeight: student ? TOKENS.TAP : 36, fontSize: student ? 16 : 15 };
-  const pages = [["Home", ""], ["Schedule", "/schedule"], ["Challenges", "/challenges"], ["Class", "/class"], ["More page", "/more"]];
+  // The pages of the class, which used to be tabs across the bar. `More page`
+  // reads that way on the dashboard, where More is also a word on the bar; on
+  // the class site it is just More.
+  const pages = [["Home", "", "home"], ["Schedule", "/schedule", "schedule"], ["Challenges", "/challenges", "assignments"],
+    ["Class", "/class", "class"], [student ? "More" : "More page", "/more", "more"]];
+  // The page you are on, marked, since the bar no longer says.
+  const pageRow = (name, to, id) => {
+    const on = active && active === id;
+    const style = { ...row, ...(on ? { color: config.accent, fontWeight: 600 } : {}) };
+    return onPick ? (
+      <button key={name} role="menuitem" className="dash-focus ca-focus repo-focus" style={style}
+        aria-current={on ? "page" : undefined}
+        onClick={() => onPick(id === "home" ? null : id === "assignments" ? "assignments" : id)}>{name}</button>
+    ) : (
+      <a key={name} className="dash-focus" href={config.path + to} aria-current={on ? "page" : undefined} style={style}>{name}</a>
+    );
+  };
   // A student's apps open in place where they are cards of this page, the way
   // the Apps button opened them, so Games does not reload the site.
   const apps = appsFor(config, role).filter(app => app.opens !== "horn").map(app => app.card && onPick ? (
@@ -89,7 +106,7 @@ export function ClassMenu({ config, role = "instructor", onPick, onLook, panels,
       style={{ ...row, ...(app.id === "dashboard" ? { color: config.accent, fontWeight: 600 } : {}) }}>{app.label}</a>
   ));
   return (
-    <DropMenu label={config.code} width={student ? 250 : 270} side="left" fixed
+    <DropMenu label={config.code} width={student ? 250 : 300} side="left" fixed
       trigger={(open, toggle) => (
         <button className="dash-focus ca-focus repo-focus" onClick={toggle} aria-expanded={open} aria-haspopup="menu"
           title={student ? "Everything else in this class" : "Every other page of this class"}
@@ -101,7 +118,7 @@ export function ClassMenu({ config, role = "instructor", onPick, onLook, panels,
           </span>
           {/* On a student's bar the class says both its number and its name,
               which is what the logo said before the menu took its place. */}
-          {student ? (
+          {student && !compact ? (
             <span style={{ display: "block" }}>
               <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: config.accent,
                 textTransform: "uppercase", letterSpacing: "0.08em" }}>{config.code}</span>
@@ -109,14 +126,20 @@ export function ClassMenu({ config, role = "instructor", onPick, onLook, panels,
                 textShadow: TOKENS.FONT.displayShadow, fontSize: 16, lineHeight: 1.1, color: TEXT_PRIMARY }}>{config.name}</span>
             </span>
           ) : (
-            <span style={{ fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY }}>{config.code}</span>
+            <span style={{ fontSize: compact ? 15 : 17, fontWeight: compact ? 700 : 600, color: TEXT_PRIMARY }}>{config.code}</span>
           )}
           <span aria-hidden="true" style={{ fontSize: 13, color: TEXT_MUTED }}>▾</span>
         </button>
       )}>
-      {student ? apps : (
+      {student ? (
         <>
-          {pages.map(([name, to]) => <a key={name} className="dash-focus" href={config.path + to} style={row}>{name}</a>)}
+          {pages.map(([name, to, id]) => pageRow(name, to, id))}
+          {rule}
+          {apps}
+        </>
+      ) : (
+        <>
+          {pages.map(([name, to, id]) => pageRow(name, to, id))}
           {rule}
           {apps}
           {(panels || []).length ? (
@@ -139,12 +162,21 @@ export function ClassMenu({ config, role = "instructor", onPick, onLook, panels,
             </button>
           ) : null}
           {ENGINE_LIST.filter(c => c.id !== config.id).length ? rule : null}
+          {/* One class per row, on two lines. Andrew, 2026-09-20, on a
+              screenshot of these: "let's fix this formatting issue." The code
+              and the meeting line were side by side in a 270px menu, so COMM 3
+              broke across two lines and the times were cut off after four
+              words. The code owns the first line and the times sit under it,
+              where there is room for them. */}
           {ENGINE_LIST.filter(c => c.id !== config.id).map(c => (
-            <button key={c.id} className="dash-focus" onClick={go(c.path + "/dashboard")} style={row}>
-              <span style={{ flex: "none", width: 8, height: 8, borderRadius: "50%", background: c.accent }} />
-              <b style={{ fontWeight: 600 }}>{c.code}</b>
-              <span style={{ minWidth: 0, color: TEXT_MUTED, fontSize: 13, overflow: "hidden",
-                textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.desc}</span>
+            <button key={c.id} className="dash-focus" onClick={go(c.path + "/dashboard")}
+              style={{ ...row, minHeight: 52, alignItems: "flex-start", paddingTop: 7, paddingBottom: 7 }}>
+              <span style={{ flex: "none", width: 8, height: 8, borderRadius: "50%", background: c.accent, marginTop: 6 }} />
+              <span style={{ minWidth: 0, display: "block" }}>
+                <b style={{ display: "block", fontWeight: 600, whiteSpace: "nowrap" }}>{c.code}</b>
+                <span style={{ display: "block", color: TEXT_MUTED, fontSize: 12.5, lineHeight: 1.35,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.desc}</span>
+              </span>
             </button>
           ))}
         </>

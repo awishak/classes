@@ -39,7 +39,7 @@ import { NextClassHero, PinnedLinks, ClassSummary, YourCardSummary, GamesSummary
 import { nextOwed } from "./AssignmentsCard.jsx";
 import { AssignmentCards, AssignmentPage } from "./AssignmentCards.jsx";
 
-import TopNav, { NAV_CLASS, tabHref } from "./TopNav.jsx";
+import TopNav, { NAV_CLASS } from "./TopNav.jsx";
 import { ClassMenu } from "./ClassMenu.jsx";
 import { daySlug } from "./days.js";
 import { isTestStudent, realStudents, sectionFor, hasSections } from "./sections.js";
@@ -740,7 +740,6 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // or a game to announce itself. The class switcher, the student preview,
   // the theme and the account stay on More, which is the admin page in either
   // view.
-  const TheClass = <ClassMenu config={config} role={view} onPick={go} />;
   const adminSelect = { fontFamily: F, fontSize: 16, fontWeight: 500, minHeight: TAP, padding: "0 12px", borderRadius: 10,
     border: "1px solid " + BORDER_STRONG, background: "var(--surface-card)", color: TEXT_PRIMARY, cursor: "pointer", maxWidth: 360 };
 
@@ -757,6 +756,12 @@ export default function ClassApp({ config: classConfig, initialCard }) {
     : tabCards.has(openKey) ? openKey
     : IN_CLASS.has(openKey) && tabCards.has("class") ? "class"
     : openKey === "more" ? "more" : "home";
+
+  // The class's name, and every page of the class behind it. Both shapes: the
+  // full one for the bar on a laptop, and a compact one for the phone, where
+  // it shares its row with the way back.
+  const TheClass = <ClassMenu config={config} role={view} onPick={go} active={activeNav} />;
+  const TheClassCompact = <ClassMenu config={config} role={view} onPick={go} active={activeNav} compact />;
 
   // The thing this student still owes, which lights the Assignments card as
   // the deadline gets close.
@@ -880,11 +885,6 @@ export default function ClassApp({ config: classConfig, initialCard }) {
     ...liveNow(config, live, data).map(i => i.title),
   ].filter(Boolean);
 
-  // A tab is either a card on this page or a door to another surface. Both
-  // wear the same shape, because to the person pressing them they are the same
-  // kind of thing.
-  const tabTo = (n) => tabHref(config, n);
-
   // The home page. The hero and the pinned links take the full width of the
   // two-across grid on a laptop; on a phone everything is one column anyway.
   const sectionOf = (roster.find(s => s.name === (preview || asStudent)) || me || {}).section;
@@ -958,7 +958,10 @@ export default function ClassApp({ config: classConfig, initialCard }) {
         {/* The same bar the dashboard and the repository wear — literally the
             same component, so the three cannot drift apart again. The theme's
             own trimmings ride in its right-hand slot. */}
-        <TopNav config={config} tabs={navTabs} active={activeNav} onPick={go} role={view}
+        {/* No tabs. Andrew, 2026-09-20: "tabs go in the dropdown. same on
+            phone i think." The five pages are in the class menu at the left,
+            where the dashboard has had them since the day before. */}
+        <TopNav config={config} tabs={[]} active={activeNav} onPick={go} role={view}
           brand={TheClass}
           right={
             <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -992,10 +995,14 @@ export default function ClassApp({ config: classConfig, initialCard }) {
     );
   }
 
-  // ─── MOBILE: single column, full-screen takeover, bottom tab bar ───
-  const BAR_H = 72;
+  // ─── MOBILE: single column, full-screen takeover ───
+  //
+  // The bottom tab bar is gone. Andrew, 2026-09-20: "tabs go in the dropdown.
+  // same on phone i think." Snapchat's camera, which sat in the middle of that
+  // bar, moved up beside the score, because it is the theme's furniture rather
+  // than a way to another page.
   return (
-    <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, paddingBottom: BAR_H + 12, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">
+    <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, paddingBottom: 24, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">
       <ThemeStyle theme={theme} />
         <ThemeChrome theme={theme} />
       <style>{CSS + accentCSS(a, config.accentDark)}</style>
@@ -1007,14 +1014,19 @@ export default function ClassApp({ config: classConfig, initialCard }) {
       <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
       {PreviewBar}
       <div style={{ background: "var(--surface-card)", borderBottom: "1px solid " + BORDER }}>
-        <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          {/* The one way back, and it says where back is. */}
+        <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+          {/* The class is always here, because with the bottom bar gone this
+              menu is the only way to another page. The way back sits beside
+              it and says where back is. */}
+          {openKey ? TheClassCompact : TheClass}
           {openKey ? (
-            <button className="ca-focus" onClick={() => go(openSub ? openKey : IN_CLASS.has(openKey) ? "class" : null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 17, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: "0 4px 0 0" }}>
+            <button className="ca-focus" onClick={() => go(openSub ? openKey : IN_CLASS.has(openKey) ? "class" : null)}
+              style={{ background: "none", border: "none", fontFamily: F, fontSize: 16, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: 0, whiteSpace: "nowrap", minWidth: 0, overflow: "hidden" }}>
               ← Back{openSub && openKey === "assignments" ? " to Challenges" : IN_CLASS.has(openKey) ? " to Class" : ""}
             </button>
-          ) : TheClass}
+          ) : null}
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flex: "none" }}>
+            <ThemeCamera theme={theme} />
             <ThemeBadge theme={theme} points={myPoints} />
           </span>
         </div>
@@ -1050,24 +1062,6 @@ export default function ClassApp({ config: classConfig, initialCard }) {
             ) : null}
           </>
         )}
-      </div>
-
-      {/* bottom tab bar */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BAR_H, background: "var(--surface-card)", borderTop: "1px solid " + BORDER, display: "flex", zIndex: 20 }}>
-        {navTabs.map((n, i) => {
-          const on = activeNav === n.id;
-          const mid = theme === "snapchat" && i === Math.floor(navTabs.length / 2);
-          if (mid) return <ThemeCamera key="cam" theme={theme} />;
-          const to = tabTo(n);
-          const barStyle = { flex: 1, minHeight: TAP, background: "none", border: "none", fontFamily: F, fontSize: 13, fontWeight: 600, color: on ? a : TEXT_SECONDARY, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, textDecoration: "none" };
-          const dot = <span style={{ width: 6, height: 6, borderRadius: "50%", background: on ? a : "transparent" }} />;
-          return to ? (
-            <a key={n.id} className="ca-focus" href={to} style={barStyle}>{dot}{n.label}</a>
-          ) : (
-            <button key={n.id} className="ca-focus" onClick={() => go(n.card)} aria-current={on ? "page" : undefined}
-              style={barStyle}>{dot}{n.label}</button>
-          );
-        })}
       </div>
 
     </div>

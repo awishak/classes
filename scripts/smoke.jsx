@@ -1080,38 +1080,34 @@ cases.push(["Instructor links", <InstructorLinks />]);
     }
   }
 
-  // The class page, both widths. An instructor's tabs are Home, Dashboard,
-  // Repository, More — the three doors among them — and the three cards that
-  // used to be tabs are gone from the bar because they are already in his grid.
-  // A student's tabs must not change at all.
+  // The class page's bar, both widths. Andrew, 2026-09-20: "tabs go in the
+  // dropdown. same on phone i think." So the bar carries the class and what is
+  // happening, and every page of the class is behind the class's name. The
+  // menu's contents are not in the markup until it is opened, which is why the
+  // check is that the tabs are NOT there and the trigger is.
   for (const [where, px] of [["laptop", LAPTOP], ["phone", PHONE]]) {
     try {
       const html = atWidth(px, () => renderToString(<ClassApp config={cfg0} />));
-      // Andrew's tabs are the students' tabs; his extra reach is in Apps.
-      ["Schedule", "Challenges", "Class", "More"].forEach(tab => {
-        if (!html.includes(">" + tab + "<")) {
-          console.error(`  FAIL  class page, instructor, ${where}: no ${tab} tab`); failedEarly++; }
+      const bar = html.split("ca-root")[1]?.slice(0, 4000) || "";
+      ["Schedule", "Challenges", "Grade view"].forEach(tab => {
+        if (new RegExp(">" + tab + "</a>|>" + tab + "</button>").test(bar)) {
+          console.error(`  FAIL  class page, instructor, ${where}: ${tab} is still a tab on the bar`); failedEarly++; }
       });
-      if (where === "laptop" && !html.includes(">Grade view<")) {
-        console.error(`  FAIL  class page, instructor, ${where}: the apps are not tabs in the bar`); failedEarly++; }
-      // The duplicates are gone: a tab AND a card for the same thing was the
-      // whole complaint. Schedule still exists as a card, just not as a tab.
-      const bar = html.split('aria-haspopup="menu"')[0] || "";
-      if (/>Community</.test(bar)) {
-        console.error(`  FAIL  class page, instructor, ${where}: Community is still a tab as well as a card`); failedEarly++; }
+      if (!/aria-haspopup="menu"/.test(html)) {
+        console.error(`  FAIL  class page, instructor, ${where}: the class is not a menu`); failedEarly++; }
     } catch (err) {
       console.error(`  FAIL  class page, instructor, ${where}: ` + err.message); failedEarly++;
     }
   }
   globalThis.localStorage.getItem = was;
 
-  // And the student's bar is untouched.
+  // A student's phone: the same menu, and no bar across the bottom.
   try {
     const html = atWidth(PHONE, () => renderToString(<ClassApp config={cfg0} />));
-    ["Schedule", "Challenges", "Class"].forEach(tab => {
-      if (!html.includes(">" + tab + "<")) {
-        console.error(`  FAIL  class page, student: ${tab} left the student's tabs`); failedEarly++; }
-    });
+    if (!/aria-haspopup="menu"/.test(html)) {
+      console.error("  FAIL  class page, student: the phone has no class menu"); failedEarly++; }
+    if (html.includes("position:fixed;bottom:0")) {
+      console.error("  FAIL  class page, student: the bottom tab bar is back"); failedEarly++; }
     // Andrew, 2026-09-15: the next class is the hero, then Assignments, then
     // Class, Grades toward the bottom and Games at the very bottom.
     const at = (t) => html.indexOf(t);
@@ -1223,7 +1219,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
       const menuSrc = readSrc(new URL("../src/engine/ClassMenu.jsx", import.meta.url), "utf8");
       // The Horn is on the bar, so the class menu leaves it out.
       if (!menuSrc.includes('app.opens !== "horn"')) say("the dashboard says Around the Horn twice");
-      for (const page of ["Home", "Schedule", "Challenges", "Class", "More page"]) {
+      for (const page of ["Home", "Schedule", "Challenges", "Class"]) {
         if (!menuSrc.includes('["' + page + '", ')) say("the class menu does not lead to " + page);
       }
     }
@@ -1818,7 +1814,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // Nothing becomes unreachable: Coming up covers three weeks and the link
   // covers everything past that, plus anything marked Ongoing, which has no
   // date to sort by at all.
-  if (!readFileSync(new URL("../src/engine/ClassMenu.jsx", import.meta.url), "utf8").includes('["Challenges", "/challenges"]')) {
+  if (!readFileSync(new URL("../src/engine/ClassMenu.jsx", import.meta.url), "utf8").includes('["Challenges", "/challenges"')) {
     say("nothing on the dashboard reaches the challenges"); }
   // The row never scrolls out of sight again.
   if (src.includes(".dash-rail-tabs{display:flex;gap:4px") && !src.includes("flex-wrap:wrap"))

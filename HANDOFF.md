@@ -131,19 +131,27 @@ The bar answers one question, WHERE AM I, and nothing else. A control that acts
 on the thing you are looking at is not navigation and does not belong here,
 which is why the dashboard's date and its room tools sit with the day.
 
-**The tabs are the same five words in the same order for everybody:** Home,
-Schedule, Challenges, Class, More. I get my apps as tabs after a divider, since
-a student's bar would be a wall of doors otherwise. The apps are Dashboard,
-Repository, Games, Grade view, Around the Horn, Room screen and Ask for me, and
-Games, Ask and Room screen for a student. `src/engine/apps.js`.
+**No tabs anywhere.** Andrew, 2026-09-20: "tabs go in the dropdown. same on
+phone i think." The bar carries the class and what is happening right now, and
+every page of the class is behind the class's name.
 
-**The class name at the left is a menu**, on the class site as well as on the
-dashboard. `src/engine/ClassMenu.jsx` holds it and both surfaces wear it: mine
-opens every page of the class, then the apps, the room panels, The Brief,
-Colour and type, the keyboard list and the other classes; a student's opens the
-apps and nothing else, since a student's five tabs are already across the bar.
-The Apps button that stood at the right end is gone, and that end of the bar is
-free for a message or a game to announce itself.
+**The class name at the left is the menu**, on the class site and on the
+dashboard, out of one file: `src/engine/ClassMenu.jsx`. It holds the five pages
+first (Home, Schedule, Challenges, Class, More), then the apps. Mine carries
+more under those: the room panels, The Brief, Colour and type, the keyboard
+list and the other classes. The page you are on is marked in the class colour,
+since no bar says it any more. The apps are Dashboard, Repository, Games, Grade
+view, Around the Horn and Room screen for me, and Games and Room screen for a
+student. `src/engine/apps.js`.
+
+**The phone has no bar across the bottom.** The menu is the navigation there
+too. With a card open the class shrinks to its code and the way back sits
+beside it, so another page is always one press away. Snapchat's camera, which
+lived in the middle of that bar, moved up beside the score.
+
+Each class in the switcher is two lines, the code over its meeting times: side
+by side in a 270px menu, COMM 3 broke across two lines and the times were cut
+off after four words.
 
 **The lit tab is read off the address**, the same way on every page. Before
 this each surface said which tab it was and most said nothing, so Grade view,
