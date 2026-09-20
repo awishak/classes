@@ -13,7 +13,6 @@ import GamesPage from "./engine/GamesPage.jsx";
 import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
-import AskPage from "./engine/AskPage.jsx";
 import GradeView from "./engine/GradeView.jsx";
 import InstructorBar from "./engine/InstructorBar.jsx";
 import PlanPage from "./PlanPage.jsx";
@@ -233,11 +232,15 @@ export default function App() {
   }
 
   // Live teaching surfaces: /<class>/dashboard (me), /<class>/today (the room
-  // screen), /<class>/ask (where the room screen's QR sends students),
-  // /<class>/grade (the class as cards, sorted into columns).
+  // screen), /<class>/grade (the class as cards, sorted into columns).
+  //
+  // /<class>/ask is gone. Andrew, 2026-09-20: "remove the whole ask feature
+  // for now. it's confusing." Asking is the Questions card on the class page,
+  // which is an FAQ rather than a room. An old link falls through to the
+  // class site, which shows the home grid rather than a dead page.
   // The dashboard may name its day: /<class>/dashboard/oct-7, or
   // /<class>/dashboard/week-3-wed. See daySlug in days.js.
-  const live = path.match(/^\/(comm\w+)\/(dashboard|today|ask|board|game|rungame|games|grade)\/?$/)
+  const live = path.match(/^\/(comm\w+)\/(dashboard|today|board|game|rungame|games|grade)\/?$/)
     || path.match(/^\/(comm\w+)\/(dashboard)\/([a-z0-9-]+)\/?$/);
   if (live && ENGINE[live[1]]) {
     const cfg = ENGINE[live[1]];
@@ -273,8 +276,7 @@ export default function App() {
     }
     if (live[2] === "today") return <ClassroomView key={cfg.id} config={cfg} />;
     if (live[2] === "board") return <InstructorBar config={cfg}><BoardPage key={cfg.id} config={cfg} /></InstructorBar>;
-    if (live[2] === "game") return <InstructorBar config={cfg}><GamePage key={cfg.id} config={cfg} /></InstructorBar>;
-    return <InstructorBar config={cfg}><AskPage key={cfg.id} config={cfg} /></InstructorBar>;
+    return <InstructorBar config={cfg}><GamePage key={cfg.id} config={cfg} /></InstructorBar>;
   }
 
   // The old forked hubs. COMM 2 and COMM 4 handed their public URL to the

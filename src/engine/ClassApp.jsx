@@ -240,11 +240,14 @@ const Panel = ({ title, children }) => (
 // question.
 export function onScreenNow(config, live, poll) {
   const c = live?.cast;
-  const ask = config.path + "/ask";
+  // The ask page is gone: Andrew, 2026-09-20, "remove the whole ask feature
+  // for now. it's confusing." Anything that used to send a phone there now
+  // says what is on the screen without offering a door, except the board,
+  // which has one of its own.
   const room = config.path + "/today";
 
   if (poll && (poll.phase === "vote1" || poll.phase === "vote2")) {
-    return { kind: "Poll", title: poll.question || "A poll is open", cta: "Vote now", href: ask };
+    return { kind: "Poll", title: poll.question || "A poll is open" };
   }
   if (!c) return null;
 
@@ -254,13 +257,13 @@ export function onScreenNow(config, live, poll) {
       cta: "Add to the discussion", href: config.path + "/board" };
   }
   if (c.type === "headlines") {
-    return { kind: "Headlines", title: "Bring a headline to the room", cta: "Post a headline", href: ask };
+    return { kind: "Headlines", title: "Bring a headline to the room" };
   }
   if (c.type === "poll") {
-    return { kind: "Poll", title: c.label || "A poll is open", cta: "Vote now", href: ask };
+    return { kind: "Poll", title: c.label || "A poll is open" };
   }
   if (c.type === "question") {
-    return { kind: "Question", title: c.title || c.label || "A question is up", cta: "Answer the question", href: ask };
+    return { kind: "Question", title: c.title || c.label || "A question is up" };
   }
   if (c.type === "reveal") {
     return { kind: "Challenge", title: c.title || "A challenge", sub: c.due || "",
@@ -299,13 +302,16 @@ export function OnScreenNow({ config, live, poll }) {
       <h2 style={{ margin: 0, fontSize: "clamp(20px,3.2vw,27px)", fontWeight: 600, letterSpacing: "-.025em",
         lineHeight: 1.2, color: TEXT_PRIMARY, wordBreak: "break-word" }}>{it.title}</h2>
       {it.sub ? <div style={{ fontSize: 14, color: TEXT_MUTED }}>{it.sub}</div> : null}
-      <a className="ca-focus" href={it.href}
+      {/* Some of what goes up has nowhere for a phone to go: a poll and
+          Headlines are answered in the room and the ask page they used is
+          gone. The banner still says what is up. */}
+      {it.href ? <a className="ca-focus" href={it.href}
         {...(it.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
         style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 8,
           minHeight: TAP, padding: "0 20px", borderRadius: 12, background: accent, color: "#fff",
           fontSize: 16, fontWeight: 600, textDecoration: "none" }}>
         {it.cta} <span aria-hidden="true">→</span>
-      </a>
+      </a> : null}
     </section>
   );
 }
@@ -325,11 +331,7 @@ function liveNow(config, live, poll, data) {
   const tot = Object.values(data?.weeklyToT || {}).find(g => g.phase === "live");
   if (tot) out.push({ id: "tot", title: "Ten on Ten is open",
     what: "Answer this week's ten.", href: config.path + "/game" });
-  if (poll && (poll.phase === "vote1" || poll.phase === "vote2")) {
-    out.push({ id: "poll", title: "A poll is open", what: poll.question || "Vote on the question that is up.", href: config.path + "/ask" });
-  }
   const c = live?.cast;
-  if (c?.type === "headlines") out.push({ id: "hl", title: "Headlines is running", what: "Post a headline and vote on the ones already up.", href: config.path + "/ask" });
   if (c?.type === "feature") out.push({ id: "ft", title: c.title + " is running", what: c.body || "", href: config.path + "/today" });
   return out;
 }

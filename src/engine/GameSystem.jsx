@@ -28,7 +28,7 @@ import React, { useState, useEffect } from "react";
 import { useTheme, themedInteriorCrd, themedHeadingFont } from "../styles.jsx";
 import { genId, gp, Toast } from "../utils.jsx";
 import QuestionPicker from "./QuestionPicker.jsx";
-import { lastNameOf } from "./AskPage.jsx";
+import { lastNameOf } from "./roster.js";
 import { dataWithIds } from "./roster.js";
 import { scoreWeek, perfectRuns, mergeAnswers } from "./game.js";
 import { ENGINE } from "../config/registry.js";

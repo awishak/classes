@@ -73,7 +73,6 @@ import { Duplicates, LooseEnds, Tags, Links } from "../src/engine/RepoTidy.jsx";
 import { tagIndex, lookalikes, retagPatches, normTag } from "../src/engine/tags.js";
 import { linkables, verdict, linkPatches } from "../src/engine/links.js";
 import { findDuplicates, findLooseEnds, applyMerge } from "../src/engine/tidy.js";
-import AskPage from "../src/engine/AskPage.jsx";
 import PlanPage from "../src/PlanPage.jsx";
 import RetreatPage from "../src/RetreatPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
@@ -87,7 +86,7 @@ import { instructorOf } from "../src/instructors.js";
 import TopNav, { NAV_CLASS, activeFor } from "../src/engine/TopNav.jsx";
 import HornApp from "../src/engine/HornApp.jsx";
 import { assignmentsOf } from "../src/engine/profileTask.js";
-import { QuestionsSummary, QuestionsDetail, answeredOf } from "../src/engine/QuestionsCard.jsx";
+import { QuestionsSummary, QuestionsDetail, publishedOf, queueOf, archivedOf, askedBy } from "../src/engine/QuestionsCard.jsx";
 import { sectionsOf as sittingLabels, hasSections, studentsIn, sectionFor, realStudents, isTestStudent, sectionNow } from "../src/engine/sections.js";
 import { classmatesOf } from "../src/engine/RosterCard.jsx";
 import { comingUp, turnedIn } from "../src/engine/AssignmentsCard.jsx";
@@ -159,7 +158,6 @@ for (const cfg of ENGINE_LIST) {
   cases.push([cfg.code + " room screen", <ClassroomView config={cfg} />]);
   cases.push([cfg.code + " class site", <ClassApp config={cfg} />]);
   cases.push([cfg.code + " class site, on a phone", atWidth(PHONE, () => <ClassApp config={cfg} />)]);
-  cases.push([cfg.code + " ask page", <AskPage config={cfg} />]);
   cases.push([cfg.code + " questions, student", <QuestionsDetail config={cfg} role="student" asStudent="Ada Lovelace" />]);
   cases.push([cfg.code + " questions, mine", <QuestionsDetail config={cfg} role="instructor" />]);
   cases.push([cfg.code + " questions tile", <QuestionsSummary config={cfg} role="instructor" />]);
@@ -915,7 +913,7 @@ cases.push(["On the wall, a discussion", <CastContent config={cfg0} plan={{}} da
     at: 0, count: 1, join: "board" }} />, "Answer on your phone"]);
 cases.push(["On the wall, the Enter board", <CastContent config={cfg0} plan={{}} data={{}}
   cast={{ type: "board", tag: "Enter", title: "Enter", idea: "One word for today",
-    at: 0, count: 3, showAsk: true }} />, "Ask me anything"]);
+    at: 0, count: 3, showAsk: true }} />, "One word for today"]);
 // The three ways a link goes up. Server-side nothing is fetched, so these prove
 // the screens draw before the article arrives: Read says so, Page shows the
 // frame, Card shows the headline on the stage with the way out.
@@ -1617,7 +1615,6 @@ cases.push(["Snapchat, the story bar", <StoryBar theme="snapchat" roster={[{ nam
     finally { globalThis.localStorage.getItem = was; }
   };
   const SURFACES = [["room screen", <ClassroomView config={cfg0} />],
-                    ["ask page", <AskPage config={cfg0} />],
                     ["discussion board", <BoardPage config={cfg0} />],
                     ["game", <GamePage config={cfg0} />]];
   // The name tcMarquee is in the keyframes on every theme, because the
@@ -2462,10 +2459,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     try {
       const you = renderToString(<YouDetail config={mcfg} role="student" data={{}} update={noop} asStudent={N} />);
       if (!you.includes("Your profile")) say("Your card lost the profile");
-      ["I don&#x27;t understand something", "Message with Dr. Ishak"].forEach(t => { if (you.includes(t)) say("Your card still carries " + JSON.stringify(t)); });
+      ["Message with Dr. Ishak"].forEach(t => { if (you.includes(t)) say("Your card still carries " + JSON.stringify(t)); });
       const hcfg2 = { ...mcfg, instructor: { ...(mcfg.instructor || {}), officeHours: "Tue and Thu, 1 to 3 pm, Vari 234" } };
       const msgs = renderToString(<MessagesDetail config={hcfg2} role="student" data={talked} update={noop} asStudent={N} />);
-      ["Message with Dr. Ishak", "I don&#x27;t understand something", "Make a meeting", "What is framing?"].forEach(t => { if (!msgs.includes(t)) say("the messages card has no " + JSON.stringify(t)); });
+      ["Message with Dr. Ishak", "Make a meeting", "What is framing?"].forEach(t => { if (!msgs.includes(t)) say("the messages card has no " + JSON.stringify(t)); });
+      // Asking moved out. One place to ask is the point of taking the ask
+      // page away, and this card is for what is between the two of them.
+      if (msgs.includes("I don&#x27;t understand something")) say("the messages card still has a question box");
       if (msgs.includes("Your profile")) say("the messages card carries the profile");
       // One tap, and it is a thumb rather than a word.
       ["Done<", "Got it<", "I&#x27;m confused<"].forEach(t => { if (msgs.includes(t)) say("the card still has a " + JSON.stringify(t) + " button"); });
@@ -2473,7 +2473,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       // Office hours, under every way of writing to him, and nothing where a
       // class has none written.
       if (!msgs.includes("Office hours") || !msgs.includes("Tue and Thu, 1 to 3 pm, Vari 234")) say("the messages card does not carry the office hours");
-      if (msgs.indexOf("Office hours") < msgs.indexOf("I don&#x27;t understand something")) say("the office hours are not underneath the messaging");
+      if (msgs.indexOf("Office hours") < msgs.indexOf("Make a meeting")) say("the office hours are not underneath the messaging");
       if (renderToString(<MessagesDetail config={mcfg} role="student" data={talked} update={noop} asStudent={N} />).includes("Office hours")) say("a class with no office hours shows an empty Office hours");
       // A thread that already holds one still reads it back.
       const old = { threads: { [N]: [{ id: "m0", ts: 1, from: "student", kind: "confused", text: "" }] } };
@@ -2572,41 +2572,60 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   }
 }
 
-// Two doors, each saying where it goes. Andrew, 2026-09-20: "there's a way to
-// ask questions from the menu, and i have no idea where that goes. so can we
-// clarify." The menu item is the room; the card is the sheet; a question can
-// be both, since they write to one store.
+// One place to ask, and nothing left pointing at the old one. Andrew,
+// 2026-09-20: "remove the whole ask feature for now. it's confusing." The ask
+// page is deleted, its route with it, and the room screen's QR code with that.
+// A question is asked on the Questions card and nowhere else.
 {
   const say = (m) => { console.error("  FAIL  asking: " + m); failedEarly++; };
   const p2 = { path: "/comm3" };
   for (const role of ["student", "instructor"]) {
-    const ask = appsFor(p2, role).find(a => a.id === "ask");
-    if (!ask) { say("no way to ask in the " + role + " menu"); continue; }
-    if (ask.label !== "Ask in class") say("the " + role + " menu calls it " + JSON.stringify(ask.label) + " rather than naming the room");
+    if (appsFor(p2, role).some(a => a.id === "ask")) say("the " + role + " menu still leads to the ask page");
   }
-  const askSrc = readFileSync(new URL("../src/engine/AskPage.jsx", import.meta.url), "utf8");
+  const appSrc = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  if (/\|ask\||\(ask\|/.test(appSrc)) say("the ask page still has a route");
+  const room = readFileSync(new URL("../src/engine/ClassroomView.jsx", import.meta.url), "utf8");
+  if (room.includes('"/ask"')) say("the room screen still sends a phone to the ask page");
+  if (/<QRCode[^>]*\/ask/.test(room)) say("the ask QR code is back on the wall");
+  // The board keeps its code, because a board is answered on a phone.
+  if (!room.includes('base + "/board"')) say("the discussion board lost the way on to it");
+  const site = readFileSync(new URL("../src/engine/ClassApp.jsx", import.meta.url), "utf8");
+  if (site.includes('"/ask"')) say("the class site still links to the ask page");
   const qSrc = readFileSync(new URL("../src/engine/QuestionsCard.jsx", import.meta.url), "utf8");
-  if (!askSrc.includes('config.path + "/questions"')) say("the ask page does not say a question ends up on the sheet");
-  if (!qSrc.includes('config.path + "/ask"')) say("the sheet does not say where to ask during class");
-  if (!qSrc.includes("no names on any of them")) say("the sheet does not promise no names");
+  if (qSrc.includes('config.path + "/ask"')) say("the questions card still points at the ask page");
+  if (!qSrc.includes("Please keep this anonymous")) say("the ask box has no anonymous tick");
 }
 
-// The question sheet: what students read is what he has answered.
+// The FAQ. Andrew, 2026-09-20: "so basically it's an FAQ site. students can
+// peruse the FAQs, and they can ask one, and they can ask to keep it
+// anonymous ... and when i choose to answer a question, i can keep it
+// anonymous and then publish my answer. i can also archive a question if i
+// think it's not worth answering."
+//
+// Writing an answer is not publishing. The class sees what he has published
+// and nothing else.
 {
-  const say = (m) => { console.error("  FAIL  question sheet: " + m); failedEarly++; };
+  const say = (m) => { console.error("  FAIL  FAQ: " + m); failedEarly++; };
   const items = [
-    { id: "q1", text: "What counts as a source?", who: "Ada Lovelace", anon: false, at: 10, state: "answered", answer: "Anything you can point at.", answeredAt: 20 },
-    { id: "q2", text: "When is the exam?", who: "", anon: true, at: 30, state: "open" },
-    { id: "q3", text: "Is the reading on the site?", who: "Grace Hopper", anon: false, at: 40, state: "answered", answer: "   ", answeredAt: 50 },
-    { id: "q4", text: "Old one", who: "", anon: true, at: 5, state: "answered", answer: "Yes.", answeredAt: 6 },
+    { id: "q1", text: "What counts as a source?", who: "Ada Lovelace", anon: false, at: 10, state: "published", answer: "Anything you can point at.", answeredAt: 20, publishedAt: 25 },
+    { id: "q2", text: "When is the exam?", who: "Grace Hopper", anon: false, at: 30, state: "open" },
+    { id: "q3", text: "Is this graded?", who: "Alan Turing", anon: false, at: 40, state: "open", answer: "Not yet published.", answeredAt: 45 },
+    { id: "q4", text: "Something unkind", who: "", anon: true, at: 50, state: "archived" },
+    { id: "q5", text: "An old answered one", who: "Ada Lovelace", anon: false, at: 5, state: "answered", answer: "Still counts.", answeredAt: 6 },
+    { id: "q6", text: "Asked quietly", who: "Grace Hopper", anon: true, at: 60, state: "published", answer: "Here you go.", answeredAt: 61, publishedAt: 62 },
   ];
-  const sheet = answeredOf(items);
-  if (sheet.map(q => q.id).join("|") !== "q1|q4") say("the sheet is not the answered ones, newest first: " + JSON.stringify(sheet.map(q => q.id)));
-  if (sheet.some(q => q.text.includes("exam"))) say("an unanswered question is on the sheet");
-  if (sheet.some(q => q.id === "q3")) say("an answer of spaces puts a question on the sheet");
-  // No name reaches the sheet. The card renders no `who` for a student, so
-  // the check is on the words the component is given.
-  if (sheet.some(q => !q.text)) say("a question on the sheet has no words");
+  const page = publishedOf(items);
+  if (page.map(q => q.id).join("|") !== "q6|q1|q5") say("the page is not the published ones, newest first: " + JSON.stringify(page.map(q => q.id)));
+  if (page.some(q => q.id === "q3")) say("an answer he has not published is on the page");
+  if (page.some(q => q.id === "q4")) say("an archived question is on the page");
+  const queue = queueOf(items);
+  if (queue.map(q => q.id).join("|") !== "q3|q2") say("the queue is not what is left to publish, newest first: " + JSON.stringify(queue.map(q => q.id)));
+  if (archivedOf(items).map(q => q.id).join("|") !== "q4") say("the archive is wrong");
+  // Either tick takes the name off, and neither can be undone by the other.
+  if (askedBy(items[0]) !== "Ada Lovelace") say("a question asked in the open lost its name");
+  if (askedBy(items[5]) !== "Anonymous") say("a student who asked to stay anonymous is named");
+  if (askedBy({ who: "Ada Lovelace", hideName: true }) !== "Anonymous") say("his own tick does not take a name off");
+  if (askedBy({ who: "", anon: false }) !== "Anonymous") say("a question with no name reads as something else");
 }
 
 // The top bar lights the tab the address says, on every page the same way,
@@ -2621,11 +2640,14 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       [p]: "home", [p + "/"]: "home", [p + "/schedule"]: "schedule", [p + "/challenges"]: "assignments", [p + "/challenges/wc1"]: "assignments",
       [p + "/class"]: "class", [p + "/you"]: "class", [p + "/roster"]: "class", [p + "/messages"]: "class", [p + "/more"]: "more",
       [p + "/dashboard"]: "dashboard", ["/repo"]: "repo", [p + "/games"]: "games", [p + "/rungame"]: "games", [p + "/grade"]: "grade",
-      [p + "/today"]: "today", [p + "/ask"]: "ask",
+      [p + "/today"]: "today",
     };
     Object.entries(want).forEach(([path, id]) => { if (at(path) !== id) say(path + " lights " + JSON.stringify(at(path)) + ", not " + id); });
     if (at(p + "/dashboard", "?app=horn") !== "dashboard") say("the dashboard with the Horn up lights " + JSON.stringify(at(p + "/dashboard", "?app=horn")));
     if (at(p + "/board") !== "") say("a board page lights " + JSON.stringify(at(p + "/board")));
+    // The ask page is gone, and a stale link to it lights nothing rather than
+    // a tab that no longer leads anywhere.
+    if (at(p + "/ask") !== "") say("a link to the old ask page still lights " + JSON.stringify(at(p + "/ask")));
     try {
       // A page that says nothing gets the tab off the address; the smoke
       // globals put the address at /, so a class path is set for the render.

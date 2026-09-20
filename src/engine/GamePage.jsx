@@ -20,7 +20,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useClassState } from "./store.js";
 import { GameAdmin, StudentAnswerView, TriviaPlayer, Accolades } from "./GameSystem.jsx";
-import { lastNameOf } from "./AskPage.jsx";
+import { lastNameOf } from "./roster.js";
 import * as TOKENS from "./tokens.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";

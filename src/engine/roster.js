@@ -117,3 +117,14 @@ export const mergeRoster = (students, rows) => {
   });
   return { students: out, added, updated };
 };
+
+// Sort by last name, the way the roster reads in the room. Names that do not
+// split on the last space (compound surnames) are listed in the class config
+// under `lastNameOverrides`.
+//
+// This lived in AskPage.jsx, which was where the roster was first listed for
+// students to pick from. The ask page came off on 2026-09-20 and three other
+// surfaces were importing this out of it, so it moved to the file about who a
+// student is.
+export const lastNameOf = (name, overrides) =>
+  (overrides && overrides[name]) || String(name || "").trim().split(/\s+/).slice(-1)[0];

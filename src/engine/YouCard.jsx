@@ -6,7 +6,6 @@
 import { useState } from "react";
 import { genId } from "../utils.jsx";
 import { schedulingLinkOf } from "../instructors.js";
-import { useQuestions } from "./questions.js";
 import * as TOKENS from "./tokens.js";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -288,21 +287,8 @@ function StudentYou({ config, data, update, asStudent, setAsStudent }) {
 function StudentMessages({ config, data, update, asStudent }) {
   const a = config.accent;
   const [reply, setReply] = useState("");
-  const [question, setQuestion] = useState("");
-  const [asked, setAsked] = useState(false);
-  const questions = useQuestions(config.storageKey);
 
   const send = (text) => { if (!text.trim()) return; addMessage(update, asStudent, { from: "student", kind: "reply", text: text.trim() }); setReply(""); };
-  // This box was a message to him alone, while its own words promised the
-  // class: "questions about material or challenges that the whole class might
-  // want to know about." Andrew, 2026-09-20: "where does that box go to? I
-  // almost want like an anonymous question sheet." So it goes to the sheet,
-  // with his name on it for Andrew and no name for anybody else.
-  const ask = () => {
-    if (!question.trim()) return;
-    questions.add({ text: question.trim(), who: asStudent || "", anon: false });
-    setQuestion(""); setAsked(true);
-  };
   const status = (kind) => addMessage(update, asStudent, { from: "student", kind, text: "" });
 
   return (
@@ -327,16 +313,10 @@ function StudentMessages({ config, data, update, asStudent }) {
         <GhostBtn accent={a} href={schedulingLinkOf(config) || undefined} onClick={() => status("meeting")}>Make a meeting</GhostBtn>
       </div>
 
-      <div style={{ marginTop: 22 }}>
-        <div style={label}>I don't understand something</div>
-        <div style={{ marginTop: 8 }}><Field value={question} onChange={setQuestion} placeholder="This is a good place to ask questions about material or challenges that the whole class might want to know about." /></div>
-        <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <SendBtn accent={a} onClick={ask} disabled={!question.trim()}>Ask</SendBtn>
-          <span style={{ fontSize: 14, color: TEXT_MUTED }}>
-            {asked ? "Asked. It turns up on Questions once it is answered." : "This goes on the class's Questions sheet, with no name on it."}
-          </span>
-        </div>
-      </div>
+      {/* "I don't understand something" was a box here, and it is the
+          Questions card now. One place to ask, which is the whole point of
+          taking the ask page away: this card is for what is between the two
+          of us, and a question the class would benefit from is not that. */}
 
       {/* Andrew, 2026-09-20: "always list my office hours underneath the
           messaging system." A student deciding whether to write to him is a

@@ -1,17 +1,21 @@
-// The question sheet.
+// The class's FAQ.
 //
-// Andrew, 2026-09-20: "i almost want like an anonymous question sheet that
-// students can access from the front page. there, they can see questions
-// people have asked, along with my answers."
+// Andrew, 2026-09-20: "i would rather just have a card on the front page that
+// says 'ask a question' and then give a checkbox for 'please keep this
+// anonymous'. and then i have a place where all the questions go, and then i
+// can PUBLISH the questions. so basically it's an FAQ site. students can
+// peruse the FAQs, and they can ask one, and they can ask to keep it
+// anonymous, and the questions will show up at the top. and when i choose to
+// answer a question, i can keep it anonymous and then publish my answer. i
+// can also archive a question if i think it's not worth answering."
 //
-// It reads the store the ask page already writes, so a question typed in the
-// room and a question typed on the front page land in one place and either
-// can be answered later. Writing the answer is what publishes it: a student
-// sees the answered ones and their own, and no names anywhere.
+// So: one card, one place to ask, and the published ones underneath. Writing
+// an answer is not publishing; publishing is a press of its own. A question
+// carries the asker's name unless the student ticked the box or he takes it
+// off on the way out.
 //
-// Asking is anonymous to the class either way. The box for his eyes says so:
-// he sees who asked unless the student ticks it, which is the rule the ask
-// page has always used.
+// It reads the store the class has always kept its questions in, so anything
+// asked before this is in the queue rather than lost.
 
 import { useState } from "react";
 import * as TOKENS from "./tokens.js";
@@ -29,15 +33,26 @@ const label = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform:
 const h2 = { fontSize: 22, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.02em" };
 const Muted = ({ children }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5 }}>{children}</div>;
 
-export const answeredOf = (items) => (items || [])
-  .filter(q => q.state === "answered" && String(q.answer || "").trim())
-  .sort((a, b) => (b.answeredAt || b.at || 0) - (a.answeredAt || a.at || 0));
+const words = (s) => String(s || "").trim();
 
-// A question of your own that he has not answered yet: yours to see, so you
-// know it arrived and do not ask it twice.
-const mineWaiting = (items, name) => (items || [])
-  .filter(q => q.state !== "trashed" && !String(q.answer || "").trim() && q.who && q.who === name)
+// On the page: published, newest first. A question answered before publishing
+// was a press of its own counts, so nothing already answered disappears.
+export const publishedOf = (items) => (items || [])
+  .filter(q => q.state === "published" || (q.state === "answered" && words(q.answer)))
+  .sort((a, b) => (b.publishedAt || b.answeredAt || b.at || 0) - (a.publishedAt || a.answeredAt || a.at || 0));
+
+// In his queue: everything asked and not yet published or archived, newest
+// first, which is what "the questions will show up at the top" means.
+export const queueOf = (items) => (items || [])
+  .filter(q => q.state !== "published" && q.state !== "archived" && q.state !== "trashed" && !(q.state === "answered" && words(q.answer)))
   .sort((a, b) => (b.at || 0) - (a.at || 0));
+
+export const archivedOf = (items) => (items || [])
+  .filter(q => q.state === "archived")
+  .sort((a, b) => (b.at || 0) - (a.at || 0));
+
+// Whose question it is, as the class sees it. Either tick takes the name off.
+export const askedBy = (q) => (q.anon || q.hideName) ? "Anonymous" : (words(q.who) || "Anonymous");
 
 const when = (ts) => { try { return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" }); } catch { return ""; } };
 
@@ -45,16 +60,16 @@ const field = {
   width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG,
   fontFamily: F, fontSize: 16, minHeight: TAP, background: "var(--surface-card)", color: TEXT_PRIMARY, lineHeight: 1.5,
 };
+const tick = { width: 18, height: 18, flex: "none" };
 
-function QA({ q, showWho }) {
+// One published question and its answer.
+function Entry({ q }) {
   return (
     <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 12 }}>
       <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.4, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{q.text}</div>
-      <div style={{ ...label, marginTop: 4 }}>{[showWho ? (q.anon ? "Anonymous" : q.who || "Anonymous") : "", when(q.answeredAt || q.at)].filter(Boolean).join(" · ")}</div>
-      {String(q.answer || "").trim() ? (
-        <div style={{ marginTop: 8, borderLeft: "3px solid var(--ca-accent, " + BORDER_STRONG + ")", paddingLeft: 12,
-          fontSize: 16, lineHeight: 1.55, color: TEXT_SECONDARY, whiteSpace: "pre-wrap" }}>{q.answer}</div>
-      ) : <Muted>Waiting on an answer.</Muted>}
+      <div style={{ ...label, marginTop: 4 }}>{askedBy(q)} · {when(q.publishedAt || q.answeredAt || q.at)}</div>
+      <div style={{ marginTop: 8, borderLeft: "3px solid var(--ca-accent, " + BORDER_STRONG + ")", paddingLeft: 12,
+        fontSize: 16, lineHeight: 1.55, color: TEXT_SECONDARY, whiteSpace: "pre-wrap" }}>{q.answer}</div>
     </div>
   );
 }
@@ -63,19 +78,19 @@ function QA({ q, showWho }) {
 export function QuestionsSummary({ config, role, asStudent }) {
   const { items } = useQuestions(config.storageKey);
   if (items === null) return <Muted>Loading.</Muted>;
-  const answered = answeredOf(items);
+  const out = publishedOf(items);
   if (role === "instructor") {
-    const waiting = (items || []).filter(q => q.state === "open" && !String(q.answer || "").trim()).length;
+    const waiting = queueOf(items).length;
     return waiting
-      ? <div><div style={{ fontSize: 22, fontWeight: 700, color: config.accent }}>{waiting}</div><Muted>waiting on an answer</Muted></div>
-      : <Muted>{answered.length} answered for the class.</Muted>;
+      ? <div><div style={{ fontSize: 22, fontWeight: 700, color: config.accent }}>{waiting}</div><Muted>to answer</Muted></div>
+      : <Muted>{out.length} published for the class.</Muted>;
   }
-  const mine = mineWaiting(items, asStudent).length;
-  if (!answered.length) return <Muted>{mine ? "Your question is in. Nothing answered yet." : "Ask anything about the class."}</Muted>;
+  const mine = queueOf(items).filter(q => words(q.who) && q.who === asStudent).length;
+  if (!out.length) return <Muted>{mine ? "Your question is in. Nothing published yet." : "Ask a question about anything in the class."}</Muted>;
   return (
     <div>
-      <div style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{answered[0].text}</div>
-      <Muted>{answered.length} answered question{answered.length === 1 ? "" : "s"}</Muted>
+      <div style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{out[0].text}</div>
+      <Muted>{out.length} question{out.length === 1 ? "" : "s"} answered{mine ? " · yours is in the queue" : ""}</Muted>
     </div>
   );
 }
@@ -93,111 +108,166 @@ function StudentQuestions({ config, api, name }) {
   const [text, setText] = useState("");
   const [anon, setAnon] = useState(false);
   const [sent, setSent] = useState(false);
-  const answered = answeredOf(api.items);
-  const waiting = mineWaiting(api.items, name);
+  const out = publishedOf(api.items);
+  const mine = queueOf(api.items).filter(q => words(q.who) && q.who === name);
   const ask = () => {
     if (!text.trim()) return;
-    api.add({ text: text.trim(), who: anon ? "" : name || "", anon });
+    api.add({ text: text.trim(), who: name || "", anon });
     setText(""); setSent(true);
   };
   return (
     <div>
       <div style={h2}>Questions</div>
-      <Muted>
-        Questions from the class, with Dr. Ishak's answers, and no names on any of them. Ask here any time.
-        While class is happening, <a className="ca-focus" href={config.path + "/ask"} style={{ color: "var(--ca-accent-ink, " + config.accent + ")", fontWeight: 600 }}>Ask in class</a> sends
-        a question to the room, where it can go up on the screen.
-      </Muted>
+      <Muted>Ask anything about the class. Answered questions turn up here for everybody to read.</Muted>
 
       <div style={{ marginTop: 18 }}>
         <div style={label}>Ask a question</div>
         <div style={{ marginTop: 8 }}>
           <textarea value={text} onChange={e => { setText(e.target.value); setSent(false); }} rows={3}
-            placeholder="Anything about the class, the readings or a challenge."
+            placeholder="A reading, a challenge, a deadline, anything."
             style={{ ...field, resize: "vertical" }} />
         </div>
-        <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <label style={{ marginTop: 8, fontSize: 15, color: TEXT_SECONDARY, display: "flex", alignItems: "center", gap: 8, minHeight: TAP }}>
+          <input type="checkbox" checked={anon} onChange={e => setAnon(e.target.checked)} style={tick} />
+          Please keep this anonymous
+        </label>
+        <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <button className="ca-focus" onClick={ask} disabled={!text.trim()}
             style={{ minHeight: TAP, padding: "0 18px", borderRadius: 999, border: "none", cursor: text.trim() ? "pointer" : "default",
               background: "var(--ca-accent, " + config.accent + ")", color: "#fff", fontFamily: F, fontSize: 16, fontWeight: 600,
               opacity: text.trim() ? 1 : .5 }}>Ask</button>
-          <label style={{ fontSize: 15, color: TEXT_SECONDARY, display: "inline-flex", alignItems: "center", gap: 8, minHeight: TAP }}>
-            <input type="checkbox" checked={anon} onChange={e => setAnon(e.target.checked)} />
-            Hide my name from Dr. Ishak too
-          </label>
+          <span style={{ fontSize: 14, color: TEXT_MUTED }}>
+            {sent ? "Asked. Your question turns up here once Dr. Ishak answers." : anon ? "Your name stays off the question." : "Dr. Ishak sees your name with the question."}
+          </span>
         </div>
-        {sent ? <Muted>Asked. It turns up here once it is answered.</Muted> : null}
       </div>
 
-      {waiting.length ? (
+      {mine.length ? (
         <div style={{ marginTop: 22 }}>
           <div style={label}>Yours, waiting</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
-            {waiting.map(q => <QA key={q.id} q={q} />)}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
+            {mine.map(q => (
+              <div key={q.id} style={{ borderTop: "1px solid " + BORDER, paddingTop: 10 }}>
+                <div style={{ fontSize: 16, lineHeight: 1.4, whiteSpace: "pre-wrap" }}>{q.text}</div>
+                <Muted>Asked {when(q.at)}</Muted>
+              </div>
+            ))}
           </div>
         </div>
       ) : null}
 
       <div style={{ marginTop: 22 }}>
         <div style={label}>Answered</div>
-        {answered.length ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
-            {answered.map(q => <QA key={q.id} q={q} />)}
+        {out.length ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 8 }}>
+            {out.map(q => <Entry key={q.id} q={q} />)}
           </div>
-        ) : <Muted>Nothing answered yet.</Muted>}
+        ) : <Muted>Nothing published yet.</Muted>}
       </div>
     </div>
   );
 }
 
 function InstructorQuestions({ config, api }) {
-  const open = (api.items || []).filter(q => q.state !== "trashed" && !String(q.answer || "").trim())
-    .sort((a, b) => (b.at || 0) - (a.at || 0));
-  const answered = answeredOf(api.items);
+  const [showArchive, setShowArchive] = useState(false);
+  const queue = queueOf(api.items);
+  const out = publishedOf(api.items);
+  const archived = archivedOf(api.items);
   return (
     <div>
       <div style={h2}>Questions</div>
-      <Muted>Asked on the front page, in the messages card, and in the room on Ask in class. Writing an answer
-        puts the question and the answer on the sheet the class reads.</Muted>
+      <Muted>Answer, then publish. Publishing is what puts a question and its answer in front of the class.</Muted>
 
       <div style={{ marginTop: 18 }}>
-        <div style={label}>Waiting</div>
-        {open.length ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 8 }}>
-            {open.map(q => <Answering key={q.id} q={q} accent={config.accent} onSave={(t) => api.answer(q.id, t)} onTrash={() => api.setState(q.id, "trashed")} />)}
+        <div style={label}>To answer</div>
+        {queue.length ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 8 }}>
+            {queue.map(q => <Answering key={q.id} q={q} config={config} api={api} />)}
           </div>
         ) : <Muted>Nothing waiting.</Muted>}
       </div>
 
-      <div style={{ marginTop: 22 }}>
-        <div style={label}>On the sheet</div>
-        {answered.length ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 8 }}>
-            {answered.map(q => <Answering key={q.id} q={q} accent={config.accent} onSave={(t) => api.answer(q.id, t)} onTrash={() => api.setState(q.id, "trashed")} />)}
+      <div style={{ marginTop: 24 }}>
+        <div style={label}>Published</div>
+        {out.length ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 8 }}>
+            {out.map(q => <Answering key={q.id} q={q} config={config} api={api} published />)}
           </div>
-        ) : <Muted>Nothing on the sheet yet.</Muted>}
+        ) : <Muted>Nothing published yet.</Muted>}
       </div>
+
+      {archived.length ? (
+        <div style={{ marginTop: 24 }}>
+          <button className="ca-focus" onClick={() => setShowArchive(v => !v)} aria-expanded={showArchive}
+            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: F,
+              fontSize: 15, fontWeight: 600, color: config.accent, minHeight: TAP }}>
+            {showArchive ? "Hide the archive" : "Archive (" + archived.length + ")"}
+          </button>
+          {showArchive ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
+              {archived.map(q => (
+                <div key={q.id} style={{ borderTop: "1px solid " + BORDER, paddingTop: 10, display: "flex", alignItems: "baseline", gap: 10 }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 15, color: TEXT_SECONDARY, whiteSpace: "pre-wrap" }}>{q.text}</span>
+                  <button className="ca-focus" onClick={() => api.unpublish(q.id)}
+                    style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 14, fontWeight: 600, color: config.accent, minHeight: TAP }}>
+                    Put it back
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-// One question, with the box the answer goes in. It saves when he leaves it,
-// like every other box in here, so there is no Save to forget.
-function Answering({ q, accent, onSave, onTrash }) {
+// One question, with the answer box and the two presses that decide what
+// happens to it. The answer saves when he leaves the box, so there is no Save
+// to forget, and publishing is separate from writing.
+function Answering({ q, config, api, published }) {
   const [draft, setDraft] = useState(q.answer || "");
+  const [hide, setHide] = useState(!!q.hideName);
+  const ready = !!draft.trim();
   return (
     <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 12 }}>
       <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.4, whiteSpace: "pre-wrap" }}>{q.text}</div>
-      <div style={{ ...label, marginTop: 4 }}>{(q.anon ? "Anonymous" : q.who || "Anonymous") + " · " + when(q.at)}</div>
-      <textarea value={draft} onChange={e => setDraft(e.target.value)} onBlur={() => onSave(draft)} rows={2}
-        placeholder="Answer, for the whole class to read"
+      <div style={{ ...label, marginTop: 4 }}>
+        {(words(q.who) || "Anonymous") + " · " + when(q.at) + (q.anon ? " · asked to stay anonymous" : "")}
+      </div>
+      <textarea value={draft} onChange={e => setDraft(e.target.value)} onBlur={() => api.answer(q.id, draft)} rows={3}
+        placeholder="Your answer, for the whole class to read"
         style={{ ...field, marginTop: 8, resize: "vertical" }} />
-      <div style={{ marginTop: 6, display: "flex", gap: 14, alignItems: "center" }}>
-        <span style={{ fontSize: 13, color: TEXT_MUTED }}>{String(q.answer || "").trim() ? "On the sheet" : "Not on the sheet yet"}</span>
-        <button className="ca-focus" onClick={onTrash}
-          style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 14, fontWeight: 600, color: TEXT_MUTED, minHeight: TAP }}>
-          Take it off
-        </button>
+      <label style={{ marginTop: 6, fontSize: 15, color: TEXT_SECONDARY, display: "flex", alignItems: "center", gap: 8, minHeight: TAP }}>
+        <input type="checkbox" checked={hide || !!q.anon} disabled={!!q.anon} style={tick}
+          onChange={e => { setHide(e.target.checked); if (published) api.publish(q.id, e.target.checked); }} />
+        {q.anon ? "Anonymous, because they asked" : "Publish it without their name"}
+      </label>
+      <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        {published ? (
+          <>
+            <button className="ca-focus" onClick={() => { api.answer(q.id, draft); api.publish(q.id, hide); }} disabled={!ready}
+              style={{ minHeight: TAP, padding: "0 16px", borderRadius: 999, border: "1px solid " + BORDER_STRONG,
+                background: "var(--surface-card)", color: TEXT_PRIMARY, fontFamily: F, fontSize: 15, fontWeight: 600,
+                cursor: ready ? "pointer" : "default", opacity: ready ? 1 : .5 }}>Save the changes</button>
+            <button className="ca-focus" onClick={() => api.unpublish(q.id)}
+              style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_MUTED, minHeight: TAP }}>
+              Take it off the page
+            </button>
+          </>
+        ) : (
+          <>
+            <button className="ca-focus" onClick={() => { api.answer(q.id, draft); api.publish(q.id, hide); }} disabled={!ready}
+              style={{ minHeight: TAP, padding: "0 18px", borderRadius: 999, border: "none",
+                background: "var(--ca-accent, " + config.accent + ")", color: "#fff", fontFamily: F, fontSize: 16, fontWeight: 600,
+                cursor: ready ? "pointer" : "default", opacity: ready ? 1 : .5 }}>Publish</button>
+            <button className="ca-focus" onClick={() => api.archive(q.id)}
+              style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_MUTED, minHeight: TAP }}>
+              Archive
+            </button>
+            <span style={{ fontSize: 14, color: TEXT_MUTED }}>{ready ? "" : "An answer first, then Publish."}</span>
+          </>
+        )}
       </div>
     </div>
   );

@@ -84,7 +84,7 @@ export function Content({ cast, config, plan, data }) {
         {plan?.notes ? (
           <div style={{ color: DIM, fontSize: "clamp(15px,1.7vw,24px)", maxWidth: "34ch", lineHeight: 1.45 }}>{plan.notes}</div>
         ) : null}
-        <AskBlock base={base} />
+        <HomeLine base={base} />
       </div>
     );
   }
@@ -119,7 +119,6 @@ export function Content({ cast, config, plan, data }) {
           </div>
         ) : null}
         {cast.join === "board" ? <JoinBlock base={origin + config.path} compact /> : null}
-        {cast.showAsk ? <AskBlock base={origin + config.path} compact /> : null}
       </div>
     );
   }
@@ -301,11 +300,7 @@ function PollScreen({ config }) {
 
       {voting ? (
         <div style={{ display: "flex", gap: "clamp(20px,3vw,44px)", alignItems: "center", marginTop: "2vh", flexWrap: "wrap" }}>
-          <QRCode value={origin + config.path + "/ask"} size={110} />
-          <div>
-            <div style={{ fontSize: "clamp(15px,1.7vw,24px)", fontWeight: 500 }}>Vote now</div>
-            <div style={{ ...eyebrow, marginTop: 4, letterSpacing: ".06em" }}>{(origin + config.path).replace(/^https?:\/\//, "")}/ask</div>
-          </div>
+          <div style={{ fontSize: "clamp(15px,1.7vw,24px)", fontWeight: 500 }}>Vote now</div>
           <div style={{ marginLeft: "auto", fontFamily: MONO, fontSize: "clamp(22px,3vw,44px)", color: "#e11d48", fontVariantNumeric: "tabular-nums" }}>
             {inCount} in
           </div>
@@ -329,8 +324,7 @@ function HeadlinesScreen({ config, data }) {
         justifyContent: "center", textAlign: "center", gap: "2.4vh", padding: "clamp(28px,5vw,80px)", color: INK, fontFamily: F }}>
         <div style={{ ...eyebrow, color: "#e11d48" }}>Right now</div>
         <div style={{ fontSize: "clamp(38px,6.4vw,104px)", fontWeight: 700, letterSpacing: "-.04em", lineHeight: 1 }}>Headlines</div>
-        <div style={{ color: DIM, fontSize: "clamp(15px,1.9vw,28px)" }}>Bring me a question. Scan the code to post yours.</div>
-        <AskBlock base={origin + config.path} compact />
+        <div style={{ color: DIM, fontSize: "clamp(15px,1.9vw,28px)" }}>Bring me a headline.</div>
       </div>
     );
   }
@@ -384,8 +378,6 @@ function HeadlinesScreen({ config, data }) {
 
       {phase !== "done" ? (
         <div style={{ display: "flex", gap: "clamp(18px,2.6vw,40px)", alignItems: "center", marginTop: "1vh", flexWrap: "wrap" }}>
-          <QRCode value={origin + config.path + "/ask"} size={100} />
-          <div style={{ ...eyebrow, letterSpacing: ".06em" }}>{(origin + config.path).replace(/^https?:\/\//, "")}/ask</div>
           <div style={{ marginLeft: "auto", fontFamily: MONO, fontSize: "clamp(20px,2.6vw,38px)", color: "#e11d48", fontVariantNumeric: "tabular-nums" }}>{inCount} in</div>
         </div>
       ) : null}
@@ -556,9 +548,9 @@ function CardScreen({ url, claim, kind, pick, article, note }) {
 
 const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return "the page"; } };
 
-// Where to answer a discussion prompt. The Ask block sends a phone to /ask,
-// which is the wrong door for a board: a student reading a prompt off the wall
-// had no way of knowing the answers go somewhere else.
+// Where to answer a discussion prompt. A board is the one thing on the wall
+// that still asks for a phone, so it keeps its code: a student reading a
+// prompt off the screen needs to know the answers go somewhere.
 function JoinBlock({ base, compact }) {
   const px = compact ? 96 : 132;
   return (
@@ -573,20 +565,15 @@ function JoinBlock({ base, compact }) {
   );
 }
 
-function AskBlock({ base, compact }) {
-  const px = compact ? 96 : 132;
+// The class's address, on the wall. Andrew, 2026-09-20: "remove the QR code,
+// forget about headlines for now." The code sent a phone to the ask page, and
+// the ask page is gone; the address is worth saying anyway, because the idle
+// screen is up while the room fills.
+function HomeLine({ base }) {
   return (
-    <div style={{ display: "flex", gap: "clamp(22px,3.4vw,52px)", marginTop: "2.5vh", alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-      <QRCode value={base + "/ask"} size={px} />
-      <div style={{ textAlign: "left" }}>
-        <div style={{ fontSize: "clamp(15px,1.6vw,22px)", fontWeight: 500 }}>Ask me anything</div>
-        <div style={{ ...eyebrow, marginTop: 4, letterSpacing: ".06em" }}>{base.replace(/^https?:\/\//, "")}/ask</div>
-        <div style={{ color: DIM, fontSize: "clamp(12px,1.1vw,15px)", marginTop: 6 }}>Confidential. Anonymous if you want.</div>
-      </div>
-      <div style={{ textAlign: "left", borderLeft: "1px solid " + LINE, paddingLeft: "clamp(18px,2.6vw,40px)" }}>
-        <div style={{ fontSize: "clamp(15px,1.6vw,22px)", fontWeight: 500 }}>Class homepage</div>
-        <div style={{ ...eyebrow, marginTop: 4, letterSpacing: ".06em" }}>{base.replace(/^https?:\/\//, "")}</div>
-      </div>
+    <div style={{ marginTop: "2.5vh", textAlign: "center" }}>
+      <div style={{ fontSize: "clamp(15px,1.6vw,22px)", fontWeight: 500 }}>Class homepage</div>
+      <div style={{ ...eyebrow, marginTop: 4, letterSpacing: ".06em" }}>{base.replace(/^https?:\/\//, "")}</div>
     </div>
   );
 }

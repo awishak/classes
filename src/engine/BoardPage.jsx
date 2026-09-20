@@ -13,7 +13,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useClassData } from "./store.js";
 import { useBoards, postsOf, idForPrompt } from "./boards.js";
 import { useLive } from "./live.js";
-import { lastNameOf } from "./AskPage.jsx";
+import { lastNameOf } from "./roster.js";
 import * as TOKENS from "./tokens.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";

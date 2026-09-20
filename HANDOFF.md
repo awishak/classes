@@ -20,7 +20,6 @@ COMM 118, COMM 2, COMM 4, COMM 3, COMM 999. Deployed at
 | `/<class>/dashboard` | me | where I plan and teach, opened on today |
 | `/<class>/dashboard/<day>` | me | one day of the term, named in the address |
 | `/<class>/today` | the room | the projector screen |
-| `/<class>/ask` | students | questions and headlines |
 | `/<class>/board` | students | discussion boards |
 | `/<class>/game` | students | where the room plays |
 | `/<class>/games` | me | the games, written and run |
@@ -194,30 +193,39 @@ A thread that already holds an I'm confused still renders it. Office hours sit
 under the whole thing, from the profile, and a class with none written shows
 nothing.
 
-## The question sheet
+## The FAQ
 
-`src/engine/QuestionsCard.jsx` over the store the ask page already writes,
-`${storageKey}-questions`. One store, two doors: a question typed in the room
-on the ask page and a question typed on the front page are the same kind of
-thing, and one asked in week two is worth answering in week three.
+`src/engine/QuestionsCard.jsx` over `${storageKey}-questions`, the store the
+class has always kept its questions in, so nothing asked before this is lost.
 
-**Two doors, and each says where it goes.** The menu item is called **Ask in
-class** and lands on `/<class>/ask`, which is the room: a question sent there
-can go up on the screen while the class is happening. The **Questions** card on
-the class page is the sheet, asked any time and read by everybody. Each page
-names the other, because a way to ask questions that does not say where they
-go is a way to ask nothing.
+**One card, and one place to ask.** A student types a question, ticks
+`Please keep this anonymous` if they want to, and reads the published ones
+underneath. The box on the Messages card is gone and so is the ask page: two
+doors to the same thing is what made it confusing.
 
-**An answer is what publishes it.** A question sits waiting until I write an
-answer; writing one puts it on the sheet students read, and clearing the words
-takes it back off. A student sees the answered ones and their own while it
-waits, so nobody asks it twice.
+**Writing an answer is not publishing.** An answer can sit in the queue while
+the words get better; **Publish** is a press of its own and the only thing that
+puts a question in front of the class. **Archive** takes a question out of the
+queue without answering it, and keeps it, so a question nobody needs is not
+deleted evidence. A published one can be taken back off.
 
-**No names on the sheet, ever.** I see who asked unless the student ticks the
-box, which is the rule the ask page has always used. The box on the Messages
-card, "I don't understand something", posts here rather than into the private
-thread it used to go to, which is what its own words always promised. The
-thread with me is still where something private goes.
+**Two ways a name comes off.** `anon` is the student's, ticked when they ask.
+`hideName` is mine, chosen when I publish, for a question that names somebody
+or that would embarrass whoever asked. Either is enough, and the student's tick
+cannot be overridden. A question published with neither carries the asker's
+name.
+
+**The ask page is gone**, and its route with it. Andrew, 2026-09-20: "remove
+the whole ask feature for now. it's confusing." The QR code came off the room
+screen with it, so the wall shows the class's address instead. An old `/ask`
+link falls through to the class home rather than a dead page.
+
+**What that took with it:** the poll and Headlines had their only student door
+on that page. Both still run on the dashboard and still draw on the room
+screen, and neither can take an answer from a phone until they are given a door
+of their own. The discussion board keeps its QR code, because a board is
+answered on a phone and that is the one thing on the wall that still asks for
+one.
 
 ## Two sittings of one class
 
@@ -530,6 +538,9 @@ twice, because one edge can serve the old bundle briefly.
   a day and then came out of the dashboard. A day's written boards are still
   in the store and nothing reads them, so either they come back somewhere or
   the data goes.
+- **The poll and Headlines have no student door.** The ask page that carried
+  both is gone. The panels are still on the dashboard, so either they get a
+  door back or they come out.
 - **Boards and the leaderboard are not split by section yet.** People-shaped
   surfaces are meant to follow the room, and those two still show the whole
   class. Undecided rather than missed: one conversation across both sittings
