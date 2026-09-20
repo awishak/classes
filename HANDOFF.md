@@ -201,6 +201,13 @@ nothing.
 on the ask page and a question typed on the front page are the same kind of
 thing, and one asked in week two is worth answering in week three.
 
+**Two doors, and each says where it goes.** The menu item is called **Ask in
+class** and lands on `/<class>/ask`, which is the room: a question sent there
+can go up on the screen while the class is happening. The **Questions** card on
+the class page is the sheet, asked any time and read by everybody. Each page
+names the other, because a way to ask questions that does not say where they
+go is a way to ask nothing.
+
 **An answer is what publishes it.** A question sits waiting until I write an
 answer; writing one puts it on the sheet students read, and clearing the words
 takes it back off. A student sees the answered ones and their own while it

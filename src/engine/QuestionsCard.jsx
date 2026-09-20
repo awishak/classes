@@ -103,7 +103,11 @@ function StudentQuestions({ config, api, name }) {
   return (
     <div>
       <div style={h2}>Questions</div>
-      <Muted>Questions from the class, with Dr. Ishak's answers. No names, ever.</Muted>
+      <Muted>
+        Questions from the class, with Dr. Ishak's answers, and no names on any of them. Ask here any time.
+        While class is happening, <a className="ca-focus" href={config.path + "/ask"} style={{ color: "var(--ca-accent-ink, " + config.accent + ")", fontWeight: 600 }}>Ask in class</a> sends
+        a question to the room, where it can go up on the screen.
+      </Muted>
 
       <div style={{ marginTop: 18 }}>
         <div style={label}>Ask a question</div>
@@ -153,7 +157,8 @@ function InstructorQuestions({ config, api }) {
   return (
     <div>
       <div style={h2}>Questions</div>
-      <Muted>Asked on the front page and in the room. An answer puts the question on the class's sheet.</Muted>
+      <Muted>Asked on the front page, in the messages card, and in the room on Ask in class. Writing an answer
+        puts the question and the answer on the sheet the class reads.</Muted>
 
       <div style={{ marginTop: 18 }}>
         <div style={label}>Waiting</div>

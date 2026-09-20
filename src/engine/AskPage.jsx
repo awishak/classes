@@ -381,6 +381,16 @@ export default function AskPage({ config }) {
         ) : null}
 
         <h1 style={{ margin: (round || hlSession) ? "8px 0 0" : 0, fontSize: (round || hlSession) ? 21 : 28, fontWeight: 600, letterSpacing: "-.02em" }}>Ask me anything</h1>
+        {/* Where this goes. Andrew, 2026-09-20: "there's a way to ask
+            questions from the menu, and i have no idea where that goes. so
+            can we clarify." A question sent here can go up on the screen
+            while the class is happening, and turns up on the class's
+            Questions page once it has an answer. */}
+        <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: TEXT_SECONDARY }}>
+          This goes to Dr. Ishak in the room, and can go up on the screen. Once he answers it, the question
+          and the answer sit on <a href={config.path + "/questions"} style={{ color: config.accent, fontWeight: 600 }}>Questions</a> for
+          the whole class, with no name on either.
+        </p>
         <textarea value={text} onChange={e => setText(e.target.value)} placeholder="What's your question?"
           style={{ ...input, minHeight: 130, resize: "vertical", lineHeight: 1.5 }} />
         <label style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 15, color: TEXT_SECONDARY, cursor: "pointer", minHeight: 44 }}>

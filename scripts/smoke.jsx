@@ -2572,6 +2572,25 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   }
 }
 
+// Two doors, each saying where it goes. Andrew, 2026-09-20: "there's a way to
+// ask questions from the menu, and i have no idea where that goes. so can we
+// clarify." The menu item is the room; the card is the sheet; a question can
+// be both, since they write to one store.
+{
+  const say = (m) => { console.error("  FAIL  asking: " + m); failedEarly++; };
+  const p2 = { path: "/comm3" };
+  for (const role of ["student", "instructor"]) {
+    const ask = appsFor(p2, role).find(a => a.id === "ask");
+    if (!ask) { say("no way to ask in the " + role + " menu"); continue; }
+    if (ask.label !== "Ask in class") say("the " + role + " menu calls it " + JSON.stringify(ask.label) + " rather than naming the room");
+  }
+  const askSrc = readFileSync(new URL("../src/engine/AskPage.jsx", import.meta.url), "utf8");
+  const qSrc = readFileSync(new URL("../src/engine/QuestionsCard.jsx", import.meta.url), "utf8");
+  if (!askSrc.includes('config.path + "/questions"')) say("the ask page does not say a question ends up on the sheet");
+  if (!qSrc.includes('config.path + "/ask"')) say("the sheet does not say where to ask during class");
+  if (!qSrc.includes("no names on any of them")) say("the sheet does not promise no names");
+}
+
 // The question sheet: what students read is what he has answered.
 {
   const say = (m) => { console.error("  FAIL  question sheet: " + m); failedEarly++; };
