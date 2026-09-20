@@ -16,7 +16,7 @@ import { renderToString } from "react-dom/server";
 import Dashboard, {
   FlowPanel, TodoPanel, NowPanel, ScratchPanel, AttendancePanel, QuestionsPanel,
   BoardsPanel, StockedPanel, AssignmentsPanel, CommandBar, Readings, IdeasPanel,
-  ColorsSheet, NoteSheet, ShortcutSheet, Reminders,
+  ColorsSheet, NoteSheet, ShortcutSheet,
 } from "../src/engine/Dashboard.jsx";
 import ClassroomView, { Content as CastContent } from "../src/engine/ClassroomView.jsx";
 import { Castable } from "../src/engine/Dashboard.jsx";
@@ -929,9 +929,6 @@ cases.push(["On the wall, a question from the room", <CastContent config={cfg0} 
 cases.push(["Ideas for the repository", <RepoIdeas />, "Merge the duplicates"]);
 cases.push(["One idea", <Idea idea={{ n: 7, group: "reuse", size: "small", first: true,
   title: "Last used", what: "A last-used column.", why: "A count cannot say when." }} />, "Start here"]);
-// The reminders band, on its own, because <Dashboard/> stops at its loading
-// screen here. The big one has to be in the markup.
-cases.push(["Dashboard reminders", <Reminders />, "love of learning"]);
 cases.push(["The Brief", <PlanPage />]);
 // Throws when a theme's quote is not tagged with the theme.
 cases.push(["Retreat", <RetreatPage />]);
@@ -1061,6 +1058,20 @@ cases.push(["Instructor links", <InstructorLinks />]);
   for (const [where, render] of surfaces) {
     try {
       const html = render();
+      // The dashboard, once it has a day, wears its own bar. Andrew,
+      // 2026-09-20: the tabs "could be a drop down from home", and Outline
+      // and Map "need to be in the top menu".
+      if (where === "dashboard") {
+        for (const word of ["Outline", "Map", "Doc", "Slides", "Around the Horn"]) {
+          if (!html.includes(">" + word + "<")) { console.error(`  FAIL  ${where}: the bar has no ${word}`); failedEarly++; }
+        }
+        if (!/aria-haspopup="menu"[^>]*title="Every other page of this class"/.test(html)) {
+          console.error(`  FAIL  ${where}: the class at the bar's left end is not a menu`); failedEarly++; }
+        if (/>Schedule<|>Challenges<|>Grade view</.test(html.split("<main")[0])) {
+          console.error(`  FAIL  ${where}: the bar still carries the tabs the class menu holds`); failedEarly++; }
+        if (html.includes(">Remember<")) { console.error(`  FAIL  ${where}: the Remember line is back`); failedEarly++; }
+        continue;
+      }
       if (!html.includes('aria-label="Teaching surfaces"')) {
         console.error(`  FAIL  ${where}: no strip, so two of the three doors are missing`); failedEarly++; continue;
       }
@@ -1221,8 +1232,12 @@ cases.push(["Instructor links", <InstructorLinks />]);
       if (name === "Dashboard" && /right=/.test(c) && !/right=\{\s*<button[^>]*>\s*Here/.test(c)) say("the dashboard puts something other than Here at the bar's right");
     });
     if (name === "Dashboard") {
-      if (!calls.some(c => /moreNode=/.test(c))) say("the dashboard's More is not in the top bar's More slot");
-      if (/dash-bar" onClick=\{openHorn\}/.test(src)) say("the dashboard says Around the Horn twice");
+      if (!src.includes("brand={") || !src.includes("middle={")) say("the dashboard's bar is not its own: the class menu and the day's controls");
+      // The Horn is on the bar, so the class menu leaves it out.
+      if (!src.includes('app.opens !== "horn"')) say("the dashboard says Around the Horn twice");
+      for (const page of ["Home", "Schedule", "Challenges", "Class", "More page"]) {
+        if (!src.includes('["' + page + '", ')) say("the class menu does not lead to " + page);
+      }
     }
   });
   try {
@@ -1650,7 +1665,6 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (src.includes("AnswersPanel")) say("the Answers panel is back");
   const rail = src.match(/const LIVE_RAIL = (\[[^\]]*\]);/);
   if (rail && JSON.parse(rail[1].replace(/'/g, '"')).includes("answers")) say("the Answers tab is back in the rail");
-  if (!src.includes("DB.open(prompt)")) say("casting a board no longer opens its thread, which the student page needs");
 
   // A card has to look like a card. At the sunk grey the edge against the white
   // panel was 1.10:1, which is no edge at all.
@@ -1817,7 +1831,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // Nothing becomes unreachable: Coming up covers three weeks and the link
   // covers everything past that, plus anything marked Ongoing, which has no
   // date to sort by at all.
-  if (!src.includes("All challenges")) say("nothing on the dashboard reaches the challenges beyond three weeks");
+  if (!src.includes('["Challenges", "/challenges"]')) say("nothing on the dashboard reaches the challenges");
   // The row never scrolls out of sight again.
   if (src.includes(".dash-rail-tabs{display:flex;gap:4px") && !src.includes("flex-wrap:wrap"))
     say("the tab row can still hide a tab off its edge");
@@ -2487,12 +2501,12 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     } catch (err) { say("the Horn threw: " + err.message); }
   }
 
-  // The day's schedule at the top of the Flow, Enter above the day and Exit
-  // below it. Andrew, 2026-09-17: "why am i not seeing game and headline on
-  // oct 5, or the readings on oct 7?" and "didn't we work on having an entry
-  // and exit part of each day on the dashboard?"
+  // The Flow is the day and nothing else. Andrew, 2026-09-20: "on the
+  // schedyle otday could go away if we have it in the search at right", and
+  // "yeah get entry and exit out." The day's own list is what the drawer
+  // shows before anything is typed, and every row of it opens the Flow's menu.
   {
-    const say = (m) => { console.error("  FAIL  flow strip: " + m); failedEarly++; };
+    const say = (m) => { console.error("  FAIL  quiet flow: " + m); failedEarly++; };
     try {
       const sched = [
         { id: "s1", type: "reading", title: "Chapter 8 on the day", url: "https://example.com/8", placed: false },
@@ -2502,36 +2516,28 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
         features: ["Headlines"], onFeature: noop, planHref: "/x", onSlidesClaim: noop, onBlockClaim: noop, where: "COMM 1 · Sep 1",
         loose: [], onAddScheduled: noop, onAddItem: noop, onRemoveItem: noop, onMoveItem: noop, onSetSequence: noop, onSetSlotTitle: noop, sequences: [seq],
         schedToday: sched, onCastScheduled: noop, boards: {}, proposals: { pre: { title: "Enter headline", ideas: ["first idea"] }, post: { title: "Exit headline", ideas: ["last idea"] } },
-        onSaveBoard: noop, onCastBoard: noop, boardHue: "#7c3aed" };
+        onSaveBoard: noop, onCastBoard: noop, boardHue: "#7c3aed",
+        footTools: <button>+ Section</button> };
       const html = renderToString(<FlowPanel {...props} />).replace(/<!-- -->/g, "");
-      const at = (t) => html.indexOf(t);
-      ["On the schedule today", "Chapter 8 on the day", "Game on the day", "Enter headline", "first idea", "Exit headline", "last idea"]
-        .forEach(t => { if (at(t) < 0) say("the Flow does not show " + JSON.stringify(t)); });
-      // The boards are the first and last sections of the day, under the
-      // schedule strip: Andrew, 2026-09-17, "entry and exit should be part of
-      // the outline, not a separate thing that i have to edit differently."
-      if (!(at("On the schedule today") < at("Enter headline"))) say("Enter is not inside the day, under the schedule");
-      // The first section by its heading, not by its first mention: a section
-      // called Open also matches the schedule strip's Open link.
-      const firstSection = Object.values(fullPlan.slots || {}).map(s => s.title).filter(Boolean)[0];
-      const headAt = (t) => html.search(new RegExp("lv-section[^>]*>\\s*" + t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "<"));
-      if (firstSection && headAt(firstSection) < 0) say("the first section is not a heading: " + JSON.stringify(firstSection));
-      if (firstSection && !(headAt("Enter headline") < headAt(firstSection))) say("Enter is not the first section of the day");
-      if (firstSection && !(headAt(firstSection) < headAt("Exit headline"))) say("Exit is not the last section of the day");
-      if (!/doc-sectag[^>]*>Enter</.test(html)) say("the Enter section does not say Enter");
-      if (!/lv-section[^>]*>Enter headline</.test(html) && !/lv-section[\s\S]{0,400}Enter headline/.test(html)) say("the Enter headline is not a section heading");
-      if (!/lv-item[\s\S]{0,400}first idea/.test(html)) say("an Enter idea is not a line of the day");
-      if (/IN THE FLOW[\s\S]*Chapter 8 on the day|Chapter 8 on the day[\s\S]{0,300}IN THE FLOW[\s\S]{0,100}<\/div>\s*<div[^>]*>[\s\S]{0,200}Game on the day/.test(html) === false) {
-        // The placed one says so and has no Add; the unplaced one has Add.
-        const chapter = html.slice(at("Chapter 8 on the day"), at("Game on the day"));
-        if (!/>Add</.test(chapter)) say("an unplaced reading has no Add");
-        const game = html.slice(at("Game on the day"), at("Game on the day") + 900);
-        if (!/IN THE FLOW/.test(game)) say("a placed activity does not say it is in the flow");
-        if (/>Add</.test(game)) say("a placed activity still offers Add");
-      }
-      if (html.includes("what is still unplaced")) say("the fold still claims to hold the unplaced");
-      const bare = renderToString(<FlowPanel {...props} schedToday={undefined} boards={undefined} proposals={undefined} onSaveBoard={undefined} />);
-      if (bare.includes("Enter headline")) say("a Flow with no board handler still draws a board");
+      ["On the schedule today", "Chapter 8 on the day", "Enter headline", "first idea", "Exit headline", "Show slides", "Hide slides", "Slides and coming up", "Add a section"]
+        .forEach(t => { if (html.includes(t)) say("the Flow still shows " + JSON.stringify(t)); });
+      const firstSection = Object.values(fullPlan.slots || {}).map(x => x.title).filter(Boolean)[0];
+      if (firstSection && !html.includes(firstSection)) say("the Flow lost its sections: " + JSON.stringify(firstSection));
+      // A row at rest is its words: the way up to the screen is in its margin,
+      // and no row wears a kind button or the old two-part link pill.
+      if (!/class="[^"]*doc-put/.test(html)) say("a row has no way up to the screen in its margin");
+      if (/class="[^"]*doc-link-open/.test(html)) say("the two-part link pill is back");
+      if (!html.includes("+ Section")) say("the foot of the day lost its tools");
+
+      const blocks = [{ id: "bk1", type: "link", title: "Chapter 8 on the day", url: "https://example.com/8" }];
+      const rows = [{ b: blocks[0], extra: "" },
+        { b: { id: "sched:s2", title: "Game on the day", type: "activity", pseudo: true }, extra: "in the flow" }];
+      const quiet = renderToString(<Drawer blocks={blocks} hue={() => "#047857"} dayRows={rows} menuFor={() => []} onPick={noop} />).replace(/<!-- -->/g, "");
+      ["On the schedule today", "Chapter 8 on the day", "Game on the day", "in the flow", "Search everything"]
+        .forEach(t => { if (!quiet.includes(t)) say("the drawer does not show " + JSON.stringify(t)); });
+      if (quiet.includes("+ New") || quiet.includes('role="tablist"')) say("the quiet drawer still has its shelves out");
+      const empty = renderToString(<Drawer blocks={blocks} hue={() => "#047857"} dayRows={[]} menuFor={() => []} onPick={noop} />);
+      if (empty.includes("On the schedule today")) say("a day with nothing on it still says On the schedule today");
     } catch (err) { say("the Flow threw: " + err.message); }
   }
 
@@ -3075,9 +3081,22 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     accent="#333" onClaim={none} features={[]} onFeature={none} planHref="/x" onSlidesClaim={none} onBlockClaim={none}
     where="COMM 1 · Sep 1" loose={[]} onAddScheduled={none} onAddItem={none} onRemoveItem={none}
     onMoveItem={none} onSetSequence={none} onSetSlotTitle={none} sequences={[seq]} classHref="/comm118" />);
-  const slides = (html.match(/class="slide slide-press/g) || []).length;
+  // Doc is the day as words: no slide sits beside a line.
+  if (/class="slide slide-press/.test(html)) say("the Doc view still draws slides beside its lines");
+  // Slides is the same day as its slides. Andrew, 2026-09-20: "google doc and
+  // slide view, but it's the same material."
+  const flowAs = (plan) => renderToString(<FlowPanel plan={plan} seq={seq} seeds={[]} castNow={none} dismiss={none} liveLabel={null}
+    accent="#333" onClaim={none} features={[]} onFeature={none} planHref="/x" onSlidesClaim={none} onBlockClaim={none}
+    where="COMM 1 · Sep 1" loose={[]} onAddScheduled={none} onAddItem={none} onRemoveItem={none}
+    onMoveItem={none} onSetSequence={none} onSetSlotTitle={none} sequences={[seq]} classHref="/comm118" view="slides" />);
+  const deck = flowAs(day);
+  const slides = (deck.match(/class="slide slide-press/g) || []).length;
   // One for the section, one for the item, none for the comment under the item.
   if (slides !== 2) say(slides + " slides on a day with one section, one item and one comment under it, want 2");
+  if (!deck.includes("A note under it")) say("an item's notes do not read under its slide");
+  if ((deck.match(/aria-label="Next design"/g) || []).length !== 2) say("not every slide has its brush under it");
+  if (!deck.includes('aria-label="Next design for the section"')) say("a section's slides cannot be stepped together");
+  if (deck.includes("doc-line")) say("the Slides view still draws the document");
   // The day is a document: every line a text box, at one of three levels.
   if (!html.includes("lv-section")) say("the section is not a line you can type into");
   if ((html.match(/doc-line lv-item/g) || []).length !== 1) say("the item is not a line you can type into");
@@ -3085,14 +3104,11 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // shown as text with a link you can press.
   if ((html.match(/doc-line doc-linetext lv-comment/g) || []).length !== 1) say("a note holding a link is not shown as text you can click into");
   if (!/class="doc-inlink" href="https:\/\/www.theatlantic.com\/sports\/story"/.test(html)) say("the web address in a note is not a link you can press");
-  // Every item that is not an activity or a seed can have its kind chosen.
-  if (!html.includes('title="Choose kind"')) say("an item's kind cannot be chosen by pressing it");
+  // A plain item wears no kind word; its kind is chosen from the row's menu.
+  if (html.includes('title="Choose kind"')) say("the kind button is back on every row");
   // A note given a slide gets one, stacked with its item's.
   const withNoteSlide = { ...day, slots: { opener: { ...day.slots.opener, items: day.slots.opener.items.map(r => (r.id === "r2" ? { ...r, slide: true } : r)) } } };
-  const html2 = renderToString(<FlowPanel plan={withNoteSlide} seq={seq} seeds={[]} castNow={none} dismiss={none} liveLabel={null}
-    accent="#333" onClaim={none} features={[]} onFeature={none} planHref="/x" onSlidesClaim={none} onBlockClaim={none}
-    where="COMM 1 · Sep 1" loose={[]} onAddScheduled={none} onAddItem={none} onRemoveItem={none}
-    onMoveItem={none} onSetSequence={none} onSetSlotTitle={none} sequences={[seq]} classHref="/comm118" />);
+  const html2 = flowAs(withNoteSlide);
   const slides2 = (html2.match(/class="slide slide-press/g) || []).length;
   if (slides2 !== 3) say(slides2 + " slides once the note was given one, want 3");
   if (/flow-sec-n|flow-tally|flow-secmove/.test(html)) say("the section still carries its numeral, tally or move arrows");
@@ -3104,7 +3120,15 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (/doc-link-go[^>]*>theatlantic.com</.test(html)) say("a web address typed into a note shows twice, in the words and as a pill");
   if (!html.includes('href="https://www.theatlantic.com/sports/story"')) say("the link cannot be opened in a tab");
   if (html.includes("Put this row on the room screen")) say("the arrow is still there beside a slide");
-  if (!html.includes("Hide slides")) say("the slide column cannot be closed");
+  // What the brush writes reaches the slide: the other ground, and the two made looks.
+  const worn = (look, input = cases2[0][1]) => slideOf({ ...input, item: { id: "i", slideLook: look } });
+  if (worn("paper").ground !== "paper") say("a slide cannot be put on the other ground");
+  if (worn("note").template !== "note" || worn("card").template !== "card") say("an item cannot be a sticky note or an index card");
+  if (worn("note", cases2[2][1]).template !== "article") say("an article turned into a sticky note");
+  for (const look of ["note", "card"]) {
+    const made = renderToString(<RoomSlide slide={worn(look)} ground="slate" />);
+    if (!made.includes("Tiger")) say("a " + look + " slide lost its words");
+  }
 }
 
 // Activities by kind, with a game's questions inside the game.

@@ -47,6 +47,49 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep20-quiet", date: "Sunday, September 20", title: "The dashboard goes quiet: a doc, its slides, one bar and a search",
+    blurb: "Andrew: \"hey so the dashboard is till a bit of a mess.\" Thursday was seventeen separate requests, each answered where the sentence pointed, and nobody redrew the page. The file set 17 type sizes against a ladder of four. Mocked on a canvas first, three rounds, then built.",
+    groups: [
+      { name: "The Flow is a doc", items: [
+        ["A row at rest is its words", "Andrew: \"The Flow should feel like a super clean google doc that could be turned into a set of slides at any time.\" A row used to wear a number button, a kind button, a two-part link pill and a red pill when live. The margin holds the item's number now, and under the pointer the number gives way to the way up to the screen. A plain item wears no kind word. A link is one chip naming the site. A web address typed into a line reads as the site, and as the whole address once the cursor is in the line."],
+        ["One filled row", "The row on the room screen is the only filled row on the page, in the live red at 7 percent, with on screen at its end. That was the call sheet's rule on September 10 and the week's patches had worn it away."],
+        ["The time chip, when there is a time", "A section with no time shows no chip until the pointer is on its heading."],
+        ["One line at the foot", "What is left of the class, then + Section, Templates, History and Meets in person as words. The add-a-section row and its menu are gone; Add item and Merge two sections are in a section's own menu."],
+        ["Type on the ladder", "Section 20, item 17, note 15, everything small 13. The rows were 21, 16 and 15 with labels at 14, 12.5 and 9."],
+      ] },
+      { name: "Doc and Slides", items: [
+        ["Two views of the same day", "Andrew: \"so maybe those are the two views? google doc and slide view, but it's the same material?\" One switch on the bar. Slides is the day as a grid under each section's name: the section's slide, a slide per item, a slide for a note that was given one, and an item's notes under its slide the way speaker notes sit. Pressing a slide puts it up. He liked the sections: \"i like that you separated out slides into diff sections. that's good.\""],
+        ["The brush", "Andrew: \"the slide design should be out of teh right click menu. maybe a button right below with a artbrsh icon\", and then: \"the art brush should be undereath each slide i the slide view.\" Each press is the next look that slide can wear. Every slide can take the other ground. An item or a section's name can be a sticky note or an index card, which are two new templates on the room screen. An article can be a clipping or its picture, which used to be two rows in the menu. The brush beside a section's name steps the whole section."],
+        ["Gone from the Flow", "Show slides, Hide slides, the Paper and Slate pair and the Teach button. Teach is still in the slash menu. Paper and Slate are behind the screen's three dots."],
+      ] },
+      { name: "Right click, or hold", items: [
+        ["One menu, in one order", "Andrew: \"when i hold something, or right click it, shouldn't i be able to then cast it on the screen? Sbouldn't I also be able to open the link on my side or open the link on te screen?\" Put on screen, Put link on screen, Open in new tab; then Highlight, Mark done, Edit details; then the structure; then Remove from day. Put on screen was in the row's menu and the two link rows were only on the link's own pill."],
+        ["Hold", "Nothing in the engine knew a hold. Pressing a line for a little over half a second opens its menu; a press that moves is a drag or a selection and lets go."],
+        ["Highlight", "Andrew: \"can you give me the ability to hihglight stuff?\" With words selected, Highlight takes those words. With none, the whole line. A text box cannot colour part of what it holds, so the words are coloured on a copy of the line set behind the box in the same type."],
+      ] },
+      { name: "The rail", items: [
+        ["Five controls under the picture", "Andrew: \"Ther preview screen has way too many buttons. open, take down, read, page, card, next, black, own window, transitions. Wayy too many.\" Back, Next, Take down, Black, and three dots. Own window, Open in new tab, Read, Page, Card, Paper, Slate, Transitions and Put something back up are behind the dots. The strip above the picture that named what was up is gone: the picture says so."],
+        ["Search, and the day's own list", "Andrew: \"maybe it should simply be a search bar instead of having all teh stuff out\", then: \"search should stay open on ANYTHING related to that day. readings, games, etc.\" The shelves, their tabs and + New are gone from the dashboard. Before anything is typed the list is everything dated to the day: the schedule's rows, the day's deck, every item in the library that names the date, a challenge due on it. A row already in a section says in the flow."],
+        ["On the schedule today left the Flow", "Andrew: \"if it always defaults to here's what's in todays schedule, we don't need the on the schedyle today thing.\" The words are the heading over the day's list in the rail now."],
+        ["The Flow's menu on every row", "Andrew: \"i should be able to rightclick on anything in the search drawer and get the same menu as if i right click on sopmething in the flow.\" Put on screen, Put link on screen, Open in new tab, Edit details, and Add to a day or Remove from day. Hold works there too."],
+      ] },
+      { name: "One bar", items: [
+        ["The class is a menu", "Andrew: \"maybe dashboard doesn't need schedule, challenges, class, more, or that could be a drop down from home? You imagein it for me.\" COMM 118 at the bar's left end opens Home, Schedule, Challenges, Class, More page, then the apps, then On the week, Questions and Poll, then The Brief, Colour and type and Keyboard, then the other classes. The five This screen settings are gone from the menu; the backslash key still hides the rail."],
+        ["Outline and Map on the bar", "Andrew: \"I think outline and map are important, but need to be in the top menu.\" Beside the date, which has an arrow either side for the day before and the day after."],
+        ["The Remember line is gone", "Andrew: \"I think I can remove the rmemeber line.\""],
+      ] },
+      { name: "Enter and Exit are out", items: [
+        ["Out of the dashboard", "Andrew: \"we can remove entry and exit if it's still in tehre\", then: \"yeah get entry and exit out.\" They are no longer sections of the day, rows of the command bar, a sheet of their own, two lines of the to-do list, or a stop on Next. A day that already has boards written keeps them in the store; nothing reads them. The room screen still knows how to draw a board, because a discussion board in the library is the same slide."],
+      ] },
+    ],
+    note: { title: "Still open", lines: [
+      "A highlight shows in the doc and nowhere else. Whether one should reach the slide was asked and not answered.",
+      "Up next counts notes and the margin's numbers do not, so up next can say 10 for the item numbered 4. That was true before today.",
+      "Test items dated to class days show in the day's list: test, test section, what about this one.",
+      "The rest of Dashboard.jsx still sets sizes off the ladder. Today moved the Flow, the bar, the rail's controls and the menus.",
+    ] },
+  },
+  {
     id: "sep17-fall-card", date: "Thursday, September 17", title: "The spring card comes to fall, the first challenge is to fill in yours, and messages get a card",
     blurb: "Andrew: \"gtta strat loadig my classes up. how do students update their profiles/ and can you update mine from last spring to this fall?\"",
     groups: [

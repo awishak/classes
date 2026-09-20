@@ -21,6 +21,7 @@ import { useState, useEffect, useRef } from "react";
 import * as TOKENS from "./tokens.js";
 import { typeOf, allTypes, makeBlock } from "./blocks.js";
 import { inkOf } from "./colors.js";
+import { Menu as RowMenu } from "./DayDoc.jsx";
 
 const F = TOKENS.FONT.body;
 const MONO = TOKENS.FONT.label;
@@ -182,14 +183,19 @@ function DrawerEdit({ block, item, where, hue, onSave, onSaveItem, onPlace, onMo
 
 // One result. A spine in its kind's colour, two lines, and the way to put it on
 // the day.
-function DrawerRow({ b, hue, placed, onPick, extra }) {
+function DrawerRow({ b, hue, placed, onPick, extra, onMenu, live }) {
   const t = typeOf(b.type);
   const when = placed && placed.get ? placed.get("b:" + b.id) : "";
+  const hold = useRef(null);
+  const letGo = () => { if (hold.current) { clearTimeout(hold.current); hold.current = null; } };
   return (
-    <button className="dash-focus draw-row" onClick={() => onPick(b)}
+    <button className={"dash-focus draw-row" + (live ? " live" : "")} onClick={() => onPick(b)}
+      onContextMenu={onMenu ? (e) => { e.preventDefault(); onMenu(b, e.clientX, e.clientY); } : undefined}
+      onPointerDown={onMenu ? (e) => { if (e.button) return; letGo(); const x = e.clientX, y = e.clientY; hold.current = setTimeout(() => { hold.current = null; onMenu(b, x, y); }, 550); } : undefined}
+      onPointerUp={letGo} onPointerLeave={letGo} onPointerCancel={letGo}
       draggable
-      onDragStart={e => { e.currentTarget.dataset.drag = "1"; e.dataTransfer.effectAllowed = "copy";
-        e.dataTransfer.setData("text/plain", JSON.stringify({ blockId: b.id })); }}
+      onDragStart={e => { letGo(); e.currentTarget.dataset.drag = "1"; e.dataTransfer.effectAllowed = "copy";
+        e.dataTransfer.setData("text/plain", JSON.stringify(b.drag || { blockId: b.id })); }}
       onDragEnd={e => { e.currentTarget.dataset.drag = "0"; }}
       style={{ "--ink": inkOf(hue(b.type)) }}
       title="Drag onto the day, or click to open">
@@ -212,8 +218,9 @@ function DrawerRow({ b, hue, placed, onPick, extra }) {
 
 export default function Drawer({ blocks, accent, hue, onPick, onNew, features, onRunFeature, featureBlurb, placed,
   picked, onSavePicked, onSaveItemPicked, onPlacePicked, onMovePicked, onClearPicked, days, today, sections, blockOf,
-  startShelf = "media", games, onPlaceGame, gamesHref }) {
+  startShelf = "media", games, onPlaceGame, gamesHref, dayRows, menuFor, liveLabel }) {
   const [q, setQ] = useState("");
+  const [menu, setMenu] = useState(null);
   const [shelf, setShelf] = useState(startShelf);
   const [kind, setKind] = useState("");
   const [newOpen, setNewOpen] = useState(false);
@@ -283,6 +290,58 @@ export default function Drawer({ blocks, accent, hue, onPick, onNew, features, o
         where={picked.where} hue={hue} onSave={onSavePicked} onSaveItem={onSaveItemPicked}
         onPlace={onPlacePicked} onMove={picked.item ? onMovePicked : null}
         onClose={onClearPicked} pickedId={picked.id} />
+    );
+  }
+
+  // THE QUIET DRAWER. Andrew, 2026-09-20: "maybe it should simply be a search
+  // bar instead of having all teh stuff out", and then: "search should stay
+  // open on ANYTHING related to that day. readings, games, etc." So with
+  // nothing typed the list is the day's own, under the words the Flow's strip
+  // used to wear, and the strip is gone from the Flow. Typing searches
+  // everything. A right-click or a hold on any row opens the menu a line of
+  // the Flow opens: "i should be able to rightclick on anything in the search
+  // drawer and get the same menu."
+  if (dayRows) {
+    const openMenu = (b, x, y) => {
+      const items = menuFor ? menuFor(b) : [];
+      if (!items.filter(Boolean).length) return;
+      const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
+      const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+      const tall = Math.min(420, 12 + items.filter(Boolean).length * 37);
+      setMenu({ at: { x: Math.min(x, vw - 260), y: Math.max(8, Math.min(y, vh - tall - 8)) }, items });
+    };
+    const found = text ? [
+      ...(games || []).filter(g => g.title.toLowerCase().includes(text))
+        .map(g => ({ id: "game:" + g.id, title: g.title, type: "set", pseudo: true, game: g, drag: { gameId: g.id, title: g.title } })),
+      ...(features || []).filter(n => n.toLowerCase().includes(text))
+        .map(n => ({ id: "feature:" + n, title: n, type: "activity", pseudo: true, feature: n, drag: { feature: n, title: n } })),
+      ...matches,
+    ] : [];
+    const list = (text ? found : dayRows.map(r => r.b)).slice(0, 40);
+    const extraOf = (b) => (text ? "" : (dayRows.find(r => r.b === b) || {}).extra || "");
+    return (
+      <div className="draw">
+        <div className="draw-head">
+          <div className="draw-find">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
+            </svg>
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search everything" aria-label="Search everything" />
+            {q ? <button className="dash-focus draw-clear" onClick={() => setQ("")} title="Clear the search">×</button> : null}
+          </div>
+        </div>
+        {!text && list.length ? <div className="draw-dayhead">On the schedule today</div> : null}
+        <div className="draw-rows">
+          {list.map(b => (
+            <DrawerRow key={b.id} b={b} hue={hue} placed={b.pseudo ? null : placed} extra={extraOf(b)} onMenu={openMenu}
+              live={!!liveLabel && liveLabel === (b.headline || b.title)}
+              onPick={b.pseudo ? () => {} : onPick} />
+          ))}
+          {text && !list.length ? <div className="draw-none">Nothing matches {JSON.stringify(q)}.</div> : null}
+          {text && found.length > list.length ? <div className="draw-none">{found.length - list.length} more. Keep typing to narrow it.</div> : null}
+        </div>
+        <RowMenu at={menu?.at} items={menu?.items || []} onClose={() => setMenu(null)} />
+      </div>
     );
   }
 
@@ -501,9 +560,12 @@ export const DRAWER_CSS = `
 .draw-kindmenu button span{margin-left:auto;font-family:${MONO};font-size:13px;color:${TEXT_MUTED}}
 /* A result row: a spine in its kind's colour, two lines, and the way to put it
    on the day. Hairlines between, on white, like the day itself. */
-.draw-row{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:6px 0;
+.draw-row{flex:none;display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:6px 0;
   background:none;border:none;border-bottom:1px solid ${BORDER};cursor:grab;text-align:left;font-family:${F}}
 .draw-row:hover{background:${SURFACE_2}}
+.draw-row.live{background:rgba(190,18,60,.07)}
+/* The words over the day's own list, before anything is typed. */
+.draw-dayhead{padding:4px 2px 0;font-family:${F};font-size:13px;font-weight:600;color:${TEXT_MUTED}}
 .draw-row[data-drag="1"]{opacity:.5;cursor:grabbing}
 .draw-row:last-of-type{border-bottom:none}
 .draw-spine{flex:none;width:3px;height:30px;border-radius:2px;margin-left:2px}

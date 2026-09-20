@@ -36,6 +36,11 @@ import { inkOf } from "./colors.js";
 
 const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; } };
 
+// The way up to the room screen, in a line's margin.
+const PUT = (
+  <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><path d="M3.5 2.2v9.6L11.5 7z" /></svg>
+);
+
 // The web addresses in a line of text.
 const URLS = /https?:\/\/[^\s<>"')]+/g;
 export const urlsIn = (text) => (String(text || "").match(URLS) || []);
@@ -59,7 +64,10 @@ function offsetAt(e, root) {
 // A text box that grows with what is in it and saves when you leave it, or
 // after a second of not typing. It keeps its own draft while it has the
 // cursor, so a save arriving from elsewhere does not move the text under you.
-function Line({ id, value, placeholder, readOnly, className, onSave, onKey, register, done, onLeaveEmpty, onLink, onType, onLeave }) {
+// `mark` is the highlight: true for the whole line, or the words of it that are
+// highlighted. A text box cannot colour part of what it holds, so a phrase is
+// coloured on a copy of the line set directly behind the box, in the same type.
+function Line({ id, value, placeholder, readOnly, className, onSave, onKey, register, done, onLeaveEmpty, onLink, onType, onLeave, mark }) {
   const box = useRef(null);
   const shown = useRef(null);
   const [draft, setDraft] = useState(value || "");
@@ -97,7 +105,13 @@ function Line({ id, value, placeholder, readOnly, className, onSave, onKey, regi
   // What the document can do to a line: put the cursor in it, and replace its
   // words (a slash command takes "/video" back out of the line it was typed in).
   const setText = (v) => { setDraft(v); flush(v); };
-  useEffect(() => { register(id, { focus: focusAt, setText }); });
+  // The words selected in this line, which is what Highlight takes.
+  const selection = () => {
+    const el = box.current;
+    if (!el || el.selectionStart == null || el.selectionStart === el.selectionEnd) return "";
+    return el.value.slice(el.selectionStart, el.selectionEnd);
+  };
+  useEffect(() => { register(id, { focus: focusAt, setText, selection }); });
   useEffect(() => () => register(id, null), [id]);
   useEffect(() => {
     if (want.current != null && box.current) { const p = want.current; want.current = null; focusAt(p); }
@@ -107,7 +121,7 @@ function Line({ id, value, placeholder, readOnly, className, onSave, onKey, regi
   if (onLink && !editing && urlsIn(draft).length) {
     const parts = String(draft).split(/(https?:\/\/[^\s<>"')]+)/g);
     return (
-      <div ref={shown} className={"doc-line doc-linetext " + className + (done ? " done" : "")}
+      <div ref={shown} className={"doc-line doc-linetext " + className + (done ? " done" : "") + (mark ? " marked" : "")}
         onMouseDown={e => {
           if (e.target.closest("a")) return;
           e.preventDefault();
@@ -115,14 +129,15 @@ function Line({ id, value, placeholder, readOnly, className, onSave, onKey, regi
           setEditing(true);
         }}>
         {parts.map((p, i) => (i % 2
-          ? <a key={i} className="doc-inlink" href={p} onClick={e => { e.preventDefault(); onLink(p, e); }}>{p}</a>
+          ? <a key={i} className="doc-inlink" href={p} title={p} onClick={e => { e.preventDefault(); onLink(p, e); }}>{hostOf(p) || p}</a>
           : p))}
       </div>
     );
   }
 
-  return (
-    <textarea ref={box} rows={1} spellCheck className={"doc-line " + className + (done ? " done" : "")}
+  const phrase = typeof mark === "string" && mark && String(draft).includes(mark) ? mark : "";
+  const area = (
+    <textarea ref={box} rows={1} spellCheck className={"doc-line " + className + (done ? " done" : "") + (mark && !phrase ? " marked" : "")}
       value={draft} placeholder={placeholder} readOnly={readOnly}
       onChange={e => {
         const v = e.target.value;
@@ -152,12 +167,25 @@ function Line({ id, value, placeholder, readOnly, className, onSave, onKey, regi
       }}
       onKeyDown={e => { if (!e.nativeEvent.isComposing) onKey(e, e.currentTarget, flush); }} />
   );
+  if (!phrase) return area;
+  const at = String(draft).indexOf(phrase);
+  return (
+    <span className="doc-linewrap">
+      <span aria-hidden="true" className={"doc-line doc-lineback " + className}>
+        {String(draft).slice(0, at)}<mark>{phrase}</mark>{String(draft).slice(at + phrase.length)}
+      </span>
+      {area}
+    </span>
+  );
 }
 
 // A link on a line: press the name and the page goes up on the room screen;
 // press ↗ and it opens in a tab here instead. Press the name again while it
 // is up to take it down.
-function LinkChips({ urls, liveLabel, liveUrl, onCast, dismiss, rowId }) {
+// One quiet chip, and pressing it asks what to do with the link: put the page
+// on the room screen, or open it in a tab here. Andrew, 2026-09-20: "shouldn't
+// I also be able to open the link on my side or open the link on the screen?"
+function LinkChips({ urls, liveLabel, liveUrl, onMenu }) {
   const list = [...new Set((urls || []).filter(Boolean))];
   if (!list.length) return null;
   return list.map(u => {
@@ -166,26 +194,29 @@ function LinkChips({ urls, liveLabel, liveUrl, onCast, dismiss, rowId }) {
     // on the host lit every one of them when one went up.
     const live = liveUrl ? liveUrl === u : liveLabel === name;
     return (
-      <span key={u} className={"doc-link" + (live ? " live" : "")}>
-        <button className="dash-focus doc-link-go" title={live ? "Take off screen" : "Put on screen"}
-          onClick={() => (live ? dismiss() : onCast && onCast(u, name, rowId))}>{live ? name + " · on screen" : name}</button>
-        <a className="dash-focus doc-link-open" href={u} target="_blank" rel="noopener noreferrer" aria-label="Open in new tab">↗</a>
-      </span>
+      <button key={u} className={"dash-focus doc-link" + (live ? " live" : "")} title="Choose what to do with the link"
+        onClick={e => onMenu && onMenu(u, e)}>{live ? name + " · on screen" : name}</button>
     );
   });
 }
 
-// One box that holds a short list of choices, opened by a right-click or the
-// item's number, and closed by anything else.
-function Menu({ at, items, onClose }) {
+// A menu's rows with its rules tidied: "-" is a rule between groups, and a rule
+// with nothing above it, nothing below it, or another rule beside it is dropped.
+const tidyRules = (items) => (items || []).filter(Boolean)
+  .filter((row, i, all) => row !== "-" || (i > 0 && all[i - 1] !== "-"))
+  .filter((row, i, all) => row !== "-" || i < all.length - 1);
+
+// One box that holds a short list of choices, opened by a right-click or a
+// hold, and closed by anything else.
+export function Menu({ at, items, onClose }) {
   if (!at) return null;
   return (
     <>
       <div className="doc-veil" onMouseDown={onClose} onContextMenu={e => { e.preventDefault(); onClose(); }} />
       <div role="menu" className="doc-menu" style={{ left: at.x, top: at.y }}>
-        {items.filter(Boolean).map(([label, run, danger]) => (
-          <button key={label} className={"dash-focus" + (danger ? " danger" : "")} onClick={() => { onClose(); run(); }}>{label}</button>
-        ))}
+        {tidyRules(items).map((row, i) => (row === "-" ? <div key={"rule" + i} className="doc-menu-rule" /> : (
+          <button key={row[0]} className={"dash-focus" + (row[2] ? " danger" : "")} onClick={() => { onClose(); row[1](); }}>{row[0]}</button>
+        )))}
       </div>
     </>
   );
@@ -311,11 +342,13 @@ export default function DayDoc({
   onSetSlotTitle, onSaveItem, onSaveBlock, onInsertRow, onRemoveItem, onNest, onTick, isAssigned, onToggleAssigned,
   onDeleteSection, onMoveSection, onEdit, drop, castLink, onMoveItem, onConvertRow, onLinkRow, library,
   onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, teach, onTeach,
-  ground, assignments, games, gamesHref,
+  ground, assignments, games, gamesHref, view, onSetSlotLook, onMerge, footTools,
 }) {
   const refs = useRef(new Map());
   const pending = useRef(null);
   const [menu, setMenu] = useState(null);
+  const menuAt = useRef(null);
+  const holding = useRef(null);
   const [over, setOver] = useState("");
   const [dragging, setDragging] = useState("");
   // A section being dragged. Held in a ref too, because a drag over an item
@@ -411,8 +444,29 @@ export default function DayDoc({
     const x = Math.min(e.clientX, (typeof window !== "undefined" ? window.innerWidth : 1200) - 260);
     const tall = Math.min(420, 12 + items.filter(Boolean).length * 39);
     const y = Math.max(8, Math.min(e.clientY, (typeof window !== "undefined" ? window.innerHeight : 800) - tall - 8));
+    menuAt.current = { clientX: e.clientX, clientY: e.clientY };
     setMenu({ at: { x, y }, items });
   };
+
+  // Holding a line opens the menu a right-click opens. Andrew, 2026-09-20:
+  // "when i hold something, or right click it, shouldn't i be able to then
+  // cast it on the screen?" A press that moves is a drag or a selection, so it
+  // lets go of the hold.
+  const letGo = () => { if (holding.current) { clearTimeout(holding.current.t); holding.current = null; } };
+  const holdProps = (getItems) => ({
+    onPointerDown: (e) => {
+      if (e.button) return;
+      letGo();
+      const at = { clientX: e.clientX, clientY: e.clientY };
+      holding.current = { ...at, t: setTimeout(() => { holding.current = null; openMenu({ preventDefault() {}, ...at }, getItems()); }, 550) };
+    },
+    onPointerMove: (e) => {
+      const h = holding.current;
+      if (h && Math.abs(e.clientX - h.clientX) + Math.abs(e.clientY - h.clientY) > 6) letGo();
+    },
+    onPointerUp: letGo, onPointerLeave: letGo, onPointerCancel: letGo,
+  });
+  useEffect(() => letGo, []);
 
   // ─── the slash menu ───
   //
@@ -689,11 +743,14 @@ export default function DayDoc({
     // on the host lit every one of them when one went up.
     const live = liveUrl ? liveUrl === url : liveLabel === name;
     openMenu(e, [
-      live ? ["Take off screen", () => dismiss()] : ["Put on screen", () => castLink && castLink(url, name, key)],
-      ["Open in new tab", () => { if (typeof window !== "undefined") window.open(url, "_blank", "noopener,noreferrer"); }],
+      live ? ["Take off screen", () => dismiss()] : ["Put link on screen", () => castLink && castLink(url, name, key)],
+      ["Open in new tab", () => openTab(url)],
       ["Edit", () => focusLine(key, "end")],
     ]);
   };
+  const openTab = (url) => { if (typeof window !== "undefined") window.open(url, "_blank", "noopener,noreferrer"); };
+  // Every address a line carries: its block's, its links', and any typed into it.
+  const urlsOf = (line) => [...new Set([line.blk?.url, ...(line.it?.links || []).map(l => l.url), ...urlsIn(line.it?.text)].filter(Boolean))];
 
   // The kinds, to choose from by pressing the kind on a line. A typed line has
   // no block behind it, so choosing a kind for one makes it a block of that kind.
@@ -706,36 +763,75 @@ export default function DayDoc({
     }]);
   };
 
+  // One menu for a line, by right-click or by holding it. The screen first,
+  // because that is what the menu is opened for with the room watching; then
+  // the line itself; then its structure; and taking it off the day last.
+  // What a slide looks like is not here: that is the brush under the slide.
   const itemMenu = (line) => {
     const { it, slot } = line;
     const done = doneSet.has(it.id);
+    const c = castLine(line);
+    const live = !!c.label && liveLabel === c.label;
+    const url = urlsOf(line)[0] || "";
+    // The words selected when the menu opened, read now because the line lets
+    // go of the cursor the moment the menu is pressed.
+    const picked = (refs.current.get(it.id)?.selection?.() || "").trim();
+    const canKind = !line.seed && !it.feature && !it.gameId && !it.board;
     return [
+      live ? ["Take off screen", () => dismiss()] : ["Put on screen", () => c.go()],
+      url && castLink ? ["Put link on screen", () => castLink(url, hostOf(url) || "link", it.id)] : null,
+      url ? ["Open in new tab", () => openTab(url)] : null,
+      "-",
+      onSaveItem ? (it.mark && !picked
+        ? ["Remove highlight", () => onSaveItem(slot, it.id, { mark: undefined })]
+        : ["Highlight", () => onSaveItem(slot, it.id, { mark: picked || true })]) : null,
       [done ? "Mark not done" : "Mark done", () => onTick(it.id)],
+      onEdit ? ["Edit details", () => onEdit({ blockId: it.blockId, item: it, where: "", slot, id: it.id })] : null,
+      "-",
       // His notes on the slide, or not, item by item.
       line.kind === "item" && onSaveItem ? [it.slideNotes ? "Hide notes on slide" : "Show notes on slide", () => onSaveItem(slot, it.id, { slideNotes: !it.slideNotes })] : null,
-      // An article's slide is a clipping or its picture; left alone it follows the page.
-      ...(isArticle(line) && onSaveItem ? [
-        it.slideLook !== "clipping" ? ["Use clipping", () => onSaveItem(slot, it.id, { slideLook: "clipping" })] : null,
-        it.slideLook !== "picture" ? ["Use picture", () => onSaveItem(slot, it.id, { slideLook: "picture" })] : null,
-      ] : []),
-      ["Put on screen", () => castLine(line).go()],
-      onEdit ? ["Edit details", () => onEdit({ blockId: it.blockId, item: it, where: "", slot, id: it.id })] : null,
-      line.kind === "item" && line.index > 0 && onNest ? ["Make note", () => onNest(slot, it.id, 1)] : null,
-      line.kind === "comment" && onNest ? ["Make item", () => onNest(slot, it.id, -1)] : null,
       // A note has no slide of its own unless you give it one.
       line.kind === "comment" && onSaveItem ? [it.slide ? "Remove slide" : "Create slide", () => onSaveItem(slot, it.id, { slide: !it.slide })] : null,
+      line.kind === "item" && line.index > 0 && onNest ? ["Make note", () => onNest(slot, it.id, 1)] : null,
+      line.kind === "comment" && onNest ? ["Make item", () => onNest(slot, it.id, -1)] : null,
+      canKind ? ["Choose kind", () => openMenu({ preventDefault() {}, ...(menuAt.current || { clientX: 40, clientY: 40 }) }, kindMenu(line))] : null,
       onToggleAssigned && line.kind === "item" ? [isAssigned(it) ? "Remove from readings" : "Add to readings", () => onToggleAssigned(it)] : null,
+      "-",
       ["Remove from day", () => onRemoveItem(slot, it.id), true],
     ];
   };
   const sectionMenu = (sec) => {
     const mine = !named.has(sec.slot);
+    const name = normSlot(slotItems[sec.slot]).title || "";
     return [
+      name ? (liveLabel === name ? ["Take off screen", () => dismiss()] : ["Put on screen", () => castSection(sec.slot, name, true)]) : null,
+      "-",
+      onInsertRow ? ["Add item", () => focusLine(onInsertRow(sec.slot, null, 0), 0)] : null,
       mine && sec.si > firstMovable && onMoveSection ? ["Move up", () => onMoveSection(sec.slot, -1)] : null,
       mine && sec.si < sections.length - 1 && onMoveSection ? ["Move down", () => onMoveSection(sec.slot, 1)] : null,
-      onInsertRow ? ["Add item", () => focusLine(onInsertRow(sec.slot, null, 0), 0)] : null,
+      onMerge && sections.length > 1 ? ["Merge two sections", () => onMerge()] : null,
+      "-",
       mine && onDeleteSection ? ["Delete section", () => onDeleteSection(sec.slot), true] : null,
     ];
+  };
+
+  // ─── what a slide looks like ───
+  //
+  // The brush under a slide steps through the looks that slide can wear. Left
+  // alone a slide follows its kind and the class's ground. Every slide can
+  // take the other ground; an item or a section can be a sticky note or an
+  // index card; an article can be a clipping or its picture.
+  const otherGround = ground === "paper" ? "slate" : "paper";
+  const looksFor = (cast) => {
+    if (!cast || cast.type !== "slide") return [""];
+    const of = cast.of || cast.template;
+    if (of === "item" || of === "section") return ["", otherGround, "note", "card"];
+    if (of === "article") return ["", otherGround, "clipping", "picture"];
+    return ["", otherGround];
+  };
+  const nextLook = (cast, now) => {
+    const all = looksFor(cast);
+    return all[(Math.max(0, all.indexOf(now || "")) + 1) % all.length];
   };
 
   // The slide column beside a line or a group. More than one slide stacks: an
@@ -837,6 +933,90 @@ export default function DayDoc({
     return <TeachView steps={steps} liveLabel={liveLabel} dismiss={dismiss} classHref={classHref} ground={ground} onExit={() => onTeach && onTeach(false)} />;
   }
 
+  // ─── slides ───
+  //
+  // The same day as its slides. Andrew, 2026-09-20: "The Flow should feel like
+  // a super clean google doc that could be turned into a set of slides at any
+  // time (so maybe those are the two views? google doc and slide view, but
+  // it's the same material?)." A section's name is a slide, an item is a
+  // slide, a note is a slide when it was given one, and the notes under an
+  // item read under its slide the way speaker notes do. Pressing a slide puts
+  // it up. The brush under it steps its look; the one beside a section's name
+  // steps every slide in the section at once.
+  if (view === "slides") {
+    const brush = (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M18.4 2.6a2 2 0 0 1 2.9 2.9l-9.2 9.2-3.2.4.4-3.2z" />
+        <path d="M8.6 14.2c-2.2 0-3.6 1.5-3.6 3.4 0 1.4-.9 2.3-2 2.9 1 .6 2.1.9 3.3.9 2.6 0 4.6-1.8 4.6-4.2" />
+      </svg>
+    );
+    const decks = groupsBySection.map(sec => {
+      const bucket = normSlot(slotItems[sec.slot]);
+      const raw = bucket.title || "";
+      const cards = [];
+      if (raw) {
+        cards.push({ key: "s:" + sec.slot, cast: castSection(sec.slot, raw, false), label: raw, n: "", notes: "",
+          go: () => castSection(sec.slot, raw, true), menu: () => sectionMenu(sec),
+          look: bucket.slideLook || "", setLook: (v) => onSetSlotLook && onSetSlotLook(sec.slot, v) });
+      }
+      sec.groups.forEach(g => {
+        const c = castLine(g.head);
+        const body = g.head.blk?.type !== "board" ? (g.head.blk?.body || "").trim() : "";
+        cards.push({ key: g.head.it.id, cast: c.cast, label: c.label, go: c.go, n: itemNumber[g.head.it.id] || "",
+          notes: [body, ...(notesOf[g.head.it.id] || [])].filter(Boolean).join(" · "), menu: () => itemMenu(g.head),
+          look: g.head.it.slideLook || "", setLook: (v) => onSaveItem && onSaveItem(sec.slot, g.head.it.id, { slideLook: v || undefined }) });
+        g.comments.filter(n => n.it.slide).forEach(n => {
+          const nc = castLine(n);
+          cards.push({ key: n.it.id, cast: nc.cast, label: nc.label, go: nc.go, n: "", notes: "", menu: () => itemMenu(n),
+            look: n.it.slideLook || "", setLook: (v) => onSaveItem && onSaveItem(sec.slot, n.it.id, { slideLook: v || undefined }) });
+        });
+      });
+      return { sec, raw, time: bucket.time || "", cards };
+    }).filter(d => d.cards.length);
+    if (!decks.length) return <div className="teach-empty">Nothing on this day to put up yet.</div>;
+    return (
+      <div className="deck">
+        {decks.map(d => {
+          // The whole section steps together, from where its first slide is.
+          const stepAll = () => {
+            const to = nextLook({ type: "slide", template: "item" }, d.cards[0].look);
+            d.cards.forEach(c => c.setLook(looksFor(c.cast).includes(to) ? to : ""));
+          };
+          return (
+            <section key={d.sec.slot} className="deck-sec">
+              <div className="deck-head" onContextMenu={e => openMenu(e, sectionMenu(d.sec))}>
+                <h2 className="deck-name">{d.raw || d.sec.title}</h2>
+                {d.time ? <span className="deck-time">{d.time}</span> : null}
+                <button className="dash-focus deck-brush deck-brush-set" onClick={stepAll}
+                  title="Next design for the section" aria-label="Next design for the section">{brush}</button>
+              </div>
+              <div className="deck-grid">
+                {d.cards.map(c => {
+                  const live = !!c.label && liveLabel === c.label;
+                  return (
+                    <div key={c.key} className="deck-card" onContextMenu={e => openMenu(e, c.menu())} {...holdProps(c.menu)}>
+                      {c.cast ? <Slide cast={c.cast} config={{ path: classHref || "" }} ground={ground} live={live} label={c.label}
+                        onClick={() => (live ? dismiss() : c.go())} /> : <div className="deck-blank" />}
+                      <div className="deck-cap">
+                        <span className={"deck-n" + (live ? " live" : "")}>{live ? "on screen" : c.n}</span>
+                        <span className="deck-notes">{c.notes}</span>
+                        {looksFor(c.cast).length > 1 ? (
+                          <button className="dash-focus deck-brush" onClick={() => c.setLook(nextLook(c.cast, c.look))}
+                            title="Next design" aria-label="Next design">{brush}</button>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+        <Menu at={menu?.at} items={menu?.items || []} onClose={() => setMenu(null)} />
+      </div>
+    );
+  }
+
   // What the day adds up to, from every section given a time.
   const times = sections.map(([k]) => normSlot(slotItems[k]).time || "");
   const total = sumRanges(times);
@@ -848,16 +1028,18 @@ export default function DayDoc({
   // to 50 planned is 15 to 25 left. Over by any amount reads as over.
   const overTime = classMinutes && total.lo > classMinutes;
   const left = classMinutes ? { lo: Math.max(0, classMinutes - total.hi), hi: Math.max(0, classMinutes - total.lo) } : null;
-  const foot = total.n ? (
+  // One line at the foot: what is left of the class, then the day's housekeeping.
+  const foot = total.n || footTools ? (
     <div className={"doc-total doc-foot" + (overTime ? " over" : "")}>
-      {overTime ? (
+      {!total.n ? null : overTime ? (
         <span className="doc-total-n">Over by {rangeLabel({ lo: total.lo - classMinutes, hi: total.hi - classMinutes })} min</span>
       ) : left ? (
         <><span className="doc-total-n">{rangeLabel(left)} min left</span><span> of {classMinutes}, with {rangeLabel(total)} planned</span></>
       ) : (
         <><span className="doc-total-n">{rangeLabel(total)} min</span><span> planned</span></>
       )}
-      {untimed ? <span className="doc-total-more"> · {untimed} {untimed === 1 ? "section" : "sections"} without a time</span> : null}
+      {total.n && untimed ? <span className="doc-total-more"> · {untimed} {untimed === 1 ? "section" : "sections"} without a time</span> : null}
+      {footTools ? <span className="doc-foot-tools">{footTools}</span> : null}
     </div>
   ) : null;
 
@@ -873,7 +1055,15 @@ export default function DayDoc({
             style={sec.mark?.color ? { "--mark": sec.mark.color } : undefined}
             data-over={over === sec.slot + "|" ? "1" : "0"} data-secover={overHere} {...sectionDrop(sec.slot)}>
             <div className={"doc-group" + (slidesOn ? " with-slides" : "")}>
-              <div className="doc-text doc-secline" onContextMenu={e => openMenu(e, sectionMenu(sec))}>
+              <div className={"doc-text doc-secline" + (secLive ? " live" : "")} onContextMenu={e => openMenu(e, sectionMenu(sec))}
+                {...holdProps(() => sectionMenu(sec))}>
+                {/* The margin: empty at rest, the way up to the screen under the pointer. */}
+                <span className="doc-gut">
+                  {raw ? (
+                    <button className="dash-focus doc-put" title={secLive ? "Take off screen" : "Put on screen"} aria-label={secLive ? "Take off screen" : "Put on screen"}
+                      onClick={() => (secLive ? dismiss() : castSection(sec.slot, raw, true))}>{PUT}</button>
+                  ) : null}
+                </span>
                 {sec.mark ? <span className="doc-sectag">{sec.mark.tag}</span> : null}
                 {!named.has(sec.slot) && onPlaceSection ? (
                   <span className="doc-grip doc-secgrip" draggable title="Drag to move this section" aria-hidden="true"
@@ -894,6 +1084,7 @@ export default function DayDoc({
                     onBlur={e => { const v = e.target.value.trim(); if (v !== (bucket.time || "")) onSetSlotTime(sec.slot, v); }}
                     onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }} />
                 ) : null}
+                {secLive ? <button className="dash-focus doc-down" onClick={dismiss} title="Take off screen">on screen</button> : null}
               </div>
               {slideCell(raw ? castSection(sec.slot, raw, false) : null, secLive, raw,
                 () => (secLive ? dismiss() : castSection(sec.slot, raw, true)))}
@@ -920,34 +1111,35 @@ export default function DayDoc({
                 const on = liveLabel === nc.label;
                 return { key: c.it.id, cast: nc.cast, live: on, label: nc.label, onClick: () => (on ? dismiss() : nc.go()) };
               });
-              const canKind = !seed && !it.feature && !it.gameId && !it.board;
-              const leave = (k) => { if (pop && pop.key === k) setPop(null); };
+              const leave =(k) => { if (pop && pop.key === k) setPop(null); };
               return (
                 <div key={it.id} className={"doc-group" + (slidesOn ? " with-slides" : "") + (pickedId === it.id ? " picked" : "")
                   + (nextId === it.id ? " next" : "")} data-over={over === sec.slot + "|" + it.id ? "1" : "0"} {...dragProps(sec.slot, it.id)}>
                   <div className="doc-text">
-                    <div className="doc-row" draggable
-                      onDragStart={e => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", JSON.stringify({ slot: sec.slot, id: it.id })); }}
-                      onContextMenu={e => openMenu(e, itemMenu(g.head))}>
-                      <button className="dash-focus doc-num" title="Drag to move, click for more"
-                        onClick={e => { const r = e.currentTarget.getBoundingClientRect(); openMenu({ preventDefault() {}, clientX: r.left, clientY: r.bottom + 4 }, itemMenu(g.head)); }}>
-                        {doneSet.has(it.id) ? "✓" : itemNumber[it.id] || ""}
-                      </button>
-                      <Line id={it.id} value={words} placeholder="Item, or / for commands" className="lv-item" done={doneSet.has(it.id)}
+                    {/* A row at rest is its words. The margin holds the item's
+                        number, and under the pointer the number gives way to
+                        the way up to the screen. The row on the screen is the
+                        only filled row on the page. */}
+                    <div className={"doc-row" + (live ? " live" : "")} draggable
+                      onDragStart={e => { letGo(); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", JSON.stringify({ slot: sec.slot, id: it.id })); }}
+                      onContextMenu={e => openMenu(e, itemMenu(g.head))} {...holdProps(() => itemMenu(g.head))}>
+                      <span className="doc-gut">
+                        <span className="doc-num">{doneSet.has(it.id) ? "✓" : itemNumber[it.id] || ""}</span>
+                        <button className="dash-focus doc-put" title={live ? "Take off screen" : "Put on screen"} aria-label={live ? "Take off screen" : "Put on screen"}
+                          onClick={() => (live ? dismiss() : castItem(it, blk, seed, words, claim, tag, slide))}>{PUT}</button>
+                      </span>
+                      <Line id={it.id} value={words} placeholder="Item, or / for commands" className="lv-item" done={doneSet.has(it.id)} mark={it.mark}
                         readOnly={!!(seed || it.feature || it.gameId)} onSave={saveItemWords(g.head)} onKey={keyHandler(g.head)} register={register}
                         onLeaveEmpty={leaveEmpty(g.head)} onLink={linkMenu(it.id)} onType={typing(g.head)} onLeave={leave} />
-                      {canKind ? (
-                        <button className="dash-focus doc-kind" style={{ "--ink": inkOf(kindColor) }} title="Choose kind"
-                          onClick={e => { const r = e.currentTarget.getBoundingClientRect(); openMenu({ preventDefault() {}, clientX: r.left, clientY: r.bottom + 4 }, kindMenu(g.head)); }}>
-                          {kind || typeOf("note").label.toLowerCase()} <span aria-hidden="true">▾</span>
-                        </button>
-                      ) : it.gameId && gamesHref ? (
+                      {/* The kind is a small coloured word, and only when it says
+                          something: a plain item wears none. */}
+                      {it.gameId && gamesHref ? (
                         <a className="dash-focus doc-kind" style={{ "--ink": inkOf(kindColor), textDecoration: "none" }} title="Open in Games"
                           href={gamesHref + "#game=" + it.gameId} target="_blank" rel="noopener noreferrer">{kind}</a>
-                      ) : kind ? <span className="doc-kind" style={{ "--ink": inkOf(kindColor) }}>{kind}</span> : null}
-                      <LinkChips rowId={it.id} urls={[blk?.url, ...(it.links || []).map(l => l.url)]}
-                        liveLabel={liveLabel} liveUrl={liveUrl} onCast={castLink} dismiss={dismiss} />
-                      {live ? <button className="dash-focus doc-down" onClick={dismiss} title="Take off screen">On screen ×</button> : null}
+                      ) : kind && blk?.type !== "note" ? <span className="doc-kind" style={{ "--ink": inkOf(kindColor) }}>{kind}</span> : null}
+                      <LinkChips urls={[blk?.url, ...(it.links || []).map(l => l.url)]}
+                        liveLabel={liveLabel} liveUrl={liveUrl} onMenu={linkMenu(it.id)} />
+                      {live ? <button className="dash-focus doc-down" onClick={dismiss} title="Take off screen">on screen</button> : null}
                     </div>
 
                     {bodyLine ? (
@@ -964,24 +1156,25 @@ export default function DayDoc({
                       return (
                         <div key={c.it.id} className={"doc-comment" + (dragging === c.it.id ? " dragging" : "")}
                           data-over={over.startsWith(sec.slot + "|" + c.it.id + "|") ? over.split("|")[2] : ""}
-                          onContextMenu={e => openMenu(e, itemMenu(c))} {...commentDrop(sec.slot, c.it.id)}>
+                          onContextMenu={e => openMenu(e, itemMenu(c))} {...holdProps(() => itemMenu(c))} {...commentDrop(sec.slot, c.it.id)}>
                           <div className="doc-row doc-under doc-commentrow">
                             {/* The handle. A note is all text box, and a press on a
                                 text box selects words, so the drag needs somewhere
                                 that is not text. Alt+↑ and Alt+↓ move it too. */}
                             <span className="doc-grip" draggable title="Drag to move this note" aria-hidden="true"
                               onDragStart={e => {
+                                letGo();
                                 e.dataTransfer.effectAllowed = "move";
                                 e.dataTransfer.setData("text/plain", JSON.stringify({ slot: sec.slot, id: c.it.id }));
                                 setDragging(c.it.id);
                               }}
                               onDragEnd={() => setDragging("")}>⠿</span>
                             <Line id={c.it.id} value={itemWords(c.it, c.blk, c.seed)} placeholder="Note" className="lv-comment"
-                              done={doneSet.has(c.it.id)} readOnly={!!(c.seed || c.it.feature)}
+                              done={doneSet.has(c.it.id)} readOnly={!!(c.seed || c.it.feature)} mark={c.it.mark}
                               onSave={saveItemWords(c)} onKey={keyHandler(c)} register={register} onLeaveEmpty={leaveEmpty(c)}
                               onLink={linkMenu(c.it.id)} onType={typing(c)} onLeave={leave} />
-                            <LinkChips rowId={c.it.id} urls={[c.blk?.url, ...(c.it.links || []).map(l => l.url)]}
-                              liveLabel={liveLabel} liveUrl={liveUrl} onCast={castLink} dismiss={dismiss} />
+                            <LinkChips urls={[c.blk?.url, ...(c.it.links || []).map(l => l.url)]}
+                              liveLabel={liveLabel} liveUrl={liveUrl} onMenu={linkMenu(c.it.id)} />
                           </div>
                           {cBody ? (
                             <div className="doc-row doc-under">
@@ -1013,7 +1206,8 @@ export const DOC_CSS = `
    heading, an item is a line, a note is quieter and set in. Every line is a
    text box that looks like text until the cursor is in it. */
 .doc{display:flex;flex-direction:column}
-.doc-total{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 4px;padding:6px 2px 0;font-family:var(--font-body);font-size:14px;color:var(--text-secondary)}
+.doc-total{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 4px;padding:6px 2px 0;font-family:var(--font-body);font-size:15px;color:var(--text-secondary)}
+.doc-foot-tools{margin-left:auto;display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 20px}
 .doc-total-n{font-weight:600;color:var(--text-primary);font-variant-numeric:tabular-nums}
 .doc-total.over .doc-total-n{color:var(--state-live)}
 .doc-foot{margin-top:22px;padding-top:12px;border-top:1px solid var(--line-soft)}
@@ -1027,7 +1221,8 @@ export const DOC_CSS = `
 /* The heading is as wide as its words, so the time chip sits beside them
    rather than at the far edge of the column. */
 .doc-secline .doc-line{flex:0 1 auto;width:auto;min-width:140px;max-width:100%}
-.doc-secgrip{position:absolute;left:-20px;top:9px}
+.doc-grip.doc-secgrip{position:absolute;left:-18px;top:9px}
+.doc-secline.live{background:rgba(190,18,60,.07);border-radius:8px}
 .doc-sec:hover .doc-secgrip,.doc-secline:focus-within .doc-secgrip{opacity:1}
 /* A section with a mark: Enter or Exit. The word sits before the heading and
    the board's colour runs down the section's left edge. */
@@ -1035,10 +1230,11 @@ export const DOC_CSS = `
 .doc-sectag{flex:none;font-family:var(--font-label);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
   color:var(--mark,var(--dash-accent))}
 /* The time a section is planned to take, as a chip beside its name. */
-.doc-time{flex:none;align-self:center;width:auto;min-width:64px;min-height:26px;box-sizing:border-box;padding:0 11px;border:1px solid transparent;border-radius:999px;
+.doc-time{flex:none;align-self:center;width:auto;field-sizing:content;min-width:64px;max-width:120px;min-height:26px;box-sizing:border-box;padding:0 11px;border:1px solid transparent;border-radius:999px;
   background:var(--surface-sunk);font-family:var(--font-label);font-size:13px;font-weight:600;color:var(--text-secondary);text-align:center;font-variant-numeric:tabular-nums}
 .doc-time::placeholder{color:var(--text-muted);font-weight:500}
-.doc-time:placeholder-shown{background:none;border:1px dashed var(--line-strong)}
+.doc-time:placeholder-shown{background:none;border:1px dashed var(--line-strong);opacity:0}
+.doc-secline:hover .doc-time,.doc-time:focus{opacity:1}
 .doc-time:hover{border-color:var(--line-strong);background:var(--surface-sunk)}
 .doc-time:focus{outline:none;border-color:var(--dash-accent);background:#fff;color:var(--text-primary)}
 .doc-time[data-bad="1"]{color:var(--state-live)}
@@ -1048,15 +1244,23 @@ export const DOC_CSS = `
 .doc-group.picked .doc-num{color:var(--dash-accent);font-weight:600}
 .doc-text{min-width:0;display:flex;flex-direction:column;padding:2px 0}
 .doc-slide{display:flex;flex-direction:column;align-items:flex-end;gap:8px;padding:4px 0}
-.doc-row{display:flex;align-items:flex-start;gap:6px;min-width:0}
-.doc-under{padding-left:58px}
+.doc-row{display:flex;align-items:flex-start;gap:6px;min-width:0;border-radius:8px}
+.doc-row.live{background:rgba(190,18,60,.07)}
+.doc-under{padding-left:62px}
 .doc-comment{display:flex;flex-direction:column}
 .doc-under .flow-block{padding-left:6px;margin-top:0}
 .doc-under:empty{display:none}
 .lv-body{color:var(--text-muted)}
-.doc-num{flex:none;width:30px;min-height:30px;margin-top:1px;border:none;background:none;border-radius:7px;cursor:grab;padding:0;
-  font-family:var(--font-label);font-size:13px;color:var(--text-muted);font-variant-numeric:tabular-nums}
-.doc-num:hover{background:rgba(23,19,16,.06);color:var(--text-primary)}
+/* The margin of a line. At rest it holds the item's number and nothing else;
+   under the pointer the number gives way to the way up to the screen. */
+.doc-gut{flex:none;width:34px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:grab}
+.doc-num{font-family:var(--font-label);font-size:13px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.doc-put{display:none;width:30px;height:30px;padding:0;border:none;background:none;border-radius:8px;cursor:pointer;
+  align-items:center;justify-content:center;color:var(--dash-accent)}
+.doc-put:hover{background:rgba(23,19,16,.06)}
+.doc-row:hover .doc-put,.doc-secline:hover .doc-put,.doc-put:focus-visible{display:inline-flex}
+.doc-row:hover .doc-num,.doc-gut:focus-within .doc-num{display:none}
+.doc-row.live .doc-put,.doc-secline.live .doc-put{color:var(--state-live)}
 .doc-group.next .doc-num{color:var(--dash-accent);font-weight:600}
 .doc-line{flex:1 1 auto;min-width:0;display:block;width:100%;box-sizing:border-box;resize:none;overflow:hidden;field-sizing:content;
   border:none;outline:none;background:transparent;border-radius:6px;padding:3px 6px;margin:0;
@@ -1066,45 +1270,45 @@ export const DOC_CSS = `
 .doc-line::placeholder{color:var(--text-muted)}
 .doc-line[readonly]{cursor:default}
 .doc-line.done{text-decoration:line-through;text-decoration-thickness:1.5px;color:var(--text-muted)}
-.lv-section{font-size:21px;font-weight:600;letter-spacing:-.015em;line-height:1.3}
-.lv-item{font-size:16px;font-weight:500;line-height:1.45}
+/* A highlight: the whole line, or the words of it that were selected. The
+   words are coloured on a copy of the line set behind the text box. */
+.doc-line.marked,.doc-line.marked:hover,.doc-line.marked:focus{background:#fef08a}
+.doc-linewrap{position:relative;flex:1 1 auto;min-width:0;display:block}
+.doc-lineback{position:absolute;inset:0;color:transparent;white-space:pre-wrap;overflow-wrap:break-word;pointer-events:none;user-select:none}
+.doc-linewrap textarea{position:relative}
+.doc-lineback mark{background:#fef08a;color:transparent;border-radius:3px}
+.lv-section{font-size:20px;font-weight:600;letter-spacing:-.015em;line-height:1.3}
+.lv-item{font-size:17px;font-weight:400;line-height:1.45}
 .lv-comment{font-size:15px;font-weight:400;line-height:1.5;color:var(--text-secondary)}
 .doc-kind{flex:none;align-self:center;font-family:var(--font-label);font-size:13px;color:var(--ink,var(--text-muted));white-space:nowrap}
-button.doc-kind{min-height:28px;padding:0 8px;border:none;border-radius:7px;background:none;cursor:pointer}
-button.doc-kind span{font-size:9px;opacity:.6}
-button.doc-kind:hover{background:rgba(23,19,16,.06)}
 /* A line showing its links: the same text, set the same way, with the web
    address as a link you can press. */
 .doc-linetext{cursor:text;white-space:pre-wrap;overflow-wrap:anywhere}
 .doc-inlink{color:var(--dash-accent);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
-/* A link: its site name puts the page on the room screen, the arrow opens it
-   here. One pill, two halves. */
-.doc-link{flex:none;align-self:center;display:inline-flex;align-items:stretch;border-radius:999px;background:var(--surface-sunk);
-  overflow:hidden;max-width:220px}
-.doc-link-go{min-height:28px;padding:0 4px 0 10px;border:none;background:none;cursor:pointer;font-family:var(--font-body);
-  font-size:13px;font-weight:600;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.doc-link-go:hover{color:var(--dash-accent)}
-.doc-link-open{display:inline-flex;align-items:center;padding:0 9px 0 5px;font-size:13px;color:var(--text-muted);text-decoration:none}
-.doc-link-open:hover{color:var(--text-primary)}
-.doc-link.live{background:var(--state-live)}
-.doc-link.live .doc-link-go,.doc-link.live .doc-link-open{color:#fff}
+/* A link: one quiet chip naming the site. Pressing it asks what to do with it. */
+.doc-link{flex:none;align-self:center;min-height:24px;max-width:220px;padding:0 9px;border:1px solid var(--line-strong);border-radius:999px;background:none;cursor:pointer;
+  font-family:var(--font-label);font-size:13px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-link:hover{border-color:var(--dash-accent);color:var(--dash-accent)}
+.doc-link.live{border-color:var(--state-live);color:var(--state-live)}
 /* A handle: quiet until its line is under the pointer. */
 .doc-commentrow{position:relative}
-.doc-grip{position:absolute;left:36px;top:5px;width:18px;height:24px;display:inline-flex;align-items:center;justify-content:center;
+.doc-grip{position:absolute;left:40px;top:5px;width:18px;height:24px;display:inline-flex;align-items:center;justify-content:center;
   font-size:13px;color:var(--text-muted);cursor:grab;border-radius:5px;opacity:0;user-select:none}
 .doc-comment:hover .doc-grip,.doc-comment:focus-within .doc-grip{opacity:1}
 .doc-grip:hover{background:rgba(23,19,16,.06);color:var(--text-primary)}
 .doc-comment.dragging{opacity:.45}
 .doc-comment[data-over="above"]{box-shadow:inset 0 2px 0 var(--dash-accent)}
 .doc-comment[data-over="below"]{box-shadow:inset 0 -2px 0 var(--dash-accent)}
-.doc-down{flex:none;align-self:center;min-height:28px;padding:0 9px;border:none;border-radius:999px;cursor:pointer;
-  background:var(--state-live);color:#fff;font-family:var(--font-label);font-size:13px;font-weight:600}
+.doc-down{flex:none;align-self:center;min-height:28px;padding:0 10px;border:none;background:none;border-radius:8px;cursor:pointer;
+  color:var(--state-live);font-family:var(--font-label);font-size:13px;white-space:nowrap}
+.doc-down:hover{background:rgba(190,18,60,.09)}
 .doc-veil{position:fixed;inset:0;z-index:80}
 .doc-menu{position:fixed;z-index:81;min-width:230px;max-height:420px;overflow-y:auto;background:#fff;border:1px solid rgba(23,19,16,.14);
   border-radius:12px;padding:5px;box-shadow:0 16px 38px -12px rgba(23,19,16,.42);display:flex;flex-direction:column;gap:1px}
 .doc-menu button{display:flex;align-items:center;width:100%;text-align:left;background:none;border:none;cursor:pointer;
-  padding:0 10px;min-height:38px;border-radius:8px;font-family:var(--font-body);font-size:14px;color:var(--text-primary)}
+  padding:0 10px;min-height:36px;border-radius:8px;font-family:var(--font-body);font-size:15px;color:var(--text-primary)}
 .doc-menu button:hover{background:rgba(23,19,16,.05)}
+.doc-menu-rule{flex:none;height:1px;margin:4px 8px;background:var(--line-soft)}
 .doc-menu button.danger{color:var(--state-live)}
 /* The / and @ menu, under the line being typed in. */
 .doc-pop{position:fixed;z-index:82;width:330px;max-height:360px;overflow-y:auto;background:#fff;border:1px solid rgba(23,19,16,.14);
@@ -1113,16 +1317,36 @@ button.doc-kind:hover{background:rgba(23,19,16,.06)}
 .doc-pop-row{display:flex;align-items:center;gap:9px;min-height:38px;padding:3px 10px;border-radius:8px;cursor:pointer}
 .doc-pop-row[data-active="1"]{background:rgba(23,19,16,.07)}
 .doc-pop-swatch{flex:none;width:3px;height:20px;border-radius:2px}
-.doc-pop-label{flex:none;font-size:14px;color:var(--text-primary);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc-pop-label{flex:none;font-size:15px;color:var(--text-primary);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .doc-pop-hint{flex:1 1 auto;min-width:0;font-size:13px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.doc-pop-none{padding:12px 10px;font-size:14px;color:var(--text-muted)}
+.doc-pop-none{padding:12px 10px;font-size:15px;color:var(--text-muted)}
 .doc-pop-foot{margin-top:4px;padding:7px 10px 4px;border-top:1px solid var(--line-soft);font-size:13px;color:var(--text-muted)}
+/* SLIDES. The same day as its slides, a grid under each section's name. */
+.deck{display:flex;flex-direction:column;gap:32px;padding-top:24px;font-family:var(--font-body)}
+.deck-sec{display:flex;flex-direction:column;gap:12px}
+.deck-head{display:flex;align-items:center;gap:12px;min-height:34px}
+.deck-name{margin:0;font-size:15px;font-weight:500;color:var(--text-secondary)}
+.deck-time{flex:none;padding:0 9px;border:1px solid var(--line-strong);border-radius:999px;font-family:var(--font-label);font-size:13px;line-height:22px;color:var(--text-secondary)}
+.deck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:24px 16px}
+.deck-card{min-width:0;display:flex;flex-direction:column;gap:8px}
+.deck-card .slide{max-width:none;max-height:none}
+.deck-blank{aspect-ratio:16/9;border-radius:8px;background:var(--surface-sunk)}
+.deck-cap{display:flex;align-items:flex-start;gap:8px;min-height:34px}
+.deck-n{flex:none;font-family:var(--font-label);font-size:13px;line-height:20px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.deck-n.live{color:var(--state-live)}
+.deck-notes{flex:1 1 auto;min-width:0;font-size:13px;line-height:20px;color:var(--text-secondary);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.deck-brush{flex:none;width:34px;height:34px;margin:-7px -6px 0 0;padding:0;border:none;background:none;border-radius:8px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;color:var(--text-muted)}
+.deck-brush:hover{background:rgba(23,19,16,.06);color:var(--dash-accent)}
+.deck-brush-set{margin:0 0 0 auto;opacity:0}
+.deck-head:hover .deck-brush-set,.deck-brush-set:focus-visible{opacity:1}
 /* TEACH */
 .teach{display:flex;flex-direction:column;gap:16px;padding-top:26px;font-family:var(--font-body)}
 .teach-empty{padding:30px 4px;font-size:15px;color:var(--text-muted)}
 .teach-top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
 .teach-where{font-family:var(--font-label);font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dash-accent)}
-.teach-count{margin-left:auto;font-size:14px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.teach-count{margin-left:auto;font-size:15px;color:var(--text-muted);font-variant-numeric:tabular-nums}
 .teach-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,46%);gap:24px;align-items:start}
 .teach-words{min-width:0;display:flex;flex-direction:column;gap:12px}
 .teach-title{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.2;color:var(--text-primary)}

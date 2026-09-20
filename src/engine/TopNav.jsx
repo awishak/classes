@@ -80,7 +80,10 @@ const whereAmI = () => {
   try { return window.location; } catch { return null; }
 };
 
-export default function TopNav({ config, tabs, active, onPick, right, accent, moreNode, role = "instructor" }) {
+// `brand` and `middle` are the dashboard's: there the class at the left end is
+// a menu of every other page, and the middle of the bar is the day's own
+// controls where the tabs and the apps sit everywhere else.
+export default function TopNav({ config, tabs, active, onPick, right, accent, moreNode, role = "instructor", brand, middle }) {
   // The repository resolves its class from what it remembers, and on a machine
   // that has never opened one there is nothing to remember. A bar with no class
   // in it would be worse than no bar.
@@ -106,7 +109,7 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
         display: "flex", alignItems: "center", gap: 14, flexWrap: "nowrap" }}>
 
         {/* The class, and a way home. Same block on all three. */}
-        <a className="dash-focus ca-focus repo-focus" href={config.path}
+        {brand ? <span style={{ flex: "none" }}>{brand}</span> : <a className="dash-focus ca-focus repo-focus" href={config.path}
           style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none",
             fontFamily: F, flex: "none" }}>
           <span style={{ width: 30, height: 30, borderRadius: 8, background: a, color: "#fff",
@@ -118,14 +121,17 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
               textTransform: "uppercase", letterSpacing: "0.08em" }}>{config.code}</span>
             <span style={{ display: "block", fontFamily: TOKENS.FONT.display, fontWeight: TOKENS.FONT.displayWeight, textShadow: TOKENS.FONT.displayShadow, fontSize: 16, lineHeight: 1.1, color: TEXT_PRIMARY, whiteSpace: "nowrap" }}>{config.name}</span>
           </span>
-        </a>
+        </a>}
 
         {/* Andrew's apps are tabs in the bar rather than a menu: "students can
             have the apps thing up top, but i want all my apps in top nav bar."
             A student keeps the Apps button, because a student's bar would be
             a wall of doors otherwise. */}
-        <nav aria-label="Teaching surfaces" style={{ display: "flex", gap: 2, minWidth: 0, flex: "1 1 auto", flexWrap: "nowrap", alignItems: "center", overflowX: "auto", scrollbarWidth: "none" }}>
-          {(tabs || []).map(n => {
+        {middle ? (
+          <div style={{ display: "flex", gap: 6, minWidth: 0, flex: "1 1 auto", flexWrap: "nowrap", alignItems: "center" }}>{middle}</div>
+        ) : null}
+        <nav aria-label="Teaching surfaces" style={{ display: middle ? "none" : "flex", gap: 2, minWidth: 0, flex: "1 1 auto", flexWrap: "nowrap", alignItems: "center", overflowX: "auto", scrollbarWidth: "none" }}>
+          {(middle ? [] : tabs || []).map(n => {
             const on = lit === n.id;
             // "More" holds different things on different surfaces — the extra
             // cards on the class page, this surface's own extras elsewhere —
@@ -141,7 +147,7 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
                 aria-current={on ? "page" : undefined} style={tabStyle(on)}>{n.label}</button>
             );
           })}
-          {role === "instructor" ? (
+          {role === "instructor" && !middle ? (
             <>
               <span aria-hidden="true" style={{ width: 1, flex: "none", alignSelf: "stretch", margin: "6px 8px", background: BORDER }} />
               {appsFor(config, role).map(app => app.opens === "horn" ? (

@@ -15,7 +15,7 @@
 // the stage to fill the wall; the dashboard's thumbnails scale it to 200px wide.
 
 import { useEffect, useState } from "react";
-import { SLIDE } from "./tokens.js";
+import { SLIDE, TEXT } from "./tokens.js";
 import { GameDuring, GameSpread, GameQuestions, GameQuestion, GameTeams } from "./GameSlides.jsx";
 
 const FONT = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -130,6 +130,40 @@ function Item({ s, g }) {
         <Site s={s} g={g} />
       </div>
       <div style={{ paddingLeft: 56, borderLeft: "3px solid " + g.rule }}><Bullets list={notes} size={44} g={g} /></div>
+    </div>
+  );
+}
+
+// Two looks an item or a section's name can wear instead of plain type: a
+// sticky note and an index card. Made things, for a line worth stopping on.
+// The paper is the same on either ground, so the ink is set here and not read
+// off the ground. Notes shown on the slide sit under the words.
+const MADE_INK = TEXT.primary;
+const madeSize = (words) => (words.length > 110 ? 44 : words.length > 60 ? 56 : 72);
+
+function StickyNote({ s, g }) {
+  const words = s.headline || s.title;
+  return (
+    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 640, minHeight: 560, boxSizing: "border-box", padding: "72px 60px 60px", background: "#fde68a", color: MADE_INK,
+        transform: "rotate(-2deg)", boxShadow: g.shadow, display: "flex", flexDirection: "column", justifyContent: "center", gap: 28 }}>
+        <div style={{ fontSize: madeSize(words), fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.08, textWrap: "balance" }}><L url={s.url}>{words}</L></div>
+        {(s.notes || []).map((n, i) => <div key={i} style={{ fontSize: 30, lineHeight: 1.3 }}>{n}</div>)}
+      </div>
+    </div>
+  );
+}
+
+function IndexCard({ s, g }) {
+  const words = s.headline || s.title;
+  return (
+    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 960, height: 560, boxSizing: "border-box", padding: "96px 72px 56px", borderRadius: 10, color: MADE_INK, boxShadow: g.shadow,
+        background: "linear-gradient(#c81e1e, #c81e1e) 0 72px / 100% 3px no-repeat, repeating-linear-gradient(#fffdf7, #fffdf7 54px, #c9dcef 54px, #c9dcef 56px)",
+        display: "flex", flexDirection: "column", justifyContent: "center", gap: 26 }}>
+        <div style={{ fontSize: madeSize(words), fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.1, textWrap: "balance" }}><L url={s.url}>{words}</L></div>
+        {(s.notes || []).map((n, i) => <div key={i} style={{ fontSize: 30, lineHeight: 1.3 }}>{n}</div>)}
+      </div>
     </div>
   );
 }
@@ -379,12 +413,25 @@ const TEMPLATES = {
   section: Section, item: Item, article: Article, video: Video, image: Image, podcast: Podcast, chapter: Chapter,
   quote: Quote, activity: Activity, headlines: Headlines, game: Game, question: Question, board: Board, assignment: Assignment,
   gameDuring: GameDuring, gameSpread: GameSpread, gameQuestions: GameQuestions, gameQuestion: GameQuestion, gameTeams: GameTeams,
+  note: StickyNote, card: IndexCard,
 };
+
+// What the brush under a slide writes to a row. "paper" and "slate" are the
+// ground for that one slide; "note" and "card" are a made thing in place of
+// plain type, for an item or a section's name; "clipping" and "picture" are
+// an article's. Anything else is the slide left to itself.
+export function lookOnto(cast, look) {
+  if (!cast || cast.type !== "slide" || !look) return cast;
+  if (look === "paper" || look === "slate") return { ...cast, ground: look };
+  if ((look === "note" || look === "card") && (cast.template === "item" || cast.template === "section")) return { ...cast, of: cast.template, template: look };
+  return cast;
+}
 
 // A slide, drawn. `fit` scales the stage to the window, for the room screen;
 // without it the stage is 1280 by 720 for whoever scales it.
 export default function RoomSlide({ slide, ground, fit }) {
-  const g = GROUNDS[ground === "paper" ? "paper" : "slate"];
+  // A slide can name its own ground; otherwise it stands on the class's.
+  const g = GROUNDS[(slide?.ground || ground) === "paper" ? "paper" : "slate"];
   const s = useFit(!!fit);
   const T = TEMPLATES[slide?.template] || Item;
   const stage = (
@@ -412,7 +459,10 @@ export const ROOM_FONTS_HREF = "https://fonts.googleapis.com/css2?family=Outfit:
 const VIDEO_HOST = /(^|\.)(youtube\.com|youtu\.be|vimeo\.com)$/;
 const IMAGE_URL = /\.(png|jpe?g|gif|webp|avif)(\?|#|$)/i;
 
-export function slideFor({ item, block, seed, title, claim, notes, tag, assignments, features, games }) {
+// The slide a row gets, wearing the look its brush gave it.
+export const slideFor = (args) => lookOnto(plainSlideFor(args), args?.item?.slideLook);
+
+function plainSlideFor({ item, block, seed, title, claim, notes, tag, assignments, features, games }) {
   const words = claim || title || "";
   const url = block?.url || (item?.links || [])[0]?.url || (String(item?.text || "").match(/https?:\/\/[^\s<>"')]+/) || [])[0] || "";
   const base = { type: "slide", label: words, title: title || "", headline: claim || "", url, site: hostOf(url), notes: notes && notes.length ? notes : undefined,
