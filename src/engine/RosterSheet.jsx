@@ -27,12 +27,13 @@ const BORDER_STRONG = TOKENS.LINE.strong;
 const SURFACE_2 = TOKENS.SURFACE.sunk;
 const OK = TOKENS.STATE.ok;
 const WARN = TOKENS.STATE.warn;
+const SURFACE_CARD = TOKENS.SURFACE.card;   // a text box takes the card's own surface, which is dark after dark
 const HIT = 36;
 
 const mini = { minHeight: HIT, padding: "0 13px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_SECONDARY, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
 const solid = (accent) => ({ ...mini, background: accent, borderColor: accent, color: "#fff" });
 const label = { fontFamily: MONO, fontSize: 13, letterSpacing: ".06em", textTransform: "uppercase", color: TEXT_MUTED, fontWeight: 500 };
-const inputStyle = { width: "100%", padding: "10px 13px", borderRadius: 11, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: 40, background: "#fff", color: TEXT_PRIMARY };
+const inputStyle = { width: "100%", padding: "10px 13px", borderRadius: 11, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: 40, background: SURFACE_CARD, color: TEXT_PRIMARY };
 
 export async function callLogins(body) {
   const r = await fetch("/api/logins", {

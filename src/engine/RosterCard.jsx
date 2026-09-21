@@ -21,6 +21,7 @@ const TEXT_MUTED = TOKENS.TEXT.muted; // 4.85:1 at worst, on every background we
 const BORDER = TOKENS.LINE.soft;
 const BORDER_STRONG = TOKENS.LINE.strong;
 const BG = TOKENS.SURFACE.page;
+const SURFACE_CARD = TOKENS.SURFACE.card;   // a text box takes the card's own surface, which is dark after dark
 const TAP = 44;
 
 const label = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
@@ -205,7 +206,7 @@ function PreferredName({ data, name, update, accent }) {
     return { ...prev, profiles };
   });
   const box = { fontFamily: F, fontSize: 15, minHeight: 36, padding: "0 10px", borderRadius: 8,
-    border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY, minWidth: 0, flex: 1 };
+    border: "1px solid " + BORDER_STRONG, background: SURFACE_CARD, color: TEXT_PRIMARY, minWidth: 0, flex: 1 };
   const roster = String(name || "").trim().split(/\s+/);
   return (
     <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>

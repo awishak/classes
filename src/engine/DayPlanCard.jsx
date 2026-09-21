@@ -29,11 +29,12 @@ const TEXT_SECONDARY = TOKENS.TEXT.secondary;
 const TEXT_MUTED = TOKENS.TEXT.muted; // 4.85:1 at worst, on every background we use.
 const BORDER = TOKENS.LINE.soft;
 const BORDER_STRONG = TOKENS.LINE.strong;
+const SURFACE_CARD = TOKENS.SURFACE.card;   // a text box takes the card's own surface, which is dark after dark
 const TAP = 44;
 
 const label = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
 const h2 = { fontSize: 22, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.02em" };
-const selectStyle = { fontFamily: F, fontSize: 16, padding: "10px 14px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, minHeight: TAP, background: "#fff", color: TEXT_PRIMARY, maxWidth: "100%" };
+const selectStyle = { fontFamily: F, fontSize: 16, padding: "10px 14px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, minHeight: TAP, background: SURFACE_CARD, color: TEXT_PRIMARY, maxWidth: "100%" };
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 
 // ─── data access ───

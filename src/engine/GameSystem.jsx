@@ -59,6 +59,7 @@ const TEXT_MUTED = TOKENS.TEXT.muted;  // 5.4:1 on white. #a8a29e was 2.5:1.
 const BORDER = TOKENS.LINE.soft;
 const BORDER_STRONG = TOKENS.LINE.strong;
 const AMBER = TOKENS.STATE.warn;   // 4.9:1 on white. #b45309 was 3.2:1.
+const SURFACE_CARD = TOKENS.SURFACE.card;   // a text box takes the card's own surface, which is dark after dark
 const HIT = 36;            // the running side, where a trackpad is under my hands
 const TAP = 44;            // the playing side, where a phone is
 
@@ -1594,7 +1595,7 @@ function ReviewAnswers({ type, week, data, setData }) {
                         <span style={{ fontSize: 12, fontWeight: 600, color: noAnswer ? TEXT_MUTED : correct ? GREEN : RED, marginRight: 4 }}>
                           {noAnswer ? "No answer" : type === "game" ? (q.options?.[ans] || letters[ans] || "?") : (q.options?.[ans] || "Option " + (ans + 1))}
                         </span>
-                        <select value={ans !== undefined && ans !== null ? ans : ""} onChange={e => { const v = e.target.value; changeAnswer(s.id, qi, v === "" ? undefined : parseInt(v)); }} style={{ fontSize: 12.5, padding: "2px 4px", borderRadius: 4, border: "1px solid " + BORDER, fontFamily: F, background: "#fff" }}>
+                        <select value={ans !== undefined && ans !== null ? ans : ""} onChange={e => { const v = e.target.value; changeAnswer(s.id, qi, v === "" ? undefined : parseInt(v)); }} style={{ fontSize: 12.5, padding: "2px 4px", borderRadius: 4, border: "1px solid " + BORDER, fontFamily: F, background: SURFACE_CARD }}>
                           <option value="">No answer</option>
                           {(q.options || []).map((o, oi) => (
                             <option key={oi} value={oi}>{type === "game" ? (letters[oi] + ") " + (o || "Option " + (oi + 1))) : (o || "Option " + (oi + 1))}</option>

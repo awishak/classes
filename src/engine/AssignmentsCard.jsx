@@ -29,6 +29,7 @@ const BORDER_STRONG = TOKENS.LINE.strong;
 const BG = TOKENS.SURFACE.page;
 const LATE = TOKENS.STATE.late;
 const SOON = TOKENS.STATE.warn;
+const SURFACE_CARD = TOKENS.SURFACE.card;   // a text box takes the card's own surface, which is dark after dark
 const TAP = 44;
 
 const label = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
@@ -37,7 +38,7 @@ const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_M
 const Pill = ({ accent, children }) => (
   <span style={{ flex: "none", fontSize: 13, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "3px 9px", whiteSpace: "nowrap" }}>{children}</span>
 );
-const inputStyle = { width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: TAP, background: "#fff", color: TEXT_PRIMARY };
+const inputStyle = { width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: TAP, background: SURFACE_CARD, color: TEXT_PRIMARY };
 
 // ─── data ───
 const getAssignments = (data, config) => assignmentsOf(config, data);

@@ -29,6 +29,7 @@ const TEXT = TOKENS.TEXT.primary;
 const MUTED = TOKENS.TEXT.muted;
 const BORDER = TOKENS.LINE.soft;
 const LIVE = TOKENS.STATE.live;
+const SURFACE_CARD = TOKENS.SURFACE.card;   // a text box takes the card's own surface, which is dark after dark
 const TAP = 44;
 
 export default function BoardPage({ config }) {
@@ -101,7 +102,7 @@ export default function BoardPage({ config }) {
         <p style={{ margin: 0, fontSize: 16, color: MUTED }}>Pick your name to post.</p>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Your name"
           style={{ width: "100%", minHeight: TAP, padding: "0 14px", fontSize: 17, fontFamily: F,
-            border: "1px solid " + BORDER, borderRadius: 12, background: "#fff", color: TEXT }} />
+            border: "1px solid " + BORDER, borderRadius: 12, background: SURFACE_CARD, color: TEXT }} />
         <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: "50vh", overflowY: "auto" }}>
           {hits.map(s => (
             <button key={s.name} onClick={() => {
@@ -136,7 +137,7 @@ export default function BoardPage({ config }) {
             onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send(); }}
             placeholder="Your answer"
             style={{ width: "100%", minHeight: 110, padding: 14, fontSize: 17, lineHeight: 1.5, fontFamily: F,
-              border: "1px solid " + BORDER, borderRadius: 14, background: "#fff", color: TEXT, resize: "vertical" }} />
+              border: "1px solid " + BORDER, borderRadius: 14, background: SURFACE_CARD, color: TEXT, resize: "vertical" }} />
           <button onClick={send} disabled={!text.trim()}
             style={{ alignSelf: "flex-start", minHeight: TAP, padding: "0 22px", fontSize: 17, fontWeight: 600,
               fontFamily: F, borderRadius: 12, border: "none", cursor: text.trim() ? "pointer" : "default",

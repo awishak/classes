@@ -72,13 +72,14 @@ const SURFACE_2 = TOKENS.SURFACE.sunk;
 const LIVE = TOKENS.STATE.live;
 const OK = TOKENS.STATE.ok;
 const WARN = TOKENS.STATE.warn;
+const SURFACE_CARD = TOKENS.SURFACE.card;   // a text box takes the card's own surface, which is dark after dark
 const TAP = 44;  // student-facing surfaces: students are on phones
 const HIT = 36;  // this screen: a trackpad under my hands, where density is the point
 
 const label = { fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, letterSpacing: 0 };
 const mini = { minHeight: HIT, padding: "0 13px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_SECONDARY, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
 const solid = (a) => ({ ...mini, background: a, borderColor: a, color: "#fff" });
-const inputStyle = { width: "100%", padding: "10px 13px", borderRadius: 11, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: 40, background: "#fff", color: TEXT_PRIMARY };
+const inputStyle = { width: "100%", padding: "10px 13px", borderRadius: 11, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: 40, background: SURFACE_CARD, color: TEXT_PRIMARY };
 const label2 = { fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, letterSpacing: 0 };
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 

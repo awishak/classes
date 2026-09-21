@@ -35,6 +35,7 @@ const BG = TOKENS.SURFACE.page;
 const TEXT = TOKENS.TEXT.primary;
 const MUTED = TOKENS.TEXT.muted;
 const BORDER = TOKENS.LINE.strong;
+const SURFACE_CARD = TOKENS.SURFACE.card;   // a text box takes the card's own surface, which is dark after dark
 const TAP = 44;
 
 const wrap = { minHeight: "100vh", background: BG, fontFamily: F, color: TEXT,
@@ -74,7 +75,7 @@ function PickName({ config, students, onPick }) {
       <p style={{ margin: "0 0 12px", fontSize: 17, color: MUTED }}>Pick your name to play.</p>
       <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Your name"
         style={{ width: "100%", maxWidth: 520, minHeight: TAP, padding: "0 14px", fontSize: 17,
-          fontFamily: F, border: "1px solid " + BORDER, borderRadius: 12, background: "#fff", color: TEXT }} />
+          fontFamily: F, border: "1px solid " + BORDER, borderRadius: 12, background: SURFACE_CARD, color: TEXT }} />
       <div style={{ display: "flex", flexDirection: "column", gap: 6, maxWidth: 520,
         maxHeight: "56vh", overflowY: "auto", marginTop: 12 }}>
         {hits.map(s => (

@@ -17,6 +17,7 @@ const TEXT_MUTED = TOKENS.TEXT.muted; // 4.85:1 at worst, on every background we
 const BORDER = TOKENS.LINE.soft;
 const BORDER_STRONG = TOKENS.LINE.strong;
 const BG = TOKENS.SURFACE.page;
+const SURFACE_CARD = TOKENS.SURFACE.card;   // a text box takes the card's own surface, which is dark after dark
 const TAP = 44;
 
 // ─── helpers ───
@@ -124,7 +125,7 @@ const Muted = ({ children }) => <div style={{ fontSize: 15, color: TEXT_MUTED, l
 const YEARS = ["First-year", "Sophomore", "Junior", "Senior", "Graduate", "Other"];
 const PRIORITIES = ["Learning new material", "Getting a good grade", "Getting course credit"];
 
-const inputStyle = { width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: TAP, background: "#fff", color: TEXT_PRIMARY };
+const inputStyle = { width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: TAP, background: SURFACE_CARD, color: TEXT_PRIMARY };
 
 // Downscale an uploaded image to a small square data URL so it fits in the store.
 export function fileToAvatar(file, cb) {

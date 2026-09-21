@@ -28,6 +28,7 @@ const TEXT_SECONDARY = TOKENS.TEXT.secondary;
 const TEXT_MUTED = TOKENS.TEXT.muted; // 4.85:1 at worst, on every background we use. #9ca3af was 2.54:1 and failed AA.
 const BORDER = TOKENS.LINE.soft;
 const BORDER_STRONG = TOKENS.LINE.strong;
+const SURFACE_CARD = TOKENS.SURFACE.card;   // a text box takes the card's own surface, which is dark after dark
 const TAP = 44;
 
 const TYPE_META = {
@@ -223,7 +224,7 @@ function WeekNav({ weeks, accent }) {
   return (
     <div style={{ marginBottom: 16 }}>
       <select onChange={e => { if (e.target.value) go(e.target.value); }} defaultValue=""
-        style={{ fontFamily: F, fontSize: 16, padding: "10px 14px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, minHeight: TAP, background: "#fff", color: TEXT_PRIMARY, maxWidth: "100%" }}>
+        style={{ fontFamily: F, fontSize: 16, padding: "10px 14px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, minHeight: TAP, background: SURFACE_CARD, color: TEXT_PRIMARY, maxWidth: "100%" }}>
         <option value="" disabled>Jump to week…</option>
         {weeks.map((w, i) => <option key={w.id} value={w.id}>{weekLabel(w, i)}</option>)}
       </select>

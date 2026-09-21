@@ -113,6 +113,24 @@ for (const [name, b] of Object.entries(BRAND)) {
   }
 }
 
+// ─── rule 4: a text box is never painted white by hand ───
+//
+// Andrew, 2026-09-21: "the text boxes in dark mode are light. they should be
+// dark." Rule 1 only reads the constants at the top of a file, and every one of
+// those boxes carried its white inside a style object: `background: "#fff"` on
+// an input, under text that goes pale after dark. A box takes the card's own
+// surface, which is white by day and near-black at night.
+const FIELD = /(<input|<textarea|<select|inputStyle|selectStyle|const (input|area|box|field)\b)/i;
+const PAINTED = /background:\s*"(#[0-9a-fA-F]{3,8}|white|rgba?\()/;
+for (const f of readdirSync(ENGINE).sort()) {
+  if (!/\.jsx?$/.test(f) || OWNS_COLOUR.has(f)) continue;
+  readFileSync(new URL(f, ENGINE), "utf8").split("\n").forEach((line, i) => {
+    if (FIELD.test(line) && PAINTED.test(line)) {
+      fail(`src/engine/${f}:${i + 1}`, "a text box paints its own background. Take it from tokens.js, so it follows the theme after dark.");
+    }
+  });
+}
+
 if (bad) {
   console.error(`\ncheck-tokens: ${bad} place(s) outside the system.`);
   process.exit(1);

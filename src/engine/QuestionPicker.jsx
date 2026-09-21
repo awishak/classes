@@ -22,6 +22,7 @@ const INK2 = TOKENS.TEXT.secondary;
 const MUTED = TOKENS.TEXT.muted;
 const LINE = TOKENS.LINE.strong;
 const GREEN = TOKENS.STATE.ok;
+const SURFACE_CARD = TOKENS.SURFACE.card;   // a box takes the card's own surface, which is dark after dark
 
 export default function QuestionPicker({ storageKey, mode, onAdd, onClose }) {
   const [bank, setBank] = useState(null);
@@ -145,7 +146,7 @@ export default function QuestionPicker({ storageKey, mode, onAdd, onClose }) {
   );
 }
 
-const box = { border: "1px solid " + INK, borderRadius: 14, padding: 12, marginBottom: 10, background: "#fff",
+const box = { border: "1px solid " + INK, borderRadius: 14, padding: 12, marginBottom: 10, background: SURFACE_CARD,
   display: "flex", flexDirection: "column", gap: 8, fontFamily: F };
 const row = { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" };
 const dim = { fontSize: 12, color: MUTED };
