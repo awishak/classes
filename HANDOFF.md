@@ -889,6 +889,10 @@ end keeps being read out of date. The id is the words and the deadline together,
 so writing new words shows the card to the class again, the students who read
 the last one included.
 
+The card says who it is from over the words rather than signing under them: his
+face from his own card and "A message from Dr. Ishak", his wording. The button
+sits under the card, not at the foot of the screen.
+
 It comes last of the cards in front of the site, after a grade and after a
 deadline, because those two are a student's own business and this is
 everybody's. His side is a collapsed control on the front page, the way the

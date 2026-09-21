@@ -4100,10 +4100,17 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const down = setNotice(next, "", 0);
   if (down.notice || noticeFor(down, "Alan Turing", before)) say("a card taken down is still up");
   // The card itself, and his side of it.
-  const cfg = { accent: "#333", code: "COMM 118", instructor: { name: "Dr. Ishak" } };
+  const cfg = { accent: "#333", code: "COMM 118", instructor: { name: "Dr. Ishak", photo: "data:image/png;base64,iVBORw0KGgo=" } };
   const card = renderToString(<NoticeCard config={cfg} text={words} onDone={noop} />);
   if (!card.includes("love to see you in office hours")) say("the card does not carry his words");
   if (!card.includes("COMM 118")) say("the card does not say which class it is for");
+  // Andrew, 2026-09-21: "where there's a message from me, can you say: A
+  // message from Dr. Ishak, and put my vatar?"
+  if (!card.includes("A message from Dr. Ishak")) say("the card does not say who it is from");
+  if (!card.includes("<img")) say("his face is not on the card");
+  if (card.indexOf("A message from Dr. Ishak") > card.indexOf("love to see you")) say("who it is from is under the words rather than over them");
+  const noFace = renderToString(<NoticeCard config={{ accent: "#333", code: "COMM 118" }} text={words} onDone={noop} />);
+  if (noFace.includes("<img")) say("a class with no photo of him draws one anyway");
   if (!card.includes("Go to the site")) say("there is nothing to press on the card");
   // Andrew, 2026-09-21: "the go to the site button is too close to the bottom.
   // can we put it right under the text?"

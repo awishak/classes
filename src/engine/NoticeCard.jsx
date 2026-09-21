@@ -9,6 +9,7 @@
 import { useState } from "react";
 import * as TOKENS from "./tokens.js";
 import { noticeOf, setNotice } from "./notice.js";
+import { AvatarPreview } from "./YouCard.jsx";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -31,11 +32,17 @@ export default function NoticeCard({ config, text, instructor, onDone }) {
           {instructor ? <span style={{ fontSize: 15, color: TEXT_MUTED }}>The card students see</span> : null}
         </div>
         <section style={{ background: WHITE, border: "1px solid " + LINE, borderRadius: 16, padding: 24,
-          boxShadow: "0 12px 32px -20px rgba(23,19,16,.35)" }}>
+          display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 12px 32px -20px rgba(23,19,16,.35)" }}>
+          {/* Who it is from, with his face, over the words rather than signed
+              under them. Andrew, 2026-09-21: "where there's a message from me,
+              can you say: A message from Dr. Ishak, and put my vatar?" The
+              photo is the one on his own card, so there is one picture of him
+              to keep up to date. */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {config.instructor?.photo ? <AvatarPreview value={config.instructor.photo} accent={a} size={44} /> : null}
+            <span style={label}>A message from Dr. Ishak</span>
+          </div>
           <div style={{ fontSize: 19, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{text}</div>
-          {config.instructor?.name ? (
-            <div style={{ ...label, marginTop: 16 }}>{config.instructor.name}</div>
-          ) : null}
         </section>
         {/* Right under what it says. Andrew, 2026-09-21: "the go to the site
             button is too close to the bottom. can we put it right under the
