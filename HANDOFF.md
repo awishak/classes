@@ -299,12 +299,15 @@ would need words he has not given. `DayItems` in `ScheduleCard.jsx`.
 
 **The roster is a wall of faces.** Andrew, 2026-09-21: "let's give the roster
 treatment a 3 across, centered avatar, name in bold, year adn home town below,
-motto below that." Three across on every screen, phone included. A student who
+motto below that", and then "motto should be in italics. and maybe we should
+just go 2 across?" Two across on every screen, phone included, with the motto
+in italics under the year and the hometown. His own roster is a different
+surface, with the search, the rooms and the way through to a student's page,
+and it carries the same cards under them. A student who
 has answered nothing is a face and a name with no empty lines under it, because
 each line is only drawn when there is something in it. Tapping one still opens
-their page, where the about and the strength are. `StudentRoster` in
-`RosterCard.jsx`; the instructor's own roster is a different surface and is
-unchanged.
+their page, where the about and the strength are. `StudentRoster` and
+`InstructorRoster` in `RosterCard.jsx`.
 
 **Challenges says both words** on the student's card, `Challenges
 (Assignments)`, until the class has the new one. The card is the next one by

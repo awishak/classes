@@ -3960,7 +3960,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   }
 }
 
-// The roster, three across.
+// The roster, two across.
 //
 // Andrew, 2026-09-21: "let's give the roster treatment a 3 across, centered
 // avatar, name in bold, year adn home town below, motto below that."
@@ -3974,12 +3974,12 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     "Grace Hopper": { hometown: "Sacramento" },
   } };
   const html = renderToString(<RosterDetail config={cfg} role="student" data={data} update={noop} name="Pepe LeFritz" />);
-  if (!/grid-template-columns:repeat\(3, ?minmax\(0, ?1fr\)\)/.test(html)) say("the roster is not three across");
+  if (!/grid-template-columns:repeat\(2, ?minmax\(0, ?1fr\)\)/.test(html)) say("the roster is not two across");
   // And his own, which is a different surface. Andrew, 2026-09-21: "roster is
   // still not three across. maybe it is for students, but not for me."
   {
     const mine = renderToString(<RosterDetail config={cfg} role="instructor" data={data} update={noop} name="" />);
-    if (!/grid-template-columns:repeat\(3, ?minmax\(0, ?1fr\)\)/.test(mine)) say("his own roster is not three across");
+    if (!/grid-template-columns:repeat\(2, ?minmax\(0, ?1fr\)\)/.test(mine)) say("his own roster is not two across");
     if (!mine.includes("Junior · Fresno")) say("his cards do not carry the year and the hometown");
     if (!mine.includes("Measure twice")) say("his cards do not carry the motto");
     if (!mine.includes("Search students")) say("he lost the search box");
@@ -3992,6 +3992,8 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (!html.includes(n)) say(n + " is not on the roster"); });
   if (!html.includes("Junior · Fresno")) say("the year and the hometown are not on the card");
   if (!html.includes("Measure twice")) say("the motto is not on the card");
+  // Andrew, 2026-09-21: "motto should be in italics."
+  if (!/font-style:italic[^>]*>Measure twice/.test(html)) say("the motto is not in italics");
   if (!/font-weight:700[^>]*>Ada Lovelace|Ada Lovelace/.test(html)) say("the name is not in bold");
   // A student who has answered nothing is a face and a name, with no empty
   // lines under it.

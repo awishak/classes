@@ -169,8 +169,8 @@ function InstructorRoster({ config, data, update }) {
           is still not three across. maybe it is for students, but not for me."
           It was, and his own roster is a different surface: the search, the
           rooms and the way through to a student's page are his alone, and only
-          the list under them is shared. */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+          the list under them is shared. Two across, like theirs. */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
         {results.map(s => {
           const p = profileOf(data, s.name);
           const shown = nameShown(data, s.name);
@@ -189,7 +189,7 @@ function InstructorRoster({ config, data, update }) {
                   a student who had written their hometown and no more read as
                   a blank. */}
               {where ? <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center", lineHeight: 1.35 }}>{where}</div> : null}
-              {p.motto ? <div style={{ fontSize: 13, color: TEXT_SECONDARY, textAlign: "center", lineHeight: 1.4, overflowWrap: "anywhere" }}>{p.motto}</div> : null}
+              {p.motto ? <div style={{ fontSize: 13, fontStyle: "italic", color: TEXT_SECONDARY, textAlign: "center", lineHeight: 1.4, overflowWrap: "anywhere" }}>{p.motto}</div> : null}
               {!where && !p.motto ? (
                 <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center", lineHeight: 1.35 }}>Profile not filled in yet</div>
               ) : null}
@@ -331,9 +331,10 @@ function StudentRoster({ config, data, name }) {
       <div style={{ ...h2, marginBottom: 16 }}>Roster</div>
       {/* Andrew, 2026-09-21: "let's give the roster treatment a 3 across,
           centered avatar, name in bold, year adn home town below, motto below
-          that." Three across on every screen, so the roster reads as a wall of
-          faces rather than a list of names, and the class fits on a phone. */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+          that", and then "motto should be in italics. and maybe we should
+          just go 2 across?" Two across on every screen, so a face is big
+          enough to know somebody by and a motto has room to be read. */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
         {students.map(s => {
           const p = profileOf(data, s.name);
           const where = [p.year, p.hometown].filter(Boolean).join(" · ");
@@ -343,7 +344,7 @@ function StudentRoster({ config, data, name }) {
               <Avatar profile={p} name={nameShown(data, s.name)} accent={a} size={56} />
               <div style={{ fontWeight: 700, fontSize: 15, textAlign: "center", color: TEXT_PRIMARY, overflowWrap: "anywhere" }}>{nameShown(data, s.name)}</div>
               {where ? <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center", lineHeight: 1.35 }}>{where}</div> : null}
-              {p.motto ? <div style={{ fontSize: 13, color: TEXT_SECONDARY, textAlign: "center", lineHeight: 1.4, overflowWrap: "anywhere" }}>{p.motto}</div> : null}
+              {p.motto ? <div style={{ fontSize: 13, fontStyle: "italic", color: TEXT_SECONDARY, textAlign: "center", lineHeight: 1.4, overflowWrap: "anywhere" }}>{p.motto}</div> : null}
             </button>
           );
         })}
