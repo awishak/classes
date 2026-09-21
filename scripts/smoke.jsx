@@ -2913,6 +2913,41 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (/add\("Day", "Teach"/.test(docSrc)) say("the slash menu still opens a Teach that is gone");
 }
 
+// Teaching, the slides are a run: one wide, with everything written under a
+// row beside it. Andrew, 2026-09-20: "it should have slides on one side
+// probably only one wide, and the screen on the right side. on top of that, it
+// should have ALL my notes from each slide, or whatever is underneath it, to
+// the right of the slide so i can see all the notes."
+{
+  const say = (msg) => { console.error("  FAIL  the run: " + msg); failedEarly++; };
+  const none = () => {};
+  const slotItems = { open: { title: "Open", time: "10", items: [
+    { id: "i1", text: "The Katrina photographs" },
+    { id: "n1", text: "Ask who took each one", depth: 1 },
+    { id: "n2", text: "Then ask who wrote the caption", depth: 1 },
+  ] } };
+  const props = { sections: [["open", "Open"]], slotItems, named: new Set(), firstMovable: 0,
+    blockOf: () => null, seedById: () => null, doneSet: new Set(), nextId: "i1", pickedId: null, liveLabel: null,
+    castItem: none, castSection: (sl, n) => ({ type: "quote", title: n, label: n }), dismiss: none, features: {},
+    hue: () => "#333", slidesOn: true, classHref: "/comm118", onSetSlotTitle: none, onSaveItem: none, onSaveBlock: none,
+    onInsertRow: () => "x", onRemoveItem: none, onNest: none, onTick: none, isAssigned: () => false,
+    onToggleAssigned: none, drop: none, onSetSlotTime: none, onPlaceSection: none, classMinutes: 65 };
+  try {
+    const run = renderToString(<DayDoc {...props} view="slides" teaching />);
+    const plan = renderToString(<DayDoc {...props} view="slides" />);
+    if (!/class="deck is-run"/.test(run)) say("teaching does not lay the slides out one wide");
+    if (/class="deck is-run"/.test(plan)) say("planning is stuck in the teaching layout");
+    // Every note under the row, each on its own line rather than run together
+    // and cut off, which is what the caption under a grid card does.
+    ["Ask who took each one", "Then ask who wrote the caption"].forEach(n => {
+      if (!run.includes(n)) say("the run does not show " + JSON.stringify(n)); });
+    if ((run.match(/class="deck-note"/g) || []).length !== 2) {
+      say("the notes are not one line each: " + JSON.stringify(run.match(/class="deck-note"/g))); }
+    if (!run.includes("Nothing written under this slide")) say("a slide with no notes says nothing about it");
+    if (plan.includes('class="deck-said"')) say("the planning grid took the run's note column");
+  } catch (err) { say("the slides threw: " + err.message); }
+}
+
 // Plan and Teach: the two modes of the dashboard. Andrew, 2026-09-20:
 // "basically i need a planning view (doc and drawer) and a teaching view:
 // slides or doc, and live image, and drawer underneath", and "when it's in

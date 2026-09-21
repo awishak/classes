@@ -2072,7 +2072,7 @@ export function boardSection(which, boards, proposals) {
   };
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList, games, gamesHref, boards, proposals, onSaveBoard, onCastBoard, boardHue, schedToday, onCastScheduled, onCastRow, view, onSetSlotLook, footTools }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList, games, gamesHref, boards, proposals, onSaveBoard, onCastBoard, boardHue, schedToday, onCastScheduled, onCastRow, view, teaching, onSetSlotLook, footTools }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -2351,7 +2351,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
           planning belongs. */}
       <DayDoc sections={docSections} slotItems={docSlotItems} named={docNamed} firstMovable={firstMovable}
         blockOf={blockOf} seedById={seedById} doneSet={doneSet} numberOf={numberOf} nextId={nextId} pickedId={pickedId}
-        liveLabel={liveLabel} liveUrl={liveCast?.openUrl || liveCast?.url || ""} dismiss={dismiss} features={FEATURES} hue={hue} slidesOn={false} view={view} classHref={classHref}
+        liveLabel={liveLabel} liveUrl={liveCast?.openUrl || liveCast?.url || ""} dismiss={dismiss} features={FEATURES} hue={hue} slidesOn={false} view={view} teaching={teaching} classHref={classHref}
         ground={roomGround || "slate"} assignments={assignmentList} games={games} gamesHref={gamesHref}
         // A slide goes up as the slide: the template the row's thumbnail draws.
         // An activity runs itself, and a clip or voice memo plays as a file.
@@ -4952,7 +4952,7 @@ export default function Dashboard({ config, daySlug = "" }) {
       games={games} gamesHref={config.path + "/games"}
       schedToday={schedToday} onCastScheduled={castScheduled}
       onCastRow={setLastCast}
-      view={view} onSetSlotLook={(slot, look) => writeDay(d => {
+      view={view} teaching={teaching} onSetSlotLook={(slot, look) => writeDay(d => {
         const slots = { ...(d.slots || {}) };
         slots[slot] = { ...normSlot(slots[slot]), slideLook: look || undefined };
         return { ...d, slots };

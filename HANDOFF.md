@@ -68,6 +68,13 @@ never what is allowed. The choice per mode is remembered in the browser. It
 always opens in Plan. `⌘E` swaps the modes, which is what that key did before
 except that it used to hide the rail, the opposite of what teaching wants.
 
+**Teaching, the slides are a run.** One slide wide down the day column, with
+everything written under that row beside it, every note on its own line and
+nothing cut off. The grid of thumbnails stays in Plan, where laying out a day
+means looking at the shape of the whole thing. The room's screen is the rail on
+the right, so the slide, what to say over it and what the room can see are all
+in one glance.
+
 **What is next, drawn rather than described.** "give me a view of like what the
 next slide is with all the notes for it." Under the picture: the words Next
 will put up, the slide the room would see, and the notes written under that row

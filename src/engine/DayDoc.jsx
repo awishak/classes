@@ -268,7 +268,7 @@ export default function DayDoc({
   onSetSlotTitle, onSaveItem, onSaveBlock, onInsertRow, onRemoveItem, onNest, onTick, isAssigned, onToggleAssigned,
   onDeleteSection, onMoveSection, onEdit, drop, castLink, onMoveItem, onConvertRow, onLinkRow, library,
   onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory,
-  ground, assignments, games, gamesHref, view, onSetSlotLook, onMerge, footTools,
+  ground, assignments, games, gamesHref, view, teaching, onSetSlotLook, onMerge, footTools,
 }) {
   const refs = useRef(new Map());
   const pending = useRef(null);
@@ -852,27 +852,35 @@ export default function DayDoc({
       const raw = bucket.title || "";
       const cards = [];
       if (raw) {
-        cards.push({ key: "s:" + sec.slot, cast: castSection(sec.slot, raw, false), label: raw, n: "", notes: "",
+        cards.push({ key: "s:" + sec.slot, cast: castSection(sec.slot, raw, false), label: raw, n: "", notes: "", said: [],
           go: () => castSection(sec.slot, raw, true), menu: () => sectionMenu(sec),
           look: bucket.slideLook || "", setLook: (v) => onSetSlotLook && onSetSlotLook(sec.slot, v) });
       }
       sec.groups.forEach(g => {
         const c = castLine(g.head);
         const body = g.head.blk?.type !== "board" ? (g.head.blk?.body || "").trim() : "";
+        const said = [body, ...(notesOf[g.head.it.id] || [])].filter(Boolean);
         cards.push({ key: g.head.it.id, cast: c.cast, label: c.label, go: c.go, n: itemNumber[g.head.it.id] || "",
-          notes: [body, ...(notesOf[g.head.it.id] || [])].filter(Boolean).join(" · "), menu: () => itemMenu(g.head),
+          notes: said.join(" · "), said, menu: () => itemMenu(g.head),
           look: g.head.it.slideLook || "", setLook: (v) => onSaveItem && onSaveItem(sec.slot, g.head.it.id, { slideLook: v || undefined }) });
         g.comments.filter(n => n.it.slide).forEach(n => {
           const nc = castLine(n);
-          cards.push({ key: n.it.id, cast: nc.cast, label: nc.label, go: nc.go, n: "", notes: "", menu: () => itemMenu(n),
+          cards.push({ key: n.it.id, cast: nc.cast, label: nc.label, go: nc.go, n: "", notes: "", said: [], menu: () => itemMenu(n),
             look: n.it.slideLook || "", setLook: (v) => onSaveItem && onSaveItem(sec.slot, n.it.id, { slideLook: v || undefined }) });
         });
       });
       return { sec, raw, time: bucket.time || "", cards };
     }).filter(d => d.cards.length);
     if (!decks.length) return <div className="teach-empty">Nothing on this day to put up yet.</div>;
+    // Teaching, the run is one slide wide with everything written under it
+    // beside it. Andrew, 2026-09-20: "it should have slides on one side
+    // probably only one wide, and the screen on the right side. on top of
+    // that, it should have ALL my notes from each slide, or whatever is
+    // underneath it, to the right of the slide so i can see all the notes."
+    // Planning, it stays a grid: laying out a day is looking at the shape of
+    // the whole thing, and teaching is reading one thing at a time.
     return (
-      <div className="deck">
+      <div className={"deck" + (teaching ? " is-run" : "")}>
         {decks.map(d => {
           // The whole section steps together, from where its first slide is.
           const stepAll = () => {
@@ -896,7 +904,13 @@ export default function DayDoc({
                         onClick={() => (live ? dismiss() : c.go())} /> : <div className="deck-blank" />}
                       <div className="deck-cap">
                         <span className={"deck-n" + (live ? " live" : "")}>{live ? "on screen" : c.n}</span>
-                        <span className="deck-notes">{c.notes}</span>
+                        {teaching ? (
+                          <span className="deck-said">
+                            {(c.said || []).length
+                              ? (c.said || []).map((n, i) => <span key={i} className="deck-note">{n}</span>)
+                              : <span className="deck-note is-none">Nothing written under this slide.</span>}
+                          </span>
+                        ) : <span className="deck-notes">{c.notes}</span>}
                         {looksFor(c.cast).length > 1 ? (
                           <button className="dash-focus deck-brush" onClick={() => c.setLook(nextLook(c.cast, c.look))}
                             title="Next design" aria-label="Next design">{brush}</button>
@@ -1225,6 +1239,14 @@ export const DOC_CSS = `
 .deck-name{margin:0;font-size:15px;font-weight:500;color:var(--text-secondary)}
 .deck-time{flex:none;padding:0 9px;border:1px solid var(--line-strong);border-radius:999px;font-family:var(--font-label);font-size:13px;line-height:22px;color:var(--text-secondary)}
 .deck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:24px 16px}
+.deck.is-run .deck-grid{grid-template-columns:minmax(0,1fr);gap:18px}
+.deck.is-run .deck-card{display:grid;grid-template-columns:minmax(220px,340px) minmax(0,1fr);gap:20px;align-items:start}
+.deck.is-run .deck-cap{flex-direction:column;gap:6px;min-height:0;padding-top:2px}
+.deck.is-run .deck-n{line-height:18px}
+.deck-said{display:flex;flex-direction:column;gap:6px;min-width:0}
+.deck-note{font-size:15px;line-height:1.5;color:var(--text-primary);white-space:pre-wrap;word-break:break-word}
+.deck-note.is-none{font-size:13px;color:var(--text-muted)}
+@media (max-width:900px){.deck.is-run .deck-card{grid-template-columns:minmax(0,1fr)}}
 .deck-card{min-width:0;display:flex;flex-direction:column;gap:8px}
 .deck-card .slide{max-width:none;max-height:none}
 .deck-blank{aspect-ratio:16/9;border-radius:8px;background:var(--surface-sunk)}
