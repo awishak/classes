@@ -25,7 +25,7 @@ import { AssignmentsSummary, AssignmentsDetail, ungradedCount, waitingCount } fr
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
 import { setClassFavicon } from "./favicon.js";
-import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
+import { withIds, idOf, rosterOf, pointsOf as studentPoints } from "./roster.js";
 import { setAway, mergeAway } from "./attendance.js";
 import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
 import { useSession, studentFor, myCode } from "./session.js";
@@ -341,7 +341,7 @@ function needsYou(config, data, role, asStudent) {
     // A message on a challenge is as easy to miss as a submission.
     const said = waitingCount(data, assignmentsOf(config, data)).messages;
     if (said) out.push({ id: "said", card: "assignments", text: said + " message" + (said === 1 ? "" : "s") + " on challenges waiting for a reply" });
-    const waiting = (config.students || []).filter(s => {
+    const waiting = rosterOf(config, data).filter(s => {
       const t = data?.threads?.[s.name] || [];
       const last = t[t.length - 1];
       return last && last.from === "student";

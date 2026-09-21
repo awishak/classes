@@ -313,6 +313,20 @@ challenge rather than only the ones still owed. My side of the same card is
 what is coming up, each with how much of each room has handed it in: `8:00
 12/18 · 10:30 9/16`, plus what is waiting to be graded or answered.
 
+**The inbox is the class, read like mail.** Andrew, 2026-09-21: "also my inbox
+still has the 10 test students, not he current students. fix that, and make it
+look like an email inbox. should have all students, but sort by most recent
+message, and bold messages that are noew." Five surfaces read `config.students`
+and only that, so they showed the placeholder names a class config ships with
+rather than the roster in the store: the inbox, the count on its card, the
+needs-you list, the grading queue and the student picker on Your card. They all
+go through `rosterOf(config, data)` now, which is in `roster.js` with the rest of
+who a student is. The inbox itself is a mail list: every student, newest thread
+first, a face, the last line, when it was said, and the ones still waiting on an
+answer in bold. Nobody has ever marked a message read, so "new" is what the
+thread says, the last word in it came from the student, which is what the Reply
+tag used to mean.
+
 **Messages are one thumb and a link.** Done and I'm confused are gone. They sat
 under the reply box answering nothing in particular, and the same tap was
 called Done on the button and Got it in the inbox. One thumbs up, drawn rather

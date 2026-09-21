@@ -13,6 +13,7 @@
 import { useState, useRef, useEffect } from "react";
 import { assignmentsOf, isProfileTask, profileComplete } from "./profileTask.js";
 import { realStudents, studentsIn, hasSections, sectionsOf } from "./sections.js";
+import { rosterOf } from "./roster.js";
 import { genId } from "../utils.jsx";
 import { draftFeedback, textToHtml } from "./feedback.js";
 import { gradeText, scaleOf, SCALES, alive } from "./grades.js";
@@ -583,7 +584,7 @@ function GradeHub({ config, data, assignments, onStart }) {
           const inWords = counts.map(c => (c.section ? c.section + " " : "") + c.in + "/" + c.of).join(" · ");
           const ungraded = ungradedQueue(assignments, data, asg.id);
           const waiting = Object.keys(data?.assignmentLog?.[asg.id] || {}).filter(n => unanswered(logOf(data, asg.id, n))).length;
-          const roster = (config.students || []).map(s => ({ aid: asg.id, name: s.name }));
+          const roster = rosterOf(config, data).map(s => ({ aid: asg.id, name: s.name }));
           return (
             <div key={asg.id} style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, overflow: "hidden" }}>
               <button onClick={() => onStart(roster)} style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", fontFamily: F, padding: 14 }}>

@@ -6,6 +6,8 @@
 import { useState } from "react";
 import { genId } from "../utils.jsx";
 import { schedulingLinkOf } from "../instructors.js";
+import { rosterOf, nameShown, lastNameOf } from "./roster.js";
+import { Avatar, profileOf } from "./RosterCard.jsx";
 import * as TOKENS from "./tokens.js";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -283,7 +285,7 @@ function ProfileForm({ student, initial, update, accent }) {
 // fills in who they are; grades have a card of their own on the home page.
 function StudentYou({ config, data, update, asStudent, setAsStudent }) {
   const a = config.accent;
-  const roster = config.students || [];
+  const roster = rosterOf(config, data);
 
   return (
     <div>
@@ -371,7 +373,7 @@ function OfficeHours({ config }) {
 // ─────────────────────────────────────────────────────────────
 function InstructorYou({ config, data, update }) {
   const a = config.accent;
-  const roster = config.students || [];
+  const roster = rosterOf(config, data);
   const [selected, setSelected] = useState(null);
   const [note, setNote] = useState("");
 
@@ -391,31 +393,45 @@ function InstructorYou({ config, data, update }) {
     );
   }
 
-  // sort: waiting-on-you first, then those with any thread, then the rest
-  const sorted = [...roster].sort((x, y) => {
-    const wx = waitingOnInstructor(data, x.name) ? 2 : threadOf(data, x.name).length ? 1 : 0;
-    const wy = waitingOnInstructor(data, y.name) ? 2 : threadOf(data, y.name).length ? 1 : 0;
-    return wy - wx;
-  });
+  // An inbox, read the way an inbox is read.
+  //
+  // Andrew, 2026-09-21: "make it look like an email inbox. should have all
+  // students, but sort by most recent message, and bold messages that are
+  // new." So: every student on the roster, newest thread at the top, and a
+  // student whose last word is still waiting on an answer in bold, the way an
+  // unread mail is bold.
+  //
+  // Nobody has ever marked a message read here, so "new" is what the thread
+  // says: the last thing in it came from the student. Answer it and it stops
+  // being bold, which is the same thing the Reply tag meant.
+  const rows = roster.map(s => {
+    const m = lastMsg(data, s.name);
+    return { name: s.name, m, at: m?.ts || 0, unread: waitingOnInstructor(data, s.name) };
+  }).sort((x, y) => y.at - x.at
+    || lastNameOf(x.name, config.lastNameOverrides).localeCompare(lastNameOf(y.name, config.lastNameOverrides)));
 
   return (
     <div>
       <div style={h2}>You · Inbox</div>
       <Muted>Every message a student sends lands here.</Muted>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
-        {sorted.map(s => {
-          const m = lastMsg(data, s.name);
-          const waiting = waitingOnInstructor(data, s.name);
+      <div style={{ marginTop: 14, borderTop: "1px solid " + BORDER }}>
+        {rows.map(r => {
+          const m = r.m;
           const preview = m ? (m.kind === "got_it" ? "Thumbs up" : m.kind === "confused" ? "I'm confused" : m.kind === "meeting" ? "Requested a meeting" : m.kind === "question" ? "Q: " + m.text : m.text) : "No messages yet";
           return (
-            <button key={s.name} onClick={() => setSelected(s.name)}
-              style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 14, cursor: "pointer", fontFamily: F, display: "flex", alignItems: "center", gap: 12, minHeight: TAP }}>
-              <div style={{ width: 40, height: 40, borderRadius: "50%", background: a + "22", border: "2px solid " + a + "55", flexShrink: 0 }} />
+            <button key={r.name} onClick={() => setSelected(r.name)}
+              style={{ width: "100%", textAlign: "left", background: SURFACE_CARD, border: "none", borderBottom: "1px solid " + BORDER,
+                padding: "8px 4px", cursor: "pointer", fontFamily: F, display: "flex", alignItems: "center", gap: 12, minHeight: TAP }}>
+              <Avatar profile={profileOf(data, r.name)} name={nameShown(data, r.name)} accent={a} size={36} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>{s.name}</div>
-                <div style={{ fontSize: 15, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: r.unread ? 700 : 500, color: TEXT_PRIMARY,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nameShown(data, r.name)}</span>
+                  {m ? <span style={{ flex: "none", fontSize: 13, color: TEXT_MUTED }}>{fmtTime(m.ts)}</span> : null}
+                </div>
+                <div style={{ fontSize: 15, fontWeight: r.unread ? 600 : 400, color: r.unread ? TEXT_PRIMARY : TEXT_MUTED,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</div>
               </div>
-              {waiting && <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: a, padding: "4px 10px", borderRadius: 999, flexShrink: 0 }}>Reply</span>}
             </button>
           );
         })}
@@ -445,7 +461,7 @@ export function MessagesDetail({ config, role, data, update, asStudent }) {
 export function MessagesSummary({ config, role, data, asStudent }) {
   const a = config.accent;
   if (role === "instructor") {
-    const waiting = (config.students || []).filter(s => waitingOnInstructor(data, s.name)).length;
+    const waiting = rosterOf(config, data).filter(s => waitingOnInstructor(data, s.name)).length;
     return waiting > 0
       ? <div><div style={{ fontSize: 22, fontWeight: 700, color: a }}>{waiting}</div><Muted>waiting on your reply</Muted></div>
       : <Muted>Inbox: no replies needed.</Muted>;

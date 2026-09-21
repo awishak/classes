@@ -91,6 +91,7 @@ import { assignmentsOf } from "../src/engine/profileTask.js";
 import { QuestionsSummary, QuestionsDetail, onThePage, archivedOf, askedBy, sortQuestions, isAnswered, QuestionEntry } from "../src/engine/QuestionsCard.jsx";
 import { sectionsOf as sittingLabels, hasSections, studentsIn, sectionFor, realStudents, isTestStudent, sectionNow } from "../src/engine/sections.js";
 import { classmatesOf, RosterDetail } from "../src/engine/RosterCard.jsx";
+import { rosterOf } from "../src/engine/roster.js";
 import { comingUp, turnedIn } from "../src/engine/AssignmentsCard.jsx";
 import { YouDetail, MessagesDetail, MessagesSummary } from "../src/engine/YouCard.jsx";
 import comm118Cfg from "../src/config/comm118.js";
@@ -3987,6 +3988,51 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const ada = html.slice(html.indexOf("Ada Lovelace") - 400, html.indexOf("Measure twice"));
   if (ada.indexOf("Ada Lovelace") > ada.indexOf("Junior · Fresno")) say("the name is under the year and the hometown");
   if (!/align-items:center/.test(ada)) say("the card is not centred");
+}
+
+// The inbox is the class, read like mail.
+//
+// Andrew, 2026-09-21: "also my inbox still has the 10 test students, not he
+// current students. fix that, and make it look like an email inbox. should
+// have all students, but sort by most recent message, and bold messages that
+// are noew."
+{
+  const say = (m) => { console.error("  FAIL  the inbox: " + m); failedEarly++; };
+  // A class config ships with placeholder names so a new class has a page to
+  // look at. The roster he pastes lands in the store, and that is the class.
+  const cfg = { accent: "#333", code: "COMM 3", students: [{ name: "Placeholder One" }, { name: "Placeholder Two" }] };
+  const real = [{ name: "Ada Lovelace" }, { name: "Grace Hopper" }, { name: "Alan Turing" }];
+  if (rosterOf(cfg, { students: real }).length !== 3) say("the class is not the roster in the store");
+  if (rosterOf(cfg, { students: [] }).length !== 2) say("a class nobody has pasted yet has no names at all");
+  if (rosterOf(cfg, {}).map(s => s.name).join() !== "Placeholder One,Placeholder Two") say("a class with no store falls back to nothing");
+  const t0 = Date.parse("2026-09-20T17:00:00Z");
+  const data = { students: real, threads: {
+    "Ada Lovelace": [{ id: "m1", ts: t0, from: "student", kind: "note", text: "Can I turn it in late?" }],
+    "Alan Turing": [{ id: "m2", ts: t0 + 60000, from: "student", kind: "note", text: "Which room are we in?" },
+      { id: "m3", ts: t0 + 120000, from: "instructor", kind: "note", text: "Vari 133." }],
+  } };
+  const html = renderToString(<MessagesDetail config={cfg} role="instructor" data={data} update={noop} />);
+  if (html.includes("Placeholder One")) say("the inbox still lists the names the config ships with");
+  ["Ada Lovelace", "Grace Hopper", "Alan Turing"].forEach(n => {
+    if (!html.includes(n)) say(n + " is not in the inbox"); });
+  // Newest thread first, then the ones nobody has written to, by last name.
+  const at = (t) => html.indexOf(t);
+  if (!(at("Alan Turing") < at("Ada Lovelace") && at("Ada Lovelace") < at("Grace Hopper")))
+    say("the inbox is not sorted by the most recent message");
+  // Bold is a student still waiting on an answer. Turing has been answered.
+  // One row is one button, so the row is the chunk that holds the name.
+  const row = (n) => (html.split("<button").find(chunk => chunk.includes(n)) || "");
+  // The name's own weight, not the initials in the circle, which are always
+  // heavy.
+  const weightOf = (n) => (row(n).match(/font-size:16px;font-weight:(\d+)/) || [])[1];
+  if (weightOf("Ada Lovelace") !== "700") say("a student waiting on a reply is not bold: " + weightOf("Ada Lovelace"));
+  if (weightOf("Alan Turing") === "700") say("a thread he has answered is still bold");
+  if (weightOf("Grace Hopper") === "700") say("a student who has never written is bold");
+  if (!html.includes("Can I turn it in late?")) say("the inbox does not preview the message");
+  if (!html.includes("No messages yet")) say("a student with no thread has no line of their own");
+  // And the tile on the front page counts the same class.
+  const tile = renderToString(<div>{MessagesSummary({ config: cfg, role: "instructor", data })}</div>);
+  if (!tile.includes("1")) say("the card does not count who is waiting: " + tile);
 }
 
 // Three readings, then the box.

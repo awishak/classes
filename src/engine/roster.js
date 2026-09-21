@@ -44,6 +44,21 @@ export const pointsOf = (log, student) => {
     .reduce((n, e) => n + (e.amount || 0), 0);
 };
 
+// The class's own roster, whatever the config ships with.
+//
+// Andrew, 2026-09-21: "my inbox still has the 10 test students, not he current
+// students." Five surfaces read `config.students` and only that: the inbox, the
+// count on its card, the needs-you list, the grading queue and the student
+// picker. A class config ships with placeholder names so a new class has a page
+// to look at, and the real roster is pasted into the store. So those five were
+// showing the placeholders for the rest of the term.
+//
+// An empty list in the store is not a roster, it is a class nobody has pasted
+// yet, which is why this asks for a length rather than taking whatever is
+// there.
+export const rosterOf = (config, data) =>
+  withIds(data?.students?.length ? data.students : ((config || {}).students || []));
+
 // A roster with every id filled in.
 //
 // Applied where students are read rather than at the eighty-odd places that
