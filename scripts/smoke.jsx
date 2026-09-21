@@ -2722,6 +2722,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // And the site puts it in front of the site rather than after it.
   const app = readFileSync(new URL("../src/engine/ClassApp.jsx", import.meta.url), "utf8");
   if (!/needsWelcome\(data, seenAs\)/.test(app)) say("the class page never asks whether to welcome them");
+  // Asked once and then remembered. Andrew, 2026-09-20: "I tried to type in the
+  // card as pepe and it just ended the card deck instead." The gate is "this
+  // student has answered nothing", so asking it on every render closed the deck
+  // on the first keystroke.
+  if (!/deck\.current\.on = true/.test(app)) say("the deck is not latched open");
+  if (!/if \(deck\.current\.on\) \{/.test(app)) say("the deck is drawn by asking the question again");
+  if (!/deck\.current\.name !== seenAs/.test(app)) say("looking at another student does not start the question over");
   if (app.indexOf("needsWelcome(data, seenAs)") > app.indexOf("const unseen = data !== null")) {
     say("the welcome comes after the grade cards rather than before the site"); }
 }

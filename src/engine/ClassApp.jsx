@@ -11,7 +11,7 @@
 // Every card is addressable: /comm999/assignments is a real URL you can send
 // someone, and the browser Back button does what it says.
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useClassData } from "./store.js";
 import { SHARED_KEY, blockById, registerTypes } from "./blocks.js";
 import { readAdded, readLabels } from "./types.js";
@@ -643,7 +643,20 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // The student's own code, read off the row only they can see, for the menu.
   const [ownCode, setOwnCode] = useState("");
   const [pinOpen, setPinOpen] = useState(false);
-  const [welcomeDone, setWelcomeDone] = useState(false);
+  // Whether the welcome cards are up, latched.
+  //
+  // The gate is "this student has answered nothing", and every keystroke on a
+  // card writes an answer, so asking the question on every render closed the
+  // deck as soon as anybody typed into it. Andrew, 2026-09-20: "I tried to type
+  // in the card as pepe and it just ended the card deck instead."
+  //
+  // So it is asked once and then remembered. In the render rather than in an
+  // effect, because an effect runs after a render and the student would see
+  // the site for a frame before the cards arrived. Looking at somebody else
+  // starts the question over, which is what View as a student is for.
+  const deck = useRef({ name: null, on: false, done: false });
+  const [, tickDeck] = useState(0);
+  const finishWelcome = () => { deck.current = { ...deck.current, on: false, done: true }; tickDeck(n => n + 1); };
   useEffect(() => {
     let alive = true;
     if (!session || sessionInstructor) { setOwnCode(""); return undefined; }
@@ -913,6 +926,10 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // The marquee reads the same facts the cards do, so Crashing Out is loud
   // about something true rather than loud about nothing.
   const seenAs = preview || asStudent;
+  if (deck.current.name !== seenAs) deck.current = { name: seenAs, on: false, done: false };
+  if (data !== null && view !== "instructor" && seenAs && !deck.current.done && needsWelcome(data, seenAs)) {
+    deck.current.on = true;
+  }
   const myPoints = (data?.log || []).filter(e => e.studentId === (roster.find(x => x.name === seenAs) || {}).id)
     .reduce((n, e) => n + (e.amount || 0), 0);
   const tickerLines = [
@@ -962,13 +979,13 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // to have cards that are like: welcome to class. I'd like to know a little
   // bit about you." It is asked once: stepping through or leaving early marks
   // it, and the first challenge of the term reads the same profile.
-  if (data !== null && view !== "instructor" && !welcomeDone && seenAs && needsWelcome(data, seenAs)) {
+  if (deck.current.on) {
     return (
       <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">
         <ThemeStyle theme={theme} />
         <style>{CSS + accentCSS(a, config.accentDark)}</style>
         <WelcomeDeck config={config} name={seenAs} profile={(data.profiles || {})[seenAs]} update={write}
-          pin={ownCode} onDone={() => setWelcomeDone(true)} />
+          pin={ownCode} onDone={finishWelcome} />
       </div>
     );
   }
