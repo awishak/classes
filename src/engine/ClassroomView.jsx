@@ -12,6 +12,7 @@ import RoomSlide, { ROOM_FONTS_HREF } from "./RoomSlide.jsx";
 import { ENGINE_LIST } from "../config/registry.js";
 import PickMark from "./Pick.jsx";
 import * as TOKENS from "./tokens.js";
+import { setClassFavicon } from "./favicon.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, Tubey } from "./ThemeChrome.jsx";
 
@@ -473,7 +474,7 @@ export default function ClassroomView({ config }) {
   const stageRef = useRef(null);
   const [beam, setBeam] = useState(0);
 
-  useEffect(() => { document.title = config.code + " — Today"; }, [config.code]);
+  useEffect(() => { document.title = config.code + " — Today"; setClassFavicon(config); }, [config.code, config.accent]);
 
   // Swap layers whenever the cast counter moves.
   useEffect(() => {

@@ -21,6 +21,7 @@ import { gameClient } from "./gameClient.js";
 import { castFor } from "./gameCast.js";
 import { normSlot } from "./dayplan.js";
 import * as TOKENS from "./tokens.js";
+import { setClassFavicon } from "./favicon.js";
 import TopNav, { NAV_TEACH } from "./TopNav.jsx";
 import { ClassMenu } from "./ClassMenu.jsx";
 import { ENGINE_LIST } from "../config/registry.js";
@@ -50,6 +51,7 @@ export default function GamesPage({ config }) {
 
   useEffect(() => {
     document.title = config.code + " · Games";
+    setClassFavicon(config);
     if (!document.querySelector(`link[href="${FONT_HREF}"]`)) {
       const link = document.createElement("link");
       link.rel = "stylesheet";

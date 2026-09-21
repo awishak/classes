@@ -22,6 +22,7 @@ import { useClassState } from "./store.js";
 import { GameAdmin, StudentAnswerView, TriviaPlayer, Accolades } from "./GameSystem.jsx";
 import { lastNameOf } from "./roster.js";
 import * as TOKENS from "./tokens.js";
+import { setClassFavicon } from "./favicon.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeBadge, TubeySays } from "./ThemeChrome.jsx";
@@ -100,6 +101,7 @@ export default function GamePage({ config }) {
 
   useEffect(() => {
     document.title = config.code + " — Game";
+    setClassFavicon(config);
     try { const v = localStorage.getItem(REMEMBER); if (v) setWho(v); } catch { /* private mode */ }
   }, [config.code, REMEMBER]);
 

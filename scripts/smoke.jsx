@@ -110,6 +110,7 @@ import DayDoc, { docMarkdown } from "../src/engine/DayDoc.jsx";
 import { ScheduleDetail, studentItems, dateInWeek, dayAnchor } from "../src/engine/ScheduleCard.jsx";
 import TermOutline from "../src/engine/TermOutline.jsx";
 import { SHARED_KEY, stampScheduled, onClassDay } from "../src/engine/blocks.js";
+import { classIcon, iconWord, iconUrl } from "../src/engine/favicon.js";
 import { DEFAULT_REPO_FONTS } from "../src/engine/fonts.js";
 
 // Warm every class's store BEFORE anything renders, so <Dashboard/> gets past
@@ -2571,6 +2572,35 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const qSrc = readFileSync(new URL("../src/engine/QuestionsCard.jsx", import.meta.url), "utf8");
   if (qSrc.includes('config.path + "/ask"')) say("the questions card still points at the ask page");
   if (!qSrc.includes("Please keep this anonymous")) say("the ask box has no anonymous tick");
+}
+
+// The tab's icon, per class. Andrew, 2026-09-20: "let's change the favicon for
+// this class." There was none to change, so every tab wore the browser's blank
+// sheet and a dashboard, a room screen and a class page looked identical in the
+// tab strip.
+{
+  const say = (msg) => { console.error("  FAIL  the tab icon: " + msg); failedEarly++; };
+  if (iconWord({ code: "COMM 118" }) !== "118") say("COMM 118's icon does not say 118");
+  if (iconWord({ code: "COMM 3" }) !== "3") say("COMM 3's icon does not say 3");
+  if (iconWord({ code: "Retreat" }) !== "RE") say("a one-word class comes out blank: " + iconWord({ code: "Retreat" }));
+  if (iconWord({ code: "" })) say("a class with no code draws letters from nowhere");
+  // The class's own colour, and the number sized to fit the tile.
+  ENGINE_LIST.forEach(c => {
+    const svg = classIcon(c);
+    if (!svg.includes(c.accent)) say(c.code + " does not wear its own colour");
+    if (!svg.includes(">" + iconWord(c) + "<")) say(c.code + " has nothing written on it");
+    const size = Number((svg.match(/font-size="(\d+)"/) || [])[1]);
+    if (iconWord(c).length >= 3 && size > 32) say(c.code + " writes three characters too big for the tile");
+    // A tab icon is fetched on every page, so it has to stay small.
+    if (iconUrl(svg).length > 2000) say(c.code + "'s icon is " + iconUrl(svg).length + " bytes");
+  });
+  // Nothing about a class reaches the markup unescaped.
+  if (classIcon({ code: "X <script>", accent: "#000" }).includes("<script>")) say("a class code lands in the icon as markup");
+  // And every surface that names the tab sets it.
+  ["ClassApp", "Dashboard", "ClassroomView", "BoardPage", "GamePage", "GamesPage"].forEach(name => {
+    const src = readFileSync(new URL("../src/engine/" + name + ".jsx", import.meta.url), "utf8");
+    if (!/setClassFavicon\(config\)/.test(src)) say(name + " names the tab without giving it an icon");
+  });
 }
 
 // The FAQ as the class reads it. Andrew, 2026-09-20: "the FAQ is poorly done.

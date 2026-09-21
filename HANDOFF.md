@@ -360,6 +360,14 @@ no render test covers their contents. The build counts tap targets across the
 bar instead and fails over six, which is the blunt measure that would have
 caught the drift in the first place.
 
+**Every tab wears its class.** `src/engine/favicon.js` draws the icon the bar
+already draws: the class's colour with its number on it, as an SVG data URI, so
+five classes get five icons out of one function and a new class has one the
+moment it has a colour. The page shipped no icon at all before, so a dashboard,
+a room screen and a class page were three identical blank sheets in the tab
+strip. Pages that belong to no class still have none, because there is no mark
+to give them yet.
+
 ## Three themes, and a student picks one
 
 `src/engine/themes.js` holds them: **Clean** is the standard, and **Snapchat**

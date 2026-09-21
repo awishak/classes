@@ -38,6 +38,7 @@ import { FACES, SLOTS, readFonts, fontVars, writeFont, resetFonts, readBold, wri
 import { unplanned, addScheduleItemToDay, addScheduleItem, removeScheduleItem, setScheduleItemClaim, setScheduleItemNote, comingUp, scheduledFor, weekdayOf, TYPE_COLOR, typeLabel } from "./schedule.js";
 import { genId } from "../utils.jsx";
 import * as TOKENS from "./tokens.js";
+import { setClassFavicon } from "./favicon.js";
 import TopNav, { NAV_TEACH } from "./TopNav.jsx";
 import { appsFor } from "./apps.js";
 import { listGames } from "@ishak/decks";
@@ -3864,7 +3865,7 @@ export default function Dashboard({ config, daySlug = "" }) {
   // under "on the schedule, not in the flow". A thing gets one home on a day.
   const looseItems = unplanned(data, config, day).filter(it => !MEDIA_SET.has(it.type));
 
-  useEffect(() => { document.title = config.code + " — Dashboard"; }, [config.code]);
+  useEffect(() => { document.title = config.code + " — Dashboard"; setClassFavicon(config); }, [config.code, config.accent]);
   // Keyboard, because during class my hands are the slow part. Nothing fires
   // while I am typing into a field, so the claim editors keep working.
   const liveRef = useRef(null);

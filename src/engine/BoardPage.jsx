@@ -15,6 +15,7 @@ import { useBoards, postsOf, idForPrompt } from "./boards.js";
 import { useLive } from "./live.js";
 import { lastNameOf } from "./roster.js";
 import * as TOKENS from "./tokens.js";
+import { setClassFavicon } from "./favicon.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeBadge, TubeySays, Avatar } from "./ThemeChrome.jsx";
@@ -44,6 +45,7 @@ export default function BoardPage({ config }) {
 
   useEffect(() => {
     document.title = config.code + " — Discussion";
+    setClassFavicon(config);
     try { const v = localStorage.getItem(REMEMBER); if (v) setWho(v); } catch { /* private mode */ }
   }, [config.code, REMEMBER]);
 

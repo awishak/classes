@@ -24,6 +24,7 @@ import { QuestionsSummary, QuestionsDetail } from "./QuestionsCard.jsx";
 import { AssignmentsSummary, AssignmentsDetail, ungradedCount, waitingCount } from "./AssignmentsCard.jsx";
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
+import { setClassFavicon } from "./favicon.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
 import { useSession, studentFor, myCode } from "./session.js";
@@ -603,7 +604,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
     }
   }, [data, config]);
 
-  useEffect(() => { document.title = config.code + " · " + config.name; }, [config.code, config.name]);
+  useEffect(() => { document.title = config.code + " · " + config.name; setClassFavicon(config); }, [config.code, config.name, config.accent]);
 
   // Some cards are instructor-only (e.g. the day-planning surface) and never
   // appear on the student home, regardless of the config toggle.
