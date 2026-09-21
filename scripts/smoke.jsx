@@ -3625,7 +3625,11 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     // cluttered ... why is the title of the day not as prominent as a reading."
     // The day's title is the heading, the date above it is a label, and each
     // reading is a card on the sunk surface.
-    if (!/font-size:19px;font-weight:700/.test(html)) say("the day's title is not the heading of the day");
+    // Andrew, 2026-09-21: "i think each day needs its own card in a way. and
+    // dont put 'nothing set for this day'."
+    if ((html.match(/id="day-[a-z0-9-]*" style="background:var\(--surface-card\)/g) || []).length !== 3)
+      say("the days are not cards of their own");
+    if (html.includes("Nothing set for this day")) say("a day with nothing on it still says so");
     if (!/background:var\(--surface-sunk\);border-radius:12px/.test(html)) say("a reading is not a card on its own ground");
     if (/font-size:16px;color:var\(--text-primary\)">Monday reading/.test(html)) say("a reading is still as loud as the day");
     if (!html.includes("Billings, Communication and Sport")) say("a block's written source is not shown");
@@ -3662,6 +3666,15 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       data={{ schedule: [week], dayPlans: { "Sep 23": { title: "Same event, different stories" } } }} blockOf={() => null} />);
     if (!titled.includes("Same event, different stories")) say("a day does not carry its title");
     if (titled.indexOf("Same event, different stories") < titled.indexOf("Wednesday, September 23")) say("the title is above the day it belongs to");
+    // The title is the loudest thing in the day. "why is the title of the day
+    // not as prominent as a reading. come on man."
+    if (!/font-size:19px;font-weight:700[^>]*>Same event/.test(titled)) say("the day's title is not the heading of the day");
+    // A day nobody has named falls back to the week's topic, and the week's
+    // topic is the heading over the cards, so an unnamed day says the date and
+    // nothing else rather than the same words three times down the week.
+    const topic = renderToString(<ScheduleDetail config={{ accent: "#333", scheduleWeeks: [] }} blockOf={() => null}
+      data={{ schedule: [{ ...week, topic: "Sport as spectacle" }] }} />);
+    if ((topic.match(/Sport as spectacle/g) || []).length !== 1) say("an unnamed day repeats the week's topic");
   }
   // The instructor reads the schedule students read. Andrew, 2026-09-21: "i
   // want you to make my schedule view the same as their schedule view. if i

@@ -244,6 +244,16 @@ Drew's Picks, the game line, Directions and the badge for a day that does not
 meet in the room all came off the card on 2026-09-20, because a card that lists
 the readings is a card a student reads instead of the schedule.
 
+**A week is a heading and a day is a card.** Andrew, 2026-09-21: "i think each
+day needs its own card in a way. and dont put 'nothing set for this day'." The
+week used to be one box with every day inside it, so a week was one tall card
+and a day was a paragraph in it. The week is a heading now, the week the class
+is in keeps the accent around its day cards, and a day nobody has set anything
+for says the date and stops. A day with no title of its own falls back to the
+week's topic, and the week's topic is the heading over the cards, so that
+fallback is not drawn any more: it read as the same words three times down a
+week.
+
 **A day is its title, and a reading is a card.** Andrew, 2026-09-21: "the
 schedule view for students is still too cluttered. what if you made the readings
 looks like cards on a slightly gray background or something like tht. like why

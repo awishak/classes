@@ -352,55 +352,69 @@ function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark
         to keep you in the loop on important changes.
       </p>
       <WeekNav weeks={weeks} accent={config.accent} />
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Andrew, 2026-09-21: "i think each day needs its own card in a way."
+          The week was one box with every day inside it, so a week of three
+          days was one tall card and a day was a paragraph in it. The week is
+          a heading now and each day is a card of its own, with its readings
+          on the sunk surface inside. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
         {weeks.map((w, wi) => {
           const isNow = w.id === current;
+          const { days, loose } = daysOfWeek(w, studentItems(w, data?.dayPlans, blockOf));
+          const row = (it) => {
+            const block = blockOf ? blockOf(it.blockId || it.libId) : null;
+            // A deadline opens the challenge itself, where the instructions
+            // link and the place to hand the work in are.
+            const href = it.type === "assignment" && it.asgId && config.path
+              ? config.path + "/challenges/" + encodeURIComponent(it.asgId) : "";
+            return <ItemView key={it.id} item={it} picked={isPicked(it)} href={href} when=""
+              source={href ? "" : sourceOf(it, block)} />;
+          };
+          // The week this week is in keeps the class's colour around its days.
+          const seat = {
+            background: SURFACE_CARD, borderRadius: 16, padding: 16, scrollMarginTop: 130,
+            border: (isNow ? "1.5px solid " + config.accent : "1px solid " + BORDER_STRONG),
+          };
           return (
-            <div key={w.id} id={"wk-" + w.id} style={{ background: SURFACE_CARD, borderRadius: 16, border: "1.5px solid " + (isNow ? config.accent : config.accent + "66"), padding: 18, scrollMarginTop: 130 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+            <div key={w.id} id={"wk-" + w.id} style={{ scrollMarginTop: 130 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 2 }}>
                 <span style={{ ...label, color: config.accent }}>{weekTag(w, wi)}</span>
                 {isNow && <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: config.accent, padding: "3px 10px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.06em" }}>This week</span>}
               </div>
-              <div style={{ fontSize: 17, fontWeight: 600 }}>{w.topic || "Untitled week"}</div>
-              {w.text && <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 10, whiteSpace: "pre-wrap" }}>{w.text}</div>}
-              {(() => {
-                const { days, loose } = daysOfWeek(w, studentItems(w, data?.dayPlans, blockOf));
-                const row = (it) => {
-                  const block = blockOf ? blockOf(it.blockId || it.libId) : null;
-                  // A deadline opens the challenge itself, where the
-                  // instructions link and the place to hand the work in are.
-                  const href = it.type === "assignment" && it.asgId && config.path
-                    ? config.path + "/challenges/" + encodeURIComponent(it.asgId) : "";
-                  return <ItemView key={it.id} item={it} picked={isPicked(it)} href={href} when=""
-                    source={href ? "" : sourceOf(it, block)} />;
-                };
-                return (
-                  <>
-                    {loose.length ? <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>{inWeekOrder(loose).map(row)}</div> : null}
-                    {days.map(d => (
-                      <div key={d.date} id={dayAnchor(d.date)} style={{ marginTop: 16, scrollMarginTop: 130 }}>
-                        {/* The heading says the day out loud. "Wed" on its own
-                            made a student work out which Wednesday, and a
-                            deadline on a Sunday needs to say Sunday. */}
-                        {/* The date is a label over the day, and what the day
-                            is about is the heading under it. */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                          <span style={{ ...label, color: TEXT_SECONDARY }}>{dayHeading(d.date)}</span>
-                          {d.classDay ? null : <span style={{ ...label, color: TEXT_MUTED }}>No class</span>}
-                          {comingBox(d)}
-                        </div>
-                        {titles[d.date]?.title ? (
-                          <div style={{ fontSize: 19, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.25, letterSpacing: "-0.01em", marginTop: 2, textWrap: "balance" }}>{titles[d.date].title}</div>
-                        ) : null}
-                        {d.items.length
-                          ? <DayItems items={inWeekOrder(d.items)} row={row} accent={config.accent} />
-                          : <div style={{ fontSize: 15, color: TEXT_MUTED, marginTop: 6 }}>Nothing set for this day yet.</div>}
-                        {awayLine(d)}
-                      </div>
-                    ))}
-                  </>
-                );
-              })()}
+              <div style={{ fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY }}>{w.topic || "Untitled week"}</div>
+              {w.text && <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 8, whiteSpace: "pre-wrap" }}>{w.text}</div>}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
+                {/* A row the week carries rather than a day, which is what a
+                    reading with no day on it is. */}
+                {loose.length ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{inWeekOrder(loose).map(row)}</div>
+                ) : null}
+                {days.map(d => (
+                  <div key={d.date} id={dayAnchor(d.date)} style={seat}>
+                    {/* The date is a label over the day, and what the day is
+                        about is the heading under it. "Wed" on its own made a
+                        student work out which Wednesday, and a deadline on a
+                        Sunday needs to say Sunday. */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <span style={{ ...label, color: TEXT_SECONDARY }}>{dayHeading(d.date)}</span>
+                      {d.classDay ? null : <span style={{ ...label, color: TEXT_MUTED }}>No class</span>}
+                      {comingBox(d)}
+                    </div>
+                    {/* A day with no title of its own falls back to the
+                        week's topic, and the week's topic is the heading over
+                        these cards, so a day that has not been named says the
+                        date and nothing else rather than the same words three
+                        times down the week. */}
+                    {titles[d.date]?.title && !titles[d.date].fromWeek ? (
+                      <div style={{ fontSize: 19, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.25, letterSpacing: "-0.01em", marginTop: 2, textWrap: "balance" }}>{titles[d.date].title}</div>
+                    ) : null}
+                    {/* A day with nothing on it yet says nothing: "dont put
+                        nothing set for this day". The card is the day. */}
+                    {d.items.length ? <DayItems items={inWeekOrder(d.items)} row={row} accent={config.accent} /> : null}
+                    {awayLine(d)}
+                  </div>
+                ))}
+              </div>
             </div>
           );
         })}
