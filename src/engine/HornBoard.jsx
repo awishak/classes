@@ -22,9 +22,10 @@ const SURFACE_2 = TOKENS.SURFACE.sunk;
 const label = { fontFamily: MONO, fontSize: 12, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
 const mini = { minHeight: 34, padding: "0 12px", borderRadius: 8, border: "1px solid " + LINE2, background: "#fff", color: INK2, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
 
-// Andrew's room is rows of six across. The seats carry a face now, so eight
-// across made each one narrower than the face it holds.
-const COLS = 6;
+// Eight across, which is the room. Andrew, 2026-09-20: "grid has to be 8
+// across. do not change that." The seats carry a face at the roster's size
+// inside that width.
+const COLS = 8;
 const AWARDS = [-1, 1, 2, 3, 5];
 
 export default function HornBoard({ students, seats, log, accent, profiles, onSeats, onAward, onClose }) {

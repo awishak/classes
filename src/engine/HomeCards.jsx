@@ -244,6 +244,56 @@ export function owedStyle(asg) {
 
 // ─── pinned links ───
 
+// A welcome, at the top of the class's page.
+//
+// Andrew, 2026-09-20: "how do i add a card to the front page of all students
+// to welcome them to this site?" There was no way: the front page carried the
+// next class, the cards and whatever he had pinned, and none of those is a
+// place to say hello to a class that has never seen the site before.
+//
+// So: a card he writes in place, like the note to students on the next class
+// card. It is the first thing on the page while it has words in it, and it is
+// not there at all when it does not, so a class in week nine is not still
+// being welcomed.
+export function WelcomeCard({ data, update, instructor, seat, accent }) {
+  const saved = String(data?.welcome || "").trim();
+  const [draft, setDraft] = useState(saved);
+  const [open, setOpen] = useState(false);
+  if (!saved && !instructor) return null;
+  const save = () => {
+    const next = draft.trim();
+    setOpen(false);
+    if (next === saved) return;
+    update(prev => ({ ...prev, welcome: next }));
+  };
+  const frame = { ...seat, padding: 20, fontFamily: F, textAlign: "left", width: "100%",
+    background: "var(--surface-card)", display: "flex", flexDirection: "column", gap: 10 };
+  if (instructor && (open || !saved)) {
+    return (
+      <section aria-label="Welcome" style={frame}>
+        <span style={small}>Welcome card</span>
+        <textarea value={draft} onChange={e => setDraft(e.target.value)} onBlur={save} rows={3}
+          placeholder="Welcome the class to the site. Empty means no card at all."
+          style={{ fontFamily: F, fontSize: 16, padding: 12, borderRadius: 10, border: "1px solid " + BORDER_STRONG,
+            background: "var(--surface-card)", color: TEXT_PRIMARY, lineHeight: 1.5, resize: "vertical" }} />
+        <span style={{ fontSize: 13, color: TEXT_MUTED }}>Every student sees this at the top of the class page.</span>
+      </section>
+    );
+  }
+  return (
+    <section aria-label="Welcome" style={frame}>
+      <div style={{ fontSize: 17, lineHeight: 1.55, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{saved}</div>
+      {instructor ? (
+        <button className="ca-focus" onClick={() => { setDraft(saved); setOpen(true); }}
+          style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, cursor: "pointer",
+            fontFamily: F, fontSize: 15, fontWeight: 600, color: accent || "var(--ca-accent-ink)", minHeight: TAP }}>
+          Edit the welcome
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
 export function PinnedLinks({ data, update, instructor, seat }) {
   const pins = data?.pins || [];
   const [title, setTitle] = useState("");

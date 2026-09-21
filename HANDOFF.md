@@ -254,11 +254,15 @@ off. Publishing used to be a press between the answer and the class, and it
 only ever made the page later than it needed to be. Andrew, 2026-09-20: "when i
 answer, it appears live."
 
+**His page is the class's page**, with an answer box on each question and the
+one press that takes one off. Three things he can do with a question: answer
+it, leave it alone, archive it.
+
 **The student's page, top to bottom:** the box with Submit beside it and a tick
 for asking anonymously, `Sort by` with Recently answered, Recently asked and
 Most appreciated, then every question. A question reads as the words in bold
-with its thanks on the same line, `asked by <name>` in italics underneath
-unless the box was ticked, and the answer under that as `Dr. Ishak: ...` with
+with its thanks on the same line, `asked by <name> on Sep 21` in italics underneath,
+or `asked on Sep 21` when the box was ticked, and the answer under that as `Dr. Ishak: ...` with
 its own thanks on its line. An unanswered one says so rather than hiding.
 
 **His side** is the same list with an answer box on each one and three things
@@ -270,6 +274,16 @@ and a question can come back out of it.
 each, pressing again takes it back, and only the count is ever shown. The names
 are kept so nobody can thank the same thing twice, and nothing renders them.
 `thanksQ` and `thanksA` on the question.
+
+**A welcome sits above everything** on the class page while it has words in it,
+written in place by Andrew and gone when he empties it, so a class in week nine
+is not still being welcomed. `data.welcome`, `WelcomeCard` in
+`src/engine/HomeCards.jsx`.
+
+**A student's own PIN is at the right end of their bar**, behind Show PIN,
+with the line that says they can use it to sign in instead of waiting for an
+email. It is hidden until pressed, and a preview of somebody else never shows
+it.
 
 **A name comes off at the student's word.** `anon` is ticked when they ask; a
 question asked in the open says who asked it, because a class where people put

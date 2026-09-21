@@ -35,7 +35,7 @@ import { gameClient } from "./gameClient.js";
 import GradeDeck from "./GradeDeck.jsx";
 import { unseenGrades, markSeen } from "./grades.js";
 import DueDeck, { dueSoon, dismissDue } from "./DueCard.jsx";
-import { NextClassHero, PinnedLinks, ClassSummary, YourCardSummary, GamesSummary, RequestForm, RequestInbox, InstructorProfile,
+import { NextClassHero, PinnedLinks, WelcomeCard, ClassSummary, YourCardSummary, GamesSummary, RequestForm, RequestInbox, InstructorProfile,
   openRequests, tileTitle, owedStyle } from "./HomeCards.jsx";
 import { nextOwed } from "./AssignmentsCard.jsx";
 import { AssignmentCards, AssignmentPage } from "./AssignmentCards.jsx";
@@ -641,6 +641,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const rosterNow = withIds(data?.students || config.students || []);
   // The student's own code, read off the row only they can see, for the menu.
   const [ownCode, setOwnCode] = useState("");
+  const [pinOpen, setPinOpen] = useState(false);
   useEffect(() => {
     let alive = true;
     if (!session || sessionInstructor) { setOwnCode(""); return undefined; }
@@ -761,6 +762,37 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // The class's name, and every page of the class behind it. Both shapes: the
   // full one for the bar on a laptop, and a compact one for the phone, where
   // it shares its row with the way back.
+  // A student's own six digits, at the right end of the bar. Andrew,
+  // 2026-09-20: "please share a students pin with them on the front page top
+  // right 'show pin' and then it shows them the pin, and says below it: you
+  // can use this to log in instead of having an email sent to you." It is
+  // hidden until pressed, because a code on the screen is a code the person
+  // beside them can read, and it is theirs alone: a preview of somebody else
+  // never shows it.
+  const ShowPin = ownCode && !preview && view !== "instructor" ? (
+    <span style={{ position: "relative", flex: "none" }}>
+      <button className="ca-focus" onClick={() => setPinOpen(v => !v)} aria-expanded={pinOpen}
+        style={{ minHeight: 34, padding: "0 12px", borderRadius: 999, cursor: "pointer",
+          border: "1px solid " + BORDER_STRONG, background: "var(--surface-card)",
+          fontFamily: F, fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY }}>
+        {pinOpen ? "Hide PIN" : "Show PIN"}
+      </button>
+      {pinOpen ? (
+        <>
+          <div onClick={() => setPinOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+          <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", zIndex: 41, width: 250,
+            maxWidth: "calc(100vw - 32px)", padding: 14, background: "var(--surface-card)",
+            border: "1px solid " + BORDER_STRONG, borderRadius: 14, boxShadow: "0 18px 44px -14px rgba(23,19,16,.35)" }}>
+            <div style={{ fontFamily: "var(--font-label)", fontSize: 24, fontWeight: 700, letterSpacing: ".18em", color: TEXT_PRIMARY }}>{ownCode}</div>
+            <div style={{ fontSize: 14, lineHeight: 1.45, color: TEXT_SECONDARY, marginTop: 8 }}>
+              You can use this to log in instead of having an email sent to you.
+            </div>
+          </div>
+        </>
+      ) : null}
+    </span>
+  ) : null;
+
   const TheClass = <ClassMenu config={config} role={view} onPick={go} active={activeNav} />;
   const TheClassCompact = <ClassMenu config={config} role={view} onPick={go} active={activeNav} compact />;
 
@@ -896,6 +928,11 @@ export default function ClassApp({ config: classConfig, initialCard }) {
             columns: the day on the left, what to do before it on the right.
             One column of the grid held the day in a slot too narrow for it,
             and the full width with everything stacked was emptier still. */}
+        {data?.welcome || view === "instructor" ? (
+          <div key="welcome" style={{ gridColumn: "1 / -1" }}>
+            <WelcomeCard data={data} update={write} instructor={view === "instructor"} seat={cardStyle(theme, 0)} accent={a} />
+          </div>
+        ) : null}
         <div key="hero" style={{ gridColumn: "1 / -1" }}>
           <NextClassHero config={config} data={data} blockOf={ctx.blockOf} section={sectionOf}
             onOpen={() => go("schedule")} onOpenDay={(date) => go("schedule/" + daySlug(date))}
@@ -968,6 +1005,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
             <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <ThemeIdentity theme={theme} points={myPoints} />
               <ThemeBadge theme={theme} points={myPoints} />
+              {ShowPin}
             </span>
           } />
         </div>
@@ -1029,6 +1067,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flex: "none" }}>
             <ThemeCamera theme={theme} />
             <ThemeBadge theme={theme} points={myPoints} />
+            {ShowPin}
           </span>
         </div>
       </div>

@@ -80,7 +80,7 @@ import { warmClassData } from "../src/engine/store.js";
 import GradeView from "../src/engine/GradeView.jsx";
 import GradeDeck from "../src/engine/GradeDeck.jsx";
 import DueDeck, { dueSoon, dismissDue, deadlineOf } from "../src/engine/DueCard.jsx";
-import { NextClassHero, nextClassFacts, timeText, PinnedLinks, RequestForm, InstructorProfile } from "../src/engine/HomeCards.jsx";
+import { NextClassHero, nextClassFacts, timeText, PinnedLinks, WelcomeCard, RequestForm, InstructorProfile } from "../src/engine/HomeCards.jsx";
 import { instructorOf } from "../src/instructors.js";
 import TopNav, { NAV_CLASS, activeFor } from "../src/engine/TopNav.jsx";
 import HornApp from "../src/engine/HornApp.jsx";
@@ -2604,6 +2604,28 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   });
 }
 
+// A welcome at the top of the class page, and a student's own PIN at the right
+// end of the bar. Andrew, 2026-09-20: "how do i add a card to the front page of
+// all students to welcome them to this site?" and "please share a students pin
+// with them on the front page top right 'show pin'."
+{
+  const say = (msg) => { console.error("  FAIL  welcome and PIN: " + msg); failedEarly++; };
+  try {
+    const said = renderToString(<WelcomeCard data={{ welcome: "Welcome to the site." }} update={noop} seat={{}} />);
+    if (!said.includes("Welcome to the site.")) say("a written welcome does not show");
+    // Nothing written, nothing on the page, so week nine is not still saying hello.
+    if (renderToString(<WelcomeCard data={{}} update={noop} seat={{}} />)) say("an empty welcome still takes a card");
+    // His view offers the box even when there is nothing in it yet.
+    const mine = renderToString(<WelcomeCard data={{}} update={noop} seat={{}} instructor />);
+    if (!mine.includes("<textarea")) say("he has no way to write the welcome");
+  } catch (err) { say("the welcome threw: " + err.message); }
+  const app = readFileSync(new URL("../src/engine/ClassApp.jsx", import.meta.url), "utf8");
+  if (!/\{pinOpen \? "Hide PIN" : "Show PIN"\}/.test(app)) say("there is no Show PIN on the bar");
+  if (!/You can use this to log in instead of having an email sent to you\./.test(app)) say("the PIN does not say what it is for");
+  // It is the student's own, and only while they are signed in as themselves.
+  if (!/ownCode && !preview && view !== "instructor"/.test(app)) say("the PIN shows for somebody other than its owner");
+}
+
 // Around the Horn: the seats carry the face and the name the roster does.
 // Andrew, 2026-09-20: "you need to make their avatars and names as big as you
 // have it on the students roster view."
@@ -2643,7 +2665,8 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (at("What counts as a source?") > at("Anything you can point at.")) say("the answer is above the question");
     if (!/font-weight:700[^"]*"[^>]*>What counts as a source\?/.test(html)) say("the question is not bold");
     // Named, in italics, under the question and above the answer.
-    if (!/font-style:italic[^"]*"[^>]*>asked by Pepe LeFritz/.test(html)) say("who asked is not in italics under the question");
+    if (!/font-style:italic[^"]*"[^>]*>asked by Pepe LeFritz on /.test(html)) say("who asked and when is not in italics under the question");
+    if (!/asked on /.test(renderToString(<QuestionEntry q={quiet} me="Sam" who="Dr. Ishak" onThank={noop} />))) say("an anonymous question does not say when it was asked");
     if (at("asked by Pepe LeFritz") > at("Anything you can point at.")) say("who asked is below the answer");
     // The answer says who is answering.
     if (!/>Dr\. Ishak:</.test(html)) say("the answer does not say who wrote it");
@@ -2696,8 +2719,8 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (/thanksQ\.map|thanksA\.map|thanksQ\.join|thanksA\.join/.test(card)) say("the page shows who appreciated something");
   // An answer reaches the class as soon as it is written, so the row says
   // which of the two things it is rather than whether it has been published.
-  if (!/Answered, and on the class's page/.test(card)) say("an answered question does not say the class has it");
-  if (!/Asked, and on the class's page/.test(card)) say("an unanswered question does not say the class has it");
+  if (!/The class has this answer/.test(card)) say("an answered question does not say the class has it");
+  if (!/Asked, and waiting on you/.test(card)) say("an unanswered question does not say it is waiting");
   if (!/\{config\.path\}\/questions/.test(card)) say("his page does not say where the class reads it");
 }
 
@@ -2729,6 +2752,11 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!/onBlur=\{\(\) => api\.answer\(q\.id, draft\)\}/.test(card)) say("an answer does not save");
   if (!/api\.archive\(q\.id\)/.test(card)) say("a question cannot be archived");
   if (!/api\.unarchive\(q\.id\)/.test(card)) say("an archived question cannot come back");
+  // His page is the students' page. Andrew, 2026-09-20: "make my UI as the
+  // instructor similar to what students see. the difference being that i can
+  // answer questions and archive them too."
+  if (!/answering=\{<Answering/.test(card)) say("his page does not draw a question the way the class reads it");
+  if ((card.match(/SORTS\.map/g) || []).length !== 2) say("one of the two pages cannot be sorted");
   if (/api\.publish/.test(card)) say("there is still a publish press between an answer and the class");
   if (/const publish = useCallback/.test(store)) say("the store still publishes");
   // And the store still knows how to say thanks.

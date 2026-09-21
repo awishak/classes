@@ -112,7 +112,7 @@ export function Thanks({ names, mine, onPress, what }) {
 // One question: the words in bold with its thanks beside them, who asked in
 // italics under it, and the answer under that with Dr. Ishak's name in front
 // and its own thanks on the same line.
-export function QuestionEntry({ q, me, who, onThank }) {
+export function QuestionEntry({ q, me, who, onThank, answering }) {
   const asked = askedBy(q);
   return (
     <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 14, display: "flex", flexDirection: "column", gap: 4 }}>
@@ -120,17 +120,18 @@ export function QuestionEntry({ q, me, who, onThank }) {
         {q.text}
         <Thanks names={q.thanksQ} mine={me} what="question" onPress={onThank ? () => onThank(q.id, "question") : null} />
       </div>
-      {asked ? (
-        <div style={{ fontSize: 14, fontStyle: "italic", color: TEXT_MUTED }}>asked by {asked}</div>
-      ) : null}
+      <div style={{ fontSize: 14, fontStyle: "italic", color: TEXT_MUTED }}>
+        {asked ? "asked by " + asked + " on " + when(q.at) : "asked on " + when(q.at)}
+      </div>
       {isAnswered(q) ? (
         <div style={{ fontSize: 16, lineHeight: 1.55, color: TEXT_PRIMARY, whiteSpace: "pre-wrap", marginTop: 4 }}>
           <b style={{ fontWeight: 600 }}>{who}:</b> {q.answer}
           <Thanks names={q.thanksA} mine={me} what="answer" onPress={onThank ? () => onThank(q.id, "answer") : null} />
         </div>
-      ) : (
+      ) : answering ? null : (
         <div style={{ fontSize: 14, color: TEXT_MUTED, marginTop: 2 }}>Not answered yet.</div>
       )}
+      {answering}
     </div>
   );
 }
@@ -224,25 +225,44 @@ function StudentQuestions({ config, api, name }) {
   );
 }
 
-// His side: every question, an answer box on each, and the one press that
-// takes a question off the page. An answer is live as soon as it is saved.
+// His side is the student's side, with an answer box on each question and the
+// one press that takes one off. Andrew, 2026-09-20: "make my UI as the
+// instructor similar to what students see. the difference being that i can
+// answer questions and archive them too."
 function InstructorQuestions({ config, api }) {
   const [showArchive, setShowArchive] = useState(false);
-  const page = sortQuestions(onThePage(api.items), "asked");
+  const [how, setHow] = useState("asked");
+  const page = sortQuestions(onThePage(api.items), how);
   const archived = archivedOf(api.items);
-  const waiting = page.filter(q => !isAnswered(q));
+  const waiting = page.filter(q => !isAnswered(q)).length;
+  const me = instructorName(config);
   return (
     <div>
       <div style={h2}>Questions</div>
       <Muted>
-        Answer one and the class reads it straight away, at {config.path}/questions. Leave one alone and it sits
-        there asked. Archive one and it comes off the page.
+        The class reads this page at {config.path}/questions. Answer one and they have it straight away; leave one
+        alone and it sits there asked; archive one and it comes off the page.
       </Muted>
-      {waiting.length ? <Muted>{waiting.length} waiting on an answer.</Muted> : null}
+      {waiting ? <Muted>{waiting} waiting on an answer.</Muted> : null}
 
-      <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span style={label}>Sort by</span>
+        {SORTS.map(([id, say]) => (
+          <button key={id} className="ca-focus" onClick={() => setHow(id)} aria-pressed={how === id}
+            style={{ minHeight: 30, padding: "0 10px", borderRadius: 999, cursor: "pointer",
+              border: "1px solid " + (how === id ? "transparent" : BORDER_STRONG),
+              background: how === id ? "var(--ca-accent, #e5e5e5)" : "none",
+              color: how === id ? "#fff" : TEXT_SECONDARY, fontFamily: F, fontSize: 13, fontWeight: 600 }}>{say}</button>
+        ))}
+      </div>
+
+      <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 14 }}>
         {page.length
-          ? page.map(q => <Answering key={q.id} q={q} config={config} api={api} />)
+          ? page.map(q => (
+            <QuestionEntry key={q.id} q={q} me={me} who={me}
+              onThank={(id, part) => api.appreciate(id, part, me)}
+              answering={<Answering q={q} config={config} api={api} />} />
+          ))
           : <Muted>Nothing asked yet.</Muted>}
       </div>
 
@@ -272,30 +292,24 @@ function InstructorQuestions({ config, api }) {
   );
 }
 
-// One question with its answer box. The box saves when he leaves it, which is
-// also when the class gets it.
+// The answer box, under the question, and the one press that takes a question
+// off the page. The box saves when he leaves it, which is when the class gets
+// what is in it.
 function Answering({ q, config, api }) {
   const [draft, setDraft] = useState(q.answer || "");
   const answered = isAnswered(q);
-  const asked = askedBy(q);
   return (
-    <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 12 }}>
-      <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.4, whiteSpace: "pre-wrap" }}>{q.text}</div>
-      <div style={{ fontSize: 14, fontStyle: "italic", color: TEXT_MUTED, marginTop: 2 }}>
-        {asked ? "asked by " + asked : "asked anonymously"} · {when(q.at)}
-        {(q.thanksQ || []).length ? " · " + q.thanksQ.length + " appreciated it" : ""}
-        {(q.thanksA || []).length ? " · " + q.thanksA.length + " appreciated the answer" : ""}
-      </div>
+    <div style={{ marginTop: 8 }}>
       <textarea value={draft} onChange={e => setDraft(e.target.value)} onBlur={() => api.answer(q.id, draft)} rows={2}
-        placeholder={"Answer as " + instructorName(config) + ", and the class reads it straight away"}
-        style={{ ...field, marginTop: 8, resize: "vertical" }} />
-      <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: answered ? TOKENS.STATE.ok : TEXT_MUTED }}>
-          {answered ? "Answered, and on the class's page" : "Asked, and on the class's page"}
+        placeholder={answered ? "" : "Answer as " + instructorName(config) + ", and the class reads it straight away"}
+        style={{ ...field, resize: "vertical" }} />
+      <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 13, color: answered ? TOKENS.STATE.ok : TEXT_MUTED }}>
+          {answered ? "The class has this answer" : "Asked, and waiting on you"}
         </span>
         <button className="ca-focus" onClick={() => api.archive(q.id)}
           style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer",
-            fontFamily: F, fontSize: 14, fontWeight: 600, color: TEXT_MUTED, minHeight: TAP }}>
+            fontFamily: F, fontSize: 13, fontWeight: 600, color: TEXT_MUTED, minHeight: 30 }}>
           Archive
         </button>
       </div>
