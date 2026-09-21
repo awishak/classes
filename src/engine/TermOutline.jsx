@@ -24,7 +24,7 @@
 import { useState } from "react";
 import * as TOKENS from "./tokens.js";
 import { allDays, dayTitles } from "./days.js";
-import { normSlot, sectionsOf, orderSlots } from "./dayplan.js";
+import { normSlot, sectionsOf, orderSlots, kindOf, KINDS } from "./dayplan.js";
 import { typeOf } from "./blocks.js";
 import Slide, { slideOf, readSlidesOn, writeSlidesOn } from "./Slide.jsx";
 
@@ -56,11 +56,6 @@ const SURFACE_2 = TOKENS.SURFACE.sunk;
 const LIVE = TOKENS.STATE.live;
 const WARN = TOKENS.STATE.warn;
 
-// What a day is: a class in the room, a day with no in-person meeting, or a
-// day of sit-downs. `noMeeting` came first and still decides what a student
-// sees, so a day that only has that still reads as one with no meeting.
-export const kindOf = (plan) => (plan || {}).kind || ((plan || {}).noMeeting ? "off" : "class");
-export const KINDS = [["class", "In person"], ["off", "No in-person meeting"], ["sitdown", "Sit-down"]];
 
 // The three class days of a week, in order, are its Mon, Wed and Fri markers,
 // which is where the readings and the games hang.

@@ -237,6 +237,32 @@ library picker, the seed suggestions and the drag helpers. `ScheduleDetail`
 takes no role now, and the smoke renders the page as me and as a student and
 fails if the two come out different. The dashboard is where a day gets built.
 
+**"I'll be there", and the exceptions are the data.** Andrew, 2026-09-21:
+"create a checkbox on the schedule next to each day for the students. it should
+start checked ... when they do, on my page as instructor, it shows who will not
+be in attendance." Every class day of the term carries the box, past days
+included, and so does the next class card. Checked is the default and writes
+nothing, so the store holds only the people who said no:
+`away["Sep 23"]["ada-lovelace"]`. Keyed on the student id, so a change of the
+name a student goes by keeps the mark. A day with no in-person meeting and a
+day of sit-downs take no box, which is what moved `kindOf` out of
+`TermOutline.jsx` and into `dayplan.js`. On my side the same line says who will
+not be in attendance, split by sitting for COMM 3. `attendance.js` and
+`Attendance.jsx`.
+
+**A mark is the one write a whole room makes at once.** `update` in `store.js`
+builds the next class from the page's own snapshot and writes the whole blob,
+which is right while there is one writer and wrong for thirty phones
+unchecking a box in the same minute: the last snapshot in wins and the marks
+that arrived while it sat open are gone. That is the bug that ate a room's
+answers, in a different map. So a mark goes through `saveMerged`, which
+re-reads, merges and writes what the server holds with the marks folded in,
+never this page's copy of everything else. A read that comes back with nothing
+is a failed read as often as it is an empty class, and there is no telling them
+apart from the browser, so a class the page holds data for is never written
+over. `mergeAway` in `attendance.js`, and the smoke plays out two phones, a
+take-back and a day plan written while a phone sat open.
+
 **Challenges says both words** on the student's card, `Challenges
 (Assignments)`, until the class has the new one. The card is the next one by
 name, when it is due, and how many more the class holds, counted across every
@@ -652,6 +678,11 @@ twice, because one edge can serve the old bundle briefly.
   Ten on Ten are played end to end by the build, through `src/engine/game.js`.
   Trivia's rounds, reveals and team scoring still live inside click handlers,
   so the only thing checked there is that the screens draw.
+- **The attendance box has not been pressed on a phone.** The rules, the merge
+  and both surfaces are in the build, and none of that is a thumb on a real
+  checkbox writing to a real class. The box also says nothing when a write does
+  not land: it goes back to where it was, which is honest and silent, and
+  Andrew has not given me words for that line.
 - **Nobody has clicked through the game on a real device.** The rules are
   checked and every surface renders, and neither of those is a phone answering
   a question over the realtime channel. Do that before running a game in front

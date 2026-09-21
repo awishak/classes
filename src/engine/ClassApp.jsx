@@ -12,7 +12,7 @@
 // someone, and the browser Back button does what it says.
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useClassData } from "./store.js";
+import { useClassData, saveMerged } from "./store.js";
 import { SHARED_KEY, blockById, registerTypes } from "./blocks.js";
 import { readAdded, readLabels } from "./types.js";
 import { ENGINE_LIST } from "../config/registry.js";
@@ -26,6 +26,7 @@ import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
 import { setClassFavicon } from "./favicon.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
+import { setAway, mergeAway } from "./attendance.js";
 import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
 import { useSession, studentFor, myCode } from "./session.js";
 import { instructorOf, schedulingLinkOf } from "../instructors.js";
@@ -173,7 +174,8 @@ function detail(key, config, role, ctx) {
     return <QuestionsDetail config={config} role={role} asStudent={ctx.asStudent} profiles={ctx.data?.profiles} />;
   }
   if (key === "schedule") {
-    return <ScheduleDetail config={config} role={role} data={ctx.data} update={ctx.update} blockOf={ctx.blockOf} focusDay={ctx.sub} />;
+    return <ScheduleDetail config={config} data={ctx.data} blockOf={ctx.blockOf} focusDay={ctx.sub}
+      instructor={role === "instructor"} me={role === "instructor" ? "" : ctx.asStudent} mark={ctx.mark} />;
   }
   if (key === "roster") {
     return <RosterDetail config={config} role={role} data={ctx.data} update={ctx.update} name={ctx.asStudent} />;
@@ -463,7 +465,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const REMEMBER = classConfig.storageKey + "-user";
   const ADMIN = classConfig.storageKey + "-admin";
 
-  const [data, update] = useClassData(classConfig.storageKey);
+  const [data, update, apply] = useClassData(classConfig.storageKey);
   // The shared shelf as well, because a reading on the schedule can be a block
   // that belongs to me rather than to this class, and the pick that says read
   // this one first lives on the block.
@@ -565,8 +567,16 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // rewrite that student's profile. While the lens is on, writes go nowhere,
   // unless he has said to save them.
   const write = preview && !saving ? () => {} : update;
+  // Saying you will not be there is the one write a whole room makes at once,
+  // so it does not go out through `update`, which writes the class as this page
+  // holds it. It re-reads, merges the marks and writes that. See attendance.js.
+  const mark = useCallback(async (date, id, away) => {
+    if (preview && !saving) return;
+    const out = await saveMerged(classConfig.storageKey, prev => setAway(prev, date, id, away), mergeAway);
+    if (out) apply(out);
+  }, [classConfig.storageKey, preview, saving, apply]);
   const ctx = { data: data || {}, update: write, asStudent: preview || asStudent,
-    setAsStudent: preview ? setPreview : null, live,
+    setAsStudent: preview ? setPreview : null, live, mark,
     blockOf: (id) => (id ? blockById(data, shared, id) : null), day, setDay };
 
   // Push updated seed content (schedule + library) to the store when the seed
@@ -957,7 +967,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
           <NextClassHero config={config} data={data} blockOf={ctx.blockOf} section={sectionOf}
             onOpen={() => go("schedule")} onOpenDay={(date) => go("schedule/" + daySlug(date))}
             seat={cardStyle(theme, 0)} wide={isDesktop}
-            instructor={view === "instructor"} update={write} />
+            instructor={view === "instructor"} update={write}
+            me={view === "instructor" ? "" : seenAs} mark={ctx.mark} />
         </div>
         {(data?.pins || []).length || view === "instructor" ? (
           <div key="pins" style={{ gridColumn: "1 / -1" }}>

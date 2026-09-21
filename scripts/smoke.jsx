@@ -76,7 +76,8 @@ import PlanPage from "../src/PlanPage.jsx";
 import RetreatPage from "../src/RetreatPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
 import { ENGINE_LIST } from "../src/config/registry.js";
-import { warmClassData } from "../src/engine/store.js";
+import { warmClassData, saveMerged } from "../src/engine/store.js";
+import { setAway, mergeAway, isAway, awayBySitting } from "../src/engine/attendance.js";
 import GradeView from "../src/engine/GradeView.jsx";
 import GradeDeck from "../src/engine/GradeDeck.jsx";
 import DueDeck, { dueSoon, dismissDue, deadlineOf } from "../src/engine/DueCard.jsx";
@@ -3668,6 +3669,120 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (t !== "Due tomorrow, 11:59 PM") say("Thursday noon, something due Friday night reads " + JSON.stringify(t));
     if (same !== "Due today, 11:59 PM") say("something due tonight reads " + JSON.stringify(same));
     if (gone !== "1 day past due") say("something due yesterday reads " + JSON.stringify(gone));
+  }
+}
+
+// Saying you will not be there.
+//
+// Andrew, 2026-09-21: "create a checkbox on the schedule next to each day for
+// the students. it should start checked. it should say 'I'll be there' next to
+// it. students can uncheck it, and when they do, on my page as instructor, it
+// shows who will not be in attendance." And: "i see the names in the schedule.
+// every day. no reason, split my list by sitting."
+{
+  const say = (m) => { console.error("  FAIL  attendance: " + m); failedEarly++; };
+  const cfg = { accent: "#333", path: "/comm3", scheduleWeeks: [],
+    meets: [{ label: "8:00", start: "08:00", end: "09:05" }, { label: "10:30", start: "10:30", end: "11:35" }],
+    students: [
+      { name: "Ada Lovelace", section: "8:00" },
+      { name: "Grace Hopper", section: "8:00" },
+      { name: "Alan Turing", section: "10:30" },
+    ] };
+  const week = { id: "w1", topic: "Week one", dates: ["Sep 21", "Sep 23", "Sep 25"], items: [] };
+  const base = { schedule: [week], students: cfg.students };
+
+  // The store holds the exceptions, because everybody starts here.
+  const one = setAway(base, "Sep 23", "ada-lovelace", true);
+  if (!isAway(one, "Sep 23", "ada-lovelace")) say("a student who unchecked the box is not marked");
+  if (isAway(one, "Sep 23", "alan-turing")) say("a student who touched nothing is marked");
+  if (isAway(one, "Sep 21", "ada-lovelace")) say("a mark on one day landed on another");
+  const back = setAway(one, "Sep 23", "ada-lovelace", false);
+  if (JSON.stringify(back.away) !== "{}") say("checking the box again leaves something behind: " + JSON.stringify(back.away));
+
+  // Two phones in one minute. Each holds the class as it was before the other
+  // marked, and the write that lands second must not take the first mark with
+  // it. This is the bug that ate a room's answers, in a different map.
+  const ada = setAway(base, "Sep 23", "ada-lovelace", true);
+  const turing = setAway(base, "Sep 23", "alan-turing", true);
+  const both = mergeAway(turing, base, ada);
+  if (!isAway(both, "Sep 23", "ada-lovelace")) say("the second write dropped the first student's mark");
+  if (!isAway(both, "Sep 23", "alan-turing")) say("the second write dropped its own mark");
+  // Taking a mark back is a change too, and it survives the same merge.
+  const undo = mergeAway(setAway(ada, "Sep 23", "ada-lovelace", false), ada, both);
+  if (isAway(undo, "Sep 23", "ada-lovelace")) say("checking the box again did not clear the mark");
+  if (!isAway(undo, "Sep 23", "alan-turing")) say("one student checking the box cleared another student's mark");
+  // Everything the mark did not touch belongs to whoever did touch it. A day
+  // plan written on the dashboard while a phone sat open is the case that
+  // matters, because the phone's copy of the class is a minute old.
+  const taught = { ...ada, dayPlans: { "Sep 23": { title: "Same event, different stories" } } };
+  const after = mergeAway(turing, base, taught);
+  if (after.dayPlans?.["Sep 23"]?.title !== "Same event, different stories") say("a mark wrote over a day plan it never touched");
+  if (!isAway(after, "Sep 23", "ada-lovelace")) say("a mark on the server was lost by a page that had not seen it");
+
+  // The names, in the sittings they belong to.
+  const out = setAway(setAway(base, "Sep 23", "ada-lovelace", true), "Sep 23", "alan-turing", true);
+  const groups = awayBySitting(cfg, out, "Sep 23");
+  if (groups.map(g => g.label).join("|") !== "8:00|10:30") say("the list is not split by sitting: " + JSON.stringify(groups.map(g => g.label)));
+  if (groups[0].rows.map(r => r.name).join(", ") !== "Ada Lovelace") say("the 8:00 list is wrong: " + JSON.stringify(groups[0].rows));
+  if (awayBySitting(cfg, base, "Sep 23").length) say("a day nobody is missing has a list");
+  // A class that meets once has nothing to tell apart, so there is one group
+  // and no label on it.
+  const single = awayBySitting({ ...cfg, meets: [{ label: "9:15", start: "09:15", end: "10:20" }] }, out, "Sep 23");
+  if (single.length !== 1 || single[0].label !== "") say("a class with one sitting still split its list");
+
+  // The box on the schedule, checked until a student says otherwise.
+  const asStudent = renderToString(<ScheduleDetail config={cfg} data={base} blockOf={() => null} me="Ada Lovelace" mark={noop} />);
+  if (!/I(&#x27;|')ll be there/.test(asStudent)) say("a student is not asked whether they will be there");
+  if ((asStudent.match(/type="checkbox"/g) || []).length !== 3) say("the three class days do not each carry a box");
+  if ((asStudent.match(/checked=""/g) || []).length !== 3) say("the box does not start checked");
+  const asMarked = renderToString(<ScheduleDetail config={cfg} data={out} blockOf={() => null} me="Ada Lovelace" mark={noop} />);
+  if ((asMarked.match(/checked=""/g) || []).length !== 2) say("the day a student said they would miss is still ticked");
+  if (asMarked.includes("Alan Turing")) say("a student can read who else will be away");
+  // A day the class does not meet in the room takes no answer.
+  const off = { ...base, dayPlans: { "Sep 23": { noMeeting: true } } };
+  const asOff = renderToString(<ScheduleDetail config={cfg} data={off} blockOf={() => null} me="Ada Lovelace" mark={noop} />);
+  if ((asOff.match(/type="checkbox"/g) || []).length !== 2) say("a day with no in-person meeting still asks who is coming");
+  // A page being read by nobody in particular, which is what /features is.
+  if (renderToString(<ScheduleDetail config={cfg} data={base} blockOf={() => null} />).includes("type=\"checkbox\"")) say("a page with no student in it drew a box");
+
+  // My side of the same days.
+  const asMe = renderToString(<ScheduleDetail config={cfg} data={out} blockOf={() => null} instructor />);
+  if (asMe.includes("type=\"checkbox\"")) say("the instructor is asked whether he will be there");
+  if (!asMe.includes("Will not be in attendance")) say("the schedule does not say who will be away");
+  if (asMe.indexOf("Ada Lovelace") > asMe.indexOf("Alan Turing")) say("the sittings are out of order");
+  if (asMe.indexOf("10:30") < asMe.indexOf("Ada Lovelace")) say("a name is under the wrong sitting");
+  if (renderToString(<ScheduleDetail config={cfg} data={base} blockOf={() => null} instructor />).includes("Will not be in attendance"))
+    say("a day nobody is missing still carries the line");
+
+  // And on the card both of us open first.
+  {
+    const hero = renderToString(<NextClassHero config={cfg} data={base} blockOf={() => null} section="" onOpen={noop} seat={{}} me="Ada Lovelace" mark={noop} />);
+    if (!/I(&#x27;|')ll be there/.test(hero)) say("the next class card does not ask a student whether they will be there");
+    const heroMine = renderToString(<NextClassHero config={cfg} data={setAway(base, "Sep 21", "ada-lovelace", true)} blockOf={() => null} section="" onOpen={noop} seat={{}} instructor update={noop} />);
+    if (!heroMine.includes("Ada Lovelace")) say("the next class card does not say who will be away");
+    if (heroMine.includes("type=\"checkbox\"")) say("the next class card asks the instructor whether he will be there");
+  }
+
+  // The write itself. A read that comes back with nothing is a failed read as
+  // often as it is an empty class, and there is no telling them apart, so a
+  // class this page holds data for is never written on top of.
+  {
+    const real = window.storage;
+    warmClassData("smoke-away", base);
+    let wrote = null;
+    window.storage = { get: async () => null, set: async (k, v) => { wrote = v; return { key: k }; } };
+    const refused = await saveMerged("smoke-away", prev => setAway(prev, "Sep 23", "ada-lovelace", true), mergeAway);
+    if (refused || wrote) say("a read that failed still wrote the whole class");
+    const server = { ...base, away: { "Sep 23": { "alan-turing": true } }, dayPlans: { "Sep 23": { title: "Written while the phone sat open" } } };
+    window.storage = { get: async () => ({ value: JSON.stringify(server) }), set: async (k, v) => { wrote = v; return { key: k }; } };
+    const saved = await saveMerged("smoke-away", prev => setAway(prev, "Sep 23", "ada-lovelace", true), mergeAway);
+    if (!saved) say("the write did not land");
+    else {
+      if (!isAway(saved, "Sep 23", "ada-lovelace")) say("the write did not carry its own mark");
+      if (!isAway(saved, "Sep 23", "alan-turing")) say("the write dropped the mark the server held");
+      if (saved.dayPlans?.["Sep 23"]?.title !== "Written while the phone sat open") say("the write went over a day plan it never touched");
+    }
+    window.storage = real;
   }
 }
 

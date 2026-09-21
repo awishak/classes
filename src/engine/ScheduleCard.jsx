@@ -13,7 +13,9 @@
 // and the dashboard writes them.
 
 import { useEffect } from "react";
-import { normSlot } from "./dayplan.js";
+import { normSlot, kindOf } from "./dayplan.js";
+import { ComingBox, AwayList } from "./Attendance.jsx";
+import { isAway, idFor, awayIds } from "./attendance.js";
 import { dayTitles } from "./days.js";
 import PickMark from "./Pick.jsx";
 import * as TOKENS from "./tokens.js";
@@ -241,8 +243,9 @@ export function ScheduleSummary({ config, data }) {
   );
 }
 
-export function ScheduleDetail({ config, data, blockOf, focusDay }) {
-  return <StudentSchedule config={config} data={data} blockOf={blockOf} focusDay={focusDay} />;
+export function ScheduleDetail({ config, data, blockOf, focusDay, instructor, me, mark }) {
+  return <StudentSchedule config={config} data={data} blockOf={blockOf} focusDay={focusDay}
+    instructor={instructor} me={me} mark={mark} />;
 }
 
 // A day of the schedule, as part of an address: /comm3/schedule/sep-23, which
@@ -252,7 +255,7 @@ export function ScheduleDetail({ config, data, blockOf, focusDay }) {
 // it and the row is where that day starts.
 export const dayAnchor = (date) => "day-" + String(date || "").trim().toLowerCase().replace(/\s+/g, "-");
 
-function StudentSchedule({ config, data, blockOf, focusDay }) {
+function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark }) {
   const weeks = getWeeks(data, config);
   // A week item points at a block, and the pick lives on the block, so what
   // the students see is worked out from the block rather than stamped on the
@@ -262,6 +265,26 @@ function StudentSchedule({ config, data, blockOf, focusDay }) {
   // What each class day is about, carried the way the rest of the app carries
   // it: a title written on a day covers the days after it until the next one.
   const titles = dayTitles(weeks, data?.dayPlans);
+  // Who this is, for the day this student is answering about. A page being read
+  // by nobody in particular, which is what the features page is, gets no box.
+  const myId = me ? idFor(config, data, me) : "";
+  // A day of the term the class is in the room for. A day with no in-person
+  // meeting and a day of sit-downs take no answer, and neither does a Sunday
+  // that only turned up because something is due on it.
+  const meets = (d) => d.classDay && kindOf((data?.dayPlans || {})[d.date]) === "class";
+  // Andrew, 2026-09-21: "i see the names in the schedule. every day." Every day
+  // of the term, past ones included, so a student can say now that they will
+  // miss a day in three weeks.
+  const attendance = (d) => {
+    if (!meets(d)) return null;
+    const inner = instructor
+      ? (awayIds(data, d.date).length ? <AwayList config={config} data={data} date={d.date} /> : null)
+      : (myId && mark
+        ? <ComingBox accent={config.accent} checked={!isAway(data, d.date, myId)}
+            onChange={(coming) => mark(d.date, myId, !coming)} />
+        : null);
+    return inner ? <div style={{ marginTop: 4 }}>{inner}</div> : null;
+  };
   // The day named in the address, scrolled to after the weeks are drawn. A day
   // the term does not have leaves the page where it opened.
   useEffect(() => {
@@ -320,6 +343,7 @@ function StudentSchedule({ config, data, blockOf, focusDay }) {
                         {d.items.length
                           ? <div style={{ marginTop: 6 }}>{inWeekOrder(d.items).map(row)}</div>
                           : <div style={{ fontSize: 15, color: TEXT_MUTED, marginTop: 6 }}>Nothing set for this day yet.</div>}
+                        {attendance(d)}
                       </div>
                     ))}
                   </>

@@ -128,7 +128,50 @@ export function useClassData(key) {
     pump();
   }, [key, pump]);
 
-  return [data, update];
+  // Taking a state that was written somewhere else.
+  //
+  // An attendance mark cannot go out through `update`: every save here is the
+  // whole class as this page holds it, and a room unchecking a box at the same
+  // time is thirty pages each holding a snapshot taken before the others
+  // marked. `saveMerged` re-reads, merges and writes for itself, and hands the
+  // result back here to be held. Nothing is queued, because it is already on
+  // the server.
+  const apply = useCallback((next) => {
+    dataRef.current = next;
+    WARM.set(key, next);
+    setData({ ...next });
+  }, [key]);
+
+  return [data, update, apply];
+}
+
+// A write that re-reads before it saves.
+//
+// `mutate` is applied to what this page holds, `merge` is given what this page
+// started from, what it wants, and what the server holds now, and its answer is
+// what gets written. See mergeAway in attendance.js for the rule, and
+// mergeAnswers in game.js for the same rule written for a game's answers.
+//
+// Hands back what was written, or null if nothing was, because after a merge
+// the result is no longer the object the caller built.
+export async function saveMerged(key, mutate, merge) {
+  const base = WARM.get(key) || {};
+  const next = mutate(base);
+  try {
+    const raw = await window.storage.get(key, true);
+    const server = raw?.value ? JSON.parse(raw.value) : null;
+    // The shim answers null both for a class nothing has ever been written for
+    // and for a request that failed, and there is no telling those apart from
+    // here. A class this page is holding data for has a row, so a null answer
+    // to that is a failed read, and writing on top of it would put this page's
+    // idea of the class over everybody else's.
+    if (!server && Object.keys(base).length) return null;
+    const out = server ? merge(next, base, server) : next;
+    const ok = await saveClass(key, out);
+    if (!ok) return null;
+    warmClassData(key, out);
+    return out;
+  } catch { return null; }
 }
 
 // The same reader, without the writer.

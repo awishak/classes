@@ -19,6 +19,16 @@ export const blankDay = (config) => ({
 
 // A slot as stored may predate the items array. Everything that reads a slot
 // goes through here.
+// What a day is: a class in the room, a day with no in-person meeting, or a
+// day of sit-downs. `noMeeting` came first and still decides what a student
+// sees, so a day that only has that still reads as one with no meeting.
+//
+// It lived in TermOutline.jsx, which is a screen. The schedule needs the same
+// answer now, because a day the class does not meet on takes no "I'll be
+// there", and a rule two screens read belongs under neither of them.
+export const kindOf = (plan) => (plan || {}).kind || ((plan || {}).noMeeting ? "off" : "class");
+export const KINDS = [["class", "In person"], ["off", "No in-person meeting"], ["sitdown", "Sit-down"]];
+
 export function normSlot(s) {
   if (!s) return { items: [] };
   // Everything a section carries comes through, not a list of fields: when this

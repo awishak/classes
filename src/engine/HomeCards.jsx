@@ -16,6 +16,9 @@ import { genId } from "../utils.jsx";
 import * as TOKENS from "./tokens.js";
 import { dayTitles } from "./days.js";
 import { studentItems } from "./ScheduleCard.jsx";
+import { ComingBox, AwayList } from "./Attendance.jsx";
+import { isAway, idFor, awayIds } from "./attendance.js";
+import { kindOf } from "./dayplan.js";
 import { Avatar, profileOf } from "./RosterCard.jsx";
 import { dueState } from "./AssignmentsCard.jsx";
 import { instructorOf } from "../instructors.js";
@@ -178,7 +181,7 @@ function NoteEditor({ date, value, update }) {
 // schedule. A card that counts them is a card that sends them there, which is
 // why the count is the link: "when you click, it goes to the TOP of that day
 // on the schedule."
-export function NextClassHero({ config, data, blockOf, section, onOpen, onOpenDay, seat, instructor, update, wide }) {
+export function NextClassHero({ config, data, blockOf, section, onOpen, onOpenDay, seat, instructor, update, wide, me, mark }) {
   const facts = nextClassFacts(config, data, blockOf, section);
   // White, like every other card, with the class's own colour around it.
   const frame = {
@@ -207,6 +210,19 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, onOpenDa
     </button>
   );
   const readingWords = facts.readings.length === 1 ? "1 reading" : facts.readings.length + " readings";
+  // The same answer the schedule takes for that day, on the card a student
+  // opens first. Andrew, 2026-09-21: "also put this in the hero card for
+  // students and for me." A day the class does not meet in the room takes no
+  // answer, on either side.
+  const myId = me ? idFor(config, data, me) : "";
+  const meets = kindOf((data?.dayPlans || {})[facts.date]) === "class";
+  const attendance = !meets ? null
+    : instructor
+      ? (awayIds(data, facts.date).length ? <AwayList config={config} data={data} date={facts.date} /> : null)
+      : (myId && mark
+        ? <ComingBox accent={config.accent} checked={!isAway(data, facts.date, myId)}
+            onChange={(coming) => mark(facts.date, myId, !coming)} />
+        : null);
   return (
     <section aria-label="Next class" style={frame}>
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -231,6 +247,8 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, onOpenDa
           {facts.note}
         </div>
       ) : null}
+
+      {attendance}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {facts.readings.length
