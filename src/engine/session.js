@@ -75,7 +75,9 @@ export async function authHeaders() {
 async function post(path, body, extra = {}) {
   const r = await fetch(base + path, { method: "POST", headers: { ...headers, ...extra }, body: JSON.stringify(body) });
   const out = await r.json().catch(() => ({}));
-  return { ok: r.ok, body: out };
+  // The status comes back too, because 429 is the one failure a student can
+  // do something about and the message alone does not always say so.
+  return { ok: r.ok, status: r.status, body: out };
 }
 
 const said = (body, fallback) => body?.msg || body?.error_description || body?.message || fallback;
@@ -108,6 +110,15 @@ export async function sendCode(email) {
     const why = said(r.body, "");
     if (/signup|not allowed|not found/i.test(why)) {
       return { ok: false, error: "That email is not on a roster yet. Ask Andrew to add you." };
+    }
+    // The mailer is rate limited, and a whole class signing in at once is
+    // exactly what trips it. Andrew, 2026-09-20: "if all students want to do
+    // the email sign in link tomorrow, will it work?" So the answer a student
+    // gets is the way in that always works rather than a number they cannot
+    // act on.
+    if (r.status === 429 || /rate limit|too many|over_email_send_rate/i.test(why)) {
+      return { ok: false, rateLimited: true,
+        error: "Too many emails are going out at once. Use your six-digit code instead, or ask Dr. Ishak for it." };
     }
     return { ok: false, error: why || "Could not send that email." };
   } catch {

@@ -44,6 +44,7 @@ export default function LoginPage() {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [leanOnCode, setLeanOnCode] = useState(false);
   const [sent, setSent] = useState(false);
   const [picking, setPicking] = useState(null);   // classes to choose from
   const [nobody, setNobody] = useState("");
@@ -83,6 +84,9 @@ export default function LoginPage() {
     const r = await sendCode(email);
     setBusy(false);
     if (!r.ok) setError(r.error); else setSent(true);
+    // A class signing in at once is what trips the mailer, and a student
+    // reading "rate limit" cannot act on it. The code they already have can.
+    if (r.rateLimited) setLeanOnCode(true);
   };
 
   const leave = async () => { await signOut(); setNobody(""); setPicking(null); setCode(""); };
@@ -126,6 +130,11 @@ export default function LoginPage() {
                 {busy ? "Signing in" : "Sign in"}
               </button>
               {error ? <div style={{ fontSize: 14, color: LATE, fontWeight: 600 }}>{error}</div> : null}
+              {leanOnCode ? (
+                <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.45 }}>
+                  Your six-digit code never expires. It is on the class page under Show PIN, and Dr. Ishak has it on the roster.
+                </div>
+              ) : null}
             </form>
             <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0" }}>
               <span style={{ flex: 1, height: 1, background: BORDER_STRONG }} />

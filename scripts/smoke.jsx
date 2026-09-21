@@ -2604,6 +2604,22 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   });
 }
 
+// The mailer's rate limit, said in words a student can act on. Andrew,
+// 2026-09-20: "if all students want to do the email sign in link tomorrow,
+// will it work? or are we gonna run into a overdraft issue?" Supabase's
+// built-in mailer sends a handful an hour, and a class of thirty asking at
+// once is exactly the shape that trips it.
+{
+  const say = (msg) => { console.error("  FAIL  the mailer: " + msg); failedEarly++; };
+  const sess = readFileSync(new URL("../src/engine/session.js", import.meta.url), "utf8");
+  const login = readFileSync(new URL("../src/LoginPage.jsx", import.meta.url), "utf8");
+  if (!/r\.status === 429/.test(sess)) say("a rate-limited send is not told apart from any other failure");
+  if (!/Use your six-digit code instead/.test(sess)) say("the failure does not name the way in that works");
+  if (!/rateLimited: true/.test(sess)) say("the page cannot tell what kind of failure it was");
+  if (!/leanOnCode/.test(login)) say("the sign-in page says nothing extra when the mail is busy");
+  if (!/never expires/.test(login)) say("the page does not say the code keeps working");
+}
+
 // A welcome at the top of the class page, and a student's own PIN at the right
 // end of the bar. Andrew, 2026-09-20: "how do i add a card to the front page of
 // all students to welcome them to this site?" and "please share a students pin
