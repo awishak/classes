@@ -76,7 +76,7 @@ import PlanPage from "../src/PlanPage.jsx";
 import RetreatPage from "../src/RetreatPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
 import { ENGINE_LIST } from "../src/config/registry.js";
-import { warmClassData, saveMerged } from "../src/engine/store.js";
+import { warmClassData, saveMerged, mergeClass } from "../src/engine/store.js";
 import { setAway, mergeAway, isAway, awayBySitting } from "../src/engine/attendance.js";
 import GradeView from "../src/engine/GradeView.jsx";
 import GradeDeck from "../src/engine/GradeDeck.jsx";
@@ -3705,6 +3705,100 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // React answers a new type by throwing the subtree away and building it
   // again. The log sits above the box being typed in.
   if (/function AssignmentLog[\s\S]{0,400}?const Wrap = \(/.test(src)) say("the log still makes a new row component on every render");
+}
+
+// One page's save cannot take another page's work with it.
+//
+// Andrew, 2026-09-21: "students are adding pictures and then it's going away.
+// do we have the problem with people doing it at the same time?" Every save is
+// the whole class as one page holds it, so two students onboarding in the same
+// minute each wrote a class the other one was not in, and the second write won.
+// Every save merges against the server now: what the page changed is the
+// page's, and everything else is the server's.
+{
+  const say = (m) => { console.error("  FAIL  merging a save: " + m); failedEarly++; };
+  // Two students, two photos, one minute. This is the bug he reported.
+  {
+    const base = { profiles: { ada: { hometown: "Fresno" } } };
+    const mine = { ...base, profiles: { ...base.profiles, pepe: { avatar: "data:pepe" } } };
+    const server = { ...base, profiles: { ...base.profiles, sym: { avatar: "data:sym" } } };
+    const out = mergeClass(base, mine, server);
+    if (!out.profiles.pepe?.avatar) say("the photo this page added did not land");
+    if (!out.profiles.sym?.avatar) say("the photo the other student added was wiped out");
+    if (out.profiles.ada?.hometown !== "Fresno") say("a profile nobody touched was lost");
+  }
+  // Two writes to one student, on different fields. A student uploads a photo
+  // on their phone while their laptop still has the card open.
+  {
+    const base = { profiles: { ada: { hometown: "" } } };
+    const mine = { ...base, profiles: { ada: { hometown: "Fresno" } } };
+    const server = { ...base, profiles: { ada: { hometown: "", avatar: "data:ada" } } };
+    const out = mergeClass(base, mine, server);
+    if (out.profiles.ada.hometown !== "Fresno") say("the field this page typed did not land");
+    if (!out.profiles.ada.avatar) say("the field the other screen wrote was wiped out");
+  }
+  // A branch this page never opened is the server's, whole. The day plan I
+  // wrote on the dashboard while a student's phone sat open is the case that
+  // costs the most.
+  {
+    const base = { dayPlans: { "Sep 23": { title: "One" } }, profiles: {} };
+    const mine = { ...base, profiles: { pepe: { avatar: "data:x" } } };
+    const server = { ...base, dayPlans: { "Sep 23": { title: "Rewritten while they typed" } } };
+    const out = mergeClass(base, mine, server);
+    if (out.dayPlans["Sep 23"].title !== "Rewritten while they typed") say("a page wrote over a day plan it never touched");
+    if (!out.profiles.pepe) say("its own write did not land");
+  }
+  // Taking something out still takes it out, and a key only the server has
+  // stays where it is.
+  {
+    const base = { pins: { a: 1, b: 2 } };
+    const mine = { pins: { a: 1 } };
+    const server = { pins: { a: 1, b: 2 }, requests: [{ id: "r1" }] };
+    const out = mergeClass(base, mine, server);
+    if ("b" in out.pins) say("a thing this page deleted came back");
+    if (!out.requests) say("something only the server had was dropped");
+  }
+  // A page that changed nothing is handed the server, whole.
+  {
+    const base = { profiles: { ada: {} } };
+    const server = { profiles: { ada: { avatar: "data:ada" } }, away: { "Sep 23": { pepe: true } } };
+    const out = mergeClass(base, base, server);
+    if (JSON.stringify(out) !== JSON.stringify(server)) say("a save that changed nothing still wrote something of its own");
+  }
+  // Arrays are leaves: the list this page rewrote is this page's, and one it
+  // never touched is the server's.
+  {
+    const base = { students: [{ id: "a" }], log: [{ id: "L1" }] };
+    const mine = { ...base, students: [{ id: "a" }, { id: "b" }] };
+    const server = { ...base, log: [{ id: "L1" }, { id: "L2" }] };
+    const out = mergeClass(base, mine, server);
+    if (out.students.length !== 2) say("the roster this page pasted did not land");
+    if (out.log.length !== 2) say("a list this page never touched was rolled back");
+  }
+  // The marks the room makes, through the same rule the attendance write uses.
+  {
+    const base = { away: {} };
+    const mine = { away: { "Sep 23": { ada: true } } };
+    const server = { away: { "Sep 23": { alan: true } } };
+    const out = mergeClass(base, mine, server);
+    if (!out.away["Sep 23"].ada || !out.away["Sep 23"].alan) say("two people marking the same day lost one of the marks");
+  }
+  // Merging twice changes nothing the first merge did not already settle.
+  {
+    const base = { profiles: {} };
+    const mine = { profiles: { pepe: { avatar: "data:x" } } };
+    const server = { profiles: { sym: { avatar: "data:y" } } };
+    const once = mergeClass(base, mine, server);
+    const twice = mergeClass(base, mine, once);
+    if (JSON.stringify(once) !== JSON.stringify(twice)) say("saving the same state twice does not settle");
+  }
+  // And the save path itself asks the server before it writes.
+  {
+    const { readFileSync: readStore } = await import("node:fs");
+    const src = readStore(new URL("../src/engine/store.js", import.meta.url), "utf8");
+    if (!/saveAgainstServer\(k, basis\.current, v\)/.test(src)) say("a save no longer measures against what the server holds");
+    if (/Promise\.resolve\(saveClass\(k, v\)\)/.test(src)) say("the plain overwrite is back in the save path");
+  }
 }
 
 // Saying you will not be there.

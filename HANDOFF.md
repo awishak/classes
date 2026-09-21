@@ -702,6 +702,42 @@ twice, because one edge can serve the old bundle briefly.
   term of games and grades at their own keys, and an engine class starts with
   no games.
 
+## Every save merges
+
+Andrew, 2026-09-21: "students are adding pictures and then it's going away. do
+we have the problem with people doing it at the same time?" Yes, and not only
+for pictures.
+
+Every save is the whole class as one page holds it. Two students onboarding in
+the same minute each wrote a class the other one was not in, and the second
+write won. The page ignores realtime echoes while it has a write outstanding,
+which is right for its own state and widens exactly this window, so a class of
+students all filling in the welcome cards at once is the worst case there is.
+Whatever landed in between is gone and nothing anywhere says so. It has now
+cost a room its game answers, and it took the photos.
+
+`mergeClass` in `store.js` is the rule, and every save goes through it: read
+what the server holds, walk what this page wants against what it started from,
+and write the answer. A branch this page never touched is still the same object,
+because React state copies the spine and shares the rest, so that branch comes
+from the server. A branch it did touch is this page's, down to the leaf, which
+means two screens writing different fields of one student both land. A key it
+took out stays out.
+
+The basis is the last state this page and the server agreed on. It moves on when
+a merged save comes back and nothing newer is waiting, because a state waiting
+in the queue was built from that same basis and has to be measured against it.
+
+Arrays are leaves. Two people appending to one array in the same second still
+lose one, and the only array students write from the class site is `requests`.
+Everything else students write is keyed per student.
+
+Still true and worth doing: **a photo is a data URL inside the class blob**. At
+220px and quality 0.7 each one is about 10KB, so a class of sixty adds well over
+half a megabyte to a thing every screen reads and writes whole. `api/upload.js`
+already hands out signed upload links for the notes bucket, which is where a
+photo belongs.
+
 ## A box holds its own words
 
 Two boxes were driven straight from the class store, one letter at a time: the

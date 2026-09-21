@@ -48,6 +48,65 @@ const canon = (v) => {
   return s.length + ":" + h;
 };
 
+// What this page changed is this page's. Everything else is the server's.
+//
+// Andrew, 2026-09-21: "students are adding pictures and then it's going away.
+// do we have the problem with people doing it at the same time?" Yes, and not
+// only for pictures. Every save here is the whole class as one page holds it,
+// so two students onboarding in the same minute each write a class that does
+// not have the other one in it, and the second write wins. A photo, a hometown,
+// a submission: whatever landed in between is gone, and nothing anywhere says
+// so.
+//
+// The rule is the one the game's answers and the attendance marks already use,
+// written once for the whole class. Walk what this page wants against what it
+// started from: a branch it never touched is still the same object, because
+// React state copies the spine and shares the rest, so that branch comes from
+// the server. A branch it did touch is this page's, down to the leaf. A key it
+// took out stays out, so deleting still deletes.
+//
+// Arrays are leaves. Two people appending to the same array in the same second
+// still lose one, and the only array students write from the class site is the
+// requests list. The maps that matter are keyed per student, so two students
+// never write the same key.
+const isPlain = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+
+export function mergeClass(base, next, server) {
+  if (!isPlain(next) || !isPlain(server)) return next;
+  const was = isPlain(base) ? base : {};
+  const out = { ...server };
+  new Set([...Object.keys(next), ...Object.keys(was)]).forEach(k => {
+    if (!(k in next)) { delete out[k]; return; }        // this page took it out
+    const mine = next[k], before = was[k];
+    if (mine === before) {                               // untouched: the server's
+      if (k in server) out[k] = server[k]; else delete out[k];
+      return;
+    }
+    out[k] = isPlain(mine) && isPlain(server[k]) ? mergeClass(before, mine, server[k]) : mine;
+  });
+  return out;
+}
+
+// Read, merge, write. Hands back what was written, or null.
+//
+// A read that comes back with nothing is a failed read as often as it is a
+// class nothing has ever been written for, and the shim cannot tell them apart,
+// so it is asked twice. If the second answer is nothing as well, the page's own
+// state goes out as it always did, because a student's own words are the one
+// thing that must not be dropped on the floor.
+async function saveAgainstServer(key, base, next) {
+  let server = null;
+  for (let i = 0; i < 2 && !server; i++) {
+    try {
+      const raw = await window.storage.get(key, true);
+      server = raw?.value ? JSON.parse(raw.value) : null;
+    } catch { server = null; }
+  }
+  const out = server ? mergeClass(base, next, server) : next;
+  const ok = await saveClass(key, out);
+  return ok ? out : null;
+}
+
 export function useClassData(key) {
   const [data, setData] = useState(() => WARM.get(key) || null);
   const dataRef = useRef({});
@@ -72,19 +131,36 @@ export function useClassData(key) {
   // The last few states this page sent, so a late echo of an older one can be
   // told apart from somebody else's write.
   const sent = useRef([]);
+  // The last state this page and the server agreed on, which is what a save
+  // measures this page's changes against. It moves on when a merged save comes
+  // back and nothing newer is waiting, because a state waiting in the queue was
+  // built from this basis and has to be merged against the same one.
+  const basis = useRef({});
 
   const pump = useCallback(() => {
     if (flying.current || !queued.current.length) return;
     const [{ k, v }, ...rest] = queued.current;
     queued.current = rest;
     flying.current = true;
-    sent.current = [...sent.current.slice(-9), canon(v)];
-    Promise.resolve(saveClass(k, v)).finally(() => {
+    Promise.resolve(saveAgainstServer(k, basis.current, v)).then((out) => {
+      if (out) {
+        sent.current = [...sent.current.slice(-9), canon(out)];
+        // What landed is what everybody holds now, this page included. Not
+        // while something newer is waiting: that state was built from the
+        // basis below and is merged against it on the way out.
+        if (!queued.current.length) {
+          basis.current = out;
+          dataRef.current = out;
+          WARM.set(k, out);
+          setData({ ...out });
+        }
+      }
+    }).finally(() => {
       flying.current = false;
       pending.current--;
       pump();
     });
-  }, []);
+  }, [setData]);
 
   useEffect(() => {
     let alive = true;
@@ -93,6 +169,7 @@ export function useClassData(key) {
     loadClass(key).then(d => {
       if (!alive) return;
       dataRef.current = d || {};
+      basis.current = dataRef.current;
       WARM.set(key, dataRef.current);
       setData(dataRef.current);
     });
@@ -105,6 +182,7 @@ export function useClassData(key) {
         // whatever was saved after it.
         if (sent.current.length && sent.current.includes(canon(d))) return;
         dataRef.current = d;
+        basis.current = d;
         WARM.set(key, d);
         setData(d);
       } catch { /* ignore */ }
@@ -138,6 +216,9 @@ export function useClassData(key) {
   // the server.
   const apply = useCallback((next) => {
     dataRef.current = next;
+    // It came back from the server, so it is what the next save measures
+    // against as well.
+    basis.current = next;
     WARM.set(key, next);
     setData({ ...next });
   }, [key]);
