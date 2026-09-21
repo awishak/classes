@@ -280,7 +280,14 @@ function StudentSchedule({ config, data, blockOf, focusDay }) {
   }, [focusDay]);
   return (
     <div>
-      <div style={{ ...h2, marginBottom: 16 }}>Schedule</div>
+      <div style={{ ...h2, marginBottom: 8 }}>Schedule</div>
+      {/* Andrew's words, unedited. A schedule that changes and does not say so
+          is a schedule students stop trusting. */}
+      <p style={{ margin: "0 0 16px", fontSize: 15, lineHeight: 1.55, color: TEXT_SECONDARY, maxWidth: "62ch" }}>
+        The best way for me to ensure this class is as useful for you as possible is for us both to be flexible.
+        Therefore, this schedule and list of assignments are subject to change in all sorts of ways. I'll make sure
+        to keep you in the loop on important changes.
+      </p>
       <WeekNav weeks={weeks} accent={config.accent} />
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {weeks.map((w, wi) => {

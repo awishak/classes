@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { profileComplete } from "./profileTask.js";
-import { realStudents, hasSections, studentsIn, sectionFor } from "./sections.js";
+import { realStudents, hasSections, studentsIn, sectionFor, sectionsOf } from "./sections.js";
 import { nameShown } from "./roster.js";
 import { computeGrade } from "./AssignmentsCard.jsx";
 import RosterSheet, { callLogins } from "./RosterSheet.jsx";
@@ -95,6 +95,10 @@ export function classmatesOf(config, data, role, name) {
 function InstructorRoster({ config, data, update }) {
   const a = config.accent;
   const [q, setQ] = useState("");
+  // Which room he is looking at. Andrew, 2026-09-20: "i'm gonna need that
+  // ability too, to only see one class roster or the other." A class with one
+  // sitting never shows this.
+  const [room, setRoom] = useState("");
   const [selected, setSelected] = useState(null);
   const [managing, setManaging] = useState(false);
   const students = data?.students || config.students || [];
@@ -130,7 +134,8 @@ function InstructorRoster({ config, data, update }) {
   }
 
   const lc = q.toLowerCase();
-  const results = students.filter(s => s.name.toLowerCase().includes(lc));
+  const results = studentsIn(students, room).filter(s => s.name.toLowerCase().includes(lc)
+    || nameShown(data, s.name).toLowerCase().includes(lc));
 
   return (
     <div>
@@ -142,6 +147,22 @@ function InstructorRoster({ config, data, update }) {
         </button>
       </div>
       <Muted style={{ marginBottom: 12 }}>Private to you.</Muted>
+      {hasSections(config) ? (
+        <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+          {[["", "Both rooms"], ...sectionsOf(config).map(sec => [sec, sec])].map(([id, say]) => {
+            const on = room === id;
+            const n = id ? studentsIn(students, id).length : students.length;
+            return (
+              <button key={id || "all"} className="ca-focus" onClick={() => setRoom(id)} aria-pressed={on}
+                style={{ minHeight: 32, padding: "0 12px", borderRadius: 999, cursor: "pointer",
+                  border: "1px solid " + (on ? a : BORDER_STRONG), background: on ? a : "#fff",
+                  color: on ? "#fff" : TEXT_SECONDARY, fontFamily: F, fontSize: 14, fontWeight: 600 }}>
+                {say} <span style={{ opacity: .75 }}>{n}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
       <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search students"
         style={{ width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: TAP, marginBottom: 12 }} />
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

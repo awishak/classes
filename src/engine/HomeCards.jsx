@@ -71,12 +71,24 @@ export function timeText(sitting) {
 export const locationOf = (config) => config.location
   || (String(config.desc || "").split("·").slice(1).join("·").trim());
 
-// The sittings this student goes to. A student in a section sees that
-// section's time; everyone else sees every sitting.
+// The sittings this student goes to.
+//
+// A student in a section sees that section's time and nothing else. Anyone the
+// app cannot place in a sitting, which is Andrew looking at his own page, sees
+// no time at all rather than both of them. Andrew, 2026-09-20: "with two
+// sections of comm 3, the next class listed is 10:30 to 11:35. why? ... maybe
+// we don't mention the time for comm 3." Two times on one card is a card that
+// tells most of the room the wrong thing, and every student who signs in has a
+// section, so the only reader it costs is him.
+//
+// The times are the words in the config, not a clock: "08:00" is 8:00 am in
+// the room the class is in. Nothing here converts a zone, so a student reading
+// it from another one sees the same class time Andrew wrote.
 const sittingsFor = (config, section) => {
   const all = meetsOf(config);
-  const mine = section ? all.filter(m => String(m.label || "").trim() === String(section).trim()) : [];
-  return mine.length ? mine : all;
+  if (all.length < 2) return all;
+  const mine = all.filter(m => String(m.label || "").trim() === String(section || "").trim());
+  return mine.length ? mine : [];
 };
 
 // The class day this page is about: today until the last sitting ends, then

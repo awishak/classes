@@ -34,7 +34,11 @@ export default function HornBoard({ students, seats, log, accent, profiles, onSe
   const [openSeat, setOpenSeat] = useState(null);
   const [toast, setToast] = useState("");
   const names = useMemo(() => students.map(s => s.name), [students]);
-  const rows = Math.max(3, Math.ceil(names.length / COLS) + 1);
+  // Andrew, 2026-09-20: "around the horn needs to be 8 columns and probably 6
+  // rows, just maybe smaller overall." Six rows of eight is 48 seats, which
+  // holds either COMM 3 sitting with room to move somebody, and a class bigger
+  // than that gets the rows it needs.
+  const rows = Math.max(6, Math.ceil(names.length / COLS) + 1);
   const total = rows * COLS;
   const seated = useRef(false);
 
@@ -105,7 +109,7 @@ export default function HornBoard({ students, seats, log, accent, profiles, onSe
         </div>
 
         <div style={{ padding: 20 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(" + COLS + ", minmax(0,1fr))", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(" + COLS + ", minmax(0,1fr))", gap: 6 }}>
             {Array.from({ length: total }).map((_, pos) => {
               const name = byPos[pos];
               const common = {
@@ -114,7 +118,7 @@ export default function HornBoard({ students, seats, log, accent, profiles, onSe
               };
               if (!name) {
                 return <div key={pos} {...common}
-                  style={{ minHeight: 132, borderRadius: 12, border: "1.5px dashed " + LINE2, background: "transparent" }} />;
+                  style={{ minHeight: 104, borderRadius: 10, border: "1.5px dashed " + LINE2, background: "transparent" }} />;
               }
               const pts = points(name);
               const open = openSeat === name;
@@ -124,19 +128,19 @@ export default function HornBoard({ students, seats, log, accent, profiles, onSe
                     onDragStart={(e) => { setDragging(name); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", name); }}
                     onDragEnd={() => setDragging(null)}
                     onClick={() => setOpenSeat(open ? null : name)}
-                    style={{ width: "100%", minHeight: 132, borderRadius: 12, cursor: "grab", textAlign: "center",
+                    style={{ width: "100%", minHeight: 104, borderRadius: 10, cursor: "grab", textAlign: "center",
                       background: open ? accent : "#fff", color: open ? "#fff" : INK,
-                      border: "1px solid " + (open ? accent : LINE2), padding: 12, fontFamily: F,
-                      display: "flex", flexDirection: "column", alignItems: "center", gap: 8, opacity: dragging === name ? .4 : 1 }}>
+                      border: "1px solid " + (open ? accent : LINE2), padding: 8, fontFamily: F,
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 5, opacity: dragging === name ? .4 : 1 }}>
                     {/* The same face and the same name the roster shows, at the
                         same size. Andrew, 2026-09-20: "you need to make their
                         avatars and names as big as you have it on the students
                         roster view." The old seat was two initials in a 26px
                         circle over a 13px first name, which is a spreadsheet
                         of a room rather than the room. */}
-                    <Avatar profile={profileOf({ profiles }, name)} name={shownName((profiles || {})[name], name)} accent={open ? "#ffffff" : accent} size={56} />
-                    <span style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.25 }}>{shownName((profiles || {})[name], name)}</span>
-                    <span style={{ marginTop: "auto", fontFamily: MONO, fontSize: 13, fontWeight: 600,
+                    <Avatar profile={profileOf({ profiles }, name)} name={shownName((profiles || {})[name], name)} accent={open ? "#ffffff" : accent} size={44} />
+                    <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.2 }}>{shownName((profiles || {})[name], name)}</span>
+                    <span style={{ marginTop: "auto", fontFamily: MONO, fontSize: 12, fontWeight: 600,
                       color: open ? "#fff" : (pts > 0 ? accent : MUTED), fontVariantNumeric: "tabular-nums" }}>
                       {pts > 0 ? "+" : ""}{pts}
                     </span>

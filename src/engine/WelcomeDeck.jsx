@@ -1,0 +1,217 @@
+// The first time a student signs in.
+//
+// Andrew, 2026-09-20: "i'd love to have cards that are like: welcome to class.
+// I'd like to know a little bit about you. and then each card has a question:
+// I have your name as: but i'd love to know your preferred names. can you fill
+// this in? next, we need a photo. can you find one where we can clearly see
+// your face so others in class can recognize you? then the other stuff for the
+// roster? use a warm tone, my voice. end with thank you! let's go to the site
+// now."
+//
+// One question a card, in the order he said them. The same fields as Your
+// card, asked rather than laid out as a form, because a form on a first visit
+// is a thing to close and a question is a thing to answer.
+//
+// Nothing here is compulsory. Every card can be stepped past, the deck comes
+// back on the next visit while the card is unfinished, and the first challenge
+// of the term, Please tell me about yourself, is the same profile read from
+// the other end.
+
+import { useState } from "react";
+import * as TOKENS from "./tokens.js";
+import { fileToAvatar, AvatarPreview } from "./YouCard.jsx";
+
+const F = TOKENS.FONT.body;
+const TEXT_PRIMARY = TOKENS.TEXT.primary;
+const TEXT_SECONDARY = TOKENS.TEXT.secondary;
+const TEXT_MUTED = TOKENS.TEXT.muted;
+const LINE = TOKENS.LINE.soft;
+const LINE_STRONG = TOKENS.LINE.strong;
+const BG = TOKENS.SURFACE.page;
+const WHITE = TOKENS.SURFACE.card;
+const TAP = TOKENS.TAP;
+
+const label = { fontFamily: TOKENS.FONT.label, fontSize: 13, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: TEXT_MUTED };
+const YEARS = ["First-year", "Sophomore", "Junior", "Senior", "Graduate", "Other"];
+const PRIORITIES = ["Learning new material", "Getting a good grade", "Getting course credit"];
+
+// Has this student been asked yet? A profile with anything in it has been, and
+// so has one that stepped through and said no more.
+export const needsWelcome = (data, name) => {
+  if (!name) return false;
+  const p = (data?.profiles || {})[name] || {};
+  const answered = ["firstName", "lastName", "avatar", "about", "year", "hometown", "motto", "goals", "priority"]
+    .some(k => String(p[k] || "").trim());
+  return !answered && !(data?.welcomeSeen || {})[name];
+};
+
+export const markWelcomed = (data, name) => ({
+  ...data,
+  welcomeSeen: { ...(data?.welcomeSeen || {}), [name]: Date.now() },
+});
+
+export default function WelcomeDeck({ config, name, profile, update, onDone }) {
+  const [at, setAt] = useState(0);
+  const a = config.accent;
+  const p = profile || {};
+  const set = (key, value) => update(prev => {
+    const profiles = { ...(prev.profiles || {}) };
+    profiles[name] = { ...(profiles[name] || {}), [key]: value };
+    return { ...prev, profiles };
+  });
+
+  const roster = String(name || "").trim().split(/\s+/);
+  const input = { width: "100%", fontFamily: F, fontSize: 17, minHeight: TAP, padding: "0 12px", borderRadius: 10,
+    border: "1px solid " + LINE_STRONG, background: WHITE, color: TEXT_PRIMARY };
+  const area = { ...input, minHeight: 92, padding: 12, lineHeight: 1.5, resize: "vertical" };
+
+  const cards = [
+    {
+      key: "hello",
+      title: "Welcome to " + config.code + ".",
+      say: "I'd like to know a little bit about you. A few quick questions, and then the site is yours.",
+      body: null,
+    },
+    {
+      key: "name",
+      title: "I have your name as " + name + ".",
+      say: "I'd love to know what you actually go by. Fill this in and it is what the whole class sees.",
+      body: (
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <label style={{ flex: 1, minWidth: 140 }}>
+            <span style={label}>First name</span>
+            <input value={p.firstName || ""} onChange={e => set("firstName", e.target.value)}
+              placeholder={roster[0] || ""} style={{ ...input, marginTop: 6 }} />
+          </label>
+          <label style={{ flex: 1, minWidth: 140 }}>
+            <span style={label}>Last name</span>
+            <input value={p.lastName || ""} onChange={e => set("lastName", e.target.value)}
+              placeholder={roster.slice(1).join(" ")} style={{ ...input, marginTop: 6 }} />
+          </label>
+        </div>
+      ),
+    },
+    {
+      key: "photo",
+      title: "Now a photo.",
+      say: "Find one where we can clearly see your face, so people in class can recognize you.",
+      body: (
+        <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+          <AvatarPreview value={p.avatar} accent={a} size={88} />
+          <label style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, padding: "0 18px",
+            borderRadius: 999, border: "1px solid " + LINE_STRONG, fontSize: 16, fontWeight: 600, color: a, cursor: "pointer" }}>
+            {p.avatar ? "Choose another" : "Choose a photo"}
+            <input type="file" accept="image/*" style={{ display: "none" }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) fileToAvatar(f, (v) => set("avatar", v)); e.target.value = ""; }} />
+          </label>
+        </div>
+      ),
+    },
+    {
+      key: "where",
+      title: "Where are you coming from?",
+      say: "Your year, and the place you call home.",
+      body: (
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <label style={{ flex: 1, minWidth: 150 }}>
+            <span style={label}>Year</span>
+            <select value={p.year || ""} onChange={e => set("year", e.target.value)} style={{ ...input, marginTop: 6 }}>
+              <option value="">Pick your year</option>
+              {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </label>
+          <label style={{ flex: 1, minWidth: 150 }}>
+            <span style={label}>Hometown</span>
+            <input value={p.hometown || ""} onChange={e => set("hometown", e.target.value)} style={{ ...input, marginTop: 6 }} />
+          </label>
+        </div>
+      ),
+    },
+    {
+      key: "about",
+      title: "Tell me something about you.",
+      say: "Anything you want the class to know. A motto is a good way in, if you keep a motto.",
+      body: (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <label>
+            <span style={label}>About me</span>
+            <textarea value={p.about || ""} onChange={e => set("about", e.target.value)} style={{ ...area, marginTop: 6 }} />
+          </label>
+          <label>
+            <span style={label}>Motto</span>
+            <input value={p.motto || ""} onChange={e => set("motto", e.target.value)} style={{ ...input, marginTop: 6 }} />
+          </label>
+        </div>
+      ),
+    },
+    {
+      key: "why",
+      title: "What do you want out of this class?",
+      say: "This answer is only for me, and it changes how I teach the class.",
+      body: (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <label>
+            <span style={label}>Goals for the class</span>
+            <textarea value={p.goals || ""} onChange={e => set("goals", e.target.value)} style={{ ...area, marginTop: 6 }} />
+          </label>
+          <label>
+            <span style={label}>What matters to you most</span>
+            <select value={p.priority || ""} onChange={e => set("priority", e.target.value)} style={{ ...input, marginTop: 6 }}>
+              <option value="">Pick what matters most</option>
+              {PRIORITIES.map(x => <option key={x} value={x}>{x}</option>)}
+            </select>
+          </label>
+        </div>
+      ),
+    },
+    {
+      key: "thanks",
+      title: "Thank you!",
+      say: "Let's go to the site now. You can change any of this later on Your card.",
+      body: null,
+    },
+  ];
+
+  const card = cards[Math.min(at, cards.length - 1)];
+  const last = at >= cards.length - 1;
+  const leave = () => { update(prev => markWelcomed(prev, name)); onDone?.(); };
+
+  return (
+    <div aria-label="Welcome" style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY,
+      display: "flex", flexDirection: "column", alignItems: "center", padding: "24px 16px" }}>
+      <div style={{ width: "100%", maxWidth: 560, display: "flex", flexDirection: "column", gap: 16, flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, minHeight: TAP }}>
+          <span style={label}>{config.code}</span>
+          <span style={{ fontSize: 15, color: TEXT_MUTED }}>{at + 1} of {cards.length}</span>
+        </div>
+
+        <section style={{ background: WHITE, border: "1px solid " + LINE, borderRadius: 16, padding: 24,
+          display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 12px 32px -20px rgba(23,19,16,.35)" }}>
+          <div style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.25, letterSpacing: "-.01em" }}>{card.title}</div>
+          <div style={{ fontSize: 17, lineHeight: 1.55, color: TEXT_SECONDARY }}>{card.say}</div>
+          {card.body}
+        </section>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: "auto" }}>
+          {at > 0 && !last ? (
+            <button onClick={() => setAt(at - 1)}
+              style={{ minHeight: 52, padding: "0 18px", borderRadius: 12, background: WHITE, border: "1px solid " + LINE_STRONG,
+                fontFamily: F, fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY, cursor: "pointer" }}>Back</button>
+          ) : null}
+          <button onClick={last ? leave : () => setAt(at + 1)}
+            style={{ flex: 1, minHeight: 52, padding: "0 20px", borderRadius: 12, background: a, color: "#fff",
+              border: "none", fontFamily: F, fontSize: 18, fontWeight: 600, cursor: "pointer" }}>
+            {last ? "Go to the site" : at === 0 ? "Let's go" : "Next"}
+          </button>
+        </div>
+        {!last ? (
+          <button onClick={leave}
+            style={{ alignSelf: "center", background: "none", border: "none", cursor: "pointer", fontFamily: F,
+              fontSize: 15, color: TEXT_MUTED, minHeight: TAP }}>
+            Finish this later
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}

@@ -85,6 +85,7 @@ import { instructorOf } from "../src/instructors.js";
 import TopNav, { NAV_CLASS, activeFor } from "../src/engine/TopNav.jsx";
 import HornApp from "../src/engine/HornApp.jsx";
 import HornBoard from "../src/engine/HornBoard.jsx";
+import WelcomeDeck, { needsWelcome, markWelcomed } from "../src/engine/WelcomeDeck.jsx";
 import { assignmentsOf } from "../src/engine/profileTask.js";
 import { QuestionsSummary, QuestionsDetail, onThePage, archivedOf, askedBy, sortQuestions, isAnswered, QuestionEntry } from "../src/engine/QuestionsCard.jsx";
 import { sectionsOf as sittingLabels, hasSections, studentsIn, sectionFor, realStudents, isTestStudent, sectionNow } from "../src/engine/sections.js";
@@ -129,7 +130,14 @@ const stocked = { day: [], week: [], any: [] };
 const weeksOf = (cfg) => (cfg.scheduleWeeks?.length ? cfg.scheduleWeeks
   : [{ id: "w1", topic: "A week", dates: ["Sep 1", "Sep 3"], text: "", plan: "", slides: "", items: [] }]);
 const dayOf = (cfg) => weeksOf(cfg)[0].dates[0];
+// Every student in a fixture has already been welcomed. The deck comes before
+// the site on a first visit by design, so without this every class-page check
+// would be reading the welcome cards. One test below goes the other way and
+// asks for a student who has not seen them.
+const welcomed = (cfg) => Object.fromEntries((cfg.students || []).map(st => [st.name, 1]));
+
 const warmShapes = (cfg, full) => ({
+  welcomeSeen: welcomed(cfg),
   courseTitle: cfg.desc || "",
   schedule: weeksOf(cfg),
   library: cfg.library || [],
@@ -1324,6 +1332,9 @@ cases.push(["Instructor links", <InstructorLinks />]);
   if (cardStyle("clean", 0).transform) say("a Clean card is tilted, and should not be");
   // And the treatment has to actually reach the page, which it did not for a
   // whole pass: cardStyle was exported and nothing called it.
+  // The welcome cards come before the site on a first visit, so a fixture that
+  // wants the site has to say the student has seen them.
+  warmClassData(cfg0.storageKey, warmShapes(cfg0, true));
   ["snapchat", "crashing"].forEach(t => {
     const was = globalThis.localStorage.getItem;
     globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : was(k));
@@ -1419,6 +1430,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
 
   // And the pieces have to land on the class site, not just exist.
   const onSite = (t, needle, what) => {
+    warmClassData(cfg0.storageKey, warmShapes(cfg0, true));
     const was = globalThis.localStorage.getItem;
     globalThis.localStorage.getItem = (k) => (k.endsWith("-theme") ? t : was(k));
     try {
@@ -2340,9 +2352,19 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       const many = { ...hdata, schedule: [{ ...hdata.schedule[0], items: ["a", "b", "c"].map(x => ({ id: x, libId: x, type: "reading", title: "Reading " + x.toUpperCase(), url: "https://x.test/" + x, date: "Wed" })) }] };
       const three = renderToString(<NextClassHero config={hcfg} data={many} blockOf={() => null} section="" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
       Date.now = realNow;
-      // What the card says.
-      ["Wednesday, September 23", "10:30 to 11:35 am · Vari 133", "Same event, different stories"].forEach(t => {
+      // What the card says. The reader here is in no sitting, which is Andrew
+      // looking at his own class page: he gets the room and no time, because
+      // one of two times is wrong for most of the class. Andrew, 2026-09-20:
+      // "with two sections of comm 3, the next class listed is 10:30 to 11:35.
+      // why? ... maybe we don't mention the time for comm 3."
+      ["Wednesday, September 23", "Vari 133", "Same event, different stories"].forEach(t => {
         if (!plain.includes(t)) say("the card does not say " + JSON.stringify(t)); });
+      if (/\d:\d\d to \d/.test(plain)) say("a reader in no sitting is given a time anyway");
+      {
+        const inRoom = renderToString(<NextClassHero config={hcfgD} data={hdata} blockOf={() => null} section="10:30" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
+        if (!inRoom.includes("10:30 to 11:35 am")) say("a student in a sitting is not told their own time");
+        if (inRoom.includes("8:00 to 9:05")) say("a student is shown the other sitting's time");
+      }
       if (!plain.includes("1 reading") || plain.includes("1 readings")) say("one reading does not read as one: " + plain.slice(plain.indexOf("reading") - 40, plain.indexOf("reading") + 20));
       if (!three.includes("3 readings")) say("the card does not count the readings");
       if (!plain.includes("Full schedule")) say("the card has no way to the full schedule");
@@ -2661,6 +2683,43 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!/ownCode && !preview && view !== "instructor"/.test(app)) say("the PIN shows for somebody other than its owner");
 }
 
+// The first time a student signs in. Andrew, 2026-09-20: "i'd love to have
+// cards that are like: welcome to class. I'd like to know a little bit about
+// you ... I have your name as: but i'd love to know your preferred names ...
+// next, we need a photo ... end with thank you! let's go to the site now."
+{
+  const say = (msg) => { console.error("  FAIL  the welcome cards: " + msg); failedEarly++; };
+  const N = "Pepe LeFritz";
+  // Asked once: a profile with anything in it, or a deck already stepped
+  // through, and the site comes straight up.
+  if (!needsWelcome({ profiles: {} }, N)) say("a student with an empty profile is not asked");
+  if (needsWelcome({ profiles: { [N]: { firstName: "Pepe" } } }, N)) say("a student who answered is asked again");
+  if (needsWelcome({ welcomeSeen: { [N]: 1 } }, N)) say("a student who stepped through is asked again");
+  if (needsWelcome({ profiles: {} }, "")) say("nobody in particular is asked");
+  if (!markWelcomed({}, N).welcomeSeen[N]) say("stepping through is not recorded");
+  try {
+    const html = renderToString(<WelcomeDeck config={{ code: "COMM 3", accent: "#7c3aed" }} name={N} profile={{}} update={noop} onDone={noop} />);
+    // His cards, in his order: hello, the name, the photo, and the rest.
+    if (!html.includes("Welcome to COMM 3")) say("the first card does not welcome them to the class");
+    if (!html.includes("d like to know a little bit about you")) say("the first card does not say what it is for");
+    if (!/1<!-- --> of <!-- -->7|1 of 7/.test(html)) say("the deck is not seven cards");
+    if (!html.includes("Let&#x27;s go") && !html.includes("Let's go")) say("there is nothing to press on the first card");
+    if (html.includes("Welcome to COMM 3") && html.includes("Choose a photo")) say("every card is on the screen at once");
+  } catch (err) { say("the deck threw: " + err.message); }
+  // The words of the later cards, which are Andrew's.
+  const deck = readFileSync(new URL("../src/engine/WelcomeDeck.jsx", import.meta.url), "utf8");
+  if (!/I have your name as/.test(deck)) say("the name card does not say what the roster has");
+  if (!/clearly see your face/.test(deck)) say("the photo card does not say why the photo matters");
+  if (!/Thank you!/.test(deck)) say("the deck does not thank them");
+  if (!/Let&#39;s go to the site now|Let's go to the site now/.test(deck)) say("the deck does not end where he said it ends");
+  if (!/Finish this later/.test(deck)) say("a student cannot leave the deck");
+  // And the site puts it in front of the site rather than after it.
+  const app = readFileSync(new URL("../src/engine/ClassApp.jsx", import.meta.url), "utf8");
+  if (!/needsWelcome\(data, seenAs\)/.test(app)) say("the class page never asks whether to welcome them");
+  if (app.indexOf("needsWelcome(data, seenAs)") > app.indexOf("const unseen = data !== null")) {
+    say("the welcome comes after the grade cards rather than before the site"); }
+}
+
 // The name a student goes by. Andrew, 2026-09-20: "i want the ability for
 // students to be able to have preferred first name and preferred last name.
 // can change from roster." What must not move is who they are: the id is
@@ -2704,9 +2763,14 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       log={[{ student: "Pepe LeFritz", amount: 2, source: "Around the Horn" }]} accent="#7c3aed"
       profiles={{ "Ada Lovelace": { avatar: "data:image/png;base64,iVBORw0KGgo=" } }}
       onSeats={noop} onAward={noop} onClose={noop} />);
-    // The roster draws a face at 56 and a name at 15. So does a seat.
-    if ((html.match(/width:56px;height:56px/g) || []).length !== 2) say("a seat's face is not the size the roster draws");
-    if (!/font-size:15px;font-weight:600[^>]*>Pepe LeFritz/.test(html)) say("a seat's name is not the size the roster draws");
+    // A seat carries a real face and the whole name, sized to fit eight across
+    // and six down. Andrew, 2026-09-20: "grid has to be 8 across", then
+    // "around the horn needs to be 8 columns and probably 6 rows, just maybe
+    // smaller overall."
+    if ((html.match(/width:44px;height:44px/g) || []).length !== 2) say("a seat has no face on it");
+    if (!/font-size:13px;font-weight:600[^>]*>Pepe LeFritz/.test(html)) say("a seat does not carry the whole name");
+    if (!/repeat\(8, minmax\(0,1fr\)\)/.test(html)) say("the room is not eight across");
+    if ((html.match(/min-height:104px/g) || []).length < 40) say("the board is not six rows of eight: " + (html.match(/min-height:104px/g) || []).length);
     // The whole name, not the first word with the rest underneath.
     if (/>Pepe<br/.test(html)) say("a seat still breaks the name in two");
     // A photo where there is one, initials where there is not.

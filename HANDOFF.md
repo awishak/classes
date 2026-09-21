@@ -354,6 +354,12 @@ no render test covers their contents. The build counts tap targets across the
 bar instead and fails over six, which is the blunt measure that would have
 caught the drift in the first place.
 
+**The next class card names a time only for a reader in a sitting.** A class
+with two of them cannot tell Andrew which one to show, and two times on one card
+tells most of the room the wrong thing, so he sees the room and no time while a
+student sees their own. The times are the words in the config rather than a
+clock: nothing here converts a timezone.
+
 **Every tab wears its class.** `src/engine/favicon.js` draws the icon the bar
 already draws: the class's colour with its number on it, as an SVG data URI, so
 five classes get five icons out of one function and a new class has one the
@@ -646,6 +652,19 @@ twice, because one edge can serve the old bundle briefly.
 - Nothing was migrated out of the forks. The three legacy files still hold a
   term of games and grades at their own keys, and an engine class starts with
   no games.
+
+## The first time a student signs in
+
+`src/engine/WelcomeDeck.jsx`. Seven cards before the site, one question each,
+in the order Andrew asked for them: welcome, the name they go by, a photo, year
+and hometown, about and motto, goals and what matters most, and thank you. It
+is the same profile the first challenge of the term reads, asked rather than
+laid out as a form, because a form on a first visit is a thing to close.
+
+Asked once. Anything written, or `Finish this later`, and the deck never comes
+back: `welcomeSeen` on the class store holds who has been through. Every fixture
+in the smoke run says its students have been welcomed, or every class-site check
+would be reading these cards instead.
 
 ## The name a student goes by
 

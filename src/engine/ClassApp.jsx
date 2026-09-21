@@ -43,6 +43,7 @@ import { AssignmentCards, AssignmentPage } from "./AssignmentCards.jsx";
 import TopNav, { NAV_CLASS } from "./TopNav.jsx";
 import { ClassMenu } from "./ClassMenu.jsx";
 import { daySlug } from "./days.js";
+import WelcomeDeck, { needsWelcome } from "./WelcomeDeck.jsx";
 import { isTestStudent, realStudents, sectionFor, hasSections } from "./sections.js";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
@@ -642,6 +643,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // The student's own code, read off the row only they can see, for the menu.
   const [ownCode, setOwnCode] = useState("");
   const [pinOpen, setPinOpen] = useState(false);
+  const [welcomeDone, setWelcomeDone] = useState(false);
   useEffect(() => {
     let alive = true;
     if (!session || sessionInstructor) { setOwnCode(""); return undefined; }
@@ -954,6 +956,22 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   if (!session) return <GoSignIn config={config} />;
   if (data !== null && !sessionInstructor && !me) return <NotInClass config={config} email={sessionEmail} onSignOut={signOut} />;
   if (data !== null && !sessionInstructor && me && signedIn !== me.name) return null;   // the effect is setting the name
+
+  // The first time a student signs in, the questions come before the site.
+  // Andrew, 2026-09-20: "first time they log in, are there cards? ... i'd love
+  // to have cards that are like: welcome to class. I'd like to know a little
+  // bit about you." It is asked once: stepping through or leaving early marks
+  // it, and the first challenge of the term reads the same profile.
+  if (data !== null && view !== "instructor" && !welcomeDone && seenAs && needsWelcome(data, seenAs)) {
+    return (
+      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">
+        <ThemeStyle theme={theme} />
+        <style>{CSS + accentCSS(a, config.accentDark)}</style>
+        <WelcomeDeck config={config} name={seenAs} profile={(data.profiles || {})[seenAs]} update={write}
+          onDone={() => setWelcomeDone(true)} />
+      </div>
+    );
+  }
 
   // A released grade is a card the student reads before the site. One per
   // assignment, and the site waits until every one has been tapped through.
