@@ -36,7 +36,7 @@ import { gameClient } from "./gameClient.js";
 import GradeDeck from "./GradeDeck.jsx";
 import { unseenGrades, markSeen } from "./grades.js";
 import DueDeck, { dueSoon, dismissDue } from "./DueCard.jsx";
-import { NextClassHero, PinnedLinks, WelcomeCard, ClassSummary, YourCardSummary, GamesSummary, RequestForm, RequestInbox, InstructorProfile,
+import { NextClassHero, PinnedLinks, ClassSummary, YourCardSummary, GamesSummary, RequestForm, RequestInbox, InstructorProfile,
   openRequests, tileTitle, owedStyle } from "./HomeCards.jsx";
 import { nextOwed } from "./AssignmentsCard.jsx";
 import { AssignmentCards, AssignmentPage } from "./AssignmentCards.jsx";
@@ -958,11 +958,6 @@ export default function ClassApp({ config: classConfig, initialCard }) {
             columns: the day on the left, what to do before it on the right.
             One column of the grid held the day in a slot too narrow for it,
             and the full width with everything stacked was emptier still. */}
-        {data?.welcome || view === "instructor" ? (
-          <div key="welcome" style={{ gridColumn: "1 / -1" }}>
-            <WelcomeCard data={data} update={write} instructor={view === "instructor"} seat={cardStyle(theme, 0)} accent={a} config={config} />
-          </div>
-        ) : null}
         <div key="hero" style={{ gridColumn: "1 / -1" }}>
           <NextClassHero config={config} data={data} blockOf={ctx.blockOf} section={sectionOf}
             onOpen={() => go("schedule")} onOpenDay={(date) => go("schedule/" + daySlug(date))}

@@ -81,7 +81,7 @@ import { setAway, mergeAway, isAway, awayBySitting } from "../src/engine/attenda
 import GradeView from "../src/engine/GradeView.jsx";
 import GradeDeck from "../src/engine/GradeDeck.jsx";
 import DueDeck, { dueSoon, dismissDue, deadlineOf } from "../src/engine/DueCard.jsx";
-import { NextClassHero, nextClassFacts, timeText, PinnedLinks, WelcomeCard, RequestForm, InstructorProfile } from "../src/engine/HomeCards.jsx";
+import { NextClassHero, nextClassFacts, timeText, PinnedLinks, RequestForm, InstructorProfile } from "../src/engine/HomeCards.jsx";
 import { instructorOf } from "../src/instructors.js";
 import TopNav, { NAV_CLASS, activeFor } from "../src/engine/TopNav.jsx";
 import HornApp from "../src/engine/HornApp.jsx";
@@ -2662,29 +2662,17 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!/never expires/.test(login)) say("the page does not say the code keeps working");
 }
 
-// A welcome at the top of the class page, and a student's own PIN at the right
-// end of the bar. Andrew, 2026-09-20: "how do i add a card to the front page of
-// all students to welcome them to this site?" and "please share a students pin
-// with them on the front page top right 'show pin'."
+// A student's own PIN at the right end of the bar. Andrew, 2026-09-20: "please
+// share a students pin with them on the front page top right 'show pin'."
+//
+// The welcome card was checked here too and came off the page on 2026-09-21:
+// "also, remove the welcome card."
 {
-  const say = (msg) => { console.error("  FAIL  welcome and PIN: " + msg); failedEarly++; };
-  try {
-    const cfgMe = { instructor: { name: "Dr. Ishak", photo: "data:image/png;base64,iVBORw0KGgo=" }, accent: "#333" };
-    const said = renderToString(<WelcomeCard data={{ welcome: "Welcome to the site." }} update={noop} seat={{}} config={cfgMe} />);
-    if (!said.includes("Welcome to the site.")) say("a written welcome does not show");
-    // His face beside his words. Andrew, 2026-09-20: "can you also put my
-    // avatar?"
-    if (!said.includes("<img")) say("his photo is not on the welcome");
-    if (!said.includes("Dr. Ishak")) say("the welcome is not signed");
-    const noPhoto = renderToString(<WelcomeCard data={{ welcome: "Hello." }} update={noop} seat={{}} config={{ instructor: {} }} />);
-    if (noPhoto.includes("<img")) say("a card draws a photo that does not exist");
-    // Nothing written, nothing on the page, so week nine is not still saying hello.
-    if (renderToString(<WelcomeCard data={{}} update={noop} seat={{}} />)) say("an empty welcome still takes a card");
-    // His view offers the box even when there is nothing in it yet.
-    const mine = renderToString(<WelcomeCard data={{}} update={noop} seat={{}} instructor />);
-    if (!mine.includes("<textarea")) say("he has no way to write the welcome");
-  } catch (err) { say("the welcome threw: " + err.message); }
+  const say = (msg) => { console.error("  FAIL  the PIN on the bar: " + msg); failedEarly++; };
+  const home = readFileSync(new URL("../src/engine/HomeCards.jsx", import.meta.url), "utf8");
+  if (/export function WelcomeCard/.test(home)) say("the welcome card is back on the page");
   const app = readFileSync(new URL("../src/engine/ClassApp.jsx", import.meta.url), "utf8");
+  if (/<WelcomeCard/.test(app)) say("the class page still draws a welcome card");
   if (!/\{pinOpen \? "Hide PIN" : "Show PIN"\}/.test(app)) say("there is no Show PIN on the bar");
   if (!/You can use this to log in instead of having an email sent to you\./.test(app)) say("the PIN does not say what it is for");
   // It is the student's own, and only while they are signed in as themselves.
@@ -3882,6 +3870,58 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (/readOnly=\{!!\(seed \|\| it\.feature \|\| it\.gameId\)\}/.test(doc)) say("a game row is read only again");
     if (!/it\.gameId \? \(it\.text \|\| gameOf\(it\.gameId\)\?\.title\)/.test(doc)) say("the game's own title wins over the name written on the day");
     if (/!line\.it\.feature && !line\.it\.gameId\) onSaveItem/.test(doc)) say("typing on a game row is thrown away");
+  }
+}
+
+// The front page, made shorter.
+//
+// Andrew, 2026-09-21: "i want the hero card to be half the height. it's too
+// tall. and then for me, if i don't have a note for students, make it
+// collapsed. also, remove the welcome card. for pinned links, make it
+// collapsed unless i open it and do smoehting with it."
+{
+  const say = (m) => { console.error("  FAIL  the front page: " + m); failedEarly++; };
+  const cfg = { accent: "#333", path: "/comm3", code: "COMM 3", scheduleWeeks: [],
+    meets: [{ label: "", start: "09:15", end: "10:20" }], location: "Vari 133" };
+  const day = { schedule: [{ id: "w1", topic: "Sport as spectacle", dates: ["Sep 21", "Sep 23", "Sep 25"], items: [] }],
+    dayPlans: { "Sep 21": { title: "Same event, different stories" } } };
+  const hero = (extra) => renderToString(<NextClassHero config={cfg} data={day} blockOf={() => null}
+    section="" onOpen={noop} seat={{}} {...extra} />).replace(/<!-- -->/g, "");
+  // Nothing came off the card.
+  {
+    const html = hero({});
+    ["Next class", "Monday, September 21", "Same event, different stories", "Full schedule"].forEach(t => {
+      if (!html.includes(t)) say("the card lost " + JSON.stringify(t)); });
+    // The label is on the line the date is on, and the two ways on share a row.
+    if (/Next class<\/span><\/div>/.test(html)) say("the label is still on a row of its own");
+    if (!/padding:16px/.test(html)) say("the card still carries its old padding");
+    if (/font-size:30px|font-size:26px/.test(html)) say("the day's title is still the old size");
+  }
+  // His note, folded away on a day he has not written one.
+  {
+    const quiet = hero({ instructor: true, update: noop });
+    if (quiet.includes("<textarea")) say("an empty note still takes a box on the card");
+    if (!quiet.includes("Note to students")) say("there is no way to write a note");
+    const written = { ...day, dayPlans: { "Sep 21": { ...day.dayPlans["Sep 21"], studentNote: "Bring the photo." } } };
+    const loud = renderToString(<NextClassHero config={cfg} data={written} blockOf={() => null}
+      section="" onOpen={noop} seat={{}} instructor update={noop} />);
+    if (!loud.includes("<textarea")) say("a note he has written does not open");
+    if (!loud.includes("Bring the photo.")) say("the note he wrote is not in the box");
+  }
+  // The pins are the card. The boxes and the Unpin buttons wait behind the word.
+  {
+    const pins = { pins: [{ id: "p1", title: "The syllabus", url: "https://example.test/s" }] };
+    const mine = renderToString(<PinnedLinks data={pins} update={noop} instructor seat={{}} />);
+    if (!mine.includes("The syllabus")) say("his own pins are not on his page");
+    if (mine.includes("<input")) say("the pin boxes are open before he asks for them");
+    if (mine.includes("Unpin")) say("the Unpin buttons are up before he asks for them");
+    if (!mine.includes("Pinned")) say("there is no way to open the pins");
+    const theirs = renderToString(<PinnedLinks data={pins} update={noop} seat={{}} />);
+    if (!theirs.includes("The syllabus")) say("students cannot see a pinned link");
+    if (theirs.includes("<input")) say("students are offered the pin boxes");
+    // A class with nothing pinned is one line for him and no card for them.
+    if (renderToString(<PinnedLinks data={{}} update={noop} seat={{}} />)) say("an empty pin card still takes room on their page");
+    if (!renderToString(<PinnedLinks data={{}} update={noop} instructor seat={{}} />).includes("Pinned")) say("he cannot pin the first link");
   }
 }
 

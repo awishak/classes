@@ -145,9 +145,24 @@ export function nextClassFacts(config, data, blockOf, section, now = Date.now())
 
 // The note an instructor leaves for the next class, typed on the front page.
 // Saved when the box loses focus, so there is no Save button to forget.
+//
+// Andrew, 2026-09-21: "for me, if i don't have a note for students, make it
+// collapsed." A box for something he has not written is 110px of the card gone
+// on every day he has nothing to say, so on those days it is the label and
+// nothing else until he presses it.
 function NoteEditor({ date, value, update }) {
   const [draft, setDraft] = useState(value);
   const [saved, setSaved] = useState(false);
+  const [open, setOpen] = useState(!!value);
+  if (!open) {
+    return (
+      <button className="ca-focus" onClick={() => setOpen(true)}
+        style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, cursor: "pointer",
+          minHeight: TAP, fontFamily: F, ...small, color: "var(--ca-accent-ink)" }}>
+        Note to students
+      </button>
+    );
+  }
   const save = () => {
     const next = draft.trim();
     if (next === value) return;
@@ -184,10 +199,15 @@ function NoteEditor({ date, value, update }) {
 export function NextClassHero({ config, data, blockOf, section, onOpen, onOpenDay, seat, instructor, update, wide, me, mark }) {
   const facts = nextClassFacts(config, data, blockOf, section);
   // White, like every other card, with the class's own colour around it.
+  // Andrew, 2026-09-21: "i want the hero card to be half the height. it's too
+  // tall." Nothing came off the card. The label moved onto the line with the
+  // date, the title came down from 30 to 22, the padding and the gaps came in,
+  // and the two ways on went side by side instead of one under the other,
+  // which is 48px on its own. About 310px before, about 160px now.
   const frame = {
-    ...seat, padding: wide ? 28 : 20, fontFamily: F, textAlign: "left", width: "100%",
+    ...seat, padding: 16, fontFamily: F, textAlign: "left", width: "100%",
     background: "var(--surface-card)", border: "2px solid var(--ca-accent)",
-    display: "flex", flexDirection: "column", gap: 16,
+    display: "flex", flexDirection: "column", gap: 10,
   };
   if (!facts) {
     return (
@@ -201,7 +221,7 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, onOpenDa
   // the count is the reason to press this one rather than the other.
   const wayOn = (words, press, key) => (
     <button key={key} className="ca-focus" onClick={press}
-      style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: TAP, padding: "0 0 0 12px",
+      style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 150px", minWidth: 0, minHeight: TAP, padding: "0 0 0 12px",
         background: "none", border: "none", borderLeft: "3px solid " + BORDER_STRONG,
         cursor: "pointer", textAlign: "left",
         fontFamily: F, fontSize: 17, fontWeight: 600, color: "var(--ca-accent-ink)" }}>
@@ -226,18 +246,22 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, onOpenDa
   return (
     <section aria-label="Next class" style={frame}>
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <span style={{ ...small, color: TEXT_SECONDARY }}>Next class</span>
-        {facts.title
-          ? <span style={{ ...DISPLAY, fontSize: wide ? 30 : 26, lineHeight: 1.15, letterSpacing: "-0.02em", color: TEXT_PRIMARY, marginTop: 2, textWrap: "balance" }}>{facts.title}</span>
-          : null}
-        <span style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.3, color: TEXT_PRIMARY, marginTop: facts.title ? 10 : 2 }}>
-          {facts.weekday}, {facts.longDate}
-        </span>
-        {facts.time || facts.location ? (
-          <span style={{ ...MONO, fontSize: 15, fontWeight: 500, lineHeight: 1.4, color: TEXT_SECONDARY, marginTop: 4 }}>
-            {[facts.time, facts.location].filter(Boolean).join(" · ")}
+        {/* The label sits on the line the date is on, rather than on a row of
+            its own above it. */}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ ...small, color: TEXT_SECONDARY }}>Next class</span>
+          <span style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3, color: TEXT_PRIMARY }}>
+            {facts.weekday}, {facts.longDate}
           </span>
-        ) : null}
+          {facts.time || facts.location ? (
+            <span style={{ ...MONO, fontSize: 14, fontWeight: 500, lineHeight: 1.4, color: TEXT_SECONDARY }}>
+              {[facts.time, facts.location].filter(Boolean).join(" · ")}
+            </span>
+          ) : null}
+        </div>
+        {facts.title
+          ? <span style={{ ...DISPLAY, fontSize: wide ? 22 : 20, lineHeight: 1.2, letterSpacing: "-0.02em", color: TEXT_PRIMARY, marginTop: 4, textWrap: "balance" }}>{facts.title}</span>
+          : null}
       </div>
 
       {instructor && update ? (
@@ -250,7 +274,7 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, onOpenDa
 
       {attendance}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         {facts.readings.length
           ? wayOn(readingWords, () => (onOpenDay ? onOpenDay(facts.date) : onOpen && onOpen()), "readings")
           : null}
@@ -274,70 +298,16 @@ export function owedStyle(asg) {
 
 // ─── pinned links ───
 
-// A welcome, at the top of the class's page.
-//
-// Andrew, 2026-09-20: "how do i add a card to the front page of all students
-// to welcome them to this site?" There was no way: the front page carried the
-// next class, the cards and whatever he had pinned, and none of those is a
-// place to say hello to a class that has never seen the site before.
-//
-// So: a card he writes in place, like the note to students on the next class
-// card. It is the first thing on the page while it has words in it, and it is
-// not there at all when it does not, so a class in week nine is not still
-// being welcomed.
-export function WelcomeCard({ data, update, instructor, seat, accent, config }) {
-  const saved = String(data?.welcome || "").trim();
-  const [draft, setDraft] = useState(saved);
-  const [open, setOpen] = useState(false);
-  if (!saved && !instructor) return null;
-  const save = () => {
-    const next = draft.trim();
-    setOpen(false);
-    if (next === saved) return;
-    update(prev => ({ ...prev, welcome: next }));
-  };
-  const frame = { ...seat, padding: 20, fontFamily: F, textAlign: "left", width: "100%",
-    background: "var(--surface-card)", display: "flex", flexDirection: "column", gap: 10 };
-  if (instructor && (open || !saved)) {
-    return (
-      <section aria-label="Welcome" style={frame}>
-        <span style={small}>Welcome card</span>
-        <textarea value={draft} onChange={e => setDraft(e.target.value)} onBlur={save} rows={3}
-          placeholder="Welcome the class to the site. Empty means no card at all."
-          style={{ fontFamily: F, fontSize: 16, padding: 12, borderRadius: 10, border: "1px solid " + BORDER_STRONG,
-            background: "var(--surface-card)", color: TEXT_PRIMARY, lineHeight: 1.5, resize: "vertical" }} />
-        <span style={{ fontSize: 13, color: TEXT_MUTED }}>Every student sees this at the top of the class page.</span>
-      </section>
-    );
-  }
-  // His face beside his words. Andrew, 2026-09-20: "on that front page
-  // welcoming them to the class, can you also put my avatar?" It is the photo
-  // from his own card, so there is one picture of him to keep up to date.
-  const me = config?.instructor || {};
-  return (
-    <section aria-label="Welcome" style={frame}>
-      <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-        {me.photo ? <AvatarPreview value={me.photo} accent={accent || "var(--ca-accent)"} size={56} /> : null}
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 17, lineHeight: 1.55, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{saved}</div>
-          {me.name ? <div style={{ ...small, marginTop: 8 }}>{me.name}</div> : null}
-        </div>
-      </div>
-      {instructor ? (
-        <button className="ca-focus" onClick={() => { setDraft(saved); setOpen(true); }}
-          style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, cursor: "pointer",
-            fontFamily: F, fontSize: 15, fontWeight: 600, color: accent || "var(--ca-accent-ink)", minHeight: TAP }}>
-          Edit the welcome
-        </button>
-      ) : null}
-    </section>
-  );
-}
+// The welcome card came off on 2026-09-21. Andrew: "also, remove the welcome
+// card." It was a card he wrote in place at the top of the page, with his face
+// and his name under it. `data.welcome` is still in the store and nothing reads
+// it, so the words are not lost if the card ever comes back.
 
 export function PinnedLinks({ data, update, instructor, seat }) {
   const pins = data?.pins || [];
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
+  const [open, setOpen] = useState(false);
   if (!pins.length && !instructor) return null;
   const add = () => {
     if (!url.trim()) return;
@@ -348,14 +318,20 @@ export function PinnedLinks({ data, update, instructor, seat }) {
   const input = { fontFamily: F, fontSize: 16, minHeight: TAP, padding: "0 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: "var(--surface-card)", color: TEXT_PRIMARY, minWidth: 0 };
   return (
     <section aria-label="Pinned" style={{ ...seat, padding: 16, display: "flex", flexDirection: "column", gap: 4 }}>
-      <span style={small}>Pinned</span>
+      {instructor ? (
+        <button className="ca-focus" onClick={() => setOpen(!open)} aria-expanded={open}
+          style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, cursor: "pointer",
+            minHeight: pins.length ? 0 : TAP, fontFamily: F, ...small, color: "var(--ca-accent-ink)" }}>
+          Pinned
+        </button>
+      ) : <span style={small}>Pinned</span>}
       {pins.map(p => (
         <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <a className="ca-focus" href={p.url} target="_blank" rel="noreferrer"
             style={{ flex: 1, minWidth: 0, minHeight: TAP, display: "flex", alignItems: "center", fontSize: 17, fontWeight: 600, color: "var(--ca-accent-ink)", textDecoration: "none", overflowWrap: "anywhere" }}>
             {p.title || p.url}
           </a>
-          {instructor ? (
+          {instructor && open ? (
             <button className="ca-focus" onClick={() => remove(p.id)}
               style={{ flex: "none", minHeight: TAP, padding: "0 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: "var(--surface-card)", color: TEXT_SECONDARY, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
               Unpin
@@ -363,7 +339,7 @@ export function PinnedLinks({ data, update, instructor, seat }) {
           ) : null}
         </div>
       ))}
-      {instructor ? (
+      {instructor && open ? (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: pins.length ? 8 : 4 }}>
           <input aria-label="Name" value={title} onChange={e => setTitle(e.target.value)} placeholder="Name" style={{ ...input, flex: "1 1 160px" }} />
           <input aria-label="Link" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://" style={{ ...input, flex: "2 1 220px" }}

@@ -212,6 +212,20 @@ The home is a grid of cards with the full page beside it on a laptop and a
 full-screen takeover on a phone. The order is Challenges, Messages, Class,
 Games, under the next-class hero and the pinned links.
 
+**The front page is shorter, 2026-09-21.** Andrew: "i want the hero card to be
+half the height. it's too tall. and then for me, if i don't have a note for
+students, make it collapsed. also, remove the welcome card. for pinned links,
+make it collapsed unless i open it and do smoehting with it." Nothing came off
+the hero: the label moved onto the line with the date, the title came down from
+30 to 22, the padding and the gaps came in, and the two ways on went side by
+side, which is 48px on its own. About 310px before, about 160 to 190 now,
+depending on whether the day takes an attendance box. On a day he has written no
+note, the box is the label and nothing else until he presses it. The pins are
+the card, and the two boxes and the Unpin buttons wait behind the word Pinned;
+students see what they always saw. The welcome card is gone, component and all.
+`data.welcome` is still in the store and nothing reads it, so the words are
+there if it ever comes back.
+
 **The next class card is the day and two ways on.** Next class, the day's
 title, the weekday and the date, the time and the room, my note to the class,
 then the readings counted as a link and the full schedule. The count opens the
