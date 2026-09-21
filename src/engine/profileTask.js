@@ -13,7 +13,7 @@
 export const PROFILE_TASK_ID = "card";
 
 // Every field on the student's form. All of them, at his call.
-export const PROFILE_FIELDS = ["email", "avatar", "about", "year", "hometown", "motto", "goals", "priority"];
+export const PROFILE_FIELDS = ["email", "avatar", "about", "year", "hometown", "motto", "goals", "priority", "strength"];
 
 export const profileComplete = (profile) => PROFILE_FIELDS.every(k => String(profile?.[k] || "").trim());
 

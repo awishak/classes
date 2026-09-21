@@ -2411,7 +2411,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const say = (m) => { console.error("  FAIL  card challenge: " + m); failedEarly++; };
     const N = "Sam Student";
     const pcfg = { ...cfg, path: "/comm118", profileTask: { due: "Sep 27" }, assignments: [{ id: "ex1", title: "Exercise 1", due: "Oct 4", dueTime: "11:59 PM", weight: 10 }] };
-    const full = { email: "s@scu.edu", avatar: "data:image/jpeg;base64,x", about: "Me", year: "Junior", hometown: "Reno", motto: "Go", goals: "Learn", priority: "Family" };
+    const full = { email: "s@scu.edu", avatar: "data:image/jpeg;base64,x", about: "Me", year: "Junior", hometown: "Reno", motto: "Go", goals: "Learn", priority: "Family", strength: "Resilience" };
     const short = { profiles: { [N]: { ...full, motto: "" } } };
     const done = { profiles: { [N]: full } };
     const now = new Date(2026, 8, 22, 12).getTime();
@@ -2527,7 +2527,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     { id: "card", title: "Please tell me about yourself", due: "Sep 22", weight: 0, completes: "profile" },
     { id: "inclass", title: "In-Class", due: "Ongoing", weight: 25 },
   ];
-  const full = { email: "a@b.c", avatar: "x", about: "x", year: "Junior", hometown: "x", motto: "x", goals: "x", priority: "x" };
+  const full = { email: "a@b.c", avatar: "x", about: "x", year: "Junior", hometown: "x", motto: "x", goals: "x", priority: "x", strength: "x" };
   const store = { students: roll, assignments: asgs,
     profiles: { "Ada Lovelace": full, "Pepe LeFritz": full },
     assignmentLog: { ex1: {
@@ -2702,7 +2702,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     // His cards, in his order: hello, the name, the photo, and the rest.
     if (!html.includes("Welcome to COMM 3")) say("the first card does not welcome them to the class");
     if (!html.includes("d like to know a little bit about you")) say("the first card does not say what it is for");
-    if (!/1<!-- --> of <!-- -->7|1 of 7/.test(html)) say("the deck is not seven cards");
+    if (!/1<!-- --> of <!-- -->8|1 of 8/.test(html)) say("the deck is not eight cards without a PIN");
+    const withPin = renderToString(<WelcomeDeck config={{ code: "COMM 3", accent: "#7c3aed" }} name={N} profile={{}} update={noop} onDone={noop} pin="123456" />);
+    if (!/1<!-- --> of <!-- -->9|1 of 9/.test(withPin)) say("the PIN card does not join the deck");
+    const deckSrc = readFileSync(new URL("../src/engine/WelcomeDeck.jsx", import.meta.url), "utf8");
+    if (!/For future sessions, you can log in using this PIN/.test(deckSrc)) say("the PIN card does not say what the PIN is for");
+    if (!/what you prefer to go by/.test(deckSrc)) say("the name card still says what they actually go by");
+    if (!/biggest strength as a student/.test(deckSrc)) say("the deck does not ask for their strength");
     if (!html.includes("Let&#x27;s go") && !html.includes("Let's go")) say("there is nothing to press on the first card");
     if (html.includes("Welcome to COMM 3") && html.includes("Choose a photo")) say("every card is on the screen at once");
   } catch (err) { say("the deck threw: " + err.message); }

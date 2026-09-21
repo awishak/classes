@@ -167,7 +167,7 @@ function FieldRow({ title, children }) {
 
 function ProfileForm({ student, initial, update, accent }) {
   const [f, setF] = useState({
-    firstName: initial.firstName || "", lastName: initial.lastName || "",
+    firstName: initial.firstName || "", lastName: initial.lastName || "", strength: initial.strength || "",
     email: initial.email || "", avatar: initial.avatar || "", about: initial.about || "",
     year: initial.year || "", hometown: initial.hometown || "", motto: initial.motto || "",
     goals: initial.goals || "", priority: initial.priority || "",
@@ -243,6 +243,17 @@ function ProfileForm({ student, initial, update, accent }) {
       <FieldRow title="Goals for the class (this is only for your instructor)">
         <textarea value={f.goals} onChange={e => set("goals", e.target.value)}
           style={{ ...inputStyle, minHeight: 80, lineHeight: 1.5, resize: "vertical" }} />
+      </FieldRow>
+
+      {/* Andrew's question, in his words. A student who can name what they are
+          good at is a student who can be asked to do it. */}
+      <FieldRow title="What would you say is your biggest strength as a student?">
+        <input value={f.strength} onChange={e => set("strength", e.target.value)}
+          placeholder="A characteristic, an activity, or something else" style={inputStyle} />
+        <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 6, lineHeight: 1.45 }}>
+          This could be a characteristic (resilience, seeing connections) or a strongest activity (writing,
+          creative work) or something else.
+        </div>
       </FieldRow>
 
       <FieldRow title="What matters to you most? (this is only for your instructor)">

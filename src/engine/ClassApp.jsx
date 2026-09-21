@@ -968,7 +968,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
         <ThemeStyle theme={theme} />
         <style>{CSS + accentCSS(a, config.accentDark)}</style>
         <WelcomeDeck config={config} name={seenAs} profile={(data.profiles || {})[seenAs]} update={write}
-          onDone={() => setWelcomeDone(true)} />
+          pin={ownCode} onDone={() => setWelcomeDone(true)} />
       </div>
     );
   }

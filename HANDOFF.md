@@ -655,9 +655,12 @@ twice, because one edge can serve the old bundle briefly.
 
 ## The first time a student signs in
 
-`src/engine/WelcomeDeck.jsx`. Seven cards before the site, one question each,
-in the order Andrew asked for them: welcome, the name they go by, a photo, year
-and hometown, about and motto, goals and what matters most, and thank you. It
+`src/engine/WelcomeDeck.jsx`. Nine cards before the site, one question each, in
+the order Andrew asked for them: welcome, the name they prefer, a photo, year
+and hometown, about and motto, goals and what matters most, their biggest
+strength as a student, their PIN with what it is for, and thank you. The PIN
+card is there only when the app knows the code, because a student who arrived
+by an emailed link has never seen the one that works without email. It
 is the same profile the first challenge of the term reads, asked rather than
 laid out as a form, because a form on a first visit is a thing to close.
 

@@ -50,7 +50,7 @@ export const markWelcomed = (data, name) => ({
   welcomeSeen: { ...(data?.welcomeSeen || {}), [name]: Date.now() },
 });
 
-export default function WelcomeDeck({ config, name, profile, update, onDone }) {
+export default function WelcomeDeck({ config, name, profile, update, onDone, pin }) {
   const [at, setAt] = useState(0);
   const a = config.accent;
   const p = profile || {};
@@ -75,7 +75,7 @@ export default function WelcomeDeck({ config, name, profile, update, onDone }) {
     {
       key: "name",
       title: "I have your name as " + name + ".",
-      say: "I'd love to know what you actually go by. Fill this in and it is what the whole class sees.",
+      say: "I'd love to know what you prefer to go by. Fill this in and it is what the whole class sees.",
       body: (
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <label style={{ flex: 1, minWidth: 140 }}>
@@ -164,6 +164,35 @@ export default function WelcomeDeck({ config, name, profile, update, onDone }) {
         </div>
       ),
     },
+    {
+      key: "strength",
+      title: "What would you say is your biggest strength as a student?",
+      say: "This could be a characteristic (resilience, seeing connections) or a strongest activity (writing, creative work) or something else.",
+      body: (
+        <label style={{ display: "block" }}>
+          <span style={label}>Your biggest strength</span>
+          <input value={p.strength || ""} onChange={e => set("strength", e.target.value)} style={{ ...input, marginTop: 6 }} />
+        </label>
+      ),
+    },
+    // His words, and the reason the card exists: a student who arrived by an
+    // emailed link has never seen the code that works without one.
+    ...(pin ? [{
+      key: "pin",
+      title: "One more thing that will be helpful.",
+      // Andrew's own sentence, kept as he wrote it: the rule is a guardrail on
+      // Claude's copy, not a correction of the author's.
+      say: "If you forget it, you can still log in by having an email sent to you. Either way works.",   // voice-ok
+      body: (
+        <div>
+          <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.55 }}>
+            For future sessions, you can log in using this PIN:
+          </div>
+          <div style={{ fontFamily: TOKENS.FONT.label, fontSize: 30, fontWeight: 700, letterSpacing: ".2em",
+            color: TEXT_PRIMARY, marginTop: 6 }}>{pin}</div>
+        </div>
+      ),
+    }] : []),
     {
       key: "thanks",
       title: "Thank you!",

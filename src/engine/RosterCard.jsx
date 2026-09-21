@@ -239,6 +239,7 @@ function StudentPage({ config, data, name, email, code, onBack, update }) {
 
           <Field title="About me" value={p.about} />
           <Field title="Motto" value={p.motto} />
+          <Field title="Biggest strength as a student" value={p.strength} />
           <Field title="Goals for the class" value={p.goals} />
           <Field title="What matters most" value={p.priority} />
           <Field title="Email" value={email || p.email} />
@@ -307,6 +308,7 @@ function StudentRoster({ config, data, name }) {
             <div style={{ fontSize: 15, color: TEXT_MUTED }}>{[p.year, p.hometown].filter(Boolean).join(" · ")}</div>
             <Field title="About me" value={p.about} />
             <Field title="Motto" value={p.motto} />
+            <Field title="Biggest strength as a student" value={p.strength} />
           </div>
         </div>
       </div>
