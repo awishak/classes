@@ -133,8 +133,8 @@ export default function WelcomeDeck({ config, name, profile, update, onDone, pin
     },
     {
       key: "about",
-      title: "Tell me something about you.",
-      say: "Anything you want the class to know. A motto is a good way in, if you keep a motto.",
+      title: "Tell the class something about you.",
+      say: "No rules here. And if you have a favorite motto, verse, or lyric, include that too.",
       body: (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <label>
