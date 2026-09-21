@@ -2084,7 +2084,6 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
   const [foldedSecs, setFoldedSecs] = useState(() => new Set());
   const [slidesOn, setSlidesOnState] = useState(readSlidesOn);
   // Teach: the day as a running order, one thing at a time.
-  const [teach, setTeach] = useState(false);
   const setSlidesOn = (on) => { setSlidesOnState(on); writeSlidesOn(on); };
   const [overRow, setOverRow] = useState(null);
 
@@ -2226,15 +2225,27 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
     const map = {};
     let n = 0;
     docSections.forEach(([k]) => {
-      normSlot(docSlotItems[k]).items.forEach(it => {
+      const items = normSlot(docSlotItems[k]).items;
+      items.forEach((it, i) => {
+        // A note is an indented line under the row above it, which is the
+        // same rule the document draws by. Notes are not rows of their own.
+        if ((it.depth || 0) > 0 && flatRows.length) {
+          const b = it.blockId ? blockOf(it.blockId) : null;
+          const said2 = (it.feature || (b ? b.title : it.claim || it.text) || "").trim();
+          if (said2) flatRows[flatRows.length - 1].notes.push(said2);
+          return;
+        }
         map[it.id] = ++n;
         const b = it.blockId ? blockOf(it.blockId) : null;
         const words = (b ? b.headline || b.title : it.claim || it.text) || "";
+        // What this row puts on the screen, as the payload rather than as the
+        // press, so the rail can draw the slide before anybody presses it.
+        const payload = words ? (b?.url
+          ? { ...castFromLink({ label: b.title, url: b.url }), title: words, label: words }
+          : { type: "quote", tag: docLabelOf[k], title: words, label: words }) : null;
         const cast = it.board && onCastBoard ? () => { said(it.id); onCastBoard(it.board, it.index); }
-          : words ? () => { said(it.id); castNow(b?.url
-            ? { ...castFromLink({ label: b.title, url: b.url }), title: words, label: words }
-            : { type: "quote", tag: docLabelOf[k], title: words, label: words }); } : null;
-        flatRows.push({ id: it.id, blockId: it.blockId, item: it, where: docLabelOf[k], cast });
+          : payload ? () => { said(it.id); castNow(payload); } : null;
+        flatRows.push({ id: it.id, blockId: it.blockId, item: it, where: docLabelOf[k], cast, payload, notes: [] });
       });
     });
     return map;
@@ -2371,7 +2382,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
         onDeleteSection={onDeleteSection} onMoveSection={onMoveSection} onEdit={onEdit} drop={drop}
         onMoveItem={onMoveItem} onConvertRow={onConvertRow} onLinkRow={onLinkRow} library={blocks2}
         onSetSlotTime={onSetSlotTime} onPlaceSection={onPlaceSection} onSplitSection={onSplitSection} classMinutes={classMinutes}
-        onOpenTemplates={onOpenTemplates} onOpenHistory={onOpenHistory} teach={teach} onTeach={setTeach}
+        onOpenTemplates={onOpenTemplates} onOpenHistory={onOpenHistory}
         onSetSlotLook={onSetSlotLook} footTools={footTools} onMerge={sectionList.length > 1 ? () => setMerging(true) : null}
         // A link put up from a line goes up the way the room screen shows any
         // link: the page itself where the site allows it, the reader where not.
@@ -3279,7 +3290,7 @@ export function ShortcutSheet({ onClose }) {
 // Black. Everything else is one press away behind the three dots: the screen
 // in its own window, how a link is shown, the ground, the transitions, and
 // putting something back up.
-export function Monitor({ config, live, cast, push, recent, onRecast, info, onNext, nextWords, nextNum, onPrev, hasPrev, ground, onSetGround }) {
+export function Monitor({ config, live, cast, push, recent, onRecast, info, onNext, nextWords, nextNum, onPrev, hasPrev, ground, onSetGround, upNext, classHref }) {
   const [anims, setAnims] = useState(false);
   const [again, setAgain] = useState(false);
   const liveUrl = live?.cast?.openUrl || live?.cast?.url || "";
@@ -3354,13 +3365,31 @@ export function Monitor({ config, live, cast, push, recent, onRecast, info, onNe
         </DropMenu>
       </div>
 
-      {/* What Next will put up, said before you press it. */}
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "0 4px" }}>
-        <span style={{ flex: "none", fontFamily: MONO, fontSize: 13, color: TEXT_MUTED }}>up next</span>
-        <span style={{ minWidth: 0, fontSize: 15, color: nextWords ? TEXT_SECONDARY : TEXT_MUTED,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {nextWords ? (nextNum ? nextNum + " · " : "") + nextWords : "everything on the day has been up"}
-        </span>
+      {/* What Next will put up, drawn rather than described. Andrew,
+          2026-09-20: "give me a view of like what the next slide is with all
+          the notes for it." The words alone said what was coming; the slide
+          says what the room will see, and the notes are what I say over it. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0 4px" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <span style={{ flex: "none", fontFamily: MONO, fontSize: 13, color: TEXT_MUTED }}>up next</span>
+          <span style={{ minWidth: 0, fontSize: 15, color: nextWords ? TEXT_SECONDARY : TEXT_MUTED,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {nextWords ? (nextNum ? nextNum + " · " : "") + nextWords : "everything on the day has been up"}
+          </span>
+        </div>
+        {upNext?.payload ? (
+          <button className="dash-focus" onClick={onNext} title="Put this up (Next)"
+            style={{ display: "block", width: "100%", padding: 0, border: "none", background: "none", cursor: "pointer", textAlign: "left" }}>
+            <Slide cast={upNext.payload} config={{ path: classHref || "" }} ground={ground} label={nextWords} />
+          </button>
+        ) : null}
+        {(upNext?.notes || []).length ? (
+          <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
+            {upNext.notes.map((n, i) => (
+              <li key={i} style={{ fontSize: 14, lineHeight: 1.45, color: TEXT_SECONDARY }}>{n}</li>
+            ))}
+          </ul>
+        ) : null}
       </div>
 
       {again && recent.length ? (
@@ -3652,8 +3681,9 @@ const COL_MAX = { material: 760, live: 620 };
 // Now the day gets everything that is not the rail, and the rail holds the
 // screen and the drawer together, in that order, because finding a thing and
 // putting it up are the same motion.
-const gridFor = (cols, railOpen, teaching) =>
-  (railOpen && !teaching ? "minmax(0,1fr) 16px " + cols.live + "px" : "minmax(0,1fr)");
+// The day, a seam, and the rail. The rail is on the screen in both modes: in
+// Plan it is the drawer, in Teach the picture sits above it.
+const gridFor = (cols) => "minmax(0,1fr) 16px " + cols.live + "px";
 
 export default function Dashboard({ config, daySlug = "" }) {
   const [data, update] = useClassData(config.storageKey);
@@ -3686,9 +3716,32 @@ export default function Dashboard({ config, daySlug = "" }) {
   // Putting the open thing on a day: "" | "add" | "move".
   const [placing, setPlacing] = useState("");
   const [colorsOpen, setColorsOpen] = useState(false);
-  // Doc or Slides: two ways to read the same day.
-  const [view, setViewState] = useState(() => { try { return localStorage.getItem("dash-view-v1") === "slides" ? "slides" : "doc"; } catch { return "doc"; } });
-  const setView = (v) => { setViewState(v); try { localStorage.setItem("dash-view-v1", v); } catch { /* private window */ } };
+  // Two modes, and each one opens on the view it is for. Andrew, 2026-09-20:
+  // "basically i need a planning view (doc and drawer) and a teaching view:
+  // slides or doc, and live image, and drawer underneath", and "when it's in
+  // plan mode, start in doc, but let me toggle to slides. and the opposite for
+  // teach."
+  //
+  // PLAN is the day as a document with the drawer beside it. Nothing is on the
+  // screen while the day is being built, so there is no picture of it.
+  // TEACH adds the room: the live picture at the top of the rail, what is next
+  // under it with its notes, and the drawer under that.
+  //
+  // It always opens in Plan. Both views are reachable from either mode, so the
+  // mode decides what starts and never what is allowed.
+  const [mode, setModeState] = useState("plan");
+  const [views, setViews] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("dash-views-v2")) || { plan: "doc", teach: "slides" }; }
+    catch { return { plan: "doc", teach: "slides" }; }
+  });
+  const teaching = mode === "teach";
+  const view = views[mode] === "slides" ? "slides" : "doc";
+  const setView = (v) => {
+    const next = { ...views, [mode]: v };
+    setViews(next);
+    try { localStorage.setItem("dash-views-v2", JSON.stringify(next)); } catch { /* private window */ }
+  };
+  const setMode = (m) => setModeState(m === "teach" ? "teach" : "plan");
   // Which sitting is in the room. The clock says, unless the bar says
   // otherwise, and what the bar says holds for a few hours so the Horn board
   // opening over another page agrees with the dashboard.
@@ -3825,7 +3878,9 @@ export default function Dashboard({ config, daySlug = "" }) {
       const cur = liveRef.current?.cast;
 
       if (mod && (e.key === "k" || e.key === "K")) { e.preventDefault(); setKeysOpen(false); setCmdOpen(v => !v); return; }
-      if (mod && (e.key === "e" || e.key === "E")) { e.preventDefault(); setFocus(v => !v); return; }
+      // The two modes, on one key. It used to hide the rail, which is the
+      // opposite of what teaching wants.
+      if (mod && (e.key === "e" || e.key === "E")) { e.preventDefault(); setModeState(m => m === "teach" ? "plan" : "teach"); return; }
       // The rails, by number. 1-4 is the prep side, 5-9 the live side, in the
       // order the tabs are drawn, so the number IS the tab I can see.
       if (!typing && !mod && /^[1-9]$/.test(e.key)) {
@@ -3834,7 +3889,6 @@ export default function Dashboard({ config, daySlug = "" }) {
         const m = n - MATERIAL.length;
         if (m < LIVE_RAIL.length) { e.preventDefault(); pickRoom(LIVE_RAIL[m]); return; }
       }
-      if (!typing && !mod && e.key === "\\") { e.preventDefault(); toggleRail(); return; }
       if (mod && e.key === "/") { e.preventDefault(); setCmdOpen(false); setKeysOpen(v => !v); return; }
       if (mod && (e.key === "b" || e.key === "B")) {
         e.preventDefault();
@@ -3874,12 +3928,8 @@ export default function Dashboard({ config, daySlug = "" }) {
   const LKEY = "dash:rails";
   const [prep, setPrep] = useState("ideas");
   const [room, setRoom] = useState("questions");
-  const [railOpen, setRailOpen] = useState(true);
   const [cols, setCols] = useState(COL);
   const [dense, setDense] = useState(false);
-  const [focus, setFocus] = useState(false);
-  const focusRef = useRef(false);
-  focusRef.current = focus;
 
   // The header is pinned, and the rails stick under it. Its height is not a
   // constant — it wraps on a narrow window — so a guessed offset put the rail
@@ -3900,7 +3950,6 @@ export default function Dashboard({ config, daySlug = "" }) {
       if (!v) return;
       if (MATERIAL.includes(v.prep)) setPrep(v.prep);
       if (LIVE_RAIL.includes(v.room)) setRoom(v.room);
-      if (typeof v.railOpen === "boolean") setRailOpen(v.railOpen);
       if (v.cols && typeof v.cols.material === "number" && typeof v.cols.live === "number") setCols(v.cols);
       if (typeof v.dense === "boolean") setDense(v.dense);
       if (typeof v.dragKeeps === "boolean") setDragKeeps(v.dragKeeps);
@@ -3910,19 +3959,18 @@ export default function Dashboard({ config, daySlug = "" }) {
   // on the first render, so the pickers read the current values off a ref
   // instead of off that closure. Without it, pressing 1 saved the right rail
   // back to whatever tab it had when the page loaded.
-  const railRef = useRef({ prep: "ideas", room: "questions", railOpen: true, dense: false, cols: COL, dragKeeps: true });
-  railRef.current = { prep, room, railOpen, dense, cols, dragKeeps };
+  const railRef = useRef({ prep: "ideas", room: "questions", dense: false, cols: COL, dragKeeps: true });
+  railRef.current = { prep, room, dense, cols, dragKeeps };
   const saveRails = useCallback((patch) => {
     const v = { ...railRef.current, ...patch };
     railRef.current = v;
     if (v.prep !== prep) setPrep(v.prep);
     if (v.room !== room) setRoom(v.room);
-    if (v.railOpen !== railOpen) setRailOpen(v.railOpen);
     if (v.dense !== dense) setDense(v.dense);
     if (v.cols !== cols) setCols(v.cols);
     if (v.dragKeeps !== dragKeeps) setDragKeeps(v.dragKeeps);
     try { localStorage.setItem(LKEY, JSON.stringify(v)); } catch { /* private mode */ }
-  }, [LKEY, prep, room, railOpen, dense, cols, dragKeeps]);
+  }, [LKEY, prep, room, dense, cols, dragKeeps]);
   const railSave = useRef(saveRails);
   railSave.current = saveRails;
   // Dragging a seam. The width is written straight onto the grid while the
@@ -3947,8 +3995,7 @@ export default function Dashboard({ config, daySlug = "" }) {
       const w = Math.max(COL_MIN[d.which], Math.min(COL_MAX[d.which], d.from + delta));
       d.next = w;
       const el = stageRef.current;
-      if (el) el.style.gridTemplateColumns = gridFor({ ...railRef.current.cols, [d.which]: w },
-        railRef.current.railOpen, focusRef.current);
+      if (el) el.style.gridTemplateColumns = gridFor({ ...railRef.current.cols, [d.which]: w });
     };
     const up = () => {
       const d = dragCol.current;
@@ -3975,9 +4022,8 @@ export default function Dashboard({ config, daySlug = "" }) {
     };
   }, []);
 
-  const pickPrep = (id) => railSave.current({ prep: id, railOpen: true });
+  const pickPrep = (id) => railSave.current({ prep: id });
   const pickRoom = (id) => railSave.current({ room: id });
-  const toggleRail = () => railSave.current({ railOpen: !railRef.current.railOpen });
   const setDenseAnd = (d) => railSave.current({ dense: d });
 
   // ─── writes ───
@@ -4057,13 +4103,9 @@ export default function Dashboard({ config, daySlug = "" }) {
     return { ...d, slots };
   }, "adding to the day plan");
   // Open a row of the day for editing. The editor is the drawer, and the drawer
-  // is in the rail, so a hidden rail or teaching mode meant Edit opened an
-  // editor nobody could see. Editing brings the rail back.
-  const editPicked = (p) => {
-    setPicked(p);
-    if (!railRef.current.railOpen) toggleRail();
-    setFocus(false);
-  };
+  // is in the rail, which is on the screen in both modes now, so Edit has
+  // nothing to reopen.
+  const editPicked = (p) => setPicked(p);
 
   // A note, indented under the row you right-clicked, and opened for typing.
   //
@@ -5107,6 +5149,16 @@ export default function Dashboard({ config, daySlug = "" }) {
               <button className="dash-focus dash-bar dash-plain" onClick={() => setTermOpen("map")}
                 title="The quarter on one screen">Map</button>
               <span style={{ flex: "1 1 auto" }} />
+              {/* What this screen is for right now. Plan opens on the doc and
+                  has the drawer beside it; Teach opens on the slides and puts
+                  the room in the rail. Either view is reachable from either
+                  mode, so the mode decides what starts, not what is allowed. */}
+              <span className="dash-views" role="group" aria-label="Plan or teach">
+                {[["plan", "Plan"], ["teach", "Teach"]].map(([id, word]) => (
+                  <button key={id} className="dash-focus" aria-pressed={mode === id} data-on={mode === id ? "1" : "0"}
+                    onClick={() => setMode(id)}>{word}</button>
+                ))}
+              </span>
               <span className="dash-views" role="group" aria-label="Choose view">
                 {[["doc", "Doc"], ["slides", "Slides"]].map(([id, word]) => (
                   <button key={id} className="dash-focus" aria-pressed={view === id} data-on={view === id ? "1" : "0"}
@@ -5138,8 +5190,8 @@ export default function Dashboard({ config, daySlug = "" }) {
           } />
       </div>
 
-      <main ref={stageRef} className="dash-stage" data-rail={railOpen ? "open" : "shut"} data-teach={focus ? "on" : "off"}
-        style={{ gridTemplateColumns: gridFor(cols, railOpen, focus),
+      <main ref={stageRef} className="dash-stage" data-rail="open" data-teach={teaching ? "on" : "off"}
+        style={{ gridTemplateColumns: gridFor(cols),
           "--mat": cols.material + "px", "--live": cols.live + "px" }}>
         <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
           {/* The column no longer needs naming. The day's own headline is the
@@ -5169,16 +5221,19 @@ export default function Dashboard({ config, daySlug = "" }) {
             should be sitting on the screen all lesson. */}
         <Rail side="Live" className="dash-room" tabs={[]}
           active={room} onPick={pickRoom} accent={config.accent}
-          head={
+          head={teaching ? (
             <Monitor config={config} live={live} cast={cast} push={push} recent={recent} onRecast={castNow}
               onNext={castNext} nextWords={upNextWords} nextNum={nextNum}
-              onPrev={castPrev} hasPrev={hasPrev}
+              onPrev={castPrev} hasPrev={hasPrev} upNext={upNextRow} classHref={config.path}
               ground={data?.roomGround} onSetGround={(gr) => update(prev => ({ ...prev, roomGround: gr }))}
               info={picked ? (
                 <BlockInfo block={picked.blockId ? blockOf(picked.blockId) : null} item={picked.item}
                   where={picked.where} accent={config.accent} onClose={() => setPicked(null)} />
               ) : null} />
-          }
+          ) : (picked ? (
+            <BlockInfo block={picked.blockId ? blockOf(picked.blockId) : null} item={picked.item}
+              where={picked.where} accent={config.accent} onClose={() => setPicked(null)} />
+          ) : null)}
           under={
             /* The drawer, directly under the screen. Not a tab, because
                finding the next thing is not a mode you switch into — it is

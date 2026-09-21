@@ -259,80 +259,6 @@ function Pop({ pop, list, onPick }) {
   );
 }
 
-// TEACH. The same day, one thing at a time: where you are, the words and the
-// notes under them to read from, the slide the room sees, and what is next.
-// Space or → goes forward and puts the next slide up; ← goes back; Escape
-// leaves. It is the document read out, so what is planned is what is taught.
-function TeachView({ steps, liveLabel, dismiss, classHref, onExit, ground }) {
-  const startAt = () => {
-    const live = steps.findIndex(s => s.label && s.label === liveLabel);
-    if (live >= 0) return live;
-    const next = steps.findIndex(s => s.next);
-    return next >= 0 ? next : 0;
-  };
-  const [idx, setIdx] = useState(startAt);
-  const at = Math.min(idx, Math.max(0, steps.length - 1));
-  const cur = steps[at];
-  const go = (i) => {
-    const j = Math.max(0, Math.min(steps.length - 1, i));
-    setIdx(j);
-    if (steps[j] && j !== at) steps[j].go();
-  };
-  useEffect(() => {
-    const onKey = (e) => {
-      const t = e.target;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if ([" ", "ArrowRight", "ArrowDown", "PageDown"].includes(e.key)) { e.preventDefault(); e.stopImmediatePropagation(); go(at + 1); }
-      else if (["ArrowLeft", "ArrowUp", "PageUp"].includes(e.key)) { e.preventDefault(); e.stopImmediatePropagation(); go(at - 1); }
-      else if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); onExit(); }
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  });
-  if (!cur) return <div className="teach-empty">Nothing on this day to teach yet.</div>;
-  const live = !!cur.label && liveLabel === cur.label;
-  const upNext = steps.slice(at + 1, at + 4);
-  return (
-    <div className="teach">
-      <div className="teach-top">
-        <span className="teach-where">{cur.section}{cur.time ? " · " + cur.time + " min" : ""}</span>
-        <span className="teach-count">{at + 1} of {steps.length}</span>
-      </div>
-      <div className="teach-main">
-        <div className="teach-words">
-          <div className={"teach-title" + (cur.kind === "section" ? " is-section" : "")}>{cur.title}</div>
-          {cur.body ? <div className="teach-body">{cur.body}</div> : null}
-          {cur.notes.length ? (
-            <ul className="teach-notes">{cur.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>
-          ) : null}
-        </div>
-        <div className="teach-slide">
-          {cur.cast ? <Slide big cast={cur.cast} config={{ path: classHref || "" }} ground={ground} live={live} label={cur.label}
-            onClick={() => (live ? dismiss() : cur.go())} /> : null}
-        </div>
-      </div>
-      <div className="teach-bar">
-        <button className="dash-focus teach-btn" disabled={at === 0} onClick={() => go(at - 1)}>Previous</button>
-        <button className="dash-focus teach-btn" onClick={() => (live ? dismiss() : cur.go())}>{live ? "Take off screen" : "Put on screen"}</button>
-        <button className="dash-focus teach-btn strong" disabled={at >= steps.length - 1} onClick={() => go(at + 1)}>
-          {steps[at + 1] ? "Next: " + steps[at + 1].title : "Next"}
-        </button>
-      </div>
-      {upNext.length ? (
-        <div className="teach-up">
-          {upNext.map((s, i) => (
-            <button key={s.key} className="dash-focus teach-uprow" onClick={() => go(at + 1 + i)}>
-              <span className="teach-upkind">{s.kind === "section" ? "section" : s.kind === "note" ? "note" : "item"}</span>{s.title}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-// Day plan rows and library sets that were games before the game panel existed.
 const GAME_FEATURES = new Set(["Game", "Team Trivia"]);
 const GAMEY = /\b(game|trivia|ten on ten)\b/i;
 
@@ -341,7 +267,7 @@ export default function DayDoc({
   liveLabel, liveUrl, castItem, castSection, dismiss, features, hue, slidesOn, classHref, renderExtras,
   onSetSlotTitle, onSaveItem, onSaveBlock, onInsertRow, onRemoveItem, onNest, onTick, isAssigned, onToggleAssigned,
   onDeleteSection, onMoveSection, onEdit, drop, castLink, onMoveItem, onConvertRow, onLinkRow, library,
-  onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, teach, onTeach,
+  onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory,
   ground, assignments, games, gamesHref, view, onSetSlotLook, onMerge, footTools,
 }) {
   const refs = useRef(new Map());
@@ -522,7 +448,6 @@ export default function DayDoc({
       if (onEdit) add("Line", "Edit details", () => onEdit({ blockId: it.blockId, item: it, where: "", slot: line.slot, id: it.id }));
       if (onRemoveItem) add("Line", "Delete line", () => onRemoveItem(line.slot, it.id));
     }
-    add("Day", "Teach", () => onTeach && onTeach(true), { hint: "One thing at a time, with the slide" });
     if (onOpenTemplates) add("Day", "Templates", () => onOpenTemplates(), { hint: "Save this day, or start from a template" });
     if (onOpenHistory) add("Day", "History", () => onOpenHistory(), { hint: "Earlier versions of this day" });
     return out;
@@ -904,34 +829,6 @@ export default function DayDoc({
       },
     };
   };
-
-  // ─── teach ───
-  if (teach) {
-    const steps = [];
-    groupsBySection.forEach(sec => {
-      const raw = normSlot(slotItems[sec.slot]).title || "";
-      const time = normSlot(slotItems[sec.slot]).time || "";
-      if (raw) {
-        steps.push({ key: "s:" + sec.slot, kind: "section", section: raw, time, title: raw, notes: [], label: raw,
-          cast: castSection(sec.slot, raw, false), go: () => castSection(sec.slot, raw, true) });
-      }
-      sec.groups.forEach(g => {
-        const c = castLine(g.head);
-        steps.push({
-          key: g.head.it.id, kind: "item", section: raw || sec.title, time, next: nextId === g.head.it.id,
-          title: c.label, body: g.head.blk?.type !== "board" ? (g.head.blk?.body || "") : "",
-          notes: g.comments.map(n => itemWords(n.it, n.blk, n.seed)).filter(x => x.trim()),
-          cast: c.cast, label: c.label, go: c.go,
-        });
-        g.comments.filter(n => n.it.slide).forEach(n => {
-          const nc = castLine(n);
-          steps.push({ key: n.it.id, kind: "note", section: raw || sec.title, time, title: nc.label, notes: [],
-            cast: nc.cast, label: nc.label, go: nc.go });
-        });
-      });
-    });
-    return <TeachView steps={steps} liveLabel={liveLabel} dismiss={dismiss} classHref={classHref} ground={ground} onExit={() => onTeach && onTeach(false)} />;
-  }
 
   // ─── slides ───
   //
@@ -1342,27 +1239,8 @@ export const DOC_CSS = `
 .deck-brush-set{margin:0 0 0 auto;opacity:0}
 .deck-head:hover .deck-brush-set,.deck-brush-set:focus-visible{opacity:1}
 /* TEACH */
-.teach{display:flex;flex-direction:column;gap:16px;padding-top:26px;font-family:var(--font-body)}
 .teach-empty{padding:30px 4px;font-size:15px;color:var(--text-muted)}
-.teach-top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-.teach-where{font-family:var(--font-label);font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dash-accent)}
-.teach-count{margin-left:auto;font-size:15px;color:var(--text-muted);font-variant-numeric:tabular-nums}
-.teach-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,46%);gap:24px;align-items:start}
-.teach-words{min-width:0;display:flex;flex-direction:column;gap:12px}
-.teach-title{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.2;color:var(--text-primary)}
-.teach-title.is-section{font-size:34px}
-.teach-body{font-size:17px;line-height:1.55;color:var(--text-secondary);white-space:pre-wrap;max-width:62ch}
-.teach-notes{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:17px;line-height:1.5;color:var(--text-primary)}
-.teach-slide{min-width:0}
-.teach-bar{display:flex;gap:8px;flex-wrap:wrap}
-.teach-btn{min-height:44px;padding:0 16px;border-radius:11px;border:1px solid var(--line-strong);background:#fff;cursor:pointer;
   font-family:var(--font-body);font-size:15px;font-weight:600;color:var(--text-primary);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.teach-btn.strong{margin-left:auto;background:var(--dash-accent);border-color:var(--dash-accent);color:#fff}
-.teach-btn:disabled{opacity:.45;cursor:default}
-.teach-up{display:flex;flex-direction:column;border-top:1px solid var(--line-soft);padding-top:8px}
-.teach-uprow{display:flex;align-items:baseline;gap:10px;min-height:38px;padding:0 6px;border:none;background:none;border-radius:8px;cursor:pointer;
   text-align:left;font-family:var(--font-body);font-size:15px;color:var(--text-secondary)}
-.teach-uprow:hover{background:rgba(23,19,16,.04);color:var(--text-primary)}
-.teach-upkind{flex:none;width:58px;font-family:var(--font-label);font-size:13px;color:var(--text-muted)}
-@media (max-width:1100px){.doc-group.with-slides{grid-template-columns:minmax(0,1fr) 150px}.teach-main{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:1100px){.doc-group.with-slides{grid-template-columns:minmax(0,1fr) 150px}}
 `;

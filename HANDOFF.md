@@ -53,14 +53,36 @@ last quarter opens the dashboard rather than a dead page. `daySlug` and
 
 ## The dashboard, in its current shape
 
-Two columns: the day, and the rail. It was three, with Materials on the left
-and the room on the right, which made the day the narrowest thing on the screen
-and split one job across opposite edges: what is on the projector lived right,
-what you would put up next lived left. Now the day takes everything the rail
-does not, and the rail holds the screen and the drawer together, in that order,
-because finding a thing and putting it up are the same motion. Teaching mode
-shuts the rail and the day takes the room it leaves. The seam is draggable and
-the drag is remembered.
+**Two modes: Plan and Teach.** Andrew, 2026-09-20: "basically i need a
+planning view (doc and drawer) and a teaching view: slides or doc, and live
+image, and drawer underneath."
+
+- **Plan** is the day as a document with the drawer beside it. Nothing is on
+  the screen while the day is being built, so there is no picture of one.
+- **Teach** adds the room: the live picture at the top of the rail, what is
+  next under it, and the drawer under that.
+
+Each mode opens on the view it is for, Plan on Doc and Teach on Slides, and
+either view is reachable from either mode, so the mode decides what starts and
+never what is allowed. The choice per mode is remembered in the browser. It
+always opens in Plan. `⌘E` swaps the modes, which is what that key did before
+except that it used to hide the rail, the opposite of what teaching wants.
+
+**What is next, drawn rather than described.** "give me a view of like what the
+next slide is with all the notes for it." Under the picture: the words Next
+will put up, the slide the room would see, and the notes written under that row
+in the document. Pressing the slide is Next.
+
+Two columns underneath it all: the day, and the rail. It was three, with
+Materials on the left and the room on the right, which made the day the
+narrowest thing on the screen and split one job across opposite edges. The rail
+is always on the screen now; `railOpen`, which nothing could toggle, and the
+old focus mode are both gone. The seam is draggable and the drag is
+remembered.
+
+**The full-screen Teach is gone.** It read the day out one line at a time with
+the slide beside it, and it had the same name as the mode. "drop it." What it
+did for the next thing up, the rail does beside the picture.
 
 **One bar.** Left to right: the class, which is a menu of every other page; the
 day, with a step either way and the date button between them; Outline and Map,

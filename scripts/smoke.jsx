@@ -1720,7 +1720,9 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // arithmetic: the wide default and the narrow band must not disagree, and
   // below the break there must be no seam left pointing at a column that is
   // no longer beside anything.
-  const wide = /const gridFor = \(cols, railOpen, teaching\) =>\s*\n?\s*\(railOpen && !teaching \? "minmax\(0,1fr\) 16px " \+ cols\.live \+ "px" : "minmax\(0,1fr\)"\)/.test(src);
+  // The rail is on the screen in both modes since 2026-09-20, so the stage is
+  // always the day, a seam and the rail.
+  const wide = /const gridFor = \(cols\) => "minmax\(0,1fr\) 16px " \+ cols\.live \+ "px"/.test(src);
   if (!wide) say("the wide stage is no longer the day plus one rail");
 
   const bands = [...src.matchAll(/@media ([^{]*?)\{[^@]*?\.dash-stage\{grid-template-columns:([^!]*)!important/g)]
@@ -2879,7 +2881,11 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (v["Sep 21"].title !== "Week one" || v["Sep 28"].title !== "Week two") say("with no titles written, days should read their week topic");
 }
 
-// Teach: the day one thing at a time. And the day's total from section times.
+// The day's total from its section times.
+//
+// The full-screen Teach that read the day out one line at a time was here
+// too, until 2026-09-20: "drop it." Teach is a mode of the dashboard now, and
+// what that view did for the next thing up, the rail does beside the picture.
 {
   const say = (msg) => { console.error("  FAIL  teach and totals: " + msg); failedEarly++; };
   const none = () => {}; // smoke render, never pressed
@@ -2901,11 +2907,30 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (html.indexOf("min left") < html.lastIndexOf('class="doc-time"')) say("the time left is not at the foot of the day");
   if ((html.match(/class="doc-time"/g) || []).length !== 2) say("a section has no place for its time");
   if ((html.match(/doc-secgrip/g) || []).length !== 2) say("a section has no handle to drag it by");
-  try { html = renderToString(<DayDoc {...props} teach onTeach={none} />); } catch (e) { say("teach threw: " + e.message); html = ""; }
-  if (!html.includes('class="teach"')) say("teach does not draw");
-  if (!html.includes("Start with headlines")) say("teach does not open on the next thing to do");
-  if (!html.includes("Ask about the weekend")) say("teach does not show the notes under the item");
-  if (!html.includes("Next: Talk")) say("teach does not say what comes next");
+  // Nothing is left that draws the old full-screen view.
+  const docSrc = readFileSync(new URL("../src/engine/DayDoc.jsx", import.meta.url), "utf8");
+  if (/function TeachView/.test(docSrc)) say("the full-screen Teach is back in the document");
+  if (/add\("Day", "Teach"/.test(docSrc)) say("the slash menu still opens a Teach that is gone");
+}
+
+// Plan and Teach: the two modes of the dashboard. Andrew, 2026-09-20:
+// "basically i need a planning view (doc and drawer) and a teaching view:
+// slides or doc, and live image, and drawer underneath", and "when it's in
+// plan mode, start in doc, but let me toggle to slides. and the opposite for
+// teach", and "always land in plan."
+{
+  const say = (msg) => { console.error("  FAIL  modes: " + msg); failedEarly++; };
+  const src = readFileSync(new URL("../src/engine/Dashboard.jsx", import.meta.url), "utf8");
+  if (!/useState\("plan"\)/.test(src)) say("the dashboard does not open in Plan");
+  if (!/\{ plan: "doc", teach: "slides" \}/.test(src)) say("the modes do not start on the view they are for");
+  if (!/\[\["plan", "Plan"\], \["teach", "Teach"\]\]/.test(src)) say("Plan and Teach are not on the bar");
+  if (!/head=\{teaching \? \(/.test(src)) say("the live picture is not the teaching half of the rail");
+  // The rail cannot be hidden any more, and the old teaching switch is gone.
+  if (/setRailOpen|toggleRail|const \[focus,/.test(src)) say("the old rail switch or focus mode is still here");
+  // What is next, drawn with the notes under it.
+  if (!/upNext\?\.payload/.test(src)) say("the rail does not draw the next slide");
+  if (!/upNext\.notes\.map/.test(src)) say("the next slide comes with no notes");
+  if (!/flatRows\[flatRows\.length - 1\]\.notes\.push/.test(src)) say("a row does not gather the notes written under it");
 }
 
 // Time on sections, as ranges, and the day's total.
@@ -3635,8 +3660,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!/onEdit \|\| onSelect \? \(\s*\n\s*<button className="dash-focus" onClick=\{\(\) => \{ setMenu\(false\); \(onEdit \|\| onSelect\)\(\); \}\}/.test(src)) {
     say("Edit this no longer calls the handler that opens a row");
   }
-  if (!/const editPicked = \(p\) => \{\s*\n\s*setPicked\(p\);\s*\n\s*if \(!railRef\.current\.railOpen\) toggleRail\(\);/.test(src)) {
-    say("Edit this no longer opens the rail the editor lives in");
+  // The rail cannot be shut any more, so Edit has nothing to reopen: it opens
+  // the row and the editor is already on the screen.
+  if (!/const editPicked = \(p\) => setPicked\(p\);/.test(src)) {
+    say("Edit this no longer opens the row the editor reads");
   }
 }
 
