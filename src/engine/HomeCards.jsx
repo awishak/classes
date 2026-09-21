@@ -35,9 +35,6 @@ const TAP = TOKENS.TAP;
 
 const DISPLAY = { fontFamily: TOKENS.FONT.display, fontWeight: TOKENS.FONT.displayWeight, textShadow: TOKENS.FONT.displayShadow };
 const small = { fontFamily: TOKENS.FONT.section, fontSize: 14, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" };
-// Dates, times, rooms and counts are set in the mono face, which is what the
-// design system keeps that face for, and what makes a page look typeset.
-const MONO = { fontFamily: TOKENS.FONT.label, fontVariantNumeric: "tabular-nums" };
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 
 // The card title. On Clean the uppercase mono label read as a caption, so the
@@ -248,7 +245,11 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, onOpenDa
       <span aria-hidden="true" style={{ flex: "none", fontSize: 22, lineHeight: 1, color: TEXT_MUTED }}>›</span>
     </button>
   );
-  const readingWords = facts.readings.length === 1 ? "1 reading" : facts.readings.length + " readings";
+  // Andrew, 2026-09-21: "if there are more than 3 readings, just put readings,
+  // not 12 readings." A number a student can hold in their head is worth
+  // saying; twelve is a number that reads as a wall.
+  const readingWords = facts.readings.length > 3 ? "Readings"
+    : facts.readings.length === 1 ? "1 reading" : facts.readings.length + " readings";
   // The same answer the schedule takes for that day, on the card a student
   // opens first. Andrew, 2026-09-21: "also put this in the hero card for
   // students and for me." A day the class does not meet in the room takes no
@@ -269,14 +270,13 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, onOpenDa
             its own above it. */}
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
           <span style={{ ...small, color: TEXT_SECONDARY }}>Next class</span>
+          {/* The time and the room came off on 2026-09-21: "remove the time
+              and location for class from the hero." They do not change from
+              week to week, and the card is for what does. They are still on
+              the facts, for anything else that wants them. */}
           <span style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3, color: TEXT_PRIMARY }}>
             {facts.weekday}, {facts.longDate}
           </span>
-          {facts.time || facts.location ? (
-            <span style={{ ...MONO, fontSize: 14, fontWeight: 500, lineHeight: 1.4, color: TEXT_SECONDARY }}>
-              {[facts.time, facts.location].filter(Boolean).join(" · ")}
-            </span>
-          ) : null}
         </div>
         {facts.title
           ? <span style={{ ...DISPLAY, fontSize: wide ? 22 : 20, lineHeight: 1.2, letterSpacing: "-0.02em", color: TEXT_PRIMARY, marginTop: 4, textWrap: "balance" }}>{facts.title}</span>

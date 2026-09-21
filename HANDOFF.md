@@ -226,6 +226,15 @@ students see what they always saw. The welcome card is gone, component and all.
 `data.welcome` is still in the store and nothing reads it, so the words are
 there if it ever comes back.
 
+**The time and the room came off the card, 2026-09-21.** "remove the time and
+location for class from the hero." They are the same every week and the card is
+for what changes. `nextClassFacts` still works them out, sitting by sitting, for
+anything else that wants them.
+
+**A day with more than three readings says Readings.** "if there are more than 3
+readings, just put readings, not 12 readings." One, two and three are counted
+out, because a number that small is worth knowing before you open the day.
+
 **The next class card is the day and two ways on.** Next class, the day's
 title, the weekday and the date, the time and the room, my note to the class,
 then the readings counted as a link and the full schedule. The count opens the

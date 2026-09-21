@@ -2358,13 +2358,20 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       // one of two times is wrong for most of the class. Andrew, 2026-09-20:
       // "with two sections of comm 3, the next class listed is 10:30 to 11:35.
       // why? ... maybe we don't mention the time for comm 3."
-      ["Wednesday, September 23", "Vari 133", "Same event, different stories"].forEach(t => {
+      ["Wednesday, September 23", "Same event, different stories"].forEach(t => {
         if (!plain.includes(t)) say("the card does not say " + JSON.stringify(t)); });
-      if (/\d:\d\d to \d/.test(plain)) say("a reader in no sitting is given a time anyway");
+      // The time and the room came off the card on 2026-09-21: "remove the time
+      // and location for class from the hero." They do not change from week to
+      // week, and the card is for what does. The facts still carry them, and a
+      // student in a sitting still gets their own time out of them, which is
+      // what the two sittings rule is about.
+      if (/\d:\d\d to \d/.test(plain)) say("the card still tells the reader the time");
+      if (plain.includes("Vari 133")) say("the card still tells the reader the room");
       {
-        const inRoom = renderToString(<NextClassHero config={hcfgD} data={hdata} blockOf={() => null} section="10:30" onOpen={noop} seat={{}} />).replace(/<!-- -->/g, "");
-        if (!inRoom.includes("10:30 to 11:35 am")) say("a student in a sitting is not told their own time");
-        if (inRoom.includes("8:00 to 9:05")) say("a student is shown the other sitting's time");
+        const mine = nextClassFacts(hcfgD, hdata, () => null, "10:30", mon);
+        if (mine.time !== "10:30 to 11:35 am") say("a student in a sitting is not told their own time: " + mine.time);
+        if ((mine.time || "").includes("8:00")) say("a student is given the other sitting's time");
+        if (nextClassFacts(hcfgD, hdata, () => null, "", mon).time) say("a reader in no sitting is given a time anyway");
       }
       if (!plain.includes("1 reading") || plain.includes("1 readings")) say("one reading does not read as one: " + plain.slice(plain.indexOf("reading") - 40, plain.indexOf("reading") + 20));
       if (!three.includes("3 readings")) say("the card does not count the readings");
@@ -3891,7 +3898,20 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     dayPlans: { "Sep 21": { title: "Same event, different stories" } } };
   const hero = (extra) => renderToString(<NextClassHero config={cfg} data={day} blockOf={() => null}
     section="" onOpen={noop} seat={{}} {...extra} />).replace(/<!-- -->/g, "");
-  // Nothing came off the card.
+  // What the card says, and what it stopped saying. Andrew, 2026-09-21:
+  // "remove the time and location for class from the hero. also, if there are
+  // more than 3 readings, just put readings, not 12 readings."
+  {
+    const html = hero({});
+    if (/9:15 to 10:20|Vari 133/.test(html)) say("the time and the room are still on the card");
+    // A number a student can hold in their head is worth saying. Twelve is not.
+    const many = (n) => renderToString(<NextClassHero config={cfg} blockOf={() => null} section="" onOpen={noop} seat={{}}
+      data={{ schedule: [{ id: "w1", dates: ["Sep 21"], items: Array.from({ length: n }, (_, i) => ({ id: "r" + i, type: "reading", title: "R" + i, date: "Mon" })) }] }} />).replace(/<!-- -->/g, "");
+    if (!many(1).includes("1 reading") || many(1).includes("1 readings")) say("one reading does not read as one");
+    if (!many(3).includes("3 readings")) say("three readings are not counted");
+    if (!many(12).includes("Readings") || many(12).includes("12 readings")) say("twelve readings are still counted out");
+  }
+  // Nothing else came off the card.
   {
     const html = hero({});
     ["Next class", "Monday, September 21", "Same event, different stories", "Full schedule"].forEach(t => {
