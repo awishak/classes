@@ -20,6 +20,7 @@
 import { useState } from "react";
 import * as TOKENS from "./tokens.js";
 import { fileToAvatar, AvatarPreview } from "./YouCard.jsx";
+import { profileComplete } from "./profileTask.js";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -35,14 +36,17 @@ const label = { fontFamily: TOKENS.FONT.label, fontSize: 13, fontWeight: 600, le
 const YEARS = ["First-year", "Sophomore", "Junior", "Senior", "Graduate", "Other"];
 const PRIORITIES = ["Learning new material", "Getting a good grade", "Getting course credit"];
 
-// Has this student been asked yet? A profile with anything in it has been, and
-// so has one that stepped through and said no more.
+// Has this student been through the cards?
+//
+// Not "have they answered anything": a student who typed one letter and closed
+// the tab had answered something, and would never be asked again with a
+// profile two fields deep. The deck comes up until either the card is complete
+// or they have stepped through it, and stepping through is recorded whichever
+// way they leave, so nobody is nagged.
 export const needsWelcome = (data, name) => {
   if (!name) return false;
-  const p = (data?.profiles || {})[name] || {};
-  const answered = ["firstName", "lastName", "avatar", "about", "year", "hometown", "motto", "goals", "priority"]
-    .some(k => String(p[k] || "").trim());
-  return !answered && !(data?.welcomeSeen || {})[name];
+  if ((data?.welcomeSeen || {})[name]) return false;
+  return !profileComplete((data?.profiles || {})[name]);
 };
 
 export const markWelcomed = (data, name) => ({

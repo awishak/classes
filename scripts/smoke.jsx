@@ -2692,8 +2692,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const N = "Pepe LeFritz";
   // Asked once: a profile with anything in it, or a deck already stepped
   // through, and the site comes straight up.
+  const filled = { email: "p@x.test", avatar: "data:x", about: "x", year: "Junior", hometown: "x",
+    motto: "x", goals: "x", priority: "x", strength: "x" };
   if (!needsWelcome({ profiles: {} }, N)) say("a student with an empty profile is not asked");
-  if (needsWelcome({ profiles: { [N]: { firstName: "Pepe" } } }, N)) say("a student who answered is asked again");
+  // Andrew, 2026-09-20, after typing one letter and being dropped on the site:
+  // "nope, no cards." A part-answered card is not an answered one.
+  if (!needsWelcome({ profiles: { [N]: { firstName: "Pepe" } } }, N)) say("a student who started and stopped is never asked again");
+  if (needsWelcome({ profiles: { [N]: filled } }, N)) say("a student whose card is complete is asked anyway");
   if (needsWelcome({ welcomeSeen: { [N]: 1 } }, N)) say("a student who stepped through is asked again");
   if (needsWelcome({ profiles: {} }, "")) say("nobody in particular is asked");
   if (!markWelcomed({}, N).welcomeSeen[N]) say("stepping through is not recorded");

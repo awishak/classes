@@ -664,8 +664,11 @@ by an emailed link has never seen the one that works without email. It
 is the same profile the first challenge of the term reads, asked rather than
 laid out as a form, because a form on a first visit is a thing to close.
 
-Asked once. Anything written, or `Finish this later`, and the deck never comes
-back: `welcomeSeen` on the class store holds who has been through. Every fixture
+Asked until the card is done. A student who types one letter and closes the tab
+gets the cards again; a student who finishes, or presses `Finish this later`,
+does not, because leaving either way records them in `welcomeSeen`. The first
+rule was "have they answered anything", which meant the first keystroke both
+closed the deck mid-typing and stopped it ever coming back. Every fixture
 in the smoke run says its students have been welcomed, or every class-site check
 would be reading these cards instead.
 
