@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { genId } from "../utils.jsx";
 import * as TOKENS from "./tokens.js";
+import { Avatar, profileOf } from "./RosterCard.jsx";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -21,10 +22,12 @@ const SURFACE_2 = TOKENS.SURFACE.sunk;
 const label = { fontFamily: MONO, fontSize: 12, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: ".12em" };
 const mini = { minHeight: 34, padding: "0 12px", borderRadius: 8, border: "1px solid " + LINE2, background: "#fff", color: INK2, fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer" };
 
-const COLS = 8;
+// Andrew's room is rows of six across. The seats carry a face now, so eight
+// across made each one narrower than the face it holds.
+const COLS = 6;
 const AWARDS = [-1, 1, 2, 3, 5];
 
-export default function HornBoard({ students, seats, log, accent, onSeats, onAward, onClose }) {
+export default function HornBoard({ students, seats, log, accent, profiles, onSeats, onAward, onClose }) {
   const [dragging, setDragging] = useState(null);
   const [openSeat, setOpenSeat] = useState(null);
   const [toast, setToast] = useState("");
@@ -109,29 +112,29 @@ export default function HornBoard({ students, seats, log, accent, onSeats, onAwa
               };
               if (!name) {
                 return <div key={pos} {...common}
-                  style={{ minHeight: 92, borderRadius: 12, border: "1.5px dashed " + LINE2, background: "transparent" }} />;
+                  style={{ minHeight: 132, borderRadius: 12, border: "1.5px dashed " + LINE2, background: "transparent" }} />;
               }
               const pts = points(name);
               const open = openSeat === name;
-              const first = name.split(" ")[0];
-              const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2);
               return (
                 <div key={pos} style={{ position: "relative" }} {...common}>
                   <button draggable
                     onDragStart={(e) => { setDragging(name); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", name); }}
                     onDragEnd={() => setDragging(null)}
                     onClick={() => setOpenSeat(open ? null : name)}
-                    style={{ width: "100%", minHeight: 92, borderRadius: 12, cursor: "grab", textAlign: "left",
+                    style={{ width: "100%", minHeight: 132, borderRadius: 12, cursor: "grab", textAlign: "center",
                       background: open ? accent : "#fff", color: open ? "#fff" : INK,
-                      border: "1px solid " + (open ? accent : LINE2), padding: 10, fontFamily: F,
-                      display: "flex", flexDirection: "column", gap: 6, opacity: dragging === name ? .4 : 1 }}>
-                    <span style={{ width: 26, height: 26, borderRadius: "50%", flex: "none",
-                      background: open ? "rgba(255,255,255,.22)" : SURFACE_2, color: open ? "#fff" : MUTED,
-                      display: "grid", placeItems: "center", fontSize: 12, fontWeight: 700, fontFamily: MONO }}>{initials}</span>
-                    <span style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.25 }}>{first}<br />
-                      <span style={{ color: open ? "rgba(255,255,255,.75)" : MUTED, fontSize: 12 }}>{name.split(" ").slice(1).join(" ")}</span>
-                    </span>
-                    <span style={{ marginTop: "auto", fontFamily: MONO, fontSize: 12, fontWeight: 600,
+                      border: "1px solid " + (open ? accent : LINE2), padding: 12, fontFamily: F,
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 8, opacity: dragging === name ? .4 : 1 }}>
+                    {/* The same face and the same name the roster shows, at the
+                        same size. Andrew, 2026-09-20: "you need to make their
+                        avatars and names as big as you have it on the students
+                        roster view." The old seat was two initials in a 26px
+                        circle over a 13px first name, which is a spreadsheet
+                        of a room rather than the room. */}
+                    <Avatar profile={profileOf({ profiles }, name)} name={name} accent={open ? "#ffffff" : accent} size={56} />
+                    <span style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.25 }}>{name}</span>
+                    <span style={{ marginTop: "auto", fontFamily: MONO, fontSize: 13, fontWeight: 600,
                       color: open ? "#fff" : (pts > 0 ? accent : MUTED), fontVariantNumeric: "tabular-nums" }}>
                       {pts > 0 ? "+" : ""}{pts}
                     </span>

@@ -84,6 +84,7 @@ import { NextClassHero, nextClassFacts, timeText, PinnedLinks, RequestForm, Inst
 import { instructorOf } from "../src/instructors.js";
 import TopNav, { NAV_CLASS, activeFor } from "../src/engine/TopNav.jsx";
 import HornApp from "../src/engine/HornApp.jsx";
+import HornBoard from "../src/engine/HornBoard.jsx";
 import { assignmentsOf } from "../src/engine/profileTask.js";
 import { QuestionsSummary, QuestionsDetail, onThePage, archivedOf, askedBy, sortQuestions, isAnswered, QuestionEntry } from "../src/engine/QuestionsCard.jsx";
 import { sectionsOf as sittingLabels, hasSections, studentsIn, sectionFor, realStudents, isTestStudent, sectionNow } from "../src/engine/sections.js";
@@ -2601,6 +2602,28 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const src = readFileSync(new URL("../src/engine/" + name + ".jsx", import.meta.url), "utf8");
     if (!/setClassFavicon\(config\)/.test(src)) say(name + " names the tab without giving it an icon");
   });
+}
+
+// Around the Horn: the seats carry the face and the name the roster does.
+// Andrew, 2026-09-20: "you need to make their avatars and names as big as you
+// have it on the students roster view."
+{
+  const say = (msg) => { console.error("  FAIL  the Horn board: " + msg); failedEarly++; };
+  const students = [{ id: "pepe", name: "Pepe LeFritz" }, { id: "ada", name: "Ada Lovelace" }];
+  try {
+    const html = renderToString(<HornBoard students={students} seats={{ "Pepe LeFritz": 0, "Ada Lovelace": 1 }}
+      log={[{ student: "Pepe LeFritz", amount: 2, source: "Around the Horn" }]} accent="#7c3aed"
+      profiles={{ "Ada Lovelace": { avatar: "data:image/png;base64,iVBORw0KGgo=" } }}
+      onSeats={noop} onAward={noop} onClose={noop} />);
+    // The roster draws a face at 56 and a name at 15. So does a seat.
+    if ((html.match(/width:56px;height:56px/g) || []).length !== 2) say("a seat's face is not the size the roster draws");
+    if (!/font-size:15px;font-weight:600[^>]*>Pepe LeFritz/.test(html)) say("a seat's name is not the size the roster draws");
+    // The whole name, not the first word with the rest underneath.
+    if (/>Pepe<br/.test(html)) say("a seat still breaks the name in two");
+    // A photo where there is one, initials where there is not.
+    if (!html.includes("<img")) say("a student's photo does not reach their seat");
+    if (!html.includes(">PL<")) say("a student with no photo has no initials either");
+  } catch (err) { say("the board threw: " + err.message); }
 }
 
 // A question on the class's page. Andrew, 2026-09-20, with the whole shape:

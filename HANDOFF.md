@@ -290,7 +290,10 @@ everything else is single.**
   page agrees with the dashboard and tomorrow starts from the clock again.
 - **Who follows it:** Here, the Horn board's seats and points, the roster a
   student reads, and the game, which the games package already opens per
-  `groupKey + section`.
+  `groupKey + section`. A seat on the Horn board carries the face and the whole
+  name the roster carries, at the same size: two initials in a 26px circle over
+  a first name was a spreadsheet of a room rather than the room. Six across
+  rather than eight, because a face needs the width.
 - **What does not:** the day, the schedule, a challenge, a block, a reading.
   Change one and both sittings have it.
 - **Counts are by room.** A challenge reads `8:00 12/18 · 10:30 9/16` rather

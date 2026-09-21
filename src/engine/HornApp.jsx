@@ -53,6 +53,7 @@ export default function HornApp({ config }) {
   }));
   return (
     <HornBoard students={students} seats={data.athSeats || {}} log={data.log || []} accent={config.accent}
+      profiles={data.profiles || {}}
       onSeats={setSeats} onAward={award} onClose={() => setOpen(false)} />
   );
 }
