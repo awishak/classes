@@ -106,7 +106,7 @@ import Slide, { slideOf } from "../src/engine/Slide.jsx";
 import RoomSlide from "../src/engine/RoomSlide.jsx";
 import { castFor } from "../src/engine/gameCast.js";
 import GamesPage from "../src/engine/GamesPage.jsx";
-import DayDoc from "../src/engine/DayDoc.jsx";
+import DayDoc, { docMarkdown } from "../src/engine/DayDoc.jsx";
 import { ScheduleDetail, studentItems, dateInWeek, dayAnchor } from "../src/engine/ScheduleCard.jsx";
 import TermOutline from "../src/engine/TermOutline.jsx";
 import { SHARED_KEY, stampScheduled, onClassDay } from "../src/engine/blocks.js";
@@ -2911,6 +2911,39 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const docSrc = readFileSync(new URL("../src/engine/DayDoc.jsx", import.meta.url), "utf8");
   if (/function TeachView/.test(docSrc)) say("the full-screen Teach is back in the document");
   if (/add\("Day", "Teach"/.test(docSrc)) say("the slash menu still opens a Teach that is gone");
+}
+
+// Lines picked out of the day, as Markdown. Andrew, 2026-09-20: "I need to be
+// able to select a whole bunch of lines in the dashboard so i can copy them
+// elsewhere", and "yeah with markdown." Every line is its own text box, so a
+// mouse drag cannot cross them and there was nothing to copy.
+{
+  const say = (msg) => { console.error("  FAIL  copying lines: " + msg); failedEarly++; };
+  const md = docMarkdown([
+    { kind: "section", words: "Open" },
+    { kind: "item", words: "The Katrina photographs" },
+    { kind: "body", words: "Two frames, two captions,\nrun the same week." },
+    { kind: "comment", words: "Ask who took each one" },
+    { kind: "comment", words: "Then ask who wrote the caption" },
+    { kind: "section", words: "Stories" },
+    { kind: "item", words: "The Sycamore Gap tree" },
+  ]);
+  const want = "## Open\n\n**The Katrina photographs**\n  Two frames, two captions, run the same week.\n"
+    + "- Ask who took each one\n- Then ask who wrote the caption\n\n## Stories\n\n**The Sycamore Gap tree**\n";
+  if (md !== want) say("the Markdown is not what a day reads like:\n" + JSON.stringify(md));
+  // Nothing picked, nothing copied, and an empty line is not a blank bullet.
+  if (docMarkdown([]) !== "") say("an empty pick copied something");
+  if (docMarkdown([{ kind: "comment", words: "   " }]) !== "") say("a blank line copied as a bullet");
+  // One row on its own does not start with the blank line that separates it
+  // from what came before.
+  if (docMarkdown([{ kind: "item", words: "On its own" }]) !== "**On its own**\n") say("one line copied with a gap in front of it");
+  // The handles are in the margins, and the strip only turns up with a pick.
+  const doc = readFileSync(new URL("../src/engine/DayDoc.jsx", import.meta.url), "utf8");
+  if (!/onClick=\{e => pickLine\(it\.id, e\)\}/.test(doc)) say("a row has no way to be picked");
+  if (!/onClick=\{e => pickLine\("s:" \+ sec\.slot, e\)\}/.test(doc)) say("a section has no way to be picked");
+  if (!/onClick=\{e => pickLine\(c\.it\.id, e\)\}/.test(doc)) say("a note has no way to be picked");
+  if (!/\["Copy", \(\) => copyKeys/.test(doc)) say("a row's menu cannot copy it");
+  if (!/\["Copy section", \(\) => copyKeys/.test(doc)) say("a section's menu cannot copy it");
 }
 
 // A day's section order survives the store. Andrew, 2026-09-20: "i keep

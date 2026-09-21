@@ -36,6 +36,27 @@ import { inkOf } from "./colors.js";
 
 const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; } };
 
+// Lines of the day as Markdown. Andrew, 2026-09-20: "I need to be able to
+// select a whole bunch of lines in the dashboard so i can copy them
+// elsewhere", and "yeah with markdown."
+//
+// A section is a heading, an item is bold on a line of its own so it reads as
+// the thing the notes are about, a note is a bullet under it, and a block's
+// content is an indented line. What comes out pastes into an email, a
+// document or a message and keeps the shape the day had.
+export function docMarkdown(rows) {
+  const out = [];
+  (rows || []).forEach(r => {
+    const words = String(r?.words || "").trim();
+    if (!words) return;
+    if (r.kind === "section") out.push((out.length ? "\n" : "") + "## " + words);
+    else if (r.kind === "comment") out.push("- " + words);
+    else if (r.kind === "body") out.push("  " + words.replace(/\s*\n+\s*/g, " "));
+    else out.push((out.length ? "\n" : "") + "**" + words + "**");
+  });
+  return out.length ? out.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n" : "";
+}
+
 // The way up to the room screen, in a line's margin.
 const PUT = (
   <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><path d="M3.5 2.2v9.6L11.5 7z" /></svg>
@@ -283,6 +304,15 @@ export default function DayDoc({
   const secDragRef = useRef("");
   const [pop, setPop] = useState(null);
   const popList = useRef([]);
+  // Lines picked out to copy. Andrew, 2026-09-20: "I need to be able to select
+  // a whole bunch of lines in the dashboard so i can copy them elsewhere."
+  // Every line of this document is its own text box, so a mouse drag cannot
+  // cross them and there is nothing for the browser to select. Clicking the
+  // number in the margin picks a row, shift takes the range between, and what
+  // comes out is Markdown.
+  const [sel, setSel] = useState([]);
+  const [copied, setCopied] = useState(false);
+  const anchor = useRef(null);
   const register = (id, api) => { if (api) refs.current.set(id, api); else refs.current.delete(id); };
 
   // Every line of the day, top to bottom, which is the order the arrows walk.
@@ -316,6 +346,80 @@ export default function DayDoc({
     notesOf[g.head.it.id] = g.comments.map(c => (c.it.feature || (c.blk ? c.blk.title : c.seed ? c.seed.title : c.it.text) || "").trim()).filter(Boolean);
   }));
   const indexOf = (key) => lines.findIndex(l => l.key === key);
+  // ⌘C copies what is picked, unless the cursor is in a line, where it means
+  // the words in that line and always should.
+  useEffect(() => {
+    if (!sel.length) return undefined;
+    const onKey = (e) => {
+      const t = e.target;
+      const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      if (e.key === "Escape") { setSel([]); anchor.current = null; return; }
+      if (typing) return;
+      if ((e.metaKey || e.ctrlKey) && (e.key === "c" || e.key === "C")) { e.preventDefault(); copyKeys(sel); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  // A line, as words. The same reading the slide and the search use: what a
+  // block is called, or the words typed into the line.
+  const wordsOfLine = (l) => (l.kind === "section"
+    ? (normSlot(slotItems[l.slot]).title || l.title || "")
+    : l.kind === "body" ? (l.blk?.body || "")
+    : (l.it?.feature || (l.blk ? (l.blk.headline || l.blk.title) : l.seed ? l.seed.title : l.it?.text) || "")).trim();
+
+  // The picked lines as Markdown, in the order the day has them. A block's
+  // content is not picked on its own; it comes with the item it belongs to.
+  const asMarkdown = (keys) => {
+    const want = new Set(keys);
+    return docMarkdown(lines
+      .filter(l => want.has(l.key) || (l.kind === "body" && want.has(l.it?.id)))
+      .map(l => ({ kind: l.kind, words: wordsOfLine(l) })));
+  };
+
+  const putOnClipboard = (text) => {
+    try {
+      if (navigator?.clipboard?.writeText) { navigator.clipboard.writeText(text); return true; }
+    } catch { /* no clipboard in this browser */ }
+    try {
+      const box = document.createElement("textarea");
+      box.value = text;
+      box.style.position = "fixed";
+      box.style.opacity = "0";
+      document.body.appendChild(box);
+      box.select();
+      document.execCommand("copy");
+      document.body.removeChild(box);
+      return true;
+    } catch { return false; }
+  };
+
+  const copyKeys = (keys) => {
+    if (!keys.length) return;
+    putOnClipboard(asMarkdown(keys));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
+  // Clicking a number picks that line. Shift takes everything between it and
+  // the last one picked; the platform's own key adds or removes one.
+  const pickLine = (key, e) => {
+    const keys = lines.map(l => l.key);
+    if (e?.shiftKey && anchor.current && keys.includes(anchor.current)) {
+      const a = keys.indexOf(anchor.current), b = keys.indexOf(key);
+      const [lo, hi] = a < b ? [a, b] : [b, a];
+      setSel(keys.slice(lo, hi + 1).filter(k => !k.startsWith("b:")));
+      return;
+    }
+    if (e?.metaKey || e?.ctrlKey) {
+      anchor.current = key;
+      setSel(prev => (prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]));
+      return;
+    }
+    anchor.current = key;
+    setSel(prev => (prev.length === 1 && prev[0] === key ? [] : [key]));
+  };
+  const picking = sel.length > 0;
   // Items are numbered down the day; notes are not, so they take no number.
   const itemNumber = {};
   lines.filter(l => l.kind === "item").forEach((l, n) => { itemNumber[l.it.id] = n + 1; });
@@ -722,6 +826,7 @@ export default function DayDoc({
       canKind ? ["Choose kind", () => openMenu({ preventDefault() {}, ...(menuAt.current || { clientX: 40, clientY: 40 }) }, kindMenu(line))] : null,
       onToggleAssigned && line.kind === "item" ? [isAssigned(it) ? "Remove from readings" : "Add to readings", () => onToggleAssigned(it)] : null,
       "-",
+      ["Copy", () => copyKeys([it.id])],
       ["Remove from day", () => onRemoveItem(slot, it.id), true],
     ];
   };
@@ -736,6 +841,7 @@ export default function DayDoc({
       mine && sec.si < sections.length - 1 && onMoveSection ? ["Move down", () => onMoveSection(sec.slot, 1)] : null,
       onMerge && sections.length > 1 ? ["Merge two sections", () => onMerge()] : null,
       "-",
+      ["Copy section", () => copyKeys(["s:" + sec.slot, ...normSlot(slotItems[sec.slot]).items.map(x => x.id)])],
       mine && onDeleteSection ? ["Delete section", () => onDeleteSection(sec.slot), true] : null,
     ];
   };
@@ -956,6 +1062,17 @@ export default function DayDoc({
 
   return (
     <div className="doc">
+      {/* What is picked, and the two things to do about it. It sits above the
+          day rather than floating over it, because a strip that covers a line
+          covers the line you are deciding about. */}
+      {picking ? (
+        <div className="doc-pick-bar">
+          <span className="doc-pick-n">{sel.length} line{sel.length === 1 ? "" : "s"} picked</span>
+          <button className="dash-focus doc-pick-do" onClick={() => copyKeys(sel)}>{copied ? "Copied" : "Copy"}</button>
+          <button className="dash-focus doc-pick-off" onClick={() => { setSel([]); anchor.current = null; }}>Clear</button>
+          <span className="doc-pick-say">Shift takes the range. ⌘C copies.</span>
+        </div>
+      ) : null}
       {groupsBySection.map(sec => {
         const bucket = normSlot(slotItems[sec.slot]);
         const raw = bucket.title || "";
@@ -966,10 +1083,12 @@ export default function DayDoc({
             style={sec.mark?.color ? { "--mark": sec.mark.color } : undefined}
             data-over={over === sec.slot + "|" ? "1" : "0"} data-secover={overHere} {...sectionDrop(sec.slot)}>
             <div className={"doc-group" + (slidesOn ? " with-slides" : "")}>
-              <div className={"doc-text doc-secline" + (secLive ? " live" : "")} onContextMenu={e => openMenu(e, sectionMenu(sec))}
+              <div className={"doc-text doc-secline" + (secLive ? " live" : "") + (sel.includes("s:" + sec.slot) ? " picked" : "")} onContextMenu={e => openMenu(e, sectionMenu(sec))}
                 {...holdProps(() => sectionMenu(sec))}>
                 {/* The margin: empty at rest, the way up to the screen under the pointer. */}
                 <span className="doc-gut">
+                  <button className="dash-focus doc-num" onClick={e => pickLine("s:" + sec.slot, e)}
+                    title="Pick this section. Shift takes the range." aria-pressed={sel.includes("s:" + sec.slot)}>§</button>
                   {raw ? (
                     <button className="dash-focus doc-put" title={secLive ? "Take off screen" : "Put on screen"} aria-label={secLive ? "Take off screen" : "Put on screen"}
                       onClick={() => (secLive ? dismiss() : castSection(sec.slot, raw, true))}>{PUT}</button>
@@ -1031,11 +1150,14 @@ export default function DayDoc({
                         number, and under the pointer the number gives way to
                         the way up to the screen. The row on the screen is the
                         only filled row on the page. */}
-                    <div className={"doc-row" + (live ? " live" : "")} draggable
+                    <div className={"doc-row" + (live ? " live" : "") + (sel.includes(it.id) ? " picked" : "")} draggable
                       onDragStart={e => { letGo(); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", JSON.stringify({ slot: sec.slot, id: it.id })); }}
                       onContextMenu={e => openMenu(e, itemMenu(g.head))} {...holdProps(() => itemMenu(g.head))}>
                       <span className="doc-gut">
-                        <span className="doc-num">{doneSet.has(it.id) ? "✓" : itemNumber[it.id] || ""}</span>
+                        <button className="dash-focus doc-num" onClick={e => pickLine(it.id, e)}
+                          title="Pick this line. Shift takes the range." aria-pressed={sel.includes(it.id)}>
+                          {doneSet.has(it.id) ? "✓" : itemNumber[it.id] || "·"}
+                        </button>
                         <button className="dash-focus doc-put" title={live ? "Take off screen" : "Put on screen"} aria-label={live ? "Take off screen" : "Put on screen"}
                           onClick={() => (live ? dismiss() : castItem(it, blk, seed, words, claim, tag, slide))}>{PUT}</button>
                       </span>
@@ -1068,7 +1190,7 @@ export default function DayDoc({
                         <div key={c.it.id} className={"doc-comment" + (dragging === c.it.id ? " dragging" : "")}
                           data-over={over.startsWith(sec.slot + "|" + c.it.id + "|") ? over.split("|")[2] : ""}
                           onContextMenu={e => openMenu(e, itemMenu(c))} {...holdProps(() => itemMenu(c))} {...commentDrop(sec.slot, c.it.id)}>
-                          <div className="doc-row doc-under doc-commentrow">
+                          <div className={"doc-row doc-under doc-commentrow" + (sel.includes(c.it.id) ? " picked" : "")}>
                             {/* The handle. A note is all text box, and a press on a
                                 text box selects words, so the drag needs somewhere
                                 that is not text. Alt+↑ and Alt+↓ move it too. */}
@@ -1080,6 +1202,8 @@ export default function DayDoc({
                                 setDragging(c.it.id);
                               }}
                               onDragEnd={() => setDragging("")}>⠿</span>
+                            <button className="dash-focus doc-num doc-notenum" onClick={e => pickLine(c.it.id, e)}
+                              title="Pick this note. Shift takes the range." aria-pressed={sel.includes(c.it.id)}>·</button>
                             <Line id={c.it.id} value={itemWords(c.it, c.blk, c.seed)} placeholder="Note" className="lv-comment"
                               done={doneSet.has(c.it.id)} readOnly={!!(c.seed || c.it.feature)} mark={c.it.mark}
                               onSave={saveItemWords(c)} onKey={keyHandler(c)} register={register} onLeaveEmpty={leaveEmpty(c)}
@@ -1165,7 +1289,21 @@ export const DOC_CSS = `
 /* The margin of a line. At rest it holds the item's number and nothing else;
    under the pointer the number gives way to the way up to the screen. */
 .doc-gut{flex:none;width:34px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:grab}
-.doc-num{font-family:var(--font-label);font-size:13px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.doc-num{font-family:var(--font-label);font-size:13px;color:var(--text-muted);font-variant-numeric:tabular-nums;
+  border:none;background:none;padding:0;min-width:20px;cursor:pointer;border-radius:6px;line-height:20px}
+.doc-num:hover{color:var(--text-primary);background:rgba(23,19,16,.06)}
+.doc-num[aria-pressed="true"]{color:var(--dash-accent);font-weight:700}
+.doc-notenum{opacity:0;margin-right:2px}
+.doc-commentrow:hover .doc-notenum,.doc-notenum:focus-visible,.doc-notenum[aria-pressed="true"]{opacity:1}
+.doc-row.picked,.doc-secline.picked{background:color-mix(in srgb,var(--dash-accent) 10%,transparent);border-radius:8px}
+.doc-pick-bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  margin:0 0 10px;padding:8px 12px;border-radius:10px;background:var(--surface-sunk);font-family:var(--font-body)}
+.doc-pick-n{font-size:14px;font-weight:600;color:var(--text-primary)}
+.doc-pick-do{min-height:32px;padding:0 14px;border-radius:999px;border:none;cursor:pointer;
+  background:var(--dash-accent);color:#fff;font-family:var(--font-body);font-size:14px;font-weight:600}
+.doc-pick-off{min-height:32px;padding:0 10px;border:none;background:none;cursor:pointer;
+  font-family:var(--font-body);font-size:14px;font-weight:600;color:var(--text-secondary)}
+.doc-pick-say{margin-left:auto;font-size:13px;color:var(--text-muted)}
 .doc-put{display:none;width:30px;height:30px;padding:0;border:none;background:none;border-radius:8px;cursor:pointer;
   align-items:center;justify-content:center;color:var(--dash-accent)}
 .doc-put:hover{background:rgba(23,19,16,.06)}

@@ -107,6 +107,16 @@ next line of the same kind and `Backspace` on an empty one deletes it. `/` opens
 the command menu, `@` finds something already in the library, `# ` at the start
 of a line makes it a section and `- ` makes it a note. `src/engine/DayDoc.jsx`.
 
+**Lines are picked out of the margin and copied as Markdown.** Every line is
+its own text box, so a mouse drag cannot cross them and there was nothing to
+select. Clicking the number picks that line, shift takes the range, the
+platform's key adds or removes one, and a strip above the day says how many are
+picked with Copy and Clear on it. ⌘C copies while a pick is up, Escape lets it
+go, and Copy and Copy section are on the right-click menus for when picking is
+more work than it is worth. A section comes out as a heading, an item bold on
+its own line, a note as a bullet under it, and a block's content indented.
+`docMarkdown` in `src/engine/DayDoc.jsx`.
+
 **Nothing on a row at rest.** The margin holds the item's number and gives way
 to Put on screen under the pointer. A plain item wears no kind word, a link is
 one chip, and the row on the room screen is the only filled row. Right click or
