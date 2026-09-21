@@ -45,6 +45,8 @@ import TopNav, { NAV_CLASS } from "./TopNav.jsx";
 import { ClassMenu } from "./ClassMenu.jsx";
 import { daySlug } from "./days.js";
 import WelcomeDeck, { needsWelcome } from "./WelcomeDeck.jsx";
+import NoticeCard, { NoticeWriter } from "./NoticeCard.jsx";
+import { noticeFor, markNoticeRead } from "./notice.js";
 import { isTestStudent, realStudents, sectionFor, hasSections } from "./sections.js";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
@@ -531,6 +533,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const [deckDone, setDeckDone] = useState(false);
   // The same, for the due-soon cards.
   const [dueDone, setDueDone] = useState(false);
+  // And for the card he writes for the class.
+  const [noticeDone, setNoticeDone] = useState(false);
   // What the page draws as. The person is still the instructor; the page is
   // drawn the way the chosen student would get the page drawn.
   // Who this is, from the session and the roster. The remembered name is what
@@ -965,6 +969,11 @@ export default function ClassApp({ config: classConfig, initialCard }) {
             instructor={view === "instructor"} update={write}
             me={view === "instructor" ? "" : seenAs} mark={ctx.mark} />
         </div>
+        {view === "instructor" ? (
+          <div key="notice" style={{ gridColumn: "1 / -1" }}>
+            <NoticeWriter data={data} update={write} seat={cardStyle(theme, 1)} />
+          </div>
+        ) : null}
         {(data?.pins || []).length || view === "instructor" ? (
           <div key="pins" style={{ gridColumn: "1 / -1" }}>
             <PinnedLinks data={data} update={write} instructor={view === "instructor"} seat={cardStyle(theme, 1)} />
@@ -1019,6 +1028,23 @@ export default function ClassApp({ config: classConfig, initialCard }) {
         <style>{CSS + accentCSS(a, config.accentDark)}</style>
         <DueDeck config={config} items={dueCards} onDismiss={(asg) => write(prev => dismissDue(prev, asg, seenAs))} onDone={() => setDueDone(true)}
           onOpen={(asg) => go("assignments/" + asg.id)} />
+      </div>
+    );
+  }
+
+  // A card he has written for the class, once each, and only while it is still
+  // worth saying. Andrew, 2026-09-21: "i want to create a card that will be
+  // there next time students log in." Last of the cards in front of the site,
+  // because a grade and a deadline are a student's own business and this is
+  // everybody's. See notice.js.
+  const notice = data !== null && view !== "instructor" && !noticeDone ? noticeFor(data, seenAs) : null;
+  if (notice) {
+    return (
+      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">
+        <ThemeStyle theme={theme} />
+        <style>{CSS + accentCSS(a, config.accentDark)}</style>
+        <NoticeCard config={config} text={notice.text}
+          onDone={() => { write(prev => markNoticeRead(prev, seenAs)); setNoticeDone(true); }} />
       </div>
     );
   }

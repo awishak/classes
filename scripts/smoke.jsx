@@ -91,6 +91,8 @@ import { assignmentsOf } from "../src/engine/profileTask.js";
 import { QuestionsSummary, QuestionsDetail, onThePage, archivedOf, askedBy, sortQuestions, isAnswered, QuestionEntry } from "../src/engine/QuestionsCard.jsx";
 import { sectionsOf as sittingLabels, hasSections, studentsIn, sectionFor, realStudents, isTestStudent, sectionNow } from "../src/engine/sections.js";
 import { classmatesOf, RosterDetail } from "../src/engine/RosterCard.jsx";
+import NoticeCard, { NoticeWriter } from "../src/engine/NoticeCard.jsx";
+import { noticeFor, noticeLive, setNotice, markNoticeRead } from "../src/engine/notice.js";
 import { rosterOf } from "../src/engine/roster.js";
 import { comingUp, turnedIn } from "../src/engine/AssignmentsCard.jsx";
 import { YouDetail, MessagesDetail, MessagesSummary } from "../src/engine/YouCard.jsx";
@@ -4068,6 +4070,45 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // And the tile on the front page counts the same class.
   const tile = renderToString(<div>{MessagesSummary({ config: cfg, role: "instructor", data })}</div>);
   if (!tile.includes("1")) say("the card does not count who is waiting: " + tile);
+}
+
+// A card the class reads before the site.
+//
+// Andrew, 2026-09-21: "i want to create a card that will be there next time
+// students log in", with his own words on it, and "get rid of it after 11:30
+// tomorrow morning."
+{
+  const say = (m) => { console.error("  FAIL  the notice: " + m); failedEarly++; };
+  const words = "I'd love to see you in office hours.";
+  const until = Date.parse("2026-09-22T18:30:00Z");   // 11:30 in California
+  const before = until - 3600000, after = until + 60000;
+  const set = setNotice({ students: [] }, words, until);
+  if (!set.notice?.id) say("a notice written is not a notice stored");
+  if (set.notice.text !== words) say("the words were changed on the way in");
+  // Every student, until they have read it.
+  if (!noticeFor(set, "Ada Lovelace", before)) say("a student is not shown the card");
+  const read = markNoticeRead(set, "Ada Lovelace");
+  if (noticeFor(read, "Ada Lovelace", before)) say("a student who read it is shown it again");
+  if (!noticeFor(read, "Alan Turing", before)) say("one student reading it took it off everybody else");
+  // And it stops on its own.
+  if (noticeFor(set, "Ada Lovelace", after)) say("the card is still up after the time he set");
+  if (!noticeLive(set, before) || noticeLive(set, after)) say("a card with a deadline does not keep to it");
+  // New words are a new card, so the class reads it again.
+  const next = setNotice(read, words + " Vari 206.", until);
+  if (!noticeFor(next, "Ada Lovelace", before)) say("a student who read the last card does not see the new one");
+  // Taken down, there is nothing to show and nothing left in the store.
+  const down = setNotice(next, "", 0);
+  if (down.notice || noticeFor(down, "Alan Turing", before)) say("a card taken down is still up");
+  // The card itself, and his side of it.
+  const cfg = { accent: "#333", code: "COMM 118", instructor: { name: "Dr. Ishak" } };
+  const card = renderToString(<NoticeCard config={cfg} text={words} onDone={noop} />);
+  if (!card.includes("love to see you in office hours")) say("the card does not carry his words");
+  if (!card.includes("COMM 118")) say("the card does not say which class it is for");
+  if (!card.includes("Go to the site")) say("there is nothing to press on the card");
+  const mine = renderToString(<NoticeWriter data={set} update={noop} seat={{}} />);
+  if (!mine.includes("Card for students")) say("he has no way to the card");
+  if (!mine.includes("love to see you in office hours")) say("he cannot see what the card says");
+  if (mine.includes("<textarea")) say("the box is open before he asks for it");
 }
 
 // Three readings, then the box.

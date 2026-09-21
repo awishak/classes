@@ -871,6 +871,32 @@ card's boxes handed new values.
 Both are guarded from the source, because a caret is a live browser and cannot
 be rendered.
 
+## A card the class reads before the site
+
+Andrew, 2026-09-21: "i want to create a card that will be there next time
+students log in", and "get rid of it after 11:30 tomorrow morning."
+
+`notice.js` and `NoticeCard.jsx`. A notice is what it says, when it stops, and
+who has read it:
+
+    notice     { id, text, until }   until is a moment, in milliseconds
+    noticeSeen { [name]: id }        the card each student has tapped through
+
+A student sees it on every visit until they tap through it, and nobody sees it
+after `until` has passed. Both together: a card that comes back after it has
+been read is a card people learn to dismiss without reading, and a card with no
+end keeps being read out of date. The id is the words and the deadline together,
+so writing new words shows the card to the class again, the students who read
+the last one included.
+
+It comes last of the cards in front of the site, after a grade and after a
+deadline, because those two are a student's own business and this is
+everybody's. His side is a collapsed control on the front page, the way the
+pinned links work: the words, a moment to stop at, Save and Take it down.
+
+The first one went up on 2026-09-21 in COMM 118 and COMM 3, which is the three
+sittings he teaches this fall, and it says what he wrote about office hours.
+
 ## The first time a student signs in
 
 `src/engine/WelcomeDeck.jsx`. Nine cards before the site, one question each, in
