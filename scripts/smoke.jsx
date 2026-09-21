@@ -4105,6 +4105,9 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!card.includes("love to see you in office hours")) say("the card does not carry his words");
   if (!card.includes("COMM 118")) say("the card does not say which class it is for");
   if (!card.includes("Go to the site")) say("there is nothing to press on the card");
+  // Andrew, 2026-09-21: "the go to the site button is too close to the bottom.
+  // can we put it right under the text?"
+  if (/margin-top:auto/.test(card)) say("the button is still pushed to the foot of the screen");
   const mine = renderToString(<NoticeWriter data={set} update={noop} seat={{}} />);
   if (!mine.includes("Card for students")) say("he has no way to the card");
   if (!mine.includes("love to see you in office hours")) say("he cannot see what the card says");

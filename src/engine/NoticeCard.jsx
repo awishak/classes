@@ -25,7 +25,7 @@ export default function NoticeCard({ config, text, instructor, onDone }) {
   return (
     <div aria-label="A note from your instructor" style={{ minHeight: "100vh", background: BG, fontFamily: F, color: TEXT_PRIMARY,
       display: "flex", flexDirection: "column", alignItems: "center", padding: "24px 16px" }}>
-      <div style={{ width: "100%", maxWidth: 560, display: "flex", flexDirection: "column", gap: 16, flex: 1 }}>
+      <div style={{ width: "100%", maxWidth: 560, display: "flex", flexDirection: "column", gap: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, minHeight: TAP }}>
           <span style={label}>{config.code}</span>
           {instructor ? <span style={{ fontSize: 15, color: TEXT_MUTED }}>The card students see</span> : null}
@@ -37,8 +37,12 @@ export default function NoticeCard({ config, text, instructor, onDone }) {
             <div style={{ ...label, marginTop: 16 }}>{config.instructor.name}</div>
           ) : null}
         </section>
+        {/* Right under what it says. Andrew, 2026-09-21: "the go to the site
+            button is too close to the bottom. can we put it right under the
+            text?" It was pushed to the foot of the screen with a margin, which
+            on a laptop put it a long way from the words it answers. */}
         <button onClick={onDone} className="ca-focus"
-          style={{ marginTop: "auto", minHeight: 52, padding: "0 20px", borderRadius: 12, background: a, color: "#fff",
+          style={{ minHeight: 52, padding: "0 20px", borderRadius: 12, background: a, color: "#fff",
             border: "none", fontFamily: F, fontSize: 18, fontWeight: 600, cursor: "pointer" }}>
           Go to the site
         </button>
