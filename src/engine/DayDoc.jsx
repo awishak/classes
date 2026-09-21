@@ -1288,7 +1288,7 @@ export const DOC_CSS = `
 .lv-body{color:var(--text-muted)}
 /* The margin of a line. At rest it holds the item's number and nothing else;
    under the pointer the number gives way to the way up to the screen. */
-.doc-gut{flex:none;width:34px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:grab}
+.doc-gut{flex:none;width:48px;min-height:32px;display:inline-flex;align-items:center;justify-content:flex-start;gap:1px;cursor:grab}
 .doc-num{font-family:var(--font-label);font-size:13px;color:var(--text-muted);font-variant-numeric:tabular-nums;
   border:none;background:none;padding:0;min-width:20px;cursor:pointer;border-radius:6px;line-height:20px}
 .doc-num:hover{color:var(--text-primary);background:rgba(23,19,16,.06)}
@@ -1304,11 +1304,16 @@ export const DOC_CSS = `
 .doc-pick-off{min-height:32px;padding:0 10px;border:none;background:none;cursor:pointer;
   font-family:var(--font-body);font-size:14px;font-weight:600;color:var(--text-secondary)}
 .doc-pick-say{margin-left:auto;font-size:13px;color:var(--text-muted)}
-.doc-put{display:none;width:30px;height:30px;padding:0;border:none;background:none;border-radius:8px;cursor:pointer;
+.doc-put{display:none;width:26px;height:26px;padding:0;border:none;background:none;border-radius:8px;cursor:pointer;
   align-items:center;justify-content:center;color:var(--dash-accent)}
 .doc-put:hover{background:rgba(23,19,16,.06)}
 .doc-row:hover .doc-put,.doc-secline:hover .doc-put,.doc-put:focus-visible{display:inline-flex}
-.doc-row:hover .doc-num,.doc-gut:focus-within .doc-num{display:none}
+/* The number stays put under the pointer. It used to give way to the arrow,
+   which is why picking a line worked on a section and nowhere else: the
+   moment you reached for an item's number it was not there any more. Andrew,
+   2026-09-20: "hmm but it only works for sections." Both live in the margin
+   now, the number first and the arrow beside it. */
+.doc-row:hover .doc-num{color:var(--text-primary)}
 .doc-row.live .doc-put,.doc-secline.live .doc-put{color:var(--state-live)}
 .doc-group.next .doc-num{color:var(--dash-accent);font-weight:600}
 .doc-line{flex:1 1 auto;min-width:0;display:block;width:100%;box-sizing:border-box;resize:none;overflow:hidden;field-sizing:content;

@@ -2942,6 +2942,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!/onClick=\{e => pickLine\(it\.id, e\)\}/.test(doc)) say("a row has no way to be picked");
   if (!/onClick=\{e => pickLine\("s:" \+ sec\.slot, e\)\}/.test(doc)) say("a section has no way to be picked");
   if (!/onClick=\{e => pickLine\(c\.it\.id, e\)\}/.test(doc)) say("a note has no way to be picked");
+  // The number has to be there when you reach for it. It used to give way to
+  // the Put arrow on hover, so picking worked on a section and nowhere else.
+  if (/\.doc-row:hover \.doc-num\{display:none\}/.test(doc)) say("an item's number disappears under the pointer again");
+  if (!/\.doc-row:hover \.doc-num\{color:/.test(doc)) say("the number does not answer the pointer at all");
   if (!/\["Copy", \(\) => copyKeys/.test(doc)) say("a row's menu cannot copy it");
   if (!/\["Copy section", \(\) => copyKeys/.test(doc)) say("a section's menu cannot copy it");
 }
