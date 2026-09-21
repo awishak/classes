@@ -3672,6 +3672,29 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   }
 }
 
+// The comment box keeps the caret where the typing is.
+//
+// Andrew, 2026-09-21: "when i type in assignment details, the cursor keeps
+// going to the beginning." The box is contentEditable and was handed its HTML
+// on every render, so each draft save came back through the store and React
+// replaced what was inside the node, putting the caret at the top of the box
+// mid-sentence. Checked from the source, because the failure is a live caret in
+// a real browser and the mistake is one line of JSX.
+{
+  const say = (m) => { console.error("  FAIL  comment box: " + m); failedEarly++; };
+  const { readFileSync: readCard } = await import("node:fs");
+  const src = readCard(new URL("../src/engine/AssignmentsCard.jsx", import.meta.url), "utf8");
+  const editor = src.slice(src.indexOf("function RichEditor"));
+  const body = editor.slice(0, editor.indexOf("\nfunction "));
+  if (/dangerouslySetInnerHTML/.test(body)) say("the box is handed its HTML on every render again");
+  if (!/editorRef\.current\.innerHTML = initialHtml/.test(body)) say("the box is never seeded with the draft it left off on");
+  if (!/\}, \[\]\)/.test(body)) say("the seed runs on more than the first render");
+  // A component made inside another component is a new type every render, and
+  // React answers a new type by throwing the subtree away and building it
+  // again. The log sits above the box being typed in.
+  if (/function AssignmentLog[\s\S]{0,400}?const Wrap = \(/.test(src)) say("the log still makes a new row component on every render");
+}
+
 // Saying you will not be there.
 //
 // Andrew, 2026-09-21: "create a checkbox on the schedule next to each day for

@@ -299,12 +299,17 @@ const APPR_CSS = `@keyframes apprPulse{0%{transform:scale(.8);opacity:0;filter:b
 // Instructor entries (grade, instructor comment) align right; student entries
 // (submission, student comment) align left. onLike toggles appreciation for the
 // current actor; onDelete (instructor only) removes a grade or comment.
+// A row of the log, on its own side of the conversation. It was declared inside
+// AssignmentLog, which makes a new component type on every render, so React
+// threw the whole conversation away and built it again every time anything
+// above it changed. On the grading screen that is every draft save.
+const Wrap = ({ right, children }) => (
+  <div style={{ display: "flex", justifyContent: right ? "flex-end" : "flex-start" }}>
+    <div style={{ maxWidth: "88%" }}>{children}</div>
+  </div>
+);
+
 function AssignmentLog({ asg, log, accent, studentName, actor, onLike, onDelete }) {
-  const Wrap = ({ right, children }) => (
-    <div style={{ display: "flex", justifyContent: right ? "flex-end" : "flex-start" }}>
-      <div style={{ maxWidth: "88%" }}>{children}</div>
-    </div>
-  );
   const delBtn = (eid) => onDelete && <button onClick={() => onDelete(eid)} style={{ background: "none", border: "none", color: "#dc2626", fontFamily: F, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: 0 }}>Delete</button>;
   const apprLabel = (by) => (by === "instructor" ? "Dr. Ishak" : (by ? by.split(" ")[0] : "")) + " appreciated this";
   const likeBtn = (e) => {
@@ -751,11 +756,34 @@ function GradeForm({ config, asg, name, log, draftHtml, onDraft, onSubmit, onSki
   );
 }
 
+// The box that holds the comment, and the box holds it.
+//
+// Andrew, 2026-09-21: "when i type in assignment details, the cursor keeps
+// going to the beginning."
+//
+// It was handed its HTML on every render, through dangerouslySetInnerHTML.
+// Typing saves a draft after 600ms of quiet, the draft goes into the class
+// store, the store comes back as a new `initialHtml`, and React answers a
+// changed __html by replacing what is inside the node. The words survive that.
+// The caret does not: it lands back at the top of the box, mid-sentence, about
+// once a second, for as long as you keep typing.
+//
+// So the draft seeds the box once, when the box is made, and after that the box
+// owns what is in it. GradeForm carries a key of assignment and student, so the
+// next person to grade is a new box, seeded again from their own draft. The
+// Draft a comment button writes through the same ref, which is why it still
+// lands.
 function RichEditor({ editorRef, initialHtml, onDraft }) {
   const timer = useRef(null);
   const cmd = (c, v) => document.execCommand(c, false, v);
   const flush = () => { if (onDraft && editorRef.current) onDraft(editorRef.current.innerHTML); };
   const onInput = () => { if (timer.current) clearTimeout(timer.current); timer.current = setTimeout(flush, 600); };
+  // Seeded once. The draft this opens on is whatever was typed and left behind
+  // last time, and a save in flight must never come back and move the caret.
+  useEffect(() => {
+    if (editorRef.current) editorRef.current.innerHTML = initialHtml || "";
+    return () => { if (timer.current) clearTimeout(timer.current); };
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   const tb = { minHeight: 36, minWidth: 40, borderRadius: 8, border: "1px solid " + BORDER_STRONG, background: "#fff", cursor: "pointer", fontFamily: F, fontSize: 15 };
   return (
     <div style={{ marginTop: 6 }}>
@@ -765,7 +793,6 @@ function RichEditor({ editorRef, initialHtml, onDraft }) {
         <button onMouseDown={e => e.preventDefault()} onClick={() => { const u = prompt("Link URL"); if (u) cmd("createLink", u); }} style={{ ...tb, fontWeight: 600 }}>Link</button>
       </div>
       <div contentEditable ref={editorRef} suppressContentEditableWarning onInput={onInput} onBlur={flush}
-        dangerouslySetInnerHTML={{ __html: initialHtml || "" }}
         style={{ ...inputStyle, minHeight: 100, lineHeight: 1.5, padding: 12, textAlign: "left" }} />
     </div>
   );
