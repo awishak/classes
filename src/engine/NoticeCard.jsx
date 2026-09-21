@@ -89,8 +89,9 @@ export function NoticeWriter({ data, update, seat }) {
   return (
     <section aria-label="Card for students" style={{ ...seat, padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
       <button className="ca-focus" onClick={() => setOpen(!open)} aria-expanded={open}
-        style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, cursor: "pointer",
-          minHeight: now ? 0 : TAP, fontFamily: F, ...label, color: "var(--ca-accent-ink)" }}>
+        style={{ alignSelf: "flex-start", background: "none", cursor: "pointer",
+          border: "1px solid " + TOKENS.LINE.strong, borderRadius: 999, padding: "0 14px", minHeight: 36,
+          fontFamily: F, ...label, color: "var(--ca-accent-ink)" }}>
         Card for students
       </button>
       {now && !open ? (

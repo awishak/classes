@@ -169,11 +169,18 @@ function NoteEditor({ date, value, update }) {
     });
     setSaved(true);
   };
+  // It reads as a button, because it is one.
+  //
+  // Andrew, 2026-09-21: "hey how come i cant change teh note on the front page
+  // now." Because the switch was drawn as a label, in the same small caps as
+  // Next class above it, so the thing to press looked like a caption. It is a
+  // pill with an edge on it now.
   const label = (
     <button className="ca-focus" aria-expanded={open}
       onClick={() => { if (open) save(); setSaved(false); setOpen(!open); }}
-      style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, cursor: "pointer",
-        minHeight: TAP, fontFamily: F, ...small, color: "var(--ca-accent-ink)" }}>
+      style={{ alignSelf: "flex-start", background: "none", cursor: "pointer",
+        border: "1px solid " + BORDER_STRONG, borderRadius: 999, padding: "0 14px", minHeight: 36,
+        fontFamily: F, ...small, color: "var(--ca-accent-ink)" }}>
       Note to students
     </button>
   );
@@ -339,8 +346,9 @@ export function PinnedLinks({ data, update, instructor, seat }) {
     <section aria-label="Pinned" style={{ ...seat, padding: 16, display: "flex", flexDirection: "column", gap: 4 }}>
       {instructor ? (
         <button className="ca-focus" onClick={() => setOpen(!open)} aria-expanded={open}
-          style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, cursor: "pointer",
-            minHeight: pins.length ? 0 : TAP, fontFamily: F, ...small, color: "var(--ca-accent-ink)" }}>
+          style={{ alignSelf: "flex-start", background: "none", cursor: "pointer",
+            border: "1px solid " + BORDER_STRONG, borderRadius: 999, padding: "0 14px", minHeight: 36,
+            fontFamily: F, ...small, color: "var(--ca-accent-ink)" }}>
           Pinned
         </button>
       ) : <span style={small}>Pinned</span>}

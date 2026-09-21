@@ -3953,6 +3953,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (quiet.includes("<textarea")) say("an empty note still takes a box on the card");
     if (!quiet.includes("Note to students")) say("there is no way to write a note");
     if (!/aria-expanded="false"/.test(quiet)) say("the label does not say whether the note is open");
+    // And it looks like something to press. Andrew, 2026-09-21: "hey how come
+    // i cant change teh note on the front page now." It was drawn in the same
+    // small caps as the label above it, so it read as a caption.
+    {
+      const chunk = quiet.slice(quiet.indexOf("Note to students") - 400, quiet.indexOf("Note to students"));
+      if (!/border-radius:999px/.test(chunk) || !/border:1px solid/.test(chunk)) say("the way into the note is drawn as a label rather than a button");
+    }
     // Written, and shut: the words, the way the class reads them, and no box.
     const written = { ...day, dayPlans: { "Sep 21": { ...day.dayPlans["Sep 21"], studentNote: "Bring the photo." } } };
     const loud = renderToString(<NextClassHero config={cfg} data={written} blockOf={() => null}
