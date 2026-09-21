@@ -950,7 +950,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
             and the full width with everything stacked was emptier still. */}
         {data?.welcome || view === "instructor" ? (
           <div key="welcome" style={{ gridColumn: "1 / -1" }}>
-            <WelcomeCard data={data} update={write} instructor={view === "instructor"} seat={cardStyle(theme, 0)} accent={a} />
+            <WelcomeCard data={data} update={write} instructor={view === "instructor"} seat={cardStyle(theme, 0)} accent={a} config={config} />
           </div>
         ) : null}
         <div key="hero" style={{ gridColumn: "1 / -1" }}>

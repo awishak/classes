@@ -267,7 +267,7 @@ export function owedStyle(asg) {
 // card. It is the first thing on the page while it has words in it, and it is
 // not there at all when it does not, so a class in week nine is not still
 // being welcomed.
-export function WelcomeCard({ data, update, instructor, seat, accent }) {
+export function WelcomeCard({ data, update, instructor, seat, accent, config }) {
   const saved = String(data?.welcome || "").trim();
   const [draft, setDraft] = useState(saved);
   const [open, setOpen] = useState(false);
@@ -292,9 +292,19 @@ export function WelcomeCard({ data, update, instructor, seat, accent }) {
       </section>
     );
   }
+  // His face beside his words. Andrew, 2026-09-20: "on that front page
+  // welcoming them to the class, can you also put my avatar?" It is the photo
+  // from his own card, so there is one picture of him to keep up to date.
+  const me = config?.instructor || {};
   return (
     <section aria-label="Welcome" style={frame}>
-      <div style={{ fontSize: 17, lineHeight: 1.55, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{saved}</div>
+      <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+        {me.photo ? <AvatarPreview value={me.photo} accent={accent || "var(--ca-accent)"} size={56} /> : null}
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 17, lineHeight: 1.55, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{saved}</div>
+          {me.name ? <div style={{ ...small, marginTop: 8 }}>{me.name}</div> : null}
+        </div>
+      </div>
       {instructor ? (
         <button className="ca-focus" onClick={() => { setDraft(saved); setOpen(true); }}
           style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, cursor: "pointer",

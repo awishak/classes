@@ -2668,8 +2668,15 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
 {
   const say = (msg) => { console.error("  FAIL  welcome and PIN: " + msg); failedEarly++; };
   try {
-    const said = renderToString(<WelcomeCard data={{ welcome: "Welcome to the site." }} update={noop} seat={{}} />);
+    const cfgMe = { instructor: { name: "Dr. Ishak", photo: "data:image/png;base64,iVBORw0KGgo=" }, accent: "#333" };
+    const said = renderToString(<WelcomeCard data={{ welcome: "Welcome to the site." }} update={noop} seat={{}} config={cfgMe} />);
     if (!said.includes("Welcome to the site.")) say("a written welcome does not show");
+    // His face beside his words. Andrew, 2026-09-20: "can you also put my
+    // avatar?"
+    if (!said.includes("<img")) say("his photo is not on the welcome");
+    if (!said.includes("Dr. Ishak")) say("the welcome is not signed");
+    const noPhoto = renderToString(<WelcomeCard data={{ welcome: "Hello." }} update={noop} seat={{}} config={{ instructor: {} }} />);
+    if (noPhoto.includes("<img")) say("a card draws a photo that does not exist");
     // Nothing written, nothing on the page, so week nine is not still saying hello.
     if (renderToString(<WelcomeCard data={{}} update={noop} seat={{}} />)) say("an empty welcome still takes a card");
     // His view offers the box even when there is nothing in it yet.
