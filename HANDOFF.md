@@ -289,6 +289,25 @@ A thread that already holds an I'm confused still renders it. Office hours sit
 under the whole thing, from the profile, and a class with none written shows
 nothing.
 
+## The day says what a game is called
+
+Andrew, 2026-09-21: "so why is the game called Week 1, and why can't i change
+the name." Three things, one knot. The game in COMM 118's games list is called
+Week 1. Dragging it onto Sep 23 wrote a row of `{ gameId, text: "Week 1" }`,
+because placing a game copies its title. And the row would not let him type,
+because `DayDoc` marked any row with a `gameId` read only, the way it does a
+feature or a seed.
+
+Underneath that was a real bug: what students read on the schedule is the copy
+on the row, so renaming the game on the games page left the day still saying
+Week 1 to the class. The class site cannot look the name up for itself, because
+it only loads the games that are open to students.
+
+So the row's own words win and the game's title is what a fresh row starts with.
+Type over it and the day says what you typed, in the document and on the
+schedule both. A row whose name is taken off reads "Game", the same as a feature
+row, because it is still a game that happens in the room.
+
 ## Questions
 
 `src/engine/QuestionsCard.jsx` over `${storageKey}-questions`, the store the

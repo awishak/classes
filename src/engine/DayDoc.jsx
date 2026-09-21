@@ -446,14 +446,25 @@ export default function DayDoc({
     return items[j]?.id || itemId;
   };
 
-  // A game row points at a game built in the game panel and wears its name.
+  // A game row points at a game built in the game panel, and the day gets to
+  // say what that game is called here.
+  //
+  // Andrew, 2026-09-21: "so why is the game called Week 1, and why can't i
+  // change the name." Because the game in the games list is called Week 1, the
+  // row copied that name when the game was dragged onto the day, and the row
+  // would not let him type. The name the students read comes off the row, so
+  // renaming the game left Wednesday still saying Week 1 to the class.
+  //
+  // So the row's own words win, and the game's title is what a fresh row starts
+  // with. Type over it and the day says what you typed, on the dashboard and on
+  // the schedule both.
   const gameOf = (id) => (games || []).find(g => g.id === id) || null;
-  const itemWords = (it, blk, seed) => (it.gameId ? (gameOf(it.gameId)?.title || it.text) : "") || it.feature || (blk ? blk.title : seed ? seed.title : it.text) || "";
+  const itemWords = (it, blk, seed) => (it.gameId ? (it.text || gameOf(it.gameId)?.title) : "") || it.feature || (blk ? blk.title : seed ? seed.title : it.text) || "";
   const isTyped = (line) => !!line.it && !line.it.blockId && !line.it.feature && !line.it.gameId && !line.it.seedId && !(line.it.links || []).length;
   const leaveEmpty = (line) => (isTyped(line) && onRemoveItem ? () => onRemoveItem(line.slot, line.it.id) : null);
   const saveItemWords = (line) => (v) => {
     if (line.blk) onSaveBlock(line.blk.id, { title: v });
-    else if (!line.seed && !line.it.feature && !line.it.gameId) onSaveItem(line.slot, line.it.id, { text: v });
+    else if (!line.seed && !line.it.feature) onSaveItem(line.slot, line.it.id, { text: v });
   };
   const tagOf = (slot) => normSlot(slotItems[slot]).title || (sections.find(([k]) => k === slot) || [])[1] || "";
 
@@ -1162,7 +1173,7 @@ export default function DayDoc({
                           onClick={() => (live ? dismiss() : castItem(it, blk, seed, words, claim, tag, slide))}>{PUT}</button>
                       </span>
                       <Line id={it.id} value={words} placeholder="Item, or / for commands" className="lv-item" done={doneSet.has(it.id)} mark={it.mark}
-                        readOnly={!!(seed || it.feature || it.gameId)} onSave={saveItemWords(g.head)} onKey={keyHandler(g.head)} register={register}
+                        readOnly={!!(seed || it.feature)} onSave={saveItemWords(g.head)} onKey={keyHandler(g.head)} register={register}
                         onLeaveEmpty={leaveEmpty(g.head)} onLink={linkMenu(it.id)} onType={typing(g.head)} onLeave={leave} />
                       {/* The kind is a small coloured word, and only when it says
                           something: a plain item wears none. */}

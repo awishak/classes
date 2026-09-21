@@ -3856,6 +3856,35 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   }
 }
 
+// The day says what the game is called.
+//
+// Andrew, 2026-09-21: "so why is the game called Week 1, and why can't i change
+// the name. for COMM 118 for Wednesdya." The game in the games list was called
+// Week 1, the row copied that name when the game was dragged onto the day, and
+// the row would not let him type. What students read comes off the row, so
+// renaming the game left the day still saying Week 1 to the class.
+{
+  const say = (m) => { console.error("  FAIL  naming a game: " + m); failedEarly++; };
+  const cfg = { accent: "#333", path: "/comm118", scheduleWeeks: [] };
+  const draw = (flowItem) => renderToString(<ScheduleDetail config={cfg} blockOf={() => null}
+    data={{ schedule: [{ id: "w1", dates: ["Sep 21", "Sep 23", "Sep 25"], items: [] }],
+      dayPlans: { "Sep 23": { slots: { opener: { items: [flowItem] } } } } }} />);
+  const named = draw({ id: "f1", gameId: "g-uuid", text: "Sports and spectacle" });
+  if (!named.includes("Sports and spectacle")) say("the name written on the day is not what the class reads");
+  // Emptied, it is still a game that happens in the room.
+  const blank = draw({ id: "f1", gameId: "g-uuid", text: "" });
+  if (!blank.includes("Game")) say("a game with its name taken off vanished from the schedule");
+  // And the day plan lets him type it. Read from the source, because the doc is
+  // a keyboard surface and what is being checked is that a row is not read only.
+  {
+    const { readFileSync: readDoc } = await import("node:fs");
+    const doc = readDoc(new URL("../src/engine/DayDoc.jsx", import.meta.url), "utf8");
+    if (/readOnly=\{!!\(seed \|\| it\.feature \|\| it\.gameId\)\}/.test(doc)) say("a game row is read only again");
+    if (!/it\.gameId \? \(it\.text \|\| gameOf\(it\.gameId\)\?\.title\)/.test(doc)) say("the game's own title wins over the name written on the day");
+    if (/!line\.it\.feature && !line\.it\.gameId\) onSaveItem/.test(doc)) say("typing on a game row is thrown away");
+  }
+}
+
 // Three readings, then the box.
 //
 // Andrew, 2026-09-21: "if there's more than 3 readings in a day, put the 3

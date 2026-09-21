@@ -176,7 +176,9 @@ export function studentItems(week, dayPlans, blockOf) {
     const seen = new Set();
     Object.values(plan.slots || {}).forEach(slot => normSlot(slot).items.forEach(it => {
       const block = it.blockId ? lookup(it.blockId) : null;
-      const title = it.gameId ? (it.text || "")
+      // A game row wears the name the day gave it. Emptied, it is still a game
+      // that happens in the room, so it says what a Game row says.
+      const title = it.gameId ? (it.text || "Game")
         : it.feature && (GAME_FEATURES.has(it.feature) || it.feature === "Headlines") ? it.feature
         : isGameSet(block, lookup) ? block.title : "";
       if (!title || seen.has(title)) return;
