@@ -3030,9 +3030,8 @@ const SHORTCUTS = [
   ["← →", "Step the board that is up, one idea at a time"],
   ["K J", "Walk down and up the run of show"],
   ["Enter", "Put the row I am on up on the room screen"],
-  ["⌘ E", "Teaching only. Shuts the rail and gives the day the whole screen."],
+  ["M", "Swap between Plan and Teach"],
   ["1-9", "Jump straight to a tab, left rail then right"],
-  ["\\", "Show or hide the rail"],
   ["⌘ /", "Show this list"],
 ];
 
@@ -3638,8 +3637,8 @@ function Picker({ title, opts, value, onPick, accent }) {
 //
 // So: PREP on the left, LIVE on the right, THE DAY down the middle and never
 // anywhere else. One tab open per rail, because a rail showing four things at
-// once is the grid again. Teaching mode shuts the prep rail, since mid-class I
-// am not gathering material, and the day takes the room it leaves.
+// once is the grid again. Teach adds the room to the rail rather than taking
+// anything away.
 // Material, Flow, Live.
 //
 // Attendance is not on the Live rail any more. Taking the roll is a thing I do
@@ -3878,9 +3877,16 @@ export default function Dashboard({ config, daySlug = "" }) {
       const cur = liveRef.current?.cast;
 
       if (mod && (e.key === "k" || e.key === "K")) { e.preventDefault(); setKeysOpen(false); setCmdOpen(v => !v); return; }
-      // The two modes, on one key. It used to hide the rail, which is the
-      // opposite of what teaching wants.
-      if (mod && (e.key === "e" || e.key === "E")) { e.preventDefault(); setModeState(m => m === "teach" ? "plan" : "teach"); return; }
+      // The two modes, on one key. Plain M rather than ⌘E: Andrew, 2026-09-20,
+      // "no command e just gave you control" — the Claude extension in Chrome
+      // takes ⌘E before the page sees it, and a shortcut the browser eats is
+      // not a shortcut. M is free here and it is the first letter of the thing
+      // it changes.
+      if (!typing && !mod && (e.key === "m" || e.key === "M")) {
+        e.preventDefault();
+        setModeState(m => m === "teach" ? "plan" : "teach");
+        return;
+      }
       // The rails, by number. 1-4 is the prep side, 5-9 the live side, in the
       // order the tabs are drawn, so the number IS the tab I can see.
       if (!typing && !mod && /^[1-9]$/.test(e.key)) {
