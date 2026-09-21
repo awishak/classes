@@ -120,15 +120,31 @@ for (const [name, b] of Object.entries(BRAND)) {
 // those boxes carried its white inside a style object: `background: "#fff"` on
 // an input, under text that goes pale after dark. A box takes the card's own
 // surface, which is white by day and near-black at night.
+const painted = [];
 const FIELD = /(<input|<textarea|<select|inputStyle|selectStyle|const (input|area|box|field)\b)/i;
+// A card painted white by hand is a card that glows after dark. Rule 1 reads
+// the constants at the top of a file; this reads the style objects, where
+// eighteen of them were hiding on 2026-09-21.
+const WHITE_GROUND = /background:\s*"(#fff(f{3})?|white)"/i;
 const PAINTED = /background:\s*"(#[0-9a-fA-F]{3,8}|white|rgba?\()/;
 for (const f of readdirSync(ENGINE).sort()) {
   if (!/\.jsx?$/.test(f) || OWNS_COLOUR.has(f)) continue;
   readFileSync(new URL(f, ENGINE), "utf8").split("\n").forEach((line, i) => {
     if (FIELD.test(line) && PAINTED.test(line)) {
       fail(`src/engine/${f}:${i + 1}`, "a text box paints its own background. Take it from tokens.js, so it follows the theme after dark.");
+    } else if (WHITE_GROUND.test(line)) {
+      // A warning rather than a failure, for now. Forty-nine of these were
+      // found on 2026-09-21 and some are white on purpose: the room screen is
+      // paper by design, and Snapchat's card is white in every light. The ones
+      // a student reads on the class site are fixed; the rest are a list to
+      // work through rather than a reason to stop the build.
+      painted.push(`src/engine/${f}:${i + 1}`);
     }
   });
+}
+
+if (painted.length) {
+  console.error(`  warn  ${painted.length} surface(s) painted white by hand, so they stay white after dark: ${painted.slice(0, 3).join(", ")}...`);
 }
 
 if (bad) {

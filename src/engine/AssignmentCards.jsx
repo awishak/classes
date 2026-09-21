@@ -186,7 +186,7 @@ export function AssignmentCards({ config, data, name, go }) {
 // "Your grade: C", the same size as every other line. The grade is not the
 // headline of a card or of the page.
 const YourGrade = ({ letter }) => (
-  <span style={{ fontSize: 15, color: TEXT_SECONDARY }}>Your grade: <strong style={{ color: TEXT_PRIMARY }}>{letter}</strong></span>
+  <span style={{ fontSize: 16, color: TEXT_PRIMARY }}>Your grade: <strong>{letter}</strong></span>
 );
 
 // Every card reads the same way: the name in full, the date and the weight
@@ -200,6 +200,17 @@ const YourGrade = ({ letter }) => (
 // once graded, red once a deadline has gone by with nothing in, amber inside
 // a week of one. A challenge with nothing turned in yet carries a chevron, to
 // say there is something to open.
+// A challenge reads the way a day on the schedule reads.
+//
+// Andrew, 2026-09-21: "maybe take the same approach we took to making the
+// schedule look cleaner ... take that approach to teh assignmetns, i'm not a
+// fan of little gray text." The card was a 17px title with three lines of grey
+// under it, all the same size, so the thing to read and the things about it
+// looked alike.
+//
+// One label across the top, in the colour of what it says. The name of the
+// challenge, big, under it. Then the lines that matter, in the ink everything
+// else is written in rather than a shade of grey.
 function AssignmentCard({ asg, st, current, onOpen }) {
   const graded = st.state === "graded";
   const edge = graded ? "2px solid " + SOLID_EDGE
@@ -211,24 +222,36 @@ function AssignmentCard({ asg, st, current, onOpen }) {
   const ongoing = st.state === "ongoing";
   const showChevron = !graded && st.state !== "turnedIn";
 
-  const when2 = ongoing ? "Ongoing"
-    : st.state === "missed" ? dueText(asg.due, asg.dueTime)
-    : st.state === "open" ? dueText(asg.due, asg.dueTime)
-    : "Due " + WEEKDAY[dateOf(asg.due).getDay()] + " " + asg.due + (asg.dueTime ? ", " + asg.dueTime : "");
-  const tone = st.state === "missed" ? LATE : st.soon ? WARN : TEXT_SECONDARY;
+  // What the top line says, and the colour it says it in. The words are the
+  // ones the markers already use, so a card and its circle agree.
+  const head = ongoing ? "Ongoing"
+    : graded ? "Graded"
+    : st.state === "turnedIn" ? "Turned in"
+    : dueText(asg.due, asg.dueTime);
+  const tone = st.state === "missed" ? LATE
+    : st.soon ? WARN
+    : st.state === "turnedIn" ? OK
+    : TEXT_PRIMARY;
+  const due = "Due " + (dateOf(asg.due) ? WEEKDAY[dateOf(asg.due).getDay()] + " " + asg.due : asg.due) + (asg.dueTime ? ", " + asg.dueTime : "");
 
   return (
     <div role="link" tabIndex={0} className="ca-focus" data-current={current ? "1" : "0"} onClick={open} onKeyDown={open}
       style={{ background: graded ? SOLID : CARD, color: TEXT_PRIMARY, border: edge, borderRadius: 16, fontFamily: F,
         cursor: "pointer", scrollMarginTop: 96, textAlign: "left", padding: 16, display: "flex", gap: 12 }}>
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
-        <span style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.3 }}>{asg.title}</span>
-        <span style={{ fontSize: 15, color: tone, fontWeight: st.state === "missed" || st.soon ? 700 : 400 }}>
-          {when2}{asg.weight ? <span style={{ color: TEXT_SECONDARY, fontWeight: 400 }}>{" \u00b7 " + asg.weight + "%"}</span> : null}
+        <span style={{ ...small, color: tone, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {head}{asg.weight ? <span style={{ color: TEXT_PRIMARY }}>{asg.weight}%</span> : null}
         </span>
-        {st.state === "turnedIn" && st.last ? <span style={{ fontSize: 15, color: TEXT_SECONDARY }}>Turned in {when(st.last.ts)}</span> : null}
+        <span style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.25, letterSpacing: "-0.01em" }}>{asg.title}</span>
+        {/* When it was wanted, on a card whose top line is about what happened
+            to it rather than when it is due. */}
+        {!ongoing && (graded || st.state === "turnedIn") ? (
+          <span style={{ fontSize: 15, color: TEXT_PRIMARY }}>
+            {st.last ? "Turned in " + when(st.last.ts) + " \u00b7 " : ""}{due}
+          </span>
+        ) : null}
         {graded && st.comments[0] ? (
-          <span style={{ fontSize: 15, lineHeight: 1.45, color: TEXT_SECONDARY, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{st.comments[0]}</span>
+          <span style={{ fontSize: 15, lineHeight: 1.45, color: TEXT_PRIMARY, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{st.comments[0]}</span>
         ) : null}
         {st.letter ? <span style={{ marginTop: 2 }}><YourGrade letter={st.letter} /></span> : null}
       </div>
@@ -237,7 +260,7 @@ function AssignmentCard({ asg, st, current, onOpen }) {
       <div style={{ flex: "none", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
         {st.isNew ? <NewPill /> : null}
         <Marker st={st} />
-        {showChevron ? <span aria-hidden="true" style={{ fontSize: 24, lineHeight: 1, color: TEXT_MUTED }}>›</span> : null}
+        {showChevron ? <span aria-hidden="true" style={{ fontSize: 24, lineHeight: 1, color: tone }}>›</span> : null}
       </div>
     </div>
   );
@@ -332,7 +355,7 @@ export function AssignmentPage({ config, data, update, name, id, go }) {
       <section style={{ background: CARD, border: "1px solid " + LINE_STRONG, borderRadius: 16, padding: 18, display: "flex", gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
           <h2 style={{ ...DISPLAY, margin: 0, fontSize: 24, lineHeight: 1.2, letterSpacing: "-0.02em", color: TEXT_PRIMARY, textWrap: "balance" }}>{asg.title}</h2>
-          {asg.description ? <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: TEXT_SECONDARY, maxWidth: "65ch" }}>{asg.description}</p> : null}
+          {asg.description ? <p style={{ margin: 0, fontSize: 17, lineHeight: 1.55, color: TEXT_PRIMARY, maxWidth: "65ch" }}>{asg.description}</p> : null}
           {asg.instructionsUrl ? (
             <a className="ca-focus" href={asg.instructionsUrl} target="_blank" rel="noreferrer"
               style={{ alignSelf: "flex-start", minHeight: TAP, padding: "0 18px", borderRadius: 12, background: accent, color: "#fff",
@@ -365,7 +388,7 @@ export function AssignmentPage({ config, data, update, name, id, go }) {
               fontFamily: F, fontSize: 16, fontWeight: 600, cursor: draft.trim() ? "pointer" : "default", opacity: draft.trim() ? 1 : .5 }}>
             Send
           </button>
-          <span style={{ fontSize: 14, color: TEXT_MUTED }}>{config.instructor?.email || "Your instructor"} needs access to your link.</span>
+          <span style={{ fontSize: 15, color: TEXT_SECONDARY }}>{config.instructor?.email || "Your instructor"} needs access to your link.</span>
         </div>
       </div>
       )}

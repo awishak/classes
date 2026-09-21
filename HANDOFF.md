@@ -338,6 +338,15 @@ each line is only drawn when there is something in it. Tapping one still opens
 their page, where the about and the strength are. `StudentRoster` and
 `InstructorRoster` in `RosterCard.jsx`.
 
+**A challenge card reads like a day on the schedule.** Andrew, 2026-09-21:
+"take that approach to teh assignmetns, i'm not a fan of little gray text." The
+card was a 17px name with three grey lines under it, all one size. One label
+across the top now, in the colour of what it says, with the words the markers
+already use: Due Thu Oct 9, Turned in, Graded, Missed, Ongoing. The name is 19px
+under it, and what is left, when it went in, the comment and the grade, is in
+ink rather than a shade of grey. The build fails if a card on that page goes
+back to `--text-secondary`.
+
 **Challenges says both words** on the student's card, `Challenges
 (Assignments)`, until the class has the new one. The card is the next one by
 name, when it is due, and how many more the class holds, counted across every

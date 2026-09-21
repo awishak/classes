@@ -333,7 +333,7 @@ function AssignmentLog({ asg, log, accent, studentName, actor, onLike, onDelete 
           const late = isLate(e.ts, asg.due);
           return (
             <Wrap key={e.id} right={false}>
-              <div style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 12, padding: 12 }}>
+              <div style={{ background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 12, padding: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                   <div style={{ ...label, color: TEXT_SECONDARY }}>Submitted</div>
                   <div style={{ fontSize: 13, color: late ? "#dc2626" : TEXT_MUTED }}>{fmtTime(e.ts)}{late ? " · Late" : ""}</div>
@@ -487,7 +487,7 @@ export function StudentAssignmentRow({ asg, accent, config, data, update, name, 
   const hasSubmitted = log.some(e => e.type === "submission");
 
   return (
-    <div id={"asg-" + asg.id} style={bare ? {} : { background: "#fff", borderRadius: 16, border: "1px solid " + BORDER, padding: 18, scrollMarginTop: 80 }}>
+    <div id={"asg-" + asg.id} style={bare ? {} : { background: SURFACE_CARD, borderRadius: 16, border: "1px solid " + BORDER, padding: 18, scrollMarginTop: 80 }}>
       {bare ? null : (
         <>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
@@ -586,7 +586,7 @@ function GradeHub({ config, data, assignments, onStart }) {
           const waiting = Object.keys(data?.assignmentLog?.[asg.id] || {}).filter(n => unanswered(logOf(data, asg.id, n))).length;
           const roster = rosterOf(config, data).map(s => ({ aid: asg.id, name: s.name }));
           return (
-            <div key={asg.id} style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, overflow: "hidden" }}>
+            <div key={asg.id} style={{ background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, overflow: "hidden" }}>
               <button onClick={() => onStart(roster)} style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", fontFamily: F, padding: 14 }}>
                 <div style={{ fontWeight: 600, fontSize: 16 }}>{asg.title}</div>
                 <Muted>{inWords} turned in · {ungraded.length} to grade{waiting ? " · " + waiting + " message" + (waiting === 1 ? "" : "s") : ""}</Muted>
@@ -695,7 +695,7 @@ function GradeForm({ config, asg, name, log, draftHtml, onDraft, onSubmit, onSki
   };
 
   return (
-    <div style={{ background: "#fff", border: "1px solid " + BORDER, borderRadius: 16, padding: 18 }}>
+    <div style={{ background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 16, padding: 18 }}>
       <div style={label}>{asg?.title} · {asg?.weight}%</div>
       <div style={{ fontSize: 22, fontWeight: 600, marginTop: 2 }}>{name}</div>
       {prev && <div style={{ fontSize: 15, fontWeight: 600, color: a, marginTop: 2 }}>Current grade: {prev.score}/100 — change it below and Submit</div>}
@@ -751,7 +751,7 @@ function GradeForm({ config, asg, name, log, draftHtml, onDraft, onSubmit, onSki
         <Btn accent={a} ghost onClick={() => doSubmit(false)}>Submit</Btn>
         <Btn accent={a} ghost onClick={onSkip}>Skip</Btn>
       </div>
-      <button onClick={cantAccess} style={{ marginTop: 12, minHeight: TAP, padding: "0 16px", borderRadius: 10, border: "1px solid #fca5a5", background: "#fff", color: "#dc2626", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
+      <button onClick={cantAccess} style={{ marginTop: 12, minHeight: TAP, padding: "0 16px", borderRadius: 10, border: "1px solid #fca5a5", background: SURFACE_CARD, color: "#dc2626", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
         Can't access link → 0 + resubmit notice
       </button>
     </div>
@@ -786,7 +786,7 @@ function RichEditor({ editorRef, initialHtml, onDraft }) {
     if (editorRef.current) editorRef.current.innerHTML = initialHtml || "";
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, []);   // eslint-disable-line react-hooks/exhaustive-deps
-  const tb = { minHeight: 36, minWidth: 40, borderRadius: 8, border: "1px solid " + BORDER_STRONG, background: "#fff", cursor: "pointer", fontFamily: F, fontSize: 15 };
+  const tb = { minHeight: 36, minWidth: 40, borderRadius: 8, border: "1px solid " + BORDER_STRONG, background: SURFACE_CARD, cursor: "pointer", fontFamily: F, fontSize: 15 };
   return (
     <div style={{ marginTop: 6 }}>
       <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
@@ -829,13 +829,13 @@ function ManageAssignments({ config, data, update, assignments, writeAssignments
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {assignments.map(asg => (
           <button key={asg.id} onClick={() => setEditing(asg.id)}
-            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER, borderRadius: 12, padding: 14, cursor: "pointer", fontFamily: F, minHeight: TAP }}>
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, width: "100%", textAlign: "left", background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 12, padding: 14, cursor: "pointer", fontFamily: F, minHeight: TAP }}>
             <div><div style={{ fontWeight: 600, fontSize: 16 }}>{asg.title}</div><Muted>Due {asg.due}{asg.dueTime ? ", " + asg.dueTime : ""} · {asg.weight || 0}% · {asg.rubric?.length ? asg.rubric.length + " criteria" : "free-form"}</Muted></div>
             <span style={{ color: a, fontSize: 15, fontWeight: 600 }}>Edit</span>
           </button>
         ))}
       </div>
-      <button onClick={() => setEditing("new")} style={{ marginTop: 12, minHeight: TAP, padding: "0 18px", borderRadius: 999, border: "1px dashed " + BORDER_STRONG, background: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_SECONDARY, cursor: "pointer" }}>+ Add challenge</button>
+      <button onClick={() => setEditing("new")} style={{ marginTop: 12, minHeight: TAP, padding: "0 18px", borderRadius: 999, border: "1px dashed " + BORDER_STRONG, background: SURFACE_CARD, fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_SECONDARY, cursor: "pointer" }}>+ Add challenge</button>
     </div>
   );
 }
@@ -908,7 +908,7 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
           <div key={c.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <input value={c.name} onChange={e => setCrit(c.id, "name", e.target.value)} placeholder="Criterion" style={{ ...inputStyle, flex: 1, minHeight: 40 }} />
             <input type="number" min="0" value={c.points} onChange={e => setCrit(c.id, "points", e.target.value)} style={{ ...inputStyle, width: 80, minHeight: 40, textAlign: "right" }} />
-            <button onClick={() => setRubric(r => r.filter(x => x.id !== c.id))} style={{ minHeight: 40, minWidth: 40, borderRadius: 8, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_MUTED, cursor: "pointer" }}>✕</button>
+            <button onClick={() => setRubric(r => r.filter(x => x.id !== c.id))} style={{ minHeight: 40, minWidth: 40, borderRadius: 8, border: "1px solid " + BORDER_STRONG, background: SURFACE_CARD, color: TEXT_MUTED, cursor: "pointer" }}>✕</button>
           </div>
         ))}
       </div>
@@ -917,7 +917,7 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
 
       <div style={{ display: "flex", gap: 8, marginTop: 18, alignItems: "center" }}>
         <Btn accent={a} onClick={save} disabled={!title.trim()}>Save</Btn>
-        {onDelete && <button onClick={onDelete} style={{ minHeight: TAP, padding: "0 16px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: "#fff", color: "#dc2626", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Delete</button>}
+        {onDelete && <button onClick={onDelete} style={{ minHeight: TAP, padding: "0 16px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, background: SURFACE_CARD, color: "#dc2626", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Delete</button>}
       </div>
     </div>
   );

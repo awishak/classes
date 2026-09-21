@@ -3126,7 +3126,16 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       ['aria-label="Complete"', 'aria-label="Not quite"', 'aria-label="Not submitted"'].forEach(t => { if (!gv.includes(t)) say("Grade view has no column " + t); });
       if (gv.includes('aria-label="Exceptional"')) say("Grade view shows letter columns for a Complete challenge");
       ["Tighten the ending.", ">New<", 'aria-label="Turned in"', 'aria-label="Missed"', 'aria-label="Graded"', "Ongoing", "Small piece", "Waiting piece"].forEach(t => { if (!cards.includes(t)) say("the assignment cards never show " + JSON.stringify(t)); });
-      if (!/data-current="1"[^>]*>[\s\S]{0,400}Leadership Guide/.test(cards)) say("the page does not scroll to the next thing due");
+      // Andrew, 2026-09-21: "take that approach to teh assignmetns, i'm not a
+      // fan of little gray text." One label across the top in the colour of
+      // what it says, the name big under it, and the lines that matter in ink.
+      if (!/font-size:19px;font-weight:700/.test(cards)) say("a challenge's name is not the biggest thing on its card");
+      if (/color:var\(--text-secondary\)/.test(cards)) say("a card still reads in grey");
+      if (!cards.includes(">Turned in<")) say("a card does not say it is turned in");
+      if (!cards.includes(">Graded<")) say("a card does not say it is graded");
+      // The card the page glides to is the next thing due. The window is the
+      // card's own markup: a label row, then the name.
+      if (!/data-current="1"[^>]*>[\s\S]{0,900}Leadership Guide/.test(cards)) say("the page does not scroll to the next thing due");
       if (/Instructions/.test(cards)) say("a card still says Instructions");
       const pg = renderToString(<AssignmentPage config={acfg} data={ad} update={noop} name={N} id="graded" go={noop} />).replace(/<!-- -->/g, "");
       ["Graded piece", "Your grade: <strong", "Tighten the ending.", "room to sharpen", "Details", "Before", "After", "Send", "A message, a link, or both"].forEach(t => { if (!pg.includes(t)) say("the assignment page never shows " + JSON.stringify(t)); });

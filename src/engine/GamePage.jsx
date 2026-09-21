@@ -81,7 +81,7 @@ function PickName({ config, students, onPick }) {
         {hits.map(s => (
           <button key={s.name} onClick={() => onPick(s.name)}
             style={{ minHeight: TAP, textAlign: "left", padding: "0 14px", fontSize: 17, fontFamily: F,
-              background: "#fff", border: "1px solid " + BORDER, borderRadius: 12, cursor: "pointer", color: TEXT }}>
+              background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 12, cursor: "pointer", color: TEXT }}>
             {s.name}
           </button>
         ))}

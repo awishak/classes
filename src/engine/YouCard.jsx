@@ -65,7 +65,7 @@ function SendBtn({ accent, onClick, children, disabled }) {
 }
 
 function GhostBtn({ accent, onClick, children, href, label }) {
-  const style = { minHeight: TAP, padding: "0 16px", borderRadius: 999, border: "1px solid " + BORDER_STRONG, background: "#fff",
+  const style = { minHeight: TAP, padding: "0 16px", borderRadius: 999, border: "1px solid " + BORDER_STRONG, background: SURFACE_CARD,
     fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, cursor: "pointer", display: "inline-flex", alignItems: "center", textDecoration: "none" };
   if (href) return <a href={href} target="_blank" rel="noreferrer" style={{ ...style, color: accent }} aria-label={label}>{children}</a>;
   return <button onClick={onClick} style={style} aria-label={label} title={label}>{children}</button>;

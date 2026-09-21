@@ -110,7 +110,7 @@ export default function BoardPage({ config }) {
               try { localStorage.setItem(REMEMBER, s.name); } catch { /* private mode */ }
             }}
               style={{ minHeight: TAP, textAlign: "left", padding: "0 14px", fontSize: 17, fontFamily: F,
-                background: "#fff", border: "1px solid " + BORDER, borderRadius: 12, cursor: "pointer", color: TEXT }}>
+                background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 12, cursor: "pointer", color: TEXT }}>
               {s.name}
             </button>
           ))}
@@ -159,7 +159,7 @@ export default function BoardPage({ config }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {posts.map(p => (
           <article key={p.id}
-            style={{ background: "#fff", border: "1px solid " + (mine(p) ? config.accent : BORDER),
+            style={{ background: SURFACE_CARD, border: "1px solid " + (mine(p) ? config.accent : BORDER),
               borderRadius: 14, padding: "13px 16px", display: "flex", flexDirection: "column", gap: 5 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
               <Avatar theme={theme} name={p.who} size={30} bg={mine(p) ? config.accent : undefined} />
@@ -185,7 +185,7 @@ function Head({ config, who, onOut, theme, points }) {
       <ThemeBadge theme={theme} points={points} />
       {who ? (
         <button onClick={onOut} style={{ marginLeft: "auto", minHeight: 34, padding: "0 12px", fontSize: 14,
-          fontFamily: F, background: "#fff", border: "1px solid " + BORDER, borderRadius: 10, cursor: "pointer", color: MUTED }}>
+          fontFamily: F, background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 10, cursor: "pointer", color: MUTED }}>
           {who} · not you?
         </button>
       ) : null}
