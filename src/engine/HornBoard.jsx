@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { genId } from "../utils.jsx";
 import * as TOKENS from "./tokens.js";
 import { Avatar, profileOf } from "./RosterCard.jsx";
+import { shownName } from "./roster.js";
 
 const F = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -133,8 +134,8 @@ export default function HornBoard({ students, seats, log, accent, profiles, onSe
                         roster view." The old seat was two initials in a 26px
                         circle over a 13px first name, which is a spreadsheet
                         of a room rather than the room. */}
-                    <Avatar profile={profileOf({ profiles }, name)} name={name} accent={open ? "#ffffff" : accent} size={56} />
-                    <span style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.25 }}>{name}</span>
+                    <Avatar profile={profileOf({ profiles }, name)} name={shownName((profiles || {})[name], name)} accent={open ? "#ffffff" : accent} size={56} />
+                    <span style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.25 }}>{shownName((profiles || {})[name], name)}</span>
                     <span style={{ marginTop: "auto", fontFamily: MONO, fontSize: 13, fontWeight: 600,
                       color: open ? "#fff" : (pts > 0 ? accent : MUTED), fontVariantNumeric: "tabular-nums" }}>
                       {pts > 0 ? "+" : ""}{pts}

@@ -167,6 +167,7 @@ function FieldRow({ title, children }) {
 
 function ProfileForm({ student, initial, update, accent }) {
   const [f, setF] = useState({
+    firstName: initial.firstName || "", lastName: initial.lastName || "",
     email: initial.email || "", avatar: initial.avatar || "", about: initial.about || "",
     year: initial.year || "", hometown: initial.hometown || "", motto: initial.motto || "",
     goals: initial.goals || "", priority: initial.priority || "",
@@ -189,6 +190,20 @@ function ProfileForm({ student, initial, update, accent }) {
     <div>
       <div style={h2}>Your profile</div>
       <Muted>Tell the class a little about yourself.</Muted>
+
+      {/* What the class calls you. Andrew, 2026-09-20: "i want the ability
+          for students to be able to have preferred first name and preferred
+          last name." The roster's name stays underneath as the identity;
+          these two are what everybody reads. */}
+      <FieldRow title="Preferred first name">
+        <input value={f.firstName} onChange={e => set("firstName", e.target.value)}
+          placeholder={(student || "").split(" ")[0] || ""} style={inputStyle} />
+      </FieldRow>
+
+      <FieldRow title="Preferred last name">
+        <input value={f.lastName} onChange={e => set("lastName", e.target.value)}
+          placeholder={(student || "").split(" ").slice(1).join(" ")} style={inputStyle} />
+      </FieldRow>
 
       <FieldRow title="Email address (this is only for your instructor)">
         <input type="email" value={f.email} onChange={e => set("email", e.target.value)} style={inputStyle} />

@@ -169,7 +169,7 @@ function detail(key, config, role, ctx) {
       : <AssignmentCards config={config} data={ctx.data} name={ctx.asStudent} go={ctx.go} />;
   }
   if (key === "questions") {
-    return <QuestionsDetail config={config} role={role} asStudent={ctx.asStudent} />;
+    return <QuestionsDetail config={config} role={role} asStudent={ctx.asStudent} profiles={ctx.data?.profiles} />;
   }
   if (key === "schedule") {
     return <ScheduleDetail config={config} role={role} data={ctx.data} update={ctx.update} blockOf={ctx.blockOf} focusDay={ctx.sub} />;

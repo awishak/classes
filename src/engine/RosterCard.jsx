@@ -7,6 +7,7 @@
 import { useState, useEffect } from "react";
 import { profileComplete } from "./profileTask.js";
 import { realStudents, hasSections, studentsIn, sectionFor } from "./sections.js";
+import { nameShown } from "./roster.js";
 import { computeGrade } from "./AssignmentsCard.jsx";
 import RosterSheet, { callLogins } from "./RosterSheet.jsx";
 import * as TOKENS from "./tokens.js";
@@ -112,7 +113,8 @@ function InstructorRoster({ config, data, update }) {
   if (selected) {
     const row = students.find(s => s.name === selected);
     const code = row?.email ? codes[String(row.email).toLowerCase()] || "" : "";
-    return <StudentPage config={config} data={data} name={selected} email={row?.email || ""} code={code} onBack={() => setSelected(null)} />;
+    return <StudentPage config={config} data={data} name={selected} email={row?.email || ""} code={code}
+      update={update} onBack={() => setSelected(null)} />;
   }
 
   if (managing) {
@@ -149,9 +151,14 @@ function InstructorRoster({ config, data, update }) {
           return (
             <button key={s.name} onClick={() => setSelected(s.name)}
               style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 12, cursor: "pointer", fontFamily: F, minHeight: TAP }}>
-              <Avatar profile={p} name={s.name} accent={a} />
+              <Avatar profile={p} name={nameShown(data, s.name)} accent={a} />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>{s.name}</div>
+                <div style={{ fontWeight: 600, fontSize: 16 }}>
+                  {nameShown(data, s.name)}
+                  {nameShown(data, s.name) !== s.name ? (
+                    <span style={{ fontWeight: 400, fontSize: 14, color: TEXT_MUTED }}> · {s.name} on the roster</span>
+                  ) : null}
+                </div>
                 {sub && <div style={{ fontSize: 15, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub}</div>}
               </div>
             </button>
@@ -162,7 +169,35 @@ function InstructorRoster({ config, data, update }) {
   );
 }
 
-function StudentPage({ config, data, name, email, code, onBack }) {
+// The name a student goes by, changed from the roster. Andrew, 2026-09-20:
+// "i want the ability for students to be able to have preferred first name and
+// preferred last name. can change from roster." A student writes these on
+// their own card; this is the same two fields for the times he is told in
+// person and they never get round to it.
+function PreferredName({ data, name, update, accent }) {
+  const p = profileOf(data, name);
+  const [first, setFirst] = useState(p.firstName || "");
+  const [last, setLast] = useState(p.lastName || "");
+  const save = (key, v) => update(prev => {
+    const profiles = { ...(prev.profiles || {}) };
+    profiles[name] = { ...(profiles[name] || {}), [key]: v.trim() };
+    return { ...prev, profiles };
+  });
+  const box = { fontFamily: F, fontSize: 15, minHeight: 36, padding: "0 10px", borderRadius: 8,
+    border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY, minWidth: 0, flex: 1 };
+  const roster = String(name || "").trim().split(/\s+/);
+  return (
+    <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      <span style={{ ...label, flex: "none" }}>Goes by</span>
+      <input value={first} onChange={e => setFirst(e.target.value)} onBlur={() => save("firstName", first)}
+        placeholder={roster[0] || ""} aria-label="Preferred first name" style={box} />
+      <input value={last} onChange={e => setLast(e.target.value)} onBlur={() => save("lastName", last)}
+        placeholder={roster.slice(1).join(" ")} aria-label="Preferred last name" style={box} />
+    </div>
+  );
+}
+
+function StudentPage({ config, data, name, email, code, onBack, update }) {
   const a = config.accent;
   const p = profileOf(data, name);
   const msgs = threadOf(data, name);
@@ -172,9 +207,13 @@ function StudentPage({ config, data, name, email, code, onBack }) {
       <button onClick={onBack} style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, padding: "0 4px 0 0" }}>← Roster</button>
 
       <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginTop: 4 }}>
-        <Avatar profile={p} name={name} accent={a} size={72} />
+        <Avatar profile={p} name={nameShown(data, name)} accent={a} size={72} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 22, fontWeight: 600 }}>{name}</div>
+          <div style={{ fontSize: 22, fontWeight: 600 }}>{nameShown(data, name)}</div>
+          {nameShown(data, name) !== name ? (
+            <div style={{ fontSize: 14, color: TEXT_MUTED }}>{name} on the registrar's roster</div>
+          ) : null}
+          {update ? <PreferredName data={data} name={name} update={update} accent={a} /> : null}
           <div style={{ fontSize: 15, color: TEXT_MUTED }}>{[p.year, p.hometown].filter(Boolean).join(" · ") || "Profile not filled in yet"}</div>
 
           <Field title="About me" value={p.about} />
@@ -241,9 +280,9 @@ function StudentRoster({ config, data, name }) {
       <div>
         <button onClick={() => setOpen(null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, padding: "0 4px 0 0" }}>← Roster</button>
         <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginTop: 4 }}>
-          <Avatar profile={p} name={open} accent={a} size={72} />
+          <Avatar profile={p} name={nameShown(data, open)} accent={a} size={72} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 22, fontWeight: 600 }}>{open}</div>
+            <div style={{ fontSize: 22, fontWeight: 600 }}>{nameShown(data, open)}</div>
             <div style={{ fontSize: 15, color: TEXT_MUTED }}>{[p.year, p.hometown].filter(Boolean).join(" · ")}</div>
             <Field title="About me" value={p.about} />
             <Field title="Motto" value={p.motto} />
@@ -262,8 +301,8 @@ function StudentRoster({ config, data, name }) {
           return (
             <button key={s.name} onClick={() => setOpen(s.name)}
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 14, cursor: "pointer", fontFamily: F, minHeight: TAP }}>
-              <Avatar profile={p} name={s.name} accent={a} size={56} />
-              <div style={{ fontWeight: 600, fontSize: 15, textAlign: "center" }}>{s.name}</div>
+              <Avatar profile={p} name={nameShown(data, s.name)} accent={a} size={56} />
+              <div style={{ fontWeight: 600, fontSize: 15, textAlign: "center" }}>{nameShown(data, s.name)}</div>
               {p.hometown && <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center" }}>{p.hometown}</div>}
             </button>
           );

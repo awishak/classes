@@ -118,6 +118,29 @@ export const mergeRoster = (students, rows) => {
   return { students: out, added, updated };
 };
 
+// What to call a student.
+//
+// Andrew, 2026-09-20: "i want the ability for students to be able to have
+// preferred first name and preferred last name." The registrar's preferred
+// name is a start, and it is still the registrar's: it does not know that
+// Symone goes by Sym.
+//
+// So the name a student picks lives on their profile and every surface that
+// shows people reads it. What does NOT change is who they are: `id` is slugged
+// from the roster name and keys their points, their answers, their posts and
+// their grades, so a change of name that moved the id would quietly hand them
+// somebody else's record, or nobody's.
+export const shownName = (profile, name) => {
+  const first = String(profile?.firstName || "").trim();
+  const last = String(profile?.lastName || "").trim();
+  if (!first && !last) return String(name || "").trim();
+  const roster = String(name || "").trim().split(/\s+/);
+  return [first || roster[0] || "", last || roster.slice(1).join(" ")].filter(Boolean).join(" ");
+};
+
+// The same, out of a class store, which is where profiles live.
+export const nameShown = (data, name) => shownName((data?.profiles || {})[name], name);
+
 // Sort by last name, the way the roster reads in the room. Names that do not
 // split on the last space (compound surnames) are listed in the class config
 // under `lastNameOverrides`.
@@ -126,5 +149,7 @@ export const mergeRoster = (students, rows) => {
 // students to pick from. The ask page came off on 2026-09-20 and three other
 // surfaces were importing this out of it, so it moved to the file about who a
 // student is.
-export const lastNameOf = (name, overrides) =>
-  (overrides && overrides[name]) || String(name || "").trim().split(/\s+/).slice(-1)[0];
+export const lastNameOf = (name, overrides, profile) =>
+  String(profile?.lastName || "").trim()
+  || (overrides && overrides[name])
+  || String(name || "").trim().split(/\s+/).slice(-1)[0];

@@ -43,7 +43,7 @@ import { Tubey, TubeySays, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, Tu
   MARQUEE_SECONDS_PER_ITEM, marqueeSeconds } from "../src/engine/ThemeChrome.jsx";
 import { ALL_FACTS, factsFor, shuffledFacts } from "../src/engine/crashing-facts.js";
 import { saveWeek, openWeek, answerWeek, scoreWeek, scoresFor, perfectRuns, pointsOf, mergeAnswers } from "../src/engine/game.js";
-import { idOf, slugOf, withIds } from "../src/engine/roster.js";
+import { idOf, slugOf, withIds, lastNameOf, shownName, nameShown } from "../src/engine/roster.js";
 import comm999 from "../src/config/comm999.js";
 import RepoPage, { Row as RepoRow, Detail as RepoDetail, Place as RepoPlace,
   TypeSheet as RepoType, Views as RepoViews, Bulk as RepoBulk, Health as RepoHealth,
@@ -2659,6 +2659,38 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!/You can use this to log in instead of having an email sent to you\./.test(app)) say("the PIN does not say what it is for");
   // It is the student's own, and only while they are signed in as themselves.
   if (!/ownCode && !preview && view !== "instructor"/.test(app)) say("the PIN shows for somebody other than its owner");
+}
+
+// The name a student goes by. Andrew, 2026-09-20: "i want the ability for
+// students to be able to have preferred first name and preferred last name.
+// can change from roster." What must not move is who they are: the id is
+// slugged from the roster name and keys their points, their answers and their
+// grades.
+{
+  const say = (msg) => { console.error("  FAIL  preferred names: " + msg); failedEarly++; };
+  const roster = "Symone Archie-McWhorter";
+  if (shownName({}, roster) !== roster) say("a student with no preference lost their name");
+  if (shownName({ firstName: "Sym" }, roster) !== "Sym Archie-McWhorter") say("a first name alone does not carry the surname");
+  if (shownName({ lastName: "McWhorter" }, roster) !== "Symone McWhorter") say("a surname alone does not carry the first name");
+  if (shownName({ firstName: "Sym", lastName: "A-M" }, roster) !== "Sym A-M") say("both together came out wrong");
+  if (nameShown({ profiles: { [roster]: { firstName: "Sym" } } }, roster) !== "Sym Archie-McWhorter") say("the store's profile is not read");
+  // Sorting follows the name they chose, and the config override still covers
+  // a compound surname nobody has overridden themselves.
+  if (lastNameOf(roster, {}, { lastName: "McWhorter" }) !== "McWhorter") say("the roster sorts by the old surname");
+  if (lastNameOf("Ileana Garcia Huerta", { "Ileana Garcia Huerta": "Garcia Huerta" }) !== "Garcia Huerta") say("the config override stopped working");
+  // The id does not move, which is the whole reason this is a display name.
+  if (idOf({ name: roster }) !== idOf({ name: roster })) say("the id is not stable");
+  // Every surface made of people reads it.
+  [["RosterCard", /nameShown\(data, s\.name\)/], ["HornBoard", /shownName\(\(profiles \|\| \{\}\)\[name\], name\)/],
+   ["QuestionsCard", /askedBy\(q, profiles\)/]].forEach(([file, re]) => {
+    const src = readFileSync(new URL("../src/engine/" + file + ".jsx", import.meta.url), "utf8");
+    if (!re.test(src)) say(file + " still shows the registrar's name");
+  });
+  // And both sides can set it: the student on their card, Andrew on the roster.
+  const you = readFileSync(new URL("../src/engine/YouCard.jsx", import.meta.url), "utf8");
+  if (!/Preferred first name/.test(you) || !/Preferred last name/.test(you)) say("a student cannot set their own name");
+  const rost = readFileSync(new URL("../src/engine/RosterCard.jsx", import.meta.url), "utf8");
+  if (!/function PreferredName/.test(rost)) say("the roster cannot change it");
 }
 
 // Around the Horn: the seats carry the face and the name the roster does.

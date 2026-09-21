@@ -647,6 +647,21 @@ twice, because one edge can serve the old bundle briefly.
   term of games and grades at their own keys, and an engine class starts with
   no games.
 
+## The name a student goes by
+
+`shownName` in `src/engine/roster.js`. A student sets a preferred first name
+and a preferred last name on Your card; Andrew can set the same two from the
+roster, for when he is told in person and they never get round to it. Every
+surface made of people reads it: the roster both ways, the Horn board's seats,
+who asked a question. His roster row also shows the registrar's name beside it,
+so a name he cannot place is one glance rather than a search.
+
+**What does not move is who they are.** `id` is slugged from the roster name
+and keys their points, their game answers, their board posts and their grades,
+so this is a display name and never a rename. Sorting follows the chosen
+surname when there is one, and the class config's `lastNameOverrides` still
+covers a compound surname nobody has overridden themselves.
+
 ## Who a student is
 
 `src/engine/roster.js`. The seeded roster was `{ name, from, goals }` with no

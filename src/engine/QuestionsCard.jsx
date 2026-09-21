@@ -23,6 +23,7 @@
 import { useState } from "react";
 import * as TOKENS from "./tokens.js";
 import { useQuestions } from "./questions.js";
+import { shownName } from "./roster.js";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -49,7 +50,7 @@ export const archivedOf = (items) => (items || []).filter(q => q.state === "arch
 
 // Who asked, as the class sees it. A student who does not tick the box is
 // named, which is the point of the box.
-export const askedBy = (q) => (q?.anon ? "" : words(q?.who));
+export const askedBy = (q, profiles) => (q?.anon ? "" : shownName((profiles || {})[words(q?.who)], words(q?.who)));
 
 const thanksCount = (q) => (q?.thanksQ || []).length + (q?.thanksA || []).length;
 
@@ -112,8 +113,8 @@ export function Thanks({ names, mine, onPress, what }) {
 // One question: the words in bold with its thanks beside them, who asked in
 // italics under it, and the answer under that with Dr. Ishak's name in front
 // and its own thanks on the same line.
-export function QuestionEntry({ q, me, who, onThank, answering }) {
-  const asked = askedBy(q);
+export function QuestionEntry({ q, me, who, onThank, answering, profiles }) {
+  const asked = askedBy(q, profiles);
   return (
     <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 14, display: "flex", flexDirection: "column", gap: 4 }}>
       <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.4, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>
@@ -159,17 +160,17 @@ export function QuestionsSummary({ config, role, asStudent }) {
 }
 
 // ─── the page ───
-export function QuestionsDetail({ config, role, asStudent }) {
+export function QuestionsDetail({ config, role, asStudent, profiles }) {
   const api = useQuestions(config.storageKey);
   if (api.items === null) return <Muted>Loading.</Muted>;
   return role === "instructor"
-    ? <InstructorQuestions config={config} api={api} />
-    : <StudentQuestions config={config} api={api} name={asStudent} />;
+    ? <InstructorQuestions config={config} api={api} profiles={profiles} />
+    : <StudentQuestions config={config} api={api} name={asStudent} profiles={profiles} />;
 }
 
 const instructorName = (config) => words(config?.instructor?.name) || "Your instructor";
 
-function StudentQuestions({ config, api, name }) {
+function StudentQuestions({ config, api, name, profiles }) {
   const [text, setText] = useState("");
   const [anon, setAnon] = useState(false);
   const [sent, setSent] = useState(false);
@@ -216,7 +217,7 @@ function StudentQuestions({ config, api, name }) {
       <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 14 }}>
         {page.length
           ? page.map(q => (
-            <QuestionEntry key={q.id} q={q} me={name} who={instructorName(config)}
+            <QuestionEntry key={q.id} q={q} me={name} who={instructorName(config)} profiles={profiles}
               onThank={(id, part) => api.appreciate(id, part, name)} />
           ))
           : <Muted>Nothing asked yet.</Muted>}
@@ -229,7 +230,7 @@ function StudentQuestions({ config, api, name }) {
 // one press that takes one off. Andrew, 2026-09-20: "make my UI as the
 // instructor similar to what students see. the difference being that i can
 // answer questions and archive them too."
-function InstructorQuestions({ config, api }) {
+function InstructorQuestions({ config, api, profiles }) {
   const [showArchive, setShowArchive] = useState(false);
   const [how, setHow] = useState("asked");
   const page = sortQuestions(onThePage(api.items), how);
@@ -259,7 +260,7 @@ function InstructorQuestions({ config, api }) {
       <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 14 }}>
         {page.length
           ? page.map(q => (
-            <QuestionEntry key={q.id} q={q} me={me} who={me}
+            <QuestionEntry key={q.id} q={q} me={me} who={me} profiles={profiles}
               onThank={(id, part) => api.appreciate(id, part, me)}
               answering={<Answering q={q} config={config} api={api} />} />
           ))
