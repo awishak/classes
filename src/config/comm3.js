@@ -59,6 +59,18 @@ const comm3 = {
   // site through and writes test messages as: his on his roster and in View
   // as a student, and nobody else's, so he stays out of the roster students
   // read and out of every count of who is in the class.
+  // Names that do not split on the last space, so the roster files them where
+  // a person would look. Taken from the registrar's own Last Name column when
+  // the roster was imported, rather than guessed from the name.
+  lastNameOverrides: {
+    "Ileana Garcia Huerta": "Garcia Huerta",
+    "Zeina Stallings Jaber": "Stallings Jaber",
+    "Camila Valeros Barrera": "Valeros Barrera",
+    "Yoshirha Valeros Barrera": "Valeros Barrera",
+    "Lorenza Camou Balderrama": "Camou Balderrama",
+    "Alejandro Lopez jimenez": "Lopez jimenez",
+  },
+
   testStudent: "Pepe LeFritz",
   students: [
     { id: "pepe-lefritz", name: "Pepe LeFritz", email: "pepe@example.test", section: "10:30", from: "", goals: "" },
