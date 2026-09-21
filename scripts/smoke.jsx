@@ -3919,6 +3919,18 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!/I(&#x27;|')ll be there/.test(asStudent)) say("a student is not asked whether they will be there");
   if ((asStudent.match(/type="checkbox"/g) || []).length !== 3) say("the three class days do not each carry a box");
   if ((asStudent.match(/checked=""/g) || []).length !== 3) say("the box does not start checked");
+  // On the day's own line, beside the date. Andrew, 2026-09-21: "attendance
+  // click button needs to be in the same line as the class date, except on the
+  // hero." So the box comes between that day's heading and whatever is set for
+  // the day, and there is nothing between the heading and the box but the row
+  // they share.
+  {
+    const at = (t) => asStudent.indexOf(t);
+    if (!(at("Monday, September 21") < at("type=\"checkbox\"") && at("type=\"checkbox\"") < at("Wednesday, September 23")))
+      say("the box is not on the line the day heading is on");
+    const between = asStudent.slice(at("Monday, September 21"), at("type=\"checkbox\""));
+    if ((between.match(/<div/g) || []).length) say("the box is under the day heading rather than beside it");
+  }
   const asMarked = renderToString(<ScheduleDetail config={cfg} data={out} blockOf={() => null} me="Ada Lovelace" mark={noop} />);
   if ((asMarked.match(/checked=""/g) || []).length !== 2) say("the day a student said they would miss is still ticked");
   if (asMarked.includes("Alan Turing")) say("a student can read who else will be away");

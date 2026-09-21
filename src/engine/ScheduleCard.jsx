@@ -276,16 +276,17 @@ function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark
   // Andrew, 2026-09-21: "i see the names in the schedule. every day." Every day
   // of the term, past ones included, so a student can say now that they will
   // miss a day in three weeks.
-  const attendance = (d) => {
-    if (!meets(d)) return null;
-    const inner = instructor
-      ? (awayIds(data, d.date).length ? <AwayList config={config} data={data} date={d.date} /> : null)
-      : (myId && mark
-        ? <ComingBox accent={config.accent} checked={!isAway(data, d.date, myId)}
-            onChange={(coming) => mark(d.date, myId, !coming)} />
-        : null);
-    return inner ? <div style={{ marginTop: 4 }}>{inner}</div> : null;
-  };
+  //
+  // The box sits on the day's own line, beside the date: "attendance click
+  // button needs to be in the same line as the class date, except on the hero."
+  // The names are a list and stay under the day, where a list has room.
+  const comingBox = (d) => (meets(d) && myId && mark && !instructor
+    ? <ComingBox accent={config.accent} checked={!isAway(data, d.date, myId)}
+        onChange={(coming) => mark(d.date, myId, !coming)} />
+    : null);
+  const awayLine = (d) => (meets(d) && instructor && awayIds(data, d.date).length
+    ? <div style={{ marginTop: 4 }}><AwayList config={config} data={data} date={d.date} /></div>
+    : null);
   // The day named in the address, scrolled to after the weeks are drawn. A day
   // the term does not have leaves the page where it opened.
   useEffect(() => {
@@ -337,6 +338,7 @@ function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark
                         <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
                           <span style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY }}>{dayHeading(d.date)}</span>
                           {d.classDay ? null : <span style={{ ...label, color: TEXT_MUTED }}>No class</span>}
+                          {comingBox(d)}
                         </div>
                         {titles[d.date]?.title ? (
                           <div style={{ fontSize: 16, color: TEXT_SECONDARY, lineHeight: 1.4, marginTop: 2 }}>{titles[d.date].title}</div>
@@ -344,7 +346,7 @@ function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark
                         {d.items.length
                           ? <div style={{ marginTop: 6 }}>{inWeekOrder(d.items).map(row)}</div>
                           : <div style={{ fontSize: 15, color: TEXT_MUTED, marginTop: 6 }}>Nothing set for this day yet.</div>}
-                        {attendance(d)}
+                        {awayLine(d)}
                       </div>
                     ))}
                   </>

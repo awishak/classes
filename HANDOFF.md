@@ -241,7 +241,10 @@ fails if the two come out different. The dashboard is where a day gets built.
 "create a checkbox on the schedule next to each day for the students. it should
 start checked ... when they do, on my page as instructor, it shows who will not
 be in attendance." Every class day of the term carries the box, past days
-included, and so does the next class card. Checked is the default and writes
+included, and so does the next class card. On the schedule the box sits on the
+day's own line, beside the date: "attendance click button needs to be in the
+same line as the class date, except on the hero." The hero keeps it under the
+note, where the card has room. Checked is the default and writes
 nothing, so the store holds only the people who said no:
 `away["Sep 23"]["ada-lovelace"]`. Keyed on the student id, so a change of the
 name a student goes by keeps the mark. A day with no in-person meeting and a
