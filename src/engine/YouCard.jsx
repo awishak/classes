@@ -322,7 +322,7 @@ function StudentMessages({ config, data, update, asStudent }) {
 
   return (
     <div>
-      <div style={h2}>Message with Dr. Ishak</div>
+      <div style={h2}>Message Dr. Ishak</div>
       <div style={{ marginTop: 14 }}><Thread data={data} name={asStudent} accent={a} /></div>
 
       <div style={{ marginTop: 18, display: "flex", gap: 8, alignItems: "flex-start" }}>

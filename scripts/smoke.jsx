@@ -1126,7 +1126,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
     // Class, Grades toward the bottom and Games at the very bottom.
     const at = (t) => html.indexOf(t);
     if (html.includes('aria-label="Next class"')) {
-      const order = ['aria-label="Next class"', ">Challenges (Assignments)</span>", ">Message with Dr. Ishak</span>", ">Questions</span>", ">Class</span>", ">Games</span>"].map(at);
+      const order = ['aria-label="Next class"', ">Challenges (Assignments)</span>", ">Message Dr. Ishak</span>", ">Questions</span>", ">Class</span>", ">Games</span>"].map(at);
       if (order.some(n => n < 0) || order.some((n, i) => i && n < order[i - 1])) {
         console.error("  FAIL  class page, student: the home page is not Next class, Challenges, Messages, Questions, Class, Games: " + JSON.stringify(order)); failedEarly++; }
     } else {
@@ -2473,10 +2473,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     try {
       const you = renderToString(<YouDetail config={mcfg} role="student" data={{}} update={noop} asStudent={N} />);
       if (!you.includes("Your profile")) say("Your card lost the profile");
-      ["Message with Dr. Ishak"].forEach(t => { if (you.includes(t)) say("Your card still carries " + JSON.stringify(t)); });
+      ["Message Dr. Ishak"].forEach(t => { if (you.includes(t)) say("Your card still carries " + JSON.stringify(t)); });
       const hcfg2 = { ...mcfg, instructor: { ...(mcfg.instructor || {}), officeHours: "Tue and Thu, 1 to 3 pm, Vari 234" } };
       const msgs = renderToString(<MessagesDetail config={hcfg2} role="student" data={talked} update={noop} asStudent={N} />);
-      ["Message with Dr. Ishak", "Make a meeting", "What is framing?"].forEach(t => { if (!msgs.includes(t)) say("the messages card has no " + JSON.stringify(t)); });
+      ["Message Dr. Ishak", "Make a meeting", "What is framing?"].forEach(t => { if (!msgs.includes(t)) say("the messages card has no " + JSON.stringify(t)); });
       // Asking moved out. One place to ask is the point of taking the ask
       // page away, and this card is for what is between the two of them.
       if (msgs.includes("I don&#x27;t understand something")) say("the messages card still has a question box");

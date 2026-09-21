@@ -126,7 +126,7 @@ function summary(key, config, role, ctx) {
     case "messages":
       return role === "instructor"
         ? { title: "Inbox", body: <MessagesSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> }
-        : { title: "Message with Dr. Ishak", body: <MessagesSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> };
+        : { title: "Message Dr. Ishak", body: <MessagesSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> };
     case "assignments":
       // Andrew, 2026-09-20: "can you label it as Challenges (Assignments) so
       // students get used to the terminology?" The tab stays one word, since
