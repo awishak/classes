@@ -2573,6 +2573,45 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!qSrc.includes("Please keep this anonymous")) say("the ask box has no anonymous tick");
 }
 
+// Thanks, on a question and on its answer. Andrew, 2026-09-20: "please have
+// people be able to appreciate a question or appreciate an answer."
+{
+  const say = (msg) => { console.error("  FAIL  appreciating: " + msg); failedEarly++; };
+  const src = readFileSync(new URL("../src/engine/questions.js", import.meta.url), "utf8");
+  if (!/const appreciate = useCallback/.test(src)) say("the store cannot record thanks");
+  if (!/thanksA" : "thanksQ"/.test(src)) say("a question and its answer are not thanked apart");
+  if (!/had\.includes\(name\) \? had\.filter/.test(src)) say("pressing it twice does not take the thanks back");
+  const card = readFileSync(new URL("../src/engine/QuestionsCard.jsx", import.meta.url), "utf8");
+  if (!/what="question"/.test(card) || !/what="answer"/.test(card)) say("the page cannot thank both");
+  if (!/api\.appreciate\(id, part, name\)/.test(card)) say("a student's press does not reach the store");
+  // The count is everyone's; who pressed it is nobody's. The page never
+  // renders the names.
+  if (/thanksQ\.map|thanksA\.map|thanksQ\.join|thanksA\.join/.test(card)) say("the page shows who appreciated something");
+  // Publishing says so in words, because an answer that saves quietly reads
+  // as an answer that is done. Andrew: "it just saves my answer in the dialogue
+  // box but doesn't really answer it."
+  if (!/On the class's page/.test(card)) say("a published answer does not say it is published");
+  if (!/the class cannot see the answer yet/.test(card)) say("an unpublished answer does not say so");
+  if (!/\{config\.path\}\/questions/.test(card)) say("his page does not say where the class reads it");
+}
+
+// The class menu holds the classes being taught. Andrew, 2026-09-20:
+// "sometimes the dropdown gets too long and i cant see the classes at the
+// end", "remove on the week and questions", and "archive everything that is
+// not COMM 118 or COMM 3."
+{
+  const say = (msg) => { console.error("  FAIL  the class menu: " + msg); failedEarly++; };
+  const menu = readFileSync(new URL("../src/engine/ClassMenu.jsx", import.meta.url), "utf8");
+  const dash = readFileSync(new URL("../src/engine/Dashboard.jsx", import.meta.url), "utf8");
+  if (!/c\.status !== "archived"/.test(menu)) say("the switcher still lists classes that are over");
+  if (!/Archived classes/.test(menu)) say("there is no way to the archived ones at all");
+  if (!/maxHeight: "calc\(100vh - 120px\)"/.test(menu)) say("a menu taller than the window still runs off it");
+  if (/panels=\{LIVE_RAIL/.test(dash)) say("On the week and Questions are back in the menu");
+  // And the two classes he is teaching are the two that are current.
+  const current = ENGINE_LIST.filter(c => c.status === "current").map(c => c.code).sort();
+  if (current.join(", ") !== "COMM 118, COMM 3") say("the current classes are " + current.join(", "));
+}
+
 // The FAQ. Andrew, 2026-09-20: "so basically it's an FAQ site. students can
 // peruse the FAQs, and they can ask one, and they can ask to keep it
 // anonymous ... and when i choose to answer a question, i can keep it

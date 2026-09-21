@@ -56,6 +56,33 @@ export const askedBy = (q) => (q.anon || q.hideName) ? "Anonymous" : (words(q.wh
 
 const when = (ts) => { try { return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" }); } catch { return ""; } };
 
+const ThumbsUp = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M7 10.5V20H4.6A1.6 1.6 0 0 1 3 18.4v-6.3A1.6 1.6 0 0 1 4.6 10.5H7z" />
+    <path d="M7 10.5l4.2-7.1a1.3 1.3 0 0 1 2.4.7V9h4.7a2 2 0 0 1 2 2.5l-1.6 6.6A2.4 2.4 0 0 1 16.4 20H7" />
+  </svg>
+);
+
+// Thanks for a question worth asking, or an answer worth reading. Andrew,
+// 2026-09-20: "please have people be able to appreciate a question or
+// appreciate an answer." The count is everyone's; who pressed it is nobody's.
+function Thanks({ names, mine, onPress, what }) {
+  const n = (names || []).length;
+  const on = !!mine && (names || []).includes(mine);
+  const say = on ? "Take your thanks back" : "Appreciate the " + what;
+  return (
+    <button className="ca-focus" onClick={onPress ? () => onPress() : undefined} disabled={!onPress}
+      aria-pressed={on} title={onPress ? say : n + " appreciated the " + what}
+      style={{ display: "inline-flex", alignItems: "center", gap: 6, minHeight: 32, padding: "0 10px",
+        borderRadius: 999, border: "1px solid " + (on ? "var(--ca-accent, " + BORDER_STRONG + ")" : BORDER_STRONG),
+        background: on ? "var(--ca-accent, #eee)" : "none", color: on ? "#fff" : TEXT_SECONDARY,
+        fontFamily: F, fontSize: 14, fontWeight: 600, cursor: onPress ? "pointer" : "default" }}>
+      <ThumbsUp />{n ? <span>{n}</span> : null}
+    </button>
+  );
+}
+
 const field = {
   width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG,
   fontFamily: F, fontSize: 16, minHeight: TAP, background: "var(--surface-card)", color: TEXT_PRIMARY, lineHeight: 1.5,
@@ -63,13 +90,21 @@ const field = {
 const tick = { width: 18, height: 18, flex: "none" };
 
 // One published question and its answer.
-function Entry({ q }) {
+function Entry({ q, me, onThank }) {
   return (
     <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 12 }}>
-      <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.4, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{q.text}</div>
-      <div style={{ ...label, marginTop: 4 }}>{askedBy(q)} · {when(q.publishedAt || q.answeredAt || q.at)}</div>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.4, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{q.text}</div>
+          <div style={{ ...label, marginTop: 4 }}>{askedBy(q)} · {when(q.publishedAt || q.answeredAt || q.at)}</div>
+        </div>
+        <Thanks names={q.thanksQ} mine={me} what="question" onPress={onThank ? () => onThank(q.id, "question") : null} />
+      </div>
       <div style={{ marginTop: 8, borderLeft: "3px solid var(--ca-accent, " + BORDER_STRONG + ")", paddingLeft: 12,
         fontSize: 16, lineHeight: 1.55, color: TEXT_SECONDARY, whiteSpace: "pre-wrap" }}>{q.answer}</div>
+      <div style={{ marginTop: 8, paddingLeft: 15 }}>
+        <Thanks names={q.thanksA} mine={me} what="answer" onPress={onThank ? () => onThank(q.id, "answer") : null} />
+      </div>
     </div>
   );
 }
@@ -160,7 +195,7 @@ function StudentQuestions({ config, api, name }) {
         <div style={label}>Answered</div>
         {out.length ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 8 }}>
-            {out.map(q => <Entry key={q.id} q={q} />)}
+            {out.map(q => <Entry key={q.id} q={q} me={name} onThank={(id, part) => api.appreciate(id, part, name)} />)}
           </div>
         ) : <Muted>Nothing published yet.</Muted>}
       </div>
@@ -176,7 +211,10 @@ function InstructorQuestions({ config, api }) {
   return (
     <div>
       <div style={h2}>Questions</div>
-      <Muted>Answer, then publish. Publishing is what puts a question and its answer in front of the class.</Muted>
+      <Muted>
+        Answer, then press Publish. Writing an answer saves it and nobody sees it; publishing is what puts the
+        question and the answer on the class's page, at <b style={{ fontWeight: 600 }}>{config.path}/questions</b>.
+      </Muted>
 
       <div style={{ marginTop: 18 }}>
         <div style={label}>To answer</div>
@@ -188,7 +226,7 @@ function InstructorQuestions({ config, api }) {
       </div>
 
       <div style={{ marginTop: 24 }}>
-        <div style={label}>Published</div>
+        <div style={label}>On the class's page</div>
         {out.length ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 8 }}>
             {out.map(q => <Answering key={q.id} q={q} config={config} api={api} published />)}
@@ -232,8 +270,12 @@ function Answering({ q, config, api, published }) {
   return (
     <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 12 }}>
       <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.4, whiteSpace: "pre-wrap" }}>{q.text}</div>
-      <div style={{ ...label, marginTop: 4 }}>
-        {(words(q.who) || "Anonymous") + " · " + when(q.at) + (q.anon ? " · asked to stay anonymous" : "")}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 4 }}>
+        <span style={{ ...label, flex: 1, minWidth: 0 }}>
+          {(words(q.who) || "Anonymous") + " · " + when(q.at) + (q.anon ? " · asked to stay anonymous" : "")}
+          {(q.thanksQ || []).length ? " · " + q.thanksQ.length + " appreciated it" : ""}
+          {(q.thanksA || []).length ? " · " + q.thanksA.length + " appreciated the answer" : ""}
+        </span>
       </div>
       <textarea value={draft} onChange={e => setDraft(e.target.value)} onBlur={() => api.answer(q.id, draft)} rows={3}
         placeholder="Your answer, for the whole class to read"
@@ -243,7 +285,10 @@ function Answering({ q, config, api, published }) {
           onChange={e => { setHide(e.target.checked); if (published) api.publish(q.id, e.target.checked); }} />
         {q.anon ? "Anonymous, because they asked" : "Publish it without their name"}
       </label>
-      <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: published ? TOKENS.STATE.ok : TOKENS.STATE.warn }}>
+          {published ? "On the class's page" : ready ? "Answered, and the class cannot see the answer yet" : "Not answered"}
+        </span>
         {published ? (
           <>
             <button className="ca-focus" onClick={() => { api.answer(q.id, draft); api.publish(q.id, hide); }} disabled={!ready}
@@ -265,7 +310,6 @@ function Answering({ q, config, api, published }) {
               style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_MUTED, minHeight: TAP }}>
               Archive
             </button>
-            <span style={{ fontSize: 14, color: TEXT_MUTED }}>{ready ? "" : "An answer first, then Publish."}</span>
           </>
         )}
       </div>

@@ -55,7 +55,11 @@ export function DropMenu({ trigger, label, width, children, side, fixed }) {
           <div role="menu" aria-label={label} onClick={() => setOpen(false)}
             style={{ ...place, zIndex: 71, background: "var(--surface-card, #ffffff)",
               border: "1px solid " + BORDER_STRONG, borderRadius: 14, padding: 6, width: width || 240,
-              boxShadow: "0 18px 44px -14px rgba(23,19,16,.35)", display: "flex", flexDirection: "column", gap: 1 }}>
+              boxShadow: "0 18px 44px -14px rgba(23,19,16,.35)", display: "flex", flexDirection: "column", gap: 1,
+              // Andrew, 2026-09-20: "sometimes the dropdown gets too long and i
+              // cant see the classes at the end." A menu taller than the window
+              // scrolls now rather than running off the bottom of it.
+              maxHeight: "calc(100vh - 120px)", overflowY: "auto" }}>
             {children}
           </div>
         </>
@@ -161,14 +165,19 @@ export function ClassMenu({ config, role = "instructor", onPick, onLook, panels,
               Keyboard<kbd style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 13, color: TEXT_MUTED }}>⌘/</kbd>
             </button>
           ) : null}
-          {ENGINE_LIST.filter(c => c.id !== config.id).length ? rule : null}
+          {ENGINE_LIST.filter(c => c.id !== config.id && c.status !== "archived").length ? rule : null}
           {/* One class per row, on two lines. Andrew, 2026-09-20, on a
               screenshot of these: "let's fix this formatting issue." The code
               and the meeting line were side by side in a 270px menu, so COMM 3
               broke across two lines and the times were cut off after four
               words. The code owns the first line and the times sit under it,
               where there is room for them. */}
-          {ENGINE_LIST.filter(c => c.id !== config.id).map(c => (
+          {/* The classes being taught. COMM 2, COMM 4 and the template are
+              archived, and an archived class is a page to visit rather than a
+              class to switch to, so they sit behind one row at the foot
+              instead of making the list long enough to push the live ones off
+              the screen. */}
+          {ENGINE_LIST.filter(c => c.id !== config.id && c.status !== "archived").map(c => (
             <button key={c.id} className="dash-focus" onClick={go(c.path + "/dashboard")}
               style={{ ...row, minHeight: 52, alignItems: "flex-start", paddingTop: 7, paddingBottom: 7 }}>
               <span style={{ flex: "none", width: 8, height: 8, borderRadius: "50%", background: c.accent, marginTop: 6 }} />
@@ -179,6 +188,9 @@ export function ClassMenu({ config, role = "instructor", onPick, onLook, panels,
               </span>
             </button>
           ))}
+          {ENGINE_LIST.some(c => c.status === "archived") ? (
+            <a className="dash-focus" href="/archive" style={{ ...row, color: TEXT_MUTED }}>Archived classes</a>
+          ) : null}
         </>
       )}
     </DropMenu>

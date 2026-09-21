@@ -5144,9 +5144,10 @@ export default function Dashboard({ config, daySlug = "" }) {
       <div ref={headRef} style={{ position: "sticky", top: 0, zIndex: 30 }}>
         <TopNav config={config} tabs={[]}
           brand={
+            /* No panels in here. Andrew, 2026-09-20: "remove on the week and
+               questions." Two rows that made the menu longer than the screen
+               and pushed the classes off the end of it. */
             <ClassMenu config={config} onLook={() => setColorsOpen(true)}
-              panels={LIVE_RAIL.map(id => ({ id, label: TITLES[id], n: RAIL_N[id] }))}
-              onPanel={setRoomOpen}
               onKeys={() => { setCmdOpen(false); setKeysOpen(true); }} />
           }
           middle={

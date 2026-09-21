@@ -3,7 +3,8 @@
 // never collides with a day-plan save.
 //
 // Shape at `${storageKey}-questions`:
-//   { items: [{ id, text, who, anon, at, state, answer, answeredAt, publishedAt, hideName }] }
+//   { items: [{ id, text, who, anon, at, state, answer, answeredAt, publishedAt,
+//               hideName, thanksQ: [name], thanksA: [name] }] }
 // state: "open" | "published" | "archived" | "trashed"
 //
 // Since 2026-09-20 this store is the class's FAQ. Andrew: "so basically it's
@@ -96,10 +97,24 @@ export function useQuestions(storageKey) {
   // the page, so a question nobody needs is not deleted evidence.
   const archive = useCallback((id) => patch(id, { state: "archived" }), [patch]);
 
+  // Thanks, for a question worth asking or an answer worth reading. Andrew,
+  // 2026-09-20: "please have people be able to appreciate a question or
+  // appreciate an answer." One per person per thing, and pressing it again
+  // takes it back. Names are kept so nobody can thank a thing twice, and only
+  // the count is ever shown.
+  const appreciate = useCallback((id, part, who) => {
+    const name = String(who || "").trim();
+    if (!name) return;
+    const field = part === "answer" ? "thanksA" : "thanksQ";
+    const q = (ref.current || []).find(x => x.id === id);
+    const had = (q?.[field] || []);
+    patch(id, { [field]: had.includes(name) ? had.filter(n => n !== name) : [...had, name] });
+  }, [patch]);
+
   // End of session: everything still open goes to the archive, unanswered.
   const archiveOpen = useCallback(() => {
     write((ref.current || []).map(q => q.state === "open" ? { ...q, state: "archived" } : q));
   }, [write]);
 
-  return { items, add, setState, archiveOpen, answer, publish, unpublish, archive };
+  return { items, add, setState, archiveOpen, answer, publish, unpublish, archive, appreciate };
 }
