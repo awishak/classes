@@ -171,10 +171,45 @@ export const deleteBlock = (update, id) => update(prev => {
 
 // Placing a block on a day stamps that date onto it, so "where has this been
 // used" is answerable without walking every plan.
-export const stampScheduled = (update, id, date) => update(prev => {
+//
+// The date is also written per class. Andrew, 2026-09-20: "why does it say
+// there are all these activities on the first day of comm 3 if there aren't."
+// Three shared activities carried scheduled: ["Sep 21"], and a shared block
+// belongs to all five classes, so a date stamped from one of them read as
+// "on the day" in every one of them. Sep 21 is COMM 3's first day and he had
+// never put Think, pair, share on it.
+//
+// `scheduled` stays what it was, the history of every day this has been used
+// on, which is the answer to "where has this been used". `scheduledIn` says
+// which class each of those days belongs to, and that is what a day's own
+// list reads.
+export const stampScheduled = (update, id, date, classId) => update(prev => {
   const blocks = { ...(prev.blocks || {}) };
   const b = blocks[id];
-  if (!b || (b.scheduled || []).includes(date)) return prev;
-  blocks[id] = { ...b, scheduled: [...(b.scheduled || []), date] };
+  if (!b) return prev;
+  const already = (b.scheduled || []).includes(date);
+  const mine = ((b.scheduledIn || {})[classId] || []);
+  if (already && (!classId || mine.includes(date))) return prev;
+  blocks[id] = {
+    ...b,
+    scheduled: already ? b.scheduled : [...(b.scheduled || []), date],
+    scheduledIn: classId
+      ? { ...(b.scheduledIn || {}), [classId]: mine.includes(date) ? mine : [...mine, date] }
+      : b.scheduledIn,
+  };
   return { ...prev, blocks };
 });
+
+// Is this block on that class day?
+//
+// A block the class owns answers with its own list, because a class's blocks
+// are that class's and an old stamp on one meant what it said. A shared block
+// has to have been placed by THIS class on THAT day, which is what
+// `scheduledIn` records. A shared block stamped before this existed says
+// nothing about which class put it there, so it is on nobody's day.
+export const onClassDay = (block, date, classId, shared) => {
+  if (!block || !date) return false;
+  const mine = (block.scheduledIn || {})[classId];
+  if (mine) return mine.includes(date);
+  return !shared && (block.scheduled || []).includes(date);
+};

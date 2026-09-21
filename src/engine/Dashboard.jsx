@@ -26,7 +26,7 @@ import { ClassMenu, DropMenu, menuRow } from "./ClassMenu.jsx";
 // its own sittingsOf.
 import { hasSections as twoSittings, sectionsOf as sectionLabels, studentsIn, realStudents, readRoomSection, writeRoomSection } from "./sections.js";
 import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections, blankDay, takeGroup, placeGroup, placeSection, splitSection, templateOf, applyTemplate } from "./dayplan.js";
-import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, makeBlock } from "./blocks.js";
+import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, onClassDay, isShared, makeBlock } from "./blocks.js";
 import { MEDIA_ACCEPT, mediaLabel, sizeLabel } from "./media.js";
 import { useUpload } from "./Attach.jsx";
 import { readAdded, readLabels } from "./types.js";
@@ -4123,7 +4123,7 @@ export default function Dashboard({ config, daySlug = "" }) {
   // document can put the cursor in it.
   const insertRow = (slot, afterId, depth, extra) => {
     const row = { id: genId(), text: "", depth: depth || 0, ...(extra || {}) };
-    if (row.blockId) stampScheduled(writeTo(row.blockId), row.blockId, day);
+    if (row.blockId) stampScheduled(writeTo(row.blockId), row.blockId, day, config.id);
     writeDay(d => {
       const slots = { ...(d.slots || {}) };
       const bucket = normSlot(slots[slot]);
@@ -4167,7 +4167,7 @@ export default function Dashboard({ config, daySlug = "" }) {
       return { ...d, slots: { ...(d.slots || {}), [slot]: { ...bucket,
         items: bucket.items.map(x => (x.id === itemId ? { ...x, blockId, text: "", links: [], feature: undefined } : x)) } } };
     }, "that line");
-    stampScheduled(writeTo(blockId), blockId, day);
+    stampScheduled(writeTo(blockId), blockId, day, config.id);
   };
 
   // A section's time, a range like 5-10.
@@ -4361,7 +4361,7 @@ export default function Dashboard({ config, daySlug = "" }) {
   const dropReading = (id) => removeScheduleItem(update, config, id);
   const pickReading = (b) => {
     addScheduleItem(update, config, day, { type: "reading", title: b.title, url: b.url, blockId: b.id });
-    stampScheduled(writeTo(b.id), b.id, day);
+    stampScheduled(writeTo(b.id), b.id, day, config.id);
   };
 
   // Something has been dragged onto Today's readings. It came either from the
@@ -4377,7 +4377,7 @@ export default function Dashboard({ config, daySlug = "" }) {
       || (url && r.url === url) || r.title === title);
     if (already) return;
     addScheduleItem(update, config, day, { type: "reading", title, url, blockId: from.blockId || "" });
-    if (from.blockId) stampScheduled(writeTo(from.blockId), from.blockId, day);
+    if (from.blockId) stampScheduled(writeTo(from.blockId), from.blockId, day, config.id);
   };
 
   // Assigned, or not, for a row that is already in the flow.
@@ -4398,7 +4398,7 @@ export default function Dashboard({ config, daySlug = "" }) {
     const blk = it.blockId ? blockOf(it.blockId) : null;
     const title = (blk?.title || it.text || it.claim || "Untitled").trim();
     addScheduleItem(update, config, day, { type: "reading", title, url: blk?.url || "", blockId: it.blockId || "" });
-    if (it.blockId) stampScheduled(writeTo(it.blockId), it.blockId, day);
+    if (it.blockId) stampScheduled(writeTo(it.blockId), it.blockId, day, config.id);
   };
 
   // A new idea is a block kept with me, so it turns up in every class.
@@ -4498,7 +4498,7 @@ export default function Dashboard({ config, daySlug = "" }) {
       slots[slot] = { ...bucket, items };
       return { ...d, slots };
     });
-    if (blockId) stampScheduled(writeTo(blockId), blockId, on);
+    if (blockId) stampScheduled(writeTo(blockId), blockId, on, config.id);
     // Dragging a reading into the flow copies it by default, so it stays on
     // today's readings as well. Turned off, the drag moves it instead.
     if (b.schedItemId && !railRef.current.dragKeeps) removeScheduleItem(update, config, b.schedItemId);
@@ -4781,7 +4781,10 @@ export default function Dashboard({ config, daySlug = "" }) {
       const t = plan.slidesClaim || "Slides";
       add({ id: "deck", title: t, type: "link", url: plan.slides, pseudo: true, drag: { title: t, url: plan.slides } });
     }
-    blocks2.filter(b => (b.scheduled || []).includes(day)).forEach(add);
+    // Only what THIS class put on this day. A shared block belongs to all five
+    // classes, so a date stamped from one of them used to read as "on the day"
+    // in every one.
+    blocks2.filter(b => onClassDay(b, day, config.id, isShared(data, b.id))).forEach(add);
     assignments.filter(a => a.due === day).forEach(a => add({ id: "due:" + a.id, title: a.title, type: "assignment", url: a.instructionsUrl || "", pseudo: true,
       drag: { title: a.title, url: a.instructionsUrl || "" } }));
     return out;

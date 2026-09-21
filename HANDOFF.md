@@ -514,6 +514,13 @@ character and those are what drifted. Font sizes are not held to `TYPE` yet.
 
 - **Blocks.** Content is stored once and referenced everywhere. Editing a
   block changes it in every place it is used. `src/engine/blocks.js`.
+- **A block's day belongs to the class that placed it.** `scheduled` is the
+  history of every day a block has been used on, and `scheduledIn` says which
+  class each of those days belongs to. The day's own list reads the second one,
+  because a shared block belongs to all five classes: three shared activities
+  carried `scheduled: ["Sep 21"]` and so read as being on COMM 3's first day,
+  where nobody had put them. A shared block stamped before this says nothing
+  about whose day it was, so it is on nobody's.
 - **Day titles carry.** A title starts on the day it is written and covers
   every class day after it until the next one. Runs are counted by what a day
   says, not by where the words came from. `src/engine/days.js`.

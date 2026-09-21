@@ -109,7 +109,7 @@ import GamesPage from "../src/engine/GamesPage.jsx";
 import DayDoc from "../src/engine/DayDoc.jsx";
 import { ScheduleDetail, studentItems, dateInWeek, dayAnchor } from "../src/engine/ScheduleCard.jsx";
 import TermOutline from "../src/engine/TermOutline.jsx";
-import { SHARED_KEY } from "../src/engine/blocks.js";
+import { SHARED_KEY, stampScheduled, onClassDay } from "../src/engine/blocks.js";
 import { DEFAULT_REPO_FONTS } from "../src/engine/fonts.js";
 
 // Warm every class's store BEFORE anything renders, so <Dashboard/> gets past
@@ -2911,6 +2911,41 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const docSrc = readFileSync(new URL("../src/engine/DayDoc.jsx", import.meta.url), "utf8");
   if (/function TeachView/.test(docSrc)) say("the full-screen Teach is back in the document");
   if (/add\("Day", "Teach"/.test(docSrc)) say("the slash menu still opens a Teach that is gone");
+}
+
+// A shared block's date belongs to the class that placed it. Andrew,
+// 2026-09-20: "why does it say there are all these activities on the first day
+// of comm 3 if there aren't." Three shared activities carried
+// scheduled: ["Sep 21"], and a shared block is every class's, so one stamp put
+// Think, pair, share on the first day of a class that had never seen it.
+{
+  const say = (msg) => { console.error("  FAIL  a block's day: " + msg); failedEarly++; };
+  const mine = { id: "b1", title: "A class block", scheduled: ["Sep 21"] };
+  const theirs = { id: "b2", title: "A shared activity", type: "activity", scheduled: ["Sep 21"] };
+  const placed = { id: "b3", title: "Placed here", scheduled: ["Sep 21"], scheduledIn: { comm3: ["Sep 21"] } };
+  // A class's own block keeps answering with the list it always had.
+  if (!onClassDay(mine, "Sep 21", "comm3", false)) say("a class block lost its own day");
+  // A shared one stamped before any of this says nothing about whose day it is.
+  if (onClassDay(theirs, "Sep 21", "comm3", true)) say("a shared block with an old stamp is still on every class's day");
+  if (onClassDay(theirs, "Sep 21", "comm118", true)) say("the same shared block is on another class's day too");
+  // Once a class places it, it is on that class's day and nobody else's.
+  if (!onClassDay(placed, "Sep 21", "comm3", true)) say("a shared block placed by this class is not on its day");
+  if (onClassDay(placed, "Sep 21", "comm118", true)) say("a block placed in COMM 3 turned up in COMM 118");
+  if (onClassDay(placed, "Sep 23", "comm3", true)) say("a block is on a day it was never placed on");
+  // Stamping writes both: the history, and which class the day belongs to.
+  let store = { blocks: { b1: { id: "b1", title: "A block", scheduled: [] } } };
+  const update = (fn) => { store = fn(store); };
+  stampScheduled(update, "b1", "Sep 21", "comm3");
+  stampScheduled(update, "b1", "Sep 21", "comm118");
+  const after = store.blocks.b1;
+  if (JSON.stringify(after.scheduled) !== '["Sep 21"]') say("the history kept the same day twice: " + JSON.stringify(after.scheduled));
+  if (JSON.stringify(after.scheduledIn) !== '{"comm3":["Sep 21"],"comm118":["Sep 21"]}') {
+    say("the day is not recorded per class: " + JSON.stringify(after.scheduledIn)); }
+  // And the drawer reads the scoped one.
+  const dash = readFileSync(new URL("../src/engine/Dashboard.jsx", import.meta.url), "utf8");
+  if (!/onClassDay\(b, day, config\.id, isShared\(data, b\.id\)\)/.test(dash)) {
+    say("the day's own list does not ask whose day it is"); }
+  if (/\(b\.scheduled \|\| \[\]\)\.includes\(day\)/.test(dash)) say("the old unscoped read is back");
 }
 
 // Teaching, the slides are a run: one wide, with everything written under a

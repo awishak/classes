@@ -509,7 +509,7 @@ export default function RepoPage() {
     });
     if (landed === "none") return "That day has no sections yet. Make one on the dashboard first.";
     if (!landed) return "Already on that day.";
-    stampScheduled(writeTo(row.target), row.id, date);
+    stampScheduled(writeTo(row.target), row.id, date, cls.id);
     return cls.code + ", " + date + ", in " + name;
   };
 
@@ -527,7 +527,7 @@ export default function RepoPage() {
       type: row.type === "assignment" ? "assignment" : "reading",
       title: row.title || row.headline, url: row.url || "", blockId: row.id,
     });
-    stampScheduled(writeTo(row.target), row.id, date);
+    stampScheduled(writeTo(row.target), row.id, date, cls.id);
     return cls.code + ", " + date + ", assigned";
   };
 
