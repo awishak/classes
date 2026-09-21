@@ -728,9 +728,21 @@ The basis is the last state this page and the server agreed on. It moves on when
 a merged save comes back and nothing newer is waiting, because a state waiting
 in the queue was built from that same basis and has to be measured against it.
 
-Arrays are leaves. Two people appending to one array in the same second still
-lose one, and the only array students write from the class site is `requests`.
-Everything else students write is keyed per student.
+**A list of rows merges by id.** Every list the app writes carries ids on its
+rows: a post, a submission, a request, a row of the roster, a week. So two
+students posting under one prompt in the same second both land. A row this page
+changed is this page's, a row it did not is the server's, and a row either side
+took out stays out. A page that only added rows keeps the other side's order and
+puts its own on the end; a page that moved rows about meant to, so its order is
+the one that keeps. A list of plain values is still a leaf, because there the
+order is the meaning: the options under a question are `["This", "That"]`, and a
+merge that took one out and put its replacement on the end would move the right
+answer.
+
+**The boards write through the same door.** `boards.js` has its own key and its
+own hook, and its write was the whole board, so a prompt cast to a room of
+thirty kept whichever answer landed last. It reads, merges and writes now, by
+post id.
 
 Still true and worth doing: **a photo is a data URL inside the class blob**. At
 220px and quality 0.7 each one is about 10KB, so a class of sixty adds well over

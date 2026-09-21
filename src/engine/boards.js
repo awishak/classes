@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { genId } from "../utils.jsx";
+import { saveAgainstServer } from "./store.js";
 
 export const boardsKey = (storageKey) => storageKey + "-boards";
 
@@ -28,6 +29,12 @@ export function useBoards(storageKey) {
   const [boards, setBoards] = useState(null);
   const ref = useRef({});
   const pending = useRef(0);
+  // The last state this page and the server agreed on. A post is written by
+  // whoever is in the room, all at once, and a write here used to be the whole
+  // board: thirty phones answering one prompt, and the answer that landed
+  // second was the only one left. Every write merges now, by post id, the same
+  // rule the class store uses. See mergeList in store.js.
+  const basis = useRef({});
 
   useEffect(() => {
     let alive = true;
@@ -37,12 +44,18 @@ export function useBoards(storageKey) {
         const v = r ? JSON.parse(r.value) : {};
         if (!alive) return;
         ref.current = v.boards || {};
+        basis.current = ref.current;
         setBoards(ref.current);
       } catch { if (alive) { ref.current = {}; setBoards({}); } }
     })();
     const off = window.storage?.onUpdate?.(key, (val) => {
       if (pending.current > 0) return;      // our own write coming back
-      try { const v = JSON.parse(val); ref.current = v.boards || {}; setBoards(ref.current); } catch { /* ignore */ }
+      try {
+        const v = JSON.parse(val);
+        ref.current = v.boards || {};
+        basis.current = ref.current;
+        setBoards(ref.current);
+      } catch { /* ignore */ }
     });
     return () => { alive = false; if (off) off(); };
   }, [key]);
@@ -51,7 +64,18 @@ export function useBoards(storageKey) {
     ref.current = next;
     setBoards({ ...next });
     pending.current++;
-    Promise.resolve(window.storage.set(key, JSON.stringify({ boards: next }), true))
+    Promise.resolve(saveAgainstServer(key, { boards: basis.current }, { boards: next }))
+      .then((out) => {
+        // Not while another write of this page's is still out: that one was
+        // built from the basis below and is measured against the same one.
+        if (!out || pending.current > 1) return;
+        // What landed is what the room holds, this page included, so a post
+        // written while this one was in flight turns up here rather than on
+        // the next reload.
+        ref.current = out.boards || {};
+        basis.current = ref.current;
+        setBoards({ ...ref.current });
+      })
       .catch(() => {}).finally(() => { pending.current--; });
   }, [key]);
 

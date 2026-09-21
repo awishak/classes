@@ -76,7 +76,7 @@ import PlanPage from "../src/PlanPage.jsx";
 import RetreatPage from "../src/RetreatPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
 import { ENGINE_LIST } from "../src/config/registry.js";
-import { warmClassData, saveMerged, mergeClass } from "../src/engine/store.js";
+import { warmClassData, saveMerged, mergeClass, mergeList } from "../src/engine/store.js";
 import { setAway, mergeAway, isAway, awayBySitting } from "../src/engine/attendance.js";
 import GradeView from "../src/engine/GradeView.jsx";
 import GradeDeck from "../src/engine/GradeDeck.jsx";
@@ -3765,15 +3765,68 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const out = mergeClass(base, base, server);
     if (JSON.stringify(out) !== JSON.stringify(server)) say("a save that changed nothing still wrote something of its own");
   }
-  // Arrays are leaves: the list this page rewrote is this page's, and one it
-  // never touched is the server's.
+  // A list of rows merges by id. Two students posting under one prompt in the
+  // same second is the case Andrew asked about after the photos.
   {
-    const base = { students: [{ id: "a" }], log: [{ id: "L1" }] };
-    const mine = { ...base, students: [{ id: "a" }, { id: "b" }] };
+    const was = [{ id: "p1", text: "first" }];
+    const mine = [...was, { id: "p2", text: "mine" }];
+    const theirs = [...was, { id: "p3", text: "theirs" }];
+    const out = mergeList(was, mine, theirs);
+    if (out.length !== 3) say("two people posting at once lost a post: " + JSON.stringify(out.map(p => p.id)));
+    if (out.map(p => p.id).join() !== "p1,p3,p2") say("the posts are not in the order they arrived: " + out.map(p => p.id).join());
+  }
+  // A row this page changed is this page's; a row it did not is the server's;
+  // a row either side took out stays out.
+  {
+    const was = [{ id: "a", n: 1 }, { id: "b", n: 1 }, { id: "c", n: 1 }];
+    const mine = [{ id: "a", n: 2 }, { id: "b", n: 1 }];
+    const theirs = [{ id: "a", n: 1 }, { id: "b", n: 9 }, { id: "c", n: 1 }];
+    const out = mergeList(was, mine, theirs);
+    if (out.find(r => r.id === "a")?.n !== 2) say("a row this page changed was rolled back");
+    if (out.find(r => r.id === "b")?.n !== 9) say("a row the other page changed was rolled back");
+    if (out.find(r => r.id === "c")) say("a row this page deleted came back");
+  }
+  // Two screens on one row, different fields. The merge goes into the row.
+  {
+    const was = [{ id: "a", score: null, comment: "" }];
+    const mine = [{ id: "a", score: 90, comment: "" }];
+    const theirs = [{ id: "a", score: null, comment: "nice work" }];
+    const out = mergeList(was, mine, theirs);
+    if (out[0].score !== 90 || out[0].comment !== "nice work") say("two screens on one row lost half of it: " + JSON.stringify(out[0]));
+  }
+  // A page that moved rows about meant to, so its order is the one that keeps.
+  {
+    const was = [{ id: "a" }, { id: "b" }, { id: "c" }];
+    const mine = [{ id: "c" }, { id: "a" }, { id: "b" }];
+    const out = mergeList(was, mine, was);
+    if (out.map(r => r.id).join() !== "c,a,b") say("a row dragged into place went back where it was");
+  }
+  // A list of plain values is a leaf, because in a list of values the order is
+  // the meaning. The options under a question are the case that would break.
+  {
+    const was = { q: { id: "q1", options: ["This", "That", "The other"] } };
+    const mine = { q: { id: "q1", options: ["This", "Something else", "The other"] } };
+    const out = mergeClass(was, mine, was);
+    if (out.q.options.join("|") !== "This|Something else|The other") say("a list of answers was shuffled by the merge: " + out.q.options.join("|"));
+  }
+  // Rows without ids are a leaf as well, and a list this page never touched is
+  // the server's.
+  {
+    const base = { students: [{ id: "a" }], seats: [["a", "b"]], log: [{ id: "L1" }] };
+    const mine = { ...base, students: [{ id: "a" }, { id: "b" }], seats: [["b", "a"]] };
     const server = { ...base, log: [{ id: "L1" }, { id: "L2" }] };
     const out = mergeClass(base, mine, server);
     if (out.students.length !== 2) say("the roster this page pasted did not land");
+    if (out.seats[0].join() !== "b,a") say("a list with no ids in it was merged rather than taken whole");
     if (out.log.length !== 2) say("a list this page never touched was rolled back");
+  }
+  // A board post lands beside the posts that arrived while it was being typed.
+  {
+    const was = { boards: { b1: { id: "b1", posts: [] } } };
+    const mine = { boards: { b1: { id: "b1", posts: [{ id: "m1", who: "Ada" }] } } };
+    const server = { boards: { b1: { id: "b1", posts: [{ id: "s1", who: "Pepe" }, { id: "s2", who: "Sym" }] } } };
+    const out = mergeClass(was, mine, server);
+    if (out.boards.b1.posts.length !== 3) say("a board lost a post: " + JSON.stringify(out.boards.b1.posts.map(p => p.id)));
   }
   // The marks the room makes, through the same rule the attendance write uses.
   {
@@ -3797,6 +3850,8 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const { readFileSync: readStore } = await import("node:fs");
     const src = readStore(new URL("../src/engine/store.js", import.meta.url), "utf8");
     if (!/saveAgainstServer\(k, basis\.current, v\)/.test(src)) say("a save no longer measures against what the server holds");
+    const boardSrc = readStore(new URL("../src/engine/boards.js", import.meta.url), "utf8");
+    if (!/saveAgainstServer\(key, \{ boards: basis\.current \}/.test(boardSrc)) say("a board post is written without merging");
     if (/Promise\.resolve\(saveClass\(k, v\)\)/.test(src)) say("the plain overwrite is back in the save path");
   }
 }

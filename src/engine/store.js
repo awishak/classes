@@ -65,11 +65,56 @@ const canon = (v) => {
 // the server. A branch it did touch is this page's, down to the leaf. A key it
 // took out stays out, so deleting still deletes.
 //
-// Arrays are leaves. Two people appending to the same array in the same second
-// still lose one, and the only array students write from the class site is the
-// requests list. The maps that matter are keyed per student, so two students
-// never write the same key.
+// A list of things that carry their own ids merges by id. Andrew, 2026-09-21:
+// "and please fix the array issue." Two students posting to one discussion
+// board in the same second each hold a list the other post is not in, and the
+// list that landed second used to be the whole list. A post, a submission, a
+// request, a row of the roster: every one of them carries an id already.
+//
+// A list of plain values stays a leaf, because in a list of values the ORDER is
+// the meaning: the options under a question are ["This", "That"], and a merge
+// that took one out and put its replacement on the end would quietly move the
+// right answer.
 const isPlain = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+const byId = (list) => {
+  if (!Array.isArray(list)) return null;
+  const m = new Map();
+  for (const x of list) {
+    if (!isPlain(x) || typeof x.id !== "string" || !x.id || m.has(x.id)) return null;
+    m.set(x.id, x);
+  }
+  return m;
+};
+
+// Which version of one row survives, by the same rule the rest of the merge
+// uses: whoever touched it owns it, and if both did, field by field.
+function pickRow(id, was, mine, theirs) {
+  const before = was.get(id), now = mine.get(id), there = theirs.get(id);
+  if (before && !now) return undefined;                 // this page took it out
+  if (before && !there) return undefined;               // somebody else took it out
+  if (!now) return there;                               // only on the server
+  if (!there) return now;                               // added here
+  if (now === before) return there;                     // untouched here
+  if (there === before) return now;                     // untouched there
+  return mergeClass(before, now, there);
+}
+
+export function mergeList(was, mine, theirs) {
+  const w = byId(was) || new Map(), m = byId(mine), t = byId(theirs);
+  if (!m || !t) return mine;                            // not rows with ids: a leaf
+  // Whose order to follow. A page that only added rows keeps the other side's
+  // order and puts its own on the end; a page that moved rows about meant to.
+  const orderOf = (list, keep) => list.filter(x => keep.has(x.id)).map(x => x.id).join("|");
+  const moved = orderOf(mine, w) !== orderOf(Array.isArray(was) ? was : [], m);
+  const order = [];
+  const seen = new Set();
+  const add = (x) => { if (!seen.has(x.id)) { seen.add(x.id); order.push(x.id); } };
+  (moved ? mine : theirs).forEach(add);
+  (moved ? theirs : mine).forEach(add);
+  const out = [];
+  order.forEach(id => { const row = pickRow(id, w, m, t); if (row !== undefined) out.push(row); });
+  return out;
+}
 
 export function mergeClass(base, next, server) {
   if (!isPlain(next) || !isPlain(server)) return next;
@@ -82,7 +127,9 @@ export function mergeClass(base, next, server) {
       if (k in server) out[k] = server[k]; else delete out[k];
       return;
     }
-    out[k] = isPlain(mine) && isPlain(server[k]) ? mergeClass(before, mine, server[k]) : mine;
+    out[k] = isPlain(mine) && isPlain(server[k]) ? mergeClass(before, mine, server[k])
+      : Array.isArray(mine) && Array.isArray(server[k]) ? mergeList(before, mine, server[k])
+      : mine;
   });
   return out;
 }
@@ -94,7 +141,7 @@ export function mergeClass(base, next, server) {
 // so it is asked twice. If the second answer is nothing as well, the page's own
 // state goes out as it always did, because a student's own words are the one
 // thing that must not be dropped on the floor.
-async function saveAgainstServer(key, base, next) {
+export async function saveAgainstServer(key, base, next) {
   let server = null;
   for (let i = 0; i < 2 && !server; i++) {
     try {
