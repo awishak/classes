@@ -319,15 +319,21 @@ function StudentRoster({ config, data, name }) {
   return (
     <div>
       <div style={{ ...h2, marginBottom: 16 }}>Roster</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12 }}>
+      {/* Andrew, 2026-09-21: "let's give the roster treatment a 3 across,
+          centered avatar, name in bold, year adn home town below, motto below
+          that." Three across on every screen, so the roster reads as a wall of
+          faces rather than a list of names, and the class fits on a phone. */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
         {students.map(s => {
           const p = profileOf(data, s.name);
+          const where = [p.year, p.hometown].filter(Boolean).join(" · ");
           return (
             <button key={s.name} onClick={() => setOpen(s.name)}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 14, cursor: "pointer", fontFamily: F, minHeight: TAP }}>
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 14, padding: 14, cursor: "pointer", fontFamily: F, minHeight: TAP }}>
               <Avatar profile={p} name={nameShown(data, s.name)} accent={a} size={56} />
-              <div style={{ fontWeight: 600, fontSize: 15, textAlign: "center" }}>{nameShown(data, s.name)}</div>
-              {p.hometown && <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center" }}>{p.hometown}</div>}
+              <div style={{ fontWeight: 700, fontSize: 15, textAlign: "center", color: TEXT_PRIMARY, overflowWrap: "anywhere" }}>{nameShown(data, s.name)}</div>
+              {where ? <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center", lineHeight: 1.35 }}>{where}</div> : null}
+              {p.motto ? <div style={{ fontSize: 13, color: TEXT_SECONDARY, textAlign: "center", lineHeight: 1.4, overflowWrap: "anywhere" }}>{p.motto}</div> : null}
             </button>
           );
         })}

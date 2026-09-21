@@ -90,7 +90,7 @@ import WelcomeDeck, { needsWelcome, markWelcomed } from "../src/engine/WelcomeDe
 import { assignmentsOf } from "../src/engine/profileTask.js";
 import { QuestionsSummary, QuestionsDetail, onThePage, archivedOf, askedBy, sortQuestions, isAnswered, QuestionEntry } from "../src/engine/QuestionsCard.jsx";
 import { sectionsOf as sittingLabels, hasSections, studentsIn, sectionFor, realStudents, isTestStudent, sectionNow } from "../src/engine/sections.js";
-import { classmatesOf } from "../src/engine/RosterCard.jsx";
+import { classmatesOf, RosterDetail } from "../src/engine/RosterCard.jsx";
 import { comingUp, turnedIn } from "../src/engine/AssignmentsCard.jsx";
 import { YouDetail, MessagesDetail, MessagesSummary } from "../src/engine/YouCard.jsx";
 import comm118Cfg from "../src/config/comm118.js";
@@ -3937,6 +3937,36 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (renderToString(<PinnedLinks data={{}} update={noop} seat={{}} />)) say("an empty pin card still takes room on their page");
     if (!renderToString(<PinnedLinks data={{}} update={noop} instructor seat={{}} />).includes("Pinned")) say("he cannot pin the first link");
   }
+}
+
+// The roster, three across.
+//
+// Andrew, 2026-09-21: "let's give the roster treatment a 3 across, centered
+// avatar, name in bold, year adn home town below, motto below that."
+{
+  const say = (m) => { console.error("  FAIL  the roster: " + m); failedEarly++; };
+  const cfg = { accent: "#333", code: "COMM 3", students: [
+    { name: "Ada Lovelace" }, { name: "Grace Hopper" }, { name: "Alan Turing" }, { name: "Pepe LeFritz" },
+  ] };
+  const data = { students: cfg.students, profiles: {
+    "Ada Lovelace": { year: "Junior", hometown: "Fresno", motto: "Measure twice" },
+    "Grace Hopper": { hometown: "Sacramento" },
+  } };
+  const html = renderToString(<RosterDetail config={cfg} role="student" data={data} update={noop} name="Pepe LeFritz" />);
+  if (!/grid-template-columns:repeat\(3, ?minmax\(0, ?1fr\)\)/.test(html)) say("the roster is not three across");
+  ["Ada Lovelace", "Grace Hopper", "Alan Turing"].forEach(n => {
+    if (!html.includes(n)) say(n + " is not on the roster"); });
+  if (!html.includes("Junior · Fresno")) say("the year and the hometown are not on the card");
+  if (!html.includes("Measure twice")) say("the motto is not on the card");
+  if (!/font-weight:700[^>]*>Ada Lovelace|Ada Lovelace/.test(html)) say("the name is not in bold");
+  // A student who has answered nothing is a face and a name, with no empty
+  // lines under it.
+  const turing = html.slice(html.indexOf("Alan Turing"));
+  if (/· <\/div>|>·</.test(turing)) say("a student with nothing filled in carries an empty line");
+  // The card stacks: avatar, then name, then where they are from, then the motto.
+  const ada = html.slice(html.indexOf("Ada Lovelace") - 400, html.indexOf("Measure twice"));
+  if (ada.indexOf("Ada Lovelace") > ada.indexOf("Junior · Fresno")) say("the name is under the year and the hometown");
+  if (!/align-items:center/.test(ada)) say("the card is not centred");
 }
 
 // Three readings, then the box.

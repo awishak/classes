@@ -288,6 +288,15 @@ challenge is due whether the list is open or not, and a game is what happens in
 the room. The box opens the day and does not close it again, because closing it
 would need words he has not given. `DayItems` in `ScheduleCard.jsx`.
 
+**The roster is a wall of faces.** Andrew, 2026-09-21: "let's give the roster
+treatment a 3 across, centered avatar, name in bold, year adn home town below,
+motto below that." Three across on every screen, phone included. A student who
+has answered nothing is a face and a name with no empty lines under it, because
+each line is only drawn when there is something in it. Tapping one still opens
+their page, where the about and the strength are. `StudentRoster` in
+`RosterCard.jsx`; the instructor's own roster is a different surface and is
+unchanged.
+
 **Challenges says both words** on the student's card, `Challenges
 (Assignments)`, until the class has the new one. The card is the next one by
 name, when it is due, and how many more the class holds, counted across every
