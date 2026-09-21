@@ -147,22 +147,21 @@ export function nextClassFacts(config, data, blockOf, section, now = Date.now())
 // Saved when the box loses focus, so there is no Save button to forget.
 //
 // Andrew, 2026-09-21: "for me, if i don't have a note for students, make it
-// collapsed." A box for something he has not written is 110px of the card gone
-// on every day he has nothing to say, so on those days it is the label and
-// nothing else until he presses it.
+// collapsed", and then "how can i recollapse the note, both after filling in or
+// not filling in?" So the label is the switch, both ways, on every day.
+//
+// Shut, a day he has written nothing for is the label and nothing else, and a
+// day with a note on it reads the note, exactly as the class reads it. Open,
+// the box. It starts shut, because the card is shortest that way and the note
+// is still there to be read.
+//
+// Shutting it saves what is in the box. Pressing the label moves the cursor out
+// of the box first, so the blur has already saved by then, and saving twice
+// with the same words writes nothing.
 function NoteEditor({ date, value, update }) {
   const [draft, setDraft] = useState(value);
   const [saved, setSaved] = useState(false);
-  const [open, setOpen] = useState(!!value);
-  if (!open) {
-    return (
-      <button className="ca-focus" onClick={() => setOpen(true)}
-        style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, cursor: "pointer",
-          minHeight: TAP, fontFamily: F, ...small, color: "var(--ca-accent-ink)" }}>
-        Note to students
-      </button>
-    );
-  }
+  const [open, setOpen] = useState(false);
   const save = () => {
     const next = draft.trim();
     if (next === value) return;
@@ -173,10 +172,30 @@ function NoteEditor({ date, value, update }) {
     });
     setSaved(true);
   };
+  const label = (
+    <button className="ca-focus" aria-expanded={open}
+      onClick={() => { if (open) save(); setSaved(false); setOpen(!open); }}
+      style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, cursor: "pointer",
+        minHeight: TAP, fontFamily: F, ...small, color: "var(--ca-accent-ink)" }}>
+      Note to students
+    </button>
+  );
+  if (!open) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {label}
+        {String(value || "").trim() ? (
+          <div style={{ borderLeft: "3px solid " + BORDER_STRONG, paddingLeft: 12, fontSize: 17, lineHeight: 1.5,
+            color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{value}</div>
+        ) : null}
+      </div>
+    );
+  }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <label htmlFor={"note-" + date} style={small}>Note to students</label>
-      <textarea id={"note-" + date} value={draft} onChange={e => { setDraft(e.target.value); setSaved(false); }} onBlur={save}
+      {label}
+      <textarea id={"note-" + date} aria-label="Note to students" value={draft}
+        onChange={e => { setDraft(e.target.value); setSaved(false); }} onBlur={save}
         style={{ fontFamily: F, fontSize: 16, minHeight: 84, padding: 12, borderRadius: 10, border: "1px solid " + BORDER_STRONG,
           background: "var(--surface-card)", color: TEXT_PRIMARY, lineHeight: 1.5, resize: "vertical" }} />
       {saved ? <span style={{ fontSize: 13, fontWeight: 600, color: TOKENS.STATE.ok }}>Saved</span> : null}

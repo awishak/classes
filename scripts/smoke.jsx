@@ -2373,7 +2373,11 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       // The note, his side and theirs.
       if (!full.includes("Bring the Katrina photo.") || full.indexOf("Bring the Katrina photo.") > full.indexOf("reading")) say("the note to students is not above the ways on");
       if (plain.includes("Note to students")) say("a student sees a note box with no note in it");
-      if (!edit.includes("Note to students") || !edit.includes("<textarea")) say("the instructor has no box for the note on the front page");
+      // The box lives behind the label now, both ways, so his side of the card
+      // is the label and the note he has written rather than a box on a day he
+      // has nothing to say. See the front page block below.
+      if (!edit.includes("Note to students")) say("the instructor has no way to the note on the front page");
+      if (edit.includes("<textarea")) say("the note box is open before he asks for it");
       // And what came off it, which stays off.
       [["Directions", plain], ["maps.example", plain], ["Week 1", plain], ["Drew&#x27;s Pick", plain], ["No in-person meeting", none]].forEach(([t, where]) => {
         if (where.includes(t)) say("the card is showing " + JSON.stringify(t) + " again"); });
@@ -3897,16 +3901,26 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (!/padding:16px/.test(html)) say("the card still carries its old padding");
     if (/font-size:30px|font-size:26px/.test(html)) say("the day's title is still the old size");
   }
-  // His note, folded away on a day he has not written one.
+  // His note, folded away, and the label is the switch both ways. Andrew,
+  // 2026-09-21: "how can i recollapse the note, both after filling in or not
+  // filling in?"
   {
     const quiet = hero({ instructor: true, update: noop });
     if (quiet.includes("<textarea")) say("an empty note still takes a box on the card");
     if (!quiet.includes("Note to students")) say("there is no way to write a note");
+    if (!/aria-expanded="false"/.test(quiet)) say("the label does not say whether the note is open");
+    // Written, and shut: the words, the way the class reads them, and no box.
     const written = { ...day, dayPlans: { "Sep 21": { ...day.dayPlans["Sep 21"], studentNote: "Bring the photo." } } };
     const loud = renderToString(<NextClassHero config={cfg} data={written} blockOf={() => null}
       section="" onOpen={noop} seat={{}} instructor update={noop} />);
-    if (!loud.includes("<textarea")) say("a note he has written does not open");
-    if (!loud.includes("Bring the photo.")) say("the note he wrote is not in the box");
+    if (!loud.includes("Bring the photo.")) say("a note he has written is not on his card");
+    if (loud.includes("<textarea")) say("a written note opens the box before he asks for it");
+    if (!loud.includes("Note to students")) say("there is no way back into a note he has written");
+    // The switch is a button rather than a label, so it can be pressed shut
+    // again. The source says so, because shutting it is a press.
+    const home = readFileSync(new URL("../src/engine/HomeCards.jsx", import.meta.url), "utf8");
+    if (!/onClick=\{\(\) => \{ if \(open\) save\(\); setSaved\(false\); setOpen\(!open\); \}\}/.test(home))
+      say("the label does not shut the note again, or does not save on the way");
   }
   // The pins are the card. The boxes and the Unpin buttons wait behind the word.
   {
