@@ -3621,6 +3621,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const at = (t) => html.indexOf(t);
     if (!(at("Monday reading") < at("Wednesday reading") && at("Wednesday reading") < at("Friday reading"))) say("readings are not in day order");
     if (!html.includes("theatlantic.com")) say("a link's site is not shown as its source");
+    // Andrew, 2026-09-21: "the schedule view for students is still too
+    // cluttered ... why is the title of the day not as prominent as a reading."
+    // The day's title is the heading, the date above it is a label, and each
+    // reading is a card on the sunk surface.
+    if (!/font-size:19px;font-weight:700/.test(html)) say("the day's title is not the heading of the day");
+    if (!/background:var\(--surface-sunk\);border-radius:12px/.test(html)) say("a reading is not a card on its own ground");
+    if (/font-size:16px;color:var\(--text-primary\)">Monday reading/.test(html)) say("a reading is still as loud as the day");
     if (!html.includes("Billings, Communication and Sport")) say("a block's written source is not shown");
     // The heading says the day in full, and the class days are all there
     // even when nothing is set for one.

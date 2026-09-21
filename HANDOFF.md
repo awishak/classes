@@ -244,6 +244,16 @@ Drew's Picks, the game line, Directions and the badge for a day that does not
 meet in the room all came off the card on 2026-09-20, because a card that lists
 the readings is a card a student reads instead of the schedule.
 
+**A day is its title, and a reading is a card.** Andrew, 2026-09-21: "the
+schedule view for students is still too cluttered. what if you made the readings
+looks like cards on a slightly gray background or something like tht. like why
+is the title of the day not as prominent as a reading. come on man." A reading's
+title was 16px on white and the day's own title was 16px on white under a 17px
+heading, so twelve readings and the day they were for read as one long list. The
+date is a small label now, what the day is about is a 19px heading under it, and
+every reading, challenge and game sits on the sunk surface as a card: the kind
+in small caps, the title, then where it came from. The whole card is the link.
+
 **A week of the schedule is its days.** Each class day gets a heading in full,
 `Monday, September 22`, the day's own title under it, and what is on it. A day
 the class does not meet joins the week when something is due on it, marked No

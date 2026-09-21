@@ -29,6 +29,7 @@ const TEXT_MUTED = TOKENS.TEXT.muted; // 4.85:1 at worst, on every background we
 const BORDER = TOKENS.LINE.soft;
 const BORDER_STRONG = TOKENS.LINE.strong;
 const SURFACE_CARD = TOKENS.SURFACE.card;   // a text box takes the card's own surface, which is dark after dark
+const SURFACE_SUNK = TOKENS.SURFACE.sunk;   // the ground a reading sits on, a shade under the card
 const TAP = 44;
 
 const TYPE_META = {
@@ -189,27 +190,42 @@ export function studentItems(week, dayPlans, blockOf) {
   return [...(week.items || []).filter(it => STUDENT_TYPES.has(it.type)), ...fromFlow];
 }
 
+// A reading is a card, and the day it belongs to is the loud thing.
+//
+// Andrew, 2026-09-21: "the schedule view for students is still too cluttered.
+// what if you made the readings looks like cards on a slightly gray background
+// or something like tht. like why is the title of the day not as prominent as
+// a reading. come on man." Fair. A reading's title was 16px on white and the
+// day's own title was 16px on white under a 17px heading, so twelve readings
+// and the day they are for all read as one long list.
+//
+// So the day's title is the biggest thing in the day, the date above it is a
+// label, and every reading sits on the sunk surface as a card of its own: the
+// kind in small caps, the title under it, where it came from under that.
 function ItemView({ item, picked, when, source, href, anchor }) {
   const m = TYPE_META[item.type] || {};
-  const inner = (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-      <Dot color={m.color} />
-      <span style={{ fontSize: 12, fontWeight: 700, color: m.color, textTransform: "uppercase", letterSpacing: "0.04em" }}>{m.label}</span>
-      <span style={{ fontSize: 16, color: TEXT_PRIMARY }}>{item.title}</span>
-      {source ? <span style={{ fontSize: 14, color: TEXT_MUTED }}>{source}</span> : null}
+  // The date column is for the week's own rows, which have no day heading over
+  // them to say which day they are on. Under a day the heading has said it.
+  const stamp = when === "" ? "" : (when || item.date || "");
+  const card = (
+    <span style={{ display: "block", minWidth: 0 }}>
+      <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <Dot color={m.color} />
+        <span style={{ fontSize: 11, fontWeight: 700, color: m.color, textTransform: "uppercase", letterSpacing: "0.06em" }}>{m.label}</span>
+        {stamp ? <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>{stamp}</span> : null}
+        {picked ? <PickMark size={22} label /> : null}
+      </span>
+      <span style={{ display: "block", fontSize: 15, lineHeight: 1.4, color: TEXT_PRIMARY, marginTop: 3 }}>{item.title}</span>
+      {source ? <span style={{ display: "block", fontSize: 13, color: TEXT_MUTED, marginTop: 1 }}>{source}</span> : null}
     </span>
   );
-  // The date column is for the instructor's list, where a row has to say which
-  // day it is on. Under a day's heading the heading has said it, so the column
-  // is left out rather than left empty.
-  const stamp = when === "" ? "" : (when || item.date || "");
+  const seat = { display: "block", background: SURFACE_SUNK, borderRadius: 12, padding: "10px 12px",
+    textDecoration: "none", scrollMarginTop: 130, overflowWrap: "anywhere" };
+  const url = href || item.url;
+  if (!url) return <div id={anchor || undefined} style={seat}>{card}</div>;
   return (
-    <div id={anchor || undefined} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid " + BORDER, scrollMarginTop: 130 }}>
-      {stamp ? <span style={{ width: 84, flexShrink: 0, fontSize: 13, fontWeight: 700, color: TEXT_SECONDARY }}>{stamp}</span> : null}
-      {href ? <a href={href} style={{ textDecoration: "none", minWidth: 0 }}>{inner}</a>
-        : item.url ? <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", minWidth: 0 }}>{inner}</a> : inner}
-      {picked ? <PickMark size={26} label /> : null}
-    </div>
+    <a id={anchor || undefined} href={url} style={seat}
+      {...(href ? {} : { target: "_blank", rel: "noreferrer" })}>{card}</a>
   );
 }
 
@@ -274,7 +290,7 @@ function DayItems({ items, row, accent }) {
   const folded = all ? [] : readings.slice(3);
   const hidden = new Set(folded.map(it => it.id));
   return (
-    <div style={{ marginTop: 6 }}>
+    <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
       {items.filter(it => !hidden.has(it.id)).map(row)}
       {folded.length ? (
         <button onClick={() => setAll(true)} className="ca-focus"
@@ -340,7 +356,7 @@ function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark
         {weeks.map((w, wi) => {
           const isNow = w.id === current;
           return (
-            <div key={w.id} id={"wk-" + w.id} style={{ background: "#fff", borderRadius: 16, border: "1.5px solid " + (isNow ? config.accent : config.accent + "66"), padding: 18, scrollMarginTop: 130 }}>
+            <div key={w.id} id={"wk-" + w.id} style={{ background: SURFACE_CARD, borderRadius: 16, border: "1.5px solid " + (isNow ? config.accent : config.accent + "66"), padding: 18, scrollMarginTop: 130 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
                 <span style={{ ...label, color: config.accent }}>{weekTag(w, wi)}</span>
                 {isNow && <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: config.accent, padding: "3px 10px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.06em" }}>This week</span>}
@@ -360,19 +376,21 @@ function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark
                 };
                 return (
                   <>
-                    {loose.length ? <div style={{ marginTop: 10 }}>{inWeekOrder(loose).map(row)}</div> : null}
+                    {loose.length ? <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>{inWeekOrder(loose).map(row)}</div> : null}
                     {days.map(d => (
                       <div key={d.date} id={dayAnchor(d.date)} style={{ marginTop: 16, scrollMarginTop: 130 }}>
                         {/* The heading says the day out loud. "Wed" on its own
                             made a student work out which Wednesday, and a
                             deadline on a Sunday needs to say Sunday. */}
-                        <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY }}>{dayHeading(d.date)}</span>
+                        {/* The date is a label over the day, and what the day
+                            is about is the heading under it. */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                          <span style={{ ...label, color: TEXT_SECONDARY }}>{dayHeading(d.date)}</span>
                           {d.classDay ? null : <span style={{ ...label, color: TEXT_MUTED }}>No class</span>}
                           {comingBox(d)}
                         </div>
                         {titles[d.date]?.title ? (
-                          <div style={{ fontSize: 16, color: TEXT_SECONDARY, lineHeight: 1.4, marginTop: 2 }}>{titles[d.date].title}</div>
+                          <div style={{ fontSize: 19, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.25, letterSpacing: "-0.01em", marginTop: 2, textWrap: "balance" }}>{titles[d.date].title}</div>
                         ) : null}
                         {d.items.length
                           ? <DayItems items={inWeekOrder(d.items)} row={row} accent={config.accent} />
