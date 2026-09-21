@@ -266,6 +266,14 @@ apart from the browser, so a class the page holds data for is never written
 over. `mergeAway` in `attendance.js`, and the smoke plays out two phones, a
 take-back and a day plan written while a phone sat open.
 
+**Three readings, then the box.** Andrew, 2026-09-21: "if there's more than 3
+readings in a day, put the 3 readings adn then and exapnad all readings box."
+COMM 118 sets six and seven on a day, and a day that long pushes the next day
+off the screen. Only readings are counted and only readings fold away: a
+challenge is due whether the list is open or not, and a game is what happens in
+the room. The box opens the day and does not close it again, because closing it
+would need words he has not given. `DayItems` in `ScheduleCard.jsx`.
+
 **Challenges says both words** on the student's card, `Challenges
 (Assignments)`, until the class has the new one. The card is the next one by
 name, when it is due, and how many more the class holds, counted across every

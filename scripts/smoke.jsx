@@ -3856,6 +3856,51 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   }
 }
 
+// Three readings, then the box.
+//
+// Andrew, 2026-09-21: "if there's more than 3 readings in a day, put the 3
+// readings adn then and exapnad all readings box." COMM 118 sets six and seven
+// on a day, and a day that long pushes the next day off the screen.
+{
+  const say = (m) => { console.error("  FAIL  a long reading day: " + m); failedEarly++; };
+  const mk = (n, type) => Array.from({ length: n }, (_, i) => ({ id: type + i, type, title: type + " " + (i + 1), date: "Mon" }));
+  const cfg = { accent: "#333", path: "/comm3", scheduleWeeks: [] };
+  const draw = (items) => renderToString(<ScheduleDetail config={cfg} blockOf={() => null}
+    data={{ schedule: [{ id: "w1", dates: ["Sep 21", "Sep 23", "Sep 25"], items }] }} />);
+  // Seven readings: three of them, and the box.
+  {
+    const html = draw(mk(7, "reading"));
+    const shown = (html.match(/Reading<\/span>/g) || []).length;
+    if (shown !== 3) say("a day of seven readings shows " + shown + " of them");
+    if (!html.includes("Expand all readings")) say("there is no way to see the rest");
+    if (html.includes("reading 4")) say("a folded reading is in the page anyway");
+  }
+  // Three is not more than three, so nothing folds and there is no box.
+  {
+    const html = draw(mk(3, "reading"));
+    if ((html.match(/Reading<\/span>/g) || []).length !== 3) say("a day of three readings does not show all three");
+    if (html.includes("Expand all readings")) say("a day of three readings offers to expand");
+  }
+  // A challenge is due whether the list is open or not, so it is never folded
+  // away and never counted. The games on a day come off the day plan rather
+  // than the week, which is why this one is written there.
+  {
+    const items = [...mk(4, "reading"), { id: "a1", type: "assignment", title: "Interview due", date: "Mon" }];
+    const html = renderToString(<ScheduleDetail config={cfg} blockOf={() => null}
+      data={{ schedule: [{ id: "w1", dates: ["Sep 21", "Sep 23", "Sep 25"], items }],
+        dayPlans: { "Sep 21": { slots: { opener: { items: [{ id: "f1", feature: "Game" }] } } } } }} />);
+    if (!html.includes("Interview due")) say("a deadline was folded away with the readings");
+    if (!html.includes("Game")) say("the game was folded away with the readings");
+    if ((html.match(/Reading<\/span>/g) || []).length !== 3) say("the readings did not fold down to three");
+  }
+  // Two readings and two challenges is four rows and nothing to expand.
+  {
+    const html = draw([...mk(2, "reading"), { id: "a1", type: "assignment", title: "One due", date: "Mon" },
+      { id: "a2", type: "assignment", title: "Two due", date: "Mon" }]);
+    if (html.includes("Expand all readings")) say("challenges were counted as readings");
+  }
+}
+
 // Saying you will not be there.
 //
 // Andrew, 2026-09-21: "create a checkbox on the schedule next to each day for

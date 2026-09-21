@@ -12,7 +12,7 @@
 // Weeks live in the store at data.schedule, seeded from config.scheduleWeeks,
 // and the dashboard writes them.
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { normSlot, kindOf } from "./dayplan.js";
 import { ComingBox, AwayList } from "./Attendance.jsx";
 import { isAway, idFor, awayIds } from "./attendance.js";
@@ -256,6 +256,35 @@ export function ScheduleDetail({ config, data, blockOf, focusDay, instructor, me
 // it and the row is where that day starts.
 export const dayAnchor = (date) => "day-" + String(date || "").trim().toLowerCase().replace(/\s+/g, "-");
 
+// A day's rows, with a long reading list folded up.
+//
+// Andrew, 2026-09-21: "if there's more than 3 readings in a day, put the 3
+// readings adn then and exapnad all readings box." COMM 118 sets six and seven
+// readings on a day, and a day that long pushes the next day off the screen, so
+// a week stops being something you can take in.
+//
+// Three readings, then his box. Only readings are counted and only readings are
+// folded away: a challenge is due whether or not the list is open, and a game
+// is what happens in the room that day.
+function DayItems({ items, row, accent }) {
+  const [all, setAll] = useState(false);
+  const readings = items.filter(it => it.type === "reading");
+  const folded = all ? [] : readings.slice(3);
+  const hidden = new Set(folded.map(it => it.id));
+  return (
+    <div style={{ marginTop: 6 }}>
+      {items.filter(it => !hidden.has(it.id)).map(row)}
+      {folded.length ? (
+        <button onClick={() => setAll(true)} className="ca-focus"
+          style={{ minHeight: TAP, padding: 0, marginTop: 2, background: "none", border: "none", cursor: "pointer",
+            fontFamily: F, fontSize: 15, fontWeight: 600, color: accent, textAlign: "left" }}>
+          Expand all readings
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark }) {
   const weeks = getWeeks(data, config);
   // A week item points at a block, and the pick lives on the block, so what
@@ -344,7 +373,7 @@ function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark
                           <div style={{ fontSize: 16, color: TEXT_SECONDARY, lineHeight: 1.4, marginTop: 2 }}>{titles[d.date].title}</div>
                         ) : null}
                         {d.items.length
-                          ? <div style={{ marginTop: 6 }}>{inWeekOrder(d.items).map(row)}</div>
+                          ? <DayItems items={inWeekOrder(d.items)} row={row} accent={config.accent} />
                           : <div style={{ fontSize: 15, color: TEXT_MUTED, marginTop: 6 }}>Nothing set for this day yet.</div>}
                         {awayLine(d)}
                       </div>
