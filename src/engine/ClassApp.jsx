@@ -785,7 +785,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
             border: "1px solid " + BORDER_STRONG, borderRadius: 14, boxShadow: "0 18px 44px -14px rgba(23,19,16,.35)" }}>
             <div style={{ fontFamily: "var(--font-label)", fontSize: 24, fontWeight: 700, letterSpacing: ".18em", color: TEXT_PRIMARY }}>{ownCode}</div>
             <div style={{ fontSize: 14, lineHeight: 1.45, color: TEXT_SECONDARY, marginTop: 8 }}>
-              You can use this to log in instead of having an email sent to you.
+              You can use this to log in instead of having an email sent to you. It never changes, and it is not
+              the one-time code an email gives you.
             </div>
           </div>
         </>

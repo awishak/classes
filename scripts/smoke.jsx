@@ -2604,6 +2604,25 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   });
 }
 
+// Two six-digit numbers reach a student, and nothing may call them the same
+// thing. Andrew, 2026-09-20, on the first mail Resend carried: "why did you
+// give me a random code." The PIN is theirs and permanent; the emailed code is
+// Supabase's and works once. The sign-in box takes either.
+{
+  const say = (msg) => { console.error("  FAIL  two codes: " + msg); failedEarly++; };
+  const login = readFileSync(new URL("../src/LoginPage.jsx", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../src/engine/ClassApp.jsx", import.meta.url), "utf8");
+  const sess = readFileSync(new URL("../src/engine/session.js", import.meta.url), "utf8");
+  if (!/your PIN or the code from your email/.test(login)) say("the page does not say both numbers work");
+  if (!/placeholder="PIN or emailed code"/.test(login)) say("the box still asks for one six-digit code");
+  if (!/That\s*\n?\s*code works once; your PIN is the one that keeps working/.test(login.replace(/\s+/g, " "))) {
+    say("the page does not say which of the two expires"); }
+  if (!/it is not\s*\n?\s*the one-time code an email gives you/.test(app.replace(/\s+/g, " "))) {
+    say("Show PIN does not tell them apart"); }
+  // Both still get in: the password first, the one-time token second.
+  if (!/grant_type=password/.test(sess) || !/\/verify/.test(sess)) say("the box stopped taking one of the two");
+}
+
 // The mailer's rate limit, said in words a student can act on. Andrew,
 // 2026-09-20: "if all students want to do the email sign in link tomorrow,
 // will it work? or are we gonna run into a overdraft issue?" Supabase's

@@ -118,13 +118,14 @@ export default function LoginPage() {
           <>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, letterSpacing: "-.02em" }}>Sign in</h1>
             <p style={{ margin: 0, fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5 }}>
-              Your email and your six-digit code. No code yet? Have one emailed to you below.
+              Your email, then your PIN or the code from your email. Either one works. No PIN yet? Have a code
+              emailed to you below.
             </p>
             <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@scu.edu"
                 autoComplete="email" aria-label="Email" style={input} />
               <input type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={6} required
-                value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ""))} placeholder="6-digit code" aria-label="Six-digit code"
+                value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ""))} placeholder="PIN or emailed code" aria-label="Your PIN, or the code from your email"
                 style={{ ...input, fontFamily: MONO, letterSpacing: ".3em", textAlign: "center", fontSize: 20, fontWeight: 600 }} />
               <button type="submit" disabled={busy || !email.trim() || code.length < 6} style={{ ...button, background: TEXT_PRIMARY, color: "#fff", opacity: busy ? .7 : 1 }}>
                 {busy ? "Signing in" : "Sign in"}
@@ -132,7 +133,7 @@ export default function LoginPage() {
               {error ? <div style={{ fontSize: 14, color: LATE, fontWeight: 600 }}>{error}</div> : null}
               {leanOnCode ? (
                 <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.45 }}>
-                  Your six-digit code never expires. It is on the class page under Show PIN, and Dr. Ishak has it on the roster.
+                  Your PIN never expires. It is on the class page under Show PIN, and Dr. Ishak has it on the roster.
                 </div>
               ) : null}
             </form>
@@ -143,7 +144,8 @@ export default function LoginPage() {
             </div>
             {sent ? (
               <p style={{ margin: 0, fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.5, textAlign: "center" }}>
-                Check your email. Type the code from the message into the box above, or tap the link in the email.
+                Check your email. Tap the link in it, or type the code from the message into the box above. That
+                code works once; your PIN is the one that keeps working.
               </p>
             ) : (
               <>
@@ -151,7 +153,8 @@ export default function LoginPage() {
                   Email me a code
                 </button>
                 <p style={{ margin: 0, fontSize: 13, color: TEXT_MUTED, lineHeight: 1.5, textAlign: "center" }}>
-                  Once you are in, the site shows you your own code. That code never expires.
+                  The emailed code works once. Once you are in, the class page shows your own PIN under Show PIN,
+                  and that one never expires.
                 </p>
               </>
             )}
