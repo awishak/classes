@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import HornBoard from "./HornBoard.jsx";
 import { useClassData } from "./store.js";
 import { currentDay } from "./days.js";
-import { studentsIn, realStudents, readRoomSection } from "./sections.js";
+import { studentsIn, realStudents, useRoomSection } from "./sections.js";
 import { genId } from "../utils.jsx";
 
 const OPEN = "ishak:horn";
@@ -33,6 +33,9 @@ const askedFor = () => {
 export default function HornApp({ config }) {
   const [open, setOpen] = useState(askedFor);
   const [data, update] = useClassData(config.storageKey);
+  // The board follows the bar while it is open, so changing the sitting
+  // reseats the room rather than needing the board closed and opened again.
+  const [room] = useRoomSection(config);
 
   useEffect(() => {
     const on = () => setOpen(true);
@@ -43,7 +46,7 @@ export default function HornApp({ config }) {
   if (!open || !data) return null;
   // The room, not the class: a board of seats belongs to the sitting in front
   // of him, and it reads the same choice the dashboard's bar writes.
-  const students = studentsIn(realStudents(config, data.students || config.students || []), readRoomSection(config));
+  const students = studentsIn(realStudents(config, data.students || config.students || []), room);
   const weeks = data.schedule || config.scheduleWeeks || [];
   const day = currentDay(weeks)?.date || null;
   const setSeats = (seats) => update(prev => ({ ...prev, athSeats: seats }));

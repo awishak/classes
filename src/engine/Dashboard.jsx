@@ -24,7 +24,7 @@ import { ClassMenu, DropMenu, menuRow } from "./ClassMenu.jsx";
 // The class's sittings. Aliased, because on this screen "section" already
 // means a part of the day: dayplan.js exports its own sectionsOf and meets.js
 // its own sittingsOf.
-import { hasSections as twoSittings, sectionsOf as sectionLabels, studentsIn, realStudents, readRoomSection, writeRoomSection } from "./sections.js";
+import { studentsIn, realStudents, useRoomSection } from "./sections.js";
 import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections, blankDay, takeGroup, placeGroup, placeSection, splitSection, templateOf, applyTemplate, orderSlots } from "./dayplan.js";
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, onClassDay, isShared, makeBlock } from "./blocks.js";
 import { MEDIA_ACCEPT, mediaLabel, sizeLabel } from "./media.js";
@@ -3743,10 +3743,9 @@ export default function Dashboard({ config, daySlug = "" }) {
   };
   const setMode = (m) => setModeState(m === "teach" ? "teach" : "plan");
   // Which sitting is in the room. The clock says, unless the bar says
-  // otherwise, and what the bar says holds for a few hours so the Horn board
-  // opening over another page agrees with the dashboard.
-  const [roomSection, setRoomState] = useState(() => readRoomSection(config));
-  const setRoomSection = (sec) => { setRoomState(sec); writeRoomSection(config, sec); };
+  // otherwise. The control is in the top bar, on every page, so this only
+  // reads it.
+  const [roomSection] = useRoomSection(config);
   const [notesOpen, setNotesOpen] = useState(false);
   // Dragging a reading into the flow: does it stay assigned, or move?
   // Two facts about one reading, so which one the drag changes is mine to say.
@@ -5188,18 +5187,6 @@ export default function Dashboard({ config, daySlug = "" }) {
           }
           right={
             <>
-              {/* Which sitting is in the room, when there are two of them.
-                  Andrew, 2026-09-20: "bc i have two sections of comm 3." The
-                  clock picks it; this says otherwise, and Here, the Horn
-                  board and the game follow whatever it says. */}
-              {twoSittings(config) ? (
-                <span className="dash-views" role="group" aria-label="The section in the room">
-                  {sectionLabels(config).map(sec => (
-                    <button key={sec} className="dash-focus" aria-pressed={roomSection === sec} data-on={roomSection === sec ? "1" : "0"}
-                      onClick={() => setRoomSection(sec)} title={"The " + sec + " section is in the room"}>{sec}</button>
-                  ))}
-                </span>
-              ) : null}
               <button className="dash-focus dash-bar dash-plain" onClick={() => setHereOpen(true)}>
                 Here{students.length ? <span className="dash-bar-sub">{students.length - outCount}/{students.length}</span> : null}
               </button>

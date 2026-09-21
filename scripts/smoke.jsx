@@ -2683,6 +2683,29 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!/ownCode && !preview && view !== "instructor"/.test(app)) say("the PIN shows for somebody other than its owner");
 }
 
+// The sitting in the room, chosen from the top bar. Andrew, 2026-09-20: "i
+// still need to be able to change between comm 3 classes. need a switcher at
+// the top for things like around the horn." The Horn board opens over whatever
+// page he is on, so the choice cannot live on the dashboard alone.
+{
+  const say = (msg) => { console.error("  FAIL  the room switcher: " + msg); failedEarly++; };
+  const seen = (cfg, role) => {
+    const html = renderToString(<TopNav config={cfg} tabs={NAV_CLASS} role={role} />);
+    return (html.match(/title="The (\d+:\d+) section is in the room"/g) || []).length;
+  };
+  if (seen(comm3Cfg, "instructor") !== 2) say("a class with two sittings has no switcher on his bar");
+  if (seen(comm3Cfg, "student") !== 0) say("a student is offered the switcher");
+  if (seen(comm118Cfg, "instructor") !== 0) say("a class with one sitting has a switcher anyway");
+  // One control, and everything else reads it.
+  const dash = readFileSync(new URL("../src/engine/Dashboard.jsx", import.meta.url), "utf8");
+  const horn = readFileSync(new URL("../src/engine/HornApp.jsx", import.meta.url), "utf8");
+  const secs = readFileSync(new URL("../src/engine/sections.js", import.meta.url), "utf8");
+  if (/sectionLabels\(config\)\.map/.test(dash)) say("the dashboard still carries its own switcher");
+  if (!/useRoomSection\(config\)/.test(dash)) say("the dashboard does not follow the bar");
+  if (!/useRoomSection\(config\)/.test(horn)) say("the Horn board does not follow the bar");
+  if (!/SECTION_CHANGED/.test(secs) || !/dispatchEvent/.test(secs)) say("a change is not announced to the open screens");
+}
+
 // The first time a student signs in. Andrew, 2026-09-20: "i'd love to have
 // cards that are like: welcome to class. I'd like to know a little bit about
 // you ... I have your name as: but i'd love to know your preferred names ...

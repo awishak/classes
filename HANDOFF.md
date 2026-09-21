@@ -298,10 +298,12 @@ everything else is single.**
 - **A section is the label of a sitting**, carried on the student. Nothing else
   identifies one, so a class with one sitting has no sections and every
   function in that file is a pass-through.
-- **The section in the room** is read off the clock, and the dashboard's bar
-  says otherwise when I am teaching the 8:00 day again at 10:30. The choice is
-  kept in the browser for six hours, so the Horn board opening over another
-  page agrees with the dashboard and tomorrow starts from the clock again.
+- **The section in the room** is read off the clock, and **the top bar says
+  otherwise, on every page**, because the Horn board opens over whatever page I
+  am on and the choice has to live where I always am. One control, in
+  `TopNav.jsx`; the dashboard, the Horn board and anything else read it through
+  `useRoomSection` and hear about a change while they are open. The choice is
+  kept in the browser for six hours, so tomorrow starts from the clock again.
 - **Who follows it:** Here, the Horn board's seats and points, the roster a
   student reads, and the game, which the games package already opens per
   `groupKey + section`. A seat on the Horn board carries the face and the whole

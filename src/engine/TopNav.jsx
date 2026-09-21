@@ -19,6 +19,7 @@
 import * as TOKENS from "./tokens.js";
 import { appsFor } from "./apps.js";
 import HornApp, { openHorn } from "./HornApp.jsx";
+import { hasSections, sectionsOf, useRoomSection } from "./sections.js";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -90,6 +91,12 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
   const a = accent || config.accent;
   const loc = whereAmI();
   const lit = active || activeFor(config, role, loc?.pathname, loc?.search);
+  // Which sitting is in the room, on every page rather than on the dashboard
+  // alone. Andrew, 2026-09-20: "i still need to be able to change between comm
+  // 3 classes. need a switcher at the top for things like around the horn."
+  // The Horn board opens over whatever page he is on, so the choice has to
+  // live where he always is.
+  const [room, setRoom] = useRoomSection(config);
 
   // One row, always. Andrew, 2026-09-17: "making sure it doesn't wrap around
   // for two levels." The bar used to wrap when the tabs and the apps outran
@@ -165,6 +172,22 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
             for Andrew, and this end came free for a message or a game to
             announce itself. */}
         <span style={{ flex: "none", display: "flex", alignItems: "center", gap: 10 }}>
+          {role === "instructor" && hasSections(config) ? (
+            <span role="group" aria-label="The section in the room"
+              style={{ display: "inline-flex", flex: "none", borderRadius: 999, border: "1px solid " + BORDER, overflow: "hidden" }}>
+              {sectionsOf(config).map(sec => {
+                const on = room === sec;
+                return (
+                  <button key={sec} className="dash-focus ca-focus repo-focus" onClick={() => setRoom(sec)}
+                    aria-pressed={on} title={"The " + sec + " section is in the room"}
+                    style={{ minHeight: 32, padding: "0 12px", border: "none", cursor: "pointer", fontFamily: F,
+                      fontSize: 13, fontWeight: 600, background: on ? a : "transparent", color: on ? "#fff" : TEXT_SECONDARY }}>
+                    {sec}
+                  </button>
+                );
+              })}
+            </span>
+          ) : null}
           {right}
         </span>
       </div>

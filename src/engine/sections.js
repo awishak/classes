@@ -21,6 +21,8 @@
 // The test student belongs to no section on purpose, so a fake account cannot
 // land in a real room's numbers.
 
+import { useState, useEffect } from "react";
+
 const clean = (s) => String(s || "").trim();
 
 // A class with one sitting writes `meets` as one object rather than a list,
@@ -101,6 +103,25 @@ export function readRoomSection(config, now = Date.now()) {
   return sectionNow(config, now);
 }
 
+// Every screen that cares hears about a change, because the choice is made in
+// the top bar and read by the dashboard, the Horn board and whatever else is
+// open at the time.
+export const SECTION_CHANGED = "ishak:section";
+
 export function writeRoomSection(config, section, now = Date.now()) {
   try { window.localStorage.setItem(roomKey(config), JSON.stringify({ section, at: now })); } catch { /* private mode */ }
+  try { window.dispatchEvent(new Event(SECTION_CHANGED)); } catch { /* server */ }
+}
+
+// The section in the room, as a piece of state any surface can hold. One
+// writer, the bar, and everybody else follows.
+export function useRoomSection(config) {
+  const [sec, setSec] = useState(() => readRoomSection(config));
+  useEffect(() => {
+    const on = () => setSec(readRoomSection(config));
+    on();
+    window.addEventListener(SECTION_CHANGED, on);
+    return () => window.removeEventListener(SECTION_CHANGED, on);
+  }, [config?.storageKey]);   // eslint-disable-line react-hooks/exhaustive-deps
+  return [sec, (v) => { writeRoomSection(config, v); setSec(v); }];
 }
