@@ -85,7 +85,7 @@ import { instructorOf } from "../src/instructors.js";
 import TopNav, { NAV_CLASS, activeFor } from "../src/engine/TopNav.jsx";
 import HornApp from "../src/engine/HornApp.jsx";
 import { assignmentsOf } from "../src/engine/profileTask.js";
-import { QuestionsSummary, QuestionsDetail, publishedOf, queueOf, archivedOf, askedBy, FaqEntry } from "../src/engine/QuestionsCard.jsx";
+import { QuestionsSummary, QuestionsDetail, onThePage, archivedOf, askedBy, sortQuestions, isAnswered, QuestionEntry } from "../src/engine/QuestionsCard.jsx";
 import { sectionsOf as sittingLabels, hasSections, studentsIn, sectionFor, realStudents, isTestStudent, sectionNow } from "../src/engine/sections.js";
 import { classmatesOf } from "../src/engine/RosterCard.jsx";
 import { comingUp, turnedIn } from "../src/engine/AssignmentsCard.jsx";
@@ -2571,7 +2571,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (site.includes('"/ask"')) say("the class site still links to the ask page");
   const qSrc = readFileSync(new URL("../src/engine/QuestionsCard.jsx", import.meta.url), "utf8");
   if (qSrc.includes('config.path + "/ask"')) say("the questions card still points at the ask page");
-  if (!qSrc.includes("Please keep this anonymous")) say("the ask box has no anonymous tick");
+  if (!qSrc.includes("Ask this anonymously")) say("the ask box has no anonymous tick");
 }
 
 // The tab's icon, per class. Andrew, 2026-09-20: "let's change the favicon for
@@ -2603,34 +2603,58 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   });
 }
 
-// The FAQ as the class reads it. Andrew, 2026-09-20: "the FAQ is poorly done.
-// It should be a bold question, and an answer underneath it. format it better
-// and clearer, and have the question dialog box be way smaller."
+// A question on the class's page. Andrew, 2026-09-20, with the whole shape:
+// "if a student is okay not being anonymous, it says asked by Pepe LeFritz in
+// italics below the question. When i answer, it says Dr. Ishak:" and "the two
+// appreciation buttons are right after, in the same line, of the question and
+// the answer."
 {
-  const say = (msg) => { console.error("  FAIL  the FAQ entry: " + msg); failedEarly++; };
-  const q = { id: "q1", text: "What counts as a source?", who: "Ada Lovelace", at: 10,
-    state: "published", answer: "Anything you can point at.", publishedAt: 20, thanksQ: ["Sam"], thanksA: [] };
+  const say = (msg) => { console.error("  FAIL  a question on the page: " + msg); failedEarly++; };
+  const named = { id: "q1", text: "What counts as a source?", who: "Pepe LeFritz", at: 10,
+    answer: "Anything you can point at.", answeredAt: 20, thanksQ: ["Sam"], thanksA: [] };
+  const quiet = { id: "q2", text: "Is this graded?", who: "Pepe LeFritz", anon: true, at: 30 };
   try {
-    const html = renderToString(<FaqEntry q={q} me="Sam" onThank={noop} />).replace(/<!-- -->/g, "");
-    const txt = html.replace(/<[^>]+>/g, "\n");
+    const html = renderToString(<QuestionEntry q={named} me="Sam" who="Dr. Ishak" onThank={noop} />).replace(/<!-- -->/g, "");
     const at = (t) => html.indexOf(t);
     if (at("What counts as a source?") < 0 || at("Anything you can point at.") < 0) say("the question or its answer is missing");
     if (at("What counts as a source?") > at("Anything you can point at.")) say("the answer is above the question");
-    // The question is the bold line, and the answer is not.
-    const qLine = html.slice(at("font-weight:700"), at("What counts as a source?"));
-    if (!qLine || qLine.length > 200) say("the question is not the bold line");
-    if (/font-weight:700[^<]*>Anything you can point at/.test(html)) say("the answer is bold too");
-    // Who asked and when sit under both, quietly, and the two ways to say
-    // thanks say which half they are about.
-    if (at("Ada Lovelace") < at("Anything you can point at.")) say("who asked is above the answer");
-    ["Good question", "Helpful"].forEach(w => { if (!html.includes(w)) say("no way to appreciate the " + JSON.stringify(w) + " half"); });
-    if (!txt.includes("1")) say("the count of thanks is not shown");
+    if (!/font-weight:700[^"]*"[^>]*>What counts as a source\?/.test(html)) say("the question is not bold");
+    // Named, in italics, under the question and above the answer.
+    if (!/font-style:italic[^"]*"[^>]*>asked by Pepe LeFritz/.test(html)) say("who asked is not in italics under the question");
+    if (at("asked by Pepe LeFritz") > at("Anything you can point at.")) say("who asked is below the answer");
+    // The answer says who is answering.
+    if (!/>Dr\. Ishak:</.test(html)) say("the answer does not say who wrote it");
+    // Both thanks buttons, each on the line of the thing it is about.
+    if ((html.match(/aria-label="Appreciate the question"/g) || []).length !== 1) say("the question has no thanks of its own");
+    if ((html.match(/aria-label="Appreciate the answer"/g) || []).length !== 1) say("the answer has no thanks of its own");
+    if (at('aria-label="Appreciate the question"') > at("asked by Pepe LeFritz")) say("the question's thanks is not on the question's line");
+    // Anonymous means no name anywhere, and an unanswered question says so.
+    const hush = renderToString(<QuestionEntry q={quiet} me="Sam" who="Dr. Ishak" onThank={noop} />).replace(/<!-- -->/g, "");
+    if (hush.includes("Pepe LeFritz")) say("an anonymous question still names who asked it");
+    if (!hush.includes("Not answered yet")) say("an unanswered question does not say so");
+    if (/>Dr\. Ishak:</.test(hush)) say("an unanswered question has an answer line anyway");
   } catch (err) { say("the entry threw: " + err.message); }
-  // The box a question is typed into says one thing and is two rows high.
+  // Every question is on the page from the moment it is asked; archiving is
+  // the one thing that takes it off.
+  const items = [named, quiet, { id: "q3", text: "Gone", state: "archived", at: 40 }];
+  if (onThePage(items).map(q => q.id).join("|") !== "q1|q2") say("the page is not everything but the archive");
+  if (archivedOf(items).map(q => q.id).join("|") !== "q3") say("the archive is wrong");
+  if (!isAnswered(named) || isAnswered(quiet)) say("answered and unanswered are not told apart");
+  // The three ways to read it.
+  const rows = [
+    { id: "a", at: 1, answer: "x", answeredAt: 100, thanksQ: ["1", "2"] },
+    { id: "b", at: 50, thanksQ: [] },
+    { id: "c", at: 10, answer: "y", answeredAt: 200, thanksA: ["1"] },
+  ];
+  if (sortQuestions(rows, "answered").map(q => q.id).join("") !== "cab") say("recently answered is out of order: " + sortQuestions(rows, "answered").map(q => q.id).join(""));
+  if (sortQuestions(rows, "asked").map(q => q.id).join("") !== "bca") say("recently asked is out of order");
+  if (sortQuestions(rows, "thanked").map(q => q.id).join("") !== "acb") say("most appreciated is out of order");
+  // The box a question is typed into, and the words above it.
   const card = readFileSync(new URL("../src/engine/QuestionsCard.jsx", import.meta.url), "utf8");
   if (!/placeholder="Ask your question here"/.test(card)) say("the ask box does not say Ask your question here");
-  if (/a challenge, a deadline/.test(card)) say("the old list of examples is back in the ask box");
-  if (!/rows=\{2\}/.test(card)) say("the ask box is not small");
+  if (!/Ask questions here\. Previously answered questions are below\./.test(card)) say("the page does not say what it is for");
+  if (!/>Submit</.test(card)) say("there is no Submit beside the box");
+  if (/api\.publish|>Publish</.test(card)) say("publishing is back between him and the class");
 }
 
 // Thanks, on a question and on its answer. Andrew, 2026-09-20: "please have
@@ -2647,11 +2671,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // The count is everyone's; who pressed it is nobody's. The page never
   // renders the names.
   if (/thanksQ\.map|thanksA\.map|thanksQ\.join|thanksA\.join/.test(card)) say("the page shows who appreciated something");
-  // Publishing says so in words, because an answer that saves quietly reads
-  // as an answer that is done. Andrew: "it just saves my answer in the dialogue
-  // box but doesn't really answer it."
-  if (!/On the class's page/.test(card)) say("a published answer does not say it is published");
-  if (!/the class cannot see the answer yet/.test(card)) say("an unpublished answer does not say so");
+  // An answer reaches the class as soon as it is written, so the row says
+  // which of the two things it is rather than whether it has been published.
+  if (!/Answered, and on the class's page/.test(card)) say("an answered question does not say the class has it");
+  if (!/Asked, and on the class's page/.test(card)) say("an unanswered question does not say the class has it");
   if (!/\{config\.path\}\/questions/.test(card)) say("his page does not say where the class reads it");
 }
 
@@ -2672,36 +2695,23 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (current.join(", ") !== "COMM 118, COMM 3") say("the current classes are " + current.join(", "));
 }
 
-// The FAQ. Andrew, 2026-09-20: "so basically it's an FAQ site. students can
-// peruse the FAQs, and they can ask one, and they can ask to keep it
-// anonymous ... and when i choose to answer a question, i can keep it
-// anonymous and then publish my answer. i can also archive a question if i
-// think it's not worth answering."
-//
-// Writing an answer is not publishing. The class sees what he has published
-// and nothing else.
+// His side of the questions. Andrew, 2026-09-20: "on my side, as the
+// instructor, i choose whether to answer a question, leave it alone, or
+// archive it ... when i answer, it appears live."
 {
-  const say = (m) => { console.error("  FAIL  FAQ: " + m); failedEarly++; };
-  const items = [
-    { id: "q1", text: "What counts as a source?", who: "Ada Lovelace", anon: false, at: 10, state: "published", answer: "Anything you can point at.", answeredAt: 20, publishedAt: 25 },
-    { id: "q2", text: "When is the exam?", who: "Grace Hopper", anon: false, at: 30, state: "open" },
-    { id: "q3", text: "Is this graded?", who: "Alan Turing", anon: false, at: 40, state: "open", answer: "Not yet published.", answeredAt: 45 },
-    { id: "q4", text: "Something unkind", who: "", anon: true, at: 50, state: "archived" },
-    { id: "q5", text: "An old answered one", who: "Ada Lovelace", anon: false, at: 5, state: "answered", answer: "Still counts.", answeredAt: 6 },
-    { id: "q6", text: "Asked quietly", who: "Grace Hopper", anon: true, at: 60, state: "published", answer: "Here you go.", answeredAt: 61, publishedAt: 62 },
-  ];
-  const page = publishedOf(items);
-  if (page.map(q => q.id).join("|") !== "q6|q1|q5") say("the page is not the published ones, newest first: " + JSON.stringify(page.map(q => q.id)));
-  if (page.some(q => q.id === "q3")) say("an answer he has not published is on the page");
-  if (page.some(q => q.id === "q4")) say("an archived question is on the page");
-  const queue = queueOf(items);
-  if (queue.map(q => q.id).join("|") !== "q3|q2") say("the queue is not what is left to publish, newest first: " + JSON.stringify(queue.map(q => q.id)));
-  if (archivedOf(items).map(q => q.id).join("|") !== "q4") say("the archive is wrong");
-  // Either tick takes the name off, and neither can be undone by the other.
-  if (askedBy(items[0]) !== "Ada Lovelace") say("a question asked in the open lost its name");
-  if (askedBy(items[5]) !== "Anonymous") say("a student who asked to stay anonymous is named");
-  if (askedBy({ who: "Ada Lovelace", hideName: true }) !== "Anonymous") say("his own tick does not take a name off");
-  if (askedBy({ who: "", anon: false }) !== "Anonymous") say("a question with no name reads as something else");
+  const say = (msg) => { console.error("  FAIL  answering: " + msg); failedEarly++; };
+  const card = readFileSync(new URL("../src/engine/QuestionsCard.jsx", import.meta.url), "utf8");
+  const store = readFileSync(new URL("../src/engine/questions.js", import.meta.url), "utf8");
+  // Three things he can do, and no fourth.
+  if (!/onBlur=\{\(\) => api\.answer\(q\.id, draft\)\}/.test(card)) say("an answer does not save");
+  if (!/api\.archive\(q\.id\)/.test(card)) say("a question cannot be archived");
+  if (!/api\.unarchive\(q\.id\)/.test(card)) say("an archived question cannot come back");
+  if (/api\.publish/.test(card)) say("there is still a publish press between an answer and the class");
+  if (/const publish = useCallback/.test(store)) say("the store still publishes");
+  // And the store still knows how to say thanks.
+  if (!/const appreciate = useCallback/.test(store)) say("the store cannot record thanks");
+  if (!/thanksA" : "thanksQ"/.test(store)) say("a question and its answer are not thanked apart");
+  if (!/had\.includes\(name\) \? had\.filter/.test(store)) say("pressing it twice does not take the thanks back");
 }
 
 // The top bar lights the tab the address says, on every page the same way,

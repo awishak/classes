@@ -243,60 +243,37 @@ A thread that already holds an I'm confused still renders it. Office hours sit
 under the whole thing, from the profile, and a class with none written shows
 nothing.
 
-## The FAQ
+## Questions
 
 `src/engine/QuestionsCard.jsx` over `${storageKey}-questions`, the store the
 class has always kept its questions in, so nothing asked before this is lost.
 
-**One card, and one place to ask.** A student types a question, ticks
-`Please keep this anonymous` if they want to, and reads the published ones
-underneath. The box on the Messages card is gone and so is the ask page: two
-doors to the same thing is what made it confusing.
+**Every question is on the page the moment it is asked.** An answer is on it
+the moment it is written, and archiving is the one thing that takes a question
+off. Publishing used to be a press between the answer and the class, and it
+only ever made the page later than it needed to be. Andrew, 2026-09-20: "when i
+answer, it appears live."
 
-**Writing an answer is not publishing, and the row says so.** An answer can sit
-in the queue while the words get better; **Publish** is a press of its own and
-the only thing that puts a question in front of the class. Each row reads Not
-answered, then Answered, and the class cannot see the answer yet, then On the
-class's page, because an answer saved quietly is the state that looks like
-success: the words are in the box, so the question looks dealt with. The
-heading says where the class reads it. **Archive** takes a question out of the
-queue without answering it, and keeps it, so a question nobody needs is not
-deleted evidence. A published one can be taken back off.
+**The student's page, top to bottom:** the box with Submit beside it and a tick
+for asking anonymously, `Sort by` with Recently answered, Recently asked and
+Most appreciated, then every question. A question reads as the words in bold
+with its thanks on the same line, `asked by <name>` in italics underneath
+unless the box was ticked, and the answer under that as `Dr. Ishak: ...` with
+its own thanks on its line. An unanswered one says so rather than hiding.
 
-**A published question reads as a question.** The words in bold at heading
-size, the answer straight under them in the same ink the page is read in, then
-one quiet line: who asked, when, and the two ways to say thanks. The box a
-question is typed into says `Ask your question here` and is two rows high.
+**His side** is the same list with an answer box on each one and three things
+he can do: answer it, leave it alone, or archive it. An answer saves when he
+leaves the box, which is when the class gets it. The archive opens at the foot
+and a question can come back out of it.
 
-**Anyone can appreciate a question or its answer.** One press per person on
+**Anyone can appreciate a question or its answer**, one press per person on
 each, pressing again takes it back, and only the count is ever shown. The names
 are kept so nobody can thank the same thing twice, and nothing renders them.
 `thanksQ` and `thanksA` on the question.
 
-**Two ways a name comes off.** `anon` is the student's, ticked when they ask.
-`hideName` is mine, chosen when I publish, for a question that names somebody
-or that would embarrass whoever asked. Either is enough, and the student's tick
-cannot be overridden. A question published with neither carries the asker's
-name.
-
-**The ask page is gone**, and its route with it. Andrew, 2026-09-20: "remove
-the whole ask feature for now. it's confusing." The QR code came off the room
-screen with it, so the wall shows the class's address instead. An old `/ask`
-link falls through to the class home rather than a dead page.
-
-**The poll and Headlines went with it.** Andrew, 2026-09-20: "for now, let's
-cut the poll and the headlines." Both had their only student door on the ask
-page. `poll.js`, `PollPanel.jsx`, `headlines.js` and `HeadlinesBoard.jsx` are
-deleted, with their rail tab, their screens on the wall, their casts and their
-two kinds in the repository's room lens. What a class already collected is
-still in its store and unread, so bringing either back brings its history.
-`oneSentence`, the one-sentence rule for a headline on the day, moved to
-`Dashboard.jsx`, which is the only thing that used it.
-
-**No QR codes on the wall at all.** "I don't want the QR code or the ask page
-on the slides at all." The room screen says addresses in words: the class's
-home on the idle screen, and `/board` under a discussion prompt. `QRCode.jsx`
-stays for the retreat page, which is not a class surface.
+**A name comes off at the student's word.** `anon` is ticked when they ask; a
+question asked in the open says who asked it, because a class where people put
+their name to a question is a better class than one where nobody does.
 
 ## Two sittings of one class
 

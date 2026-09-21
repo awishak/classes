@@ -3,9 +3,9 @@
 // never collides with a day-plan save.
 //
 // Shape at `${storageKey}-questions`:
-//   { items: [{ id, text, who, anon, at, state, answer, answeredAt, publishedAt,
-//               hideName, thanksQ: [name], thanksA: [name] }] }
-// state: "open" | "published" | "archived" | "trashed"
+//   { items: [{ id, text, who, anon, at, state, answer, answeredAt,
+//               thanksQ: [name], thanksA: [name] }] }
+// state: "open" | "archived" | "trashed"
 //
 // Since 2026-09-20 this store is the class's FAQ. Andrew: "so basically it's
 // an FAQ site. students can peruse the FAQs, and they can ask one, and they
@@ -14,18 +14,23 @@
 // publish my answer. i can also archive a question if i think it's not worth
 // answering."
 //
-// So writing an answer is not publishing. An answer can sit in the queue
-// while he works on the words; publishing is a press of its own, and it is
-// the only thing that puts a question in front of the class. Archiving takes
-// a question out of the queue without answering it.
+// Andrew again, later the same night, with the whole shape of it: "on my
+// side, as the instructor, i choose whether to answer a question, leave it
+// alone, or archive it. but students see the questions, so they can say if
+// they appreciate the question. when i answer, it appears live."
 //
-// Two ways a name comes off. `anon` is the student's, ticked when they ask.
-// `hideName` is his, chosen when he publishes, for a question that names
-// somebody or that would embarrass the person who asked. Either one is
-// enough, and neither can be undone by the other.
+// So there is no publishing. A question is on the class's page the moment it
+// is asked, an answer is on it the moment it is written, and archiving is the
+// one thing that takes a question off. Three states were two too many: a
+// question either counts or it is archived.
 //
-// `answered` is the state this file used before publishing was its own
-// press. An old one with words in its answer reads as published.
+// A name comes off at the student's word: `anon`, ticked when they ask. A
+// question asked in the open says who asked it, because a class where people
+// put their name to a question is a better class than one where nobody does.
+//
+// `published` and `answered` are states this file used while publishing was a
+// press of its own. Both read as a question on the page, which is what they
+// were.
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
@@ -78,24 +83,17 @@ export function useQuestions(storageKey) {
     write((ref.current || []).map(q => q.id === id ? { ...q, ...fields } : q));
   }, [write]);
 
-  // His answer, saved as he writes it. The class does not see it until he
-  // publishes, so there is no half-finished answer on the page.
+  // His answer, saved as he writes it, and live as soon as it is saved.
   const answer = useCallback((id, text) => {
     const words = String(text || "").trim();
     patch(id, { answer: words, answeredAt: words ? Date.now() : null });
   }, [patch]);
 
-  // The press that puts a question and its answer in front of the class.
-  const publish = useCallback((id, hideName) => {
-    patch(id, { state: "published", publishedAt: Date.now(), hideName: !!hideName });
-  }, [patch]);
-
-  // Back to the queue, for a published answer he wants to rewrite.
-  const unpublish = useCallback((id) => patch(id, { state: "open", publishedAt: null }), [patch]);
-
-  // Not worth answering. It stays in the store and leaves both the queue and
-  // the page, so a question nobody needs is not deleted evidence.
+  // Not worth answering, or not worth the class reading. It stays in the
+  // store and comes off the page, so a question nobody needs is not deleted
+  // evidence. Back again with the same press.
   const archive = useCallback((id) => patch(id, { state: "archived" }), [patch]);
+  const unarchive = useCallback((id) => patch(id, { state: "open" }), [patch]);
 
   // Thanks, for a question worth asking or an answer worth reading. Andrew,
   // 2026-09-20: "please have people be able to appreciate a question or
@@ -116,5 +114,5 @@ export function useQuestions(storageKey) {
     write((ref.current || []).map(q => q.state === "open" ? { ...q, state: "archived" } : q));
   }, [write]);
 
-  return { items, add, setState, archiveOpen, answer, publish, unpublish, archive, appreciate };
+  return { items, add, setState, archiveOpen, answer, archive, unarchive, appreciate };
 }
