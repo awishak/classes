@@ -5,9 +5,8 @@
 // placeholder for grades/assignments (filled in once the gradebook exists).
 
 import { useState, useEffect } from "react";
-import { profileComplete } from "./profileTask.js";
 import { realStudents, hasSections, studentsIn, sectionFor, sectionsOf } from "./sections.js";
-import { nameShown } from "./roster.js";
+import { nameShown, rosterOf } from "./roster.js";
 import { computeGrade } from "./AssignmentsCard.jsx";
 import RosterSheet, { callLogins } from "./RosterSheet.jsx";
 import * as TOKENS from "./tokens.js";
@@ -102,7 +101,7 @@ function InstructorRoster({ config, data, update }) {
   const [room, setRoom] = useState("");
   const [selected, setSelected] = useState(null);
   const [managing, setManaging] = useState(false);
-  const students = data?.students || config.students || [];
+  const students = rosterOf(config, data);
 
   // Every code, once, for the student pages. A failure leaves the pages
   // without codes and nothing else.
@@ -143,7 +142,7 @@ function InstructorRoster({ config, data, update }) {
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
         <div style={h2}>Roster</div>
         <button onClick={() => setManaging(true)}
-          style={{ marginLeft: "auto", minHeight: TAP, padding: "0 14px", borderRadius: 999, border: "1px solid " + a, background: "#fff", color: a, fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+          style={{ marginLeft: "auto", minHeight: TAP, padding: "0 14px", borderRadius: 999, border: "1px solid " + a, background: SURFACE_CARD, color: a, fontFamily: F, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
           Roster and logins
         </button>
       </div>
@@ -156,7 +155,7 @@ function InstructorRoster({ config, data, update }) {
             return (
               <button key={id || "all"} className="ca-focus" onClick={() => setRoom(id)} aria-pressed={on}
                 style={{ minHeight: 32, padding: "0 12px", borderRadius: 999, cursor: "pointer",
-                  border: "1px solid " + (on ? a : BORDER_STRONG), background: on ? a : "#fff",
+                  border: "1px solid " + (on ? a : BORDER_STRONG), background: on ? a : SURFACE_CARD,
                   color: on ? "#fff" : TEXT_SECONDARY, fontFamily: F, fontSize: 14, fontWeight: 600 }}>
                 {say} <span style={{ opacity: .75 }}>{n}</span>
               </button>
@@ -166,23 +165,34 @@ function InstructorRoster({ config, data, update }) {
       ) : null}
       <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search students"
         style={{ width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: TAP, marginBottom: 12 }} />
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* The same wall of faces the students get. Andrew, 2026-09-21: "roster
+          is still not three across. maybe it is for students, but not for me."
+          It was, and his own roster is a different surface: the search, the
+          rooms and the way through to a student's page are his alone, and only
+          the list under them is shared. */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
         {results.map(s => {
           const p = profileOf(data, s.name);
-          const sub = profileComplete(p) ? [p.year, p.hometown || s.from].filter(Boolean).join(" · ") : "Profile not filled in yet";
+          const shown = nameShown(data, s.name);
+          const where = [p.year, p.hometown || s.from].filter(Boolean).join(" · ");
           return (
             <button key={s.name} onClick={() => setSelected(s.name)}
-              style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", background: "#fff", border: "1px solid " + BORDER, borderRadius: 14, padding: 12, cursor: "pointer", fontFamily: F, minHeight: TAP }}>
-              <Avatar profile={p} name={nameShown(data, s.name)} accent={a} />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>
-                  {nameShown(data, s.name)}
-                  {nameShown(data, s.name) !== s.name ? (
-                    <span style={{ fontWeight: 400, fontSize: 14, color: TEXT_MUTED }}> · {s.name} on the roster</span>
-                  ) : null}
-                </div>
-                {sub && <div style={{ fontSize: 15, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub}</div>}
-              </div>
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 14, padding: 14, cursor: "pointer", fontFamily: F, minHeight: TAP }}>
+              <Avatar profile={p} name={shown} accent={a} size={56} />
+              <div style={{ fontWeight: 700, fontSize: 15, textAlign: "center", color: TEXT_PRIMARY, overflowWrap: "anywhere" }}>{shown}</div>
+              {/* The name the registrar has, when it is not the one they go by. */}
+              {shown !== s.name ? (
+                <div style={{ fontSize: 12, color: TEXT_MUTED, textAlign: "center", overflowWrap: "anywhere" }}>{s.name} on the roster</div>
+              ) : null}
+              {/* Whatever they have given, and a word when they have given
+                  nothing. It used to be all or nothing on profileComplete, so
+                  a student who had written their hometown and no more read as
+                  a blank. */}
+              {where ? <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center", lineHeight: 1.35 }}>{where}</div> : null}
+              {p.motto ? <div style={{ fontSize: 13, color: TEXT_SECONDARY, textAlign: "center", lineHeight: 1.4, overflowWrap: "anywhere" }}>{p.motto}</div> : null}
+              {!where && !p.motto ? (
+                <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center", lineHeight: 1.35 }}>Profile not filled in yet</div>
+              ) : null}
             </button>
           );
         })}

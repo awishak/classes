@@ -3975,6 +3975,19 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   } };
   const html = renderToString(<RosterDetail config={cfg} role="student" data={data} update={noop} name="Pepe LeFritz" />);
   if (!/grid-template-columns:repeat\(3, ?minmax\(0, ?1fr\)\)/.test(html)) say("the roster is not three across");
+  // And his own, which is a different surface. Andrew, 2026-09-21: "roster is
+  // still not three across. maybe it is for students, but not for me."
+  {
+    const mine = renderToString(<RosterDetail config={cfg} role="instructor" data={data} update={noop} name="" />);
+    if (!/grid-template-columns:repeat\(3, ?minmax\(0, ?1fr\)\)/.test(mine)) say("his own roster is not three across");
+    if (!mine.includes("Junior · Fresno")) say("his cards do not carry the year and the hometown");
+    if (!mine.includes("Measure twice")) say("his cards do not carry the motto");
+    if (!mine.includes("Search students")) say("he lost the search box");
+    if (!mine.includes("Roster and logins")) say("he lost the way to the roster and the logins");
+    // A student who has answered nothing says so, on his side only.
+    if (!mine.includes("Profile not filled in yet")) say("he cannot see who has not filled anything in");
+    if (html.includes("Profile not filled in yet")) say("students are told who has not filled anything in");
+  }
   ["Ada Lovelace", "Grace Hopper", "Alan Turing"].forEach(n => {
     if (!html.includes(n)) say(n + " is not on the roster"); });
   if (!html.includes("Junior · Fresno")) say("the year and the hometown are not on the card");
