@@ -160,6 +160,15 @@ dashboard; a day's written boards stay in the store and nothing reads them.
 
 ## One top bar, worn by three surfaces
 
+**Switching classes keeps the page.** Andrew, 2026-09-21: "when i switch
+between classes, it sends me to dashboard. always send me to the same page i'm
+on between classes." The switcher in the class menu sent every jump to
+`/<class>/dashboard`. It carries the page now: grade to grade, board to board,
+home to home. Nothing deeper travels, because a day, a challenge or a student
+belongs to the class it is in, so `/comm118/dashboard/oct-7` opens the other
+class's dashboard on its own today. `pageOf` in `ClassMenu.jsx`.
+
+
 `src/engine/TopNav.jsx` is the bar, and the class page, the dashboard and the
 repository all wear the same component, so the three cannot drift apart again.
 Before this each had its own, with its own height and its own idea of where the

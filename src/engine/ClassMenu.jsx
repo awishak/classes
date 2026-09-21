@@ -74,12 +74,32 @@ export const menuRow = {
   fontFamily: F, fontSize: 14.5, color: TEXT_PRIMARY, textDecoration: "none",
 };
 
+// The page of an address, inside a class.
+//
+// Andrew, 2026-09-21: "when i switch between classes, it sends me to dashboard.
+// always send me to the same page i'm on between classes." Switching from COMM
+// 118's grade view to COMM 3 meant landing on the dashboard and clicking back
+// to grades.
+//
+// The page is the first thing after the class, and nothing after that travels:
+// a day, a challenge or a student belongs to the class it is in and means
+// nothing in the other one. So /comm118/dashboard/oct-7 opens the other class's
+// dashboard on its own today, and /comm118 opens the other class's home.
+export const pageOf = (path, base) => {
+  const p = String(path || ""), b = String(base || "");
+  const rest = b && p.startsWith(b + "/") ? p.slice(b.length + 1) : "";
+  const page = rest.split("/").filter(Boolean)[0] || "";
+  return page ? "/" + page : "";
+};
+
 export function ClassMenu({ config, role = "instructor", onPick, onLook, panels, onPanel, onKeys, active, compact }) {
   const student = role !== "instructor";
   const go = (href) => () => {
     window.history.pushState({}, "", href);
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
+  // Where the other class opens: the page this one is on. See pageOf.
+  const samePage = () => pageOf((typeof window !== "undefined" && window.location?.pathname) || "", config.path);
   const rule = <div style={{ height: 1, background: BORDER, margin: "5px 8px" }} />;
   const row = { ...menuRow, minHeight: student ? TOKENS.TAP : 36, fontSize: student ? 16 : 15 };
   // The pages of the class, which used to be tabs across the bar. `More page`
@@ -178,7 +198,7 @@ export function ClassMenu({ config, role = "instructor", onPick, onLook, panels,
               instead of making the list long enough to push the live ones off
               the screen. */}
           {ENGINE_LIST.filter(c => c.id !== config.id && c.status !== "archived").map(c => (
-            <button key={c.id} className="dash-focus" onClick={go(c.path + "/dashboard")}
+            <button key={c.id} className="dash-focus" onClick={() => go(c.path + samePage())()}
               style={{ ...row, minHeight: 52, alignItems: "flex-start", paddingTop: 7, paddingBottom: 7 }}>
               <span style={{ flex: "none", width: 8, height: 8, borderRadius: "50%", background: c.accent, marginTop: 6 }} />
               <span style={{ minWidth: 0, display: "block" }}>

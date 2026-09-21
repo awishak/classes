@@ -91,6 +91,7 @@ import { assignmentsOf } from "../src/engine/profileTask.js";
 import { QuestionsSummary, QuestionsDetail, onThePage, archivedOf, askedBy, sortQuestions, isAnswered, QuestionEntry } from "../src/engine/QuestionsCard.jsx";
 import { sectionsOf as sittingLabels, hasSections, studentsIn, sectionFor, realStudents, isTestStudent, sectionNow } from "../src/engine/sections.js";
 import { classmatesOf, RosterDetail } from "../src/engine/RosterCard.jsx";
+import { pageOf } from "../src/engine/ClassMenu.jsx";
 import NoticeCard, { NoticeWriter } from "../src/engine/NoticeCard.jsx";
 import { noticeFor, noticeLive, setNotice, markNoticeRead } from "../src/engine/notice.js";
 import { rosterOf } from "../src/engine/roster.js";
@@ -4119,6 +4120,36 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!mine.includes("Card for students")) say("he has no way to the card");
   if (!mine.includes("love to see you in office hours")) say("he cannot see what the card says");
   if (mine.includes("<textarea")) say("the box is open before he asks for it");
+}
+
+// Switching classes keeps the page.
+//
+// Andrew, 2026-09-21: "when i switch between classes, it sends me to dashboard.
+// always send me to the same page i'm on between classes."
+{
+  const say = (m) => { console.error("  FAIL  switching classes: " + m); failedEarly++; };
+  const cases = [
+    ["/comm118/dashboard", "/comm118", "/dashboard"],
+    ["/comm118/grade", "/comm118", "/grade"],
+    ["/comm118/board", "/comm118", "/board"],
+    // A day, a challenge or a student belongs to the class it is in.
+    ["/comm118/dashboard/oct-7", "/comm118", "/dashboard"],
+    ["/comm118/schedule/sep-23", "/comm118", "/schedule"],
+    ["/comm118/challenges/wc1", "/comm118", "/challenges"],
+    // The home page of a class is the home page of the other one.
+    ["/comm118", "/comm118", ""],
+    ["/comm118/", "/comm118", ""],
+    // Somewhere that is not inside this class at all falls back to its home.
+    ["/plan", "/comm118", ""],
+    ["/comm1188/dashboard", "/comm118", ""],
+  ];
+  cases.forEach(([path, base, want]) => {
+    const got = pageOf(path, base);
+    if (got !== want) say(JSON.stringify(path) + " goes to " + JSON.stringify(got) + " rather than " + JSON.stringify(want));
+  });
+  const menu = readFileSync(new URL("../src/engine/ClassMenu.jsx", import.meta.url), "utf8");
+  if (/go\(c\.path \+ "\/dashboard"\)/.test(menu)) say("the switcher sends him to the dashboard again");
+  if (!/go\(c\.path \+ samePage\(\)\)/.test(menu)) say("the switcher does not carry the page across");
 }
 
 // Three readings, then the box.
