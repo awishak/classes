@@ -176,7 +176,10 @@ every page of the class is behind the class's name.
 
 **The class name at the left is the menu**, on the class site and on the
 dashboard, out of one file: `src/engine/ClassMenu.jsx`. It holds the five pages
-first (Home, Schedule, Challenges, Class, More), then the apps. Mine carries
+first (Home, Schedule, Challenges, Class, More), then the apps. The switcher at
+the foot lists only the classes being taught, with one row through to the
+archived ones, and the menu scrolls rather than running off the bottom of the
+window: it had grown long enough to push the classes off the end of it. Mine carries
 more under those: the room panels, The Brief, Colour and type, the keyboard
 list and the other classes. The page you are on is marked in the class colour,
 since no bar says it any more. The apps are Dashboard, Repository, Games, Grade
@@ -250,11 +253,20 @@ class has always kept its questions in, so nothing asked before this is lost.
 underneath. The box on the Messages card is gone and so is the ask page: two
 doors to the same thing is what made it confusing.
 
-**Writing an answer is not publishing.** An answer can sit in the queue while
-the words get better; **Publish** is a press of its own and the only thing that
-puts a question in front of the class. **Archive** takes a question out of the
+**Writing an answer is not publishing, and the row says so.** An answer can sit
+in the queue while the words get better; **Publish** is a press of its own and
+the only thing that puts a question in front of the class. Each row reads Not
+answered, then Answered, and the class cannot see the answer yet, then On the
+class's page, because an answer saved quietly is the state that looks like
+success: the words are in the box, so the question looks dealt with. The
+heading says where the class reads it. **Archive** takes a question out of the
 queue without answering it, and keeps it, so a question nobody needs is not
 deleted evidence. A published one can be taken back off.
+
+**Anyone can appreciate a question or its answer.** One press per person on
+each, pressing again takes it back, and only the count is ever shown. The names
+are kept so nobody can thank the same thing twice, and nothing renders them.
+`thanksQ` and `thanksA` on the question.
 
 **Two ways a name comes off.** `anon` is the student's, ticked when they ask.
 `hideName` is mine, chosen when I publish, for a question that names somebody
