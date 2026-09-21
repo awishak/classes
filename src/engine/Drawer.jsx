@@ -216,6 +216,34 @@ function DrawerRow({ b, hue, placed, onPick, extra, onMenu, live }) {
   );
 }
 
+// Make something new: media, an activity, or an item. Andrew, 2026-09-20:
+// "so how do i create activities from the drawer?" You could not. The drawer
+// grew a second shape for the day's own list, and this button stayed behind in
+// the first one, so the only way to a new block was the slash menu on a line.
+function NewButton({ hue, onNew, onShelf }) {
+  const [open, setOpen] = useState(false);
+  if (!onNew) return null;
+  return (
+    <span style={{ position: "relative", flex: "none" }}>
+      <button className="dash-focus draw-new" onClick={() => setOpen(v => !v)}
+        aria-haspopup="menu" aria-expanded={open}>+ New</button>
+      {open ? (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 60 }} />
+          <div role="menu" className="draw-newmenu">
+            {SHELVES.map(sh => (
+              <button key={sh.id} className="dash-focus" onClick={() => { setOpen(false); if (onShelf) onShelf(sh.id); onNew(sh.make); }}>
+                <span className="draw-swatch" style={{ background: hue(sh.make) }} />
+                New {sh.label.toLowerCase().replace(/s$/, "")}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+    </span>
+  );
+}
+
 export default function Drawer({ blocks, accent, hue, onPick, onNew, features, onRunFeature, featureBlurb, placed,
   picked, onSavePicked, onSaveItemPicked, onPlacePicked, onMovePicked, onClearPicked, days, today, sections, blockOf,
   startShelf = "media", games, onPlaceGame, gamesHref, dayRows, menuFor, liveLabel }) {
@@ -223,7 +251,6 @@ export default function Drawer({ blocks, accent, hue, onPick, onNew, features, o
   const [menu, setMenu] = useState(null);
   const [shelf, setShelf] = useState(startShelf);
   const [kind, setKind] = useState("");
-  const [newOpen, setNewOpen] = useState(false);
   const [kindOpen, setKindOpen] = useState(false);
   // The games opened to show their questions.
   const [openSets, setOpenSets] = useState(() => new Set());
@@ -329,6 +356,7 @@ export default function Drawer({ blocks, accent, hue, onPick, onNew, features, o
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search everything" aria-label="Search everything" />
             {q ? <button className="dash-focus draw-clear" onClick={() => setQ("")} title="Clear the search">×</button> : null}
           </div>
+          <NewButton hue={hue} onNew={onNew} />
         </div>
         {!text && list.length ? <div className="draw-dayhead">On the schedule today</div> : null}
         <div className="draw-rows">
@@ -358,23 +386,7 @@ export default function Drawer({ blocks, accent, hue, onPick, onNew, features, o
             <button className="dash-focus draw-clear" onClick={() => { setQ(""); setKind(""); }} title="Clear the search">×</button>
           ) : null}
         </div>
-        <span style={{ position: "relative", flex: "none" }}>
-          <button className="dash-focus draw-new" onClick={() => setNewOpen(v => !v)}
-            aria-haspopup="menu" aria-expanded={newOpen}>+ New</button>
-          {newOpen ? (
-            <>
-              <div onClick={() => setNewOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 60 }} />
-              <div role="menu" className="draw-newmenu">
-                {SHELVES.map(s => (
-                  <button key={s.id} className="dash-focus" onClick={() => { setNewOpen(false); setShelf(s.id); onNew(s.make); }}>
-                    <span className="draw-swatch" style={{ background: hue(s.make) }} />
-                    New {s.label.toLowerCase().replace(/s$/, "")}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : null}
-        </span>
+        <NewButton hue={hue} onNew={onNew} onShelf={setShelf} />
       </div>
 
       {/* Underlined tabs, not pills. Three pills beside a row of kind pills

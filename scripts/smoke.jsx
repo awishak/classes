@@ -98,7 +98,7 @@ import comm3Cfg from "../src/config/comm3.js";
 import { bucketsFor, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, unseenGrades, markSeen, letterOf, BUCKETS } from "../src/engine/grades.js";
 import GradeParade from "../src/engine/GradeParade.jsx";
 import { computeGrade, dueText, AssignmentsSummary, waitingOn, waitingCount, appreciatePatch, deletePatch } from "../src/engine/AssignmentsCard.jsx";
-import { sectionsOf, takeGroup, placeGroup, parseRange, sumRanges, rangeLabel, placeSection, splitSection, templateOf, applyTemplate } from "../src/engine/dayplan.js";
+import { sectionsOf, takeGroup, placeGroup, parseRange, sumRanges, rangeLabel, placeSection, splitSection, templateOf, applyTemplate, slotOrder, orderSlots } from "../src/engine/dayplan.js";
 import { dayTitles, daySlug, dayFromSlug } from "../src/engine/days.js";
 import { normSlot as normSlotT } from "../src/engine/dayplan.js";
 import Drawer, { SHELVES, shelfOf } from "../src/engine/Drawer.jsx";
@@ -2911,6 +2911,34 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const docSrc = readFileSync(new URL("../src/engine/DayDoc.jsx", import.meta.url), "utf8");
   if (/function TeachView/.test(docSrc)) say("the full-screen Teach is back in the document");
   if (/add\("Day", "Teach"/.test(docSrc)) say("the slash menu still opens a Teach that is gone");
+}
+
+// A day's section order survives the store. Andrew, 2026-09-20: "i keep
+// moving a section down on day 1, and it refuses to go down."
+//
+// The order was the order of the keys in `slots`, and the store is Postgres
+// jsonb, which sorts an object's keys by length and then alphabetically. The
+// write went out, the row came back sorted, and the day looked exactly as it
+// had. The order is a list on the day now.
+{
+  const say = (msg) => { console.error("  FAIL  section order: " + msg); failedEarly++; };
+  // What the store does to an object, reproduced: shortest key first.
+  const sorted = (o) => Object.fromEntries(Object.keys(o).sort((a, b) => a.length - b.length || a.localeCompare(b)).map(k => [k, o[k]]));
+  const day = { order: ["sec-c", "sec-a", "sec-bb"], slots: sorted({
+    "sec-a": { title: "First", items: [] }, "sec-bb": { title: "Second", items: [] }, "sec-c": { title: "Third", items: [] } }) };
+  if (Object.keys(day.slots).join("|") !== "sec-a|sec-c|sec-bb") say("the store stand-in does not sort the way jsonb does");
+  if (slotOrder(day).join("|") !== "sec-c|sec-a|sec-bb") say("the list is not what the day reads: " + slotOrder(day).join("|"));
+  if (Object.keys(orderSlots(day).slots).join("|") !== "sec-c|sec-a|sec-bb") say("the slots are not rebuilt in the day's order");
+  // A day written before any of this keeps whatever order it came back in.
+  const old = { slots: { "sec-a": { items: [] }, "sec-bb": { items: [] } } };
+  if (slotOrder(old).join("|") !== "sec-a|sec-bb") say("a day with no list lost its sections");
+  // A section that has gone is not in the order, and one that arrived is.
+  const gone = { order: ["sec-c", "sec-x", "sec-a"], slots: { "sec-a": { items: [] }, "sec-c": { items: [] }, "sec-new": { items: [] } } };
+  if (slotOrder(gone).join("|") !== "sec-c|sec-a|sec-new") say("the order did not follow the sections: " + slotOrder(gone).join("|"));
+  // Every write records the order it left the day in.
+  const dash = readFileSync(new URL("../src/engine/Dashboard.jsx", import.meta.url), "utf8");
+  if (!/order: Object\.keys\(made\.slots\)/.test(dash)) say("a day is written without saying what order its sections are in");
+  if (!/const plan = orderSlots\(/.test(dash)) say("the dashboard reads the day without putting its sections in order");
 }
 
 // A shared block's date belongs to the class that placed it. Andrew,

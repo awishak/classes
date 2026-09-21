@@ -15,7 +15,7 @@
 // notes, done }, and slots[slot] = { title?, items: [...] }, where an item
 // points at a block, names a seed, or carries its own words.
 
-import { normSlot, dayPlanFor, sectionsOf } from "./dayplan.js";
+import { normSlot, dayPlanFor, sectionsOf, orderSlots } from "./dayplan.js";
 import { typeOf } from "./blocks.js";
 import { hostOf } from "./links.js";
 import PickMark from "./Pick.jsx";
@@ -77,7 +77,7 @@ export function defaultDay(weeks) {
 export function rowsOf({ config, data, plan, blockOf }) {
   const seeds = getSeeds(data, config);
   const done = new Set(plan.done || []);
-  return sectionsOf(config, plan).map(([slot, name]) => {
+  return sectionsOf(config, orderSlots(plan)).map(([slot, name]) => {
     const bucket = normSlot(plan.slots[slot]);
     return {
       slot,

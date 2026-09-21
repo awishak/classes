@@ -24,7 +24,7 @@
 import { useState } from "react";
 import * as TOKENS from "./tokens.js";
 import { allDays, dayTitles } from "./days.js";
-import { normSlot, sectionsOf } from "./dayplan.js";
+import { normSlot, sectionsOf, orderSlots } from "./dayplan.js";
 import { typeOf } from "./blocks.js";
 import Slide, { slideOf, readSlidesOn, writeSlidesOn } from "./Slide.jsx";
 
@@ -101,7 +101,7 @@ export function deadlinesByDay(assignments, dates) {
 const readDay = (config, plans, date) => {
   const plan = (plans || {})[date];
   if (!plan) return { rows: 0, done: 0, sections: [] };
-  const secs = sectionsOf(config, plan);
+  const secs = sectionsOf(config, orderSlots(plan));
   let rows = 0, done = 0;
   const doneSet = new Set(plan.done || []);
   // A day can have a plan and no slots at all — a sequence was picked and

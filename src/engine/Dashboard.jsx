@@ -25,7 +25,7 @@ import { ClassMenu, DropMenu, menuRow } from "./ClassMenu.jsx";
 // means a part of the day: dayplan.js exports its own sectionsOf and meets.js
 // its own sittingsOf.
 import { hasSections as twoSittings, sectionsOf as sectionLabels, studentsIn, realStudents, readRoomSection, writeRoomSection } from "./sections.js";
-import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections, blankDay, takeGroup, placeGroup, placeSection, splitSection, templateOf, applyTemplate } from "./dayplan.js";
+import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections, blankDay, takeGroup, placeGroup, placeSection, splitSection, templateOf, applyTemplate, orderSlots } from "./dayplan.js";
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, onClassDay, isShared, makeBlock } from "./blocks.js";
 import { MEDIA_ACCEPT, mediaLabel, sizeLabel } from "./media.js";
 import { useUpload } from "./Attach.jsx";
@@ -3796,7 +3796,10 @@ export default function Dashboard({ config, daySlug = "" }) {
   // the moment the class loaded.
   useEffect(() => { setLastCast(null); }, [day]);
 
-  const plan = (data?.dayPlans || {})[day] || null;
+  // The day, with its sections in the order they were put in. The store
+  // sorts the keys of an object, so the order lives in a list on the day and
+  // the slots are rebuilt from it here, once, at the door.
+  const plan = orderSlots((data?.dayPlans || {})[day] || null);
   // sequenceOptions adds Freeform, which config.sequences does not carry, so
   // the picker never offered it. sequenceFor also stops a day already set to
   // freeform falling through find() to seqs[0] and being drawn as the Motivated
@@ -4044,7 +4047,10 @@ export default function Dashboard({ config, daySlug = "" }) {
   const writeDayOn = (date, fn, what) => update(prev => {
     const plans = { ...(prev.dayPlans || {}) };
     const before = plans[date];
-    plans[date] = fn(plans[date] || {});
+    // Whatever the write did to the order of the slots, say so in the list,
+    // because the object's own order will not survive being stored.
+    const made = fn(orderSlots(plans[date] || {}));
+    plans[date] = made?.slots ? { ...made, order: Object.keys(made.slots) } : made;
     if (plans[date] !== before) {
       setUndo({ date, plan: before, what: what || "that" });
       const list = versionsRef.current[date] || [];

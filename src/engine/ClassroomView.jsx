@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLive } from "./live.js";
 import { useClassData } from "./store.js";
-import { currentDay } from "./days.js";
+import { currentDay, dayTitles } from "./days.js";
 import RoomSlide, { ROOM_FONTS_HREF } from "./RoomSlide.jsx";
 import { ENGINE_LIST } from "../config/registry.js";
 import PickMark from "./Pick.jsx";
@@ -458,7 +458,16 @@ export default function ClassroomView({ config }) {
   const weeks = data?.schedule || config.scheduleWeeks || [];
   const day = currentDay(weeks);
   const dayPlan = day ? (data?.dayPlans || {})[day.date] : null;
-  const plan = day ? { topic: day.topic || config.name, notes: dayPlan?.notes || "" } : null;
+  // What the day is called, the way every other surface calls it: the title
+  // written on the day wins, and carries forward until the next one. Andrew,
+  // 2026-09-20: "why is the screen showing 'identifying stories and framing'
+  // for today if that is no longer the topic for the day?" Because this read
+  // the week's topic and nothing else, so renaming the day on the dashboard
+  // left the wall saying the old words.
+  const titles = day ? dayTitles(weeks, data?.dayPlans) : null;
+  const plan = day
+    ? { topic: (titles?.[day.date]?.title || "").trim() || day.topic || config.name, notes: dayPlan?.notes || "" }
+    : null;
   const [layers, setLayers] = useState([]); // [{ key, cast, anim, phase }]
   const seen = useRef(-1);
   const stageRef = useRef(null);

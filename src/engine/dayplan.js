@@ -60,6 +60,34 @@ export const dayPlanFor = (data, config, date) =>
 // The Dashboard worked this out inline and the repository asked the sequence,
 // which is the same disagreement between two readers of one shape that this
 // file was made to end. One reader now.
+// The order a day's sections are in.
+//
+// It used to be the order of the keys in `slots`, and that order does not
+// survive the trip to the store. The column is Postgres jsonb, which sorts an
+// object's keys by length and then alphabetically, so a day came back in an
+// order nobody chose and moving a section down did nothing at all: the write
+// went out, the row came back sorted, and the day looked exactly as before.
+// Andrew, 2026-09-20: "i keep moving a section down on day 1, and it refuses
+// to go down."
+//
+// So the order is a list on the day, and the keys are only keys. A day
+// written before this has no list, and its key order is the best guess there
+// is, which is what it was being drawn in anyway.
+export const slotOrder = (plan) => {
+  const slots = plan?.slots || {};
+  const listed = (plan?.order || []).filter(k => k in slots);
+  return [...listed, ...Object.keys(slots).filter(k => !listed.includes(k))];
+};
+
+// The same day with its slots rebuilt in that order, so everything downstream
+// can go on reading the object the way it always has.
+export const orderSlots = (plan) => {
+  if (!plan || !plan.slots) return plan;
+  const next = {};
+  slotOrder(plan).forEach(k => { next[k] = plan.slots[k]; });
+  return { ...plan, slots: next };
+};
+
 export function sectionsOf(config, plan) {
   const sl = plan?.slots || {};
   const seqSlots = sequenceFor(config, plan?.sequenceId || config.defaultSequenceId).slots || [];

@@ -523,7 +523,16 @@ character and those are what drifted. Font sizes are not held to `TYPE` yet.
   about whose day it was, so it is on nobody's.
 - **Day titles carry.** A title starts on the day it is written and covers
   every class day after it until the next one. Runs are counted by what a day
-  says, not by where the words came from. `src/engine/days.js`.
+  says, not by where the words came from. `src/engine/days.js`. Every surface
+  that names a day reads this, the room screen included: it used to show the
+  week's topic, so renaming a day left the wall saying the old words.
+- **A day's section order is a list, not the order of its keys.** The store is
+  Postgres jsonb, which sorts an object's keys by length and then
+  alphabetically. Section order lived in the key order of `slots`, so a move
+  went out, the row came back sorted, and the day looked exactly as before.
+  `order` on the day plan holds it, `orderSlots` rebuilds the object from it at
+  the door, and every write records the order it left the day in.
+  `src/engine/dayplan.js`.
 - **Colour by kind.** Readings blue, ideas green, notes yellow, assignments
   red, questions orange, poll deeper orange, Enter/Exit purple. Twenty
   swatches, all carrying white text, all checked against 4.5:1 by the build.
