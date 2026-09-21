@@ -540,6 +540,15 @@ character and those are what drifted. Font sizes are not held to `TYPE` yet.
 Each was written after the matching mistake reached production. Do not remove
 one because it is inconvenient; add the case instead.
 
+**The smoke run is on a pinned clock, in UTC.** On 2026-09-20 three builds
+failed for a change that touched none of the code they broke: Vercel builds on
+UTC, so after 5pm in California it is tomorrow there, a challenge due two days
+out fell inside the 48 hours that hands a student the deadline card, that card
+takes the whole screen by design, and every class-site check failed at once. A
+suite that reads the wall clock passes or fails by the hour. Everything renders
+at one fixed moment now, set in `scripts/smoke-globals.js`, and `npm run smoke`
+runs in UTC so this machine and the build machine cannot disagree again.
+
 ## How it gets deployed
 
 `vercel --prod` is rate limited at 100 a day and that limit gets hit. **Pushing
