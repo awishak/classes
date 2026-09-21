@@ -4909,11 +4909,6 @@ export default function Dashboard({ config, daySlug = "" }) {
             <span style={label}>{config.code}</span>
             <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-.02em" }}>No sessions on the calendar yet</div>
             <Muted>This class has no dates yet.</Muted>
-            <a className="dash-focus" href={config.path + "/schedule"}
-              style={{ ...mini, minHeight: TAP, padding: "0 18px", borderColor: config.accent, color: config.accent,
-                textDecoration: "none", display: "inline-flex", alignItems: "center", fontSize: 15 }}>
-              Build the schedule →
-            </a>
           </div>
         </div>
       </div>

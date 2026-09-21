@@ -228,6 +228,15 @@ class, which is how a Sunday deadline gets a place of its own. A row under a
 day heading no longer repeats the date the heading has said, and each day
 carries the anchor the next class card links to.
 
+**One schedule, and I read the one the students read.** Andrew, 2026-09-21: "i
+want you to make my schedule view the same as their schedule view. if i want to
+make changes, I'll do it in dashboard." `/<class>/schedule` drew a week
+composer for me and the rendered weeks for them, so the term had two places it
+could be built. The composer is deleted, about 360 lines: the week editor, the
+library picker, the seed suggestions and the drag helpers. `ScheduleDetail`
+takes no role now, and the smoke renders the page as me and as a student and
+fails if the two come out different. The dashboard is where a day gets built.
+
 **Challenges says both words** on the student's card, `Challenges
 (Assignments)`, until the class has the new one. The card is the next one by
 name, when it is due, and how many more the class holds, counted across every
@@ -632,6 +641,13 @@ twice, because one edge can serve the old bundle briefly.
 - Six `onDone` handlers in the pre-engine Comm118/2/4 files do nothing. Those
   files are frozen.
 - 57 linked readings never had `scheduled` backfilled onto their blocks.
+- **A week's free text has no editor.** Deleting the schedule composer on
+  2026-09-21 took the only way to write four things: a week's own paragraph,
+  which students still read under the topic, a week's dates, adding or
+  deleting a week, and the library at `data.library`. Andrew wants the free
+  text back, "for now, don't worry", and the rest went on purpose. Week topics
+  and a day's readings are already written from the dashboard, and weeks
+  themselves come from the term config.
 - **Team Trivia's live flow has no test beyond rendering.** The weekly game and
   Ten on Ten are played end to end by the build, through `src/engine/game.js`.
   Trivia's rounds, reveals and team scoring still live inside click handlers,

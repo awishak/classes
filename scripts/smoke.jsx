@@ -3643,6 +3643,16 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (!titled.includes("Same event, different stories")) say("a day does not carry its title");
     if (titled.indexOf("Same event, different stories") < titled.indexOf("Wednesday, September 23")) say("the title is above the day it belongs to");
   }
+  // The instructor reads the schedule students read. Andrew, 2026-09-21: "i
+  // want you to make my schedule view the same as their schedule view. if i
+  // want to make changes, I'll do it in dashboard." The week composer that
+  // used to open here is gone, so the page is the same page for both.
+  {
+    const mine = renderToString(<ScheduleDetail config={{ accent: "#333", scheduleWeeks: [] }} role="instructor"
+      data={{ schedule: [week] }} blockOf={blockOf} update={noop} />);
+    if (mine !== html) say("the instructor's schedule is not the students' schedule");
+    if (/Add week|Planning/.test(mine)) say("the schedule still offers to be edited");
+  }
   if (dateInWeek({ dates: ["Dec 7", "Dec 9"] }, "Fri") !== "Dec 11") say("the Friday of a two-day finals week is not Dec 11");
   // The badge names the weekday and the time. Dates carry no year and are read
   // as 2026, so this only means something while Dec 31 is more than a week off.
