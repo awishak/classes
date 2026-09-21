@@ -702,6 +702,28 @@ twice, because one edge can serve the old bundle briefly.
   term of games and grades at their own keys, and an engine class starts with
   no games.
 
+## A box holds its own words
+
+Two boxes were driven straight from the class store, one letter at a time: the
+Comment back box on the grading screen and every text box on the welcome cards.
+Each keystroke wrote the whole class, each write is a round trip, and an echo of
+an earlier save landing mid-word put the box back to what the server held. The
+words survived. The caret went to the front of the box, about once a second, for
+as long as the typing went on. Andrew, 2026-09-21: "when i type in assignment
+details, the cursor keeps going to the beginning", and then the same thing on
+the welcome cards.
+
+The rule now, and it is the one the note on the front page already followed: a
+box keeps what is typed in it and hands it over when it is left. The grading
+box is contentEditable and seeds itself once from the saved draft, then owns its
+own contents. The welcome cards hold a draft each and save on blur and on
+leaving the card, because Next is a tap that can land before a blur on a phone.
+A card carries its key on the section, so one card's boxes are never the last
+card's boxes handed new values.
+
+Both are guarded from the source, because a caret is a live browser and cannot
+be rendered.
+
 ## The first time a student signs in
 
 `src/engine/WelcomeDeck.jsx`. Nine cards before the site, one question each, in

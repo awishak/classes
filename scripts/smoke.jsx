@@ -2750,6 +2750,18 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   } catch (err) { say("the deck threw: " + err.message); }
   // The words of the later cards, which are Andrew's.
   const deck = readFileSync(new URL("../src/engine/WelcomeDeck.jsx", import.meta.url), "utf8");
+  // A box holds its own words while a student types in it. Andrew, 2026-09-21:
+  // "same thing is happening to student when they put in their home town on the
+  // cards." Each letter used to write the profile to the class store, and an
+  // echo of an earlier save landing mid-word put the box back to what the server
+  // held and the caret to the front of it.
+  if (/<(input|textarea)[^>]*value=\{p\./.test(deck)) say("a box on a card is driven by the class store again");
+  if (!/onBlur=\{save\}/.test(deck)) say("a box never hands its words over");
+  if (!/useEffect\(\(\) => save, \[\]\)/.test(deck)) say("leaving a card does not save what was typed on it");
+  if (!/<section key=\{card\.key\}/.test(deck)) say("one card's boxes can be the last card's boxes handed new values");
+  // And a box opens on what is already in the profile, so a student who comes
+  // back to a half-answered card reads their own words rather than an empty box.
+  if (!/const \[draft, setDraft\] = useState\(value \|\| ""\)/.test(deck)) say("a box does not open on what was already given")
   if (!/I have your name as/.test(deck)) say("the name card does not say what the roster has");
   if (!/clearly see your face/.test(deck)) say("the photo card does not say why the photo matters");
   if (!/Thank you!/.test(deck)) say("the deck does not thank them");

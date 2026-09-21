@@ -17,7 +17,7 @@
 // of the term, Please tell me about yourself, is the same profile read from
 // the other end.
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import * as TOKENS from "./tokens.js";
 import { fileToAvatar, AvatarPreview } from "./YouCard.jsx";
 import { profileComplete } from "./profileTask.js";
@@ -54,6 +54,36 @@ export const markWelcomed = (data, name) => ({
   welcomeSeen: { ...(data?.welcomeSeen || {}), [name]: Date.now() },
 });
 
+// A box a student types in, holding the words while they type.
+//
+// Andrew, 2026-09-21: "same thing is happening to student when they put in
+// their home town on the cards."
+//
+// Every keystroke wrote the profile into the class store: one save a letter,
+// each one a round trip, and the class coming back over the top of the box. An
+// echo of an earlier save landing mid-word put the box back to what the server
+// held and the caret to the front of it. The comment box on the grading screen
+// was the same bug through a different door.
+//
+// So the box keeps the words and hands them over when the student leaves the
+// box, or when the card goes, which is what the note on the front page already
+// does. Next is a tap that can land before a blur on a phone, so the card going
+// saves as well.
+function Answer({ value, onSave, multiline, ...rest }) {
+  const [draft, setDraft] = useState(value || "");
+  const latest = useRef(value || "");
+  const saved = useRef(value || "");
+  const save = () => {
+    if (latest.current === saved.current) return;
+    saved.current = latest.current;
+    onSave(latest.current);
+  };
+  useEffect(() => save, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  const Box = multiline ? "textarea" : "input";
+  return <Box value={draft} onChange={e => { latest.current = e.target.value; setDraft(e.target.value); }}
+    onBlur={save} {...rest} />;
+}
+
 export default function WelcomeDeck({ config, name, profile, update, onDone, pin }) {
   const [at, setAt] = useState(0);
   const a = config.accent;
@@ -84,12 +114,12 @@ export default function WelcomeDeck({ config, name, profile, update, onDone, pin
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <label style={{ flex: 1, minWidth: 140 }}>
             <span style={label}>First name</span>
-            <input value={p.firstName || ""} onChange={e => set("firstName", e.target.value)}
+            <Answer value={p.firstName} onSave={v => set("firstName", v)}
               placeholder={roster[0] || ""} style={{ ...input, marginTop: 6 }} />
           </label>
           <label style={{ flex: 1, minWidth: 140 }}>
             <span style={label}>Last name</span>
-            <input value={p.lastName || ""} onChange={e => set("lastName", e.target.value)}
+            <Answer value={p.lastName} onSave={v => set("lastName", v)}
               placeholder={roster.slice(1).join(" ")} style={{ ...input, marginTop: 6 }} />
           </label>
         </div>
@@ -126,7 +156,7 @@ export default function WelcomeDeck({ config, name, profile, update, onDone, pin
           </label>
           <label style={{ flex: 1, minWidth: 150 }}>
             <span style={label}>Hometown</span>
-            <input value={p.hometown || ""} onChange={e => set("hometown", e.target.value)} style={{ ...input, marginTop: 6 }} />
+            <Answer value={p.hometown} onSave={v => set("hometown", v)} style={{ ...input, marginTop: 6 }} />
           </label>
         </div>
       ),
@@ -139,11 +169,11 @@ export default function WelcomeDeck({ config, name, profile, update, onDone, pin
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <label>
             <span style={label}>About me</span>
-            <textarea value={p.about || ""} onChange={e => set("about", e.target.value)} style={{ ...area, marginTop: 6 }} />
+            <Answer multiline value={p.about} onSave={v => set("about", v)} style={{ ...area, marginTop: 6 }} />
           </label>
           <label>
             <span style={label}>Motto</span>
-            <input value={p.motto || ""} onChange={e => set("motto", e.target.value)} style={{ ...input, marginTop: 6 }} />
+            <Answer value={p.motto} onSave={v => set("motto", v)} style={{ ...input, marginTop: 6 }} />
           </label>
         </div>
       ),
@@ -156,7 +186,7 @@ export default function WelcomeDeck({ config, name, profile, update, onDone, pin
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <label>
             <span style={label}>Goals for the class</span>
-            <textarea value={p.goals || ""} onChange={e => set("goals", e.target.value)} style={{ ...area, marginTop: 6 }} />
+            <Answer multiline value={p.goals} onSave={v => set("goals", v)} style={{ ...area, marginTop: 6 }} />
           </label>
           <label>
             <span style={label}>What matters to you most</span>
@@ -175,7 +205,7 @@ export default function WelcomeDeck({ config, name, profile, update, onDone, pin
       body: (
         <label style={{ display: "block" }}>
           <span style={label}>Your biggest strength</span>
-          <input value={p.strength || ""} onChange={e => set("strength", e.target.value)} style={{ ...input, marginTop: 6 }} />
+          <Answer value={p.strength} onSave={v => set("strength", v)} style={{ ...input, marginTop: 6 }} />
         </label>
       ),
     },
@@ -218,7 +248,7 @@ export default function WelcomeDeck({ config, name, profile, update, onDone, pin
           <span style={{ fontSize: 15, color: TEXT_MUTED }}>{at + 1} of {cards.length}</span>
         </div>
 
-        <section style={{ background: WHITE, border: "1px solid " + LINE, borderRadius: 16, padding: 24,
+        <section key={card.key} style={{ background: WHITE, border: "1px solid " + LINE, borderRadius: 16, padding: 24,
           display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 12px 32px -20px rgba(23,19,16,.35)" }}>
           <div style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.25, letterSpacing: "-.01em" }}>{card.title}</div>
           <div style={{ fontSize: 17, lineHeight: 1.55, color: TEXT_SECONDARY }}>{card.say}</div>
