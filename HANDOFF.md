@@ -263,6 +263,11 @@ heading says where the class reads it. **Archive** takes a question out of the
 queue without answering it, and keeps it, so a question nobody needs is not
 deleted evidence. A published one can be taken back off.
 
+**A published question reads as a question.** The words in bold at heading
+size, the answer straight under them in the same ink the page is read in, then
+one quiet line: who asked, when, and the two ways to say thanks. The box a
+question is typed into says `Ask your question here` and is two rows high.
+
 **Anyone can appreciate a question or its answer.** One press per person on
 each, pressing again takes it back, and only the count is ever shown. The names
 are kept so nobody can thank the same thing twice, and nothing renders them.

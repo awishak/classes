@@ -67,18 +67,18 @@ const ThumbsUp = () => (
 // Thanks for a question worth asking, or an answer worth reading. Andrew,
 // 2026-09-20: "please have people be able to appreciate a question or
 // appreciate an answer." The count is everyone's; who pressed it is nobody's.
-function Thanks({ names, mine, onPress, what }) {
+function Thanks({ names, mine, onPress, what, say: words }) {
   const n = (names || []).length;
   const on = !!mine && (names || []).includes(mine);
   const say = on ? "Take your thanks back" : "Appreciate the " + what;
   return (
     <button className="ca-focus" onClick={onPress ? () => onPress() : undefined} disabled={!onPress}
       aria-pressed={on} title={onPress ? say : n + " appreciated the " + what}
-      style={{ display: "inline-flex", alignItems: "center", gap: 6, minHeight: 32, padding: "0 10px",
+      style={{ display: "inline-flex", alignItems: "center", gap: 6, minHeight: 30, padding: "0 10px",
         borderRadius: 999, border: "1px solid " + (on ? "var(--ca-accent, " + BORDER_STRONG + ")" : BORDER_STRONG),
         background: on ? "var(--ca-accent, #eee)" : "none", color: on ? "#fff" : TEXT_SECONDARY,
-        fontFamily: F, fontSize: 14, fontWeight: 600, cursor: onPress ? "pointer" : "default" }}>
-      <ThumbsUp />{n ? <span>{n}</span> : null}
+        fontFamily: F, fontSize: 13, fontWeight: 600, cursor: onPress ? "pointer" : "default" }}>
+      <ThumbsUp />{words ? <span>{words}</span> : null}{n ? <span style={{ opacity: .8 }}>{n}</span> : null}
     </button>
   );
 }
@@ -90,20 +90,24 @@ const field = {
 const tick = { width: 18, height: 18, flex: "none" };
 
 // One published question and its answer.
-function Entry({ q, me, onThank }) {
+// One question, the way the class reads it. Andrew, 2026-09-20: "the FAQ is
+// poorly done. It should be a bold question, and an answer underneath it."
+// So: the question, in bold, at the size of a heading. The answer straight
+// under it, in the colour everything else is read in. Then one quiet line for
+// who asked, when, and the two ways to say thanks.
+export function FaqEntry({ q, me, onThank }) {
   return (
-    <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 12 }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.4, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{q.text}</div>
-          <div style={{ ...label, marginTop: 4 }}>{askedBy(q)} · {when(q.publishedAt || q.answeredAt || q.at)}</div>
-        </div>
-        <Thanks names={q.thanksQ} mine={me} what="question" onPress={onThank ? () => onThank(q.id, "question") : null} />
-      </div>
-      <div style={{ marginTop: 8, borderLeft: "3px solid var(--ca-accent, " + BORDER_STRONG + ")", paddingLeft: 12,
-        fontSize: 16, lineHeight: 1.55, color: TEXT_SECONDARY, whiteSpace: "pre-wrap" }}>{q.answer}</div>
-      <div style={{ marginTop: 8, paddingLeft: 15 }}>
-        <Thanks names={q.thanksA} mine={me} what="answer" onPress={onThank ? () => onThank(q.id, "answer") : null} />
+    <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 16, display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.35, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{q.text}</div>
+      <div style={{ fontSize: 16, lineHeight: 1.55, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{q.answer}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 2 }}>
+        <span style={{ fontSize: 13, color: TEXT_MUTED }}>{askedBy(q)} · {when(q.publishedAt || q.answeredAt || q.at)}</span>
+        <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <Thanks names={q.thanksQ} mine={me} what="question" say="Good question"
+            onPress={onThank ? () => onThank(q.id, "question") : null} />
+          <Thanks names={q.thanksA} mine={me} what="answer" say="Helpful"
+            onPress={onThank ? () => onThank(q.id, "answer") : null} />
+        </span>
       </div>
     </div>
   );
@@ -158,9 +162,13 @@ function StudentQuestions({ config, api, name }) {
       <div style={{ marginTop: 18 }}>
         <div style={label}>Ask a question</div>
         <div style={{ marginTop: 8 }}>
-          <textarea value={text} onChange={e => { setText(e.target.value); setSent(false); }} rows={3}
-            placeholder="A reading, a challenge, a deadline, anything."
-            style={{ ...field, resize: "vertical" }} />
+          {/* Small, and it says the one thing it needs to. Andrew,
+              2026-09-20: "wtf is that shit. remove that. just say ask your
+              question here", and "have the question dialog box be way
+              smaller." */}
+          <textarea value={text} onChange={e => { setText(e.target.value); setSent(false); }} rows={2}
+            placeholder="Ask your question here"
+            style={{ ...field, minHeight: 64, resize: "vertical" }} />
         </div>
         <label style={{ marginTop: 8, fontSize: 15, color: TEXT_SECONDARY, display: "flex", alignItems: "center", gap: 8, minHeight: TAP }}>
           <input type="checkbox" checked={anon} onChange={e => setAnon(e.target.checked)} style={tick} />
@@ -195,7 +203,7 @@ function StudentQuestions({ config, api, name }) {
         <div style={label}>Answered</div>
         {out.length ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 8 }}>
-            {out.map(q => <Entry key={q.id} q={q} me={name} onThank={(id, part) => api.appreciate(id, part, name)} />)}
+            {out.map(q => <FaqEntry key={q.id} q={q} me={name} onThank={(id, part) => api.appreciate(id, part, name)} />)}
           </div>
         ) : <Muted>Nothing published yet.</Muted>}
       </div>

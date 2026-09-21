@@ -85,7 +85,7 @@ import { instructorOf } from "../src/instructors.js";
 import TopNav, { NAV_CLASS, activeFor } from "../src/engine/TopNav.jsx";
 import HornApp from "../src/engine/HornApp.jsx";
 import { assignmentsOf } from "../src/engine/profileTask.js";
-import { QuestionsSummary, QuestionsDetail, publishedOf, queueOf, archivedOf, askedBy } from "../src/engine/QuestionsCard.jsx";
+import { QuestionsSummary, QuestionsDetail, publishedOf, queueOf, archivedOf, askedBy, FaqEntry } from "../src/engine/QuestionsCard.jsx";
 import { sectionsOf as sittingLabels, hasSections, studentsIn, sectionFor, realStudents, isTestStudent, sectionNow } from "../src/engine/sections.js";
 import { classmatesOf } from "../src/engine/RosterCard.jsx";
 import { comingUp, turnedIn } from "../src/engine/AssignmentsCard.jsx";
@@ -2571,6 +2571,36 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const qSrc = readFileSync(new URL("../src/engine/QuestionsCard.jsx", import.meta.url), "utf8");
   if (qSrc.includes('config.path + "/ask"')) say("the questions card still points at the ask page");
   if (!qSrc.includes("Please keep this anonymous")) say("the ask box has no anonymous tick");
+}
+
+// The FAQ as the class reads it. Andrew, 2026-09-20: "the FAQ is poorly done.
+// It should be a bold question, and an answer underneath it. format it better
+// and clearer, and have the question dialog box be way smaller."
+{
+  const say = (msg) => { console.error("  FAIL  the FAQ entry: " + msg); failedEarly++; };
+  const q = { id: "q1", text: "What counts as a source?", who: "Ada Lovelace", at: 10,
+    state: "published", answer: "Anything you can point at.", publishedAt: 20, thanksQ: ["Sam"], thanksA: [] };
+  try {
+    const html = renderToString(<FaqEntry q={q} me="Sam" onThank={noop} />).replace(/<!-- -->/g, "");
+    const txt = html.replace(/<[^>]+>/g, "\n");
+    const at = (t) => html.indexOf(t);
+    if (at("What counts as a source?") < 0 || at("Anything you can point at.") < 0) say("the question or its answer is missing");
+    if (at("What counts as a source?") > at("Anything you can point at.")) say("the answer is above the question");
+    // The question is the bold line, and the answer is not.
+    const qLine = html.slice(at("font-weight:700"), at("What counts as a source?"));
+    if (!qLine || qLine.length > 200) say("the question is not the bold line");
+    if (/font-weight:700[^<]*>Anything you can point at/.test(html)) say("the answer is bold too");
+    // Who asked and when sit under both, quietly, and the two ways to say
+    // thanks say which half they are about.
+    if (at("Ada Lovelace") < at("Anything you can point at.")) say("who asked is above the answer");
+    ["Good question", "Helpful"].forEach(w => { if (!html.includes(w)) say("no way to appreciate the " + JSON.stringify(w) + " half"); });
+    if (!txt.includes("1")) say("the count of thanks is not shown");
+  } catch (err) { say("the entry threw: " + err.message); }
+  // The box a question is typed into says one thing and is two rows high.
+  const card = readFileSync(new URL("../src/engine/QuestionsCard.jsx", import.meta.url), "utf8");
+  if (!/placeholder="Ask your question here"/.test(card)) say("the ask box does not say Ask your question here");
+  if (/a challenge, a deadline/.test(card)) say("the old list of examples is back in the ask box");
+  if (!/rows=\{2\}/.test(card)) say("the ask box is not small");
 }
 
 // Thanks, on a question and on its answer. Andrew, 2026-09-20: "please have
