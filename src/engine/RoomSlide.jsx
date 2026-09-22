@@ -16,7 +16,6 @@
 
 import { useEffect, useState } from "react";
 import { SLIDE, TEXT } from "./tokens.js";
-import { useSurround } from "./imageColor.js";
 import { GameDuring, GameSpread, GameQuestions, GameQuestion, GameTeams } from "./GameSlides.jsx";
 
 const FONT = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -297,18 +296,38 @@ function Video({ s, g }) {
   );
 }
 
-// A photo dropped on the day, whole, and nothing else on the screen with it.
+// A photo, whole, and nothing else on the screen with it.
+//
 // Andrew, 2026-09-22: "it's not showing the whole pictures." Filling the frame
 // cropped a tall phone photo to a band across its middle, so the picture sits
-// inside the frame, and what is left over takes the average of the picture's
-// own edge rather than black. `imageColor.js` does the reading.
-function Image({ s }) {
-  const bg = useSurround(s.image) || "#000";
+// inside the frame. What is left over was black, and then the average of the
+// picture's own edge, which came out beige on most photographs: "it's gonna be
+// an ugly beige every time. can we do this instead. take the image, make it
+// huge and out of focus, and use that as the background instead?"
+//
+// So the bars are the picture again, blown up past the edges of the frame and
+// thrown out of focus. Two copies of one file, so the browser fetches once.
+//
+// The backdrop is drawn at 130 percent and hung 15 percent out on each side,
+// because a blur fades out at the edge of what it is blurring: at 44px of
+// blur the soft edge runs about 130px, and the overhang has to cover it or
+// the wall gets a halo round the outside. Black underneath, for the moment
+// before the file arrives.
+export function Photo({ src }) {
+  if (!src) return null;
   return (
-    <div style={{ position: "absolute", inset: 0, background: bg }}>
-      <img src={s.image} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", background: "#000" }}>
+      <img src={src} alt="" aria-hidden="true"
+        style={{ position: "absolute", left: "-15%", top: "-15%", width: "130%", height: "130%",
+          objectFit: "cover", filter: "blur(44px)", display: "block" }} />
+      <img src={src} alt=""
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
     </div>
   );
+}
+
+function Image({ s }) {
+  return <Photo src={s.image} />;
 }
 
 function Podcast({ s, g }) {

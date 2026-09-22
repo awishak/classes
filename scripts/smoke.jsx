@@ -111,7 +111,6 @@ import { normSlot as normSlotT } from "../src/engine/dayplan.js";
 import Drawer, { SHELVES, shelfOf } from "../src/engine/Drawer.jsx";
 import Slide, { slideOf } from "../src/engine/Slide.jsx";
 import RoomSlide from "../src/engine/RoomSlide.jsx";
-import { edgeAverage, sampleEdge } from "../src/engine/imageColor.js";
 import { castFor } from "../src/engine/gameCast.js";
 import GamesPage from "../src/engine/GamesPage.jsx";
 import DayDoc, { docMarkdown } from "../src/engine/DayDoc.jsx";
@@ -2078,62 +2077,37 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (minutesLeft(bad, at(9, 30)) !== null) { console.error("  FAIL  meets: a class with no times is in session"); failedEarly++; }
 }
 
-// The colour behind a photo on the wall. Andrew, 2026-09-22: "the background
-// color should be derived from the color of the image", and, on the caption
+// A photo on the wall. Andrew, 2026-09-22: "take the image, make it huge and
+// out of focus, and use that as the background instead", and, on the caption
 // that used to sit over it, "if i have an image, all i want is the image."
-//
-// The colour is the average of the ring of pixels around the edge of the
-// picture, because the ring is what the bars touch. The average is the honest
-// one: nothing is written over a photo any more, so a pale picture is allowed
-// to give pale bars.
 {
-  const say = (m) => { console.error("  FAIL  photo colour: " + m); failedEarly++; };
-  // A picture drawn by hand, RGBA, the way a canvas hands one over.
-  const px = (w, h, at) => {
-    const d = new Uint8ClampedArray(w * h * 4);
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const [r, g, b, a = 255] = at(x, y);
-        const i = (y * w + x) * 4;
-        d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = a;
-      }
-    }
-    return d;
-  };
-  const onEdge = (x, y, w, h) => x === 0 || y === 0 || x === w - 1 || y === h - 1;
-
-  // A red ring round a white middle. The bars take the ring.
-  const ring = px(6, 6, (x, y) => (onEdge(x, y, 6, 6) ? [220, 38, 38] : [255, 255, 255]));
-  if (edgeAverage(ring, 6, 6, 1) !== "#dc2626") say("the edge of a picture is not the colour that came out: " + edgeAverage(ring, 6, 6, 1));
-
-  // A pale picture gives pale bars. Nothing darkens the average.
-  const pale = px(4, 4, () => [250, 250, 250]);
-  if (edgeAverage(pale, 4, 4, 1) !== "#fafafa") say("a pale picture was darkened; the average is the honest one");
-
-  // A transparent edge is not a colour, so it counts for nothing.
-  const glass = px(4, 4, (x) => (x === 0 ? [0, 0, 255, 0] : [0, 128, 0]));
-  if (edgeAverage(glass, 4, 4, 1) !== "#008000") say("a transparent edge was counted as a colour: " + edgeAverage(glass, 4, 4, 1));
-
-  // A picture with nothing you can see hands back nothing, and the caller
-  // keeps black.
-  if (edgeAverage(px(2, 2, () => [0, 0, 0, 0]), 2, 2, 1) !== "") say("a picture with nothing in it handed back a colour");
-
-  // Reading pixels is a browser. Server side there is nothing to read, and
-  // the wall falls back to black rather than throwing.
-  if (sampleEdge({ naturalWidth: 10, naturalHeight: 10 }) !== "") say("sampling asked for a canvas where there is none");
-
-  // On the wall: the photo fills the screen, it is not boxed inside the 16:9
-  // stage, and no words are drawn over it.
+  const say = (m) => { console.error("  FAIL  photo: " + m); failedEarly++; };
   const photo = { type: "slide", template: "image", image: "https://e.com/theo.jpg", title: "Theo", label: "Theo" };
   const wall = renderToString(<RoomSlide slide={photo} ground="slate" fit />);
-  if (!wall.includes('src="https://e.com/theo.jpg"')) say("the photo is not on the wall");
+
+  // Two copies of one file: the backdrop, blown up and out of focus, and the
+  // picture itself, whole.
+  const copies = (wall.match(/https:\/\/e\.com\/theo\.jpg/g) || []).length;
+  if (copies !== 2) say("a photo draws " + copies + " copies of the file, not two");
+  if (!wall.includes("blur(44px)")) say("the backdrop is in focus");
+  if (!wall.includes("object-fit:contain")) say("the photo itself is not whole");
+  if (!wall.includes("object-fit:cover")) say("the backdrop does not fill the screen");
+  // The blur fades out at the edge of what it blurs, so the backdrop has to
+  // hang outside the frame or the screen gets a halo round the outside.
+  if (!wall.includes("width:130%")) say("the backdrop is not blown up past the edges, so the blur will show a halo");
+
+  // Nothing is written over a photo, on either path to the wall.
   if (wall.includes("Theo")) say("a photo on the wall carries words over it");
-  if (wall.includes("width:1280px")) say("a photo is boxed inside the stage instead of taking the wall");
-  const thumb = renderToString(<RoomSlide slide={photo} ground="slate" />);
-  if (!thumb.includes("width:1280px")) say("a photo's thumbnail lost the 16:9 stage");
   const wallCast = renderToString(<CastContent config={cfg0} plan={{}} data={{}}
     cast={{ type: "media", media: "image", src: "https://e.com/shot.jpg", title: "The billboard on 101" }} />);
   if (wallCast.includes("The billboard on 101")) say("a photo cast as a file still carries its headline in the corner");
+  if (!wallCast.includes("blur(44px)")) say("a photo cast as a file draws differently from a photo on a row");
+
+  // The photo takes the wall itself. The stage is 16:9 and a projector is
+  // whatever it is, so boxing the photo in the stage and the stage on the
+  // wall letterboxes it twice. A thumbnail keeps the stage, being 16:9 itself.
+  if (wall.includes("width:1280px")) say("a photo is boxed inside the stage instead of taking the wall");
+  if (!renderToString(<RoomSlide slide={photo} ground="slate" />).includes("width:1280px")) say("a photo's thumbnail lost the 16:9 stage");
 }
 
 // A note with a file plays as slides behind one button: the headline, the
