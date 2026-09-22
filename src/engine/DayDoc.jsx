@@ -30,6 +30,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Slide, { slideOf } from "./Slide.jsx";
+import { withoutUrls } from "./RoomSlide.jsx";
 import { typeOf, allTypes } from "./blocks.js";
 import { mediaLabel } from "./media.js";
 import { normSlot, sumRanges, rangeLabel, parseRange } from "./dayplan.js";
@@ -1006,7 +1007,15 @@ export default function DayDoc({
         const said = [body, ...(notesOf[it.id] || [])].filter(Boolean);
         cards.push({ key: it.id, cast: c.cast, label: c.label, go: c.go, n: itemNumber[it.id] || "",
           notes: said.join(" · "), said, menu: () => itemMenu(g.head),
-          words: itemWords(it, blk, seed), urls: [blk?.url, ...(it.links || []).map(l => l.url)],
+          // The words without the address in them. The slide already reads
+          // this way, and a line that spells out
+          // news.google.com/home?hl=en-US&gl=US&ceid=US:en beside a chip that
+          // says google.com is saying it twice, the ugly way. Andrew,
+          // 2026-09-22: "not loving that it is showign teh whole url and not a
+          // link chip." Every address on the line is a chip, so the sentence
+          // loses nothing by giving them up.
+          words: withoutUrls(itemWords(it, blk, seed)),
+          urls: [blk?.url, ...(it.links || []).map(l => l.url), ...urlsIn(it.text)],
           id: it.id, line: g.head, bodyLine: lines.find(l => l.key === "b:" + it.id) || null,
           blk, comments: g.comments,
           addNote: onInsertRow ? () => focusLine(onInsertRow(sec.slot, it.id, 1), 0) : null,
@@ -1014,7 +1023,8 @@ export default function DayDoc({
         g.comments.filter(n => n.it.slide).forEach(n => {
           const nc = castLine(n);
           cards.push({ key: n.it.id, cast: nc.cast, label: nc.label, go: nc.go, n: "", notes: "", said: [], menu: () => itemMenu(n),
-            words: itemWords(n.it, n.blk, n.seed), urls: [n.blk?.url, ...(n.it.links || []).map(l => l.url)],
+            words: withoutUrls(itemWords(n.it, n.blk, n.seed)),
+            urls: [n.blk?.url, ...(n.it.links || []).map(l => l.url), ...urlsIn(n.it.text)],
             id: n.it.id, comments: [],
             look: n.it.slideLook || "", setLook: (v) => onSaveItem && onSaveItem(sec.slot, n.it.id, { slideLook: v || undefined }) });
         });

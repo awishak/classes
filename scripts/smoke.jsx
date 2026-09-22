@@ -3595,6 +3595,16 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       sections={[["open", "Open"]]} view="slides" teaching />);
     if (!/class="deck-words">Stanford/.test(bare)) say("a row with no notes does not show its own words either");
     if (/class="doc-line lv-comment"/.test(bare)) say("a row with no notes drew a note anyway");
+    // The address comes out of the sentence and stays on a chip. Andrew,
+    // 2026-09-22: "not loving that it is showign teh whole url and not a link
+    // chip." The slide already reads this way, so the caption uses the slide's
+    // own rule rather than a second one.
+    const linked = renderToString(<DayDoc {...props} sections={[["open", "Open"]]}
+      slotItems={{ open: { title: "Open", items: [{ id: "i8", text: "Look at Google News https://news.google.com/home?hl=en-US&gl=US" }] } }}
+      view="slides" teaching />);
+    if (!/class="deck-words">Look at Google News</.test(linked)) say("the caption did not give up the address");
+    if (/deck-words">[^<]*https:/.test(linked)) say("the whole address is still in the sentence");
+    if (!linked.includes(">news.google.com<")) say("the address on the line is not a chip");
   } catch (err) { say("the slides threw: " + err.message); }
 }
 

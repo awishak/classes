@@ -49,7 +49,7 @@ function Linked({ text, accent }) {
 // The words with any web address taken out, for the slide. The row's label
 // keeps the address, because the label is how a row knows it is the one on
 // screen.
-const withoutUrls = (s) => String(s || "").replace(URL_RE, "").replace(/\s+([,.;:!?])/g, "$1").replace(/\s{2,}/g, " ").trim();
+export const withoutUrls = (s) => String(s || "").replace(URL_RE, "").replace(/\s+([,.;:!?])/g, "$1").replace(/\s{2,}/g, " ").trim();
 
 // What an article's own page says about itself, read through the class site's
 // reader: the headline and the picture. A line on the day that is only a link
