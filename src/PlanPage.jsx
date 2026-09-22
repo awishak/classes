@@ -68,6 +68,7 @@ const SESSIONS = [
       ] },
       { name: "A link on a slide", items: [
         ["The article, not the address", "Andrew: \"when there is a link in a line on the dashboard, please don't give me the whole url on the slide, it's ugly. give me a nice link\", and: \"you cold give me the actual articles.\" A line with a link on it, typed into the words or on its chip, goes up as the article: the line's own words as the headline, the page's own headline under them, the site in the accent, the page's picture where the reader finds one. A line that is only an address gets the page's headline as its own. The address is gone from every slide's words; a note under an item that holds one shows the site instead."],
+        ["No second layout", "Andrew: \"it loads a differnet layout for a second before loading the correct layout.\" The wall drew the clipping while it asked the reader for the page's picture, then swapped to the picture layout. Now what the dashboard has already learned about the page travels with the cast, so the wall paints the finished layout on its first frame; and a wall that does have to ask holds bare ground for the moment rather than drawing the wrong layout first."],
       ] },
     ],
   },

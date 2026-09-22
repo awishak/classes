@@ -55,18 +55,47 @@ const withoutUrls = (s) => String(s || "").replace(URL_RE, "").replace(/\s+([,.;
 // reader: the headline and the picture. A line on the day that is only a link
 // gets the page's own headline on its slide, which is the article, rather than
 // its address.
-function useArticleMeta(url, have) {
-  const [meta, setMeta] = useState({ image: have || "", title: "" });
+//
+// What the reader said about a page is kept for the session, so a slide the
+// dashboard has already drawn as a thumbnail carries the picture in its cast
+// and the wall paints the finished layout at once. Andrew, 2026-09-22: "it
+// loads a differnet layout for a second before loading the correct layout."
+// A page not yet read is `loading` until the reader answers or two and a half
+// seconds pass, whichever is first.
+const META = new Map();
+const WAIT = 2500;
+function useArticleMeta(url, have, haveTitle, need = { image: true, title: false }) {
+  const known = url ? META.get(url) : null;
+  // A page the dashboard already read and found nothing on is settled too.
+  const settled = !url || !!known || !!need.read || ((!!have || !need.image) && (!!haveTitle || !need.title))
+    || typeof document === "undefined";   // a server render has no reader to wait for
+  const [meta, setMeta] = useState(known || { image: have || "", title: haveTitle || "" });
+  const [loading, setLoading] = useState(!settled);
   useEffect(() => {
-    if (!url || typeof fetch === "undefined") return undefined;
+    if (!url || typeof fetch === "undefined" || META.has(url)) return undefined;
     let alive = true;
+    const t = setTimeout(() => { if (alive) setLoading(false); }, WAIT);
     fetch("/api/read?url=" + encodeURIComponent(url))
       .then(r => r.json())
-      .then(d => { if (alive && d && d.ok) setMeta({ image: have || d.image || "", title: d.title || "" }); })
-      .catch(() => {});
-    return () => { alive = false; };
-  }, [url, have]);
-  return { image: have || meta.image, title: meta.title };
+      .then(d => {
+        const got = { image: (d && d.ok && d.image) || "", title: (d && d.ok && d.title) || "" };
+        META.set(url, got);
+        if (alive) { setMeta(got); setLoading(false); }
+      })
+      .catch(() => { if (alive) setLoading(false); });
+    return () => { alive = false; clearTimeout(t); };
+  }, [url]);
+  return { image: have || meta.image, title: haveTitle || meta.title, loading: settled ? false : loading };
+}
+// What is already known about a page, for a cast built on the dashboard.
+const knownMeta = (url) => (url && META.get(url)) || null;
+// A slide about to be sent, with what this browser has learned about its page
+// since the slide was built.
+export function withKnown(cast) {
+  if (!cast || cast.type !== "slide" || !cast.url || cast.read) return cast;
+  const known = knownMeta(cast.url);
+  if (!known) return cast;
+  return { ...cast, image: cast.image || known.image || undefined, pageTitle: cast.pageTitle || known.title || undefined, read: true };
 }
 const useLeadImage = (url, have) => useArticleMeta(have ? "" : url, have).image;
 
@@ -199,8 +228,11 @@ function NotesBeside({ s, g, children, width }) {
 // articles on one day can look different; `look` on the row settles it.
 function Article({ s, g }) {
   const clipping = s.look === "clipping";
-  const meta = useArticleMeta(s.url, s.image);
+  const meta = useArticleMeta(s.url, s.image, s.pageTitle, { image: !clipping && s.look !== "picture", title: !!s.fromLine && !s.title, read: !!s.read });
   const img = clipping ? "" : meta.image;
+  // Until the reader answers there is no knowing which layout this is, and a
+  // layout that changes a second in is worse than a beat of bare ground.
+  if (meta.loading) return null;
   // What goes big and what goes under it. A row from the library carries the
   // article's title and Andrew's claim. A line on the day carries only its
   // own words, or nothing but the address; the page's own headline goes
@@ -497,8 +529,12 @@ function plainSlideFor({ item, block, seed, title, claim, notes, tag, assignment
   // the article's to draw on and fetches the page's own.
   const lineUrl = (item?.links || [])[0]?.url || (String(item?.text || "").match(/https?:\/\/[^\s<>"')]+/) || [])[0] || "";
   const url = block?.url || lineUrl;
+  const known = knownMeta(url);
   const base = { type: "slide", label: words, title: withoutUrls(title), headline: withoutUrls(claim), url, site: hostOf(url), notes: notes && notes.length ? notes : undefined,
-    look: item?.slideLook || undefined, fromLine: !block?.url && !!lineUrl || undefined };
+    look: item?.slideLook || undefined, fromLine: !block?.url && !!lineUrl || undefined,
+    // The page's picture and headline, when this browser has already read
+    // the page for a thumbnail, so the wall need not read it again.
+    image: known?.image || undefined, pageTitle: known?.title || undefined, read: known ? true : undefined };
   const sub = block?.type !== "board" ? (block?.body || "").trim() : "";
 
   // A game from the game panel is its ticket, with the count of its questions.

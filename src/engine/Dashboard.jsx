@@ -47,7 +47,7 @@ import Drawer, { DRAWER_CSS } from "./Drawer.jsx";
 import TermOutline, { TERM_CSS } from "./TermOutline.jsx";
 import Slide, { slideOf, SLIDE_CSS, readSlidesOn, writeSlidesOn } from "./Slide.jsx";
 import DayDoc, { DOC_CSS, Menu as RowMenu } from "./DayDoc.jsx";
-import { lookOnto } from "./RoomSlide.jsx";
+import { lookOnto, withKnown } from "./RoomSlide.jsx";
 import { TemplatesPanel, HistoryPanel } from "./DayTools.jsx";
 
 // Eight items at 39px, plus the padding: the tallest a row menu usually gets,
@@ -4751,7 +4751,12 @@ export default function Dashboard({ config, daySlug = "" }) {
   pickedRef.current = picked;
 
   const liveLabel = live?.cast?.label || null;
-  const castNow = (payload) => {
+  const castNow = (raw) => {
+    // A slide's cast is built when its row is drawn, which is before the
+    // thumbnail has heard back from the reader. What this browser knows about
+    // the page by the time the slide is sent goes with it, so the wall paints
+    // the finished layout at once.
+    const payload = withKnown(raw);
     cast(payload);
     const name = payload?.label || payload?.title;
     if (!name || payload.type === "black") return;
