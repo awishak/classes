@@ -2255,13 +2255,24 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
         }
         map[it.id] = ++n;
         const b = it.blockId ? blockOf(it.blockId) : null;
+        const seed = it.seedId ? seedById(it.seedId) : null;
         const words = (b ? b.headline || b.title : it.claim || it.text) || "";
         // What this row puts on the screen, as the payload rather than as the
         // press, so the rail can draw the slide before anybody presses it.
-        const payload = words ? (b?.url
-          ? { ...castFromLink({ label: b.title, url: b.url }), title: words, label: words }
-          : { type: "quote", tag: docLabelOf[k], title: words, label: words }) : null;
+        // The same slide the row's own button sends: the doc reads it off the
+        // row with slideOf, and so does this. Next used to send a plain quote
+        // of the words for every row, so a dropped photo went up as its file
+        // name. Andrew, 2026-09-22: "when i go left right, even though i have
+        // images in teh dashboard, it is only showing text."
+        const own = (b ? b.title : seed ? seed.title : it.text) || "";
+        // An empty line has nothing to put up, so Next and back step past it.
+        const has = words || own || (it.links || []).length || b?.media?.src || b?.url || it.gameId;
+        const payload = it.board || it.feature || !has ? null
+          : slideOf({ item: it, block: b, seed, title: own, claim: it.claim || b?.headline || "", tag: docLabelOf[k],
+              features: FEATURES, assignments: assignmentList, games })
+            || { type: "quote", tag: docLabelOf[k], title: words, label: words };
         const cast = it.board && onCastBoard ? () => { said(it.id); onCastBoard(it.board, it.index); }
+          : it.feature && onFeature ? () => { said(it.id); onFeature(it.feature); }
           : payload ? () => { said(it.id); castNow(payload); } : null;
         flatRows.push({ id: it.id, blockId: it.blockId, item: it, where: docLabelOf[k], cast, payload, notes: [] });
       });
@@ -3983,21 +3994,33 @@ export default function Dashboard({ config, daySlug = "" }) {
   // class; instead it says which key was pressed on a channel only this
   // browser can hear, and the dashboard, open in another window of the same
   // browser, does what Next, back and Black do.
+  // A room screen on another machine sends the key to the server with the
+  // PIN, and the server writes it onto the live row as `ask`; that arrives
+  // here on the realtime feed. A key can come both ways, so each is made
+  // once by its id, and one older than a few seconds (the row as it was when
+  // this page opened) is left alone.
+  const heard = useRef(new Set());
+  const roomKey = (m) => {
+    if (!m || m.room && m.room !== config.storageKey) return;
+    if (m.id) { if (heard.current.has(m.id)) return; heard.current.add(m.id); }
+    if (m.what === "next") stepShow(1);
+    else if (m.what === "prev") stepShow(-1);
+    else if (m.what === "black") {
+      const cur = liveRef.current?.cast;
+      cast(cur?.type === "black" ? null : { type: "black", label: "Black screen" });
+    }
+  };
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") return undefined;
     const ch = new BroadcastChannel("classes-room-keys");
-    ch.onmessage = (ev) => {
-      const m = ev.data || {};
-      if (m.room !== config.storageKey) return;
-      if (m.what === "next") stepShow(1);
-      else if (m.what === "prev") stepShow(-1);
-      else if (m.what === "black") {
-        const cur = liveRef.current?.cast;
-        cast(cur?.type === "black" ? null : { type: "black", label: "Black screen" });
-      }
-    };
+    ch.onmessage = (ev) => roomKey(ev.data);
     return () => ch.close();
   }, [cast, config.storageKey]);
+  const ask = live?.ask;
+  useEffect(() => {
+    if (!ask?.id || !ask.at || Date.now() - ask.at > 8000) return;
+    roomKey(ask);
+  }, [ask?.id]);
 
   // ─── the rails (my screen preference, so it lives in this browser) ───
   // Which tab is open in each rail, and whether the prep rail is showing at

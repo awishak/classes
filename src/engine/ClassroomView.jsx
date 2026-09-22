@@ -13,6 +13,8 @@ import { currentDay, dayTitles } from "./days.js";
 import RoomSlide, { ROOM_FONTS_HREF } from "./RoomSlide.jsx";
 import { ENGINE_LIST } from "../config/registry.js";
 import { mediaLabel } from "./media.js";
+import { savedPin, rememberPin, checkPin, PinForm } from "../InstructorGate.jsx";
+import { authHeaders } from "./session.js";
 import PickMark from "./Pick.jsx";
 import * as TOKENS from "./tokens.js";
 import { setClassFavicon } from "./favicon.js";
@@ -536,12 +538,31 @@ export default function ClassroomView({ config }) {
     ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
 
   // F toggles fullscreen so the room screen can be driven from the room machine.
-  // Right and left go to the next slide and back, and space goes to black:
-  // this screen never writes to the cast bus, so the key is said on a channel
-  // only this browser can hear, and the dashboard, open in another window of
-  // the same browser, makes the move.
+  // Right and left go to the next slide and back, and space goes to black.
+  // This screen never writes to the cast bus with the key in the bundle, so
+  // a student with /today open cannot drive the class. A key pressed here
+  // goes two ways at once: on a channel only this browser can hear, for a
+  // dashboard open in another window of it, and to the server with the
+  // instructor PIN, which writes the request onto the live row for a
+  // dashboard open on any machine. Both carry the same id, so the move is
+  // made once. Andrew, 2026-09-22: "yeah need a pin check."
+  const [asking, setAsking] = useState(null);   // the key waiting on a PIN
+  const send = useRef(null);
+  send.current = async (what) => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    try { new BroadcastChannel("classes-room-keys").postMessage({ room: config.storageKey, what, id }); } catch { /* no channel here */ }
+    const pin = savedPin();
+    const auth = await authHeaders();
+    if (!pin && !auth.Authorization) { setAsking(what); return; }
+    fetch("/api/room-key", {
+      method: "POST", headers: { "Content-Type": "application/json", ...auth },
+      body: JSON.stringify({ pin, room: config.storageKey, what, id }),
+    }).then(async r => {
+      // A PIN this machine remembered that no longer matches: ask again.
+      if (r.status === 401) { rememberPin(""); setAsking(what); }
+    }).catch(() => {});
+  };
   useEffect(() => {
-    const ch = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("classes-room-keys") : null;
     const onKey = (e) => {
       const t = e.target;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
@@ -551,13 +572,14 @@ export default function ClassroomView({ config }) {
         else el.requestFullscreen?.();
         return;
       }
+      if (e.key === "Escape") { setAsking(null); return; }
       const what = e.key === "ArrowRight" ? "next" : e.key === "ArrowLeft" ? "prev" : e.key === " " ? "black" : "";
-      if (!what || !ch) return;
+      if (!what) return;
       e.preventDefault();
-      ch.postMessage({ room: config.storageKey, what });
+      send.current(what);
     };
     window.addEventListener("keydown", onKey);
-    return () => { window.removeEventListener("keydown", onKey); ch?.close(); };
+    return () => window.removeEventListener("keydown", onKey);
   }, [config.storageKey]);
 
   return (
@@ -570,6 +592,17 @@ export default function ClassroomView({ config }) {
           Crashing Out runs its marquee across the top and stands Tubey in the
           corner; every other theme leaves the wall to whatever is cast. */}
       <ThemeTopper theme={theme} lines={[config.code, "ANSWER ON YOUR PHONE"]} fixed />
+      {asking ? (
+        <div style={{ position: "absolute", right: "clamp(20px,3vw,48px)", bottom: "clamp(20px,3vw,48px)", zIndex: 30, padding: 20, borderRadius: 16,
+          background: TOKENS.SURFACE.card, color: TOKENS.TEXT.primary, boxShadow: "0 24px 60px -20px rgba(0,0,0,.6)" }}>
+          <PinForm compact title="Drive the screen from here" note="The PIN, once; this machine remembers it."
+            onDone={async (pin) => {
+              const r = await checkPin(pin);
+              if (r.ok) { rememberPin(pin); const what = asking; setAsking(null); send.current(what); }
+              return r;
+            }} />
+        </div>
+      ) : null}
       {theme === "crashing" ? (
         <div style={{ position: "absolute", left: "2.5vw", bottom: "3vh", zIndex: 5, pointerEvents: "none",
           display: "flex", alignItems: "flex-end", gap: "1.2vw" }}>

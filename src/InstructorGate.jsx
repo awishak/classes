@@ -27,6 +27,11 @@ const KEY = "classes-instructor-pin";
 export function savedPin() {
   try { return localStorage.getItem(KEY) || ""; } catch { return ""; }
 }
+// A PIN that checked out, kept the way the gate keeps one, so the room
+// screen on the podium machine can remember it too.
+export function rememberPin(pin) {
+  try { localStorage.setItem(KEY, pin); } catch { /* private mode */ }
+}
 
 export async function checkPin(pin) {
   try {
