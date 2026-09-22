@@ -59,6 +59,14 @@ const SESSIONS = [
         ["Documents", "PDF, PowerPoint, Keynote, Word, Pages, Excel, Numbers, CSV, text, Markdown, RTF and zip, on top of video, image and audio. Still 50 MB a file, which is the bucket's own cap. The server checks the name as well as the type, because Safari and Chrome hand over no type for a Keynote or a Markdown file."],
         ["On the room screen", "A PDF shows as itself. A PowerPoint, Word or Excel file shows through Microsoft's viewer, which reads the file's public link; the file's own link waits in the corner for the day the viewer stays blank. Keynote, Pages and Numbers have no viewer, so they go up as a title card with the way to open the file. A document's thumbnail in the Slides view is its headline under the kind of file, not a viewer in every row."],
         ["The attach button", "Attach a clip, a photo or a voice memo, on the Add an item sheet and in the repository, now says Attach a file and takes the same list."],
+        ["The whole photo", "Andrew: \"it's not showing teh whole picutres.\" A photo on the wall filled the frame and a tall phone photo was cropped to a band across its middle. The picture sits inside the frame on black now, on the wall and in the Slides thumbnail."],
+      ] },
+      { name: "The room's keys", items: [
+        ["Right, left, space", "Andrew: \"i shoud be able to press left or right to go to teh next slide in room view. give me that ability, and to press spacebar to go to a black screen.\" On the room screen, right is Next, left is back, space is Black and space again takes the black down. On a board, right and left step its ideas. The same three keys work on the dashboard."],
+        ["How the key gets there", "The room screen still never writes to the cast bus, so a student with /today open on a phone cannot drive the class. The key is said on a channel only this browser can hear, and the dashboard, open in another window of the same browser, makes the move. A room screen opened on a different machine hears its own F for fullscreen and nothing else."],
+      ] },
+      { name: "A link on a slide", items: [
+        ["The article, not the address", "Andrew: \"when there is a link in a line on the dashboard, please don't give me the whole url on the slide, it's ugly. give me a nice link\", and: \"you cold give me the actual articles.\" A line with a link on it, typed into the words or on its chip, goes up as the article: the line's own words as the headline, the page's own headline under them, the site in the accent, the page's picture where the reader finds one. A line that is only an address gets the page's headline as its own. The address is gone from every slide's words; a note under an item that holds one shows the site instead."],
       ] },
     ],
   },

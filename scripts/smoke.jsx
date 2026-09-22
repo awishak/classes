@@ -4441,6 +4441,23 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (sl(13).due !== "Oct 9" || sl(13).dueTime !== "11:59 PM") say("an assignment does not carry its due date from the class");
   if (sl(13).url !== "https://docs.google.com/d/1") say("an assignment does not link to its instructions");
   if (sl(16).chapter !== "Chapter 8" || sl(16).chapterName !== "Sport and Mythology" || sl(16).book !== "Communication and Sport") say("a chapter's title is not split into book and chapter");
+  // A line with a link on it is the article, and the address is not on the
+  // slide: the words lose it, the site stands for it, and a line that was
+  // only an address leaves the headline to the page's own.
+  const linked = slideOf({ item: { id: "l1", text: "Read this before class https://www.nytimes.com/2026/09/22/sports/x.html" }, title: "Read this before class https://www.nytimes.com/2026/09/22/sports/x.html" });
+  if (linked.template !== "article") say("a line with a link makes a " + linked.template + " slide, want article");
+  if (linked.title !== "Read this before class") say("the address is still in the slide's words: " + JSON.stringify(linked.title));
+  if (linked.label !== "Read this before class https://www.nytimes.com/2026/09/22/sports/x.html") say("the slide's label lost the address, so the row cannot read as live");
+  if (!linked.fromLine || linked.site !== "nytimes.com") say("a line's link is not marked as the line's, or the site is off: " + linked.site);
+  const bare = slideOf({ item: { id: "l2", text: "https://www.nytimes.com/2026/09/22/sports/x.html" }, title: "https://www.nytimes.com/2026/09/22/sports/x.html" });
+  if (bare.title !== "" || bare.template !== "article") say("a line that is only an address keeps it as the headline");
+  const lh = renderToString(<RoomSlide slide={linked} ground="paper" />);
+  if (lh.replace(/<[^>]+>/g, " ").includes("nytimes.com/2026")) say("the whole address is drawn on the slide");
+  if (!lh.includes("Read this before class") || !lh.includes(">nytimes.com<")) say("the linked line's slide lost its words or its site");
+  const chipped = slideOf({ item: { id: "l3", text: "The Popovich piece", links: [{ id: "k", label: "grantland.com", url: "https://grantland.com/x" }] }, title: "The Popovich piece" });
+  if (chipped.template !== "article" || !chipped.fromLine) say("a line's link chip does not make the article slide");
+  const blocked = slideOf({ item: I, block: { type: "link", title: "A story", url: "https://e.com/s" }, title: "A story" });
+  if (blocked.fromLine) say("a block's link is marked as the line's");
   // Notes are on a slide only when the row asks.
   if (sl(0).notes) say("notes arrived on a slide nobody asked for");
   const withNotes = slideOf({ ...cases2[0][1], notes: ["Daejon Love", "The World Cup"] });

@@ -3957,14 +3957,47 @@ export default function Dashboard({ config, daySlug = "" }) {
       if (e.key === "Enter" && pickedRef.current?.cast) { e.preventDefault(); pickedRef.current.cast(); return; }
 
       if (e.key === "Escape" && cur) { e.preventDefault(); cast(null); return; }
-      if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && cur?.type === "board" && stepRef.current) {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
         e.preventDefault();
-        stepRef.current(e.key === "ArrowRight" ? 1 : -1);
+        stepShow(e.key === "ArrowRight" ? 1 : -1);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [cast]);
+
+  // Right and left walk the show: a board steps through its ideas, anything
+  // else goes to the next row or back to the one before. Next and back are
+  // worked out further down, so they are reached through a ref.
+  const showRef = useRef({ next: () => {}, prev: () => {} });
+  const stepShow = (dir) => {
+    const cur = liveRef.current?.cast;
+    if (cur?.type === "board" && stepRef.current) return stepRef.current(dir);
+    return dir > 0 ? showRef.current.next() : showRef.current.prev();
+  };
+
+  // The room screen's keys. Andrew, 2026-09-22: "i shoud be able to press
+  // left or right to go to teh next slide in room view ... and to press
+  // spacebar to go to a black screen." The room screen never writes to the
+  // cast bus, so a student with /today open on a phone cannot drive the
+  // class; instead it says which key was pressed on a channel only this
+  // browser can hear, and the dashboard, open in another window of the same
+  // browser, does what Next, back and Black do.
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return undefined;
+    const ch = new BroadcastChannel("classes-room-keys");
+    ch.onmessage = (ev) => {
+      const m = ev.data || {};
+      if (m.room !== config.storageKey) return;
+      if (m.what === "next") stepShow(1);
+      else if (m.what === "prev") stepShow(-1);
+      else if (m.what === "black") {
+        const cur = liveRef.current?.cast;
+        cast(cur?.type === "black" ? null : { type: "black", label: "Black screen" });
+      }
+    };
+    return () => ch.close();
+  }, [cast, config.storageKey]);
 
   // ─── the rails (my screen preference, so it lives in this browser) ───
   // Which tab is open in each rail, and whether the prep rail is showing at
@@ -5218,6 +5251,7 @@ export default function Dashboard({ config, daySlug = "" }) {
     const before = liveAt > 0 ? rows[liveAt - 1] : null;
     if (before?.cast) before.cast();
   };
+  showRef.current = { next: castNext, prev: castPrev };
   // The number Next will put up, counted the way the day numbers its rows.
   const nextNum = upNextRow
     ? (flowOrderRef.current || []).findIndex(r => r.id === upNextRow.id) + 1

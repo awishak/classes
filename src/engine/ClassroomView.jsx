@@ -2,7 +2,9 @@
 // (/comm118/today). It holds the idle screen until the instructor casts
 // something from the Dashboard, then swaps content with the chosen animation.
 //
-// Read-only: this surface never writes to the cast bus. Press F for fullscreen.
+// Read-only: this surface never writes to the cast bus. Press F for fullscreen,
+// right and left for the next slide and back, space for black; those three
+// reach the dashboard in another window of the same browser.
 
 import { useEffect, useRef, useState } from "react";
 import { useLive } from "./live.js";
@@ -534,16 +536,29 @@ export default function ClassroomView({ config }) {
     ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
 
   // F toggles fullscreen so the room screen can be driven from the room machine.
+  // Right and left go to the next slide and back, and space goes to black:
+  // this screen never writes to the cast bus, so the key is said on a channel
+  // only this browser can hear, and the dashboard, open in another window of
+  // the same browser, makes the move.
   useEffect(() => {
+    const ch = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("classes-room-keys") : null;
     const onKey = (e) => {
-      if (e.key !== "f" && e.key !== "F") return;
-      const el = document.documentElement;
-      if (document.fullscreenElement) document.exitFullscreen?.();
-      else el.requestFullscreen?.();
+      const t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (e.key === "f" || e.key === "F") {
+        const el = document.documentElement;
+        if (document.fullscreenElement) document.exitFullscreen?.();
+        else el.requestFullscreen?.();
+        return;
+      }
+      const what = e.key === "ArrowRight" ? "next" : e.key === "ArrowLeft" ? "prev" : e.key === " " ? "black" : "";
+      if (!what || !ch) return;
+      e.preventDefault();
+      ch.postMessage({ room: config.storageKey, what });
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+    return () => { window.removeEventListener("keydown", onKey); ch?.close(); };
+  }, [config.storageKey]);
 
   return (
     <div ref={stageRef} data-theme={theme} data-mode={mode} style={{ position: "fixed", inset: 0, background: STAGE, overflow: "hidden", fontFamily: F }}>

@@ -36,27 +36,39 @@ function L({ url, children, underline }) {
   );
 }
 
-// Words with their web addresses made into links.
+// Words with their web addresses made into links. The link reads as the site,
+// because the address itself is nobody's idea of a slide. Andrew, 2026-09-22:
+// "please don't give me the whole url on the slide, it's ugly."
+const URL_RE = /https?:\/\/[^\s<>"')]+/g;
 function Linked({ text, accent }) {
   return String(text || "").split(/(https?:\/\/[^\s<>"')]+)/g).map((p, i) => (i % 2
-    ? <a key={i} href={p} target="_blank" rel="noopener noreferrer" style={{ color: accent, textDecoration: "underline", textUnderlineOffset: 6, overflowWrap: "anywhere" }}>{p}</a>
+    ? <a key={i} href={p} target="_blank" rel="noopener noreferrer" style={{ color: accent, textDecoration: "underline", textUnderlineOffset: 6 }}>{hostOf(p) || p}</a>
     : p));
 }
 
-// The picture an article's own page names, read through the class site's reader.
-function useLeadImage(url, have) {
-  const [img, setImg] = useState(have || "");
+// The words with any web address taken out, for the slide. The row's label
+// keeps the address, because the label is how a row knows it is the one on
+// screen.
+const withoutUrls = (s) => String(s || "").replace(URL_RE, "").replace(/\s+([,.;:!?])/g, "$1").replace(/\s{2,}/g, " ").trim();
+
+// What an article's own page says about itself, read through the class site's
+// reader: the headline and the picture. A line on the day that is only a link
+// gets the page's own headline on its slide, which is the article, rather than
+// its address.
+function useArticleMeta(url, have) {
+  const [meta, setMeta] = useState({ image: have || "", title: "" });
   useEffect(() => {
-    if (have || !url || typeof fetch === "undefined") return undefined;
+    if (!url || typeof fetch === "undefined") return undefined;
     let alive = true;
     fetch("/api/read?url=" + encodeURIComponent(url))
       .then(r => r.json())
-      .then(d => { if (alive && d && d.ok && d.image) setImg(d.image); })
+      .then(d => { if (alive && d && d.ok) setMeta({ image: have || d.image || "", title: d.title || "" }); })
       .catch(() => {});
     return () => { alive = false; };
   }, [url, have]);
-  return img;
+  return { image: have || meta.image, title: meta.title };
 }
+const useLeadImage = (url, have) => useArticleMeta(have ? "" : url, have).image;
 
 // Fill the viewport with the stage, keeping its shape.
 function useFit(fit) {
@@ -187,7 +199,16 @@ function NotesBeside({ s, g, children, width }) {
 // articles on one day can look different; `look` on the row settles it.
 function Article({ s, g }) {
   const clipping = s.look === "clipping";
-  const img = useLeadImage(s.image || clipping ? "" : s.url, s.image);
+  const meta = useArticleMeta(s.url, s.image);
+  const img = clipping ? "" : meta.image;
+  // What goes big and what goes under it. A row from the library carries the
+  // article's title and Andrew's claim. A line on the day carries only its
+  // own words, or nothing but the address; the page's own headline goes
+  // where the title would, so the slide is the article rather than a link.
+  const page = s.fromLine ? meta.title : "";
+  const big = s.headline || s.title || page;
+  const small = s.headline ? s.title : (s.title ? page : "");
+  s = { ...s, headline: big, title: small };
   if (!clipping && (img || s.look === "picture")) {
     return (
       <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "700px minmax(0, 1fr)" }}>
@@ -199,7 +220,7 @@ function Article({ s, g }) {
           <div style={{ fontSize: s.headline ? 62 : 58, fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.06, textWrap: "balance" }}>
             <L url={s.url}>{s.headline || s.title}</L>
           </div>
-          {s.headline ? <div style={{ fontSize: 30, lineHeight: 1.3, color: g.dim }}><L url={s.url}>{s.title}</L></div> : null}
+          {s.title ? <div style={{ fontSize: 30, lineHeight: 1.3, color: g.dim }}><L url={s.url}>{s.title}</L></div> : null}
           {(s.notes || []).length ? <Bullets list={s.notes} size={30} g={g} /> : null}
         </div>
       </div>
@@ -214,7 +235,7 @@ function Article({ s, g }) {
             {s.site ? <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "0.02em", color: CRIMSON }}><L url={s.url}>{s.site}</L></div> : null}
             <div style={{ fontSize: beside ? 72 : 96, fontWeight: 700, letterSpacing: "-0.035em", lineHeight: 1 }}><L url={s.url}>{s.headline || s.title}</L></div>
             <div style={{ height: 3, background: "#1c1917" }} />
-            {s.headline ? <div style={{ fontSize: beside ? 28 : 36, lineHeight: 1.3, color: "#57534e" }}>{s.title}</div> : null}
+            {s.title ? <div style={{ fontSize: beside ? 28 : 36, lineHeight: 1.3, color: "#57534e" }}>{s.title}</div> : null}
             {s.sub ? <div style={{ fontSize: beside ? 28 : 38, lineHeight: 1.3, color: "#57534e" }}>{s.sub}</div> : null}
           </div>
         </div>
@@ -471,9 +492,13 @@ export const slideFor = (args) => lookOnto(plainSlideFor(args), args?.item?.slid
 
 function plainSlideFor({ item, block, seed, title, claim, notes, tag, assignments, features, games }) {
   const words = claim || title || "";
-  const url = block?.url || (item?.links || [])[0]?.url || (String(item?.text || "").match(/https?:\/\/[^\s<>"')]+/) || [])[0] || "";
-  const base = { type: "slide", label: words, title: title || "", headline: claim || "", url, site: hostOf(url), notes: notes && notes.length ? notes : undefined,
-    look: item?.slideLook || undefined };
+  // A line's own link, from its chip or typed into its words. A block's link
+  // is the block's; a line's says so, because the slide then has no title of
+  // the article's to draw on and fetches the page's own.
+  const lineUrl = (item?.links || [])[0]?.url || (String(item?.text || "").match(/https?:\/\/[^\s<>"')]+/) || [])[0] || "";
+  const url = block?.url || lineUrl;
+  const base = { type: "slide", label: words, title: withoutUrls(title), headline: withoutUrls(claim), url, site: hostOf(url), notes: notes && notes.length ? notes : undefined,
+    look: item?.slideLook || undefined, fromLine: !block?.url && !!lineUrl || undefined };
   const sub = block?.type !== "board" ? (block?.body || "").trim() : "";
 
   // A game from the game panel is its ticket, with the count of its questions.
@@ -513,6 +538,10 @@ function plainSlideFor({ item, block, seed, title, claim, notes, tag, assignment
   }
   if (type === "video" || VIDEO_HOST.test(hostOf(url))) return { ...base, template: "video", sub };
   if (type === "activity") return { ...base, template: "activity" };
-  if (url && !["note", "story"].includes(type)) return { ...base, template: "article", sub };
+  // A line with a link on it is the article, with the page's own headline
+  // when the line has no words of its own. Andrew, 2026-09-22: "you could
+  // give me the actual articles." A note used to keep the item template with
+  // the address in its words.
+  if (url && type !== "story") return { ...base, template: "article", sub };
   return { ...base, template: "item", sub };
 }
