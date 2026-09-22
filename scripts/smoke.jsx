@@ -3397,6 +3397,59 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (/add\("Day", "Teach"/.test(docSrc)) say("the slash menu still opens a Teach that is gone");
 }
 
+// WHERE THE ROOM IS, on the day. Andrew, 2026-09-22: "i like how there are
+// outlines used in the cards on the schedule ... should it outline the section
+// i'm currently on?" The schedule puts the class's colour round the week the
+// class is in; a section card takes it the same way, and "currently on" is the
+// section holding whatever is on the screen.
+{
+  const say = (msg) => { console.error("  FAIL  where the room is: " + msg); failedEarly++; };
+  const none = () => {};
+  const slotItems = {
+    open: { title: "Open", items: [{ id: "i1", text: "Start with headlines" }] },
+    talk: { title: "Talk", items: [{ id: "i2", text: "Why we care" }] },
+  };
+  const props = { sections: [["open", "Open"], ["talk", "Talk"]], slotItems, named: new Set(), firstMovable: 0,
+    blockOf: () => null, seedById: () => null, doneSet: new Set(), nextId: "i1", pickedId: null,
+    castItem: none, castSection: (sl, n) => ({ type: "quote", title: n, label: n }), dismiss: none, features: {}, hue: () => "#333",
+    slidesOn: false, classHref: "/comm118", onSetSlotTitle: none, onSaveItem: none, onSaveBlock: none, onInsertRow: () => "x",
+    onRemoveItem: none, onNest: none, onTick: none, isAssigned: () => false, onToggleAssigned: none, drop: none,
+    onSetSlotTime: none, onPlaceSection: none, classMinutes: 65 };
+  const marked = (html) => (html.match(/class="doc-sec here/g) || []).length;
+
+  // Nothing on the screen, nothing outlined. A day being planned has a room
+  // that is nowhere, and the schedule marks where the class actually is.
+  const idle = renderToString(<DayDoc {...props} liveLabel={null} />);
+  if (marked(idle) !== 0) say("a day with nothing on the screen outlined a section anyway");
+
+  // A row of the second section goes up, and that card takes the accent.
+  const onTalk = renderToString(<DayDoc {...props} liveLabel="Why we care" />);
+  if (marked(onTalk) !== 1) say("a row on the screen marked " + marked(onTalk) + " sections, not one");
+  if (onTalk.indexOf('class="doc-sec here') < onTalk.indexOf("Start with headlines")) say("the outline landed on the section above the row that is up");
+
+  // A section's own name on the wall is that section too.
+  if (marked(renderToString(<DayDoc {...props} liveLabel="Open" />)) !== 1) say("a section's own title card does not mark its section");
+
+  // Something up that is on no row of this day marks nothing.
+  if (marked(renderToString(<DayDoc {...props} liveLabel="Something from another day" />)) !== 0) say("a cast from somewhere else outlined a section of this day");
+
+  // The card is the site's card and the outline is the accent, the same two
+  // facts the schedule's current week carries.
+  const docSrc = readFileSync(new URL("../src/engine/DayDoc.jsx", import.meta.url), "utf8");
+  if (!/^\.doc-sec\.here\{border:1\.5px solid var\(--dash-accent\)\}/m.test(docSrc)) say("the outline is not 1.5px of the accent, the way the schedule draws it");
+  const schedSrc = readFileSync(new URL("../src/engine/ScheduleCard.jsx", import.meta.url), "utf8");
+  if (!/1\.5px solid " \+ config\.accent/.test(schedSrc)) say("the schedule stopped outlining the week the class is in, so the two have drifted");
+
+  // One rule for what is on the screen, read by the card and by the row.
+  if ((docSrc.match(/const rowLive = /g) || []).length !== 1) say("there is no single rule for whether a row is up");
+  if (/const live = it\.board \? liveLabel ===/.test(docSrc)) say("the row works out on its own whether it is up, so a card and its line can disagree");
+
+  // The list that used to sit above the day is the drawer now, and the
+  // component that drew it is gone rather than sitting there uncalled.
+  const dashSrc = readFileSync(new URL("../src/engine/Dashboard.jsx", import.meta.url), "utf8");
+  if (/function ScheduleToday/.test(dashSrc)) say("ScheduleToday is back, and nothing renders it");
+}
+
 // Lines picked out of the day, as Markdown. Andrew, 2026-09-20: "I need to be
 // able to select a whole bunch of lines in the dashboard so i can copy them
 // elsewhere", and "yeah with markdown." Every line is its own text box, so a
@@ -3525,10 +3578,23 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     // and cut off, which is what the caption under a grid card does.
     ["Ask who took each one", "Then ask who wrote the caption"].forEach(n => {
       if (!run.includes(n)) say("the run does not show " + JSON.stringify(n)); });
-    if ((run.match(/class="deck-note"/g) || []).length !== 2) {
-      say("the notes are not one line each: " + JSON.stringify(run.match(/class="deck-note"/g))); }
-    if (!run.includes("Nothing written under this slide")) say("a slide with no notes says nothing about it");
+    // The line itself, beside its slide. Andrew, 2026-09-22: "show me what it
+    // says in teh actual line like 'stanford' and the link." The block used to
+    // be the notes and nothing else, so a row with no notes had nothing under
+    // it but a sentence saying so.
+    if (!/class="deck-words">The Katrina photographs/.test(run)) say("the run does not say what the line itself says");
+    if (run.includes("Nothing written under this slide")) say("the run still writes a sentence about an absence");
+    // The notes are lines, not text: a place to write as well as read.
+    if ((run.match(/class="doc-line lv-comment"/g) || []).length !== 2) {
+      say("the notes are not editable lines: " + (run.match(/class="doc-line lv-comment"/g) || []).length); }
+    if (!run.includes("Add a note")) say("a row with no note has no way to start one");
     if (plan.includes('class="deck-said"')) say("the planning grid took the run's note column");
+    // A row with nothing written under it still shows its own words, and does
+    // not draw an empty notes area.
+    const bare = renderToString(<DayDoc {...props} slotItems={{ open: { title: "Open", items: [{ id: "i9", text: "Stanford" }] } }}
+      sections={[["open", "Open"]]} view="slides" teaching />);
+    if (!/class="deck-words">Stanford/.test(bare)) say("a row with no notes does not show its own words either");
+    if (/class="doc-line lv-comment"/.test(bare)) say("a row with no notes drew a note anyway");
   } catch (err) { say("the slides threw: " + err.message); }
 }
 

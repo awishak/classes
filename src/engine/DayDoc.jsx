@@ -470,6 +470,20 @@ export default function DayDoc({
   const tagOf = (slot) => normSlot(slotItems[slot]).title || (sections.find(([k]) => k === slot) || [])[1] || "";
 
   // What putting a line on the room screen sends, for an item or a note.
+  // Whether a row of the day is what the room is looking at. A board's idea
+  // goes up as that board, one idea at a time, and the room says which one is
+  // up as "Enter \u00b7 2".
+  //
+  // The section card reads this before it draws and the row reads it again, so
+  // the card and the line in it cannot disagree about where the room is.
+  const rowLive = (g) => {
+    const { it, blk, seed } = g.head;
+    if (it.board) return liveLabel === (it.board === "pre" ? "Enter" : "Exit") + " \u00b7 " + (it.index + 1);
+    const words = itemWords(it, blk, seed);
+    const claim = it.claim || blk?.headline || "";
+    return liveLabel === (claim || words) || (!!it.feature && liveLabel === it.feature);
+  };
+
   const castLine = (line) => {
     const w = itemWords(line.it, line.blk, line.seed);
     const cl = line.it.claim || line.blk?.headline || "";
@@ -965,25 +979,43 @@ export default function DayDoc({
         <path d="M8.6 14.2c-2.2 0-3.6 1.5-3.6 3.4 0 1.4-.9 2.3-2 2.9 1 .6 2.1.9 3.3.9 2.6 0 4.6-1.8 4.6-4.2" />
       </svg>
     );
+    // What a card carries. Teaching, the block beside a slide used to be the
+    // notes and nothing else, so a row reading "Stanford" with a link on it
+    // said "Nothing written under this slide" and the line itself was
+    // nowhere. Andrew, 2026-09-22: "show me what it says in teh actual line
+    // like 'stanford' and the link, and then give me a notes panel."
+    //
+    // So a card carries its own line as well as its slide: the words, the
+    // links, the block's content and the notes under it, each as the line it
+    // is in the document rather than as a string, because the notes are a
+    // place to write as well as read.
     const decks = groupsBySection.map(sec => {
       const bucket = normSlot(slotItems[sec.slot]);
       const raw = bucket.title || "";
       const cards = [];
       if (raw) {
         cards.push({ key: "s:" + sec.slot, cast: castSection(sec.slot, raw, false), label: raw, n: "", notes: "", said: [],
+          words: raw, urls: [], comments: [],
           go: () => castSection(sec.slot, raw, true), menu: () => sectionMenu(sec),
           look: bucket.slideLook || "", setLook: (v) => onSetSlotLook && onSetSlotLook(sec.slot, v) });
       }
       sec.groups.forEach(g => {
         const c = castLine(g.head);
-        const body = g.head.blk?.type !== "board" ? (g.head.blk?.body || "").trim() : "";
-        const said = [body, ...(notesOf[g.head.it.id] || [])].filter(Boolean);
-        cards.push({ key: g.head.it.id, cast: c.cast, label: c.label, go: c.go, n: itemNumber[g.head.it.id] || "",
+        const { it, blk, seed } = g.head;
+        const body = blk?.type !== "board" ? (blk?.body || "").trim() : "";
+        const said = [body, ...(notesOf[it.id] || [])].filter(Boolean);
+        cards.push({ key: it.id, cast: c.cast, label: c.label, go: c.go, n: itemNumber[it.id] || "",
           notes: said.join(" · "), said, menu: () => itemMenu(g.head),
-          look: g.head.it.slideLook || "", setLook: (v) => onSaveItem && onSaveItem(sec.slot, g.head.it.id, { slideLook: v || undefined }) });
+          words: itemWords(it, blk, seed), urls: [blk?.url, ...(it.links || []).map(l => l.url)],
+          id: it.id, line: g.head, bodyLine: lines.find(l => l.key === "b:" + it.id) || null,
+          blk, comments: g.comments,
+          addNote: onInsertRow ? () => focusLine(onInsertRow(sec.slot, it.id, 1), 0) : null,
+          look: it.slideLook || "", setLook: (v) => onSaveItem && onSaveItem(sec.slot, it.id, { slideLook: v || undefined }) });
         g.comments.filter(n => n.it.slide).forEach(n => {
           const nc = castLine(n);
           cards.push({ key: n.it.id, cast: nc.cast, label: nc.label, go: nc.go, n: "", notes: "", said: [], menu: () => itemMenu(n),
+            words: itemWords(n.it, n.blk, n.seed), urls: [n.blk?.url, ...(n.it.links || []).map(l => l.url)],
+            id: n.it.id, comments: [],
             look: n.it.slideLook || "", setLook: (v) => onSaveItem && onSaveItem(sec.slot, n.it.id, { slideLook: v || undefined }) });
         });
       });
@@ -1023,10 +1055,38 @@ export default function DayDoc({
                       <div className="deck-cap">
                         <span className={"deck-n" + (live ? " live" : "")}>{live ? "on screen" : c.n}</span>
                         {teaching ? (
+                          /* The line, then what is written under it. The line
+                             is the row's own words with its links beside them,
+                             drawn by the same chips the document draws, so
+                             pressing stanford.edu here offers what it offers
+                             there. Under it, the block's content and every
+                             note, each one the line it is in the document and
+                             editable in place: "a place to write and read, and
+                             it doesn't have to be a fancy panel." */
                           <span className="deck-said">
-                            {(c.said || []).length
-                              ? (c.said || []).map((n, i) => <span key={i} className="deck-note">{n}</span>)
-                              : <span className="deck-note is-none">Nothing written under this slide.</span>}
+                            {c.words ? (
+                              <span className="deck-line">
+                                <span className="deck-words">{c.words}</span>
+                                <LinkChips urls={c.urls} liveLabel={liveLabel} liveUrl={liveUrl}
+                                  onMenu={c.id ? linkMenu(c.id) : undefined} />
+                              </span>
+                            ) : null}
+                            {c.bodyLine && c.blk ? (
+                              <Line id={c.bodyLine.key} value={c.blk.body} placeholder="Content" className="lv-comment"
+                                onSave={v => onSaveBlock(c.blk.id, { body: v })} onKey={keyHandler(c.bodyLine)} register={register}
+                                onLink={linkMenu(c.bodyLine.key)} onType={typing(c.bodyLine)} onLeave={(k) => { if (pop && pop.key === k) setPop(null); }} />
+                            ) : null}
+                            {(c.comments || []).map(n => (
+                              <Line key={n.it.id} id={n.it.id} value={itemWords(n.it, n.blk, n.seed)} placeholder="Note" className="lv-comment"
+                                done={doneSet.has(n.it.id)} readOnly={!!(n.seed || n.it.feature)} mark={n.it.mark}
+                                onSave={saveItemWords(n)} onKey={keyHandler(n)} register={register} onLeaveEmpty={leaveEmpty(n)}
+                                onLink={linkMenu(n.it.id)} onType={typing(n)} onLeave={(k) => { if (pop && pop.key === k) setPop(null); }} />
+                            ))}
+                            {/* With no note to press Enter in, there has to be
+                                somewhere to start one. */}
+                            {c.addNote ? (
+                              <button className="dash-focus deck-addnote" onClick={c.addNote}>Add a note</button>
+                            ) : null}
                           </span>
                         ) : <span className="deck-notes">{c.notes}</span>}
                         {looksFor(c.cast).length > 1 ? (
@@ -1045,6 +1105,21 @@ export default function DayDoc({
       </div>
     );
   }
+
+  // WHERE THE ROOM IS. The schedule puts the class's colour round the week you
+  // are in; a section card takes it the same way. Andrew, 2026-09-22: "i like
+  // how there are outlines used in the cards on the schedule ... should it
+  // outline the section i'm currently on?"
+  //
+  // Currently on means the section holding whatever is on the screen: its own
+  // name, one of its rows, or a note under a row that was given a slide. With
+  // nothing up, nothing is outlined, because the schedule marks where you
+  // actually are rather than where you happen to be looking, and while a day
+  // is being planned the room is nowhere.
+  const hereSlot = !liveLabel ? "" : (groupsBySection.find(sec =>
+    (normSlot(slotItems[sec.slot]).title || "") === liveLabel
+    || sec.groups.some(g => rowLive(g) || g.comments.some(c => c.it.slide && castLine(c).label === liveLabel))
+  ) || {}).slot || "";
 
   // What the day adds up to, from every section given a time.
   const times = sections.map(([k]) => normSlot(slotItems[k]).time || "");
@@ -1089,9 +1164,10 @@ export default function DayDoc({
         const bucket = normSlot(slotItems[sec.slot]);
         const raw = bucket.title || "";
         const secLive = !!raw && liveLabel === raw;
+        const here = !!liveLabel && sec.slot === hereSlot;
         const overHere = over.startsWith("sec|" + sec.slot + "|") ? over.split("|")[2] : "";
         return (
-          <div key={sec.slot} className={"doc-sec" + (secDrag === sec.slot ? " dragging" : "") + (sec.mark ? " marked" : "")}
+          <div key={sec.slot} className={"doc-sec" + (here ? " here" : "") + (secDrag === sec.slot ? " dragging" : "") + (sec.mark ? " marked" : "")}
             style={sec.mark?.color ? { "--mark": sec.mark.color } : undefined}
             data-over={over === sec.slot + "|" ? "1" : "0"} data-secover={overHere} {...sectionDrop(sec.slot)}>
             <div className={"doc-group" + (slidesOn ? " with-slides" : "")}>
@@ -1139,11 +1215,7 @@ export default function DayDoc({
               const tag = raw || sec.title;
               const slide = slideOf({ item: it, block: blk, seed, title: words, claim, tag, features, assignments, games,
                 notes: it.slideNotes ? (notesOf[it.id] || []) : undefined });
-              // A board's idea goes up as that board, one idea at a time, and
-              // the room says which one is up as "Enter · 2".
-              const boardLabel = it.board ? (it.board === "pre" ? "Enter" : "Exit") + " · " + (it.index + 1) : "";
-              const live = it.board ? liveLabel === boardLabel
-                : liveLabel === (claim || words) || (it.feature && liveLabel === it.feature);
+              const live = rowLive(g);
               // A note with a file on it says which kind of file: slides, pdf,
               // photo, clip. A plain note says nothing, the way it always has.
               const kind = it.board ? "" : it.gameId ? "game" : it.feature ? "activity"
@@ -1281,6 +1353,11 @@ export const DOC_CSS = `
 /* Dropping onto a card. A wash of grey was the old affordance and it is
    invisible on a white card, so the card takes the accent round its edge and
    the two drop marks keep saying above or below. */
+/* The section the room is in, marked the way the schedule marks the week the
+   class is in: the accent round the card instead of the hairline. It comes
+   before the mark below, so a section carrying Enter or Exit keeps its own
+   colour down the left edge. */
+.doc-sec.here{border:1.5px solid var(--dash-accent)}
 .doc-sec[data-over="1"]{border-color:var(--dash-accent)}
 .doc-sec[data-secover="above"]{box-shadow:inset 0 3px 0 var(--dash-accent)}
 .doc-sec[data-secover="below"]{box-shadow:inset 0 -3px 0 var(--dash-accent)}
@@ -1419,9 +1496,16 @@ export const DOC_CSS = `
 .deck.is-run .deck-card{display:grid;grid-template-columns:minmax(220px,340px) minmax(0,1fr);gap:20px;align-items:start}
 .deck.is-run .deck-cap{flex-direction:column;gap:6px;min-height:0;padding-top:2px}
 .deck.is-run .deck-n{line-height:18px}
-.deck-said{display:flex;flex-direction:column;gap:6px;min-width:0}
-.deck-note{font-size:15px;line-height:1.5;color:var(--text-primary);white-space:pre-wrap;word-break:break-word}
-.deck-note.is-none{font-size:13px;color:var(--text-muted)}
+.deck-said{display:flex;flex-direction:column;gap:6px;min-width:0;align-items:flex-start}
+/* The line itself, over what is written under it: the words at reading size
+   with the link beside them. */
+.deck-line{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0;width:100%}
+.deck-words{font-size:17px;font-weight:600;letter-spacing:-.01em;color:var(--text-primary);
+  overflow-wrap:anywhere;min-width:0}
+.deck-said .doc-line{font-size:15px}
+.deck-addnote{min-height:28px;padding:0 8px;margin-left:-8px;border:none;background:none;cursor:pointer;
+  font-family:var(--font-body);font-size:13px;color:var(--text-muted);border-radius:7px}
+.deck-addnote:hover{background:rgba(23,19,16,.06);color:var(--text-primary)}
 @media (max-width:900px){.deck.is-run .deck-card{grid-template-columns:minmax(0,1fr)}}
 .deck-card{min-width:0;display:flex;flex-direction:column;gap:8px}
 .deck-card .slide{max-width:none;max-height:none}

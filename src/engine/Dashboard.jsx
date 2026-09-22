@@ -2030,45 +2030,6 @@ function ComingUp({ rows, accent, castNow, dismiss, liveLabel, extra }) {
   );
 }
 
-// What the schedule has for this day, at the top of the Flow. Andrew,
-// 2026-09-17: "why am i not seeing game and headline on oct 5, or the
-// readings on oct 7? shouldn't the dashboard make this really easy for me to
-// see?" It did not: an item on the schedule that was not yet in a section sat
-// under a fold at the foot of the day, and a reading never reached the Flow
-// at all. Every reading and activity dated to the day is here now, castable
-// from its row, with Add for anything not yet in a section.
-function ScheduleToday({ items, accent, onAdd, onCast }) {
-  if (!items.length) return null;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ ...label, color: accent }}>On the schedule today</div>
-      {items.map(it => (
-        <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap",
-          background: SURFACE_2, border: "1px solid " + BORDER, borderRadius: 10, padding: "6px 11px", minHeight: TAP }}>
-          <span style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: TYPE_COLOR[it.type] || TEXT_MUTED }} />
-          <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase",
-            color: TYPE_COLOR[it.type] || TEXT_MUTED }}>{typeLabel(it.type)}</span>
-          <span style={{ flex: 1, minWidth: 110, fontSize: 14, color: TEXT_PRIMARY, overflow: "hidden", wordBreak: "break-word", lineHeight: 1.4 }}>{it.title}</span>
-          {it.loose ? <span style={{ fontFamily: MONO, fontSize: 13, letterSpacing: ".08em", color: TEXT_MUTED }}>THIS WEEK</span> : null}
-          {it.placed ? <span style={{ fontFamily: MONO, fontSize: 13, letterSpacing: ".08em", color: TEXT_MUTED }}>IN THE FLOW</span> : null}
-          {it.url ? (
-            <a href={it.url} target="_blank" rel="noreferrer" className="dash-focus"
-              style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 13, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Open ↗</a>
-          ) : null}
-          {onCast ? (
-            <button className="dash-focus" style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 13 }}
-              onClick={() => onCast(it)}>Cast</button>
-          ) : null}
-          {!it.placed ? (
-            <button className="dash-focus" style={{ ...mini, minHeight: 30, padding: "0 10px", fontSize: 13, borderColor: accent, color: accent }}
-              onClick={() => onAdd(it)}>Add</button>
-          ) : null}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // The Enter board above the day and the Exit board below it, as rows of the
 // Flow. Andrew, 2026-09-17: "didn't we work on having an entry and exit part
 // of each day on the dashboard?" We had: the two buttons came off the room
