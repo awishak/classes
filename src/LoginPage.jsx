@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react";
 import { signInWithCode, sendCode, takeRedirect, getSession, whereTo, signOut } from "./engine/session.js";
 import { loadClass } from "./engine/store.js";
-import { currentClasses } from "./config/registry.js";
+import { currentClasses, archivedClasses } from "./config/registry.js";
 import * as TOKENS from "./engine/tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -27,9 +27,15 @@ const input = { width: "100%", boxSizing: "border-box", fontFamily: F, fontSize:
   border: "1px solid " + BORDER_STRONG, borderRadius: 12, background: "#fff", color: TEXT_PRIMARY, minHeight: TAP };
 const button = { width: "100%", minHeight: TAP, borderRadius: 12, border: "none", fontFamily: F, fontSize: 16, fontWeight: 600, cursor: "pointer" };
 
-// Every current class's roster, for whereTo. Five small loads, once.
+// Every class's roster, for whereTo. Five small loads, once.
+//
+// The finished terms count too. A student of a class that ended still signs in
+// to read their grades, and COMM 999 is archived and is where a game is tried
+// on two phones, so a sign-in that only knew this term's classes turned both
+// of those people away at the door. Current classes sort first, so somebody on
+// two rosters lands on the one still meeting.
 async function rosters() {
-  const list = currentClasses();
+  const list = [...currentClasses(), ...archivedClasses()];
   const out = await Promise.all(list.map(async cls => {
     const data = await loadClass(cls.storageKey).catch(() => null);
     return { cls, students: (data && data.students) || cls.students || [] };
