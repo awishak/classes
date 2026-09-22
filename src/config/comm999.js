@@ -34,13 +34,16 @@ const comm999 = {
 
   // ─── People ───
   // Goals get filled in on day one (first-day "what are your goals" seed).
-  // The fake one, for looking at the site as a student and writing test
-  // messages. Zack Girgis is a real name and was standing in for this.
+  // Zack Girgis is a real name and was standing in for this.
   //
   // Two of them carry an email, because a game keys on the sign-in: Pepe on
   // one phone and Jan on the other, so a game can be played against itself
   // before a class plays one.
-  testStudent: "Pepe LeFritz",
+  //
+  // No test student here. A real class names one so the fake account stays
+  // out of the roster students read; every name in this class is fake, so
+  // naming one would only hide Pepe from the roster he is meant to play on.
+  testStudent: null,
   students: [
     { id: "pepe-lefritz", name: "Pepe LeFritz", email: "pepe@example.test", from: "", goals: "" },
     { id: "jan-itor", name: "Jan Itor", email: "jan@example.test", from: "", goals: "" },
