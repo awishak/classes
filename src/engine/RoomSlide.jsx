@@ -243,8 +243,15 @@ function Video({ s, g }) {
   );
 }
 
+// A photo dropped on the day, whole. Andrew, 2026-09-22: "it's not showing
+// the whole pictures." Filling the frame cropped a tall phone photo to a
+// band across its middle, so the picture sits inside the frame on black.
 function Image({ s }) {
-  return <img src={s.image} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />;
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "#000" }}>
+      <img src={s.image} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+    </div>
+  );
 }
 
 function Podcast({ s, g }) {
