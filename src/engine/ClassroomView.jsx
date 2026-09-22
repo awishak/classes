@@ -10,6 +10,7 @@ import { useClassData } from "./store.js";
 import { currentDay, dayTitles } from "./days.js";
 import RoomSlide, { ROOM_FONTS_HREF } from "./RoomSlide.jsx";
 import { ENGINE_LIST } from "../config/registry.js";
+import { mediaLabel } from "./media.js";
 import PickMark from "./Pick.jsx";
 import * as TOKENS from "./tokens.js";
 import { setClassFavicon } from "./favicon.js";
@@ -163,6 +164,38 @@ export function Content({ cast, config, plan, data }) {
             {cast.title}
           </div>
           <audio src={cast.src} autoPlay controls style={{ width: "min(640px,80vw)" }} />
+        </div>
+      );
+    }
+    // A document dropped on the day: a PDF the browser draws, an Office file
+    // through Microsoft's viewer. The file's own link waits in the corner for
+    // the day the viewer stays blank. Anything with no viewer at all is a
+    // title card and that link.
+    const isDoc = ["pdf", "deck", "doc", "sheet", "file"].includes(cast.media);
+    if (isDoc) {
+      const open = (
+        <a href={cast.src} target="_blank" rel="noopener noreferrer" style={openPill}>{"Open " + (cast.name || mediaLabel(cast.media)) + " ↗"}</a>
+      );
+      if (!cast.view) {
+        return (
+          <div style={{ ...wrap, alignItems: "center", justifyContent: "center", textAlign: "center", gap: "3vh" }}>
+            <div style={eyebrow}>{cast.tag || mediaLabel(cast.media)}</div>
+            <div style={{ fontSize: "clamp(28px,4.4vw,64px)", fontWeight: 500, letterSpacing: "-.025em", lineHeight: 1.24, maxWidth: "21ch" }}>
+              {cast.title}
+            </div>
+            {open}
+          </div>
+        );
+      }
+      return (
+        <div style={{ position: "absolute", inset: 0, background: "#000" }}>
+          <iframe src={cast.view} title={cast.title || mediaLabel(cast.media)}
+            style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+            allow="fullscreen" referrerPolicy="no-referrer" />
+          <div style={{ ...corner, pointerEvents: "none", display: "flex", alignItems: "center", gap: "clamp(12px,1.5vw,24px)" }}>
+            <span>{cast.title}</span>
+            <span style={{ pointerEvents: "auto" }}>{open}</span>
+          </div>
         </div>
       );
     }

@@ -1,6 +1,6 @@
-// Hands the phone a place to put a file.
+// Hands the phone, or the dashboard, a place to put a file.
 //
-// A clip, a photo or a voice memo goes into the `notes` bucket, and the bucket
+// A clip, a photo, a voice memo or a handout goes into the `notes` bucket, and the bucket
 // takes writes only from the service role. That key stays on the server, so
 // the browser asks here for a signed upload link, then sends the file straight
 // to Supabase on that link. The link is good for one file at one path and
@@ -18,7 +18,13 @@ import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
 
 export const BUCKET = "notes";
 export const MAX_BYTES = 50 * 1024 * 1024;   // the bucket's own cap
-const ALLOWED = /^(video|image|audio)\//;
+// What can go up: anything that plays, and the documents a class hands out.
+// Both the type and the name are checked, because a browser hands over no
+// type for a Keynote or a Markdown file and fills the name in every time.
+// The list of extensions is the same one as EXT_TYPES in src/engine/media.js.
+const ALLOWED_TYPES = /^(video|image|audio)\//;
+const ALLOWED_EXT = /\.(pdf|pptx?|key|docx?|pages|xlsx?|numbers|csv|txt|md|rtf|zip)$/i;
+const allowed = (type, name) => ALLOWED_TYPES.test(type) || ALLOWED_EXT.test(String(name || ""));
 
 // A path Supabase will take: the class, the month, a stamp, and the file's own
 // name with anything odd squeezed out. The stamp keeps two files with the same
@@ -44,7 +50,7 @@ export default async function handler(req, res) {
 
   const type = String(body.type || "");
   const size = Number(body.size || 0);
-  if (!ALLOWED.test(type)) return res.status(400).json({ ok: false, error: "Only a video, a photo or an audio file can go up." });
+  if (!allowed(type, body.name)) return res.status(400).json({ ok: false, error: "That kind of file cannot go up." });
   if (!size || size > MAX_BYTES) return res.status(400).json({ ok: false, error: "The file has to be under 50 MB." });
 
   if (!serviceKey()) return res.status(500).json({ ok: false, error: "No Supabase service key is configured on the server." });

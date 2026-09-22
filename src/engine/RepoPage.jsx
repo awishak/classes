@@ -1481,7 +1481,7 @@ export function Attach({ media, onChange, classId }) {
       ) : null}
       <div className="repo-row">
         <label className="repo-focus repo-chip" style={up.busy ? { opacity: .6 } : undefined}>
-          {up.label(media?.src ? "Swap the file" : "Attach a clip, a photo or a voice memo")}
+          {up.label(media?.src ? "Swap the file" : "Attach a file")}
           <input type="file" accept={MEDIA_ACCEPT} disabled={up.busy} style={{ display: "none" }}
             onChange={e => { up.send(e.target.files?.[0]); e.target.value = ""; }} />
         </label>

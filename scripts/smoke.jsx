@@ -20,7 +20,7 @@ import Dashboard, {
 } from "../src/engine/Dashboard.jsx";
 import ClassroomView, { Content as CastContent } from "../src/engine/ClassroomView.jsx";
 import { Castable } from "../src/engine/Dashboard.jsx";
-import { mediaSteps, liveStep, mediaKind } from "../src/engine/media.js";
+import { mediaSteps, liveStep, mediaKind, viewUrl } from "../src/engine/media.js";
 import { pathFor } from "../api/upload.js";
 import { baseCSS } from "../src/engine/themes.js";
 import RosterSheet from "../src/engine/RosterSheet.jsx";
@@ -375,7 +375,7 @@ cases.push(["Repository", <RepoPage />]);
   cases.push(["Repository row, never used", table(<RepoRow block={bare} hue={hue} open onOpen={noop} onTag={noop}
     picked={false} onPick={noop} />), "Never"]);
   cases.push(["Repository open row", <RepoDetail block={blk} hue={hue} planOf={planOf} stores={stores}
-    onSave={noop} onDelete={noop} onPlace={noop} onAssign={noop} />, "Attach a clip"]);
+    onSave={noop} onDelete={noop} onPlace={noop} onAssign={noop} />, "Attach a file"]);
   cases.push(["Repository open row, with a clip on it", <RepoDetail
     block={{ ...blk, media: { kind: "video", src: "https://e.com/clip.mov", name: "clip.mov", size: 8 * 1024 * 1024 }, ask: "Who was that for?" }}
     hue={hue} planOf={planOf} stores={stores} onSave={noop} onDelete={noop} onPlace={noop} onAssign={noop} />, "Take the file off"]);
@@ -921,6 +921,15 @@ cases.push(["On the wall, a photo", <CastContent config={cfg0} plan={{}} data={{
   cast={{ type: "media", media: "image", src: "https://e.com/shot.jpg", title: "The billboard on 101" }} />]);
 cases.push(["On the wall, a voice memo", <CastContent config={cfg0} plan={{}} data={{}}
   cast={{ type: "media", media: "audio", src: "https://e.com/memo.m4a", title: "What I noticed on the drive in" }} />]);
+// A document dropped on the day: a deck through the Office viewer, a PDF as
+// itself, and a Keynote file, which has no viewer, as a title card with the
+// way to open it.
+cases.push(["On the wall, a deck dropped on the day", <CastContent config={cfg0} plan={{}} data={{}}
+  cast={{ type: "media", media: "deck", src: "https://e.com/talk.pptx", name: "talk.pptx", view: "https://view.officeapps.live.com/op/embed.aspx?src=https%3A%2F%2Fe.com%2Ftalk.pptx", title: "Week 4" }} />, "view.officeapps.live.com"]);
+cases.push(["On the wall, a PDF dropped on the day", <CastContent config={cfg0} plan={{}} data={{}}
+  cast={{ type: "media", media: "pdf", src: "https://e.com/handout.pdf", name: "handout.pdf", view: "https://e.com/handout.pdf", title: "The handout" }} />, 'src="https://e.com/handout.pdf"']);
+cases.push(["On the wall, a file with no viewer", <CastContent config={cfg0} plan={{}} data={{}}
+  cast={{ type: "media", media: "deck", src: "https://e.com/talk.key", name: "talk.key", view: "", title: "Week 4" }} />, "Open talk.key"]);
 cases.push(["On the wall, a question from the room", <CastContent config={cfg0} plan={{}} data={{}}
   cast={{ type: "question", tag: "From the room", title: "Why does that work?", cite: "Anonymous" }} />]);
 cases.push(["Ideas for the repository", <RepoIdeas />, "Merge the duplicates"]);
@@ -2087,7 +2096,25 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (liveStep(s3 && s3[1].payload, withAsk.headline) !== 1) { console.error("  FAIL  media: the clip slide is up and the row does not know"); failedEarly++; }
   if (liveStep({ type: "quote", label: "something else" }, withAsk.headline) !== -1) { console.error("  FAIL  media: another row's cast counted as this row's"); failedEarly++; }
   if (liveStep(null, withAsk.headline) !== -1) { console.error("  FAIL  media: an idle wall counted as live"); failedEarly++; }
-  if (mediaKind("video/quicktime") !== "video" || mediaKind("audio/m4a") !== "audio" || mediaKind("application/pdf") !== "") { console.error("  FAIL  media: a MIME type was filed under the wrong kind"); failedEarly++; }
+  if (mediaKind("video/quicktime") !== "video" || mediaKind("audio/m4a") !== "audio" || mediaKind("application/pdf") !== "pdf") { console.error("  FAIL  media: a MIME type was filed under the wrong kind"); failedEarly++; }
+  // A document dropped on the day: Office files by type, a Keynote by its
+  // name alone (the browser hands over no type), and an unknown kind is a
+  // file rather than a refusal.
+  const kinds = [
+    [mediaKind("application/vnd.openxmlformats-officedocument.presentationml.presentation", "talk.pptx"), "deck"],
+    [mediaKind("", "talk.key"), "deck"],
+    [mediaKind("application/msword", "handout.doc"), "doc"],
+    [mediaKind("text/csv", "grades.csv"), "sheet"],
+    [mediaKind("application/zip", "bundle.zip"), "file"],
+    [mediaKind("", "mystery"), ""],
+  ];
+  kinds.forEach(([got, want]) => { if (got !== want) { console.error("  FAIL  media: a document was filed as " + JSON.stringify(got) + ", not " + want); failedEarly++; } });
+  const office = viewUrl({ kind: "deck", src: "https://e.com/talk.pptx", name: "talk.pptx" });
+  if (!/^https:\/\/view\.officeapps\.live\.com\/.*talk\.pptx/.test(office)) { console.error("  FAIL  media: a deck has no viewer: " + office); failedEarly++; }
+  if (viewUrl({ kind: "pdf", src: "https://e.com/a.pdf", name: "a.pdf" }) !== "https://e.com/a.pdf") { console.error("  FAIL  media: a PDF does not show as itself"); failedEarly++; }
+  if (viewUrl({ kind: "deck", src: "https://e.com/talk.key", name: "talk.key" }) !== "") { console.error("  FAIL  media: a Keynote file was given a viewer it has no way to use"); failedEarly++; }
+  const deckSteps = mediaSteps({ title: "The deck", media: { kind: "deck", src: "https://e.com/talk.pptx", name: "talk.pptx" } }, "", "");
+  if (!deckSteps || deckSteps[1].payload.media !== "deck" || !deckSteps[1].payload.view) { console.error("  FAIL  media: a deck's slide has no viewer on it"); failedEarly++; }
   // The path a file lands at: class, month, stamp, the file's own name cleaned
   // up, and nothing Supabase would refuse.
   const path = pathFor({ classId: "comm118", name: "Screen Recording 2026-09-04 at 8.12.03 PM.mov", now: new Date("2026-09-04T20:12:03Z") });

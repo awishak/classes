@@ -49,8 +49,11 @@ function Face({ cast, config, ground }) {
       </div>
     );
   }
-  if (cast.type === "media" && cast.media === "audio") {
-    return <Content cast={{ type: "quote", tag: mediaLabel("audio"), title: cast.title }} config={config} />;
+  // A voice memo or a document has no picture of its own, so its thumbnail is
+  // the headline under the kind of file. A viewer inside every row's
+  // thumbnail would be a page of iframes.
+  if (cast.type === "media" && cast.media !== "image") {
+    return <Content cast={{ type: "quote", tag: mediaLabel(cast.media), title: cast.title }} config={config} />;
   }
   return <Content cast={cast} config={config} />;
 }

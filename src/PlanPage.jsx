@@ -47,6 +47,22 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep22-drop", date: "Tuesday, September 22", title: "A file dragged onto the day is a row on the day",
+    blurb: "Andrew: \"i need t be able to drag and drop jpg, pptx, andother formats directly into teh dashboard for that days class.\" The upload path built on September 8 for clips from a phone took only a video, a photo or a voice memo, and only through the Add an item sheet. Now the day itself takes a drop.",
+    groups: [
+      { name: "The drop", items: [
+        ["Drop it where it goes", "A file over the window puts a dashed line under the day, Drop to add to the day. Dropped on a row, the file lands above that row; on a section, at the section's end; anywhere else on the page, at the end of the day. A day with no section yet gets one. Several files at once each become a row."],
+        ["A row like any other", "The file is a note in the repository with the file on it, and the row's words are the file's name without its extension, so week4-lecture.pptx reads week4-lecture and can be renamed on the line. The row says what it carries on the right, in the small coloured word: slides, pdf, photo, clip, document, spreadsheet."],
+        ["While it goes up", "Each file on its way is a line under the day with its name and the percent. A file that fails stays with the reason until Forget."],
+      ] },
+      { name: "What can go up now", items: [
+        ["Documents", "PDF, PowerPoint, Keynote, Word, Pages, Excel, Numbers, CSV, text, Markdown, RTF and zip, on top of video, image and audio. Still 50 MB a file, which is the bucket's own cap. The server checks the name as well as the type, because Safari and Chrome hand over no type for a Keynote or a Markdown file."],
+        ["On the room screen", "A PDF shows as itself. A PowerPoint, Word or Excel file shows through Microsoft's viewer, which reads the file's public link; the file's own link waits in the corner for the day the viewer stays blank. Keynote, Pages and Numbers have no viewer, so they go up as a title card with the way to open the file. A document's thumbnail in the Slides view is its headline under the kind of file, not a viewer in every row."],
+        ["The attach button", "Attach a clip, a photo or a voice memo, on the Add an item sheet and in the repository, now says Attach a file and takes the same list."],
+      ] },
+    ],
+  },
+  {
     id: "sep20-quiet", date: "Sunday, September 20", title: "The dashboard goes quiet: a doc, its slides, one bar and a search",
     blurb: "Andrew: \"hey so the dashboard is till a bit of a mess.\" Thursday was seventeen separate requests, each answered where the sentence pointed, and nobody redrew the page. The file set 17 type sizes against a ladder of four. Mocked on a canvas first, three rounds, then built.",
     groups: [

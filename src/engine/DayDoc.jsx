@@ -31,6 +31,7 @@
 import { useEffect, useRef, useState } from "react";
 import Slide, { slideOf } from "./Slide.jsx";
 import { typeOf, allTypes } from "./blocks.js";
+import { mediaLabel } from "./media.js";
 import { normSlot, sumRanges, rangeLabel, parseRange } from "./dayplan.js";
 import { inkOf } from "./colors.js";
 
@@ -1143,7 +1144,10 @@ export default function DayDoc({
               const boardLabel = it.board ? (it.board === "pre" ? "Enter" : "Exit") + " · " + (it.index + 1) : "";
               const live = it.board ? liveLabel === boardLabel
                 : liveLabel === (claim || words) || (it.feature && liveLabel === it.feature);
-              const kind = it.board ? "" : it.gameId ? "game" : it.feature ? "activity" : blk ? typeOf(blk.type).label.toLowerCase() : seed ? "seed" : "";
+              // A note with a file on it says which kind of file: slides, pdf,
+              // photo, clip. A plain note says nothing, the way it always has.
+              const kind = it.board ? "" : it.gameId ? "game" : it.feature ? "activity"
+                : blk ? (blk.media?.src ? mediaLabel(blk.media.kind).toLowerCase() : typeOf(blk.type).label.toLowerCase()) : seed ? "seed" : "";
               const kindColor = it.gameId ? hue("set") : it.feature ? hue("activity") : blk ? hue(blk.type) : hue("note");
               const kids = blk?.type === "set" ? (blk.children || []).map(id => blockOf(id)).filter(Boolean) : null;
               const bodyLine = lines.find(l => l.key === "b:" + it.id);
@@ -1180,7 +1184,7 @@ export default function DayDoc({
                       {it.gameId && gamesHref ? (
                         <a className="dash-focus doc-kind" style={{ "--ink": inkOf(kindColor), textDecoration: "none" }} title="Open in Games"
                           href={gamesHref + "#game=" + it.gameId} target="_blank" rel="noopener noreferrer">{kind}</a>
-                      ) : kind && blk?.type !== "note" ? <span className="doc-kind" style={{ "--ink": inkOf(kindColor) }}>{kind}</span> : null}
+                      ) : kind && (blk?.type !== "note" || blk?.media?.src) ? <span className="doc-kind" style={{ "--ink": inkOf(kindColor) }}>{kind}</span> : null}
                       <LinkChips urls={[blk?.url, ...(it.links || []).map(l => l.url)]}
                         liveLabel={liveLabel} liveUrl={liveUrl} onMenu={linkMenu(it.id)} />
                       {live ? <button className="dash-focus doc-down" onClick={dismiss} title="Take off screen">on screen</button> : null}

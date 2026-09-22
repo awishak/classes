@@ -27,7 +27,7 @@ import { ClassMenu, DropMenu, menuRow } from "./ClassMenu.jsx";
 import { studentsIn, realStudents, useRoomSection } from "./sections.js";
 import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections, blankDay, takeGroup, placeGroup, placeSection, splitSection, templateOf, applyTemplate, orderSlots } from "./dayplan.js";
 import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, onClassDay, isShared, makeBlock } from "./blocks.js";
-import { MEDIA_ACCEPT, mediaLabel, sizeLabel } from "./media.js";
+import { MEDIA_ACCEPT, mediaLabel, sizeLabel, uploadMedia } from "./media.js";
 import { useUpload } from "./Attach.jsx";
 import { readAdded, readLabels } from "./types.js";
 import PickMark from "./Pick.jsx";
@@ -123,6 +123,18 @@ const CSS = `
 .doc-foot-tool{min-height:34px;padding:0 2px;border:none;background:none;cursor:pointer;font-family:inherit;font-size:13px;color:${TEXT_MUTED}}
 .doc-foot-tool:hover,.doc-foot-tool[aria-pressed="true"]{color:${TEXT_PRIMARY}}
 .dash-stage{display:grid;gap:0;padding:14px 18px 26px;align-items:start;max-width:1760px;margin:0 auto}
+/* A file from the desktop. While one is over the window the day says so
+   under its last row, and each file on its way up is a line there with its
+   progress. Everything in this box is status, so nothing in it is a colour
+   that means press me. */
+.flow-uploads{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.flow-drop{min-height:44px;display:flex;align-items:center;justify-content:center;border:2px dashed ${TOKENS.LINE.ghost};
+  border-radius:12px;color:${TEXT_SECONDARY};font-size:15px;font-weight:600;pointer-events:none}
+.flow-upload{display:flex;align-items:center;gap:12px;min-height:34px;padding:0 12px;border-radius:10px;background:${SURFACE_2};font-size:13px;color:${TEXT_SECONDARY}}
+.flow-upload-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${TEXT_PRIMARY}}
+.flow-upload-pct{font-family:${MONO};color:${TEXT_MUTED}}
+.flow-upload[data-failed="1"] .flow-upload-why{color:${WARN};font-weight:600}
+.flow-upload-x{min-height:28px;padding:0 10px;border:1px solid ${BORDER_STRONG};border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;font-size:13px;color:${TEXT_SECONDARY}}
 /* The seam between two columns. Invisible until the pointer is near it, then a
    line you can grab. Sixteen pixels wide so it is catchable, drawn as three so
    it is not a gutter. */
@@ -2074,7 +2086,7 @@ export function boardSection(which, boards, proposals) {
   };
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList, games, gamesHref, boards, proposals, onSaveBoard, onCastBoard, boardHue, schedToday, onCastScheduled, onCastRow, view, teaching, onSetSlotLook, footTools }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList, games, gamesHref, boards, proposals, onSaveBoard, onCastBoard, boardHue, schedToday, onCastScheduled, onCastRow, view, teaching, onSetSlotLook, footTools, onDropFiles, uploads, onForgetUpload, dragging }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
@@ -2096,6 +2108,10 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
   // blockId and no slot, and gets placed. Same drop targets for both, because
   // from where I am sitting it is the same gesture.
   const drop = (e, toSlot, beforeId) => {
+    // A file from the desktop, dropped on a row or a section: it goes up and
+    // becomes a row right there.
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (files.length) { if (onDropFiles) onDropFiles(files, toSlot, beforeId); return; }
     let from;
     try { from = JSON.parse(e.dataTransfer.getData("text/plain")); } catch { return; }
     if (!from) return;
@@ -2389,6 +2405,26 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
         // A link put up from a line goes up the way the room screen shows any
         // link: the page itself where the site allows it, the reader where not.
         castLink={(url, name, rowId) => { if (rowId) said(rowId); castNow({ ...castFromLink({ label: name, url }), title: name, label: name }); }} />
+      {/* A file on its way up, one line each, under the day it will join. A
+          failed one stays until it is dismissed, with the reason. */}
+      {dragging || (uploads || []).length ? (
+        <div className="flow-uploads" data-dragging={dragging ? "1" : "0"}>
+          {dragging ? <div className="flow-drop">Drop to add to the day</div> : null}
+          {(uploads || []).map(u => (
+            <div key={u.key} className="flow-upload" data-failed={u.why ? "1" : "0"}>
+              <span className="flow-upload-name">{u.name}</span>
+              {u.why ? (
+                <>
+                  <span className="flow-upload-why">{u.why}</span>
+                  <button className="dash-focus flow-upload-x" onClick={() => onForgetUpload && onForgetUpload(u.key)}>Forget</button>
+                </>
+              ) : (
+                <span className="flow-upload-pct">{Math.round((u.progress || 0) * 100)}%</span>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : null}
       {foldRow}
       {blockBlock}
 
@@ -3164,8 +3200,8 @@ function SourceNote({ from, body, onSave, accent, oneLine }) {
 export function NoteSheet({ sections, sources, accent, onAdd, onClose, classId }) {
   const [text, setText] = useState("");
   const [slot, setSlot] = useState(sections[0]?.[0] || "");
-  // A note can carry a clip, a photo or a voice memo, and the question that
-  // follows the file on the wall. With either of those the note is a block,
+  // A note can carry a file (a clip, a photo, a voice memo, a PDF, a deck),
+  // and the question that follows the file on the wall. With either of those the note is a block,
   // so the repository can find the clip again; plain words stay a row.
   const [media, setMedia] = useState(null);
   const [ask, setAsk] = useState("");
@@ -3192,7 +3228,7 @@ export function NoteSheet({ sections, sources, accent, onAdd, onClose, classId }
       </span>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <label className="dash-focus" style={{ ...mini, minHeight: HIT, cursor: up.busy ? "wait" : "pointer", opacity: up.busy ? .6 : 1 }}>
-          {up.label(media ? "Swap the file" : "Attach a clip, a photo or a voice memo")}
+          {up.label(media ? "Swap the file" : "Attach a file")}
           <input type="file" accept={MEDIA_ACCEPT} disabled={up.busy} style={{ display: "none" }}
             onChange={e => { up.send(e.target.files?.[0]); e.target.value = ""; }} />
         </label>
@@ -4473,11 +4509,76 @@ export default function Dashboard({ config, daySlug = "" }) {
   // file was on it, which meant a note written on the dashboard never turned
   // up in the repository and could not be edited there. Andrew: a note is a
   // repo note like any other.
-  const addNote = (slot, { text, media, ask }) => {
+  const addNote = (slot, { text, media, ask }, beforeId) => {
     const made = makeBlock({ type: "note", title: text, media: media || null, ask: (ask || "").trim() });
     update(prev => ({ ...prev, blocks: { ...(prev.blocks || {}), [made.id]: made } }));
-    pickBlock(slot, made);
+    pickBlock(slot, made, null, beforeId);
   };
+
+  // Files dragged in from the desktop. Each one goes up on its own and lands
+  // as a row where it was dropped: on a row, above that row; on a section, at
+  // its end; anywhere else on the page, at the end of the day. A day with no
+  // section yet gets one, so the first thing dropped on an empty day has
+  // somewhere to be. The row's words are the file's name, which is what
+  // Finder called it; the name can be rewritten on the row like any other.
+  const [uploads, setUploads] = useState([]);
+  const [dragging, setDragging] = useState(false);
+  const forgetUpload = (key) => setUploads(list => list.filter(u => u.key !== key));
+  const dropFiles = (files, slot, beforeId) => {
+    setDragging(false);
+    let into = slot || sections[sections.length - 1]?.[0] || "";
+    if (!into) {
+      into = "sec-" + genId();
+      writeDay(d => ({ ...d, slots: { ...(d.slots || {}), [into]: { title: "", items: [] } } }));
+    }
+    const on = day;
+    Array.from(files || []).forEach(file => {
+      const key = genId();
+      setUploads(list => [...list, { key, name: file.name, size: file.size, progress: 0, why: "" }]);
+      const patch = (p) => setUploads(list => list.map(u => (u.key === key ? { ...u, ...p } : u)));
+      uploadMedia(file, { classId: config.id, onProgress: (f) => patch({ progress: f }) })
+        .then(media => {
+          const made = makeBlock({ type: "note", title: file.name.replace(/\.[a-z0-9]+$/i, ""), media, ask: "" });
+          update(prev => ({ ...prev, blocks: { ...(prev.blocks || {}), [made.id]: made } }));
+          pickBlock(into, made, on, beforeId);
+          forgetUpload(key);
+        })
+        .catch(err => patch({ why: err.message || "The upload did not go through." }));
+    });
+  };
+
+  // While a file is over the window the browser would open it in place of
+  // the app, so the whole page says no to that, and the day says drop it
+  // here. A drop that no row or section caught still lands, at the end of
+  // the day.
+  const dropRef = useRef(dropFiles);
+  dropRef.current = dropFiles;
+  useEffect(() => {
+    const hasFiles = (e) => Array.from(e.dataTransfer?.types || []).includes("Files");
+    // Enter and leave fire on every element the file crosses, so the count
+    // of enters without leaves is what says the file is still over the page.
+    let depth = 0;
+    const enter = (e) => { if (!hasFiles(e)) return; depth++; setDragging(true); };
+    const over = (e) => { if (!hasFiles(e)) return; e.preventDefault(); };
+    const leave = (e) => { if (!hasFiles(e)) return; depth = Math.max(0, depth - 1); if (!depth) setDragging(false); };
+    const drop = (e) => {
+      if (!hasFiles(e)) return;
+      depth = 0; setDragging(false);
+      if (e.defaultPrevented) return;   // a row or a section took it
+      e.preventDefault();
+      dropRef.current(e.dataTransfer.files, "", null);
+    };
+    window.addEventListener("dragenter", enter);
+    window.addEventListener("dragover", over);
+    window.addEventListener("dragleave", leave);
+    window.addEventListener("drop", drop);
+    return () => {
+      window.removeEventListener("dragenter", enter);
+      window.removeEventListener("dragover", over);
+      window.removeEventListener("dragleave", leave);
+      window.removeEventListener("drop", drop);
+    };
+  }, []);
 
   const pickBlock = (slot, b, date, beforeId) => {
     const on = date || day;
@@ -4929,6 +5030,7 @@ export default function Dashboard({ config, daySlug = "" }) {
       onSlidesClaim={saveSlidesClaim} onBlockClaim={saveBlockClaim} where={config.code + " · " + day}
       loose={looseItems} onAddScheduled={(it, slot, date) => addScheduleItemToDay(update, config, date || day, it, slot)}
       onAddItem={addFlowItem} onAddNote={addNote} classId={config.id} onRemoveItem={removeItemB} onMoveItem={moveFlowItem}
+      onDropFiles={dropFiles} uploads={uploads} onForgetUpload={forgetUpload} dragging={dragging}
       onSetSequence={setSequence} onSetSlotTitle={setSlotTitleB} sequences={seqs}
       onAddBlock={addBlock} onRemoveBlock={removeBlock} onMoveBlock={moveBlock}
       blocks2={blocks2} onPickBlock={pickBlock} blockOf={blockOf} onBlockHeadline={setBlockHeadline}
