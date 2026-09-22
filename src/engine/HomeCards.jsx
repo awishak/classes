@@ -431,7 +431,10 @@ export function GamesSummary({ games = [] }) {
       </div>
     );
   }
-  return <Muted>No games yet.</Muted>;
+  // A game that has been played but not scored is still a game, so the card
+  // says what is missing rather than claiming the term has had none. Andrew,
+  // 2026-09-22: "it should say no games scored yet."
+  return <Muted>No games scored yet.</Muted>;
 }
 
 // ─── the instructor's own card ───

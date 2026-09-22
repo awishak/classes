@@ -31,7 +31,7 @@ import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker }
 import { useSession, studentFor, myCode } from "./session.js";
 import { instructorOf, schedulingLinkOf } from "../instructors.js";
 import { assignmentsOf, profileTaskOf, profileComplete } from "./profileTask.js";
-import { useOpenGames, GameStart, GamePlay, GamesNow } from "@ishak/decks";
+import { useOpenGames, GameStart, GamePlay, GamesNow, GameReviewLive } from "@ishak/decks";
 import { gameClient } from "./gameClient.js";
 import GradeDeck from "./GradeDeck.jsx";
 import { unseenGrades, markSeen } from "./grades.js";
@@ -206,12 +206,13 @@ function detail(key, config, role, ctx) {
     );
   }
   // Games: the one that is open, with Start, and every game this student
-  // finished, with the score once the scores are released.
+  // finished, with the score once the scores are released. A finished one
+  // opens again, to read their own answers back.
   if (key === "games") {
     return (
       <Panel title="Games">
         {(ctx.games || []).length
-          ? <GamesNow games={ctx.games} onStart={ctx.startGame || (() => {})} />
+          ? <GamesNow games={ctx.games} onStart={ctx.startGame || (() => {})} onReview={ctx.reviewGame || undefined} />
           : <Muted>No games yet.</Muted>}
         {role === "instructor" ? (
           <a className="ca-focus" href={config.path + "/games"} style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, marginTop: 12, fontSize: 17, fontWeight: 600, color: config.accent, textDecoration: "none" }}>Games</a>
@@ -689,12 +690,23 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const gameViewer = me && sessionEmail ? { id: String(sessionEmail).trim().toLowerCase(), name: me.name } : null;
   const { games } = useOpenGames({ supabase: gameClient, groupKey: config.id, viewerId: gameViewer?.id, section: me?.section ? String(me.section).trim() : null });
   const [playing, setPlaying] = useState(null);
+  // A game they have finished, opened again to read their own answers back.
+  // Andrew, 2026-09-22: "there should be a way back into the questions."
+  const [reviewing, setReviewing] = useState(null);
   const gameRoster = rosterNow.filter(s => s.email).map(s => ({ id: String(s.email).trim().toLowerCase(), name: s.name }));
   ctx.games = games;
   ctx.startGame = gameViewer ? setPlaying : null;
+  ctx.reviewGame = gameViewer ? setReviewing : null;
   const openGame = !preview && gameViewer ? games.find(g => g.open) : null;
   const GameLayer = !gameViewer || preview ? null
     : playing ? <GamePlay supabase={gameClient} game={playing} viewer={gameViewer} roster={gameRoster} onExit={() => setPlaying(null)} onError={e => console.error(e)} />
+    : reviewing ? (
+      <div style={{ position: "fixed", inset: 0, zIndex: 1000, overflowY: "auto", background: TOKENS.SURFACE.page }}>
+        <GameReviewLive supabase={gameClient} deckId={reviewing.deck.id} viewer={gameViewer}
+          title={reviewing.deck.title} result={reviewing.score || null} theme={{ accent: config.accent }}
+          onExit={() => setReviewing(null)} onError={e => console.error(e)} />
+      </div>
+    )
     : openGame ? <GameStart game={openGame} onStart={setPlaying} />
     : null;
   useEffect(() => {
