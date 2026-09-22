@@ -16,6 +16,7 @@
 
 import { useEffect, useState } from "react";
 import { SLIDE, TEXT } from "./tokens.js";
+import { useSurround } from "./imageColor.js";
 import { GameDuring, GameSpread, GameQuestions, GameQuestion, GameTeams } from "./GameSlides.jsx";
 
 const FONT = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -296,12 +297,15 @@ function Video({ s, g }) {
   );
 }
 
-// A photo dropped on the day, whole. Andrew, 2026-09-22: "it's not showing
-// the whole pictures." Filling the frame cropped a tall phone photo to a
-// band across its middle, so the picture sits inside the frame on black.
+// A photo dropped on the day, whole, and nothing else on the screen with it.
+// Andrew, 2026-09-22: "it's not showing the whole pictures." Filling the frame
+// cropped a tall phone photo to a band across its middle, so the picture sits
+// inside the frame, and what is left over takes the average of the picture's
+// own edge rather than black. `imageColor.js` does the reading.
 function Image({ s }) {
+  const bg = useSurround(s.image) || "#000";
   return (
-    <div style={{ position: "absolute", inset: 0, background: "#000" }}>
+    <div style={{ position: "absolute", inset: 0, background: bg }}>
       <img src={s.image} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
     </div>
   );
@@ -489,17 +493,29 @@ export function lookOnto(cast, look) {
 
 // A slide, drawn. `fit` scales the stage to the window, for the room screen;
 // without it the stage is 1280 by 720 for whoever scales it.
+// The templates that take the wall itself rather than the stage. The stage is
+// 16:9 and a wall is whatever the projector is, so scaling a picture to the
+// stage and then the stage to the wall boxes the picture twice: black bars
+// inside the stage and the class's ground outside it. A picture given the
+// whole surface fits the screen top to bottom, left to right, or both. A
+// thumbnail still gets the stage, because a thumbnail has to be 16:9.
+const FULL_BLEED = new Set(["image"]);
+
 export default function RoomSlide({ slide, ground, fit }) {
   // A slide can name its own ground; otherwise it stands on the class's.
   const g = GROUNDS[(slide?.ground || ground) === "paper" ? "paper" : "slate"];
   const s = useFit(!!fit);
   const T = TEMPLATES[slide?.template] || Item;
+  const drawn = <T s={{ ...slide, title: slide?.title || "" }} g={g} />;
   const stage = (
     <div style={{ width: W, height: H, position: "relative", overflow: "hidden", background: g.bg, color: g.ink, fontFamily: FONT, boxSizing: "border-box" }}>
-      <T s={{ ...slide, title: slide?.title || "" }} g={g} />
+      {drawn}
     </div>
   );
   if (!fit) return stage;
+  if (FULL_BLEED.has(slide?.template)) {
+    return <div style={{ position: "absolute", inset: 0, overflow: "hidden", background: g.bg }}>{drawn}</div>;
+  }
   return (
     <div style={{ position: "absolute", inset: 0, background: g.bg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
       <div style={{ width: W * s, height: H * s, flex: "none" }}>

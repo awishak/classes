@@ -13,6 +13,7 @@ import { currentDay, dayTitles } from "./days.js";
 import RoomSlide, { ROOM_FONTS_HREF } from "./RoomSlide.jsx";
 import { ENGINE_LIST } from "../config/registry.js";
 import { mediaLabel } from "./media.js";
+import { useSurround } from "./imageColor.js";
 import { savedPin, rememberPin, checkPin, PinForm } from "../InstructorGate.jsx";
 import { authHeaders } from "./session.js";
 import PickMark from "./Pick.jsx";
@@ -64,6 +65,18 @@ const CSS = `
 .cv-controls select{font-family:${MONO};font-size:12px;letter-spacing:.08em;color:${DIM};
   background:rgba(20,17,15,.9);border:1px solid ${LINE};border-radius:8px;padding:7px 9px;min-height:34px;cursor:pointer}
 `;
+
+// A photo on the wall: the picture fit to the screen, on the average of its
+// own edge, with nothing written over it. `imageColor.js` does the reading,
+// and a picture it cannot read stands on black the way it always did.
+function Photo({ src }) {
+  const bg = useSurround(src) || "#000";
+  return (
+    <div style={{ position: "absolute", inset: 0, background: bg }}>
+      <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+    </div>
+  );
+}
 
 const eyebrow = { fontFamily: TOKENS.FONT.label, fontSize: "clamp(11px,1.1vw,15px)", letterSpacing: ".16em", textTransform: "uppercase", color: DIM };
 
@@ -203,12 +216,15 @@ export function Content({ cast, config, plan, data }) {
         </div>
       );
     }
+    // A photo is the photo. Andrew, 2026-09-22: "i dont know why we have
+    // corner title. if i have an image, all i want is the image." A clip
+    // keeps its headline, because a clip is playing and the room wants to
+    // know what it is watching.
+    if (cast.media === "image") return <Photo src={cast.src} />;
     return (
       <div style={{ position: "absolute", inset: 0, background: "#000" }}>
-        {cast.media === "image"
-          ? <img src={cast.src} alt={cast.title || ""} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
-          : <video src={cast.src} autoPlay playsInline controls poster={cast.poster}
-              style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "#000" }} />}
+        <video src={cast.src} autoPlay playsInline controls poster={cast.poster}
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "#000" }} />
         {cast.title ? <div style={corner}>{cast.title}</div> : null}
       </div>
     );
