@@ -36,9 +36,14 @@ const comm999 = {
   // Goals get filled in on day one (first-day "what are your goals" seed).
   // The fake one, for looking at the site as a student and writing test
   // messages. Zack Girgis is a real name and was standing in for this.
+  //
+  // Two of them carry an email, because a game keys on the sign-in: Pepe on
+  // one phone and Jan on the other, so a game can be played against itself
+  // before a class plays one.
   testStudent: "Pepe LeFritz",
   students: [
     { id: "pepe-lefritz", name: "Pepe LeFritz", email: "pepe@example.test", from: "", goals: "" },
+    { id: "jan-itor", name: "Jan Itor", email: "jan@example.test", from: "", goals: "" },
     { id: "zack-girgis", name: "Zack Girgis", from: "", goals: "" },
     { id: "joe-hanna", name: "Joe Hanna", from: "", goals: "" },
     { id: "hanni-fakhoury", name: "Hanni Fakhoury", from: "", goals: "" },

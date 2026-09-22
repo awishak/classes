@@ -71,12 +71,16 @@ export default function GamesPage({ config }) {
     .filter(s => emailOf(s))
     .map(s => ({ id: emailOf(s), name: s.name }));
 
-  // Who a game can run for: every class this term, and a class with more than
-  // one section as each section. This class's sections are its roster's, so a
-  // run's section is the same words a student's row carries; another class's
-  // are its meeting times.
+  // Who a game can run for: every class on the shelf, this term's and the
+  // finished ones, and a class with more than one section as each section.
+  // This class's sections are its roster's, so a run's section is the same
+  // words a student's row carries; another class's are its meeting times.
+  //
+  // A game outlives a term. COMM 999 is archived and COMM 999 is where a game
+  // gets tried before a class plays one, so an archived class belongs in the
+  // menu too. The class whose page this is sorts first.
   const ownSections = [...new Set(withIds(data?.students || config.students || []).map(s => String(s.section || "").trim()).filter(Boolean))];
-  const groups = ENGINE_LIST.filter(c => c.status !== "archived").flatMap(c => {
+  const groups = ENGINE_LIST.flatMap(c => {
     const name = [c.code, c.quarter].filter(Boolean).join(" · ");
     const sections = c.id === config.id && ownSections.length > 1 ? ownSections
       : (c.meets || []).length > 1 ? c.meets.map(m => m.label) : [];
