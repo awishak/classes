@@ -19,6 +19,7 @@ import { isAway, idFor, awayIds } from "./attendance.js";
 import { dayTitles } from "./days.js";
 import PickMark from "./Pick.jsx";
 import * as TOKENS from "./tokens.js";
+import { cardStyle } from "./ThemeChrome.jsx";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
 // Fredoka on Crashing Out. One declaration, and every use below follows.
@@ -262,9 +263,9 @@ export function ScheduleSummary({ config, data }) {
   );
 }
 
-export function ScheduleDetail({ config, data, blockOf, focusDay, instructor, me, mark }) {
+export function ScheduleDetail({ config, data, blockOf, focusDay, instructor, me, mark, theme }) {
   return <StudentSchedule config={config} data={data} blockOf={blockOf} focusDay={focusDay}
-    instructor={instructor} me={me} mark={mark} />;
+    instructor={instructor} me={me} mark={mark} theme={theme} />;
 }
 
 // A day of the schedule, as part of an address: /comm3/schedule/sep-23, which
@@ -303,7 +304,7 @@ function DayItems({ items, row, accent }) {
   );
 }
 
-function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark }) {
+function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark, theme }) {
   const weeks = getWeeks(data, config);
   // A week item points at a block, and the pick lives on the block, so what
   // the students see is worked out from the block rather than stamped on the
@@ -370,10 +371,15 @@ function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark
             return <ItemView key={it.id} item={it} picked={isPicked(it)} href={href} when=""
               source={href ? "" : sourceOf(it, block)} />;
           };
-          // The week this week is in keeps the class's colour around its days.
+          // A day is the site's card, the same one the front page draws, so a
+          // theme that cuts its corners cuts these too. It had a hairline and a
+          // radius of its own before, near enough to the real card to look like
+          // a mistake rather than a choice. The week this week is in keeps the
+          // class's colour around its days, which is a state on a card and not
+          // a different card.
           const seat = {
-            background: SURFACE_CARD, borderRadius: 16, padding: 16, scrollMarginTop: 130,
-            border: (isNow ? "1.5px solid " + config.accent : "1px solid " + BORDER_STRONG),
+            ...cardStyle(theme, wi), padding: 16, scrollMarginTop: 130,
+            ...(isNow ? { border: "1.5px solid " + config.accent } : null),
           };
           return (
             <div key={w.id} id={"wk-" + w.id} style={{ scrollMarginTop: 130 }}>

@@ -441,7 +441,7 @@ export default function TermOutline({ config, weeks, plans, assignments, day, on
 export const TERM_CSS = `
 .term-veil{position:fixed;inset:0;background:rgba(23,19,16,.34);z-index:80}
 .term{position:fixed;top:34px;left:50%;transform:translateX(-50%);width:min(1120px,calc(100vw - 48px));
-  max-height:calc(100vh - 68px);background:#fff;border-radius:20px;z-index:81;display:flex;flex-direction:column;
+  max-height:calc(100vh - 68px);background:var(--surface-page);border-radius:20px;z-index:81;display:flex;flex-direction:column;
   overflow:hidden;box-shadow:0 40px 90px -30px rgba(23,19,16,.5),0 0 0 1px rgba(23,19,16,.08);font-family:${F}}
 .term-head{padding:18px 22px 12px;border-bottom:1px solid ${BORDER_STRONG};display:flex;flex-direction:column;gap:11px}
 .term-head-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -473,8 +473,15 @@ export const TERM_CSS = `
   color:${TEXT_SECONDARY};font-size:11px;padding:0}
 .term-fold:hover{background:${SURFACE_2};color:${TEXT_PRIMARY}}
 
-.term-day{border-bottom:1px solid ${BORDER}}
-.term-day-head{display:flex;align-items:center;gap:11px;min-height:40px;padding-left:62px}
+/* A DAY IS A CARD, here as on the schedule and on the map. Andrew,
+   2026-09-22: "in the outline the card is the day i think? definitely it;s a
+   day on teh map." A rule under each day made the quarter one long ruled list,
+   which is the shape the schedule had before a day got a card. The card is the
+   day rather than the section, because the outline is the whole quarter: a
+   card per section here is a hundred and fifty cards on one screen. */
+.term-day{background:var(--surface-card);border:var(--card-border);box-shadow:var(--card-shadow);border-radius:var(--card-radius);
+  padding:4px 14px 6px;margin-bottom:8px}
+.term-day-head{display:flex;align-items:center;gap:11px;min-height:40px;padding-left:48px}
 .term-date{flex:none;width:58px;border:none;background:none;cursor:pointer;text-align:left;padding:2px 4px;
   border-radius:6px;font-family:${MONO};font-size:13px;color:${TEXT_SECONDARY}}
 .term-date:hover{background:${SURFACE_2};color:${TEXT_PRIMARY}}
@@ -490,7 +497,7 @@ export const TERM_CSS = `
 .term-build{flex:none;min-height:28px;padding:0 11px;border-radius:999px;border:1px dashed ${BORDER_STRONG};
   background:none;cursor:pointer;font-family:${F};font-size:13px;color:${TEXT_MUTED}}
 .term-build:hover{border-style:solid;color:${TEXT_PRIMARY}}
-.term-secs{display:flex;flex-direction:column;gap:10px;padding:4px 0 12px 120px}
+.term-secs{display:flex;flex-direction:column;gap:10px;padding:4px 0 8px 106px}
 .term-sec{display:flex;flex-direction:column;gap:0}
 .term-sechead{display:flex;align-items:baseline;gap:8px;padding-bottom:5px;border-bottom:1px solid ${TEXT_PRIMARY}}
 .term-sname{font-size:15px;font-weight:600;color:${TEXT_PRIMARY}}
@@ -546,7 +553,10 @@ export const TERM_CSS = `
 .term-mapweek{display:flex;flex-direction:column;gap:1px;justify-content:center;padding-right:6px;min-width:0}
 .term-mapname{font-size:14px;font-weight:600;color:${TEXT_PRIMARY};line-height:1.25}
 .term-mapsub{font-family:${MONO};font-size:13px;color:${TEXT_MUTED}}
-.term-cell{display:flex;flex-direction:column;min-height:56px;border-radius:11px;background:${SURFACE_2};font-family:${F}}
+/* A day on the map is the same card again, not a sunk box with a radius of
+   its own. */
+.term-cell{display:flex;flex-direction:column;min-height:56px;font-family:${F};
+  background:var(--surface-card);border:var(--card-border);box-shadow:var(--card-shadow);border-radius:var(--card-radius)}
 .term-cellopen{flex:1 1 auto;display:flex;flex-direction:column;gap:3px;align-items:stretch;text-align:left;
   padding:8px 11px;border:none;border-radius:11px;background:none;cursor:pointer;font-family:${F}}
 .term-cell:hover{background:rgba(23,19,16,.07)}

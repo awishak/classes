@@ -36,7 +36,7 @@ import { DayPlanSummary, DayPlanDetail, rowsOf, countRows } from "../src/engine/
 import { FREEFORM } from "../src/engine/dayplan.js";
 import { weekdayOf } from "../src/engine/schedule.js";
 import { sittingsOf, minutesLeft, sittingLength } from "../src/engine/meets.js";
-import { THEMES, THEME, THEME_LABELS, themeCSS, varsOf, fontHref, hasNight } from "../src/engine/themes.js";
+import { THEMES, THEME, THEME_LABELS, themeCSS, varsOf, fontHref, hasNight, CARD_CSS } from "../src/engine/themes.js";
 import { ThemePicker, DayNightPicker } from "../src/engine/ThemeShell.jsx";
 import { Tubey, TubeySays, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeyPeek, ThemeStickers,
   StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, StatusMark, cardStyle, CHROME_CSS,
@@ -2075,6 +2075,66 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (minutesLeft(one, at(9, 30)) !== 50) { console.error("  FAIL  meets: a class that meets once does not count down"); failedEarly++; }
   if (sittingLength(two, at(10, 45)) !== 65) { console.error("  FAIL  meets: a sitting came out the wrong length"); failedEarly++; }
   if (minutesLeft(bad, at(9, 30)) !== null) { console.error("  FAIL  meets: a class with no times is in session"); failedEarly++; }
+}
+
+// ONE CARD, EVERYWHERE. Andrew, 2026-09-22: "i want that same card look
+// oeverywhere, including when i view the whole schedyule as an outline or a
+// map", and "get rid of shadows. we want to be consisntent across the site."
+//
+// check-tokens holds the four declarations. What is checked here is the part a
+// stylesheet cannot say: that the card is mounted on every route, that the
+// surfaces which draw one inline go through cardStyle rather than writing
+// their own, and that the day's sections are cards on the page rather than
+// cards inside one.
+{
+  const say = (m) => { console.error("  FAIL  one card: " + m); failedEarly++; };
+
+  // The rule ships with the tokens, on every route, or a card is four
+  // undefined variables.
+  if (!/\.card\{/.test(CARD_CSS)) say("there is no .card rule to wear");
+  for (const want of ["var(--surface-card)", "var(--card-border)", "var(--card-shadow)", "var(--card-radius)"]) {
+    if (!CARD_CSS.includes(want)) say("the card does not read " + want);
+  }
+  const mainSrc = readFileSync(new URL("../src/main.jsx", import.meta.url), "utf8");
+  if (!/CARD_CSS/.test(mainSrc)) say("the card is never mounted, so no surface off the class site has one");
+
+  // Clean's card is a hairline and no shadow. The dashboard used to lift on a
+  // two part shadow of its own, and that is the thing that came off.
+  if (THEME.clean.card.shadow !== "none") say("Clean grew a shadow");
+  const dashSrc = readFileSync(new URL("../src/engine/Dashboard.jsx", import.meta.url), "utf8");
+  const panelRule = (dashSrc.match(/^\.dash-panel\{[^}]*\}/m) || [""])[0];
+  if (/box-shadow:0/.test(panelRule)) say("the dashboard panel kept a shadow of its own");
+  if (/^\.dash-panel:hover\{/m.test(dashSrc)) say("the dashboard panel still lifts under the pointer");
+
+  // A day on the schedule is the site's card, cut up by the theme the way the
+  // front page is, rather than a hairline of its own.
+  const schedSrc = readFileSync(new URL("../src/engine/ScheduleCard.jsx", import.meta.url), "utf8");
+  if (!/cardStyle\(theme/.test(schedSrc)) say("a day on the schedule does not draw the site's card");
+  if (/borderRadius: 16, padding: 16/.test(schedSrc)) say("a day on the schedule kept its own radius");
+
+  // Crashing Out cuts every card its own way, and a day has to be cut too.
+  const clean0 = cardStyle("clean", 0);
+  const crash0 = cardStyle("crashing", 0);
+  const crash1 = cardStyle("crashing", 1);
+  if (clean0.borderRadius !== "var(--card-radius)") say("Clean's card is not reading the radius variable");
+  if (crash0.border === crash1.border) say("Crashing Out draws every card the same, so a stack of them is six copies of one box");
+
+  // The day's sections are cards on the page. The column around them paints
+  // nothing, because a card holding cards is the tall box this replaced.
+  const docSrc = readFileSync(new URL("../src/engine/DayDoc.jsx", import.meta.url), "utf8");
+  if (!/^\.doc-sec\{[^}]*padding:var\(--pad/m.test(docSrc)) say("a section is a card with nothing inside its edge");
+  if (/^\.doc-sec\{[^}]*padding-top:18px/m.test(docSrc)) say("a section still spaces itself the old way");
+  if (!/\.dash-bare\{/.test(dashSrc)) say("there is no bare column for the sections to sit on");
+  if (!/id="flow"[^>]*bare/.test(dashSrc)) say("the day column still paints itself, so the sections are cards inside a card");
+
+  // The outline and the map. A day is the card on both: a card per section
+  // across a quarter is about a hundred and fifty cards on one screen.
+  const termSrc = readFileSync(new URL("../src/engine/TermOutline.jsx", import.meta.url), "utf8");
+  if (/^\.term-day\{border-bottom/m.test(termSrc)) say("a day in the outline is still a rule rather than a card");
+  if (/^\.term-sec\{[^}]*var\(--card-radius\)/m.test(termSrc)) say("the outline made a card of every section, which is the whole quarter in cards");
+  // A white card on a white panel is an invisible card, so the outline stands
+  // on the page surface the way the class site does.
+  if (/^\.term\{[^}]*background:#fff/m.test(termSrc)) say("the outline is white, so a white card on it has nothing to read against");
 }
 
 // A photo on the wall. Andrew, 2026-09-22: "take the image, make it huge and

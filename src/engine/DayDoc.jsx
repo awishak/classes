@@ -1255,15 +1255,33 @@ export const DOC_CSS = `
 /* THE DAY AS A DOCUMENT. Three sizes of text and nothing else: a section is a
    heading, an item is a line, a note is quieter and set in. Every line is a
    text box that looks like text until the cursor is in it. */
-.doc{display:flex;flex-direction:column}
+.doc{display:flex;flex-direction:column;gap:var(--gap,11px)}
 .doc-total{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 4px;padding:6px 2px 0;font-family:var(--font-body);font-size:15px;color:var(--text-secondary)}
 .doc-foot-tools{margin-left:auto;display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 20px}
 .doc-total-n{font-weight:600;color:var(--text-primary);font-variant-numeric:tabular-nums}
 .doc-total.over .doc-total-n{color:var(--state-live)}
 .doc-foot{margin-top:22px;padding-top:12px;border-top:1px solid var(--line-soft)}
 .doc-total-more{color:var(--text-muted)}
-.doc-sec{display:flex;flex-direction:column;padding-top:18px;border-radius:10px}
-.doc-sec[data-over="1"]{background:rgba(23,19,16,.035)}
+/* A SECTION IS A CARD. Andrew, 2026-09-22: "i want each section to get the
+   same treatment we gave to each day in the schedyle. Each section should
+   feel like a card."
+
+   The day was one tall panel with three sizes of text down it, which is the
+   shape the schedule's weeks had before a day got a card of its own. So the
+   day's own title is the heading, the sections are cards under it, and the
+   panel around them went flush so these are cards on the page rather than
+   cards inside a card. The rows inside a section stay as lines: every one of
+   them is a text box that has to look like text until the cursor is in it,
+   and a card round each would be a form.
+
+   The card itself is the site's, out of themes.js, so a section, a panel, a
+   day on the schedule and a card on the front page are the same card. */
+.doc-sec{display:flex;flex-direction:column;padding:var(--pad,16px);
+  background:var(--surface-card);border:var(--card-border);box-shadow:var(--card-shadow);border-radius:var(--card-radius)}
+/* Dropping onto a card. A wash of grey was the old affordance and it is
+   invisible on a white card, so the card takes the accent round its edge and
+   the two drop marks keep saying above or below. */
+.doc-sec[data-over="1"]{border-color:var(--dash-accent)}
 .doc-sec[data-secover="above"]{box-shadow:inset 0 3px 0 var(--dash-accent)}
 .doc-sec[data-secover="below"]{box-shadow:inset 0 -3px 0 var(--dash-accent)}
 .doc-sec.dragging{opacity:.45}
@@ -1271,12 +1289,12 @@ export const DOC_CSS = `
 /* The heading is as wide as its words, so the time chip sits beside them
    rather than at the far edge of the column. */
 .doc-secline .doc-line{flex:0 1 auto;width:auto;min-width:140px;max-width:100%}
-.doc-grip.doc-secgrip{position:absolute;left:-18px;top:9px}
+.doc-grip.doc-secgrip{position:absolute;left:-16px;top:9px}
 .doc-secline.live{background:rgba(190,18,60,.07);border-radius:8px}
 .doc-sec:hover .doc-secgrip,.doc-secline:focus-within .doc-secgrip{opacity:1}
 /* A section with a mark: Enter or Exit. The word sits before the heading and
-   the board's colour runs down the section's left edge. */
-.doc-sec.marked{border-left:3px solid var(--mark,var(--dash-accent));padding-left:12px}
+   the board's colour runs down the card's left edge. */
+.doc-sec.marked{border-left:3px solid var(--mark,var(--dash-accent))}
 .doc-sectag{flex:none;font-family:var(--font-label);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
   color:var(--mark,var(--dash-accent))}
 /* The time a section is planned to take, as a chip beside its name. */

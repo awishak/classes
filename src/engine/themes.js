@@ -156,6 +156,29 @@ const vars = (t) => Object.entries(varsOf(t)).map(([k, v]) => k + ":" + v).join(
 // still mounts ThemeStyle after this block, and its rules win by coming later.
 export const baseCSS = () => ":root{" + vars(THEME.clean) + "}";
 
+// One card, everywhere.
+//
+// Every theme already carried a card: a border, a shadow and a radius, one
+// block per theme, reaching the page as three variables. For months the front
+// page was the only surface that drew one. The schedule wrote its own hairline,
+// the dashboard its own shadow, the outline a rule under each day and the map a
+// sunk box with a different radius, so five surfaces of one site had five ideas
+// of what a card is. That is the palette's own history repeating: a system in
+// the file and nobody pointing at it, because there was nothing to point at
+// from inside a stylesheet.
+//
+// So the card is a class now, mounted beside the tokens on every route, and a
+// surface that wants one says `card`. Andrew, 2026-09-22: "i want that same
+// card look oeverywhere", and on the dashboard's own shadow, "get rid of
+// shadows. we want to be consisntent across the site." Clean's shadow is
+// `none`, so wearing the card is what takes a shadow off.
+//
+// Inline-style surfaces go through `cardStyle` in ThemeChrome.jsx, which is
+// the same four values and adds Crashing Out's cut corners.
+export const CARD_CSS = `
+.card{background:var(--surface-card);border:var(--card-border);box-shadow:var(--card-shadow);border-radius:var(--card-radius)}
+`;
+
 export const themeCSS = () => {
   const light = [":root{" + vars(THEME.clean) + "}",
     ...THEMES.map(n => "[data-theme=\"" + n + "\"]{" + vars(THEME[n]) + "}")];

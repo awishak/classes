@@ -202,10 +202,18 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 /* A card is a surface, not a box. The border round every one of them, the rule
    under every header and the grip sitting out in the open added up to more
    lines than content. A soft edge and space carry it, and the handles come
-   back when the pointer is on the card. */
-.dash-panel{background:#fff;border-radius:18px;
-  box-shadow:0 1px 2px rgba(23,19,16,.05),0 0 0 1px rgba(23,19,16,.045)}
-.dash-panel:hover{box-shadow:0 2px 8px -2px rgba(23,19,16,.09),0 0 0 1px rgba(23,19,16,.08)}
+   back when the pointer is on the card.
+
+   The panel had its own white, its own radius and a two part shadow that lifted
+   under the pointer, none of which the class site's cards have. Andrew,
+   2026-09-22: "get rid of shadows. we want to be consisntent across the site."
+   So a panel wears the site's card, out of themes.js, like every other card
+   here, and the lift goes with the shadow. */
+.dash-panel{background:var(--surface-card);border:var(--card-border);box-shadow:var(--card-shadow);border-radius:var(--card-radius)}
+/* The day is the one column that paints nothing of its own, because the
+   sections in it are the cards. A card holding cards is what made the day read
+   as one tall box. */
+.dash-bare{background:none;border:none;box-shadow:none}
 .dash-head{display:flex;align-items:center;gap:8px;padding:12px 16px 10px}
 .dash-chrome{opacity:0;transition:opacity .12s}
 .dash-panel:hover .dash-chrome,.dash-panel:focus-within .dash-chrome{opacity:1}
@@ -515,9 +523,11 @@ body[data-resizing="1"]{cursor:col-resize;user-select:none}
 @media (hover:none){.flow-tools{opacity:1}}
 /* Keyboard users had no idea where they were on this screen. */
 .dash-focus:focus-visible{outline:2px solid var(--dash-accent);outline-offset:2px;border-radius:8px}
-.dash-comfortable{--row-h:44px;--gap:11px;--pad:16px;--fs:15px;--topic:26px;--card:16px}
+.dash-comfortable{--row-h:44px;--gap:11px;--pad:16px;--fs:15px;--topic:26px;--card:var(--card-radius)}
 .dash-compact{--row-h:33px;--gap:6px;--pad:11px;--fs:14px;--topic:20px;--card:12px}
-.dash-panel{border-radius:var(--card,16px)}
+/* Compact shaves the corner along with everything else. Comfortable takes the
+   radius the theme gives every card. */
+.dash-compact .dash-panel,.dash-compact .doc-sec{border-radius:var(--card)}
 .flow-row{font-size:var(--fs,15px)}
 .dash-band{padding:var(--pad,16px) calc(var(--pad,16px) + 4px);gap:var(--gap,11px)}
 .dash-topic{font-size:var(--topic,26px)}
@@ -595,9 +605,9 @@ const LiveTag = () => <span className="dash-live"><i />LIVE</span>;
 
 // A panel now sits where it sits. No grip, no size button, no collapse arrow —
 // the rail decides what is showing, so the panel only has to be the panel.
-function Panel({ id, title, right, children, flush }) {
+function Panel({ id, title, right, children, flush, bare }) {
   return (
-    <section className="dash-panel" data-id={id} style={{ minWidth: 0 }}>
+    <section className={bare ? "dash-bare" : "dash-panel"} data-id={id} style={{ minWidth: 0 }}>
       {title ? (
         <div className="dash-head">
           <h2 style={{ margin: 0, marginRight: "auto", fontFamily: F, fontSize: 15, fontWeight: 600,
@@ -5361,7 +5371,7 @@ export default function Dashboard({ config, daySlug = "" }) {
           {/* The column no longer needs naming. The day's own headline is the
               first thing in it, which says what this is better than the words
               "Day Plan" ever did. */}
-          <Panel id="flow" title={null}>
+          <Panel id="flow" title={null} bare flush>
             <EditableTopic value={dayTitle.title} placeholder={config.name} onSave={saveDayTitle}
               own={dayTitle.own} weekLabel={weekLabel} weekday={weekdayFull}
               span={dayTitle.span} nth={dayTitle.nth}

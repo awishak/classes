@@ -177,7 +177,7 @@ function detail(key, config, role, ctx) {
   }
   if (key === "schedule") {
     return <ScheduleDetail config={config} data={ctx.data} blockOf={ctx.blockOf} focusDay={ctx.sub}
-      instructor={role === "instructor"} me={role === "instructor" ? "" : ctx.asStudent} mark={ctx.mark} />;
+      instructor={role === "instructor"} me={role === "instructor" ? "" : ctx.asStudent} mark={ctx.mark} theme={ctx.theme} />;
   }
   if (key === "roster") {
     return <RosterDetail config={config} role={role} data={ctx.data} update={ctx.update} name={ctx.asStudent} />;
@@ -579,8 +579,12 @@ export default function ClassApp({ config: classConfig, initialCard }) {
     const out = await saveMerged(classConfig.storageKey, prev => setAway(prev, date, id, away), mergeAway);
     if (out) apply(out);
   }, [classConfig.storageKey, preview, saving, apply]);
+  // The theme travels with the context, because a card on the schedule is the
+  // same card as a card on the front page and Crashing Out cuts each one its
+  // own way. It used to stop at this component, so the schedule drew a hairline
+  // of its own while the page behind it was cut up.
   const ctx = { data: data || {}, update: write, asStudent: preview || asStudent,
-    setAsStudent: preview ? setPreview : null, live, mark,
+    setAsStudent: preview ? setPreview : null, live, mark, theme,
     blockOf: (id) => (id ? blockById(data, shared, id) : null), day, setDay };
 
   // Push updated seed content (schedule + library) to the store when the seed

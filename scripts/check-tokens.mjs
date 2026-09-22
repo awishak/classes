@@ -143,6 +143,44 @@ for (const f of readdirSync(ENGINE).sort()) {
   });
 }
 
+// ─── rule 4: one card, everywhere ───
+//
+// Every theme carries a card and for months the front page was the only
+// surface that drew one: the schedule wrote its own hairline, the dashboard
+// its own shadow, the outline a rule under each day, the map a sunk box with
+// its own radius. Five surfaces, five ideas of what a card is, which is the
+// palette's own history repeating.
+//
+// So the card-shaped selectors are named here, and each one has to take its
+// surface, its border, its shadow and its radius from the variables. Anything
+// that wants to look different has to say so in themes.js, where every theme
+// gets the change.
+const CARD_SELECTORS = [
+  ["src/engine/Dashboard.jsx", ".dash-panel"],
+  ["src/engine/DayDoc.jsx", ".doc-sec"],
+  ["src/engine/TermOutline.jsx", ".term-day"],
+  ["src/engine/TermOutline.jsx", ".term-cell"],
+];
+const CARD_PARTS = [
+  ["background", "var(--surface-card)"],
+  ["border", "var(--card-border)"],
+  ["box-shadow", "var(--card-shadow)"],
+  ["border-radius", "var(--card-radius)"],
+];
+for (const [file, sel] of CARD_SELECTORS) {
+  // An interpolation carries braces of its own, so it comes out before the
+  // rule is read: ${F} inside a declaration ended the match at the font.
+  const src = readFileSync(new URL("../" + file, import.meta.url), "utf8").replace(/\$\{[^}]*\}/g, "X");
+  // The rule as written: the selector at the start of a line, up to its brace.
+  const m = new RegExp("^\\" + sel + "\\{([^}]*)\\}", "m").exec(src);
+  if (!m) { fail(file, `${sel} has no rule of its own, so it cannot be wearing the card`); continue; }
+  for (const [prop, want] of CARD_PARTS) {
+    if (!new RegExp("(^|;)\\s*" + prop + ":" + want.replace(/[()-]/g, "\\$&")).test(m[1])) {
+      fail(file, `${sel} does not take its ${prop} from ${want}. One card, out of themes.js.`);
+    }
+  }
+}
+
 if (painted.length) {
   console.error(`  warn  ${painted.length} surface(s) painted white by hand, so they stay white after dark: ${painted.slice(0, 3).join(", ")}...`);
 }
