@@ -3705,7 +3705,7 @@ const COL_MAX = { material: 760, live: 620 };
 const gridFor = (cols) => "minmax(0,1fr) 16px " + cols.live + "px";
 
 export default function Dashboard({ config, daySlug = "" }) {
-  const [data, update] = useClassData(config.storageKey);
+  const [data, update, , saving] = useClassData(config.storageKey);
   // The class's games, as built in the game panel: the only games a day can hold.
   // Read again whenever this window comes back into focus, so a game made in
   // the Games tab is here when you return.
@@ -5537,6 +5537,27 @@ export default function Dashboard({ config, daySlug = "" }) {
       <div style={{ maxWidth: 1560, margin: "0 auto", padding: "0 20px 40px", fontSize: 13, color: TEXT_MUTED }}>
         {dayMeta?.topic ? dayMeta.topic + " · " : ""}Press ⌘K to cast anything, ⌘/ for the rest of the keyboard. Panel arrangement is saved to this browser; everything else syncs to the class.
       </div>
+
+      {/* What the saving is doing, which used to be nothing anybody could see.
+          A save that has not landed is still being tried, and the words are
+          held in this browser until one does. */}
+      {saving?.trouble ? (
+        <div role="status" style={{ position: "fixed", left: 20, bottom: 20, zIndex: 60, maxWidth: 420, padding: "12px 16px", borderRadius: 12,
+          background: "#fff", color: TOKENS.STATE.late, fontFamily: F, fontSize: 15, fontWeight: 600,
+          boxShadow: "0 0 0 1px " + BORDER_STRONG + ", 0 16px 40px -16px rgba(28,25,23,.35)" }}>
+          Not saved yet. Still trying, and your words are held in this browser.
+        </div>
+      ) : saving?.restored ? (
+        <div role="status" style={{ position: "fixed", left: 20, bottom: 20, zIndex: 60, maxWidth: 420, padding: "12px 16px", borderRadius: 12,
+          background: "#fff", color: TEXT_PRIMARY, fontFamily: F, fontSize: 15,
+          boxShadow: "0 0 0 1px " + BORDER_STRONG + ", 0 16px 40px -16px rgba(28,25,23,.35)", display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ flex: 1 }}>Work this browser was holding is back on the class.</span>
+          <button type="button" onClick={() => saving.clearRestored()}
+            style={{ minHeight: 34, padding: "0 12px", border: "none", borderRadius: 8, background: "transparent", color: TEXT_MUTED, fontFamily: F, fontSize: 15, cursor: "pointer" }}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

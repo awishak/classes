@@ -34,6 +34,69 @@ export async function saveClass(key, data) {
 const WARM = new Map();
 export const warmClassData = (key, data) => { WARM.set(key, data); };
 
+// ─── work that has not landed yet ───
+//
+// Andrew, 2026-09-22: "i worked on tomorrows lesson plan for COMM 3 on my
+// laptop, then i came home to a differnet desktop, and it wasn't updated."
+// Nothing of that day's work was on the server, and nothing had told him. A
+// save that fails answers null, the queued state is dropped, and the page goes
+// on showing the words as though they were kept.
+//
+// Two things follow from that. A save that fails is tried again, and until one
+// lands the state sits in this browser under its own key, so a closed lid, a
+// dead tab or a walk out of wifi cannot eat it. The next time any page opens
+// that class here, what was never saved is merged into what the server holds
+// now, by the same rule two people editing at once already use.
+const PENDING = "classes-unsaved:";
+
+// The state that was wanted, and the state it was built on top of. Both,
+// because the merge rule needs to know which branches this page actually
+// touched: without the basis, work held overnight would put a stale copy of
+// every other branch back over whatever happened since.
+// Writing to localStorage is the main thread standing still, and a class is
+// half a megabyte, so a copy on every keystroke would be felt in the typing.
+// At most one a second, and always one last write on the way out.
+const lastKept = new Map();
+const keepTimer = new Map();
+const wanted = new Map();
+const writePending = (key) => {
+  const held = wanted.get(key);
+  clearTimeout(keepTimer.get(key));
+  keepTimer.delete(key);
+  if (!held) return;
+  lastKept.set(key, Date.now());
+  try { localStorage.setItem(PENDING + key, JSON.stringify({ at: Date.now(), ...held })); }
+  catch { /* private window, or no room: the queue in memory is still trying */ }
+};
+const keepPending = (key, data, base) => {
+  wanted.set(key, { data, base });
+  const since = Date.now() - (lastKept.get(key) || 0);
+  if (since >= 1000) { writePending(key); return; }
+  if (!keepTimer.has(key)) keepTimer.set(key, setTimeout(() => writePending(key), 1000 - since));
+  // The last word before the tab goes: whatever is still waiting gets written
+  // now, because a page being closed is exactly when this matters.
+  if (typeof window !== "undefined" && !keepPending.bound) {
+    keepPending.bound = true;
+    window.addEventListener("pagehide", () => { [...wanted.keys()].forEach(writePending); });
+  }
+};
+const readPending = (key) => {
+  try {
+    const raw = localStorage.getItem(PENDING + key);
+    const held = raw ? JSON.parse(raw) : null;
+    return held && held.data && held.base ? held : null;
+  } catch { return null; }
+};
+const dropPending = (key) => {
+  wanted.delete(key);
+  clearTimeout(keepTimer.get(key));
+  keepTimer.delete(key);
+  try { localStorage.removeItem(PENDING + key); } catch { /* nothing to drop */ }
+};
+
+/** Whether this browser is holding work for a class that never reached the server. */
+export const unsavedFor = (key) => !!readPending(key);
+
 // The same data written out the same way whatever order its keys are in.
 // Postgres hands a row back with its keys re-sorted, so the echo of a save never
 // matches the string that was sent.
@@ -184,6 +247,14 @@ export function useClassData(key) {
   // built from this basis and has to be merged against the same one.
   const basis = useRef({});
 
+  // How many goes a save has had, and whether the last one failed. A failure
+  // is worth saying out loud, which is what `trouble` is for.
+  const tries = useRef(0);
+  const [trouble, setTrouble] = useState(false);
+  // Work that was held in this browser and has now been put back.
+  const [restored, setRestored] = useState(false);
+  const retry = useRef(null);
+
   const pump = useCallback(() => {
     if (flying.current || !queued.current.length) return;
     const [{ k, v }, ...rest] = queued.current;
@@ -191,6 +262,8 @@ export function useClassData(key) {
     flying.current = true;
     Promise.resolve(saveAgainstServer(k, basis.current, v)).then((out) => {
       if (out) {
+        tries.current = 0;
+        setTrouble(false);
         sent.current = [...sent.current.slice(-9), canon(out)];
         // What landed is what everybody holds now, this page included. Not
         // while something newer is waiting: that state was built from the
@@ -200,12 +273,25 @@ export function useClassData(key) {
           dataRef.current = out;
           WARM.set(k, out);
           setData({ ...out });
+          dropPending(k);
         }
+        return;
       }
+      // Nothing landed. Put it back at the head of the queue, unless newer
+      // work is already waiting there, and come round again: a second of
+      // dropped wifi should cost nothing. The copy in this browser stays put
+      // until something lands, so closing the tab now loses nothing either.
+      tries.current += 1;
+      setTrouble(true);
+      if (!queued.current.some(q => q.k === k)) queued.current = [{ k, v }, ...queued.current];
+      else pending.current--;
+      const wait = Math.min(30000, 1000 * 2 ** (tries.current - 1));
+      clearTimeout(retry.current);
+      retry.current = setTimeout(() => pump(), wait);
     }).finally(() => {
       flying.current = false;
-      pending.current--;
-      pump();
+      if (!tries.current) pending.current--;
+      if (!tries.current) pump();
     });
   }, [setData]);
 
@@ -213,12 +299,31 @@ export function useClassData(key) {
     let alive = true;
     const warm = WARM.get(key);
     if (warm) dataRef.current = warm;
-    loadClass(key).then(d => {
+    loadClass(key).then(async d => {
       if (!alive) return;
-      dataRef.current = d || {};
-      basis.current = dataRef.current;
-      WARM.set(key, dataRef.current);
-      setData(dataRef.current);
+      const server = d || {};
+      dataRef.current = server;
+      basis.current = server;
+      WARM.set(key, server);
+      setData(server);
+
+      // Work this browser is still holding, from a page whose save never
+      // landed. Merged against what the server has now, from the state that
+      // page started on, so only what was actually written here goes back in.
+      const held = readPending(key);
+      if (!held || canon(held.data) === canon(server)) { dropPending(key); return; }
+      const out = await saveAgainstServer(key, held.base, held.data);
+      if (!alive) return;
+      if (out) {
+        dropPending(key);
+        setRestored(true);
+        dataRef.current = out;
+        basis.current = out;
+        WARM.set(key, out);
+        setData({ ...out });
+      } else {
+        setTrouble(true);
+      }
     });
     const off = window.storage?.onUpdate?.(key, (val) => {
       if (pending.current > 0) return;
@@ -250,6 +355,9 @@ export function useClassData(key) {
     const q = queued.current;
     if (q.length && q[q.length - 1].k === key) q[q.length - 1] = { k: key, v: next };
     else { q.push({ k: key, v: next }); pending.current++; }
+    // Held here until a save lands. A tab that dies between the keystroke and
+    // the write still has the words when something opens this class again.
+    keepPending(key, next, basis.current);
     pump();
   }, [key, pump]);
 
@@ -270,7 +378,20 @@ export function useClassData(key) {
     setData({ ...next });
   }, [key]);
 
-  return [data, update, apply];
+  // Nothing leaves this browser while a save is still trying, so say so before
+  // the window closes. The browser shows its own words, not ours.
+  useEffect(() => {
+    if (!trouble) return undefined;
+    const ask = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", ask);
+    return () => window.removeEventListener("beforeunload", ask);
+  }, [trouble]);
+  useEffect(() => () => clearTimeout(retry.current), []);
+
+  // A fourth thing, so a screen can say what the saving is doing: `trouble` is
+  // a save that has not landed and is still being tried, `restored` is work
+  // this browser was holding and has now put back.
+  return [data, update, apply, { trouble, restored, clearRestored: () => setRestored(false) }];
 }
 
 // A write that re-reads before it saves.

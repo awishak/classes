@@ -4078,6 +4078,14 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const { readFileSync: readStore } = await import("node:fs");
     const src = readStore(new URL("../src/engine/store.js", import.meta.url), "utf8");
     if (!/saveAgainstServer\(k, basis\.current, v\)/.test(src)) say("a save no longer measures against what the server holds");
+    // A day's work went missing on a laptop and nothing said so. Three things
+    // hold that line: the words are kept in this browser until a save lands, a
+    // save that fails is tried again, and what was held is merged back in the
+    // next time the class opens here.
+    if (!/keepPending\(key, next, basis\.current\)/.test(src)) say("work is no longer held in this browser until it saves");
+    if (!/queued\.current = \[\{ k, v \}, \.\.\.queued\.current\]/.test(src)) say("a save that fails is dropped instead of tried again");
+    if (!/saveAgainstServer\(key, held\.base, held\.data\)/.test(src)) say("held work is no longer merged back in on load");
+    if (!/dropPending\(k\)/.test(src)) say("the held copy is never cleared, so it would come back for ever");
     const boardSrc = readStore(new URL("../src/engine/boards.js", import.meta.url), "utf8");
     if (!/saveAgainstServer\(key, \{ boards: basis\.current \}/.test(boardSrc)) say("a board post is written without merging");
     if (/Promise\.resolve\(saveClass\(k, v\)\)/.test(src)) say("the plain overwrite is back in the save path");
