@@ -1,6 +1,6 @@
 **COMM 3, Digital Storytelling. Syllabus, fall 2026.**
 
-Working draft, September 23, 2026. Section order follows the Summer 2025 COMM 118 syllabus. Course content comes from comm3-one-page.md, comm3-course-plan.md and the site data in src/config/comm3-term.js. Policy text is carried over from the COMM 118 syllabus. The rendered page is comm3-syllabus.html in this folder, and the PDF is built from that.
+Working draft, September 23, 2026. Section order follows the Summer 2025 COMM 118 syllabus. Course content comes from comm3-one-page.md, comm3-course-plan.md and the site data in src/config/comm3-term.js. Policy text is carried over from the COMM 118 syllabus. The first paragraph of the course description is from Charlotta Kratz's Spring 2026 COMM 3 syllabus. The rendered page is comm3-syllabus.html in this folder, and the PDF is built from that.
 
 ---
 
@@ -14,8 +14,7 @@ Communication Department
 Vari Hall 206
 aishak@scu.edu
 
-Office Hours: Thursdays. Book a Time.
-On Fridays I am in the classroom and students come by to talk through their work.
+Office Hours: Tuesdays 9:30 to 11:30 am, and by appointment (calendly.com/andrewishak/meet).
 
 Class meetings: MWF 8:00 to 9:05 am and 10:30 to 11:35 am, Vari 133
 
@@ -23,9 +22,9 @@ Readings: on the class site, classes.andrewishak.com/comm3.
 
 **Course description**
 
-I use stories to structure class time. Rather than presenting a concept and then illustrating it, I present the stories first and we work out the concept from them. Some are major news stories. Some are local or from campus, since a character can be someone everyone on campus knows and a story can be something SCU is doing. Students then apply what they learned by making something of their own.
+This course will challenge you to become an educated consumer and creator of stories in the digital age. During the quarter we will learn to identify the basic elements of narrative design and how to create stories using different platforms. We will spend a great deal of time learning how to analyze audiences and assess the best storytelling strategies to connect with them while considering the power and privilege of the creators. Along the way, you'll learn how to record a concise audio story, make a visual story, and create a multimedia portfolio.
 
-I want two things by the end of the quarter. First, when students read a story, whether it is about an athlete or a political event, they understand how the medium, the viewpoint, and the decisions behind the telling shape what they are reading. Second, and more important, they can do it themselves. Podcasts, video, and multimedia are the forms we use, but the underlying point is that whenever anyone tells a story, the choice of medium, what gets included, and the point of view all matter.
+I want two things for you by the end of the quarter. First, when you read a story, whether it is about an athlete or a political event, you understand how the medium, the viewpoint, and the decisions behind the telling shape what you are reading. Second, and more important, you can do it yourself. Podcasts, video, and multimedia are the forms we use, but the underlying point is that whenever anyone tells a story, the choice of medium, what gets included, and the point of view all matter.
 
 ---
 

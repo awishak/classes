@@ -1,6 +1,6 @@
 **COMM 118, Communication and Sport. Syllabus, fall 2026.**
 
-Working draft, September 23, 2026. Section order and policy text follow the Summer 2025 COMM 118 syllabus. Meeting info comes from src/config/comm118.js. The schedule and the assignments come from the live class site, the comm118-f26-v1 record in the store, as of September 23. Weeks 3 to 10 have no topic on the site yet, so the Topic column is blank there. The rendered page is comm118-syllabus.html in this folder, and the PDF is built from that.
+Working draft, September 23, 2026. Section order and policy text follow the Summer 2025 COMM 118 syllabus. Meeting info comes from src/config/comm118.js. The assignments come from the live class site, the comm118-f26-v1 record in the store, as of September 23. Weeks 1 and 2 take the week topic from the site; the other weeks list the day titles on the site for that week. There is no dated schedule and no weight column, following the COMM 3 layout. The rendered page is comm118-syllabus.html in this folder, and the PDF is built from that.
 
 ---
 
@@ -14,7 +14,7 @@ Communication Department
 Vari Hall 206
 aishak@scu.edu
 
-Office Hours: Book a Time.
+Office Hours: Tuesdays 9:30 to 11:30 am, and by appointment (calendly.com/andrewishak/meet).
 
 Class meetings: MWF 9:15 to 10:20 am, Vari 133
 
@@ -37,21 +37,22 @@ At the completion of this course, you will have a better understanding of select
 
 ## Page 2. Assignments
 
-| Week | Dates | Topic | Due | Weight |
-|---|---|---|---|---|
-| 1 | Sep 21 to 25 | The Purpose of Sports | Intro post, Fri. Weekly Challenge 1: Aussie rules football, Sun Sep 27 | 2.5 |
-| 2 | Sep 28 to Oct 2 | Value & Interest | | |
-| 3 | Oct 5 to 9 | | Weekly Challenge 2, Sun Oct 11 | 2.5 |
-| 4 | Oct 12 to 16 | | Sit-Down 1 memo, Sun Oct 18 | 5 |
-| 5 | Oct 19 to 23 | | Sit-Down 1, Fri Oct 23 | 15 |
-| 6 | Oct 26 to 30 | | Weekly Challenge 3: Former coach interview, Sun Nov 1 | 2.5 |
-| 7 | Nov 2 to 6 | | Sit-Down 2 memo, Sun Nov 8 | 5 |
-| 8 | Nov 9 to 13 | | Sit-Down 2, Fri Nov 13 | 15 |
-| 9 | Nov 16 to 20 | | Weekly Challenge 4: Leadership Guide, Fri Nov 20. Field Guide topic, Fri Nov 20 | 2.5 |
-| 10 | Nov 30 to Dec 4 | | | |
-| Finals | Dec 7 to 11 | | The Field Guide, Fri Dec 11 | 30 |
-| | | | In-Class: Weekly Game, This or That, Around the Horn, Rotating Fishbowl | 20 |
-| | | | Total | 100 |
+| Week | Topic | Assignment |
+|---|---|---|
+| 1 | The Purpose of Sports | Intro post, Friday. Weekly Challenge 1: Aussie rules football |
+| 2 | Value & Interest |  |
+| 3 | OJ. Athletes as celebrities. NIL, endorsement and who gets covered | Weekly Challenge 2 |
+| 4 | Legacy media, social media, storytelling. Streaming and the NFL on Netflix | Sit-Down 1 memo |
+| 5 | Youth sports: cost and access | Sit-Down 1 |
+| 6 | Identity, informal play, and who plays what. Coaching and communication | Weekly Challenge 3: Former coach interview |
+| 7 | Small groups and team interaction. Team culture | Sit-Down 2 memo |
+| 8 |  | Sit-Down 2 |
+| 9 | Power: protest, organizations, money | Weekly Challenge 4: Leadership Guide, Friday. Field Guide topic, Friday |
+| 10 | Wrap-up: media, participation, power. Field Guide work |  |
+| Finals | Field Guide peer review. Presentations | The Field Guide, Friday, December 11 |
+| | | In-Class: Weekly Game, This or That, Around the Horn, Rotating Fishbowl, ongoing |
+
+Weekly Challenges 1 to 3 and the Sit-Down memos are due Sundays. Sit-Downs are in class, Wednesday and Friday.
 
 Thanksgiving week is off.
 

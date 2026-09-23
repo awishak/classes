@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>COMM 118 Syllabus, Fall 2026</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* Design tokens from ~/.claude/DESIGN.md. Type floor 13, every text colour clears 4.5:1 on white. */
   :root {
@@ -16,7 +16,6 @@
     --sunk: #f6f4f1;
     --accent: #1e40af;   /* COMM 118. 8.7:1 on white. */
     --font: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
-    --mono: "IBM Plex Mono", ui-monospace, monospace;
   }
   @page { size: letter; margin: 0; }
   * { box-sizing: border-box; }
@@ -63,18 +62,14 @@
   th { text-align: left; font-size: 13px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 0 10px 8px 0; border-bottom: 1px solid var(--line-strong); }
   td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line-soft); vertical-align: top; font-size: 13px; }
   tr:last-child td { border-bottom: 0; }
-  td.num, th.num { font-family: var(--mono); font-size: 13px; width: 0.6in; white-space: nowrap; }
-  td.wt, th.wt { font-family: var(--mono); font-size: 13px; width: 0.7in; text-align: right; padding-right: 0; white-space: nowrap; }
-  td.dates, th.dates { width: 1.1in; white-space: nowrap; color: var(--text-2); }
-  .assign td.dates { font-size: 13px; }
+  td.num, th.num { font-size: 13px; font-variant-numeric: tabular-nums; width: 0.6in; white-space: nowrap; }
   td.topic { font-weight: 500; }
   tr.final td { border-top: 1px solid var(--line-strong); }
-  tr.total td { font-weight: 600; }
   .assign td { font-size: 15px; }
-  .assign td.num, .assign td.wt { font-size: 13px; }
+  .assign td.num { font-size: 13px; }
 
   .lo li { margin-bottom: 6px; }
-  .lo .k { font-family: var(--mono); font-weight: 500; color: var(--accent); margin-right: 6px; }
+  .lo .k { font-weight: 600; color: var(--accent); margin-right: 6px; }
 
   .footer { position: absolute; bottom: 0.4in; left: 0.75in; right: 0.75in; display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
 </style>
@@ -95,7 +90,7 @@
       </div>
       <div class="block">
         <div class="label">Office hours</div>
-        <div><a href="https://calendly.com/andrewishak/meet">Book a Time.</a></div>
+        <div>Tuesdays 9:30 to 11:30 am, and <a href="https://calendly.com/andrewishak/meet">by appointment</a></div>
       </div>
       <div class="block">
         <div class="label">Class meetings</div>
@@ -130,23 +125,23 @@
 <section class="page">
   <div class="strap"><span class="section">Assignments</span><span class="course">COMM 118 · Santa Clara University · Fall 2026</span></div>
   <table class="assign">
-    <thead><tr><th class="num">Week</th><th class="dates">Dates</th><th>Topic</th><th>Due</th><th class="wt">Weight</th></tr></thead>
+    <thead><tr><th class="num">Week</th><th>Topic</th><th>Assignment</th></tr></thead>
     <tbody>
-      <tr><td class="num">1</td><td class="dates">Sep 21 to 25</td><td class="topic">The Purpose of Sports</td><td>Intro post, Fri. Weekly Challenge 1: Aussie rules football, Sun Sep 27</td><td class="wt">2.5</td></tr>
-      <tr><td class="num">2</td><td class="dates">Sep 28 to Oct 2</td><td class="topic">Value &amp; Interest</td><td></td><td class="wt"></td></tr>
-      <tr><td class="num">3</td><td class="dates">Oct 5 to 9</td><td class="topic"></td><td>Weekly Challenge 2, Sun Oct 11</td><td class="wt">2.5</td></tr>
-      <tr><td class="num">4</td><td class="dates">Oct 12 to 16</td><td class="topic"></td><td>Sit-Down 1 memo, Sun Oct 18</td><td class="wt">5</td></tr>
-      <tr><td class="num">5</td><td class="dates">Oct 19 to 23</td><td class="topic"></td><td>Sit-Down 1, Fri Oct 23</td><td class="wt">15</td></tr>
-      <tr><td class="num">6</td><td class="dates">Oct 26 to 30</td><td class="topic"></td><td>Weekly Challenge 3: Former coach interview, Sun Nov 1</td><td class="wt">2.5</td></tr>
-      <tr><td class="num">7</td><td class="dates">Nov 2 to 6</td><td class="topic"></td><td>Sit-Down 2 memo, Sun Nov 8</td><td class="wt">5</td></tr>
-      <tr><td class="num">8</td><td class="dates">Nov 9 to 13</td><td class="topic"></td><td>Sit-Down 2, Fri Nov 13</td><td class="wt">15</td></tr>
-      <tr><td class="num">9</td><td class="dates">Nov 16 to 20</td><td class="topic"></td><td>Weekly Challenge 4: Leadership Guide, Fri Nov 20. Field Guide topic, Fri Nov 20</td><td class="wt">2.5</td></tr>
-      <tr><td class="num">10</td><td class="dates">Nov 30 to Dec 4</td><td class="topic"></td><td></td><td class="wt"></td></tr>
-      <tr class="final"><td class="num">Finals</td><td class="dates">Dec 7 to 11</td><td class="topic"></td><td>The Field Guide, Fri Dec 11</td><td class="wt">30</td></tr>
-      <tr><td class="num"></td><td class="dates"></td><td class="topic"></td><td>In-Class: Weekly Game, This or That, Around the Horn, Rotating Fishbowl</td><td class="wt">20</td></tr>
-      <tr class="total"><td class="num"></td><td class="dates"></td><td class="topic"></td><td>Total</td><td class="wt">100</td></tr>
+      <tr><td class="num">1</td><td class="topic">The Purpose of Sports</td><td>Intro post, Friday. Weekly Challenge 1: Aussie rules football</td></tr>
+      <tr><td class="num">2</td><td class="topic">Value &amp; Interest</td><td></td></tr>
+      <tr><td class="num">3</td><td class="topic">OJ. Athletes as celebrities. NIL, endorsement and who gets covered</td><td>Weekly Challenge 2</td></tr>
+      <tr><td class="num">4</td><td class="topic">Legacy media, social media, storytelling. Streaming and the NFL on Netflix</td><td>Sit-Down 1 memo</td></tr>
+      <tr><td class="num">5</td><td class="topic">Youth sports: cost and access</td><td>Sit-Down 1</td></tr>
+      <tr><td class="num">6</td><td class="topic">Identity, informal play, and who plays what. Coaching and communication</td><td>Weekly Challenge 3: Former coach interview</td></tr>
+      <tr><td class="num">7</td><td class="topic">Small groups and team interaction. Team culture</td><td>Sit-Down 2 memo</td></tr>
+      <tr><td class="num">8</td><td class="topic"></td><td>Sit-Down 2</td></tr>
+      <tr><td class="num">9</td><td class="topic">Power: protest, organizations, money</td><td>Weekly Challenge 4: Leadership Guide, Friday. Field Guide topic, Friday</td></tr>
+      <tr><td class="num">10</td><td class="topic">Wrap-up: media, participation, power. Field Guide work</td><td></td></tr>
+      <tr class="final"><td class="num">Finals</td><td class="topic">Field Guide peer review. Presentations</td><td>The Field Guide, Friday, December 11</td></tr>
+      <tr><td class="num"></td><td class="topic"></td><td>In-Class: Weekly Game, This or That, Around the Horn, Rotating Fishbowl, ongoing</td></tr>
     </tbody>
   </table>
+  <p>Weekly Challenges 1 to 3 and the Sit-Down memos are due Sundays. Sit-Downs are in class, Wednesday and Friday.</p>
   <p>Thanksgiving week is off.</p>
   <p>You can find dates and more information at <a href="https://classes.andrewishak.com/comm118">classes.andrewishak.com/comm118</a>.</p>
   <div class="footer"><span>classes.andrewishak.com/comm118</span><span>2</span></div>

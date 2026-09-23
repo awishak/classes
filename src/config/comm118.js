@@ -32,6 +32,10 @@ const comm118 = {
 
   storageKey: "comm118-f26-v1",
 
+  // The syllabus PDF, a card in Class. The file is a link in public/ to the
+  // one scripts/syllabus-pdf.sh writes into teaching/comm118/.
+  syllabus: "/syllabus/comm118-syllabus.pdf",
+
   // The first-week challenge: fill in your card, every field, due Sep 22.
   // No weight. The challenge itself lives in engine/profileTask.js.
   profileTask: { due: "Sep 22" },

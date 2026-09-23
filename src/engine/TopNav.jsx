@@ -54,7 +54,7 @@ const linkOf = (config, n) => config.path + (n.card ? "/" + segment(n.card) : ""
 // with Around the Horn up. The address already says where you are, so the
 // bar reads it, the same way on every page. A surface can still pass
 // `active` to say otherwise.
-const CLASS_CARDS = new Set(["class", "you", "roster", "instructor", "messages"]);
+const CLASS_CARDS = new Set(["class", "you", "roster", "instructor", "messages", "syllabus"]);
 export function activeFor(config, role, pathname, search = "") {
   if (!config) return "";
   const here = String(pathname || "").replace(/\/$/, "") + (search || "");

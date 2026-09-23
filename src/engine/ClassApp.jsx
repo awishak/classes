@@ -146,6 +146,8 @@ function summary(key, config, role, ctx) {
       return { title: "Leaderboard", body: <Muted>In-class game standings.</Muted> };
     case "roster":
       return { title: "Roster", body: <RosterSummary config={config} data={ctx.data} role={role} name={ctx.asStudent} /> };
+    case "syllabus":
+      return { title: "Syllabus", body: null };
     case "instructor":
       return { title: "Your instructor", body: <div style={{ fontWeight: 600 }}>{config.instructor?.name}</div> };
     default:
@@ -195,13 +197,26 @@ function detail(key, config, role, ctx) {
       </Panel>
     );
   }
+  // The syllabus, the PDF itself on the page. A phone often will not draw a
+  // PDF inside a page, so the file is a link under it too.
+  if (key === "syllabus") {
+    return (
+      <Panel title="Syllabus">
+        <iframe title={config.code + " syllabus"} src={config.syllabus}
+          style={{ display: "block", width: "100%", height: "80vh", border: "1px solid " + BORDER, borderRadius: 10, background: "#fff" }} />
+        <a className="ca-focus" href={config.syllabus} target="_blank" rel="noreferrer"
+          style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, marginTop: 12, fontSize: 17, fontWeight: 600, color: config.accent, textDecoration: "none" }}>Open PDF</a>
+      </Panel>
+    );
+  }
   // Class: your card, the roster and your instructor, each a card of its own.
   // Andrew has no card of his own here; his inbox is on the home page.
   if (key === "class") {
     return (
       <Panel title="Class">
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {(role === "instructor" ? ["roster", "instructor"] : ["you", "roster", "instructor"]).map((k, i) => ctx.tile(k, i))}
+          {(role === "instructor" ? ["roster", "instructor"] : ["you", "roster", "instructor"])
+            .concat(config.syllabus ? ["syllabus"] : []).map((k, i) => ctx.tile(k, i))}
         </div>
       </Panel>
     );
@@ -641,7 +656,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const enabledCards = Object.entries(config.cards || {})
     .filter(([, on]) => on)
     .map(([k]) => k)
-    .filter(k => view === "instructor" || !INSTRUCTOR_ONLY.has(k));
+    .filter(k => view === "instructor" || !INSTRUCTOR_ONLY.has(k))
+    .concat(config.syllabus ? ["syllabus"] : []);
   // The tabs this person gets, and therefore which cards are already reachable
   // without opening More. An instructor's tabs hold no cards at all, so every
   // card is under More for him — Schedule and Assignments did not disappear,
@@ -654,7 +670,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // under Challenges since 2026-09-17, a card of their own off the profile.
   const HOME = ["assignments", "messages", "questions", "class", "games"].filter(k => enabledCards.includes(k));
   // What lives inside Class, and lights the Class tab when open.
-  const IN_CLASS = new Set(["you", "roster", "instructor"]);
+  const IN_CLASS = new Set(["you", "roster", "instructor", "syllabus"]);
 
   const signIn = (name) => {
     try { localStorage.setItem(REMEMBER, name); } catch { /* private mode */ }
