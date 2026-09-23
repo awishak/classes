@@ -14,6 +14,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useClassData } from "./store.js";
+import { usePhotos, useWithPhotos } from "./photos.js";
 import { useLive, ANIMS, BIG_ANIMS } from "./live.js";
 import { mediaSteps, liveStep } from "./media.js";
 import { questionOf } from "./qbank.js";
@@ -3705,7 +3706,11 @@ const COL_MAX = { material: 760, live: 620 };
 const gridFor = (cols) => "minmax(0,1fr) 16px " + cols.live + "px";
 
 export default function Dashboard({ config, daySlug = "" }) {
-  const [data, update, , saving] = useClassData(config.storageKey);
+  const [stored, update, , saving] = useClassData(config.storageKey);
+  // The faces live one row over, so a keystroke in the day doc does not ship
+  // two dozen of them with it. Put back on the profiles here. See photos.js.
+  const [photos] = usePhotos(config.storageKey);
+  const data = useWithPhotos(stored, photos);
   // The class's games, as built in the game panel: the only games a day can hold.
   // Read again whenever this window comes back into focus, so a game made in
   // the Games tab is here when you return.

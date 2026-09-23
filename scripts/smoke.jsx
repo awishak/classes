@@ -77,6 +77,8 @@ import RetreatPage from "../src/RetreatPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
 import { ENGINE_LIST } from "../src/config/registry.js";
 import { warmClassData, saveMerged, mergeClass, mergeList } from "../src/engine/store.js";
+import { withPhotos, saveProfile, PHOTO_MARK } from "../src/engine/photos.js";
+import { profileComplete } from "../src/engine/profileTask.js";
 import { setAway, mergeAway, isAway, awayBySitting } from "../src/engine/attendance.js";
 import GradeView from "../src/engine/GradeView.jsx";
 import GradeDeck from "../src/engine/GradeDeck.jsx";
@@ -4089,6 +4091,27 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const boardSrc = readStore(new URL("../src/engine/boards.js", import.meta.url), "utf8");
     if (!/saveAgainstServer\(key, \{ boards: basis\.current \}/.test(boardSrc)) say("a board post is written without merging");
     if (/Promise\.resolve\(saveClass\(k, v\)\)/.test(src)) say("the plain overwrite is back in the save path");
+  }
+  // The photographs, which is most of what a class weighs, live one row over.
+  {
+    const say = (m) => { console.error("  FAIL  photographs: " + m); failedEarly++; };
+    const face = "data:image/jpeg;base64,abc";
+    const moved = withPhotos({ profiles: { Ann: { avatar: PHOTO_MARK, year: "Senior" } } }, { Ann: face });
+    if (moved.profiles.Ann.avatar !== face) say("a picture in the photographs row does not reach the profile");
+    if (moved.profiles.Ann.year !== "Senior") say("putting the picture back lost the rest of the card");
+    // A class nobody has moved over yet still has its pictures on the profiles.
+    const old = { profiles: { Ann: { avatar: face } } };
+    if (withPhotos(old, {}) !== old) say("a class that was never moved over is rebuilt for nothing");
+    if (withPhotos(old, { Ann: "data:image/jpeg;base64,zzz" }).profiles.Ann.avatar !== face)
+      say("the photographs row overrode a picture the class still holds");
+    // And writing a card sends the picture to the one and the words to the other.
+    let wrote = null; let kept = null;
+    saveProfile({ update: (fn) => { kept = fn({ profiles: {} }); }, setPhoto: (n, v) => { wrote = [n, v]; }, name: "Ann", profile: { avatar: face, year: "Senior" } });
+    if (!wrote || wrote[1] !== face) say("the picture was not written to the photographs row");
+    if (kept.profiles.Ann.avatar !== PHOTO_MARK) say("the class row kept the picture, which is the whole weight");
+    if (kept.profiles.Ann.year !== "Senior") say("the rest of the card did not reach the class");
+    if (!profileComplete({ ...kept.profiles.Ann, email: "a@b.c", about: "x", hometown: "x", motto: "x", goals: "x", priority: "x", strength: "x" }))
+      say("a card whose picture moved reads as unfinished");
   }
 }
 

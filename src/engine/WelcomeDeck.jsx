@@ -20,6 +20,7 @@
 import { useState, useEffect, useRef } from "react";
 import * as TOKENS from "./tokens.js";
 import { fileToAvatar, AvatarPreview } from "./YouCard.jsx";
+import { PHOTO_MARK } from "./photos.js";
 import { profileComplete } from "./profileTask.js";
 
 const F = TOKENS.FONT.body;
@@ -84,15 +85,21 @@ function Answer({ value, onSave, multiline, ...rest }) {
     onBlur={save} {...rest} />;
 }
 
-export default function WelcomeDeck({ config, name, profile, update, onDone, pin }) {
+export default function WelcomeDeck({ config, name, profile, update, setPhoto, onDone, pin }) {
   const [at, setAt] = useState(0);
   const a = config.accent;
   const p = profile || {};
-  const set = (key, value) => update(prev => {
-    const profiles = { ...(prev.profiles || {}) };
-    profiles[name] = { ...(profiles[name] || {}), [key]: value };
-    return { ...prev, profiles };
-  });
+  const set = (key, value) => {
+    // A photograph goes to the class's photographs row; the card keeps the
+    // mark, so the class itself stays light. See photos.js.
+    const photo = key === "avatar" && typeof value === "string" && value.startsWith("data:");
+    if (photo && setPhoto) setPhoto(name, value);
+    update(prev => {
+      const profiles = { ...(prev.profiles || {}) };
+      profiles[name] = { ...(profiles[name] || {}), [key]: photo ? PHOTO_MARK : value };
+      return { ...prev, profiles };
+    });
+  };
 
   const roster = String(name || "").trim().split(/\s+/);
   const input = { width: "100%", fontFamily: F, fontSize: 17, minHeight: TAP, padding: "0 12px", borderRadius: 10,

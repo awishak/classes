@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useClassData, saveMerged } from "./store.js";
+import { usePhotos, useWithPhotos, saveProfile } from "./photos.js";
 import { SHARED_KEY, blockById, registerTypes } from "./blocks.js";
 import { readAdded, readLabels } from "./types.js";
 import { ENGINE_LIST } from "../config/registry.js";
@@ -161,7 +162,7 @@ function detail(key, config, role, ctx) {
       date={ctx.day} onDate={ctx.setDay} />;
   }
   if (key === "you") {
-    return <YouDetail config={config} role={role} data={ctx.data} update={ctx.update} asStudent={ctx.asStudent} setAsStudent={ctx.setAsStudent} />;
+    return <YouDetail config={config} role={role} data={ctx.data} update={ctx.update} setPhoto={ctx.setPhoto} asStudent={ctx.asStudent} setAsStudent={ctx.setAsStudent} />;
   }
   if (key === "messages") {
     return <MessagesDetail config={config} role={role} data={ctx.data} update={ctx.update} asStudent={ctx.asStudent} />;
@@ -468,7 +469,12 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const REMEMBER = classConfig.storageKey + "-user";
   const ADMIN = classConfig.storageKey + "-admin";
 
-  const [data, update, apply] = useClassData(classConfig.storageKey);
+  const [stored, update, apply] = useClassData(classConfig.storageKey);
+  // The photographs live one row over, so a keystroke anywhere in the class
+  // does not ship two dozen faces with it. Put back on the profiles here, once,
+  // and every screen below goes on reading profiles[name].avatar. See photos.js.
+  const [photos, setPhoto] = usePhotos(classConfig.storageKey);
+  const data = useWithPhotos(stored, photos);
   // The shared shelf as well, because a reading on the schedule can be a block
   // that belongs to me rather than to this class, and the pick that says read
   // this one first lives on the block.
@@ -586,6 +592,9 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // of its own while the page behind it was cut up.
   const ctx = { data: data || {}, update: write, asStudent: preview || asStudent,
     setAsStudent: preview ? setPreview : null, live, mark, theme,
+    // A photograph is written to its own row, never into the class. A preview
+    // writes nothing, the same as every other edit made while looking.
+    setPhoto: preview && !saving ? () => {} : setPhoto,
     blockOf: (id) => (id ? blockById(data, shared, id) : null), day, setDay };
 
   // Push updated seed content (schedule + library) to the store when the seed
@@ -1016,7 +1025,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
         <ThemeStyle theme={theme} />
         <style>{CSS + accentCSS(a, config.accentDark)}</style>
         <WelcomeDeck config={config} name={seenAs} profile={(data.profiles || {})[seenAs]} update={write}
-          pin={ownCode} onDone={finishWelcome} />
+          setPhoto={preview && !saving ? () => {} : setPhoto} pin={ownCode} onDone={finishWelcome} />
       </div>
     );
   }

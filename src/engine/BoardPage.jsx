@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useClassData } from "./store.js";
+import { usePhotos, useWithPhotos } from "./photos.js";
 import { useBoards, postsOf, idForPrompt } from "./boards.js";
 import { useLive } from "./live.js";
 import { lastNameOf } from "./roster.js";
@@ -33,7 +34,10 @@ const SURFACE_CARD = TOKENS.SURFACE.card;   // a text box takes the card's own s
 const TAP = 44;
 
 export default function BoardPage({ config }) {
-  const [data] = useClassData(config.storageKey);
+  const [stored] = useClassData(config.storageKey);
+  // The faces live one row over; put back on the profiles here. See photos.js.
+  const [photos] = usePhotos(config.storageKey);
+  const data = useWithPhotos(stored, photos);
   const [live] = useLive(config.storageKey);
   const B = useBoards(config.storageKey);
   const [theme] = useStudentTheme(config);

@@ -8,6 +8,7 @@ import { genId } from "../utils.jsx";
 import { schedulingLinkOf } from "../instructors.js";
 import { rosterOf, nameShown, lastNameOf } from "./roster.js";
 import { Avatar, profileOf } from "./RosterCard.jsx";
+import { saveProfile, PHOTO_MARK } from "./photos.js";
 import * as TOKENS from "./tokens.js";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -151,6 +152,9 @@ export function fileToAvatar(file, cb) {
 
 export function AvatarPreview({ value, accent, size = 72 }) {
   const isPhoto = typeof value === "string" && value.startsWith("data:");
+  // The mark the class row keeps where a photograph was is not something to
+  // print in the circle. See photos.js.
+  if (!isPhoto && value === PHOTO_MARK) value = "";
   return (
     <div style={{ width: size, height: size, borderRadius: "50%", flexShrink: 0, overflow: "hidden",
       background: accent + "22", border: "2px solid " + accent + "55", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.5 }}>
@@ -168,7 +172,7 @@ function FieldRow({ title, children }) {
   );
 }
 
-function ProfileForm({ student, initial, update, accent }) {
+function ProfileForm({ student, initial, update, setPhoto, accent }) {
   const [f, setF] = useState({
     firstName: initial.firstName || "", lastName: initial.lastName || "", strength: initial.strength || "",
     email: initial.email || "", avatar: initial.avatar || "", about: initial.about || "",
@@ -180,7 +184,9 @@ function ProfileForm({ student, initial, update, accent }) {
   const a = accent;
 
   const save = () => {
-    update(prev => ({ ...prev, profiles: { ...(prev.profiles || {}), [student]: f } }));
+    // The photograph goes to the class's photographs row and the card keeps a
+    // mark where it was, so the class itself stays light. See photos.js.
+    saveProfile({ update, setPhoto, name: student, profile: f });
     setSaved(true);
   };
 
@@ -283,7 +289,7 @@ function ProfileForm({ student, initial, update, accent }) {
 // ─────────────────────────────────────────────────────────────
 // Your card. The profile comes first, because this page is where a student
 // fills in who they are; grades have a card of their own on the home page.
-function StudentYou({ config, data, update, asStudent, setAsStudent }) {
+function StudentYou({ config, data, update, setPhoto, asStudent, setAsStudent }) {
   const a = config.accent;
   const roster = rosterOf(config, data);
 
@@ -303,7 +309,7 @@ function StudentYou({ config, data, update, asStudent, setAsStudent }) {
       </div>
 
       <div style={{ marginTop: 14 }}>
-        <ProfileForm key={asStudent} student={asStudent} initial={data?.profiles?.[asStudent] || {}} update={update} accent={a} />
+        <ProfileForm key={asStudent} student={asStudent} initial={data?.profiles?.[asStudent] || {}} update={update} setPhoto={setPhoto} accent={a} />
       </div>
     </div>
   );
@@ -445,9 +451,9 @@ function InstructorYou({ config, data, update }) {
 // ─────────────────────────────────────────────────────────────
 // Your card: the profile. For Andrew, the same key still opens the inbox, so
 // a saved link keeps working.
-export function YouDetail({ config, role, data, update, asStudent, setAsStudent }) {
+export function YouDetail({ config, role, data, update, setPhoto, asStudent, setAsStudent }) {
   if (role === "instructor") return <InstructorYou config={config} data={data} update={update} />;
-  return <StudentYou config={config} data={data} update={update} asStudent={asStudent} setAsStudent={setAsStudent} />;
+  return <StudentYou config={config} data={data} update={update} setPhoto={setPhoto} asStudent={asStudent} setAsStudent={setAsStudent} />;
 }
 
 // Messages: the student's thread with Andrew, or Andrew's inbox.

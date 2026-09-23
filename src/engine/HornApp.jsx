@@ -15,6 +15,7 @@
 import { useEffect, useState } from "react";
 import HornBoard from "./HornBoard.jsx";
 import { useClassData } from "./store.js";
+import { usePhotos, useWithPhotos } from "./photos.js";
 import { currentDay } from "./days.js";
 import { studentsIn, realStudents, useRoomSection } from "./sections.js";
 import { genId } from "../utils.jsx";
@@ -32,7 +33,10 @@ const askedFor = () => {
 
 export default function HornApp({ config }) {
   const [open, setOpen] = useState(askedFor);
-  const [data, update] = useClassData(config.storageKey);
+  const [stored, update] = useClassData(config.storageKey);
+  // The faces live one row over; put back on the profiles here. See photos.js.
+  const [photos] = usePhotos(config.storageKey);
+  const data = useWithPhotos(stored, photos);
   // The board follows the bar while it is open, so changing the sitting
   // reseats the room rather than needing the board closed and opened again.
   const [room] = useRoomSection(config);
