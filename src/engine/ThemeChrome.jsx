@@ -206,9 +206,13 @@ export function ThemeBadge({ theme, points }) {
 // Snapchat rings an avatar the way a story is ringed. Everything else draws a
 // circle. `seen` greys the ring, which is the difference between a story you
 // have opened and one you have not.
-export function Avatar({ theme, name, size = 44, bg, seen }) {
+export function Avatar({ theme, name, size = 44, bg, seen, photo }) {
   const initials = String(name || "?").trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
-  const face = (
+  // Their own picture when the class has one, initials when it does not.
+  // Andrew, 2026-09-23: "avatars anywhere their names appear."
+  const face = photo ? (
+    <img src={photo} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", display: "block" }} />
+  ) : (
     <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: bg || "var(--text-primary)",
       color: "var(--surface-card)", display: "flex", alignItems: "center", justifyContent: "center",
       fontWeight: 700, fontSize: Math.round(size / 3) }}>{initials}</div>

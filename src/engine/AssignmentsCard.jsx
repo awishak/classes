@@ -14,6 +14,7 @@ import { useState, useRef, useEffect } from "react";
 import { assignmentsOf, isProfileTask, profileComplete } from "./profileTask.js";
 import { realStudents, studentsIn, hasSections, sectionsOf } from "./sections.js";
 import { rosterOf } from "./roster.js";
+import { Avatar, profileOf } from "./Face.jsx";
 import { genId } from "../utils.jsx";
 import { draftFeedback, textToHtml } from "./feedback.js";
 import { gradeText, scaleOf, SCALES, alive } from "./grades.js";
@@ -643,7 +644,7 @@ function GradeFlow({ config, data, update, queue, onExit }) {
         <button onClick={onExit} style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, padding: 0 }}>← Exit</button>
         <div style={{ fontSize: 15, color: TEXT_MUTED }}>{i + 1} of {queue.length}</div>
       </div>
-      <GradeForm key={aid + "|" + name} config={config} asg={asg} name={name} log={log} draftHtml={draft} onDraft={saveDraft} onSubmit={submit} onSkip={() => setI(i + 1)}
+      <GradeForm key={aid + "|" + name} config={config} asg={asg} name={name} profile={profileOf(data, name)} log={log} draftHtml={draft} onDraft={saveDraft} onSubmit={submit} onSkip={() => setI(i + 1)}
         onLike={(eid) => appreciate(update, aid, name, eid, "instructor")} onDelete={(eid) => deleteEvent(update, aid, name, eid)} />
     </div>
   );
@@ -651,7 +652,7 @@ function GradeFlow({ config, data, update, queue, onExit }) {
 
 const CANT_ACCESS_HTML = "<i>I cannot access your link. This challenge currently is scored as a 0. Please resubmit within 24 hours for credit.</i>";
 
-function GradeForm({ config, asg, name, log, draftHtml, onDraft, onSubmit, onSkip, onLike, onDelete }) {
+function GradeForm({ config, asg, name, profile, log, draftHtml, onDraft, onSubmit, onSkip, onLike, onDelete }) {
   const a = config.accent;
   const hasRubric = (asg?.rubric || []).length > 0;
   const prev = currentGrade(log);
@@ -697,7 +698,12 @@ function GradeForm({ config, asg, name, log, draftHtml, onDraft, onSubmit, onSki
   return (
     <div style={{ background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 16, padding: 18 }}>
       <div style={label}>{asg?.title} · {asg?.weight}%</div>
-      <div style={{ fontSize: 22, fontWeight: 600, marginTop: 2 }}>{name}</div>
+      {/* Whose work this is, as a face. Andrew, 2026-09-23: "avatars anywhere
+          their names appear." */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+        <Avatar profile={profile} name={name} accent={a} size={40} />
+        <div style={{ fontSize: 22, fontWeight: 600 }}>{name}</div>
+      </div>
       {prev && <div style={{ fontSize: 15, fontWeight: 600, color: a, marginTop: 2 }}>Current grade: {prev.score}/100 — change it below and Submit</div>}
 
       <div style={{ marginTop: 14 }}><AssignmentLog asg={asg} log={log} accent={a} studentName={name} actor="instructor" onLike={onLike} onDelete={onDelete} /></div>

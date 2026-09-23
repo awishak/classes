@@ -8,6 +8,8 @@ import { useState, useEffect } from "react";
 import { realStudents, hasSections, studentsIn, sectionFor, sectionsOf } from "./sections.js";
 import { nameShown, rosterOf } from "./roster.js";
 import { computeGrade } from "./AssignmentsCard.jsx";
+import { Avatar, profileOf } from "./Face.jsx";
+import { StudentThread } from "./YouCard.jsx";
 import RosterSheet, { callLogins } from "./RosterSheet.jsx";
 import * as TOKENS from "./tokens.js";
 
@@ -27,18 +29,12 @@ const label = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform:
 const h2 = { fontSize: 22, fontWeight: 600, color: TEXT_PRIMARY, letterSpacing: "-0.02em" };
 const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_MUTED, lineHeight: 1.5, ...style }}>{children}</div>;
 
-export const profileOf = (data, name) => (data?.profiles?.[name] || {});
-const threadOf = (data, name) => (data?.threads?.[name] || []);
+// The face lives in Face.jsx now, so every screen that writes a name can draw
+// one without importing this card. Passed on here for the screens that already
+// ask this file for it.
+export { Avatar, Face, FaceName, profileOf } from "./Face.jsx";  // for the screens that ask this card
 
-export function Avatar({ profile, name, accent, size = 44 }) {
-  const photo = profile?.avatar && String(profile.avatar).startsWith("data:") ? profile.avatar : null;
-  const initials = (name || "").split(" ").map(p => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
-  return (
-    <div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: accent + "22", border: "2px solid " + accent + "55", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.36, fontWeight: 700, color: accent }}>
-      {photo ? <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
-    </div>
-  );
-}
+const threadOf = (data, name) => (data?.threads?.[name] || []);
 
 // One labeled read-only field; renders nothing if empty.
 function Field({ title, value }) {
@@ -178,12 +174,11 @@ function InstructorRoster({ config, data, update }) {
           return (
             <button key={s.name} onClick={() => setSelected(s.name)}
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 14, padding: 14, cursor: "pointer", fontFamily: F, minHeight: TAP }}>
-              <Avatar profile={p} name={shown} accent={a} size={56} />
+              {/* Big enough to know somebody by across a room. Andrew,
+                  2026-09-23: "i'd like to make their pictures bigger on the
+                  roster page." */}
+              <Avatar profile={p} name={shown} accent={a} size={104} />
               <div style={{ fontWeight: 700, fontSize: 15, textAlign: "center", color: TEXT_PRIMARY, overflowWrap: "anywhere" }}>{shown}</div>
-              {/* The name the registrar has, when it is not the one they go by. */}
-              {shown !== s.name ? (
-                <div style={{ fontSize: 12, color: TEXT_MUTED, textAlign: "center", overflowWrap: "anywhere" }}>{s.name} on the roster</div>
-              ) : null}
               {/* Whatever they have given, and a word when they have given
                   nothing. It used to be all or nothing on profileComplete, so
                   a student who had written their hometown and no more read as
@@ -238,13 +233,13 @@ function StudentPage({ config, data, name, email, code, onBack, update }) {
     <div>
       <button onClick={onBack} style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, padding: "0 4px 0 0" }}>← Roster</button>
 
-      <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginTop: 4 }}>
-        <Avatar profile={p} name={nameShown(data, name)} accent={a} size={72} />
+      <div style={{ display: "flex", gap: 20, alignItems: "flex-start", marginTop: 4 }}>
+        <Avatar profile={p} name={nameShown(data, name)} accent={a} size={120} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 22, fontWeight: 600 }}>{nameShown(data, name)}</div>
-          {nameShown(data, name) !== name ? (
-            <div style={{ fontSize: 14, color: TEXT_MUTED }}>{name} on the registrar's roster</div>
-          ) : null}
+          {/* What the registrar calls them is not worth a line. Andrew,
+              2026-09-23: "i don't care about their name on the roster, you can
+              remove that warning." */}
           {update ? <PreferredName data={data} name={name} update={update} accent={a} /> : null}
           <div style={{ fontSize: 15, color: TEXT_MUTED }}>{[p.year, p.hometown].filter(Boolean).join(" · ") || "Profile not filled in yet"}</div>
 
@@ -276,24 +271,17 @@ function StudentPage({ config, data, name, email, code, onBack, update }) {
             );
           })()}
 
+          {/* The messaging app itself, not a read-only copy of it. Andrew,
+              2026-09-23: "please also let me access the same messaging app from
+              the class roster." Same component the inbox opens, so a note
+              written here lands where a note written there does. */}
           <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid " + BORDER }}>
             <div style={label}>Messages</div>
-            {msgs.length === 0 ? <Muted style={{ marginTop: 6 }}>No messages yet.</Muted> : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
-                {msgs.map(m => {
-                  if (m.kind === "got_it" || m.kind === "confused" || m.kind === "meeting") {
-                    const t = m.kind === "got_it" ? "Got it" : m.kind === "confused" ? "I'm confused" : "Requested a meeting";
-                    return <div key={m.id} style={{ fontSize: 15, color: TEXT_MUTED }}>• {t}</div>;
-                  }
-                  return (
-                    <div key={m.id} style={{ fontSize: 15, color: TEXT_PRIMARY }}>
-                      <span style={{ fontWeight: 700, color: m.from === "instructor" ? a : TEXT_SECONDARY }}>{m.from === "instructor" ? "You" : name.split(" ")[0]}{m.kind === "question" ? " (Q)" : ""}: </span>
-                      {m.text}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <div style={{ marginTop: 10 }}>
+              {update
+                ? <StudentThread config={config} data={data} update={update} name={name} />
+                : <Muted>{msgs.length ? msgs.length + " message(s)." : "No messages yet."}</Muted>}
+            </div>
           </div>
         </div>
       </div>
@@ -313,7 +301,7 @@ function StudentRoster({ config, data, name }) {
       <div>
         <button onClick={() => setOpen(null)} style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, padding: "0 4px 0 0" }}>← Roster</button>
         <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginTop: 4 }}>
-          <Avatar profile={p} name={nameShown(data, open)} accent={a} size={72} />
+          <Avatar profile={p} name={nameShown(data, open)} accent={a} size={120} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 22, fontWeight: 600 }}>{nameShown(data, open)}</div>
             <div style={{ fontSize: 15, color: TEXT_MUTED }}>{[p.year, p.hometown].filter(Boolean).join(" · ")}</div>
@@ -341,7 +329,7 @@ function StudentRoster({ config, data, name }) {
           return (
             <button key={s.name} onClick={() => setOpen(s.name)}
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 14, padding: 14, cursor: "pointer", fontFamily: F, minHeight: TAP }}>
-              <Avatar profile={p} name={nameShown(data, s.name)} accent={a} size={56} />
+              <Avatar profile={p} name={nameShown(data, s.name)} accent={a} size={104} />
               <div style={{ fontWeight: 700, fontSize: 15, textAlign: "center", color: TEXT_PRIMARY, overflowWrap: "anywhere" }}>{nameShown(data, s.name)}</div>
               {where ? <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center", lineHeight: 1.35 }}>{where}</div> : null}
               {p.motto ? <div style={{ fontSize: 13, fontStyle: "italic", color: TEXT_SECONDARY, textAlign: "center", lineHeight: 1.4, overflowWrap: "anywhere" }}>{p.motto}</div> : null}

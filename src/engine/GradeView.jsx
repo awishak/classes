@@ -7,6 +7,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useClassData } from "./store.js";
+import { usePhotos, useWithPhotos } from "./photos.js";
+import { Avatar, profileOf } from "./Face.jsx";
 import { ThemeStyle } from "./ThemeShell.jsx";
 import { withIds } from "./roster.js";
 import { schedulingLinkOf } from "../instructors.js";
@@ -22,6 +24,7 @@ const LINE = TOKENS.LINE.soft;
 const LINE_STRONG = TOKENS.LINE.strong;
 const WHITE = TOKENS.SURFACE.card;
 const SUNK = TOKENS.SURFACE.sunk;
+const MONO = TOKENS.FONT.label;
 const OK = TOKENS.STATE.ok;
 const LATE = TOKENS.STATE.late;
 const HIT = TOKENS.HIT;
@@ -60,7 +63,10 @@ const workOf = (data, aid, name) => {
 };
 
 export default function GradeView({ config }) {
-  const [data, update] = useClassData(config.storageKey);
+  const [stored, update] = useClassData(config.storageKey);
+  // The faces live one row over; put back on the profiles here. See photos.js.
+  const [photos] = usePhotos(config.storageKey);
+  const data = useWithPhotos(stored, photos);
   const a = config.accent;
   const assignments = data?.assignments || config.assignments || [];
   const roster = useMemo(() => withIds(data?.students?.length ? data.students : (config.students || [])), [data, config]);
@@ -107,7 +113,7 @@ export default function GradeView({ config }) {
 
   const cardOf = (s) => {
     const card = board.cards?.[s.name] || {};
-    return <Card key={s.name} student={s} due={asg?.due} card={card} work={workOf(data, aid, s.name)} accent={a}
+    return <Card key={s.name} student={s} profile={profileOf(data, s.name)} due={asg?.due} card={card} work={workOf(data, aid, s.name)} accent={a}
       dragging={dragging === s.name} picked={picked === s.name} editing={editing === s.name}
       onDragStart={(e) => { e.dataTransfer.setData("text/plain", s.name); e.dataTransfer.effectAllowed = "move"; setDragging(s.name); }}
       onDragEnd={() => { setDragging(""); setOver(""); }}
@@ -248,7 +254,7 @@ export default function GradeView({ config }) {
   );
 }
 
-function Card({ student, due, card, work, accent, dragging, picked, editing, onDragStart, onDragEnd, onPick, onEdit, onCancel, onSave, onAppreciate, onDelete }) {
+function Card({ student, profile, due, card, work, accent, dragging, picked, editing, onDragStart, onDragEnd, onPick, onEdit, onCancel, onSave, onAppreciate, onDelete }) {
   const [comment, setComment] = useState(card.comment || "");
   const [note, setNote] = useState(card.note || "");
   useEffect(() => { if (editing) { setComment(card.comment || ""); setNote(card.note || ""); } }, [editing]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -264,9 +270,17 @@ function Card({ student, due, card, work, accent, dragging, picked, editing, onD
         borderRadius: 12, padding: "10px 12px", background: WHITE, display: "flex", flexDirection: "column", gap: 6, fontSize: 15 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <button className="gv-focus" onClick={onPick} aria-pressed={picked}
-          style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", padding: 0, fontFamily: F, fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY, cursor: "pointer", minHeight: 28, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {student.name}
+          style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", padding: 0, fontFamily: F, fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY, cursor: "pointer", minHeight: 28, display: "flex", alignItems: "center", gap: 8 }}>
+          <Avatar profile={profile} name={student.name} accent={accent} size={28} />
+          <span style={{ minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{student.name}</span>
         </button>
+        {/* Which sitting they are in, because two rooms of COMM 3 grade
+            together. Andrew, 2026-09-23: "when they are in the grade view, i
+            need an 8:00 and 10:30 chip next to each students name." */}
+        {student.section ? (
+          <span style={{ flex: "none", fontFamily: MONO, fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY,
+            background: SUNK, borderRadius: 999, padding: "2px 9px" }}>{student.section}</span>
+        ) : null}
         {/* The student wrote and nobody has answered: say so where the card is. */}
         {work.waiting ? <span style={{ flex: "none", fontSize: 12, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "2px 8px" }}>New message</span> : null}
         {grade ? <span style={{ flex: "none", fontSize: 13, fontWeight: 700, color: accent }}>{grade.label}</span>

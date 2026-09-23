@@ -7,7 +7,7 @@ import { useState } from "react";
 import { genId } from "../utils.jsx";
 import { schedulingLinkOf } from "../instructors.js";
 import { rosterOf, nameShown, lastNameOf } from "./roster.js";
-import { Avatar, profileOf } from "./RosterCard.jsx";
+import { Avatar, Face, profileOf } from "./Face.jsx";
 import { saveProfile, PHOTO_MARK } from "./photos.js";
 import * as TOKENS from "./tokens.js";
 
@@ -80,7 +80,7 @@ const ThumbsUp = () => (
   </svg>
 );
 
-function Bubble({ m, accent }) {
+function Bubble({ m, accent, config, data, name }) {
   // status messages render centered
   if (m.kind === "got_it" || m.kind === "confused" || m.kind === "meeting") {
     const text = m.kind === "got_it" ? "Thumbs up" : m.kind === "confused" ? "Said: I'm confused" : "Requested a meeting";
@@ -93,8 +93,11 @@ function Bubble({ m, accent }) {
   }
   const mine = m.from === "instructor";
   const isQuestion = m.kind === "question";
+  // The face of whoever said it, on the side the bubble sits.
+  const face = <Face config={config} data={data} name={name} instructor={mine} size={32} />;
   return (
-    <div style={{ display: "flex", justifyContent: mine ? "flex-start" : "flex-end" }}>
+    <div style={{ display: "flex", justifyContent: mine ? "flex-start" : "flex-end", gap: 8, alignItems: "flex-end" }}>
+      {mine ? face : null}
       <div style={{ maxWidth: "82%" }}>
         {isQuestion && <div style={{ ...label, color: "#d97706", marginBottom: 4 }}>Question</div>}
         <div style={{ padding: "10px 14px", borderRadius: 16, fontSize: 15, lineHeight: 1.45,
@@ -106,16 +109,17 @@ function Bubble({ m, accent }) {
           {mine ? "Instructor" : "You"} · {fmtTime(m.ts)}
         </div>
       </div>
+      {mine ? null : face}
     </div>
   );
 }
 
-function Thread({ data, name, accent }) {
+function Thread({ config, data, name, accent }) {
   const msgs = threadOf(data, name);
   if (!msgs.length) return <Muted>No messages yet.</Muted>;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {msgs.map(m => <Bubble key={m.id} m={m} accent={accent} />)}
+      {msgs.map(m => <Bubble key={m.id} m={m} accent={accent} config={config} data={data} name={name} />)}
     </div>
   );
 }
@@ -329,7 +333,7 @@ function StudentMessages({ config, data, update, asStudent }) {
   return (
     <div>
       <div style={h2}>Message Dr. Ishak</div>
-      <div style={{ marginTop: 14 }}><Thread data={data} name={asStudent} accent={a} /></div>
+      <div style={{ marginTop: 14 }}><Thread config={config} data={data} name={asStudent} accent={a} /></div>
 
       <div style={{ marginTop: 18, display: "flex", gap: 8, alignItems: "flex-start" }}>
         <div style={{ flex: 1 }}><Field value={reply} onChange={setReply} placeholder="Write a reply..." /></div>
@@ -377,24 +381,42 @@ function OfficeHours({ config }) {
 // ─────────────────────────────────────────────────────────────
 // INSTRUCTOR VIEW (inbox)
 // ─────────────────────────────────────────────────────────────
+/**
+ * One student's thread and the box to answer it: the messaging surface itself,
+ * with nothing around it. The inbox opens it, and so does the roster, because
+ * Andrew, 2026-09-23: "please also let me access the same messaging app from
+ * the class roster" — the same one, not a copy of it.
+ */
+export function StudentThread({ config, data, update, name }) {
+  const a = config.accent;
+  const [note, setNote] = useState("");
+  const send = () => { if (!note.trim()) return; addMessage(update, name, { from: "instructor", kind: "note", text: note.trim() }); setNote(""); };
+  return (
+    <div>
+      <Thread config={config} data={data} name={name} accent={a} />
+      <div style={{ marginTop: 18, display: "flex", gap: 8, alignItems: "flex-start" }}>
+        <div style={{ flex: 1 }}><Field value={note} onChange={setNote} placeholder={"Post a note to " + String(name).split(" ")[0] + "..."} /></div>
+        <SendBtn accent={a} onClick={send} disabled={!note.trim()}>Post</SendBtn>
+      </div>
+    </div>
+  );
+}
+
 function InstructorYou({ config, data, update }) {
   const a = config.accent;
   const roster = rosterOf(config, data);
   const [selected, setSelected] = useState(null);
-  const [note, setNote] = useState("");
 
   if (selected) {
-    const send = () => { if (!note.trim()) return; addMessage(update, selected, { from: "instructor", kind: "note", text: note.trim() }); setNote(""); };
     return (
       <div>
         <button onClick={() => setSelected(null)}
           style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, padding: "0 4px 0 0" }}>← Inbox</button>
-        <div style={{ ...h2, marginTop: 4 }}>{selected}</div>
-        <div style={{ marginTop: 14 }}><Thread data={data} name={selected} accent={a} /></div>
-        <div style={{ marginTop: 18, display: "flex", gap: 8, alignItems: "flex-start" }}>
-          <div style={{ flex: 1 }}><Field value={note} onChange={setNote} placeholder={"Post a note to " + selected.split(" ")[0] + "..."} /></div>
-          <SendBtn accent={a} onClick={send} disabled={!note.trim()}>Post</SendBtn>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 4 }}>
+          <Avatar profile={profileOf(data, selected)} name={nameShown(data, selected)} accent={a} size={44} />
+          <div style={h2}>{nameShown(data, selected)}</div>
         </div>
+        <div style={{ marginTop: 14 }}><StudentThread config={config} data={data} update={update} name={selected} /></div>
       </div>
     );
   }

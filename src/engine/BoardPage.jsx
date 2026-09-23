@@ -124,6 +124,11 @@ export default function BoardPage({ config }) {
   }
 
   const mine = (p) => p.who === who;
+  // The face beside a post, when that student has given one.
+  const photoOf = (n) => {
+    const v = (data?.profiles || {})[n]?.avatar;
+    return typeof v === "string" && v.startsWith("data:") ? v : "";
+  };
   return (
     <div data-theme={theme} data-mode={mode} style={wrap}><ThemeStyle theme={theme} /><ThemeChrome theme={theme} /><ThemeTopper theme={theme} lines={["SAY SOMETHING", config.code]} fixed /><div style={inner}>
       <Head config={config} who={who} theme={theme} points={myPoints} onOut={() => {
@@ -166,7 +171,7 @@ export default function BoardPage({ config }) {
             style={{ background: SURFACE_CARD, border: "1px solid " + (mine(p) ? config.accent : BORDER),
               borderRadius: 14, padding: "13px 16px", display: "flex", flexDirection: "column", gap: 5 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <Avatar theme={theme} name={p.who} size={30} bg={mine(p) ? config.accent : undefined} />
+              <Avatar theme={theme} name={p.who} size={30} bg={mine(p) ? config.accent : undefined} photo={photoOf(p.who)} />
               <span style={{ fontSize: 14, fontWeight: 600, color: mine(p) ? config.accent : TEXT }}>{p.who}</span>
               {mine(p) ? <span style={{ fontSize: 12, color: MUTED }}>you</span> : null}
             </div>
