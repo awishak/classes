@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>COMM 3 Syllabus, Fall 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Design tokens from ~/.claude/DESIGN.md. Type floor 13, every text colour clears 4.5:1 on white. */
+  :root {
+    --text: #1c1917;
+    --text-2: #57534e;
+    --muted: #6b655f;
+    --line-soft: #f0edea;
+    --line-strong: #e3ded8;
+    --sunk: #f6f4f1;
+    --accent: #7c3aed;   /* COMM 3. 5.7:1 on white. */
+    --font: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @page { size: letter; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fff; color: var(--text); font-family: var(--font); }
+  body { font-size: 13px; line-height: 1.45; }
+
+  .page {
+    width: 8.5in; height: 11in; padding: 0.7in 0.75in 0.6in;
+    page-break-after: always; break-after: page; position: relative; overflow: hidden;
+  }
+  .page:last-child { page-break-after: auto; break-after: auto; }
+
+  /* Strap on every page: section name left, course right. */
+  .strap {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 2px solid var(--accent); padding-bottom: 8px; margin-bottom: 24px;
+  }
+  .strap .section { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: var(--accent); text-transform: uppercase; }
+  .strap .course { font-size: 13px; font-weight: 500; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+
+  h2 { font-size: 15px; font-weight: 600; margin: 20px 0 6px; color: var(--text); }
+  h2:first-of-type { margin-top: 0; }
+  p { margin: 0 0 10px; }
+  p:last-child { margin-bottom: 0; }
+  a { color: var(--accent); text-decoration: none; }
+  ul, ol { margin: 0 0 10px; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+
+  /* Cover */
+  .cover .title { font-size: 48px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; text-transform: uppercase; color: var(--accent); margin: 0 0 12px; }
+  .cover .title span { display: block; }
+  .cover .course { font-size: 13px; font-weight: 500; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 2px solid var(--accent); padding-bottom: 12px; margin-bottom: 24px; }
+  .cover .cols { display: grid; grid-template-columns: 2.2in 1fr; gap: 32px; }
+  .cover .who { font-size: 15px; line-height: 1.4; }
+  .cover .who .name { font-weight: 600; font-size: 17px; }
+  .cover .who .block { margin-bottom: 16px; }
+  .cover .who .label { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; margin-bottom: 2px; }
+  .cover .desc { font-size: 17px; line-height: 1.5; }
+  .cover .desc p { margin-bottom: 14px; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 0 0 16px; }
+  th { text-align: left; font-size: 13px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 0 10px 8px 0; border-bottom: 1px solid var(--line-strong); }
+  td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line-soft); vertical-align: top; font-size: 13px; }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { font-family: var(--mono); font-size: 13px; width: 0.6in; white-space: nowrap; }
+  td.topic { font-weight: 500; }
+  tr.final td { border-top: 1px solid var(--line-strong); }
+  .assign td { font-size: 15px; }
+  .assign td.num { font-size: 13px; }
+
+  /* Objectives */
+  .lo li { margin-bottom: 6px; }
+  .lo .k { font-family: var(--mono); font-weight: 500; color: var(--accent); margin-right: 6px; }
+
+  .footer { position: absolute; bottom: 0.4in; left: 0.75in; right: 0.75in; display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- Page 1. Cover -->
+<section class="page cover">
+  <h1 class="title"><span>Digital</span><span>Storytelling</span></h1>
+  <div class="course">COMM 3 &nbsp;·&nbsp; Santa Clara University &nbsp;·&nbsp; Fall 2026</div>
+  <div class="cols">
+    <div class="who">
+      <div class="block">
+        <div class="name">Andrew W. Ishak, Ph.D.</div>
+        <div>Communication Department</div>
+        <div>Vari Hall 206</div>
+        <div><a href="mailto:aishak@scu.edu">aishak@scu.edu</a></div>
+      </div>
+      <div class="block">
+        <div class="label">Office hours</div>
+        <div>Thursdays. <a href="#">Book a Time.</a></div>
+        <div class="small muted">On Fridays I am in the classroom and students come by to talk through their work.</div>
+      </div>
+      <div class="block">
+        <div class="label">Class meetings</div>
+        <div>MWF 8:00 to 9:05 am</div>
+        <div>MWF 10:30 to 11:35 am</div>
+        <div>Vari 133</div>
+      </div>
+      <div class="block">
+        <div class="label">Readings</div>
+        <div>On the class site, <a href="https://classes.andrewishak.com/comm3">classes.andrewishak.com/comm3</a></div>
+      </div>
+    </div>
+    <div class="desc">
+      <p>I use stories to structure class time. Rather than presenting a concept and then illustrating it, I present the stories first and we work out the concept from them. Some are major news stories. Some are local or from campus, since a character can be someone everyone on campus knows and a story can be something SCU is doing. Students then apply what they learned by making something of their own.</p>
+      <p>I want two things by the end of the quarter. First, when students read a story, whether it is about an athlete or a political event, they understand how the medium, the viewpoint, and the decisions behind the telling shape what they are reading. Second, and more important, they can do it themselves. Podcasts, video, and multimedia are the forms we use, but the underlying point is that whenever anyone tells a story, the choice of medium, what gets included, and the point of view all matter.</p>
+    </div>
+  </div>
+  <div class="footer"><span>classes.andrewishak.com/comm3</span><span>1</span></div>
+</section>
+
+<!-- Page 2. Assignments -->
+<section class="page">
+  <div class="strap"><span class="section">Assignments</span><span class="course">COMM 3 · Santa Clara University · Fall 2026</span></div>
+  <table class="assign">
+    <thead><tr><th class="num">Week</th><th>Topic</th><th>Assignment</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td class="topic">Identifying stories and framing</td><td>Identifying stories and framing exercise</td></tr>
+      <tr><td class="num">2</td><td class="topic">Visual language</td><td>Visual language exercise</td></tr>
+      <tr><td class="num">3</td><td class="topic">Graphics</td><td>Visual story pre-production, Friday. Graphics exercise</td></tr>
+      <tr><td class="num">4</td><td class="topic">Narrative arc</td><td>Visual story</td></tr>
+      <tr><td class="num">5</td><td class="topic">Characters</td><td>Characters exercise</td></tr>
+      <tr><td class="num">6</td><td class="topic">Audio quality</td><td>Audio story pre-production, Friday. Audio exercise</td></tr>
+      <tr><td class="num">7</td><td class="topic">Audience and platform</td><td>Audio story</td></tr>
+      <tr><td class="num">8</td><td class="topic">The final project</td><td>Groups form Wednesday</td></tr>
+      <tr><td class="num">9</td><td class="topic">Pitches and production</td><td>Groups pitch Monday</td></tr>
+      <tr><td class="num">10</td><td class="topic">Editing and presentations</td><td>Groups present Wednesday. Final pre-production document</td></tr>
+      <tr class="final"><td class="num">Finals</td><td class="topic"></td><td>Final project, Wednesday, December 9</td></tr>
+      <tr><td class="num"></td><td class="topic"></td><td>Class culture, ongoing</td></tr>
+    </tbody>
+  </table>
+  <p>Exercises are due Sundays. Pre-production for the visual and audio stories is due the Friday nine days before the project. Pre-production for the final is due the night of the group presentations, Wednesday, December 2. Pre-production counts toward the project it belongs to, not toward the creative exercise grade.</p>
+  <p>Creative exercises are always individual. The visual story and the audio story are done in pairs. The final project is done in groups of four.</p>
+  <p>Each piece gets a whole letter grade. There are no pluses or minuses on individual assignments and students do not see percentages. The final course grade is built from the letters lined up together, read for the average and for growth across the quarter.</p>
+  <p>You can find dates and more information at <a href="https://classes.andrewishak.com/comm3">classes.andrewishak.com/comm3</a>.</p>
+  <div class="footer"><span>classes.andrewishak.com/comm3</span><span>2</span></div>
+</section>
+
+<!-- Page 3. Objectives -->
+<section class="page">
+  <div class="strap"><span class="section">Objectives</span><span class="course">COMM 3 · Santa Clara University · Fall 2026</span></div>
+  <h2>Department Learning Outcomes</h2>
+  <p>The course objectives meet the following Department Learning Outcomes:</p>
+  <ul class="lo" style="list-style:none; padding-left:0">
+    <li><span class="k">LO 1</span>Explain and apply communication theories and concepts.</li>
+    <li><span class="k">LO 3</span>Analyze communication structures that maintain power and privilege and engage in practices that support diversity, equity, and inclusion.</li>
+    <li><span class="k">LO 4</span>Analyze the ethical dimensions of communication and form judgments and practices based on evidence and values.</li>
+    <li><span class="k">LO 6</span>Create effective and ethical oral, visual, and written communication based on awareness of diverse perspectives, contexts, and social identities.</li>
+    <li><span class="k">LO 7</span>Design communication that fosters a more just, humane, or sustainable world.</li>
+  </ul>
+  <h2>Course objectives</h2>
+  <ol>
+    <li>Identify and understand basic narrative elements. <span class="muted">(LO 1)</span></li>
+    <li>Identify a target audience and the best platform or distribution channel to connect with the audience. <span class="muted">(LO 1)</span></li>
+    <li>Critically analyze the power and privilege of content creators. <span class="muted">(LO 3, 4)</span></li>
+    <li>Create research-based social justice stories using an audio story, a short video, and a multimedia project. <span class="muted">(LO 6, 7)</span></li>
+  </ol>
+  <h2>Course assessment</h2>
+  <table>
+    <thead><tr><th>Course objective</th><th class="num">LOs</th><th>Assessed by</th></tr></thead>
+    <tbody>
+      <tr><td>Identify and understand basic narrative elements.</td><td class="num">1</td><td>Creative exercises, visual story, audio story, final project</td></tr>
+      <tr><td>Identify a target audience and the best platform or distribution channel to connect with the audience.</td><td class="num">1</td><td>Audio story, final project</td></tr>
+      <tr><td>Critically analyze the power and privilege of content creators.</td><td class="num">3, 4</td><td>Creative exercises, final project</td></tr>
+      <tr><td>Create research-based social justice stories using an audio story, a short video, and a multimedia project.</td><td class="num">6, 7</td><td>Visual story, audio story, final project</td></tr>
+    </tbody>
+  </table>
+  <div class="footer"><span>classes.andrewishak.com/comm3</span><span>3</span></div>
+</section>
+
+<!-- Page 4. Policies -->
+<section class="page">
+  <div class="strap"><span class="section">Policies</span><span class="course">COMM 3 · Santa Clara University · Fall 2026</span></div>
+  <h2>Accommodations</h2>
+  <p>If you have a documented disability for which accommodations may be required in this class, please contact Disabilities Resources, Benson 216 (<a href="https://www.scu.edu/disabilities">www.scu.edu/disabilities</a>) as soon as possible to discuss your needs and register for accommodations with the University. If you have already arranged accommodations through Disabilities Resources, please initiate a conversation with me about your accommodations during my office hours within the first two weeks of class.</p>
+  <p>Students who are pregnant and parenting may also be eligible for accommodations. Accommodations will only be provided after I have verification of your accommodations as approved by Disabilities Resources, and with sufficient lead time for me to arrange testing or other accommodations. For more information you may contact Disabilities Resources at 408-554-4109.</p>
+  <h2>Late Work</h2>
+  <p>Over many years of teaching, I have gone through a number of different policies regarding late work. What I've found is that the best policy is to be consistent, clear, and simple. This might seem strict to you, but again, this is what I've found to work the best.</p>
+  <p>If an assignment is not turned in at the deadline, the student will receive an F for that assignment. This includes turning in the wrong assignment, a mostly-incomplete assignment, or an assignment that doesn't meet basic requirements.</p>
+  <p>Then, the regrade policy applies. So the best a late assignment can earn is a D.</p>
+  <h2>Regrading</h2>
+  <p>If you would like to earn a higher grade, you may re-submit your assignment within 48 hours of receiving your grade. A resubmission can raise your grade by one letter.</p>
+  <p>Some assignments will not have improvement opportunities, including those submitted during Finals Week, and presentations. Please keep that in mind as we make our way towards the end of the quarter.</p>
+  <h2>Plagiarism</h2>
+  <p>Plagiarism and cheating in any form is unacceptable in this course, as it is in any course at SCU. There are no excuses. If you plagiarize or are found to be academically dishonest in any way, you will receive a grade of zero on that assignment. For incidents that I consider to be exceptional, you will receive a failing grade for the course. We'll talk about what counts as plagiarism, but if you're unsure in the meantime, come talk to me, or see <a href="https://www.scu.edu/academic-integrity/">scu.edu/academic-integrity</a>.</p>
+  <h2>AI</h2>
+  <p>We'll have a conversation about AI in class. Otherwise, my expectation is that we will use AI to assist us when I call it appropriate.</p>
+  <div class="footer"><span>classes.andrewishak.com/comm3</span><span>4</span></div>
+</section>
+
+<!-- Page 5. Course Policies, page 2 -->
+<section class="page">
+  <div class="strap"><span class="section">Policies, continued</span><span class="course">COMM 3 · Santa Clara University · Fall 2026</span></div>
+  <h2>Use of Classroom Recordings</h2>
+  <p>Some class meetings may be recorded by the instructor and made available on the class site. As is stated in the Student Conduct Code: “...Dissemination or sharing of any classroom recording without the permission of the instructor would be considered ‘misuse’ and, therefore, prohibited. Violations of these policies may result in disciplinary action by the University. At the instructor's discretion, violations may also have an adverse effect on the student's grade.”</p>
+  <h2>Discrimination, Harassment and Sexual Misconduct (Title IX)</h2>
+  <p>SCU faculty are committed to helping create a safe and open learning environment for all students. If you (or someone you know) have experienced any form of discrimination, harassment or sexual misconduct, including sexual assault, dating or domestic violence, or stalking, know that help and support are available, I encourage you seek support and report incidents to the Director of Equal Opportunity and Title IX Coordinator, Belinda Guthrie, at 408-554-3043, <a href="mailto:bguthrie@scu.edu">bguthrie@scu.edu</a>. For more information about reporting options and resources at Santa Clara University and in the community, please visit <a href="https://www.scu.edu/title-ix/">scu.edu/title-ix</a>. If you wish to speak with a confidential resource, please visit <a href="https://www.scu.edu/title-ix/resources/student/">scu.edu/title-ix/resources/student</a>.</p>
+  <h2>Copyright Statement</h2>
+  <p>Materials in this course are protected by United States copyright laws. I am the copyright holder of the materials I create, including notes, handouts, slides, and videos. You may make copies of course materials for your own use and you may share the materials with other students enrolled in this course. You may not publicly distribute the course materials without my written permission.</p>
+  <h2>Technology Support</h2>
+  <p>For Zoom assistance, contact Media Services at <a href="mailto:mediaservices@scu.edu">mediaservices@scu.edu</a> or 408-554-4520. You can also get support from the Zoom Help Center website.</p>
+  <p>For SCU network and computing support, contact the SCU Technology Help Desk at <a href="mailto:techdesk@scu.edu">techdesk@scu.edu</a> or 408-554-5700. They can provide support for MySCU Portal, Duo, eCampus, hardware and software issues, and more.</p>
+  <div class="footer"><span>classes.andrewishak.com/comm3</span><span>5</span></div>
+</section>
+
+</body>
+</html>
