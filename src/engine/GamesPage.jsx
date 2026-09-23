@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { GamesHome, FONT_HREF } from "@ishak/decks";
 import { useClassState } from "./store.js";
+import { usePhotos } from "./photos.js";
 import { parseDay } from "./days.js";
 import { useLive } from "./live.js";
 import { withIds } from "./roster.js";
@@ -30,6 +31,7 @@ const emailOf = (s) => String(s?.email || "").trim().toLowerCase();
 
 export default function GamesPage({ config }) {
   const [data] = useClassState(config.storageKey);
+  const [photos] = usePhotos(config.storageKey);
   const [live, cast, push] = useLive(config.storageKey);
   const { session, instructor } = useSession();
   const [error, setError] = useState("");
@@ -67,9 +69,11 @@ export default function GamesPage({ config }) {
   const places = (deck) => byDate.filter(date => Object.values(data.dayPlans[date]?.slots || {})
     .some(slot => normSlot(slot).items.some(it => it.gameId === deck.id)));
 
+  // Who can play, with the face the panel draws beside each name. The pictures
+  // live one row over, so they are fetched here rather than read off the class.
   const roster = withIds(data?.students || config.students || [])
     .filter(s => emailOf(s))
-    .map(s => ({ id: emailOf(s), name: s.name }));
+    .map(s => ({ id: emailOf(s), name: s.name, photo: photos[s.name] || "" }));
 
   // Who a game can run for: every class on the shelf, this term's and the
   // finished ones, and a class with more than one section as each section.
