@@ -40,23 +40,28 @@ export default function HornBoard({ students, seats, log, accent, profiles, onSe
   // than that gets the rows it needs.
   const rows = Math.max(6, Math.ceil(names.length / COLS) + 1);
   const total = rows * COLS;
-  const seated = useRef(false);
+  // Which roster was last seated. COMM 3's two sittings share one seat map,
+  // keyed by name, but each sitting is its own room: the 10:30 board counts
+  // only 10:30's seats as taken, and switching the sitting seats the new one.
+  // A flag that said "seated once" left the 10:30 room empty all morning.
+  const seated = useRef("");
+  const roomKey = names.join("|");
 
-  // First open: drop everyone into seats in roster order.
+  // First open of a room: drop everyone without a seat in, in roster order.
   useEffect(() => {
-    if (seated.current) return;
+    if (seated.current === roomKey) return;
     const missing = names.filter(n => seats[n] === undefined);
-    if (!missing.length) { seated.current = true; return; }
+    if (!missing.length) { seated.current = roomKey; return; }
     const next = { ...seats };
-    const used = new Set(Object.values(seats));
+    const used = new Set(names.filter(n => seats[n] !== undefined).map(n => seats[n]));
     let p = 0;
     missing.forEach(n => {
       while (used.has(p) && p < total) p++;
       if (p < total) { next[n] = p; used.add(p); p++; }
     });
-    seated.current = true;
+    seated.current = roomKey;
     onSeats(next);
-  }, [names.length]);
+  }, [roomKey, seats]);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
@@ -104,7 +109,7 @@ export default function HornBoard({ students, seats, log, accent, profiles, onSe
             <div style={{ fontSize: 13, color: MUTED }}>Drag a name to move a seat. Tap a seat to award points.</div>
           </div>
           {toast ? <span style={{ ...label, color: accent, fontSize: 13 }}>{toast}</span> : null}
-          <button style={mini} onClick={() => { seated.current = false; onSeats({}); }}>Reset seats</button>
+          <button style={mini} onClick={() => { seated.current = ""; onSeats(Object.fromEntries(Object.entries(seats).filter(([n]) => !names.includes(n)))); }}>Reset seats</button>
           <button style={{ ...mini, borderColor: accent, color: accent }} onClick={onClose}>Close</button>
         </div>
 
