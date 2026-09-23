@@ -570,7 +570,18 @@ function plainSlideFor({ item, block, seed, title, claim, notes, tag, assignment
     // The page's picture and headline, when this browser has already read
     // the page for a thumbnail, so the wall need not read it again.
     image: known?.image || undefined, pageTitle: known?.title || undefined, read: known ? true : undefined };
-  const sub = block?.type !== "board" ? (block?.body || "").trim() : "";
+  // What is written under a line is notes, not a slide.
+  //
+  // Andrew, 2026-09-23: "the problem with the slides is that it's not showing
+  // the headlines, it's showing all the notes below it. i want all those notes
+  // in the NOTES section of each slide, so i can see it as a present slides."
+  // A block's body went straight onto the face, so a row carrying a lecture's
+  // worth of bullets put the whole lecture on the wall in small type. The
+  // words are already beside the slide in Teach, which is where they are read
+  // from. A quote and a chapter keep theirs, because there the body IS the
+  // slide: the quotation, and the chapter's own line.
+  const body = block?.type !== "board" ? (block?.body || "").trim() : "";
+  const sub = block?.type === "quote" || block?.type === "book-chapter" || block?.type === "book" ? body : "";
 
   // A game from the game panel is its ticket, with the count of its questions.
   if (item?.gameId) {

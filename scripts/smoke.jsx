@@ -4644,6 +4644,19 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // A line with a link on it is the article, and the address is not on the
   // slide: the words lose it, the site stands for it, and a line that was
   // only an address leaves the headline to the page's own.
+  // What is written under a line is notes, not a slide. A lecture's worth of
+  // bullets on a block used to print on the wall in small type; the words are
+  // read beside the slide in Teach instead. A quote and a chapter keep theirs.
+  {
+    const lecture = { id: "n1" };
+    const long = "Homo narrans: humans are storytellers first\nWe don't judge messages mainly by logic.\n  Narrative probability: does the story hang together?";
+    const note = slideOf({ item: lecture, block: { type: "note", title: "Fisher's Narrative Paradigm", body: long }, title: "Fisher's Narrative Paradigm" });
+    if (note.sub) say("a note's body is still printed on the slide: " + JSON.stringify(note.sub).slice(0, 60));
+    if (note.title !== "Fisher's Narrative Paradigm") say("the slide lost the headline it should be showing");
+    const art = slideOf({ item: lecture, block: { type: "link", title: "Entman 1993", body: long, url: "https://doi.org/10.1111/x" }, title: "Entman 1993" });
+    if (art.sub) say("an article's slide is still carrying the body");
+    if (slideOf(cases2[14][1]).sub !== "Simone Weil") say("a quote lost the words that are the whole slide");
+  }
   const linked = slideOf({ item: { id: "l1", text: "Read this before class https://www.nytimes.com/2026/09/22/sports/x.html" }, title: "Read this before class https://www.nytimes.com/2026/09/22/sports/x.html" });
   if (linked.template !== "article") say("a line with a link makes a " + linked.template + " slide, want article");
   if (linked.title !== "Read this before class") say("the address is still in the slide's words: " + JSON.stringify(linked.title));
