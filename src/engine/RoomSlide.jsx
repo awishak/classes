@@ -330,6 +330,32 @@ function Image({ s }) {
   return <Photo src={s.image} />;
 }
 
+// A headline and a picture, together.
+//
+// Andrew, 2026-09-23: "what if i want to put a picture in a headline, like
+// obamas tan suit ... can we get both on the screen? that's the only exception
+// to that rule." A photograph on its own still takes the whole wall; a picture
+// dropped into a line that has words of its own shares the wall with them.
+// The words take the left, the picture fills the right edge to edge, and a
+// long headline steps down the way every other slide's does.
+function Picture({ s, g }) {
+  const words = s.headline || s.title || "";
+  return (
+    <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+      <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 28, padding: "0 56px 0 110px" }}>
+        <div style={{ width: 110, height: 10, borderRadius: 5, background: g.accent }} />
+        <div style={{ fontSize: words.length > 70 ? 54 : words.length > 40 ? 64 : 76, fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.04, textWrap: "balance" }}>
+          <L url={s.url}>{words}</L>
+        </div>
+        {s.site ? <div style={{ fontSize: 26, color: g.dim }}>{s.site}</div> : null}
+      </div>
+      <div style={{ position: "relative", overflow: "hidden", background: g.bg }}>
+        <img src={s.image} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+      </div>
+    </div>
+  );
+}
+
 function Podcast({ s, g }) {
   const bars = Array.from({ length: 58 }, (_, i) => Math.min(150, 26 + Math.round(Math.abs(Math.sin(i * 1.7) * 70 + Math.sin(i * 0.37) * 60))));
   return (
@@ -493,7 +519,7 @@ function Assignment({ s, g }) {
 }
 
 const TEMPLATES = {
-  section: Section, item: Item, article: Article, video: Video, image: Image, podcast: Podcast, chapter: Chapter,
+  section: Section, item: Item, article: Article, video: Video, image: Image, picture: Picture, podcast: Podcast, chapter: Chapter,
   quote: Quote, activity: Activity, headlines: Headlines, game: Game, question: Question, board: Board, assignment: Assignment,
   gameDuring: GameDuring, gameSpread: GameSpread, gameQuestions: GameQuestions, gameQuestion: GameQuestion, gameTeams: GameTeams,
   note: StickyNote, card: IndexCard,
@@ -595,7 +621,18 @@ function plainSlideFor({ item, block, seed, title, claim, notes, tag, assignment
       : { ...base, template: "activity", title: item.feature, label: item.feature };
   }
   if (block?.media?.src && block.media.kind === "image") return { ...base, template: "image", image: block.media.src };
-  if (IMAGE_URL.test(url)) return { ...base, template: "image", image: url };
+  // A picture dropped into a line that has words of its own goes up beside
+  // them; a line that is only a picture is still the whole photograph. The
+  // words are what is left of the line once the address is out of it, so a
+  // bare address has none and takes the wall.
+  if (IMAGE_URL.test(url)) {
+    // Only a picture the line itself carries. A block that IS a picture keeps
+    // the whole wall, which is what a photograph on the shelf is for.
+    const typedIn = !block?.url && !!lineUrl;
+    return typedIn && withoutUrls(claim || title || "")
+      ? { ...base, template: "picture", image: url }
+      : { ...base, template: "image", image: url };
+  }
 
   const type = block?.type || (seed ? "story" : "note");
   if (type === "set") return { ...base, template: "game", count: (block.children || []).length || 0 };

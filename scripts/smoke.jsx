@@ -4657,6 +4657,18 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (art.sub) say("an article's slide is still carrying the body");
     if (slideOf(cases2[14][1]).sub !== "Simone Weil") say("a quote lost the words that are the whole slide");
   }
+  // A picture typed into a line that has words of its own goes up beside them;
+  // a line that is only a picture is still the whole photograph, and a block
+  // that IS a picture keeps the wall.
+  {
+    const both = slideOf({ item: { id: "p1", text: "Obama's tan suit https://e.com/suit.jpg" }, title: "Obama's tan suit https://e.com/suit.jpg" });
+    if (both.template !== "picture") say("a picture beside a headline makes a " + both.template + " slide, want picture");
+    if (both.title !== "Obama's tan suit") say("the picture slide lost the headline: " + JSON.stringify(both.title));
+    if (both.image !== "https://e.com/suit.jpg") say("the picture slide has no picture");
+    const alone = slideOf({ item: { id: "p2", text: "https://e.com/suit.jpg" }, title: "https://e.com/suit.jpg" });
+    if (alone.template !== "image") say("a line that is only a picture makes a " + alone.template + " slide, want image");
+    for (const ground of ["paper", "slate"]) renderToString(<Slide cast={both} config={cfg} ground={ground} />);
+  }
   const linked = slideOf({ item: { id: "l1", text: "Read this before class https://www.nytimes.com/2026/09/22/sports/x.html" }, title: "Read this before class https://www.nytimes.com/2026/09/22/sports/x.html" });
   if (linked.template !== "article") say("a line with a link makes a " + linked.template + " slide, want article");
   if (linked.title !== "Read this before class") say("the address is still in the slide's words: " + JSON.stringify(linked.title));

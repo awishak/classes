@@ -48,7 +48,7 @@ import Drawer, { DRAWER_CSS } from "./Drawer.jsx";
 import TermOutline, { TERM_CSS } from "./TermOutline.jsx";
 import Slide, { slideOf, SLIDE_CSS, readSlidesOn, writeSlidesOn } from "./Slide.jsx";
 import DayDoc, { DOC_CSS, Menu as RowMenu } from "./DayDoc.jsx";
-import { lookOnto, withKnown } from "./RoomSlide.jsx";
+import { lookOnto, withKnown, withoutUrls } from "./RoomSlide.jsx";
 import { TemplatesPanel, HistoryPanel } from "./DayTools.jsx";
 
 // Eight items at 39px, plus the padding: the tallest a row menu usually gets,
@@ -2368,7 +2368,17 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
         }}
         // A section's slide is its name on the wall, the title card for what comes next.
         castSection={(slot, name, go) => {
-          const cast = lookOnto({ type: "slide", template: "section", title: name, label: name }, normSlot(slotItems[slot]).slideLook);
+          // A section named with a picture in it shows both: the name on the
+          // left, the picture filling the right. Andrew, 2026-09-23: "if a pic
+          // is in a section title, can we get both on the screen?"
+          const pic = (String(name).match(/https?:\/\/\S+\.(?:png|jpe?g|gif|webp|avif)(?:\?\S*)?/i) || [])[0] || "";
+          const words = withoutUrls(name);
+          const face = pic && words
+            ? { type: "slide", template: "picture", title: words, label: name, image: pic }
+            : pic
+              ? { type: "slide", template: "image", title: "", label: name, image: pic }
+              : { type: "slide", template: "section", title: name, label: name };
+          const cast = lookOnto(face, normSlot(slotItems[slot]).slideLook);
           if (go) castNow(cast);
           return cast;
         }}
