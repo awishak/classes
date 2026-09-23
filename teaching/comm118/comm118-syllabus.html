@@ -65,6 +65,8 @@
   tr:last-child td { border-bottom: 0; }
   td.num, th.num { font-family: var(--mono); font-size: 13px; width: 0.6in; white-space: nowrap; }
   td.wt, th.wt { font-family: var(--mono); font-size: 13px; width: 0.7in; text-align: right; padding-right: 0; white-space: nowrap; }
+  td.dates, th.dates { width: 1.1in; white-space: nowrap; color: var(--text-2); }
+  .assign td.dates { font-size: 13px; }
   td.topic { font-weight: 500; }
   tr.final td { border-top: 1px solid var(--line-strong); }
   tr.total td { font-weight: 600; }
@@ -93,7 +95,7 @@
       </div>
       <div class="block">
         <div class="label">Office hours</div>
-        <div><a href="#">Book a Time.</a></div>
+        <div><a href="https://calendly.com/andrewishak/meet">Book a Time.</a></div>
       </div>
       <div class="block">
         <div class="label">Class meetings</div>
@@ -128,21 +130,21 @@
 <section class="page">
   <div class="strap"><span class="section">Assignments</span><span class="course">COMM 118 · Santa Clara University · Fall 2026</span></div>
   <table class="assign">
-    <thead><tr><th class="num">Week</th><th>Topic</th><th>Assignment</th><th class="wt">Weight</th></tr></thead>
+    <thead><tr><th class="num">Week</th><th class="dates">Dates</th><th>Topic</th><th>Due</th><th class="wt">Weight</th></tr></thead>
     <tbody>
-      <tr><td class="num">1</td><td class="topic">Gambling and the purpose of sports</td><td></td><td class="wt"></td></tr>
-      <tr><td class="num">2</td><td class="topic">The value and interest of sports</td><td></td><td class="wt"></td></tr>
-      <tr><td class="num">3</td><td class="topic">Athletes, celebrity, and corporations</td><td>Interview Assignment</td><td class="wt">5</td></tr>
-      <tr><td class="num">4</td><td class="topic">Media rights and spectacle</td><td>Intersections Proposal</td><td class="wt">5</td></tr>
-      <tr><td class="num">5</td><td class="topic">Fans and identity</td><td></td><td class="wt"></td></tr>
-      <tr><td class="num">6</td><td class="topic">Civic pride, stadiums, and the NCAA</td><td>Intersections Submission</td><td class="wt">20</td></tr>
-      <tr><td class="num">7</td><td class="topic">OJ: Made in America</td><td></td><td class="wt"></td></tr>
-      <tr><td class="num">8</td><td class="topic">Leadership, communication, and culture</td><td>Leadership Guide</td><td class="wt">15</td></tr>
-      <tr><td class="num">9</td><td class="topic">Teach Me Something New</td><td>Presentations</td><td class="wt"></td></tr>
-      <tr><td class="num">10</td><td class="topic">Teach Me Something New</td><td>Presentations</td><td class="wt"></td></tr>
-      <tr class="final"><td class="num">Finals</td><td class="topic"></td><td>Final Project: Teach Me Something New</td><td class="wt">30</td></tr>
-      <tr><td class="num"></td><td class="topic"></td><td>In-Class: weekly game, This or That, in-class points, Rotating Fishbowl</td><td class="wt">25</td></tr>
-      <tr class="total"><td class="num"></td><td class="topic"></td><td>Total</td><td class="wt">100</td></tr>
+      <tr><td class="num">1</td><td class="dates">Sep 21 to 25</td><td class="topic">The Purpose of Sports</td><td>Intro post, Fri. Weekly Challenge 1: Aussie rules football, Sun Sep 27</td><td class="wt">2.5</td></tr>
+      <tr><td class="num">2</td><td class="dates">Sep 28 to Oct 2</td><td class="topic">Value &amp; Interest</td><td></td><td class="wt"></td></tr>
+      <tr><td class="num">3</td><td class="dates">Oct 5 to 9</td><td class="topic"></td><td>Weekly Challenge 2, Sun Oct 11</td><td class="wt">2.5</td></tr>
+      <tr><td class="num">4</td><td class="dates">Oct 12 to 16</td><td class="topic"></td><td>Sit-Down 1 memo, Sun Oct 18</td><td class="wt">5</td></tr>
+      <tr><td class="num">5</td><td class="dates">Oct 19 to 23</td><td class="topic"></td><td>Sit-Down 1, Fri Oct 23</td><td class="wt">15</td></tr>
+      <tr><td class="num">6</td><td class="dates">Oct 26 to 30</td><td class="topic"></td><td>Weekly Challenge 3: Former coach interview, Sun Nov 1</td><td class="wt">2.5</td></tr>
+      <tr><td class="num">7</td><td class="dates">Nov 2 to 6</td><td class="topic"></td><td>Sit-Down 2 memo, Sun Nov 8</td><td class="wt">5</td></tr>
+      <tr><td class="num">8</td><td class="dates">Nov 9 to 13</td><td class="topic"></td><td>Sit-Down 2, Fri Nov 13</td><td class="wt">15</td></tr>
+      <tr><td class="num">9</td><td class="dates">Nov 16 to 20</td><td class="topic"></td><td>Weekly Challenge 4: Leadership Guide, Fri Nov 20. Field Guide topic, Fri Nov 20</td><td class="wt">2.5</td></tr>
+      <tr><td class="num">10</td><td class="dates">Nov 30 to Dec 4</td><td class="topic"></td><td></td><td class="wt"></td></tr>
+      <tr class="final"><td class="num">Finals</td><td class="dates">Dec 7 to 11</td><td class="topic"></td><td>The Field Guide, Fri Dec 11</td><td class="wt">30</td></tr>
+      <tr><td class="num"></td><td class="dates"></td><td class="topic"></td><td>In-Class: Weekly Game, This or That, Around the Horn, Rotating Fishbowl</td><td class="wt">20</td></tr>
+      <tr class="total"><td class="num"></td><td class="dates"></td><td class="topic"></td><td>Total</td><td class="wt">100</td></tr>
     </tbody>
   </table>
   <p>Thanksgiving week is off.</p>
@@ -166,12 +168,12 @@
   <table>
     <thead><tr><th>Course objective</th><th class="num">LOs</th><th>Assessed by</th></tr></thead>
     <tbody>
-      <tr><td>Students will be able to explain how the advent of sports media has contributed to sports as product, spectacle, and culture.</td><td class="num">1</td><td>Intersections, weekly game</td></tr>
-      <tr><td>Students will be able to evaluate communication theories and concepts through the lenses of professional and recreational sports.</td><td class="num">1</td><td>Weekly game, Rotating Fishbowl, Leadership Guide</td></tr>
-      <tr><td>Students will be able to analyze the impact of sports on local and global communities.</td><td class="num">3, 7</td><td>Intersections, final project</td></tr>
-      <tr><td>Students will be able to find and analyze research about sports and identity.</td><td class="num">3, 4</td><td>Intersections, final project</td></tr>
-      <tr><td>Students will be able to identify multiple strategies for improving communication, culture, and leadership in team sports.</td><td class="num">6, 7</td><td>Leadership Guide, Interview Assignment</td></tr>
-      <tr><td>Students will develop their own ethical approaches to consumption and/or participation in sports.</td><td class="num">4</td><td>Intersections, final project, This or That</td></tr>
+      <tr><td>Students will be able to explain how the advent of sports media has contributed to sports as product, spectacle, and culture.</td><td class="num">1</td><td>Weekly Game, Sit-Down 1</td></tr>
+      <tr><td>Students will be able to evaluate communication theories and concepts through the lenses of professional and recreational sports.</td><td class="num">1</td><td>Weekly Game, Rotating Fishbowl, Sit-Downs</td></tr>
+      <tr><td>Students will be able to analyze the impact of sports on local and global communities.</td><td class="num">3, 7</td><td>Weekly Challenges, The Field Guide</td></tr>
+      <tr><td>Students will be able to find and analyze research about sports and identity.</td><td class="num">3, 4</td><td>Sit-Down 2, The Field Guide</td></tr>
+      <tr><td>Students will be able to identify multiple strategies for improving communication, culture, and leadership in team sports.</td><td class="num">6, 7</td><td>Weekly Challenge 3: Former coach interview, Weekly Challenge 4: Leadership Guide</td></tr>
+      <tr><td>Students will develop their own ethical approaches to consumption and/or participation in sports.</td><td class="num">4</td><td>This or That, Sit-Downs, The Field Guide</td></tr>
     </tbody>
   </table>
   <div class="footer"><span>classes.andrewishak.com/comm118</span><span>3</span></div>

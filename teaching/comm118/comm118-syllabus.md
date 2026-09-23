@@ -1,6 +1,6 @@
 **COMM 118, Communication and Sport. Syllabus, fall 2026.**
 
-Working draft, September 23, 2026. Section order and policy text follow the Summer 2025 COMM 118 syllabus. Meeting info comes from src/config/comm118.js. The week sequence and the assignment list are the Spring 2026 ones from the legacy class page, laid onto the fall calendar; the fall term has no schedule in the config yet, so the weeks below are the spring order until Andrew changes them. The rendered page is comm118-syllabus.html in this folder, and the PDF is built from that.
+Working draft, September 23, 2026. Section order and policy text follow the Summer 2025 COMM 118 syllabus. Meeting info comes from src/config/comm118.js. The schedule and the assignments come from the live class site, the comm118-f26-v1 record in the store, as of September 23. Weeks 3 to 10 have no topic on the site yet, so the Topic column is blank there. The rendered page is comm118-syllabus.html in this folder, and the PDF is built from that.
 
 ---
 
@@ -37,21 +37,21 @@ At the completion of this course, you will have a better understanding of select
 
 ## Page 2. Assignments
 
-| Week | Topic | Assignment | Weight |
-|---|---|---|---|
-| 1 | Gambling and the purpose of sports | | |
-| 2 | The value and interest of sports | | |
-| 3 | Athletes, celebrity, and corporations | Interview Assignment | 5 |
-| 4 | Media rights and spectacle | Intersections Proposal | 5 |
-| 5 | Fans and identity | | |
-| 6 | Civic pride, stadiums, and the NCAA | Intersections Submission | 20 |
-| 7 | OJ: Made in America | | |
-| 8 | Leadership, communication, and culture | Leadership Guide | 15 |
-| 9 | Teach Me Something New | Presentations | |
-| 10 | Teach Me Something New | Presentations | |
-| Finals | | Final Project: Teach Me Something New | 30 |
-| | | In-Class: weekly game, This or That, in-class points, Rotating Fishbowl | 25 |
-| | | Total | 100 |
+| Week | Dates | Topic | Due | Weight |
+|---|---|---|---|---|
+| 1 | Sep 21 to 25 | The Purpose of Sports | Intro post, Fri. Weekly Challenge 1: Aussie rules football, Sun Sep 27 | 2.5 |
+| 2 | Sep 28 to Oct 2 | Value & Interest | | |
+| 3 | Oct 5 to 9 | | Weekly Challenge 2, Sun Oct 11 | 2.5 |
+| 4 | Oct 12 to 16 | | Sit-Down 1 memo, Sun Oct 18 | 5 |
+| 5 | Oct 19 to 23 | | Sit-Down 1, Fri Oct 23 | 15 |
+| 6 | Oct 26 to 30 | | Weekly Challenge 3: Former coach interview, Sun Nov 1 | 2.5 |
+| 7 | Nov 2 to 6 | | Sit-Down 2 memo, Sun Nov 8 | 5 |
+| 8 | Nov 9 to 13 | | Sit-Down 2, Fri Nov 13 | 15 |
+| 9 | Nov 16 to 20 | | Weekly Challenge 4: Leadership Guide, Fri Nov 20. Field Guide topic, Fri Nov 20 | 2.5 |
+| 10 | Nov 30 to Dec 4 | | | |
+| Finals | Dec 7 to 11 | | The Field Guide, Fri Dec 11 | 30 |
+| | | | In-Class: Weekly Game, This or That, Around the Horn, Rotating Fishbowl | 20 |
+| | | | Total | 100 |
 
 Thanksgiving week is off.
 
@@ -75,12 +75,12 @@ The course objectives meet the following Department Learning Outcomes:
 
 | Course objective | LOs | Assessed by |
 |---|---|---|
-| Students will be able to explain how the advent of sports media has contributed to sports as product, spectacle, and culture. | 1 | Intersections, weekly game |
-| Students will be able to evaluate communication theories and concepts through the lenses of professional and recreational sports. | 1 | Weekly game, Rotating Fishbowl, Leadership Guide |
-| Students will be able to analyze the impact of sports on local and global communities. | 3, 7 | Intersections, final project |
-| Students will be able to find and analyze research about sports and identity. | 3, 4 | Intersections, final project |
-| Students will be able to identify multiple strategies for improving communication, culture, and leadership in team sports. | 6, 7 | Leadership Guide, Interview Assignment |
-| Students will develop their own ethical approaches to consumption and/or participation in sports. | 4 | Intersections, final project, This or That |
+| Students will be able to explain how the advent of sports media has contributed to sports as product, spectacle, and culture. | 1 | Weekly Game, Sit-Down 1 |
+| Students will be able to evaluate communication theories and concepts through the lenses of professional and recreational sports. | 1 | Weekly Game, Rotating Fishbowl, Sit-Downs |
+| Students will be able to analyze the impact of sports on local and global communities. | 3, 7 | Weekly Challenges, The Field Guide |
+| Students will be able to find and analyze research about sports and identity. | 3, 4 | Sit-Down 2, The Field Guide |
+| Students will be able to identify multiple strategies for improving communication, culture, and leadership in team sports. | 6, 7 | Weekly Challenge 3: Former coach interview, Weekly Challenge 4: Leadership Guide |
+| Students will develop their own ethical approaches to consumption and/or participation in sports. | 4 | This or That, Sit-Downs, The Field Guide |
 
 ---
 
