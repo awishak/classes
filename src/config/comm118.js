@@ -1,8 +1,6 @@
 // COMM 118 — Communication and Sport, Fall 2026.
-// Starting point for the live teaching surfaces (Dashboard, Classroom View,
-// Ask). It inherits the template class's schedule shape, sequences, seeds, and
-// roster so there is something real to run against on day one; replace those
-// fields here as the real term takes shape.
+// Inherits the template class's sequences, seeds and concepts. The term, the
+// library, the challenges and the roster are the store's own.
 //
 // Its own storageKey, so nothing here touches the existing /comm118 hub
 // (which still runs on comm118-game-v14).
@@ -31,6 +29,17 @@ const comm118 = {
   accentLight: "#eef2ff",
 
   storageKey: "comm118-f26-v1",
+
+  // The term lives in the store, built on the dashboard. The template's
+  // placeholder weeks, library and assignments stay out: they were inherited
+  // by the spread above and the seed bump pushed Why We Bet, Intro post and
+  // This or That into a real class. Andrew, 2026-09-24: "only what i include
+  // should be there." No seedVersion, so nothing here is ever pushed over the
+  // store again.
+  scheduleWeeks: [],
+  library: [],
+  assignments: [],
+  seedVersion: undefined,
 
   // The syllabus PDF, a card in Class. The file is a link in public/ to the
   // one scripts/syllabus-pdf.sh writes into teaching/comm118/.
