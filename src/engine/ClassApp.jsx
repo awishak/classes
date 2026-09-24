@@ -47,6 +47,7 @@ import { ClassMenu } from "./ClassMenu.jsx";
 import { daySlug } from "./days.js";
 import WelcomeDeck, { needsWelcome } from "./WelcomeDeck.jsx";
 import NoticeCard, { NoticeWriter } from "./NoticeCard.jsx";
+import { SaveWord, useOnline } from "./SaveWord.jsx";
 import { noticeFor, markNoticeRead } from "./notice.js";
 import { isTestStudent, realStudents, sectionFor, hasSections } from "./sections.js";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
@@ -484,7 +485,14 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const REMEMBER = classConfig.storageKey + "-user";
   const ADMIN = classConfig.storageKey + "-admin";
 
-  const [stored, update, apply] = useClassData(classConfig.storageKey);
+  // The fourth thing is where the saving is, so a box can say Saved or Not
+  // saved yet, and the bar can say it for the whole page.
+  const [stored, update, apply, saveState] = useClassData(classConfig.storageKey);
+  const online = useOnline();
+  // Whether this page has written anything yet, so the bar says Saved only
+  // once there has been something to save.
+  const [wrote, setWrote] = useState(false);
+  useEffect(() => { if (saveState?.busy) setWrote(true); }, [saveState?.busy]);
   // The photographs live one row over, so a keystroke anywhere in the class
   // does not ship two dozen faces with it. Put back on the profiles here, once,
   // and every screen below goes on reading profiles[name].avatar. See photos.js.
@@ -1044,11 +1052,11 @@ export default function ClassApp({ config: classConfig, initialCard }) {
             onOpen={() => go("schedule")} onOpenDay={(date) => go("schedule/" + daySlug(date))}
             seat={cardStyle(theme, 0)} wide={isDesktop}
             instructor={view === "instructor"} update={write}
-            me={view === "instructor" ? "" : seenAs} mark={ctx.mark} />
+            me={view === "instructor" ? "" : seenAs} mark={ctx.mark} saving={saveState} online={online} />
         </div>
         {view === "instructor" ? (
           <div key="notice" style={{ gridColumn: "1 / -1" }}>
-            <NoticeWriter data={data} update={write} seat={cardStyle(theme, 1)} />
+            <NoticeWriter data={data} update={write} seat={cardStyle(theme, 1)} saving={saveState} online={online} />
           </div>
         ) : null}
         {(data?.pins || []).length || view === "instructor" ? (
@@ -1148,6 +1156,11 @@ export default function ClassApp({ config: classConfig, initialCard }) {
           brand={TheClass}
           right={
             <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {/* Where the saving is, the way the dashboard bar says it, so a
+                  write that is stuck says so on every page of the class. Once
+                  something has been written from this page; a page that has
+                  only read has nothing to report. */}
+              {view === "instructor" ? <SaveWord saving={saveState} online={online} armed={wrote || !online || !!saveState?.trouble} /> : null}
               <ThemeIdentity theme={theme} points={myPoints} />
               <ThemeBadge theme={theme} points={myPoints} />
               {ShowPin}

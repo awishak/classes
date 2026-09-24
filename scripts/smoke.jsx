@@ -4211,12 +4211,12 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const quiet = hero({ instructor: true, update: noop });
     if (quiet.includes("<textarea")) say("an empty note still takes a box on the card");
     if (!quiet.includes("Note to students")) say("there is no way to write a note");
-    if (!/aria-expanded="false"/.test(quiet)) say("the label does not say whether the note is open");
-    // And it looks like something to press. Andrew, 2026-09-21: "hey how come
-    // i cant change teh note on the front page now." It was drawn in the same
-    // small caps as the label above it, so it read as a caption.
+    // And the way in looks like something to press. Andrew, 2026-09-21: "hey
+    // how come i cant change teh note on the front page now." It was drawn in
+    // the same small caps as the label above it, so it read as a caption. The
+    // way in is the pill beside the label now: Write a note, or Edit.
     {
-      const chunk = quiet.slice(quiet.indexOf("Note to students") - 400, quiet.indexOf("Note to students"));
+      const chunk = quiet.slice(quiet.indexOf("Note to students"), quiet.indexOf("Write a note"));
       if (!/border-radius:999px/.test(chunk) || !/border:1px solid/.test(chunk)) say("the way into the note is drawn as a label rather than a button");
     }
     // Written, and shut: the words, the way the class reads them, and no box.
@@ -4226,11 +4226,27 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (!loud.includes("Bring the photo.")) say("a note he has written is not on his card");
     if (loud.includes("<textarea")) say("a written note opens the box before he asks for it");
     if (!loud.includes("Note to students")) say("there is no way back into a note he has written");
-    // The switch is a button rather than a label, so it can be pressed shut
-    // again. The source says so, because shutting it is a press.
+    // Edit, Save and Cancel, and nothing saves on its own. Andrew,
+    // 2026-09-24: "i added a note for students, adn then the note goes away.
+    // come on. this is ahppening too much you need to put edit and save
+    // buttons on the note to students, card for students, etc."
+    if (!quiet.includes("Write a note")) say("an empty note has no way in");
+    if (!loud.includes(">Edit<")) say("a written note has no Edit");
     const home = readFileSync(new URL("../src/engine/HomeCards.jsx", import.meta.url), "utf8");
-    if (!/onClick=\{\(\) => \{ if \(open\) save\(\); setSaved\(false\); setOpen\(!open\); \}\}/.test(home))
-      say("the label does not shut the note again, or does not save on the way");
+    const noteSrc = home.slice(home.indexOf("function NoteEditor("), home.indexOf("export function NextClassHero("));
+    if (/onBlur/.test(noteSrc)) say("the note still saves when the box is left");
+    if (!/pill\("Save", save, true\)/.test(noteSrc) || !/pill\("Cancel", cancel\)/.test(noteSrc)) say("the note box has no Save and Cancel");
+    if (!/const edit = \(\) => \{ setDraft\(value \|\| ""\)/.test(noteSrc)) say("Edit does not open the box on what is saved at that moment");
+    if (!/<SaveWord /.test(noteSrc)) say("Save says nothing back");
+    // The word back, from the store's own account of the save.
+    const { saveWord } = await import("../src/engine/SaveWord.jsx");
+    if (saveWord({ busy: true }).text !== "Saving...") say("a save on its way does not say so");
+    if (saveWord({ busy: false }).text !== "Saved") say("a landed save does not say Saved");
+    if (!saveWord({ trouble: true }).bad || !/Not saved/.test(saveWord({ trouble: true }).text)) say("a save that has not landed reads as fine");
+    if (!saveWord({}, false).bad || !/Offline/.test(saveWord({}, false).text)) say("offline reads as fine");
+    const stuck = renderToString(<NextClassHero config={cfg} data={written} blockOf={() => null}
+      section="" onOpen={noop} seat={{}} instructor update={noop} saving={{ trouble: true }} />);
+    if (stuck.includes("Not saved")) say("the note reports on a save before Save has been pressed");
   }
   // The pins are the card. The boxes and the Unpin buttons wait behind the word.
   {
@@ -4386,6 +4402,15 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!mine.includes("Card for students")) say("he has no way to the card");
   if (!mine.includes("love to see you in office hours")) say("he cannot see what the card says");
   if (mine.includes("<textarea")) say("the box is open before he asks for it");
+  // Opened with Edit on what is saved at that moment, not seeded once before
+  // the class has loaded, which opened an empty box over a card that was there.
+  if (!mine.includes(">Edit<")) say("a written card has no Edit");
+  const blank = renderToString(<NoticeWriter data={{}} update={noop} seat={{}} />);
+  if (!blank.includes("Write a card")) say("an empty card has no way in");
+  const nsrc = readFileSync(new URL("../src/engine/NoticeCard.jsx", import.meta.url), "utf8");
+  if (!/const edit = \(\) => \{ setDraft\(now\?\.text \|\| ""\)/.test(nsrc)) say("Edit does not open the card on what is saved at that moment");
+  if (!/pill\("Cancel", cancel\)/.test(nsrc)) say("the card has no Cancel");
+  if (!/<SaveWord /.test(nsrc)) say("Save on the card says nothing back");
 }
 
 // Switching classes keeps the page.

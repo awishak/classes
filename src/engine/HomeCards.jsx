@@ -23,6 +23,7 @@ import { Avatar, profileOf } from "./RosterCard.jsx";
 import { dueState } from "./AssignmentsCard.jsx";
 import { instructorOf } from "../instructors.js";
 import { fileToAvatar, AvatarPreview } from "./YouCard.jsx";
+import { SaveWord } from "./SaveWord.jsx";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -140,55 +141,59 @@ export function nextClassFacts(config, data, blockOf, section, now = Date.now())
   };
 }
 
-// The note an instructor leaves for the next class, typed on the front page.
-// Saved when the box loses focus, so there is no Save button to forget.
+// The note an instructor leaves for the next class, written on the front page.
 //
-// Andrew, 2026-09-21: "for me, if i don't have a note for students, make it
-// collapsed", and then "how can i recollapse the note, both after filling in or
-// not filling in?" So the label is the switch, both ways, on every day.
+// It saved when the box lost focus, with no Save button and no word back, and
+// a note typed that way could be gone with nobody told. Andrew, 2026-09-24:
+// "i added a note for students, adn then the note goes away. come on. this is
+// ahppening too much you need to put edit and save buttons on the note to
+// students, card for students, etc." So: Edit opens the box on what is saved
+// at that moment, Save writes it and says Saving..., Saved or Not saved yet,
+// and Cancel puts the words back. Nothing saves on its own.
 //
-// Shut, a day he has written nothing for is the label and nothing else, and a
-// day with a note on it reads the note, exactly as the class reads it. Open,
-// the box. It starts shut, because the card is shortest that way and the note
-// is still there to be read.
-//
-// Shutting it saves what is in the box. Pressing the label moves the cursor out
-// of the box first, so the blur has already saved by then, and saving twice
-// with the same words writes nothing.
-function NoteEditor({ date, value, update }) {
-  const [draft, setDraft] = useState(value);
-  const [saved, setSaved] = useState(false);
+// Shut, a day he has written nothing for is the label and Write a note, and a
+// day with a note on it reads the note, exactly as the class reads it, with
+// Edit beside the label. It starts shut, because the card is shortest that way
+// and the note is still there to be read.
+function NoteEditor({ date, value, update, saving, online = true }) {
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [armed, setArmed] = useState(false);
+  const has = !!String(value || "").trim();
+  const edit = () => { setDraft(value || ""); setArmed(false); setOpen(true); };
+  const cancel = () => { setDraft(value || ""); setOpen(false); };
   const save = () => {
     const next = draft.trim();
-    if (next === value) return;
-    update(prev => {
-      const plans = { ...(prev.dayPlans || {}) };
-      plans[date] = { ...(plans[date] || {}), studentNote: next };
-      return { ...prev, dayPlans: plans };
-    });
-    setSaved(true);
+    if (next !== value) {
+      update(prev => {
+        const plans = { ...(prev.dayPlans || {}) };
+        plans[date] = { ...(plans[date] || {}), studentNote: next };
+        return { ...prev, dayPlans: plans };
+      });
+    }
+    setArmed(true);
+    setOpen(false);
   };
-  // It reads as a button, because it is one.
-  //
-  // Andrew, 2026-09-21: "hey how come i cant change teh note on the front page
-  // now." Because the switch was drawn as a label, in the same small caps as
-  // Next class above it, so the thing to press looked like a caption. It is a
-  // pill with an edge on it now.
-  const label = (
-    <button className="ca-focus" aria-expanded={open}
-      onClick={() => { if (open) save(); setSaved(false); setOpen(!open); }}
-      style={{ alignSelf: "flex-start", background: "none", cursor: "pointer",
-        border: "1px solid " + BORDER_STRONG, borderRadius: 999, padding: "0 14px", minHeight: 36,
-        fontFamily: F, ...small, color: "var(--ca-accent-ink)" }}>
-      Note to students
+  const pill = (text, onClick, filled) => (
+    <button className="ca-focus" onClick={onClick}
+      style={{ background: filled ? "var(--ca-accent)" : "none", cursor: "pointer",
+        border: "1px solid " + (filled ? "var(--ca-accent)" : BORDER_STRONG), borderRadius: 999, padding: "0 14px", minHeight: 36,
+        fontFamily: F, fontSize: 14, fontWeight: 700, color: filled ? "#fff" : "var(--ca-accent-ink)" }}>
+      {text}
     </button>
+  );
+  const head = (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      <span style={{ ...small, color: "var(--ca-accent-ink)" }}>Note to students</span>
+      {open ? null : pill(has ? "Edit" : "Write a note", edit)}
+      {open ? null : <SaveWord saving={saving} online={online} armed={armed} />}
+    </div>
   );
   if (!open) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        {label}
-        {String(value || "").trim() ? (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {head}
+        {has ? (
           <div style={{ borderLeft: "3px solid " + BORDER_STRONG, paddingLeft: 12, fontSize: 17, lineHeight: 1.5,
             color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{value}</div>
         ) : null}
@@ -197,12 +202,16 @@ function NoteEditor({ date, value, update }) {
   }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {label}
-      <textarea id={"note-" + date} aria-label="Note to students" value={draft}
-        onChange={e => { setDraft(e.target.value); setSaved(false); }} onBlur={save}
+      {head}
+      <textarea id={"note-" + date} aria-label="Note to students" value={draft} autoFocus
+        onChange={e => setDraft(e.target.value)}
+        onKeyDown={e => { if (e.key === "Escape") cancel(); }}
         style={{ fontFamily: F, fontSize: 16, minHeight: 84, padding: 12, borderRadius: 10, border: "1px solid " + BORDER_STRONG,
           background: "var(--surface-card)", color: TEXT_PRIMARY, lineHeight: 1.5, resize: "vertical" }} />
-      {saved ? <span style={{ fontSize: 13, fontWeight: 600, color: TOKENS.STATE.ok }}>Saved</span> : null}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        {pill("Save", save, true)}
+        {pill("Cancel", cancel)}
+      </div>
     </div>
   );
 }
@@ -219,7 +228,7 @@ function NoteEditor({ date, value, update }) {
 // schedule. A card that counts them is a card that sends them there, which is
 // why the count is the link: "when you click, it goes to the TOP of that day
 // on the schedule."
-export function NextClassHero({ config, data, blockOf, section, onOpen, onOpenDay, seat, instructor, update, wide, me, mark }) {
+export function NextClassHero({ config, data, blockOf, section, onOpen, onOpenDay, seat, instructor, update, wide, me, mark, saving, online }) {
   const facts = nextClassFacts(config, data, blockOf, section);
   // White, like every other card, with the class's own colour around it.
   // Andrew, 2026-09-21: "i want the hero card to be half the height. it's too
@@ -291,7 +300,7 @@ export function NextClassHero({ config, data, blockOf, section, onOpen, onOpenDa
       </div>
 
       {instructor && update ? (
-        <NoteEditor key={facts.date} date={facts.date} value={facts.note} update={update} />
+        <NoteEditor key={facts.date} date={facts.date} value={facts.note} update={update} saving={saving} online={online} />
       ) : facts.note ? (
         <div style={{ borderLeft: "3px solid " + BORDER_STRONG, paddingLeft: 12, fontSize: 17, lineHeight: 1.5, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>
           {facts.note}

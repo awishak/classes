@@ -889,6 +889,19 @@ card's boxes handed new values.
 Both are guarded from the source, because a caret is a live browser and cannot
 be rendered.
 
+**His boxes on the front page do not save on their own, 2026-09-24.** Andrew:
+"i added a note for students, adn then the note goes away. come on. this is
+ahppening too much you need to put edit and save buttons on the note to
+students, card for students, etc." The note to students and the card for
+students each open with Edit on what is saved at that moment, write on Save,
+and Cancel puts the words back. Save says what happened, from the store's own
+account: Saving..., Saved, Not saved yet, or Offline. The class site's bar
+carries the same words for him once the page has written anything, the way
+the dashboard bar has since 2026-09-23. `src/engine/SaveWord.jsx`. The card's
+box used to seed itself once when the page first drew, before the class had
+loaded, so it opened empty over a card that was there and Save wrote the
+empty box over it.
+
 ## A card the class reads before the site
 
 Andrew, 2026-09-21: "i want to create a card that will be there next time

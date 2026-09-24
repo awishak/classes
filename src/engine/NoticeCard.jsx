@@ -10,6 +10,7 @@ import { useState } from "react";
 import * as TOKENS from "./tokens.js";
 import { noticeOf, setNotice } from "./notice.js";
 import { AvatarPreview } from "./YouCard.jsx";
+import { SaveWord } from "./SaveWord.jsx";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -74,46 +75,68 @@ const local = (ms) => {
   return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + "T" + p(d.getHours()) + ":" + p(d.getMinutes());
 };
 
-export function NoticeWriter({ data, update, seat }) {
+export function NoticeWriter({ data, update, seat, saving, online = true }) {
   const now = noticeOf(data);
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(now?.text || "");
-  const [until, setUntil] = useState(local(now?.until));
+  const [draft, setDraft] = useState("");
+  const [until, setUntil] = useState("");
+  const [armed, setArmed] = useState(false);
+  // The box seeds itself when Edit is pressed, from what is saved at that
+  // moment. It used to seed once when the page first drew, which is before
+  // the class has loaded, so it opened empty over a card that was there, and
+  // Save then wrote the empty box over the card.
+  const edit = () => { setDraft(now?.text || ""); setUntil(local(now?.until)); setArmed(false); setOpen(true); };
+  const cancel = () => setOpen(false);
   const save = () => {
     const at = until ? new Date(until).getTime() : 0;
     update(prev => setNotice(prev, draft, Number.isFinite(at) ? at : 0));
+    setArmed(true);
+    setOpen(false);
+  };
+  const takeDown = () => {
+    update(prev => setNotice(prev, "", 0));
+    setArmed(true);
     setOpen(false);
   };
   const box = { fontFamily: F, fontSize: 16, padding: "10px 12px", borderRadius: 10, border: "1px solid " + TOKENS.LINE.strong,
     background: WHITE, color: TEXT_PRIMARY, minHeight: TAP };
+  const pill = (text, onClick, filled) => (
+    <button className="ca-focus" onClick={onClick}
+      style={{ minHeight: TAP, padding: "0 18px", borderRadius: 10, cursor: "pointer", fontFamily: F, fontSize: 15, fontWeight: 600,
+        border: filled ? "none" : "1px solid " + TOKENS.LINE.strong,
+        background: filled ? "var(--ca-accent)" : WHITE, color: filled ? "#fff" : TEXT_PRIMARY }}>
+      {text}
+    </button>
+  );
   return (
     <section aria-label="Card for students" style={{ ...seat, padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
-      <button className="ca-focus" onClick={() => setOpen(!open)} aria-expanded={open}
-        style={{ alignSelf: "flex-start", background: "none", cursor: "pointer",
-          border: "1px solid " + TOKENS.LINE.strong, borderRadius: 999, padding: "0 14px", minHeight: 36,
-          fontFamily: F, ...label, color: "var(--ca-accent-ink)" }}>
-        Card for students
-      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span style={{ ...label, color: "var(--ca-accent-ink)" }}>Card for students</span>
+        {open ? null : (
+          <button className="ca-focus" onClick={edit}
+            style={{ background: "none", cursor: "pointer", border: "1px solid " + TOKENS.LINE.strong, borderRadius: 999,
+              padding: "0 14px", minHeight: 36, fontFamily: F, fontSize: 14, fontWeight: 700, color: "var(--ca-accent-ink)" }}>
+            {now ? "Edit" : "Write a card"}
+          </button>
+        )}
+        {open ? null : <SaveWord saving={saving} online={online} armed={armed} />}
+      </div>
       {now && !open ? (
         <div style={{ fontSize: 15, lineHeight: 1.5, color: TEXT_PRIMARY, whiteSpace: "pre-wrap" }}>{now.text}</div>
       ) : null}
       {open ? (
         <>
-          <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={4}
+          <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={4} autoFocus
+            onKeyDown={e => { if (e.key === "Escape") cancel(); }}
             style={{ ...box, lineHeight: 1.5, resize: "vertical" }} />
           <label style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 15, color: TEXT_MUTED }}>
             Until
             <input type="datetime-local" value={until} onChange={e => setUntil(e.target.value)} style={box} />
           </label>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button className="ca-focus" onClick={save}
-              style={{ minHeight: TAP, padding: "0 18px", borderRadius: 10, border: "none", background: "var(--ca-accent)",
-                color: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Save</button>
-            {now ? (
-              <button className="ca-focus" onClick={() => { setDraft(""); setUntil(""); update(prev => setNotice(prev, "", 0)); setOpen(false); }}
-                style={{ minHeight: TAP, padding: "0 16px", borderRadius: 10, border: "1px solid " + TOKENS.LINE.strong,
-                  background: WHITE, color: TEXT_PRIMARY, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Take it down</button>
-            ) : null}
+            {pill("Save", save, true)}
+            {pill("Cancel", cancel)}
+            {now ? pill("Take it down", takeDown) : null}
           </div>
         </>
       ) : null}
