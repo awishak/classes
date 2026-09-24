@@ -958,7 +958,12 @@ export default function ClassApp({ config: classConfig, initialCard }) {
     </Panel>
   );
 
-  const detailFor = (key) => key === "more" ? MorePage : detail(key, config, view, ctx);
+  // Nothing opens on a class that has not arrived yet. A card drawn over the
+  // empty stand-in reads as blank, and a form drawn over it starts blank and
+  // stays that way when the class lands.
+  const detailFor = (key) => key === "more" ? MorePage
+    : data === null ? <div style={{ display: "flex", flexDirection: "column", gap: 12 }}><Skeleton w="40%" h={22} /><Skeleton w="90%" h={14} /><Skeleton w="75%" h={14} /></div>
+    : detail(key, config, view, ctx);
   ctx.tile = CardTile;
 
   // Class is on the projector right now. Students following remotely get the

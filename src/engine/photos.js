@@ -70,10 +70,19 @@ export function useWithPhotos(data, photos) {
  * Writing a profile: the picture goes to the photographs row, the rest to the
  * class, and the class keeps the mark. Hand it the same `update` the caller
  * already has and the `setPhoto` from usePhotos.
+ *
+ * Only the fields handed in are written; the rest of the card stays as the
+ * class has it. Andrew, 2026-09-23: Lucille's card read blank on her screen
+ * while every field was on the server, and a Save from that blank form would
+ * have written the blanks over all of it.
  */
 export function saveProfile({ update, setPhoto, name, profile }) {
-  const avatar = profile?.avatar || "";
-  if (isPicture(avatar) && setPhoto) setPhoto(name, avatar);
-  const kept = { ...profile, avatar: isPicture(avatar) ? PHOTO_MARK : avatar };
-  update(prev => ({ ...prev, profiles: { ...(prev.profiles || {}), [name]: kept } }));
+  const kept = { ...profile };
+  if ("avatar" in kept) {
+    const avatar = kept.avatar || "";
+    if (isPicture(avatar) && setPhoto) setPhoto(name, avatar);
+    kept.avatar = isPicture(avatar) ? PHOTO_MARK : avatar;
+  }
+  update(prev => ({ ...prev, profiles: { ...(prev.profiles || {}),
+    [name]: { ...((prev.profiles || {})[name] || {}), ...kept } } }));
 }

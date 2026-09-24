@@ -176,22 +176,24 @@ function FieldRow({ title, children }) {
   );
 }
 
-function ProfileForm({ student, initial, update, setPhoto, accent }) {
+function ProfileForm({ student, initial, update, setPhoto, accent, onDone, onCancel }) {
   const [f, setF] = useState({
     firstName: initial.firstName || "", lastName: initial.lastName || "", strength: initial.strength || "",
     email: initial.email || "", avatar: initial.avatar || "", about: initial.about || "",
     year: initial.year || "", hometown: initial.hometown || "", motto: initial.motto || "",
     goals: initial.goals || "", priority: initial.priority || "",
   });
-  const [saved, setSaved] = useState(false);
-  const set = (k, v) => { setF(p => ({ ...p, [k]: v })); setSaved(false); };
+  const set = (k, v) => setF(p => ({ ...p, [k]: v }));
   const a = accent;
 
   const save = () => {
     // The photograph goes to the class's photographs row and the card keeps a
     // mark where it was, so the class itself stays light. See photos.js.
-    saveProfile({ update, setPhoto, name: student, profile: f });
-    setSaved(true);
+    // Only what was changed here is written, so a form opened on an old copy
+    // cannot blank a field somebody saved since.
+    const changed = Object.fromEntries(Object.entries(f).filter(([k, v]) => v !== (initial[k] || "")));
+    if (Object.keys(changed).length) saveProfile({ update, setPhoto, name: student, profile: changed });
+    onDone && onDone();
   };
 
   const onPhoto = (e) => {
@@ -281,7 +283,11 @@ function ProfileForm({ student, initial, update, setPhoto, accent }) {
 
       <div style={{ marginTop: 20, display: "flex", gap: 12, alignItems: "center" }}>
         <SendBtn accent={a} onClick={save}>Save profile</SendBtn>
-        {saved && <span style={{ fontSize: 15, fontWeight: 600, color: "#059669" }}>Saved</span>}
+        {onCancel ? (
+          <button onClick={onCancel}
+            style={{ minHeight: TAP, padding: "0 16px", borderRadius: 999, cursor: "pointer", fontFamily: F, fontSize: 15, fontWeight: 600,
+              background: "#fff", color: TEXT_PRIMARY, border: "1px solid " + BORDER_STRONG }}>Cancel</button>
+        ) : null}
       </div>
     </div>
   );
@@ -313,8 +319,51 @@ function StudentYou({ config, data, update, setPhoto, asStudent, setAsStudent })
       </div>
 
       <div style={{ marginTop: 14 }}>
-        <ProfileForm key={asStudent} student={asStudent} initial={data?.profiles?.[asStudent] || {}} update={update} setPhoto={setPhoto} accent={a} />
+        <ProfileCard key={asStudent} student={asStudent} profile={data?.profiles?.[asStudent] || {}} update={update} setPhoto={setPhoto} accent={a} />
       </div>
+    </div>
+  );
+}
+
+// The card as it is saved, and a form only when asked for. Andrew,
+// 2026-09-23: "we need save buttons, and then an edit button when things are
+// not in their editable state." What is shown is always the class as it is
+// now, so a card can never sit blank over answers that are on the server, and
+// the form starts from what is saved at the moment Edit is pressed.
+const PROFILE_KEYS = ["firstName", "lastName", "email", "avatar", "about", "year", "hometown", "motto", "goals", "strength", "priority"];
+
+function ProfileCard({ student, profile, update, setPhoto, accent }) {
+  const empty = !PROFILE_KEYS.some(k => String(profile[k] || "").trim());
+  const [editing, setEditing] = useState(empty);
+  const [saved, setSaved] = useState(false);
+  if (editing) {
+    return <ProfileForm student={student} initial={profile} update={update} setPhoto={setPhoto} accent={accent}
+      onDone={() => { setEditing(false); setSaved(true); }} onCancel={empty ? null : () => setEditing(false)} />;
+  }
+  const a = accent;
+  const shown = (v) => String(v || "").trim()
+    ? <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{v}</div>
+    : <Muted>Not filled in yet.</Muted>;
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div style={h2}>Your profile</div>
+        <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {saved && <span style={{ fontSize: 15, fontWeight: 600, color: "#059669" }}>Saved</span>}
+          <SendBtn accent={a} onClick={() => { setSaved(false); setEditing(true); }}>Edit profile</SendBtn>
+        </span>
+      </div>
+      <FieldRow title="Preferred first name">{shown(profile.firstName)}</FieldRow>
+      <FieldRow title="Preferred last name">{shown(profile.lastName)}</FieldRow>
+      <FieldRow title="Email address (this is only for your instructor)">{shown(profile.email)}</FieldRow>
+      <FieldRow title="Avatar"><AvatarPreview value={profile.avatar || ""} accent={a} /></FieldRow>
+      <FieldRow title="About me">{shown(profile.about)}</FieldRow>
+      <FieldRow title="Year">{shown(profile.year)}</FieldRow>
+      <FieldRow title="Hometown">{shown(profile.hometown)}</FieldRow>
+      <FieldRow title="Motto">{shown(profile.motto)}</FieldRow>
+      <FieldRow title="Goals for the class (this is only for your instructor)">{shown(profile.goals)}</FieldRow>
+      <FieldRow title="What would you say is your biggest strength as a student?">{shown(profile.strength)}</FieldRow>
+      <FieldRow title="What matters to you most? (this is only for your instructor)">{shown(profile.priority)}</FieldRow>
     </div>
   );
 }
