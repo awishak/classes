@@ -19,7 +19,13 @@ export const profileComplete = (profile) => PROFILE_FIELDS.every(k => String(pro
 
 export const isProfileTask = (asg) => asg?.completes === "profile";
 
-export const profileTaskOf = (config) => config?.profileTask ? {
+// Deleted on the Challenges page, the challenge is off for the class: the
+// store says so, and the config line stays. Andrew, 2026-09-24: "i treid to
+// delete tell me about yourself from comm 118, and i couldn't." Delete only
+// filtered the store's list, and this was never in that list.
+export const PROFILE_TASK_OFF = "profileTaskOff";
+
+export const profileTaskOf = (config, data) => config?.profileTask && !data?.[PROFILE_TASK_OFF] ? {
   id: PROFILE_TASK_ID,
   title: "Please tell me about yourself",
   due: config.profileTask.due || "",
@@ -36,7 +42,7 @@ export const profileTaskOf = (config) => config?.profileTask ? {
 // config's, with the card challenge in front when the class asks for it.
 export const assignmentsOf = (config, data) => {
   const list = data?.assignments || config?.assignments || [];
-  const task = profileTaskOf(config);
+  const task = profileTaskOf(config, data);
   if (!task || list.some(a => a.id === task.id)) return list;
   return [task, ...list];
 };

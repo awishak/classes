@@ -11,7 +11,7 @@
 // sum to 100, or leave the rubric empty for a free-form score.
 
 import { useState, useRef, useEffect } from "react";
-import { assignmentsOf, isProfileTask, profileComplete } from "./profileTask.js";
+import { assignmentsOf, isProfileTask, profileComplete, PROFILE_TASK_OFF } from "./profileTask.js";
 import { realStudents, studentsIn, hasSections, sectionsOf } from "./sections.js";
 import { rosterOf } from "./roster.js";
 import { Avatar, profileOf } from "./Face.jsx";
@@ -849,7 +849,13 @@ function ManageAssignments({ config, data, update, assignments, writeAssignments
         });
         setEditing(null);
       }}
-      onDelete={asg ? () => { writeAssignments(list => list.filter(x => x.id !== asg.id)); setEditing(null); } : null} />;
+      onDelete={asg ? () => {
+        // The card challenge is built from the config, not kept in the list,
+        // so taking it off is a mark on the class rather than a row removed.
+        if (isProfileTask(asg)) update(prev => ({ ...prev, [PROFILE_TASK_OFF]: true }));
+        else writeAssignments(list => list.filter(x => x.id !== asg.id));
+        setEditing(null);
+      } : null} />;
   }
 
   return (

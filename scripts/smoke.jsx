@@ -2558,6 +2558,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       if (list[0]?.id !== "card" || list.length !== 2) say("the card challenge is not in front of the class's list: " + list.map(a => a.id).join(","));
       if (assignmentsOf(pcfg, { assignments: [{ id: "wc1", title: "Weekly Challenge 1" }] })[0]?.id !== "card") say("a store carrying its own list loses the card challenge");
       if (assignmentsOf({ ...pcfg, profileTask: null }, {}).length !== 1) say("a class that did not ask for it got the card challenge");
+      // Deleted on the Challenges page, the store carries the mark and the
+      // challenge is off, with the config line still there.
+      if (assignmentsOf(pcfg, { profileTaskOff: true }).some(a => a.id === "card")) say("a class that deleted the card challenge still gets it");
+      if (assignmentsOf(pcfg, { profileTaskOff: true, assignments: [{ id: "wc1", title: "Weekly Challenge 1" }] }).length !== 1) say("the mark took more than the card challenge off the list");
       if (list[0].weight !== 0 || list[0].title !== "Please tell me about yourself") say("the card challenge is not his title at no weight: " + JSON.stringify(list[0]));
       const task = list[0];
       const at = (d, t) => statusOf(pcfg, d, task, N, new Set(), t);

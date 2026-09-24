@@ -374,7 +374,7 @@ function needsYou(config, data, role, asStudent) {
   }
   if (unreadNotes(data, asStudent)) out.push({ id: "note", card: "messages", text: "A new note from " + (config.instructor?.name || "your instructor") });
   // The first-week challenge, until every field on the card is filled.
-  const task = profileTaskOf(config);
+  const task = profileTaskOf(config, data);
   if (task && !profileComplete(data?.profiles?.[asStudent])) out.push({ id: "card", card: "you", text: task.title });
   // A deadline coming up is the Assignments card's own highlight now, so it
   // is not said a second time up here.
