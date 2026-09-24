@@ -59,6 +59,7 @@ const SESSIONS = [
         ["Please tell me about yourself is off COMM 3", "COMM 3 no longer opts into the card challenge. What students filled in on Your card stays. COMM 118 still has it."],
         ["Open details", "Andrew: \"the details button ... is almost too prominent. it needs a way to be clearer that students find details there.\" Outlined rather than filled, with a page icon, Open details, and the arrow for a new tab."],
         ["Edit answer and Save answer", "Andrew: \"always have edit and save buttons, not just have it save randomly.\" An answer reaches the class on Save answer and not before; leaving the box no longer saves. Both buttons are always there and grey out when they have nothing to do. Unsaved words say Not saved, and Cancel puts the saved answer back."],
+        ["The My Work card is the next one", "Andrew: \"why is the mywork box so tall. only needs to have the next assigmment.\" A student's card is the next challenge and its due date, without the count of the rest. His card is the next one due, plus any other challenge only while work or a message on it is waiting on him."],
       ] },
     ],
   },

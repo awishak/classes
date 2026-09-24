@@ -423,7 +423,14 @@ export function AssignmentsSummary({ config, data, role, name }) {
     // What is coming up, how much of each room has handed it in, and what is
     // waiting on him. The card used to hold the waiting rows alone, which
     // said nothing about what was coming or how many people were behind.
-    const rows = comingUp(config, data, assignments);
+    // The next one due, and another only while something on it is waiting on
+    // him. Andrew, 2026-09-24: "why is the mywork box so tall. only needs to
+    // have the next assigmment." The work to grade stays, since that is what
+    // the card is for on his side; the rest are a tap away.
+    const all = comingUp(config, data, assignments);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const next = all.find(r => { const d = parseDue(r.due); return d && d.getTime() >= today.getTime(); });
+    const rows = all.filter(r => r === next || r.toGrade || r.messages);
     if (!rows.length) return <Muted>No challenge has a due date yet.</Muted>;
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -455,11 +462,8 @@ export function AssignmentsSummary({ config, data, role, name }) {
   const next = name ? nextOwed(assignments, data, name) : nextDueOf(assignments);
   if (!next) return <Muted>No upcoming challenges.</Muted>;
   const st = dueState(next.due);
-  // Andrew drew this on 2026-09-20: the next one by name, when it is due, and
-  // then how many others the class holds. The rest is the whole list rather
-  // than the ones still owed, because a student asking "how much is there"
-  // is asking about the class and not about their own pile.
-  const rest = assignments.length - 1;
+  // The next one by name and when it is due, and nothing else. The count of
+  // the others went on 2026-09-24: "only needs to have the next assigmment."
   return (
     <div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
@@ -469,11 +473,6 @@ export function AssignmentsSummary({ config, data, role, name }) {
       <div style={{ fontSize: 15, marginTop: 2, color: st ? dueColor(st.tone) : TEXT_MUTED, fontWeight: st && st.tone !== "calm" ? 700 : 400 }}>
         {dueText(next.due, next.dueTime)}{weightText(next.weight)}
       </div>
-      {rest > 0 ? (
-        <div style={{ fontSize: 15, marginTop: 8, color: TEXT_SECONDARY }}>
-          {rest} more challenge{rest === 1 ? "" : "s"}
-        </div>
-      ) : null}
     </div>
   );
 }

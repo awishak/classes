@@ -3315,10 +3315,9 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       // every other challenge in the class rather than the ones still owed.
       const mine = renderToString(<AssignmentsSummary config={acfg} data={asked} role="student" name={N} />).replace(/<!-- -->/g, "");
       if (!mine.includes("Next")) say("the student's Challenges card does not label the next one");
-      const more = acfg.assignments.length - 1;
-      if (!mine.includes(more + " more challenge" + (more === 1 ? "" : "s"))) say("the student's Challenges card does not count the rest: " + mine);
-      const one = renderToString(<AssignmentsSummary config={acfg} data={{ ...asked, assignments: [acfg.assignments[0]] }} role="student" name={N} />).replace(/<!-- -->/g, "");
-      if (one.includes("more challenge")) say("a class with one challenge says there are more");
+      // The next one only, since 2026-09-24: "only needs to have the next
+      // assigmment."
+      if (mine.includes("more challenge")) say("the student's My Work card still counts the rest: " + mine);
       if (waitingCount(asked, acfg.assignments).messages !== 1) say("the messages waiting are counted wrong for the home page");
       // Deleting a message takes it off every screen and every count, and
       // leaves the words in the class record.
