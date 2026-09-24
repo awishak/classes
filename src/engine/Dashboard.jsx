@@ -3717,12 +3717,15 @@ const gridFor = (cols) => "minmax(0,1fr) 16px " + cols.live + "px";
 
 export default function Dashboard({ config, daySlug = "" }) {
   const [stored, update, , saving] = useClassData(config.storageKey);
-  // Whether the browser has a connection, for the save line in the bar.
-  const [online, setOnline] = useState(() => { try { return navigator.onLine !== false; } catch { return true; } });
+  // Whether the server can be reached, for the save line in the bar: no
+  // wifi, or wifi with no way out, which the shim finds out from requests
+  // that never get an answer (REACH, "ishak:reach", in storage-shim.js).
+  const reachable = () => { try { return navigator.onLine !== false && !window.storage?.unreachable; } catch { return true; } };
+  const [online, setOnline] = useState(reachable);
   useEffect(() => {
-    const on = () => setOnline(true), off = () => setOnline(false);
-    window.addEventListener("online", on); window.addEventListener("offline", off);
-    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+    const look = () => setOnline(reachable());
+    window.addEventListener("online", look); window.addEventListener("offline", look); window.addEventListener("ishak:reach", look);
+    return () => { window.removeEventListener("online", look); window.removeEventListener("offline", look); window.removeEventListener("ishak:reach", look); };
   }, []);
   // The faces live one row over, so a keystroke in the day doc does not ship
   // two dozen of them with it. Put back on the profiles here. See photos.js.

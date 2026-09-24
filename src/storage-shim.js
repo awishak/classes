@@ -107,6 +107,19 @@ function connectRealtime() {
   }
 }
 
+// Whether the server can be reached at all. The browser's own online flag
+// only knows about wifi: on a network with no way out, campus wifi before
+// its sign-in page, it says online while every save fails. A request that
+// never gets an answer says more, so reads and writes report here, and the
+// dashboard's save line listens for REACH.
+export const REACH = "ishak:reach";
+let unreachable = false;
+function heard(reached) {
+  if (unreachable === !reached) return;
+  unreachable = !reached;
+  try { window.dispatchEvent(new Event(REACH)); } catch { /* no window */ }
+}
+
 // Start realtime connection
 connectRealtime();
 
@@ -124,15 +137,18 @@ try {
 } catch { /* no window */ }
 
 window.storage = {
+  get unreachable() { return unreachable; },
   async get(key, shared) {
     try {
       const url = SUPABASE_URL + "/rest/v1/app_data?id=eq." + encodeURIComponent(key) + "&select=data";
       const res = await fetch(url, { headers });
+      heard(true);
       if (!res.ok) return null;
       const rows = await res.json();
       if (!rows || rows.length === 0) return null;
       return { key, value: JSON.stringify(rows[0].data), shared: !!shared };
     } catch (e) {
+      if (e instanceof TypeError) heard(false);
       console.error("Storage get error:", e);
       return null;
     }
@@ -202,6 +218,7 @@ window.storage = {
         headers: { ...headers, "Prefer": "return=representation,resolution=merge-duplicates" },
         body,
       });
+      heard(true);
 
       if (!res.ok) {
         console.error("Storage set error:", res.status, await res.text());
@@ -210,6 +227,7 @@ window.storage = {
 
       return { key, value, shared: !!shared };
     } catch (e) {
+      if (e instanceof TypeError) heard(false);
       console.error("Storage set error:", e);
       return null;
     }
