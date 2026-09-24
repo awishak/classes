@@ -13,7 +13,7 @@
 // Casting goes through live.js; questions through questions.js.
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useClassData } from "./store.js";
+import { useClassData, recordDay } from "./store.js";
 import { usePhotos, useWithPhotos } from "./photos.js";
 import { useLive, ANIMS, BIG_ANIMS } from "./live.js";
 import { mediaSteps, liveStep } from "./media.js";
@@ -5446,7 +5446,12 @@ export default function Dashboard({ config, daySlug = "" }) {
         <Sheet title="History" sub={config.code + " · " + day} onClose={() => setHistoryOpen(false)} width={620}>
           <HistoryPanel storageKey={config.storageKey} day={day} plan={plan} blockOf={blockOf}
             local={versionsRef.current[day] || []}
-            onRestore={(version) => { writeDay(() => version, "that restore"); setHistoryOpen(false); }} />
+            onRestore={async (version) => {
+              // The day as it is now is kept first, so a restore can itself
+              // be undone from this same list, on any machine.
+              if (plan) await recordDay(config.storageKey, day, (data?.dayPlans || {})[day], true);
+              writeDay(() => version, "that restore"); setHistoryOpen(false);
+            }} />
         </Sheet>
       ) : null}
 

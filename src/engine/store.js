@@ -13,6 +13,60 @@ export async function loadClass(key) {
   }
 }
 
+// ─── the history of a day ───
+//
+// Andrew, 2026-09-23, after a morning when a day looked wiped: version history,
+// so any earlier state of a day can be looked at and put back. Each day keeps
+// its versions in a small row of its own, `<class>-history-<date>`, so the
+// class itself stays the size it is and reading a day's history reads only
+// that day.
+//
+// A version is the day as it was just before an editing session touched it:
+// the first change to a day after five quiet minutes writes down what the day
+// was. Everything since is the day as it is now. Thirty kept per day. The
+// History sheet on the dashboard (DayTools.jsx) lists these, whichever
+// machine wrote them, above the daily backups.
+const HISTORY_GAP = 5 * 60 * 1000;
+const HISTORY_KEEP = 30;
+export const historyKey = (key, date) => key + "-history-" + String(date || "").trim().toLowerCase().replace(/\s+/g, "-");
+const lastVersion = new Map();
+
+export async function recordDay(key, date, plan, force = false) {
+  if (!key || !date || !plan) return;
+  const k = historyKey(key, date);
+  const now = Date.now();
+  if (!force && now - (lastVersion.get(k) || 0) < HISTORY_GAP) return;
+  lastVersion.set(k, now);
+  try {
+    // Read twice before believing there is nothing: the shim answers null for
+    // a failed read as well as for no row, and writing on a failed read would
+    // leave one version where there were thirty.
+    let raw = await window.storage.get(k, true);
+    if (!raw) raw = await window.storage.get(k, true);
+    const had = raw?.value ? JSON.parse(raw.value) : {};
+    const versions = Array.isArray(had.versions) ? had.versions : [];
+    if (versions[0] && canon(versions[0].plan) === canon(plan)) return;
+    await window.storage.set(k, JSON.stringify({ date, versions: [{ at: now, plan }, ...versions].slice(0, HISTORY_KEEP) }), true);
+  } catch { /* the class save is what matters; a version missed is a version missed */ }
+}
+
+export async function loadDayHistory(key, date) {
+  try {
+    const raw = await window.storage.get(historyKey(key, date), true);
+    const had = raw?.value ? JSON.parse(raw.value) : {};
+    return Array.isArray(had.versions) ? had.versions : [];
+  } catch { return []; }
+}
+
+// Every day an edit is about to change, written down as it was.
+const noteDays = (key, before, after) => {
+  const was = before?.dayPlans || {}, now = after?.dayPlans || {};
+  if (was === now) return;
+  Object.keys(was).forEach(date => {
+    if (was[date] && was[date] !== now[date]) recordDay(key, date, was[date]);
+  });
+};
+
 export async function saveClass(key, data) {
   try {
     return !!(await window.storage.set(key, JSON.stringify(data), true));
@@ -390,7 +444,9 @@ export function useClassData(key) {
     // From the newest state this page holds, not this hook's own copy: two
     // hooks can read one class (the bar's Horn over the dashboard), and a
     // write from one must not undo what the other has not saved yet.
-    const next = mutator(WARM.get(key) || dataRef.current || {});
+    const before = WARM.get(key) || dataRef.current || {};
+    const next = mutator(before);
+    noteDays(key, before, next);
     dataRef.current = next;
     WARM.set(key, next);
     setData({ ...next });

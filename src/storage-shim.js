@@ -186,8 +186,9 @@ window.storage = {
 
   async set(key, value, shared) {
     try {
-      // Daily backup before writing (skip backup keys themselves)
-      if (!key.includes("-bak-")) {
+      // Daily backup before writing (skip backup keys themselves, and a day's
+      // history, which is a record of versions already)
+      if (!key.includes("-bak-") && !key.includes("-history-")) {
         await this._ensureBackup(key);
       }
 

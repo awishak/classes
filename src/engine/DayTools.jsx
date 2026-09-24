@@ -14,6 +14,7 @@
 
 import { useEffect, useState } from "react";
 import { normSlot } from "./dayplan.js";
+import { loadDayHistory } from "./store.js";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -105,6 +106,14 @@ const backupLabel = (key, storageKey) => {
 
 export function HistoryPanel({ storageKey, day, plan, local, blockOf, onRestore }) {
   const [backups, setBackups] = useState(null);
+  // The versions every machine wrote, from the day's history row. See
+  // recordDay in store.js.
+  const [saved, setSaved] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    loadDayHistory(storageKey, day).then(v => { if (alive) setSaved(v); });
+    return () => { alive = false; };
+  }, [storageKey, day]);
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -127,11 +136,17 @@ export function HistoryPanel({ storageKey, day, plan, local, blockOf, onRestore 
   }, [storageKey, day]);
 
   const now = JSON.stringify(plan || {});
+  // Newest first, the saved versions and this browser's own together, and one
+  // entry for a version both kept.
+  const timed = [
+    ...(saved || []).map(v => ({ ...v, key: "saved-" + v.at })),
+    ...(local || []).map(v => ({ ...v, key: "local-" + v.at })),
+  ].sort((a, b) => b.at - a.at);
+  const seen = new Set();
   const versions = [
-    ...(local || []).slice().reverse().map(v => ({
-      key: "local-" + v.at, plan: v.plan,
-      label: "Earlier today, " + new Date(v.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
-    })),
+    ...timed.filter(v => { const k = JSON.stringify(v.plan || {}); if (seen.has(k)) return false; seen.add(k); return true; })
+      .map(v => ({ key: v.key, plan: v.plan,
+        label: new Date(v.at).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) })),
     ...(backups || []),
   ];
 
@@ -152,8 +167,8 @@ export function HistoryPanel({ storageKey, day, plan, local, blockOf, onRestore 
           </div>
         );
       })}
-      {backups === null ? <div style={{ ...small, padding: "11px 0", fontFamily: MONO }}>Reading backups…</div> : null}
-      {backups !== null && !versions.length ? <div style={{ ...small, padding: "11px 0" }}>No earlier versions of this day.</div> : null}
+      {backups === null || saved === null ? <div style={{ ...small, padding: "11px 0", fontFamily: MONO }}>Reading backups…</div> : null}
+      {backups !== null && saved !== null && !versions.length ? <div style={{ ...small, padding: "11px 0" }}>No earlier versions of this day.</div> : null}
     </div>
   );
 }
