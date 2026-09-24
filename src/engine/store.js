@@ -16,10 +16,14 @@ export async function loadClass(key) {
 // ─── the history of a day ───
 //
 // Andrew, 2026-09-23, after a morning when a day looked wiped: version history,
-// so any earlier state of a day can be looked at and put back. Each day keeps
-// its versions in a small row of its own, `<class>-history-<date>`, so the
-// class itself stays the size it is and reading a day's history reads only
-// that day.
+// so any earlier state of a day can be looked at and put back, from any
+// machine.
+//
+// Each version is a row of its own, `<class>-history-<date>-<time>`, so saving
+// one never needs anything read first. The first version of this lived in one
+// row per day, read and written back whole, and a read that failed on bad
+// wifi would have written a list of one over thirty. Rows in that older shape
+// are still read.
 //
 // A version is the day as it was just before an editing session touched it:
 // the first change to a day after five quiet minutes writes down what the day
@@ -29,7 +33,9 @@ export async function loadClass(key) {
 const HISTORY_GAP = 5 * 60 * 1000;
 const HISTORY_KEEP = 30;
 export const historyKey = (key, date) => key + "-history-" + String(date || "").trim().toLowerCase().replace(/\s+/g, "-");
+const versionKey = (key, date, at) => historyKey(key, date) + "-" + String(at).padStart(13, "0");
 const lastVersion = new Map();
+const lastPlan = new Map();
 
 export async function recordDay(key, date, plan, force = false) {
   if (!key || !date || !plan) return;
@@ -37,24 +43,32 @@ export async function recordDay(key, date, plan, force = false) {
   const now = Date.now();
   if (!force && now - (lastVersion.get(k) || 0) < HISTORY_GAP) return;
   lastVersion.set(k, now);
+  const same = canon(plan);
+  if (lastPlan.get(k) === same) return;
   try {
-    // Read twice before believing there is nothing: the shim answers null for
-    // a failed read as well as for no row, and writing on a failed read would
-    // leave one version where there were thirty.
-    let raw = await window.storage.get(k, true);
-    if (!raw) raw = await window.storage.get(k, true);
-    const had = raw?.value ? JSON.parse(raw.value) : {};
-    const versions = Array.isArray(had.versions) ? had.versions : [];
-    if (versions[0] && canon(versions[0].plan) === canon(plan)) return;
-    await window.storage.set(k, JSON.stringify({ date, versions: [{ at: now, plan }, ...versions].slice(0, HISTORY_KEEP) }), true);
+    const ok = await window.storage.set(versionKey(key, date, now), JSON.stringify({ date, at: now, plan }), true);
+    if (!ok) { lastVersion.delete(k); return; }
+    lastPlan.set(k, same);
+    // Thirty kept. Trimming is the only part that reads, and a read that
+    // fails only means nothing is trimmed this time.
+    const listed = await window.storage.list(k + "-", true);
+    const keys = (listed?.keys || []).filter(x => /-\d{13}$/.test(x)).sort().reverse();
+    for (const old of keys.slice(HISTORY_KEEP)) await window.storage.delete(old, true);
   } catch { /* the class save is what matters; a version missed is a version missed */ }
 }
 
 export async function loadDayHistory(key, date) {
+  const k = historyKey(key, date);
   try {
-    const raw = await window.storage.get(historyKey(key, date), true);
-    const had = raw?.value ? JSON.parse(raw.value) : {};
-    return Array.isArray(had.versions) ? had.versions : [];
+    const [rows, legacy] = await Promise.all([
+      window.storage.rows ? window.storage.rows(k + "-") : null,
+      window.storage.get(k, true),
+    ]);
+    const own = (rows || [])
+      .filter(r => /-\d{13}$/.test(r.id) && r.data && r.data.plan)
+      .map(r => ({ at: r.data.at, plan: r.data.plan }));
+    const old = legacy?.value ? (JSON.parse(legacy.value).versions || []) : [];
+    return [...own, ...old].sort((a, b) => b.at - a.at);
   } catch { return []; }
 }
 

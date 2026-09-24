@@ -215,6 +215,19 @@ window.storage = {
     }
   },
 
+  // Every row whose key starts with `prefix`, keys and data together, in one
+  // request. Null when the request fails, so a caller can tell that from none.
+  async rows(prefix) {
+    try {
+      const url = SUPABASE_URL + "/rest/v1/app_data?id=like." + encodeURIComponent(prefix + "%") + "&select=id,data&order=id.desc";
+      const res = await fetch(url, { headers });
+      if (!res.ok) return null;
+      const rows = await res.json();
+      return Array.isArray(rows) ? rows : null;
+    } catch (e) {
+      return null;
+    }
+  },
   async delete(key, shared) {
     try {
       const url = SUPABASE_URL + "/rest/v1/app_data?id=eq." + encodeURIComponent(key);
