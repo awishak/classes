@@ -134,7 +134,7 @@ export function ClassMenu({ config, role = "instructor", onPick, onLook, panels,
       trigger={(open, toggle) => (
         <button className="dash-focus ca-focus repo-focus" onClick={toggle} aria-expanded={open} aria-haspopup="menu"
           title={student ? "Everything else in this class" : "Every other page of this class"}
-          style={{ display: "inline-flex", alignItems: "center", gap: 10, minHeight: 44, padding: "0 8px 0 0", border: "none",
+          style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: compact ? 4 : 10, minHeight: 44, padding: "0 8px 0 0", border: "none",
             background: "transparent", borderRadius: 8, cursor: "pointer", fontFamily: F, whiteSpace: "nowrap", textAlign: "left" }}>
           <span style={{ width: 30, height: 30, borderRadius: 8, background: config.accent, color: "#fff",
             fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
@@ -149,8 +149,13 @@ export function ClassMenu({ config, role = "instructor", onPick, onLook, panels,
               <span style={{ display: "block", fontFamily: TOKENS.FONT.display, fontWeight: TOKENS.FONT.displayWeight,
                 textShadow: TOKENS.FONT.displayShadow, fontSize: 16, lineHeight: 1.1, color: TEXT_PRIMARY }}>{config.name}</span>
             </span>
+          ) : compact ? (
+            // On a phone with a page open the badge alone stands for the
+            // class: the bar also holds the way back, the PIN and the
+            // envelope, and the code beside the badge cut the way back short.
+            <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>{config.code}</span>
           ) : (
-            <span style={{ fontSize: compact ? 15 : 17, fontWeight: compact ? 700 : 600, color: TEXT_PRIMARY }}>{config.code}</span>
+            <span style={{ fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY }}>{config.code}</span>
           )}
           <span aria-hidden="true" style={{ fontSize: 13, color: TEXT_MUTED }}>▾</span>
         </button>

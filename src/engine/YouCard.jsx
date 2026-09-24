@@ -3,7 +3,7 @@
 // / Make a meeting, and ask a question. Instructor view: an inbox of every
 // student thread. Threads persist via the shared store (Supabase + realtime).
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { genId } from "../utils.jsx";
 import { schedulingLinkOf } from "../instructors.js";
 import { rosterOf, nameShown, lastNameOf, shownName } from "./roster.js";
@@ -25,6 +25,31 @@ const TAP = 44;
 
 // ─── helpers ───
 const threadOf = (data, name) => (data?.threads?.[name] || []);
+
+// Whether a student has read what Andrew sent. Andrew, 2026-09-24: students
+// need "a mail envelope that tells them if they have a message from me or
+// not." The store keeps the moment each student last opened the thread, in
+// threadSeen. A thread from before there was a threadSeen counts as read up to
+// the student's own last message, since anything they answered they saw.
+export function unreadNotes(data, name) {
+  const thread = threadOf(data, name);
+  let seen = data?.threadSeen?.[name];
+  if (seen == null) {
+    seen = 0;
+    for (const m of thread) if (m.from !== "instructor" && (m.ts || 0) > seen) seen = m.ts || 0;
+  }
+  return thread.filter(m => m.from === "instructor" && (m.ts || 0) > seen).length;
+}
+
+// Opening the thread reads it. Written only when something is unread, so an
+// open thread does not write on every render.
+export function useMarkThreadSeen(update, data, name) {
+  const unread = name ? unreadNotes(data, name) : 0;
+  useEffect(() => {
+    if (!unread || !update) return;
+    update(prev => ({ ...prev, threadSeen: { ...(prev.threadSeen || {}), [name]: Date.now() } }));
+  }, [unread, name]);   // eslint-disable-line react-hooks/exhaustive-deps
+}
 
 function addMessage(update, name, msg) {
   update(prev => {
@@ -396,6 +421,7 @@ function ProfileCard({ student, profile, update, setPhoto, accent }) {
 function StudentMessages({ config, data, update, asStudent }) {
   const a = config.accent;
   const [reply, setReply] = useState("");
+  useMarkThreadSeen(update, data, asStudent);
 
   const send = (text) => { if (!text.trim()) return; addMessage(update, asStudent, { from: "student", kind: "reply", text: text.trim() }); setReply(""); };
   const status = (kind) => addMessage(update, asStudent, { from: "student", kind, text: "" });
@@ -566,7 +592,8 @@ export function MessagesSummary({ config, role, data, asStudent }) {
   }
   const m = lastMsg(data, asStudent);
   if (!m) return <Muted>No messages yet.</Muted>;
-  if (m.from === "instructor") return <><div style={{ fontWeight: 600 }}>New note from instructor</div><Muted>Tap to read</Muted></>;
+  if (unreadNotes(data, asStudent)) return <><div style={{ fontWeight: 600 }}>New note from instructor</div><Muted>Tap to read</Muted></>;
+  if (m.from === "instructor") return <div style={{ fontSize: 15, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{(config.instructor?.name || "Instructor") + ": " + (m.text || "")}</div>;
   const preview = m.kind === "got_it" ? "Thumbs up" : m.kind === "confused" ? "I'm confused" : m.kind === "meeting" ? "Requested a meeting" : m.kind === "question" ? "Q: " + m.text : m.text;
   return <div style={{ fontSize: 15, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>You: {preview}</div>;
 }

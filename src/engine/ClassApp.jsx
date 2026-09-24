@@ -18,7 +18,7 @@ import { SHARED_KEY, blockById, registerTypes } from "./blocks.js";
 import { readAdded, readLabels } from "./types.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { useLive } from "./live.js";
-import { YouDetail, MessagesDetail, MessagesSummary } from "./YouCard.jsx";
+import { YouDetail, MessagesDetail, MessagesSummary, unreadNotes } from "./YouCard.jsx";
 import { ScheduleSummary, ScheduleDetail } from "./ScheduleCard.jsx";
 import { RosterSummary, RosterDetail } from "./RosterCard.jsx";
 import { QuestionsSummary, QuestionsDetail } from "./QuestionsCard.jsx";
@@ -372,9 +372,7 @@ function needsYou(config, data, role, asStudent) {
     if (asks) out.push({ id: "requests", card: "more", text: asks + " request" + (asks === 1 ? "" : "s") + " and bugs waiting" });
     return out;
   }
-  const thread = data?.threads?.[asStudent] || [];
-  const last = thread[thread.length - 1];
-  if (last && last.from === "instructor") out.push({ id: "note", card: "messages", text: "A new note from " + (config.instructor?.name || "your instructor") });
+  if (unreadNotes(data, asStudent)) out.push({ id: "note", card: "messages", text: "A new note from " + (config.instructor?.name || "your instructor") });
   // The first-week challenge, until every field on the card is filled.
   const task = profileTaskOf(config);
   if (task && !profileComplete(data?.profiles?.[asStudent])) out.push({ id: "card", card: "you", text: task.title });
@@ -841,13 +839,26 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // hidden until pressed, because a code on the screen is a code the person
   // beside them can read, and it is theirs alone: a preview of somebody else
   // never shows it.
-  const ShowPin = ownCode && !preview && view !== "instructor" ? (
+  // A student's two things in the bar, on a phone as well. Andrew,
+  // 2026-09-24: "students need two things in their upper nav bar, even on
+  // mobile: a button to reveal their 6 digit pin, and a mail envelope that
+  // tells them if they have a message from me or not, and if they click on
+  // it, they reach messaging with me anyway."
+  //
+  // Both show while he views as a student, so he sees the bar they see. A
+  // preview cannot read another person's PIN, so there it is six dots.
+  const pinShown = preview ? "••••••" : ownCode;
+  const barBtn = { minHeight: TAP, minWidth: TAP, padding: "0 12px", borderRadius: 999, cursor: "pointer",
+    border: "1px solid " + BORDER_STRONG, background: "var(--surface-card)", display: "inline-flex",
+    alignItems: "center", justifyContent: "center", gap: 6, fontFamily: F, fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY };
+  const ShowPin = pinShown && view !== "instructor" ? (
     <span style={{ position: "relative", flex: "none" }}>
       <button className="ca-focus" onClick={() => setPinOpen(v => !v)} aria-expanded={pinOpen}
-        style={{ minHeight: 34, padding: "0 12px", borderRadius: 999, cursor: "pointer",
-          border: "1px solid " + BORDER_STRONG, background: "var(--surface-card)",
-          fontFamily: F, fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY }}>
-        {pinOpen ? "Hide PIN" : "Show PIN"}
+        aria-label={pinOpen ? "Hide PIN" : "Show PIN"} style={barBtn}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="7.5" cy="15.5" r="4.5" /><path d="m10.7 12.3 9.3-9.3" /><path d="m16 7 3 3" /><path d="m19 4 2 2" />
+        </svg>
+        {isDesktop ? (pinOpen ? "Hide PIN" : "Show PIN") : "PIN"}
       </button>
       {pinOpen ? (
         <>
@@ -855,7 +866,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
           <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", zIndex: 41, width: 250,
             maxWidth: "calc(100vw - 32px)", padding: 14, background: "var(--surface-card)",
             border: "1px solid " + BORDER_STRONG, borderRadius: 14, boxShadow: "0 18px 44px -14px rgba(23,19,16,.35)" }}>
-            <div style={{ fontFamily: "var(--font-label)", fontSize: 24, fontWeight: 700, letterSpacing: ".18em", color: TEXT_PRIMARY }}>{ownCode}</div>
+            <div style={{ fontFamily: "var(--font-label)", fontSize: 24, fontWeight: 700, letterSpacing: ".18em", color: TEXT_PRIMARY }}>{pinShown}</div>
             <div style={{ fontSize: 14, lineHeight: 1.45, color: TEXT_SECONDARY, marginTop: 8 }}>
               You can use this to log in instead of having an email sent to you. It never changes, and it is not
               the one-time code an email gives you.
@@ -864,6 +875,24 @@ export default function ClassApp({ config: classConfig, initialCard }) {
         </>
       ) : null}
     </span>
+  ) : null;
+
+  const unread = view !== "instructor" ? unreadNotes(data, preview || asStudent) : 0;
+  const MailButton = view !== "instructor" ? (
+    <button className="ca-focus" onClick={() => { setPinOpen(false); go("messages"); }}
+      aria-label={unread ? "Messages, " + unread + " new from " + (config.instructor?.name || "your instructor") : "Messages, nothing new"}
+      title={unread ? unread + " new" : "Nothing new"}
+      style={{ ...barBtn, position: "relative", padding: 0, width: TAP,
+        borderColor: unread ? a : BORDER_STRONG, color: unread ? a : TEXT_SECONDARY }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" />
+      </svg>
+      {unread ? (
+        <span aria-hidden="true" style={{ position: "absolute", top: -4, right: -4, minWidth: 20, height: 20, padding: "0 5px",
+          borderRadius: 999, background: a, color: "#fff", fontSize: 13, fontWeight: 700, lineHeight: "20px", textAlign: "center",
+          boxShadow: "0 0 0 2px var(--surface-card)" }}>{unread}</span>
+      ) : null}
+    </button>
   ) : null;
 
   const TheClass = <ClassMenu config={config} role={view} onPick={go} active={activeNav} />;
@@ -1122,6 +1151,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
               <ThemeIdentity theme={theme} points={myPoints} />
               <ThemeBadge theme={theme} points={myPoints} />
               {ShowPin}
+              {MailButton}
             </span>
           } />
         </div>
@@ -1177,13 +1207,16 @@ export default function ClassApp({ config: classConfig, initialCard }) {
           {openKey ? (
             <button className="ca-focus" onClick={() => go(openSub ? openKey : IN_CLASS.has(openKey) ? "class" : null)}
               style={{ background: "none", border: "none", fontFamily: F, fontSize: 16, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: 0, whiteSpace: "nowrap", minWidth: 0, overflow: "hidden" }}>
-              ← Back{openSub && openKey === "assignments" ? " to My Work" : IN_CLASS.has(openKey) ? " to Class" : ""}
+              {/* The place, not the word Back: with the PIN and the envelope
+                  beside it, "Back to My Work" was cut to "Back t" on a phone. */}
+              ← {openSub && openKey === "assignments" ? "My Work" : IN_CLASS.has(openKey) ? "Class" : "Back"}
             </button>
           ) : null}
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flex: "none" }}>
             <ThemeCamera theme={theme} />
             <ThemeBadge theme={theme} points={myPoints} />
             {ShowPin}
+            {MailButton}
           </span>
         </div>
       </div>

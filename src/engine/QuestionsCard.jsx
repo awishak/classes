@@ -241,7 +241,7 @@ function InstructorQuestions({ config, api, profiles }) {
     <div>
       <div style={h2}>Questions</div>
       <Muted>
-        The class reads this page at {config.path}/questions. Answer one and they have it straight away; leave one
+        The class reads this page at {config.path}/questions. Leave one
         alone and it sits there asked; archive one and it comes off the page.
       </Muted>
       {waiting ? <Muted>{waiting} waiting on an answer.</Muted> : null}
@@ -294,23 +294,60 @@ function InstructorQuestions({ config, api, profiles }) {
 }
 
 // The answer box, under the question, and the one press that takes a question
-// off the page. The box saves when he leaves it, which is when the class gets
-// what is in it.
+// off the page. Andrew, 2026-09-24: "i need the ability to save and edit
+// answers to student questions. always have edit and save buttons, not just
+// have it save randomly." So nothing reaches the class until Save answer.
+// Edit answer opens the box on an answer already given; a question with no
+// answer yet opens with the box ready. Both buttons are always there, and
+// each is greyed out when it has nothing to do.
 function Answering({ q, config, api }) {
-  const [draft, setDraft] = useState(q.answer || "");
+  const saved = q.answer || "";
   const answered = isAnswered(q);
+  const [editing, setEditing] = useState(!answered);
+  const [draft, setDraft] = useState(saved);
+  const changed = draft.trim() !== saved.trim();
+  const canSave = editing && changed;
+  const canEdit = !editing;
+  const save = () => {
+    if (!canSave) return;
+    api.answer(q.id, draft);
+    if (words(draft)) setEditing(false);
+  };
+  const cancel = () => { setDraft(saved); setEditing(!answered); };
+  const btn = (on, primary) => ({
+    minHeight: TAP, padding: "0 16px", borderRadius: 10, fontFamily: F, fontSize: 15, fontWeight: 600,
+    cursor: on ? "pointer" : "default", opacity: on ? 1 : 0.45,
+    border: primary ? "none" : "1px solid " + BORDER_STRONG,
+    background: primary ? "var(--ca-accent, " + config.accent + ")" : "none",
+    color: primary ? "#fff" : TEXT_PRIMARY,
+  });
   return (
     <div style={{ marginTop: 8 }}>
-      <textarea value={draft} onChange={e => setDraft(e.target.value)} onBlur={() => api.answer(q.id, draft)} rows={2}
-        placeholder={answered ? "" : "Answer as " + instructorName(config) + ", and the class reads it straight away"}
-        style={{ ...field, resize: "vertical" }} />
-      <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 13, color: answered ? TOKENS.STATE.ok : TEXT_MUTED }}>
-          {answered ? "The class has this answer" : "Asked, and waiting on you"}
+      {editing ? (
+        <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={3} autoFocus={answered}
+          onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); } }}
+          placeholder={answered ? "" : "Answer as " + instructorName(config)}
+          style={{ ...field, resize: "vertical" }} />
+      ) : null}
+      <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <button className="ca-focus" onClick={() => { if (canEdit) { setDraft(saved); setEditing(true); } }} disabled={!canEdit} style={btn(canEdit, false)}>
+          Edit answer
+        </button>
+        <button className="ca-focus" onClick={save} disabled={!canSave} style={btn(canSave, true)}>
+          Save answer
+        </button>
+        {editing && answered ? (
+          <button className="ca-focus" onClick={cancel}
+            style={{ background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_SECONDARY, minHeight: TAP }}>
+            Cancel
+          </button>
+        ) : null}
+        <span style={{ fontSize: 13, color: changed ? TOKENS.STATE.warn : answered ? TOKENS.STATE.ok : TEXT_MUTED }}>
+          {changed ? "Not saved" : answered ? "The class has this answer" : "Asked, and waiting on you"}
         </span>
         <button className="ca-focus" onClick={() => api.archive(q.id)}
           style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer",
-            fontFamily: F, fontSize: 13, fontWeight: 600, color: TEXT_MUTED, minHeight: 30 }}>
+            fontFamily: F, fontSize: 13, fontWeight: 600, color: TEXT_MUTED, minHeight: TAP }}>
           Archive
         </button>
       </div>

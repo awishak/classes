@@ -45,9 +45,9 @@ const comm3 = {
   // one scripts/syllabus-pdf.sh writes into teaching/comm3/.
   syllabus: "/syllabus/comm3-syllabus.pdf",
 
-  // The first-week challenge: fill in your card, every field, due Sep 22.
-  // No weight. The challenge itself lives in engine/profileTask.js.
-  profileTask: { due: "Sep 22" },
+  // Andrew, 2026-09-24: "for comm 3, remove the assignment called Please
+  // tell me about yourself." COMM 3 no longer opts into the card challenge.
+  // What students filled in on Your card stays.
 
   // "current" | "archived" — what the front page does with it.
   status: "current",

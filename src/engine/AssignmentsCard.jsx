@@ -40,6 +40,29 @@ const Muted = ({ children, style }) => <div style={{ fontSize: 15, color: TEXT_M
 const Pill = ({ accent, children }) => (
   <span style={{ flex: "none", fontSize: 13, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "3px 9px", whiteSpace: "nowrap" }}>{children}</span>
 );
+// The way to a challenge's instructions. Andrew, 2026-09-24: the Details
+// button "is almost too prominent. it needs a way to be clearer that students
+// find details there." So it is outlined rather than filled, and it says what
+// it does: a page icon, a verb and its object, and the arrow that means a new
+// tab.
+export function DetailsLink({ href, accent, style }) {
+  return (
+    <a className="ca-focus" href={href} target="_blank" rel="noreferrer"
+      style={{ position: "relative", alignSelf: "flex-start", minHeight: TAP, padding: "0 16px", borderRadius: 12, border: "1.5px solid " + accent,
+        background: "transparent", color: accent, display: "inline-flex", alignItems: "center", gap: 8,
+        fontFamily: F, fontSize: 16, fontWeight: 600, textDecoration: "none", ...style }}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M9 13h6" /><path d="M9 17h6" />
+      </svg>
+      Open details
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M7 17 17 7" /><path d="M8 7h9v9" />
+      </svg>
+      <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>(opens in a new tab)</span>
+    </a>
+  );
+}
+
 const inputStyle = { width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: TAP, background: SURFACE_CARD, color: TEXT_PRIMARY };
 
 // ─── data ───
@@ -496,7 +519,7 @@ export function StudentAssignmentRow({ asg, accent, config, data, update, name, 
             <DueBadge due={asg.due} time={asg.dueTime} weight={asg.weight} />
           </div>
           {asg.description && <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5, marginTop: 6 }}>{asg.description}</div>}
-          {asg.instructionsUrl && <a href={asg.instructionsUrl} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 15, fontWeight: 600, color: accent }}>Details</a>}
+          {asg.instructionsUrl && <div style={{ marginTop: 10 }}><DetailsLink href={asg.instructionsUrl} accent={accent} /></div>}
           {grade && <div style={{ marginTop: 10, fontSize: 22, fontWeight: 700, color: accent }}>Grade: {gradeText(grade)}</div>}
         </>
       )}

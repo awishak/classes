@@ -47,6 +47,22 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep24-bar", date: "Thursday, September 24", title: "A student's bar holds the PIN and the mail",
+    blurb: "Four asks in one message: take Please tell me about yourself off COMM 3, make Details clearer, give answers to questions an Edit and a Save, and put the PIN and an envelope in a student's bar on every screen.",
+    groups: [
+      { name: "The bar", items: [
+        ["PIN and envelope, on a phone too", "Andrew: \"students need two things in their upper nav bar, even on mobile: a button to reveal their 6 digit pin, and a mail envelope that tells them if they have a message from me or not.\" The PIN button now has a key and shows while he views as a student, with six dots in place of the code. The envelope carries a count of his notes the student has not read, and opens Message Dr. Ishak."],
+        ["What read means", "The store keeps when each student last opened the thread, as threadSeen. Opening it clears the envelope, the new-note line on the home page and the New note on the Messages card, on every device. A thread from before today counts as read up to the student's own last message."],
+        ["The way back on a phone", "With a page open, the badge stands alone for the class and the way back says where it goes: ← My Work, ← Class, or ← Back."],
+      ] },
+      { name: "The rest", items: [
+        ["Please tell me about yourself is off COMM 3", "COMM 3 no longer opts into the card challenge. What students filled in on Your card stays. COMM 118 still has it."],
+        ["Open details", "Andrew: \"the details button ... is almost too prominent. it needs a way to be clearer that students find details there.\" Outlined rather than filled, with a page icon, Open details, and the arrow for a new tab."],
+        ["Edit answer and Save answer", "Andrew: \"always have edit and save buttons, not just have it save randomly.\" An answer reaches the class on Save answer and not before; leaving the box no longer saves. Both buttons are always there and grey out when they have nothing to do. Unsaved words say Not saved, and Cancel puts the saved answer back."],
+      ] },
+    ],
+  },
+  {
     id: "sep24-my-work", date: "Thursday, September 24", title: "Challenges is My Work",
     blurb: "Andrew: \"change Challenges to My Work. as a tab and every where else, yes?\" The word on the tab, the home card, the page heading, the menu, the back links, the due card's button, the dashboard title and the colour setting is My Work now. A student's home card still says My Work (Assignments). Each piece of work is still a challenge in a sentence, and the address is still /<class>/challenges.",
     groups: [],

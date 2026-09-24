@@ -2820,7 +2820,16 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!/\{pinOpen \? "Hide PIN" : "Show PIN"\}/.test(app)) say("there is no Show PIN on the bar");
   if (!/You can use this to log in instead of having an email sent to you\./.test(app)) say("the PIN does not say what it is for");
   // It is the student's own, and only while they are signed in as themselves.
-  if (!/ownCode && !preview && view !== "instructor"/.test(app)) say("the PIN shows for somebody other than its owner");
+  // A preview shows the button with six dots, never somebody's code.
+  if (!/const pinShown = preview \? "••••••" : ownCode;/.test(app)) say("the PIN shows for somebody other than its owner");
+  if (!/pinShown && view !== "instructor"/.test(app)) say("the PIN button shows on his own bar");
+  // And the envelope beside it, on the desktop bar and the phone bar alike.
+  // Andrew, 2026-09-24: "a mail envelope that tells them if they have a
+  // message from me or not."
+  if ((app.match(/\{MailButton\}/g) || []).length !== 2) say("the envelope is not on both bars");
+  if (!/go\("messages"\)/.test(app)) say("the envelope does not open messaging");
+  const you = readFileSync(new URL("../src/engine/YouCard.jsx", import.meta.url), "utf8");
+  if (!/useMarkThreadSeen\(update, data, asStudent\)/.test(you)) say("opening messaging does not mark the thread read");
 }
 
 // The sitting in the room, chosen from the top bar. Andrew, 2026-09-20: "i
@@ -3073,7 +3082,11 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const card = readFileSync(new URL("../src/engine/QuestionsCard.jsx", import.meta.url), "utf8");
   const store = readFileSync(new URL("../src/engine/questions.js", import.meta.url), "utf8");
   // Three things he can do, and no fourth.
-  if (!/onBlur=\{\(\) => api\.answer\(q\.id, draft\)\}/.test(card)) say("an answer does not save");
+  // Saved on Save answer and nowhere else. Andrew, 2026-09-24: "always have
+  // edit and save buttons, not just have it save randomly."
+  if (!/api\.answer\(q\.id, draft\)/.test(card)) say("an answer does not save");
+  if (/onBlur=\{\(\) => api\.answer/.test(card)) say("an answer saves on its own again");
+  if (!/>\s*Edit answer\s*</.test(card) || !/>\s*Save answer\s*</.test(card)) say("Edit answer and Save answer are not both there");
   if (!/api\.archive\(q\.id\)/.test(card)) say("a question cannot be archived");
   if (!/api\.unarchive\(q\.id\)/.test(card)) say("an archived question cannot come back");
   // His page is the students' page. Andrew, 2026-09-20: "make my UI as the
@@ -3267,7 +3280,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       if (!/data-current="1"[^>]*>[\s\S]{0,900}Leadership Guide/.test(cards)) say("the page does not scroll to the next thing due");
       if (/Instructions/.test(cards)) say("a card still says Instructions");
       const pg = renderToString(<AssignmentPage config={acfg} data={ad} update={noop} name={N} id="graded" go={noop} />).replace(/<!-- -->/g, "");
-      ["Graded piece", "Your grade: <strong", "Tighten the ending.", "room to sharpen", "Details", "Before", "After", "Send", "A message, a link, or both"].forEach(t => { if (!pg.includes(t)) say("the assignment page never shows " + JSON.stringify(t)); });
+      ["Graded piece", "Your grade: <strong", "Tighten the ending.", "room to sharpen", "Open details", "Before", "After", "Send", "A message, a link, or both"].forEach(t => { if (!pg.includes(t)) say("the assignment page never shows " + JSON.stringify(t)); });
       if (!pg.includes("days early") && !pg.includes("a day early")) say("the assignment page does not say how early the work went in");
       // The conversation: newest first, the grade and the due date from
       // Andrew, the student's own message and link from them, and one box to

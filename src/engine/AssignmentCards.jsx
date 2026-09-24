@@ -25,7 +25,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import * as TOKENS from "./tokens.js";
-import { dueText, dueState, isLate, deletePatch } from "./AssignmentsCard.jsx";
+import { dueText, dueState, isLate, deletePatch, DetailsLink } from "./AssignmentsCard.jsx";
 import { unseenGrades, markSeen, bucketOf, htmlToText, letterOf, alive } from "./grades.js";
 import { deadlineOf } from "./DueCard.jsx";
 import { assignmentsOf, isProfileTask, profileComplete } from "./profileTask.js";
@@ -356,13 +356,7 @@ export function AssignmentPage({ config, data, update, name, id, go }) {
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
           <h2 style={{ ...DISPLAY, margin: 0, fontSize: 24, lineHeight: 1.2, letterSpacing: "-0.02em", color: TEXT_PRIMARY, textWrap: "balance" }}>{asg.title}</h2>
           {asg.description ? <p style={{ margin: 0, fontSize: 17, lineHeight: 1.55, color: TEXT_PRIMARY, maxWidth: "65ch" }}>{asg.description}</p> : null}
-          {asg.instructionsUrl ? (
-            <a className="ca-focus" href={asg.instructionsUrl} target="_blank" rel="noreferrer"
-              style={{ alignSelf: "flex-start", minHeight: TAP, padding: "0 18px", borderRadius: 12, background: accent, color: "#fff",
-                display: "inline-flex", alignItems: "center", fontSize: 16, fontWeight: 600, textDecoration: "none" }}>
-              Details
-            </a>
-          ) : null}
+          {asg.instructionsUrl ? <DetailsLink href={asg.instructionsUrl} accent={accent} /> : null}
         </div>
         <div style={{ flex: "none" }}><Marker st={st} /></div>
       </section>
