@@ -49,6 +49,10 @@ export const warmClassData = (key, data) => { WARM.set(key, data); };
 // now, by the same rule two people editing at once already use.
 const PENDING = "classes-unsaved:";
 
+// The event storage-shim.js sends when its socket is back after a drop. Named
+// here rather than imported, because importing the shim opens a socket.
+const RECONNECTED = "ishak:realtime-back";
+
 // The state that was wanted, and the state it was built on top of. Both,
 // because the merge rule needs to know which branches this page actually
 // touched: without the basis, work held overnight would put a stale copy of
@@ -339,7 +343,43 @@ export function useClassData(key) {
         setData(d);
       } catch { /* ignore */ }
     });
-    return () => { alive = false; if (off) off(); };
+
+    // Catching up with what changed while this page was not listening.
+    // Andrew, 2026-09-23: his laptop showed the COMM 118 day from before the
+    // morning's work, long after the server had the newer one. Realtime only
+    // carries changes while the socket is alive, and a laptop lid kills it.
+    // So the class is read again whenever the socket comes back (the shim
+    // says so with RECONNECTED), the tab comes back into view or the window
+    // into focus, or the browser back online. Only when nothing from this
+    // page is waiting to save: a save in flight is merged against the server
+    // on its way out, and what lands is taken then.
+    let lastLook = 0;
+    const catchUp = () => {
+      if (document.visibilityState === "hidden") return;
+      const now = Date.now();
+      if (now - lastLook < 5000) return;
+      lastLook = now;
+      loadClass(key).then(d => {
+        if (!alive || !d || !Object.keys(d).length) return;
+        if (pending.current > 0 || flying.current || queued.current.length) return;
+        if (canon(d) === canon(WARM.get(key) || dataRef.current)) return;
+        dataRef.current = d;
+        basis.current = d;
+        WARM.set(key, d);
+        setData(d);
+      });
+    };
+    document.addEventListener("visibilitychange", catchUp);
+    window.addEventListener("focus", catchUp);
+    window.addEventListener("online", catchUp);
+    window.addEventListener(RECONNECTED, catchUp);
+    return () => {
+      alive = false; if (off) off();
+      document.removeEventListener("visibilitychange", catchUp);
+      window.removeEventListener("focus", catchUp);
+      window.removeEventListener("online", catchUp);
+      window.removeEventListener(RECONNECTED, catchUp);
+    };
   }, [key]);
 
   const update = useCallback((mutator) => {

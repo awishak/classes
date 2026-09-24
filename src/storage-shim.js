@@ -18,6 +18,27 @@ const listeners = {};
 // Connect to Supabase Realtime via WebSocket
 let realtimeChannel = null;
 
+// Andrew, 2026-09-23: the COMM 118 day he had built was not on his laptop,
+// though it was on the server. A laptop that sleeps keeps a socket that looks
+// open and hears nothing, and a socket that does reconnect never learns what
+// changed while it was gone. So: the last time the server said anything, a
+// socket that has gone quiet past two heartbeats is dropped and made again,
+// and every reconnect after the first tells the pages to read their class
+// again. store.js listens for RECONNECTED.
+export const RECONNECTED = "ishak:realtime-back";
+const QUIET = 75000;
+let lastHeard = 0;
+let joinedOnce = false;
+
+function dropRealtime(ws) {
+  if (realtimeChannel !== ws) return;
+  realtimeChannel = null;
+  if (ws._beat) clearInterval(ws._beat);
+  ws.onclose = null; ws.onerror = null; ws.onmessage = null;
+  try { ws.close(); } catch { /* already gone */ }
+  setTimeout(connectRealtime, 500);
+}
+
 function connectRealtime() {
   if (realtimeChannel) return;
   try {
@@ -35,14 +56,21 @@ function connectRealtime() {
         payload: { config: { broadcast: { self: false }, postgres_changes: [{ event: "*", schema: "public", table: "app_data" }] } },
         ref: String(ref),
       }));
-      // Heartbeat every 30s
+      lastHeard = Date.now();
+      if (joinedOnce) { try { window.dispatchEvent(new Event(RECONNECTED)); } catch { /* no window */ } }
+      joinedOnce = true;
+      // Heartbeat every 30s, and a socket the server has stopped answering
+      // is made again rather than trusted.
       heartbeat = setInterval(() => {
+        if (Date.now() - lastHeard > QUIET) { dropRealtime(ws); return; }
         ref++;
-        ws.send(JSON.stringify({ topic: "phoenix", event: "heartbeat", payload: {}, ref: String(ref) }));
+        try { ws.send(JSON.stringify({ topic: "phoenix", event: "heartbeat", payload: {}, ref: String(ref) })); } catch { dropRealtime(ws); }
       }, 30000);
+      ws._beat = heartbeat;
     };
 
     ws.onmessage = (event) => {
+      lastHeard = Date.now();
       try {
         const msg = JSON.parse(event.data);
         if (msg.event === "postgres_changes") {
@@ -81,6 +109,19 @@ function connectRealtime() {
 
 // Start realtime connection
 connectRealtime();
+
+// Coming back to the page, or back online: a socket that went quiet while the
+// laptop slept is made again now rather than at the next heartbeat.
+const wake = () => {
+  if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+  if (!realtimeChannel) connectRealtime();
+  else if (realtimeChannel.readyState === 1 && Date.now() - lastHeard > 45000) dropRealtime(realtimeChannel);
+};
+try {
+  document.addEventListener("visibilitychange", wake);
+  window.addEventListener("online", wake);
+  window.addEventListener("focus", wake);
+} catch { /* no window */ }
 
 window.storage = {
   async get(key, shared) {
