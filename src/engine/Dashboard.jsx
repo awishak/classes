@@ -3717,6 +3717,13 @@ const gridFor = (cols) => "minmax(0,1fr) 16px " + cols.live + "px";
 
 export default function Dashboard({ config, daySlug = "" }) {
   const [stored, update, , saving] = useClassData(config.storageKey);
+  // Whether the browser has a connection, for the save line in the bar.
+  const [online, setOnline] = useState(() => { try { return navigator.onLine !== false; } catch { return true; } });
+  useEffect(() => {
+    const on = () => setOnline(true), off = () => setOnline(false);
+    window.addEventListener("online", on); window.addEventListener("offline", off);
+    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+  }, []);
   // The faces live one row over, so a keystroke in the day doc does not ship
   // two dozen of them with it. Put back on the profiles here. See photos.js.
   const [photos] = usePhotos(config.storageKey);
@@ -5333,6 +5340,13 @@ export default function Dashboard({ config, daySlug = "" }) {
           }
           right={
             <>
+              {/* Where the saving is, the way a Google Doc says it. Andrew
+                  asked on 2026-09-23 for the day to behave like a Google Doc,
+                  and knowing it is saved is most of that for one person. */}
+              <span role="status" aria-live="polite" style={{ fontFamily: F, fontSize: 13, fontWeight: 500, whiteSpace: "nowrap",
+                color: !online || saving?.trouble ? TOKENS.STATE.late : TEXT_MUTED }}>
+                {!online ? "Offline, holding your work" : saving?.trouble ? "Not saved yet" : saving?.busy ? "Saving..." : "Saved"}
+              </span>
               <button className="dash-focus dash-bar dash-plain" onClick={() => setHereOpen(true)}>
                 Here{students.length ? <span className="dash-bar-sub">{students.length - outCount}/{students.length}</span> : null}
               </button>

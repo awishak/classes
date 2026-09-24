@@ -255,6 +255,9 @@ export function useClassData(key) {
   // is worth saying out loud, which is what `trouble` is for.
   const tries = useRef(0);
   const [trouble, setTrouble] = useState(false);
+  // Whether anything from this page is on its way to the server, so a screen
+  // can say Saving... and then Saved, the way a Google Doc does.
+  const [busy, setBusy] = useState(false);
   // Work that was held in this browser and has now been put back.
   const [restored, setRestored] = useState(false);
   const retry = useRef(null);
@@ -296,6 +299,7 @@ export function useClassData(key) {
       flying.current = false;
       if (!tries.current) pending.current--;
       if (!tries.current) pump();
+      if (!flying.current && !queued.current.length) setBusy(false);
     });
   }, [setData]);
 
@@ -398,6 +402,7 @@ export function useClassData(key) {
     // Held here until a save lands. A tab that dies between the keystroke and
     // the write still has the words when something opens this class again.
     keepPending(key, next, basis.current);
+    setBusy(true);
     pump();
   }, [key, pump]);
 
@@ -429,9 +434,10 @@ export function useClassData(key) {
   useEffect(() => () => clearTimeout(retry.current), []);
 
   // A fourth thing, so a screen can say what the saving is doing: `trouble` is
-  // a save that has not landed and is still being tried, `restored` is work
+  // a save that has not landed and is still being tried, `busy` is a save on
+  // its way, `restored` is work
   // this browser was holding and has now put back.
-  return [data, update, apply, { trouble, restored, clearRestored: () => setRestored(false) }];
+  return [data, update, apply, { trouble, busy, restored, clearRestored: () => setRestored(false) }];
 }
 
 // A write that re-reads before it saves.
