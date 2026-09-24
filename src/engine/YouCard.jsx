@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { genId } from "../utils.jsx";
 import { schedulingLinkOf } from "../instructors.js";
-import { rosterOf, nameShown, lastNameOf } from "./roster.js";
+import { rosterOf, nameShown, lastNameOf, shownName } from "./roster.js";
 import { Avatar, Face, profileOf } from "./Face.jsx";
 import { saveProfile, PHOTO_MARK } from "./photos.js";
 import * as TOKENS from "./tokens.js";
@@ -203,7 +203,6 @@ function ProfileForm({ student, initial, update, setPhoto, accent, onDone, onCan
 
   return (
     <div>
-      <div style={h2}>Your profile</div>
       <Muted>Tell the class a little about yourself.</Muted>
 
       {/* What the class calls you. Andrew, 2026-09-20: "i want the ability
@@ -262,7 +261,7 @@ function ProfileForm({ student, initial, update, setPhoto, accent, onDone, onCan
 
       {/* Andrew's question, in his words. A student who can name what they are
           good at is a student who can be asked to do it. */}
-      <FieldRow title="What would you say is your biggest strength as a student?">
+      <FieldRow title="What would you say is your biggest strength as a student? (this is only for your instructor)">
         <input value={f.strength} onChange={e => set("strength", e.target.value)}
           placeholder="A characteristic, an activity, or something else" style={inputStyle} />
         <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 6, lineHeight: 1.45 }}>
@@ -305,8 +304,8 @@ function StudentYou({ config, data, update, setPhoto, asStudent, setAsStudent })
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <div style={h2}>Your card</div>
+      {setAsStudent ? (
+      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
         {setAsStudent ? (
           <label style={{ fontSize: 13, color: TEXT_SECONDARY, display: "flex", alignItems: "center", gap: 6 }}>
             Viewing as
@@ -317,8 +316,9 @@ function StudentYou({ config, data, update, setPhoto, asStudent, setAsStudent })
           </label>
         ) : null}
       </div>
+      ) : null}
 
-      <div style={{ marginTop: 14 }}>
+      <div>
         <ProfileCard key={asStudent} student={asStudent} profile={data?.profiles?.[asStudent] || {}} update={update} setPhoto={setPhoto} accent={a} />
       </div>
     </div>
@@ -341,29 +341,50 @@ function ProfileCard({ student, profile, update, setPhoto, accent }) {
       onDone={() => { setEditing(false); setSaved(true); }} onCancel={empty ? null : () => setEditing(false)} />;
   }
   const a = accent;
-  const shown = (v) => String(v || "").trim()
-    ? <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{v}</div>
-    : <Muted>Not filled in yet.</Muted>;
+  const name = shownName(profile, student);
+  const text = (v) => String(v || "").trim();
+  const Field = ({ title, value, big }) => (
+    <div style={{ minWidth: 0 }}>
+      <div style={label}>{title}</div>
+      {text(value)
+        ? <div style={{ marginTop: 6, fontSize: big ? 17 : 16, color: TEXT_PRIMARY, lineHeight: 1.55, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{value}</div>
+        : <div style={{ marginTop: 6 }}><Muted>Not filled in yet.</Muted></div>}
+    </div>
+  );
+  const rule = { borderTop: "1px solid " + BORDER, paddingTop: 20, marginTop: 20 };
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <div style={h2}>Your profile</div>
-        <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {saved && <span style={{ fontSize: 15, fontWeight: 600, color: "#059669" }}>Saved</span>}
-          <SendBtn accent={a} onClick={() => { setSaved(false); setEditing(true); }}>Edit profile</SendBtn>
-        </span>
+      {/* The face, big, and the name beside it. The preferred-name fields
+          are how the name is made; here it is just the name. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+        <Avatar profile={profile} name={name} accent={a} size={112} />
+        <div style={{ flex: "1 1 180px", minWidth: 0 }}>
+          <div style={{ fontSize: 30, fontWeight: 700, color: TEXT_PRIMARY, letterSpacing: "-0.02em", lineHeight: 1.1, overflowWrap: "anywhere" }}>{name}</div>
+          {saved ? <div style={{ marginTop: 8, fontSize: 15, fontWeight: 600, color: "#059669" }}>Saved</div> : null}
+        </div>
+        <SendBtn accent={a} onClick={() => { setSaved(false); setEditing(true); }}>Edit profile</SendBtn>
       </div>
-      <FieldRow title="Preferred first name">{shown(profile.firstName)}</FieldRow>
-      <FieldRow title="Preferred last name">{shown(profile.lastName)}</FieldRow>
-      <FieldRow title="Email address (this is only for your instructor)">{shown(profile.email)}</FieldRow>
-      <FieldRow title="Avatar"><AvatarPreview value={profile.avatar || ""} accent={a} /></FieldRow>
-      <FieldRow title="About me">{shown(profile.about)}</FieldRow>
-      <FieldRow title="Year">{shown(profile.year)}</FieldRow>
-      <FieldRow title="Hometown">{shown(profile.hometown)}</FieldRow>
-      <FieldRow title="Motto">{shown(profile.motto)}</FieldRow>
-      <FieldRow title="Goals for the class (this is only for your instructor)">{shown(profile.goals)}</FieldRow>
-      <FieldRow title="What would you say is your biggest strength as a student?">{shown(profile.strength)}</FieldRow>
-      <FieldRow title="What matters to you most? (this is only for your instructor)">{shown(profile.priority)}</FieldRow>
+
+      <div style={{ ...rule, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 20 }}>
+        <Field title="Hometown" value={profile.hometown} />
+        <Field title="Year" value={profile.year} />
+      </div>
+
+      <div style={{ ...rule, display: "flex", flexDirection: "column", gap: 20 }}>
+        <Field title="About me" value={profile.about} big />
+        <Field title="Motto" value={profile.motto} />
+      </div>
+
+      {/* Below the line is Andrew's alone. Andrew, 2026-09-23, on what goes
+          under it and what it says. The classmates' roster in RosterCard
+          shows none of these. */}
+      <div style={{ ...rule, display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5 }}>The rest of this info is only for your instructor and is not displayed to other students.</div>
+        <Field title="What would you say is your biggest strength as a student?" value={profile.strength} />
+        <Field title="Email address" value={profile.email} />
+        <Field title="Goals for the class" value={profile.goals} />
+        <Field title="What matters to you most?" value={profile.priority} />
+      </div>
     </div>
   );
 }

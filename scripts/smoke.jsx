@@ -2573,8 +2573,11 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       if (!page.includes("Your card")) say("the card challenge's page has no way to the card");
       if (page.includes("A message, a link, or both")) say("the card challenge's page still has a box to send from");
       const form = renderToString(<YouDetail config={pcfg} role="student" data={short} update={noop} asStudent={N} />);
-      ["Email address (this is only for your instructor)", "Goals for the class (this is only for your instructor)", "What matters to you most? (this is only for your instructor)"]
-        .forEach(t => { if (!form.includes(t)) say("the form does not mark " + JSON.stringify(t)); });
+      // The card marks everything below the line as Andrew's alone.
+      const note = form.indexOf("The rest of this info is only for your instructor and is not displayed to other students.");
+      if (note < 0) say("the card does not say what is only for the instructor");
+      ["biggest strength as a student", "Email address", "Goals for the class", "What matters to you most?"]
+        .forEach(t => { const at = form.indexOf(t); if (at < 0 || at < note) say("the card does not put " + JSON.stringify(t) + " under the instructor-only line"); });
       ["About me (this is only", "Motto (this is only", "Hometown (this is only"].forEach(t => { if (form.includes(t)) say("a field classmates see is marked private: " + t); });
     } catch (err) { say("the card challenge threw: " + err.message); }
   }
@@ -2595,7 +2598,11 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const talked = { threads: { [N]: [{ id: "m1", ts: 1, from: "student", kind: "question", text: "What is framing?" }] } };
     try {
       const you = renderToString(<YouDetail config={mcfg} role="student" data={{}} update={noop} asStudent={N} />);
-      if (!you.includes("Your profile")) say("Your card lost the profile");
+      if (!you.includes("Tell the class a little about yourself")) say("an empty card no longer opens on the form");
+      const filled = renderToString(<YouDetail config={mcfg} role="student" update={noop} asStudent={N}
+        data={{ profiles: { [N]: { firstName: "Sammy", hometown: "Folsom, CA", year: "First-year", about: "A runner." } } }} />);
+      if (!filled.includes("Edit profile") || !filled.includes("Sammy Student") || !filled.includes("Folsom, CA")) say("a filled card does not show the saved profile with Edit");
+      if (filled.includes("Preferred first name")) say("the card shows the preferred-name fields outside Edit");
       ["Message Dr. Ishak"].forEach(t => { if (you.includes(t)) say("Your card still carries " + JSON.stringify(t)); });
       const hcfg2 = { ...mcfg, instructor: { ...(mcfg.instructor || {}), officeHours: "Tue and Thu, 1 to 3 pm, Vari 234" } };
       const msgs = renderToString(<MessagesDetail config={hcfg2} role="student" data={talked} update={noop} asStudent={N} />);

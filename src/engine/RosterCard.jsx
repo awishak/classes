@@ -307,7 +307,8 @@ function StudentRoster({ config, data, name }) {
             <div style={{ fontSize: 15, color: TEXT_MUTED }}>{[p.year, p.hometown].filter(Boolean).join(" · ")}</div>
             <Field title="About me" value={p.about} />
             <Field title="Motto" value={p.motto} />
-            <Field title="Biggest strength as a student" value={p.strength} />
+            {/* Strength, goals, what matters most and email are Andrew's
+                alone; a student's own card says so. */}
           </div>
         </div>
       </div>
