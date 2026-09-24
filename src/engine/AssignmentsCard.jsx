@@ -546,7 +546,7 @@ function InstructorAssignments({ config, data, update }) {
 
   return (
     <div>
-      <div style={{ ...h2, marginBottom: 12 }}>Challenges</div>
+      <div style={{ ...h2, marginBottom: 12 }}>My Work</div>
       <div style={{ display: "flex", gap: 4, background: BG, padding: 3, borderRadius: 999, border: "1px solid " + BORDER, width: "fit-content", marginBottom: 16 }}>
         {[["grade", "To grade"], ["manage", "Manage"]].map(([k, lbl]) => (
           <span key={k} onClick={() => setView(k)}
@@ -614,7 +614,7 @@ function GradeFlow({ config, data, update, queue, onExit }) {
       <div style={{ textAlign: "center", padding: "30px 0" }}>
         <div style={{ ...h2, marginBottom: 8 }}>All done</div>
         <Muted style={{ marginBottom: 16 }}>Worked through {queue.length} submission{queue.length === 1 ? "" : "s"}.</Muted>
-        <Btn accent={a} onClick={onExit}>Back to challenges</Btn>
+        <Btn accent={a} onClick={onExit}>Back to My Work</Btn>
       </div>
     );
   }

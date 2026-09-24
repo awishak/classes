@@ -171,7 +171,7 @@ export function AssignmentCards({ config, data, name, go }) {
 
   return (
     <div>
-      <div style={{ ...DISPLAY, fontSize: 22, color: TEXT_PRIMARY, letterSpacing: "-0.02em", marginBottom: 16 }}>Challenges</div>
+      <div style={{ ...DISPLAY, fontSize: 22, color: TEXT_PRIMARY, letterSpacing: "-0.02em", marginBottom: 16 }}>My Work</div>
       {!assignments.length ? <div style={{ fontSize: 15, color: TEXT_MUTED }}>No challenges yet.</div> : null}
       <div ref={listRef} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {assignments.map(asg => (

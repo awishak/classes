@@ -47,6 +47,11 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep24-my-work", date: "Thursday, September 24", title: "Challenges is My Work",
+    blurb: "Andrew: \"change Challenges to My Work. as a tab and every where else, yes?\" The word on the tab, the home card, the page heading, the menu, the back links, the due card's button, the dashboard title and the colour setting is My Work now. A student's home card still says My Work (Assignments). Each piece of work is still a challenge in a sentence, and the address is still /<class>/challenges.",
+    groups: [],
+  },
+  {
     id: "sep22-drop", date: "Tuesday, September 22", title: "A file dragged onto the day is a row on the day",
     blurb: "Andrew: \"i need t be able to drag and drop jpg, pptx, andother formats directly into teh dashboard for that days class.\" The upload path built on September 8 for clips from a phone took only a video, a photo or a voice memo, and only through the Add an item sheet. Now the day itself takes a drop.",
     groups: [

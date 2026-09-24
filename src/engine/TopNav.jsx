@@ -33,7 +33,7 @@ const TAP = 44;
 export const NAV_CLASS = [
   { id: "home", label: "Home", card: null },
   { id: "schedule", label: "Schedule", card: "schedule" },
-  { id: "assignments", label: "Challenges", card: "assignments" },
+  { id: "assignments", label: "My Work", card: "assignments" },
   { id: "class", label: "Class", card: "class" },
   { id: "more", label: "More", card: "more" },
 ];

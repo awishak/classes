@@ -1075,7 +1075,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
         }
         if (!/aria-haspopup="menu"[^>]*title="Every other page of this class"/.test(html)) {
           console.error(`  FAIL  ${where}: the class at the bar's left end is not a menu`); failedEarly++; }
-        if (/>Schedule<|>Challenges<|>Grade view</.test(html.split("<main")[0])) {
+        if (/>Schedule<|>My Work<|>Grade view</.test(html.split("<main")[0])) {
           console.error(`  FAIL  ${where}: the bar still carries the tabs the class menu holds`); failedEarly++; }
         if (html.includes(">Remember<")) { console.error(`  FAIL  ${where}: the Remember line is back`); failedEarly++; }
         continue;
@@ -1088,7 +1088,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
       const strip = (html.split('aria-label="Teaching surfaces"')[1] || "").split("</nav>")[0];
       // The same five tabs as the class page, each a link back to it, and the
       // Apps button, which is where the Dashboard and the Repository live now.
-      for (const door of ["Home", "Schedule", "Challenges", "Class", "More"]) {
+      for (const door of ["Home", "Schedule", "My Work", "Class", "More"]) {
         if (!strip.includes(">" + door + "<")) {
           console.error(`  FAIL  ${where}: the strip has no ${door} tab`); failedEarly++; }
       }
@@ -1115,7 +1115,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
     try {
       const html = atWidth(px, () => renderToString(<ClassApp config={cfg0} />));
       const bar = html.split("ca-root")[1]?.slice(0, 4000) || "";
-      ["Schedule", "Challenges", "Grade view"].forEach(tab => {
+      ["Schedule", "My Work", "Grade view"].forEach(tab => {
         if (new RegExp(">" + tab + "</a>|>" + tab + "</button>").test(bar)) {
           console.error(`  FAIL  class page, instructor, ${where}: ${tab} is still a tab on the bar`); failedEarly++; }
       });
@@ -1138,9 +1138,9 @@ cases.push(["Instructor links", <InstructorLinks />]);
     // Class, Grades toward the bottom and Games at the very bottom.
     const at = (t) => html.indexOf(t);
     if (html.includes('aria-label="Next class"')) {
-      const order = ['aria-label="Next class"', ">Challenges (Assignments)</span>", ">Message Dr. Ishak</span>", ">Questions</span>", ">Class</span>", ">Games</span>"].map(at);
+      const order = ['aria-label="Next class"', ">My Work (Assignments)</span>", ">Message Dr. Ishak</span>", ">Questions</span>", ">Class</span>", ">Games</span>"].map(at);
       if (order.some(n => n < 0) || order.some((n, i) => i && n < order[i - 1])) {
-        console.error("  FAIL  class page, student: the home page is not Next class, Challenges, Messages, Questions, Class, Games: " + JSON.stringify(order)); failedEarly++; }
+        console.error("  FAIL  class page, student: the home page is not Next class, My Work, Messages, Questions, Class, Games: " + JSON.stringify(order)); failedEarly++; }
     } else {
       console.error("  FAIL  class page, student: the home page has no Next class hero"); failedEarly++;
     }
@@ -1245,14 +1245,14 @@ cases.push(["Instructor links", <InstructorLinks />]);
       const menuSrc = readSrc(new URL("../src/engine/ClassMenu.jsx", import.meta.url), "utf8");
       // The Horn is on the bar, so the class menu leaves it out.
       if (!menuSrc.includes('app.opens !== "horn"')) say("the dashboard says Around the Horn twice");
-      for (const page of ["Home", "Schedule", "Challenges", "Class"]) {
+      for (const page of ["Home", "Schedule", "My Work", "Class"]) {
         if (!menuSrc.includes('["' + page + '", ')) say("the class menu does not lead to " + page);
       }
     }
   });
   try {
     const html = renderToString(<InstructorBar config={cfg0} always><div>page</div></InstructorBar>);
-    if (!html.includes('aria-label="Teaching surfaces"') || !html.includes(">Challenges<") || !html.includes(">Grade view<")) say("the wrapper does not draw the same bar");
+    if (!html.includes('aria-label="Teaching surfaces"') || !html.includes(">My Work<") || !html.includes(">Grade view<")) say("the wrapper does not draw the same bar");
   } catch (err) { say("the wrapper threw: " + err.message); }
 }
 
@@ -1846,7 +1846,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // Nothing becomes unreachable: Coming up covers three weeks and the link
   // covers everything past that, plus anything marked Ongoing, which has no
   // date to sort by at all.
-  if (!readFileSync(new URL("../src/engine/ClassMenu.jsx", import.meta.url), "utf8").includes('["Challenges", "/challenges"')) {
+  if (!readFileSync(new URL("../src/engine/ClassMenu.jsx", import.meta.url), "utf8").includes('["My Work", "/challenges"')) {
     say("nothing on the dashboard reaches the challenges"); }
   // The row never scrolls out of sight again.
   if (src.includes(".dash-rail-tabs{display:flex;gap:4px") && !src.includes("flex-wrap:wrap"))
@@ -2431,7 +2431,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (!dueSoon(cfg, moved, "Ada Lovelace", now).some(a => a.id === "sat")) say("a deadline moved after a dismissal never brought the card back");
     try {
       const html = renderToString(<DueDeck config={cfg} items={[asgs[1], asgs[2]]} onDismiss={noop} onOpen={noop} onDone={noop} />).replace(/<!-- -->/g, "");
-      ["Short piece", "Got it", "Go to challenges", "1 of 2"].forEach(t => { if (!html.includes(t)) say("the due card never showed " + JSON.stringify(t)); });
+      ["Short piece", "Got it", "Go to My Work", "1 of 2"].forEach(t => { if (!html.includes(t)) say("the due card never showed " + JSON.stringify(t)); });
     } catch (err) { say("the due card threw: " + err.message); }
   }
 

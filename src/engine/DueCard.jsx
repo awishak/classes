@@ -101,7 +101,7 @@ export default function DueDeck({ config, items, onDismiss, onOpen, onDone }) {
           </button>
           <button onClick={open}
             style={{ flex: 1, minHeight: 52, padding: "0 20px", borderRadius: 12, background: a, color: "#fff", border: "none", fontFamily: F, fontSize: 18, fontWeight: 600, cursor: "pointer" }}>
-            Go to challenges
+            Go to My Work
           </button>
         </div>
       </div>

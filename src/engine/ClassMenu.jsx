@@ -105,7 +105,7 @@ export function ClassMenu({ config, role = "instructor", onPick, onLook, panels,
   // The pages of the class, which used to be tabs across the bar. `More page`
   // reads that way on the dashboard, where More is also a word on the bar; on
   // the class site it is just More.
-  const pages = [["Home", "", "home"], ["Schedule", "/schedule", "schedule"], ["Challenges", "/challenges", "assignments"],
+  const pages = [["Home", "", "home"], ["Schedule", "/schedule", "schedule"], ["My Work", "/challenges", "assignments"],
     ["Class", "/class", "class"], [student ? "More" : "More page", "/more", "more"]];
   // The page you are on, marked, since the bar no longer says.
   const pageRow = (name, to, id) => {

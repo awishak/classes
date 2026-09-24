@@ -129,10 +129,12 @@ function summary(key, config, role, ctx) {
         ? { title: "Inbox", body: <MessagesSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> }
         : { title: "Message Dr. Ishak", body: <MessagesSummary config={config} role={role} data={ctx.data} asStudent={ctx.asStudent} /> };
     case "assignments":
-      // Andrew, 2026-09-20: "can you label it as Challenges (Assignments) so
+      // Andrew, 2026-09-24: Challenges is My Work now, as a tab and everywhere
+      // else. The student label keeps the parenthetical he asked for on
+      // 2026-09-20: "can you label it as Challenges (Assignments) so
       // students get used to the terminology?" The tab stays one word, since
       // a tab is a place rather than a lesson in what he calls things.
-      return { title: role === "instructor" ? "Challenges" : "Challenges (Assignments)",
+      return { title: role === "instructor" ? "My Work" : "My Work (Assignments)",
         body: <AssignmentsSummary config={config} data={ctx.data} role={role} name={role === "instructor" ? "" : ctx.asStudent} /> };
     case "questions":
       return { title: "Questions", body: <QuestionsSummary config={config} role={role} asStudent={ctx.asStudent} /> };
@@ -1175,7 +1177,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
           {openKey ? (
             <button className="ca-focus" onClick={() => go(openSub ? openKey : IN_CLASS.has(openKey) ? "class" : null)}
               style={{ background: "none", border: "none", fontFamily: F, fontSize: 16, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: 0, whiteSpace: "nowrap", minWidth: 0, overflow: "hidden" }}>
-              ← Back{openSub && openKey === "assignments" ? " to Challenges" : IN_CLASS.has(openKey) ? " to Class" : ""}
+              ← Back{openSub && openKey === "assignments" ? " to My Work" : IN_CLASS.has(openKey) ? " to Class" : ""}
             </button>
           ) : null}
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flex: "none" }}>

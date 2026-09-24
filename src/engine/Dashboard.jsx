@@ -5181,7 +5181,7 @@ export default function Dashboard({ config, daySlug = "" }) {
       onStock={(text) => setShelf("day", list => [...list, { id: genId(), kind: "Note", title: text, url: "" }])} />,
     assignments: () => <AssignmentsPanel assignments={assignments} castNow={castNow} dismiss={dismiss} liveLabel={liveLabel} path={config.path} />,
   };
-  const TITLES = { todo: "To-do", flow: "Day Plan", boards: "Enter/Exit", find: "Find", readings: "On the week", ideas: "Activities & seeds", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "Challenges" };
+  const TITLES = { todo: "To-do", flow: "Day Plan", boards: "Enter/Exit", find: "Find", readings: "On the week", ideas: "Activities & seeds", questions: "Questions", attendance: "Here", scratch: "Notes", assignments: "My Work" };
   const openQ = (q.items || []).filter(x => x.state === "open").length;
   const outCount = Object.values(marks).filter(v => v === "out").length;
   // How far through the day I am, counted off the flow rather than the clock.

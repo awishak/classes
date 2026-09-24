@@ -57,7 +57,7 @@ const STUDENTS = [
     body: ["When something needs a student's attention, that thing is the first screen they see: a card, one at a time, tap through. A grade came in. A challenge is due in 48 hours. A note from me. Then the site."] },
   { src: "s-challenge", phone: true, title: "A rough grade comes with a meeting link",
     body: ["This grade is made up, but this is what happens. A D, an F or an Incomplete puts a link to book a meeting with me into the challenge's conversation, automatically, right under my comment. The student can write back in the same thread."] },
-  { src: "s-challenges", phone: true, title: "The challenges page",
+  { src: "s-challenges", phone: true, title: "The My Work page",
     body: ["Every challenge for the term. Each one opens to its own conversation: what the student turned in, what I said about the work, and the grade."] },
   { src: "s-schedule2", phone: true, title: "Readings, by day",
     body: ["Every reading on the day I assigned it, with the link. Drew's Picks are the ones I'd read first."] },
