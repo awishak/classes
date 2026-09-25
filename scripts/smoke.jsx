@@ -1217,7 +1217,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const { readFileSync: readSrc } = await import("node:fs");
   const app = readSrc(new URL("../src/App.jsx", import.meta.url), "utf8");
   // Pages that draw TopNav themselves.
-  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GamesPage: "engine/GamesPage.jsx" };
+  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx" };
   // What the projector shows, and the page you sign in on before you are anybody.
   const EXEMPT = new Set(["ClassroomView", "EnginePresenter", "TriviaPresenter4", "TriviaPresenter118", "LoginPage", "InstructorGate", "InstructorBar", "RetreatPage"]);
   const routed = [...app.matchAll(/return\s*\(?\s*<([A-Z]\w*)/g), ...app.matchAll(/<InstructorGate[^>]*>\s*<([A-Z]\w*)/g)].map(m => m[1]);
