@@ -8,6 +8,7 @@
 // that signs each call as the person here (a host, under migration 002).
 
 import { useEffect, useState } from "react";
+import { DetailsLink } from "./AssignmentsCard.jsx";
 import { WorksheetReview, WORKSHEETS } from "@ishak/worksheets";
 import { useClassState } from "./store.js";
 import { rosterOf } from "./roster.js";
@@ -24,6 +25,14 @@ export default function WorksheetsPage({ config }) {
   const { session, instructor } = useSession();
   const [key, setKey] = useState(WORKSHEETS[0]?.key || "");
   const sheet = WORKSHEETS.find(w => w.key === key);
+  const [copied, setCopied] = useState(false);
+  // The address students open, in full, for the Details link on an assignment.
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const studentUrl = sheet ? origin + config.path + "/worksheets/" + sheet.key : "";
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(studentUrl); setCopied(true); setTimeout(() => setCopied(false), 1500); }
+    catch { /* no clipboard: the box is selectable */ }
+  };
 
   useEffect(() => {
     document.title = config.code + " · Worksheets";
@@ -65,12 +74,22 @@ export default function WorksheetsPage({ config }) {
           </div>
         ) : null}
         {sheet ? (
+          <div style={{ display: "grid", gap: 8, marginBottom: 20, padding: 16, borderRadius: 16, background: TOKENS.SURFACE.card, border: "1px solid " + TOKENS.LINE.soft }}>
+            <div style={{ fontSize: 15, fontWeight: 600 }}>Students open this worksheet at</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <input readOnly value={studentUrl} aria-label="student address" onFocus={e => e.target.select()}
+                style={{ flex: "1 1 320px", minWidth: 0, fontFamily: TOKENS.FONT.mono || "ui-monospace, monospace", fontSize: 14, minHeight: 40, padding: "0 12px", borderRadius: 10, border: "1px solid " + TOKENS.LINE.strong, background: TOKENS.SURFACE.sunk, color: TOKENS.TEXT.primary }} />
+              <button type="button" onClick={copy}
+                style={{ fontFamily: TOKENS.FONT.body, fontSize: 15, fontWeight: 600, minHeight: 40, padding: "0 16px", borderRadius: 10, border: "1px solid " + TOKENS.LINE.strong, background: TOKENS.SURFACE.card, color: TOKENS.TEXT.primary, cursor: "pointer" }}>
+                {copied ? "Copied" : "Copy"}
+              </button>
+              <DetailsLink href={studentUrl} accent={config.accent} />
+            </div>
+            <div style={{ fontSize: 14, color: TOKENS.TEXT.secondary }}>Paste the address into the Details link on the assignment.</div>
+          </div>
           <WorksheetReview key={sheet.key} supabase={gameClient} worksheetKey={sheet.key} groupKey={config.id}
             roster={roster} title={sheet.title} accent={config.accent} />
         ) : null}
-        <p style={{ fontSize: 15, color: TOKENS.TEXT.secondary, marginTop: 16 }}>
-          Students open a worksheet at {config.path + "/worksheets/" + (sheet ? sheet.key : "")}. Put that address on the assignment.
-        </p>
       </div>
     </div>
   );
