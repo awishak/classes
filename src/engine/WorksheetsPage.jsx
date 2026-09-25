@@ -73,7 +73,7 @@ export default function WorksheetsPage({ config }) {
             ))}
           </div>
         ) : null}
-        {sheet ? (
+        {sheet ? (<>
           <div style={{ display: "grid", gap: 8, marginBottom: 20, padding: 16, borderRadius: 16, background: TOKENS.SURFACE.card, border: "1px solid " + TOKENS.LINE.soft }}>
             <div style={{ fontSize: 15, fontWeight: 600 }}>Students open this worksheet at</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -89,7 +89,7 @@ export default function WorksheetsPage({ config }) {
           </div>
           <WorksheetReview key={sheet.key} supabase={gameClient} worksheetKey={sheet.key} groupKey={config.id}
             roster={roster} title={sheet.title} accent={config.accent} />
-        ) : null}
+        </>) : null}
       </div>
     </div>
   );
