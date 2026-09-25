@@ -234,7 +234,10 @@ function detail(key, config, role, ctx) {
           ? <GamesNow games={ctx.games} onStart={ctx.startGame || (() => {})} onReview={ctx.reviewGame || undefined} />
           : <Muted>No games yet.</Muted>}
         {role === "instructor" ? (
-          <a className="ca-focus" href={config.path + "/games"} style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, marginTop: 12, fontSize: 17, fontWeight: 600, color: config.accent, textDecoration: "none" }}>Games</a>
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+            <a className="ca-focus" href={config.path + "/games"} style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, marginTop: 12, fontSize: 17, fontWeight: 600, color: config.accent, textDecoration: "none" }}>Games</a>
+            <a className="ca-focus" href={config.path + "/worksheets"} style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, marginTop: 12, fontSize: 17, fontWeight: 600, color: config.accent, textDecoration: "none" }}>Worksheets</a>
+          </div>
         ) : null}
       </Panel>
     );

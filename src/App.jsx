@@ -11,6 +11,7 @@ import BoardPage from "./engine/BoardPage.jsx";
 import GamePage, { RunGamePage } from "./engine/GamePage.jsx";
 import GamesPage from "./engine/GamesPage.jsx";
 import WorksheetPage from "./engine/WorksheetPage.jsx";
+import WorksheetsPage from "./engine/WorksheetsPage.jsx";
 import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
@@ -243,6 +244,15 @@ export default function App() {
   // /<class>/dashboard/week-3-wed. See daySlug in days.js.
   // A worksheet, one student's copy: /<class>/worksheets/<key>. The sheet is
   // the worksheets package; the page signs it in as the student.
+  // And every student's, for the instructor: /<class>/worksheets.
+  const wsAll = path.match(/^\/(comm\w+)\/worksheets\/?$/);
+  if (wsAll && ENGINE[wsAll[1]]) {
+    return (
+      <InstructorGate what={ENGINE[wsAll[1]].code + " worksheets"}>
+        <WorksheetsPage key={wsAll[1]} config={ENGINE[wsAll[1]]} />
+      </InstructorGate>
+    );
+  }
   const ws = path.match(/^\/(comm\w+)\/worksheets\/([a-z0-9-]+)\/?$/);
   if (ws && ENGINE[ws[1]]) {
     return <WorksheetPage key={ws[1] + "/" + ws[2]} config={ENGINE[ws[1]]} worksheetKey={ws[2]} />;
