@@ -14,6 +14,7 @@ export function appsFor(config, role) {
       { id: "dashboard", label: "Dashboard", href: p + "/dashboard" },
       { id: "repo", label: "Repository", href: "/repo" },
       { id: "games", label: "Games", href: p + "/games" },
+      { id: "worksheets", label: "Worksheets", href: p + "/worksheets" },
       { id: "grade", label: "Grade view", href: p + "/grade" },
       { id: "horn", label: "Around the Horn", opens: "horn" },
       { id: "today", label: "Room screen", href: p + "/today" },
