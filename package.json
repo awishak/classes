@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@ishak/decks": "github:awishak/decks#v0.7.0",
-    "@ishak/worksheets": "github:awishak/worksheets#v0.2.0",
+    "@ishak/worksheets": "file:vendor/ishak-worksheets-0.2.0.tgz",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
