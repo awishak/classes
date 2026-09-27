@@ -13,13 +13,26 @@ import { rosterOf } from "./roster.js";
 import { useSession, studentFor } from "./session.js";
 import { gameClient } from "./gameClient.js";
 import * as TOKENS from "./tokens.js";
+import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
+import { hasNight } from "./themes.js";
 import { setClassFavicon } from "./favicon.js";
 import TopNav, { NAV_STUDENT } from "./TopNav.jsx";
+
+// The sheet is told day or night only when the page is holding one. Auto
+// leaves it to follow the machine, which is what the page does. A theme with
+// no night (Snapchat, Crashing Out) keeps the sheet light rather than putting
+// a dark sheet on a yellow page.
+const sheetThemeOf = (theme, mode) => !hasNight(theme) ? "light" : mode === "night" ? "dark" : mode === "day" ? "light" : undefined;
 
 export default function WorksheetPage({ config, worksheetKey }) {
   const [data] = useClassState(config.storageKey);
   const { session, email, instructor } = useSession();
   const sheet = WORKSHEETS.find(w => w.key === worksheetKey);
+  // The student's theme and their day or night, the same ones the class home
+  // reads. Without these the page had only Clean's daytime block, so the nav
+  // and the page stayed white around a sheet that followed the phone.
+  const [theme] = useStudentTheme(config);
+  const [mode] = useDayNight(config);
 
   useEffect(() => {
     document.title = config.code + " · " + (sheet ? sheet.title : "Worksheet");
@@ -53,14 +66,15 @@ export default function WorksheetPage({ config, worksheetKey }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: TOKENS.SURFACE.page, color: TOKENS.TEXT.primary, fontFamily: TOKENS.FONT.body }}>
+    <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: TOKENS.SURFACE.page, color: TOKENS.TEXT.primary, fontFamily: TOKENS.FONT.body }}>
+      <ThemeStyle theme={theme} />
       <div style={{ position: "sticky", top: 0, zIndex: 30 }}>
         <TopNav config={config} tabs={NAV_STUDENT} active="assignments" />
       </div>
       {body !== null
         ? <div style={{ padding: 32 }}>{body}</div>
         : <Worksheet key={viewer.id} supabase={gameClient} worksheetKey={worksheetKey} groupKey={config.id} viewer={viewer}
-            accent={config.accent} accentLight={config.accentLight} />}
+            accent={config.accent} accentLight={config.accentLight} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />}
     </div>
   );
 }

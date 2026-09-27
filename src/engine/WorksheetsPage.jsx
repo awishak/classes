@@ -15,10 +15,14 @@ import { rosterOf } from "./roster.js";
 import { useSession } from "./session.js";
 import { gameClient } from "./gameClient.js";
 import * as TOKENS from "./tokens.js";
+import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
+import { hasNight } from "./themes.js";
 import { setClassFavicon } from "./favicon.js";
 import TopNav, { NAV_TEACH } from "./TopNav.jsx";
 
 const emailOf = (s) => String(s?.email || "").trim().toLowerCase();
+// See WorksheetPage: the grid is held to day or night only when the page is.
+const sheetThemeOf = (theme, mode) => !hasNight(theme) ? "light" : mode === "night" ? "dark" : mode === "day" ? "light" : undefined;
 
 export default function WorksheetsPage({ config }) {
   const [data] = useClassState(config.storageKey);
@@ -26,6 +30,10 @@ export default function WorksheetsPage({ config }) {
   const [key, setKey] = useState(WORKSHEETS[0]?.key || "");
   const sheet = WORKSHEETS.find(w => w.key === key);
   const [copied, setCopied] = useState(false);
+  // My theme and day or night in this browser, the same keys the class home
+  // writes, so this page goes dark with the rest of the class.
+  const [theme] = useStudentTheme(config);
+  const [mode] = useDayNight(config);
   // The address students open, in full, for the Details link on an assignment.
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const studentUrl = sheet ? origin + config.path + "/worksheets/" + sheet.key : "";
@@ -48,7 +56,8 @@ export default function WorksheetsPage({ config }) {
 
   if (!session || !instructor) {
     return (
-      <div style={{ minHeight: "100vh", background: TOKENS.SURFACE.page, color: TOKENS.TEXT.primary, fontFamily: TOKENS.FONT.body }}>
+      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: TOKENS.SURFACE.page, color: TOKENS.TEXT.primary, fontFamily: TOKENS.FONT.body }}>
+        <ThemeStyle theme={theme} />
         {bar}
         <div style={{ padding: 32 }}>
           <p style={{ fontSize: 17, margin: "0 0 12px" }}>Worksheets run on your email sign-in.</p>
@@ -59,7 +68,8 @@ export default function WorksheetsPage({ config }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: TOKENS.SURFACE.page, color: TOKENS.TEXT.primary, fontFamily: TOKENS.FONT.body }}>
+    <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: TOKENS.SURFACE.page, color: TOKENS.TEXT.primary, fontFamily: TOKENS.FONT.body }}>
+      <ThemeStyle theme={theme} />
       {bar}
       <div style={{ padding: "24px 16px 48px", maxWidth: 1600, margin: "0 auto" }}>
         {WORKSHEETS.length > 1 ? (
@@ -88,7 +98,7 @@ export default function WorksheetsPage({ config }) {
             <div style={{ fontSize: 14, color: TOKENS.TEXT.secondary }}>Paste the address into the Details link on the assignment.</div>
           </div>
           <WorksheetReview key={sheet.key} supabase={gameClient} worksheetKey={sheet.key} groupKey={config.id}
-            roster={roster} title={sheet.title} accent={config.accent} />
+            roster={roster} title={sheet.title} accent={config.accent} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />
         </>) : null}
       </div>
     </div>
