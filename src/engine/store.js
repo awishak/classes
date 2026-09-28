@@ -235,15 +235,28 @@ function pickRow(id, was, mine, theirs) {
 export function mergeList(was, mine, theirs) {
   const w = byId(was) || new Map(), m = byId(mine), t = byId(theirs);
   if (!m || !t) return mine;                            // not rows with ids: a leaf
-  // Whose order to follow. A page that only added rows keeps the other side's
-  // order and puts its own on the end; a page that moved rows about meant to.
+  // Whose order to follow. A side that moved rows about meant to, and when
+  // neither did, or both did, this page's order stands.
+  //
+  // Andrew, 2026-09-28: "when i add a new line to a section, no matter where
+  // i add it, it adds it to the bottom." The line landed where Enter was
+  // pressed, and the save came back with it on the end: this used to follow
+  // the server's order unless this page had moved rows, and a line typed into
+  // the middle moves nothing, so it was put on after everything the server
+  // held. The other side's new rows go in after the row they were put after,
+  // for the same reason.
+  const base = Array.isArray(was) ? was : [];
   const orderOf = (list, keep) => list.filter(x => keep.has(x.id)).map(x => x.id).join("|");
-  const moved = orderOf(mine, w) !== orderOf(Array.isArray(was) ? was : [], m);
-  const order = [];
-  const seen = new Set();
-  const add = (x) => { if (!seen.has(x.id)) { seen.add(x.id); order.push(x.id); } };
-  (moved ? mine : theirs).forEach(add);
-  (moved ? theirs : mine).forEach(add);
+  const mineMoved = orderOf(mine, w) !== orderOf(base, m);
+  const theirsMoved = orderOf(theirs, w) !== orderOf(base, t);
+  const [lead, follow] = theirsMoved && !mineMoved ? [theirs, mine] : [mine, theirs];
+  const order = lead.map(x => x.id);
+  follow.forEach((x, i) => {
+    if (order.includes(x.id)) return;
+    let j = i - 1;
+    while (j >= 0 && !order.includes(follow[j].id)) j--;
+    order.splice((j >= 0 ? order.indexOf(follow[j].id) : -1) + 1, 0, x.id);
+  });
   const out = [];
   order.forEach(id => { const row = pickRow(id, w, m, t); if (row !== undefined) out.push(row); });
   return out;

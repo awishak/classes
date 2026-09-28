@@ -289,7 +289,7 @@ export default function DayDoc({
   sections, slotItems, named, firstMovable, blockOf, seedById, doneSet, nextId, pickedId,
   liveLabel, liveUrl, castItem, castSection, dismiss, features, hue, slidesOn, classHref, renderExtras,
   onSetSlotTitle, onSaveItem, onSaveBlock, onInsertRow, onRemoveItem, onNest, onTick, isAssigned, onToggleAssigned,
-  onDeleteSection, onMoveSection, onEdit, drop, castLink, onMoveItem, onConvertRow, onLinkRow, library,
+  onDeleteSection, onMoveSection, onMoveSectionAway, onEdit, drop, castLink, onMoveItem, onConvertRow, onLinkRow, library,
   onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory,
   ground, assignments, games, gamesHref, view, teaching, onSetSlotLook, onMerge, footTools,
 }) {
@@ -537,6 +537,7 @@ export default function DayDoc({
       if (onMoveSection && !named.has(line.slot)) {
         add("Section", "Move up", () => onMoveSection(line.slot, -1));
         add("Section", "Move down", () => onMoveSection(line.slot, 1));
+        if (onMoveSectionAway) add("Section", "Move to another day", () => onMoveSectionAway(line.slot));
       }
       if (onDeleteSection && !named.has(line.slot)) add("Section", "Delete section", () => onDeleteSection(line.slot));
     } else {
@@ -866,6 +867,7 @@ export default function DayDoc({
       onInsertRow ? ["Add item", () => focusLine(onInsertRow(sec.slot, null, 0), 0)] : null,
       mine && sec.si > firstMovable && onMoveSection ? ["Move up", () => onMoveSection(sec.slot, -1)] : null,
       mine && sec.si < sections.length - 1 && onMoveSection ? ["Move down", () => onMoveSection(sec.slot, 1)] : null,
+      mine && onMoveSectionAway ? ["Move to another day", () => onMoveSectionAway(sec.slot)] : null,
       onMerge && sections.length > 1 ? ["Merge two sections", () => onMerge()] : null,
       "-",
       ["Copy section", () => copyKeys(["s:" + sec.slot, ...normSlot(slotItems[sec.slot]).items.map(x => x.id)])],

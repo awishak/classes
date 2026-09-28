@@ -1223,6 +1223,55 @@ function PlaceMenu({ slots, days, today, accent, onPlace, onClose }) {
   );
 }
 
+// A whole section, carried to another day and put down where I say.
+//
+// Andrew, 2026-09-28: "i want to be able to move an entire section to a
+// different day. let me choose where it goes on that day too." The day is
+// picked the way the place menu picks one. Under it, the sections that day
+// already has, each a place to land before, and the end of the day last. The
+// list follows the day, so changing the day changes the places.
+export function MoveSectionMenu({ name, slot, days, today, accent, sectionsOn, onPlace, onClose }) {
+  const i = days.findIndex(d => d.date === today);
+  const next = i >= 0 ? days[i + 1] : null;
+  const [date, setDate] = useState(next ? next.date : today);
+  const quick = [[today, "This day"], ...(next ? [[next.date, "Next class"]] : [])];
+  const there = (sectionsOn ? sectionsOn(date) : []).filter(([k]) => !(date === today && k === slot));
+  const go = (before) => { onPlace(date, before); onClose(); };
+  const place = { ...mini, minHeight: TAP, justifyContent: "flex-start", textAlign: "left", padding: "0 14px", fontSize: 14.5 };
+
+  return (
+    <div onMouseDown={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(23,19,16,.3)", display: "grid", placeItems: "center", padding: 20 }}>
+      <div onMouseDown={e => e.stopPropagation()} role="dialog" aria-label="Move this section"
+        style={{ width: "100%", maxWidth: 420, background: "#fff", borderRadius: 16, border: "1px solid " + BORDER_STRONG,
+          boxShadow: "0 24px 60px -20px rgba(23,19,16,.5)", padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+        <span style={label}>Move {name} to</span>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {quick.map(([d, lbl]) => (
+            <button key={d} onClick={() => setDate(d)} aria-pressed={date === d}
+              style={{ ...mini, minHeight: HIT, ...(date === d ? { background: accent, borderColor: accent, color: "#fff" } : {}) }}>
+              {lbl} · {d}
+            </button>
+          ))}
+          <select value={date} onChange={e => setDate(e.target.value)}
+            style={{ ...inputStyle, minHeight: HIT, width: "auto", fontSize: 13.5, padding: "4px 8px" }}>
+            {days.map(d => <option key={d.date} value={d.date}>{d.date}{d.topic ? " · " + d.topic : ""}</option>)}
+          </select>
+        </div>
+
+        <span style={{ ...label, paddingTop: 4 }}>Where on {date}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {there.map(([k, lbl]) => (
+            <button key={k} className="dash-focus" onClick={() => go(k)} style={place}>Before {lbl}</button>
+          ))}
+          <button className="dash-focus" onClick={() => go(null)} style={place}>{there.length ? "At the end" : "On its own"}</button>
+        </div>
+        <button style={{ ...mini, alignSelf: "flex-start" }} onClick={onClose}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 // Building the day is the job this screen exists for, so it happens here
 // rather than on another page. Three ways in, because that is all a slot ever
 // holds: something I say, something from the seed library, or something to open.
@@ -2058,11 +2107,13 @@ export function boardSection(which, boards, proposals) {
   };
 }
 
-export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList, games, gamesHref, boards, proposals, onSaveBoard, onCastBoard, boardHue, schedToday, onCastScheduled, onCastRow, view, teaching, onSetSlotLook, footTools, onDropFiles, uploads, onForgetUpload, dragging }) {
+export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveCast, accent, onAddNote, classId, onClaim, features, onFeature, planHref, classHref, onSlidesClaim, onBlockClaim, where, loose, onAddScheduled, onAddItem, onRemoveItem, onMoveItem, onSetSequence, onSetSlotTitle, sequences, onAddBlock, onRemoveBlock, onMoveBlock, blocks2, onPickBlock, blockOf, onBlockHeadline, readings, comingRows, onAddReading, onRemoveReading, onPickReading, onAddIdea, days, today, onFold, onDragMove, onDeleteSection, onMoveSection, onAddUnder, onMergeSections, onSelect, onEdit, pickedId, onOrder, doneSet: doneIn, onTick, isAssigned, onToggleAssigned, hue = defaultHue, noteSources, onNest, secHue = secColor, onSectionColor, onSaveBlock, onSaveDayNote, onSaveSpring, onSaveItem, onInsertRow, onConvertRow, onLinkRow, onSetSlotTime, onPlaceSection, onSplitSection, onMoveSectionToDay, sectionsOn, classMinutes, onOpenTemplates, onOpenHistory, roomGround, onSetGround, assignmentList, games, gamesHref, boards, proposals, onSaveBoard, onCastBoard, boardHue, schedToday, onCastScheduled, onCastRow, view, teaching, onSetSlotLook, footTools, onDropFiles, uploads, onForgetUpload, dragging }) {
   const doneSet = doneIn || new Set();
   const [adding, setAdding] = useState(null);
   const [placing, setPlacing] = useState(null);
   const [merging, setMerging] = useState(false);
+  // The section on its way to another day, while the menu asks where.
+  const [movingSec, setMovingSec] = useState(null);
   const [overSlot, setOverSlot] = useState(null);
   // Which sections are folded shut. Held on the panel rather than in the class
   // data, because folding is where I am looking right now and not a fact about
@@ -2341,6 +2392,10 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
         <PlaceMenu slots={sectionList} days={days || []} today={today} accent={accent}
           onPlace={(date, slot) => onAddScheduled(placing, slot, date)} onClose={() => setPlacing(null)} />
       ) : null}
+      {movingSec ? (
+        <MoveSectionMenu name={labelOf[movingSec] || "this section"} slot={movingSec} days={days || []} today={today} accent={accent}
+          sectionsOn={sectionsOn} onPlace={(date, before) => onMoveSectionToDay(movingSec, date, before)} onClose={() => setMovingSec(null)} />
+      ) : null}
       {/* The day, and nothing above it.
           Five blocks used to sit here before the first section — the sequence
           picker, the slides, what the week had left unplaced, the six formats
@@ -2391,6 +2446,7 @@ export function FlowPanel({ plan, seq, seeds, castNow, dismiss, liveLabel, liveC
         onRemoveItem={onRemoveItem} onNest={onNest} onTick={onTick}
         isAssigned={isAssigned} onToggleAssigned={onToggleAssigned}
         onDeleteSection={onDeleteSection} onMoveSection={onMoveSection} onEdit={onEdit} drop={drop}
+        onMoveSectionAway={onMoveSectionToDay && sectionsOn ? (slot) => setMovingSec(slot) : null}
         onMoveItem={onMoveItem} onConvertRow={onConvertRow} onLinkRow={onLinkRow} library={blocks2}
         onSetSlotTime={onSetSlotTime} onPlaceSection={onPlaceSection} onSplitSection={onSplitSection} classMinutes={classMinutes}
         onOpenTemplates={onOpenTemplates} onOpenHistory={onOpenHistory}
@@ -4152,11 +4208,14 @@ export default function Dashboard({ config, daySlug = "" }) {
   });
   const doUndo = () => {
     if (!undo) return;
-    const { date, plan } = undo;
+    const { date, plan, more } = undo;
     setUndo(null);
     update(prev => {
       const plans = { ...(prev.dayPlans || {}) };
-      if (plan === undefined) delete plans[date]; else plans[date] = plan;
+      // One day, or two when a section went from one day to another.
+      [{ date, plan }, ...(more || [])].forEach(({ date: on, plan: was }) => {
+        if (was === undefined) delete plans[on]; else plans[on] = was;
+      });
       return { ...prev, dayPlans: plans };
     });
   };
@@ -4274,6 +4333,31 @@ export default function Dashboard({ config, daySlug = "" }) {
 
   // A section dragged to a new place in the day.
   const placeSectionAt = (slot, beforeSlot) => writeDay(d => ({ ...d, slots: placeSection(d.slots, slot, beforeSlot) }), "moving that section");
+
+  // A whole section to another day, put down before one of that day's
+  // sections or at its end. Both days go out in one write, so what lands
+  // carries the section off one day and onto the other together, and Undo
+  // puts both back. The section keeps its key unless that day already holds
+  // one by it. Rows go as they are: same ids, same pointers at whatever they
+  // came from. Picked for this day, it is the ordinary move.
+  const moveSectionToDay = (slot, toDate, beforeSlot) => {
+    if (!toDate || toDate === day) { if (beforeSlot !== slot) placeSectionAt(slot, beforeSlot); return; }
+    update(prev => {
+      const plans = { ...(prev.dayPlans || {}) };
+      const from = orderSlots({ ...blankDay(config), ...(plans[day] || {}) });
+      const bucket = (from.slots || {})[slot];
+      if (!bucket) return prev;
+      const fromSlots = { ...from.slots };
+      delete fromSlots[slot];
+      const to = orderSlots({ ...blankDay(config), ...(plans[toDate] || {}) });
+      const key = slot in (to.slots || {}) ? "sec-" + genId() : slot;
+      const toSlots = placeSection({ ...(to.slots || {}), [key]: bucket }, key, beforeSlot);
+      setUndo({ date: day, plan: plans[day], more: [{ date: toDate, plan: plans[toDate] }], what: "moving that section to " + toDate });
+      plans[day] = { ...from, slots: fromSlots, order: Object.keys(fromSlots) };
+      plans[toDate] = { ...to, slots: toSlots, order: Object.keys(toSlots) };
+      return { ...prev, dayPlans: plans };
+    });
+  };
 
   // A line turned into a section: the rows after it go with it. Hands back the
   // new section's key so its name can take the cursor.
@@ -4860,6 +4944,7 @@ export default function Dashboard({ config, daySlug = "" }) {
   const setSlotTimeB = forBoard(setSlotTime, (which, time) => writeBoard(which, b => ({ ...b, time })));
   const moveSectionB = forBoard(moveSection, nothing);
   const placeSectionB = forBoard(placeSectionAt, nothing);
+  const moveSectionToDayB = forBoard(moveSectionToDay, nothing);
   const splitSectionB = forBoard(splitSectionAt, nothing);
   const convertRowB = forBoard(convertRow, nothing);
   const linkRowB = forBoard(linkRow, nothing);
@@ -5110,6 +5195,8 @@ export default function Dashboard({ config, daySlug = "" }) {
       onSaveBlock={saveBlockPatch} onSaveDayNote={(v) => saveDayNote(v)}
       onSaveItem={saveItemB} onInsertRow={insertRowB} onConvertRow={convertRowB}
       onLinkRow={linkRowB} onSetSlotTime={setSlotTimeB} onPlaceSection={placeSectionB} onSplitSection={splitSectionB}
+      onMoveSectionToDay={moveSectionToDayB}
+      sectionsOn={(date) => sectionsOf(config, orderSlots({ ...blankDay(config), ...((stored?.dayPlans || {})[date] || {}) }))}
       classMinutes={(() => { const s = sittingsOf(config)[0]; return s ? s.end - s.start : null; })()}
       onOpenTemplates={() => setTemplatesOpen(true)} onOpenHistory={() => setHistoryOpen(true)}
       roomGround={data?.roomGround} onSetGround={(gr) => update(prev => ({ ...prev, roomGround: gr }))} assignmentList={assignments}

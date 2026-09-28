@@ -19,7 +19,7 @@ import Dashboard, {
   ColorsSheet, NoteSheet, ShortcutSheet,
 } from "../src/engine/Dashboard.jsx";
 import ClassroomView, { Content as CastContent } from "../src/engine/ClassroomView.jsx";
-import { Castable } from "../src/engine/Dashboard.jsx";
+import { Castable, MoveSectionMenu } from "../src/engine/Dashboard.jsx";
 import { mediaSteps, liveStep, mediaKind, viewUrl } from "../src/engine/media.js";
 import { pathFor } from "../api/upload.js";
 import { baseCSS } from "../src/engine/themes.js";
@@ -4054,6 +4054,22 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const out = mergeList(was, mine, was);
     if (out.map(r => r.id).join() !== "c,a,b") say("a row dragged into place went back where it was");
   }
+  // A line typed into the middle of a section stays in the middle once the
+  // save comes back, and a row the other side added lands after the row it
+  // was put after.
+  {
+    const was = { rows: [{ id: "a" }, { id: "b" }] };
+    const mine = { rows: [{ id: "a" }, { id: "n" }, { id: "b" }] };
+    const out = mergeClass(was, mine, was);
+    if (out.rows.map(r => r.id).join() !== "a,n,b") say("a line typed into the middle went to the bottom: " + out.rows.map(r => r.id).join());
+    const server = { rows: [{ id: "a" }, { id: "t" }, { id: "b" }] };
+    const both = mergeClass(was, mine, server);
+    const ids = both.rows.map(r => r.id);
+    if (ids[0] !== "a" || ids[3] !== "b" || !ids.includes("n") || !ids.includes("t")) say("two lines typed into the middle from two machines did not both stay: " + ids.join());
+    const theirsMoved = { rows: [{ id: "b" }, { id: "a" }] };
+    const moved = mergeClass(was, mine, theirsMoved);
+    if (moved.rows.map(r => r.id).join() !== "b,a,n") say("a row the other side moved went back, or the new line was lost: " + moved.rows.map(r => r.id).join());
+  }
   // A list of plain values is a leaf, because in a list of values the order is
   // the meaning. The options under a question are the case that would break.
   {
@@ -5295,6 +5311,22 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
   if (!/dashboard\)\\\/\(\[a-z0-9-\]\+\)/.test(app)) say("the app does not route /dashboard/<day>");
   if (!/daySlug=\{live\[3\]/.test(app)) say("the app does not hand the day to the dashboard");
+}
+
+// Moving a section to another day: the menu lists the places on the day
+// picked, and never offers the section a place before itself.
+{
+  const say = (m) => { console.error("  FAIL  move a section: " + m); failedEarly++; };
+  const days = [{ date: "Sep 30" }, { date: "Oct 2", topic: "Workshop" }];
+  const sectionsOn = (date) => (date === "Oct 2" ? [["sec-plan", "Lesson plan"], ["sec-x", "Section 2"]] : [["sec-a", "Stories"], ["sec-b", "Lesson plan"]]);
+  const plain = (el) => renderToString(el).replace(/<!--.*?-->/g, "");
+  const html = plain(<MoveSectionMenu name="Stories" slot="sec-a" days={days} today="Sep 30" accent="#000" sectionsOn={sectionsOn} onPlace={noop} onClose={noop} />);
+  if (!html.includes("Move Stories to")) say("the menu does not say what it is moving");
+  if (!html.includes("Before Lesson plan") || !html.includes("Before Section 2")) say("the menu does not list the places on the next class");
+  if (!html.includes("At the end")) say("the menu has no end of the day");
+  const same = plain(<MoveSectionMenu name="Stories" slot="sec-a" days={[days[0]]} today="Sep 30" accent="#000" sectionsOn={sectionsOn} onPlace={noop} onClose={noop} />);
+  if (same.includes("Before Stories")) say("a section is offered a place before itself");
+  if (!same.includes("Before Lesson plan")) say("this day's other section is not a place to land");
 }
 
 let failed = failedEarly;
