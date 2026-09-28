@@ -89,8 +89,6 @@ export async function saveClass(key, data) {
   }
 }
 
-// Returns [data, update]. data is null until first load.
-// update(mutator) applies mutator(prev) -> next, saves, and updates state.
 // The last data we saw for a key, held for the life of the page.
 //
 // Without it, every trip back to a class I was on ten seconds ago is a spinner
@@ -289,192 +287,241 @@ export async function saveAgainstServer(key, base, next) {
   return ok ? out : null;
 }
 
+// ─── one pipeline per class ───
+//
+// Andrew, 2026-09-27: "the dashboard keeps not saving what i write on it."
+// Two lines survived on Sep 30 of COMM 3 and nothing on Oct 2. The bar mounts
+// Around the Horn on every page I am on, and Horn opens a reader of its own on
+// the class the dashboard is editing. The two hooks shared WARM, which every
+// keystroke builds its next state on, but each kept its own idea of what was
+// in flight. The dashboard's hook knew to ignore the echoes of its own saves;
+// Horn's hook had nothing in flight, so it took every echo and every re-read
+// on focus and put that older state into WARM. The next line typed was built
+// on it, and the lines typed in between were gone from the screen, and then
+// from the server, because the merge read them as lines this page took out.
+//
+// So the queue, what is in flight, what was sent and what this page and the
+// server last agreed on live here, once per class, and every hook on a class
+// reads the same one. A hook is a subscription to it and nothing more.
+const PIPES = new Map();
+const pipeFor = (key) => {
+  let p = PIPES.get(key);
+  if (!p) {
+    p = {
+      // Waiting states, at most one. A newer state replaces the one waiting.
+      queued: [],
+      // How many states this page has sent or is about to send that have not
+      // landed, so an echo is not taken while it could be older than what is
+      // held.
+      pending: 0,
+      // One save at a time. Every save is the whole class, and two a second
+      // apart could land in either order.
+      flying: false,
+      // The last few states sent, so a late echo of an older one can be told
+      // apart from somebody else's write.
+      sent: [],
+      // The last state this page and the server agreed on, which is what a
+      // save measures this page's changes against.
+      basis: {},
+      tries: 0,
+      retry: null,
+      trouble: false,
+      busy: false,
+      hooks: new Set(),
+      off: null,
+    };
+    PIPES.set(key, p);
+  }
+  return p;
+};
+
+/** Whether anything for this class is on its way to the server, or waiting to go. */
+export const inFlight = (key) => {
+  const p = PIPES.get(key);
+  return !!p && (p.pending > 0 || p.flying || p.queued.length > 0);
+};
+
+// Every hook on the class takes the state.
+const tell = (key, d) => {
+  WARM.set(key, d);
+  pipeFor(key).hooks.forEach(h => h.data({ ...d }));
+};
+const tellStatus = (p, patch) => {
+  Object.assign(p, patch);
+  p.hooks.forEach(h => h.status());
+};
+
+// A state the server holds, taken only when nothing from here is on its way:
+// a save in flight is merged against the server as it goes out, and what
+// lands is taken then. An echo of a state this page sent is nothing new, and
+// taking it would undo whatever was saved after it. Answers whether it was
+// taken.
+export function takeServer(key, d) {
+  if (!isPlain(d)) return false;
+  const p = pipeFor(key);
+  if (inFlight(key)) return false;
+  const same = canon(d);
+  if (p.sent.includes(same)) return false;
+  const have = WARM.get(key);
+  if (have && canon(have) === same) return false;
+  p.basis = d;
+  tell(key, d);
+  return true;
+}
+
+// What this page wants, from the newest state held for the class, whichever
+// hook is asking: a write from one must not undo what another has not saved
+// yet. Held in this browser until a save lands, so a tab that dies between
+// the keystroke and the write still has the words.
+export function pushUpdate(key, mutator) {
+  const p = pipeFor(key);
+  const before = WARM.get(key) || {};
+  const next = mutator(before);
+  noteDays(key, before, next);
+  tell(key, next);
+  // A state still waiting is replaced rather than queued behind, so it is
+  // counted once.
+  if (p.queued.length) p.queued[p.queued.length - 1] = next;
+  else { p.queued.push(next); p.pending++; }
+  keepPending(key, next, p.basis);
+  tellStatus(p, { busy: true });
+  pump(key);
+  return next;
+}
+
+function pump(key) {
+  const p = pipeFor(key);
+  if (p.flying || !p.queued.length) return;
+  const v = p.queued.shift();
+  p.flying = true;
+  Promise.resolve(saveAgainstServer(key, p.basis, v)).then((out) => {
+    if (out) {
+      p.tries = 0;
+      p.sent = [...p.sent.slice(-9), canon(out)];
+      // What landed is what everybody holds now. Not while something newer is
+      // waiting: that state was built from the basis and is merged against it
+      // on the way out.
+      if (!p.queued.length) {
+        p.basis = out;
+        tell(key, out);
+        dropPending(key);
+      }
+      tellStatus(p, { trouble: false });
+      return;
+    }
+    // Nothing landed. Put it back at the head of the queue, unless newer work
+    // is already waiting there, and come round again: a second of dropped
+    // wifi should cost nothing. The copy in this browser stays put until
+    // something lands, so closing the tab now loses nothing either.
+    p.tries += 1;
+    if (!p.queued.length) p.queued.unshift(v);
+    else p.pending--;
+    const wait = Math.min(30000, 1000 * 2 ** (p.tries - 1));
+    clearTimeout(p.retry);
+    p.retry = setTimeout(() => pump(key), wait);
+    tellStatus(p, { trouble: true });
+  }).finally(() => {
+    p.flying = false;
+    if (!p.tries) p.pending--;
+    if (!p.tries) pump(key);
+    tellStatus(p, { busy: p.flying || p.queued.length > 0 });
+  });
+}
+
+// Listening for the class, once however many hooks are on it: the echo of
+// every save, and a read again whenever this page could have missed one.
+//
+// Andrew, 2026-09-23: his laptop showed the COMM 118 day from before the
+// morning's work, long after the server had the newer one. Realtime only
+// carries changes while the socket is alive, and a laptop lid kills it. So
+// the class is read again whenever the socket comes back (the shim says so
+// with RECONNECTED), the tab comes back into view or the window into focus,
+// or the browser back online.
+function watch(key) {
+  const p = pipeFor(key);
+  if (p.off) return;
+  const off = window.storage?.onUpdate?.(key, (val) => {
+    try { takeServer(key, JSON.parse(val)); } catch { /* ignore */ }
+  });
+  let lastLook = 0;
+  const catchUp = () => {
+    if (document.visibilityState === "hidden") return;
+    const now = Date.now();
+    if (now - lastLook < 5000) return;
+    lastLook = now;
+    loadClass(key).then(d => { if (p.off && d && Object.keys(d).length) takeServer(key, d); });
+  };
+  document.addEventListener("visibilitychange", catchUp);
+  window.addEventListener("focus", catchUp);
+  window.addEventListener("online", catchUp);
+  window.addEventListener(RECONNECTED, catchUp);
+  p.off = () => {
+    if (off) off();
+    document.removeEventListener("visibilitychange", catchUp);
+    window.removeEventListener("focus", catchUp);
+    window.removeEventListener("online", catchUp);
+    window.removeEventListener(RECONNECTED, catchUp);
+    p.off = null;
+  };
+}
+const unwatch = (key) => {
+  const p = PIPES.get(key);
+  if (p && !p.hooks.size && p.off) p.off();
+};
+
+// Returns [data, update, apply, saving]. data is null until first load.
+// update(mutator) applies mutator(prev) -> next, saves, and tells every hook
+// on the class.
 export function useClassData(key) {
   const [data, setData] = useState(() => WARM.get(key) || null);
-  const dataRef = useRef({});
-  // Every save comes back to us as a realtime event. Blindly taking that echo
-  // rolls local state back to whatever the server had, which quietly ate edits
-  // made while a write was still in flight — and writes are slow here, because
-  // the storage shim takes a daily backup before each one. So while we have
-  // writes outstanding, we already hold the newest state: ignore the echo.
-  const pending = useRef(0);
-  // One save at a time, and only the newest state waiting behind it.
-  //
-  // Saves used to go out all at once. Every save is the whole class, and the
-  // first save of the day takes a backup before it writes, so two saves a
-  // second apart could land in either order. Make a thing, type its title, and
-  // the save holding the blank title could arrive after the one holding the
-  // real one. The server kept the blank, and so did the screen once the echo
-  // came back. Now a save waits for the one ahead of it, and edits made in the
-  // meantime go out together as one.
-  const flying = useRef(false);
-  // Waiting saves, at most one per key in a row. Almost always zero or one.
-  const queued = useRef([]);
-  // The last few states this page sent, so a late echo of an older one can be
-  // told apart from somebody else's write.
-  const sent = useRef([]);
-  // The last state this page and the server agreed on, which is what a save
-  // measures this page's changes against. It moves on when a merged save comes
-  // back and nothing newer is waiting, because a state waiting in the queue was
-  // built from this basis and has to be merged against the same one.
-  const basis = useRef({});
-
-  // How many goes a save has had, and whether the last one failed. A failure
-  // is worth saying out loud, which is what `trouble` is for.
-  const tries = useRef(0);
-  const [trouble, setTrouble] = useState(false);
-  // Whether anything from this page is on its way to the server, so a screen
-  // can say Saving... and then Saved, the way a Google Doc does.
-  const [busy, setBusy] = useState(false);
+  const [trouble, setTrouble] = useState(() => pipeFor(key).trouble);
+  const [busy, setBusy] = useState(() => pipeFor(key).busy);
   // Work that was held in this browser and has now been put back.
   const [restored, setRestored] = useState(false);
-  const retry = useRef(null);
-
-  const pump = useCallback(() => {
-    if (flying.current || !queued.current.length) return;
-    const [{ k, v }, ...rest] = queued.current;
-    queued.current = rest;
-    flying.current = true;
-    Promise.resolve(saveAgainstServer(k, basis.current, v)).then((out) => {
-      if (out) {
-        tries.current = 0;
-        setTrouble(false);
-        sent.current = [...sent.current.slice(-9), canon(out)];
-        // What landed is what everybody holds now, this page included. Not
-        // while something newer is waiting: that state was built from the
-        // basis below and is merged against it on the way out.
-        if (!queued.current.length) {
-          basis.current = out;
-          dataRef.current = out;
-          WARM.set(k, out);
-          setData({ ...out });
-          dropPending(k);
-        }
-        return;
-      }
-      // Nothing landed. Put it back at the head of the queue, unless newer
-      // work is already waiting there, and come round again: a second of
-      // dropped wifi should cost nothing. The copy in this browser stays put
-      // until something lands, so closing the tab now loses nothing either.
-      tries.current += 1;
-      setTrouble(true);
-      if (!queued.current.some(q => q.k === k)) queued.current = [{ k, v }, ...queued.current];
-      else pending.current--;
-      const wait = Math.min(30000, 1000 * 2 ** (tries.current - 1));
-      clearTimeout(retry.current);
-      retry.current = setTimeout(() => pump(), wait);
-    }).finally(() => {
-      flying.current = false;
-      if (!tries.current) pending.current--;
-      if (!tries.current) pump();
-      if (!flying.current && !queued.current.length) setBusy(false);
-    });
-  }, [setData]);
 
   useEffect(() => {
     let alive = true;
+    const p = pipeFor(key);
+    const me = { data: setData, status: () => { setTrouble(p.trouble); setBusy(p.busy); } };
+    p.hooks.add(me);
+    watch(key);
+    // The key changed under this hook, or the class moved on between this
+    // hook's first render and now.
     const warm = WARM.get(key);
-    if (warm) dataRef.current = warm;
+    if (warm) setData({ ...warm });
+    me.status();
     loadClass(key).then(async d => {
-      if (!alive) return;
       const server = d || {};
-      dataRef.current = server;
-      basis.current = server;
-      WARM.set(key, server);
-      setData(server);
-
+      takeServer(key, server);
       // Work this browser is still holding, from a page whose save never
       // landed. Merged against what the server has now, from the state that
       // page started on, so only what was actually written here goes back in.
+      // Not while something is on its way: that save carries the held state
+      // itself, and lands or keeps trying.
+      if (inFlight(key)) return;
       const held = readPending(key);
       if (!held || canon(held.data) === canon(server)) { dropPending(key); return; }
+      // Through the pipeline, so nothing typed meanwhile goes out under it.
+      p.flying = true;
+      tellStatus(p, { busy: true });
       const out = await saveAgainstServer(key, held.base, held.data);
-      if (!alive) return;
+      p.flying = false;
       if (out) {
-        dropPending(key);
-        setRestored(true);
-        dataRef.current = out;
-        basis.current = out;
-        WARM.set(key, out);
-        setData({ ...out });
-      } else {
-        setTrouble(true);
+        p.sent = [...p.sent.slice(-9), canon(out)];
+        if (!p.queued.length) {
+          p.basis = out;
+          tell(key, out);
+          dropPending(key);
+        }
+        if (alive) setRestored(true);
       }
+      tellStatus(p, { trouble: !out, busy: p.queued.length > 0 });
+      pump(key);
     });
-    const off = window.storage?.onUpdate?.(key, (val) => {
-      if (pending.current > 0) return;
-      try {
-        const d = JSON.parse(val);
-        // Our own save coming back. If it is what we hold, there is nothing to
-        // do; if it is an older one arriving late, taking it would undo
-        // whatever was saved after it.
-        if (sent.current.length && sent.current.includes(canon(d))) return;
-        dataRef.current = d;
-        basis.current = d;
-        WARM.set(key, d);
-        setData(d);
-      } catch { /* ignore */ }
-    });
-
-    // Catching up with what changed while this page was not listening.
-    // Andrew, 2026-09-23: his laptop showed the COMM 118 day from before the
-    // morning's work, long after the server had the newer one. Realtime only
-    // carries changes while the socket is alive, and a laptop lid kills it.
-    // So the class is read again whenever the socket comes back (the shim
-    // says so with RECONNECTED), the tab comes back into view or the window
-    // into focus, or the browser back online. Only when nothing from this
-    // page is waiting to save: a save in flight is merged against the server
-    // on its way out, and what lands is taken then.
-    let lastLook = 0;
-    const catchUp = () => {
-      if (document.visibilityState === "hidden") return;
-      const now = Date.now();
-      if (now - lastLook < 5000) return;
-      lastLook = now;
-      loadClass(key).then(d => {
-        if (!alive || !d || !Object.keys(d).length) return;
-        if (pending.current > 0 || flying.current || queued.current.length) return;
-        if (canon(d) === canon(WARM.get(key) || dataRef.current)) return;
-        dataRef.current = d;
-        basis.current = d;
-        WARM.set(key, d);
-        setData(d);
-      });
-    };
-    document.addEventListener("visibilitychange", catchUp);
-    window.addEventListener("focus", catchUp);
-    window.addEventListener("online", catchUp);
-    window.addEventListener(RECONNECTED, catchUp);
-    return () => {
-      alive = false; if (off) off();
-      document.removeEventListener("visibilitychange", catchUp);
-      window.removeEventListener("focus", catchUp);
-      window.removeEventListener("online", catchUp);
-      window.removeEventListener(RECONNECTED, catchUp);
-    };
+    return () => { alive = false; p.hooks.delete(me); unwatch(key); };
   }, [key]);
 
-  const update = useCallback((mutator) => {
-    // From the newest state this page holds, not this hook's own copy: two
-    // hooks can read one class (the bar's Horn over the dashboard), and a
-    // write from one must not undo what the other has not saved yet.
-    const before = WARM.get(key) || dataRef.current || {};
-    const next = mutator(before);
-    noteDays(key, before, next);
-    dataRef.current = next;
-    WARM.set(key, next);
-    setData({ ...next });
-    // A state still waiting is replaced rather than queued behind, so it is
-    // counted once.
-    const q = queued.current;
-    if (q.length && q[q.length - 1].k === key) q[q.length - 1] = { k: key, v: next };
-    else { q.push({ k: key, v: next }); pending.current++; }
-    // Held here until a save lands. A tab that dies between the keystroke and
-    // the write still has the words when something opens this class again.
-    keepPending(key, next, basis.current);
-    setBusy(true);
-    pump();
-  }, [key, pump]);
+  const update = useCallback((mutator) => { pushUpdate(key, mutator); }, [key]);
 
   // Taking a state that was written somewhere else.
   //
@@ -483,14 +530,10 @@ export function useClassData(key) {
   // time is thirty pages each holding a snapshot taken before the others
   // marked. `saveMerged` re-reads, merges and writes for itself, and hands the
   // result back here to be held. Nothing is queued, because it is already on
-  // the server.
+  // the server, so it is what the next save measures against as well.
   const apply = useCallback((next) => {
-    dataRef.current = next;
-    // It came back from the server, so it is what the next save measures
-    // against as well.
-    basis.current = next;
-    WARM.set(key, next);
-    setData({ ...next });
+    pipeFor(key).basis = next;
+    tell(key, next);
   }, [key]);
 
   // Nothing leaves this browser while a save is still trying, so say so before
@@ -501,12 +544,10 @@ export function useClassData(key) {
     window.addEventListener("beforeunload", ask);
     return () => window.removeEventListener("beforeunload", ask);
   }, [trouble]);
-  useEffect(() => () => clearTimeout(retry.current), []);
 
   // A fourth thing, so a screen can say what the saving is doing: `trouble` is
   // a save that has not landed and is still being tried, `busy` is a save on
-  // its way, `restored` is work
-  // this browser was holding and has now put back.
+  // its way, `restored` is work this browser was holding and has now put back.
   return [data, update, apply, { trouble, busy, restored, clearRestored: () => setRestored(false) }];
 }
 
@@ -556,15 +597,18 @@ export function useClassState(key) {
     let alive = true;
     const warm = WARM.get(key);
     if (warm) ref.current = warm;
+    // Not over a save another hook on this class has on its way: the games
+    // page and the bar's Horn read one class, and what lands is taken then.
     loadClass(key).then(d => {
       if (!alive) return;
-      ref.current = d || {};
+      ref.current = inFlight(key) ? (WARM.get(key) || {}) : (d || {});
       WARM.set(key, ref.current);
       setData(ref.current);
     });
     const off = window.storage?.onUpdate?.(key, (val) => {
       // Our own write coming back. The caller already holds the newer state.
       if (mine.current > 0) { mine.current--; return; }
+      if (inFlight(key)) return;
       try {
         const d = JSON.parse(val);
         ref.current = d;

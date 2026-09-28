@@ -76,7 +76,7 @@ import PlanPage from "../src/PlanPage.jsx";
 import RetreatPage from "../src/RetreatPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
 import { ENGINE_LIST } from "../src/config/registry.js";
-import { warmClassData, saveMerged, mergeClass, mergeList } from "../src/engine/store.js";
+import { warmClassData, saveMerged, mergeClass, mergeList, pushUpdate, takeServer, inFlight } from "../src/engine/store.js";
 import { withPhotos, saveProfile, PHOTO_MARK } from "../src/engine/photos.js";
 import { profileComplete } from "../src/engine/profileTask.js";
 import { setAway, mergeAway, isAway, awayBySitting } from "../src/engine/attendance.js";
@@ -4102,15 +4102,15 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   {
     const { readFileSync: readStore } = await import("node:fs");
     const src = readStore(new URL("../src/engine/store.js", import.meta.url), "utf8");
-    if (!/saveAgainstServer\(k, basis\.current, v\)/.test(src)) say("a save no longer measures against what the server holds");
+    if (!/saveAgainstServer\(key, p\.basis, v\)/.test(src)) say("a save no longer measures against what the server holds");
     // A day's work went missing on a laptop and nothing said so. Three things
     // hold that line: the words are kept in this browser until a save lands, a
     // save that fails is tried again, and what was held is merged back in the
     // next time the class opens here.
-    if (!/keepPending\(key, next, basis\.current\)/.test(src)) say("work is no longer held in this browser until it saves");
-    if (!/queued\.current = \[\{ k, v \}, \.\.\.queued\.current\]/.test(src)) say("a save that fails is dropped instead of tried again");
+    if (!/keepPending\(key, next, p\.basis\)/.test(src)) say("work is no longer held in this browser until it saves");
+    if (!/p\.queued\.unshift\(v\)/.test(src)) say("a save that fails is dropped instead of tried again");
     if (!/saveAgainstServer\(key, held\.base, held\.data\)/.test(src)) say("held work is no longer merged back in on load");
-    if (!/dropPending\(k\)/.test(src)) say("the held copy is never cleared, so it would come back for ever");
+    if (!/dropPending\(key\)/.test(src)) say("the held copy is never cleared, so it would come back for ever");
     const boardSrc = readStore(new URL("../src/engine/boards.js", import.meta.url), "utf8");
     if (!/saveAgainstServer\(key, \{ boards: basis\.current \}/.test(boardSrc)) say("a board post is written without merging");
     if (/Promise\.resolve\(saveClass\(k, v\)\)/.test(src)) say("the plain overwrite is back in the save path");
@@ -4610,6 +4610,66 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       if (!isAway(saved, "Sep 23", "alan-turing")) say("the write dropped the mark the server held");
       if (saved.dayPlans?.["Sep 23"]?.title !== "Written while the phone sat open") say("the write went over a day plan it never touched");
     }
+    window.storage = real;
+  }
+}
+
+// Two hooks on one class, and the echo of a save landing between two lines.
+//
+// Andrew, 2026-09-27: "the dashboard keeps not saving what i write on it."
+// The bar's Horn read the class the dashboard was typing into, took the echo
+// of the dashboard's own save, and put that older state where the next
+// keystroke would build on it. The pipeline is one per class now, so a state
+// the server sends back is taken only when nothing is on its way and it is
+// not one this page sent.
+{
+  const say = (m) => { console.error("  FAIL  one pipeline: " + m); failedEarly++; };
+  const real = window.storage;
+  const key = "smoke-pipe";
+  let server = { note: "", lines: { a: "one" } };
+  const holds = [];
+  const writes = [];
+  window.storage = {
+    get: async () => ({ value: JSON.stringify(server) }),
+    set: (k, v) => new Promise(resolve => holds.push(() => { server = JSON.parse(v); writes.push(server); resolve({ key: k }); })),
+    onUpdate: () => () => {},
+  };
+  const tick = () => new Promise(r => setTimeout(r, 0));
+  const release = async () => { await tick(); await tick(); const h = holds.shift(); if (h) h(); await tick(); await tick(); };
+  try {
+    takeServer(key, server);
+    // Line one is typed and its save goes out. Line two is typed while that
+    // save is in the air.
+    const s1 = pushUpdate(key, prev => ({ ...prev, lines: { ...prev.lines, b: "discuss themes" } }));
+    const s2 = pushUpdate(key, prev => ({ ...prev, lines: { ...prev.lines, c: "discuss assignment" } }));
+    if (!inFlight(key)) say("nothing is in flight with a save out and a state waiting");
+    // The server reads back what it had, on a focus or an echo, while the
+    // save is still out. The other hook used to take this.
+    if (takeServer(key, { note: "", lines: { a: "one" } })) say("an older state was taken while a save was in flight");
+    let next = pushUpdate(key, prev => prev);
+    if (next.lines.c !== "discuss assignment") say("the second line was lost to a re-read during the save");
+    await release();
+    if (!writes[0] || writes[0].lines.b !== "discuss themes") say("the first save did not carry the first line");
+    // The echo of the first save arrives once it has landed, while the second
+    // is out.
+    if (takeServer(key, s1)) say("the echo of the first save was taken while the second was out");
+    await release();
+    if (!writes[1] || writes[1].lines.c !== "discuss assignment") say("the second save did not carry the second line");
+    if (inFlight(key)) say("something is still in flight after every save landed");
+    // A late echo of the first save, after everything landed, is nothing new.
+    if (takeServer(key, s1)) say("a late echo of an older save was taken");
+    next = pushUpdate(key, prev => prev);
+    if (next.lines.c !== "discuss assignment") say("a late echo of an older save took the second line off the page");
+    await release();
+    // Somebody else's write is taken.
+    const theirs = { ...server, away: { "Sep 30": { "ada-lovelace": true } } };
+    if (!takeServer(key, theirs)) say("a write from another machine was not taken");
+    next = pushUpdate(key, prev => prev);
+    if (!next.away?.["Sep 30"]?.["ada-lovelace"]) say("a write from another machine did not reach the page");
+    if (next.lines.c !== "discuss assignment") say("taking another machine's write dropped a line the server holds");
+    await release();
+    if (s2.lines.c !== "discuss assignment") say("the state handed back is not the state built");
+  } finally {
     window.storage = real;
   }
 }
