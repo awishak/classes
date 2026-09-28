@@ -138,19 +138,26 @@ try {
 
 window.storage = {
   get unreachable() { return unreachable; },
+  // Null when there is no row by that key. Undefined when the read failed:
+  // no wifi, a sign-in page in the way, an error from the server. The two
+  // used to come back the same, and a page that could not reach the server
+  // took the answer for an empty class, seeded itself from config and wrote
+  // the seed back over the term. Both are falsy, so a caller that only asks
+  // whether it got something reads as it always did.
   async get(key, shared) {
     try {
       const url = SUPABASE_URL + "/rest/v1/app_data?id=eq." + encodeURIComponent(key) + "&select=data";
       const res = await fetch(url, { headers });
       heard(true);
-      if (!res.ok) return null;
+      if (!res.ok) return undefined;
       const rows = await res.json();
-      if (!rows || rows.length === 0) return null;
+      if (!Array.isArray(rows)) return undefined;
+      if (rows.length === 0) return null;
       return { key, value: JSON.stringify(rows[0].data), shared: !!shared };
     } catch (e) {
       if (e instanceof TypeError) heard(false);
       console.error("Storage get error:", e);
-      return null;
+      return undefined;
     }
   },
 

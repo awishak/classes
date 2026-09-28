@@ -4,12 +4,25 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
+// What the server holds for a key: the class, {} when there is no row by
+// that key, and null when the read failed.
+//
+// Andrew, 2026-09-28: "it keeps not saving my headlines." The day's title,
+// a section's name and a seed row he had taken off Sep 28 all came back
+// during class, with his own rows untouched. A failed read used to come back
+// as {}, the same as a class nothing has been written for. A phone in the
+// room that could not reach the server came up with an empty class, the site
+// seeded itself from config, and the merge, measuring against nothing, wrote
+// the seed's titles and rows over his. A read that fails is nothing now,
+// and everything above the shim reads through here.
 export async function loadClass(key) {
   try {
     const r = await window.storage.get(key, true);
-    return r ? JSON.parse(r.value) : {};
+    if (r === undefined) return null;
+    if (r === null) return {};
+    return JSON.parse(r.value);
   } catch {
-    return {};
+    return null;
   }
 }
 
@@ -282,20 +295,17 @@ export function mergeClass(base, next, server) {
 
 // Read, merge, write. Hands back what was written, or null.
 //
-// A read that comes back with nothing is a failed read as often as it is a
-// class nothing has ever been written for, and the shim cannot tell them apart,
-// so it is asked twice. If the second answer is nothing as well, the page's own
-// state goes out as it always did, because a student's own words are the one
-// thing that must not be dropped on the floor.
+// A read that fails is asked once more, and if it fails again the save does
+// not happen this time round: a student's own words are held in this browser
+// and sent when the server can be reached, and the whole class is never
+// written blind over whatever is there.
 export async function saveAgainstServer(key, base, next) {
   let server = null;
-  for (let i = 0; i < 2 && !server; i++) {
-    try {
-      const raw = await window.storage.get(key, true);
-      server = raw?.value ? JSON.parse(raw.value) : null;
-    } catch { server = null; }
-  }
-  const out = server ? mergeClass(base, next, server) : next;
+  for (let i = 0; i < 2 && server === null; i++) server = await loadClass(key);
+  // Could not read: nothing goes out on top of what cannot be seen. The save
+  // is tried again, and the words are held in this browser until it lands.
+  if (server === null) return null;
+  const out = Object.keys(server).length ? mergeClass(base, next, server) : next;
   const ok = await saveClass(key, out);
   return ok ? out : null;
 }
@@ -342,6 +352,8 @@ const pipeFor = (key) => {
       busy: false,
       hooks: new Set(),
       off: null,
+      loading: false,
+      retryLoad: null,
     };
     PIPES.set(key, p);
   }
@@ -482,6 +494,49 @@ const unwatch = (key) => {
   if (p && !p.hooks.size && p.off) p.off();
 };
 
+// Reading the class in, and again until it comes.
+//
+// A read that fails is tried again with a backoff for as long as a hook is
+// on the class, and the page stays on its loading screen until the class is
+// really here. It used to come up as an empty class, and an empty class is
+// something a page will happily seed and write.
+function loadInto(key) {
+  const p = pipeFor(key);
+  if (p.loading) return;
+  p.loading = true;
+  const attempt = (n) => loadClass(key).then(async d => {
+    if (!p.hooks.size) { p.loading = false; return; }
+    if (d === null) { p.retryLoad = setTimeout(() => attempt(n + 1), Math.min(30000, 2000 * 2 ** n)); return; }
+    p.loading = false;
+    takeServer(key, d);
+    // Work this browser is still holding, from a page whose save never
+    // landed. Merged against what the server has now, from the state that
+    // page started on, so only what was actually written here goes back in.
+    // Not while something is on its way: that save carries the held state
+    // itself, and lands or keeps trying.
+    if (inFlight(key)) return;
+    const held = readPending(key);
+    if (!held || canon(held.data) === canon(d)) { dropPending(key); return; }
+    // Through the pipeline, so nothing typed meanwhile goes out under it.
+    p.flying = true;
+    tellStatus(p, { busy: true });
+    const out = await saveAgainstServer(key, held.base, held.data);
+    p.flying = false;
+    if (out) {
+      p.sent = [...p.sent.slice(-9), canon(out)];
+      if (!p.queued.length) {
+        p.basis = out;
+        tell(key, out);
+        dropPending(key);
+      }
+      p.hooks.forEach(h => h.restored());
+    }
+    tellStatus(p, { trouble: !out, busy: p.queued.length > 0 });
+    pump(key);
+  });
+  attempt(0);
+}
+
 // Returns [data, update, apply, saving]. data is null until first load.
 // update(mutator) applies mutator(prev) -> next, saves, and tells every hook
 // on the class.
@@ -493,9 +548,8 @@ export function useClassData(key) {
   const [restored, setRestored] = useState(false);
 
   useEffect(() => {
-    let alive = true;
     const p = pipeFor(key);
-    const me = { data: setData, status: () => { setTrouble(p.trouble); setBusy(p.busy); } };
+    const me = { data: setData, status: () => { setTrouble(p.trouble); setBusy(p.busy); }, restored: () => setRestored(true) };
     p.hooks.add(me);
     watch(key);
     // The key changed under this hook, or the class moved on between this
@@ -503,35 +557,8 @@ export function useClassData(key) {
     const warm = WARM.get(key);
     if (warm) setData({ ...warm });
     me.status();
-    loadClass(key).then(async d => {
-      const server = d || {};
-      takeServer(key, server);
-      // Work this browser is still holding, from a page whose save never
-      // landed. Merged against what the server has now, from the state that
-      // page started on, so only what was actually written here goes back in.
-      // Not while something is on its way: that save carries the held state
-      // itself, and lands or keeps trying.
-      if (inFlight(key)) return;
-      const held = readPending(key);
-      if (!held || canon(held.data) === canon(server)) { dropPending(key); return; }
-      // Through the pipeline, so nothing typed meanwhile goes out under it.
-      p.flying = true;
-      tellStatus(p, { busy: true });
-      const out = await saveAgainstServer(key, held.base, held.data);
-      p.flying = false;
-      if (out) {
-        p.sent = [...p.sent.slice(-9), canon(out)];
-        if (!p.queued.length) {
-          p.basis = out;
-          tell(key, out);
-          dropPending(key);
-        }
-        if (alive) setRestored(true);
-      }
-      tellStatus(p, { trouble: !out, busy: p.queued.length > 0 });
-      pump(key);
-    });
-    return () => { alive = false; p.hooks.delete(me); unwatch(key); };
+    loadInto(key);
+    return () => { p.hooks.delete(me); unwatch(key); };
   }, [key]);
 
   const update = useCallback((mutator) => { pushUpdate(key, mutator); }, [key]);
@@ -577,15 +604,14 @@ export async function saveMerged(key, mutate, merge) {
   const base = WARM.get(key) || {};
   const next = mutate(base);
   try {
-    const raw = await window.storage.get(key, true);
-    const server = raw?.value ? JSON.parse(raw.value) : null;
-    // The shim answers null both for a class nothing has ever been written for
-    // and for a request that failed, and there is no telling those apart from
-    // here. A class this page is holding data for has a row, so a null answer
-    // to that is a failed read, and writing on top of it would put this page's
-    // idea of the class over everybody else's.
-    if (!server && Object.keys(base).length) return null;
-    const out = server ? merge(next, base, server) : next;
+    const server = await loadClass(key);
+    // A read that failed writes nothing. And a class this page is holding
+    // data for has a row, so no row is a failed read in another coat, and
+    // writing on top of it would put this page's idea of the class over
+    // everybody else's.
+    if (server === null) return null;
+    if (!Object.keys(server).length && Object.keys(base).length) return null;
+    const out = Object.keys(server).length ? merge(next, base, server) : next;
     const ok = await saveClass(key, out);
     if (!ok) return null;
     warmClassData(key, out);
@@ -612,12 +638,17 @@ export function useClassState(key) {
     if (warm) ref.current = warm;
     // Not over a save another hook on this class has on its way: the games
     // page and the bar's Horn read one class, and what lands is taken then.
-    loadClass(key).then(d => {
+    let retry = null;
+    const load = (n) => loadClass(key).then(d => {
       if (!alive) return;
-      ref.current = inFlight(key) ? (WARM.get(key) || {}) : (d || {});
+      // A read that failed is nothing. What this page holds stands, and the
+      // class is asked for again.
+      if (d === null) { retry = setTimeout(() => load(n + 1), Math.min(30000, 2000 * 2 ** n)); return; }
+      ref.current = inFlight(key) ? (WARM.get(key) || {}) : d;
       WARM.set(key, ref.current);
       setData(ref.current);
     });
+    load(0);
     const off = window.storage?.onUpdate?.(key, (val) => {
       // Our own write coming back. The caller already holds the newer state.
       if (mine.current > 0) { mine.current--; return; }
@@ -629,7 +660,7 @@ export function useClassState(key) {
         setData(d);
       } catch { /* ignore */ }
     });
-    return () => { alive = false; if (off) off(); };
+    return () => { alive = false; clearTimeout(retry); if (off) off(); };
   }, [key]);
 
   const take = useCallback((next) => {

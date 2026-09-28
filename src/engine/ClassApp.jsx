@@ -626,7 +626,10 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // Push updated seed content (schedule + library) to the store when the seed
   // version changes, without touching threads/profiles or other live data.
   useEffect(() => {
-    if (!data || !config.seedVersion) return;
+    // `stored` is null until the class has been read. A failed read used to
+    // come up as an empty class, this ran, and the seed went out over the
+    // term. The store keeps a failed read as nothing now, and this waits.
+    if (!stored || !data || !config.seedVersion) return;
     if (data.seedVersion !== config.seedVersion) {
       // Seed from config, but NEVER overwrite real content with an empty one.
       // A class whose term lives in its store carries an empty scheduleWeeks on
@@ -657,7 +660,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
         return next;
       });
     }
-  }, [data, config]);
+  }, [stored, data, config]);
 
   useEffect(() => { document.title = config.code + " · " + config.name; setClassFavicon(config); }, [config.code, config.name, config.accent]);
 

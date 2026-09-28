@@ -76,7 +76,7 @@ import PlanPage from "../src/PlanPage.jsx";
 import RetreatPage from "../src/RetreatPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
 import { ENGINE_LIST } from "../src/config/registry.js";
-import { warmClassData, saveMerged, mergeClass, mergeList, pushUpdate, takeServer, inFlight } from "../src/engine/store.js";
+import { warmClassData, saveMerged, mergeClass, mergeList, pushUpdate, takeServer, inFlight, loadClass, saveAgainstServer } from "../src/engine/store.js";
 import { withPhotos, saveProfile, PHOTO_MARK } from "../src/engine/photos.js";
 import { profileComplete } from "../src/engine/profileTask.js";
 import { setAway, mergeAway, isAway, awayBySitting } from "../src/engine/attendance.js";
@@ -4688,6 +4688,51 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   } finally {
     window.storage = real;
   }
+}
+
+// A read that fails is nothing, not an empty class.
+//
+// Andrew, 2026-09-28: "it keeps not saving my headlines." A phone that could
+// not reach the server came up with an empty class, seeded itself from
+// config, and the merge wrote the seed's day title, section names and rows
+// back over his. The shim tells a failed read from a missing row now, a
+// failed read loads as null, and nothing is written on top of a class that
+// could not be read.
+{
+  const say = (m) => { console.error("  FAIL  a failed read: " + m); failedEarly++; };
+  const real = window.storage;
+  const key = "smoke-noread";
+  try {
+    window.storage = { get: async () => undefined, set: async () => ({ key }), onUpdate: () => () => {} };
+    if ((await loadClass(key)) !== null) say("a failed read did not load as null");
+    window.storage = { get: async () => null, set: async () => ({ key }), onUpdate: () => () => {} };
+    const none = await loadClass(key);
+    if (!none || Object.keys(none).length) say("a missing row did not load as an empty class");
+    // Saving while the server cannot be read: nothing goes out, and the
+    // words are still held.
+    let wrote = 0;
+    window.storage = { get: async () => undefined, set: async (k, v) => { wrote++; return { key: k }; }, onUpdate: () => () => {} };
+    if ((await saveAgainstServer(key, {}, { seedVersion: 3 })) !== null) say("a save went out on top of a class that could not be read");
+    if (wrote) say("a failed read still wrote the whole class");
+    takeServer(key, { title: "mine", rows: [{ id: "a" }] });
+    const next = pushUpdate(key, prev => ({ ...prev, title: "typed" }));
+    await new Promise(r => setTimeout(r, 30));
+    if (wrote) say("the pipeline wrote while the server could not be read");
+    if (!inFlight(key)) say("the save was dropped rather than tried again");
+    if (next.title !== "typed") say("the typed word was lost");
+    // The server comes back, and the retry lands what was typed.
+    let server = { title: "mine", rows: [{ id: "a" }], away: { x: true } };
+    window.storage = { get: async () => ({ value: JSON.stringify(server) }), set: async (k, v) => { server = JSON.parse(v); wrote++; return { key: k }; }, onUpdate: () => () => {} };
+    await new Promise(r => setTimeout(r, 1200));
+    if (server.title !== "typed") say("the retried save did not carry the typed word: " + JSON.stringify(server));
+    if (!server.away) say("the retried save wrote over what the server held meanwhile");
+    if (inFlight(key)) say("something is still in flight after the retry landed");
+  } finally {
+    window.storage = real;
+  }
+  // The class site seeds only a class it has read.
+  const app = readFileSync(new URL("../src/engine/ClassApp.jsx", import.meta.url), "utf8");
+  if (!/if \(!stored \|\| !data \|\| !config\.seedVersion\) return;/.test(app)) say("the seed effect no longer waits for the class to be read");
 }
 
 // What students see on a week: games and Headlines from the day plans, and the
