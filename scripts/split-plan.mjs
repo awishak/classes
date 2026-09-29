@@ -48,7 +48,7 @@ for (const k of KEYS) {
 
   const backupKey = k + "-before-split-" + today;
   if (await read(backupKey)) console.log("  backup exists:", backupKey);
-  else { await write(backupKey, row); console.log("  backup written:", backupKey, sizeOf(row)); }
+  else { await write(backupKey, row); if (!DRY) console.log("  backup written:", backupKey, sizeOf(row)); }
 
   // What the plan row already holds is newer than the class row's copy: the
   // deployed code has been writing every edit there since it went live.
