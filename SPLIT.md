@@ -43,7 +43,24 @@ than a retry. The shim sends the signed-in person's token on plan rows and
 falls back to anon once, so it works before and after the SQL. The seed
 effect runs only from an instructor's page.
 
-Left for Andrew, on any machine, in this order:
+Done 2026-09-29, in this order: the SQL in piece 3, then the migration
+script. Two things came up on the way, both handled:
+
+- The table already had three policies from the day it was made, "Allow all
+  inserts", "Allow all reads" and "Allow all updates", all for `anon`.
+  Policies are permissive and OR together, so they let every write through
+  regardless of the new ones. They were dropped by name. Probed from a shell
+  afterwards: an anon insert to a plan row comes back 401 with 42501, an anon
+  update touches nothing, and ordinary rows still read, write and delete.
+- In the second the script cleaned COMM 3's class row, a tab still on the
+  old bundle wrote the seed's `dayPlans`, `schedule`, `library` and
+  `seedVersion` back into it: the old class site's seed effect, reacting to
+  the row losing its seed version. Harmless to what anyone sees, since the
+  plan row wins, but 75 KB of junk on every student save. The fix is to
+  reload every tab everywhere, phone included, and run the script again; it
+  leaves the plan row alone and cleans the class row.
+
+What was left for Andrew, before that:
 
 1. Run the SQL in piece 3 in the Supabase SQL editor, reading the first
    result before the rest.
