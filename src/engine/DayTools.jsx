@@ -95,7 +95,7 @@ export function TemplatesPanel({ templates, plan, blockOf, onSave, onApply, onDe
 // "comm118-f26-v1-bak-2026-09-14" is the store's backup from the start of that
 // day; "comm118-f26-v1-bak-before-spring-move" is one taken before a change.
 const backupLabel = (key, storageKey) => {
-  const tail = key.slice((storageKey + "-bak-").length);
+  const tail = key.slice((key.startsWith(storageKey + "-plan-bak-") ? storageKey + "-plan-bak-" : storageKey + "-bak-").length);
   const m = tail.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (m) {
     const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
@@ -118,8 +118,13 @@ export function HistoryPanel({ storageKey, day, plan, local, blockOf, onRestore 
     let alive = true;
     (async () => {
       try {
-        const listed = await window.storage.list(storageKey + "-bak-", true);
-        const keys = (listed?.keys || []).sort().reverse();
+        // The class row's daily backups from before the split, and the plan
+        // row's since.
+        const [listed, listedPlan] = await Promise.all([
+          window.storage.list(storageKey + "-bak-", true),
+          window.storage.list(storageKey + "-plan-bak-", true),
+        ]);
+        const keys = [...(listed?.keys || []), ...(listedPlan?.keys || [])].sort().reverse();
         const found = [];
         for (const k of keys) {
           const got = await window.storage.get(k, true);

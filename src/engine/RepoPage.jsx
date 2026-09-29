@@ -24,7 +24,7 @@
 // unchanged from this page.
 
 import { useState, useEffect, useMemo, useRef, Fragment } from "react";
-import { loadClass, saveClass } from "./store.js";
+import { loadClass, saveSplit } from "./store.js";
 import { mediaLabel, sizeLabel, MEDIA_ACCEPT } from "./media.js";
 import { useUpload } from "./Attach.jsx";
 import { ENGINE_LIST } from "../config/registry.js";
@@ -247,7 +247,7 @@ export default function RepoPage() {
     ref.current = { ...ref.current, [target]: next };
     setStores(ref.current);
     pending.current[target] = (pending.current[target] || 0) + 1;
-    Promise.resolve(saveClass(key, next)).catch(() => {}).finally(() => { pending.current[target]--; });
+    Promise.resolve(saveSplit(key, cur, next)).catch(() => {}).finally(() => { pending.current[target]--; });
   };
 
   // ─── the index ───

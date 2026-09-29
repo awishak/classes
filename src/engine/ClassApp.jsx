@@ -12,7 +12,7 @@
 // someone, and the browser Back button does what it says.
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useClassData, saveMerged } from "./store.js";
+import { useClassData, saveMerged, mayWritePlan } from "./store.js";
 import { usePhotos, useWithPhotos, saveProfile } from "./photos.js";
 import { SHARED_KEY, blockById, registerTypes } from "./blocks.js";
 import { readAdded, readLabels } from "./types.js";
@@ -630,6 +630,11 @@ export default function ClassApp({ config: classConfig, initialCard }) {
     // come up as an empty class, this ran, and the seed went out over the
     // term. The store keeps a failed read as nothing now, and this waits.
     if (!stored || !data || !config.seedVersion) return;
+    // Every key the seed writes is a plan key: an instructor's to write, and
+    // the database refuses anyone else. A student's page has no business
+    // seeding anything, and used to, which is how a phone on bad wifi wrote
+    // the seed over the term.
+    if (!mayWritePlan()) return;
     if (data.seedVersion !== config.seedVersion) {
       // Seed from config, but NEVER overwrite real content with an empty one.
       // A class whose term lives in its store carries an empty scheduleWeeks on

@@ -15,6 +15,29 @@ const headers = {
 // Real-time listeners: key -> [callback, ...]
 const listeners = {};
 
+// The signed-in person's token, asked for at each write to a plan row so the
+// database can see who is writing. session.js registers it. A plan row is
+// `<class>-plan`, and its backups and history are `<class>-plan-...`.
+let tokenFn = null;
+const isPlanRow = (k) => typeof k === "string" && (k.endsWith("-plan") || k.includes("-plan-"));
+
+// An upsert of one row. As the signed-in person for a plan row, and if the
+// database refuses that, once more as anon, for a database that has no
+// policies yet. Answers the response.
+async function upsert(id, data) {
+  const body = JSON.stringify({ id, data, updated_at: new Date().toISOString() });
+  const send = (token) => fetch(SUPABASE_URL + "/rest/v1/app_data?on_conflict=id", {
+    method: "POST",
+    headers: { ...headers, ...(token ? { Authorization: "Bearer " + token } : {}), "Prefer": "return=representation,resolution=merge-duplicates" },
+    body,
+  });
+  let token = null;
+  if (isPlanRow(id) && tokenFn) { try { token = await tokenFn(); } catch { token = null; } }
+  let res = await send(token);
+  if (token && (res.status === 401 || res.status === 403)) res = await send(null);
+  return res;
+}
+
 // Connect to Supabase Realtime via WebSocket
 let realtimeChannel = null;
 
@@ -185,12 +208,7 @@ window.storage = {
       const rows = await getRes.json();
       if (!rows || rows.length === 0) return;
       // Save backup
-      const backupBody = JSON.stringify({ id: backupKey, data: rows[0].data, updated_at: new Date().toISOString() });
-      await fetch(SUPABASE_URL + "/rest/v1/app_data?on_conflict=id", {
-        method: "POST",
-        headers: { ...headers, "Prefer": "return=representation,resolution=merge-duplicates" },
-        body: backupBody,
-      });
+      await upsert(backupKey, rows[0].data);
       this._backedUpToday[backupFlag] = true;
       console.log("Daily backup created:", backupKey);
       // Clean up old backups (keep last 7 days)
@@ -215,30 +233,31 @@ window.storage = {
         await this._ensureBackup(key);
       }
 
-      const data = JSON.parse(value);
-      const body = JSON.stringify({ id: key, data, updated_at: new Date().toISOString() });
-
-      // Try upsert
-      const url = SUPABASE_URL + "/rest/v1/app_data?on_conflict=id";
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { ...headers, "Prefer": "return=representation,resolution=merge-duplicates" },
-        body,
-      });
+      const res = await upsert(key, JSON.parse(value));
       heard(true);
 
+      // Refused is not failed: the database said no to this writer, and
+      // asking again would get the same answer. False, so the store can tell.
+      if (res.status === 401 || res.status === 403) {
+        console.warn("Storage set refused:", key, res.status);
+        return false;
+      }
       if (!res.ok) {
         console.error("Storage set error:", res.status, await res.text());
-        return null;
+        return undefined;
       }
 
       return { key, value, shared: !!shared };
     } catch (e) {
       if (e instanceof TypeError) heard(false);
       console.error("Storage set error:", e);
-      return null;
+      return undefined;
     }
   },
+
+  // Who is at the keyboard, for the rows that care. A function that answers
+  // a token, or null.
+  setToken(fn) { tokenFn = typeof fn === "function" ? fn : null; },
 
   // Every row whose key starts with `prefix`, keys and data together, in one
   // request. Null when the request fails, so a caller can tell that from none.
@@ -256,8 +275,11 @@ window.storage = {
   async delete(key, shared) {
     try {
       const url = SUPABASE_URL + "/rest/v1/app_data?id=eq." + encodeURIComponent(key);
-      await fetch(url, { method: "DELETE", headers });
-      return { key, deleted: true, shared: !!shared };
+      let token = null;
+      if (isPlanRow(key) && tokenFn) { try { token = await tokenFn(); } catch { token = null; } }
+      let res = await fetch(url, { method: "DELETE", headers: { ...headers, ...(token ? { Authorization: "Bearer " + token } : {}) } });
+      if (token && (res.status === 401 || res.status === 403)) res = await fetch(url, { method: "DELETE", headers });
+      return { key, deleted: res.ok, shared: !!shared };
     } catch (e) {
       return null;
     }

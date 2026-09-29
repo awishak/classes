@@ -10,6 +10,21 @@ One codebase renders every class from a config object. Five classes are live:
 COMM 118, COMM 2, COMM 4, COMM 3, COMM 999. Deployed at
 `classes.andrewishak.com` on Vercel.
 
+## Two rows behind one class
+
+Since 2026-09-29 a class is two rows in `app_data`: `<storageKey>`, which
+students write, and `<storageKey>-plan`, which holds the lesson plans, the
+schedule, the library, the blocks, the assignments and the rest of what only I
+write. SPLIT.md has the list, the reasoning and the SQL. Every surface still
+asks `useClassData(storageKey)` for the class and gets one object, plan keys
+over class keys, the way the photographs come back onto the profiles. A save
+is split by key in `src/engine/store.js` and only the row whose keys changed
+goes out. The shim writes a plan row as the signed-in person, so the database
+can refuse anyone who is not an instructor; a page that is not mine drops a
+plan write with a warning rather than retrying it. The key list is
+`src/engine/plan-keys.js`, and `scripts/split-plan.mjs` is the one-time
+migration, run with the service key after the code is live.
+
 ## The surfaces
 
 | Route | Who | What |

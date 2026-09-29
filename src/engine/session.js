@@ -193,3 +193,8 @@ export function useSession() {
   const out = useCallback(async () => { await signOut(); }, []);
   return { session, email: session?.user?.email || "", instructor: isInstructorEmail(session?.user?.email), signOut: out };
 }
+
+// The shim writes a plan row as the signed-in person, so the database can
+// see who is writing. It cannot import this file (this file imports its
+// constants), so the token is handed over here.
+if (typeof window !== "undefined" && window.storage?.setToken) window.storage.setToken(accessToken);

@@ -33,6 +33,30 @@ rules say server authoritative, enforce it in the database. The writes do
 neither. This job makes the first move: a student's phone can never touch the
 lesson plan, however broken its connection or the merge.
 
+## Where it stands, 2026-09-29
+
+The code side is built and deployed: pieces 1, 2, 4, 6 and 7, and the
+migration script from piece 5. The store reads two rows behind one hook,
+writes the row whose keys changed, drops a plan write from a page that is not
+the instructor's, and treats a refusal from the database as a drop rather
+than a retry. The shim sends the signed-in person's token on plan rows and
+falls back to anon once, so it works before and after the SQL. The seed
+effect runs only from an instructor's page.
+
+Left for Andrew, on any machine, in this order:
+
+1. Run the SQL in piece 3 in the Supabase SQL editor, reading the first
+   result before the rest.
+2. Reload every dashboard tab on both machines.
+3. `SUPABASE_SERVICE_ROLE_KEY=... node scripts/split-plan.mjs --dry`, read
+   it, then the same without `--dry`.
+4. Check, per the Verify section.
+
+One consequence of the SQL to know about: after it runs, a dashboard opened
+with the remembered PIN and no sign-in cannot write the lesson plan, because
+the database only counts a session. The podium machine has to sign in at
+/login like everyone else. Until the SQL runs, the PIN still works.
+
 ## Decisions to confirm before starting
 
 Defaults are what gets built if nothing is said.

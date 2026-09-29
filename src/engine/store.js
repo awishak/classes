@@ -3,6 +3,10 @@
 // with realtime updates so the student and instructor views stay in sync.
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { ENGINE_LIST } from "../config/registry.js";
+import { getSession } from "./session.js";
+import { isInstructorEmail } from "../instructors.js";
+import { PLAN_KEYS, PLAN_SUFFIX, splitParts } from "./plan-keys.js";
 
 // What the server holds for a key: the class, {} when there is no row by
 // that key, and null when the read failed.
@@ -15,7 +19,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 // seeded itself from config, and the merge, measuring against nothing, wrote
 // the seed's titles and rows over his. A read that fails is nothing now,
 // and everything above the shim reads through here.
-export async function loadClass(key) {
+export async function loadRow(key) {
   try {
     const r = await window.storage.get(key, true);
     if (r === undefined) return null;
@@ -24,6 +28,15 @@ export async function loadClass(key) {
   } catch {
     return null;
   }
+}
+
+// A class as one object, read off its two rows. See SPLIT.md, and the
+// section on the two rows below.
+export async function loadClass(key) {
+  if (!isClassKey(key)) return loadRow(key);
+  const [c, p] = await Promise.all([loadRow(key), loadRow(planKeyOf(key))]);
+  if (c === null || p === null) return null;
+  return { ...c, ...p };
 }
 
 // ─── the history of a day ───
@@ -73,11 +86,14 @@ export async function recordDay(key, date, plan, force = false) {
 export async function loadDayHistory(key, date) {
   const k = historyKey(key, date);
   try {
-    const [rows, legacy] = await Promise.all([
-      window.storage.rows ? window.storage.rows(k + "-") : null,
+    // Versions written since the split live under the plan row's key, and
+    // the ones from before under the class's. Both are the day's history.
+    const prefixes = isClassKey(key) ? [k, historyKey(planKeyOf(key), date)] : [k];
+    const [lists, legacy] = await Promise.all([
+      Promise.all(prefixes.map(pre => (window.storage.rows ? window.storage.rows(pre + "-") : null))),
       window.storage.get(k, true),
     ]);
-    const own = (rows || [])
+    const own = lists.flatMap(rows => rows || [])
       .filter(r => /-\d{13}$/.test(r.id) && r.data && r.data.plan)
       .map(r => ({ at: r.data.at, plan: r.data.plan }));
     const old = legacy?.value ? (JSON.parse(legacy.value).versions || []) : [];
@@ -94,12 +110,35 @@ const noteDays = (key, before, after) => {
   });
 };
 
+// True when it landed, false when the database refused it (a plan row and
+// not an instructor), null when it could not be sent.
 export async function saveClass(key, data) {
   try {
-    return !!(await window.storage.set(key, JSON.stringify(data), true));
+    const r = await window.storage.set(key, JSON.stringify(data), true);
+    if (r === false) return false;
+    return r ? true : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+// A whole state written raw, the way the repository writes a class, split
+// by row for a class. Only a row whose keys changed goes out, and the class
+// row keeps whatever copies of plan keys it still holds from before the
+// split, so writing it never quietly migrates a class.
+export async function saveSplit(key, cur, next) {
+  if (!isClassKey(key)) return saveClass(key, next);
+  const was = cur || {};
+  const keys = new Set([...Object.keys(next || {}), ...Object.keys(was)]);
+  const changed = (k) => (next || {})[k] !== was[k];
+  const { plan, rest } = splitParts(next);
+  const jobs = [];
+  if ([...keys].some(k => PLAN_KEYS.has(k) && changed(k))) jobs.push(saveClass(planKeyOf(key), plan));
+  if ([...keys].some(k => !PLAN_KEYS.has(k) && changed(k))) {
+    jobs.push(loadRow(key).then(raw => (raw === null ? null : saveClass(key, { ...splitParts(raw).plan, ...rest }))));
+  }
+  const out = await Promise.all(jobs);
+  return out.every(Boolean);
 }
 
 // The last data we saw for a key, held for the life of the page.
@@ -111,7 +150,57 @@ export async function saveClass(key, data) {
 // without effects, which is what the smoke test needs — the panels alone were
 // never the part that broke.
 const WARM = new Map();
-export const warmClassData = (key, data) => { WARM.set(key, data); };
+
+// ─── two rows behind one class ───
+//
+// SPLIT.md has the reasoning. A class is two rows: `<storageKey>`, which
+// students write, and `<storageKey>-plan`, which only an instructor session
+// may write, and the database refuses anyone else. Every surface still asks
+// for the class by its storageKey and gets one object, plan keys over class
+// keys, the way the photographs come back onto the profiles. A save is split
+// by key, and only the row whose keys changed goes out.
+//
+// Before the migration has run, the class row still holds copies of the plan
+// keys. A plan key the plan row lacks falls back to the class row, and the
+// first edit writes every plan key into the plan row, so the plan row wins
+// from then on. The class row keeps its stale copies until the migration
+// takes them off; nothing here deletes them, so nothing here migrates a class
+// by accident.
+export { PLAN_KEYS, PLAN_SUFFIX, splitParts };
+export const classKeys = new Set(ENGINE_LIST.map(c => c.storageKey));
+export const isClassKey = (k) => classKeys.has(k);
+export const planKeyOf = (k) => k + PLAN_SUFFIX;
+export const isPlanRow = (k) => typeof k === "string" && (k.endsWith(PLAN_SUFFIX) || k.includes(PLAN_SUFFIX + "-"));
+// The rows a key is read from.
+const rowsOf = (key) => (isClassKey(key) ? [key, planKeyOf(key)] : [key]);
+// The class as one object, or null until both rows are here. Both, because
+// a view drawn from the class row alone, before the plan row has arrived,
+// would be a class with no lesson plans and no seed version, and the site
+// would seed it.
+export const mergedView = (key) => {
+  if (!isClassKey(key)) return WARM.has(key) ? { ...WARM.get(key) } : null;
+  const planKey = planKeyOf(key);
+  if (!WARM.has(key) || !WARM.has(planKey)) return null;
+  return { ...WARM.get(key), ...WARM.get(planKey) };
+};
+// Whether this browser may write a plan row: an instructor session, or the
+// PIN the gate remembered. The database only counts the session; the PIN is
+// for the podium machine until it signs in.
+let planWriter = () => {
+  if (isInstructorEmail(getSession()?.user?.email)) return true;
+  try { return !!localStorage.getItem("classes-instructor-pin"); } catch { return false; }
+};
+export const mayWritePlan = () => planWriter();
+/** For the smoke: stand in for who is at the keyboard. */
+export const asPlanWriter = (fn) => { planWriter = fn || (() => false); };
+
+// Warming a class puts each part on its row.
+export const warmClassData = (key, data) => {
+  if (!isClassKey(key)) { WARM.set(key, data); return; }
+  const { plan, rest } = splitParts(data);
+  WARM.set(key, rest);
+  WARM.set(planKeyOf(key), plan);
+};
 
 // ─── work that has not landed yet ───
 //
@@ -178,7 +267,7 @@ const dropPending = (key) => {
 };
 
 /** Whether this browser is holding work for a class that never reached the server. */
-export const unsavedFor = (key) => !!readPending(key);
+export const unsavedFor = (key) => rowsOf(key).some(k => !!readPending(k));
 
 // The same data written out the same way whatever order its keys are in.
 // Postgres hands a row back with its keys re-sorted, so the echo of a save never
@@ -299,14 +388,16 @@ export function mergeClass(base, next, server) {
 // not happen this time round: a student's own words are held in this browser
 // and sent when the server can be reached, and the whole class is never
 // written blind over whatever is there.
+export const REFUSED = Symbol("refused");
 export async function saveAgainstServer(key, base, next) {
   let server = null;
-  for (let i = 0; i < 2 && server === null; i++) server = await loadClass(key);
+  for (let i = 0; i < 2 && server === null; i++) server = await loadRow(key);
   // Could not read: nothing goes out on top of what cannot be seen. The save
   // is tried again, and the words are held in this browser until it lands.
   if (server === null) return null;
   const out = Object.keys(server).length ? mergeClass(base, next, server) : next;
   const ok = await saveClass(key, out);
+  if (ok === false) return REFUSED;
   return ok ? out : null;
 }
 
@@ -369,7 +460,7 @@ export const inFlight = (key) => {
 // Every hook on the class takes the state.
 const tell = (key, d) => {
   WARM.set(key, d);
-  pipeFor(key).hooks.forEach(h => h.data({ ...d }));
+  pipeFor(key).hooks.forEach(h => h.data());
 };
 const tellStatus = (p, patch) => {
   Object.assign(p, patch);
@@ -399,6 +490,28 @@ export function takeServer(key, d) {
 // yet. Held in this browser until a save lands, so a tab that dies between
 // the keystroke and the write still has the words.
 export function pushUpdate(key, mutator) {
+  if (!isClassKey(key)) return pushRow(key, mutator);
+  const view = mergedView(key);
+  if (!view) return null;
+  const next = mutator(view);
+  if (!next || next === view) return next;
+  const keys = new Set([...Object.keys(next), ...Object.keys(view)]);
+  const changedPlan = [...keys].some(k => PLAN_KEYS.has(k) && next[k] !== view[k]);
+  const changedRest = [...keys].some(k => !PLAN_KEYS.has(k) && next[k] !== view[k]);
+  if (changedPlan) {
+    if (mayWritePlan()) pushRow(planKeyOf(key), () => splitParts(next).plan);
+    else console.warn("A change to the lesson plan from a page that is not the instructor's was not saved.");
+  }
+  if (changedRest) {
+    // The class row: its own keys as they are now, and whatever copies of
+    // plan keys it still holds, untouched.
+    const held = splitParts(WARM.get(key) || {}).plan;
+    pushRow(key, () => ({ ...held, ...splitParts(next).rest }));
+  }
+  return next;
+}
+
+function pushRow(key, mutator) {
   const p = pipeFor(key);
   const before = WARM.get(key) || {};
   const next = mutator(before);
@@ -420,6 +533,16 @@ function pump(key) {
   const v = p.queued.shift();
   p.flying = true;
   Promise.resolve(saveAgainstServer(key, p.basis, v)).then((out) => {
+    if (out === REFUSED) {
+      // The database said no: a plan row, and this is not an instructor's
+      // session. Nothing to retry. The words stay on the screen until the
+      // server's copy comes back over them, and the bar says Not saved.
+      console.warn("The server refused a save to " + key + ". Sign in as the instructor to write the lesson plan.");
+      p.tries = 0;
+      if (!p.queued.length) dropPending(key);
+      tellStatus(p, { trouble: true });
+      return;
+    }
     if (out) {
       p.tries = 0;
       p.sent = [...p.sent.slice(-9), canon(out)];
@@ -474,7 +597,7 @@ function watch(key) {
     const now = Date.now();
     if (now - lastLook < 5000) return;
     lastLook = now;
-    loadClass(key).then(d => { if (p.off && d && Object.keys(d).length) takeServer(key, d); });
+    loadRow(key).then(d => { if (p.off && d && Object.keys(d).length) takeServer(key, d); });
   };
   document.addEventListener("visibilitychange", catchUp);
   window.addEventListener("focus", catchUp);
@@ -504,7 +627,7 @@ function loadInto(key) {
   const p = pipeFor(key);
   if (p.loading) return;
   p.loading = true;
-  const attempt = (n) => loadClass(key).then(async d => {
+  const attempt = (n) => loadRow(key).then(async d => {
     if (!p.hooks.size) { p.loading = false; return; }
     if (d === null) { p.retryLoad = setTimeout(() => attempt(n + 1), Math.min(30000, 2000 * 2 ** n)); return; }
     p.loading = false;
@@ -541,24 +664,26 @@ function loadInto(key) {
 // update(mutator) applies mutator(prev) -> next, saves, and tells every hook
 // on the class.
 export function useClassData(key) {
-  const [data, setData] = useState(() => WARM.get(key) || null);
-  const [trouble, setTrouble] = useState(() => pipeFor(key).trouble);
-  const [busy, setBusy] = useState(() => pipeFor(key).busy);
+  const [data, setData] = useState(() => mergedView(key));
+  const [trouble, setTrouble] = useState(() => rowsOf(key).some(k => pipeFor(k).trouble));
+  const [busy, setBusy] = useState(() => rowsOf(key).some(k => pipeFor(k).busy));
   // Work that was held in this browser and has now been put back.
   const [restored, setRestored] = useState(false);
 
   useEffect(() => {
-    const p = pipeFor(key);
-    const me = { data: setData, status: () => { setTrouble(p.trouble); setBusy(p.busy); }, restored: () => setRestored(true) };
-    p.hooks.add(me);
-    watch(key);
+    const rows = rowsOf(key);
+    const me = {
+      data: () => setData(mergedView(key)),
+      status: () => { setTrouble(rows.some(k => pipeFor(k).trouble)); setBusy(rows.some(k => pipeFor(k).busy)); },
+      restored: () => setRestored(true),
+    };
+    rows.forEach(k => { pipeFor(k).hooks.add(me); watch(k); });
     // The key changed under this hook, or the class moved on between this
     // hook's first render and now.
-    const warm = WARM.get(key);
-    if (warm) setData({ ...warm });
+    me.data();
     me.status();
-    loadInto(key);
-    return () => { p.hooks.delete(me); unwatch(key); };
+    rows.forEach(k => loadInto(k));
+    return () => rows.forEach(k => { pipeFor(k).hooks.delete(me); unwatch(k); });
   }, [key]);
 
   const update = useCallback((mutator) => { pushUpdate(key, mutator); }, [key]);
@@ -571,6 +696,8 @@ export function useClassData(key) {
   // marked. `saveMerged` re-reads, merges and writes for itself, and hands the
   // result back here to be held. Nothing is queued, because it is already on
   // the server, so it is what the next save measures against as well.
+  // `next` is the class row as the server holds it, not the merged view:
+  // saveMerged reads and writes that row alone.
   const apply = useCallback((next) => {
     pipeFor(key).basis = next;
     tell(key, next);
@@ -604,7 +731,7 @@ export async function saveMerged(key, mutate, merge) {
   const base = WARM.get(key) || {};
   const next = mutate(base);
   try {
-    const server = await loadClass(key);
+    const server = await loadRow(key);
     // A read that failed writes nothing. And a class this page is holding
     // data for has a row, so no row is a failed read in another coat, and
     // writing on top of it would put this page's idea of the class over
@@ -628,46 +755,26 @@ export async function saveMerged(key, mutate, merge) {
 // second time. So this returns the class data and a way to take what was just
 // written, and saves nothing itself.
 export function useClassState(key) {
-  const [data, setData] = useState(() => WARM.get(key) || null);
-  const ref = useRef(null);
-  const mine = useRef(0);
+  const [data, setData] = useState(() => mergedView(key));
 
   useEffect(() => {
-    let alive = true;
-    const warm = WARM.get(key);
-    if (warm) ref.current = warm;
-    // Not over a save another hook on this class has on its way: the games
-    // page and the bar's Horn read one class, and what lands is taken then.
-    let retry = null;
-    const load = (n) => loadClass(key).then(d => {
-      if (!alive) return;
-      // A read that failed is nothing. What this page holds stands, and the
-      // class is asked for again.
-      if (d === null) { retry = setTimeout(() => load(n + 1), Math.min(30000, 2000 * 2 ** n)); return; }
-      ref.current = inFlight(key) ? (WARM.get(key) || {}) : d;
-      WARM.set(key, ref.current);
-      setData(ref.current);
-    });
-    load(0);
-    const off = window.storage?.onUpdate?.(key, (val) => {
-      // Our own write coming back. The caller already holds the newer state.
-      if (mine.current > 0) { mine.current--; return; }
-      if (inFlight(key)) return;
-      try {
-        const d = JSON.parse(val);
-        ref.current = d;
-        WARM.set(key, d);
-        setData(d);
-      } catch { /* ignore */ }
-    });
-    return () => { alive = false; clearTimeout(retry); if (off) off(); };
+    const rows = rowsOf(key);
+    const me = { data: () => setData(mergedView(key)), status: () => {}, restored: () => {} };
+    rows.forEach(k => { pipeFor(k).hooks.add(me); watch(k); });
+    me.data();
+    rows.forEach(k => loadInto(k));
+    return () => rows.forEach(k => { pipeFor(k).hooks.delete(me); unwatch(k); });
   }, [key]);
 
+  // A state the caller's own save path has already put on the server, taken
+  // here so the next read measures against it.
   const take = useCallback((next) => {
-    ref.current = next;
-    WARM.set(key, next);
-    mine.current++;
-    setData({ ...next });
+    if (!isClassKey(key)) { pipeFor(key).basis = next; tell(key, next); return; }
+    const { plan, rest } = splitParts(next);
+    const held = splitParts(WARM.get(key) || {}).plan;
+    const planKey = planKeyOf(key);
+    pipeFor(planKey).basis = plan; tell(planKey, plan);
+    pipeFor(key).basis = { ...held, ...rest }; tell(key, { ...held, ...rest });
   }, [key]);
 
   return [data, take];

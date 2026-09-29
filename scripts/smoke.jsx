@@ -76,7 +76,7 @@ import PlanPage from "../src/PlanPage.jsx";
 import RetreatPage from "../src/RetreatPage.jsx";
 import InstructorLinks from "../src/InstructorLinks.jsx";
 import { ENGINE_LIST } from "../src/config/registry.js";
-import { warmClassData, saveMerged, mergeClass, mergeList, pushUpdate, takeServer, inFlight, loadClass, saveAgainstServer } from "../src/engine/store.js";
+import { warmClassData, saveMerged, mergeClass, mergeList, pushUpdate, takeServer, inFlight, loadClass, saveAgainstServer, classKeys, mergedView, asPlanWriter, PLAN_KEYS } from "../src/engine/store.js";
 import { withPhotos, saveProfile, PHOTO_MARK } from "../src/engine/photos.js";
 import { profileComplete } from "../src/engine/profileTask.js";
 import { setAway, mergeAway, isAway, awayBySitting } from "../src/engine/attendance.js";
@@ -4733,6 +4733,86 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // The class site seeds only a class it has read.
   const app = readFileSync(new URL("../src/engine/ClassApp.jsx", import.meta.url), "utf8");
   if (!/if \(!stored \|\| !data \|\| !config\.seedVersion\) return;/.test(app)) say("the seed effect no longer waits for the class to be read");
+}
+
+// Two rows behind one class. SPLIT.md.
+//
+// The lesson plan lives on `<key>-plan`, which only an instructor writes,
+// and the class row is what students write. Every surface still sees one
+// object. A save goes to the row whose keys changed, and the class row keeps
+// the copies of plan keys it held from before the migration.
+{
+  const say = (m) => { console.error("  FAIL  two rows: " + m); failedEarly++; };
+  const real = window.storage;
+  const key = "smoke-split", planKey = key + "-plan";
+  classKeys.add(key);
+  const server = {
+    [key]: { profiles: { ada: { hometown: "Fresno" } }, away: {}, dayPlans: { "Sep 30": { title: "stale copy" } }, seedVersion: 3 },
+    [planKey]: null,
+  };
+  const writes = [];
+  window.storage = {
+    get: async (k) => (server[k] ? { value: JSON.stringify(server[k]) } : null),
+    set: async (k, v) => { server[k] = JSON.parse(v); writes.push(k); return { key: k }; },
+    onUpdate: () => () => {},
+  };
+  const settle = () => new Promise(r => setTimeout(r, 60));
+  try {
+    asPlanWriter(() => true);
+    // Read: one object, plan keys over class keys, and the class row's copy
+    // when the plan row has nothing.
+    const got = await loadClass(key);
+    if (got.dayPlans?.["Sep 30"]?.title !== "stale copy") say("a plan key the plan row lacks did not fall back to the class row");
+    takeServer(key, server[key]);
+    takeServer(planKey, {});
+    if (mergedView(key)?.profiles?.ada?.hometown !== "Fresno") say("the merged view lost a class key");
+    // Write: a plan key and a class key in one edit go to two rows.
+    pushUpdate(key, prev => ({ ...prev, dayPlans: { ...prev.dayPlans, "Sep 30": { title: "edited" } }, away: { "Sep 30": { ada: true } } }));
+    await settle();
+    if (!server[planKey] || server[planKey].dayPlans?.["Sep 30"]?.title !== "edited") say("the edit to a plan key did not land on the plan row");
+    if (server[planKey] && !("seedVersion" in server[planKey])) say("the first plan write did not carry every plan key across");
+    if (server[planKey] && "profiles" in server[planKey]) say("a class key was written to the plan row");
+    if (!server[key].away?.["Sep 30"]?.ada) say("the edit to a class key did not land on the class row");
+    if (server[key].dayPlans?.["Sep 30"]?.title !== "stale copy") say("writing the class row touched its copy of a plan key: " + JSON.stringify(server[key].dayPlans));
+    if (mergedView(key).dayPlans["Sep 30"].title !== "edited") say("the merged view does not prefer the plan row");
+    // A class key alone writes one row.
+    writes.length = 0;
+    pushUpdate(key, prev => ({ ...prev, away: {} }));
+    await settle();
+    if (writes.includes(planKey)) say("a class-only edit wrote the plan row");
+    if (!writes.includes(key)) say("a class-only edit did not write the class row");
+    // A plan key alone writes one row.
+    writes.length = 0;
+    pushUpdate(key, prev => ({ ...prev, scratch: { "Sep 30": "note" } }));
+    await settle();
+    if (writes.includes(key)) say("a plan-only edit wrote the class row");
+    if (!writes.includes(planKey)) say("a plan-only edit did not write the plan row");
+    // Not the instructor: a plan write is dropped, a class write still goes.
+    asPlanWriter(() => false);
+    writes.length = 0;
+    const warn = console.warn; console.warn = () => {};
+    pushUpdate(key, prev => ({ ...prev, dayPlans: {}, threads: { ada: [{ id: "m1" }] } }));
+    await settle();
+    console.warn = warn;
+    if (writes.includes(planKey)) say("a page that is not the instructor's wrote the plan row");
+    if (!server[key].threads?.ada) say("a student's own write was dropped with the plan write");
+    if (!Object.keys(server[planKey].dayPlans || {}).length) say("a dropped plan write still changed the plan row");
+    // The database refusing a plan write is a drop, not a retry.
+    asPlanWriter(() => true);
+    window.storage.set = async (k, v) => { if (k === planKey) return false; server[k] = JSON.parse(v); return { key: k }; };
+    pushUpdate(key, prev => ({ ...prev, scratch: { "Sep 30": "again" } }));
+    await settle();
+    if (inFlight(planKey)) say("a refused plan write is being retried");
+    // Every key the seed writes is a plan key.
+    for (const k of ["schedule", "library", "dayPlans", "seedVersion"]) if (!PLAN_KEYS.has(k)) say("the seed writes " + k + ", which is not a plan key");
+  } finally {
+    window.storage = real;
+    asPlanWriter(null);
+    classKeys.delete(key);
+  }
+  // The class site seeds only from an instructor's page.
+  const app = readFileSync(new URL("../src/engine/ClassApp.jsx", import.meta.url), "utf8");
+  if (!/if \(!mayWritePlan\(\)\) return;/.test(app)) say("the seed effect no longer checks who is at the keyboard");
 }
 
 // What students see on a week: games and Headlines from the day plans, and the
