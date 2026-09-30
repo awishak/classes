@@ -9,6 +9,7 @@
 //
 // POST /api/worksheet-submits { pin?, groupKey, keys: ["stakeholder-map"] }
 //   -> { ok, sheets: { [key]: [{ viewer_id, submitted_at }] } }
+// POST /api/worksheet-submits { pin?, groupKey, key, viewer } -> { ok, sheet, answers }
 
 import { callerAllowed, readBody } from "./_auth.js";
 import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
@@ -22,6 +23,21 @@ export default async function handler(req, res) {
   if (!(await callerAllowed(req, body))) return res.status(401).json({ ok: false, error: "Not signed in as the instructor." });
   if (!serviceKey()) return res.status(500).json({ ok: false, error: "No Supabase service key is configured on the server." });
   const groupKey = String(body.groupKey || "");
+
+  // One student's sheet, for opening their file from the grade view.
+  // { groupKey, key, viewer: "<email>" } -> { ok, sheet, answers }
+  if (body.viewer) {
+    const key = String(body.key || ""), viewer = String(body.viewer).trim().toLowerCase();
+    if (!SLUG.test(groupKey) || !SLUG.test(key) || !/^[^\s@&=?#]+@[^\s@&=?#]+$/.test(viewer)) return res.status(400).json({ ok: false, error: "A class, a worksheet and a student are needed." });
+    const s = await fetch(SUPABASE_URL + `/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&worksheet_key=eq.${key}&group_key=eq.${groupKey}&viewer_id=eq.${encodeURIComponent(viewer)}`, { headers: serviceHeaders() });
+    if (!s.ok) return res.status(502).json({ ok: false, error: "Could not read the worksheet." });
+    const [sheet] = await s.json();
+    if (!sheet) return res.status(200).json({ ok: true, sheet: null, answers: [] });
+    const a = await fetch(SUPABASE_URL + `/rest/v1/worksheet_answers?select=id,field,value,position,created_at,verdict&sheet_id=eq.${sheet.id}&order=created_at`, { headers: serviceHeaders() });
+    if (!a.ok) return res.status(502).json({ ok: false, error: "Could not read the answers." });
+    return res.status(200).json({ ok: true, sheet, answers: await a.json() });
+  }
+
   const keys = (Array.isArray(body.keys) ? body.keys : []).map(String).filter(k => SLUG.test(k)).slice(0, 20);
   if (!SLUG.test(groupKey) || !keys.length) return res.status(400).json({ ok: false, error: "A class and at least one worksheet are needed." });
 

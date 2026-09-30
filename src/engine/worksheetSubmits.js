@@ -19,7 +19,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { gameClient } from "./gameClient.js";
-import { rosterOf } from "./roster.js";
+import { rosterOf, idOf } from "./roster.js";
 import { authHeaders } from "./session.js";
 import { savedPin } from "../InstructorGate.jsx";
 
@@ -35,24 +35,35 @@ const alive = (log) => (log || []).filter(e => !e.deleted);
 
 // The class with each linked worksheet's submits in its assignmentLog.
 // sheets: { [worksheetKey]: [{ viewer_id, submitted_at }] }.
-// A student who already has a submission in the log keeps theirs as it is.
+// A student who already has a submission in the log keeps theirs, with its
+// link pointed at their own sheet when it pointed at the worksheet.
+//
+// Every link names the student: <worksheet>?s=<roster id>. The worksheet
+// alone opens whoever is signed in, which for the instructor was his own test
+// sheet. Andrew, 2026-09-29: "when it says open their file, it's my file ...
+// you have to give the ability to look at anyone's file."
 export function withWorksheetSubmits(data, config, sheets) {
   if (!data || !sheets) return data;
   const assignments = data.assignments || config.assignments || [];
-  const byEmail = new Map(rosterOf(config, data).filter(s => s.email).map(s => [String(s.email).trim().toLowerCase(), s.name]));
+  const byEmail = new Map(rosterOf(config, data).filter(s => s.email).map(s => [String(s.email).trim().toLowerCase(), s]));
   let al = null;
   assignments.forEach(asg => {
     const ws = worksheetOf(asg);
     if (!ws || ws.classId !== config.id) return;
+    const base = String(asg.instructionsUrl).trim().replace(/[?#].*$/, "").replace(/\/$/, "");
+    const theirs = (s) => base + "?s=" + encodeURIComponent(idOf(s));
+    const toSheet = (link) => String(link || "").replace(/[?#].*$/, "").replace(/\/$/, "") === base;
     (sheets[ws.key] || []).forEach(sh => {
-      const name = byEmail.get(sh.viewer_id);
-      if (!name || !sh.submitted_at) return;
-      const log = (al || data.assignmentLog || {})[asg.id]?.[name];
-      if (alive(log).some(e => e.type === "submission")) return;
+      const s = byEmail.get(sh.viewer_id);
+      if (!s || !sh.submitted_at) return;
+      const log = (al || data.assignmentLog || {})[asg.id]?.[s.name];
+      const live = alive(log).filter(e => e.type === "submission");
+      if (live.length && !live.some(e => toSheet(e.link))) return;
       al = al || { ...(data.assignmentLog || {}) };
-      al[asg.id] = { ...(al[asg.id] || {}), [name]: [...(log || []), {
+      const kept = (log || []).map(e => e.type === "submission" && toSheet(e.link) ? { ...e, link: theirs(s) } : e);
+      al[asg.id] = { ...(al[asg.id] || {}), [s.name]: live.length ? kept : [...kept, {
         id: "ws-" + asg.id + "-" + sh.viewer_id, ts: Date.parse(sh.submitted_at), type: "submission",
-        link: asg.instructionsUrl, worksheet: ws.key,
+        link: theirs(s), worksheet: ws.key,
       }].sort((a, b) => (a.ts || 0) - (b.ts || 0)) };
     });
   });

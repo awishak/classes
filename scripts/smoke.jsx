@@ -206,16 +206,18 @@ let failedEarly = 0;
   const data = {
     students: [{ name: "Ann A", email: "ann@x.edu" }, { name: "Ben B", email: "ben@x.edu" }, { name: "Cy C", email: "cy@x.edu" }],
     assignments: [{ id: "wc1", instructionsUrl: "https://classes.andrewishak.com/comm118/worksheets/stakeholder-map" }, { id: "wc2" }],
-    assignmentLog: { wc1: { "Ben B": [{ id: "h1", ts: 5, type: "submission", link: "x" }] } },
+    assignmentLog: { wc1: { "Ben B": [{ id: "h1", ts: 5, type: "submission", link: "x" }], "Cy C": [{ id: "h2", ts: 6, type: "submission", link: "https://classes.andrewishak.com/comm118/worksheets/stakeholder-map" }] } },
   };
   const before = JSON.stringify(data);
   const out = withWorksheetSubmits(data, cfg, { "stakeholder-map": [
-    { viewer_id: "ann@x.edu", submitted_at: "2026-09-28T00:00:00Z" }, { viewer_id: "ben@x.edu", submitted_at: "2026-09-28T00:00:00Z" },
+    { viewer_id: "ann@x.edu", submitted_at: "2026-09-28T00:00:00Z" }, { viewer_id: "ben@x.edu", submitted_at: "2026-09-28T00:00:00Z" }, { viewer_id: "cy@x.edu", submitted_at: "2026-09-28T00:00:00Z" },
     { viewer_id: "nobody@x.edu", submitted_at: "2026-09-28T00:00:00Z" }] });
   const ws = (n) => (out.assignmentLog.wc1[n] || []).filter(e => e.type === "submission");
   if (ws("Ann A").length !== 1 || ws("Ann A")[0].worksheet !== "stakeholder-map") { console.error("  FAIL  worksheet submits: Ann's submit is not on Weekly Challenge 1"); failedEarly++; }
   if (ws("Ben B").length !== 1 || ws("Ben B")[0].id !== "h1") { console.error("  FAIL  worksheet submits: a hand entry was doubled or replaced"); failedEarly++; }
-  if (ws("Cy C").length !== 0 || out.assignmentLog.wc2) { console.error("  FAIL  worksheet submits: a submit landed where there was none"); failedEarly++; }
+  if (out.assignmentLog.wc2) { console.error("  FAIL  worksheet submits: a submit landed where there was none"); failedEarly++; }
+  if (!/stakeholder-map\?s=ann-a$/.test(ws("Ann A")[0]?.link || "")) { console.error("  FAIL  worksheet submits: Ann's submit does not open her own sheet"); failedEarly++; }
+  if (ws("Cy C").length !== 1 || ws("Cy C")[0].id !== "h2" || !/\?s=cy-c$/.test(ws("Cy C")[0].link)) { console.error("  FAIL  worksheet submits: a hand entry on the worksheet does not open that student's sheet"); failedEarly++; }
   if (JSON.stringify(data) !== before) { console.error("  FAIL  worksheet submits: the stored class was changed"); failedEarly++; }
   if (withWorksheetSubmits(data, cfg, null) !== data) { console.error("  FAIL  worksheet submits: no sheets should leave the class as it is"); failedEarly++; }
 }

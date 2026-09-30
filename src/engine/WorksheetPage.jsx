@@ -6,11 +6,12 @@
 // answer is its own row, written as it is typed, so a weekend of work never
 // sits in one blob waiting to be saved. See worksheets' BRIEF.md.
 
-import { useEffect } from "react";
-import { Worksheet, WORKSHEETS } from "@ishak/worksheets";
+import { useEffect, useRef, useState } from "react";
+import { Worksheet, WORKSHEETS, mountSheet } from "@ishak/worksheets";
 import { useClassState } from "./store.js";
-import { rosterOf } from "./roster.js";
-import { useSession, studentFor } from "./session.js";
+import { rosterOf, findStudent } from "./roster.js";
+import { useSession, studentFor, authHeaders } from "./session.js";
+import { savedPin } from "../InstructorGate.jsx";
 import { gameClient } from "./gameClient.js";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
@@ -23,6 +24,53 @@ import TopNav, { NAV_STUDENT } from "./TopNav.jsx";
 // no night (Snapchat, Crashing Out) keeps the sheet light rather than putting
 // a dark sheet on a yellow page.
 const sheetThemeOf = (theme, mode) => !hasNight(theme) ? "light" : mode === "night" ? "dark" : mode === "day" ? "light" : undefined;
+
+// One student's sheet, read only, for the instructor: /<class>/worksheets/<key>?s=<roster id>.
+// The grade view links here. It reads through /api/worksheet-submits, which
+// takes the PIN or an instructor's session, so it opens however he signed in.
+function TheirSheet({ config, worksheetKey, student, theme }) {
+  const ref = useRef(null);
+  const [state, setState] = useState("loading");   // loading | none | denied | failed | shown
+  const [submitted, setSubmitted] = useState(null);
+  useEffect(() => {
+    let alive = true, sheet = null;
+    (async () => {
+      try {
+        const r = await fetch("/api/worksheet-submits", {
+          method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+          body: JSON.stringify({ pin: savedPin(), groupKey: config.id, key: worksheetKey, viewer: student.email }),
+        });
+        if (!alive) return;
+        if (r.status === 401) { setState("denied"); return; }
+        const out = await r.json();
+        if (!out.ok) { setState("failed"); return; }
+        if (!out.sheet) { setState("none"); return; }
+        setSubmitted(out.sheet.submitted_at);
+        setState("shown");
+        const own = (WORKSHEETS.find(w => w.key === worksheetKey) || {}).theme || {};
+        sheet = mountSheet(ref.current, {
+          store: { async load() { return { answers: out.answers, submitted_at: out.sheet.submitted_at }; } },
+          readOnly: true, theme, accent: own.accent || config.accent, accentLight: own.accentLight || config.accentLight,
+          vars: own.vars, dark: own.dark || { accent: config.accentDark },
+        });
+      } catch { if (alive) setState("failed"); }
+    })();
+    return () => { alive = false; if (sheet) sheet.destroy(); };
+  }, [config, worksheetKey, student.email, theme]);
+  const say = { loading: "Loading " + student.name + "'s sheet.", none: student.name + " has not opened this worksheet.",
+    denied: "Only the instructor can open a student's sheet. Sign in as the instructor and open this address again.",
+    failed: "The sheet could not be read. Reload to try again." }[state];
+  return (
+    <div>
+      <div style={{ padding: "16px 16px 0", maxWidth: 1352, margin: "0 auto", display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
+        <b style={{ fontSize: 22, fontWeight: 600 }}>{student.name}</b>
+        {state === "shown" ? <span style={{ fontSize: 15, color: TOKENS.TEXT.secondary }}>{submitted ? "Submitted " + new Date(submitted).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "Started, not submitted"}</span> : null}
+      </div>
+      {say ? <p style={{ fontSize: 17, padding: "16px 16px 0", maxWidth: 1352, margin: "0 auto" }}>{say}</p> : null}
+      <div ref={ref} />
+    </div>
+  );
+}
 
 export default function WorksheetPage({ config, worksheetKey }) {
   const [data] = useClassState(config.storageKey);
@@ -47,8 +95,16 @@ export default function WorksheetPage({ config, worksheetKey }) {
   const viewer = me ? { id, name: me.name } : session && instructor ? { id, name: "Instructor" } : null;
   const next = typeof window !== "undefined" ? window.location.pathname : config.path;
 
+  // A student named in the address: that student's sheet, for the instructor.
+  const want = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("s") || "" : "";
+  const them = want ? findStudent(roster, want) : null;
+
   let body;
-  if (!sheet) {
+  if (sheet && want) {
+    body = them && them.email ? "theirs"
+      : data === null ? <p style={{ fontSize: 17, margin: 0 }}>Loading the roster.</p>
+      : <p style={{ fontSize: 17, margin: 0 }}>There is no student {want} on the {config.code} roster.</p>;
+  } else if (!sheet) {
     body = <p style={{ fontSize: 17, margin: 0 }}>There is no worksheet at this address.</p>;
   } else if (!session) {
     body = (
@@ -71,7 +127,9 @@ export default function WorksheetPage({ config, worksheetKey }) {
       <div style={{ position: "sticky", top: 0, zIndex: 30 }}>
         <TopNav config={config} tabs={NAV_STUDENT} active="assignments" />
       </div>
-      {body !== null
+      {body === "theirs"
+        ? <TheirSheet config={config} worksheetKey={worksheetKey} student={them} theme={sheetThemeOf(theme, mode)} />
+        : body !== null
         ? <div style={{ padding: 32 }}>{body}</div>
         : <Worksheet key={viewer.id} supabase={gameClient} worksheetKey={worksheetKey} groupKey={config.id} viewer={viewer}
             accent={config.accent} accentLight={config.accentLight} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />}
