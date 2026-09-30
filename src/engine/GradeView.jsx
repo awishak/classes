@@ -8,6 +8,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useClassData } from "./store.js";
 import { usePhotos, useWithPhotos } from "./photos.js";
+import { useWithWorksheetSubmits } from "./worksheetSubmits.js";
 import { Avatar, profileOf } from "./Face.jsx";
 import { ThemeStyle } from "./ThemeShell.jsx";
 import { withIds } from "./roster.js";
@@ -66,7 +67,8 @@ export default function GradeView({ config }) {
   const [stored, update] = useClassData(config.storageKey);
   // The faces live one row over; put back on the profiles here. See photos.js.
   const [photos] = usePhotos(config.storageKey);
-  const data = useWithPhotos(stored, photos);
+  // And a linked worksheet's submits on its assignment, read-only. See worksheetSubmits.js.
+  const data = useWithWorksheetSubmits(useWithPhotos(stored, photos), config);
   const a = config.accent;
   const assignments = data?.assignments || config.assignments || [];
   const roster = useMemo(() => withIds(data?.students?.length ? data.students : (config.students || [])), [data, config]);

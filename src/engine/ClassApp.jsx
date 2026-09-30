@@ -14,6 +14,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useClassData, saveMerged, mayWritePlan } from "./store.js";
 import { usePhotos, useWithPhotos, saveProfile } from "./photos.js";
+import { useWithWorksheetSubmits } from "./worksheetSubmits.js";
 import { SHARED_KEY, blockById, registerTypes } from "./blocks.js";
 import { readAdded, readLabels } from "./types.js";
 import { ENGINE_LIST } from "../config/registry.js";
@@ -500,7 +501,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // does not ship two dozen faces with it. Put back on the profiles here, once,
   // and every screen below goes on reading profiles[name].avatar. See photos.js.
   const [photos, setPhoto] = usePhotos(classConfig.storageKey);
-  const data = useWithPhotos(stored, photos);
+  // And a linked worksheet's submits on its assignment, read-only. See worksheetSubmits.js.
+  const data = useWithWorksheetSubmits(useWithPhotos(stored, photos), classConfig);
   // The shared shelf as well, because a reading on the schedule can be a block
   // that belongs to me rather than to this class, and the pick that says read
   // this one first lives on the block.

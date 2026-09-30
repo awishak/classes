@@ -1,0 +1,92 @@
+// A worksheet's submits, counted on the assignment that links to it.
+//
+// A worksheet keeps its own rows (worksheet_sheets), and submitting one never
+// wrote to the class's assignmentLog. So Weekly Challenge 1 in COMM 118,
+// which links to the stakeholder map, showed three submissions, the three
+// Andrew had put in by hand, while 25 students had submitted the sheet.
+// Andrew, 2026-09-29, choosing between copying them in and reading them:
+// "read them from the worksheet".
+//
+// So this reads them and lays them over the log for display, the way
+// photos.js lays the photographs over the profiles. Nothing here is saved.
+// Every write in the app goes through update(prev => ...), and prev is the
+// stored class, which never holds these entries. A submit that is recalled
+// drops out on the next read.
+//
+// The rules decide who sees what: the instructor reads every sheet in the
+// class, a student reads only their own, and nobody signed in reads nothing.
+
+import { useEffect, useMemo, useState } from "react";
+import { gameClient } from "./gameClient.js";
+import { rosterOf } from "./roster.js";
+
+// The worksheet an assignment points at, from its details link:
+// /<class>/worksheets/<key>, on this site or written as a full address.
+const SHEET = /\/(comm\w+)\/worksheets\/([a-z0-9-]+)\/?(?:[?#].*)?$/;
+export const worksheetOf = (asg) => {
+  const m = String(asg?.instructionsUrl || "").trim().match(SHEET);
+  return m ? { classId: m[1], key: m[2] } : null;
+};
+
+const alive = (log) => (log || []).filter(e => !e.deleted);
+
+// The class with each linked worksheet's submits in its assignmentLog.
+// sheets: { [worksheetKey]: [{ viewer_id, submitted_at }] }.
+// A student who already has a submission in the log keeps theirs as it is.
+export function withWorksheetSubmits(data, config, sheets) {
+  if (!data || !sheets) return data;
+  const assignments = data.assignments || config.assignments || [];
+  const byEmail = new Map(rosterOf(config, data).filter(s => s.email).map(s => [String(s.email).trim().toLowerCase(), s.name]));
+  let al = null;
+  assignments.forEach(asg => {
+    const ws = worksheetOf(asg);
+    if (!ws || ws.classId !== config.id) return;
+    (sheets[ws.key] || []).forEach(sh => {
+      const name = byEmail.get(sh.viewer_id);
+      if (!name || !sh.submitted_at) return;
+      const log = (al || data.assignmentLog || {})[asg.id]?.[name];
+      if (alive(log).some(e => e.type === "submission")) return;
+      al = al || { ...(data.assignmentLog || {}) };
+      al[asg.id] = { ...(al[asg.id] || {}), [name]: [...(log || []), {
+        id: "ws-" + asg.id + "-" + sh.viewer_id, ts: Date.parse(sh.submitted_at), type: "submission",
+        link: asg.instructionsUrl, worksheet: ws.key,
+      }].sort((a, b) => (a.ts || 0) - (b.ts || 0)) };
+    });
+  });
+  return al ? { ...data, assignmentLog: al } : data;
+}
+
+// The submitted sheets for every worksheet the class's assignments link to.
+// Read again when the window comes back into focus, so a submit made while
+// the page sat open shows up on return.
+export function useWorksheetSheets(config, data) {
+  const keys = useMemo(() => {
+    const list = (data?.assignments || config.assignments || []).map(worksheetOf).filter(w => w && w.classId === config.id).map(w => w.key);
+    return [...new Set(list)].sort().join(",");
+  }, [data?.assignments, config]);
+  const [sheets, setSheets] = useState(null);
+  useEffect(() => {
+    if (!keys) { setSheets(null); return undefined; }
+    let alive = true;
+    const load = async () => {
+      const out = {};
+      for (const key of keys.split(",")) {
+        const r = await gameClient.from("worksheet_sheets").select("viewer_id,submitted_at")
+          .eq("worksheet_key", key).eq("group_key", config.id).not("submitted_at", "is", "null");
+        if (r.error) return;   // keep what is showing; the next focus tries again
+        out[key] = r.data || [];
+      }
+      if (alive) setSheets(out);
+    };
+    load();
+    window.addEventListener("focus", load);
+    return () => { alive = false; window.removeEventListener("focus", load); };
+  }, [keys, config.id]);
+  return sheets;
+}
+
+/** The class as every screen reads it, with the worksheet submits laid over. */
+export function useWithWorksheetSubmits(data, config) {
+  const sheets = useWorksheetSheets(config, data);
+  return useMemo(() => withWorksheetSubmits(data, config, sheets), [data, config, sheets]);
+}

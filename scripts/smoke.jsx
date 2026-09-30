@@ -27,6 +27,7 @@ import RosterSheet from "../src/engine/RosterSheet.jsx";
 import LoginPage from "../src/LoginPage.jsx";
 import { whereTo, studentFor } from "../src/engine/session.js";
 import { parseRoster, mergeRoster } from "../src/engine/roster.js";
+import { withWorksheetSubmits } from "../src/engine/worksheetSubmits.js";
 import { makeCode, looksLikeEmail } from "../api/logins.js";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
@@ -198,6 +199,27 @@ let failedEarly = 0;
 // bar. The phone one is what students actually use, and nothing rendered it
 // until now. That is how the phone header kept four theme buttons, a badge and
 // a role toggle for a day after the desktop header was tidied.
+// A worksheet's submits count on the assignment that links to it, without
+// touching what the class saved, and a hand entry stays as it is.
+{
+  const cfg = { id: "comm118", students: [] };
+  const data = {
+    students: [{ name: "Ann A", email: "ann@x.edu" }, { name: "Ben B", email: "ben@x.edu" }, { name: "Cy C", email: "cy@x.edu" }],
+    assignments: [{ id: "wc1", instructionsUrl: "https://classes.andrewishak.com/comm118/worksheets/stakeholder-map" }, { id: "wc2" }],
+    assignmentLog: { wc1: { "Ben B": [{ id: "h1", ts: 5, type: "submission", link: "x" }] } },
+  };
+  const before = JSON.stringify(data);
+  const out = withWorksheetSubmits(data, cfg, { "stakeholder-map": [
+    { viewer_id: "ann@x.edu", submitted_at: "2026-09-28T00:00:00Z" }, { viewer_id: "ben@x.edu", submitted_at: "2026-09-28T00:00:00Z" },
+    { viewer_id: "nobody@x.edu", submitted_at: "2026-09-28T00:00:00Z" }] });
+  const ws = (n) => (out.assignmentLog.wc1[n] || []).filter(e => e.type === "submission");
+  if (ws("Ann A").length !== 1 || ws("Ann A")[0].worksheet !== "stakeholder-map") { console.error("  FAIL  worksheet submits: Ann's submit is not on Weekly Challenge 1"); failedEarly++; }
+  if (ws("Ben B").length !== 1 || ws("Ben B")[0].id !== "h1") { console.error("  FAIL  worksheet submits: a hand entry was doubled or replaced"); failedEarly++; }
+  if (ws("Cy C").length !== 0 || out.assignmentLog.wc2) { console.error("  FAIL  worksheet submits: a submit landed where there was none"); failedEarly++; }
+  if (JSON.stringify(data) !== before) { console.error("  FAIL  worksheet submits: the stored class was changed"); failedEarly++; }
+  if (withWorksheetSubmits(data, cfg, null) !== data) { console.error("  FAIL  worksheet submits: no sheets should leave the class as it is"); failedEarly++; }
+}
+
 const PHONE = 390, LAPTOP = 1440;
 function atWidth(px, fn) {
   const was = globalThis.innerWidth;
