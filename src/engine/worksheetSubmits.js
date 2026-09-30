@@ -13,12 +13,15 @@
 // stored class, which never holds these entries. A submit that is recalled
 // drops out on the next read.
 //
-// The rules decide who sees what: the instructor reads every sheet in the
-// class, a student reads only their own, and nobody signed in reads nothing.
+// The instructor reads every sheet through /api/worksheet-submits, which takes
+// the PIN or an instructor session. Anyone else reads under the rules: a
+// student sees only their own sheet, and nobody signed in sees nothing.
 
 import { useEffect, useMemo, useState } from "react";
 import { gameClient } from "./gameClient.js";
 import { rosterOf } from "./roster.js";
+import { authHeaders } from "./session.js";
+import { savedPin } from "../InstructorGate.jsx";
 
 // The worksheet an assignment points at, from its details link:
 // /<class>/worksheets/<key>, on this site or written as a full address.
@@ -69,6 +72,16 @@ export function useWorksheetSheets(config, data) {
     if (!keys) { setSheets(null); return undefined; }
     let alive = true;
     const load = async () => {
+      // The instructor: every sheet, through the server, PIN or session.
+      try {
+        const r = await fetch("/api/worksheet-submits", {
+          method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+          body: JSON.stringify({ pin: savedPin(), groupKey: config.id, keys: keys.split(",") }),
+        });
+        const out = r.ok ? await r.json() : null;
+        if (out?.ok) { if (alive) setSheets(out.sheets); return; }
+      } catch { /* fall through to the student's own read */ }
+      // A student: their own sheet, under the rules.
       const out = {};
       for (const key of keys.split(",")) {
         const r = await gameClient.from("worksheet_sheets").select("viewer_id,submitted_at")
