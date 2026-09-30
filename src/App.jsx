@@ -12,6 +12,7 @@ import GamePage, { RunGamePage } from "./engine/GamePage.jsx";
 import GamesPage from "./engine/GamesPage.jsx";
 import WorksheetPage from "./engine/WorksheetPage.jsx";
 import WorksheetsPage from "./engine/WorksheetsPage.jsx";
+import ReadoutPage from "./engine/ReadoutPage.jsx";
 import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
@@ -252,6 +253,11 @@ export default function App() {
         <WorksheetsPage key={wsAll[1]} config={ENGINE[wsAll[1]]} />
       </InstructorGate>
     );
+  }
+  // What the class wrote on it, for the class: /<class>/worksheets/<key>/readout.
+  const wsRead = path.match(/^\/(comm\w+)\/worksheets\/([a-z0-9-]+)\/readout\/?$/);
+  if (wsRead && ENGINE[wsRead[1]]) {
+    return <ReadoutPage key={wsRead[1] + "/" + wsRead[2]} config={ENGINE[wsRead[1]]} worksheetKey={wsRead[2]} />;
   }
   const ws = path.match(/^\/(comm\w+)\/worksheets\/([a-z0-9-]+)\/?$/);
   if (ws && ENGINE[ws[1]]) {

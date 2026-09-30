@@ -1,0 +1,2436 @@
+{
+ "worksheet": "stakeholder-map",
+ "classId": "comm118",
+ "students": 25,
+ "answers": 1258,
+ "written": "2026-09-29",
+ "overview": [
+  "The Teams and Leagues cards were close to unanimous, and the sponsor cards were the hardest. More than half the Product Sponsors answers are brands like Toyota and McDonald's, which belong on Audience Sponsors.",
+  "Four students put Hawthorn on their map (players, coach Sam Mitchell, supporters, the team). They were following the sheet: its instructions named Hawthorn and Brisbane, written before the preliminary finals, and Fremantle made the Grand Final instead. One student also named Joe Daniher, who retired after the 2024 season.",
+  "Athletes → Fans was the most-drawn line at 28 answers, and 12 of those were the one word \"entertainment.\" The money lines were thin: three answers on the whole sheet mention the broadcast rights fee, and none mention club memberships.",
+  "Students read the game through US sports. The centre bounce became a basketball tip-off, the Observations and Opinions boxes kept listing soccer, rugby and US football, and 14 questions were about the game growing, most often in the US.",
+  "The boxes disagree with each other. Some students saw constant fights and a confusing rulebook, and others saw smiling players who \"do not fight\" and rules that were \"simple.\""
+ ],
+ "boxes": [
+  {
+   "field": "notice",
+   "label": "Observations",
+   "students": 25,
+   "answers": 122,
+   "summary": "Most students noticed three things: how physical the game is with almost no padding, how fast play restarts, and how packed and loud the stadium was. A second group watched the broadcast itself, the camera cuts, replays, score bug and commentary. And plenty of them reached for a US sport to explain what they saw, most often the basketball tip-off at the centre bounce.",
+   "themes": [
+    {
+     "theme": "Physical, with no pads",
+     "count": 13,
+     "note": "Contact, blood and injuries, almost always paired with surprise at how little protective gear the players wear.",
+     "examples": [
+      "I notice they hit each other very hard but aren't wearing any uniform protection.",
+      "I noticed that the players bleed a lot more frequently than in other sports",
+      "I noticed that it appears as a very physical sport yet the players wear almost no protective gear or equipment and seem to recover completely after every altercation which is impressive and also begs the question of how it differs from American football for example in which they are head to toe in protective gear."
+     ]
+    },
+    {
+     "theme": "Crowd size and noise",
+     "count": 10,
+     "note": "A full stadium that stays standing and loud for the whole game.",
+     "examples": [
+      "I notice that there are almost no empty seats in the stands.",
+      "I notice how LOUD the crowd is",
+      "fan supoport gets team to play harder"
+     ]
+    },
+    {
+     "theme": "What fans wore and carried",
+     "count": 9,
+     "note": "Scarves, flags, banners, purple head to toe; one student picked up that the scarves are for an Australian winter.",
+     "examples": [
+      "I noticed that all of the fans were wearing different gear than US football fans (lots of colored scarfs because it is during Australian winter)",
+      "I noticed many fans were in head to toe purple to support the Fremantle Dockers",
+      "This may have just been me but when they panned to the wide media angle besides right behind the goal when you looked into the crowd I couldn't tell a difference in color. It seemed like either it was mainly one teams color or that the fans didn't wear specific colors for their teams."
+     ]
+    },
+    {
+     "theme": "Fast, with few stoppages",
+     "count": 9,
+     "note": "Play restarts quickly and there are no ad breaks in play.",
+     "examples": [
+      "I notice that they have no breaks (not even for ads)!",
+      "I notice how fast paced the game moves. Whether its the amount of points scored in such a short amount of time or how quick the play starts up again after a stop/point/call of any kind, there are a lot of rhythm differences to American sports.",
+      "the game is very go go go all the time not many breaks"
+     ]
+    },
+    {
+     "theme": "Camera work and replays",
+     "count": 9,
+     "note": "Cuts, zooms, replays and crowd shots, and what they do for the viewer at home.",
+     "examples": [
+      "I notice that important plays are replayed from different camera angles, which makes big moments feel even more dramatic and gives viewers a chance to understand what happened.",
+      "I notice that the cameras don't just focus on the action they also show fans celebrating, reacting, and sometimes looking disappointed, which makes the audience at home feel like they are part of the stadium.",
+      "I noticed that there isn't too many closeups on individual players because of how fast paced the game is played."
+     ]
+    },
+    {
+     "theme": "Commentary",
+     "count": 7,
+     "note": "Energy, backstory and slang from the commentators.",
+     "examples": [
+      "I notice that the commentators talk about players' backgrounds, personalities, and past performances instead of only explaining what is happening on the field. This makes the players feel more like individuals with stories.",
+      "I notice the commentators are very enthusiastic in the way they speak, kinda reminds me of watching soccer on a spanish-speaking channel.",
+      "I noticed that the commentary was very objective (didn't ever talk about something not actively going on - like what sometimes happens during American sports)"
+     ]
+    },
+    {
+     "theme": "Looks like other sports",
+     "count": 7,
+     "note": "Soccer, rugby, basketball, US football, and one student's childhood game of 3 flags up.",
+     "examples": [
+      "I notice that this sports combines a lot of sports. I see aspects of soccer, football, basketball, and rugby.",
+      "One of my biggest observations was that I noticed when they would have a free kick, which was a lot, and the ball would go up, it reminded me of what some people call 3 flags up, or I called jackpot growing up. One guy hucks the ball in the air, and it is a scramble to get it either \"dead or alive\" alive is catching in the air and dead is scrambling for it on the ground.",
+      "a lot of kicking which is interesting, seems kind of like punting in football"
+     ]
+    },
+    {
+     "theme": "Rules and umpires",
+     "count": 7,
+     "note": "Umpire numbers, the extra goal posts, and play that seemed to carry on out of bounds.",
+     "examples": [
+      "I noticed that the Dockers went out of bounds and still kicked the ball in, didn't know this was legal",
+      "There are more goal posts than a US football game and I am curious what the outer posts mean",
+      "I notice the refs are called umpires."
+     ]
+    },
+    {
+     "theme": "Single moments",
+     "count": 7,
+     "note": "A bleeding fan, the rain, the halftime tie, the comeback, a birds sighting.",
+     "examples": [
+      "I noticed that one of the fans in the audience was bleeding. How did that happen or is it fake?",
+      "brisbane huge comeback fueled by the siren?"
+     ]
+    },
+    {
+     "theme": "Emotion and team closeness",
+     "count": 6,
+     "note": "Players celebrate together and the Grand Final stakes show on their faces.",
+     "examples": [
+      "I noticed that the teams are clearly very tight knit communities and I think their relationship impacts why their fan bases are so devoted. After almost every point they are jumping on each other, hugging, shouting, which contributes to the overall atmosphere of the game in which the fans are constantly full of energy.",
+      "I notice whenever one player makes a really good play all the others run to that specific player no matter where they are on the field."
+     ]
+    },
+    {
+     "theme": "Players seem friendly",
+     "count": 5,
+     "note": "Smiling, cordial, not in each other's faces.",
+     "examples": [
+      "The players seem more cordial than players in US games",
+      "I noticed that players didn't really get in each others faces (or at least for the first half I only saw this happen once)."
+     ]
+    },
+    {
+     "theme": "Game-day music and shows",
+     "count": 5,
+     "note": "Country Roads, Oasis, Linkin Park, Dom Dolla, the siren, halftime costumes.",
+     "examples": [
+      "The played country roads take me home as a song in the fourth quarter after a goal, very interesting playing that very american music in an Aussie football game.",
+      "I notice the music that they play, songs from Linkin Park and Oasis"
+     ]
+    },
+    {
+     "theme": "Big oval field, lots of players",
+     "count": 5,
+     "note": "The size and shape of the ground against how many players are out there.",
+     "examples": [
+      "The field is very large for the little number of players on the field",
+      "I notice the stadium is very circular, different than most american stadiums"
+     ]
+    },
+    {
+     "theme": "Skills and tactics",
+     "count": 5,
+     "note": "Kicking accuracy, the ball bouncing, players calling to each other.",
+     "examples": [
+      "I notice that players have to communicate nonstop, always seeing teammates pointing, calling, and directing each other",
+      "I notice even though the ball bounces in weird directions and the players seem to know exactly where it will go"
+     ]
+    },
+    {
+     "theme": "What players look like",
+     "count": 5,
+     "note": "Uniforms, cleats, tattoos, mullets.",
+     "examples": [
+      "Most players had mullets",
+      "I notice the suits are similar to gymnastics'."
+     ]
+    },
+    {
+     "theme": "The basketball tip-off",
+     "count": 4,
+     "note": "The centre bounce read as a tip-off to four students.",
+     "examples": [
+      "I notice it starts like a basketball tip off."
+     ]
+    },
+    {
+     "theme": "Sponsors on screen",
+     "count": 4,
+     "note": "Logos on the ground and screens, with Toyota named as the main sponsor.",
+     "examples": [
+      "I noticed the ads on/around the field (ex: Virgin Atlantic, Toyota, Macca's) even though the game was fast paced.",
+      "I notice that Toyota is the main sponser of this event."
+     ]
+    },
+    {
+     "theme": "On-screen graphics",
+     "count": 3,
+     "note": "The score bug and stats that help a new viewer follow.",
+     "examples": [
+      "I notice the unique score bug that shows how many goals (6pts) and single points each team scored as well as how straight forward they keep it with stats",
+      "I notice how much information is put on the screen through scores, player statistics, graphics, and other visuals. Even if someone doesn't know much about AFL, these features help them understand what is happening."
+     ]
+    },
+    {
+     "theme": "Coaches",
+     "count": 2,
+     "note": "Coaches on the sideline and up in a box.",
+     "examples": [
+      "I noticed that the coaches, or somebody higher up seemed to be in a box making calls to somebody which was interesting"
+     ]
+    }
+   ],
+   "standouts": [
+    "I noticed that all of the fans were wearing different gear than US football fans (lots of colored scarfs because it is during Australian winter)",
+    "One of my biggest observations was that I noticed when they would have a free kick, which was a lot, and the ball would go up, it reminded me of what some people call 3 flags up, or I called jackpot growing up. One guy hucks the ball in the air, and it is a scramble to get it either \"dead or alive\" alive is catching in the air and dead is scrambling for it on the ground.",
+    "I notice that the commentators talk about players' backgrounds, personalities, and past performances instead of only explaining what is happening on the field. This makes the players feel more like individuals with stories.",
+    "The played country roads take me home as a song in the fourth quarter after a goal, very interesting playing that very american music in an Aussie football game."
+   ],
+   "gaps": "Two sets of answers disagree: one group saw \"lots of small fights\" and \"constantly bumping, tackling, and fighting,\" another saw players who \"do not fight\" and are \"always smiling.\" And one student asked whether the Docker who went out of bounds was allowed to keep playing, which nobody answered; the ball has to be fully over the line, and a player standing out of bounds can still play a ball that's in."
+  },
+  {
+   "field": "think",
+   "label": "Opinions",
+   "students": 24,
+   "answers": 120,
+   "summary": "The class split on whether the game is fun to watch or hard to follow, and a fair number said both in the same line. Almost everyone was taken with the fans. And a smaller group wrote about how the broadcast shapes the viewing, from who gets made into a main character to why the coaches barely appear.",
+   "themes": [
+    {
+     "theme": "Fast and entertaining",
+     "count": 16,
+     "note": "Constant action, high scores and a close finish kept them watching.",
+     "examples": [
+      "In my opinion I think that this game, even though a championship game was just as if not more electric than an NFL game. I think that football was meant to be played in this way, it makes sense.",
+      "I think the scoring system is exciting because scoring 90+ points in a game reminds me of a basketball game.",
+      "I think that the game itself is much more enjoyable to watch because of how big the field is, it is not rectangular and can see the whole field, kind of like baseball and I enjoy watching baseball."
+     ]
+    },
+    {
+     "theme": "Athletes need every skill",
+     "count": 14,
+     "note": "Fitness, endurance and having to decide instantly with the ball.",
+     "examples": [
+      "the players seem extremely athletic, their builds are like a mix between a running back and a soccer player i feel like",
+      "I think that the AFL players can kick better than NFL kickers?",
+      "I think the players have to make decisions instantly because you can not hold onto the ball too long."
+     ]
+    },
+    {
+     "theme": "Fans are all in",
+     "count": 13,
+     "note": "Passion, costumes, songs, nobody sitting down, often compared to soccer fans.",
+     "examples": [
+      "I think that these fans are super invested. I love the purple wigs and I really think that singing songs after goals is something very special for a team/fan culture",
+      "I think its incredible that it seemed like not a single fan was sitting for even a moment of the game. It felt like every time the camera panned to the fans they were up, cheering, waving signs, etc.",
+      "I think that the range of fan outfits is very interesting and seems to not correlate to age or gender. I'm interested in how different fans dress based on their team culture."
+     ]
+    },
+    {
+     "theme": "Confusing or hard to follow",
+     "count": 12,
+     "note": "Rules, scoring, the pace and the accents all came up.",
+     "examples": [
+      "I think the rules were confusing at first, but once I watched it longer it became easier to understand.",
+      "I think is hard for crowd or fans to focus only on one person. I always miss who is the one passing the ball.",
+      "I think the commentary was sometimes hard to follow just simply given how fast they were talking and how heavy some of the commentors accents were."
+     ]
+    },
+    {
+     "theme": "The broadcast shapes the game",
+     "count": 10,
+     "note": "Commentators, replays and camera choices decide who viewers care about.",
+     "examples": [
+      "I think the broadcast makes certain players seem like the \"main characters\" by showing them more often, talking about their history, and focusing on their reactions during important moments.",
+      "I think slow-motion replays change the way we experience the game because a quick play that lasts only a few seconds can be turned into a dramatic moment that viewers get to analyze.",
+      "I think about how they rarely show the coaches"
+     ]
+    },
+    {
+     "theme": "Grand Final moments",
+     "count": 9,
+     "note": "Specific players, calls and the pressure of the final.",
+     "examples": [
+      "Lewis getting penalized was a good thing despite people getting mad on social media",
+      "I think the ending of the grand final was more clutch  than game 6 of the 2013  final",
+      "I think Brisbane used the siren as fuel to make a comeback"
+     ]
+    },
+    {
+     "theme": "A mix of other sports",
+     "count": 9,
+     "note": "The same idea as the Observations box, now as an opinion.",
+     "examples": [
+      "I think it looks like Harry Potter quidditch.",
+      "I think its fascinating to watch this sport as an American because it combines a handful of American sports but it's interesting because the rules and game itself are very different"
+     ]
+    },
+    {
+     "theme": "Physical with no protection",
+     "count": 8,
+     "note": "Players stay on after injuries and wear only a mouthguard.",
+     "examples": [
+      "if i was a parent id be scared to let my kid play with no protection",
+      "I think it is so interesting that if someone gets hurt they do not stop the play but that person runs off and they keep going-they clearly prioritize the entertainment piece",
+      "I think that the game is structured in a way that almost promotes the occasional scuffle, which seems to generate crowd pops and interest whenever it occurs"
+     ]
+    },
+    {
+     "theme": "Odd details",
+     "count": 8,
+     "note": "Tight uniforms, mouthguards in socks, no breaks, how many players are out there.",
+     "examples": [
+      "I think it is an odd strategy that they put their mouth guards in their socks",
+      "I feel like they're getting tired so instead of being strategic they're just being agressibe"
+     ]
+    },
+    {
+     "theme": "Lighter than US sports",
+     "count": 6,
+     "note": "Fewer complaints to the umpire, more smiling, more like an entertainment event.",
+     "examples": [
+      "I think the rules provide less opportunities for complaining to the ref",
+      "I think with how the players smile the whole game, or even when one tackles another and there isn't much of a negative reaction, it feels more lighthearted which also makes me wonder if that takes away the competitiveness of the game.",
+      "I think the rules and the way it is presented or at least was presented to me when I watched made it feel more like an entertainment event rather than watching a competitive sporting event."
+     ]
+    },
+    {
+     "theme": "Popular in Australia only",
+     "count": 4,
+     "note": "A local game with a huge home crowd, and whether the game could travel.",
+     "examples": [
+      "I think AFL is very localized. When I was young I lived in Australia for a while, but I've never heard about it and I had no friends play it. But the stadium is big and there are a lot of fans.",
+      "It seems like a small sport with a huge fan base"
+     ]
+    },
+    {
+     "theme": "Scoring",
+     "count": 4,
+     "note": "Goals and behinds, and points off the post.",
+     "examples": [
+      "I think it's so interesting how they still get a point for hitting the goal frame (it makes sense though!!)",
+      "I think that it is interesting how the scoreboard at the bottom is divided by the 6 vs 1 points"
+     ]
+    },
+    {
+     "theme": "Rule changes they would make",
+     "count": 4,
+     "note": "Shorter games, no marks, more hitting, a smaller goal.",
+     "examples": [
+      "I think there should be no marks",
+      "I think there needs to be more hitting"
+     ]
+    },
+    {
+     "theme": "Sponsors",
+     "count": 3,
+     "note": "Why global brands like Toyota and McDonald's buy into a local league.",
+     "examples": [
+      "I think even companies like Toyota and McDonalds sponsored it because they are targeting a fanbase that is dedicated.",
+      "The sponsers are brands based in the US as well, but not as popular to sponser a US game"
+     ]
+    }
+   ],
+   "standouts": [
+    "I think AFL is very localized. When I was young I lived in Australia for a while, but I've never heard about it and I had no friends play it. But the stadium is big and there are a lot of fans.",
+    "I think about how they rarely show the coaches",
+    "I think the rules provide less opportunities for complaining to the ref",
+    "I think with how the players smile the whole game, or even when one tackles another and there isn't much of a negative reaction, it feels more lighthearted which also makes me wonder if that takes away the competitiveness of the game."
+   ],
+   "gaps": "Students called the game \"less rules\" and \"simple\" in one place and \"a lot of rules\" and \"confusing\" in another, and nobody put the two side by side. And the opinion about goal-post hits is correct: a ball that hits the post scores a behind, one point."
+  },
+  {
+   "field": "wonder",
+   "label": "Questions",
+   "students": 24,
+   "answers": 120,
+   "summary": "The biggest cluster asked whether the AFL could work outside Australia, and in the US in particular. Next came how the rules work and how the umpires keep up with 36 players. The money questions (player pay, ticket prices, what sponsors get back) and the broadcast questions (who picks the close-up, whether producers steer commentators) line up with the connections on the map.",
+   "themes": [
+    {
+     "theme": "Could it grow beyond Australia",
+     "count": 14,
+     "note": "The US most of all, plus New Zealand, expansion past 18 teams, and a global audience.",
+     "examples": [
+      "I wonder if this would be different if the rules were the same but the fanbase was US based",
+      "I wonder how the game would be viewed if it was brought to America? Would we still see respect to the refs or not as many commercials?",
+      "I wonder if New Zealand and neighboring Islands will develop the AFL culture?"
+     ]
+    },
+    {
+     "theme": "How the rules work",
+     "count": 12,
+     "note": "Marks, free kicks, the 50-metre arc, scoring, when you can throw.",
+     "examples": [
+      "I wonder if the game originated with all of the intricate rules (lengths to dribble, at what point you can throw, etc.) or if they have evolved and been added over time?",
+      "I wonder why they sometimes toss the ball, kick it, or punch it.",
+      "whats the strategy behind going for a risky shot vs the safe route"
+     ]
+    },
+    {
+     "theme": "Why the game is built this way",
+     "count": 9,
+     "note": "The oval field, the number of players, four posts, quarters.",
+     "examples": [
+      "I wonder why they have a circular field? What difference does that make and why aren't there more of those?",
+      "I wonder why they chose to have their field be ginormous",
+      "I wonder why there are three field posts it reminds me of the Harry Potter game?"
+     ]
+    },
+    {
+     "theme": "Player life and the pathway in",
+     "count": 9,
+     "note": "Recruiting, levels of the sport, pressure, retirement.",
+     "examples": [
+      "I wonder what the process is to get recruited into this league? Do players grow up playing the game, play it through college, does it replace college and become a career immediately, etc.?",
+      "how you feel after going to pro to retirement, feeling of loss?",
+      "I wonder how many levels to this sport there are? Is it similar to soccer where there are different divisions of leagues? Or is it similar to the NFL with divisions in the same league?"
+     ]
+    },
+    {
+     "theme": "The broadcast",
+     "count": 8,
+     "note": "Who picks the close-up, how commentators choose storylines, and TV against being there.",
+     "examples": [
+      "I wonder how broadcasters decide which player to zoom in on after a big play and whether those choices affect which players become more popular with fans.",
+      "I wonder whether watching a game on television actually changes how we remember the game because the broadcast decides which moments we see repeatedly.",
+      "I wonder how much freedom commentators have to choose what they talk about and whether producers tell them which players or storylines to focus on."
+     ]
+    },
+    {
+     "theme": "Training and coaching",
+     "count": 8,
+     "note": "Practice, positions, plays, and Grand Final preparation.",
+     "examples": [
+      "I wonder if they have similar coaching to football, where there are different plays or if they just play as they feel is best",
+      "I wonder how the coaches adjust their game plan when the momentum starts to change."
+     ]
+    },
+    {
+     "theme": "One-offs",
+     "count": 8,
+     "note": "Halftime rooms, a three-peat, the Wharfie poster, rugby or football.",
+     "examples": [
+      "I wonder what the saying \"Are we Wharfing Yet?\" means? And did the answer answer the question on the poster?",
+      "I wonder if there has ever been a 3 peat before this one"
+     ]
+    },
+    {
+     "theme": "How the umpires keep up",
+     "count": 7,
+     "note": "Tracking 36 players, the 15-metre run, judging contact.",
+     "examples": [
+      "I wonder how referees count the exact 15 meters a player is running with the ball and if there are ever debacles between teams over that",
+      "I wonder how referees can keep track of all players when there is so much going on/so many players (What is their strategy, if any?)",
+      "I wonder how can umpires judge the body hitting."
+     ]
+    },
+    {
+     "theme": "How big the audience is",
+     "count": 7,
+     "note": "Viewers outside Australia, online and at home, and where the AFL sits among Australian sports.",
+     "examples": [
+      "I wonder how many people from outside of Australia watched this game live or in general? How often are international sports admired and viewed",
+      "is this the biggest sport in australia?"
+     ]
+    },
+    {
+     "theme": "Sponsors and ads",
+     "count": 7,
+     "note": "What sponsors pay, what they get, and why US brands sign on.",
+     "examples": [
+      "I wonder how much advertisers value a huge event like the AFL Grand Final and whether companies pay more to have their ads shown during especially important moments.",
+      "I wonder how the AFL measures whether sponsorships were successful",
+      "I wonder what inspired some American/non-Australian companies (ex: McDonalds, Toyota, Colgate) to be ad sponspors."
+     ]
+    },
+    {
+     "theme": "Injuries and protection",
+     "count": 7,
+     "note": "Why no pads, and what the common injuries are.",
+     "examples": [
+      "I wonder if there are more injuries than US football because of the little gear they have on",
+      "why is there no protection of any kind"
+     ]
+    },
+    {
+     "theme": "Fan culture and rivalries",
+     "count": 7,
+     "note": "Divided fan bases, rivalries set against Red Sox and Yankees, celebrity fans.",
+     "examples": [
+      "I wonder how much the divided fan bases impact the social culture of Australia? Is it divided or united on the basis of simply supporting the sport as a whole?",
+      "Now that I have watched a game, I wonder what the biggest rivalries are and if they are similar to a Red Sox Yankees or Cowboys Commanders rivalry.",
+      "I wonder if you were to ask a fan who has experience and is immersed in the culture of AFL and NFL, what are some big differences but also similarities of the fan culture?"
+     ]
+    },
+    {
+     "theme": "Uniforms and players' bodies",
+     "count": 6,
+     "note": "Low socks, tight suits, cold weather, what they rub on their arms.",
+     "examples": [
+      "What are the players rubbing on their hands/arms during timeouts? I saw two players get something from the water girl and rub it on their arms during a timeout.",
+      "I wonder if any of the players are grossed out by putting their mouthguards in their sock during the field goals"
+     ]
+    },
+    {
+     "theme": "Player pay",
+     "count": 5,
+     "note": "How much players and coaches earn, and how much comes from sponsors.",
+     "examples": [
+      "I wonder how much the players make from the game itself versus sponsors and partnerships?",
+      "I wonder how much the top atheletes and coaches in this sport get payed?"
+     ]
+    },
+    {
+     "theme": "Ticket prices",
+     "count": 3,
+     "note": "Cost and whether locals can afford a seat.",
+     "examples": [
+      "I wonder how affordable these tickets are for those who reside in Australia"
+     ]
+    },
+    {
+     "theme": "The songs",
+     "count": 3,
+     "note": "Why Take Me Home, Country Roads, and why the club songs sound old.",
+     "examples": [
+      "I wonder why they are singing \"Take Me Home, Country Roads\" in Australia. The meaning is universal but it is interesting that they took an American song.",
+      "I wonder why the team songs are so old fashioned"
+     ]
+    }
+   ],
+   "standouts": [
+    "I wonder how broadcasters decide which player to zoom in on after a big play and whether those choices affect which players become more popular with fans.",
+    "I wonder how much the divided fan bases impact the social culture of Australia? Is it divided or united on the basis of simply supporting the sport as a whole?",
+    "I wonder what the process is to get recruited into this league? Do players grow up playing the game, play it through college, does it replace college and become a career immediately, etc.?",
+    "I wonder how referees count the exact 15 meters a player is running with the ball and if there are ever debacles between teams over that"
+   ],
+   "gaps": "A few questions rest on a wrong fact. A goal is worth six points, not seven, and there are four posts, not three. The three-peat question has a fresh answer: this win was Brisbane's third premiership in a row, as they did in 2001, 2002 and 2003. And teams do go to the rooms at half time; the on-field huddles come at quarter time and three-quarter time."
+  }
+ ],
+ "cards": [
+  {
+   "field": "card:athletes",
+   "label": "Athletes",
+   "students": 25,
+   "answers": 73,
+   "summary": "Nearly every answer is a named player from the Brisbane Lions or the Fremantle Dockers. Will Ashcroft came up 11 times on his own and in three more lists, far ahead of anyone else. A few students listed several players in one entry.",
+   "themes": [
+    {
+     "theme": "Fremantle players",
+     "count": 26,
+     "note": "Serong, Young, Pearce, Jackson, Brayshaw, Treacy and others, one per answer.",
+     "examples": [
+      "Caleb Serong",
+      "Matthew Johnson - Dockers",
+      "Alex Pearce"
+     ]
+    },
+    {
+     "theme": "Brisbane players other than Ashcroft",
+     "count": 19,
+     "note": "Charlie Cameron leads with five, then Neale, Lohmann, Dunkley and Morris.",
+     "examples": [
+      "Charlie Cameron",
+      "Josh Dunkley - (Captain / Midfielder)",
+      "Kai Lohmann - Lions"
+     ]
+    },
+    {
+     "theme": "Will Ashcroft",
+     "count": 11,
+     "note": "The single most-named player on the sheet.",
+     "examples": [
+      "Will Ashcroft - Lions",
+      "Will Ashcroft"
+     ]
+    },
+    {
+     "theme": "Several players in one answer",
+     "count": 6,
+     "note": "Lists from one or both teams.",
+     "examples": [
+      "Brisbane Lions: Ty Gallop, Harris Andrews, Ryan Lester, Darcy Wilmot. Fremantle Dockers: Jordan Clark, Alex Pearce, Judd McVee, Karl Worner",
+      "Caleb Serong, Shai Bolton, Will Ashcroft, Josh Dunkley, Patrick Voss, Hayden Young"
+     ]
+    },
+    {
+     "theme": "Hawthorn players",
+     "count": 6,
+     "note": "The worksheet's instructions named Hawthorn and Brisbane, written before the preliminary finals; Fremantle made the Grand Final instead.",
+     "examples": [
+      "Dylan Moore, Nick Watson, Jack Ginnivan, Tom Barrass on the Hawthorns",
+      "James Sicily"
+     ]
+    },
+    {
+     "theme": "Something other than a player",
+     "count": 5,
+     "note": "Clothing, a team size, and a line about emotion.",
+     "examples": [
+      "Tank Tops",
+      "The emotion, the disappointment and happiness, after the win or loss is so prevalent on their faces. This means the world to them."
+     ]
+    }
+   ],
+   "standouts": [
+    "The emotion, the disappointment and happiness, after the win or loss is so prevalent on their faces. This means the world to them.",
+    "Brisbane Lions: Ty Gallop, Harris Andrews, Ryan Lester, Darcy Wilmot. Fremantle Dockers: Jordan Clark, Alex Pearce, Judd McVee, Karl Worner"
+   ],
+   "gaps": "Two students named Hawthorn players (Moore, Ginnivan, Gunston, Sicily, Ward, Watson, Barrass), which follows the sheet's instructions; Brisbane played Fremantle. Joe Daniher retired after the 2024 season, so he didn't play in this one. \"Tank Tops\" and \"Short Shorts\" describe the uniform, and \"18per teams\" is a team size."
+  },
+  {
+   "field": "card:audience",
+   "label": "Audience Sponsors",
+   "students": 24,
+   "answers": 82,
+   "summary": "Students found plenty of these, 82 answers from 24 people. Toyota and McDonald's (spelled several ways, Macca's included) make up almost a third of the answers. The rest is a long list of Australian and global brands from the ground, the goal posts and the jerseys.",
+   "themes": [
+    {
+     "theme": "Retail, energy and other services",
+     "count": 19,
+     "note": "Bunnings, Chemist Warehouse, DP World, Woodside, Workday, Crypto.com, Colgate and more.",
+     "examples": [
+      "Bunnings Warehouse",
+      "realestate.com.au",
+      "Workday"
+     ]
+    },
+    {
+     "theme": "Toyota",
+     "count": 13,
+     "note": "The AFL's naming partner, spotted on the field, the screens and the premiership ad.",
+     "examples": [
+      "Toyota (using branding printed on field to reach/advertise to customers)",
+      "Toyota had a big ad on the screen with the footy cup on it"
+     ]
+    },
+    {
+     "theme": "Telcos, banks and insurers",
+     "count": 13,
+     "note": "Telstra, NAB, Bankwest, Youi, AAMI.",
+     "examples": [
+      "Telstra",
+      "AAMI"
+     ]
+    },
+    {
+     "theme": "McDonald's",
+     "count": 12,
+     "note": "Including Macca's, Maccas and Macas, and the arches on the goal posts.",
+     "examples": [
+      "The goal posts had Mcdonald's golden arches on the post",
+      "Macca's"
+     ]
+    },
+    {
+     "theme": "Food and drink besides McDonald's",
+     "count": 8,
+     "note": "KFC, Coca-Cola, Coles, Uber Eats.",
+     "examples": [
+      "KFC on uniforms",
+      "uber eats"
+     ]
+    },
+    {
+     "theme": "Virgin Australia",
+     "count": 6,
+     "note": "On the ground and in the naming.",
+     "examples": [
+      "Virgin Australia was on the field"
+     ]
+    },
+    {
+     "theme": "Cars and car products besides Toyota",
+     "count": 6,
+     "note": "Hyundai, Castrol, Continental.",
+     "examples": [
+      "Continental tires"
+     ]
+    },
+    {
+     "theme": "Several brands in one answer",
+     "count": 3,
+     "note": "Where the student saw them, jerseys or the field.",
+     "examples": [
+      "Brisbane had Mcdonalds, Hyundai, and Youi on their jerseys"
+     ]
+    },
+    {
+     "theme": "Not a sponsor",
+     "count": 2,
+     "note": "A halftime performance, and one student who wasn't sure what the card meant.",
+     "examples": [
+      "Kylie + other Melbourne singer performance",
+      "not sure what this is"
+     ]
+    }
+   ],
+   "standouts": [
+    "The goal posts had Mcdonald's golden arches on the post",
+    "Brisbane had Mcdonalds, Hyundai, and Youi on their jerseys",
+    "Toyota (using branding printed on field to reach/advertise to customers)"
+   ],
+   "gaps": "\"Kylie + other Melbourne singer performance\" is entertainment, not a sponsor, and one student left a note saying they weren't sure what the card meant. Skechers and New Balance make sporting gear and fit Product Sponsors better."
+  },
+  {
+   "field": "card:product",
+   "label": "Product Sponsors",
+   "students": 24,
+   "answers": 67,
+   "summary": "About two in five answers are true product sponsors: sports drinks (Gatorade, Powerade, Cool Ridge) and kit (New Balance, Adidas, Nike, Puma, Under Armour). The rest repeats the Audience Sponsors card, with Toyota and McDonald's again at the top.",
+   "themes": [
+    {
+     "theme": "Other non-sport brands",
+     "count": 16,
+     "note": "Hyundai, Nissan, Youi, Telstra, TCL, DP World, Woodside, Uber Eats, Tasmania.",
+     "examples": [
+      "hyundai (lions",
+      "youi (insurance?"
+     ]
+    },
+    {
+     "theme": "Kit and footwear",
+     "count": 14,
+     "note": "New Balance makes Brisbane's kit; Adidas, Nike, Puma and Under Armour also appear.",
+     "examples": [
+      "Brisbane had New balance shorts",
+      "New Balance"
+     ]
+    },
+    {
+     "theme": "McDonald's and KFC",
+     "count": 13,
+     "note": "The same fast-food names as on the Audience card.",
+     "examples": [
+      "McDonalds (branding wrapped around goal posts)",
+      "McDonalds-ish"
+     ]
+    },
+    {
+     "theme": "Sports drinks and water",
+     "count": 12,
+     "note": "Gatorade, Powerade, Cool Ridge, often spotted on the water carriers.",
+     "examples": [
+      "Gatorade",
+      "Cool ridge"
+     ]
+    },
+    {
+     "theme": "Toyota",
+     "count": 9,
+     "note": "Also the top answer on the Audience card.",
+     "examples": [
+      "Toyota"
+     ]
+    },
+    {
+     "theme": "Beer",
+     "count": 2,
+     "note": "Carlton Draught and Carlton Dry.",
+     "examples": [
+      "carlton draught"
+     ]
+    },
+    {
+     "theme": "Unclear",
+     "count": 1,
+     "note": "A brand name that doesn't match an AFL sponsor.",
+     "examples": [
+      "Wagner"
+     ]
+    }
+   ],
+   "standouts": [
+    "McDonalds (branding wrapped around goal posts)",
+    "Brisbane had New balance shorts"
+   ],
+   "gaps": "More than half the answers (Toyota, McDonald's, KFC, Hyundai, Youi, Telstra, DP World) belong on Audience Sponsors, because those brands aren't sporting products. \"DP World Tour\" is a golf tour."
+  },
+  {
+   "field": "card:fans",
+   "label": "Fans",
+   "students": 24,
+   "answers": 56,
+   "summary": "Students described the fans more than they named them: the purple of Fremantle, the maroon and gold of Brisbane, scarves, flags, wigs, morphsuits. A handful gave the attendance, 100,023. A few thought past the stadium, to club members, season-ticket holders, fantasy players and bettors.",
+   "themes": [
+    {
+     "theme": "Gear, colours and flags",
+     "count": 20,
+     "note": "Scarves, beanies, purple hair, giant flags, signs.",
+     "examples": [
+      "Head to Toe purple morphsuits",
+      "It is interesting that in one view I saw fans wearing scarfs which doesn't happen much in the NFL.",
+      "Purple hair color"
+     ]
+    },
+    {
+     "theme": "Supporters of a named team",
+     "count": 13,
+     "note": "Brisbane and Fremantle, and two answers naming Hawthorn, as the sheet's instructions did.",
+     "examples": [
+      "Fremantly fans in purple with scarfs, flags, jerseys, etc.",
+      "Brisbane fans in maroon, blue, and gold with flags, scarfs, and jerseys"
+     ]
+    },
+    {
+     "theme": "Kinds of fans",
+     "count": 8,
+     "note": "Club members, season-ticket holders, bettors, locals, and the student themselves.",
+     "examples": [
+      "fantasy or people who bet on the afl/individual players",
+      "Me (Now)",
+      "club members"
+     ]
+    },
+    {
+     "theme": "Crowd size",
+     "count": 5,
+     "note": "The 100,023 attendance figure.",
+     "examples": [
+      "100,023 fans in attendance"
+     ]
+    },
+    {
+     "theme": "One fan in particular",
+     "count": 5,
+     "note": "The lion mane, the grey suit, the huge red football, Dom Dolla.",
+     "examples": [
+      "The fan with the huge red football celebrating after a goal",
+      "Teen boy with grey quarter zip sweatshirt. Very chill while watching"
+     ]
+    },
+    {
+     "theme": "What fans did",
+     "count": 5,
+     "note": "Singing Country Roads, jumping, a fight, a pre-game wedding.",
+     "examples": [
+      "Getting married pre game",
+      "Singing \"Take Me Home, Country Roads\""
+     ]
+    }
+   ],
+   "standouts": [
+    "fantasy or people who bet on the afl/individual players",
+    "Getting married pre game",
+    "Me (Now)"
+   ],
+   "gaps": "Two students put Hawthorn supporters on the card, following the sheet's instructions; Brisbane played Fremantle."
+  },
+  {
+   "field": "card:staff",
+   "label": "Staff",
+   "students": 24,
+   "answers": 51,
+   "summary": "Most students named the two head coaches, Chris Fagan for Brisbane and Justin Longmuir for Fremantle, or wrote \"coaches.\" Twelve answers went further, to trainers, medics, physios and the water carriers. Six answers put referees or umpires here.",
+   "themes": [
+    {
+     "theme": "Named coaches and club staff",
+     "count": 17,
+     "note": "Fagan and Longmuir mostly, plus assistants and Brisbane's football manager Danny Daly.",
+     "examples": [
+      "chris fagan (head coach) cameron bruce (assistant coach) dale morris (assistant coach) daniel lloyd (assistant coach) high performance coach- damien austin, GM danny daly",
+      "Brisbane: Coach Chris Fagan, Fremantle: Coach Justin Longmuir. Additionally, staff could include medical professionals, field staff, and officials"
+     ]
+    },
+    {
+     "theme": "Medical, training and support staff",
+     "count": 12,
+     "note": "Trainers, medics, physios, analysts, water carriers.",
+     "examples": [
+      "Water staff. Dresses in all purple and brought water to the players during breaks.",
+      "One water girl with the purple vest came out with gatorade bottles and new balance. She was the brisbane water girl"
+     ]
+    },
+    {
+     "theme": "Coaches, unnamed",
+     "count": 11,
+     "note": "Head, senior, midfield, backline and forward coaches.",
+     "examples": [
+      "Midfield Coach",
+      "Backline Coach"
+     ]
+    },
+    {
+     "theme": "Umpires and referees",
+     "count": 6,
+     "note": "Including field umpire Hayden Meyer.",
+     "examples": [
+      "Field umpire Hayden Meyer"
+     ]
+    },
+    {
+     "theme": "Other",
+     "count": 3,
+     "note": "A coach with a headset mic, \"full of personnel,\" and one name.",
+     "examples": [
+      "team leader(w/ earphone mic"
+     ]
+    },
+    {
+     "theme": "Media roles",
+     "count": 2,
+     "note": "A photographer and a rebroadcast station.",
+     "examples": [
+      "photographer",
+      "rebroadcast station"
+     ]
+    }
+   ],
+   "standouts": [
+    "One water girl with the purple vest came out with gatorade bottles and new balance. She was the brisbane water girl",
+    "chris fagan (head coach) cameron bruce (assistant coach) dale morris (assistant coach) daniel lloyd (assistant coach) high performance coach- damien austin, GM danny daly"
+   ],
+   "gaps": "Sam Mitchell coaches Hawthorn, the team the sheet's instructions named. \"Photographer\" and \"rebroadcast station\" belong on the Media card. Umpires appear on both this card and the Governing Bodies card, so the class hasn't settled where officials go."
+  },
+  {
+   "field": "card:media",
+   "label": "Media",
+   "students": 24,
+   "answers": 46,
+   "summary": "Answers split by where the student watched. US viewers named Fox Sports, FS1 and Fox One; others named the Australian broadcasters, Channel 7 and 7plus, Fox Footy, Foxtel and Kayo. One student named seven commentators and reporters.",
+   "themes": [
+    {
+     "theme": "Fox Sports in the US",
+     "count": 11,
+     "note": "FS1, Fox One and plain \"fox.\"",
+     "examples": [
+      "Fox Sports 1 (FS1)",
+      "Fox Sports US"
+     ]
+    },
+    {
+     "theme": "Seven Network and 7plus",
+     "count": 7,
+     "note": "The Grand Final's free-to-air broadcaster in Australia.",
+     "examples": [
+      "7Plus, FOX Australia, Channel 7 (differs based on your location)"
+     ]
+    },
+    {
+     "theme": "Streaming and social",
+     "count": 7,
+     "note": "YouTube, YouTube TV, Prime Video, social media.",
+     "examples": [
+      "Prime Video depending on region",
+      "social media platforms, YouTube,"
+     ]
+    },
+    {
+     "theme": "Commentators by name",
+     "count": 7,
+     "note": "Brian Taylor, James Brayshaw, Luke Hodge, Kane Cornes and others, all from one student.",
+     "examples": [
+      "Brian Taylor",
+      "Abbey Holmes"
+     ]
+    },
+    {
+     "theme": "Media roles",
+     "count": 6,
+     "note": "Photographers, videographers, the halftime panel, local news.",
+     "examples": [
+      "Experts discussing at halftime show",
+      "footy cam"
+     ]
+    },
+    {
+     "theme": "Fox Footy, Foxtel and Kayo",
+     "count": 4,
+     "note": "The Australian pay-TV and streaming side.",
+     "examples": [
+      "Kayo sports"
+     ]
+    },
+    {
+     "theme": "Not a media outlet",
+     "count": 4,
+     "note": "The league, a sponsor, a halftime show, an observation about the camera.",
+     "examples": [
+      "AFL - Australian Football League",
+      "The way that the camera was angled when it showed the whole oval field, you could see whatever brand was advertising on the whole ring of the oval"
+     ]
+    }
+   ],
+   "standouts": [
+    "7Plus, FOX Australia, Channel 7 (differs based on your location)",
+    "The way that the camera was angled when it showed the whole oval field, you could see whatever brand was advertising on the whole ring of the oval"
+   ],
+   "gaps": "\"AFL - Australian Football League\" is the league, not the media, though the AFL does run its own media arm. Telstra is a sponsor and tech partner, and the Kylie halftime show is entertainment."
+  },
+  {
+   "field": "card:teams",
+   "label": "Teams",
+   "students": 24,
+   "answers": 39,
+   "summary": "The class agreed here: 36 of 39 answers name the Brisbane Lions, the Fremantle Dockers, or both. The rest are two Hawthorn answers, which follow the sheet's instructions, and one player name.",
+   "themes": [
+    {
+     "theme": "Brisbane Lions",
+     "count": 16,
+     "note": "Named on its own.",
+     "examples": [
+      "Brisbane Lions"
+     ]
+    },
+    {
+     "theme": "Fremantle",
+     "count": 14,
+     "note": "As the Dockers or Fremantle Football Club.",
+     "examples": [
+      "Fremantle Football Club",
+      "Fremantle Dockers"
+     ]
+    },
+    {
+     "theme": "Both teams in one answer",
+     "count": 6,
+     "note": "Written as a matchup.",
+     "examples": [
+      "Fremantle Dockers vs Brisbane Lions"
+     ]
+    },
+    {
+     "theme": "Hawthorn",
+     "count": 2,
+     "note": "The worksheet's instructions named Hawthorn and Brisbane, written before the preliminary finals; Fremantle made the Grand Final instead.",
+     "examples": [
+      "Hawthorn Hawks & Brisbane Lions"
+     ]
+    },
+    {
+     "theme": "A player, not a team",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "Joe Daniher (Brisbane Lions)"
+     ]
+    }
+   ],
+   "standouts": [],
+   "gaps": "One student put a player, Joe Daniher, on the Teams card, and he retired after the 2024 season."
+  },
+  {
+   "field": "card:leagues",
+   "label": "Leagues",
+   "students": 24,
+   "answers": 27,
+   "summary": "Everyone got this one: the Australian Football League. One student added \"one conference,\" a useful contrast with the NFL, and then listed the NFL, NBA and MLS as separate entries.",
+   "themes": [
+    {
+     "theme": "The AFL",
+     "count": 24,
+     "note": "Written out or abbreviated.",
+     "examples": [
+      "AFL - one conference",
+      "AFL Premiership",
+      "AFL is the main league"
+     ]
+    },
+    {
+     "theme": "US leagues",
+     "count": 3,
+     "note": "NFL, NBA and MLS, all from one student.",
+     "examples": [
+      "NFL",
+      "NBA",
+      "MLS"
+     ]
+    }
+   ],
+   "standouts": [
+    "AFL - one conference"
+   ],
+   "gaps": "\"AFL Premiership\" is the competition the league runs, not the league itself. The NFL, NBA and MLS entries came from one student who also wrote the AFL; they read as comparisons, but on this card they sit as if they were part of the AFL map."
+  },
+  {
+   "field": "card:governing",
+   "label": "Governing Bodies",
+   "students": 23,
+   "answers": 26,
+   "summary": "Most students found the AFL Commission, and one named its chair, Craig Drummond. Five wrote just \"AFL,\" which puts the league and the governing body in the same box. Three put the umpires here.",
+   "themes": [
+    {
+     "theme": "The AFL Commission",
+     "count": 17,
+     "note": "Including one that added the West Australian Football Commission.",
+     "examples": [
+      "WAFC, AFL Comission",
+      "AFL Commission (owns all the teams that fall under the Australian Football League)"
+     ]
+    },
+    {
+     "theme": "Just \"AFL\"",
+     "count": 5,
+     "note": "The league name again, with no commission.",
+     "examples": [
+      "afl?"
+     ]
+    },
+    {
+     "theme": "Umpires or referees",
+     "count": 3,
+     "note": "Officials who run the game.",
+     "examples": [
+      "Goal, field/sideline"
+     ]
+    },
+    {
+     "theme": "The commission chair",
+     "count": 1,
+     "note": "Craig Drummond.",
+     "examples": [
+      "Craig Drummond"
+     ]
+    }
+   ],
+   "standouts": [
+    "Craig Drummond",
+    "WAFC, AFL Comission"
+   ],
+   "gaps": "\"The AFL Commission (owns all the teams...)\" is wrong: the clubs are member-owned, and the commission governs the competition. Umpires officiate games under the commission's rules, so they fit better with Staff than here."
+  }
+ ],
+ "connections": [
+  {
+   "field": "line:athletes>fans",
+   "label": "Athletes → Fans",
+   "students": 17,
+   "answers": 28,
+   "summary": "The most-drawn line on the sheet. Twelve answers stop at \"entertainment.\" The rest name something fans carry away: a player to follow, a storyline, pride, identity, a community.",
+   "themes": [
+    {
+     "theme": "Entertainment",
+     "count": 12,
+     "note": "Usually one word.",
+     "examples": [
+      "the main point of entertainment for the fans"
+     ]
+    },
+    {
+     "theme": "Someone to care about",
+     "count": 8,
+     "note": "Personalities, drama, storylines, pride, even misery.",
+     "examples": [
+      "Athletes give fans players to support and become emotionally invested in.",
+      "misery",
+      "Personalities to follow"
+     ]
+    },
+    {
+     "theme": "Identity and community",
+     "count": 4,
+     "note": "Fans build a shared identity around the players.",
+     "examples": [
+      "They give fans emotional reasons to follow a team, they create a community through their own identity.",
+      "share the sense of achievement"
+     ]
+    },
+    {
+     "theme": "Role models",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "leadership/role model"
+     ]
+    },
+    {
+     "theme": "Other",
+     "count": 2,
+     "note": "Personal interaction, and the performance fans pay for.",
+     "examples": [
+      "The atheletes exhibit their individual and team skills and talent and provide the specific emotions and play that the fans pay money to watch. If a fans favorite player(s) are playing in a game, fans are much more likely to go to that game and spend money to do so. The athletes provide commercial benifits,"
+     ]
+    }
+   ],
+   "standouts": [
+    "misery",
+    "They give fans emotional reasons to follow a team, they create a community through their own identity.",
+    "The atheletes exhibit their individual and team skills and talent and provide the specific emotions and play that the fans pay money to watch. If a fans favorite player(s) are playing in a game, fans are much more likely to go to that game and spend money to do so. The athletes provide commercial benifits,"
+   ],
+   "gaps": "Nobody mentioned the direct contact AFL players have with fans, like signing, club events or social media."
+  },
+  {
+   "field": "line:staff>athletes",
+   "label": "Staff → Athletes",
+   "students": 17,
+   "answers": 22,
+   "summary": "Coaching, strategy and training lead, then general support and guidance. Two answers treated staff as the umpires.",
+   "themes": [
+    {
+     "theme": "Coaching, strategy, training",
+     "count": 11,
+     "note": "",
+     "examples": [
+      "Coaches and other staff train athletes, create strategies, and help them prepare for games.",
+      "The staff provide the atheletes with the tools and skills they need to play their sport. They provide the atheletes with the coaching, strategy, medical support, etc. they need to play to the highest of their abilities."
+     ]
+    },
+    {
+     "theme": "Support and guidance",
+     "count": 7,
+     "note": "One word, mostly.",
+     "examples": [
+      "Help athletes prepare and perform."
+     ]
+    },
+    {
+     "theme": "Medical care and safety",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "Staff keeps athletes safe and can help with injury or inquiries."
+     ]
+    },
+    {
+     "theme": "Umpiring",
+     "count": 2,
+     "note": "Refs supervising players, from two students.",
+     "examples": [
+      "Refs supervise the athletes on the field"
+     ]
+    }
+   ],
+   "standouts": [
+    "The staff provide the atheletes with the tools and skills they need to play their sport. They provide the atheletes with the coaching, strategy, medical support, etc. they need to play to the highest of their abilities."
+   ],
+   "gaps": "Only two answers mention medical staff, even though several students noticed trainers running on while play continued."
+  },
+  {
+   "field": "line:leagues>teams",
+   "label": "Leagues → Teams",
+   "students": 15,
+   "answers": 21,
+   "summary": "Most students said the league gives teams a competition to play in, a structure, a place to meet other teams. Five named something material: money, sponsorship, exposure, facilities.",
+   "themes": [
+    {
+     "theme": "A competition to play in",
+     "count": 12,
+     "note": "Organisation, structure, a system.",
+     "examples": [
+      "The AFL organizes the competition that the teams participate in.",
+      "A larger body to be apart of"
+     ]
+    },
+    {
+     "theme": "Money, sponsors, exposure, facilities",
+     "count": 5,
+     "note": "",
+     "examples": [
+      "sponsorships",
+      "Exposure"
+     ]
+    },
+    {
+     "theme": "Rules and management",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "enforce rules"
+     ]
+    },
+    {
+     "theme": "Other",
+     "count": 2,
+     "note": "A comment on the field logos and \"win-win.\"",
+     "examples": [
+      "I think it is cool that they have both team logos on the oval, unlike NFL where only the home teams logo is on the field"
+     ]
+    }
+   ],
+   "standouts": [
+    "I think it is cool that they have both team logos on the oval, unlike NFL where only the home teams logo is on the field"
+   ],
+   "gaps": "Nobody named the league's biggest payment to clubs, the distribution from the broadcast rights deal, or the draft and salary cap the league runs."
+  },
+  {
+   "field": "line:fans>athletes",
+   "label": "Fans → Athletes",
+   "students": 15,
+   "answers": 19,
+   "summary": "Support, by a wide margin, usually in one word. Three answers followed the money from tickets and jerseys to players' pay.",
+   "themes": [
+    {
+     "theme": "Support and energy",
+     "count": 14,
+     "note": "Cheering, chants, atmosphere, following online.",
+     "examples": [
+      "The chants that the fans do after a good goal is insane. If I was an athlete it would get me so pumped up.",
+      "Show up for the athletes, follow them on social media, rep their jerseys, etc"
+     ]
+    },
+    {
+     "theme": "Money",
+     "count": 3,
+     "note": "Tickets and jerseys that end up in players' pay.",
+     "examples": [
+      "helps the league make money which in turn pays the athletes."
+     ]
+    },
+    {
+     "theme": "A reason to play",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "reasons to keep playing"
+     ]
+    }
+   ],
+   "standouts": [
+    "The chants that the fans do after a good goal is insane. If I was an athlete it would get me so pumped up.",
+    "helps the league make money which in turn pays the athletes."
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:athletes>media",
+   "label": "Athletes → Media",
+   "students": 15,
+   "answers": 19,
+   "summary": "Content: stories, personalities, highlights, something to report. Students agreed on this one more than almost any other line.",
+   "themes": [
+    {
+     "theme": "Stories and content",
+     "count": 13,
+     "note": "People, backstories, highlights, personalities.",
+     "examples": [
+      "They provide backstories, personalities, and behind the scenes moments that give the media the sense of a narrative.",
+      "Give the media people and stories to cover"
+     ]
+    },
+    {
+     "theme": "Entertainment",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "entertainment"
+     ]
+    },
+    {
+     "theme": "Other",
+     "count": 3,
+     "note": "Money, coverage, public figures.",
+     "examples": [
+      "they become public figures that are looked up to and followed"
+     ]
+    }
+   ],
+   "standouts": [
+    "They provide backstories, personalities, and behind the scenes moments that give the media the sense of a narrative."
+   ],
+   "gaps": "\"Coverage\" runs the other way; the media covers the athletes."
+  },
+  {
+   "field": "line:media>fans",
+   "label": "Media → Fans",
+   "students": 14,
+   "answers": 17,
+   "summary": "Two answers dominate: a way to watch when you can't be there, and information like stats, updates and analysis.",
+   "themes": [
+    {
+     "theme": "A way to watch",
+     "count": 7,
+     "note": "Live coverage for fans not at the ground.",
+     "examples": [
+      "The media allows for fans who may not be able to attend the game in person to view the full thing online",
+      "Media gives fans access to the game through live coverage, commentary, interviews, replays, and statistics."
+     ]
+    },
+    {
+     "theme": "Information and updates",
+     "count": 7,
+     "note": "Stats, analysis, opinion.",
+     "examples": [
+      "An opportunity to stay in the know without tuning into a specific game",
+      "Information (about players, teams, real time game updates, etc.)"
+     ]
+    },
+    {
+     "theme": "Other",
+     "count": 3,
+     "note": "New fans, material to remix, a sense of culture.",
+     "examples": [
+      "resources for secondary creation",
+      "The fans in that one shot in the fourth quarter at 7:37 is insane. It looks like the world cup with all those people in the streets, it provides a sense of culture and being able to be seen"
+     ]
+    }
+   ],
+   "standouts": [
+    "resources for secondary creation",
+    "The fans in that one shot in the fourth quarter at 7:37 is insane. It looks like the world cup with all those people in the streets, it provides a sense of culture and being able to be seen"
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:teams>athletes",
+   "label": "Teams → Athletes",
+   "students": 13,
+   "answers": 17,
+   "summary": "Belonging came up most: identity, family, community. Then the practical side, training and facilities. Only one student said teams pay players.",
+   "themes": [
+    {
+     "theme": "Identity and belonging",
+     "count": 6,
+     "note": "",
+     "examples": [
+      "The main thing that the teams provide the atheletes is an identity. It gives them a group, logo, and ideology to identify themselves with and represent everywhere they go.",
+      "A family like bond"
+     ]
+    },
+    {
+     "theme": "Coaching, training, facilities",
+     "count": 5,
+     "note": "",
+     "examples": [
+      "The teams also provide the players with strategy and a field to play on. They provide the training and support for the players."
+     ]
+    },
+    {
+     "theme": "A place to play",
+     "count": 4,
+     "note": "A role, an opportunity, a field.",
+     "examples": [
+      "They provide them with a place to foster athletic talent after higher education, as well as a community."
+     ]
+    },
+    {
+     "theme": "Pay",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "Teams will pay athletes large sums of money through contracts."
+     ]
+    },
+    {
+     "theme": "Support",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "support"
+     ]
+    }
+   ],
+   "standouts": [
+    "The main thing that the teams provide the atheletes is an identity. It gives them a group, logo, and ideology to identify themselves with and represent everywhere they go."
+   ],
+   "gaps": "Only one answer mentions contracts, and nobody mentioned the salary cap that limits what each club can pay."
+  },
+  {
+   "field": "line:athletes>teams",
+   "label": "Athletes → Teams",
+   "students": 13,
+   "answers": 16,
+   "summary": "Athletes are the team. After that, students listed what players bring: work, time, skill, dedication, image.",
+   "themes": [
+    {
+     "theme": "The players themselves",
+     "count": 6,
+     "note": "Athletes make up the team.",
+     "examples": [
+      "Athletes make up the teams and are picked by them"
+     ]
+    },
+    {
+     "theme": "Effort and skill",
+     "count": 5,
+     "note": "",
+     "examples": [
+      "The atheletes impliment the team's strategy."
+     ]
+    },
+    {
+     "theme": "Wins and reputation",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "The atheletes contribute to the team's reputation."
+     ]
+    },
+    {
+     "theme": "Other",
+     "count": 2,
+     "note": "A fanbase and leadership.",
+     "examples": [
+      "fanbase"
+     ]
+    }
+   ],
+   "standouts": [
+    "The atheletes provide the teams with the group of players that choose to represent them and play under their identity. It provides them the content that they advertise to fans to garner support."
+   ],
+   "gaps": "\"there is 18 at a time on the field\" is right; each side has 18 players on the ground."
+  },
+  {
+   "field": "line:staff>teams",
+   "label": "Staff → Teams",
+   "students": 11,
+   "answers": 15,
+   "summary": "Mostly the same list as Staff to Athletes: coaching, strategy, medical help, support. Students didn't separate what staff do for a team from what they do for a player.",
+   "themes": [
+    {
+     "theme": "Coaching and strategy",
+     "count": 6,
+     "note": "",
+     "examples": [
+      "Coaching and direction"
+     ]
+    },
+    {
+     "theme": "Support and day-to-day running",
+     "count": 4,
+     "note": "",
+     "examples": [
+      "The staff provides the support for the teams. Coaches make the players better and give them strategy and a plan. The trainers provide medical support and help condtion the players. The kitmen provide the uniforms and are there to give whatever the players need.",
+      "Helps support the team, whether the staff is features on camera or behind the scenes"
+     ]
+    },
+    {
+     "theme": "Other",
+     "count": 3,
+     "note": "Leadership, a clean environment, and refs enforcing rules.",
+     "examples": [
+      "enforce rules-refs"
+     ]
+    },
+    {
+     "theme": "Medical help",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "Medical assistance"
+     ]
+    }
+   ],
+   "standouts": [
+    "The staff provides the support for the teams. Coaches make the players better and give them strategy and a plan. The trainers provide medical support and help condtion the players. The kitmen provide the uniforms and are there to give whatever the players need."
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:fans>teams",
+   "label": "Fans → Teams",
+   "students": 12,
+   "answers": 14,
+   "summary": "An even split between support and money. The money answers got specific: tickets, merchandise, attendance.",
+   "themes": [
+    {
+     "theme": "Money: tickets, merch, attendance",
+     "count": 7,
+     "note": "",
+     "examples": [
+      "ticket & merch revenue",
+      "They provide support, emotionally and financially, which gives them an incentive to try for their community."
+     ]
+    },
+    {
+     "theme": "Support and enthusiasm",
+     "count": 7,
+     "note": "",
+     "examples": [
+      "The fans help the teams gain popularity and traction by supporting with attire and spirit"
+     ]
+    }
+   ],
+   "standouts": [
+    "They provide support, emotionally and financially, which gives them an incentive to try for their community."
+   ],
+   "gaps": "Nobody mentioned club membership, the season-long fee that most AFL clubs rely on, although two students put club members on the Fans card."
+  },
+  {
+   "field": "line:governing>leagues",
+   "label": "Governing Bodies → Leagues",
+   "students": 13,
+   "answers": 13,
+   "summary": "Rules. Ten of 13 answers say rules or regulation, and the other three say management.",
+   "themes": [
+    {
+     "theme": "Rules and regulation",
+     "count": 10,
+     "note": "",
+     "examples": [
+      "Establish and enforce rules",
+      "The AFL Commission helps oversee and establish rules for the AFL competition."
+     ]
+    },
+    {
+     "theme": "Management",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "managing/policy"
+     ]
+    }
+   ],
+   "standouts": [],
+   "gaps": "The AFL Commission is the league's board, so both cards point at one organisation, and no answer said so."
+  },
+  {
+   "field": "line:product>athletes",
+   "label": "Product Sponsors → Athletes",
+   "students": 10,
+   "answers": 12,
+   "summary": "Money, mostly in one word, plus endorsement deals. Three said sponsors give players the product itself.",
+   "themes": [
+    {
+     "theme": "Money and endorsement deals",
+     "count": 9,
+     "note": "",
+     "examples": [
+      "They give them sponsorships, pushing product while helping athletes have other side jobs and life after retirement.",
+      "endorsement deals"
+     ]
+    },
+    {
+     "theme": "Gear and products",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "Sponsors can provide athletes with equipment, clothing, or other products they use."
+     ]
+    }
+   ],
+   "standouts": [
+    "They give them sponsorships, pushing product while helping athletes have other side jobs and life after retirement."
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:media>athletes",
+   "label": "Media → Athletes",
+   "students": 11,
+   "answers": 12,
+   "summary": "Visibility: publicity, exposure, coverage. Three students said the media also shapes an athlete's image.",
+   "themes": [
+    {
+     "theme": "Visibility and publicity",
+     "count": 8,
+     "note": "",
+     "examples": [
+      "Coverage increases athletes' visibility",
+      "The media helps athletes gain popularity worldwide. It also lets fans watch their favorite players"
+     ]
+    },
+    {
+     "theme": "Image",
+     "count": 3,
+     "note": "The media can build or damage one.",
+     "examples": [
+      "Can make or break the image of an athlete",
+      "Media coverage shows athletes raw emotion and character in intense moments."
+     ]
+    },
+    {
+     "theme": "Money",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "Money"
+     ]
+    }
+   ],
+   "standouts": [
+    "Can make or break the image of an athlete"
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:fans>media",
+   "label": "Fans → Media",
+   "students": 11,
+   "answers": 12,
+   "summary": "Fans are the audience the media sells. Students got this half right: most said viewers or ratings, and three followed the viewers through to money or advertising.",
+   "themes": [
+    {
+     "theme": "Viewers and ratings",
+     "count": 6,
+     "note": "",
+     "examples": [
+      "The fans provide the media a viewerbase in which the media pushes out their content to. It provides the demographic that the media is advertising and giving content to, giving the. media a direction in which to go with.",
+      "online audience rating"
+     ]
+    },
+    {
+     "theme": "Money and advertising",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "advertising"
+     ]
+    },
+    {
+     "theme": "Content",
+     "count": 2,
+     "note": "Fans as interview subjects and social posters.",
+     "examples": [
+      "they post ab the game on their social media platforms"
+     ]
+    },
+    {
+     "theme": "Influence",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "opportunity to influence"
+     ]
+    }
+   ],
+   "standouts": [
+    "The fans provide the media a viewerbase in which the media pushes out their content to. It provides the demographic that the media is advertising and giving content to, giving the. media a direction in which to go with."
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:teams>fans",
+   "label": "Teams → Fans",
+   "students": 9,
+   "answers": 11,
+   "summary": "Belonging: community, shared identity, a side to pick. Only two said entertainment.",
+   "themes": [
+    {
+     "theme": "Community and identity",
+     "count": 6,
+     "note": "",
+     "examples": [
+      "Traditions, rivalries, and communities",
+      "Teams give fans a shared identity and something to feel connected to."
+     ]
+    },
+    {
+     "theme": "Something to root for",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "something to believe in and root for"
+     ]
+    },
+    {
+     "theme": "Entertainment and competition",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "Entertainment"
+     ]
+    },
+    {
+     "theme": "Off topic",
+     "count": 1,
+     "note": "A question about Wharfie time.",
+     "examples": [
+      "I am really interested to find out what this Wharfie time was when the fans got super extra loud and pumped up when they went up by 17"
+     ]
+    }
+   ],
+   "standouts": [
+    "Traditions, rivalries, and communities"
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:governing>athletes",
+   "label": "Governing Bodies → Athletes",
+   "students": 10,
+   "answers": 11,
+   "summary": "Rules and their enforcement, with fairness and safety close behind. Two answers describe a team or a club, not a governing body.",
+   "themes": [
+    {
+     "theme": "Rules and enforcement",
+     "count": 6,
+     "note": "",
+     "examples": [
+      "The governing bodies provide the rules and regulations that the players have to follow. They give them the guidelines on how to play their sport, and how they should conduct themselves on and off the field."
+     ]
+    },
+    {
+     "theme": "Fairness and safety",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "safety protocols"
+     ]
+    },
+    {
+     "theme": "Mixed up with a club",
+     "count": 2,
+     "note": "A team to play for, money.",
+     "examples": [
+      "a team in which these people can play for"
+     ]
+    },
+    {
+     "theme": "Image",
+     "count": 1,
+     "note": "Keeping players' conduct in line.",
+     "examples": [
+      "Watches over the athletes to make sure they are portraying a good image of themselves, the league, and the company as a whole"
+     ]
+    }
+   ],
+   "standouts": [
+    "Watches over the athletes to make sure they are portraying a good image of themselves, the league, and the company as a whole"
+   ],
+   "gaps": "\"a team in which these people can play for\" and \"money\" describe what a club gives a player, not the commission."
+  },
+  {
+   "field": "line:media>audience",
+   "label": "Media → Audience Sponsors",
+   "students": 9,
+   "answers": 11,
+   "summary": "Reach: the broadcast puts sponsors in front of a large audience, as air time or brand visibility.",
+   "themes": [
+    {
+     "theme": "Reach and air time",
+     "count": 8,
+     "note": "",
+     "examples": [
+      "The broadcast gives sponsors access to a large audience for their advertisements.",
+      "helps promote their presence getting the word across to a bigger audience"
+     ]
+    },
+    {
+     "theme": "Showing the ads",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "In the final, most important minutes the media is showing \"You could get free Macca's for life\" across the whole stadium."
+     ]
+    },
+    {
+     "theme": "Making the game easy to follow",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "They help make the game accessible, and explain it so everybody can understand, which aligns with sponsorship audiences."
+     ]
+    }
+   ],
+   "standouts": [
+    "In the final, most important minutes the media is showing \"You could get free Macca's for life\" across the whole stadium."
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:audience>fans",
+   "label": "Audience Sponsors → Fans",
+   "students": 8,
+   "answers": 10,
+   "summary": "Answers were scattered. Some named what fans get (giveaways, ads, experiences), and some described what the sponsor wants from fans, which is the other direction.",
+   "themes": [
+    {
+     "theme": "Experiences and giveaways",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "Provides in game experiences for the fans"
+     ]
+    },
+    {
+     "theme": "Products and ads",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "The audience sponsers provide the fans with products that the league that they follow and love has endorsed and connected themselves with. Fans are more likely to buy products from companies that identify themselves with the league that the fans support."
+     ]
+    },
+    {
+     "theme": "What the sponsor wants",
+     "count": 3,
+     "note": "Reach, targeting, local customers.",
+     "examples": [
+      "Audience sponsors target large arenas with lots of fans for outreach."
+     ]
+    },
+    {
+     "theme": "Unclear",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "jointly signed"
+     ]
+    }
+   ],
+   "standouts": [
+    "The audience sponsers provide the fans with products that the league that they follow and love has endorsed and connected themselves with. Fans are more likely to buy products from companies that identify themselves with the league that the fans support."
+   ],
+   "gaps": "\"boost target group\" and \"Audience sponsors target large arenas with lots of fans for outreach\" describe what the sponsor wants from fans, not what the sponsor gives them."
+  },
+  {
+   "field": "line:product>fans",
+   "label": "Product Sponsors → Fans",
+   "students": 9,
+   "answers": 9,
+   "summary": "Reasons to buy: products the players use, exclusive deals, team items. Two said experiences or entertainment.",
+   "themes": [
+    {
+     "theme": "Reasons and deals to buy",
+     "count": 5,
+     "note": "",
+     "examples": [
+      "Similarly to the audience sponsers, the product sponsers provide the audience with products that the players themselves actually use. Fans are much more likely to buy a product that the team they support and players they look up to use."
+     ]
+    },
+    {
+     "theme": "Exposure to the brand",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "Use exposure through broadcasting to introduce their brands and products to viewers"
+     ]
+    },
+    {
+     "theme": "Experiences and entertainment",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "experiences"
+     ]
+    }
+   ],
+   "standouts": [
+    "Similarly to the audience sponsers, the product sponsers provide the audience with products that the players themselves actually use. Fans are much more likely to buy a product that the team they support and players they look up to use."
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:media>teams",
+   "label": "Media → Teams",
+   "students": 5,
+   "answers": 9,
+   "summary": "Visibility, and through visibility, fans. Five students gave nine answers here.",
+   "themes": [
+    {
+     "theme": "Coverage, visibility and fans",
+     "count": 8,
+     "note": "",
+     "examples": [
+      "They post/stream/show their games, which helps get them fans.",
+      "a platfrom where they can be seen"
+     ]
+    },
+    {
+     "theme": "Money",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "$$$"
+     ]
+    }
+   ],
+   "standouts": [
+    "They post/stream/show their games, which helps get them fans."
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:leagues>athletes",
+   "label": "Leagues → Athletes",
+   "students": 8,
+   "answers": 9,
+   "summary": "A job and a competition to play in. One student named the draft.",
+   "themes": [
+    {
+     "theme": "A job and pay",
+     "count": 5,
+     "note": "",
+     "examples": [
+      "A corporation to be employed by"
+     ]
+    },
+    {
+     "theme": "A competition structure",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "The leagues give the atheletes an organized and well run system and format in which they can compete and play organized sports."
+     ]
+    },
+    {
+     "theme": "The draft",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "The league also oversees drafting and player acquisition to provide opprotunities for atheletes to play."
+     ]
+    }
+   ],
+   "standouts": [
+    "The league also oversees drafting and player acquisition to provide opprotunities for atheletes to play."
+   ],
+   "gaps": "\"The league hires the athletes\" is wrong; players are contracted to clubs, and the league runs the draft and the salary cap."
+  },
+  {
+   "field": "line:audience>media",
+   "label": "Audience Sponsors → Media",
+   "students": 7,
+   "answers": 8,
+   "summary": "Money for advertising, in five of eight answers. Two answers read \"audience\" as the viewers, not the sponsors.",
+   "themes": [
+    {
+     "theme": "Advertising money",
+     "count": 5,
+     "note": "",
+     "examples": [
+      "Sponsors pay to advertise to the large audience that the media attracts."
+     ]
+    },
+    {
+     "theme": "Read as viewers, not sponsors",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "The audience shows attention, which shows the media that the AFL is worth investing in."
+     ]
+    },
+    {
+     "theme": "Other",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "Broadcasting opportunities"
+     ]
+    }
+   ],
+   "standouts": [
+    "Sponsors pay to advertise to the large audience that the media attracts."
+   ],
+   "gaps": "\"The audience shows attention\" and \"it brings in crowds\" treat the card as the TV audience. The card means sponsors trying to reach an audience."
+  },
+  {
+   "field": "line:media>product",
+   "label": "Media → Product Sponsors",
+   "students": 7,
+   "answers": 8,
+   "summary": "Attention and reach: product placement, close-ups on Gatorade, national TV. One answer runs the money the wrong way.",
+   "themes": [
+    {
+     "theme": "Reach and product placement",
+     "count": 7,
+     "note": "",
+     "examples": [
+      "The cuts and zoom ins to coaches/players showed in. more detail brands like gatorade.",
+      "They provide a lot of focused viewers who will pay attention to advertising and product placement."
+     ]
+    },
+    {
+     "theme": "Revenue",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "revenue"
+     ]
+    }
+   ],
+   "standouts": [
+    "The cuts and zoom ins to coaches/players showed in. more detail brands like gatorade."
+   ],
+   "gaps": "\"revenue\" flows from the sponsor to the media, not the other way."
+  },
+  {
+   "field": "line:athletes>product",
+   "label": "Athletes → Product Sponsors",
+   "students": 6,
+   "answers": 7,
+   "summary": "Publicity. Six of seven said the same thing in one or two words.",
+   "themes": [
+    {
+     "theme": "Publicity and exposure",
+     "count": 6,
+     "note": "",
+     "examples": [
+      "Publicity"
+     ]
+    },
+    {
+     "theme": "Wearing it makes fans want it",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "publicly wearing their things making fans want to buy"
+     ]
+    }
+   ],
+   "standouts": [
+    "publicly wearing their things making fans want to buy"
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:teams>staff",
+   "label": "Teams → Staff",
+   "students": 6,
+   "answers": 7,
+   "summary": "Jobs and pay, plus facilities and resources.",
+   "themes": [
+    {
+     "theme": "Jobs and pay",
+     "count": 5,
+     "note": "",
+     "examples": [
+      "The teams provide the staff with a job. It provides them with pay, and a group of atheletes in which they give their support to."
+     ]
+    },
+    {
+     "theme": "Resources and facilities",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "facilities"
+     ]
+    }
+   ],
+   "standouts": [
+    "The teams provide the staff with a job. It provides them with pay, and a group of atheletes in which they give their support to."
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:teams>leagues",
+   "label": "Teams → Leagues",
+   "students": 6,
+   "answers": 7,
+   "summary": "The teams make up the league, and two answers named the 18 clubs.",
+   "themes": [
+    {
+     "theme": "Teams make up the league",
+     "count": 5,
+     "note": "",
+     "examples": [
+      "The 18 teams build the league",
+      "The teans provide the content for the league. They provide the organized groups of players that compete, giving the league that content."
+     ]
+    },
+    {
+     "theme": "Something for fans to root for",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "different groups to root for to get fans involved"
+     ]
+    },
+    {
+     "theme": "A franchise relationship",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "The teams have a franchisee relationship with the league."
+     ]
+    }
+   ],
+   "standouts": [
+    "The teans provide the content for the league. They provide the organized groups of players that compete, giving the league that content."
+   ],
+   "gaps": "\"franchisee relationship\" is a US model. AFL clubs are member-owned and hold licences from the league, apart from Gold Coast and GWS, which the AFL set up."
+  },
+  {
+   "field": "line:fans>audience",
+   "label": "Fans → Audience Sponsors",
+   "students": 5,
+   "answers": 6,
+   "summary": "Customers. Five of six said fans are the market sponsors are buying.",
+   "themes": [
+    {
+     "theme": "Customers and money",
+     "count": 5,
+     "note": "",
+     "examples": [
+      "The fans provide a customer base that can be associated with the league/teams/players"
+     ]
+    },
+    {
+     "theme": "Eyes on the sponsor",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "People to see the sponsors"
+     ]
+    }
+   ],
+   "standouts": [
+    "The fans give audience sponsers a group to which they push their product out to. The fans give them money in return for products that are associated with the game they watch and enjoy."
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:product>teams",
+   "label": "Product Sponsors → Teams",
+   "students": 6,
+   "answers": 6,
+   "summary": "Money and kit, and one student compared the link to Dunkin' and the Patriots.",
+   "themes": [
+    {
+     "theme": "Money for jersey space",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "give teams money to have their companies on the jerseys"
+     ]
+    },
+    {
+     "theme": "Gear and kit",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "Product sponsors provide money, equipment, clothing, or other products that can support teams."
+     ]
+    },
+    {
+     "theme": "Identity",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "They provide another channel of identity, like Dunkin to the Patriots, which fosters team/fan identity."
+     ]
+    }
+   ],
+   "standouts": [
+    "They provide another channel of identity, like Dunkin to the Patriots, which fosters team/fan identity."
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:fans>leagues",
+   "label": "Fans → Leagues",
+   "students": 4,
+   "answers": 5,
+   "summary": "Money from tickets, and viewers.",
+   "themes": [
+    {
+     "theme": "Money and ticket sales",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "The fans ticket sales help the league (and its teams) thrive"
+     ]
+    },
+    {
+     "theme": "Viewers and support",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "viewers"
+     ]
+    }
+   ],
+   "standouts": [],
+   "gaps": ""
+  },
+  {
+   "field": "line:media>leagues",
+   "label": "Media → Leagues",
+   "students": 4,
+   "answers": 5,
+   "summary": "Exposure, and two answers on the money broadcasters pay to carry the games.",
+   "themes": [
+    {
+     "theme": "Exposure and a place to broadcast",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "A place to broadcast their games"
+     ]
+    },
+    {
+     "theme": "Money",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "media gives money to leagues to carry their sport"
+     ]
+    }
+   ],
+   "standouts": [
+    "media gives money to leagues to carry their sport"
+   ],
+   "gaps": "Only three answers on the whole sheet touch the broadcast rights fee, the AFL's largest source of money: two here and \"Broadcast Rights/Access\" under Governing Bodies to Media."
+  },
+  {
+   "field": "line:audience>leagues",
+   "label": "Audience Sponsors → Leagues",
+   "students": 4,
+   "answers": 4,
+   "summary": "Money in exchange for exposure.",
+   "themes": [
+    {
+     "theme": "Money",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "Provide money in exchange for exposure"
+     ]
+    },
+    {
+     "theme": "A partnership with branding in the stadium",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "Partners with the league, have their products and names in the stadium"
+     ]
+    }
+   ],
+   "standouts": [],
+   "gaps": ""
+  },
+  {
+   "field": "line:audience>athletes",
+   "label": "Audience Sponsors → Athletes",
+   "students": 3,
+   "answers": 4,
+   "summary": "All four answers say money.",
+   "themes": [
+    {
+     "theme": "Money",
+     "count": 4,
+     "note": "",
+     "examples": [
+      "money"
+     ]
+    }
+   ],
+   "standouts": [],
+   "gaps": ""
+  },
+  {
+   "field": "line:staff>product",
+   "label": "Staff → Product Sponsors",
+   "students": 4,
+   "answers": 4,
+   "summary": "Staff carry the brand: New Balance on the coach's jacket, Gatorade in the water carrier's hands.",
+   "themes": [
+    {
+     "theme": "Showing the brand",
+     "count": 4,
+     "note": "",
+     "examples": [
+      "The water girl doing her job brought out gatorade bottles showing that these athletes drink gatorade products",
+      "New Balance's logo was on the coach's jacket, promoting the brand"
+     ]
+    }
+   ],
+   "standouts": [
+    "The water girl doing her job brought out gatorade bottles showing that these athletes drink gatorade products"
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:staff>media",
+   "label": "Staff → Media",
+   "students": 2,
+   "answers": 4,
+   "summary": "Two students gave four answers: stories, personalities, content, and a question of whether commentators count as staff.",
+   "themes": [
+    {
+     "theme": "Stories and content",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "stories"
+     ]
+    },
+    {
+     "theme": "Commentators as staff",
+     "count": 1,
+     "note": "",
+     "examples": [
+      "Commentators are affiliated with the media but they could count as staff because they are physically at the game"
+     ]
+    }
+   ],
+   "standouts": [
+    "Commentators are affiliated with the media but they could count as staff because they are physically at the game"
+   ],
+   "gaps": ""
+  },
+  {
+   "field": "line:product>staff",
+   "label": "Product Sponsors → Staff",
+   "students": 3,
+   "answers": 4,
+   "summary": "Gear, clothing and drinks for staff to wear and use.",
+   "themes": [
+    {
+     "theme": "Gear and drinks",
+     "count": 4,
+     "note": "",
+     "examples": [
+      "Jackets/Gear",
+      "Hydration"
+     ]
+    }
+   ],
+   "standouts": [],
+   "gaps": ""
+  },
+  {
+   "field": "other",
+   "label": "Less-drawn connections",
+   "students": 18,
+   "answers": 43,
+   "summary": "Twenty-three more connections got three answers or fewer. Most are sponsor lines, money one way and advertising space the other. The rest cover the league putting on games, a few rule and oversight lines, and some one-offs.",
+   "themes": [
+    {
+     "theme": "Advertising space and exposure",
+     "count": 14,
+     "note": "Leagues and teams selling brand placement.",
+     "examples": [
+      "Teams give sponsors exposure by displaying their brands on uniforms, equipment, and other team materials.",
+      "Being a player with a jersey allows for companies to put their sponsor and be seen on the athletes"
+     ]
+    },
+    {
+     "theme": "Money",
+     "count": 8,
+     "note": "Sponsors and broadcasters paying.",
+     "examples": [
+      "give media money to run their ads"
+     ]
+    },
+    {
+     "theme": "Games and entertainment",
+     "count": 8,
+     "note": "Athletes and leagues supplying the product everyone else sells.",
+     "examples": [
+      "The AFL provides the games and events that media organizations broadcast to audiences.",
+      "athletes are the main point of entertainment for the league to function"
+     ]
+    },
+    {
+     "theme": "Rules and oversight",
+     "count": 7,
+     "note": "Who picks the commissioners, who enforces the rules.",
+     "examples": [
+      "The 18 clubs in the league select the commissioners to keep the league runnings.",
+      "give the governing bodies a reason to exists. without the athletes none of this exists."
+     ]
+    },
+    {
+     "theme": "One-offs",
+     "count": 6,
+     "note": "Merchandise, comfort, logos, broadcasts, and the internet on referees.",
+     "examples": [
+      "the refs get a bad rep sometimes for the calls made the internet paints a pic"
+     ]
+    }
+   ],
+   "standouts": [
+    "The 18 clubs in the league select the commissioners to keep the league runnings.",
+    "fans consume ads and fall for marketing tactics which makes ads worth it",
+    "the refs get a bad rep sometimes for the calls made the internet paints a pic"
+   ],
+   "gaps": "Money from the media to the league, the broadcast rights deal, got one answer here (\"Broadcast Rights/Access\") and two more under Media to Leagues. And \"Money\" from the governing body to the media runs backwards; broadcasters pay the AFL."
+  }
+ ]
+}

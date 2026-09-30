@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from "react";
 import { DetailsLink } from "./AssignmentsCard.jsx";
+import { hasReadout } from "./ReadoutPage.jsx";
 import { WorksheetReview, WORKSHEETS } from "@ishak/worksheets";
 import { useClassState } from "./store.js";
 import { rosterOf } from "./roster.js";
@@ -38,10 +39,27 @@ export default function WorksheetsPage({ config }) {
   // The address students open, in full, for the Details link on an assignment.
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const studentUrl = sheet ? origin + config.path + "/worksheets/" + sheet.key : "";
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(studentUrl); setCopied(true); setTimeout(() => setCopied(false), 1500); }
+  // And what the class wrote on it, to share with them, where there is a readout.
+  const readoutUrl = sheet && hasReadout(config.id, sheet.key) ? studentUrl + "/readout" : "";
+  const copy = async (url) => {
+    try { await navigator.clipboard.writeText(url); setCopied(url); setTimeout(() => setCopied(false), 1500); }
     catch { /* no clipboard: the box is selectable */ }
   };
+  const addressBox = (heading, url, note) => (
+    <div style={{ display: "grid", gap: 8, marginBottom: 20, padding: 16, borderRadius: 16, background: TOKENS.SURFACE.card, border: "1px solid " + TOKENS.LINE.soft }}>
+      <div style={{ fontSize: 15, fontWeight: 600 }}>{heading}</div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <input readOnly value={url} aria-label={heading} onFocus={e => e.target.select()}
+          style={{ flex: "1 1 320px", minWidth: 0, fontFamily: TOKENS.FONT.mono || "ui-monospace, monospace", fontSize: 14, minHeight: 40, padding: "0 12px", borderRadius: 10, border: "1px solid " + TOKENS.LINE.strong, background: TOKENS.SURFACE.sunk, color: TOKENS.TEXT.primary }} />
+        <button type="button" onClick={() => copy(url)}
+          style={{ fontFamily: TOKENS.FONT.body, fontSize: 15, fontWeight: 600, minHeight: 40, padding: "0 16px", borderRadius: 10, border: "1px solid " + TOKENS.LINE.strong, background: TOKENS.SURFACE.card, color: TOKENS.TEXT.primary, cursor: "pointer" }}>
+          {copied === url ? "Copied" : "Copy"}
+        </button>
+        <DetailsLink href={url} accent={config.accent} />
+      </div>
+      {note ? <div style={{ fontSize: 14, color: TOKENS.TEXT.secondary }}>{note}</div> : null}
+    </div>
+  );
 
   useEffect(() => {
     document.title = config.code + " · Worksheets";
@@ -85,19 +103,8 @@ export default function WorksheetsPage({ config }) {
           </div>
         ) : null}
         {sheet ? (<>
-          <div style={{ display: "grid", gap: 8, marginBottom: 20, padding: 16, borderRadius: 16, background: TOKENS.SURFACE.card, border: "1px solid " + TOKENS.LINE.soft }}>
-            <div style={{ fontSize: 15, fontWeight: 600 }}>Students open this worksheet at</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-              <input readOnly value={studentUrl} aria-label="student address" onFocus={e => e.target.select()}
-                style={{ flex: "1 1 320px", minWidth: 0, fontFamily: TOKENS.FONT.mono || "ui-monospace, monospace", fontSize: 14, minHeight: 40, padding: "0 12px", borderRadius: 10, border: "1px solid " + TOKENS.LINE.strong, background: TOKENS.SURFACE.sunk, color: TOKENS.TEXT.primary }} />
-              <button type="button" onClick={copy}
-                style={{ fontFamily: TOKENS.FONT.body, fontSize: 15, fontWeight: 600, minHeight: 40, padding: "0 16px", borderRadius: 10, border: "1px solid " + TOKENS.LINE.strong, background: TOKENS.SURFACE.card, color: TOKENS.TEXT.primary, cursor: "pointer" }}>
-                {copied ? "Copied" : "Copy"}
-              </button>
-              <DetailsLink href={studentUrl} accent={config.accent} />
-            </div>
-            <div style={{ fontSize: 14, color: TOKENS.TEXT.secondary }}>Paste the address into the Details link on the assignment.</div>
-          </div>
+          {addressBox("Students open this worksheet at", studentUrl, "Paste the address into the Details link on the assignment.")}
+          {readoutUrl ? addressBox("What the class wrote, to share with them", readoutUrl, "") : null}
           <WorksheetReview key={sheet.key} supabase={gameClient} worksheetKey={sheet.key} groupKey={config.id}
             roster={roster} hide={INSTRUCTOR_EMAILS} title={sheet.title} accent={config.accent} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />
         </>) : null}
