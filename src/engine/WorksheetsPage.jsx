@@ -12,6 +12,7 @@ import { DetailsLink } from "./AssignmentsCard.jsx";
 import { WorksheetReview, WORKSHEETS } from "@ishak/worksheets";
 import { useClassState } from "./store.js";
 import { rosterOf } from "./roster.js";
+import { INSTRUCTOR_EMAILS } from "../instructors.js";
 import { useSession } from "./session.js";
 import { gameClient } from "./gameClient.js";
 import * as TOKENS from "./tokens.js";
@@ -98,7 +99,7 @@ export default function WorksheetsPage({ config }) {
             <div style={{ fontSize: 14, color: TOKENS.TEXT.secondary }}>Paste the address into the Details link on the assignment.</div>
           </div>
           <WorksheetReview key={sheet.key} supabase={gameClient} worksheetKey={sheet.key} groupKey={config.id}
-            roster={roster} title={sheet.title} accent={config.accent} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />
+            roster={roster} hide={INSTRUCTOR_EMAILS} title={sheet.title} accent={config.accent} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />
         </>) : null}
       </div>
     </div>
