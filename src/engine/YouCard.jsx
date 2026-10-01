@@ -67,7 +67,29 @@ function fmtTime(ts) {
 }
 
 const lastMsg = (data, name) => { const t = threadOf(data, name); return t[t.length - 1]; };
-const waitingOnInstructor = (data, name) => { const m = lastMsg(data, name); return m && m.from === "student"; };
+
+// Whether a thread is waiting on Andrew. Andrew, 2026-10-01: "once i read a
+// message, please treat it like there is no message for me." Before this a
+// thread waited until he replied, so a thumbs up sat in bold for days. Now a
+// thread waits when the student spoke last and he has not opened it since:
+// inboxSeen holds the moment he last opened each thread, on the plan row so
+// only his session writes it. Replying still clears it, since then he spoke
+// last.
+export const waitingOnInstructor = (data, name) => {
+  const m = lastMsg(data, name);
+  return !!(m && m.from === "student" && (m.ts || 0) > (data?.inboxSeen?.[name] || 0));
+};
+export const inboxWaiting = (config, data) => rosterOf(config, data).filter(s => waitingOnInstructor(data, s.name)).length;
+
+// Opening a thread reads it. Written only while the thread is waiting, so an
+// open thread does not write on every render.
+function useMarkInboxSeen(update, data, name) {
+  const waiting = name ? waitingOnInstructor(data, name) : false;
+  useEffect(() => {
+    if (!waiting || !update) return;
+    update(prev => ({ ...prev, inboxSeen: { ...(prev.inboxSeen || {}), [name]: Date.now() } }));
+  }, [waiting, name]);   // eslint-disable-line react-hooks/exhaustive-deps
+}
 
 // ─── shared bits ───
 const label = { fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
@@ -486,6 +508,7 @@ function OfficeHours({ config }) {
 export function StudentThread({ config, data, update, name }) {
   const a = config.accent;
   const [note, setNote] = useState("");
+  useMarkInboxSeen(update, data, name);
   const send = () => { if (!note.trim()) return; addMessage(update, name, { from: "instructor", kind: "note", text: note.trim() }); setNote(""); };
   return (
     <div>
@@ -585,7 +608,7 @@ export function MessagesDetail({ config, role, data, update, asStudent }) {
 export function MessagesSummary({ config, role, data, asStudent }) {
   const a = config.accent;
   if (role === "instructor") {
-    const waiting = rosterOf(config, data).filter(s => waitingOnInstructor(data, s.name)).length;
+    const waiting = inboxWaiting(config, data);
     return waiting > 0
       ? <div><div style={{ fontSize: 22, fontWeight: 700, color: a }}>{waiting}</div><Muted>waiting on your reply</Muted></div>
       : <Muted>Inbox: no replies needed.</Muted>;

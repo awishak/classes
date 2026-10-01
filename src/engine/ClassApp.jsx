@@ -19,7 +19,7 @@ import { SHARED_KEY, blockById, registerTypes } from "./blocks.js";
 import { readAdded, readLabels } from "./types.js";
 import { ENGINE_LIST } from "../config/registry.js";
 import { useLive } from "./live.js";
-import { YouDetail, MessagesDetail, MessagesSummary, unreadNotes } from "./YouCard.jsx";
+import { YouDetail, MessagesDetail, MessagesSummary, unreadNotes, inboxWaiting } from "./YouCard.jsx";
 import { ScheduleSummary, ScheduleDetail } from "./ScheduleCard.jsx";
 import { RosterSummary, RosterDetail } from "./RosterCard.jsx";
 import { QuestionsSummary, QuestionsDetail } from "./QuestionsCard.jsx";
@@ -369,11 +369,7 @@ function needsYou(config, data, role, asStudent) {
     // A message on a challenge is as easy to miss as a submission.
     const said = waitingCount(data, assignmentsOf(config, data)).messages;
     if (said) out.push({ id: "said", card: "assignments", text: said + " message" + (said === 1 ? "" : "s") + " on challenges waiting for a reply" });
-    const waiting = rosterOf(config, data).filter(s => {
-      const t = data?.threads?.[s.name] || [];
-      const last = t[t.length - 1];
-      return last && last.from === "student";
-    }).length;
+    const waiting = inboxWaiting(config, data);
     if (waiting) out.push({ id: "inbox", card: "messages", text: waiting + " student" + (waiting === 1 ? "" : "s") + " waiting on a reply" });
     const asks = openRequests(data);
     if (asks) out.push({ id: "requests", card: "more", text: asks + " request" + (asks === 1 ? "" : "s") + " and bugs waiting" });
@@ -908,7 +904,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // The envelope: a student's unread notes from him, or, on his own bar, the
   // threads waiting on a reply. Opens messaging either way.
   const unread = view !== "instructor" ? unreadNotes(data, preview || asStudent)
-    : rosterOf(config, data).filter(s => { const t = data?.threads?.[s.name] || []; const last = t[t.length - 1]; return last && last.from === "student"; }).length;
+    : inboxWaiting(config, data);
   const MailButton = (
     <button className="ca-focus" onClick={() => { setPinOpen(false); go("messages"); }}
       aria-label={view === "instructor" ? (unread ? "Inbox, " + unread + " waiting" : "Inbox") : (unread ? "Messages, " + unread + " new from " + (config.instructor?.name || "your instructor") : "Messages, nothing new")}

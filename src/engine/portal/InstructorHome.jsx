@@ -16,6 +16,7 @@ import { onThePage, isAnswered } from "../QuestionsCard.jsx";
 import { isProfileTask, PROFILE_TASK_OFF } from "../profileTask.js";
 import { Sec, Row, Io, Btn, Chip, Face, Gm, dcolOf, dueWords, whenWords } from "./bits.jsx";
 import { opensState, opensWords } from "./work.js";
+import { waitingOnInstructor } from "../YouCard.jsx";
 import { Hero } from "./StudentHome.jsx";
 import { QuestionsSection } from "./Questions.jsx";
 
@@ -52,7 +53,7 @@ export function Inbox({ config, data, go, limit }) {
   const rows = rosterOf(config, data).map(s => {
     const t = data?.threads?.[s.name] || [];
     const last = t[t.length - 1];
-    return last ? { s, last, waiting: last.from === "student" } : null;
+    return last ? { s, last, waiting: waitingOnInstructor(data, s.name) } : null;
   }).filter(Boolean).sort((x, y) => (y.last.ts || 0) - (x.last.ts || 0));
   const shown = limit ? rows.slice(0, limit) : rows;
   if (!rows.length) return <p className="pt-quiet">Nobody has written yet.</p>;
@@ -80,7 +81,7 @@ export function InstructorHome({ config, data, update, blockOf, go, saving, onli
   const waiting = waitingOn(data, assignments);
   const toGradeOf = (asg) => (waiting.find(w => w.id === asg.id) || {}).toGrade || 0;
   const graded = assignments.map(asg => ({ asg, n: toGradeOf(asg) })).filter(r => r.n);
-  const inbox = rosterOf(config, data).filter(s => { const t = data?.threads?.[s.name] || []; const last = t[t.length - 1]; return last && last.from === "student"; });
+  const inbox = rosterOf(config, data).filter(s => waitingOnInstructor(data, s.name));
   const q = useQuestions(config.storageKey);
   const askWaiting = q.items === null ? 0 : onThePage(q.items).filter(x => !isAnswered(x)).length;
   const facts = nextClassFacts(config, data, blockOf, "");
