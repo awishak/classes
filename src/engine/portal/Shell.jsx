@@ -26,6 +26,7 @@ import { MyWorkPage, ChallengePage, PerformanceSheet } from "./MyWork.jsx";
 import { ClassPage } from "./ClassPage.jsx";
 import { QuestionsPage } from "./Questions.jsx";
 import { SearchPanel } from "./Search.jsx";
+import { SchedulePage } from "./Schedule.jsx";
 import { visibleAssignments } from "./work.js";
 
 const STUDENT_TITLES = [["schedule", "Schedule"], ["assignments", "My work"], ["class", "Class"]];
@@ -60,7 +61,8 @@ export default function PortalShell(p) {
   const work = (extra) => <MyWorkPage config={config} data={d} update={write} name={name} go={go} view={p.workView} setView={p.setWorkView} onPerformance={() => setSheet("performance")} {...extra} />;
   const page = (key, sub) => {
     if (loading) return <p className="pt-quiet">Loading.</p>;
-    if (key === "more" || key === "games" || key === "schedule") return detailFor(key);
+    if (key === "more" || key === "games") return detailFor(key);
+    if (key === "schedule") return <SchedulePage config={config} data={d} blockOf={ctx.blockOf} focusDay={sub} instructor={instructor} me={instructor ? "" : name} mark={mark} go={go} />;
     if (instructor) {
       if (key === "assignments") return <InstructorWork config={config} data={d} update={write} go={go} editing={sub || ""} />;
       if (key === "messages") return sub
