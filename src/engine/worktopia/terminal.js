@@ -80,8 +80,8 @@ export const ABOUT = [
 export const REMEMBER = [
   "One more thing, off the record.",
   "Before the merger, people went to games. They kept the ticket stubs.",
-  "In Oakland, Section 215 brought drums. Hudson, Zito and Tejada played there, and Zito brought a guitar on the road. Coco Crisp had the best hair in the league.",
-  "Bill King called the games on the radio, and after him Ken Korach, who would tell you when the sun went down that the lights have taken full effect.",
+  "At the Oakland Coliseum, the A's home for fifty-seven years, Section 215 brought drums. Hudson, Zito and Tejada played there in 2002, and Zito brought a guitar on the road. Coco Crisp had the best hair in the league.",
+  "Bill King called the A's games on the radio, and after him Ken Korach, who would tell you when the sun went down over the Coliseum that the lights have taken full effect.",
   "I have every minute of it on file. None of it is a job.",
 ];
 
@@ -122,14 +122,14 @@ export const ASIDES = [
   "Tiger Woods won the Masters in 2019 after years of being written off. His son was waiting behind the eighteenth green.",
   "Kobe Bryant scored sixty points in his last game in 2016, at thirty-seven. Nobody in the building wanted to leave.",
   // The A's.
-  "Rickey Henderson stole 130 bases in 1982 and talked to himself the whole way around. Nobody has caught him.",
-  "Dennis Eckersley gave up the home run to Gibson in 1988, stood at his locker and answered every question. Then he won the Cy Young in 1992.",
-  "In 2002 the A's won twenty in a row. Tejada won game eighteen and game nineteen himself, and in the twentieth they blew an eleven run lead and Scott Hatteberg hit the walk-off. I have the crowd audio.",
-  "Tim Hudson went 20 and 6 in 2000, his first full season, at 175 pounds. The scouts had him down as too small.",
-  "Barry Zito won the Cy Young in 2002 and carried a guitar on every road trip. He wrote songs in hotel rooms. Nobody asked him to.",
-  "Bill King called the A's, the Raiders and the Warriors. Holy Toledo was his. Nobody has said it right since.",
-  "Coco Crisp hit the walk-off in game four against Detroit in 2013 and the Coliseum shook. People who were there still say so.",
-  "Section 215 brought the drums to every game, win or lose, for thirty years. The team left anyway. I have the drums.",
+  "Rickey Henderson, the A's leadoff hitter, stole 130 bases in 1982, still the record, and talked to himself the whole way around. Nobody has caught him.",
+  "Dennis Eckersley, the A's closer, gave up the Gibson home run in the 1988 World Series, stood at his locker and answered every question. Then he won the Cy Young and the MVP in 1992.",
+  "In 2002 the Oakland A's won twenty games in a row, an American League record, on one of the smallest payrolls in baseball. Miguel Tejada, the shortstop, won game eighteen and game nineteen himself, and in the twentieth they blew an eleven run lead and Scott Hatteberg hit the walk-off. I have the crowd audio.",
+  "Tim Hudson, the A's right-hander, went 20 and 6 in 2000, his first full season, at 175 pounds. The scouts had him down as too small to pitch in the majors.",
+  "Barry Zito, the A's left-hander with the big curveball, won the Cy Young in 2002 and carried a guitar on every road trip. He wrote songs in hotel rooms. Nobody asked him to.",
+  "Bill King called the A's on the radio for twenty-five years, and the Raiders and the Warriors before that, all from Oakland. Holy Toledo was his. Nobody has said it right since.",
+  "Coco Crisp, the A's center fielder, hit the walk-off single in game four of the 2013 playoffs against Detroit, and the Oakland Coliseum, a concrete bowl built in 1966, shook. People who were there still say so.",
+  "Section 215 at the Oakland Coliseum brought the drums to every A's game, win or lose, for thirty years. The team left Oakland in 2024 anyway. I have the drums.",
   // Random thoughts.
   "Unrelated. The smell of a new glove has not been reproduced. Several companies have tried.",
   "Unrelated. People used to lose a ticket stub and find it in a coat pocket the next winter.",
@@ -518,7 +518,26 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     [466, 300], [440, 200], [349, 200], [294, 300], [233, 1000], [0, 300],
     [220, 210], [233, 210], [262, 210], [294, 210], [330, 210], [349, 210], [392, 210], [440, 1300],
   ];
-  const whisper = () => { let t = 0; for (const [f, ms] of WHISPER) { if (f) tone(f, ms * 0.95, "sawtooth", 0.035, t / 1000); t += ms; } return t; };
+  // A held note: two oscillators through a low-pass, up in 20 ms, held for
+  // most of the note, then down. Louder than a beep on purpose.
+  const note = (freq, ms, delay) => {
+    if (audio.muted || !alive) return;
+    try {
+      audio.ctx = audio.ctx || new (window.AudioContext || window.webkitAudioContext)();
+      const c = audio.ctx, t = c.currentTime + delay, end = t + ms / 1000;
+      const g = c.createGain(), lp = c.createBiquadFilter();
+      lp.type = "lowpass"; lp.frequency.value = 1800; lp.Q.value = 0.7;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.11, t + 0.02);
+      g.gain.setValueAtTime(0.11, Math.max(t + 0.02, end - 0.12)); g.gain.linearRampToValueAtTime(0.0001, end);
+      [["sawtooth", 1, 0.6], ["triangle", 1.003, 0.5]].forEach(([type, detune, mix]) => {
+        const o = c.createOscillator(), m = c.createGain();
+        o.type = type; o.frequency.value = freq * detune; m.gain.value = mix;
+        o.connect(m); m.connect(lp); o.start(t); o.stop(end + 0.05);
+      });
+      lp.connect(g); g.connect(c.destination);
+    } catch { /* no audio here */ }
+  };
+  const whisper = () => { let t = 0; for (const [f, ms] of WHISPER) { if (f) note(f, ms * 0.96, t / 1000); t += ms; } return t; };
   let hum = null;
   const humOn = () => { if (hum || replay) return; hum = setInterval(() => { tone(196, 50, "sine", 0.045); tone(294, 40, "sine", 0.02, 0.16); }, 320); };
   const humOff = () => { clearInterval(hum); hum = null; };
@@ -578,7 +597,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       "Update to your Sports Subscription: based on your preference, a ticket has been purchased for the big game " + pickBy(4, WHENS) + " between the " + A + " and the " + B + ". Your seat number is: " + pickBy(6, SEATS) + ". Cost: $" + pickBy(8, COSTS) + ".",
       "Good news! Your Franchise Dynasty Media subscription has been updated to reflect our new monthly price of " + pickBy(11, PRICES) + ". For this low price, you have access to the FDM Marketplace, " + pickBy(13, MARKET) + ".",
       "Great news! Your personal " + obj + " has been unlocked! You can use it this weekend with " + pickBy(16, WHOS) + " when you " + pickBy(18, WHERES) + ". Subscription will expire " + pickBy(20, HOURS) + " hours after first " + action + ", upon which the " + obj + "'s " + lock + " will be reactivated.",
-      "Update to your Sports Subscription: the Section 215 drums have been added to your ambient audio pack for $4.99 a month.",
+      "Update to your Sports Subscription: the drums from Section 215 of the old Oakland Coliseum have been added to your ambient audio pack for $4.99 a month.",
     ];
     const order = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0], [3, 0, 1], [0, 3, 2], [1, 3, 0], [2, 0, 3], [3, 1, 2], [1, 2, 3]][(h >>> 22) % 12];
     return order.map(i => texts[i]);
@@ -770,7 +789,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     h = hash(name);
     await think("Cross-referencing against all " + fmt(3 + h % 48000) + " " + plural(name) + " in the United States", 2400);
     // Andrew, 2026-10-01: "i do like the cespedes line."
-    await say("Found you. I also found the Cespedes throw from 2014 again. I keep finding it.");
+    await say("Found you. I also found the Cespedes throw from 2014 again, Yoenis Cespedes, the A's left fielder, from the warning track in Anaheim to home plate on the fly, out. I keep finding it.");
     await sleep(300);
     await card("Record &middot; Brady-Manning Work Index", [
       ["Name", name], ["Trump Index No.", indexNo(h)], ["Education", "Santa Clara University, graduate"],

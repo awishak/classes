@@ -362,7 +362,7 @@ a little too much. i do like the cespedes line." What is left:
 
 - The lookup: "Found you. I also found the Cespedes throw from 2014 again. I
   keep finding it."
-- The evaluation: one sentence on the 2002 streak and the twentieth game.
+- `ASIDES`, between the position questions. Andrew: "pepper the back and forth with the three jobs with some nostalgia. worktopia should be sympathetic to the human at times. hit on big moments, 50% big moments in sports that everyone would know, 40% oakland A's stuff, 10% random thoughts." Twenty lines, ten big moments, eight A's, two random, shuffled by the name and dealt from the top: one after every "what will you bring" answer and one after "why you personally" when a bit of the name says so, three to six a run. Every A's line names the player's role, the team and Oakland, after "when it references the a's can you give it slightly more context" (2026-10-01). Claude's draft, for him to edit; the facts were checked against memory, not a source.
 - A fourth Sports Subscription update, the Section 215 drums for $4.99 a
   month, three of the four an update a run. `drums()` plays the cadence,
   boom, boom, boom-boom-boom, twice, from the same oscillator as every other
@@ -376,7 +376,7 @@ a little too much. i do like the cespedes line." What is left:
   student path now.
 - **The intro** is his, word for word. One question: "a job in sports in 2032" where the page is 2034.
 - **`REMEMBER` and `ABOUT`** are drafts and his pitch; he rewrites both in the Google Doc, then here.
-- **The sounds.** He asked for "some midi version of a's drum audio, or actually of careless whisper," then "yeah add it." Both are synthesized from the terminal's oscillator, no file on the site: `whisper()` plays the sax riff under `REMEMBER`, `drums()` the Section 215 cadence after it and with the drums update. Nobody has listened to the riff against the record yet; the notes come from a transcription, transposed from alto sax.
+- **The sounds.** He asked for "some midi version of a's drum audio, or actually of careless whisper," then "yeah add it." Both are synthesized from the terminal's oscillator, no file on the site: `whisper()` plays the sax riff under `REMEMBER`, through `note()`, a held two-oscillator voice through a low-pass at about four times a beep's peak and holding where a beep has already died (Andrew, 2026-10-01: "where is careless whisper? I don't hear it"; the first version used the beep's envelope, which an offline render showed at 0.001 half a second into a note), `drums()` the Section 215 cadence after it and with the drums update. Nobody has listened to the riff against the record yet; the notes come from a transcription, transposed from alto sax.
 - **The values of sports.** Andrew, 2026-10-01: "we need a way to make them
   understand the values of sports. so i'm still thinking." Not built.
 - **Worktopia's lines** other than the questions are Claude's words for him
