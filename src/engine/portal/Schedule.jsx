@@ -52,12 +52,13 @@ function ReadingChip({ item, block, href }) {
 }
 
 function DayRow({ config, data, blockOf, day, title, ring, note, instructor, myId, mark, go }) {
-  const [all, setAll] = useState(false);
+  // The readings fold. Andrew, 2026-09-30: "can we collapse readings and let
+  // people expand." A day says how many it has; the chip opens them.
+  const [open, setOpen] = useState(false);
   const items = inWeekOrder(day.items || []);
   const readings = items.filter(it => it.type === "reading");
   const due = items.filter(it => it.type === "assignment");
   const other = items.filter(it => it.type !== "reading" && it.type !== "assignment");
-  const shown = all ? readings : readings.slice(0, 3);
   const meets = day.classDay && kindOf((data?.dayPlans || {})[day.date]) === "class";
   const side = !instructor && meets && myId && mark
     ? <Coming checked={!isAway(data, day.date, myId)} onChange={(coming) => mark(day.date, myId, !coming)} />
@@ -73,10 +74,10 @@ function DayRow({ config, data, blockOf, day, title, ring, note, instructor, myI
         {title ? <p className="pt-title">{title}</p> : !day.classDay ? <p className="pt-title" style={{ color: "var(--text-muted)" }}>No class</p> : null}
         {ring ? <p className="pt-meta"><span style={{ color: "var(--ca-accent-ink)", fontWeight: 600 }}>Next class</span></p> : null}
         {note ? <p className="pt-text" style={{ borderLeft: "3px solid var(--line-strong)", paddingLeft: 10 }}>{note}</p> : null}
-        {shown.length ? (
+        {readings.length ? (
           <div className="pt-stack" style={{ gap: 6, marginTop: 4 }}>
-            {shown.map(it => <ReadingChip key={it.id} item={it} block={blockOf ? blockOf(it.blockId || it.libId) : null} />)}
-            {readings.length > 3 && !all ? <div><Chip onClick={() => setAll(true)}>All {readings.length} readings</Chip></div> : null}
+            <div><Chip onClick={() => setOpen(v => !v)} on={open} label={(open ? "Hide " : "Show ") + readings.length + " readings"}>{open ? "Hide readings" : readings.length === 1 ? "1 reading" : readings.length + " readings"}</Chip></div>
+            {open ? readings.map(it => <ReadingChip key={it.id} item={it} block={blockOf ? blockOf(it.blockId || it.libId) : null} />) : null}
           </div>
         ) : null}
         {other.map(it => <p key={it.id} className="pt-meta" style={{ color: "var(--text-primary)" }}>{it.title}</p>)}
