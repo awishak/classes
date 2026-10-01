@@ -42,6 +42,20 @@ answer back ... it's an advanced version of AI."
   link pointed at the student address. The submits then count on the card
   (`worksheetSubmits.js` reads by key).
 
+## The title, the icon and the preview
+
+Andrew, 2026-10-01: "please change the fav ico and site title and preview
+image." A crawler reads the HTML and runs no script, so `/worktopia` has
+its own entry, `worktopia.html` at the repo root, a second Vite input that
+loads the same app. It carries the title "Worktopia," the icon
+(`public/worktopia-icon.svg`, a white W on the terminal's blue, with 32 and
+180 pixel PNGs), and the Open Graph and Twitter tags pointing at
+`public/worktopia-og.png`, 1200 by 630, the terminal's 2034 and "State your
+name." The description is his last intro line. `vercel.json` rewrites
+`/worktopia` to that file ahead of the catch-all, and every address in it is
+absolute so the drewi.sh proxy shows the same. The bundle is now
+`dist/assets/main-*.js`, not `index-*.js`, because the inputs are named.
+
 ## The code
 
 - `src/engine/worktopia/terminal.js`: the terminal, CSS and markup and all,

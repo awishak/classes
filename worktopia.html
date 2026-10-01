@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Worktopia's own entry. The app is the same as index.html; this file
+         exists so the title, the icon and the link preview are in the HTML,
+         where a crawler reads them, instead of set by script after load.
+         /worktopia is rewritten here in vercel.json, and drewi.sh/worktopia
+         proxies it, so every address is absolute. Andrew, 2026-10-01: "please
+         change the fav ico and site title and preview image." -->
+    <title>Worktopia</title>
+    <meta name="description" content="And now, you get your chance to experience Worktopia in the year 2034." />
+    <link rel="icon" type="image/svg+xml" href="https://classes.andrewishak.com/worktopia-icon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="https://classes.andrewishak.com/worktopia-icon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="https://classes.andrewishak.com/worktopia-icon-180.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Worktopia" />
+    <meta property="og:description" content="And now, you get your chance to experience Worktopia in the year 2034." />
+    <meta property="og:image" content="https://classes.andrewishak.com/worktopia-og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Worktopia" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Worktopia" />
+    <meta name="twitter:description" content="And now, you get your chance to experience Worktopia in the year 2034." />
+    <meta name="twitter:image" content="https://classes.andrewishak.com/worktopia-og.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    </style>
+    <script type="module" src="/src/main.jsx"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
