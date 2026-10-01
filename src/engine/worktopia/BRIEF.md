@@ -315,6 +315,16 @@ taken, a low sine hum while thinking, a groan on a horrible assignment, a
 fanfare on submit, a mute button in the bar. Nothing plays until Enter
 Worktopia, which is the press the browser wants.
 
+## Skipping
+
+Andrew, 2026-10-01: "give people the option to skip questions." Every typed
+question has a Skip button beside the box. A skip is kept on file as
+`SKIPPED`, "(skipped)", and echoed as the answer, so a reload moves past it
+and the instructor sees it was passed. A skipped name becomes the sign-in's
+name, or Operator; a skipped title is filed as an unnamed position and the
+Index is not searched. Buttons (accept, confirm, the stars) cannot be
+skipped; one of them is always a short answer.
+
 ## Saving
 
 Every answer is its own row, written when sent. A field is a word with an

@@ -26,6 +26,10 @@
 import { JOBS, HORRIBLE, horribleFor, findJob } from "./jobs.js";
 
 export const WORKTOPIA_KEY = "worktopia";
+// What a skipped question is kept as. Andrew, 2026-10-01: "give people the
+// option to skip questions." The word is on file, so a reload moves past it
+// and the instructor sees it was passed, not missed.
+export const SKIPPED = "(skipped)";
 export const WORKTOPIA_TITLE = "Worktopia";
 
 // FRANCHISE DYNASTY MEDIA INC.: the companies that own sports and the screens sports
@@ -253,6 +257,9 @@ export const CSS = `
 .jb .dock { position: sticky; bottom: 0; background: var(--jb-panel); border-top: 1px solid var(--jb-rule); padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; z-index: 3; }
 .jb .dock .row { display: flex; gap: 12px; align-items: flex-start; }
 .jb .dock .glyph { font-size: 13px; letter-spacing: 0.18em; color: var(--jb-cyan); padding-top: 11px; white-space: nowrap; }
+.jb .dock .skip { font: inherit; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; min-height: 42px; padding: 6px 14px; background: none; border: 1px solid var(--jb-rule); color: var(--jb-dim); border-radius: 2px; cursor: pointer; }
+.jb .dock .skip:hover { border-color: var(--jb-bot); color: var(--jb-bot); }
+.jb .dock .skip:disabled { opacity: 0.4; cursor: default; }
 .jb .dock textarea { flex: 1; min-width: 0; font: inherit; color: var(--jb-ink); background: var(--jb-paper); border: 1px solid var(--jb-rule); border-radius: 2px; padding: 9px 12px; resize: none; min-height: 42px; max-height: 40vh; caret-color: var(--jb-cyan); transition: box-shadow 0.2s, border-color 0.2s; }
 .jb .dock textarea:focus { border-color: var(--jb-cyan); box-shadow: 0 0 0 3px rgba(8,145,178,0.12), 0 0 18px rgba(8,145,178,0.18); outline: none; }
 .jb .dock textarea:disabled { background: #f1f4fa; color: var(--jb-dim); }
@@ -446,16 +453,17 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
           <div class="row" hidden>
             <span class="glyph" aria-hidden="true">OPERATOR &gt;</span>
             <textarea rows="1" aria-label="Your answer" disabled></textarea>
+            <button type="button" class="skip" disabled>Skip</button>
           </div>
           <div class="choice" hidden></div>
-          <div class="hint" hidden>Enter sends &middot; Shift+Enter for a new line</div>
+          <div class="hint" hidden>Enter sends &middot; Shift+Enter for a new line &middot; Skip passes</div>
         </div>
       </div>
     </div>`;
   const $ = (s) => root.querySelector(s);
   const intro = $(".intro"), term = $(".term");
   const log = $(".log"), input = $("textarea"), inputRow = $(".dock .row"), choice = $(".choice"), hint = $(".hint");
-  const light = $(".light"), status = $(".status"), count = $(".count"), enter = $(".enter"), mute = $(".mute"), clock = $(".clock"), saveEl = $(".save");
+  const light = $(".light"), status = $(".status"), count = $(".count"), enter = $(".enter"), mute = $(".mute"), clock = $(".clock"), saveEl = $(".save"), skip = $(".skip");
   const rail = [...root.querySelectorAll(".rail i")];
   const help = $(".help"), about = $(".about");
   if (help && about) {
@@ -647,6 +655,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       beep();
       inputRow.hidden = false; hint.hidden = false; choice.hidden = true;
       input.disabled = false; input.value = ""; input.rows = rows || 1; input.placeholder = placeholder || "";
+      skip.disabled = false;
       input.focus({ preventScroll: true });
       const grow = () => { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, window.innerHeight * 0.4) + "px"; };
       grow(); scroll();
@@ -656,12 +665,17 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
         const t = input.value.trim();
         if (!t) { warn("I need an answer before I can go on."); return; }
         if (min && t.length < min) { warn(short || "This is not enough information to assign you."); return; }
-        input.removeEventListener("keydown", onKey); input.removeEventListener("input", grow);
-        input.disabled = true; input.value = ""; input.style.height = "";
+        done(t);
+      };
+      const onSkip = () => done(SKIPPED);
+      const done = (t) => {
+        input.removeEventListener("keydown", onKey); input.removeEventListener("input", grow); skip.removeEventListener("click", onSkip);
+        input.disabled = true; skip.disabled = true; input.value = ""; input.style.height = "";
         echo(t); resolve(t);
       };
       input.addEventListener("keydown", onKey);
       input.addEventListener("input", grow);
+      skip.addEventListener("click", onSkip);
     });
     await save(field, v);
     return v;
@@ -752,6 +766,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
 
   async function lookup() {
     name = await ask({ field: F.name, q: "State your name.", placeholder: viewer?.name || "Your name" });
+    if (name === SKIPPED) name = viewer?.name || "Operator";
     h = hash(name);
     await think("Cross-referencing against all " + fmt(3 + h % 48000) + " " + plural(name) + " in the United States", 2400);
     // Andrew, 2026-10-01: "i do like the cespedes line."
@@ -814,9 +829,13 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     const title = await ask({ field: F.title(i), force, placeholder: "Job title",
       q: i === 0 ? "Okay. What employment do you want?"
         : "Position " + L + ", your " + ORDINAL[i] + " choice. What is a position in sports that you would be competent at, and provide value to " + COMPANY + "? Please list the job title." });
-    await think("Searching the Brady-Manning Work Index for \"" + title + "\"", 1600);
-    const hit = findJob(title);
-    await say(hit ? "Found in the Index: " + hit.title + ", under " + hit.category + ". Status: OPEN." : "Not in the Index. Filed as a new position. Status: OPEN.");
+    if (title === SKIPPED) {
+      await say("No title given. Filed as Position " + L + ", unnamed. Status: OPEN.");
+    } else {
+      await think("Searching the Brady-Manning Work Index for \"" + title + "\"", 1600);
+      const hit = findJob(title);
+      await say(hit ? "Found in the Index: " + hit.title + ", under " + hit.category + ". Status: OPEN." : "Not in the Index. Filed as a new position. Status: OPEN.");
+    }
     const skills = await ask({ field: F.skills(i), force, rows: 2, min: 20, q: "What skills will you need to do this well?" });
     await think("Noted", 600);
     // Andrew, 2026-10-01: the question to hint at on the first page and ask here.
