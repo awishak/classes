@@ -20,8 +20,13 @@ const chunks = (value) => {
 };
 // Rows to a map of field to value, chunks joined in order.
 export const answersOf = (rows) => {
+  // One row per field and position. Two tabs saving the same answer at the
+  // same instant can leave two rows at a position; the later one is kept,
+  // so the text is never doubled.
+  const slot = {};
+  (rows || []).forEach(r => { slot[r.field + "\u0000" + (r.position || 0)] = r; });
   const by = {};
-  (rows || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0)).forEach(r => { by[r.field] = (by[r.field] || "") + r.value; });
+  Object.values(slot).sort((a, b) => (a.position || 0) - (b.position || 0)).forEach(r => { by[r.field] = (by[r.field] || "") + r.value; });
   return by;
 };
 
@@ -37,9 +42,13 @@ export function supabaseStore({ supabase, worksheetKey, groupKey, viewerId }) {
     if (r.error) fail("Could not read the sheet", r);
     if (r.data && r.data[0]) { sheetId = r.data[0].id; return sheetId; }
     const made = await supabase.from("worksheet_sheets").insert({ worksheet_key: worksheetKey, group_key: groupKey, viewer_id: viewer }).select("id,submitted_at");
-    if (made.error || !made.data || !made.data[0]) fail("Could not start the sheet", made);
-    sheetId = made.data[0].id;
-    return sheetId;
+    if (made.data && made.data[0]) { sheetId = made.data[0].id; return sheetId; }
+    // The same student in two tabs can race to start the sheet. The table's
+    // unique (worksheet_key, group_key, viewer_id) lets only one in; the
+    // other reads the row the winner made instead of failing.
+    const again = await supabase.from("worksheet_sheets").select("id,submitted_at").eq("worksheet_key", worksheetKey).eq("group_key", groupKey).eq("viewer_id", viewer);
+    if (again.data && again.data[0]) { sheetId = again.data[0].id; return sheetId; }
+    fail("Could not start the sheet", made.error ? made : again);
   };
   return {
     async load() {
