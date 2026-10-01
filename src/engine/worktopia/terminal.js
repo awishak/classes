@@ -51,11 +51,21 @@ export const COMPANY_LETTERS = [
 export const INTRO = [
   "It's the year 2034.",
   "Over the last eight years, a few things have happened.",
-  "AI has taken over the routine work of every office in sports: the schedules, the contracts, the first draft of everything.",
-  "Media has collapsed into a handful of owners, and then into one. The leagues, the networks, the streaming apps and the phones they play on belong to " + COMPANY,
-  "Sports media in particular has stopped posting jobs. There is no application, no interview, no offer. There is a file on you, and a system that reads it.",
+  // The story. Andrew, 2026-10-01: "make up a story. don't just say media
+  // has collapsed into a bunch of owners. don't just say 'they own every NFL
+  // team and the other leagues.' tell a dystopian story and use details."
+  "In 2027, a model wrote the entire Super Bowl ad slate for a beer company over a weekend, and the ads tested better than the agency's. By the next spring, every team's marketing department was two people and a login.",
+  "In 2028, the Jaguars let a model run their draft. It took a punter in the first round. He made the Pro Bowl. The next year, thirty-one teams let a model run their draft, and the one that didn't went 2-15.",
+  "The models wrote the contracts, set the schedules, cut the highlights, called the games in forty languages, and produced the first draft of everything a human then signed.",
+  "Then the humans who signed things started selling. Fox bought Sinclair. Amazon bought Fox. Comcast and Disney merged on a Tuesday. In 2031, the whole stack closed in a single filing: the leagues, the networks, the streams, the stadiums and the phones they play on, under one name, " + COMPANY + " The last line of the deal was a banana company. Nobody knows why. It is still there.",
+  COMPANY + " owns every NFL team. It bought the Packers from the people of Green Bay for one share each. After the NFL, the other leagues. After the leagues, every channel, every stream, every stadium, every jersey, every ticket and every banana.",
+  "Sports media stopped posting jobs in 2032. There is no application, no interview, no offer. There is a file on you, built from everything you ever posted, bought, watched or skipped, and a system that reads it.",
   "That's led to the consolidation of decisions in the employment process to one product: Worktopia.",
-  "Worktopia is a work management system that assigns you to your job. It reads your file, weighs your case and decides.",
+  "Worktopia is a work management system that assigns you to your job. It reads your file, weighs your case and decides. It has never been wrong. It says so on the login screen.",
+  // The hint. Andrew, 2026-10-01: "what you should hint at on this first
+  // page, and also in the skills questions: what will you bring to this job
+  // that would be better than if we simply let AI do it?"
+  "Worktopia will ask what you want to do. As you answer, keep one question in mind: what will you bring to this job that would be better than if we simply let AI do it?",
   "And now, you get your chance to experience Worktopia in the year 2034.",
 ];
 
@@ -296,7 +306,7 @@ export const F = {
   // Rounds as letters, since the database allows only letters in a part: a to
   // z, then aa to zz. accept:0 was refused on 2026-10-01.
   accept: (r) => "accept:" + String.fromCharCode(97 + (r % 26)).repeat(Math.floor(r / 26) + 1),
-  title: part("title"), skills: part("skills"), why: part("why"), duties: part("duties"), value: part("value"), future: part("future"),
+  title: part("title"), skills: part("skills"), human: part("human"), why: part("why"), duties: part("duties"), value: part("value"), future: part("future"),
   interesting: "interesting", likely: "likely", pays: "pays", confirm: "confirm",
   industry: "industry", fading: "fading", rising: "rising",
   coworkers: "coworkers", meeting: "meeting", thursday: "thursday", stars: "stars", review: "review",
@@ -643,6 +653,9 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     await say(hit ? "Found in the Index: " + hit.title + ", under " + hit.category + ". Status: OPEN." : "Not in the Index. Filed as a new position. Status: OPEN.");
     const skills = await ask({ field: F.skills(i), force, rows: 2, min: 20, q: "What skills will you need to do this well?" });
     await think("Noted", 600);
+    // Andrew, 2026-10-01: the question to hint at on the first page and ask here.
+    const human = await ask({ field: F.human(i), force, rows: 3, min: 40, q: "What will you bring to this job that would be better than if we simply let AI do it?" });
+    await think("Noted", 600);
     const why = await ask({ field: F.why(i), force, rows: 3, min: 40, q: "Why will you personally be good at this position?" });
     await think("Noted", 600);
     const duties = await ask({ field: F.duties(i), force, rows: 3, min: 60, q: "What does this position accomplish? What are the main duties?" });
@@ -652,7 +665,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     const future = await ask({ field: F.future(i), force, rows: 3, min: 60, q: "Why do you think this position is still valuable in 2034? (I know, for I am Worktopia, but I want you to tell me.)" });
     await think("Filing Position " + L, 1400);
     await say("Logged. Position " + L + ", " + title + ", is on your file.");
-    jobs[i] = { letter: L, title, skills, why, duties, value, future };
+    jobs[i] = { letter: L, title, skills, human, why, duties, value, future };
   }
 
   const titleOf = (L) => (jobs.find(j => j.letter === L) || {}).title || "";

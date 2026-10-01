@@ -67,14 +67,21 @@ answer back ... it's an advanced version of AI."
 
 ## The run, in order
 
-1. **The intro.** 2034 in large type, then eight sentences. His skeleton:
+1. **The intro.** 2034 in large type, then a story: a model writes the
+   Super Bowl ads in 2027, the Jaguars let one run their draft in 2028,
+   the buyouts, the 2031 filing, the Packers sold for one share each, the
+   banana company, and jobs stop being posted in 2032. Andrew: "make up a
+   story ... tell a dystopian story and use details." His skeleton:
    "its the year 2034. (catch people up on what's going on). over the last
    eight years, a few things have happened. AI has... media has... sports
    media in particular has... that's led to the consolidation of decisions
    in the employment process to one product: Worktopia. Worktopia is a ...
    that ... and now, you get your chance to experience Worktopia in the year
    2034." His sentences are kept as written; the fills are Claude's draft,
-   in `INTRO`, for him to replace. Enter Worktopia is the press the browser
+   in `INTRO`, for him to replace. The AI sentence names marketing and
+   drafting players, and the page ends on his hint: "what will you bring to
+   this job that would be better than if we simply let AI do it?" Enter
+   Worktopia is the press the browser
    wants before any sound plays.
 2. **Boot.** The terminal, the build, connecting to the Brady-Manning Work
    Index, loading 1,000 positions, calibrating the assignment engine,
@@ -107,6 +114,9 @@ answer back ... it's an advanced version of AI."
    production. Status: OPEN." or "Not in the Index. Filed as a new position.
    Status: OPEN." Then his questions:
    - "What skills will you need to do this well?"
+   - "What will you bring to this job that would be better than if we
+     simply let AI do it?" (his, 2026-10-01: hinted at on the intro page
+     and asked here)
    - "Why will you personally be good at this position?"
    - "What does this position accomplish? What are the main duties?"
    - "What value does this position provide to the sports ecosystem?"
@@ -246,7 +256,7 @@ Worktopia, which is the press the browser wants.
 
 Every answer is its own row, written when sent. A field is a word with an
 optional part, the shape the database's field check allows: `name`,
-`accept:a` and on, `title:a`, `skills:a`, `why:a`, `duties:a`, `value:a`,
+`accept:a` and on, `title:a`, `skills:a`, `human:a`, `why:a`, `duties:a`, `value:a`,
 `future:a` (and `:b`, `:c`), `interesting`, `likely`, `pays`, `confirm`,
 `industry`, `fading`, `rising`, `coworkers`, `meeting`, `thursday`,
 `stars`, `review`. An answer over 500 characters is cut into rows at

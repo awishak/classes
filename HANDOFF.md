@@ -807,8 +807,8 @@ Brady-Manning Work Index (a seventeen-digit number, likes and dislikes, all
 from the name) and draws them as text (their card photograph, or a face from
 the name). Then a horrible job (`HORRIBLE`, sixty of them, his two first) on
 an assignment ticket, and "Do you accept?" Yes gets the next horrible job;
-no moves on: "Okay. What employment do you want?" Three positions, six of
-his questions each (title, skills needed, why you personally, duties, value
+no moves on: "Okay. What employment do you want?" Three positions, seven of
+his questions each (title, skills needed, what you bring that beats letting AI do it, why you personally, duties, value
 to the ecosystem, why still valuable in 2034); a title is looked up in the
 Index of a thousand jobs (twenty-five categories of forty, the smoke counts
 them). After Position A: "this is not a guarantee. We need to present three
