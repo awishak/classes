@@ -18,7 +18,8 @@
 import { WORKTOPIA_KEY, WORKTOPIA_TITLE, mountWorktopia } from "./worktopia/terminal.js";
 
 export const LOCAL_WORKSHEETS = [
-  { key: WORKTOPIA_KEY, title: WORKTOPIA_TITLE, mount: mountWorktopia, open: ["comm999"] },
+  // Andrew, 2026-10-01: "let's open it now." Weekly Challenge 2, due Oct 7.
+  { key: WORKTOPIA_KEY, title: WORKTOPIA_TITLE, mount: mountWorktopia, open: ["comm999", "comm118"] },
 ];
 
 export const localWorksheet = (key) => LOCAL_WORKSHEETS.find(w => w.key === key) || null;
