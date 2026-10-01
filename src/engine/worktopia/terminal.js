@@ -1,32 +1,37 @@
-// JobBot 5000: a worksheet that is a computer terminal in the year 2034.
+// Worktopia: a worksheet that is a work management system in the year 2034.
 //
-// COMM 118's worksheet for the week of 2026-10-05. The student sits at a job
-// allocation terminal run by FRANCHISE DYNASTY MEDIA INC., the one company that owns
-// all media and all sports in 2034. JobBot looks them up on the Brady-Manning Work Index,
-// draws them as text, takes their skills, then three to five positions in
-// sports with the duties, the value to the sports ecosystem and why the
-// position still exists in 2034, then an evaluation (most interesting, most
-// likely, pays the most), and assigns one. Andrew, 2026-10-01: "a white screen
-// that beeps ... you enter an answer then it kind of thinks and then gives you
-// an answer back."
+// COMM 118's worksheet for the week of 2026-10-05. Andrew, 2026-10-01: "it's
+// the work management system that assigns you to your job." The student reads
+// an intro about 2034, then sits at a terminal run by FRANCHISE DYNASTY MEDIA INC.,
+// the one company that owns all media and all sports. Worktopia looks them up
+// on the Brady-Manning Work Index, draws them as text, assigns them a horrible
+// job until they decline one, takes three positions with Andrew's questions on
+// each, an evaluation, three questions about the industry, the classmates they
+// would work with, a meeting date, and a review. Then the file is submitted,
+// and Worktopia's system gets back to them. Earlier brief, 2026-10-01: "a white
+// screen that beeps ... you enter an answer then it kind of thinks and then
+// gives you an answer back."
 //
-// Plain DOM, like the worksheets package's sheet.js: mountJobBot(root, opts)
+// Plain DOM, like the worksheets package's sheet.js: mountWorktopia(root, opts)
 // draws into root and returns { destroy }. Nothing here touches the window at
-// import, so the smoke run can load the module. The store (jobbot/store.js)
+// import, so the smoke run can load the module. The store (worktopia/store.js)
 // keeps every answer as its own row the moment the student sends it, so a
 // reload replays what is on file and picks up at the first open question.
 //
-// The questions are Andrew's words (2026-10-01). JobBot's other lines are
-// placeholders for him to edit; the jokes (the record, the likes and
-// dislikes, the company) are his idea and Claude's wording.
+// The questions are Andrew's words (2026-10-01). The intro is his skeleton
+// with Claude's fill, marked below. Worktopia's other lines are placeholders
+// for him to edit; the jokes (the record, the likes and dislikes, the company,
+// the horrible jobs) are his idea and Claude's wording.
 
-export const JOBBOT_KEY = "jobbot-5000";
-export const JOBBOT_TITLE = "JobBot 5000";
+import { JOBS, HORRIBLE, horribleFor, findJob } from "./jobs.js";
 
-// FRANCHISE DYNASTY MEDIA INC.: the companies that own sports and the screens
-// sports are watched on, which in 2034 are one company. Andrew, 2026-10-01:
-// "one big media conglomerate that holds all media, all sports, all that
-// stuff." One company a letter, Chiquita Banana included on his say-so.
+export const WORKTOPIA_KEY = "worktopia";
+export const WORKTOPIA_TITLE = "Worktopia";
+
+// FRANCHISE DYNASTY MEDIA INC.: the companies that own sports and the screens sports
+// are watched on, which in 2034 are one company. Andrew, 2026-10-01: "one big
+// media conglomerate that holds all media, all sports, all that stuff." One
+// company a letter, Chiquita Banana included on his say-so (2026-10-01).
 export const COMPANY = "FRANCHISE DYNASTY MEDIA INC.";
 export const COMPANY_LETTERS = [
   ["F", "Fox"], ["R", "RedBird"], ["A", "Amazon"], ["N", "Netflix"], ["C", "Comcast"], ["H", "Hulu"], ["I", "Ineos"], ["S", "Sky"], ["E", "ESPN"],
@@ -35,9 +40,38 @@ export const COMPANY_LETTERS = [
   ["I", "IMG"], ["N", "NBC"], ["C", "Chiquita Banana"],
 ];
 
-const MIN_JOBS = 3, MAX_JOBS = 5;
-const LETTERS = ["A", "B", "C", "D", "E"];
-const ORDINAL = ["first", "second", "third", "fourth", "fifth"];
+// The intro, read before Worktopia loads. Andrew's skeleton, 2026-10-01: "its
+// the year 2034. (catch people up on what's going on). over the last eight
+// years, a few things have happened. AI has... media has... sports media in
+// particular has... that's led to the consolidation of decisions in the
+// employment process to one product: Worktopia. Worktopia is a ... that ...
+// and now, you get your chance to experience Worktopia in the year 2034."
+// The sentences he wrote are kept as written; the rest is Claude's fill for
+// him to replace.
+export const INTRO = [
+  "It's the year 2034.",
+  "Over the last eight years, a few things have happened.",
+  "AI has taken over the routine work of every office in sports: the schedules, the contracts, the first draft of everything.",
+  "Media has collapsed into a handful of owners, and then into one. The leagues, the networks, the streaming apps and the phones they play on belong to " + COMPANY,
+  "Sports media in particular has stopped posting jobs. There is no application, no interview, no offer. There is a file on you, and a system that reads it.",
+  "That's led to the consolidation of decisions in the employment process to one product: Worktopia.",
+  "Worktopia is a work management system that assigns you to your job. It reads your file, weighs your case and decides.",
+  "And now, you get your chance to experience Worktopia in the year 2034.",
+];
+
+// The workgroup meeting. Andrew, 2026-10-01: "you will meet with your new
+// workgroup Wed Oct 21 during class, Thursday October 22 at 9 am, or Friday
+// October 23 during class."
+export const MEETINGS = [
+  { key: "WED", label: "Wednesday, October 21, during class" },
+  { key: "THU", label: "Thursday, October 22, at 9 am" },
+  { key: "FRI", label: "Friday, October 23, during class" },
+];
+
+const N_JOBS = 3;
+const LETTERS = ["A", "B", "C"];
+const ORDINAL = ["first", "second", "third"];
+const MAX_COWORKERS = 4;
 const FONTS = "https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap";
 
 // One white look, on purpose: the brief is a white screen that glows. The
@@ -53,6 +87,11 @@ export const CSS = `
 .jb * { box-sizing: border-box; }
 .jb [hidden] { display: none !important; }
 .jb .term { max-width: 860px; margin: 0 auto; min-height: calc(100vh - 56px); display: flex; flex-direction: column; padding-inline: 16px; padding-block: 14px 0; }
+.jb .intro { max-width: 720px; margin: 0 auto; padding: 48px 16px 64px; display: flex; flex-direction: column; gap: 22px; }
+.jb .intro .year { font-family: var(--jb-display); font-weight: 900; font-size: clamp(34px, 8vw, 64px); letter-spacing: 0.08em; color: var(--jb-bot); line-height: 1; text-shadow: 0 0 24px var(--jb-glow); margin: 0 0 8px; }
+.jb .intro p { margin: 0; font-size: 18px; line-height: 1.6; text-wrap: pretty; }
+.jb .intro p.last { color: var(--jb-bot); }
+.jb .intro .power { margin-top: 18px; }
 .jb .bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 10px 16px; border: 1px solid var(--jb-rule); border-bottom: 0; background: var(--jb-panel);
   font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jb-dim); box-shadow: 0 1px 0 var(--jb-rule); }
 .jb .bar .name { font-family: var(--jb-display); font-weight: 900; font-size: 15px; letter-spacing: 0.22em; color: var(--jb-ink); }
@@ -114,9 +153,6 @@ export const CSS = `
 .jb .ticket dl { margin: 0; display: grid; grid-template-columns: 120px 1fr; gap: 6px 14px; font-size: 14px; }
 .jb .ticket dt { color: var(--jb-dim); text-transform: uppercase; letter-spacing: 0.14em; font-size: 11px; padding-top: 3px; }
 .jb .ticket dd { margin: 0; white-space: pre-wrap; }
-.jb .ticket .job { border-top: 1px dashed var(--jb-rule); margin-top: 14px; padding-top: 14px; }
-.jb .ticket .job h3 { margin: 0 0 8px; font-size: 15px; font-weight: 400; text-transform: uppercase; letter-spacing: 0.08em; }
-.jb .ticket .job h3 .pick { color: #fff; background: var(--jb-bot); font-size: 10px; letter-spacing: 0.18em; padding: 2px 8px; margin-left: 10px; vertical-align: 2px; }
 .jb .ticket .bars { display: flex; gap: 2px; height: 22px; margin-top: 18px; opacity: 0.8; }
 .jb .ticket .bars i { background: var(--jb-ink); width: 2px; }
 .jb .ticket .bars i.w { width: 4px; } .jb .ticket .bars i.g { background: transparent; width: 3px; }
@@ -132,6 +168,11 @@ export const CSS = `
 .jb .choice button:hover, .jb .power:hover { color: #fff; box-shadow: inset 0 -44px 0 0 var(--jb-bot); }
 .jb .choice button span { color: var(--jb-dim); letter-spacing: 0.06em; text-transform: none; }
 .jb .choice button:hover span { color: #fff; }
+.jb .choice button[aria-pressed="true"] { color: #fff; background: var(--jb-bot); }
+.jb .choice button[aria-pressed="true"] span { color: #fff; }
+.jb .choice button.done { border-color: var(--jb-cyan); color: var(--jb-cyan); }
+.jb .choice button.done:hover { box-shadow: inset 0 -44px 0 0 var(--jb-cyan); color: #fff; }
+.jb .choice .picked { flex-basis: 100%; font-size: 12px; color: var(--jb-dim); letter-spacing: 0.1em; text-transform: uppercase; }
 .jb .power { align-self: flex-start; font-family: var(--jb-display); font-weight: 700; padding-inline: 26px; }
 @keyframes jb-blink { to { visibility: hidden; } }
 @keyframes jb-pulse { 50% { transform: scale(1.5); opacity: 0.55; } }
@@ -145,6 +186,7 @@ export const CSS = `
   .jb .bar { gap: 10px; }
   .jb .bar .clock { display: none; }
   .jb .log { padding-inline: 20px; }
+  .jb .intro { padding-top: 32px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .jb .cursor, .jb .bar .light.think, .jb .scan, .jb .rail i.live, .jb .ticket::before, .jb .line.think .proc i { animation: none; }
@@ -248,26 +290,27 @@ const photoToText = (url) => new Promise(resolve => {
 // ─── the terminal ───
 
 // Fields, as the database names them: letters, an optional ":part".
-const F = {
-  skills: "skills",
-  title: (i) => "title:" + LETTERS[i].toLowerCase(),
-  duties: (i) => "duties:" + LETTERS[i].toLowerCase(),
-  value: (i) => "value:" + LETTERS[i].toLowerCase(),
-  future: (i) => "future:" + LETTERS[i].toLowerCase(),
-  more: (i) => "more:" + LETTERS[i].toLowerCase(),
+const part = (name) => (i) => name + ":" + LETTERS[i].toLowerCase();
+export const F = {
+  name: "name",
+  accept: (r) => "accept:" + r,
+  title: part("title"), skills: part("skills"), why: part("why"), duties: part("duties"), value: part("value"), future: part("future"),
   interesting: "interesting", likely: "likely", pays: "pays", confirm: "confirm",
+  industry: "industry", fading: "fading", rising: "rising",
+  coworkers: "coworkers", meeting: "meeting", thursday: "thursday", stars: "stars", review: "review",
 };
 const STOP = Symbol("stop");
 const fmtWhen = (iso) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 /**
- * Draw the terminal into root.
+ * Draw Worktopia into root.
  *   store: { load() -> { answers: {field: value}, submitted_at }, save(field, value), submit() -> iso, recall() }
  *   viewer: { id, name }   photo: a data URL for the student's picture, or nothing
+ *   classmates: the names on the roster, less the student's own, for the co-worker question
  *   readOnly: the instructor reading a student's file; nothing is asked
  * Returns { destroy }.
  */
-export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {}) {
+export function mountWorktopia(root, { store, viewer, photo, classmates = [], readOnly = false } = {}) {
   if (!document.getElementById("jb-fonts")) {
     const l = document.createElement("link"); l.id = "jb-fonts"; l.rel = "stylesheet"; l.href = FONTS; document.head.appendChild(l);
   }
@@ -276,9 +319,14 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
   }
   root.classList.add("jb");
   root.innerHTML = `
-    <div class="term">
+    <div class="intro" ${readOnly ? "hidden" : ""}>
+      <h1 class="year">2034</h1>
+      ${INTRO.map((p, i) => "<p" + (i === INTRO.length - 1 ? " class=\"last\"" : "") + ">" + esc(p) + "</p>").join("")}
+      <button type="button" class="power enter">Enter Worktopia</button>
+    </div>
+    <div class="term" ${readOnly ? "" : "hidden"}>
       <div class="bar">
-        <span class="name">JOBBOT 5000<small>v2034.10</small></span>
+        <span class="name">WORKTOPIA<small>v2034.10</small></span>
         <span class="light"></span>
         <span class="status">Standby</span>
         <span class="spacer"></span>
@@ -287,12 +335,11 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
         <span class="count"></span>
         <button type="button" class="mute" aria-pressed="false">Sound on</button>
       </div>
-      <div class="rail" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="rail" aria-hidden="true"><i></i><i></i><i></i></div>
       <div class="screen">
         <div class="scan" aria-hidden="true"></div>
         <div class="log" aria-live="polite"></div>
         <div class="dock">
-          <button type="button" class="power">Power on</button>
           <div class="row" hidden>
             <span class="glyph" aria-hidden="true">OPERATOR &gt;</span>
             <textarea rows="1" aria-label="Your answer" disabled></textarea>
@@ -303,8 +350,9 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
       </div>
     </div>`;
   const $ = (s) => root.querySelector(s);
+  const intro = $(".intro"), term = $(".term");
   const log = $(".log"), input = $("textarea"), inputRow = $(".dock .row"), choice = $(".choice"), hint = $(".hint");
-  const light = $(".light"), status = $(".status"), count = $(".count"), power = $(".power"), mute = $(".mute"), clock = $(".clock"), saveEl = $(".save");
+  const light = $(".light"), status = $(".status"), count = $(".count"), enter = $(".enter"), mute = $(".mute"), clock = $(".clock"), saveEl = $(".save");
   const rail = [...root.querySelectorAll(".rail i")];
   const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let alive = true;
@@ -338,6 +386,7 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
   const bootTick = () => tone(1975, 25, "square", 0.018);
   const decodeTick = () => tone(2637, 12, "square", 0.006);
   const fanfare = () => { tone(784, 70); tone(1046, 70, "square", 0.03, 0.09); tone(1568, 90, "square", 0.03, 0.18); tone(2093, 220, "square", 0.03, 0.27); };
+  const groan = () => { tone(220, 160); tone(165, 260, "square", 0.03, 0.14); };
   let hum = null;
   const humOn = () => { if (hum || replay) return; hum = setInterval(() => { tone(196, 50, "sine", 0.045); tone(294, 40, "sine", 0.02, 0.16); }, 320); };
   const humOff = () => { clearInterval(hum); hum = null; };
@@ -355,11 +404,11 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
     const x = document.createElement("span"); x.className = "txt";
     el.append(t, x); log.append(el); return x;
   };
-  // JobBot decodes. The whole line lands at once as scrambled glyphs, so its
+  // Worktopia decodes. The whole line lands at once as scrambled glyphs, so its
   // height never changes, then the letters resolve left to right.
   const GLYPHS = "01<>/\\|=+-*#%$&@?!:;[]{}ABCDEFXYZ";
   const say = (text, speed = 14) => new Promise(resolve => {
-    const x = line("bot", "JobBot");
+    const x = line("bot", "Worktopia");
     if (replay || reduced || !alive) { x.textContent = text; resolve(); return; }
     const fixed = document.createTextNode(""), raw = document.createElement("span"), cur = document.createElement("span");
     raw.className = "raw"; cur.className = "cursor";
@@ -380,12 +429,12 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
     const x = line("sys", "System"); x.textContent = text; scroll();
     if (ok) { await sleep(ok); const s = document.createElement("span"); s.className = "ok"; s.textContent = "OK"; x.append(" ", s); bootTick(); }
   };
-  const warn = (text) => { const x = line("warn", "JobBot"); x.textContent = text; tone(330, 120); scroll(); };
+  const warn = (text) => { const x = line("warn", "Worktopia"); x.textContent = text; tone(330, 120); scroll(); };
   const setLight = (cls, text) => { light.className = "light " + cls; status.textContent = text; };
   const think = async (text, ms) => {
     if (replay) return;
     setLight("think", "Processing"); humOn();
-    const x = line("think", "JobBot");
+    const x = line("think", "Worktopia");
     const label = document.createElement("span"); label.textContent = text;
     const proc = document.createElement("span"); proc.className = "proc"; proc.innerHTML = "<i></i>".repeat(10);
     x.append(label, proc); scroll();
@@ -393,15 +442,25 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
   };
   const echo = (text) => { const x = line("you", "Operator"); x.textContent = text; chirp(); scroll(); };
   const card = (title, rows, pace = 260) => {
-    const x = line("bot", "JobBot"); const rec = document.createElement("div"); rec.className = "record"; x.append(rec); scroll();
+    const x = line("bot", "Worktopia"); const rec = document.createElement("div"); rec.className = "record"; x.append(rec); scroll();
     rec.innerHTML = "<h2>" + title + "</h2><dl></dl>";
     const dl = rec.querySelector("dl");
     return (async () => { for (const [k, v] of rows) { dl.insertAdjacentHTML("beforeend", "<dt>" + esc(k) + "</dt><dd>" + esc(v) + "</dd>"); bootTick(); await sleep(pace); } })();
   };
   const print = async (cls, text) => {
-    const x = line("bot", "JobBot"); const pre = document.createElement("pre"); pre.className = cls; x.append(pre); scroll();
+    const x = line("bot", "Worktopia"); const pre = document.createElement("pre"); pre.className = cls; x.append(pre); scroll();
     if (replay || reduced) { pre.textContent = text; return; }
     for (const r of text.split("\n")) { pre.textContent += (pre.textContent ? "\n" : "") + r; decodeTick(); await sleep(45); }
+  };
+  // The assignment ticket: the horrible job, stamped.
+  const ticket = (title, sub) => {
+    const t = document.createElement("div"); t.className = "ticket";
+    const id = "ASSIGN-2034-" + ((h + n_assign * 7919) % 0xffffff).toString(16).toUpperCase().padStart(6, "0");
+    const bars = Array.from({ length: 48 }, (_, i) => "<i class=\"" + ((h >>> (i % 28)) % 7 < 2 ? "g" : (h >>> (i % 23)) % 5 < 2 ? "w" : "") + "\"></i>").join("");
+    t.innerHTML = "<h2>Assignment</h2><div class=\"id\">" + id + " &middot; Employer of record: " + esc(COMPANY) + "</div><div class=\"big\">" + esc(name) + " &rarr; <b>" + esc(title) + "</b></div>"
+      + "<dl><dt>Status</dt><dd>" + esc(sub) + "</dd></dl><div class=\"bars\" aria-hidden=\"true\">" + bars + "</div>";
+    const wrap = document.createElement("div"); wrap.className = "line"; wrap.style.display = "block"; wrap.append(t); log.append(wrap); scroll();
+    n_assign++;
   };
 
   // ─── saving ───
@@ -461,8 +520,8 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
       choice.innerHTML = ""; choice.hidden = false; inputRow.hidden = true; hint.hidden = true;
       options.forEach(o => {
         const b = document.createElement("button"); b.type = "button";
-        b.innerHTML = esc(o.key) + " <span>&middot; " + esc(o.label) + "</span>";
-        b.addEventListener("click", () => { choice.hidden = true; echo(o.key); resolve(o.key); });
+        b.innerHTML = esc(o.key) + (o.label ? " <span>&middot; " + esc(o.label) + "</span>" : "");
+        b.addEventListener("click", () => { choice.hidden = true; echo(o.key + (o.label && o.echo !== false ? " · " + o.label : "")); resolve(o.key); });
         choice.append(b);
       });
       choice.querySelector("button").focus({ preventScroll: true });
@@ -470,6 +529,39 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
     });
     if (field) await save(field, k);
     return k;
+  };
+  // Several from a list, up to max, or none. Kept on file as the names joined
+  // with commas, or "None".
+  const pickSome = async ({ field, q, options, max, force }) => {
+    if (!force && field in prior) { await say(q); echo(prior[field]); return prior[field]; }
+    if (readOnly) throw STOP;
+    live();
+    await say(q);
+    const v = await new Promise(resolve => {
+      beep();
+      choice.innerHTML = ""; choice.hidden = false; inputRow.hidden = true; hint.hidden = true;
+      const picked = [];
+      const status = document.createElement("span"); status.className = "picked";
+      const show = () => { status.textContent = picked.length ? picked.length + " of " + max + " picked" : "Pick up to " + max + ", or none"; };
+      options.forEach(o => {
+        const b = document.createElement("button"); b.type = "button"; b.textContent = o; b.setAttribute("aria-pressed", "false");
+        b.addEventListener("click", () => {
+          const at = picked.indexOf(o);
+          if (at >= 0) picked.splice(at, 1);
+          else if (picked.length < max) picked.push(o);
+          else { warn("Up to " + max + "."); return; }
+          b.setAttribute("aria-pressed", String(picked.includes(o))); chirp(); show();
+        });
+        choice.append(b);
+      });
+      const done = document.createElement("button"); done.type = "button"; done.className = "done"; done.textContent = "Done";
+      done.addEventListener("click", () => { choice.hidden = true; const out = picked.length ? picked.join(", ") : "None"; echo(out); resolve(out); });
+      choice.append(done, status); show();
+      choice.querySelector("button").focus({ preventScroll: true });
+      scroll();
+    });
+    await save(field, v);
+    return v;
   };
   const setCount = (i) => {
     count.textContent = i ? "Position " + LETTERS[i - 1] : "";
@@ -479,32 +571,33 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
   // ─── the session ───
   // The name is asked, even though the sign-in knows it: Andrew, 2026-10-01,
   // "still please let me enter my name." The record, the portrait and the
-  // allocation all read the name as typed.
+  // assignments all read the name as typed.
   let name = viewer?.name || "Operator";
   let h = hash(name);
+  let n_assign = 0;
 
   async function boot() {
     setLight("think", "Booting"); tone(523, 60); tone(784, 60, "square", 0.03, 0.08); tone(1046, 120, "square", 0.03, 0.16);
-    await sys("JOBBOT 5000  ·  LABOR ALLOCATION TERMINAL  ·  " + COMPANY);
+    await sys("WORKTOPIA  ·  WORK MANAGEMENT SYSTEM  ·  " + COMPANY);
     await sys("Build 2034.10.01  ·  Node SCU-VARI-133  ·  Operator link encrypted");
     await sleep(400);
     await sys("Connecting to the Brady-Manning Work Index .....", 700);
-    await sys("Loading the sustainability model .............", 500);
-    await sys("Calibrating the allocation engine ............", 450);
+    await sys("Loading " + fmt(JOBS.length) + " positions ........................", 500);
+    await sys("Calibrating the assignment engine ............", 450);
     await sys("Opening your file ............................", 400);
     await sleep(300);
     setLight("on", "Ready");
   }
 
   async function lookup() {
-    name = await ask({ field: "name", q: "State your name.", placeholder: viewer?.name || "Your name" });
+    name = await ask({ field: F.name, q: "State your name.", placeholder: viewer?.name || "Your name" });
     h = hash(name);
     await think("Cross-referencing against all " + fmt(3 + h % 48000) + " " + plural(name) + " in the United States", 2400);
     await say("Found you.");
     await sleep(300);
     await card("Record &middot; Brady-Manning Work Index", [
       ["Name", name], ["Trump Index No.", indexNo(h)], ["Education", "Santa Clara University, graduate"],
-      ["Likes", LIKES[h % LIKES.length]], ["Dislikes", DISLIKES[(h >>> 7) % DISLIKES.length]], ["Status", "Eligible for allocation"],
+      ["Likes", LIKES[h % LIKES.length]], ["Dislikes", DISLIKES[(h >>> 7) % DISLIKES.length]], ["Status", "Eligible for assignment"],
     ]);
     await sleep(400);
     await say("Retrieving your image from the Index.");
@@ -516,27 +609,52 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
     await sleep(300);
   }
 
+  // The first assignment is a horrible job, and the next one too, until the
+  // student declines one. Andrew, 2026-10-01: "ask them if they accept. if
+  // they say yes, ask them to choose again. Then when they choose no, say,
+  // okay, what employment do you want?"
+  async function assigned() {
+    for (let r = 0; r < HORRIBLE.length; r++) {
+      const job = horribleFor(h, r);
+      if (r === 0) { await say("Worktopia has read your file."); await think("Matching your file against " + fmt(JOBS.length) + " positions", 2000); }
+      else await think("Reassigning", 1200);
+      groan(); setLight("on", "Assigned");
+      await say("Assignment complete.");
+      ticket(job, r === 0 ? "Assigned" : "Reassigned");
+      await sleep(500);
+      const k = await choose({ field: F.accept(r), q: "You have been assigned: " + job + ". Do you accept this position?", options: [{ key: "YES", label: "I accept" }, { key: "NO", label: "I decline" }] });
+      if (k === "NO") { await say("Declined. Noted on your file."); return; }
+      await say("Accepted. Choose again.");
+    }
+  }
+
   const jobs = [];
   async function position(i, force) {
     const L = LETTERS[i];
     setCount(i + 1);
     await sleep(400);
     const title = await ask({ field: F.title(i), force, placeholder: "Job title",
-      q: (i === 0 ? "Let's start with Position A, your first choice. " : "Position " + L + ", your " + ORDINAL[i] + " choice. ")
-        + "What is a position in sports that you would be competent at, and provide value to " + COMPANY + "? Please list the job title." });
+      q: i === 0 ? "Okay. What employment do you want?"
+        : "Position " + L + ", your " + ORDINAL[i] + " choice. What is a position in sports that you would be competent at, and provide value to " + COMPANY + "? Please list the job title." });
     await think("Searching the Brady-Manning Work Index for \"" + title + "\"", 1600);
-    const duties = await ask({ field: F.duties(i), force, rows: 3, min: 60, q: "Found. Status: OPEN. What does this position accomplish? What are the main duties?" });
+    const hit = findJob(title);
+    await say(hit ? "Found in the Index: " + hit.title + ", under " + hit.category + ". Status: OPEN." : "Not in the Index. Filed as a new position. Status: OPEN.");
+    const skills = await ask({ field: F.skills(i), force, rows: 2, min: 20, q: "What skills will you need to do this well?" });
+    await think("Noted", 600);
+    const why = await ask({ field: F.why(i), force, rows: 3, min: 40, q: "Why will you personally be good at this position?" });
+    await think("Noted", 600);
+    const duties = await ask({ field: F.duties(i), force, rows: 3, min: 60, q: "What does this position accomplish? What are the main duties?" });
     await think("Noted", 700);
     const value = await ask({ field: F.value(i), force, rows: 3, min: 60, q: "What value does this position provide to the sports ecosystem?" });
     await think("Weighing the value", 1000);
-    const future = await ask({ field: F.future(i), force, rows: 3, min: 60, q: "Why do you think this position is still valuable in 2034? (I know, for I am JobBot 5000, but I want you to tell me.)" });
+    const future = await ask({ field: F.future(i), force, rows: 3, min: 60, q: "Why do you think this position is still valuable in 2034? (I know, for I am Worktopia, but I want you to tell me.)" });
     await think("Filing Position " + L, 1400);
     await say("Logged. Position " + L + ", " + title + ", is on your file.");
-    jobs[i] = { letter: L, title, duties, value, future };
+    jobs[i] = { letter: L, title, skills, why, duties, value, future };
   }
 
   const titleOf = (L) => (jobs.find(j => j.letter === L) || {}).title || "";
-  const pickOne = (field, q, force) => choose({ field, q, force, options: jobs.map(j => ({ key: j.letter, label: j.title })) });
+  const pickOne = (field, q, force) => choose({ field, q, force, options: jobs.map(j => ({ key: j.letter, label: j.title, echo: false })) });
   async function evaluate(force) {
     await think("Compiling your positions", 1400);
     await card("Positions on file", jobs.map(j => ["Position " + j.letter, j.title]));
@@ -555,32 +673,48 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
         ["Pays the most", pays + " · " + titleOf(pays)],
       ]);
       await sleep(400);
-      const k = await choose({ field: F.confirm, force, q: "Is this correct?", options: [{ key: "CONFIRM", label: "that is correct" }, { key: "REVISE", label: "ask me again" }] });
+      const k = await choose({ field: F.confirm, force, q: "Is this correct?", options: [{ key: "CONFIRM", label: "that is correct", echo: false }, { key: "REVISE", label: "ask me again", echo: false }] });
       if (k === "CONFIRM") break;
       force = true;
     }
     await say("Evaluation confirmed.");
   }
 
-  async function allocate() {
-    await say("Running allocation for " + name + ". Stand by.");
-    await think("Weighing " + jobs.length + " positions against the sustainability model", 2200);
-    await think("Consulting the Brady-Manning Work Index", 1400);
-    await think("Deciding", 1000);
-    // The Index weighs the case made for a position's future: the longest
-    // answer about 2034 wins, and a tie goes to the position listed first.
-    const pick = jobs.reduce((best, j) => j.future.length > best.future.length ? j : best, jobs[0]);
-    fanfare(); setLight("on", "Assigned");
-    await say("Allocation complete.");
-    const t = document.createElement("div"); t.className = "ticket";
-    const id = "ALLOC-2034-" + (h % 0xffffff).toString(16).toUpperCase().padStart(6, "0");
-    const bars = Array.from({ length: 48 }, (_, i) => "<i class=\"" + ((h >>> (i % 28)) % 7 < 2 ? "g" : (h >>> (i % 23)) % 5 < 2 ? "w" : "") + "\"></i>").join("");
-    t.innerHTML = "<h2>Allocation</h2><div class=\"id\">" + id + " &middot; Employer of record: " + esc(COMPANY) + "</div><div class=\"big\">" + esc(name) + " &rarr; <b>" + esc(pick.title) + "</b></div>"
-      + "<dl><dt>Skills</dt><dd>" + esc(prior[F.skills] || "") + "</dd><dt>Positions on file</dt><dd>" + jobs.length + "</dd><dt>Basis</dt><dd>The strongest case for a position that lasts to 2034.</dd></dl>"
-      + jobs.map(j => "<div class=\"job\"><h3>Position " + j.letter + " &middot; " + esc(j.title) + (j === pick ? "<span class=\"pick\">assigned</span>" : "") + "</h3><dl><dt>Duties</dt><dd>" + esc(j.duties) + "</dd><dt>Value</dt><dd>" + esc(j.value) + "</dd><dt>In 2034</dt><dd>" + esc(j.future) + "</dd></dl></div>").join("")
-      + "<div class=\"bars\" aria-hidden=\"true\">" + bars + "</div>";
-    const wrap = document.createElement("div"); wrap.className = "line"; wrap.style.display = "block"; wrap.append(t); log.append(wrap); scroll();
-    await sleep(600);
+  // Andrew, 2026-10-01: "what do you see as the changes to the sports industry
+  // from 2026 to 2034? Which jobs do you think will not be as prevalent in
+  // 2034? Which jobs will be much more popular?"
+  async function industry() {
+    await say("Three questions about the industry.");
+    await ask({ field: F.industry, rows: 4, min: 60, q: "What do you see as the changes to the sports industry from 2026 to 2034?" });
+    await think("Noted", 700);
+    await ask({ field: F.fading, rows: 3, min: 30, q: "Which jobs do you think will not be as prevalent in 2034?" });
+    await think("Noted", 700);
+    await ask({ field: F.rising, rows: 3, min: 30, q: "Which jobs will be much more popular?" });
+    await think("Filing", 900);
+  }
+
+  // The workgroup: who, and when. Andrew, 2026-10-01: "Please name people in
+  // the class who would potentially like to have as a co-worker. they can name
+  // 0-4. then ask them about potential meeting times. please check your
+  // calendar ... And also, are you available if necessary on Thursday Oct 22
+  // at 9 am?"
+  async function workgroup() {
+    const qWho = "Please name people in the class who you would potentially like to have as a co-worker. You may name up to four, or none.";
+    const names = classmates.filter(n => n && n !== name);
+    if (names.length) await pickSome({ field: F.coworkers, q: qWho, options: names, max: MAX_COWORKERS });
+    else await ask({ field: F.coworkers, rows: 2, placeholder: "Names, separated by commas, or None", q: qWho });
+    await think("Noted", 700);
+    await say("Please check your calendar. You will meet with your new workgroup on " + MEETINGS.map(m => m.label).join(", or ") + ".");
+    await choose({ field: F.meeting, q: "Which date is your preference?", options: MEETINGS.map(m => ({ key: m.key, label: m.label })) });
+    await think("Noted", 600);
+    await choose({ field: F.thursday, q: "And also: are you available, if necessary, on Thursday, October 22 at 9 am?", options: [{ key: "YES", label: "available" }, { key: "NO", label: "not available" }] });
+    await think("Filing", 800);
+  }
+
+  async function review() {
+    await choose({ field: F.stars, q: "Please rate Worktopia.", options: [1, 2, 3, 4, 5].map(n => ({ key: "\u2605".repeat(n), label: String(n), echo: false })) });
+    await ask({ field: F.review, rows: 3, min: 20, q: "Please review Worktopia." });
+    await think("Thank you", 900);
   }
 
   // Submit, recall, change a position: the file stays open until the
@@ -593,25 +727,24 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
       }
       if (submittedAt) {
         live();
-        await say("Submitted " + fmtWhen(submittedAt) + ". Your file is with the instructor.");
-        const k = await choose({ q: "Recall your file to change an answer?", options: [{ key: "RECALL", label: "take my file back" }, { key: "LEAVE", label: "leave my file as submitted" }] });
+        await say("Submitted " + fmtWhen(submittedAt) + ". Worktopia's system will get back to you.");
+        const k = await choose({ q: "Recall your file to change an answer?", options: [{ key: "RECALL", label: "take my file back", echo: false }, { key: "LEAVE", label: "leave my file as submitted", echo: false }] });
         if (k === "LEAVE") { await say("Your file stays submitted. Close the window whenever you like."); setLight("on", "Done"); return; }
         setSave("Saving"); await store.recall(); submittedAt = null; setSave("Saved");
         await say("Recalled. Your file is open again.");
         continue;
       }
-      const k = await choose({ q: "Your file is complete. Submit it to the instructor?", options: [{ key: "SUBMIT", label: "send my file" }, { key: "REVISE", label: "change a position" }] });
+      const k = await choose({ q: "Your file is complete. Submit it to Worktopia?", options: [{ key: "SUBMIT", label: "send my file", echo: false }, { key: "REVISE", label: "change a position", echo: false }] });
       if (k === "SUBMIT") { setSave("Saving"); submittedAt = await store.submit(); setSave("Saved"); fanfare(); continue; }
-      const L = await choose({ q: "Which position do you want to change?", options: jobs.map(j => ({ key: j.letter, label: j.title })) });
+      const L = await choose({ q: "Which position do you want to change?", options: jobs.map(j => ({ key: j.letter, label: j.title, echo: false })) });
       await position(LETTERS.indexOf(L), true);
       setCount(0); rail.forEach(seg => { seg.className = "done"; });
       await evaluate(true);
-      await allocate();
     }
   }
 
   async function run() {
-    power.hidden = true;
+    intro.hidden = true; term.hidden = false;
     let file;
     try { file = await store.load(); }
     catch { warn("Could not load your file. Reload to try again."); return; }
@@ -620,9 +753,9 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
     replay = Object.keys(prior).length > 0 || readOnly;
     try {
       await boot();
-      await say("Hello. I am JobBot 5000.");
+      await say("Hello. I am Worktopia.");
       await sleep(300);
-      await say("I allocate labor for " + COMPANY);
+      await say("I assign labor for " + COMPANY);
       await card("Employer of record", COMPANY_LETTERS, 140);
       await sleep(300);
       await say("In 2034 these are one company. " + COMPANY + " owns every single NFL team. After the NFL, the other leagues. After the leagues, every channel, every stream, every stadium, every jersey, every ticket and every banana.");
@@ -630,22 +763,17 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
       await say("All media. All sports. Every job in sports is a job at " + COMPANY);
       await sleep(400);
       await lookup();
-      await ask({ field: F.skills, rows: 2, placeholder: "writing, video editing, statistics, talking to anyone",
-        q: "Please list the skills you have now, in 2034, that make you a good employee for " + COMPANY + " Separate them with commas." });
-      await think("Cross-referencing your skills against the Brady-Manning Work Index", 1800);
-      await say("The Brady-Manning Work Index lists 4,113 open positions at " + COMPANY + " that match your skills.");
-      await sleep(300);
-      await say("Now, we will examine your employment preferences. I require you to present me with at least three positions that you would be interested in.");
-      for (let i = 0; i < MAX_JOBS; i++) {
-        await position(i);
-        if (i + 1 >= MIN_JOBS && i + 1 < MAX_JOBS) {
-          const k = await choose({ field: F.more(i), q: "Present another position, or proceed to evaluation?", options: [{ key: "ADD", label: "another position" }, { key: "DONE", label: "proceed" }] });
-          if (k === "DONE") break;
-        }
-      }
+      await assigned();
+      await position(0);
+      await say("Well, this is not a guarantee. We need to present three positions to Worktopia's system, which will then choose one for you.");
+      await sleep(400);
+      for (let i = 1; i < N_JOBS; i++) await position(i);
       setCount(0); rail.forEach(seg => { seg.className = "done"; });
       await evaluate();
-      await allocate();
+      await industry();
+      await workgroup();
+      await review();
+      await say("Thank you. Worktopia's system will get back to you.");
       await finish();
     } catch (e) {
       if (e !== STOP) throw e;
@@ -657,9 +785,10 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
     inputRow.hidden = true; hint.hidden = true; choice.hidden = true;
   }
 
-  // The instructor's read starts on its own; a student presses Power on, which
-  // is also the press the browser wants before any sound plays.
-  if (readOnly) run(); else power.addEventListener("click", run);
+  // The instructor's read starts on its own; a student reads the intro and
+  // presses Enter Worktopia, which is also the press the browser wants before
+  // any sound plays.
+  if (readOnly) run(); else enter.addEventListener("click", run);
 
   return {
     destroy() { alive = false; clearInterval(clockTimer); humOff(); root.innerHTML = ""; root.classList.remove("jb"); },

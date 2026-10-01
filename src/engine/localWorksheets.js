@@ -1,19 +1,22 @@
 // Worksheets that live in this repo rather than in the worksheets package.
 //
 // The package (vendor/ishak-worksheets) carries the stakeholder map and the
-// pages that read it. JobBot 5000 is built here, on the package's tables, so
+// pages that read it. Worktopia is built here, on the package's tables, so
 // the same addresses work for it: /<class>/worksheets/<key> for a student,
 // ?s=<roster id> for the instructor reading one file, and the submits count
 // on the assignment that links to it (worksheetSubmits.js reads by key, so
 // nothing there needs to know which repo a sheet came from).
 //
-// A local worksheet is { key, title, mount }. mount(root, { store, viewer,
-// photo, readOnly }) draws it and returns { destroy }.
+// A local worksheet is { key, title, mount, open }. mount(root, { store,
+// viewer, photo, classmates, readOnly }) draws it and returns { destroy }.
+// open: false keeps it to the instructor until it is sent. Andrew,
+// 2026-10-01: "don't make it student facing yet but i will want to see it in
+// the morning."
 
-import { JOBBOT_KEY, JOBBOT_TITLE, mountJobBot } from "./jobbot/terminal.js";
+import { WORKTOPIA_KEY, WORKTOPIA_TITLE, mountWorktopia } from "./worktopia/terminal.js";
 
 export const LOCAL_WORKSHEETS = [
-  { key: JOBBOT_KEY, title: JOBBOT_TITLE, mount: mountJobBot },
+  { key: WORKTOPIA_KEY, title: WORKTOPIA_TITLE, mount: mountWorktopia, open: false },
 ];
 
 export const localWorksheet = (key) => LOCAL_WORKSHEETS.find(w => w.key === key) || null;

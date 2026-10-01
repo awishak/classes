@@ -12,7 +12,8 @@ import { useClassState } from "./store.js";
 import { rosterOf, findStudent } from "./roster.js";
 import { useSession, studentFor, authHeaders } from "./session.js";
 import { localWorksheet } from "./localWorksheets.js";
-import { supabaseStore, readStore } from "./jobbot/store.js";
+import { supabaseStore, readStore } from "./worktopia/store.js";
+import { CATEGORIES, HORRIBLE } from "./worktopia/jobs.js";
 import { usePhotos } from "./photos.js";
 import { savedPin } from "../InstructorGate.jsx";
 import { gameClient } from "./gameClient.js";
@@ -82,15 +83,38 @@ function TheirSheet({ config, worksheetKey, student, theme, photo }) {
 
 // A worksheet built in this repo, for the student signed in: the store writes
 // as them, the way the package's sheet does. The photograph on their card
-// becomes their picture on the terminal.
-function LocalSheet({ local, config, viewer, photo }) {
+// becomes their picture on the terminal, and the roster, less themselves, is
+// who they can name as a co-worker.
+function LocalSheet({ local, config, viewer, photo, classmates }) {
   const ref = useRef(null);
+  const names = classmates.join("\n");
   useEffect(() => {
     const store = supabaseStore({ supabase: gameClient, worksheetKey: local.key, groupKey: config.id, viewerId: viewer.id });
-    const sheet = local.mount(ref.current, { store, viewer, photo });
+    const sheet = local.mount(ref.current, { store, viewer, photo, classmates: names ? names.split("\n") : [] });
     return () => sheet.destroy();
-  }, [local, config.id, viewer.id, viewer.name, photo]);
+  }, [local, config.id, viewer.id, viewer.name, photo, names]);
   return <div ref={ref} />;
+}
+
+// The Brady-Manning Work Index, readable: /<class>/worksheets/worktopia?index.
+// Andrew, 2026-10-01: "make sure i can see the list."
+function JobIndex() {
+  const total = CATEGORIES.reduce((n, [, t]) => n + t.length, 0);
+  const col = { columns: "3 240px", columnGap: 28, margin: 0, padding: 0, listStyle: "none", fontSize: 15, lineHeight: 1.5 };
+  return (
+    <div style={{ padding: "16px 16px 48px", maxWidth: 1352, margin: "0 auto" }}>
+      <h1 style={{ fontSize: 26, fontWeight: 600, margin: "0 0 4px" }}>The Brady-Manning Work Index</h1>
+      <p style={{ fontSize: 16, color: TOKENS.TEXT.secondary, margin: "0 0 28px" }}>{total.toLocaleString("en-US")} positions in {CATEGORIES.length} categories, and the {HORRIBLE.length} Worktopia assigns first.</p>
+      <h2 style={{ fontSize: 20, fontWeight: 600, margin: "0 0 10px" }}>Assigned first</h2>
+      <ol style={{ ...col, marginBottom: 32 }}>{HORRIBLE.map(t => <li key={t}>{t}</li>)}</ol>
+      {CATEGORIES.map(([category, titles]) => (
+        <section key={category} style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 600, margin: "0 0 10px" }}>{category} <span style={{ fontWeight: 400, color: TOKENS.TEXT.secondary, fontSize: 15 }}>{titles.length}</span></h2>
+          <ul style={col}>{titles.map(t => <li key={t}>{t}</li>)}</ul>
+        </section>
+      ))}
+    </div>
+  );
 }
 
 export default function WorksheetPage({ config, worksheetKey }) {
@@ -119,11 +143,15 @@ export default function WorksheetPage({ config, worksheetKey }) {
   const next = typeof window !== "undefined" ? window.location.pathname : config.path;
 
   // A student named in the address: that student's sheet, for the instructor.
-  const want = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("s") || "" : "";
+  const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
+  const want = search.get("s") || "";
   const them = want ? findStudent(roster, want) : null;
+  const wantIndex = local && search.has("index");
 
   let body;
-  if (sheet && want) {
+  if (wantIndex) {
+    body = "index";
+  } else if (sheet && want) {
     body = them && them.email ? "theirs"
       : data === null ? <p style={{ fontSize: 17, margin: 0 }}>Loading the roster.</p>
       : <p style={{ fontSize: 17, margin: 0 }}>There is no student {want} on the {config.code} roster.</p>;
@@ -140,9 +168,13 @@ export default function WorksheetPage({ config, worksheetKey }) {
     body = data === null
       ? <p style={{ fontSize: 17, margin: 0 }}>Loading the roster.</p>
       : <p style={{ fontSize: 17, margin: 0 }}>{email} is not on the roster for {config.code} yet.</p>;
+  } else if (local && local.open === false && !instructor) {
+    // Built, not sent: the instructor tries it under their own email first.
+    body = <p style={{ fontSize: 17, margin: 0 }}>This worksheet is not open yet.</p>;
   } else {
     body = null;
   }
+  const classmates = roster.map(s => s.name).filter(n => n && !(me && n === me.name));
 
   return (
     <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: TOKENS.SURFACE.page, color: TOKENS.TEXT.primary, fontFamily: TOKENS.FONT.body }}>
@@ -150,12 +182,14 @@ export default function WorksheetPage({ config, worksheetKey }) {
       <div style={{ position: "sticky", top: 0, zIndex: 30 }}>
         <TopNav config={config} tabs={NAV_STUDENT} active="assignments" />
       </div>
-      {body === "theirs"
+      {body === "index"
+        ? <JobIndex />
+        : body === "theirs"
         ? <TheirSheet config={config} worksheetKey={worksheetKey} student={them} theme={sheetThemeOf(theme, mode)} photo={photos[them.name] || ""} />
         : body !== null
         ? <div style={{ padding: 32 }}>{body}</div>
         : local
-        ? <LocalSheet key={viewer.id} local={local} config={config} viewer={viewer} photo={(me && photos[me.name]) || ""} />
+        ? <LocalSheet key={viewer.id} local={local} config={config} viewer={viewer} photo={(me && photos[me.name]) || ""} classmates={classmates} />
         : <Worksheet key={viewer.id} supabase={gameClient} worksheetKey={worksheetKey} groupKey={config.id} viewer={viewer}
             accent={config.accent} accentLight={config.accentLight} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />}
     </div>

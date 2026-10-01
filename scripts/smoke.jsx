@@ -28,6 +28,7 @@ import LoginPage from "../src/LoginPage.jsx";
 import { whereTo, studentFor } from "../src/engine/session.js";
 import { parseRoster, mergeRoster } from "../src/engine/roster.js";
 import { withWorksheetSubmits } from "../src/engine/worksheetSubmits.js";
+import { JOBS, CATEGORIES, HORRIBLE, findJob, horribleFor } from "../src/engine/worktopia/jobs.js";
 import { makeCode, looksLikeEmail } from "../api/logins.js";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
@@ -220,6 +221,20 @@ let failedEarly = 0;
   if (ws("Cy C").length !== 1 || ws("Cy C")[0].id !== "h2" || !/\?s=cy-c$/.test(ws("Cy C")[0].link)) { console.error("  FAIL  worksheet submits: a hand entry on the worksheet does not open that student's sheet"); failedEarly++; }
   if (JSON.stringify(data) !== before) { console.error("  FAIL  worksheet submits: the stored class was changed"); failedEarly++; }
   if (withWorksheetSubmits(data, cfg, null) !== data) { console.error("  FAIL  worksheet submits: no sheets should leave the class as it is"); failedEarly++; }
+}
+
+// Worktopia's Index: a thousand jobs, forty a category, none twice, and the
+// horrible ones none twice either. Andrew, 2026-10-01: "yes 1000."
+{
+  const titles = JOBS.map(j => j.title.toLowerCase());
+  if (JOBS.length !== 1000) { console.error("  FAIL  worktopia: the Index holds " + JOBS.length + " jobs, not 1000"); failedEarly++; }
+  if (new Set(titles).size !== titles.length) { console.error("  FAIL  worktopia: a job is in the Index twice"); failedEarly++; }
+  CATEGORIES.forEach(([c, t]) => { if (t.length !== 40) { console.error("  FAIL  worktopia: " + c + " has " + t.length + " jobs, not 40"); failedEarly++; } });
+  if (new Set(HORRIBLE.map(s => s.toLowerCase())).size !== HORRIBLE.length) { console.error("  FAIL  worktopia: a horrible job is listed twice"); failedEarly++; }
+  if (!findJob("sideline reporter") || findJob("sideline reporter").title !== "Sideline reporter") { console.error("  FAIL  worktopia: the Index cannot find a sideline reporter"); failedEarly++; }
+  if (!findJob("highlight editor")) { console.error("  FAIL  worktopia: the Index cannot find a highlight editor by its singular"); failedEarly++; }
+  if (findJob("astronaut")) { console.error("  FAIL  worktopia: the Index found an astronaut"); failedEarly++; }
+  if (horribleFor(7, 0) === horribleFor(7, 1)) { console.error("  FAIL  worktopia: the second horrible job repeats the first"); failedEarly++; }
 }
 
 const PHONE = 390, LAPTOP = 1440;

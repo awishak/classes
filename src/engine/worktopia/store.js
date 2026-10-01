@@ -1,10 +1,10 @@
-// Where JobBot keeps a student's file: the worksheets package's own tables.
+// Where Worktopia keeps a student's file: the worksheets package's own tables.
 //
 // worksheet_sheets is one row per student per worksheet in a class, and
 // worksheet_answers is one row per answer (migrations 001 and 002 in
 // vendor/ishak-worksheets). The rules there read who is asking off the token,
 // so a student writes only their own rows and the instructor, a host, reads
-// every one. JobBot's fields are plain words with an optional part
+// every one. Worktopia's fields are plain words with an optional part
 // (title:a, duties:a, more:c), which is the shape the field check allows.
 //
 // An answer is at most 500 characters a row. A position's duties can run

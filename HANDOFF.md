@@ -783,35 +783,49 @@ to `main` deploys through the repo integration**, which is the reliable path.
 Verify by comparing the live bundle hash against `dist/assets/*.js`, and read
 twice, because one edge can serve the old bundle briefly.
 
-## JobBot 5000, the COMM 118 worksheet for the week of October 5
+## Worktopia, the COMM 118 worksheet for the week of October 5
 
-A worksheet that is a computer terminal in 2034, built in this repo on the
-worksheets package's tables rather than in the package. Its own brief is
-`src/engine/jobbot/BRIEF.md`: the run in order, his words, the jokes, what
-is open. The code is `src/engine/jobbot/`
-(`terminal.js` draws it, `store.js` writes every answer as its own row the
-moment the student sends it) and `src/engine/localWorksheets.js`, which is
-the list the worksheet pages read after the package's own. Students open it
-at `/comm118/worksheets/jobbot-5000`, signed in off the roster; the
-instructor reads one file at `?s=<roster id>` and sees the submits at
-`/comm118/worksheets`, where a repo-built sheet gets a list rather than the
-package's spreadsheet. The submits count on whichever assignment links to
-the address, as the stakeholder map's do.
+Was JobBot 5000 until 2026-10-01: "Job Bot 5000 is now call worktopia. it's
+the work management system that assigns you to your job." A worksheet that
+is a computer terminal in 2034, built in this repo on the worksheets
+package's tables rather than in the package: `src/engine/worktopia/`
+(`BRIEF.md` is its own brief, read it first; `terminal.js` draws it, `jobs.js` is the Index, `store.js` writes every
+answer as its own row the moment the student sends it) and
+`src/engine/localWorksheets.js`, which is the list the worksheet pages read
+after the package's own. The address is `/comm118/worksheets/worktopia`,
+signed in off the roster. **It is not open to students yet**: `open: false`
+on the local worksheet shows them "This worksheet is not open yet," and the
+instructor goes through under his own email. Flip `open` to send it. The
+instructor reads one file at `?s=<roster id>`, sees the submits at
+`/comm118/worksheets`, and reads the whole Index at `?index`. The submits
+count on whichever assignment links to the address, as the stakeholder
+map's do.
 
-JobBot looks the student up on the Brady-Manning Work Index (a record with a
-seventeen-digit number, likes and dislikes, all drawn from the name), draws
-them as text (their card photograph, or a face drawn from the name), takes
-their skills, then Positions A to E with Andrew's four questions each, then
-an evaluation (most interesting, most likely to get, pays the most,
-confirmed), then an allocation. The employer is FRANCHISE DYNASTY MEDIA INC.,
-one company a letter (Fox, RedBird, Amazon, Netflix, Comcast, Hulu, Ineos,
-Sky, ESPN, Disney, YouTube, Nike, Apple, Sinclair, TKO, YES Network, Meta,
-Emirates, DAZN, iHeart, Anthropic, IMG, NBC, Chiquita Banana), which owns
-every NFL team, then the other leagues, then everything else, in 2034. Andrew's words are the questions; JobBot's other lines are placeholders
-for him. A reload replays the file and picks up at the first open question;
-submit and recall work as on every worksheet; a position can be changed after
-the allocation. Open: the "values of sports" part Andrew is still thinking
-about, and his words for the saving line.
+The run: an intro page about 2034 (Andrew's skeleton, Claude's fill, marked
+in `INTRO`), then the terminal boots, asks the name, finds the student on the
+Brady-Manning Work Index (a seventeen-digit number, likes and dislikes, all
+from the name) and draws them as text (their card photograph, or a face from
+the name). Then a horrible job (`HORRIBLE`, sixty of them, his two first) on
+an assignment ticket, and "Do you accept?" Yes gets the next horrible job;
+no moves on: "Okay. What employment do you want?" Three positions, six of
+his questions each (title, skills needed, why you personally, duties, value
+to the ecosystem, why still valuable in 2034); a title is looked up in the
+Index of a thousand jobs (twenty-five categories of forty, the smoke counts
+them). After Position A: "this is not a guarantee. We need to present three
+positions to Worktopia's system, which will then choose one for you." Then
+the evaluation kept from JobBot (most interesting, most likely, pays the
+most, confirm), three industry questions (changes 2026 to 2034, jobs fading,
+jobs rising), co-workers picked off the roster (up to four, or none), the
+workgroup date (Oct 21 in class, Oct 22 at 9 am, Oct 23 in class) and
+whether Thursday 9 am works, a star rating and a review, then "Worktopia's
+system will get back to you" and submit. No allocation at the end any more.
+The employer is still FRANCHISE DYNASTY MEDIA INC. (Meta, Emirates, DAZN, Anthropic, IMG and Chiquita Banana joined on October 1), which owns every NFL team. Fields
+are in `F` in terminal.js. A reload replays the file and picks up at the
+first open question; submit and recall work as on every worksheet; a
+position can be changed after submit. Dropped from JobBot: the generic
+skills question up front and the fourth and fifth positions. Open: the
+"values of sports" part Andrew is still thinking about, and his words for
+the saving line and the intro fill.
 
 ## Things known to be unfinished
 

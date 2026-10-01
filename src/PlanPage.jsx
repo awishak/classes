@@ -47,6 +47,45 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "oct1-worktopia", date: "Thursday, October 1", title: "JobBot 5000 is Worktopia",
+    blurb: "Andrew: \"Job Bot 5000 is now call worktopia. it's the work management system that assigns you to your job. so take what we have it and change the name. now, i have some changes.\" The terminal is the same machine with a new name, a page before it, an Index behind it, and a longer file. It lives at /comm118/worksheets/worktopia and is closed to students until he opens it: \"don't make it student facing yet but i will want to see it in the morning.\"",
+    groups: [
+      { name: "What changed", items: [
+        ["The intro", "A page before the terminal: 2034 in large type, then his skeleton filled in (\"its the year 2034 ... over the last eight years, a few things have happened. AI has... media has... sports media in particular has...\"). His sentences are kept as written; the rest is a draft for him to replace. Enter Worktopia starts the machine."],
+        ["The Index", "A thousand jobs in sports, forty in each of twenty-five categories: athletes, coaching, front office, leagues, officiating, broadcast, journalism, digital, marketing, sponsorship, communications, ticketing, venues, food, transit, manufacturing, retail, technology, medical, legal and ethics, finance, betting, esports, youth and college, agents. A typed title is looked up and comes back with its category, or is filed as new. The whole list reads at ?index, with the sixty horrible jobs on top."],
+        ["The first assignment", "After the record and the portrait, Worktopia stamps a ticket with a horrible job (his two first: Postgame Toilet Inspector, Human Cannonball for the Cannonball Games) and asks if they accept. Yes gets the next one. No gets \"Okay. What employment do you want?\""],
+        ["Three positions, six questions each", "The title, what skills they will need, why they personally will be good at it, the duties, the value to the ecosystem, and why it is still valuable in 2034. After the first: \"this is not a guarantee. We need to present three positions to Worktopia's system, which will then choose one for you.\" The evaluation from JobBot stays after the third."],
+        ["The industry, the workgroup, the review", "Three questions: the changes from 2026 to 2034, the jobs that will not be as prevalent, the jobs that will be much more popular. Then up to four classmates picked off the roster as co-workers, or none; the workgroup date (Wednesday, October 21 in class, Thursday, October 22 at 9 am, Friday, October 23 in class) and whether Thursday at 9 works if necessary; stars and a review. Then \"Worktopia's system will get back to you,\" and submit. No allocation ticket at the end."],
+      ] },
+      { name: "What it rests on", items: [
+        ["Every answer is still a row", "The same tables, the same replay, the same submit and recall. Every answer, the accepted and declined horrible jobs included, is on file for him to read at ?s=<roster id> and count at /comm118/worksheets."],
+        ["Closed until he opens it", "The local worksheet carries open: false. A student at the address reads one line, the instructor goes through under his own email. One flag to send it."],
+        ["Checked", "Walked end to end headlessly at a laptop width and a phone width: the intro, the horrible job accepted once and declined once, three positions, the evaluation, the three industry questions, two co-workers picked, Thursday, four stars, a review, submit, recall, a changed position, and the replay after a reload. The instructor's read of a file that stops at the first assignment. The smoke counts the Index. No errors."],
+        ["Dropped", "The generic skills question up front, since each position now asks for its own, and the fourth and fifth positions."],
+      ] },
+    ],
+  },
+  {
+    id: "sep30-jobbot", date: "Wednesday, September 30", title: "JobBot 5000, the COMM 118 worksheet for the week of October 5",
+    blurb: "Andrew: \"a white screen that beeps ... you enter an answer then it kind of thinks and then gives you an answer back.\" A worksheet that is a job allocation terminal in 2034, run by the one company that owns all media and all sports. It looks the student up, draws them as text, takes their skills and three to five positions in sports with Andrew's four questions each, runs an evaluation, and assigns one. Students open it at /comm118/worksheets/jobbot-5000, signed in off the roster.",
+    groups: [
+      { name: "The terminal", items: [
+        ["The employer", "FRANCHISE DYNASTY INC., one company a letter: Fox, RedBird, Amazon, Netflix, Comcast, Hulu, Ineos, Sky, ESPN, Disney, YouTube, Nike, Apple, Sinclair, TKO, YES Network, iHeart, NBC, CBS. Andrew: \"one big media conglomerate that holds all media, all sports, all that stuff,\" and, on the first draft, \"football is no good. how do we get Fox, Hulu, Comcast, and more in the first word.\""],
+        ["The record", "JobBot asks for the name even though the sign-in knows it (\"still please let me enter my name\"), then finds the student on the Brady-Manning Work Index: a seventeen-digit number, a like and a dislike, all drawn from the name. The portrait is the card photograph as text, or a face drawn from the name for a student without one."],
+        ["The questions", "Andrew's words, four per position: the job title, what it accomplishes and its main duties, the value it provides to the sports ecosystem, and why it is still valuable in 2034. Then the evaluation: most interesting, most likely to get, pays the most, and Is this correct. The allocation goes to the position with the strongest case for 2034, printed on a ticket with every position on it."],
+        ["JobBot's other lines", "Placeholders, Claude's wording on Andrew's idea, for him to edit: the boot, the Index, the likes and dislikes, the thinking lines, the warning when an answer is too short."],
+      ] },
+      { name: "What it rests on", items: [
+        ["Every answer is a row", "The worksheets package's own tables, written the moment the student sends an answer. A reload replays the file and picks up at the first open question; submit and recall work as on every worksheet; a position can be changed after the allocation, which re-runs the evaluation and the ticket."],
+        ["The instructor's read", "One file at ?s=<roster id> plays back and stops where the student stopped, and the submits count at /comm118/worksheets."],
+        ["Checked October 1", "Walked end to end headlessly on a laptop width and a phone width: the warning for a short answer, three positions, the evaluation, the ticket, submit, recall, a changed position, a second ticket, and the replay after a reload. The instructor's read of a file that stops partway. No errors."],
+      ] },
+      { name: "Still open", items: [
+        ["Two things of Andrew's", "The values-of-sports part he is still thinking about, and his words for the line that says an answer is saved."],
+      ] },
+    ],
+  },
+  {
     id: "sep30-portal", date: "Wednesday, September 30", title: "The student portal, built",
     blurb: "Andrew, at the end of a day of mockups: \"nah do the whole thing.\" The class site is the portal now, on a phone and on a laptop, in the language of fieldtime.net/mockup: a serif headline, a filled next-class card with its buttons, and every row a tinted card whose colour says what it is. Amber is something to do, green is done, blue came from Dr. Ishak, grey is the student's own, faded is not open yet. Twelve pixels of rounding on anything you press, and the action a row exists for is filled in the class colour. The card grid is gone.",
     groups: [
