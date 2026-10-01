@@ -12,7 +12,9 @@
 // terminal.js (ABOUT). The pictures under public/worktopia are kept, unused.
 //
 // The instructor reads the files at the same address: /worktopia?files is
-// the list, /worktopia?v=<visitor id> is one file, read only.
+// the list, /worktopia?v=<visitor id> is one file, read only. drewi.sh/worktopia
+// proxies this page (three rewrites in the andrewishak repo), so the sign-in
+// links point at classes.andrewishak.com, where the session lives.
 
 import { useEffect, useRef, useState } from "react";
 import { mountWorktopia } from "./engine/worktopia/terminal.js";
@@ -56,7 +58,7 @@ function Files() {
   const [out, setOut] = useState(null);
   useEffect(() => { ask({ action: "list" }).then(setOut); }, []);
   if (!out) return <p>Loading the files.</p>;
-  if (out.denied) return <p>Sign in as the instructor to read the files. <a href={"/login?next=" + encodeURIComponent("/worktopia?files")} style={{ color: "#1e40af" }}>Sign in</a></p>;
+  if (out.denied) return <p>Sign in as the instructor to read the files. <a href={"https://classes.andrewishak.com/login?next=" + encodeURIComponent("/worktopia?files")} style={{ color: "#1e40af" }}>Sign in</a></p>;
   if (!out.ok) return <p>Could not read the files.</p>;
   const done = out.sheets.filter(s => s.submitted_at).length;
   return (
@@ -95,7 +97,7 @@ function TheirFile({ viewer }) {
   return (
     <>
       {state === "loading" && <p>Loading the file.</p>}
-      {state === "denied" && <p>Sign in as the instructor to read a file. <a href={"/login?next=" + encodeURIComponent("/worktopia?v=" + viewer)} style={{ color: "#1e40af" }}>Sign in</a></p>}
+      {state === "denied" && <p>Sign in as the instructor to read a file. <a href={"https://classes.andrewishak.com/login?next=" + encodeURIComponent("/worktopia?v=" + viewer)} style={{ color: "#1e40af" }}>Sign in</a></p>}
       {state === "failed" && <p>Could not read the file.</p>}
       {state === "none" && <p>There is no file for that visitor.</p>}
       <div ref={ref} />
