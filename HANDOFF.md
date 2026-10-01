@@ -783,6 +783,32 @@ to `main` deploys through the repo integration**, which is the reliable path.
 Verify by comparing the live bundle hash against `dist/assets/*.js`, and read
 twice, because one edge can serve the old bundle briefly.
 
+## JobBot 5000, the COMM 118 worksheet for the week of October 5
+
+A worksheet that is a computer terminal in 2034, built in this repo on the
+worksheets package's tables rather than in the package: `src/engine/jobbot/`
+(`terminal.js` draws it, `store.js` writes every answer as its own row the
+moment the student sends it) and `src/engine/localWorksheets.js`, which is
+the list the worksheet pages read after the package's own. Students open it
+at `/comm118/worksheets/jobbot-5000`, signed in off the roster; the
+instructor reads one file at `?s=<roster id>` and sees the submits at
+`/comm118/worksheets`, where a repo-built sheet gets a list rather than the
+package's spreadsheet. The submits count on whichever assignment links to
+the address, as the stakeholder map's do.
+
+JobBot looks the student up on the Brady-Manning Work Index (a record with a
+seventeen-digit number, likes and dislikes, all drawn from the name), draws
+them as text (their card photograph, or a face drawn from the name), takes
+their skills, then Positions A to E with Andrew's four questions each, then
+an evaluation (most interesting, most likely to get, pays the most,
+confirmed), then an allocation. The employer is FRANCHISE: Fox, RedBird,
+Amazon, Netflix, Comcast, Hulu, Ineos, Sky and Emirates, one company in
+2034. Andrew's words are the questions; JobBot's other lines are placeholders
+for him. A reload replays the file and picks up at the first open question;
+submit and recall work as on every worksheet; a position can be changed after
+the allocation. Open: the "values of sports" part Andrew is still thinking
+about, and his words for the saving line.
+
 ## Things known to be unfinished
 
 - COMM 3 has its term as of September 8: eleven weeks, nine graded pieces,

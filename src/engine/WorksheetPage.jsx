@@ -11,6 +11,9 @@ import { Worksheet, WORKSHEETS, mountSheet } from "@ishak/worksheets";
 import { useClassState } from "./store.js";
 import { rosterOf, findStudent } from "./roster.js";
 import { useSession, studentFor, authHeaders } from "./session.js";
+import { localWorksheet } from "./localWorksheets.js";
+import { supabaseStore, readStore } from "./jobbot/store.js";
+import { usePhotos } from "./photos.js";
 import { savedPin } from "../InstructorGate.jsx";
 import { gameClient } from "./gameClient.js";
 import * as TOKENS from "./tokens.js";
@@ -28,7 +31,7 @@ const sheetThemeOf = (theme, mode) => !hasNight(theme) ? "light" : mode === "nig
 // One student's sheet, read only, for the instructor: /<class>/worksheets/<key>?s=<roster id>.
 // The grade view links here. It reads through /api/worksheet-submits, which
 // takes the PIN or an instructor's session, so it opens however he signed in.
-function TheirSheet({ config, worksheetKey, student, theme }) {
+function TheirSheet({ config, worksheetKey, student, theme, photo }) {
   const ref = useRef(null);
   const [state, setState] = useState("loading");   // loading | none | denied | failed | shown
   const [submitted, setSubmitted] = useState(null);
@@ -47,6 +50,11 @@ function TheirSheet({ config, worksheetKey, student, theme }) {
         if (!out.sheet) { setState("none"); return; }
         setSubmitted(out.sheet.submitted_at);
         setState("shown");
+        const local = localWorksheet(worksheetKey);
+        if (local) {
+          sheet = local.mount(ref.current, { store: readStore(out.answers, out.sheet.submitted_at), viewer: { id: student.email, name: student.name }, photo, readOnly: true });
+          return;
+        }
         const own = (WORKSHEETS.find(w => w.key === worksheetKey) || {}).theme || {};
         sheet = mountSheet(ref.current, {
           store: { async load() { return { answers: out.answers, submitted_at: out.sheet.submitted_at }; } },
@@ -56,7 +64,7 @@ function TheirSheet({ config, worksheetKey, student, theme }) {
       } catch { if (alive) setState("failed"); }
     })();
     return () => { alive = false; if (sheet) sheet.destroy(); };
-  }, [config, worksheetKey, student.email, theme]);
+  }, [config, worksheetKey, student.email, theme, photo]);
   const say = { loading: "Loading " + student.name + "'s sheet.", none: student.name + " has not opened this worksheet.",
     denied: "Only the instructor can open a student's sheet. Sign in as the instructor and open this address again.",
     failed: "The sheet could not be read. Reload to try again." }[state];
@@ -72,10 +80,25 @@ function TheirSheet({ config, worksheetKey, student, theme }) {
   );
 }
 
+// A worksheet built in this repo, for the student signed in: the store writes
+// as them, the way the package's sheet does. The photograph on their card
+// becomes their picture on the terminal.
+function LocalSheet({ local, config, viewer, photo }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const store = supabaseStore({ supabase: gameClient, worksheetKey: local.key, groupKey: config.id, viewerId: viewer.id });
+    const sheet = local.mount(ref.current, { store, viewer, photo });
+    return () => sheet.destroy();
+  }, [local, config.id, viewer.id, viewer.name, photo]);
+  return <div ref={ref} />;
+}
+
 export default function WorksheetPage({ config, worksheetKey }) {
   const [data] = useClassState(config.storageKey);
   const { session, email, instructor } = useSession();
-  const sheet = WORKSHEETS.find(w => w.key === worksheetKey);
+  const local = localWorksheet(worksheetKey);
+  const sheet = local || WORKSHEETS.find(w => w.key === worksheetKey);
+  const [photos] = usePhotos(config.storageKey);
   // The student's theme and their day or night, the same ones the class home
   // reads. Without these the page had only Clean's daytime block, so the nav
   // and the page stayed white around a sheet that followed the phone.
@@ -128,9 +151,11 @@ export default function WorksheetPage({ config, worksheetKey }) {
         <TopNav config={config} tabs={NAV_STUDENT} active="assignments" />
       </div>
       {body === "theirs"
-        ? <TheirSheet config={config} worksheetKey={worksheetKey} student={them} theme={sheetThemeOf(theme, mode)} />
+        ? <TheirSheet config={config} worksheetKey={worksheetKey} student={them} theme={sheetThemeOf(theme, mode)} photo={photos[them.name] || ""} />
         : body !== null
         ? <div style={{ padding: 32 }}>{body}</div>
+        : local
+        ? <LocalSheet key={viewer.id} local={local} config={config} viewer={viewer} photo={(me && photos[me.name]) || ""} />
         : <Worksheet key={viewer.id} supabase={gameClient} worksheetKey={worksheetKey} groupKey={config.id} viewer={viewer}
             accent={config.accent} accentLight={config.accentLight} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />}
     </div>

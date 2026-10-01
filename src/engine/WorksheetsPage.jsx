@@ -12,9 +12,11 @@ import { DetailsLink } from "./AssignmentsCard.jsx";
 import { hasReadout } from "./ReadoutPage.jsx";
 import { WorksheetReview, WORKSHEETS } from "@ishak/worksheets";
 import { useClassState } from "./store.js";
-import { rosterOf } from "./roster.js";
+import { rosterOf, idOf } from "./roster.js";
 import { INSTRUCTOR_EMAILS } from "../instructors.js";
-import { useSession } from "./session.js";
+import { useSession, authHeaders } from "./session.js";
+import { savedPin } from "../InstructorGate.jsx";
+import { LOCAL_WORKSHEETS } from "./localWorksheets.js";
 import { gameClient } from "./gameClient.js";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
@@ -26,11 +28,70 @@ const emailOf = (s) => String(s?.email || "").trim().toLowerCase();
 // See WorksheetPage: the grid is held to day or night only when the page is.
 const sheetThemeOf = (theme, mode) => !hasNight(theme) ? "light" : mode === "night" ? "dark" : mode === "day" ? "light" : undefined;
 
+// Every worksheet the class can be handed: the package's, then this repo's.
+const ALL_WORKSHEETS = [...WORKSHEETS, ...LOCAL_WORKSHEETS];
+
+// A worksheet built in this repo has no spreadsheet yet: one row per student,
+// submitted or not, and Open sheet to read their file as they saw it. The
+// submits come through /api/worksheet-submits, the same read the assignment
+// card uses, so the PIN or an instructor's session both work.
+function LocalReview({ config, sheet, people, studentUrl }) {
+  const [sheets, setSheets] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch("/api/worksheet-submits", {
+          method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+          body: JSON.stringify({ pin: savedPin(), groupKey: config.id, keys: [sheet.key] }),
+        });
+        const out = r.ok ? await r.json() : null;
+        if (alive) setSheets(out?.ok ? out.sheets[sheet.key] || [] : []);
+      } catch { if (alive) setSheets([]); }
+    })();
+    return () => { alive = false; };
+  }, [config.id, sheet.key]);
+  const when = new Map((sheets || []).map(s => [s.viewer_id, s.submitted_at]));
+  const rows = people.filter(s => !INSTRUCTOR_EMAILS.includes(emailOf(s))).slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  const submitted = rows.filter(s => when.get(emailOf(s))).length;
+  const cell = { padding: "10px 12px", borderBottom: "1px solid " + TOKENS.LINE.soft, fontSize: 15, textAlign: "left", verticalAlign: "top" };
+  return (
+    <div style={{ borderRadius: 16, background: TOKENS.SURFACE.card, border: "1px solid " + TOKENS.LINE.soft, overflow: "hidden" }}>
+      <div style={{ padding: "14px 16px", display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
+        <b style={{ fontSize: 20, fontWeight: 600 }}>{sheet.title}</b>
+        <span style={{ fontSize: 15, color: TOKENS.TEXT.secondary }}>{sheets === null ? "Reading the submits." : submitted + " of " + rows.length + " submitted"}</span>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead><tr>
+            <th style={{ ...cell, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em", color: TOKENS.TEXT.secondary }}>Student</th>
+            <th style={{ ...cell, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em", color: TOKENS.TEXT.secondary }}>Submitted</th>
+            <th style={cell}></th>
+          </tr></thead>
+          <tbody>
+            {rows.map(s => (
+              <tr key={emailOf(s)}>
+                <td style={cell}>{s.name}</td>
+                <td style={{ ...cell, color: when.get(emailOf(s)) ? TOKENS.TEXT.primary : TOKENS.TEXT.secondary }}>
+                  {when.get(emailOf(s)) ? new Date(when.get(emailOf(s))).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "Not yet"}
+                </td>
+                <td style={cell}><a className="ca-focus" href={studentUrl + "?s=" + encodeURIComponent(idOf(s))} style={{ fontSize: 15, fontWeight: 600, color: config.accent }}>Open sheet</a></td>
+              </tr>
+            ))}
+            {!rows.length ? <tr><td style={cell} colSpan={3}>Nobody on the roster has an email yet.</td></tr> : null}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function WorksheetsPage({ config }) {
   const [data] = useClassState(config.storageKey);
   const { session, instructor } = useSession();
-  const [key, setKey] = useState(WORKSHEETS[0]?.key || "");
-  const sheet = WORKSHEETS.find(w => w.key === key);
+  const [key, setKey] = useState(ALL_WORKSHEETS[0]?.key || "");
+  const sheet = ALL_WORKSHEETS.find(w => w.key === key);
+  const local = LOCAL_WORKSHEETS.some(w => w.key === key);
   const [copied, setCopied] = useState(false);
   // My theme and day or night in this browser, the same keys the class home
   // writes, so this page goes dark with the rest of the class.
@@ -66,7 +127,8 @@ export default function WorksheetsPage({ config }) {
     setClassFavicon(config);
   }, [config]);
 
-  const roster = rosterOf(config, data).filter(s => s.email).map(s => ({ id: emailOf(s), name: s.name }));
+  const people = rosterOf(config, data).filter(s => s.email);
+  const roster = people.map(s => ({ id: emailOf(s), name: s.name }));
   const bar = (
     <div style={{ position: "sticky", top: 0, zIndex: 30 }}>
       <TopNav config={config} tabs={NAV_TEACH} active="" />
@@ -91,9 +153,9 @@ export default function WorksheetsPage({ config }) {
       <ThemeStyle theme={theme} />
       {bar}
       <div style={{ padding: "24px 16px 48px", maxWidth: 1600, margin: "0 auto" }}>
-        {WORKSHEETS.length > 1 ? (
+        {ALL_WORKSHEETS.length > 1 ? (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-            {WORKSHEETS.map(w => (
+            {ALL_WORKSHEETS.map(w => (
               <button key={w.key} type="button" onClick={() => setKey(w.key)} aria-pressed={w.key === key}
                 style={{ fontFamily: TOKENS.FONT.body, fontSize: 15, fontWeight: 600, minHeight: 40, padding: "0 14px", borderRadius: 999,
                   border: "1px solid " + TOKENS.LINE.strong, background: w.key === key ? config.accent : TOKENS.SURFACE.card, color: w.key === key ? "#fff" : TOKENS.TEXT.primary, cursor: "pointer" }}>
@@ -105,8 +167,10 @@ export default function WorksheetsPage({ config }) {
         {sheet ? (<>
           {addressBox("Students open this worksheet at", studentUrl, "Paste the address into the Details link on the assignment.")}
           {readoutUrl ? addressBox("What the class wrote, to share with them", readoutUrl, "") : null}
-          <WorksheetReview key={sheet.key} supabase={gameClient} worksheetKey={sheet.key} groupKey={config.id}
-            roster={roster} hide={INSTRUCTOR_EMAILS} title={sheet.title} accent={config.accent} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />
+          {local
+            ? <LocalReview key={sheet.key} config={config} sheet={sheet} people={people} studentUrl={studentUrl} />
+            : <WorksheetReview key={sheet.key} supabase={gameClient} worksheetKey={sheet.key} groupKey={config.id}
+                roster={roster} hide={INSTRUCTOR_EMAILS} title={sheet.title} accent={config.accent} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />}
         </>) : null}
       </div>
     </div>
