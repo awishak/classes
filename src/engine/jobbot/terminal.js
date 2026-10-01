@@ -476,8 +476,11 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
   };
 
   // ─── the session ───
-  const name = viewer?.name || "Operator";
-  const h = hash(name);
+  // The name is asked, even though the sign-in knows it: Andrew, 2026-10-01,
+  // "still please let me enter my name." The record, the portrait and the
+  // allocation all read the name as typed.
+  let name = viewer?.name || "Operator";
+  let h = hash(name);
 
   async function boot() {
     setLight("think", "Booting"); tone(523, 60); tone(784, 60, "square", 0.03, 0.08); tone(1046, 120, "square", 0.03, 0.16);
@@ -493,7 +496,8 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
   }
 
   async function lookup() {
-    await say("Operator identified by terminal credentials: " + name + ".");
+    name = await ask({ field: "name", q: "State your name.", placeholder: viewer?.name || "Your name" });
+    h = hash(name);
     await think("Cross-referencing against all " + fmt(3 + h % 48000) + " " + plural(name) + " in the United States", 2400);
     await say("Found you.");
     await sleep(300);
