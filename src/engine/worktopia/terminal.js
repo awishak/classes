@@ -310,7 +310,7 @@ export const F = {
   // Rounds as letters, since the database allows only letters in a part: a to
   // z, then aa to zz. accept:0 was refused on 2026-10-01.
   accept: (r) => "accept:" + String.fromCharCode(97 + (r % 26)).repeat(Math.floor(r / 26) + 1),
-  title: part("title"), skills: part("skills"), human: part("human"), why: part("why"), duties: part("duties"), value: part("value"), future: part("future"),
+  title: part("title"), skills: part("skills"), human: part("human"), why: part("why"), duties: part("duties"), value: part("value"),
   interesting: "interesting", likely: "likely", pays: "pays", confirm: "confirm",
   industry: "industry", fading: "fading", rising: "rising",
   coworkers: "coworkers", meeting: "meeting", thursday: "thursday", stars: "stars", review: "review",
@@ -664,12 +664,14 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     await think("Noted", 600);
     const duties = await ask({ field: F.duties(i), force, rows: 3, min: 60, q: "What does this position accomplish? What are the main duties?" });
     await think("Noted", 700);
-    const value = await ask({ field: F.value(i), force, rows: 3, min: 60, q: "What value does this position provide to the sports ecosystem?" });
-    await think("Weighing the value", 1000);
-    const future = await ask({ field: F.future(i), force, rows: 3, min: 60, q: "Why do you think this position is still valuable in 2034? (I know, for I am Worktopia, but I want you to tell me.)" });
+    // One question where there were two (value now; why still valuable in
+    // 2034). Andrew, 2026-10-01: "cut the job questions by 1. change the
+    // last two to 'what value will this position provide to the sports
+    // ecosystem in 2034'."
+    const value = await ask({ field: F.value(i), force, rows: 3, min: 60, q: "What value will this position provide to the sports ecosystem in 2034?" });
     await think("Filing Position " + L, 1400);
     await say("Logged. Position " + L + ", " + title + ", is on your file.");
-    jobs[i] = { letter: L, title, skills, human, why, duties, value, future };
+    jobs[i] = { letter: L, title, skills, human, why, duties, value };
   }
 
   const titleOf = (L) => (jobs.find(j => j.letter === L) || {}).title || "";
@@ -801,6 +803,9 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       await say("All media. All sports. Every job in sports is a job at " + COMPANY);
       await sleep(400);
       await lookup();
+      // The industry before the jobs. Andrew, 2026-10-01: "ask the three
+      // industry questions before asking about the jobs."
+      await industry();
       await assigned();
       await position(0);
       await say("Well, this is not a guarantee. We need to present three positions to Worktopia's system, which will then choose one for you.");
@@ -808,7 +813,6 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       for (let i = 1; i < N_JOBS; i++) await position(i);
       setCount(0); rail.forEach(seg => { seg.className = "done"; });
       await evaluate();
-      await industry();
       await workgroup();
       await review();
       await say("Thank you. Worktopia's system will get back to you.");

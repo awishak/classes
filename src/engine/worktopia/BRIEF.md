@@ -121,9 +121,9 @@ answer back ... it's an advanced version of AI."
      and asked here)
    - "Why will you personally be good at this position?"
    - "What does this position accomplish? What are the main duties?"
-   - "What value does this position provide to the sports ecosystem?"
-   - "Why do you think this position is still valuable in 2034? (I know,
-     for I am Worktopia, but I want you to tell me.)"
+   - "What value will this position provide to the sports ecosystem in
+     2034?" (one question where there were two, 2026-10-01: "cut the job
+     questions by 1")
    Then "Logged. Position A, <title>, is on your file." and his line: "Well,
    this is not a guarantee. We need to present three positions to
    Worktopia's system, which will then choose one for you."
@@ -137,7 +137,9 @@ answer back ... it's an advanced version of AI."
    most interesting, which they are most likely to get, which pays the
    most. Shown back as a card, then "Is this correct?" CONFIRM moves on,
    REVISE asks the three again.
-10. **The industry.** His three: "What do you see as the changes to the
+10. **The industry.** Moved ahead of the jobs on 2026-10-01 ("ask the
+    three industry questions before asking about the jobs"): it now runs
+    right after the lookup, before the first assignment. His three: "What do you see as the changes to the
     sports industry from 2026 to 2034?" "Which jobs do you think will not be
     as prevalent in 2034?" "Which jobs will be much more popular?"
 11. **The workgroup.** "Please name people in the class who you would
