@@ -260,7 +260,7 @@ export const CSS = `
 .jb .dock .send { font-family: var(--jb-display); font-weight: 700; background: var(--jb-panel); border: 1px solid var(--jb-bot); color: var(--jb-bot); box-shadow: inset 0 0 0 0 var(--jb-bot); transition: box-shadow 0.2s, color 0.2s; }
 .jb .dock .send:hover { color: #fff; box-shadow: inset 0 -44px 0 0 var(--jb-bot); }
 .jb .dock .skip:disabled, .jb .dock .send:disabled { opacity: 0.4; cursor: default; box-shadow: none; color: var(--jb-dim); }
-@media (max-width: 480px) { .jb .dock .row { flex-wrap: wrap; } .jb .dock textarea { flex-basis: 100%; } .jb .dock .skip { margin-left: auto; } }
+@media (max-width: 480px) { .jb .dock .row { flex-wrap: wrap; } .jb .dock .row textarea { flex: 1 1 200px; } .jb .dock .row .skip { margin-left: auto; } }
 .jb .dock textarea { flex: 1; min-width: 0; font: inherit; color: var(--jb-ink); background: var(--jb-paper); border: 1px solid var(--jb-rule); border-radius: 2px; padding: 9px 12px; resize: none; min-height: 42px; max-height: 40vh; caret-color: var(--jb-cyan); transition: box-shadow 0.2s, border-color 0.2s; }
 .jb .dock textarea:focus { border-color: var(--jb-cyan); box-shadow: 0 0 0 3px rgba(8,145,178,0.12), 0 0 18px rgba(8,145,178,0.18); outline: none; }
 .jb .dock textarea:disabled { background: #f1f4fa; color: var(--jb-dim); }
