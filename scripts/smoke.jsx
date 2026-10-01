@@ -1162,9 +1162,13 @@ cases.push(["Instructor links", <InstructorLinks />]);
     // Class, Grades toward the bottom and Games at the very bottom.
     const at = (t) => html.indexOf(t);
     if (html.includes('aria-label="Next class"')) {
-      const order = ['aria-label="Next class"', ">My Work (Assignments)</span>", ">Message Dr. Ishak</span>", ">Questions</span>", ">Class</span>", ">Games</span>"].map(at);
+      // The portal, 2026-09-30: the next class, then My work with only the
+      // next challenge, then Questions, then Dr. Ishak. Andrew: "students care
+      // most about: what is the schedule, what are the assignments/challenges,
+      // how do I submit, what is my grade in the class."
+      const order = ['aria-label="Next class"', ">My work</button>", ">Questions</button>", ">Your instructor</span>"].map(at);
       if (order.some(n => n < 0) || order.some((n, i) => i && n < order[i - 1])) {
-        console.error("  FAIL  class page, student: the home page is not Next class, My Work, Messages, Questions, Class, Games: " + JSON.stringify(order)); failedEarly++; }
+        console.error("  FAIL  class page, student: the home page is not Next class, My work, Questions, Dr. Ishak: " + JSON.stringify(order)); failedEarly++; }
     } else {
       console.error("  FAIL  class page, student: the home page has no Next class hero"); failedEarly++;
     }
@@ -2864,7 +2868,9 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // And the envelope beside it, on the desktop bar and the phone bar alike.
   // Andrew, 2026-09-24: "a mail envelope that tells them if they have a
   // message from me or not."
-  if ((app.match(/\{MailButton\}/g) || []).length !== 2) say("the envelope is not on both bars");
+  // One bar now, worn on the laptop and the phone alike, so the envelope is
+  // on it once.
+  if ((app.match(/\{MailButton\}/g) || []).length < 1) say("the envelope is not on the bar");
   if (!/go\("messages"\)/.test(app)) say("the envelope does not open messaging");
   const you = readFileSync(new URL("../src/engine/YouCard.jsx", import.meta.url), "utf8");
   if (!/useMarkThreadSeen\(update, data, asStudent\)/.test(you)) say("opening messaging does not mark the thread read");

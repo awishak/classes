@@ -626,7 +626,7 @@ function GradeHub({ config, data, assignments, onStart }) {
   );
 }
 
-function GradeFlow({ config, data, update, queue, onExit }) {
+export function GradeFlow({ config, data, update, queue, onExit }) {
   const a = config.accent;
   const [i, setI] = useState(0);
   const assignments = getAssignments(data, config);
@@ -874,7 +874,7 @@ function ManageAssignments({ config, data, update, assignments, writeAssignments
   );
 }
 
-function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
+export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
   const a = config.accent;
   const [title, setTitle] = useState(asg?.title || "");
   const [due, setDue] = useState(asg?.due || "");
@@ -885,6 +885,13 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
   const [closeAt, setCloseAt] = useState(asg?.closeAt || "");
   const [rubric, setRubric] = useState(asg?.rubric || []);
   const [scale, setScale] = useState(scaleOf(asg));
+  // Two fields the portal added, 2026-09-30: "give me the ability to make
+  // visible, open submissions, change due date, add instructions, including
+  // a link." Visible hides a challenge from students altogether; Submissions
+  // open says when it takes work: now, on a date, or not yet.
+  const [visible, setVisible] = useState(asg?.visible !== false);
+  const [opens, setOpens] = useState(asg?.opens === "date" || asg?.opens === "never" ? asg.opens : "now");
+  const [opensAt, setOpensAt] = useState(asg?.opensAt || "");
 
   const setCrit = (id, field, val) => setRubric(r => r.map(c => c.id === id ? { ...c, [field]: val } : c));
   const rubricTotal = rubric.reduce((s, c) => s + (Number(c.points) || 0), 0);
@@ -899,6 +906,7 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
       ...(asg || {}),
       id: asg?.id || genId(), title: title.trim(), due: due.trim(), dueTime: dueTime.trim(), weight: Number(weight) || 0, scale,
       description: description.trim(), instructionsUrl: instructionsUrl.trim(), closeAt: closeAt || "",
+      visible, opens, opensAt: opens === "date" ? opensAt : "",
       rubric: rubric.filter(c => c.name.trim()).map(c => ({ id: c.id, name: c.name.trim(), points: Number(c.points) || 0 })),
     });
   };
@@ -928,9 +936,27 @@ function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
         ))}
       </div>
       <Muted style={{ marginTop: 6 }}>{scale === "complete" ? "Complete, Not quite, Incomplete or Not submitted." : "A, B, C, D, Incomplete or F."}</Muted>
-      <div style={fieldL}>Short description</div>
-      <textarea value={description} onChange={e => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical", marginTop: 6 }} />
-      <div style={fieldL}>Details link</div>
+      {/* Whether students can see this challenge at all. */}
+      <label style={{ ...fieldL, display: "flex", alignItems: "center", gap: 12, minHeight: TAP, cursor: "pointer" }}>
+        <input type="checkbox" checked={visible} onChange={e => setVisible(e.target.checked)} style={{ width: 20, height: 20, accentColor: a }} />
+        Visible to students
+      </label>
+      {/* When it takes work. Not open yet draws faded on the student's list
+          with Opens <day>, and the box to send is not there. */}
+      <div style={fieldL}>Submissions open</div>
+      <div role="radiogroup" aria-label="Submissions open" style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+        {[["now", "Now"], ["date", "On a date"], ["never", "Not yet"]].map(([id, name]) => (
+          <button key={id} role="radio" aria-checked={opens === id} onClick={() => setOpens(id)}
+            style={{ minHeight: TAP, padding: "0 18px", borderRadius: 999, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer",
+              border: "1px solid " + (opens === id ? a : BORDER_STRONG), background: opens === id ? a : "#fff", color: opens === id ? "#fff" : TEXT_PRIMARY }}>
+            {name}
+          </button>
+        ))}
+      </div>
+      {opens === "date" ? <input type="datetime-local" value={opensAt} onChange={e => setOpensAt(e.target.value)} aria-label="Opens on" style={{ ...inputStyle, marginTop: 8 }} /> : null}
+      <div style={fieldL}>Instructions</div>
+      <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="What the challenge asks for" style={{ ...inputStyle, minHeight: 96, lineHeight: 1.5, resize: "vertical", marginTop: 6 }} />
+      <div style={fieldL}>Link to more instructions</div>
       <input value={instructionsUrl} onChange={e => setInstructionsUrl(e.target.value)} placeholder="https://..." style={{ ...inputStyle, marginTop: 6 }} />
       <div style={fieldL}>Submissions close (optional)</div>
       <input type="datetime-local" value={closeAt} onChange={e => setCloseAt(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} />

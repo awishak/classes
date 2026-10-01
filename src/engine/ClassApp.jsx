@@ -48,6 +48,8 @@ import { ClassMenu } from "./ClassMenu.jsx";
 import { daySlug } from "./days.js";
 import WelcomeDeck, { needsWelcome } from "./WelcomeDeck.jsx";
 import NoticeCard, { NoticeWriter } from "./NoticeCard.jsx";
+import PortalShell from "./portal/Shell.jsx";
+import { Face as PortalFace, DrFace } from "./portal/bits.jsx";
 import { SaveWord, useOnline } from "./SaveWord.jsx";
 import { noticeFor, markNoticeRead } from "./notice.js";
 import { isTestStudent, realStudents, sectionFor, hasSections } from "./sections.js";
@@ -708,6 +710,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // The student's own code, read off the row only they can see, for the menu.
   const [ownCode, setOwnCode] = useState("");
   const [pinOpen, setPinOpen] = useState(false);
+  // My work opens on the Flow; List is a press away and stays until the page is left.
+  const [workView, setWorkView] = useState("flow");
   // Whether the welcome cards are up, latched.
   //
   // The gate is "this student has answered nothing", and every keystroke on a
@@ -839,7 +843,10 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // A card key can arrive from the address bar, so it gets the same check the
   // grid does: unknown or not-yours falls back to the home grid.
   const [openBase, openSub = ""] = String(open || "").split("/");
-  const openKey = openBase && (openBase === "more" || enabledCards.includes(openBase)) ? openBase : null;
+  // The portal's own pages, beside the cards: My performance, and the
+  // profile behind the face in the bar.
+  const PORTAL_PAGES = new Set(["performance", "profile"]);
+  const openKey = openBase && (openBase === "more" || PORTAL_PAGES.has(openBase) || enabledCards.includes(openBase)) ? openBase : null;
   ctx.sub = openKey ? openSub : "";
   ctx.go = go;
 
@@ -898,15 +905,18 @@ export default function ClassApp({ config: classConfig, initialCard }) {
     </span>
   ) : null;
 
-  const unread = view !== "instructor" ? unreadNotes(data, preview || asStudent) : 0;
-  const MailButton = view !== "instructor" ? (
+  // The envelope: a student's unread notes from him, or, on his own bar, the
+  // threads waiting on a reply. Opens messaging either way.
+  const unread = view !== "instructor" ? unreadNotes(data, preview || asStudent)
+    : rosterOf(config, data).filter(s => { const t = data?.threads?.[s.name] || []; const last = t[t.length - 1]; return last && last.from === "student"; }).length;
+  const MailButton = (
     <button className="ca-focus" onClick={() => { setPinOpen(false); go("messages"); }}
-      aria-label={unread ? "Messages, " + unread + " new from " + (config.instructor?.name || "your instructor") : "Messages, nothing new"}
+      aria-label={view === "instructor" ? (unread ? "Inbox, " + unread + " waiting" : "Inbox") : (unread ? "Messages, " + unread + " new from " + (config.instructor?.name || "your instructor") : "Messages, nothing new")}
       title={unread ? unread + " new" : "Nothing new"}
-      style={{ ...barBtn, position: "relative", padding: 0, width: TAP,
+      style={{ ...barBtn, position: "relative", padding: 0, width: TAP, borderRadius: 12,
         borderColor: unread ? a : BORDER_STRONG, color: unread ? a : TEXT_SECONDARY }}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" />
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="14" rx="3" /><path d="m3 8 9 6 9-6" />
       </svg>
       {unread ? (
         <span aria-hidden="true" style={{ position: "absolute", top: -4, right: -4, minWidth: 20, height: 20, padding: "0 5px",
@@ -914,7 +924,15 @@ export default function ClassApp({ config: classConfig, initialCard }) {
           boxShadow: "0 0 0 2px var(--surface-card)" }}>{unread}</span>
       ) : null}
     </button>
-  ) : null;
+  );
+  // The face at the right end: a student's own, which opens the profile, or
+  // his, which opens More.
+  const FaceButton = view === "instructor"
+    ? <button className="ca-focus" onClick={() => go("more")} aria-label="More" style={{ background: "none", border: "none", padding: 0, minHeight: TAP, display: "flex", alignItems: "center", cursor: "pointer" }}><DrFace config={config} size={40} /></button>
+    : <button className="ca-focus" onClick={() => go("profile")} aria-label="My profile" style={{ background: "none", border: "none", padding: 0, minHeight: TAP, display: "flex", alignItems: "center", cursor: "pointer" }}><PortalFace config={config} data={data || {}} name={preview || asStudent} size={40} /></button>;
+  // The search behind the glass, open or shut. On a laptop the bar carries
+  // a box that opens it; on a phone the glass sits beside the page's title.
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const TheClass = <ClassMenu config={config} role={view} onPick={go} active={activeNav} />;
   const TheClassCompact = <ClassMenu config={config} role={view} onPick={go} active={activeNav} compact />;
@@ -1148,138 +1166,42 @@ export default function ClassApp({ config: classConfig, initialCard }) {
     );
   }
 
-  // ─── DESKTOP: top nav + side-by-side master/detail ───
-  if (isDesktop) {
-    return (
-      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">
-        <ThemeStyle theme={theme} />
-        <ThemeChrome theme={theme} />
-        <style>{CSS + accentCSS(a, config.accentDark)}</style>
-        {GameLayer}
-        <ThemeStickers theme={theme} />
-        <ThemeTopper theme={theme} lines={tickerLines} seed={(seenAs || "").length + (config.code || "").length} />
-        <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
-        {PreviewBar}
-        {/* The same bar the dashboard and the repository wear — literally the
-            same component, so the three cannot drift apart again. The theme's
-            own trimmings ride in its right-hand slot. */}
-        {/* No tabs. Andrew, 2026-09-20: "tabs go in the dropdown. same on
-            phone i think." The five pages are in the class menu at the left,
-            where the dashboard has had them since the day before. */}
-        <TopNav config={config} tabs={[]} active={activeNav} onPick={go} role={view}
-          brand={TheClass}
-          right={
-            <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {/* Where the saving is, the way the dashboard bar says it, so a
-                  write that is stuck says so on every page of the class. Once
-                  something has been written from this page; a page that has
-                  only read has nothing to report. */}
-              {view === "instructor" ? <SaveWord saving={saveState} online={online} armed={wrote || !online || !!saveState?.trouble} /> : null}
-              <ThemeIdentity theme={theme} points={myPoints} />
-              <ThemeBadge theme={theme} points={myPoints} />
-              {ShowPin}
-              {MailButton}
-            </span>
-          } />
-        </div>
-        <div style={{ maxWidth: 1240, margin: "0 auto", padding: 20, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 24, alignItems: "start" }}>
-          <div style={{ maxWidth: CARD_MAX * 2 + 12 }}>
-            <StoryBar theme={theme} roster={roster} me={seenAs} />
-            {LiveBanner}
-            <NeedsYou items={actions} accent={a} onOpen={go} />
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-              {Grid}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
-              <ClassLeader theme={theme} roster={roster} log={data?.log} me={seenAs} />
-              <TubeySays theme={theme} seed={(seenAs || "").length} />
-              <ThemeSponsor theme={theme} />
-              <ThemeLegal theme={theme} />
-            </div>
-          </div>
-          <div style={{ ...cardStyle(theme, 2), padding: 24, minHeight: 400, position: "sticky", top: 80 }}>
-            {openKey
-              ? detailFor(openKey)
-              : <div style={{ color: TEXT_MUTED, fontSize: 16, paddingTop: 40, textAlign: "center" }}>Open a card to see its full page here.</div>}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── MOBILE: single column, full-screen takeover ───
-  //
-  // The bottom tab bar is gone. Andrew, 2026-09-20: "tabs go in the dropdown.
-  // same on phone i think." Snapchat's camera, which sat in the middle of that
-  // bar, moved up beside the score, because it is the theme's furniture rather
-  // than a way to another page.
-  return (
-    <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, paddingBottom: 24, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">
-      <ThemeStyle theme={theme} />
-        <ThemeChrome theme={theme} />
-      <style>{CSS + accentCSS(a, config.accentDark)}</style>
-      {GameLayer}
-
-      <ThemeStickers theme={theme} />
-      <ThemeTopper theme={theme} lines={tickerLines} seed={(seenAs || "").length + (config.code || "").length} />
-      {/* compact top bar */}
-      <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
-      {PreviewBar}
-      <div style={{ background: "var(--surface-card)", borderBottom: "1px solid " + BORDER }}>
-        <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-          {/* The class is always here, because with the bottom bar gone this
-              menu is the only way to another page. The way back sits beside
-              it and says where back is. */}
-          {openKey ? TheClassCompact : TheClass}
-          {openKey ? (
-            <button className="ca-focus" onClick={() => go(openSub ? openKey : IN_CLASS.has(openKey) ? "class" : null)}
-              style={{ background: "none", border: "none", fontFamily: F, fontSize: 16, fontWeight: 600, color: a, cursor: "pointer", minHeight: TAP, display: "inline-flex", alignItems: "center", padding: 0, whiteSpace: "nowrap", minWidth: 0, overflow: "hidden" }}>
-              {/* The place, not the word Back: with the PIN and the envelope
-                  beside it, "Back to My Work" was cut to "Back t" on a phone. */}
-              ← {openSub && openKey === "assignments" ? "My Work" : IN_CLASS.has(openKey) ? "Class" : "Back"}
-            </button>
-          ) : null}
-          <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flex: "none" }}>
-            <ThemeCamera theme={theme} />
-            <ThemeBadge theme={theme} points={myPoints} />
-            {ShowPin}
-            {MailButton}
-          </span>
-        </div>
-      </div>
-      </div>
-
-
-      {/* content: grid OR full-screen takeover */}
-      <div style={{ padding: 16 }}>
-        {openKey ? (
-          <div style={{ ...cardStyle(theme, 2), padding: 20 }}>
-            {detailFor(openKey)}
-          </div>
-        ) : (
-          <>
-            <StoryBar theme={theme} roster={roster} me={seenAs} />
-            {LiveBanner}
-            <NeedsYou items={actions} accent={a} onOpen={go} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {Grid}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
-              <ClassLeader theme={theme} roster={roster} log={data?.log} me={seenAs} />
-              <TubeySays theme={theme} seed={(seenAs || "").length} />
-              <ThemeSponsor theme={theme} compact />
-              <ThemeLegal theme={theme} />
-            </div>
-            {signedIn && !preview ? (
-              <button className="ca-focus" onClick={signOut}
-                style={{ background: "none", border: "none", fontFamily: F, fontSize: 15, color: TEXT_MUTED, cursor: "pointer", minHeight: TAP, marginTop: 8 }}>
-                Signed in as {signedIn} · sign out
-              </button>
-            ) : null}
-          </>
-        )}
-      </div>
-
-    </div>
+  const TheBar = (
+    <TopNav config={config} tabs={[]} active={activeNav} onPick={go} role={view}
+      brand={TheClass}
+      middle={isDesktop ? (
+        <button className="ca-focus" onClick={() => setSearchOpen(true)} aria-label="Search"
+          style={{ flex: 1, maxWidth: 460, minHeight: TAP, padding: "0 14px", background: "var(--surface-card)", border: "1px solid " + BORDER_STRONG,
+            borderRadius: 12, cursor: "text", color: TEXT_MUTED, fontFamily: F, fontSize: 16, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+          <span>Search</span>
+        </button>
+      ) : null}
+      right={
+        <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {view === "instructor" ? <SaveWord saving={saveState} online={online} armed={wrote || !online || !!saveState?.trouble} /> : null}
+          <ThemeIdentity theme={theme} points={myPoints} />
+          <ThemeBadge theme={theme} points={myPoints} />
+          {ShowPin}
+          {MailButton}
+          {FaceButton}
+        </span>
+      } />
   );
+  // ─── the portal ───
+  //
+  // The student portal canvas of 2026-09-30, built. Andrew: "do the whole
+  // thing." The card grid, the master/detail split and the compact phone bar
+  // are gone; the shell draws the home, the pages, the bottom bar and the
+  // laptop's two panes, and this component still owns everything above:
+  // the session, the data, the decks in front of the site, the preview bar.
+  return (
+    <PortalShell config={config} data={data} write={write} ctx={ctx} view={view} isDesktop={isDesktop}
+      theme={theme} mode={mode} accentCSS={accentCSS(a, config.accentDark)} baseCSS={CSS}
+      go={go} openKey={openKey} openSub={openSub} me={me} seenAs={seenAs}
+      PreviewBar={PreviewBar} GameLayer={GameLayer} tickerLines={tickerLines} myPoints={myPoints}
+      saveState={saveState} online={online} wrote={wrote} detailFor={detailFor} mark={ctx.mark}
+      workView={workView} setWorkView={setWorkView} bar={TheBar} searchOpen={searchOpen} setSearchOpen={setSearchOpen} roster={roster} />
+  );
+
 }

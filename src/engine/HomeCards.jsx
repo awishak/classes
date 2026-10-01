@@ -155,7 +155,7 @@ export function nextClassFacts(config, data, blockOf, section, now = Date.now())
 // day with a note on it reads the note, exactly as the class reads it, with
 // Edit beside the label. It starts shut, because the card is shortest that way
 // and the note is still there to be read.
-function NoteEditor({ date, value, update, saving, online = true }) {
+export function NoteEditor({ date, value, update, saving, online = true }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [armed, setArmed] = useState(false);

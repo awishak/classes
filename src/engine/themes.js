@@ -206,7 +206,7 @@ export const MODE_DESCS = { auto: "Follow this device", day: "Always light", nig
 
 // Which fonts a theme needs, so a surface loads those and no others.
 export const THEME_FONTS = {
-  clean: "family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Nunito:wght@700;800;900",
+  clean: "family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Nunito:wght@700;800;900&family=Lora:ital,wght@0,500;0,600;1,500",
   business: "family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600",
   snapchat: "family=Nunito:wght@400;600;700;800;900",
   crashing: "family=Bangers&family=Lilita+One&family=Shantell+Sans:ital,wght@0,300..800;1,300..800&family=Rubik+Mono+One&family=Press+Start+2P&family=Fredoka:wght@400;500;600;700",

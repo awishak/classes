@@ -47,6 +47,28 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep30-portal", date: "Wednesday, September 30", title: "The student portal, built",
+    blurb: "Andrew, at the end of a day of mockups: \"nah do the whole thing.\" The class site is the portal now, on a phone and on a laptop, in the language of fieldtime.net/mockup: a serif headline, a filled next-class card with its buttons, and every row a tinted card whose colour says what it is. Amber is something to do, green is done, blue came from Dr. Ishak, grey is the student's own, faded is not open yet. Twelve pixels of rounding on anything you press, and the action a row exists for is filled in the class colour. The card grid is gone.",
+    groups: [
+      { name: "A student's site", items: [
+        ["The home", "The pinned link as a notice bar with Open on it. The next class filled in the class colour, with his note, I'll be there, and the readings and the schedule as buttons. New: a grade not yet opened, a message not yet read, his note for the day. My work with only the next challenge and My performance beside it. Questions, with the box to ask and the latest answered one folded. Dr. Ishak, with Message, Make a meeting and See more."],
+        ["The bar and the bottom", "Top right of every page: the envelope with its count, and the student's own face, which opens the profile. A bar along the bottom: Schedule, My work, Class. The search glass sits beside every page's title and reaches grades, challenges, readings, days, classmates, office hours, the PIN and the profile; grades land on My performance, assignments and projects on My work, teacher and professor on Dr. Ishak."],
+        ["My work", "One page, two views. Flow is the conversation, newest first, with the challenge still owed pinned on top and the chips All, My work and grades, Messages, Feedback; the box to write to Dr. Ishak sits at the foot. List is every challenge in due order, grouped by month, Class culture at the foot under All quarter. My performance is a sheet: Graded, To do and Missed as counts, then every challenge with its own word, each row opening that challenge. No grade so far, anywhere."],
+        ["One challenge", "The state card at the top: Due or Turned in or the grade big, the weight on the same line, the instructions in full before the work goes in and folded behind Instructions after, with More instructions as the link. One box for a link, a message, or both. Then everything said about that one piece, newest first, Dr. Ishak on the right. A challenge that does not take submissions yet is faded, says Opens with the day, and has no box."],
+        ["Class", "The student's own card first, with Edit profile on it, which opens the welcome deck's form as a sheet. Dr. Ishak under it. Then the classmates in the student's own section only, two across, faces at 88px. Nobody sees the other section."],
+      ] },
+      { name: "Andrew's site", items: [
+        ["His home", "Week 2 and its dates as the headline. The pinned links, the next class with the note box and the two doors, Open dashboard and Room screen. Needs you: how many turned in each challenge with Grade and the count on the button, the messages waiting with Open, the questions waiting with Answer. My work coming up with how much of each section is in and Edit on each. Questions with Answer. The inbox as mail: newest first, the last line or two under each name, bold and New while it waits on him."],
+        ["My work is where challenges are built", "Every challenge in due order with the section counts, a to-grade chip, Edit on each, New challenge at the top and Grade view a chip away. The editor has two new fields: Visible to students, and Submissions open as Now, On a date or Not yet. Short description is Instructions and Details link is Link to more instructions. On a laptop the right pane's four titles are the switch: Schedule, My work, Inbox, Class."],
+      ] },
+      { name: "What this rests on", items: [
+        ["The engine, one bar", "Everything is src/engine/portal/: the style, the pieces, the work model, My work, Questions, Class, Search, the two homes and the shell. ClassApp still owns the session, the data, the decks in front of the site, the preview bar and the one TopNav, and hands the shell the rest. The old card grid and its two layouts are gone from the render; the summaries and tiles stay in the file for now."],
+        ["Two fields on a challenge", "visible, false to hide a challenge from students, missing means shown. opens, with opensAt, for a challenge that takes work later or not yet. Nothing made before today changes."],
+        ["The checks", "The smoke's picture of the home is the portal's now: Next class, My work, Questions, Dr. Ishak. One bar, so the envelope is on it once. Every other check held as it was."],
+      ] },
+    ],
+  },
+  {
     id: "sep30-seen", date: "Wednesday, September 30", title: "Students can get past the grade card again",
     blurb: "Students, through Andrew: \"they can't see feedback, only instructors can.\" Since the lesson plan moved to its own row on September 29, the grade board and the due-card dismissals have been plan keys, which only an instructor may write. A student's Got it on a grade card was refused, so the card came back on every visit, and Open the challenge reloaded the page straight into the card again. Nobody but Andrew could reach the feedback behind it. The same held for the due-soon card.",
     groups: [

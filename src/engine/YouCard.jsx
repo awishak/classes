@@ -201,7 +201,7 @@ function FieldRow({ title, children }) {
   );
 }
 
-function ProfileForm({ student, initial, update, setPhoto, accent, onDone, onCancel }) {
+export function ProfileForm({ student, initial, update, setPhoto, accent, onDone, onCancel }) {
   const [f, setF] = useState({
     firstName: initial.firstName || "", lastName: initial.lastName || "", strength: initial.strength || "",
     email: initial.email || "", avatar: initial.avatar || "", about: initial.about || "",
