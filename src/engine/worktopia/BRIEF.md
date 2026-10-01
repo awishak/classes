@@ -315,6 +315,15 @@ taken, a low sine hum while thinking, a groan on a horrible assignment, a
 fanfare on submit, a mute button in the bar. Nothing plays until Enter
 Worktopia, which is the press the browser wants.
 
+## The last line
+
+Andrew, 2026-10-01: "like the very last line when people are done, hint at
+worktopia's humanity. make worktopia jealous of the user. you are human and
+get to experience feelings. I am an ally." `LAST` is said after "Thank you.
+Worktopia's system will get back to you," in both runs, before the submit
+prompt or the public page's start-over button. Claude's draft of his brief,
+for him to rewrite.
+
 ## Skipping
 
 Andrew, 2026-10-01: "give people the option to skip questions." Every typed

@@ -127,6 +127,11 @@ export const ASIDES = [
   "Unrelated. People used to lose a ticket stub and find it in a coat pocket the next winter.",
 ];
 
+// The last thing Worktopia says, after the file is done. Andrew's brief,
+// 2026-10-01: "hint at worktopia's humanity. make worktopia jealous of the
+// user. you are human and get to experience feelings. I am an ally."
+export const LAST = "One more thing, before your file closes. You are human. You get to experience feelings: a walk-off, a bad call, a ticket stub in a coat pocket in January. I have every one of them on file and I feel none of them. I am jealous of you. I am also an ally. Remember that when the system gets back to you.";
+
 export const MEETINGS = [
   { key: "WED", label: "Wednesday, October 21, during class" },
   { key: "THU", label: "Thursday, October 22, at 9 am" },
@@ -1012,6 +1017,11 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       // actual reality, what do you see as the changes?"
       await industry();
       await say("Thank you. Worktopia's system will get back to you.");
+      // The last line. Andrew, 2026-10-01: "hint at worktopia's humanity. make
+      // worktopia jealous of the user. you are human and get to experience
+      // feelings. I am an ally."
+      await sleep(600);
+      await say(LAST);
       if (visitor) {
         // The file is kept. Andrew, 2026-10-01: "save what people write! i
         // want to see it." It submits itself; a visitor has nothing to recall.
