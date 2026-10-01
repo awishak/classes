@@ -82,6 +82,19 @@ export const MEETINGS = [
   { key: "FRI", label: "Friday, October 23, during class" },
 ];
 
+// The parts the Sports Subscription updates are built from, picked by the
+// name. The teams are 2034's.
+const TEAMS = ["Green Bay Quackers", "Las Vegas Algorithms", "Austin Bananas", "Jacksonville Punters", "Portland Streamers", "Miami Bundle", "Seattle Login", "Denver Cloud", "Toronto Buffering", "Phoenix Dynamic Pricing", "Nashville Paywalls", "Boston Terms of Service", "Chicago Autoplay", "Houston Push Notifications", "Atlanta Free Trial", "Dallas Firmware"];
+const WHENS = ["next Sunday", "Saturday afternoon", "Thursday night", "next Monday at 5:15 am Pacific", "Sunday at noon", "tonight"];
+const SEATS = ["your couch", "your kitchen table", "the floor of your living room", "your roommate's couch", "a folding chair in the garage", "the front seat of your car", "the bathtub", "your bed, upright"];
+const COSTS = ["150", "175", "199", "212", "240", "89", "310", "149.99"];
+const PRICES = ["$249.99", "$199.99", "$279.99", "$349.99", "$229.99", "$299.99", "$259.99"];
+const MARKET = ["where you can buy access to sports games", "where you can buy access to sports games, one quarter at a time", "where you can buy access to sports games and the right to remember them", "where you can buy access to sports games, replays sold separately", "where you can buy access to sports games, and the sound is extra", "where you can buy access to sports games, overtime not included"];
+const OBJECTS = [["frisbee", "throw", "ground magnet"], ["basketball", "dribble", "deflation valve"], ["football", "spiral", "ground magnet"], ["tennis racket", "serve", "handle lock"], ["bicycle", "pedal stroke", "wheel lock"], ["running shoes", "mile", "lace lock"], ["kayak", "paddle", "hull anchor"], ["skateboard", "push", "wheel brakes"], ["soccer ball", "kick", "deflation valve"], ["golf clubs", "swing", "bag lock"], ["volleyball", "serve", "deflation valve"], ["surfboard", "wave", "leash lock"]];
+const WHOS = ["your friends", "your cousins", "your co-workers", "your roommates", "your group chat", "your friends from high school"];
+const WHERES = ["go to the beach", "go to the park", "go to the lake", "go to the backyard", "go to the courts", "go up the hill", "go to the river"];
+const HOURS = ["48", "36", "24", "72", "12", "60"];
+
 const N_JOBS = 3;
 const LETTERS = ["A", "B", "C"];
 const ORDINAL = ["first", "second", "third"];
@@ -145,6 +158,8 @@ export const CSS = `
 .jb .line.sys .ok { color: var(--jb-ok); }
 .jb .line.sys .ok::before { content: '[ '; } .jb .line.sys .ok::after { content: ' ]'; }
 .jb .line.warn .txt { color: var(--jb-warn); }
+.jb .line.note .tag { color: var(--jb-warn); }
+.jb .line.note .txt { color: var(--jb-ink); background: #fff7ed; border: 1px solid #fdba74; border-left: 3px solid var(--jb-warn); padding: 8px 12px; }
 .jb .line.think .txt { color: var(--jb-cyan); display: flex; flex-direction: column; gap: 6px; }
 .jb .line.think .proc { display: flex; gap: 3px; max-width: 260px; }
 .jb .line.think .proc i { flex: 1; height: 8px; background: var(--jb-rule); animation: jb-fill 1.1s linear infinite; }
@@ -446,6 +461,37 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     if (ok) { await sleep(ok); const s = document.createElement("span"); s.className = "ok"; s.textContent = "OK"; x.append(" ", s); bootTick(); }
   };
   const warn = (text) => { const x = line("warn", "Worktopia"); x.textContent = text; tone(330, 120); scroll(); };
+
+  // Three updates to the student's Sports Subscription, dropped in at three
+  // points of the run picked by the name, so a reload shows them in the
+  // same places. Andrew, 2026-10-01: "at random points (3 for each
+  // student), you should give them an UPDATE on their Sports Subscription,"
+  // with the three he wrote, and "don't do exactly this. make some of the
+  // details different for each student." The teams, the seat, the cost,
+  // the price, the object and its lock all come from the name.
+  const pickBy = (n, list) => list[(h >>> n) % list.length];
+  const updatesFor = () => {
+    const A = pickBy(3, TEAMS); let B = pickBy(9, TEAMS); if (B === A) B = TEAMS[(TEAMS.indexOf(A) + 1) % TEAMS.length];
+    const [obj, action, lock] = pickBy(14, OBJECTS);
+    const texts = [
+      "Update to your Sports Subscription: based on your preference, a ticket has been purchased for the big game " + pickBy(4, WHENS) + " between the " + A + " and the " + B + ". Your seat number is: " + pickBy(6, SEATS) + ". Cost: $" + pickBy(8, COSTS) + ".",
+      "Good news! Your Franchise Dynasty Media subscription has been updated to reflect our new monthly price of " + pickBy(11, PRICES) + ". For this low price, you have access to the FDM Marketplace, " + pickBy(13, MARKET) + ".",
+      "Great news! Your personal " + obj + " has been unlocked! You can use it this weekend with " + pickBy(16, WHOS) + " when you " + pickBy(18, WHERES) + ". Subscription will expire " + pickBy(20, HOURS) + " hours after first " + action + ", upon which the " + obj + "'s " + lock + " will be reactivated.",
+    ];
+    const order = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]][(h >>> 22) % 6];
+    return order.map(i => texts[i]);
+  };
+  // The three slots: one early, one in the middle, one late, counted in
+  // questions asked after the name.
+  const slotsFor = () => [3 + (h % 9), 12 + ((h >>> 5) % 9), 21 + ((h >>> 10) % 8)];
+  let asked = 0, told = 0;
+  const beat = async () => {
+    asked++;
+    if (told >= 3 || !slotsFor().includes(asked)) return;
+    const text = updatesFor()[told++];
+    const x = line("note", "Update"); x.textContent = text; tone(880, 80); tone(1175, 120, "square", 0.03, 0.1); scroll();
+    await sleep(1200);
+  };
   const setLight = (cls, text) => { light.className = "light " + cls; status.textContent = text; };
   const think = async (text, ms) => {
     if (replay) return;
@@ -497,6 +543,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   // with its answer, and an open one is decoded and then asked.
   const live = () => { if (replay) { replay = false; setLight("on", "Ready"); } };
   const ask = async ({ field, q, force, rows, placeholder, min, short }) => {
+    await beat();
     if (!force && field in prior) { await say(q); echo(prior[field]); return prior[field]; }
     if (readOnly) throw STOP;
     live();
@@ -527,6 +574,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   // A choice: buttons. One with a field is kept on file; one without is a
   // moment (submit, recall) and is not.
   const choose = async ({ field, q, options, force }) => {
+    if (field) await beat();
     if (field && !force && field in prior) { await say(q); echo(prior[field]); return prior[field]; }
     if (readOnly) throw STOP;
     live();
@@ -549,6 +597,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   // Several from a list, up to max, or none. Kept on file as the names joined
   // with commas, or "None".
   const pickSome = async ({ field, q, options, max, force }) => {
+    await beat();
     if (!force && field in prior) { await say(q); echo(prior[field]); return prior[field]; }
     if (readOnly) throw STOP;
     live();

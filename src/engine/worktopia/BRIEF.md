@@ -235,6 +235,30 @@ along, so a reload hands out the same jobs in the same order.
   stream, every stadium, every parking lot, every jersey, every ticket, every
   app the ticket lives in, every mascot and every banana.
 
+## The Sports Subscription updates
+
+Three per student, dropped in before three questions picked by the name
+(one early, one in the middle, one late), in an order picked by the name,
+so a reload shows them in the same places. Andrew, 2026-10-01: "at random
+points (3 for each student), you should give them an UPDATE on their
+Sports Subscription," and "don't do exactly this. make some of the details
+different for each student." His three, with the parts that vary:
+
+- A ticket bought for the big game (when) between two 2034 teams (Green
+  Bay Quackers, Las Vegas Algorithms, Austin Bananas, Jacksonville
+  Punters...). "Your seat number is: your couch" (or the kitchen table, the
+  bathtub...). Cost: $150 (or another).
+- The subscription updated to a new monthly price of $249.99 (or another),
+  with access to the FDM Marketplace, "where you can buy access to sports
+  games" (one quarter at a time, replays sold separately...).
+- A personal frisbee (or basketball, kayak, running shoes...) unlocked for
+  the weekend; the subscription expires 48 hours (or another) after first
+  throw (dribble, paddle, mile), upon which its ground magnet (deflation
+  valve, hull anchor, lace lock) is reactivated.
+
+The parts are the lists at the top of `terminal.js`; `updatesFor` and
+`slotsFor` build them from the hash.
+
 ## Behind the curtain
 
 Andrew, 2026-10-01: "you're giving away the stuff behind the curtain." So:
