@@ -120,9 +120,9 @@ export const CSS = `
 .jb .intro p.last { color: var(--jb-bot); }
 .jb .intro .power { margin-top: 18px; }
 .jb .bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 10px 16px; border: 1px solid var(--jb-rule); border-bottom: 0; background: var(--jb-panel);
-  font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jb-dim); box-shadow: 0 1px 0 var(--jb-rule); }
+  font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jb-dim); box-shadow: 0 1px 0 var(--jb-rule); }
 .jb .bar .name { font-family: var(--jb-display); font-weight: 900; font-size: 15px; letter-spacing: 0.22em; color: var(--jb-ink); }
-.jb .bar .name small { font-weight: 500; color: var(--jb-cyan); font-size: 10px; margin-left: 10px; letter-spacing: 0.2em; }
+.jb .bar .name small { font-weight: 500; color: var(--jb-cyan); font-size: 13px; margin-left: 10px; letter-spacing: 0.2em; }
 .jb .bar .light { width: 9px; height: 9px; border-radius: 50%; background: var(--jb-rule); flex: none; }
 .jb .bar .light.on { background: var(--jb-ok); box-shadow: 0 0 0 3px rgba(4,120,87,0.16), 0 0 10px rgba(4,120,87,0.5); }
 .jb .bar .light.think { background: var(--jb-cyan); box-shadow: 0 0 10px var(--jb-cyan); animation: jb-pulse 0.8s ease-in-out infinite; }
@@ -146,15 +146,15 @@ export const CSS = `
 .jb .log::after { bottom: 10px; right: 10px; border-left: 0; border-top: 0; }
 .jb .scan { position: absolute; left: 0; right: 0; top: -20%; height: 18%; background: linear-gradient(180deg, transparent, rgba(8, 145, 178, 0.07) 60%, rgba(8, 145, 178, 0.14)); pointer-events: none; animation: jb-scan 7s linear infinite; }
 .jb .log { position: relative; flex: 1; padding: 30px 28px 26px; display: flex; flex-direction: column; gap: 12px; overflow-wrap: anywhere; min-width: 0; }
-.jb .line { display: grid; grid-template-columns: 92px 1fr; gap: 12px; align-items: start; }
-.jb .line .tag { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--jb-dim); padding-top: 5px; white-space: nowrap; }
+.jb .line { display: grid; grid-template-columns: 124px 1fr; gap: 12px; align-items: start; }
+.jb .line .tag { font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--jb-dim); padding-top: 5px; white-space: nowrap; }
 .jb .line.bot .tag { color: var(--jb-bot); }
 .jb .line.bot .tag::before { content: '\\25B8\\00a0'; color: var(--jb-cyan); }
 .jb .line .txt { white-space: pre-wrap; min-width: 0; }
 .jb .line.bot .txt { color: var(--jb-ink); text-shadow: 0 0 12px rgba(29, 78, 216, 0.12); }
 .jb .line.bot .txt .raw { color: var(--jb-cyan); opacity: 0.6; }
 .jb .line.you .txt { color: var(--jb-ink); background: var(--jb-soft); border-left: 2px solid var(--jb-cyan); padding: 6px 12px; }
-.jb .line.sys .txt { color: var(--jb-dim); font-size: 14px; }
+.jb .line.sys .txt { color: var(--jb-dim); font-size: 15px; }
 .jb .line.sys .ok { color: var(--jb-ok); }
 .jb .line.sys .ok::before { content: '[ '; } .jb .line.sys .ok::after { content: ' ]'; }
 .jb .line.warn .txt { color: var(--jb-warn); }
@@ -167,31 +167,31 @@ export const CSS = `
 .jb .line.think .proc i:nth-child(6) { animation-delay: .5s; } .jb .line.think .proc i:nth-child(7) { animation-delay: .6s; } .jb .line.think .proc i:nth-child(8) { animation-delay: .7s; } .jb .line.think .proc i:nth-child(9) { animation-delay: .8s; } .jb .line.think .proc i:nth-child(10) { animation-delay: .9s; }
 .jb .cursor { display: inline-block; width: 0.55em; height: 1.05em; background: var(--jb-cyan); box-shadow: 0 0 8px var(--jb-cyan); vertical-align: -0.18em; margin-left: 3px; animation: jb-blink 0.9s steps(2, start) infinite; }
 .jb .record { border: 1px solid var(--jb-rule); border-left: 3px solid var(--jb-cyan); padding: 12px 16px; background: var(--jb-paper); max-width: 560px; }
-.jb .record h2 { margin: 0 0 8px; font-family: var(--jb-display); font-size: 10px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--jb-cyan); font-weight: 700; }
-.jb .record dl { margin: 0; display: grid; grid-template-columns: 150px 1fr; gap: 4px 14px; font-size: 14px; }
-.jb .record dt { color: var(--jb-dim); text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; padding-top: 2px; }
+.jb .record h2 { margin: 0 0 8px; font-family: var(--jb-display); font-size: 13px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--jb-cyan); font-weight: 700; }
+.jb .record dl { margin: 0; display: grid; grid-template-columns: 150px 1fr; gap: 4px 14px; font-size: 15px; }
+.jb .record dt { color: var(--jb-dim); text-transform: uppercase; letter-spacing: 0.12em; font-size: 13px; padding-top: 2px; }
 .jb .record dd { margin: 0; font-variant-numeric: tabular-nums; white-space: pre-wrap; }
-.jb pre.portrait { margin: 0; font: 11px/1.05 var(--jb-mono); color: var(--jb-bot); letter-spacing: 0.02em; white-space: pre; overflow-x: auto; max-width: 100%; text-shadow: 0 0 10px var(--jb-glow); }
+.jb pre.portrait { margin: 0; font: 13px/1.05 var(--jb-mono); color: var(--jb-bot); letter-spacing: 0.02em; white-space: pre; overflow-x: auto; max-width: 100%; text-shadow: 0 0 10px var(--jb-glow); }
 .jb .ticket { position: relative; margin-top: 6px; padding: 20px 22px; background: var(--jb-panel); border: 1px solid var(--jb-rule); box-shadow: 0 0 0 1px var(--jb-panel), 0 0 40px var(--jb-glow); }
 .jb .ticket::before { content: ''; position: absolute; inset: 0; padding: 2px; background: linear-gradient(120deg, var(--jb-bot), var(--jb-cyan), var(--jb-bot)); background-size: 200% 100%; animation: jb-border 4s linear infinite;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
-.jb .ticket h2 { margin: 0; font-family: var(--jb-display); font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--jb-cyan); font-weight: 700; }
-.jb .ticket .id { font-size: 11px; color: var(--jb-dim); letter-spacing: 0.12em; margin-top: 2px; }
+.jb .ticket h2 { margin: 0; font-family: var(--jb-display); font-size: 13px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--jb-cyan); font-weight: 700; }
+.jb .ticket .id { font-size: 13px; color: var(--jb-dim); letter-spacing: 0.12em; margin-top: 2px; }
 .jb .ticket .big { font-family: var(--jb-display); font-size: clamp(20px, 4.6vw, 30px); font-weight: 700; line-height: 1.2; margin: 12px 0 18px; text-wrap: balance; letter-spacing: 0.02em; }
 .jb .ticket .big b { color: var(--jb-bot); font-weight: 900; }
-.jb .ticket dl { margin: 0; display: grid; grid-template-columns: 120px 1fr; gap: 6px 14px; font-size: 14px; }
-.jb .ticket dt { color: var(--jb-dim); text-transform: uppercase; letter-spacing: 0.14em; font-size: 11px; padding-top: 3px; }
+.jb .ticket dl { margin: 0; display: grid; grid-template-columns: 120px 1fr; gap: 6px 14px; font-size: 15px; }
+.jb .ticket dt { color: var(--jb-dim); text-transform: uppercase; letter-spacing: 0.14em; font-size: 13px; padding-top: 3px; }
 .jb .ticket dd { margin: 0; white-space: pre-wrap; }
 .jb .ticket .bars { display: flex; gap: 2px; height: 22px; margin-top: 18px; opacity: 0.8; }
 .jb .ticket .bars i { background: var(--jb-ink); width: 2px; }
 .jb .ticket .bars i.w { width: 4px; } .jb .ticket .bars i.g { background: transparent; width: 3px; }
 .jb .dock { position: sticky; bottom: 0; background: var(--jb-panel); border-top: 1px solid var(--jb-rule); padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; z-index: 3; }
 .jb .dock .row { display: flex; gap: 12px; align-items: flex-start; }
-.jb .dock .glyph { font-size: 11px; letter-spacing: 0.18em; color: var(--jb-cyan); padding-top: 11px; white-space: nowrap; }
+.jb .dock .glyph { font-size: 13px; letter-spacing: 0.18em; color: var(--jb-cyan); padding-top: 11px; white-space: nowrap; }
 .jb .dock textarea { flex: 1; min-width: 0; font: inherit; color: var(--jb-ink); background: var(--jb-paper); border: 1px solid var(--jb-rule); border-radius: 2px; padding: 9px 12px; resize: none; min-height: 42px; max-height: 40vh; caret-color: var(--jb-cyan); transition: box-shadow 0.2s, border-color 0.2s; }
 .jb .dock textarea:focus { border-color: var(--jb-cyan); box-shadow: 0 0 0 3px rgba(8,145,178,0.12), 0 0 18px rgba(8,145,178,0.18); outline: none; }
 .jb .dock textarea:disabled { background: #f1f4fa; color: var(--jb-dim); }
-.jb .dock .hint { font-size: 11px; color: var(--jb-dim); letter-spacing: 0.12em; text-transform: uppercase; }
+.jb .dock .hint { font-size: 13px; color: var(--jb-dim); letter-spacing: 0.12em; text-transform: uppercase; }
 .jb .choice { display: flex; gap: 10px; flex-wrap: wrap; }
 .jb .choice button, .jb .power { font: inherit; cursor: pointer; min-height: 44px; background: var(--jb-panel); color: var(--jb-bot); border: 1px solid var(--jb-bot); border-radius: 2px; padding: 6px 18px; letter-spacing: 0.16em; text-transform: uppercase; font-size: 13px; box-shadow: inset 0 0 0 0 var(--jb-bot); transition: box-shadow 0.2s, color 0.2s; }
 .jb .choice button:hover, .jb .power:hover { color: #fff; box-shadow: inset 0 -44px 0 0 var(--jb-bot); }
@@ -201,7 +201,7 @@ export const CSS = `
 .jb .choice button[aria-pressed="true"] span { color: #fff; }
 .jb .choice button.done { border-color: var(--jb-cyan); color: var(--jb-cyan); }
 .jb .choice button.done:hover { box-shadow: inset 0 -44px 0 0 var(--jb-cyan); color: #fff; }
-.jb .choice .picked { flex-basis: 100%; font-size: 12px; color: var(--jb-dim); letter-spacing: 0.1em; text-transform: uppercase; }
+.jb .choice .picked { flex-basis: 100%; font-size: 13px; color: var(--jb-dim); letter-spacing: 0.1em; text-transform: uppercase; }
 .jb .power { align-self: flex-start; font-family: var(--jb-display); font-weight: 700; padding-inline: 26px; }
 @keyframes jb-blink { to { visibility: hidden; } }
 @keyframes jb-pulse { 50% { transform: scale(1.5); opacity: 0.55; } }
@@ -288,12 +288,14 @@ export const portraitFor = (h) => {
 
 // A photograph, as text. Dark pixels become dense glyphs, since the screen is
 // white. The middle of the picture is kept, cropped to a portrait.
-const RAMP = "@%#*+=-:. ";
-const toText = (img, cols = 54) => {
-  const rows = Math.round(cols * 0.62);
+// Seventy levels of ink, dense to light, so a face keeps its shading.
+const RAMP = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ";
+const toText = (img, cols = 72) => {
+  // A cell of the terminal's mono is about 1.75 times as tall as it is wide.
+  const rows = Math.round(cols * 0.7);
   const c = document.createElement("canvas"); c.width = cols; c.height = rows;
   const ctx = c.getContext("2d");
-  const want = cols / (rows * 2), have = img.naturalWidth / img.naturalHeight;
+  const want = cols / (rows * 1.75), have = img.naturalWidth / img.naturalHeight;
   let sw = img.naturalWidth, sh = img.naturalHeight, sx = 0, sy = 0;
   if (have > want) { sw = sh * want; sx = (img.naturalWidth - sw) / 2; } else { sh = sw / want; sy = (img.naturalHeight - sh) / 2; }
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cols, rows);
@@ -308,10 +310,11 @@ const toText = (img, cols = 54) => {
   }
   return out.join("\n");
 };
-const photoToText = (url) => new Promise(resolve => {
+const photoToText = (url, cols) => new Promise(resolve => {
   if (!url) { resolve(null); return; }
   const img = new Image();
-  img.onload = () => { try { resolve(toText(img)); } catch { resolve(null); } };
+  img.crossOrigin = "anonymous";
+  img.onload = () => { try { resolve(toText(img, cols)); } catch { resolve(null); } };
   img.onerror = () => resolve(null);
   img.src = url;
 });
@@ -667,7 +670,10 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     await sleep(400);
     await say("Retrieving your image from the Index.");
     await think("Rendering operator image", 1600);
-    const art = (await photoToText(photo)) || portraitFor(h);
+    // As many columns as the screen has room for: about 72 on a laptop, 36
+    // on a phone, so the picture never scrolls sideways.
+    const cols = Math.max(36, Math.min(72, Math.floor((log.clientWidth - 64) / 7.9)));
+    const art = (await photoToText(photo, cols)) || portraitFor(h);
     await print("portrait", art);
     await sleep(300);
     await say("Operator image rendered. Resemblance: " + (88 + h % 11) + "%.");

@@ -61,7 +61,9 @@ const SESSIONS = [
       ] },
       { name: "What it rests on", items: [
         ["Every answer is still a row", "The same tables, the same replay, the same submit and recall. Every answer, the accepted and declined horrible jobs included, is on file for him to read at ?s=<roster id> and count at /comm118/worksheets."],
-        ["Closed until he opens it", "The local worksheet carries open: false. A student at the address reads one line, the instructor goes through under his own email. One flag to send it."],
+        ["Closed until he opens it", "The local worksheet carries open: a list of classes. COMM 999 is on it, so Pepe and Jan can run the student path; COMM 118 is not, so a student there reads one line and the instructor goes through under his own email. One flag to send it."],
+        ["Shown to outsiders", "A public page at /worktopia, in his words: \"one way I use AI is as a software developer to help students engage with material.\" Eight pictures of the real terminal, taken on the harness with the COMM 999 test students: the intro, the record, the first assignment, a position, an update, the co-worker picker, a phone, and the instructor's read of a file."],
+        ["Bigger small text, a sharper portrait", "Nothing in the terminal is under 13px now, the tag column widened to fit. A photograph becomes text at up to 72 columns on a laptop and 36 on a phone, with seventy levels of ink instead of ten, so a face keeps its shading. The instructor's own card photograph is used when he runs it."],
         ["Checked", "Walked end to end headlessly at a laptop width and a phone width: the intro, the horrible job accepted once and declined once, three positions, the evaluation, the three industry questions, two co-workers picked, Thursday, four stars, a review, submit, recall, a changed position, and the replay after a reload. The instructor's read of a file that stops at the first assignment. The smoke counts the Index. No errors."],
         ["Dropped", "The generic skills question up front, since each position now asks for its own, and the fourth and fifth positions."],
       ] },

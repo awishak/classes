@@ -303,7 +303,9 @@ to review them."
 
 ## Open
 
-- **Opening it.** `open: false` in `localWorksheets.js` until he says.
+- **Opening it.** `open: ["comm999"]` in `localWorksheets.js` until he says;
+  `true` opens it to every class. Pepe and Jan on COMM 999 can run the
+  student path now.
 - **The intro fill.** His sentences are his; the five fills are a draft.
 - **The values of sports.** Andrew, 2026-10-01: "we need a way to make them
   understand the values of sports. so i'm still thinking." Not built.

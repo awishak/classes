@@ -793,9 +793,12 @@ package's tables rather than in the package: `src/engine/worktopia/`
 answer as its own row the moment the student sends it) and
 `src/engine/localWorksheets.js`, which is the list the worksheet pages read
 after the package's own. The address is `/comm118/worksheets/worktopia`,
-signed in off the roster. **It is not open to students yet**: `open: false`
-on the local worksheet shows them "This worksheet is not open yet," and the
-instructor goes through under his own email. Flip `open` to send it. The
+signed in off the roster. **It is not open to COMM 118 students yet**:
+`open` on the local worksheet is a list of class ids (COMM 999, for Pepe
+and Jan) or `true` for every class; a student in a class not on it reads
+"This worksheet is not open yet," and the instructor goes through under
+his own email. Set `open: true` to send it. A public page at `/worktopia`
+shows it to outsiders in his words, pictures under `public/worktopia`. The
 instructor reads one file at `?s=<roster id>`, sees the submits at
 `/comm118/worksheets`, and reads the whole Index at `?index`. The submits
 count on whichever assignment links to the address, as the stakeholder

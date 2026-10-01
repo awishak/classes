@@ -9,14 +9,19 @@
 //
 // A local worksheet is { key, title, mount, open }. mount(root, { store,
 // viewer, photo, classmates, readOnly }) draws it and returns { destroy }.
-// open: false keeps it to the instructor until it is sent. Andrew,
-// 2026-10-01: "don't make it student facing yet but i will want to see it in
-// the morning."
+// open: true opens it to every class's students; a list of class ids opens
+// it to those classes only (COMM 999, the rig with Pepe and Jan, for trying
+// the student path); false keeps it to the instructor. Andrew, 2026-10-01:
+// "don't make it student facing yet but i will want to see it in the
+// morning."
 
 import { WORKTOPIA_KEY, WORKTOPIA_TITLE, mountWorktopia } from "./worktopia/terminal.js";
 
 export const LOCAL_WORKSHEETS = [
-  { key: WORKTOPIA_KEY, title: WORKTOPIA_TITLE, mount: mountWorktopia, open: false },
+  { key: WORKTOPIA_KEY, title: WORKTOPIA_TITLE, mount: mountWorktopia, open: ["comm999"] },
 ];
 
 export const localWorksheet = (key) => LOCAL_WORKSHEETS.find(w => w.key === key) || null;
+
+/** Whether a local worksheet is open to the students of a class. */
+export const openTo = (local, classId) => local.open === true || (Array.isArray(local.open) && local.open.includes(classId));

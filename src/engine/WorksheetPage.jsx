@@ -11,7 +11,7 @@ import { Worksheet, WORKSHEETS, mountSheet } from "@ishak/worksheets";
 import { useClassState } from "./store.js";
 import { rosterOf, findStudent } from "./roster.js";
 import { useSession, studentFor, authHeaders } from "./session.js";
-import { localWorksheet } from "./localWorksheets.js";
+import { localWorksheet, openTo } from "./localWorksheets.js";
 import { supabaseStore, readStore } from "./worktopia/store.js";
 import { CATEGORIES, HORRIBLE } from "./worktopia/jobs.js";
 import { usePhotos } from "./photos.js";
@@ -168,7 +168,7 @@ export default function WorksheetPage({ config, worksheetKey }) {
     body = data === null
       ? <p style={{ fontSize: 17, margin: 0 }}>Loading the roster.</p>
       : <p style={{ fontSize: 17, margin: 0 }}>{email} is not on the roster for {config.code} yet.</p>;
-  } else if (local && local.open === false && !instructor) {
+  } else if (local && !instructor && !openTo(local, config.id)) {
     // Built, not sent: the instructor tries it under their own email first.
     body = <p style={{ fontSize: 17, margin: 0 }}>This worksheet is not open yet.</p>;
   } else {
@@ -189,7 +189,7 @@ export default function WorksheetPage({ config, worksheetKey }) {
         : body !== null
         ? <div style={{ padding: 32 }}>{body}</div>
         : local
-        ? <LocalSheet key={viewer.id} local={local} config={config} viewer={viewer} photo={(me && photos[me.name]) || ""} classmates={classmates} />
+        ? <LocalSheet key={viewer.id} local={local} config={config} viewer={viewer} photo={(me && photos[me.name]) || (!me && config.instructor?.photo) || ""} classmates={classmates} />
         : <Worksheet key={viewer.id} supabase={gameClient} worksheetKey={worksheetKey} groupKey={config.id} viewer={viewer}
             accent={config.accent} accentLight={config.accentLight} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />}
     </div>
