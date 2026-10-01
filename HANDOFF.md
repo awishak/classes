@@ -786,7 +786,9 @@ twice, because one edge can serve the old bundle briefly.
 ## JobBot 5000, the COMM 118 worksheet for the week of October 5
 
 A worksheet that is a computer terminal in 2034, built in this repo on the
-worksheets package's tables rather than in the package: `src/engine/jobbot/`
+worksheets package's tables rather than in the package. Its own brief is
+`src/engine/jobbot/BRIEF.md`: the run in order, his words, the jokes, what
+is open. The code is `src/engine/jobbot/`
 (`terminal.js` draws it, `store.js` writes every answer as its own row the
 moment the student sends it) and `src/engine/localWorksheets.js`, which is
 the list the worksheet pages read after the package's own. Students open it
