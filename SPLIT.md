@@ -345,8 +345,8 @@ the store. Point at this file for the reasoning.
 
 - `npm run build` clean.
 - Push to `main`. `vercel --prod` is rate limited; the repo integration is the
-  deploy. Compare the live bundle hash against `dist/assets/index-*.js`:
-  `curl -s https://classes.andrewishak.com/ | grep -o 'assets/index-[^"]*\.js'`.
+  deploy. Compare the live bundle hash against `dist/assets/main-*.js`:
+  `curl -s https://classes.andrewishak.com/ | grep -o 'assets/main-[^"]*\.js'`.
   Read it twice; one edge can serve the old bundle briefly.
 - Reload the dashboard, edit a day, and read `comm3-f26-v1-plan` from the REST
   endpoint with the anon key: the edit is there and the class row did not
