@@ -254,9 +254,13 @@ export const CSS = `
 .jb .dock { position: sticky; bottom: 0; background: var(--jb-panel); border-top: 1px solid var(--jb-rule); padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; z-index: 3; }
 .jb .dock .row { display: flex; gap: 12px; align-items: flex-start; }
 .jb .dock .glyph { font-size: 13px; letter-spacing: 0.18em; color: var(--jb-cyan); padding-top: 11px; white-space: nowrap; }
-.jb .dock .skip { font: inherit; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; min-height: 42px; padding: 6px 14px; background: none; border: 1px solid var(--jb-rule); color: var(--jb-dim); border-radius: 2px; cursor: pointer; }
-.jb .dock .skip:hover { border-color: var(--jb-bot); color: var(--jb-bot); }
-.jb .dock .skip:disabled { opacity: 0.4; cursor: default; }
+.jb .dock .skip, .jb .dock .send { font: inherit; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; min-height: 42px; padding: 6px 14px; border-radius: 2px; cursor: pointer; white-space: nowrap; }
+.jb .dock .skip { background: none; border: 1px solid transparent; color: var(--jb-dim); text-decoration: underline; text-underline-offset: 3px; }
+.jb .dock .skip:hover { color: var(--jb-bot); }
+.jb .dock .send { font-family: var(--jb-display); font-weight: 700; background: var(--jb-panel); border: 1px solid var(--jb-bot); color: var(--jb-bot); box-shadow: inset 0 0 0 0 var(--jb-bot); transition: box-shadow 0.2s, color 0.2s; }
+.jb .dock .send:hover { color: #fff; box-shadow: inset 0 -44px 0 0 var(--jb-bot); }
+.jb .dock .skip:disabled, .jb .dock .send:disabled { opacity: 0.4; cursor: default; box-shadow: none; color: var(--jb-dim); }
+@media (max-width: 480px) { .jb .dock .row { flex-wrap: wrap; } .jb .dock textarea { flex-basis: 100%; } .jb .dock .skip { margin-left: auto; } }
 .jb .dock textarea { flex: 1; min-width: 0; font: inherit; color: var(--jb-ink); background: var(--jb-paper); border: 1px solid var(--jb-rule); border-radius: 2px; padding: 9px 12px; resize: none; min-height: 42px; max-height: 40vh; caret-color: var(--jb-cyan); transition: box-shadow 0.2s, border-color 0.2s; }
 .jb .dock textarea:focus { border-color: var(--jb-cyan); box-shadow: 0 0 0 3px rgba(8,145,178,0.12), 0 0 18px rgba(8,145,178,0.18); outline: none; }
 .jb .dock textarea:disabled { background: #f1f4fa; color: var(--jb-dim); }
@@ -451,16 +455,17 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
             <span class="glyph" aria-hidden="true">OPERATOR &gt;</span>
             <textarea rows="1" aria-label="Your answer" disabled></textarea>
             <button type="button" class="skip" disabled>Skip</button>
+            <button type="button" class="send" disabled>Send</button>
           </div>
           <div class="choice" hidden></div>
-          <div class="hint" hidden>Enter sends &middot; Shift+Enter for a new line &middot; Skip passes</div>
+          <div class="hint" hidden>Send or Enter &middot; Shift+Enter for a new line &middot; Skip passes the question</div>
         </div>
       </div>
     </div>`;
   const $ = (s) => root.querySelector(s);
   const intro = $(".intro"), term = $(".term");
   const log = $(".log"), input = $("textarea"), inputRow = $(".dock .row"), choice = $(".choice"), hint = $(".hint");
-  const light = $(".light"), status = $(".status"), count = $(".count"), enter = $(".enter"), mute = $(".mute"), clock = $(".clock"), saveEl = $(".save"), skip = $(".skip");
+  const light = $(".light"), status = $(".status"), count = $(".count"), enter = $(".enter"), mute = $(".mute"), clock = $(".clock"), saveEl = $(".save"), skip = $(".skip"), send = $(".send");
   const rail = [...root.querySelectorAll(".rail i")];
   const help = $(".help"), about = $(".about");
   if (help && about) {
@@ -555,8 +560,8 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   // Worktopia decodes. The whole line lands at once as scrambled glyphs, so its
   // height never changes, then the letters resolve left to right.
   const GLYPHS = "01<>/\\|=+-*#%$&@?!:;[]{}ABCDEFXYZ";
-  const say = (text, speed = 14) => new Promise(resolve => {
-    const x = line("bot", "Worktopia");
+  const say = (text, speed = 14, tag = "Worktopia") => new Promise(resolve => {
+    const x = line("bot", tag);
     if (replay || reduced || !alive) { x.textContent = text; resolve(); return; }
     const fixed = document.createTextNode(""), raw = document.createElement("span"), cur = document.createElement("span");
     raw.className = "raw"; cur.className = "cursor";
@@ -671,27 +676,49 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       beep();
       inputRow.hidden = false; hint.hidden = false; choice.hidden = true;
       input.disabled = false; input.value = ""; input.rows = rows || 1; input.placeholder = placeholder || "";
-      skip.disabled = false;
+      skip.disabled = false; send.disabled = false;
       input.focus({ preventScroll: true });
       const grow = () => { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, window.innerHeight * 0.4) + "px"; };
       grow(); scroll();
-      const onKey = (e) => {
-        if (e.key !== "Enter" || e.shiftKey) return;
-        e.preventDefault();
-        const t = input.value.trim();
-        if (!t) { warn("I need an answer before I can go on."); return; }
-        if (min && t.length < min) { warn(short || "This is not enough information to assign you."); return; }
+      // One way in, three ways to get there: the Send button, the Enter key,
+      // and a line break the phone's keyboard inserts without a key event
+      // (Android sends keyCode 229 while a word is being composed, and a
+      // trailing space ends the composition, which is the case a friend hit:
+      // "when I have a space after my final word and hit enter, it doesn't
+      // register my answer"). Shift+Enter is still a new line.
+      let shift = false;
+      const submit = () => {
+        const t = input.value.replace(/\s+$/, "").trim();
+        if (!t) { input.value = ""; grow(); warn("I need an answer before I can go on."); return; }
+        if (/\?$/.test(t) && t.length < 160) {
+          input.value = ""; grow();
+          warn("I cannot answer questions. I can only file answers. The question again:");
+          say(q);
+          return;
+        }
+        if (min && t.length < min) { input.value = t; grow(); warn(short || "This is not enough information to assign you."); return; }
         done(t);
       };
+      const onKey = (e) => {
+        if (e.key === "Shift") shift = true;
+        if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229) return;
+        e.preventDefault(); submit();
+      };
+      const onKeyUp = (e) => { if (e.key === "Shift") shift = false; };
+      const onInput = (e) => { grow(); if (e.inputType === "insertLineBreak" && !shift && /\n$/.test(input.value)) submit(); };
       const onSkip = () => done(SKIPPED);
+      const onSend = () => submit();
       const done = (t) => {
-        input.removeEventListener("keydown", onKey); input.removeEventListener("input", grow); skip.removeEventListener("click", onSkip);
-        input.disabled = true; skip.disabled = true; input.value = ""; input.style.height = "";
+        input.removeEventListener("keydown", onKey); input.removeEventListener("keyup", onKeyUp); input.removeEventListener("input", onInput);
+        skip.removeEventListener("click", onSkip); send.removeEventListener("click", onSend);
+        input.disabled = true; skip.disabled = true; send.disabled = true; input.value = ""; input.style.height = "";
         echo(t); resolve(t);
       };
       input.addEventListener("keydown", onKey);
-      input.addEventListener("input", grow);
+      input.addEventListener("keyup", onKeyUp);
+      input.addEventListener("input", onInput);
       skip.addEventListener("click", onSkip);
+      send.addEventListener("click", onSend);
     });
     await save(field, v);
     return v;
@@ -844,7 +871,10 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     return idx;
   })();
   let dealt = 0;
-  const aside = async () => { if (dealt >= asideOrder.length) return; await say(ASIDES[asideOrder[dealt++]]); await sleep(500); };
+  // Tagged "Off the record" so it reads as a tangent, not a question. A
+  // friend, 2026-10-01: "it gave me kind of a non sequitur about the miracle
+  // on ice and asked me about a job."
+  const aside = async () => { if (dealt >= asideOrder.length) return; await say(ASIDES[asideOrder[dealt++]], 14, "Off the record"); await sleep(500); };
 
   async function position(i, force) {
     const L = LETTERS[i];

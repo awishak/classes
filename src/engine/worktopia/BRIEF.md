@@ -324,6 +324,22 @@ Worktopia's system will get back to you," in both runs, before the submit
 prompt or the public page's start-over button. Claude's draft of his brief,
 for him to rewrite.
 
+## Sending an answer
+
+A friend's three notes, 2026-10-01, through Andrew: "when I have a space
+after my final word and hit enter, it doesn't register my answer"; "the
+skip button is also in the place where I thought the enter button would
+be so I skipped my name by accident"; and an aside "gave me kind of a non
+sequitur about the miracle on ice," then "I asked for clarification and it
+didn't know how to respond." So: a Send button sits at the right of the
+box, Skip to its left as dim underlined text; an answer goes in by Send,
+by Enter, or by the line break a phone keyboard inserts without a key
+event (`inputType` `insertLineBreak`), with trailing whitespace stripped
+and keyCode 229 ignored; asides are tagged "Off the record" instead of
+"Worktopia"; and an answer that ends in a question mark and runs under 160
+characters is not filed: "I cannot answer questions. I can only file
+answers. The question again:" and the question is said again.
+
 ## Skipping
 
 Andrew, 2026-10-01: "give people the option to skip questions." Every typed
