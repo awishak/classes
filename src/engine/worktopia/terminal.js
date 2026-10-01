@@ -319,7 +319,7 @@ const fmtWhen = (iso) => new Date(iso).toLocaleString("en-US", { month: "short",
 
 /**
  * Draw Worktopia into root.
- *   store: { load() -> { answers: {field: value}, submitted_at }, save(field, value), submit() -> iso, recall() }
+ *   store: { load() -> { answers: {field: value}, submitted_at }, save(field, value), submit() -> iso, recall(), reset() }
  *   viewer: { id, name }   photo: a data URL for the student's picture, or nothing
  *   classmates: the names on the roster, less the student's own, for the co-worker question
  *   readOnly: the instructor reading a student's file; nothing is asked
@@ -768,8 +768,26 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     catch { warn("Could not load your file. Reload to try again."); return; }
     Object.assign(prior, file.answers || {});
     submittedAt = file.submitted_at || null;
-    replay = Object.keys(prior).length > 0 || readOnly;
+    replay = readOnly;
     try {
+      // A return visit: pick up where the file stops, or start over, which
+      // clears it. Andrew, 2026-10-01: "when i try to re-do it, it jumps me
+      // back to the same spot. i should have the option to restart or go
+      // back to where my progress was."
+      if (!readOnly && Object.keys(prior).length > 0) {
+        setLight("on", "Ready");
+        const k = await choose({ q: "Your file is on record" + (submittedAt ? ", submitted " + fmtWhen(submittedAt) : "") + ". Pick up where you left off, or start over?",
+          options: [{ key: "RESUME", label: "where I left off", echo: false }, { key: "RESTART", label: "start over, clear my file", echo: false }] });
+        if (k === "RESTART") {
+          setSave("Saving"); await store.reset(); setSave("Saved");
+          Object.keys(prior).forEach(f => { delete prior[f]; });
+          submittedAt = null; name = viewer?.name || "Operator"; h = hash(name);
+          await say("File cleared.");
+        } else {
+          replay = true;
+        }
+        await sleep(300);
+      }
       await boot();
       await say("Hello. I am Worktopia.");
       await sleep(300);

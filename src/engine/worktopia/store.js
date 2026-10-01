@@ -72,13 +72,24 @@ export function supabaseStore({ supabase, worksheetKey, groupKey, viewerId }) {
       const r = await supabase.from("worksheet_sheets").update({ submitted_at: null }).eq("id", id).select("id");
       if (r.error || !r.data || !r.data[0]) fail("Could not recall", r);
     },
+    // Start over: every answer row goes, and the sheet is unsubmitted. The
+    // sheet row itself stays, so the student keeps writing to the same one.
+    async reset() {
+      const id = await sheet();
+      const gone = await supabase.from("worksheet_answers").delete().eq("sheet_id", id).select("id");
+      if (gone.error) fail("Could not clear the file", gone);
+      const r = await supabase.from("worksheet_sheets").update({ submitted_at: null }).eq("id", id).select("id");
+      if (r.error || !r.data || !r.data[0]) fail("Could not clear the file", r);
+      const left = await supabase.from("worksheet_answers").select("id").eq("sheet_id", id).range(0, 0);
+      if (left.error || (left.data && left.data.length)) fail("The file did not clear", left);
+    },
   };
 }
 
 /** A file already read (the instructor, through /api/worksheet-submits): nothing is written. */
 export function readStore(rows, submittedAt) {
   const refuse = async () => { throw new Error("This file is read only."); };
-  return { async load() { return { answers: answersOf(rows), submitted_at: submittedAt || null }; }, save: refuse, submit: refuse, recall: refuse };
+  return { async load() { return { answers: answersOf(rows), submitted_at: submittedAt || null }; }, save: refuse, submit: refuse, recall: refuse, reset: refuse };
 }
 
 /** A store that forgets, for trying the terminal with nothing behind it. */
@@ -90,5 +101,6 @@ export function memoryStore() {
     async save(field, value) { answers[field] = value; },
     async submit() { submitted = new Date().toISOString(); return submitted; },
     async recall() { submitted = null; },
+    async reset() { Object.keys(answers).forEach(k => { delete answers[k]; }); submitted = null; },
   };
 }

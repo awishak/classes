@@ -157,7 +157,11 @@ answer back ... it's an advanced version of AI."
     takes the file back, LEAVE ends. No allocation at the end: the system
     gets back to them.
 
-A reload replays everything on file at once, with no sound and no delays,
+A return visit asks first: "Your file is on record. Pick up where you left
+off, or start over?" RESUME replays; RESTART clears every answer row and
+the submit (`store.reset()`) and begins at the name. Andrew: "i should have
+the option to restart or go back to where my progress was." A resumed file
+replays everything on file at once, with no sound and no delays,
 and picks up at the first open question at the terminal's real pace. The
 intro shows on every visit; the instructor's read skips it.
 
