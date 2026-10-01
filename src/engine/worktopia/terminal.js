@@ -61,7 +61,8 @@ export const INTRO = [
   // The Quackers: Andrew, 2026-10-01, "AI even renamed one of the teams from
   // the Packers to the Quackers, and their duck-themed merch became the most
   // popular team merchandise in the world."
-  COMPANY + " owns every NFL team. It bought the Packers from the people of Green Bay for one share each. The next week, an AI renamed them the Quackers, and their duck-themed merch became the most popular team merchandise in the world. After the NFL, the other leagues. After the leagues, every channel, every stream, every stadium, every jersey, every ticket and every banana.",
+  COMPANY + " owns every NFL team. It bought the Packers from the people of Green Bay for one share each. The next week, an AI renamed them the Quackers, and their duck-themed merch became the most popular team merchandise in the world.",
+  "The NBA went next, for a streaming bundle and a lunch. Baseball was thrown in to close the Disney deal. The NHL came with Comcast, and nobody noticed for a month. Then the rest: every channel, every stream, every stadium down to the parking lots, every jersey, every ticket and the app the ticket lives in, and the banana company, which now sponsors the seventh-inning stretch.",
   "Sports media stopped posting jobs in 2032. There is no application, no interview, no offer. There is a file on you, built from everything you ever posted, bought, watched or skipped, and a system that reads it.",
   "That's led to the consolidation of decisions in the employment process to one product: Worktopia.",
   "Worktopia is a work management system that assigns you to your job. It reads your file, weighs your case and decides. It has never been wrong. It says so on the login screen.",
