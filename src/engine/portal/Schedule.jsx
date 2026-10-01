@@ -6,7 +6,7 @@
 // day the class meets. The next class wears the ring.
 
 import { useState, useEffect } from "react";
-import { daysOfWeek, studentItems, sourceOf, inWeekOrder, dayAnchor, dayHeading } from "../ScheduleCard.jsx";
+import { daysOfWeek, studentItems, sourceOf, inWeekOrder, dayAnchor } from "../ScheduleCard.jsx";
 import { dayTitles, daySlug } from "../days.js";
 import { kindOf } from "../dayplan.js";
 import { isAway, idFor, awayIds } from "../attendance.js";
@@ -67,12 +67,11 @@ function DayRow({ config, data, blockOf, day, title, ring, note, instructor, myI
     <div id={dayAnchor(day.date)} className={"pt-row " + tint + (ring ? " ring" : "")} style={{ alignItems: "flex-start", scrollMarginTop: 130 }}>
       <div className="pt-dcol"><span className="pt-dw">{dcolOf(day.date)[0]}</span><span className="pt-dn">{dcolOf(day.date)[1]}</span></div>
       <div className="pt-main">
-        <p className="pt-title">{title || dayHeading(day.date)}</p>
-        <p className="pt-meta">
-          {title ? <span>{dayHeading(day.date)}</span> : null}
-          {ring ? <span style={{ color: "var(--ca-accent-ink)", fontWeight: 600 }}>Next class</span> : null}
-          {!day.classDay ? <span>No class</span> : null}
-        </p>
+        {/* The date column says the day, so the words never say it again.
+            Andrew, 2026-09-30: "you're double listing dates." A day with no
+            title of its own is its rows and nothing else. */}
+        {title ? <p className="pt-title">{title}</p> : !day.classDay ? <p className="pt-title" style={{ color: "var(--text-muted)" }}>No class</p> : null}
+        {ring ? <p className="pt-meta"><span style={{ color: "var(--ca-accent-ink)", fontWeight: 600 }}>Next class</span></p> : null}
         {note ? <p className="pt-text" style={{ borderLeft: "3px solid var(--line-strong)", paddingLeft: 10 }}>{note}</p> : null}
         {shown.length ? (
           <div className="pt-stack" style={{ gap: 6, marginTop: 4 }}>
