@@ -1,7 +1,7 @@
 // JobBot 5000: a worksheet that is a computer terminal in the year 2034.
 //
 // COMM 118's worksheet for the week of 2026-10-05. The student sits at a job
-// allocation terminal run by FOOTBALL DYNASTY INC., the one company that owns
+// allocation terminal run by FRANCHISE DYNASTY INC., the one company that owns
 // all media and all sports in 2034. JobBot looks them up on the Brady-Manning Work Index,
 // draws them as text, takes their skills, then three to five positions in
 // sports with the duties, the value to the sports ecosystem and why the
@@ -23,15 +23,15 @@
 export const JOBBOT_KEY = "jobbot-5000";
 export const JOBBOT_TITLE = "JobBot 5000";
 
-// FOOTBALL DYNASTY INC.: the companies that own sports and the screens sports
+// FRANCHISE DYNASTY INC.: the companies that own sports and the screens sports
 // are watched on, which in 2034 are one company. Andrew, 2026-10-01: "one big
 // media conglomerate that holds all media, all sports, all that stuff." One
 // company a letter.
-export const COMPANY = "FOOTBALL DYNASTY INC.";
+export const COMPANY = "FRANCHISE DYNASTY INC.";
 export const COMPANY_LETTERS = [
-  ["F", "Fox"], ["O", "Oak View Group"], ["O", "Oaktree"], ["T", "TKO"], ["B", "Bally's"], ["A", "Amazon"], ["L", "Liberty Media"], ["L", "Legends"],
-  ["D", "Disney"], ["Y", "YouTube"], ["N", "Netflix"], ["A", "Apple"], ["S", "Sky"], ["T", "Turner"], ["Y", "YES Network"],
-  ["I", "Ineos"], ["N", "Nike"], ["C", "Comcast"],
+  ["F", "Fox"], ["R", "RedBird"], ["A", "Amazon"], ["N", "Netflix"], ["C", "Comcast"], ["H", "Hulu"], ["I", "Ineos"], ["S", "Sky"], ["E", "ESPN"],
+  ["D", "Disney"], ["Y", "YouTube"], ["N", "Nike"], ["A", "Apple"], ["S", "Sinclair"], ["T", "TKO"], ["Y", "YES Network"],
+  ["I", "iHeart"], ["N", "NBC"], ["C", "CBS"],
 ];
 
 const MIN_JOBS = 3, MAX_JOBS = 5;

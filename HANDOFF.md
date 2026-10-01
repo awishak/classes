@@ -801,10 +801,10 @@ seventeen-digit number, likes and dislikes, all drawn from the name), draws
 them as text (their card photograph, or a face drawn from the name), takes
 their skills, then Positions A to E with Andrew's four questions each, then
 an evaluation (most interesting, most likely to get, pays the most,
-confirmed), then an allocation. The employer is FOOTBALL DYNASTY INC., one
-company a letter (Fox, Oak View Group, Oaktree, TKO, Bally's, Amazon, Liberty
-Media, Legends, Disney, YouTube, Netflix, Apple, Sky, Turner, YES Network,
-Ineos, Nike, Comcast), one company in 2034. Andrew's words are the questions; JobBot's other lines are placeholders
+confirmed), then an allocation. The employer is FRANCHISE DYNASTY INC., one
+company a letter (Fox, RedBird, Amazon, Netflix, Comcast, Hulu, Ineos, Sky,
+ESPN, Disney, YouTube, Nike, Apple, Sinclair, TKO, YES Network, iHeart, NBC,
+CBS), one company in 2034. Andrew's words are the questions; JobBot's other lines are placeholders
 for him. A reload replays the file and picks up at the first open question;
 submit and recall work as on every worksheet; a position can be changed after
 the allocation. Open: the "values of sports" part Andrew is still thinking
