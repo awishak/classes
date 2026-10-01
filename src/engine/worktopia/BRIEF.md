@@ -69,7 +69,9 @@ answer back ... it's an advanced version of AI."
 
 1. **The intro.** 2034 in large type, then a story: a model writes the
    Super Bowl ads in 2027, the Jaguars let one run their draft in 2028,
-   the buyouts, the 2031 filing, the Packers sold for one share each, the
+   the buyouts, the 2031 filing, the Packers sold for one share each and
+   renamed the Quackers by an AI (his: "their duck-themed merch became the
+   most popular team merchandise in the world"), the
    banana company, and jobs stop being posted in 2032. Andrew: "make up a
    story ... tell a dystopian story and use details." His skeleton:
    "its the year 2034. (catch people up on what's going on). over the last

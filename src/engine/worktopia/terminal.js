@@ -58,7 +58,10 @@ export const INTRO = [
   "In 2028, the Jaguars let a model run their draft. It took a punter in the first round. He made the Pro Bowl. The next year, thirty-one teams let a model run their draft, and the one that didn't went 2-15.",
   "The models wrote the contracts, set the schedules, cut the highlights, called the games in forty languages, and produced the first draft of everything a human then signed.",
   "Then the humans who signed things started selling. Fox bought Sinclair. Amazon bought Fox. Comcast and Disney merged on a Tuesday. In 2031, the whole stack closed in a single filing: the leagues, the networks, the streams, the stadiums and the phones they play on, under one name, " + COMPANY + " The last line of the deal was a banana company. Nobody knows why. It is still there.",
-  COMPANY + " owns every NFL team. It bought the Packers from the people of Green Bay for one share each. After the NFL, the other leagues. After the leagues, every channel, every stream, every stadium, every jersey, every ticket and every banana.",
+  // The Quackers: Andrew, 2026-10-01, "AI even renamed one of the teams from
+  // the Packers to the Quackers, and their duck-themed merch became the most
+  // popular team merchandise in the world."
+  COMPANY + " owns every NFL team. It bought the Packers from the people of Green Bay for one share each. The next week, an AI renamed them the Quackers, and their duck-themed merch became the most popular team merchandise in the world. After the NFL, the other leagues. After the leagues, every channel, every stream, every stadium, every jersey, every ticket and every banana.",
   "Sports media stopped posting jobs in 2032. There is no application, no interview, no offer. There is a file on you, built from everything you ever posted, bought, watched or skipped, and a system that reads it.",
   "That's led to the consolidation of decisions in the employment process to one product: Worktopia.",
   "Worktopia is a work management system that assigns you to your job. It reads your file, weighs your case and decides. It has never been wrong. It says so on the login screen.",
