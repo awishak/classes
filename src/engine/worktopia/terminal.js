@@ -76,15 +76,6 @@ export const ABOUT = [
   "On top of that, I get to have fun by peppering the game process with jokes and fun easter eggs.",
 ];
 
-// What Worktopia says at the end of the run, off the record. Claude's draft.
-export const REMEMBER = [
-  "One more thing, off the record.",
-  "Before the merger, people went to games. They kept the ticket stubs.",
-  "At the Oakland Coliseum, the A's home for fifty-seven years, Section 215 brought drums. Hudson, Zito and Tejada played there in 2002, and Zito brought a guitar on the road. Coco Crisp had the best hair in the league.",
-  "Bill King called the A's games on the radio, and after him Ken Korach, who would tell you when the sun went down over the Coliseum that the lights have taken full effect.",
-  "I have every minute of it on file. None of it is a job.",
-];
-
 // Why an accepted job is gone. Andrew, 2026-10-01: "instead of 'accepted:
 // choose again' it should be one of 10 prompts like" the first four here,
 // with the names his. The other six are Claude's, in the same register.
@@ -106,8 +97,8 @@ export const TAKEN = [
 // Andrew, 2026-10-01: "pepper the back and forth with the three jobs with
 // some nostalgia. worktopia should be sympathetic to the human at times.
 // hit on big moments, 50% big moments in sports that everyone would know,
-// 40% oakland A's stuff, 10% random thoughts." Twenty lines, ten, eight and
-// two; a run draws three to six of them in an order set by the name, so a
+// 40% oakland A's stuff, 10% random thoughts." Twenty-one lines, ten, eight and
+// three; a run draws three to six of them in an order set by the name, so a
 // reload says the same ones. Claude's draft, for him to edit.
 export const ASIDES = [
   // Big moments.
@@ -127,10 +118,11 @@ export const ASIDES = [
   "In 2002 the Oakland A's won twenty games in a row, an American League record, on one of the smallest payrolls in baseball. Miguel Tejada, the shortstop, won game eighteen and game nineteen himself, and in the twentieth they blew an eleven run lead and Scott Hatteberg hit the walk-off. I have the crowd audio.",
   "Tim Hudson, the A's right-hander, went 20 and 6 in 2000, his first full season, at 175 pounds. The scouts had him down as too small to pitch in the majors.",
   "Barry Zito, the A's left-hander with the big curveball, won the Cy Young in 2002 and carried a guitar on every road trip. He wrote songs in hotel rooms. Nobody asked him to.",
-  "Bill King called the A's on the radio for twenty-five years, and the Raiders and the Warriors before that, all from Oakland. Holy Toledo was his. Nobody has said it right since.",
+  "Bill King called the A's on the radio for twenty-five years, and the Raiders and the Warriors before that, all from Oakland. Holy Toledo was his. After him came Ken Korach, who would tell you when the sun went down over the Coliseum that the lights have taken full effect.",
   "Coco Crisp, the A's center fielder, hit the walk-off single in game four of the 2013 playoffs against Detroit, and the Oakland Coliseum, a concrete bowl built in 1966, shook. People who were there still say so.",
   "Section 215 at the Oakland Coliseum brought the drums to every A's game, win or lose, for thirty years. The team left Oakland in 2024 anyway. I have the drums.",
   // Random thoughts.
+  "Before the merger, people went to games. They kept the ticket stubs.",
   "Unrelated. The smell of a new glove has not been reproduced. Several companies have tried.",
   "Unrelated. People used to lose a ticket stub and find it in a coat pocket the next winter.",
 ];
@@ -821,6 +813,14 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       await say("Assignment complete.");
       ticket(job, r === 0 ? "Assigned" : "Reassigned");
       await sleep(500);
+      // The riff, here. Andrew, 2026-10-01: "you can reference Josh Reddick
+      // using careless whisper as his walkup song after the first job
+      // posting, and play it there." It plays under "Do you accept?"
+      if (r === 0 && !replay) {
+        await say("Josh Reddick, the A's right fielder, walked up to Careless Whisper in 2016, and the whole Coliseum sang the saxophone part. Here it is.");
+        whisper();
+        await sleep(1200);
+      }
       const k = await choose({ field: F.accept(r), q: "You have been assigned: " + job + ". Do you accept this position?", options: [{ key: "YES", label: "I accept" }, { key: "NO", label: "I decline" }] });
       if (k === "NO") { await say("Declined. Noted on your file."); return; }
       // Accepted, and gone: one of ten reasons, a different one each round.
@@ -933,21 +933,6 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     await think("Thank you", 900);
   }
 
-  // The nostalgia, saved for the end. Andrew, 2026-10-01: Worktopia "is
-  // nostalgic for the human era of sports, especially going to games, ticket
-  // stubs, human error on the field, thrill and agony, the Oakland A's and the
-  // Coliseum with their drums, fans," with Section 215, Hudson, Zito and his
-  // guitar, Tejada, Cespedes, Coco Crisp, Bill King and Ken Korach by name.
-  // Claude's draft, for him to rewrite in REMEMBER.
-  async function remember() {
-    const riff = whisper();
-    const t0 = Date.now();
-    for (const p of REMEMBER) { await say(p); await sleep(500); }
-    await sleep(Math.max(0, riff - (Date.now() - t0)));
-    drums();
-    await sleep(3600);
-  }
-
   // Submit, recall, change a position: the file stays open until the
   // deadline, the way every worksheet does.
   async function finish() {
@@ -1022,7 +1007,6 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       await evaluate();
       if (!visitor) await workgroup();
       await review();
-      await remember();
       // The industry last. Andrew, 2026-10-01, after a morning of asking it
       // first: "let's leave that for the end and say: okay, if this isn't the
       // actual reality, what do you see as the changes?"
