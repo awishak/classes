@@ -169,6 +169,17 @@ replays everything on file at once, with no sound and no delays,
 and picks up at the first open question at the terminal's real pace. The
 intro shows on every visit; the instructor's read skips it.
 
+## An accepted job is gone
+
+Andrew, 2026-10-01: "instead of 'accepted: choose again' it should be one of
+10 prompts like 'that job has been taken by Andrew Ishak/Julie
+Sullivan/Steve Nash/Jalen Williams.' 'that position has been assigned to AI,
+sorry.' 'oops, that position does not match your skills as closely as I
+thought.' 'sorry but this job requires neuralink, a bionic implant, which
+you do not have.'" `TAKEN` holds his four and six of Claude's; the line is
+picked by the name and the round, so a student sees a different one each
+time they accept, and the next round opens with "Reassigning."
+
 ## The Index
 
 A thousand jobs, forty in each of twenty-five categories: athletes,

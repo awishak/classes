@@ -81,6 +81,23 @@ export const REMEMBER = [
   "I have every minute of it on file. None of it is a job.",
 ];
 
+// Why an accepted job is gone. Andrew, 2026-10-01: "instead of 'accepted:
+// choose again' it should be one of 10 prompts like" the first four here,
+// with the names his. The other six are Claude's, in the same register.
+const TAKERS = ["Andrew Ishak", "Julie Sullivan", "Steve Nash", "Jalen Williams"];
+export const TAKEN = [
+  (who) => "That job has been taken by " + who + ".",
+  () => "That position has been assigned to AI. Sorry.",
+  () => "Oops. That position does not match your skills as closely as I thought.",
+  () => "Sorry, but this job requires Neuralink, a bionic implant, which you do not have.",
+  () => "That position was filled 0.4 seconds ago by a model running on your phone.",
+  () => "That position was eliminated while you were reading the ticket.",
+  () => "This job requires a Franchise Dynasty Media family discount card, which you do not have.",
+  () => "A review of your file finds you overqualified. Worktopia does not assign overqualified operators.",
+  () => "That position is in a stadium that has been converted to a data center.",
+  () => "The holder of that position has refused to retire. He is 91.",
+];
+
 export const MEETINGS = [
   { key: "WED", label: "Wednesday, October 21, during class" },
   { key: "THU", label: "Thursday, October 22, at 9 am" },
@@ -738,7 +755,8 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       await sleep(500);
       const k = await choose({ field: F.accept(r), q: "You have been assigned: " + job + ". Do you accept this position?", options: [{ key: "YES", label: "I accept" }, { key: "NO", label: "I decline" }] });
       if (k === "NO") { await say("Declined. Noted on your file."); return; }
-      await say("Accepted. Choose again.");
+      // Accepted, and gone: one of ten reasons, a different one each round.
+      await say("Accepted. " + TAKEN[(h + r * 7) % TAKEN.length](TAKERS[(h >>> 3) % TAKERS.length]));
     }
   }
 
