@@ -101,7 +101,17 @@ export default function GradeView({ config }) {
     update(prev => placeCard(prev, aid, name, bucket));
     setPicked(""); setDragging(""); setOver("");
   };
-  const save = (name, fields) => { update(prev => writeCard(prev, aid, name, fields)); setEditing(""); };
+  // The comment and the grade are written together, from the same box.
+  // Andrew, 2026-09-30: "when i do add a comment, replace the note to myself
+  // area with the grade options." A bucket of undefined leaves the card
+  // where it is; null puts it back on the pile.
+  const save = (name, fields, bucket) => {
+    update(prev => {
+      const next = writeCard(prev, aid, name, fields);
+      return bucket === undefined ? next : placeCard(next, aid, name, bucket);
+    });
+    setEditing("");
+  };
   const release = () => { update(prev => releasePatch(prev, aid, Date.now(), { meetingLink: schedulingLinkOf(config) })); setConfirm(""); };
   const hide = () => { update(prev => hidePatch(prev, aid)); setConfirm(""); };
 
@@ -116,12 +126,13 @@ export default function GradeView({ config }) {
   const cardOf = (s) => {
     const card = board.cards?.[s.name] || {};
     return <Card key={s.name} student={s} profile={profileOf(data, s.name)} due={asg?.due} card={card} work={workOf(data, aid, s.name)} accent={a}
+      columns={columns}
       dragging={dragging === s.name} picked={picked === s.name} editing={editing === s.name}
       onDragStart={(e) => { e.dataTransfer.setData("text/plain", s.name); e.dataTransfer.effectAllowed = "move"; setDragging(s.name); }}
       onDragEnd={() => { setDragging(""); setOver(""); }}
       onPick={() => setPicked(p => p === s.name ? "" : s.name)}
       onEdit={() => setEditing(s.name)} onCancel={() => setEditing("")}
-      onSave={(fields) => save(s.name, fields)}
+      onSave={(fields, bucket) => save(s.name, fields, bucket)}
       onAppreciate={(eid) => update(prev => appreciatePatch(prev, aid, s.name, eid, "instructor"))}
       onDelete={(eid) => update(prev => deletePatch(prev, aid, s.name, eid, "instructor"))} />;
   };
@@ -256,10 +267,12 @@ export default function GradeView({ config }) {
   );
 }
 
-function Card({ student, profile, due, card, work, accent, dragging, picked, editing, onDragStart, onDragEnd, onPick, onEdit, onCancel, onSave, onAppreciate, onDelete }) {
+function Card({ student, profile, due, card, work, accent, columns, dragging, picked, editing, onDragStart, onDragEnd, onPick, onEdit, onCancel, onSave, onAppreciate, onDelete }) {
   const [comment, setComment] = useState(card.comment || "");
-  const [note, setNote] = useState(card.note || "");
-  useEffect(() => { if (editing) { setComment(card.comment || ""); setNote(card.note || ""); } }, [editing]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // The grade, chosen in the same box as the comment. Starts on the column
+  // the card is in; tapping the lit one again puts the card back on the pile.
+  const [bucket, setBucket] = useState(card.bucket || null);
+  useEffect(() => { if (editing) { setComment(card.comment || ""); setBucket(card.bucket || null); } }, [editing]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const late = work.last ? isLate(work.last.ts, due) : false;
   const link = work.link;
@@ -303,12 +316,29 @@ function Card({ student, profile, due, card, work, accent, dragging, picked, edi
             <div style={label}>Comment to {first(student.name)}</div>
             <textarea className="gv-box" value={comment} onChange={e => setComment(e.target.value)} placeholder="Goes out with the grade" autoFocus />
           </div>
+          {/* The grade options, where the note to myself used to be. Andrew,
+              2026-09-30: "replace the note to myself area with the grade
+              options." The same words as the columns, so a pill and a column
+              agree. A note already written stays on the card and is read
+              below; nothing writes a new one. */}
           <div>
-            <div style={label}>Note to myself</div>
-            <textarea className="gv-box" value={note} onChange={e => setNote(e.target.value)} placeholder="Stays on this page" style={{ minHeight: 44 }} />
+            <div style={label}>Grade</div>
+            <div role="radiogroup" aria-label="Grade" style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+              {(columns || []).map(b => {
+                const on = bucket === b.id;
+                return (
+                  <button key={b.id} type="button" role="radio" aria-checked={on} className="gv-focus"
+                    onClick={() => setBucket(on ? null : b.id)}
+                    style={{ minHeight: HIT, padding: "0 12px", borderRadius: 8, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer",
+                      background: on ? accent : WHITE, color: on ? "#fff" : TEXT_PRIMARY, border: "1px solid " + (on ? accent : LINE_STRONG) }}>
+                    {b.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="gv-focus" onClick={() => onSave({ comment: comment.trim(), note: note.trim() })}
+            <button className="gv-focus" onClick={() => onSave({ comment: comment.trim() }, bucket === (card.bucket || null) ? undefined : bucket)}
               style={{ minHeight: HIT, padding: "0 14px", borderRadius: 8, background: accent, color: "#fff", border: "none", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Save</button>
             <button className="gv-focus" onClick={onCancel}
               style={{ minHeight: HIT, padding: "0 12px", borderRadius: 8, background: "none", color: TEXT_SECONDARY, border: "1px solid " + LINE_STRONG, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Cancel</button>

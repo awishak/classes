@@ -47,6 +47,16 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep30-grade-pills", date: "Wednesday, September 30", title: "The grade is picked in the comment box",
+    blurb: "Andrew: \"when i do add a comment, replace the note to myself area with the grade options.\" On the grade view, Add a comment opens the comment and, under it, the columns as pills: A to F, or Complete, Not quite, Incomplete and Not submitted, whichever the challenge is graded in. Save writes the comment and moves the card into that column in one go. The lit pill tapped again puts the card back on the pile. Nothing writes a note to myself any more; a note already on a card still reads on it.",
+    groups: [
+      { name: "The student side, redrawn on a canvas", items: [
+        ["A day of mockups, not code", "The student portal was redrawn in the language of the Fieldtime mockup at fieldtime.net/mockup: Lora for the headline and the date, Outfit for the rest, a filled next-class card with two buttons, and every row a tinted card whose colour says what it is. Amber is something to do, green is done, blue came from Dr. Ishak, grey is the student's own. Nothing from the canvas is built yet."],
+        ["What the canvas settled", "A bottom bar on the phone: Schedule, My work, Class. My work is one page with a Flow and a List; the Flow is newest first with the pinned challenge on top. My performance replaces any grade so far: a word per challenge, each row opening that challenge. Questions sit under My work with Ask this anonymously. The right of every header is an envelope with an unread count and the student's own face. A search glass beside each title reaches grades, challenges, readings, days, classmates, office hours and the profile. On a laptop the right pane's titles are the switch. A challenge editor gets Submissions open: Now, On a date, Not yet."],
+      ] },
+    ],
+  },
+  {
     id: "sep24-bar", date: "Thursday, September 24", title: "A student's bar holds the PIN and the mail",
     blurb: "Four asks in one message: take Please tell me about yourself off COMM 3, make Details clearer, give answers to questions an Edit and a Save, and put the PIN and an envelope in a student's bar on every screen.",
     groups: [
