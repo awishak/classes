@@ -448,6 +448,18 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   // The Coliseum drums, Section 215: boom, boom, boom-boom-boom, twice.
   const thump = (d) => { tone(92, 170, "sine", 0.14, d); tone(58, 230, "triangle", 0.09, d); tone(1400, 18, "square", 0.012, d); };
   const drums = () => { [0, 0.46, 0.92, 1.15, 1.38].forEach(d => { thump(d); thump(d + 2.0); }); };
+  // Careless Whisper, the sax riff, from the same oscillator and nothing
+  // downloaded. Andrew, 2026-10-01: "pull some midi version of a's drum
+  // audio, or actually of careless whisper," then "yeah add it." Concert
+  // pitch, D minor, the four phrases: a Dm9 arpeggio, a Gm11 arpeggio, a
+  // Bbmaj7 arpeggio, then A Phrygian straight up. Hz and ms.
+  const WHISPER = [
+    [659, 400], [587, 200], [440, 200], [349, 900], [0, 300],
+    [523, 300], [466, 200], [349, 200], [294, 300], [523, 200], [466, 200], [349, 900], [0, 300],
+    [466, 300], [440, 200], [349, 200], [294, 300], [233, 1000], [0, 300],
+    [220, 210], [233, 210], [262, 210], [294, 210], [330, 210], [349, 210], [392, 210], [440, 1300],
+  ];
+  const whisper = () => { let t = 0; for (const [f, ms] of WHISPER) { if (f) tone(f, ms * 0.95, "sawtooth", 0.035, t / 1000); t += ms; } return t; };
   let hum = null;
   const humOn = () => { if (hum || replay) return; hum = setInterval(() => { tone(196, 50, "sine", 0.045); tone(294, 40, "sine", 0.02, 0.16); }, 320); };
   const humOff = () => { clearInterval(hum); hum = null; };
@@ -830,9 +842,12 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   // guitar, Tejada, Cespedes, Coco Crisp, Bill King and Ken Korach by name.
   // Claude's draft, for him to rewrite in REMEMBER.
   async function remember() {
+    const riff = whisper();
+    const t0 = Date.now();
     for (const p of REMEMBER) { await say(p); await sleep(500); }
+    await sleep(Math.max(0, riff - (Date.now() - t0)));
     drums();
-    await sleep(2200);
+    await sleep(3600);
   }
 
   // Submit, recall, change a position: the file stays open until the

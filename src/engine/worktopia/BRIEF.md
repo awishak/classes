@@ -341,7 +341,7 @@ a little too much. i do like the cespedes line." What is left:
   student path now.
 - **The intro** is his, word for word. One question: "a job in sports in 2032" where the page is 2034.
 - **`REMEMBER` and `ABOUT`** are drafts and his pitch; he rewrites both in the Google Doc, then here.
-- **A MIDI.** He asked for "some midi version of a's drum audio, or actually of careless whisper." The drums are synthesized in `drums()`. Careless Whisper is under copyright, so a recording or MIDI of it on a public page is his call; not done.
+- **The sounds.** He asked for "some midi version of a's drum audio, or actually of careless whisper," then "yeah add it." Both are synthesized from the terminal's oscillator, no file on the site: `whisper()` plays the sax riff under `REMEMBER`, `drums()` the Section 215 cadence after it and with the drums update. Nobody has listened to the riff against the record yet; the notes come from a transcription, transposed from alto sax.
 - **The values of sports.** Andrew, 2026-10-01: "we need a way to make them
   understand the values of sports. so i'm still thinking." Not built.
 - **Worktopia's lines** other than the questions are Claude's words for him
