@@ -98,6 +98,39 @@ export const TAKEN = [
   () => "The holder of that position has refused to retire. He is 91.",
 ];
 
+// What Worktopia says between the questions about the three positions.
+// Andrew, 2026-10-01: "pepper the back and forth with the three jobs with
+// some nostalgia. worktopia should be sympathetic to the human at times.
+// hit on big moments, 50% big moments in sports that everyone would know,
+// 40% oakland A's stuff, 10% random thoughts." Twenty lines, ten, eight and
+// two; a run draws three to six of them in an order set by the name, so a
+// reload says the same ones. Claude's draft, for him to edit.
+export const ASIDES = [
+  // Big moments.
+  "Kirk Gibson could barely walk in 1988 and hit the home run anyway. Bring that.",
+  "In 1980, a team of college kids beat the Soviet Union on ice. No model would have given them a chance.",
+  "Michael Jordan hit the shot over Bryon Russell in 1998 and held the pose. People still remember where they were sitting.",
+  "Buster Douglas knocked out Mike Tyson in Tokyo in 1990, a 42 to 1 underdog. His mother had died three weeks before. He fought anyway.",
+  "In 2004 the Red Sox came back from three games down against the Yankees. Eighty-six years ended in St. Louis on a Wednesday night.",
+  "Bill Buckner let a ground ball through his legs in 1986. Boston forgave him, slowly, and stood and cheered him in 2008. I am still learning that part.",
+  "Brandi Chastain scored the penalty in the Rose Bowl in 1999 in front of ninety thousand people. They had all driven there.",
+  "The Cubs won in 2016 after a rain delay before the tenth inning. People cried in parking lots in two cities, for different reasons.",
+  "Tiger Woods won the Masters in 2019 after years of being written off. His son was waiting behind the eighteenth green.",
+  "Kobe Bryant scored sixty points in his last game in 2016, at thirty-seven. Nobody in the building wanted to leave.",
+  // The A's.
+  "Rickey Henderson stole 130 bases in 1982 and talked to himself the whole way around. Nobody has caught him.",
+  "Dennis Eckersley gave up the home run to Gibson in 1988, stood at his locker and answered every question. Then he won the Cy Young in 1992.",
+  "In 2002 the A's won twenty in a row. Tejada won game eighteen and game nineteen himself, and in the twentieth they blew an eleven run lead and Scott Hatteberg hit the walk-off. I have the crowd audio.",
+  "Tim Hudson went 20 and 6 in 2000, his first full season, at 175 pounds. The scouts had him down as too small.",
+  "Barry Zito won the Cy Young in 2002 and carried a guitar on every road trip. He wrote songs in hotel rooms. Nobody asked him to.",
+  "Bill King called the A's, the Raiders and the Warriors. Holy Toledo was his. Nobody has said it right since.",
+  "Coco Crisp hit the walk-off in game four against Detroit in 2013 and the Coliseum shook. People who were there still say so.",
+  "Section 215 brought the drums to every game, win or lose, for thirty years. The team left anyway. I have the drums.",
+  // Random thoughts.
+  "Unrelated. The smell of a new glove has not been reproduced. Several companies have tried.",
+  "Unrelated. People used to lose a ticket stub and find it in a coat pocket the next winter.",
+];
+
 export const MEETINGS = [
   { key: "WED", label: "Wednesday, October 21, during class" },
   { key: "THU", label: "Thursday, October 22, at 9 am" },
@@ -361,7 +394,7 @@ export const F = {
   // z, then aa to zz. accept:0 was refused on 2026-10-01.
   accept: (r) => "accept:" + String.fromCharCode(97 + (r % 26)).repeat(Math.floor(r / 26) + 1),
   title: part("title"), skills: part("skills"), human: part("human"), why: part("why"), duties: part("duties"), value: part("value"),
-  interesting: "interesting", likely: "likely", pays: "pays", confirm: "confirm",
+  confirm: "confirm",
   industry: "industry", fading: "fading", rising: "rising",
   coworkers: "coworkers", meeting: "meeting", thursday: "thursday", stars: "stars", review: "review",
 };
@@ -374,10 +407,11 @@ const fmtWhen = (iso) => new Date(iso).toLocaleString("en-US", { month: "short",
  *   viewer: { id, name }   photo: a data URL for the student's picture, or nothing
  *   classmates: the names on the roster, less the student's own, for the co-worker question
  *   readOnly: the instructor reading a student's file; nothing is asked
- *   visitor: the public page; no roster, no calendar, no submit, a ? that explains
+ *   visitor: the public page; no roster, no calendar, the file submits itself at the end, a ? that explains
+ *   restart: what "start over" does on the public page (a new visitor id, then a reload)
  * Returns { destroy }.
  */
-export function mountWorktopia(root, { store, viewer, photo, classmates = [], readOnly = false, visitor = false } = {}) {
+export function mountWorktopia(root, { store, viewer, photo, classmates = [], readOnly = false, visitor = false, restart = null } = {}) {
   if (!document.getElementById("jb-fonts")) {
     const l = document.createElement("link"); l.id = "jb-fonts"; l.rel = "stylesheet"; l.href = FONTS; document.head.appendChild(l);
   }
@@ -761,6 +795,18 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   }
 
   const jobs = [];
+  // The asides, in an order the name sets: a seeded shuffle of ASIDES, dealt
+  // from the top as the run reaches each slot, so a reload deals the same.
+  const asideOrder = (() => {
+    let x = (h ^ 0x9e3779b9) >>> 0;
+    const rnd = () => { x = (x + 0x6d2b79f5) >>> 0; let t = Math.imul(x ^ (x >>> 15), 1 | x); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const idx = ASIDES.map((_, k) => k);
+    for (let k = idx.length - 1; k > 0; k--) { const j = Math.floor(rnd() * (k + 1)); [idx[k], idx[j]] = [idx[j], idx[k]]; }
+    return idx;
+  })();
+  let dealt = 0;
+  const aside = async () => { if (dealt >= asideOrder.length) return; await say(ASIDES[asideOrder[dealt++]]); await sleep(500); };
+
   async function position(i, force) {
     const L = LETTERS[i];
     setCount(i + 1);
@@ -776,8 +822,12 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     // Andrew, 2026-10-01: the question to hint at on the first page and ask here.
     const human = await ask({ field: F.human(i), force, rows: 3, min: 40, q: "What will you bring to this job that would be better than if we simply let AI do it?" });
     await think("Noted", 600);
+    // An aside after the human question every time, and after the next one
+    // when the name says so: three to six a run.
+    if (!force) await aside();
     const why = await ask({ field: F.why(i), force, rows: 3, min: 40, q: "Why will you personally be good at this position?" });
     await think("Noted", 600);
+    if (!force && ((h >>> (i + 2)) & 1)) await aside();
     const duties = await ask({ field: F.duties(i), force, rows: 3, min: 60, q: "What does this position accomplish? What are the main duties?" });
     await think("Noted", 700);
     // One question where there were two (value now; why still valuable in
@@ -790,38 +840,30 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     jobs[i] = { letter: L, title, skills, human, why, duties, value };
   }
 
-  const titleOf = (L) => (jobs.find(j => j.letter === L) || {}).title || "";
-  const pickOne = (field, q, force) => choose({ field, q, force, options: jobs.map(j => ({ key: j.letter, label: j.title, echo: false })) });
   async function evaluate(force) {
     await think("Compiling your positions", 1400);
     await card("Positions on file", jobs.map(j => ["Position " + j.letter, j.title]));
     await sleep(300);
-    await say("Evaluation. Three questions about the positions on your file.");
+    // Andrew, 2026-10-01: "remove these three questions, and just have them
+    // confirm their three positions." The three evaluation questions came out.
     for (;;) {
-      const interesting = await pickOne(F.interesting, "Which position do you find most interesting?", force);
-      await think("Noted", 600);
-      const likely = await pickOne(F.likely, "Which position are you most likely to get?", force);
-      await think("Noted", 600);
-      const pays = await pickOne(F.pays, "Which position pays the most?", force);
-      await think("Compiling your evaluation", 1200);
-      await card("Evaluation", [
-        ["Most interesting", interesting + " · " + titleOf(interesting)],
-        ["Most likely to get", likely + " · " + titleOf(likely)],
-        ["Pays the most", pays + " · " + titleOf(pays)],
-      ]);
-      await sleep(400);
-      const k = await choose({ field: F.confirm, force, q: "Is this correct?", options: [{ key: "CONFIRM", label: "that is correct", echo: false }, { key: "REVISE", label: "ask me again", echo: false }] });
+      const k = await choose({ field: F.confirm, force, q: "Are these your three positions?", options: [{ key: "CONFIRM", label: "yes, those are my three", echo: false }, { key: "REVISE", label: "change one", echo: false }] });
       if (k === "CONFIRM") break;
+      const L = await choose({ q: "Which position do you want to change?", options: jobs.map(j => ({ key: j.letter, label: j.title, echo: false })) });
+      await position(LETTERS.indexOf(L), true);
+      await think("Compiling your positions", 1000);
+      await card("Positions on file", jobs.map(j => ["Position " + j.letter, j.title]));
+      await sleep(300);
       force = true;
     }
-    await say("Evaluation confirmed. In 2002, Hudson, Zito and Tejada won twenty in a row on a forty million dollar payroll, and I have not been able to explain the twentieth game.");
+    await say("Positions confirmed.");
   }
 
   // Andrew, 2026-10-01: "what do you see as the changes to the sports industry
   // from 2026 to 2034? Which jobs do you think will not be as prevalent in
   // 2034? Which jobs will be much more popular?"
   async function industry() {
-    await ask({ field: F.industry, rows: 4, min: 60, q: "Okay, if this isn't the actual reality, what do you see as the changes?" });
+    await ask({ field: F.industry, rows: 4, min: 60, q: "Off the record, let's say that none of this actually came true (don't tell Elon). It's 2026 right now. What do you actually see as changes to the sports ecosystem over the next 8 years?" });
     await think("Noted", 700);
     await ask({ field: F.fading, rows: 3, min: 30, q: "Which jobs do you think will not be as prevalent in 2034?" });
     await think("Noted", 700);
@@ -949,9 +991,12 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       await industry();
       await say("Thank you. Worktopia's system will get back to you.");
       if (visitor) {
+        // The file is kept. Andrew, 2026-10-01: "save what people write! i
+        // want to see it." It submits itself; a visitor has nothing to recall.
+        if (!submittedAt) { setSave("Saving"); submittedAt = await store.submit(); setSave("Saved"); fanfare(); }
         setLight("on", "Done");
-        const k = await choose({ q: "That is the whole run. Nothing you typed was kept.", options: [{ key: "AGAIN", label: "start over", echo: false }] });
-        if (k === "AGAIN") window.location.reload();
+        const k = await choose({ q: "That is the whole run. Your file is on record.", options: [{ key: "AGAIN", label: "start over", echo: false }] });
+        if (k === "AGAIN") { if (restart) restart(); else window.location.reload(); }
         return;
       }
       await finish();

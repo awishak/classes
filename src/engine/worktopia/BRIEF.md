@@ -132,11 +132,12 @@ answer back ... it's an advanced version of AI."
    FRANCHISE DYNASTY MEDIA INC.? Please list the job title." and the same
    five questions. Exactly three positions now; the fourth and fifth are
    gone.
-9. **Evaluation.** Kept from JobBot. The positions on file as a card, then
-   three questions, each answered with a lettered button: which position is
-   most interesting, which they are most likely to get, which pays the
-   most. Shown back as a card, then "Is this correct?" CONFIRM moves on,
-   REVISE asks the three again.
+9. **The three, confirmed.** The positions on file as a card, then "Are
+   these your three positions?" Yes moves on; "change one" asks which, runs
+   that position again, and shows the card again. The three evaluation
+   questions (most interesting, most likely, pays the most) came out on
+   2026-10-01: "remove these three questions, and just have them confirm
+   their three positions."
 10. **The industry.** Last, after the review and `REMEMBER`. It ran
     first for a morning ("ask the three industry questions before asking
     about the jobs"), then Andrew moved it: "let's leave that for the end
@@ -320,8 +321,7 @@ Andrew: "just give the public a way to go through worktopia. make it a public
 version. i'll link to it and let people play with it. and then give a ? button
 at the top that has a pop up that has like a 3 paragraph description of what
 i'm doing here." `/worktopia` mounts the terminal with `visitor: true` on
-`memoryStore`: no roster question, no calendar, no submit, a start-over
-button at the end that reloads, and nothing kept past the tab. The ? is a
+`publicStore`: no roster question, no calendar, the file submits itself at the end, and a start-over button opens a new file under a new visitor id. Andrew, later the same day: "save what people write! i want to see it." So `publicStore` posts every answer to `api/worktopia-public.js`, which holds the service key and writes to the worksheet tables as worksheet_key "worktopia", group_key "public", viewer_id "visitor-<uuid>"; the uuid lives in the browser's localStorage, so a reload resumes the file. The instructor reads them at `/worktopia?files` and `/worktopia?v=<visitor id>`, by session or PIN, through the same function. The function caps an answer at 4,000 characters and a file at 400 rows; it is a public write endpoint, and that is the whole defence. The ? is a
 fixed button at the top right that opens a `<dialog>` holding `ABOUT`, his
 pitch from the "Worktopia front page" Google Doc, word for word. The intro is
 his too, from the same doc, in `INTRO`.

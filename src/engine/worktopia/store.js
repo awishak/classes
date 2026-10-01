@@ -101,6 +101,23 @@ export function readStore(rows, submittedAt) {
   return { async load() { return { answers: answersOf(rows), submitted_at: submittedAt || null }; }, save: refuse, submit: refuse, recall: refuse, reset: refuse };
 }
 
+/** A visitor's file on the public page, through /api/worktopia-public, which holds the service key. */
+export function publicStore({ visitorId }) {
+  const call = async (what, args) => {
+    const r = await fetch("/api/worktopia-public", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ visitor: visitorId, ...args }) });
+    const out = await r.json().catch(() => null);
+    if (!r.ok || !out || !out.ok) throw new Error(what + ": " + (out?.error || "nothing came back"));
+    return out;
+  };
+  return {
+    async load() { const out = await call("Could not read the file", { action: "load" }); return { answers: answersOf(out.answers), submitted_at: out.submitted_at || null }; },
+    async save(field, value) { await call("Could not save the answer", { action: "save", field, value: String(value) }); },
+    async submit() { return (await call("Could not submit", { action: "submit" })).submitted_at; },
+    async recall() { throw new Error("A visitor cannot recall a file."); },
+    async reset() { await call("Could not clear the file", { action: "reset" }); },
+  };
+}
+
 /** A store that forgets, for trying the terminal with nothing behind it. */
 export function memoryStore() {
   const answers = {};
