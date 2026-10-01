@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<meta name="description" content="A 2034 job-allocation terminal. The COMM 118 worksheet: your skills, three to five jobs in sports, and the one you are assigned.">
+<meta name="description" content="A 2034 job-allocation terminal. The COMM 118 worksheet: your skills, three to five positions in sports, and the one you are assigned.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <style>
@@ -411,7 +411,7 @@ pre.portrait { margin: 0; font: 11px/1.05 var(--mono); color: var(--bot); letter
   const S = { name: '', skills: [], jobs: [] };
   const MIN_JOBS = 3, MAX_JOBS = 5;
   const setCount = (i) => {
-    count.textContent = i ? 'Job ' + i + ' / ' + MAX_JOBS : '';
+    count.textContent = i ? 'Position ' + 'ABCDE'[i - 1] : '';
     rail.forEach((seg, k) => { seg.className = k < i - 1 ? 'done' : k === i - 1 ? 'live' : ''; });
   };
 
@@ -443,46 +443,52 @@ pre.portrait { margin: 0; font: 11px/1.05 var(--mono); color: var(--bot); letter
     d = d.slice(0, 17);
     return d[0] + ' ' + d.slice(1, 5) + ' ' + d.slice(5, 9) + ' ' + d.slice(9, 13) + ' ' + d.slice(13);
   };
-  // Three faces, for when the Index has no photo on file. The class site has
-  // every student's photo, so the live version draws the real one.
-  const FACES = [
-`       _.-----._
-     .'  _____  '.
-    /  .'     '.  \\
-   |  /         \\  |
-   | |  (o) (o)  | |
-   | |     ^     | |
-   | |   \\___/   | |
-    \\ \\         / /
-     '.'-.___.-'.'
-       |  ' '  |
-    ___|_______|___
-   /               \\`,
-`      .-'''''''-.
-    .'           '.
-   /   .-------.   \\
-  |   /         \\   |
-  |  |  (o) (o)  |  |
-  |  |     ^     |  |
-  |  |   \\___/   |  |
-  |   \\         /   |
-  |    '-.___.-'    |
-  |      |   |      |
-  |   ___|   |___   |
-  '--'           '--'`,
-`    ________________
-   (________________)
-     |  .-------.  |
-     '--|       |--'
-        | o   o |
-        |   ^   |
-        |  \\_/  |
-         \\     /
-          '---'
-        .--| |--.
-       /   | |   \\
-      /____|_|____\\`,
-  ];
+  // A portrait drawn from the name, for when the Index has no photo on file:
+  // hair, eyes, glasses, mouth, beard and a jersey number, each picked by
+  // the name, so every student gets their own. The class site has every
+  // student's photo, so the live version draws the real one instead.
+  const portraitFor = (h) => {
+    const pick = (n, list) => list[(h >>> n) % list.length];
+    const hair = pick(2, ['bald', 'short', 'long', 'curly', 'cap', 'bun', 'spiky']);
+    const eyes = pick(6, ['o   o', '0   0', '^   ^', '-   -', '.   .', 'o   -', '>   <']);
+    const glasses = pick(10, [false, false, true]);
+    const nose = pick(12, ['^', '|', 'v', '>', 'u']);
+    const mouth = pick(15, ['\\___/', ' ___ ', '\\_/  ', '  o  ', '\\__/ ', ' ~~~ ', '\\=_=/']);
+    const beard = pick(18, ['none', 'none', 'stache', 'beard', 'goatee']);
+    const num = (h >>> 21) % 100;
+    const W = 11;                                  // the face, inside its walls
+    const mid = (t) => { const pad = W - t.length, l = Math.floor(pad / 2); return ' '.repeat(l) + t + ' '.repeat(pad - l); };
+    const long = hair === 'long' || hair === 'curly';
+    const side = long ? (hair === 'curly' ? ['(', ')'] : ['|', '|']) : [' ', ' '];
+    const face = (t) => '    ' + side[0] + ' |' + mid(t) + '| ' + side[1];
+    const top = {
+      bald:  ['       .---------.', '      /           \\'],
+      short: ['       .---------.', '      /|||||||||||\\'],
+      long:  ['     .-------------.', '    /|||||||||||||||\\'],
+      curly: ['     (~~~~~~~~~~~~~)', '    (~~~~~~~~~~~~~~~)'],
+      cap:   ['       ___________', '      [___________]__'],
+      bun:   ['            (@)', '       .----|----.'],
+      spiky: ['       \\|/\\|/\\|/\\|', '      /\\/\\/\\/\\/\\/\\/'],
+    }[hair];
+    const eyeRow = glasses ? eyes.replace(/(.)   (.)/, '-$1---$2-') : eyes;
+    const rows = [
+      ...top,
+      face(''),
+      face(eyeRow),
+      face(nose),
+      face(beard === 'stache' || beard === 'goatee' ? '~~~~~' : ''),
+      face(mouth),
+      face(beard === 'beard' ? '~~~~~~~~~' : beard === 'goatee' ? '~~~' : ''),
+      '    ' + side[0] + '  \\' + (beard === 'beard' ? '~~~~~~~~~' : '         ') + '/  ' + side[1],
+      '    ' + side[0] + "    '-._.-'    " + side[1],
+      '          _| |_',
+      "      .-'       '-.",
+      '     /     [' + String(num).padStart(2, '0') + ']    \\',
+      '    |      ---      |',
+      '    |_______________|',
+    ];
+    return rows.map(r => r.replace(/\s+$/, '')).join('\n');
+  };
   // A photo, as text. Dark pixels become dense glyphs, since the screen is
   // white. The middle of the photo is kept, cropped to a portrait.
   const RAMP = '@%#*+=-:. ';
@@ -535,7 +541,6 @@ pre.portrait { margin: 0; font: 11px/1.05 var(--mono); color: var(--bot); letter
     await think('Cross-referencing against all ' + fmt(3 + h % 48000) + ' ' + plural(S.name) + ' in the United States', 2400);
     await say('Found you.');
     await sleep(300);
-    const esc = (s) => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
     const x = line('bot', 'JobBot'); const rec = document.createElement('div'); rec.className = 'record'; x.append(rec); scroll();
     const rows = [['Name', esc(S.name)], ['Trump Index No.', indexNo(h)], ['Education', 'Santa Clara University, graduate'], ['Likes', LIKES[h % LIKES.length]], ['Dislikes', DISLIKES[(h >>> 7) % DISLIKES.length]], ['Status', 'Eligible for allocation']];
     rec.innerHTML = '<h2>Record &middot; Brady-Manning Work Index</h2><dl></dl>';
@@ -545,12 +550,15 @@ pre.portrait { margin: 0; font: 11px/1.05 var(--mono); color: var(--bot); letter
     await say('Retrieving your image from the Index.');
     const file = await pickPhoto();
     await think('Rendering operator image', 1600);
-    const art = (file && await photoFromFile(file)) || FACES[(h >>> 5) % FACES.length];
+    const art = (file && await photoFromFile(file)) || portraitFor(h);
     await print('portrait', art);
     await sleep(300);
     await say('Operator image rendered. Resemblance: ' + (88 + h % 11) + '%.');
     await sleep(300);
   }
+
+  const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+  const ORDINAL = ['first', 'second', 'third', 'fourth', 'fifth'];
 
   async function run() {
     await boot();
@@ -564,54 +572,91 @@ pre.portrait { margin: 0; font: 11px/1.05 var(--mono); color: var(--bot); letter
     await say('Welcome, ' + S.name + '. List your skills. Separate them with commas.');
     S.skills = (await ask({ placeholder: 'writing, video editing, statistics, talking to anyone', rows: 2 })).split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
     await think('Cross-referencing ' + S.skills.length + ' skill' + (S.skills.length === 1 ? '' : 's') + ' against the Brady-Manning Work Index', 1800);
-    await say('The Brady-Manning Work Index lists 4,113 open positions that match your skills. Too many. We will narrow it one job at a time.');
+    await say('The Brady-Manning Work Index lists 4,113 open positions that match your skills.');
     await sleep(300);
-    await say('Give me at least ' + MIN_JOBS + ' jobs you would want. You may give me up to ' + MAX_JOBS + '. For each one I need three things: why you want it, what value it produces for the sports world, and why it will still exist in 2034.');
+    await say('Now, we will examine your employment preferences. I require you to present me with at least three positions that you would be interested in.');
 
-    for (let i = 1; i <= MAX_JOBS; i++) {
-      setCount(i);
+    for (let i = 0; i < MAX_JOBS; i++) {
+      const L = LETTERS[i];
+      setCount(i + 1);
       await sleep(400);
-      await say('JOB ' + i + '. Name one job in the sports world you would want in 2034.');
+      await say((i === 0 ? "Let's start with Position A, your first choice. " : 'Position ' + L + ', your ' + ORDINAL[i] + ' choice. ')
+        + 'What is a position in sports that you would be competent at, and provide value to your organization (or self)? Please list the job title.');
       const title = await ask({ placeholder: 'Job title' });
       await think('Searching the Brady-Manning Work Index for "' + title + '"', 1600);
-      await say('Found. Status: OPEN. Tell me why you want this job.');
-      const why = await ask({ rows: 3, min: 60, short: 'This is not enough information to assign you.' });
+      await say('Found. Status: OPEN. What does this position accomplish? What are the main duties?');
+      const duties = await ask({ rows: 3, min: 60, short: 'This is not enough information to assign you.' });
       await think('Noted', 700);
-      await say('What value does this job produce for the sports world? Who is better off because it exists?');
+      await say('What value does this position provide to the sports ecosystem?');
       const value = await ask({ rows: 3, min: 60, short: 'This is not enough information to assign you.' });
       await think('Weighing the value', 1000);
-      await say('Last one. Why will this job still exist in 2034? What makes it sustainable?');
+      await say('Why do you think this position is still valuable in 2034? (I know, for I am JobBot 5000, but I want you to tell me.)');
       const sustain = await ask({ rows: 3, min: 60, short: 'This is not enough information to assign you.' });
-      S.jobs.push({ title, why, value, sustain });
-      await think('Filing "' + title + '"', 1400);
-      await say('Logged. "' + title + '" is on your file. ' + (i < MIN_JOBS ? (MIN_JOBS - i) + ' more to go.' : ''));
-      if (i >= MIN_JOBS && i < MAX_JOBS) {
-        await say('Add another job, or request your assignment?');
-        const k = await choose([{ key: 'ADD', label: 'one more job' }, { key: 'DONE', label: 'assign me' }]);
+      S.jobs.push({ letter: L, title, duties, value, sustain });
+      await think('Filing Position ' + L, 1400);
+      await say('Logged. Position ' + L + ', ' + title + ', is on your file.');
+      if (i + 1 >= MIN_JOBS && i + 1 < MAX_JOBS) {
+        await say('Present another position, or proceed to evaluation?');
+        const k = await choose([{ key: 'ADD', label: 'another position' }, { key: 'DONE', label: 'proceed' }]);
         if (k === 'DONE') break;
       }
     }
     setCount(0); rail.forEach(seg => { seg.className = 'done'; });
+    await evaluate();
     await assign();
+  }
+
+  // The positions, side by side, and three picks, confirmed.
+  const esc = (s) => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const pickOne = () => choose(S.jobs.map(j => ({ key: j.letter, label: j.title })));
+  async function evaluate() {
+    await think('Compiling your positions', 1400);
+    const x = line('bot', 'JobBot'); const rec = document.createElement('div'); rec.className = 'record'; x.append(rec); scroll();
+    rec.innerHTML = '<h2>Positions on file</h2><dl></dl>';
+    const dl = rec.querySelector('dl');
+    for (const j of S.jobs) { dl.insertAdjacentHTML('beforeend', '<dt>Position ' + j.letter + '</dt><dd>' + esc(j.title) + '</dd>'); bootTick(); await sleep(260); }
+    await sleep(300);
+    await say('Evaluation. Three questions about the positions on your file.');
+    for (;;) {
+      await say('Which position do you find most interesting?');
+      S.interesting = await pickOne();
+      await think('Noted', 600);
+      await say('Which position are you most likely to get?');
+      S.likely = await pickOne();
+      await think('Noted', 600);
+      await say('Which position pays the most?');
+      S.pays = await pickOne();
+      await think('Compiling your evaluation', 1200);
+      const titleOf = (L) => S.jobs.find(j => j.letter === L).title;
+      const y = line('bot', 'JobBot'); const ev = document.createElement('div'); ev.className = 'record'; y.append(ev); scroll();
+      ev.innerHTML = '<h2>Evaluation</h2><dl>'
+        + '<dt>Most interesting</dt><dd>' + S.interesting + ' &middot; ' + esc(titleOf(S.interesting)) + '</dd>'
+        + '<dt>Most likely to get</dt><dd>' + S.likely + ' &middot; ' + esc(titleOf(S.likely)) + '</dd>'
+        + '<dt>Pays the most</dt><dd>' + S.pays + ' &middot; ' + esc(titleOf(S.pays)) + '</dd></dl>';
+      await sleep(400);
+      await say('Is this correct?');
+      const k = await choose([{ key: 'CONFIRM', label: 'that is correct' }, { key: 'REVISE', label: 'ask me again' }]);
+      if (k === 'CONFIRM') break;
+    }
+    await say('Evaluation confirmed.');
   }
 
   async function assign() {
     await say('Running allocation for ' + S.name + '. Stand by.');
-    await think('Weighing ' + S.jobs.length + ' jobs against the sustainability model', 2200);
+    await think('Weighing ' + S.jobs.length + ' positions against the sustainability model', 2200);
     await think('Consulting the Brady-Manning Work Index', 1400);
     await think('Deciding', 1000);
-    // The Index weighs the case you made for a job's future. The longest
-    // sustainability answer wins; a tie goes to the job listed first.
+    // The Index weighs the case you made for a position's future. The longest
+    // answer about 2034 wins; a tie goes to the position listed first.
     const pick = S.jobs.reduce((best, j) => j.sustain.length > best.sustain.length ? j : best, S.jobs[0]);
     done(); setLight('on', 'Assigned');
     await say('Allocation complete.');
     const t = document.createElement('div'); t.className = 'ticket';
-    const esc = (s) => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
     const id = 'ALLOC-2034-' + Math.random().toString(16).slice(2, 8).toUpperCase();
     const bars = Array.from({ length: 48 }, () => '<i class="' + (Math.random() < 0.3 ? 'g' : Math.random() < 0.3 ? 'w' : '') + '"></i>').join('');
     t.innerHTML = '<h2>Allocation</h2><div class="id">' + id + '</div><div class="big">' + esc(S.name) + ' &rarr; <b>' + esc(pick.title) + '</b></div>'
-      + '<dl><dt>Skills</dt><dd>' + esc(S.skills.join(', ')) + '</dd><dt>Jobs on file</dt><dd>' + S.jobs.length + '</dd><dt>Basis</dt><dd>The strongest case for a job that lasts to 2034.</dd></dl>'
-      + S.jobs.map(j => '<div class="job"><h3>' + esc(j.title) + (j === pick ? '<span class="pick">assigned</span>' : '') + '</h3><dl><dt>Why</dt><dd>' + esc(j.why) + '</dd><dt>Value</dt><dd>' + esc(j.value) + '</dd><dt>Sustainable</dt><dd>' + esc(j.sustain) + '</dd></dl></div>').join('')
+      + '<dl><dt>Skills</dt><dd>' + esc(S.skills.join(', ')) + '</dd><dt>Positions on file</dt><dd>' + S.jobs.length + '</dd><dt>Basis</dt><dd>The strongest case for a position that lasts to 2034.</dd></dl>'
+      + S.jobs.map(j => '<div class="job"><h3>Position ' + j.letter + ' &middot; ' + esc(j.title) + (j === pick ? '<span class="pick">assigned</span>' : '') + '</h3><dl><dt>Duties</dt><dd>' + esc(j.duties) + '</dd><dt>Value</dt><dd>' + esc(j.value) + '</dd><dt>In 2034</dt><dd>' + esc(j.sustain) + '</dd></dl></div>').join('')
       + '<div class="bars" aria-hidden="true">' + bars + '</div>';
     const wrap = document.createElement('div'); wrap.className = 'line'; wrap.style.display = 'block'; wrap.append(t); log.append(wrap); scroll();
     await sleep(600);
