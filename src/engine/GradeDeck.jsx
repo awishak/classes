@@ -28,7 +28,7 @@ const label = { fontSize: 13, fontWeight: 700, color: TEXT_MUTED, textTransform:
 const when = (ts) => ts ? new Date(ts).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
 const hostOf = (url) => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return "your link"; } };
 
-export default function GradeDeck({ config, items, onSeen, onDone, children }) {
+export default function GradeDeck({ config, items, onSeen, onDone, onOpen, children }) {
   // The stack is fixed when the deck opens. Got it writes a seen stamp, and
   // that write comes back through the store and would shorten a live list
   // under the reader's thumb.
@@ -67,7 +67,12 @@ export default function GradeDeck({ config, items, onSeen, onDone, children }) {
           {/* No meeting button here: a grade rough enough to need one sends
               the link into the challenge's conversation on its own. */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <a href={config.path + "/challenges/" + encodeURIComponent(card.aid)} style={ghost}>Open the challenge</a>
+            {/* The way through is in the app, with the card marked read
+                first. As a link it reloaded the page, and a card not yet
+                marked read came straight back in front of the challenge. */}
+            {onOpen
+              ? <button onClick={() => { onSeen?.(card.aid); onDone?.(); onOpen(card.aid); }} style={{ ...ghost, cursor: "pointer" }}>Open the challenge</button>
+              : <a href={config.path + "/challenges/" + encodeURIComponent(card.aid)} style={ghost}>Open the challenge</a>}
           </div>
         </section>
 

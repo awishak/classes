@@ -255,7 +255,10 @@ export const unseenGrades = (config, data, name) => {
     const more = log.filter(e => e.type === "comment" && e.from !== "student" && e.ts > sent.ts)
       .map(e => ({ text: htmlToText(e.html || e.text), at: e.ts })).filter(m => m.text);
     const changedAt = more.length ? Math.max(gradedAt, more[more.length - 1].at) : gradedAt;
-    if ((board.seen?.[name] || 0) >= changedAt) return [];
+    // The seen stamp lives on the class row, which the student may write.
+    // Stamps written before the split sit on the board and still count.
+    const seenAt = Math.max(board.seen?.[name] || 0, data?.gradeSeen?.[asg.id]?.[name] || 0);
+    if (seenAt >= changedAt) return [];
     const subs = log.filter(e => e.type === "submission");
     const last = subs[subs.length - 1] || null;
     const linked = [...subs].reverse().find(e => e.link) || null;
@@ -265,8 +268,16 @@ export const unseenGrades = (config, data, name) => {
   });
 };
 
-export const markSeen = (data, aid, name, now = Date.now()) =>
-  withBoard(data, aid, board => ({ ...board, seen: { ...(board.seen || {}), [name]: now } }));
+// Got it, written where a student can write it. The stamp used to go on the
+// board, and the board moved to the plan row on 2026-09-29, which only an
+// instructor may write. So every student's Got it was refused, the card came
+// back on every visit, and Open the challenge reloaded into the card again:
+// nobody but Andrew could get past it to the feedback. Students, 2026-09-30:
+// they can't see feedback, only instructors can. `gradeSeen` is a class key.
+export const markSeen = (data, aid, name, now = Date.now()) => ({
+  ...(data || {}),
+  gradeSeen: { ...((data || {}).gradeSeen || {}), [aid]: { ...(((data || {}).gradeSeen || {})[aid] || {}), [name]: now } },
+});
 
 // A number out of 100 as the word the columns would have given. The older
 // grading flow wrote numbers, and the parade on the You card shows every

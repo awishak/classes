@@ -2339,6 +2339,16 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const deck = unseenGrades(cfg, d, "Ada Lovelace");
   if (deck.length !== 1 || deck[0].letter !== "A" || !deck[0].comment.startsWith("Sharp")) say("the deck card is wrong: " + JSON.stringify(deck));
   if (unseenGrades(cfg, markSeen(d, "ex1", "Ada Lovelace", 30), "Ada Lovelace").length) say("Got it did not clear the deck card");
+  // A student's Got it has to land on the class row: the plan row refuses
+  // them, and a stamp that never lands brings the card back on every visit.
+  {
+    const seen = markSeen(d, "ex1", "Ada Lovelace", 30);
+    for (const k of Object.keys(seen)) if (seen[k] !== d[k] && PLAN_KEYS.has(k)) say("Got it on a grade writes " + k + ", which a student may not write");
+    const soon = { ...cfg, assignments: [{ id: "due1", title: "Soon", due: new Date(Date.now() + 3600000).toLocaleDateString("en-US", { month: "short", day: "numeric" }), dueTime: "11:59 PM" }] };
+    const gone = dismissDue({}, soon.assignments[0], "Ada Lovelace", 30);
+    for (const k of Object.keys(gone)) if (PLAN_KEYS.has(k)) say("Got it on a due card writes " + k + ", which a student may not write");
+    if (dueSoon(soon, gone, "Ada Lovelace").length) say("a dismissed due card came back");
+  }
   if (changedSinceRelease(d.gradeBoard.ex1)) say("a fresh release reads as changed");
   const moved = placeCard(d, "ex1", "Ada Lovelace", "b", 40);
   if (!changedSinceRelease(moved.gradeBoard.ex1)) say("moving a card after release does not read as changed");

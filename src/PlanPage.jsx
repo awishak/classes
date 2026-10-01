@@ -47,6 +47,16 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "sep30-seen", date: "Wednesday, September 30", title: "Students can get past the grade card again",
+    blurb: "Students, through Andrew: \"they can't see feedback, only instructors can.\" Since the lesson plan moved to its own row on September 29, the grade board and the due-card dismissals have been plan keys, which only an instructor may write. A student's Got it on a grade card was refused, so the card came back on every visit, and Open the challenge reloaded the page straight into the card again. Nobody but Andrew could reach the feedback behind it. The same held for the due-soon card.",
+    groups: [
+      { name: "The fix", items: [
+        ["The stamp lives where a student can write it", "Got it on a grade writes gradeSeen on the class row, and Got it on a due card writes dueSeen there. Stamps from before the split still count. The smoke fails if either Got it ever writes a plan key again."],
+        ["Open the challenge stays in the app", "The button marks the card read and goes to the challenge without a reload, so the card cannot come back in front of the page."],
+      ] },
+    ],
+  },
+  {
     id: "sep30-grade-pills", date: "Wednesday, September 30", title: "The grade is picked in the comment box",
     blurb: "Andrew: \"when i do add a comment, replace the note to myself area with the grade options.\" On the grade view, Add a comment opens the comment and, under it, the columns as pills: A to F, or Complete, Not quite, Incomplete and Not submitted, whichever the challenge is graded in. Save writes the comment and moves the card into that column in one go. The lit pill tapped again puts the card back on the pile. Nothing writes a note to myself any more; a note already on a card still reads on it.",
     groups: [

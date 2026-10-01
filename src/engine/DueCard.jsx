@@ -59,14 +59,21 @@ export function dueSoon(config, data, name, now = Date.now()) {
     if (!at || at <= now || at - now > DUE_SOON_HOURS * 3600000) return false;
     const log = data?.assignmentLog?.[asg.id]?.[name] || [];
     if (log.some(e => e.type === "submission")) return false;
-    return data?.dueCards?.[asg.id]?.[name]?.due !== dueKey(asg);
+    // Dismissals written since the split sit on the class row as `dueSeen`;
+    // the ones from before sit on the plan row as `dueCards`. Either counts.
+    const seen = data?.dueSeen?.[asg.id]?.[name] || data?.dueCards?.[asg.id]?.[name];
+    return seen?.due !== dueKey(asg);
   });
 }
 
+// Got it, written where a student can write it. `dueCards` is a plan key
+// since 2026-09-29, so a student's dismissal was refused and the card came
+// back on every visit. Same bug as the grade card's seen stamp; see
+// markSeen in grades.js.
 export const dismissDue = (data, asg, name, now = Date.now()) => {
-  const cards = { ...(data?.dueCards || {}) };
+  const cards = { ...(data?.dueSeen || {}) };
   cards[asg.id] = { ...(cards[asg.id] || {}), [name]: { due: dueKey(asg), at: now } };
-  return { ...data, dueCards: cards };
+  return { ...data, dueSeen: cards };
 };
 
 export default function DueDeck({ config, items, onDismiss, onOpen, onDone }) {

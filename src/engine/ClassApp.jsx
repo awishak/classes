@@ -1111,7 +1111,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
       <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">
         <ThemeStyle theme={theme} />
         <style>{CSS + accentCSS(a, config.accentDark)}</style>
-        <GradeDeck config={config} items={unseen} onSeen={(aid) => write(prev => markSeen(prev, aid, seenAs))} onDone={() => setDeckDone(true)} />
+        <GradeDeck config={config} items={unseen} onSeen={(aid) => write(prev => markSeen(prev, aid, seenAs))} onDone={() => setDeckDone(true)}
+          onOpen={(aid) => go("assignments/" + aid)} />
       </div>
     );
   }
