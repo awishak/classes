@@ -115,7 +115,7 @@ export default function WorksheetPage({ config, worksheetKey }) {
   const id = String(email || "").trim().toLowerCase();
   // The instructor gets a sheet of their own, under their own email, so the
   // worksheet can be tried before it is sent.
-  const viewer = me ? { id, name: me.name } : session && instructor ? { id, name: "Instructor" } : null;
+  const viewer = me ? { id, name: me.name } : session && instructor ? { id, name: config.instructor?.name || "Instructor" } : null;
   const next = typeof window !== "undefined" ? window.location.pathname : config.path;
 
   // A student named in the address: that student's sheet, for the instructor.

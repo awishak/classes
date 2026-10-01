@@ -1,8 +1,8 @@
 // JobBot 5000: a worksheet that is a computer terminal in the year 2034.
 //
 // COMM 118's worksheet for the week of 2026-10-05. The student sits at a job
-// allocation terminal run by FRANCHISE, the one company that owns all media
-// and all sports in 2034. JobBot looks them up on the Brady-Manning Work Index,
+// allocation terminal run by FOOTBALL DYNASTY INC., the one company that owns
+// all media and all sports in 2034. JobBot looks them up on the Brady-Manning Work Index,
 // draws them as text, takes their skills, then three to five positions in
 // sports with the duties, the value to the sports ecosystem and why the
 // position still exists in 2034, then an evaluation (most interesting, most
@@ -18,14 +18,21 @@
 //
 // The questions are Andrew's words (2026-10-01). JobBot's other lines are
 // placeholders for him to edit; the jokes (the record, the likes and
-// dislikes, FRANCHISE) are his idea and Claude's wording.
+// dislikes, the company) are his idea and Claude's wording.
 
 export const JOBBOT_KEY = "jobbot-5000";
 export const JOBBOT_TITLE = "JobBot 5000";
 
-// FRANCHISE: the companies that own sports and the screens sports are watched
-// on, which in 2034 are one company.
-export const FRANCHISE = ["Fox", "RedBird", "Amazon", "Netflix", "Comcast", "Hulu", "Ineos", "Sky", "Emirates"];
+// FOOTBALL DYNASTY INC.: the companies that own sports and the screens sports
+// are watched on, which in 2034 are one company. Andrew, 2026-10-01: "one big
+// media conglomerate that holds all media, all sports, all that stuff." One
+// company a letter.
+export const COMPANY = "FOOTBALL DYNASTY INC.";
+export const COMPANY_LETTERS = [
+  ["F", "Fox"], ["O", "Oak View Group"], ["O", "Oaktree"], ["T", "TKO"], ["B", "Bally's"], ["A", "Amazon"], ["L", "Liberty Media"], ["L", "Legends"],
+  ["D", "Disney"], ["Y", "YouTube"], ["N", "Netflix"], ["A", "Apple"], ["S", "Sky"], ["T", "Turner"], ["Y", "YES Network"],
+  ["I", "Ineos"], ["N", "Nike"], ["C", "Comcast"],
+];
 
 const MIN_JOBS = 3, MAX_JOBS = 5;
 const LETTERS = ["A", "B", "C", "D", "E"];
@@ -384,11 +391,11 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
     await sleep(ms); x.parentElement.remove(); humOff(); setLight("on", "Ready");
   };
   const echo = (text) => { const x = line("you", "Operator"); x.textContent = text; chirp(); scroll(); };
-  const card = (title, rows) => {
+  const card = (title, rows, pace = 260) => {
     const x = line("bot", "JobBot"); const rec = document.createElement("div"); rec.className = "record"; x.append(rec); scroll();
     rec.innerHTML = "<h2>" + title + "</h2><dl></dl>";
     const dl = rec.querySelector("dl");
-    return (async () => { for (const [k, v] of rows) { dl.insertAdjacentHTML("beforeend", "<dt>" + esc(k) + "</dt><dd>" + esc(v) + "</dd>"); bootTick(); await sleep(260); } })();
+    return (async () => { for (const [k, v] of rows) { dl.insertAdjacentHTML("beforeend", "<dt>" + esc(k) + "</dt><dd>" + esc(v) + "</dd>"); bootTick(); await sleep(pace); } })();
   };
   const print = async (cls, text) => {
     const x = line("bot", "JobBot"); const pre = document.createElement("pre"); pre.className = cls; x.append(pre); scroll();
@@ -474,7 +481,7 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
 
   async function boot() {
     setLight("think", "Booting"); tone(523, 60); tone(784, 60, "square", 0.03, 0.08); tone(1046, 120, "square", 0.03, 0.16);
-    await sys("JOBBOT 5000  ·  LABOR ALLOCATION TERMINAL  ·  FRANCHISE");
+    await sys("JOBBOT 5000  ·  LABOR ALLOCATION TERMINAL  ·  " + COMPANY);
     await sys("Build 2034.10.01  ·  Node SCU-VARI-133  ·  Operator link encrypted");
     await sleep(400);
     await sys("Connecting to the Brady-Manning Work Index .....", 700);
@@ -511,7 +518,7 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
     await sleep(400);
     const title = await ask({ field: F.title(i), force, placeholder: "Job title",
       q: (i === 0 ? "Let's start with Position A, your first choice. " : "Position " + L + ", your " + ORDINAL[i] + " choice. ")
-        + "What is a position in sports that you would be competent at, and provide value to FRANCHISE (or self)? Please list the job title." });
+        + "What is a position in sports that you would be competent at, and provide value to " + COMPANY + " (or self)? Please list the job title." });
     await think("Searching the Brady-Manning Work Index for \"" + title + "\"", 1600);
     const duties = await ask({ field: F.duties(i), force, rows: 3, min: 60, q: "Found. Status: OPEN. What does this position accomplish? What are the main duties?" });
     await think("Noted", 700);
@@ -563,7 +570,7 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
     const t = document.createElement("div"); t.className = "ticket";
     const id = "ALLOC-2034-" + (h % 0xffffff).toString(16).toUpperCase().padStart(6, "0");
     const bars = Array.from({ length: 48 }, (_, i) => "<i class=\"" + ((h >>> (i % 28)) % 7 < 2 ? "g" : (h >>> (i % 23)) % 5 < 2 ? "w" : "") + "\"></i>").join("");
-    t.innerHTML = "<h2>Allocation</h2><div class=\"id\">" + id + " &middot; Employer of record: FRANCHISE</div><div class=\"big\">" + esc(name) + " &rarr; <b>" + esc(pick.title) + "</b></div>"
+    t.innerHTML = "<h2>Allocation</h2><div class=\"id\">" + id + " &middot; Employer of record: " + esc(COMPANY) + "</div><div class=\"big\">" + esc(name) + " &rarr; <b>" + esc(pick.title) + "</b></div>"
       + "<dl><dt>Skills</dt><dd>" + esc(prior[F.skills] || "") + "</dd><dt>Positions on file</dt><dd>" + jobs.length + "</dd><dt>Basis</dt><dd>The strongest case for a position that lasts to 2034.</dd></dl>"
       + jobs.map(j => "<div class=\"job\"><h3>Position " + j.letter + " &middot; " + esc(j.title) + (j === pick ? "<span class=\"pick\">assigned</span>" : "") + "</h3><dl><dt>Duties</dt><dd>" + esc(j.duties) + "</dd><dt>Value</dt><dd>" + esc(j.value) + "</dd><dt>In 2034</dt><dd>" + esc(j.future) + "</dd></dl></div>").join("")
       + "<div class=\"bars\" aria-hidden=\"true\">" + bars + "</div>";
@@ -610,13 +617,16 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
       await boot();
       await say("Hello. I am JobBot 5000.");
       await sleep(300);
-      await say("I allocate labor for FRANCHISE: " + FRANCHISE.slice(0, -1).join(", ") + " and " + FRANCHISE[FRANCHISE.length - 1] + ", which in 2034 are one company. All media. All sports. Every job in sports is a job at FRANCHISE.");
+      await say("I allocate labor for " + COMPANY);
+      await card("Employer of record", COMPANY_LETTERS, 140);
+      await sleep(300);
+      await say("Which in 2034 are one company. All media. All sports. Every job in sports is a job at " + COMPANY);
       await sleep(400);
       await lookup();
       await ask({ field: F.skills, rows: 2, placeholder: "writing, video editing, statistics, talking to anyone",
-        q: "Please list the skills you have now, in 2034, that make you a good employee for FRANCHISE. Separate them with commas." });
+        q: "Please list the skills you have now, in 2034, that make you a good employee for " + COMPANY + " Separate them with commas." });
       await think("Cross-referencing your skills against the Brady-Manning Work Index", 1800);
-      await say("The Brady-Manning Work Index lists 4,113 open positions at FRANCHISE that match your skills.");
+      await say("The Brady-Manning Work Index lists 4,113 open positions at " + COMPANY + " that match your skills.");
       await sleep(300);
       await say("Now, we will examine your employment preferences. I require you to present me with at least three positions that you would be interested in.");
       for (let i = 0; i < MAX_JOBS; i++) {
