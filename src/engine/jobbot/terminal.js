@@ -1,7 +1,7 @@
 // JobBot 5000: a worksheet that is a computer terminal in the year 2034.
 //
 // COMM 118's worksheet for the week of 2026-10-05. The student sits at a job
-// allocation terminal run by FRANCHISE DYNASTY INC., the one company that owns
+// allocation terminal run by FRANCHISE DYNASTY MEDIA INC., the one company that owns
 // all media and all sports in 2034. JobBot looks them up on the Brady-Manning Work Index,
 // draws them as text, takes their skills, then three to five positions in
 // sports with the duties, the value to the sports ecosystem and why the
@@ -23,15 +23,16 @@
 export const JOBBOT_KEY = "jobbot-5000";
 export const JOBBOT_TITLE = "JobBot 5000";
 
-// FRANCHISE DYNASTY INC.: the companies that own sports and the screens sports
-// are watched on, which in 2034 are one company. Andrew, 2026-10-01: "one big
-// media conglomerate that holds all media, all sports, all that stuff." One
-// company a letter.
-export const COMPANY = "FRANCHISE DYNASTY INC.";
+// FRANCHISE DYNASTY MEDIA INC.: the companies that own sports and the screens
+// sports are watched on, which in 2034 are one company. Andrew, 2026-10-01:
+// "one big media conglomerate that holds all media, all sports, all that
+// stuff." One company a letter, Chiquita Banana included on his say-so.
+export const COMPANY = "FRANCHISE DYNASTY MEDIA INC.";
 export const COMPANY_LETTERS = [
   ["F", "Fox"], ["R", "RedBird"], ["A", "Amazon"], ["N", "Netflix"], ["C", "Comcast"], ["H", "Hulu"], ["I", "Ineos"], ["S", "Sky"], ["E", "ESPN"],
   ["D", "Disney"], ["Y", "YouTube"], ["N", "Nike"], ["A", "Apple"], ["S", "Sinclair"], ["T", "TKO"], ["Y", "YES Network"],
-  ["I", "iHeart"], ["N", "NBC"], ["C", "CBS"],
+  ["M", "Meta"], ["E", "Emirates"], ["D", "DAZN"], ["I", "iHeart"], ["A", "Anthropic"],
+  ["I", "IMG"], ["N", "NBC"], ["C", "Chiquita Banana"],
 ];
 
 const MIN_JOBS = 3, MAX_JOBS = 5;
@@ -522,7 +523,7 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
     await sleep(400);
     const title = await ask({ field: F.title(i), force, placeholder: "Job title",
       q: (i === 0 ? "Let's start with Position A, your first choice. " : "Position " + L + ", your " + ORDINAL[i] + " choice. ")
-        + "What is a position in sports that you would be competent at, and provide value to " + COMPANY + " (or self)? Please list the job title." });
+        + "What is a position in sports that you would be competent at, and provide value to " + COMPANY + "? Please list the job title." });
     await think("Searching the Brady-Manning Work Index for \"" + title + "\"", 1600);
     const duties = await ask({ field: F.duties(i), force, rows: 3, min: 60, q: "Found. Status: OPEN. What does this position accomplish? What are the main duties?" });
     await think("Noted", 700);
@@ -624,7 +625,9 @@ export function mountJobBot(root, { store, viewer, photo, readOnly = false } = {
       await say("I allocate labor for " + COMPANY);
       await card("Employer of record", COMPANY_LETTERS, 140);
       await sleep(300);
-      await say("Which in 2034 are one company. All media. All sports. Every job in sports is a job at " + COMPANY);
+      await say("In 2034 these are one company. " + COMPANY + " owns every single NFL team. After the NFL, the other leagues. After the leagues, every channel, every stream, every stadium, every jersey, every ticket and every banana.");
+      await sleep(400);
+      await say("All media. All sports. Every job in sports is a job at " + COMPANY);
       await sleep(400);
       await lookup();
       await ask({ field: F.skills, rows: 2, placeholder: "writing, video editing, statistics, talking to anyone",
