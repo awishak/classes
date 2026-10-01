@@ -29,6 +29,7 @@ import { whereTo, studentFor } from "../src/engine/session.js";
 import { parseRoster, mergeRoster } from "../src/engine/roster.js";
 import { withWorksheetSubmits } from "../src/engine/worksheetSubmits.js";
 import { JOBS, CATEGORIES, HORRIBLE, findJob, horribleFor } from "../src/engine/worktopia/jobs.js";
+import { F as WF } from "../src/engine/worktopia/terminal.js";
 import { makeCode, looksLikeEmail } from "../api/logins.js";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
@@ -235,6 +236,14 @@ let failedEarly = 0;
   if (!findJob("highlight editor")) { console.error("  FAIL  worktopia: the Index cannot find a highlight editor by its singular"); failedEarly++; }
   if (findJob("astronaut")) { console.error("  FAIL  worktopia: the Index found an astronaut"); failedEarly++; }
   if (horribleFor(7, 0) === horribleFor(7, 1)) { console.error("  FAIL  worktopia: the second horrible job repeats the first"); failedEarly++; }
+  // Every field Worktopia writes must pass the database's check on
+  // worksheet_answers.field (migration 001): letters, an optional :part of
+  // letters. accept:0 failed it on 2026-10-01 and the terminal waited on the
+  // save for ever. Andrew: "i pressed yes i accept the job and now that's it."
+  const FIELD = /^[a-z]+(:[a-z]+(>[a-z]+)?)?$/;
+  const fields = Object.entries(WF).filter(([k]) => k !== "accept").flatMap(([, f]) => typeof f === "function" ? [0, 1, 2].map(i => f(i)) : [f]).concat(Array.from({ length: HORRIBLE.length }, (_, r) => WF.accept(r)));
+  fields.forEach(f => { if (!FIELD.test(f)) { console.error("  FAIL  worktopia: the field " + f + " would be refused by the database"); failedEarly++; } });
+  if (new Set(fields).size !== fields.length) { console.error("  FAIL  worktopia: two answers share a field name"); failedEarly++; }
 }
 
 const PHONE = 390, LAPTOP = 1440;

@@ -293,7 +293,9 @@ const photoToText = (url) => new Promise(resolve => {
 const part = (name) => (i) => name + ":" + LETTERS[i].toLowerCase();
 export const F = {
   name: "name",
-  accept: (r) => "accept:" + r,
+  // Rounds as letters, since the database allows only letters in a part: a to
+  // z, then aa to zz. accept:0 was refused on 2026-10-01.
+  accept: (r) => "accept:" + String.fromCharCode(97 + (r % 26)).repeat(Math.floor(r / 26) + 1),
   title: part("title"), skills: part("skills"), why: part("why"), duties: part("duties"), value: part("value"), future: part("future"),
   interesting: "interesting", likely: "likely", pays: "pays", confirm: "confirm",
   industry: "industry", fading: "fading", rising: "rising",

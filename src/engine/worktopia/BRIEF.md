@@ -100,8 +100,8 @@ answer back ... it's an advanced version of AI."
    accept. if they say yes, ask them to choose again. Then when they choose
    no, say, okay, what employment do you want?" YES gets "Accepted. Choose
    again." and the next horrible job on a new ticket; NO gets "Declined.
-   Noted on your file." Each round is its own field (`accept:0`,
-   `accept:1`...), so the file shows how many they took.
+   Noted on your file." Each round is its own field (`accept:a`,
+   `accept:b`...), so the file shows how many they took.
 7. **Position A.** "Okay. What employment do you want?" The title is looked
    up: "Found in the Index: Sideline reporter, under Broadcast and
    production. Status: OPEN." or "Not in the Index. Filed as a new position.
@@ -246,7 +246,7 @@ Worktopia, which is the press the browser wants.
 
 Every answer is its own row, written when sent. A field is a word with an
 optional part, the shape the database's field check allows: `name`,
-`accept:0` and on, `title:a`, `skills:a`, `why:a`, `duties:a`, `value:a`,
+`accept:a` and on, `title:a`, `skills:a`, `why:a`, `duties:a`, `value:a`,
 `future:a` (and `:b`, `:c`), `interesting`, `likely`, `pays`, `confirm`,
 `industry`, `fading`, `rising`, `coworkers`, `meeting`, `thursday`,
 `stars`, `review`. An answer over 500 characters is cut into rows at
