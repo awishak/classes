@@ -83,6 +83,10 @@ export default function GradeView({ config }) {
   };
 
   const asg = assignments.find(x => x.id === aid) || null;
+  // Andrew, 2026-10-01: "put that as a hint to myself in grade view, hey this
+  // is how we grade." The note lives on the assignment in config, so it is
+  // read off config even when the store holds its own copy of the list.
+  const howWeGrade = asg?.howWeGrade || (config.assignments || []).find(x => x.id === aid)?.howWeGrade || "";
   const board = boardOf(data, aid);
   const [dragging, setDragging] = useState("");
   const [over, setOver] = useState("");
@@ -219,6 +223,14 @@ export default function GradeView({ config }) {
 
       {asg ? (
         <main style={{ maxWidth: 1600, margin: "0 auto", padding: "16px 20px 48px" }}>
+          {howWeGrade ? (
+            <details style={{ marginBottom: 16, border: "1px solid " + LINE, borderRadius: 12, padding: "10px 14px", background: SUNK }}>
+              <summary className="gv-focus" style={{ cursor: "pointer", fontSize: 15, fontWeight: 600, color: a }}>{"How we grade the " + (asg?.title || "challenge").toLowerCase()}</summary>
+              <div style={{ maxWidth: 760, marginTop: 8 }}>
+                {howWeGrade.split(/\n{2,}/).map((p, i) => <p key={i} style={{ fontSize: 15, lineHeight: 1.5, color: TEXT_SECONDARY, margin: "0 0 10px" }}>{p}</p>)}
+              </div>
+            </details>
+          ) : null}
           {picked ? (
             <div style={{ fontSize: 15, color: TEXT_SECONDARY, marginBottom: 12 }}>
               {first(picked)} is picked up. Choose a column, or press Escape.

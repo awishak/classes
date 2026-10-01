@@ -350,7 +350,10 @@ export const assignments = [
     "weight": 3,
     "description": "",
     "instructionsUrl": "",
-    "rubric": []
+    "rubric": [],
+    // The folded note at the top of Grade view, for Andrew. The long version
+    // is teaching/comm3/comm3-grading.md.
+    "howWeGrade": "The process. Claude pulls the doc links off this page, reads every doc against the checklist below, and sorts the class into Complete, Complete with a note, Not quite, Incomplete. A doc not shared with me is Incomplete. Claude drafts a comment for every card in my voice and shows me the whole sort as a table before anything is written. I edit. Claude writes the columns and comments onto the board. I press Release.\n\nThe voice. Complete gets \"Nice work, [first name].\" A slip on a Complete is \"One note:\" and asks with \"I'd like you to,\" never \"go back.\" Not quite opens with some version of \"I see some effort, but we have some work to do,\" then names the things. Say \"we need,\" not \"I need.\" Incomplete gives credit first, something specific from what they did do, then what is missing, and no promise about what happens next. If they left my instructions in the doc, it is still Complete this week, with the line asking them to delete instructions on all future assignments.\n\nPart 1, for each person: a headline, Entman's four parts named (problem, cause, who's good or bad, how it ended), one moment a transcript wouldn't catch, the follow-up about what the other person left out, and why the headline is built the way it is.\n\nPart 2: six headlines for their actual people, a sentence on why for each, at least one equivalency frame and one emphasis frame labeled, two sent with evidence and a note on how it went.\n\nThe lines. Missing labels alone is Complete with a note. Confusing the two frame types, or answering the transcript question as \"what I'd cut,\" is Not quite. A whole part missing, the doc not shared, or the wrong assignment is Incomplete."
   },
   {
     "id": "ex2",
