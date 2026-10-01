@@ -797,15 +797,13 @@ signed in off the roster. **It is not open to COMM 118 students yet**:
 `open` on the local worksheet is a list of class ids (COMM 999, for Pepe
 and Jan) or `true` for every class; a student in a class not on it reads
 "This worksheet is not open yet," and the instructor goes through under
-his own email. Set `open: true` to send it. A public page at `/worktopia`
-shows it to outsiders in his words, pictures under `public/worktopia`. The
+his own email. Set `open: true` to send it. The public page at `/worktopia` is the terminal itself on a memory store (`visitor: true`): no roster, no calendar, no submit, nothing kept, and a ? at the top right that opens his pitch (`ABOUT` in terminal.js, from the "Worktopia front page" Google Doc). The pictures under `public/worktopia` are kept and unused. The
 instructor reads one file at `?s=<roster id>`, sees the submits at
 `/comm118/worksheets`, and reads the whole Index at `?index`. The submits
 count on whichever assignment links to the address, as the stakeholder
 map's do.
 
-The run: an intro page about 2034 (Andrew's skeleton, Claude's fill, marked
-in `INTRO`), then the terminal boots, asks the name, finds the student on the
+The run: an intro page about 2034 (Andrew's own words from the Google Doc, used word for word in `INTRO`, 2026-10-01), then the terminal boots, asks the name, finds the student on the
 Brady-Manning Work Index (a seventeen-digit number, likes and dislikes, all
 from the name) and draws them as text (their card photograph, or a face from
 the name). Then a horrible job (`HORRIBLE`, sixty of them, his two first) on
@@ -817,18 +815,14 @@ Index of a thousand jobs (twenty-five categories of forty, the smoke counts
 them). After Position A: "this is not a guarantee. We need to present three
 positions to Worktopia's system, which will then choose one for you." Then
 the evaluation kept from JobBot (most interesting, most likely, pays the
-most, confirm), three industry questions (changes 2026 to 2034, jobs fading,
-jobs rising), co-workers picked off the roster (up to four, or none), the
+most, confirm), co-workers picked off the roster (up to four, or none), the
 workgroup date (Oct 21 in class, Oct 22 at 9 am, Oct 23 in class) and
-whether Thursday 9 am works, a star rating and a review, then "Worktopia's
-system will get back to you" and submit. No allocation at the end any more.
-The employer is still FRANCHISE DYNASTY MEDIA INC. (Meta, Emirates, DAZN, Anthropic, IMG and Chiquita Banana joined on October 1), which owns every NFL team. Fields
+whether Thursday 9 am works, a star rating and a review, `REMEMBER`, then the three industry questions last, opening "Okay, if this isn't the actual reality, what do you see as the changes?" (his words, 2026-10-01; they were first in the morning), then "Worktopia's system will get back to you" and submit. No allocation at the end any more.
+The employer is still FRANCHISE DYNASTY MEDIA INC. (Meta, Emirates, DAZN, Anthropic, IMG and Chiquita Banana joined on October 1). By his intro it is Musk's, owns 97 franchises, and does not own the Packers, who held out; the Quackers are gone and the Sports Subscription ticket is Packers against Raiders. Fields
 are in `F` in terminal.js. A reload replays the file and picks up at the
 first open question; submit and recall work as on every worksheet; a
 position can be changed after submit. Dropped from JobBot: the generic
-skills question up front and the fourth and fifth positions. Open: the
-"values of sports" part Andrew is still thinking about, and his words for
-the saving line and the intro fill.
+skills question up front and the fourth and fifth positions. Worktopia is nostalgic for the human era of sports (his ask, 2026-10-01: going to games, ticket stubs, human error, the A's, the Coliseum drums, Section 215, Hudson, Zito's guitar, Tejada, Cespedes, Coco Crisp, Bill King, Ken Korach). He cut the first draft as "too AI" and "a little too much," so it is light: the Cespedes line at the lookup, which he likes, the 2002 streak at the evaluation, a Section 215 drums update with a synthesized drum cadence, and `REMEMBER`, five lines after the review, Claude's draft for him to rewrite. Open: the "values of sports" part Andrew is still thinking about, his words for the saving line and for `REMEMBER` and `ABOUT`, whether "a job in sports in 2032" in his intro should read 2034, and whether a Careless Whisper or drum MIDI goes in (asked 2026-10-01, not done; the song is under copyright, the drums are synthesized in `drums()`).
 
 ## Things known to be unfinished
 

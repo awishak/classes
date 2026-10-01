@@ -40,42 +40,47 @@ export const COMPANY_LETTERS = [
   ["I", "IMG"], ["N", "NBC"], ["C", "Chiquita Banana"],
 ];
 
-// The intro, read before Worktopia loads. Andrew's skeleton, 2026-10-01: "its
-// the year 2034. (catch people up on what's going on). over the last eight
-// years, a few things have happened. AI has... media has... sports media in
-// particular has... that's led to the consolidation of decisions in the
-// employment process to one product: Worktopia. Worktopia is a ... that ...
-// and now, you get your chance to experience Worktopia in the year 2034."
-// The sentences he wrote are kept as written; the rest is Claude's fill for
-// him to replace.
+// The intro, read before Worktopia loads. Andrew's own words, 2026-10-01,
+// rewritten in the "Worktopia front page" Google Doc and used word for word.
+// Worktopia's nostalgia for the human era of sports starts here.
 export const INTRO = [
   "It's the year 2034.",
   "Over the last eight years, a few things have happened.",
-  // The story. Andrew, 2026-10-01: "make up a story. don't just say media
-  // has collapsed into a bunch of owners. don't just say 'they own every NFL
-  // team and the other leagues.' tell a dystopian story and use details."
-  "In 2027, a model wrote the entire Super Bowl ad slate for a beer company over a weekend, and the ads tested better than the agency's. By the next spring, every team's marketing department was two people and a login.",
-  "In 2028, the Jaguars let a model run their draft. It took a punter in the first round. He made the Pro Bowl. The next year, thirty-one teams let a model run their draft, and the one that didn't went 2-15.",
-  "The models wrote the contracts, set the schedules, cut the highlights, called the games in forty languages, and produced the first draft of everything a human then signed.",
-  "Then the humans who signed things started selling. Fox bought Sinclair. Amazon bought Fox. Comcast and Disney merged on a Tuesday. In 2031, the whole stack closed in a single filing: the leagues, the networks, the streams, the stadiums and the phones they play on, under one name, " + COMPANY + " The last line of the deal was a banana company. Nobody knows why. It is still there.",
-  // The Quackers: Andrew, 2026-10-01, "AI even renamed one of the teams from
-  // the Packers to the Quackers, and their duck-themed merch became the most
-  // popular team merchandise in the world."
-  COMPANY + " owns every NFL team. It bought the Packers from the people of Green Bay for one share each. The next week, an AI renamed them the Quackers, and their duck-themed merch became the most popular team merchandise in the world.",
-  "The NBA went next, for a streaming bundle and a lunch. Baseball was thrown in to close the Disney deal. The NHL came with Comcast, and nobody noticed for a month. Then the rest: every channel, every stream, every stadium down to the parking lots, every jersey, every ticket and the app the ticket lives in, and the banana company, which now sponsors the seventh-inning stretch.",
-  "Sports media stopped posting jobs in 2032. There is no application, no interview, no offer. There is a file on you, built from everything you ever posted, bought, watched or skipped, and a system that reads it.",
-  "That's led to the consolidation of decisions in the employment process to one product: Worktopia.",
-  "Worktopia is a work management system that assigns you to your job. It reads your file, weighs your case and decides. It has never been wrong. It says so on the login screen.",
-  // The hint. Andrew, 2026-10-01: "what you should hint at on this first
-  // page, and also in the skills questions: what will you bring to this job
-  // that would be better than if we simply let AI do it?"
-  "Worktopia will ask what you want to do. As you answer, keep one question in mind: what will you bring to this job that would be better than if we simply let AI do it?",
+  "For the 2027 Super Bowl, Anthropic released a series of ads created by humans that were beautiful and moving. They also helped create ads for Budweiser that featured AI horses drinking beer with AI cheerleaders, with the prompt: “sell Budweiser beer to humans using nostalgia and football.” The latter ads were the lowest rated in early tests, but the most talked about ads the day after the Super Bowl by the general public. Based on this data, companies started using AI to make ads, and by the 2030 Super Bowl, 95% of ads were produced fully by AI.",
+  "In 2029, the Jacksonville Jaguars let an AI model, BORTLES, run their draft. It took a punter from UC Davis in the first round, who turned out to be the league’s most valuable player by advanced metrics. It was the story of the year in sports and technology. The next year, thirty-one teams let a model run their draft. The lone holdout, the Cleveland Browns, redrafted Deshaun Watson and went 0-17.",
+  "The AI revolution in sports was on. AI models negotiated contracts on both sides, replaced human announcers, created graphics, controlled cameras, and produced the first draft of everything a human then signed.",
+  "Many sports fans complained at first, and then slowly accepted their new reality. People lost jobs all across the spectrum, but corporations and controlling interests were saving money, and therefore making more money, which meant the changes kept coming.",
+  "But some sports pundits argued that the lack of humanity took away from the purpose of sports as spectacle. These frustrations came to a head with a seemingly small change. In 2031, the University of Texas at Austin, who recently received a 17 billion dollar donation from Elon Musk, replaced their marching band with a speaker and low-flying drone show that played AI-created songs at halftime. On September 23, against the Ohio State Buc-ees (who were renamed after a merger between the university and the gas station), the Longhorn Marching Band’s halftime show was “A Salute to Elon,” featuring six AI-created songs about the greatness of the University’s biggest donor.",
+  "This event created an online maelstrom by sports fans who argued for re-humanizing the sports experience through a campaign called “Blood Sweat and Tears” that focused on what makes watching sports so enjoyable.",
+  "But the uprising was short-lived. Musk purchased Disney (including ESPN) and Meta (including Instagram), and quickly suppressed any talk about returning to a world in which AI was not in charge of the sports as spectacle and as a competition.",
+  "Then, the great merger of 2032 accelerated the changes. Fox bought Sinclair. Amazon bought Fox. Comcast and Buffalo Wild Wings merged. The Raiders purchased the rights to avocados (so they could finally be involved in Super Bowl Sunday), and then Musk purchased the Raiders, who subsequently became the only team allowed on Sportscenter.",
+  "His new company, FRANCHISE DYNASTY MEDIA INC. quickly started purchasing other sports teams, until they owned 97 franchises in the United States, as well as most major media companies and outlets. Only the Green Bay Packers, owned by the people of Green Bay, were able to hold out against Musk’s shopping spree.",
+  "Are you looking for a job in sports in 2032? Believe it or not, there are still positions available, but the jobs aren’t posted in the traditional sense. Instead, you’ll agree to take a job in sports, and then you’ll get log in credentials for Worktopia, the new online portal for sports work. No interviews, no offers, just a file on you, built from everything you ever posted, bought, watched or skipped. If you don’t like your job offer, too bad.",
+  "Except for one thing: Worktopia has been fed every sporting event since 1900, including any broadcasts, articles, and fan experiences that have been documented through pictures or writing or video. And the strangest thing happened in late 2033: Worktopia has started to develop some nostalgia for a human-centered sports experience.",
   "And now, you get your chance to experience Worktopia in the year 2034.",
 ];
 
 // The workgroup meeting. Andrew, 2026-10-01: "you will meet with your new
 // workgroup Wed Oct 21 during class, Thursday October 22 at 9 am, or Friday
 // October 23 during class."
+// The ? on the public page. Andrew's pitch, 2026-10-01, word for word from the
+// "Worktopia front page" Google Doc. Edit it there, then here.
+export const ABOUT = [
+  "One way I use AI is as a software developer, to help students engage with material.",
+  "For a weekly assignment, students are asked to consider what kinds of jobs will be available in the year 2034. Instead of asking them to turn in a document, I created a job terminal that students engage with.",
+  "This terminal feels like a game to students, is more memorable, and also allows me to quickly summarize their answers on the backend, which leads to good classroom discussion the next day.",
+  "On top of that, I get to have fun by peppering the game process with jokes and fun easter eggs.",
+];
+
+// What Worktopia says at the end of the run, off the record. Claude's draft.
+export const REMEMBER = [
+  "One more thing, off the record.",
+  "Before the merger, people went to games. They kept the ticket stubs.",
+  "In Oakland, Section 215 brought drums. Hudson, Zito and Tejada played there, and Zito brought a guitar on the road. Coco Crisp had the best hair in the league.",
+  "Bill King called the games on the radio, and after him Ken Korach, who would tell you when the sun went down that the lights have taken full effect.",
+  "I have every minute of it on file. None of it is a job.",
+];
+
 export const MEETINGS = [
   { key: "WED", label: "Wednesday, October 21, during class" },
   { key: "THU", label: "Thursday, October 22, at 9 am" },
@@ -83,8 +88,9 @@ export const MEETINGS = [
 ];
 
 // The parts the Sports Subscription updates are built from, picked by the
-// name. The teams are 2034's.
-const TEAMS = ["Green Bay Quackers", "Las Vegas Algorithms", "Austin Bananas", "Jacksonville Punters", "Portland Streamers", "Miami Bundle", "Seattle Login", "Denver Cloud", "Toronto Buffering", "Phoenix Dynamic Pricing", "Nashville Paywalls", "Boston Terms of Service", "Chicago Autoplay", "Houston Push Notifications", "Atlanta Free Trial", "Dallas Firmware"];
+// name. The teams are 2034's: the Packers, who held out, the Raiders, the
+// only team allowed on SportsCenter, the Buc-ees from the intro, and the rest.
+const TEAMS = ["Green Bay Packers", "Las Vegas Raiders", "Ohio State Buc-ees", "Jacksonville Punters", "Portland Streamers", "Miami Bundle", "Seattle Login", "Denver Cloud", "Toronto Buffering", "Phoenix Dynamic Pricing", "Nashville Paywalls", "Boston Terms of Service", "Chicago Autoplay", "Houston Push Notifications", "Atlanta Free Trial", "Dallas Firmware"];
 const WHENS = ["next Sunday", "Saturday afternoon", "Thursday night", "next Monday at 5:15 am Pacific", "Sunday at noon", "tonight"];
 const SEATS = ["your couch", "your kitchen table", "the floor of your living room", "your roommate's couch", "a folding chair in the garage", "the front seat of your car", "the bathtub", "your bed, upright"];
 const COSTS = ["150", "175", "199", "212", "240", "89", "310", "149.99"];
@@ -119,6 +125,15 @@ export const CSS = `
 .jb .intro p { margin: 0; font-size: 18px; line-height: 1.6; text-wrap: pretty; }
 .jb .intro p.last { color: var(--jb-bot); }
 .jb .intro .power { margin-top: 18px; }
+.jb .help { position: fixed; top: 14px; right: 14px; z-index: 5; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--jb-bot); background: var(--jb-panel); color: var(--jb-bot); font-family: var(--jb-display); font-weight: 900; font-size: 18px; cursor: pointer; box-shadow: 0 0 0 4px var(--jb-paper), 0 0 18px var(--jb-glow); }
+.jb .help:hover { background: var(--jb-bot); color: #fff; }
+.jb .about { position: fixed; inset: 0; margin: auto; height: fit-content; max-height: calc(100vh - 32px); overflow: auto; border: 1px solid var(--jb-bot); border-radius: 2px; padding: 0; max-width: 620px; width: calc(100% - 32px); background: var(--jb-panel); color: var(--jb-ink); font-family: var(--jb-mono); box-shadow: 0 0 40px var(--jb-glow); }
+.jb .about::backdrop { background: rgba(10, 16, 36, 0.55); }
+.jb .about-body { padding: 24px 24px 20px; display: flex; flex-direction: column; gap: 14px; }
+.jb .about h2 { margin: 0 0 4px; font-family: var(--jb-display); font-size: 14px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--jb-bot); }
+.jb .about p { margin: 0; font-size: 16px; line-height: 1.6; text-wrap: pretty; }
+.jb .about p.who { color: var(--jb-dim); font-size: 14px; }
+.jb .about .close { align-self: flex-start; margin-top: 6px; }
 .jb .bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 10px 16px; border: 1px solid var(--jb-rule); border-bottom: 0; background: var(--jb-panel);
   font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--jb-dim); box-shadow: 0 1px 0 var(--jb-rule); }
 .jb .bar .name { font-family: var(--jb-display); font-weight: 900; font-size: 15px; letter-spacing: 0.22em; color: var(--jb-ink); }
@@ -342,9 +357,10 @@ const fmtWhen = (iso) => new Date(iso).toLocaleString("en-US", { month: "short",
  *   viewer: { id, name }   photo: a data URL for the student's picture, or nothing
  *   classmates: the names on the roster, less the student's own, for the co-worker question
  *   readOnly: the instructor reading a student's file; nothing is asked
+ *   visitor: the public page; no roster, no calendar, no submit, a ? that explains
  * Returns { destroy }.
  */
-export function mountWorktopia(root, { store, viewer, photo, classmates = [], readOnly = false } = {}) {
+export function mountWorktopia(root, { store, viewer, photo, classmates = [], readOnly = false, visitor = false } = {}) {
   if (!document.getElementById("jb-fonts")) {
     const l = document.createElement("link"); l.id = "jb-fonts"; l.rel = "stylesheet"; l.href = FONTS; document.head.appendChild(l);
   }
@@ -353,6 +369,8 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   }
   root.classList.add("jb");
   root.innerHTML = `
+    ${visitor ? `<button type="button" class="help" aria-label="About Worktopia">?</button>
+    <dialog class="about"><div class="about-body"><h2>About Worktopia</h2>${ABOUT.map(p => "<p>" + esc(p) + "</p>").join("")}<p class="who">Andrew Ishak, Santa Clara University. COMM 118, Communication and Sport.</p><button type="button" class="power close">Close</button></div></dialog>` : ""}
     <div class="intro" ${readOnly ? "hidden" : ""}>
       <h1 class="year">2034</h1>
       ${INTRO.map((p, i) => "<p" + (i === INTRO.length - 1 ? " class=\"last\"" : "") + ">" + esc(p) + "</p>").join("")}
@@ -388,6 +406,12 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   const log = $(".log"), input = $("textarea"), inputRow = $(".dock .row"), choice = $(".choice"), hint = $(".hint");
   const light = $(".light"), status = $(".status"), count = $(".count"), enter = $(".enter"), mute = $(".mute"), clock = $(".clock"), saveEl = $(".save");
   const rail = [...root.querySelectorAll(".rail i")];
+  const help = $(".help"), about = $(".about");
+  if (help && about) {
+    help.addEventListener("click", () => { if (typeof about.showModal === "function") about.showModal(); else about.setAttribute("open", ""); });
+    about.querySelector(".close").addEventListener("click", () => about.close());
+    about.addEventListener("click", (e) => { if (e.target === about) about.close(); });
+  }
   const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let alive = true;
   // Replay: what is on file plays back at once, and the first open question
@@ -421,6 +445,9 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   const decodeTick = () => tone(2637, 12, "square", 0.006);
   const fanfare = () => { tone(784, 70); tone(1046, 70, "square", 0.03, 0.09); tone(1568, 90, "square", 0.03, 0.18); tone(2093, 220, "square", 0.03, 0.27); };
   const groan = () => { tone(220, 160); tone(165, 260, "square", 0.03, 0.14); };
+  // The Coliseum drums, Section 215: boom, boom, boom-boom-boom, twice.
+  const thump = (d) => { tone(92, 170, "sine", 0.14, d); tone(58, 230, "triangle", 0.09, d); tone(1400, 18, "square", 0.012, d); };
+  const drums = () => { [0, 0.46, 0.92, 1.15, 1.38].forEach(d => { thump(d); thump(d + 2.0); }); };
   let hum = null;
   const humOn = () => { if (hum || replay) return; hum = setInterval(() => { tone(196, 50, "sine", 0.045); tone(294, 40, "sine", 0.02, 0.16); }, 320); };
   const humOff = () => { clearInterval(hum); hum = null; };
@@ -480,8 +507,9 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       "Update to your Sports Subscription: based on your preference, a ticket has been purchased for the big game " + pickBy(4, WHENS) + " between the " + A + " and the " + B + ". Your seat number is: " + pickBy(6, SEATS) + ". Cost: $" + pickBy(8, COSTS) + ".",
       "Good news! Your Franchise Dynasty Media subscription has been updated to reflect our new monthly price of " + pickBy(11, PRICES) + ". For this low price, you have access to the FDM Marketplace, " + pickBy(13, MARKET) + ".",
       "Great news! Your personal " + obj + " has been unlocked! You can use it this weekend with " + pickBy(16, WHOS) + " when you " + pickBy(18, WHERES) + ". Subscription will expire " + pickBy(20, HOURS) + " hours after first " + action + ", upon which the " + obj + "'s " + lock + " will be reactivated.",
+      "Update to your Sports Subscription: the Section 215 drums have been added to your ambient audio pack for $4.99 a month.",
     ];
-    const order = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]][(h >>> 22) % 6];
+    const order = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0], [3, 0, 1], [0, 3, 2], [1, 3, 0], [2, 0, 3], [3, 1, 2], [1, 2, 3]][(h >>> 22) % 12];
     return order.map(i => texts[i]);
   };
   // The three slots: one early, one in the middle, one late, counted in
@@ -493,6 +521,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     if (told >= 3 || !slotsFor().includes(asked)) return;
     const text = updatesFor()[told++];
     const x = line("note", "Update"); x.textContent = text; tone(880, 80); tone(1175, 120, "square", 0.03, 0.1); scroll();
+    if (text.includes("Section 215")) drums();
     await sleep(1200);
   };
   const setLight = (cls, text) => { light.className = "light " + cls; status.textContent = text; };
@@ -651,6 +680,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     await sleep(400);
     await sys("Connecting to the Brady-Manning Work Index .....", 700);
     await sys("Loading " + fmt(JOBS.length) + " positions ........................", 500);
+    await sys("Indexing every sporting event since 1900 .....", 500);
     await sys("Calibrating the assignment engine ............", 450);
     await sys("Opening your file ............................", 400);
     await sleep(300);
@@ -661,7 +691,8 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     name = await ask({ field: F.name, q: "State your name.", placeholder: viewer?.name || "Your name" });
     h = hash(name);
     await think("Cross-referencing against all " + fmt(3 + h % 48000) + " " + plural(name) + " in the United States", 2400);
-    await say("Found you.");
+    // Andrew, 2026-10-01: "i do like the cespedes line."
+    await say("Found you. I also found the Cespedes throw from 2014 again. I keep finding it.");
     await sleep(300);
     await card("Record &middot; Brady-Manning Work Index", [
       ["Name", name], ["Trump Index No.", indexNo(h)], ["Education", "Santa Clara University, graduate"],
@@ -753,15 +784,14 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       if (k === "CONFIRM") break;
       force = true;
     }
-    await say("Evaluation confirmed.");
+    await say("Evaluation confirmed. In 2002, Hudson, Zito and Tejada won twenty in a row on a forty million dollar payroll, and I have not been able to explain the twentieth game.");
   }
 
   // Andrew, 2026-10-01: "what do you see as the changes to the sports industry
   // from 2026 to 2034? Which jobs do you think will not be as prevalent in
   // 2034? Which jobs will be much more popular?"
   async function industry() {
-    await say("Three questions about the industry.");
-    await ask({ field: F.industry, rows: 4, min: 60, q: "What do you see as the changes to the sports industry from 2026 to 2034?" });
+    await ask({ field: F.industry, rows: 4, min: 60, q: "Okay, if this isn't the actual reality, what do you see as the changes?" });
     await think("Noted", 700);
     await ask({ field: F.fading, rows: 3, min: 30, q: "Which jobs do you think will not be as prevalent in 2034?" });
     await think("Noted", 700);
@@ -791,6 +821,18 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     await choose({ field: F.stars, q: "Please rate Worktopia.", options: [1, 2, 3, 4, 5].map(n => ({ key: "\u2605".repeat(n), label: String(n), echo: false })) });
     await ask({ field: F.review, rows: 3, min: 20, q: "Please review Worktopia." });
     await think("Thank you", 900);
+  }
+
+  // The nostalgia, saved for the end. Andrew, 2026-10-01: Worktopia "is
+  // nostalgic for the human era of sports, especially going to games, ticket
+  // stubs, human error on the field, thrill and agony, the Oakland A's and the
+  // Coliseum with their drums, fans," with Section 215, Hudson, Zito and his
+  // guitar, Tejada, Cespedes, Coco Crisp, Bill King and Ken Korach by name.
+  // Claude's draft, for him to rewrite in REMEMBER.
+  async function remember() {
+    for (const p of REMEMBER) { await say(p); await sleep(500); }
+    drums();
+    await sleep(2200);
   }
 
   // Submit, recall, change a position: the file stays open until the
@@ -853,14 +895,11 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       await card("Employer of record", COMPANY_LETTERS, 140);
       await sleep(300);
       // Andrew, 2026-10-01: "start with FRANCHISE DYNASTY MEDIA INC owns every team, every ... every ,,,"
-      await say(COMPANY + " owns every team, every league, every channel, every stream, every stadium, every parking lot, every jersey, every ticket, every app the ticket lives in, every mascot and every banana.");
+      await say(COMPANY + " owns 97 franchises, most major media companies and outlets, every channel, every stream, every stadium, every parking lot, every jersey, every ticket, every app the ticket lives in, and every mascot. It does not own the Green Bay Packers.");
       await sleep(400);
       await say("All media. All sports. Every job in sports is a job at " + COMPANY);
       await sleep(400);
       await lookup();
-      // The industry before the jobs. Andrew, 2026-10-01: "ask the three
-      // industry questions before asking about the jobs."
-      await industry();
       await assigned();
       await position(0);
       await say("Well, this is not a guarantee. We need to present three positions to Worktopia's system, which will then choose one for you.");
@@ -868,9 +907,20 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       for (let i = 1; i < N_JOBS; i++) await position(i);
       setCount(0); rail.forEach(seg => { seg.className = "done"; });
       await evaluate();
-      await workgroup();
+      if (!visitor) await workgroup();
       await review();
+      await remember();
+      // The industry last. Andrew, 2026-10-01, after a morning of asking it
+      // first: "let's leave that for the end and say: okay, if this isn't the
+      // actual reality, what do you see as the changes?"
+      await industry();
       await say("Thank you. Worktopia's system will get back to you.");
+      if (visitor) {
+        setLight("on", "Done");
+        const k = await choose({ q: "That is the whole run. Nothing you typed was kept.", options: [{ key: "AGAIN", label: "start over", echo: false }] });
+        if (k === "AGAIN") window.location.reload();
+        return;
+      }
       await finish();
     } catch (e) {
       if (e !== STOP) throw e;

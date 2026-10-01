@@ -208,8 +208,8 @@ export default function App() {
     return <InstructorBar><FeaturesPage /></InstructorBar>;
   }
 
-  // Worktopia, shown to people outside the class: screenshots and Andrew's
-  // account of why a terminal rather than a document. Public.
+  // Worktopia, open to the public: the terminal itself on a memory store,
+  // with a ? that explains. Nothing a visitor types is kept.
   if (path === "/worktopia" || path === "/worktopia/") {
     return <InstructorBar><WorktopiaPage /></InstructorBar>;
   }

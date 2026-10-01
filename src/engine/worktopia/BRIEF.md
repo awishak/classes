@@ -137,11 +137,13 @@ answer back ... it's an advanced version of AI."
    most interesting, which they are most likely to get, which pays the
    most. Shown back as a card, then "Is this correct?" CONFIRM moves on,
    REVISE asks the three again.
-10. **The industry.** Moved ahead of the jobs on 2026-10-01 ("ask the
-    three industry questions before asking about the jobs"): it now runs
-    right after the lookup, before the first assignment. His three: "What do you see as the changes to the
-    sports industry from 2026 to 2034?" "Which jobs do you think will not be
-    as prevalent in 2034?" "Which jobs will be much more popular?"
+10. **The industry.** Last, after the review and `REMEMBER`. It ran
+    first for a morning ("ask the three industry questions before asking
+    about the jobs"), then Andrew moved it: "let's leave that for the end
+    and say: okay, if this isn't the actual reality, what do you see as the
+    changes?" His three now: "Okay, if this isn't the actual reality, what
+    do you see as the changes?" "Which jobs do you think will not be as
+    prevalent in 2034?" "Which jobs will be much more popular?"
 11. **The workgroup.** "Please name people in the class who you would
     potentially like to have as a co-worker. You may name up to four, or
     none." The roster, less themselves, as toggles and a Done button; saved
@@ -301,12 +303,45 @@ set and clear `submitted_at` on the sheet row, the same as the stakeholder
 map. Andrew: "you have to keep all these student answers. i will need them
 to review them."
 
-## Open
+## The public version, 2026-10-01
 
+Andrew: "just give the public a way to go through worktopia. make it a public
+version. i'll link to it and let people play with it. and then give a ? button
+at the top that has a pop up that has like a 3 paragraph description of what
+i'm doing here." `/worktopia` mounts the terminal with `visitor: true` on
+`memoryStore`: no roster question, no calendar, no submit, a start-over
+button at the end that reloads, and nothing kept past the tab. The ? is a
+fixed button at the top right that opens a `<dialog>` holding `ABOUT`, his
+pitch from the "Worktopia front page" Google Doc, word for word. The intro is
+his too, from the same doc, in `INTRO`.
+
+The nostalgia. His ask the same day: Worktopia "is nostalgic for the human
+era of sports, especially going to games, ticket stubs, human error on the
+field, thrill and agony, the oakland a's and the coliseum with their drums,
+fans," then "a's section 215 please" and the names: Hudson, Zito and his
+guitar, Tejada, Cespedes, Coco Crisp, Bill King, Ken Korach "the lights have
+taken full effect." The first draft put a line in the greeting and a wry
+aside on most answers; he cut it: "you went too AI on this part ... save the
+nostalgia for later in the conversation," then "well not every line. but it's
+a little too much. i do like the cespedes line." What is left:
+
+- The lookup: "Found you. I also found the Cespedes throw from 2014 again. I
+  keep finding it."
+- The evaluation: one sentence on the 2002 streak and the twentieth game.
+- A fourth Sports Subscription update, the Section 215 drums for $4.99 a
+  month, three of the four an update a run. `drums()` plays the cadence,
+  boom, boom, boom-boom-boom, twice, from the same oscillator as every other
+  sound. It plays again after `REMEMBER`.
+- `REMEMBER`: five lines after the review, before the thank-you, in both
+  the class run and the public one. Claude's draft, for him to rewrite.
+
+## Open
 - **Opening it.** `open: ["comm999"]` in `localWorksheets.js` until he says;
   `true` opens it to every class. Pepe and Jan on COMM 999 can run the
   student path now.
-- **The intro fill.** His sentences are his; the five fills are a draft.
+- **The intro** is his, word for word. One question: "a job in sports in 2032" where the page is 2034.
+- **`REMEMBER` and `ABOUT`** are drafts and his pitch; he rewrites both in the Google Doc, then here.
+- **A MIDI.** He asked for "some midi version of a's drum audio, or actually of careless whisper." The drums are synthesized in `drums()`. Careless Whisper is under copyright, so a recording or MIDI of it on a public page is his call; not done.
 - **The values of sports.** Andrew, 2026-10-01: "we need a way to make them
   understand the values of sports. so i'm still thinking." Not built.
 - **Worktopia's lines** other than the questions are Claude's words for him
