@@ -795,7 +795,8 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       await say("I assign labor for " + COMPANY);
       await card("Employer of record", COMPANY_LETTERS, 140);
       await sleep(300);
-      await say("In 2034 these are one company. " + COMPANY + " owns every single NFL team. After the NFL, the other leagues. After the leagues, every channel, every stream, every stadium, every jersey, every ticket and every banana.");
+      // Andrew, 2026-10-01: "start with FRANCHISE DYNASTY MEDIA INC owns every team, every ... every ,,,"
+      await say(COMPANY + " owns every team, every league, every channel, every stream, every stadium, every parking lot, every jersey, every ticket, every app the ticket lives in, every mascot and every banana.");
       await sleep(400);
       await say("All media. All sports. Every job in sports is a job at " + COMPANY);
       await sleep(400);

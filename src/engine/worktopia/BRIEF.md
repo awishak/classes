@@ -228,7 +228,10 @@ along, so a reload hands out the same jobs in the same order.
 - **What it owns.** "In 2034 these are one company. FRANCHISE DYNASTY MEDIA
   INC. owns every single NFL team. After the NFL, the other leagues. After
   the leagues, every channel, every stream, every stadium, every jersey,
-  every ticket and every banana."
+  every ticket and every banana." Rewritten 2026-10-01 at his ask: the
+  terminal now says it owns every team, every league, every channel, every
+  stream, every stadium, every parking lot, every jersey, every ticket, every
+  app the ticket lives in, every mascot and every banana.
 
 ## Behind the curtain
 
