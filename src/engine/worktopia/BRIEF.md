@@ -171,9 +171,9 @@ absolute so the drewi.sh proxy shows the same. The bundle is now
 12. **The review.** "Please rate Worktopia." One to five stars. "Please
     review Worktopia." A few lines.
 13. **"Thank you. Worktopia's system will get back to you."** Then "Your
-    file is complete. Submit it to Worktopia?" SUBMIT or REVISE (change one
-    position, then the evaluation runs again). After submitting: RECALL
-    takes the file back, LEAVE ends. No allocation at the end: the system
+    file is complete. Submit it to Worktopia?" SUBMIT or REVIEW (every
+    answer, each with Change; see below). After submitting: RECALL takes the
+    file back, LEAVE ends. No allocation at the end: the system
     gets back to them.
 
 A return visit asks first: "Your file is on record. Pick up where you left
@@ -364,6 +364,67 @@ set and clear `submitted_at` on the sheet row, the same as the stakeholder
 map. Andrew: "you have to keep all these student answers. i will need them
 to review them."
 
+## Back, and the review at the end, 2026-10-01
+
+Andrew: "at the end, they should be able to see all their answers and
+change them. i guess the same goes for while they're working, so we should
+have a back button." So:
+
+- **Back.** A dim Back button sits between the box and Skip on every typed
+  question, and as a last button on every choice that is kept on file. Back
+  re-asks the question before, with the old answer already in the box (or
+  the old button pressed). Back is disabled on the first question.
+- **The review.** "Your file is complete" now offers SUBMIT or REVIEW (see
+  and change my answers). The review is a card of every answer on file, in
+  the order asked, with the question's own wording and a Change button on
+  each; a position's title offers Change this position, which re-asks all
+  six, since the other five were about the old job. After a change the
+  review comes back, so the next change is one press away; DONE returns to
+  submitting. A recalled file goes through the same prompt. The visitor on
+  the public page gets REVIEW beside start over.
+- **How both work.** `trail` is every field asked this session, in order,
+  with its wording in `qOf`. Back or Change notes the field in `redo`,
+  throws `REWIND`, and `run()` clears the screen and runs `session()` again
+  as a replay: instant and silent, until the replay reaches that field,
+  which is asked live with `prior[field]` prefilled, then the replay goes on
+  to where the student was. Nothing is re-architected; the run is still one
+  straight line of awaits.
+- **A changed answer to the horrible job.** When a round is answered NO,
+  later rounds on file (from a run that accepted more) are removed, through
+  the new `store.remove(field)` on every store and a `remove` action on
+  `api/worktopia-public.js`.
+- Every answer is still a row the moment it is sent, under the student's
+  sign-in, so a file picked up on a second device is the same file. Andrew
+  asked for this on 2026-10-01 and it was already so; the resume prompt's
+  comment now says it.
+
+## The week 1 read, 2026-10-01
+
+Andrew: "i want to include some tidbits from their work on the week 1
+worksheet. so can you look at each students work individually, particularly
+their think and wonder stuff." The first draft quoted their own lines back
+to them, three a run; he cut that: "i don't like how you wrote up the stuff
+from their week 1 work. i want you to analyze them now and see what they are
+interested in, and put a little description in their box." So the record
+card carries one row, Interests, with a sentence or two on what that
+student's notice, think and wonder answers on the AFL Grand Final sheet
+show they care about. Claude's read, 2026-10-01, for him to edit, for
+example: "How the broadcast builds the story: who becomes a main character,
+what producers tell commentators, and what advertisers pay for the big
+moments."
+
+**Nothing about a student is in this repo.** The descriptions live in the
+class store under `comm118-f26-v1-worktopia-onfile` as `{ files: { [email]:
+{ interests } } }`, readable by the class pages the way the roster row is.
+`onfile.js` holds the loader; `WorksheetPage.jsx` hands `loadOnFile(...)`
+to the student's mount and to the instructor's read, so both show the same
+row. A loader that fails returns nothing and the run goes on. The public
+page has no file.
+
+The descriptions for the 25 students (and one for Andrew's own sign-in, from
+his two notice lines) are drafted and not in the store yet: a write to
+production waits on his yes.
+
 ## The public version, 2026-10-01
 
 Andrew: "just give the public a way to go through worktopia. make it a public
@@ -419,3 +480,13 @@ a little too much. i do like the cespedes line." What is left:
   answers themselves read one file at a time at `?s=`.
 - **The company card** takes about three seconds to spell out. Fine once;
   on a replay it is instant.
+- **The week 1 descriptions** are not written yet; the mechanism is built
+  and walked on the harness with a fake one. Writing the row is one script,
+  after he looks over the descriptions.
+- **The review after a change** replays the whole run to rebuild the
+  screen. Fine on a laptop, instant on reduced motion; on a slow phone the
+  rebuild of thirty lines is still well under a second.
+- **The readout for Worktopia**, like the stakeholder map's
+  (`src/readouts`), once the files are in: what people are interested in
+  and how they answered. Andrew, 2026-10-01: "afterward, I am going to want
+  to run a similar analysis like we ran last time."

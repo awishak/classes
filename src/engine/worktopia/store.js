@@ -69,6 +69,13 @@ export function supabaseStore({ supabase, worksheetKey, groupKey, viewerId }) {
       const r = await supabase.from("worksheet_answers").insert(rows).select("id");
       if (r.error || !r.data || r.data.length !== rows.length) fail("Could not save the answer", r);
     },
+    // Take one answer off the file: a round of the horrible job that no longer
+    // happened once an earlier round is answered NO.
+    async remove(field) {
+      const id = await sheet();
+      const gone = await supabase.from("worksheet_answers").delete().eq("sheet_id", id).eq("field", field);
+      if (gone.error) fail("Could not remove the answer", gone);
+    },
     async submit() {
       const id = await sheet();
       const when = new Date().toISOString();
@@ -98,7 +105,7 @@ export function supabaseStore({ supabase, worksheetKey, groupKey, viewerId }) {
 /** A file already read (the instructor, through /api/worksheet-submits): nothing is written. */
 export function readStore(rows, submittedAt) {
   const refuse = async () => { throw new Error("This file is read only."); };
-  return { async load() { return { answers: answersOf(rows), submitted_at: submittedAt || null }; }, save: refuse, submit: refuse, recall: refuse, reset: refuse };
+  return { async load() { return { answers: answersOf(rows), submitted_at: submittedAt || null }; }, save: refuse, remove: refuse, submit: refuse, recall: refuse, reset: refuse };
 }
 
 /** A visitor's file on the public page, through /api/worktopia-public, which holds the service key. */
@@ -112,6 +119,7 @@ export function publicStore({ visitorId }) {
   return {
     async load() { const out = await call("Could not read the file", { action: "load" }); return { answers: answersOf(out.answers), submitted_at: out.submitted_at || null }; },
     async save(field, value) { await call("Could not save the answer", { action: "save", field, value: String(value) }); },
+    async remove(field) { await call("Could not remove the answer", { action: "remove", field }); },
     async submit() { return (await call("Could not submit", { action: "submit" })).submitted_at; },
     async recall() { throw new Error("A visitor cannot recall a file."); },
     async reset() { await call("Could not clear the file", { action: "reset" }); },
@@ -125,6 +133,7 @@ export function memoryStore() {
   return {
     async load() { return { answers: { ...answers }, submitted_at: submitted }; },
     async save(field, value) { answers[field] = value; },
+    async remove(field) { delete answers[field]; },
     async submit() { submitted = new Date().toISOString(); return submitted; },
     async recall() { submitted = null; },
     async reset() { Object.keys(answers).forEach(k => { delete answers[k]; }); submitted = null; },

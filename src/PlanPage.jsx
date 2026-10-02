@@ -47,6 +47,23 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "oct1-worktopia-back", date: "Thursday, October 1, later", title: "Worktopia: Back, the review, and the week 1 lines",
+    blurb: "Andrew: \"students should be able to save their work and come back to it from another device\", \"at the end, they should be able to see all their answers and change them ... so we should have a back button\", and \"i want to include some tidbits from their work on the week 1 worksheet.\" The first was already so; the other two are built and walked end to end on the harness at a laptop width and a phone width.",
+    groups: [
+      { name: "What changed", items: [
+        ["Back", "A dim Back button between the box and Skip on every typed question, and a last button on every choice kept on file. Back re-asks the question before, with the old answer already in the box or the old button pressed. Disabled on the first question."],
+        ["The review", "Your file is complete now offers SUBMIT or REVIEW. The review is a card of every answer on file, in the order asked, with the question's own wording and a Change button on each. A position's title offers Change this position, which re-asks all six. After a change the review comes back; DONE returns to submitting. The public page gets REVIEW beside start over."],
+        ["How both work", "Every question asked this session is on a trail. Back or Change notes the field, throws the session out, and runs the same straight line of awaits again as an instant replay that stops at that field, asks it live, and replays on. A round of the horrible job answered NO now takes later rounds off the file."],
+        ["The week 1 read", "The record card carries a row, Interests: a sentence or two on what that student's notice, think and wonder answers on the AFL sheet show they care about. A first draft quoted their own lines back to them; Andrew: \"i want you to analyze them now and see what they are interested in, and put a little description in their box.\""],
+        ["Nothing about a student is in the repo", "The descriptions live in the class store, read the way the roster is; the student's page and the instructor's read show the same row. The row is drafted for all 25 students and waits on Andrew's yes before it is written."],
+      ] },
+      { name: "Still to do", items: [
+        ["The Interests row", "One script, after he looks over the descriptions."],
+        ["The Worktopia readout", "Like the stakeholder map's, once the files are in: what people are interested in and how they answered."],
+      ] },
+    ],
+  },
+  {
     id: "oct1-worktopia", date: "Thursday, October 1", title: "JobBot 5000 is Worktopia",
     blurb: "Andrew: \"Job Bot 5000 is now call worktopia. it's the work management system that assigns you to your job. so take what we have it and change the name. now, i have some changes.\" The terminal is the same machine with a new name, a page before it, an Index behind it, and a longer file. It lives at /comm118/worksheets/worktopia and is closed to students until he opens it: \"don't make it student facing yet but i will want to see it in the morning.\"",
     groups: [

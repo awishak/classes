@@ -12,6 +12,7 @@
 // POST { visitor, action: "save", field, value }   -> { ok }
 // POST { visitor, action: "submit" }               -> { ok, submitted_at }
 // POST { visitor, action: "reset" }                -> { ok }
+// POST { visitor, action: "remove", field }        -> { ok }
 // The instructor, by PIN or session:
 // POST { action: "list" }                          -> { ok, sheets: [{ viewer_id, submitted_at, name }] }
 // POST { action: "read", viewer }                  -> { ok, sheet, answers }
@@ -103,6 +104,17 @@ export default async function handler(req, res) {
     if (!parts.length) parts.push({ sheet_id: sh.id, field, value: "", position: 0 });
     const r = await rows("/rest/v1/worksheet_answers?select=id", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(parts) });
     if (!r.ok || !r.data || r.data.length !== parts.length) return res.status(502).json({ ok: false, error: "Could not save the answer." });
+    return res.status(200).json({ ok: true });
+  }
+
+  // One answer off the file: a horrible-job round that no longer happened.
+  if (action === "remove") {
+    const field = String(body.field || "");
+    if (!FIELD.test(field)) return res.status(400).json({ ok: false, error: "That is not a field." });
+    const sh = await sheet();
+    if (!sh) return res.status(502).json({ ok: false, error: "Could not start the file." });
+    const gone = await rows(`/rest/v1/worksheet_answers?sheet_id=eq.${sh.id}&field=eq.${field}`, { method: "DELETE" });
+    if (!gone.ok) return res.status(502).json({ ok: false, error: "Could not remove the answer." });
     return res.status(200).json({ ok: true });
   }
 

@@ -13,6 +13,7 @@ import { rosterOf, findStudent } from "./roster.js";
 import { useSession, studentFor, authHeaders } from "./session.js";
 import { localWorksheet, openTo } from "./localWorksheets.js";
 import { supabaseStore, readStore } from "./worktopia/store.js";
+import { loadOnFile } from "./worktopia/onfile.js";
 import { CATEGORIES, HORRIBLE } from "./worktopia/jobs.js";
 import { usePhotos } from "./photos.js";
 import { savedPin } from "../InstructorGate.jsx";
@@ -53,7 +54,9 @@ function TheirSheet({ config, worksheetKey, student, theme, photo }) {
         setState("shown");
         const local = localWorksheet(worksheetKey);
         if (local) {
-          sheet = local.mount(ref.current, { store: readStore(out.answers, out.sheet.submitted_at), viewer: { id: student.email, name: student.name }, photo, readOnly: true });
+          // The same week 1 read the terminal showed them (onfile.js).
+          const onFile = loadOnFile({ supabase: gameClient, storageKey: config.storageKey, viewerId: student.email });
+          sheet = local.mount(ref.current, { store: readStore(out.answers, out.sheet.submitted_at), viewer: { id: student.email, name: student.name }, photo, readOnly: true, onFile });
           return;
         }
         const own = (WORKSHEETS.find(w => w.key === worksheetKey) || {}).theme || {};
@@ -90,9 +93,11 @@ function LocalSheet({ local, config, viewer, photo, classmates }) {
   const names = classmates.join("\n");
   useEffect(() => {
     const store = supabaseStore({ supabase: gameClient, worksheetKey: local.key, groupKey: config.id, viewerId: viewer.id });
-    const sheet = local.mount(ref.current, { store, viewer, photo, classmates: names ? names.split("\n") : [] });
+    // What week 1 says about them (onfile.js).
+    const onFile = loadOnFile({ supabase: gameClient, storageKey: config.storageKey, viewerId: viewer.id });
+    const sheet = local.mount(ref.current, { store, viewer, photo, classmates: names ? names.split("\n") : [], onFile });
     return () => sheet.destroy();
-  }, [local, config.id, viewer.id, viewer.name, photo, names]);
+  }, [local, config.id, config.storageKey, viewer.id, viewer.name, photo, names]);
   return <div ref={ref} />;
 }
 

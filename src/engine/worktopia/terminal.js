@@ -257,10 +257,22 @@ export const CSS = `
 .jb .dock .skip, .jb .dock .send { font: inherit; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; min-height: 42px; padding: 6px 14px; border-radius: 2px; cursor: pointer; white-space: nowrap; }
 .jb .dock .skip { background: none; border: 1px solid transparent; color: var(--jb-dim); text-decoration: underline; text-underline-offset: 3px; }
 .jb .dock .skip:hover { color: var(--jb-bot); }
+.jb .dock .back { font: inherit; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; min-height: 42px; padding: 6px 10px; border-radius: 2px; cursor: pointer; white-space: nowrap; background: none; border: 1px solid transparent; color: var(--jb-dim); }
+.jb .dock .back:hover { color: var(--jb-bot); }
+.jb .dock .back:disabled { opacity: 0.4; cursor: default; color: var(--jb-dim); }
+.jb .choice button.back { border-color: var(--jb-rule); color: var(--jb-dim); }
+.jb .choice button.back:hover { box-shadow: inset 0 -44px 0 0 var(--jb-dim); color: #fff; }
+.jb .file { border: 1px solid var(--jb-rule); border-left: 3px solid var(--jb-cyan); background: var(--jb-paper); padding: 6px 16px 4px; max-width: 720px; }
+.jb .file h2 { margin: 6px 0 8px; font-family: var(--jb-display); font-size: 13px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--jb-cyan); font-weight: 700; }
+.jb .file .row { display: grid; grid-template-columns: 1fr auto; gap: 4px 14px; padding: 10px 0; border-top: 1px solid var(--jb-rule); align-items: start; }
+.jb .file .q { grid-column: 1 / -1; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--jb-dim); }
+.jb .file .a { white-space: pre-wrap; font-size: 15px; min-width: 0; }
+.jb .file .row button { font: inherit; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; min-height: 44px; padding: 4px 12px; border-radius: 2px; cursor: pointer; background: var(--jb-panel); border: 1px solid var(--jb-bot); color: var(--jb-bot); white-space: nowrap; }
+.jb .file .row button:hover { background: var(--jb-bot); color: #fff; }
 .jb .dock .send { font-family: var(--jb-display); font-weight: 700; background: var(--jb-panel); border: 1px solid var(--jb-bot); color: var(--jb-bot); box-shadow: inset 0 0 0 0 var(--jb-bot); transition: box-shadow 0.2s, color 0.2s; }
 .jb .dock .send:hover { color: #fff; box-shadow: inset 0 -44px 0 0 var(--jb-bot); }
 .jb .dock .skip:disabled, .jb .dock .send:disabled { opacity: 0.4; cursor: default; box-shadow: none; color: var(--jb-dim); }
-@media (max-width: 480px) { .jb .dock .row { flex-wrap: wrap; } .jb .dock .row textarea { flex: 1 1 200px; } .jb .dock .row .skip { margin-left: auto; } }
+@media (max-width: 480px) { .jb .dock .row { flex-wrap: wrap; } .jb .dock .row textarea { flex: 1 1 200px; } .jb .dock .row .back { margin-left: auto; } }
 .jb .dock textarea { flex: 1; min-width: 0; font: inherit; color: var(--jb-ink); background: var(--jb-paper); border: 1px solid var(--jb-rule); border-radius: 2px; padding: 9px 12px; resize: none; min-height: 42px; max-height: 40vh; caret-color: var(--jb-cyan); transition: box-shadow 0.2s, border-color 0.2s; }
 .jb .dock textarea:focus { border-color: var(--jb-cyan); box-shadow: 0 0 0 3px rgba(8,145,178,0.12), 0 0 18px rgba(8,145,178,0.18); outline: none; }
 .jb .dock textarea:disabled { background: #f1f4fa; color: var(--jb-dim); }
@@ -285,6 +297,8 @@ export const CSS = `
 @media (max-width: 560px) {
   .jb .line { grid-template-columns: 1fr; gap: 3px; }
   .jb .ticket dl, .jb .record dl { grid-template-columns: 1fr; }
+  .jb .file .row { grid-template-columns: 1fr; }
+  .jb .file .row button { justify-self: start; }
   .jb .bar { gap: 10px; }
   .jb .bar .clock { display: none; }
   .jb .log { padding-inline: 20px; }
@@ -417,9 +431,10 @@ const fmtWhen = (iso) => new Date(iso).toLocaleString("en-US", { month: "short",
  *   readOnly: the instructor reading a student's file; nothing is asked
  *   visitor: the public page; no roster, no calendar, the file submits itself at the end, a ? that explains
  *   restart: what "start over" does on the public page (a new visitor id, then a reload)
+ *   onFile: what week 1 says about them, { interests } or a function that resolves to that (onfile.js)
  * Returns { destroy }.
  */
-export function mountWorktopia(root, { store, viewer, photo, classmates = [], readOnly = false, visitor = false, restart = null } = {}) {
+export function mountWorktopia(root, { store, viewer, photo, classmates = [], readOnly = false, visitor = false, restart = null, onFile = null } = {}) {
   if (!document.getElementById("jb-fonts")) {
     const l = document.createElement("link"); l.id = "jb-fonts"; l.rel = "stylesheet"; l.href = FONTS; document.head.appendChild(l);
   }
@@ -454,6 +469,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
           <div class="row" hidden>
             <span class="glyph" aria-hidden="true">OPERATOR &gt;</span>
             <textarea rows="1" aria-label="Your answer" disabled></textarea>
+            <button type="button" class="back" disabled>Back</button>
             <button type="button" class="skip" disabled>Skip</button>
             <button type="button" class="send" disabled>Send</button>
           </div>
@@ -465,7 +481,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   const $ = (s) => root.querySelector(s);
   const intro = $(".intro"), term = $(".term");
   const log = $(".log"), input = $("textarea"), inputRow = $(".dock .row"), choice = $(".choice"), hint = $(".hint");
-  const light = $(".light"), status = $(".status"), count = $(".count"), enter = $(".enter"), mute = $(".mute"), clock = $(".clock"), saveEl = $(".save"), skip = $(".skip"), send = $(".send");
+  const light = $(".light"), status = $(".status"), count = $(".count"), enter = $(".enter"), mute = $(".mute"), clock = $(".clock"), saveEl = $(".save"), skip = $(".skip"), send = $(".send"), back = $(".back");
   const rail = [...root.querySelectorAll(".rail i")];
   const help = $(".help"), about = $(".about");
   if (help && about) {
@@ -666,18 +682,45 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   // The question is printed here, so a question on file is printed at once
   // with its answer, and an open one is decoded and then asked.
   const live = () => { if (replay) { replay = false; setLight("on", "Ready"); } };
+
+  // Going back, and changing an answer later. Andrew, 2026-10-01: "at the
+  // end, they should be able to see all their answers and change them. i
+  // guess the same goes for while they're working, so we should have a back
+  // button." Every question asked this session is on the trail, in order,
+  // with its wording. Back re-asks the one before; the review at the end
+  // re-asks any one. Both work the same way: the field to ask again is
+  // noted, the session is thrown out and run again from the top as a replay,
+  // which is instant and silent, and the replay stops at that field, asks it
+  // live with the old answer already in the box, then replays on to where
+  // the student was.
+  const trail = [], qOf = {};
+  let redo = null, redoPosition = -1, fromReview = false;
+  const REWIND = Symbol("rewind"), BACK = Symbol("back");
+  const track = (field, q) => { const at = trail.indexOf(field); if (at >= 0) trail.splice(at, 1); trail.push(field); qOf[field] = q; };
+  const untrack = (field) => { const at = trail.indexOf(field); if (at >= 0) trail.splice(at, 1); };
+  const canBack = () => !readOnly && trail.length > 1;
+  const rewindTo = (field) => { redo = field; throw REWIND; };
+  const previous = () => trail[trail.length - 2];
+  // The old answer, for a question asked again.
+  const kept = (field) => prior[field] && prior[field] !== SKIPPED ? prior[field] : "";
+
   const ask = async ({ field, q, force, rows, placeholder, min, short }) => {
+    track(field, q);
     await beat();
-    if (!force && field in prior) { await say(q); echo(prior[field]); return prior[field]; }
+    const again = redo === field;
+    if (again) redo = null;
+    if (!force && !again && field in prior) { await say(q); echo(prior[field]); return prior[field]; }
     if (readOnly) throw STOP;
     live();
     await say(q);
+    const had = force || again ? kept(field) : "";
     const v = await new Promise(resolve => {
       beep();
       inputRow.hidden = false; hint.hidden = false; choice.hidden = true;
-      input.disabled = false; input.value = ""; input.rows = rows || 1; input.placeholder = placeholder || "";
-      skip.disabled = false; send.disabled = false;
+      input.disabled = false; input.value = had; input.rows = rows || 1; input.placeholder = placeholder || "";
+      skip.disabled = false; send.disabled = false; back.disabled = !canBack();
       input.focus({ preventScroll: true });
+      if (had) input.setSelectionRange(had.length, had.length);
       const grow = () => { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, window.innerHeight * 0.4) + "px"; };
       grow(); scroll();
       // One way in, three ways to get there: the Send button, the Enter key,
@@ -708,60 +751,78 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       const onInput = (e) => { grow(); if (e.inputType === "insertLineBreak" && !shift && /\n$/.test(input.value)) submit(); };
       const onSkip = () => done(SKIPPED);
       const onSend = () => submit();
+      const onBack = () => done(BACK);
       const done = (t) => {
         input.removeEventListener("keydown", onKey); input.removeEventListener("keyup", onKeyUp); input.removeEventListener("input", onInput);
-        skip.removeEventListener("click", onSkip); send.removeEventListener("click", onSend);
-        input.disabled = true; skip.disabled = true; send.disabled = true; input.value = ""; input.style.height = "";
-        echo(t); resolve(t);
+        skip.removeEventListener("click", onSkip); send.removeEventListener("click", onSend); back.removeEventListener("click", onBack);
+        input.disabled = true; skip.disabled = true; send.disabled = true; back.disabled = true; input.value = ""; input.style.height = "";
+        if (t !== BACK) echo(t);
+        resolve(t);
       };
       input.addEventListener("keydown", onKey);
       input.addEventListener("keyup", onKeyUp);
       input.addEventListener("input", onInput);
       skip.addEventListener("click", onSkip);
       send.addEventListener("click", onSend);
+      back.addEventListener("click", onBack);
     });
+    if (v === BACK) rewindTo(previous());
     await save(field, v);
     return v;
   };
   // A choice: buttons. One with a field is kept on file; one without is a
   // moment (submit, recall) and is not.
   const choose = async ({ field, q, options, force }) => {
-    if (field) await beat();
-    if (field && !force && field in prior) { await say(q); echo(prior[field]); return prior[field]; }
+    if (field) { track(field, q); await beat(); }
+    const again = !!field && redo === field;
+    if (again) redo = null;
+    if (field && !force && !again && field in prior) { await say(q); echo(prior[field]); return prior[field]; }
     if (readOnly) throw STOP;
     live();
     await say(q);
+    const had = field && (force || again) ? kept(field) : "";
     const k = await new Promise(resolve => {
       beep();
       choice.innerHTML = ""; choice.hidden = false; inputRow.hidden = true; hint.hidden = true;
       options.forEach(o => {
         const b = document.createElement("button"); b.type = "button";
         b.innerHTML = esc(o.key) + (o.label ? " <span>&middot; " + esc(o.label) + "</span>" : "");
+        if (had && had === o.key) b.setAttribute("aria-pressed", "true");
         b.addEventListener("click", () => { choice.hidden = true; echo(o.key + (o.label && o.echo !== false ? " · " + o.label : "")); resolve(o.key); });
         choice.append(b);
       });
+      if (field && canBack()) {
+        const b = document.createElement("button"); b.type = "button"; b.className = "back"; b.textContent = "Back";
+        b.addEventListener("click", () => { choice.hidden = true; resolve(BACK); });
+        choice.append(b);
+      }
       choice.querySelector("button").focus({ preventScroll: true });
       scroll();
     });
+    if (k === BACK) rewindTo(previous());
     if (field) await save(field, k);
     return k;
   };
   // Several from a list, up to max, or none. Kept on file as the names joined
   // with commas, or "None".
   const pickSome = async ({ field, q, options, max, force }) => {
+    track(field, q);
     await beat();
-    if (!force && field in prior) { await say(q); echo(prior[field]); return prior[field]; }
+    const again = redo === field;
+    if (again) redo = null;
+    if (!force && !again && field in prior) { await say(q); echo(prior[field]); return prior[field]; }
     if (readOnly) throw STOP;
     live();
     await say(q);
+    const had = force || again ? kept(field) : "";
     const v = await new Promise(resolve => {
       beep();
       choice.innerHTML = ""; choice.hidden = false; inputRow.hidden = true; hint.hidden = true;
-      const picked = [];
+      const picked = had.split(", ").filter(n => options.includes(n)).slice(0, max);
       const status = document.createElement("span"); status.className = "picked";
       const show = () => { status.textContent = picked.length ? picked.length + " of " + max + " picked" : "Pick up to " + max + ", or none"; };
       options.forEach(o => {
-        const b = document.createElement("button"); b.type = "button"; b.textContent = o; b.setAttribute("aria-pressed", "false");
+        const b = document.createElement("button"); b.type = "button"; b.textContent = o; b.setAttribute("aria-pressed", String(picked.includes(o)));
         b.addEventListener("click", () => {
           const at = picked.indexOf(o);
           if (at >= 0) picked.splice(at, 1);
@@ -773,13 +834,52 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       });
       const done = document.createElement("button"); done.type = "button"; done.className = "done"; done.textContent = "Done";
       done.addEventListener("click", () => { choice.hidden = true; const out = picked.length ? picked.join(", ") : "None"; echo(out); resolve(out); });
-      choice.append(done, status); show();
+      choice.append(done);
+      if (canBack()) {
+        const b = document.createElement("button"); b.type = "button"; b.className = "back"; b.textContent = "Back";
+        b.addEventListener("click", () => { choice.hidden = true; resolve(BACK); });
+        choice.append(b);
+      }
+      choice.append(status); show();
       choice.querySelector("button").focus({ preventScroll: true });
       scroll();
     });
+    if (v === BACK) rewindTo(previous());
     await save(field, v);
     return v;
   };
+
+  // Every answer on file, in the order asked, each with a Change button.
+  // Change re-asks that one question with the old answer in the box; Change
+  // on a position's title re-asks the whole position, since the other five
+  // answers were about the old job. Done goes back to submitting.
+  async function reviewAll() {
+    live();
+    await say("Your file, as it stands. Change any answer, or press Done.");
+    const x = line("bot", "Worktopia"); const box = document.createElement("div"); box.className = "file"; x.append(box);
+    box.innerHTML = "<h2>File &middot; " + esc(name) + "</h2>";
+    const pick = await new Promise(resolve => {
+      trail.forEach(f => {
+        if (!(f in prior) || f === F.confirm) return;
+        const isTitle = LETTERS.some((_, k) => F.title(k) === f);
+        const row = document.createElement("div"); row.className = "row";
+        row.innerHTML = "<div class=\"q\">" + esc(qOf[f] || f) + "</div><div class=\"a\">" + esc(prior[f]) + "</div>";
+        const b = document.createElement("button"); b.type = "button"; b.textContent = isTitle ? "Change this position" : "Change";
+        b.addEventListener("click", () => { chirp(); resolve(f); });
+        row.append(b); box.append(row);
+      });
+      choice.innerHTML = ""; choice.hidden = false; inputRow.hidden = true; hint.hidden = true;
+      const done = document.createElement("button"); done.type = "button"; done.className = "done"; done.innerHTML = "DONE <span>&middot; nothing to change</span>";
+      done.addEventListener("click", () => resolve(null));
+      choice.append(done); scroll();
+    });
+    choice.hidden = true;
+    if (!pick) { echo("DONE"); return; }
+    fromReview = true;
+    const i = LETTERS.findIndex((_, k) => F.title(k) === pick);
+    if (i >= 0) redoPosition = i;
+    rewindTo(pick);
+  }
   const setCount = (i) => {
     count.textContent = i ? "Position " + LETTERS[i - 1] : "";
     rail.forEach((seg, k) => { seg.className = k < i - 1 ? "done" : k === i - 1 ? "live" : ""; });
@@ -792,6 +892,10 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   let name = viewer?.name || "Operator";
   let h = hash(name);
   let n_assign = 0;
+  // What week 1 says about them, loaded once, on the first run.
+  let profile = null, profileLoad = null;
+  const loadProfile = () => profileLoad || (profileLoad = Promise.resolve().then(() => typeof onFile === "function" ? onFile() : onFile)
+    .then(x => x && typeof x.interests === "string" && x.interests.trim() ? { interests: x.interests.trim() } : null).catch(() => null));
 
   async function boot() {
     setLight("think", "Booting"); tone(523, 60); tone(784, 60, "square", 0.03, 0.08); tone(1046, 120, "square", 0.03, 0.16);
@@ -815,10 +919,15 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     // Andrew, 2026-10-01: "i do like the cespedes line."
     await say("Found you. I also found the Cespedes throw from 2014 again, Yoenis Cespedes, the A's left fielder, from the warning track in Anaheim to home plate on the fly, out. I keep finding it.");
     await sleep(300);
-    await card("Record &middot; Brady-Manning Work Index", [
+    profile = await loadProfile();
+    const record = [
       ["Name", name], ["Trump Index No.", indexNo(h)], ["Education", "Santa Clara University, graduate"],
-      ["Likes", LIKES[h % LIKES.length]], ["Dislikes", DISLIKES[(h >>> 7) % DISLIKES.length]], ["Status", "Eligible for assignment"],
-    ]);
+      ["Likes", LIKES[h % LIKES.length]], ["Dislikes", DISLIKES[(h >>> 7) % DISLIKES.length]],
+    ];
+    // What week 1 says they are interested in, read off their own sheet.
+    if (profile) record.push(["Interests", profile.interests]);
+    record.push(["Status", "Eligible for assignment"]);
+    await card("Record &middot; Brady-Manning Work Index", record);
     await sleep(400);
     await say("Retrieving your image from the Index.");
     await think("Rendering operator image", 1600);
@@ -854,7 +963,16 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
         await sleep(1200);
       }
       const k = await choose({ field: F.accept(r), q: "You have been assigned: " + job + ". Do you accept this position?", options: [{ key: "YES", label: "I accept" }, { key: "NO", label: "I decline" }] });
-      if (k === "NO") { await say("Declined. Noted on your file."); return; }
+      if (k === "NO") {
+        await say("Declined. Noted on your file.");
+        // Rounds after this one, from a run that accepted more before Back
+        // or the review changed this answer, come off the file.
+        for (let r2 = r + 1; r2 < HORRIBLE.length && F.accept(r2) in prior; r2++) {
+          const f = F.accept(r2); delete prior[f]; untrack(f);
+          try { await store.remove(f); } catch { /* the stale round stays on file; the run is unchanged */ }
+        }
+        return;
+      }
       // Accepted, and gone: one of ten reasons, a different one each round.
       await say("Accepted. " + TAKEN[(h + r * 7) % TAKEN.length](TAKERS[(h >>> 3) % TAKERS.length]));
     }
@@ -878,6 +996,8 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
 
   async function position(i, force) {
     const L = LETTERS[i];
+    // The whole position again, from Change this position in the review.
+    if (redoPosition === i) { force = true; redoPosition = -1; }
     setCount(i + 1);
     await sleep(400);
     const title = await ask({ field: F.title(i), force, placeholder: "Job title",
@@ -976,6 +1096,9 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
         await say(submittedAt ? "Submitted " + fmtWhen(submittedAt) + "." : "Not submitted yet.");
         return;
       }
+      // Back from a change made in the review: the review again, so the
+      // next change is one press away.
+      if (fromReview) { fromReview = false; await reviewAll(); continue; }
       if (submittedAt) {
         live();
         await say("Submitted " + fmtWhen(submittedAt) + ". Worktopia's system will get back to you.");
@@ -985,42 +1108,66 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
         await say("Recalled. Your file is open again.");
         continue;
       }
-      const k = await choose({ q: "Your file is complete. Submit it to Worktopia?", options: [{ key: "SUBMIT", label: "send my file", echo: false }, { key: "REVISE", label: "change a position", echo: false }] });
+      const k = await choose({ q: "Your file is complete. Submit it to Worktopia?", options: [{ key: "SUBMIT", label: "send my file", echo: false }, { key: "REVIEW", label: "see and change my answers", echo: false }] });
       if (k === "SUBMIT") { setSave("Saving"); submittedAt = await store.submit(); setSave("Saved"); fanfare(); continue; }
-      const L = await choose({ q: "Which position do you want to change?", options: jobs.map(j => ({ key: j.letter, label: j.title, echo: false })) });
-      await position(LETTERS.indexOf(L), true);
-      setCount(0); rail.forEach(seg => { seg.className = "done"; });
-      await evaluate(true);
+      await reviewAll();
     }
   }
 
+  // The screen and the session's counters, back to the start, for a rerun.
+  // What is on file (prior, submittedAt) stays.
+  const fresh = () => {
+    log.innerHTML = ""; asked = 0; told = 0; dealt = 0; n_assign = 0; jobs.length = 0; trail.length = 0;
+    name = viewer?.name || "Operator"; h = hash(name);
+    setCount(0); rail.forEach(seg => { seg.className = ""; });
+    inputRow.hidden = true; choice.hidden = true; hint.hidden = true;
+  };
+
   async function run() {
     intro.hidden = true; term.hidden = false;
-    let file;
-    try { file = await store.load(); }
+    let had;
+    try { had = await store.load(); }
     catch { warn("Could not load your file. Reload to try again."); return; }
-    Object.assign(prior, file.answers || {});
-    submittedAt = file.submitted_at || null;
+    Object.assign(prior, had.answers || {});
+    submittedAt = had.submitted_at || null;
     replay = readOnly;
-    try {
-      // A return visit: pick up where the file stops, or start over, which
-      // clears it. Andrew, 2026-10-01: "when i try to re-do it, it jumps me
-      // back to the same spot. i should have the option to restart or go
-      // back to where my progress was."
-      if (!readOnly && Object.keys(prior).length > 0) {
-        setLight("on", "Ready");
-        const k = await choose({ q: "Your file is on record" + (submittedAt ? ", submitted " + fmtWhen(submittedAt) : "") + ". Pick up where you left off, or start over?",
-          options: [{ key: "RESUME", label: "where I left off", echo: false }, { key: "RESTART", label: "start over, clear my file", echo: false }] });
-        if (k === "RESTART") {
-          setSave("Saving"); await store.reset(); setSave("Saved");
-          Object.keys(prior).forEach(f => { delete prior[f]; });
-          submittedAt = null; name = viewer?.name || "Operator"; h = hash(name);
-          await say("File cleared.");
-        } else {
-          replay = true;
-        }
-        await sleep(300);
+    // A return visit: pick up where the file stops, or start over, which
+    // clears it. Andrew, 2026-10-01: "when i try to re-do it, it jumps me
+    // back to the same spot. i should have the option to restart or go
+    // back to where my progress was." On any device: the file is under the
+    // sign-in, not the browser.
+    if (!readOnly && Object.keys(prior).length > 0) {
+      setLight("on", "Ready");
+      const k = await choose({ q: "Your file is on record" + (submittedAt ? ", submitted " + fmtWhen(submittedAt) : "") + ". Pick up where you left off, or start over?",
+        options: [{ key: "RESUME", label: "where I left off", echo: false }, { key: "RESTART", label: "start over, clear my file", echo: false }] });
+      if (k === "RESTART") {
+        setSave("Saving"); await store.reset(); setSave("Saved");
+        Object.keys(prior).forEach(f => { delete prior[f]; });
+        submittedAt = null; name = viewer?.name || "Operator"; h = hash(name);
+        await say("File cleared.");
+      } else {
+        replay = true;
       }
+      await sleep(300);
+    }
+    // The session, again from the top after Back or a change in the review.
+    for (;;) {
+      try { await session(); break; }
+      catch (e) {
+        if (e === REWIND) { fresh(); replay = true; continue; }
+        if (e !== STOP) throw e;
+        // The instructor, reading: the file stops where the student stopped.
+        replay = false;
+        const x = line("sys", "System"); x.textContent = "The file stops here. " + (submittedAt ? "Submitted " + fmtWhen(submittedAt) + "." : "Not submitted yet."); scroll();
+        setLight("", "Stopped");
+        break;
+      }
+    }
+    inputRow.hidden = true; hint.hidden = true; choice.hidden = true;
+  }
+
+  async function session() {
+    {
       await boot();
       await say("Hello. I am Worktopia.");
       await sleep(300);
@@ -1057,19 +1204,15 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
         // want to see it." It submits itself; a visitor has nothing to recall.
         if (!submittedAt) { setSave("Saving"); submittedAt = await store.submit(); setSave("Saved"); fanfare(); }
         setLight("on", "Done");
-        const k = await choose({ q: "That is the whole run. Your file is on record.", options: [{ key: "AGAIN", label: "start over", echo: false }] });
-        if (k === "AGAIN") { if (restart) restart(); else window.location.reload(); }
-        return;
+        for (;;) {
+          if (fromReview) { fromReview = false; await reviewAll(); }
+          const k = await choose({ q: "That is the whole run. Your file is on record.", options: [{ key: "REVIEW", label: "see and change my answers", echo: false }, { key: "AGAIN", label: "start over", echo: false }] });
+          if (k === "AGAIN") { if (restart) restart(); else window.location.reload(); return; }
+          await reviewAll();
+        }
       }
       await finish();
-    } catch (e) {
-      if (e !== STOP) throw e;
-      // The instructor, reading: the file stops where the student stopped.
-      replay = false;
-      const x = line("sys", "System"); x.textContent = "The file stops here. " + (submittedAt ? "Submitted " + fmtWhen(submittedAt) + "." : "Not submitted yet."); scroll();
-      setLight("", "Stopped");
     }
-    inputRow.hidden = true; hint.hidden = true; choice.hidden = true;
   }
 
   // The instructor's read starts on its own; a student reads the intro and
