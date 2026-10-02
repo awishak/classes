@@ -420,6 +420,23 @@ export const F = {
   industry: "industry", fading: "fading", rising: "rising",
   coworkers: "coworkers", meeting: "meeting", thursday: "thursday", stars: "stars", review: "review",
 };
+// The questions, in Andrew's words, one place: the terminal asks them and the
+// answers page (WorktopiaAnswersPage.jsx) heads each column with them.
+export const QUESTIONS = {
+  skills: "What skills will you need to do this well?",
+  human: "What will you bring to this job that would be better than if we simply let AI do it?",
+  why: "Why will you personally be good at this position?",
+  duties: "What does this position accomplish? What are the main duties?",
+  value: "What value will this position provide to the sports ecosystem in 2034?",
+  industry: "Off the record, let's say that none of this actually came true (don't tell Elon). It's 2026 right now. What do you actually see as changes to the sports ecosystem over the next 8 years?",
+  fading: "Which jobs do you think will not be as prevalent in 2034?",
+  rising: "Which jobs will be much more popular?",
+  coworkers: "Please name people in the class who you would potentially like to have as a co-worker. You may name up to four, or none.",
+  meeting: "Which date is your preference?",
+  thursday: "And also: are you available, if necessary, on Thursday, October 22 at 9 am?",
+  stars: "Please rate Worktopia.",
+  review: "Please review Worktopia.",
+};
 const STOP = Symbol("stop");
 const fmtWhen = (iso) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
@@ -1010,24 +1027,24 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       const hit = findJob(title);
       await say(hit ? "Found in the Index: " + hit.title + ", under " + hit.category + ". Status: OPEN." : "Not in the Index. Filed as a new position. Status: OPEN.");
     }
-    const skills = await ask({ field: F.skills(i), force, rows: 2, min: 20, q: "What skills will you need to do this well?" });
+    const skills = await ask({ field: F.skills(i), force, rows: 2, min: 20, q: QUESTIONS.skills });
     await think("Noted", 600);
     // Andrew, 2026-10-01: the question to hint at on the first page and ask here.
-    const human = await ask({ field: F.human(i), force, rows: 3, min: 40, q: "What will you bring to this job that would be better than if we simply let AI do it?" });
+    const human = await ask({ field: F.human(i), force, rows: 3, min: 40, q: QUESTIONS.human });
     await think("Noted", 600);
     // An aside after the human question every time, and after the next one
     // when the name says so: three to six a run.
     if (!force) await aside();
-    const why = await ask({ field: F.why(i), force, rows: 3, min: 40, q: "Why will you personally be good at this position?" });
+    const why = await ask({ field: F.why(i), force, rows: 3, min: 40, q: QUESTIONS.why });
     await think("Noted", 600);
     if (!force && ((h >>> (i + 2)) & 1)) await aside();
-    const duties = await ask({ field: F.duties(i), force, rows: 3, min: 60, q: "What does this position accomplish? What are the main duties?" });
+    const duties = await ask({ field: F.duties(i), force, rows: 3, min: 60, q: QUESTIONS.duties });
     await think("Noted", 700);
     // One question where there were two (value now; why still valuable in
     // 2034). Andrew, 2026-10-01: "cut the job questions by 1. change the
     // last two to 'what value will this position provide to the sports
     // ecosystem in 2034'."
-    const value = await ask({ field: F.value(i), force, rows: 3, min: 60, q: "What value will this position provide to the sports ecosystem in 2034?" });
+    const value = await ask({ field: F.value(i), force, rows: 3, min: 60, q: QUESTIONS.value });
     await think("Filing Position " + L, 1400);
     await say("Logged. Position " + L + ", " + title + ", is on your file.");
     jobs[i] = { letter: L, title, skills, human, why, duties, value };
@@ -1056,11 +1073,11 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   // from 2026 to 2034? Which jobs do you think will not be as prevalent in
   // 2034? Which jobs will be much more popular?"
   async function industry() {
-    await ask({ field: F.industry, rows: 4, min: 60, q: "Off the record, let's say that none of this actually came true (don't tell Elon). It's 2026 right now. What do you actually see as changes to the sports ecosystem over the next 8 years?" });
+    await ask({ field: F.industry, rows: 4, min: 60, q: QUESTIONS.industry });
     await think("Noted", 700);
-    await ask({ field: F.fading, rows: 3, min: 30, q: "Which jobs do you think will not be as prevalent in 2034?" });
+    await ask({ field: F.fading, rows: 3, min: 30, q: QUESTIONS.fading });
     await think("Noted", 700);
-    await ask({ field: F.rising, rows: 3, min: 30, q: "Which jobs will be much more popular?" });
+    await ask({ field: F.rising, rows: 3, min: 30, q: QUESTIONS.rising });
     await think("Filing", 900);
   }
 
@@ -1070,21 +1087,21 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   // calendar ... And also, are you available if necessary on Thursday Oct 22
   // at 9 am?"
   async function workgroup() {
-    const qWho = "Please name people in the class who you would potentially like to have as a co-worker. You may name up to four, or none.";
+    const qWho = QUESTIONS.coworkers;
     const names = classmates.filter(n => n && n !== name);
     if (names.length) await pickSome({ field: F.coworkers, q: qWho, options: names, max: MAX_COWORKERS });
     else await ask({ field: F.coworkers, rows: 2, placeholder: "Names, separated by commas, or None", q: qWho });
     await think("Noted", 700);
     await say("Please check your calendar. You will meet with your new workgroup on " + MEETINGS.map(m => m.label).join(", or ") + ".");
-    await choose({ field: F.meeting, q: "Which date is your preference?", options: MEETINGS.map(m => ({ key: m.key, label: m.label })) });
+    await choose({ field: F.meeting, q: QUESTIONS.meeting, options: MEETINGS.map(m => ({ key: m.key, label: m.label })) });
     await think("Noted", 600);
-    await choose({ field: F.thursday, q: "And also: are you available, if necessary, on Thursday, October 22 at 9 am?", options: [{ key: "YES", label: "available" }, { key: "NO", label: "not available" }] });
+    await choose({ field: F.thursday, q: QUESTIONS.thursday, options: [{ key: "YES", label: "available" }, { key: "NO", label: "not available" }] });
     await think("Filing", 800);
   }
 
   async function review() {
-    await choose({ field: F.stars, q: "Please rate Worktopia.", options: [1, 2, 3, 4, 5].map(n => ({ key: "\u2605".repeat(n), label: String(n), echo: false })) });
-    await ask({ field: F.review, rows: 3, min: 20, q: "Please review Worktopia." });
+    await choose({ field: F.stars, q: QUESTIONS.stars, options: [1, 2, 3, 4, 5].map(n => ({ key: "\u2605".repeat(n), label: String(n), echo: false })) });
+    await ask({ field: F.review, rows: 3, min: 20, q: QUESTIONS.review });
     await think("Thank you", 900);
   }
 

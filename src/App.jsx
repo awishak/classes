@@ -13,6 +13,7 @@ import GamesPage from "./engine/GamesPage.jsx";
 import WorksheetPage from "./engine/WorksheetPage.jsx";
 import WorksheetsPage from "./engine/WorksheetsPage.jsx";
 import ReadoutPage from "./engine/ReadoutPage.jsx";
+import WorktopiaAnswersPage from "./engine/WorktopiaAnswersPage.jsx";
 import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
@@ -260,6 +261,13 @@ export default function App() {
         <WorksheetsPage key={wsAll[1]} config={ENGINE[wsAll[1]]} />
       </InstructorGate>
     );
+  }
+  // Everyone's Worktopia file, by question: /<class>/worksheets/worktopia/answers.
+  // Names for the instructor, nobody's name for a student on the roster; the
+  // server decides which (api/worktopia-answers.js).
+  const wsAns = path.match(/^\/(comm\w+)\/worksheets\/worktopia\/answers\/?$/);
+  if (wsAns && ENGINE[wsAns[1]]) {
+    return <WorktopiaAnswersPage key={wsAns[1]} config={ENGINE[wsAns[1]]} />;
   }
   // What the class wrote on it, for the class: /<class>/worksheets/<key>/readout.
   const wsRead = path.match(/^\/(comm\w+)\/worksheets\/([a-z0-9-]+)\/readout\/?$/);

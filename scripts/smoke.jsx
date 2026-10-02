@@ -30,6 +30,7 @@ import { parseRoster, mergeRoster } from "../src/engine/roster.js";
 import { withWorksheetSubmits } from "../src/engine/worksheetSubmits.js";
 import { JOBS, CATEGORIES, HORRIBLE, findJob, horribleFor } from "../src/engine/worktopia/jobs.js";
 import { F as WF } from "../src/engine/worktopia/terminal.js";
+import { Group as AnswersGroup } from "../src/engine/WorktopiaAnswersPage.jsx";
 import { makeCode, looksLikeEmail } from "../api/logins.js";
 import ClassApp, { OnScreenNow } from "../src/engine/ClassApp.jsx";
 import BoardPage from "../src/engine/BoardPage.jsx";
@@ -1269,7 +1270,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const { readFileSync: readSrc } = await import("node:fs");
   const app = readSrc(new URL("../src/App.jsx", import.meta.url), "utf8");
   // Pages that draw TopNav themselves.
-  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", WorksheetsPage: "engine/WorksheetsPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx" };
+  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", WorksheetsPage: "engine/WorksheetsPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx", WorktopiaAnswersPage: "engine/WorktopiaAnswersPage.jsx" };
   // What the projector shows, and the page you sign in on before you are anybody.
   const EXEMPT = new Set(["ClassroomView", "EnginePresenter", "TriviaPresenter4", "TriviaPresenter118", "LoginPage", "InstructorGate", "InstructorBar", "RetreatPage"]);
   const routed = [...app.matchAll(/return\s*\(?\s*<([A-Z]\w*)/g), ...app.matchAll(/<InstructorGate[^>]*>\s*<([A-Z]\w*)/g)].map(m => m[1]);
@@ -5516,6 +5517,22 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const same = plain(<MoveSectionMenu name="Stories" slot="sec-a" days={[days[0]]} today="Sep 30" accent="#000" sectionsOn={sectionsOn} onPlace={noop} onClose={noop} />);
   if (same.includes("Before Stories")) say("a section is offered a place before itself");
   if (!same.includes("Before Lesson plan")) say("this day's other section is not a place to land");
+}
+
+// Everyone's Worktopia answers, by question, with names and without.
+{
+  const file = (viewer, name, extra = {}) => ({ viewer, submitted_at: "2026-10-06T18:00:00Z", answers: {
+    name, "accept:a": "YES", "accept:b": "NO",
+    "title:a": "Agent", "skills:a": "Negotiation", "human:a": "Trust", "why:a": "Because", "duties:a": "Deals", "value:a": "Money",
+    "title:b": "Scout", "title:c": "Analyst",
+    industry: "Streaming eats everything.", fading: "Beat writers.", rising: "Creators.",
+    coworkers: "Ben B, Cy C", meeting: "WED", thursday: "YES", stars: "\u2605\u2605\u2605\u2605", review: "Beeped a lot.", ...extra } });
+  const files = [file("ann@x.edu", "Ann A"), file("ben@x.edu", "Ben B", { coworkers: "None", meeting: "FRI", thursday: "NO", stars: "\u2605\u2605" }), { viewer: "cy@x.edu", submitted_at: null, answers: { name: "Cy C", "accept:a": "NO", "title:a": "Coach" } }];
+  const who = (f) => f.answers.name;
+  cases.push(["Worktopia answers, named", <AnswersGroup title="The class" files={files} who={who} named roster />, "Took 1 before declining"]);
+  cases.push(["Worktopia answers, named, co-workers tallied", <AnswersGroup title="The class" files={files} who={who} named roster />, "Ben B"]);
+  cases.push(["Worktopia answers, anonymous", <AnswersGroup title="The class" files={files.slice(0, 2).map(f => ({ ...f, viewer: undefined }))} who={() => ""} named={false} roster />, "Streaming eats everything."]);
+  cases.push(["Worktopia answers, nobody yet", <AnswersGroup title="Visitors on the public page" files={[]} who={() => ""} named roster={false} />, "Nobody has started."]);
 }
 
 let failed = failedEarly;

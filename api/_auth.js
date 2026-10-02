@@ -28,15 +28,22 @@ import { isInstructorEmail } from "../src/instructors.js";
 
 export async function callerAllowed(req, body) {
   if (pinMatches(body?.pin)) return true;
+  return isInstructorEmail(await callerEmail(req));
+}
+
+// Whose session is in the bearer header, as a lowercased email, or nothing.
+// A route that opens to a class's students, not only to me, asks this and
+// checks the roster itself.
+export async function callerEmail(req) {
   const auth = req.headers?.authorization || req.headers?.Authorization || "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  if (!token) return false;
+  if (!token) return "";
   try {
     const r = await fetch(SUPABASE_URL + "/auth/v1/user", { headers: { ...serviceHeaders(), Authorization: "Bearer " + token } });
-    if (!r.ok) return false;
+    if (!r.ok) return "";
     const user = await r.json();
-    return isInstructorEmail(user?.email);
-  } catch { return false; }
+    return String(user?.email || "").trim().toLowerCase();
+  } catch { return ""; }
 }
 
 export function readBody(req) {

@@ -16,6 +16,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { mountSheet, WORKSHEETS, BOX_LABELS } from "@ishak/worksheets";
+import { LOCAL_WORKSHEETS } from "./localWorksheets.js";
 import { useClassState } from "./store.js";
 import { rosterOf } from "./roster.js";
 import { useSession, studentFor } from "./session.js";
@@ -28,6 +29,10 @@ import TopNav, { NAV_STUDENT } from "./TopNav.jsx";
 // One file per class and worksheet, loaded only on this page.
 const READOUTS = {
   "comm118/stakeholder-map": () => import("../readouts/comm118-stakeholder-map.json"),
+  // Scaffolded 2026-10-02, written once the class submits (due October 7).
+  // A readout with `sections` and no boxes, cards or connections draws no
+  // map, and its `written` is null until the analysis is in.
+  "comm118/worktopia": () => import("../readouts/comm118-worktopia.json"),
 };
 export const hasReadout = (classId, key) => !!READOUTS[classId + "/" + key];
 
@@ -127,7 +132,7 @@ export default function ReadoutPage({ config, worksheetKey }) {
   const { session, email, instructor } = useSession();
   const [theme] = useStudentTheme(config);
   const [mode] = useDayNight(config);
-  const sheet = WORKSHEETS.find(w => w.key === worksheetKey);
+  const sheet = WORKSHEETS.find(w => w.key === worksheetKey) || LOCAL_WORKSHEETS.find(w => w.key === worksheetKey);
   const [r, setR] = useState(null);
   const [pick, setPick] = useState("");
   const mapRef = useRef(null);
@@ -143,8 +148,11 @@ export default function ReadoutPage({ config, worksheetKey }) {
   const allowed = session && (instructor || studentFor(email, roster));
 
   // The map, once the readout and the page are here. A click jumps to the section.
+  const mapped = !!(r && r.connections);
+  const groups = r ? (mapped ? [["boxes", Object.values(BOX_LABELS).join(", "), r.boxes], ["cards", "Cards", r.cards], ["connections", "Connections", r.connections]] : [["sections", "", r.sections || []]]) : [];
+  const every = groups.flatMap(g => g[2]);
   useEffect(() => {
-    if (!r || !allowed || !mapRef.current) return undefined;
+    if (!r || !mapped || !allowed || !mapRef.current) return undefined;
     const rows = mapRows(r);
     const own = (sheet && sheet.theme) || {};
     const m = mountSheet(mapRef.current, {
@@ -154,10 +162,10 @@ export default function ReadoutPage({ config, worksheetKey }) {
       onPick: (field) => go(field),
     });
     return () => m.destroy();
-  }, [r, allowed, theme, mode]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [r, mapped, allowed, theme, mode]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const go = (field) => {
-    const known = r && [...r.boxes, ...r.cards, ...r.connections].some(s => s.field === field);
+    const known = every.some(s => s.field === field);
     const target = known ? field : "other";
     setPick(target);
     const el = document.getElementById(idOf(target));
@@ -175,10 +183,11 @@ export default function ReadoutPage({ config, worksheetKey }) {
     ? <p style={{ fontSize: 17, margin: 0 }}>Loading the roster.</p>
     : <p style={{ fontSize: 17, margin: 0 }}>{email} is not on the roster for {config.code} yet.</p>;
   else if (!r) gate = <p style={{ fontSize: 17, margin: 0 }}>Loading.</p>;
+  else if (!r.written) gate = <p style={{ fontSize: 17, margin: 0 }}>The readout for {sheet.title} is written once the class has submitted. Nothing is here yet.</p>;
 
   const navGroup = (title, list) => (
     <div className="ng">
-      <div className="nt">{title}</div>
+      {title ? <div className="nt">{title}</div> : null}
       {list.map(s => (
         <button type="button" key={s.field} className="ni" aria-current={pick === s.field ? "true" : undefined} onClick={() => go(s.field)}>
           <span>{s.label}</span><i>{s.answers ?? ""}</i>
@@ -201,24 +210,27 @@ export default function ReadoutPage({ config, worksheetKey }) {
             <h1>{sheet.title}</h1>
             <div className="facts">{plural(r.students, "student")} · {r.answers.toLocaleString("en-US")} answers</div>
           </header>
-          <div className="map">
-            <div className="hint">Click a line or a card to read what the class wrote on that line or card.</div>
-            <div ref={mapRef} />
-          </div>
+          {mapped ? (
+            <div className="map">
+              <div className="hint">Click a line or a card to read what the class wrote on that line or card.</div>
+              <div ref={mapRef} />
+            </div>
+          ) : null}
           <section className="over">
             <h2>Across the whole sheet</h2>
             <ol>{r.overview.map((o, i) => <li key={i}><span>{o}</span></li>)}</ol>
           </section>
           <div className="body">
             <nav aria-label="Sections">
-              {navGroup(Object.values(BOX_LABELS).join(", "), r.boxes)}
-              {navGroup("Cards", r.cards)}
-              {navGroup("Connections", r.connections)}
+              {groups.map(([id, title, list]) => <div key={id}>{navGroup(title, list)}</div>)}
             </nav>
             <main>
-              <div className="grp">{r.boxes.map(s => <Section key={s.field} s={s} on={pick === s.field} />)}</div>
-              <div className="grp"><h2>Cards</h2>{r.cards.map(s => <Section key={s.field} s={s} on={pick === s.field} />)}</div>
-              <div className="grp"><h2>Connections</h2>{r.connections.map(s => <Section key={s.field} s={s} on={pick === s.field} />)}</div>
+              {groups.map(([id, title, list], i) => (
+                <div key={id} className="grp">
+                  {i > 0 && title ? <h2>{title}</h2> : null}
+                  {list.map(s => <Section key={s.field} s={s} on={pick === s.field} />)}
+                </div>
+              ))}
               <p className="foot">Counts are answers, not students. Quotes are exactly as students wrote each answer, without names.</p>
             </main>
           </div>

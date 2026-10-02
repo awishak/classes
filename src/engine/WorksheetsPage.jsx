@@ -17,6 +17,7 @@ import { INSTRUCTOR_EMAILS } from "../instructors.js";
 import { useSession, authHeaders } from "./session.js";
 import { savedPin } from "../InstructorGate.jsx";
 import { LOCAL_WORKSHEETS } from "./localWorksheets.js";
+import { WORKTOPIA_KEY } from "./worktopia/terminal.js";
 import { gameClient } from "./gameClient.js";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
@@ -102,6 +103,8 @@ export default function WorksheetsPage({ config }) {
   const studentUrl = sheet ? origin + config.path + "/worksheets/" + sheet.key : "";
   // And what the class wrote on it, to share with them, where there is a readout.
   const readoutUrl = sheet && hasReadout(config.id, sheet.key) ? studentUrl + "/readout" : "";
+  // And everyone's file by question, live. Names for me, none for the class.
+  const answersUrl = sheet && sheet.key === WORKTOPIA_KEY ? studentUrl + "/answers" : "";
   const copy = async (url) => {
     try { await navigator.clipboard.writeText(url); setCopied(url); setTimeout(() => setCopied(false), 1500); }
     catch { /* no clipboard: the box is selectable */ }
@@ -166,6 +169,7 @@ export default function WorksheetsPage({ config }) {
         ) : null}
         {sheet ? (<>
           {addressBox("Students open this worksheet at", studentUrl, "Paste the address into the Details link on the assignment.")}
+          {answersUrl ? addressBox("Everyone's answers, by question", answersUrl, "You see names. A student who opens the same address sees the answers with no names.") : null}
           {readoutUrl ? addressBox("What the class wrote, to share with them", readoutUrl, "") : null}
           {local
             ? <LocalReview key={sheet.key} config={config} sheet={sheet} people={people} studentUrl={studentUrl} />

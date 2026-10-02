@@ -7,14 +7,23 @@
 //
 // Each app is a link to its own page, or a card on the class page.
 
+import { localWorksheet, openTo } from "./localWorksheets.js";
+import { WORKTOPIA_KEY } from "./worktopia/terminal.js";
+
 export function appsFor(config, role) {
   const p = config.path;
   if (role === "instructor") {
+    // Everyone's Worktopia file by question, in the classes Worktopia is
+    // open to. Andrew, 2026-10-02: "make it easy for me to access."
+    const worktopia = localWorksheet(WORKTOPIA_KEY);
+    const answers = worktopia && openTo(worktopia, config.id)
+      ? [{ id: "worktopia-answers", label: "Worktopia answers", href: p + "/worksheets/worktopia/answers" }] : [];
     return [
       { id: "dashboard", label: "Dashboard", href: p + "/dashboard" },
       { id: "repo", label: "Repository", href: "/repo" },
       { id: "games", label: "Games", href: p + "/games" },
       { id: "worksheets", label: "Worksheets", href: p + "/worksheets" },
+      ...answers,
       { id: "grade", label: "Grade view", href: p + "/grade" },
       { id: "horn", label: "Around the Horn", opens: "horn" },
       { id: "today", label: "Room screen", href: p + "/today" },
