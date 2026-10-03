@@ -239,6 +239,7 @@ export const CSS = `
 .jb .intro .part .text, .jb .intro .part .full { display: flex; flex-direction: column; gap: 18px; }
 .jb .intro .moves { display: flex; gap: 12px; flex-wrap: wrap; }
 .jb .intro .moves .power { text-align: left; }
+.jb .intro .full mark { background: var(--jb-soft); color: var(--jb-bot); padding: 0 2px; border-radius: 2px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .jb .intro .moves .more { color: var(--jb-dim); border-color: var(--jb-rule); }
 .jb .intro .part { display: flex; flex-direction: column; gap: 18px; padding: 28px 28px 30px; background: var(--jb-panel); border: 1px solid var(--jb-rule); border-left: 3px solid var(--jb-cyan); box-shadow: 0 0 40px rgba(29, 78, 216, 0.08); animation: jb-card 0.35s ease-out; }
 .jb .intro .part .eyebrow { font-family: var(--jb-display); font-size: 11px; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: var(--jb-cyan); }
@@ -405,6 +406,43 @@ const indexNo = (h) => {
 };
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
+// A card's full text as paragraphs of HTML, with every word the short version
+// doesn't have in a <mark>. Andrew, 2026-10-03: "take me back to the top, but
+// this time, highlight in blue all the new stuff." A word-level longest common
+// subsequence against the short text; a run of two or fewer kept words between
+// new ones is marked too, so a "the" inside a new sentence doesn't break it up.
+export function fullWithNew(part) {
+  const key = (w) => w.toLowerCase().replace(/[^a-z0-9%]/g, "");
+  const words = part.full.map(p => p.split(/(?<=\s)(?=\S)/));
+  const flat = words.flat(), short = part.text.join(" ").split(/\s+/).map(key);
+  const a = flat.map(key), n = a.length, m = short.length;
+  const L = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = a[i] && a[i] === short[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const isNew = new Array(n).fill(true);
+  for (let i = 0, j = 0; i < n && j < m;) {
+    if (a[i] && a[i] === short[j]) { isNew[i] = false; i++; j++; }
+    else if (L[i + 1][j] >= L[i][j + 1]) i++; else j++;
+  }
+  for (let i = 0; i < n;) {
+    if (isNew[i]) { i++; continue; }
+    let k = i; while (k < n && !isNew[k]) k++;
+    if (k - i <= 2 && i > 0 && k < n) for (let x = i; x < k; x++) isNew[x] = true;
+    i = k;
+  }
+  let at = 0;
+  return words.map(ws => {
+    let html = "", open = false;
+    ws.forEach((w, x) => {
+      const mark = isNew[at++], end = x === ws.length - 1 || !isNew[at];
+      if (mark && !open) { html += "<mark>"; open = true; }
+      const tail = w.match(/\s*$/)[0], body = w.slice(0, w.length - tail.length);
+      html += esc(body) + (mark && end ? "</mark>" : "") + esc(tail);
+      if (mark && end) open = false;
+    });
+    return html;
+  });
+}
+
 // A portrait drawn from the name, for a student with no photograph on their
 // card: hair, eyes, glasses, mouth, beard and a jersey number, each picked by
 // the name, so every student gets their own.
@@ -547,7 +585,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       ${INTRO_PARTS.map((c, i) => `<section class="part" data-i="${i}" ${i ? "hidden" : ""} aria-label="${esc(c.part)}">
         <div class="eyebrow">${esc(c.part)} &middot; ${esc(c.years)}</div>
         <h2>${esc(c.head)}</h2>
-        ${["text", "full"].map(v => `<div class="${v}" ${v === "full" ? "hidden" : ""}>${c[v].map((p, k) => "<p" + (i === INTRO_PARTS.length - 1 && k === c[v].length - 1 ? " class=\"last\"" : "") + ">" + esc(p) + "</p>").join("")}</div>`).join("")}
+        ${["text", "full"].map(v => `<div class="${v}" ${v === "full" ? "hidden" : ""}>${(v === "full" ? fullWithNew(c) : c.text.map(esc)).map((p, k, all) => "<p" + (i === INTRO_PARTS.length - 1 && k === all.length - 1 ? " class=\"last\"" : "") + ">" + p + "</p>").join("")}</div>`).join("")}
       </section>`).join("")}
       <div class="steps">
         <div class="dots" aria-hidden="true">${INTRO_PARTS.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>
@@ -610,7 +648,8 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     more.addEventListener("click", () => {
       parts.forEach(p => { p.querySelector(".text").hidden = true; p.querySelector(".full").hidden = false; });
       more.hidden = true;
-      next.focus({ preventScroll: true });
+      if (typeof window !== "undefined" && window.scrollTo) window.scrollTo({ top: 0, behavior: "auto" });
+      (at === parts.length - 1 ? go : next).focus({ preventScroll: true });
     });
     next.addEventListener("click", () => show(at + 1));
     prev.addEventListener("click", () => show(at - 1));

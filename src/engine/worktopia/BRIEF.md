@@ -103,7 +103,12 @@ word for word. Two buttons sit under the card, his wording: "I want to read
 more about the AI takeover of media," which swaps in `full` on that card and
 every card after and then goes away, and "Move on to Part two" (or three),
 with Enter Worktopia on the last. A Read the full story link inside the card
-came first and was "in an awkward spot." The one change in `full` is his own, from the
+came first and was "in an awkward spot." Reading more takes the page back to the top, and
+every word of `full` that the short version doesn't have is in a blue
+<mark> (`fullWithNew`, a word diff), after "when i click it, it takes me to
+the middle ... take me back to the top, but this time, highlight in blue all
+the new stuff." Where the short version reworded his sentence, the
+highlight is choppy, a word here and there; that is the diff being honest. The one change in `full` is his own, from the
 same day: "Are you looking for a job in sports in 2032? ... in the
 traditional sense. Instead," became "Even the job seeking process has been
 turned over to AI in the name of efficiency," in both versions.
