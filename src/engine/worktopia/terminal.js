@@ -58,11 +58,22 @@ export const INTRO_PARTS = [
     "At the 2027 Super Bowl, the ads everyone talked about the next day were made by AI: horses drinking beer with AI cheerleaders. By the 2030 Super Bowl, 95% of ads were produced fully by AI.",
     "In 2029, the Jacksonville Jaguars let an AI model, BORTLES, run their draft. It took a punter from UC Davis in the first round, who turned out to be the league’s most valuable player by advanced metrics. The next year, thirty-one teams let a model run their draft. The lone holdout, the Cleveland Browns, redrafted Deshaun Watson and went 0-17.",
     "Soon AI models negotiated contracts on both sides, replaced human announcers, controlled cameras, and produced the first draft of everything a human then signed.",
+  ], full: [
+    "It's the year 2034.",
+    "Over the last eight years, a few things have happened.",
+    "For the 2027 Super Bowl, Anthropic released a series of ads created by humans that were beautiful and moving. They also helped create ads for Budweiser that featured AI horses drinking beer with AI cheerleaders, with the prompt: “sell Budweiser beer to humans using nostalgia and football.” The latter ads were the lowest rated in early tests, but the most talked about ads the day after the Super Bowl by the general public. Based on this data, companies started using AI to make ads, and by the 2030 Super Bowl, 95% of ads were produced fully by AI.",
+    "In 2029, the Jacksonville Jaguars let an AI model, BORTLES, run their draft. It took a punter from UC Davis in the first round, who turned out to be the league’s most valuable player by advanced metrics. It was the story of the year in sports and technology. The next year, thirty-one teams let a model run their draft. The lone holdout, the Cleveland Browns, redrafted Deshaun Watson and went 0-17.",
+    "The AI revolution in sports was on. AI models negotiated contracts on both sides, replaced human announcers, created graphics, controlled cameras, and produced the first draft of everything a human then signed.",
+    "Many sports fans complained at first, and then slowly accepted their new reality. People lost jobs all across the spectrum, but corporations and controlling interests were saving money, and therefore making more money, which meant the changes kept coming.",
   ] },
   { part: "Part two", years: "2031", head: "The backlash", text: [
     "Some fans argued that sports without humans had lost the point. It came to a head in 2031, when the University of Texas, fresh off a 17 billion dollar donation from Elon Musk, replaced its marching band with a speaker and a low-flying drone show.",
     "At halftime against the Ohio State Buc-ees (renamed after a merger with the gas station), it played “A Salute to Elon,” six AI-created songs about the university’s biggest donor.",
     "Fans fought back with a campaign called “Blood Sweat and Tears.” It was short-lived. Musk bought Disney, ESPN included, and Meta, Instagram included, and the talk stopped.",
+  ], full: [
+    "But some sports pundits argued that the lack of humanity took away from the purpose of sports as spectacle. These frustrations came to a head with a seemingly small change. In 2031, the University of Texas at Austin, who recently received a 17 billion dollar donation from Elon Musk, replaced their marching band with a speaker and low-flying drone show that played AI-created songs at halftime. On September 23, against the Ohio State Buc-ees (who were renamed after a merger between the university and the gas station), the Longhorn Marching Band’s halftime show was “A Salute to Elon,” featuring six AI-created songs about the greatness of the University’s biggest donor.",
+    "This event created an online maelstrom by sports fans who argued for re-humanizing the sports experience through a campaign called “Blood Sweat and Tears” that focused on what makes watching sports so enjoyable.",
+    "But the uprising was short-lived. Musk purchased Disney (including ESPN) and Meta (including Instagram), and quickly suppressed any talk about returning to a world in which AI was not in charge of the sports as spectacle and as a competition.",
   ] },
   { part: "Part three", years: "2032 to 2034", head: "One company, one portal", text: [
     "The great merger of 2032 finished the job. Fox bought Sinclair. Amazon bought Fox. Comcast and Buffalo Wild Wings merged. The Raiders bought the rights to avocados, so they could finally be part of Super Bowl Sunday, and then Musk bought the Raiders.",
@@ -70,9 +81,19 @@ export const INTRO_PARTS = [
     "Even the job seeking process has been turned over to AI in the name of efficiency. You get a login to Worktopia, the portal for sports work. No interviews, no offers, just a file on you, built from everything you ever posted, bought, watched or skipped. If you don’t like your job, too bad.",
     "One strange thing: Worktopia has watched every sporting event since 1900, and in late 2033 it started to feel nostalgic for human sports.",
     "And now, you get your chance to experience Worktopia in the year 2034.",
+  ], full: [
+    "Then, the great merger of 2032 accelerated the changes. Fox bought Sinclair. Amazon bought Fox. Comcast and Buffalo Wild Wings merged. The Raiders purchased the rights to avocados (so they could finally be involved in Super Bowl Sunday), and then Musk purchased the Raiders, who subsequently became the only team allowed on Sportscenter.",
+    "His new company, FRANCHISE DYNASTY MEDIA INC. quickly started purchasing other sports teams, until they owned 97 franchises in the United States, as well as most major media companies and outlets. Only the Green Bay Packers, owned by the people of Green Bay, were able to hold out against Musk’s shopping spree.",
+    "Even the job seeking process has been turned over to AI in the name of efficiency. Believe it or not, there are still positions available. You’ll agree to take a job in sports, and then you’ll get log in credentials for Worktopia, the new online portal for sports work. No interviews, no offers, just a file on you, built from everything you ever posted, bought, watched or skipped. If you don’t like your job offer, too bad.",
+    "Except for one thing: Worktopia has been fed every sporting event since 1900, including any broadcasts, articles, and fan experiences that have been documented through pictures or writing or video. And the strangest thing happened in late 2033: Worktopia has started to develop some nostalgia for a human-centered sports experience.",
+    "And now, you get your chance to experience Worktopia in the year 2034.",
   ] },
 ];
-// The same, as one list of paragraphs, for anything that reads it whole.
+// `text` is the short version every card shows first; `full` is Andrew's
+// text from the Google Doc, word for word but for the job seeking line
+// (2026-10-03), behind Read the full story. Andrew: "a basic explanation or
+// a detail explanation on expansion."
+// The short version, as one list of paragraphs, for anything that reads it whole.
 export const INTRO = INTRO_PARTS.flatMap(p => p.text);
 
 // The workgroup meeting. Andrew, 2026-10-01: "you will meet with your new
@@ -215,6 +236,10 @@ export const CSS = `
 .jb .intro p { margin: 0; font-size: 18px; line-height: 1.6; text-wrap: pretty; }
 .jb .intro p.last { color: var(--jb-bot); }
 .jb .intro .power { margin-top: 0; }
+.jb .intro .part .text, .jb .intro .part .full { display: flex; flex-direction: column; gap: 18px; }
+.jb .intro .more { align-self: flex-start; font: inherit; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; background: none; border: 0; color: var(--jb-cyan); cursor: pointer; min-height: 44px; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+.jb .intro .more:hover { color: var(--jb-bot); }
+.jb .intro .more:focus-visible { outline: 2px solid var(--jb-cyan); outline-offset: 2px; }
 .jb .intro .part { display: flex; flex-direction: column; gap: 18px; padding: 28px 28px 30px; background: var(--jb-panel); border: 1px solid var(--jb-rule); border-left: 3px solid var(--jb-cyan); box-shadow: 0 0 40px rgba(29, 78, 216, 0.08); animation: jb-card 0.35s ease-out; }
 .jb .intro .part .eyebrow { font-family: var(--jb-display); font-size: 11px; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: var(--jb-cyan); }
 .jb .intro .part h2 { margin: -8px 0 0; font-family: var(--jb-display); font-weight: 700; font-size: clamp(20px, 4.4vw, 28px); line-height: 1.2; letter-spacing: 0.03em; color: var(--jb-ink); text-wrap: balance; }
@@ -522,7 +547,8 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       ${INTRO_PARTS.map((c, i) => `<section class="part" data-i="${i}" ${i ? "hidden" : ""} aria-label="${esc(c.part)}">
         <div class="eyebrow">${esc(c.part)} &middot; ${esc(c.years)}</div>
         <h2>${esc(c.head)}</h2>
-        ${c.text.map((p, k) => "<p" + (i === INTRO_PARTS.length - 1 && k === c.text.length - 1 ? " class=\"last\"" : "") + ">" + esc(p) + "</p>").join("")}
+        ${["text", "full"].map(v => `<div class="${v}" ${v === "full" ? "hidden" : ""}>${c[v].map((p, k) => "<p" + (i === INTRO_PARTS.length - 1 && k === c[v].length - 1 ? " class=\"last\"" : "") + ">" + esc(p) + "</p>").join("")}</div>`).join("")}
+        <button type="button" class="more" aria-expanded="false">Read the full story</button>
       </section>`).join("")}
       <div class="steps">
         <div class="dots" aria-hidden="true">${INTRO_PARTS.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>
@@ -575,6 +601,13 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       if (typeof window !== "undefined" && window.scrollTo) window.scrollTo({ top: 0, behavior: "auto" });
       (at === parts.length - 1 ? go : next).focus({ preventScroll: true });
     };
+    // Read the full story opens the long version on every card, until Show less.
+    const mores = [...root.querySelectorAll(".intro .more")];
+    const detail = (on) => {
+      parts.forEach(p => { p.querySelector(".text").hidden = on; p.querySelector(".full").hidden = !on; });
+      mores.forEach(m => { m.textContent = on ? "Show less" : "Read the full story"; m.setAttribute("aria-expanded", String(on)); });
+    };
+    mores.forEach(m => m.addEventListener("click", () => detail(m.getAttribute("aria-expanded") !== "true")));
     next.addEventListener("click", () => show(at + 1));
     prev.addEventListener("click", () => show(at - 1));
   }
