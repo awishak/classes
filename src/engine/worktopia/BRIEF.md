@@ -96,22 +96,20 @@ Worktopia. His sentences are kept where they fit; the cuts and the headings
 are Claude's, for him to edit. `INTRO` is still exported, the three cards
 flattened. The class sheet and the public page show the same cards.
 
-Later the same day, after seeing the cuts: "can you make it so that there's a
-basic explanation or a detail explanation on expansion?" Each card has
-`text`, the short version it shows first, and `full`, his Google Doc text
-word for word. Two buttons sit under the card, his wording: "I want to read
-more about the AI takeover of media," which swaps in `full` on that card and
-every card after and then goes away, and "Move on to Part two" (or three),
-with Enter Worktopia on the last. A Read the full story link inside the card
-came first and was "in an awkward spot." Reading more takes the page back to the top, and
-every word of `full` that the short version doesn't have is in a blue
-<mark> (`fullWithNew`, a word diff), after "when i click it, it takes me to
-the middle ... take me back to the top, but this time, highlight in blue all
-the new stuff." Where the short version reworded his sentence, the
-highlight is choppy, a word here and there; that is the diff being honest. The one change in `full` is his own, from the
-same day: "Are you looking for a job in sports in 2032? ... in the
-traditional sense. Instead," became "Even the job seeking process has been
-turned over to AI in the name of efficiency," in both versions.
+Later the same day he asked for a basic and a detailed version. That went
+through three tries: a Read the full story link swapping in his whole text
+("in an awkward spot"), two buttons with the whole text highlighted where it
+was new ("it takes me to the middle"), and then what is built: "include an
+additional bullet pointed or dated list below that button when someone
+clicks on it, so they can read some of the details, and then the next button
+moves below." Each card has `text`, the card, and `more`, six bullets of the
+Google Doc details the card leaves out, in his sentences with light joins
+(Claude's, for him to edit). Under the card: "I want to read more about the
+AI takeover of media," which opens that card's list right below it and goes
+away, then "Move on to Part two" (or three), or Enter Worktopia on the last.
+Every card starts closed. "Even the job seeking process has been turned over
+to AI in the name of efficiency" replaced "Jobs in sports aren't posted
+anymore," his line, 2026-10-03.
 
 ## The public page is a game, 2026-10-03
 
