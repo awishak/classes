@@ -128,10 +128,11 @@ after the lookup instead of the worksheet:
 4. A verdict, one of `VERDICTS` by the name: the job went to AI anyway
    (4 to 1, 0.3% stronger, merged, the model kept it, Neuralink).
 5. "But Worktopia has found something for you." An offer, then "Do you
-   accept this position?" YES or NO. The first offer comes from the
-   thousand; after each no the next alternates between the sixty horrible
-   jobs and the thousand, picked by the name and the round, never the job
-   they asked for. The Careless Whisper riff plays under the first offer.
+   accept this position?" YES or NO. Every offer is one of the sixty horrible jobs,
+   in an order the name sets, never the same one twice in a run. The first
+   version took every other offer from the thousand, and Andrew drew Team
+   Nutritionist: "that's a real good job? the jobs are supposed to be bad"
+   (2026-10-03). The Careless Whisper riff plays under the first offer.
    A no gets "Declined. Noted on your file." with a different line at five,
    ten, fifteen and twenty declines. After 26 offers it assigns one anyway.
 6. A yes: "Employed. Report Monday, 5:15 am Pacific." on a ticket, and
