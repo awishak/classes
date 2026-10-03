@@ -67,7 +67,7 @@ export const INTRO_PARTS = [
   { part: "Part three", years: "2032 to 2034", head: "One company, one portal", text: [
     "The great merger of 2032 finished the job. Fox bought Sinclair. Amazon bought Fox. Comcast and Buffalo Wild Wings merged. The Raiders bought the rights to avocados, so they could finally be part of Super Bowl Sunday, and then Musk bought the Raiders.",
     "His new company, FRANCHISE DYNASTY MEDIA INC., now owns 97 franchises and most of the media. Only the Green Bay Packers, owned by the people of Green Bay, held out.",
-    "Jobs in sports aren’t posted anymore. You get a login to Worktopia, the portal for sports work. No interviews, no offers, just a file on you, built from everything you ever posted, bought, watched or skipped. If you don’t like your job, too bad.",
+    "Even the job seeking process has been turned over to AI in the name of efficiency. You get a login to Worktopia, the portal for sports work. No interviews, no offers, just a file on you, built from everything you ever posted, bought, watched or skipped. If you don’t like your job, too bad.",
     "One strange thing: Worktopia has watched every sporting event since 1900, and in late 2033 it started to feel nostalgic for human sports.",
     "And now, you get your chance to experience Worktopia in the year 2034.",
   ] },
