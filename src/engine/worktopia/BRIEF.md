@@ -99,8 +99,11 @@ flattened. The class sheet and the public page show the same cards.
 Later the same day, after seeing the cuts: "can you make it so that there's a
 basic explanation or a detail explanation on expansion?" Each card has
 `text`, the short version it shows first, and `full`, his Google Doc text
-word for word, behind Read the full story. Open, it stays open on every card
-as they page, until Show less. The one change in `full` is his own, from the
+word for word. Two buttons sit under the card, his wording: "I want to read
+more about the AI takeover of media," which swaps in `full` on that card and
+every card after and then goes away, and "Move on to Part two" (or three),
+with Enter Worktopia on the last. A Read the full story link inside the card
+came first and was "in an awkward spot." The one change in `full` is his own, from the
 same day: "Are you looking for a job in sports in 2032? ... in the
 traditional sense. Instead," became "Even the job seeking process has been
 turned over to AI in the name of efficiency," in both versions.

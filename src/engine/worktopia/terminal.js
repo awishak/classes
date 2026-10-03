@@ -91,7 +91,7 @@ export const INTRO_PARTS = [
 ];
 // `text` is the short version every card shows first; `full` is Andrew's
 // text from the Google Doc, word for word but for the job seeking line
-// (2026-10-03), behind Read the full story. Andrew: "a basic explanation or
+// (2026-10-03), behind the read more button. Andrew: "a basic explanation or
 // a detail explanation on expansion."
 // The short version, as one list of paragraphs, for anything that reads it whole.
 export const INTRO = INTRO_PARTS.flatMap(p => p.text);
@@ -237,9 +237,9 @@ export const CSS = `
 .jb .intro p.last { color: var(--jb-bot); }
 .jb .intro .power { margin-top: 0; }
 .jb .intro .part .text, .jb .intro .part .full { display: flex; flex-direction: column; gap: 18px; }
-.jb .intro .more { align-self: flex-start; font: inherit; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; background: none; border: 0; color: var(--jb-cyan); cursor: pointer; min-height: 44px; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
-.jb .intro .more:hover { color: var(--jb-bot); }
-.jb .intro .more:focus-visible { outline: 2px solid var(--jb-cyan); outline-offset: 2px; }
+.jb .intro .moves { display: flex; gap: 12px; flex-wrap: wrap; }
+.jb .intro .moves .power { text-align: left; }
+.jb .intro .moves .more { color: var(--jb-dim); border-color: var(--jb-rule); }
 .jb .intro .part { display: flex; flex-direction: column; gap: 18px; padding: 28px 28px 30px; background: var(--jb-panel); border: 1px solid var(--jb-rule); border-left: 3px solid var(--jb-cyan); box-shadow: 0 0 40px rgba(29, 78, 216, 0.08); animation: jb-card 0.35s ease-out; }
 .jb .intro .part .eyebrow { font-family: var(--jb-display); font-size: 11px; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: var(--jb-cyan); }
 .jb .intro .part h2 { margin: -8px 0 0; font-family: var(--jb-display); font-weight: 700; font-size: clamp(20px, 4.4vw, 28px); line-height: 1.2; letter-spacing: 0.03em; color: var(--jb-ink); text-wrap: balance; }
@@ -548,12 +548,14 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
         <div class="eyebrow">${esc(c.part)} &middot; ${esc(c.years)}</div>
         <h2>${esc(c.head)}</h2>
         ${["text", "full"].map(v => `<div class="${v}" ${v === "full" ? "hidden" : ""}>${c[v].map((p, k) => "<p" + (i === INTRO_PARTS.length - 1 && k === c[v].length - 1 ? " class=\"last\"" : "") + ">" + esc(p) + "</p>").join("")}</div>`).join("")}
-        <button type="button" class="more" aria-expanded="false">Read the full story</button>
       </section>`).join("")}
       <div class="steps">
         <div class="dots" aria-hidden="true">${INTRO_PARTS.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>
         <button type="button" class="prev" hidden>Back</button>
-        <button type="button" class="power next">Next</button>
+      </div>
+      <div class="moves">
+        <button type="button" class="power more">I want to read more about the AI takeover of media</button>
+        <button type="button" class="power next">Move on to Part two</button>
         <button type="button" class="power enter" hidden>Enter Worktopia</button>
       </div>
     </div>
@@ -598,16 +600,18 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       parts.forEach((p, k) => { p.hidden = k !== at; });
       dots.forEach((d, k) => { d.className = k === at ? "on" : k < at ? "seen" : ""; });
       prev.hidden = at === 0; next.hidden = at === parts.length - 1; go.hidden = at !== parts.length - 1;
+      if (at < parts.length - 1) next.textContent = "Move on to " + INTRO_PARTS[at + 1].part;
       if (typeof window !== "undefined" && window.scrollTo) window.scrollTo({ top: 0, behavior: "auto" });
       (at === parts.length - 1 ? go : next).focus({ preventScroll: true });
     };
-    // Read the full story opens the long version on every card, until Show less.
-    const mores = [...root.querySelectorAll(".intro .more")];
-    const detail = (on) => {
-      parts.forEach(p => { p.querySelector(".text").hidden = on; p.querySelector(".full").hidden = !on; });
-      mores.forEach(m => { m.textContent = on ? "Show less" : "Read the full story"; m.setAttribute("aria-expanded", String(on)); });
-    };
-    mores.forEach(m => m.addEventListener("click", () => detail(m.getAttribute("aria-expanded") !== "true")));
+    // Andrew's two buttons under the card. Reading more swaps in his full
+    // text on this card and every card after it, and the button goes away.
+    const more = $(".intro .more");
+    more.addEventListener("click", () => {
+      parts.forEach(p => { p.querySelector(".text").hidden = true; p.querySelector(".full").hidden = false; });
+      more.hidden = true;
+      next.focus({ preventScroll: true });
+    });
     next.addEventListener("click", () => show(at + 1));
     prev.addEventListener("click", () => show(at - 1));
   }
