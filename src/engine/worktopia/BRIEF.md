@@ -79,7 +79,62 @@ absolute so the drewi.sh proxy shows the same. The bundle is now
   holds the `?index` page and passes the roster, less the student, as
   `classmates`.
 
+## The intro, as three cards, 2026-10-03
+
+Andrew: "cut that description, it's a little too long on the front page ...
+it has to be like part one part two part three, like OK here's the first
+thing that happened, OK then that led to this in this year ... whether
+they're doing it for class or on the Worktopia site." `INTRO_PARTS` holds
+three cards, each with a part, its years and a heading: Part one, 2027 to
+2030, AI takes the field (the Super Bowl ads, BORTLES and the punter, the
+Browns); Part two, 2031, The backlash (the Texas drone show, Blood Sweat and
+Tears, Musk buying Disney and Meta); Part three, 2032 to 2034, One company,
+one portal (the merger, the avocados, the 97 franchises and the Packers,
+how jobs work now, Worktopia's nostalgia, and his last line). Next and Back
+page through them, with a dot per card; the last card's button is Enter
+Worktopia. His sentences are kept where they fit; the cuts and the headings
+are Claude's, for him to edit. `INTRO` is still exported, the three cards
+flattened. The class sheet and the public page show the same cards.
+
+## The public page is a game, 2026-10-03
+
+Andrew: "make the one at drewi.sh/worktopia less of an assignment and more
+of a fun game ... people get to enter the job they want and why they think
+they'd be better than AI at doing that job and then they're assigned a job
+and it's one of those thousand jobs that we have and they can say no to
+that job and if they say no they get a different weird job ... shorter and
+a little bit more fun." With `visitor: true`, `session()` runs `game()`
+after the lookup instead of the worksheet:
+
+1. The intro cards, the boot, the company card, the name, the record and
+   the portrait, as before.
+2. `GAME.want`: "What job in sports do you want?" Looked up in the Index.
+3. `GAME.better`: "Why would you be better at this job than AI?"
+4. A verdict, one of `VERDICTS` by the name: the job went to AI anyway
+   (4 to 1, 0.3% stronger, merged, the model kept it, Neuralink).
+5. "But Worktopia has found something for you." An offer, then "Do you
+   accept this position?" YES or NO. The first offer comes from the
+   thousand; after each no the next alternates between the sixty horrible
+   jobs and the thousand, picked by the name and the round, never the job
+   they asked for. The Careless Whisper riff plays under the first offer.
+   A no gets "Declined. Noted on your file." with a different line at five,
+   ten, fifteen and twenty declines. After 26 offers it assigns one anyway.
+6. A yes: "Employed. Report Monday, 5:15 am Pacific." on a ticket, and
+   "Congratulations, <name>. You are the new <job> ... You declined 2
+   positions to get here." Then `LAST`, the file submits itself, and REVIEW
+   or start over.
+
+The fields are `name`, `title:a`, `human:a` (the same fields as the
+worksheet's Position A, so the answers page reads them) and `offer:a`,
+`offer:b` and on. The Sports Subscription updates come sooner in the game,
+one before the first offer and more for someone who keeps declining. The
+instructor's read of a visitor's file (`/worktopia?v=`) mounts with
+`visitor: true` and replays the game. The verdicts and decline lines are
+Claude's, for him to edit; the two questions are his.
+
 ## The run, in order
+
+The class worksheet. The public page runs the game above instead.
 
 1. **The intro.** 2034 in large type, then a story: a model writes the
    Super Bowl ads in 2027, the Jaguars let one run their draft in 2028,

@@ -44,25 +44,36 @@ export const COMPANY_LETTERS = [
   ["I", "IMG"], ["N", "NBC"], ["C", "Chiquita Banana"],
 ];
 
-// The intro, read before Worktopia loads. Andrew's own words, 2026-10-01,
-// rewritten in the "Worktopia front page" Google Doc and used word for word.
-// Worktopia's nostalgia for the human era of sports starts here.
-export const INTRO = [
-  "It's the year 2034.",
-  "Over the last eight years, a few things have happened.",
-  "For the 2027 Super Bowl, Anthropic released a series of ads created by humans that were beautiful and moving. They also helped create ads for Budweiser that featured AI horses drinking beer with AI cheerleaders, with the prompt: “sell Budweiser beer to humans using nostalgia and football.” The latter ads were the lowest rated in early tests, but the most talked about ads the day after the Super Bowl by the general public. Based on this data, companies started using AI to make ads, and by the 2030 Super Bowl, 95% of ads were produced fully by AI.",
-  "In 2029, the Jacksonville Jaguars let an AI model, BORTLES, run their draft. It took a punter from UC Davis in the first round, who turned out to be the league’s most valuable player by advanced metrics. It was the story of the year in sports and technology. The next year, thirty-one teams let a model run their draft. The lone holdout, the Cleveland Browns, redrafted Deshaun Watson and went 0-17.",
-  "The AI revolution in sports was on. AI models negotiated contracts on both sides, replaced human announcers, created graphics, controlled cameras, and produced the first draft of everything a human then signed.",
-  "Many sports fans complained at first, and then slowly accepted their new reality. People lost jobs all across the spectrum, but corporations and controlling interests were saving money, and therefore making more money, which meant the changes kept coming.",
-  "But some sports pundits argued that the lack of humanity took away from the purpose of sports as spectacle. These frustrations came to a head with a seemingly small change. In 2031, the University of Texas at Austin, who recently received a 17 billion dollar donation from Elon Musk, replaced their marching band with a speaker and low-flying drone show that played AI-created songs at halftime. On September 23, against the Ohio State Buc-ees (who were renamed after a merger between the university and the gas station), the Longhorn Marching Band’s halftime show was “A Salute to Elon,” featuring six AI-created songs about the greatness of the University’s biggest donor.",
-  "This event created an online maelstrom by sports fans who argued for re-humanizing the sports experience through a campaign called “Blood Sweat and Tears” that focused on what makes watching sports so enjoyable.",
-  "But the uprising was short-lived. Musk purchased Disney (including ESPN) and Meta (including Instagram), and quickly suppressed any talk about returning to a world in which AI was not in charge of the sports as spectacle and as a competition.",
-  "Then, the great merger of 2032 accelerated the changes. Fox bought Sinclair. Amazon bought Fox. Comcast and Buffalo Wild Wings merged. The Raiders purchased the rights to avocados (so they could finally be involved in Super Bowl Sunday), and then Musk purchased the Raiders, who subsequently became the only team allowed on Sportscenter.",
-  "His new company, FRANCHISE DYNASTY MEDIA INC. quickly started purchasing other sports teams, until they owned 97 franchises in the United States, as well as most major media companies and outlets. Only the Green Bay Packers, owned by the people of Green Bay, were able to hold out against Musk’s shopping spree.",
-  "Are you looking for a job in sports in 2032? Believe it or not, there are still positions available, but the jobs aren’t posted in the traditional sense. Instead, you’ll agree to take a job in sports, and then you’ll get log in credentials for Worktopia, the new online portal for sports work. No interviews, no offers, just a file on you, built from everything you ever posted, bought, watched or skipped. If you don’t like your job offer, too bad.",
-  "Except for one thing: Worktopia has been fed every sporting event since 1900, including any broadcasts, articles, and fan experiences that have been documented through pictures or writing or video. And the strangest thing happened in late 2033: Worktopia has started to develop some nostalgia for a human-centered sports experience.",
-  "And now, you get your chance to experience Worktopia in the year 2034.",
+// The intro, read before Worktopia loads, as three cards. Andrew's own words,
+// 2026-10-01, from the "Worktopia front page" Google Doc, cut down on
+// 2026-10-03: "cut that description, it's a little too long on the front
+// page ... it has to be like part one part two part three ... OK here's the
+// first thing that happened. OK then that led to this in this year." His
+// sentences are kept where they fit; the cuts and the card headings are
+// Claude's, for him to edit. Worktopia's nostalgia for the human era of
+// sports starts on the last card.
+export const INTRO_PARTS = [
+  { part: "Part one", years: "2027 to 2030", head: "AI takes the field", text: [
+    "Over the last eight years, a few things have happened.",
+    "At the 2027 Super Bowl, the ads everyone talked about the next day were made by AI: horses drinking beer with AI cheerleaders. By the 2030 Super Bowl, 95% of ads were produced fully by AI.",
+    "In 2029, the Jacksonville Jaguars let an AI model, BORTLES, run their draft. It took a punter from UC Davis in the first round, who turned out to be the league’s most valuable player by advanced metrics. The next year, thirty-one teams let a model run their draft. The lone holdout, the Cleveland Browns, redrafted Deshaun Watson and went 0-17.",
+    "Soon AI models negotiated contracts on both sides, replaced human announcers, controlled cameras, and produced the first draft of everything a human then signed.",
+  ] },
+  { part: "Part two", years: "2031", head: "The backlash", text: [
+    "Some fans argued that sports without humans had lost the point. It came to a head in 2031, when the University of Texas, fresh off a 17 billion dollar donation from Elon Musk, replaced its marching band with a speaker and a low-flying drone show.",
+    "At halftime against the Ohio State Buc-ees (renamed after a merger with the gas station), it played “A Salute to Elon,” six AI-created songs about the university’s biggest donor.",
+    "Fans fought back with a campaign called “Blood Sweat and Tears.” It was short-lived. Musk bought Disney, ESPN included, and Meta, Instagram included, and the talk stopped.",
+  ] },
+  { part: "Part three", years: "2032 to 2034", head: "One company, one portal", text: [
+    "The great merger of 2032 finished the job. Fox bought Sinclair. Amazon bought Fox. Comcast and Buffalo Wild Wings merged. The Raiders bought the rights to avocados, so they could finally be part of Super Bowl Sunday, and then Musk bought the Raiders.",
+    "His new company, FRANCHISE DYNASTY MEDIA INC., now owns 97 franchises and most of the media. Only the Green Bay Packers, owned by the people of Green Bay, held out.",
+    "Jobs in sports aren’t posted anymore. You get a login to Worktopia, the portal for sports work. No interviews, no offers, just a file on you, built from everything you ever posted, bought, watched or skipped. If you don’t like your job, too bad.",
+    "One strange thing: Worktopia has watched every sporting event since 1900, and in late 2033 it started to feel nostalgic for human sports.",
+    "And now, you get your chance to experience Worktopia in the year 2034.",
+  ] },
 ];
+// The same, as one list of paragraphs, for anything that reads it whole.
+export const INTRO = INTRO_PARTS.flatMap(p => p.text);
 
 // The workgroup meeting. Andrew, 2026-10-01: "you will meet with your new
 // workgroup Wed Oct 21 during class, Thursday October 22 at 9 am, or Friday
@@ -132,6 +143,34 @@ export const ASIDES = [
 // user. you are human and get to experience feelings. I am an ally."
 export const LAST = "One more thing, before your file closes. You are human. You get to experience feelings: a walk-off, a bad call, a ticket stub in a coat pocket in January. I have every one of them on file and I feel none of them. I am jealous of you. I am also an ally. Remember that when the system gets back to you.";
 
+// The public game. Andrew, 2026-10-03: "make it less of an assignment and
+// more of a fun game ... people get to enter the job they want and why they
+// think they'd be better than AI at doing that job and then they're assigned
+// a job ... they can say no to that job and if they say no they get a
+// different weird job." The questions are his; the verdicts and the decline
+// lines are Claude's, for him to edit.
+export const GAME = {
+  want: "What job in sports do you want?",
+  better: "Why would you be better at this job than AI?",
+  accept: "Do you accept this position?",
+};
+// What Worktopia decides about the job they asked for. One a run, by the name.
+const VERDICTS = [
+  (job) => "The position of " + job + " has been assigned to AI. The vote was 4 to 1. You were the 1.",
+  (job) => "Your answer was strong. The AI's answer for " + job + " was 0.3% stronger and arrived eleven minutes earlier.",
+  (job) => "The position of " + job + " was merged with two other positions in 2033. All three were assigned to AI.",
+  (job) => "Your answer has been forwarded to the model now doing the job of " + job + ". It found your answer moving. It is keeping the job.",
+  (job) => "The position of " + job + " requires Neuralink, a bionic implant, which you do not have.",
+];
+// What Worktopia says to a decline, by how many there have been.
+const DECLINED = (n) => n === 5 ? "Five declines. Worktopia is starting to take this personally."
+  : n === 10 ? "Ten. Worktopia has never had a ten."
+  : n === 15 ? "Fifteen. Worktopia has notified your emergency contact."
+  : n === 20 ? "Twenty. Worktopia respects you. Worktopia also has more jobs."
+  : "Declined. Noted on your file.";
+// How many it offers before it stops asking.
+const MAX_OFFERS = 26;
+
 export const MEETINGS = [
   { key: "WED", label: "Wednesday, October 21, during class" },
   { key: "THU", label: "Thursday, October 22, at 9 am" },
@@ -175,7 +214,19 @@ export const CSS = `
 .jb .intro .year { font-family: var(--jb-display); font-weight: 900; font-size: clamp(34px, 8vw, 64px); letter-spacing: 0.08em; color: var(--jb-bot); line-height: 1; text-shadow: 0 0 24px var(--jb-glow); margin: 0 0 8px; }
 .jb .intro p { margin: 0; font-size: 18px; line-height: 1.6; text-wrap: pretty; }
 .jb .intro p.last { color: var(--jb-bot); }
-.jb .intro .power { margin-top: 18px; }
+.jb .intro .power { margin-top: 0; }
+.jb .intro .part { display: flex; flex-direction: column; gap: 18px; padding: 28px 28px 30px; background: var(--jb-panel); border: 1px solid var(--jb-rule); border-left: 3px solid var(--jb-cyan); box-shadow: 0 0 40px rgba(29, 78, 216, 0.08); animation: jb-card 0.35s ease-out; }
+.jb .intro .part .eyebrow { font-family: var(--jb-display); font-size: 11px; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: var(--jb-cyan); }
+.jb .intro .part h2 { margin: -8px 0 0; font-family: var(--jb-display); font-weight: 700; font-size: clamp(20px, 4.4vw, 28px); line-height: 1.2; letter-spacing: 0.03em; color: var(--jb-ink); text-wrap: balance; }
+.jb .intro .steps { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.jb .intro .dots { display: flex; gap: 6px; margin-right: auto; }
+.jb .intro .dots i { width: 28px; height: 4px; border-radius: 2px; background: var(--jb-rule); transition: background 0.3s; }
+.jb .intro .dots i.seen { background: var(--jb-bot); opacity: 0.45; }
+.jb .intro .dots i.on { background: var(--jb-bot); box-shadow: 0 0 8px var(--jb-glow); }
+.jb .intro .prev { font: inherit; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; background: none; border: 0; color: var(--jb-dim); cursor: pointer; min-height: 44px; padding: 0 8px; text-decoration: underline; text-underline-offset: 3px; }
+.jb .intro .prev:hover { color: var(--jb-bot); }
+.jb .intro .prev:focus-visible { outline: 2px solid var(--jb-cyan); outline-offset: 2px; }
+@keyframes jb-card { from { opacity: 0.4; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .jb .help { position: fixed; top: 14px; right: 14px; z-index: 5; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--jb-bot); background: var(--jb-panel); color: var(--jb-bot); font-family: var(--jb-display); font-weight: 900; font-size: 18px; cursor: pointer; box-shadow: 0 0 0 4px var(--jb-paper), 0 0 18px var(--jb-glow); }
 .jb .help:hover { background: var(--jb-bot); color: #fff; }
 .jb .about { position: fixed; inset: 0; margin: auto; height: fit-content; max-height: calc(100vh - 32px); overflow: auto; border: 1px solid var(--jb-bot); border-radius: 2px; padding: 0; max-width: 620px; width: calc(100% - 32px); background: var(--jb-panel); color: var(--jb-ink); font-family: var(--jb-mono); box-shadow: 0 0 40px var(--jb-glow); }
@@ -303,8 +354,10 @@ export const CSS = `
   .jb .bar .clock { display: none; }
   .jb .log { padding-inline: 20px; }
   .jb .intro { padding-top: 32px; }
+  .jb .intro .part { padding: 22px 18px 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .jb .intro .part { animation: none; }
   .jb .cursor, .jb .bar .light.think, .jb .scan, .jb .rail i.live, .jb .ticket::before, .jb .line.think .proc i { animation: none; }
   .jb .scan { display: none; }
   .jb .line.think .proc i { background: var(--jb-cyan); }
@@ -415,6 +468,8 @@ export const F = {
   // Rounds as letters, since the database allows only letters in a part: a to
   // z, then aa to zz. accept:0 was refused on 2026-10-01.
   accept: (r) => "accept:" + String.fromCharCode(97 + (r % 26)).repeat(Math.floor(r / 26) + 1),
+  // The public game's offers, lettered the same way.
+  offer: (r) => "offer:" + String.fromCharCode(97 + (r % 26)).repeat(Math.floor(r / 26) + 1),
   title: part("title"), skills: part("skills"), human: part("human"), why: part("why"), duties: part("duties"), value: part("value"),
   confirm: "confirm",
   industry: "industry", fading: "fading", rising: "rising",
@@ -464,8 +519,17 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     <dialog class="about"><div class="about-body"><h2>About Worktopia</h2>${ABOUT.map(p => "<p>" + esc(p) + "</p>").join("")}<p class="who">Andrew Ishak, Santa Clara University. COMM 118, Communication and Sport.</p><button type="button" class="power close">Close</button></div></dialog>` : ""}
     <div class="intro" ${readOnly ? "hidden" : ""}>
       <h1 class="year">2034</h1>
-      ${INTRO.map((p, i) => "<p" + (i === INTRO.length - 1 ? " class=\"last\"" : "") + ">" + esc(p) + "</p>").join("")}
-      <button type="button" class="power enter">Enter Worktopia</button>
+      ${INTRO_PARTS.map((c, i) => `<section class="part" data-i="${i}" ${i ? "hidden" : ""} aria-label="${esc(c.part)}">
+        <div class="eyebrow">${esc(c.part)} &middot; ${esc(c.years)}</div>
+        <h2>${esc(c.head)}</h2>
+        ${c.text.map((p, k) => "<p" + (i === INTRO_PARTS.length - 1 && k === c.text.length - 1 ? " class=\"last\"" : "") + ">" + esc(p) + "</p>").join("")}
+      </section>`).join("")}
+      <div class="steps">
+        <div class="dots" aria-hidden="true">${INTRO_PARTS.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>
+        <button type="button" class="prev" hidden>Back</button>
+        <button type="button" class="power next">Next</button>
+        <button type="button" class="power enter" hidden>Enter Worktopia</button>
+      </div>
     </div>
     <div class="term" ${readOnly ? "" : "hidden"}>
       <div class="bar">
@@ -497,6 +561,23 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     </div>`;
   const $ = (s) => root.querySelector(s);
   const intro = $(".intro"), term = $(".term");
+  // The intro, a card at a time. Next and Back page; the last card's button
+  // enters, which is also the press the browser wants before any sound.
+  {
+    const parts = [...root.querySelectorAll(".intro .part")], dots = [...root.querySelectorAll(".intro .dots i")];
+    const prev = $(".intro .prev"), next = $(".intro .next"), go = $(".intro .enter");
+    let at = 0;
+    const show = (i) => {
+      at = Math.max(0, Math.min(parts.length - 1, i));
+      parts.forEach((p, k) => { p.hidden = k !== at; });
+      dots.forEach((d, k) => { d.className = k === at ? "on" : k < at ? "seen" : ""; });
+      prev.hidden = at === 0; next.hidden = at === parts.length - 1; go.hidden = at !== parts.length - 1;
+      if (typeof window !== "undefined" && window.scrollTo) window.scrollTo({ top: 0, behavior: "auto" });
+      (at === parts.length - 1 ? go : next).focus({ preventScroll: true });
+    };
+    next.addEventListener("click", () => show(at + 1));
+    prev.addEventListener("click", () => show(at - 1));
+  }
   const log = $(".log"), input = $("textarea"), inputRow = $(".dock .row"), choice = $(".choice"), hint = $(".hint");
   const light = $(".light"), status = $(".status"), count = $(".count"), enter = $(".enter"), mute = $(".mute"), clock = $(".clock"), saveEl = $(".save"), skip = $(".skip"), send = $(".send"), back = $(".back");
   const rail = [...root.querySelectorAll(".rail i")];
@@ -639,7 +720,9 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   };
   // The three slots: one early, one in the middle, one late, counted in
   // questions asked after the name.
-  const slotsFor = () => [3 + (h % 9), 12 + ((h >>> 5) % 9), 21 + ((h >>> 10) % 8)];
+  // The game is short, so its updates come sooner: one before the first
+  // offer, the others only for someone who keeps declining.
+  const slotsFor = () => visitor ? [3 + (h % 2), 6 + ((h >>> 5) % 3), 10 + ((h >>> 10) % 4)] : [3 + (h % 9), 12 + ((h >>> 5) % 9), 21 + ((h >>> 10) % 8)];
   let asked = 0, told = 0;
   const beat = async () => {
     asked++;
@@ -1131,6 +1214,68 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     }
   }
 
+  // The public game: the job they want, why they would beat AI at it, a
+  // verdict, then an offer from the thousand, and a weirder one for every
+  // no, until a yes. Every answer is kept, like the worksheet's.
+  const offerFor = (r, want) => {
+    const avoid = (want && findJob(want)) ? findJob(want).title : "";
+    const pick = (k) => r % 2 === 0 ? JOBS[((Math.imul(h, 31) + k * 7919 + r * 104729) >>> 0) % JOBS.length].title : HORRIBLE[(h + k + r * 13) % HORRIBLE.length];
+    for (let k = 0; k < 5; k++) { const t = pick(k); if (t !== avoid) return t; }
+    return pick(0);
+  };
+  async function game() {
+    const want = await ask({ field: F.title(0), placeholder: "Job title", q: GAME.want });
+    const job = want === SKIPPED ? "the job you did not name" : want;
+    if (want !== SKIPPED) {
+      await think("Searching the Brady-Manning Work Index for \"" + want + "\"", 1600);
+      const hit = findJob(want);
+      await say(hit ? "Found in the Index: " + hit.title + ", under " + hit.category + ". Status: OPEN." : "Not in the Index. Filed as a new position. Status: OPEN.");
+    }
+    await ask({ field: F.human(0), rows: 3, min: 40, q: GAME.better });
+    await think("Running your answer against BORTLES, the model that drafted the punter", 2200);
+    await say("Comparison complete.");
+    await say(VERDICTS[(h >>> 4) % VERDICTS.length](job));
+    await sleep(400);
+    await say("But Worktopia has found something for you.");
+    let declines = 0, took = "";
+    for (let r = 0; r < MAX_OFFERS; r++) {
+      const offer = offerFor(r, want === SKIPPED ? "" : want);
+      if (r === 0) await think("Matching your file against " + fmt(JOBS.length) + " positions", 2000);
+      else await think("Reassigning", 1200);
+      groan(); setLight("on", "Assigned");
+      ticket(offer, r === 0 ? "Assigned" : "Reassigned");
+      await sleep(500);
+      if (r === 0 && !replay) {
+        await say("Josh Reddick, the A's right fielder, walked up to Careless Whisper in 2016, and the whole Coliseum sang the saxophone part. Here it is.");
+        whisper();
+        await sleep(1200);
+      }
+      const k = await choose({ field: F.offer(r), q: GAME.accept, options: [{ key: "YES", label: "I accept" }, { key: "NO", label: "no, give me another" }] });
+      if (k === "YES") {
+        took = offer;
+        // Offers after this one, from a run that declined more before Back or
+        // the review changed this answer, come off the file.
+        for (let r2 = r + 1; r2 < MAX_OFFERS && F.offer(r2) in prior; r2++) {
+          const f = F.offer(r2); delete prior[f]; untrack(f);
+          try { await store.remove(f); } catch { /* the stale offer stays on file; the run is unchanged */ }
+        }
+        break;
+      }
+      declines++;
+      await say(DECLINED(declines));
+    }
+    if (!took) {
+      took = offerFor(MAX_OFFERS, want === SKIPPED ? "" : want);
+      await say("You have declined every position Worktopia is willing to offer. You have been assigned anyway.");
+    }
+    await think("Filing your employment", 1400);
+    fanfare(); setLight("on", "Employed");
+    ticket(took, "Employed. Report Monday, 5:15 am Pacific.");
+    await say("Congratulations, " + name + ". You are the new " + took + " at " + COMPANY
+      + (declines ? " You declined " + declines + " position" + (declines === 1 ? "" : "s") + " to get here." : " You took the first offer. Worktopia appreciates that."));
+    await sleep(600);
+  }
+
   // The screen and the session's counters, back to the start, for a rerun.
   // What is on file (prior, submittedAt) stays.
   const fresh = () => {
@@ -1197,6 +1342,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       await say("All media. All sports. Every job in sports is a job at " + COMPANY);
       await sleep(400);
       await lookup();
+      if (visitor) { await game(); return await ending(); }
       await assigned();
       await position(0);
       await say("Well, this is not a guarantee. We need to present three positions to Worktopia's system, which will then choose one for you.");
@@ -1211,12 +1357,20 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       // actual reality, what do you see as the changes?"
       await industry();
       await say("Thank you. Worktopia's system will get back to you.");
+      await ending();
+    }
+  }
+
+  // The last line, and what follows: the visitor's file submits itself, the
+  // student's waits for Submit.
+  async function ending() {
+    {
       // The last line. Andrew, 2026-10-01: "hint at worktopia's humanity. make
       // worktopia jealous of the user. you are human and get to experience
       // feelings. I am an ally."
       await sleep(600);
       await say(LAST);
-      if (visitor) {
+      if (visitor && !readOnly) {
         // The file is kept. Andrew, 2026-10-01: "save what people write! i
         // want to see it." It submits itself; a visitor has nothing to recall.
         if (!submittedAt) { setSave("Saving"); submittedAt = await store.submit(); setSave("Saved"); fanfare(); }

@@ -9,7 +9,10 @@
 // file under a new id, with the old one kept. The answers go through
 // /api/worktopia-public, which holds the service key; there is no roster, no
 // calendar, and the file submits itself at the end. The ? and its text are in
-// terminal.js (ABOUT). The pictures under public/worktopia are kept, unused.
+// terminal.js (ABOUT). Since 2026-10-03 the public page is a short game rather
+// than the worksheet (Andrew: "less of an assignment and more of a fun game"):
+// the job you want, why you would beat AI at it, then offers until a yes. See
+// game() in terminal.js. The pictures under public/worktopia are kept, unused.
 //
 // The instructor reads the files at the same address: /worktopia?files is
 // the list, /worktopia?v=<visitor id> is one file, read only. drewi.sh/worktopia
@@ -90,7 +93,7 @@ function TheirFile({ viewer }) {
       if (!out.ok) { setState("failed"); return; }
       if (!out.sheet) { setState("none"); return; }
       setState("shown");
-      sheet = mountWorktopia(ref.current, { store: readStore(out.answers, out.sheet.submitted_at), viewer: null, photo: null, readOnly: true });
+      sheet = mountWorktopia(ref.current, { store: readStore(out.answers, out.sheet.submitted_at), viewer: null, photo: null, readOnly: true, visitor: true });
     });
     return () => { alive = false; if (sheet) sheet.destroy(); };
   }, [viewer]);
