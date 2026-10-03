@@ -1260,14 +1260,12 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
   }
 
   // The public game: the job they want, why they would beat AI at it, a
-  // verdict, then an offer from the thousand, and a weirder one for every
-  // no, until a yes. Every answer is kept, like the worksheet's.
-  const offerFor = (r, want) => {
-    const avoid = (want && findJob(want)) ? findJob(want).title : "";
-    const pick = (k) => r % 2 === 0 ? JOBS[((Math.imul(h, 31) + k * 7919 + r * 104729) >>> 0) % JOBS.length].title : HORRIBLE[(h + k + r * 13) % HORRIBLE.length];
-    for (let k = 0; k < 5; k++) { const t = pick(k); if (t !== avoid) return t; }
-    return pick(0);
-  };
+  // verdict, then a horrible job, and another for every no, until a yes.
+  // Every offer is one of the sixty horrible jobs, in an order the name sets,
+  // never the same one twice in a run. Andrew, 2026-10-03, on a Team
+  // Nutritionist offer from the thousand: "that's a real good job? the jobs
+  // are supposed to be bad." Every answer is kept, like the worksheet's.
+  const offerFor = (r) => HORRIBLE[(h + r * 13) % HORRIBLE.length];
   async function game() {
     const want = await ask({ field: F.title(0), placeholder: "Job title", q: GAME.want });
     const job = want === SKIPPED ? "the job you did not name" : want;
@@ -1284,7 +1282,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
     await say("But Worktopia has found something for you.");
     let declines = 0, took = "";
     for (let r = 0; r < MAX_OFFERS; r++) {
-      const offer = offerFor(r, want === SKIPPED ? "" : want);
+      const offer = offerFor(r);
       if (r === 0) await think("Matching your file against " + fmt(JOBS.length) + " positions", 2000);
       else await think("Reassigning", 1200);
       groan(); setLight("on", "Assigned");
@@ -1310,7 +1308,7 @@ export function mountWorktopia(root, { store, viewer, photo, classmates = [], re
       await say(DECLINED(declines));
     }
     if (!took) {
-      took = offerFor(MAX_OFFERS, want === SKIPPED ? "" : want);
+      took = offerFor(MAX_OFFERS);
       await say("You have declined every position Worktopia is willing to offer. You have been assigned anyway.");
     }
     await think("Filing your employment", 1400);
