@@ -11,13 +11,13 @@ import { useEffect, useState } from "react";
 import { DetailsLink } from "./AssignmentsCard.jsx";
 import { hasReadout } from "./ReadoutPage.jsx";
 import { WorksheetReview, WORKSHEETS } from "@ishak/worksheets";
-import { useClassState } from "./store.js";
+import { useClassData } from "./store.js";
 import { rosterOf, idOf } from "./roster.js";
 import { INSTRUCTOR_EMAILS } from "../instructors.js";
 import { useSession, authHeaders } from "./session.js";
 import { savedPin } from "../InstructorGate.jsx";
-import { LOCAL_WORKSHEETS } from "./localWorksheets.js";
 import { WORKTOPIA_KEY } from "./worktopia/terminal.js";
+import { LOCAL_WORKSHEETS, listedFor, openTo } from "./localWorksheets.js";
 import { gameClient } from "./gameClient.js";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
@@ -88,11 +88,16 @@ function LocalReview({ config, sheet, people, studentUrl }) {
 }
 
 export default function WorksheetsPage({ config }) {
-  const [data] = useClassState(config.storageKey);
+  const [data, update] = useClassData(config.storageKey);
   const { session, instructor } = useSession();
-  const [key, setKey] = useState(ALL_WORKSHEETS[0]?.key || "");
-  const sheet = ALL_WORKSHEETS.find(w => w.key === key);
-  const local = LOCAL_WORKSHEETS.some(w => w.key === key);
+  // This class's worksheets, by listedFor. A sheet made for this class opens first.
+  const mine = ALL_WORKSHEETS.filter(w => listedFor(w, config.id));
+  const [key, setKey] = useState((mine.find(w => w.classes && w.classes.includes(config.id)) || mine[0])?.key || "");
+  const sheet = mine.find(w => w.key === key);
+  const local = LOCAL_WORKSHEETS.find(w => w.key === key) || null;
+  const isOpen = local ? openTo(local, config.id, data) : false;
+  // The switch writes the plan row, which only an instructor can write.
+  const setOpen = (on) => update(prev => ({ ...prev, worksheetsOpen: { ...(prev.worksheetsOpen || {}), [key]: on } }));
   const [copied, setCopied] = useState(false);
   // My theme and day or night in this browser, the same keys the class home
   // writes, so this page goes dark with the rest of the class.
@@ -156,9 +161,9 @@ export default function WorksheetsPage({ config }) {
       <ThemeStyle theme={theme} />
       {bar}
       <div style={{ padding: "24px 16px 48px", maxWidth: 1600, margin: "0 auto" }}>
-        {ALL_WORKSHEETS.length > 1 ? (
+        {mine.length > 1 ? (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-            {ALL_WORKSHEETS.map(w => (
+            {mine.map(w => (
               <button key={w.key} type="button" onClick={() => setKey(w.key)} aria-pressed={w.key === key}
                 style={{ fontFamily: TOKENS.FONT.body, fontSize: 15, fontWeight: 600, minHeight: 40, padding: "0 14px", borderRadius: 999,
                   border: "1px solid " + TOKENS.LINE.strong, background: w.key === key ? config.accent : TOKENS.SURFACE.card, color: w.key === key ? "#fff" : TOKENS.TEXT.primary, cursor: "pointer" }}>
@@ -168,6 +173,19 @@ export default function WorksheetsPage({ config }) {
           </div>
         ) : null}
         {sheet ? (<>
+          {local ? (
+            <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 20, padding: 16, borderRadius: 16, background: TOKENS.SURFACE.card, border: "1px solid " + TOKENS.LINE.soft }}>
+              <div style={{ flex: "1 1 260px" }}>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>{isOpen ? "Open to " + config.code + " students" : "Closed to students"}</div>
+                <div style={{ fontSize: 14, color: TOKENS.TEXT.secondary }}>{isOpen ? "Anyone on the roster can open the address and start." : "Students who open the address read that the worksheet is not open yet. You can still try the sheet under your own email."}</div>
+              </div>
+              <button type="button" role="switch" aria-checked={isOpen} onClick={() => setOpen(!isOpen)} disabled={data === null}
+                style={{ fontFamily: TOKENS.FONT.body, fontSize: 15, fontWeight: 600, minHeight: 44, padding: "0 18px", borderRadius: 999, cursor: "pointer",
+                  border: "1px solid " + (isOpen ? config.accent : TOKENS.LINE.strong), background: isOpen ? config.accent : TOKENS.SURFACE.card, color: isOpen ? "#fff" : TOKENS.TEXT.primary }}>
+                {isOpen ? "Close to students" : "Open to students"}
+              </button>
+            </div>
+          ) : null}
           {addressBox("Students open this worksheet at", studentUrl, "Paste the address into the Details link on the assignment.")}
           {answersUrl ? addressBox("Everyone's answers, by question", answersUrl, "You see names. A student who opens the same address sees the answers with no names.") : null}
           {readoutUrl ? addressBox("What the class wrote, to share with them", readoutUrl, "") : null}

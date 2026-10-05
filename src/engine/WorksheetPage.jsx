@@ -11,7 +11,7 @@ import { Worksheet, WORKSHEETS, mountSheet } from "@ishak/worksheets";
 import { useClassState } from "./store.js";
 import { rosterOf, findStudent } from "./roster.js";
 import { useSession, studentFor, authHeaders } from "./session.js";
-import { localWorksheet, openTo } from "./localWorksheets.js";
+import { localWorksheet, openTo, listedFor } from "./localWorksheets.js";
 import { supabaseStore, readStore } from "./worktopia/store.js";
 import { loadOnFile } from "./worktopia/onfile.js";
 import { CATEGORIES, HORRIBLE } from "./worktopia/jobs.js";
@@ -56,7 +56,7 @@ function TheirSheet({ config, worksheetKey, student, theme, photo }) {
         if (local) {
           // The same week 1 read the terminal showed them (onfile.js).
           const onFile = loadOnFile({ supabase: gameClient, storageKey: config.storageKey, viewerId: student.email });
-          sheet = local.mount(ref.current, { store: readStore(out.answers, out.sheet.submitted_at), viewer: { id: student.email, name: student.name }, photo, readOnly: true, onFile });
+          sheet = local.mount(ref.current, { store: readStore(out.answers, out.sheet.submitted_at), viewer: { id: student.email, name: student.name }, photo, readOnly: true, onFile, theme });
           return;
         }
         const own = (WORKSHEETS.find(w => w.key === worksheetKey) || {}).theme || {};
@@ -88,16 +88,16 @@ function TheirSheet({ config, worksheetKey, student, theme, photo }) {
 // as them, the way the package's sheet does. The photograph on their card
 // becomes their picture on the terminal, and the roster, less themselves, is
 // who they can name as a co-worker.
-function LocalSheet({ local, config, viewer, photo, classmates }) {
+function LocalSheet({ local, config, viewer, photo, classmates, theme }) {
   const ref = useRef(null);
   const names = classmates.join("\n");
   useEffect(() => {
     const store = supabaseStore({ supabase: gameClient, worksheetKey: local.key, groupKey: config.id, viewerId: viewer.id });
     // What week 1 says about them (onfile.js).
     const onFile = loadOnFile({ supabase: gameClient, storageKey: config.storageKey, viewerId: viewer.id });
-    const sheet = local.mount(ref.current, { store, viewer, photo, classmates: names ? names.split("\n") : [], onFile });
+    const sheet = local.mount(ref.current, { store, viewer, photo, classmates: names ? names.split("\n") : [], onFile, theme });
     return () => sheet.destroy();
-  }, [local, config.id, config.storageKey, viewer.id, viewer.name, photo, names]);
+  }, [local, config.id, config.storageKey, viewer.id, viewer.name, photo, names, theme]);
   return <div ref={ref} />;
 }
 
@@ -125,8 +125,11 @@ function JobIndex() {
 export default function WorksheetPage({ config, worksheetKey }) {
   const [data] = useClassState(config.storageKey);
   const { session, email, instructor } = useSession();
-  const local = localWorksheet(worksheetKey);
-  const sheet = local || WORKSHEETS.find(w => w.key === worksheetKey);
+  // A local sheet that belongs to other classes has no address in this one.
+  const found = localWorksheet(worksheetKey);
+  const local = found && listedFor(found, config.id) ? found : null;
+  const pkg = found ? null : WORKSHEETS.find(w => w.key === worksheetKey);
+  const sheet = local || (pkg && listedFor(pkg, config.id) ? pkg : null);
   const [photos] = usePhotos(config.storageKey);
   // The student's theme and their day or night, the same ones the class home
   // reads. Without these the page had only Clean's daytime block, so the nav
@@ -173,7 +176,7 @@ export default function WorksheetPage({ config, worksheetKey }) {
     body = data === null
       ? <p style={{ fontSize: 17, margin: 0 }}>Loading the roster.</p>
       : <p style={{ fontSize: 17, margin: 0 }}>{email} is not on the roster for {config.code} yet.</p>;
-  } else if (local && !instructor && !openTo(local, config.id)) {
+  } else if (local && !instructor && !openTo(local, config.id, data)) {
     // Built, not sent: the instructor tries it under their own email first.
     body = <p style={{ fontSize: 17, margin: 0 }}>This worksheet is not open yet.</p>;
   } else {
@@ -194,7 +197,7 @@ export default function WorksheetPage({ config, worksheetKey }) {
         : body !== null
         ? <div style={{ padding: 32 }}>{body}</div>
         : local
-        ? <LocalSheet key={viewer.id} local={local} config={config} viewer={viewer} photo={(me && photos[me.name]) || (!me && config.instructor?.photo) || ""} classmates={classmates} />
+        ? <LocalSheet key={viewer.id} local={local} config={config} viewer={viewer} photo={(me && photos[me.name]) || (!me && config.instructor?.photo) || ""} classmates={classmates} theme={sheetThemeOf(theme, mode)} />
         : <Worksheet key={viewer.id} supabase={gameClient} worksheetKey={worksheetKey} groupKey={config.id} viewer={viewer}
             accent={config.accent} accentLight={config.accentLight} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />}
     </div>

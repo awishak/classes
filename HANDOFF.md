@@ -822,6 +822,31 @@ first open question; submit and recall work as on every worksheet; a
 position can be changed after submit. Dropped from JobBot: the generic
 skills question up front and the fourth and fifth positions. Worktopia is nostalgic for the human era of sports (his ask, 2026-10-01: going to games, ticket stubs, human error, the A's, the Coliseum drums, Section 215, Hudson, Zito's guitar, Tejada, Cespedes, Coco Crisp, Bill King, Ken Korach). He cut the first draft as "too AI" and "a little too much," then asked for more between the position questions ("50% big moments in sports that everyone would know, 40% oakland A's stuff, 10% random thoughts," sympathetic at times), so: the Cespedes line at the lookup, which he likes, `ASIDES`, twenty lines dealt three to six a run in an order the name sets, after the human question and sometimes the next, a Section 215 drums update with a synthesized drum cadence, and the Careless Whisper riff after the first job posting, with Josh Reddick's walk-up as the reason; a five-line block at the end came out as "too much at once." Open: the "values of sports" part Andrew is still thinking about, his words for the saving line and for `ASIDES` and `ABOUT`, whether "a job in sports in 2032" in his intro should read 2034, and a listen to `whisper()`, the synthesized Careless Whisper riff, against the record.
 
+## 3x5, the COMM 3 photo worksheet
+
+Built 2026-10-04 from `~/Projects/3x5/BRIEF.md` and the mockup beside it.
+A local worksheet like Worktopia: `src/engine/threebyfive/sheet.js` draws
+it, the photos, index and shutter sounds are static under `public/3x5`
+(copied from `~/Projects/3x5`, where `scripts/build-index.mjs` makes them;
+copy again after adding photos). The address is `/comm3/worksheets/3x5`.
+It is listed only for COMM 3 and COMM 999 (`classes` on the entry).
+
+**Opening it.** The Worksheets page has an Open to students / Close to
+students switch beside any local sheet. It writes `worksheetsOpen[key]` on
+the plan row, and a value there wins over `open` in `localWorksheets.js`,
+so no deploy is needed to open or close a sheet. 3x5 ships closed to COMM 3.
+
+**Storage.** Each roll (canvas) is one JSON value under `roll:a`, `roll:b`
+on the student's own worksheet sheet, saved 0.7 s after the last change and
+cut into 500-character rows by `worktopia/store.js`. The group is the
+student plus up to four classmates picked off the roster; the canvas lives
+on the sheet of whoever made it, so only that student shows as handed in.
+Hand in is enabled once all three strips are full and all six write-ins are
+submitted; Take back recalls it. Sort and Sheet/Big view are per browser.
+
+Not built from the brief yet: sort by place and the map tool, drewi.sh/3x5,
+and the room-screen view of every group's canvas.
+
 ## Things known to be unfinished
 
 - COMM 3 has its term as of September 8: eleven weeks, nine graded pieces,

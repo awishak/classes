@@ -1,0 +1,46 @@
+{
+ "drop": [
+  {
+   "id": "communications-camera-digital-camera-canon-eos-5d-shutter",
+   "file": "ES_Communications, Camera, Digital Camera, Canon EOS 5D, Shutter - Epidemic Sound.wav",
+   "src": "sfx/communications-camera-digital-camera-canon-eos-5d-shutter.mp4",
+   "bytes": 9697
+  },
+  {
+   "id": "communications-camera-digital-camera-nikon-d3100-shutter",
+   "file": "ES_Communications, Camera, Digital Camera, Nikon D3100, Shutter - Epidemic Sound.wav",
+   "src": "sfx/communications-camera-digital-camera-nikon-d3100-shutter.mp4",
+   "bytes": 11905
+  },
+  {
+   "id": "communications-camera-digital-slr-sony-alpha-take-photo-shutter-click-only",
+   "file": "ES_Communications, Camera, Digital SLR, Sony Alpha, Take Photo, Shutter Click Only - Epidemic Sound.wav",
+   "src": "sfx/communications-camera-digital-slr-sony-alpha-take-photo-shutter-click-only.mp4",
+   "bytes": 9612
+  },
+  {
+   "id": "communications-camera-shutter-release-nikon-f4-01",
+   "file": "ES_Communications, Camera, Shutter Release, Nikon F4 01 - Epidemic Sound.wav",
+   "src": "sfx/communications-camera-shutter-release-nikon-f4-01.mp4",
+   "bytes": 10786
+  },
+  {
+   "id": "communications-camera-shutter-release-nikon-f4-03",
+   "file": "ES_Communications, Camera, Shutter Release, Nikon F4 03 - Epidemic Sound.wav",
+   "src": "sfx/communications-camera-shutter-release-nikon-f4-03.mp4",
+   "bytes": 9349
+  },
+  {
+   "id": "communications-cellphone-smartphone-camera-01",
+   "file": "ES_Communications, Cellphone, Smartphone, Camera 01 - Epidemic Sound.wav",
+   "src": "sfx/communications-cellphone-smartphone-camera-01.mp4",
+   "bytes": 8366
+  }
+ ],
+ "burst": {
+  "id": "communications-camera-digital-camera-canon-eos-5d-burst-mode",
+  "file": "ES_Communications, Camera, Digital Camera, Canon EOS 5D, Burst Mode - Epidemic Sound.wav",
+  "src": "sfx/communications-camera-digital-camera-canon-eos-5d-burst-mode.mp4",
+  "bytes": 26659
+ }
+}
