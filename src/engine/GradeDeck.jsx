@@ -56,12 +56,13 @@ export default function GradeDeck({ config, items, onSeen, onDone, onOpen, child
           {/* One sentence, and the way to the challenge. Andrew, 2026-09-15:
               "it doesn't need to include all the info. in fact, it should say:
               your Visual Story has been evaluated / you didn't submit your
-              Visual Story so you received a grade of 0." Everything else — the
+              Visual Story so you received a grade of 0." The grade of 0 came
+              off on 2026-10-06, when the scores did. Everything else — the
               grade, what it means, the comments, what they turned in — is on
               the challenge's own page, one press away. */}
           <p style={{ margin: 0, fontSize: 20, lineHeight: 1.45 }}>
             {missed
-              ? <>You didn't submit your <strong>{card.title}</strong>, so you received a grade of 0.</>
+              ? <>You didn't submit your <strong>{card.title}</strong>.</>
               : <>Your <strong>{card.title}</strong> has been evaluated.</>}
           </p>
           {/* No meeting button here: a grade rough enough to need one sends

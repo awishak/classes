@@ -2451,7 +2451,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     ["Exercise 1", "has been evaluated", "Got it", "Open the challenge"].forEach(t => { if (!html.includes(t)) say("the deck never showed " + JSON.stringify(t)); });
     ["Sharp work.", "room to sharpen", "Open your file", "Graded "].forEach(t => { if (html.includes(t)) say("the deck is still carrying " + JSON.stringify(t)); });
     const nothingIn = renderToString(<GradeDeck config={cfg} items={[{ ...deckCard, letter: "Incomplete", bucket: "incomplete", link: "", submittedAt: null }]} onSeen={noop} onDone={noop} onMeeting={noop} />).replace(/<!-- -->/g, "");
-    if (!nothingIn.includes("so you received a grade of 0")) say("a challenge with nothing turned in does not say so on the card");
+    if (!/You didn&#x27;t submit your <strong>[^<]*<\/strong>\.|You didn't submit your <strong>[^<]*<\/strong>\./.test(nothingIn) || nothingIn.includes("grade of 0")) say("a challenge with nothing turned in does not say so on the card");
     if (!html.includes('/challenges/ex1"')) say("Open the assignment does not point at the assignment itself");
     // The calendar is not a button here any more: a rough grade sends the
     // link into the challenge's conversation when it is released.

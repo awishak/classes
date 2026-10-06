@@ -306,8 +306,10 @@ export function ChallengePage({ config, data, update, name, id, go }) {
   // date with nothing in, the challenge takes a link and a reason.
   const turnInLate = () => {
     const link = lateLink.trim();
-    if (!link || !lateWhy.trim()) return;
-    addEvent({ type: "submission", link, text: "", why: lateWhy.trim() });
+    if (!link) return;
+    // The reason is theirs to give or not. Andrew, 2026-10-06: "you're
+    // welcome to give context as to why this is being submitted late."
+    addEvent({ type: "submission", link, text: "", why: lateWhy.trim(), late: true });
     setLateLink(""); setLateWhy("");
   };
   // One regrade per challenge, once a grade is out.
@@ -321,9 +323,9 @@ export function ChallengePage({ config, data, update, name, id, go }) {
     <div className="pt-stack">
       <Sec name="Turn in late" />
       <input className="pt-field pt-focus" value={lateLink} onChange={e => setLateLink(e.target.value)} aria-label="A link" placeholder="A link" />
-      <textarea className="pt-field pt-focus" value={lateWhy} onChange={e => setLateWhy(e.target.value)} aria-label="Why is it late?" placeholder="Why is it late?" />
+      <textarea className="pt-field pt-focus" value={lateWhy} onChange={e => setLateWhy(e.target.value)} aria-label="You're welcome to give context as to why this is being submitted late." placeholder="You're welcome to give context as to why this is being submitted late." />
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <Btn onClick={turnInLate} disabled={!lateLink.trim() || !lateWhy.trim()}>Turn in late</Btn>
+        <Btn onClick={turnInLate} disabled={!lateLink.trim()}>Turn in late</Btn>
         <span className="pt-quiet" style={{ padding: 0, fontSize: 15 }}>{config.instructor?.email || "Your instructor"} needs access to your link.</span>
       </div>
     </div>
