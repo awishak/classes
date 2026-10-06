@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useQuestions } from "../questions.js";
 import { onThePage, isAnswered, sortQuestions, askedBy, SORTS } from "../QuestionsCard.jsx";
 import { Sec, Chip, Btn, Io, DrFace, Badge, I } from "./bits.jsx";
+import { hideLurkers } from "../sections.js";
 
 const when = (ts) => { try { return new Date(ts).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }); } catch { return ""; } };
 const drName = (config) => String(config?.instructor?.name || "").trim() || "Your instructor";
@@ -100,7 +101,7 @@ export function QuestionsSection({ config, name, profiles, instructor, go, limit
   const [open, setOpen] = useState(null);
   // Drawn while the questions are still on their way, so the box to ask is
   // on the page from the first frame.
-  const page = onThePage(api.items || []);
+  const page = instructor ? onThePage(api.items || []) : hideLurkers(onThePage(api.items || []), name);
   const shown = instructor ? sortQuestions(page, "asked").slice(0, 3) : sortQuestions(page.filter(isAnswered), "answered").slice(0, limit);
   const waiting = page.filter(q => !isAnswered(q)).length;
   return (
@@ -122,7 +123,7 @@ export function QuestionsPage({ config, name, profiles, instructor }) {
   const [how, setHow] = useState(instructor ? "asked" : "answered");
   const [open, setOpen] = useState(null);
   if (api.items === null) return <p className="pt-quiet">Loading.</p>;
-  const page = sortQuestions(onThePage(api.items), how);
+  const page = sortQuestions(instructor ? onThePage(api.items) : hideLurkers(onThePage(api.items), name), how);
   return (
     <div className="pt-body" style={{ gap: 16 }}>
       {instructor ? null : <AskBox api={api} name={name} />}

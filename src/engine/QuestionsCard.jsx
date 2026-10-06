@@ -24,6 +24,7 @@ import { useState } from "react";
 import * as TOKENS from "./tokens.js";
 import { useQuestions } from "./questions.js";
 import { shownName } from "./roster.js";
+import { hideLurkers, isLurker } from "./sections.js";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -141,7 +142,7 @@ export function QuestionEntry({ q, me, who, onThank, answering, profiles }) {
 export function QuestionsSummary({ config, role, asStudent }) {
   const { items } = useQuestions(config.storageKey);
   if (items === null) return <Muted>Loading.</Muted>;
-  const page = onThePage(items);
+  const page = role === "instructor" ? onThePage(items) : hideLurkers(onThePage(items), asStudent);
   const answered = page.filter(isAnswered);
   if (role === "instructor") {
     const waiting = page.length - answered.length;
@@ -175,7 +176,7 @@ function StudentQuestions({ config, api, name, profiles }) {
   const [anon, setAnon] = useState(false);
   const [sent, setSent] = useState(false);
   const [how, setHow] = useState("answered");
-  const page = sortQuestions(onThePage(api.items), how);
+  const page = sortQuestions(hideLurkers(onThePage(api.items), name), how);
   const ask = () => {
     if (!text.trim()) return;
     api.add({ text: text.trim(), who: name || "", anon });

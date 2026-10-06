@@ -59,6 +59,13 @@ export const pointsOf = (log, student) => {
 export const rosterOf = (config, data) =>
   withIds(data?.students?.length ? data.students : ((config || {}).students || []));
 
+// The roster with the house in it: Jan Itor, Pepe LeFritz and Marty McFly,
+// in every class. See HOUSE in sections.js.
+export const withHouse = (students, house) => {
+  const have = new Set((students || []).map(s => String(s?.name || "").trim().toLowerCase()));
+  return [...(students || []), ...(house || []).filter(h => !have.has(h.name.toLowerCase()))];
+};
+
 // A roster with every id filled in.
 //
 // Applied where students are read rather than at the eighty-odd places that

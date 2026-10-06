@@ -2731,7 +2731,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const seen = classmatesOf(two, data, "student", "Ada Lovelace").map(s => s.name);
   if (seen.join("|") !== "Ada Lovelace|Grace Hopper") say("a student sees the wrong roster: " + JSON.stringify(seen));
   if (classmatesOf(two, data, "instructor", "").length !== 4) say("Andrew cannot see the whole class, test student and all");
-  if (classmatesOf(one, data, "student", "Ada Lovelace").length !== 4) say("a class with one sitting hides classmates");
+  // Pepe is a lurker in every class now, named or not. Andrew, 2026-10-06.
+  if (classmatesOf(one, data, "student", "Ada Lovelace").length !== 3) say("a class with one sitting hides classmates, or shows a lurker");
+  // Marty McFly is the mascot: a student everyone sees, in every room.
+  const withMarty = { students: [...roll, { name: "Marty McFly" }, { name: "Jan Itor" }] };
+  const room = classmatesOf(two, withMarty, "student", "Alan Turing").map(s => s.name);
+  if (!room.includes("Marty McFly") || room.includes("Jan Itor") || room.includes("Pepe LeFritz")) say("the 10:30 room does not see Marty, or sees a lurker: " + JSON.stringify(room));
+  if (realStudents(one, withMarty.students).length !== 4) say("Marty is not counted like a student, or a lurker is");
   // The counts he asked for, by room, with the card challenge reading the
   // profile and everything else reading what was turned in.
   const asgs = [

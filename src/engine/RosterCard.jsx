@@ -5,7 +5,7 @@
 // placeholder for grades/assignments (filled in once the gradebook exists).
 
 import { useState, useEffect } from "react";
-import { realStudents, hasSections, studentsIn, sectionFor, sectionsOf } from "./sections.js";
+import { realStudents, hasSections, studentsIn, sectionFor, sectionsOf, MASCOT } from "./sections.js";
 import { nameShown, rosterOf } from "./roster.js";
 import { computeGrade } from "./AssignmentsCard.jsx";
 import { gradeText } from "./grades.js";
@@ -81,7 +81,10 @@ export function classmatesOf(config, data, role, name) {
   if (role === "instructor") return all;
   const mine = realStudents(config, all);
   if (!hasSections(config)) return mine;
-  return studentsIn(mine, sectionFor(all, name));
+  // The mascot has no room, so he is in every room.
+  const room = studentsIn(mine, sectionFor(all, name));
+  const mascot = mine.filter(s => s?.name === MASCOT && !room.includes(s));
+  return [...room, ...mascot];
 }
 
 // ─── instructor: list + full student page ───

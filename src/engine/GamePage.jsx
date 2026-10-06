@@ -26,6 +26,7 @@ import { setClassFavicon } from "./favicon.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeBadge, TubeySays } from "./ThemeChrome.jsx";
+import { isLurker } from "./sections.js";
 
 // The same tokens the rest of the engine uses.
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -106,7 +107,8 @@ export default function GamePage({ config }) {
     try { const v = localStorage.getItem(REMEMBER); if (v) setWho(v); } catch { /* private mode */ }
   }, [config.code, REMEMBER]);
 
-  const students = withIds(data?.students || config.students);
+  // The lurkers are not in a student's name picker. See HOUSE in sections.js.
+  const students = withIds(data?.students || config.students).filter(s => !isLurker(s.name) || s.name === who);
   // The streak is a real number: what this student has in the log already.
   const myId = (students.find(s => s.name === who) || {}).id;
   const myPoints = myId ? (data?.log || []).filter(e => e.studentId === myId).reduce((n, e) => n + (e.amount || 0), 0) : null;

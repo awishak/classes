@@ -27,7 +27,7 @@ import { AssignmentsSummary, AssignmentsDetail, ungradedCount, waitingCount } fr
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
 import { setClassFavicon } from "./favicon.js";
-import { withIds, idOf, rosterOf, pointsOf as studentPoints } from "./roster.js";
+import { withIds, idOf, rosterOf, withHouse, pointsOf as studentPoints } from "./roster.js";
 import { setAway, mergeAway } from "./attendance.js";
 import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
 import { useSession, studentFor, myCode } from "./session.js";
@@ -54,7 +54,7 @@ import PortalShell from "./portal/Shell.jsx";
 import { Face as PortalFace, DrFace } from "./portal/bits.jsx";
 import { SaveWord, useOnline } from "./SaveWord.jsx";
 import { noticeFor, markNoticeRead } from "./notice.js";
-import { isTestStudent, realStudents, sectionFor, hasSections } from "./sections.js";
+import { isTestStudent, realStudents, sectionFor, hasSections, HOUSE, isHouse, isLurker } from "./sections.js";
 import { ThemeChrome, ThemeTopper, ThemeSponsor, ThemeLegal, ThemeBadge, TubeySays, TubeyPeek,
   ThemeStickers, StoryBar, ThemeIdentity, ThemeCamera, ClassLeader, Avatar, cardStyle,
 } from "./ThemeChrome.jsx";
@@ -562,6 +562,12 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // on the preview bar, and it starts on for the class's test student, who is
   // fake and exists for exactly this.
   const [saving, setSaving] = useState(false);
+  // Being one of the house rather than looking at a student: picked from the
+  // face, it saves, there is no bar, and he stays on the page he is on.
+  // Andrew, 2026-10-06: "not to see it as them, but to be them. so i can see
+  // what it's like student facing exactly."
+  const [switched, setSwitched] = useState(false);
+  const [faceOpen, setFaceOpen] = useState(false);
   // The grade deck has been tapped through this visit. Held here rather than
   // read back from the store, because a preview writes nothing and would
   // otherwise sit behind the deck for ever.
@@ -595,6 +601,28 @@ export default function ClassApp({ config: classConfig, initialCard }) {
     const path = config.path + (key ? "/" + String(key).replace(/^assignments(?=\/|$)/, "challenges") : "");
     if (window.location.pathname !== path) window.history.pushState({}, "", path);
   }, [config.path]);
+
+  // The face menu shuts on a press anywhere else, or Escape.
+  useEffect(() => {
+    if (!faceOpen) return;
+    const shut = (e) => { if (e.type === "keydown" ? e.key === "Escape" : !e.target?.closest?.("[data-face-menu]")) setFaceOpen(false); };
+    document.addEventListener("pointerdown", shut);
+    document.addEventListener("keydown", shut);
+    return () => { document.removeEventListener("pointerdown", shut); document.removeEventListener("keydown", shut); };
+  }, [faceOpen]);
+
+  // Jan, Pepe and Marty on every class's roster. The roster is a plan key,
+  // so only his page writes it, and a roster pasted over them gets them back
+  // the next time he opens the class.
+  useEffect(() => {
+    if (!stored || !data || !mayWritePlan()) return;
+    const base = data.students?.length ? data.students : (config.students || []);
+    if (!base.length || withHouse(base, HOUSE).length === base.length) return;
+    update(prev => {
+      const list = prev?.students?.length ? prev.students : (config.students || []);
+      return { ...prev, students: withHouse(list, HOUSE) };
+    });
+  }, [stored, data === null, data?.students?.length]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onPop = () => {
@@ -795,7 +823,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
 
   const StudentPicker = (
     <select className="ca-focus" value={preview} aria-label="Which student"
-      onChange={e => { setPreview(e.target.value); setSaving(isTestStudent(config, e.target.value)); go(null); }}
+      onChange={e => { setPreview(e.target.value); setSwitched(false); setSaving(isTestStudent(config, e.target.value)); go(null); }}
       style={{ fontFamily: F, fontSize: 15, fontWeight: 600, minHeight: TAP, padding: "0 10px", maxWidth: 230,
         borderRadius: 999, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY, cursor: "pointer" }}>
       <option value="">View as a student</option>
@@ -805,7 +833,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
 
   // The way out, across the top of every page, in the class colour, so no
   // amount of scrolling loses the way back.
-  const PreviewBar = preview ? (
+  const PreviewBar = preview && !switched ? (
     <div style={{ background: a, color: "#fff" }}>
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "10px 16px", display: "flex",
         alignItems: "center", gap: 12, flexWrap: "wrap" }}>
@@ -821,7 +849,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
         </button>
         <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {StudentPicker}
-          <button className="ca-focus" onClick={() => { setPreview(""); go(null); }}
+          <button className="ca-focus" onClick={() => { setPreview(""); setSwitched(false); go(null); }}
             style={{ minHeight: TAP, padding: "0 16px", borderRadius: 999, border: "1px solid rgba(255,255,255,.55)",
               background: "transparent", color: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
             Go back to instructor view
@@ -928,8 +956,41 @@ export default function ClassApp({ config: classConfig, initialCard }) {
     </button>
   );
   // The face at the right end: a student's own, which opens the profile, or
-  // his, which opens More.
-  const FaceButton = view === "instructor"
+  // his, which opens More. On his own sign-in it is a menu: himself, the
+  // three house students, and the page the face used to open.
+  const beAs = (name) => {
+    setFaceOpen(false);
+    if (!name) { setPreview(""); setSwitched(false); return; }
+    setPreview(name); setSaving(true); setSwitched(true);
+  };
+  const faceItem = { display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: TAP, padding: "0 12px", background: "none", border: "none", boxShadow: "none",
+    borderRadius: 10, fontFamily: F, fontSize: 16, color: TEXT_PRIMARY, cursor: "pointer", textAlign: "left" };
+  const FaceMenu = sessionInstructor && faceOpen ? (
+    <div role="menu" aria-label="Be someone else" style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 50, minWidth: 240, padding: 6,
+      background: "var(--surface-card)", border: "1px solid " + BORDER_STRONG, borderRadius: 14, boxShadow: "0 12px 32px -12px rgba(0,0,0,.35)" }}>
+      {[{ name: "", label: config.instructor?.name || "Andrew Ishak" }, ...HOUSE.map(h => ({ name: h.name, label: h.name }))].map(o => (
+        <button key={o.label} role="menuitemradio" aria-checked={(preview || "") === o.name} className="ca-focus" onClick={() => beAs(o.name)}
+          style={{ ...faceItem, fontWeight: (preview || "") === o.name ? 700 : 400 }}>
+          {o.name ? <PortalFace config={config} data={data || {}} name={o.name} size={28} /> : <DrFace config={config} size={28} />}
+          {o.label}
+        </button>
+      ))}
+      <div style={{ height: 1, background: BORDER, margin: "6px 4px" }} />
+      <button role="menuitem" className="ca-focus" onClick={() => { setFaceOpen(false); go(preview ? "profile" : "more"); }} style={faceItem}>
+        {preview ? "My profile" : "More"}
+      </button>
+    </div>
+  ) : null;
+  const FaceButton = sessionInstructor && (!preview || switched) ? (
+    <span data-face-menu style={{ position: "relative", display: "inline-flex" }}>
+      <button className="ca-focus" onClick={() => setFaceOpen(v => !v)} aria-haspopup="menu" aria-expanded={faceOpen}
+        aria-label={"Signed in as " + (preview || config.instructor?.name || "Andrew Ishak") + ". Switch"}
+        style={{ background: "none", border: "none", padding: 0, minHeight: TAP, display: "flex", alignItems: "center", cursor: "pointer" }}>
+        {preview ? <PortalFace config={config} data={data || {}} name={preview} size={40} /> : <DrFace config={config} size={40} />}
+      </button>
+      {FaceMenu}
+    </span>
+  ) : view === "instructor"
     ? <button className="ca-focus" onClick={() => go("more")} aria-label="More" style={{ background: "none", border: "none", padding: 0, minHeight: TAP, display: "flex", alignItems: "center", cursor: "pointer" }}><DrFace config={config} size={40} /></button>
     : <button className="ca-focus" onClick={() => go("profile")} aria-label="My profile" style={{ background: "none", border: "none", padding: 0, minHeight: TAP, display: "flex", alignItems: "center", cursor: "pointer" }}><PortalFace config={config} data={data || {}} name={preview || asStudent} size={40} /></button>;
   // The search behind the glass, open or shut. On a laptop the bar carries
@@ -1215,7 +1276,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
       go={go} openKey={openKey} openSub={openSub} me={me} seenAs={seenAs}
       PreviewBar={PreviewBar} GameLayer={GameLayer} tickerLines={tickerLines} myPoints={myPoints}
       saveState={saveState} online={online} wrote={wrote} detailFor={detailFor} mark={ctx.mark}
-      workView={workView} setWorkView={setWorkView} bar={TheBar} searchOpen={searchOpen} setSearchOpen={setSearchOpen} roster={roster} />
+      workView={workView} setWorkView={setWorkView} bar={TheBar} searchOpen={searchOpen} setSearchOpen={setSearchOpen}
+      roster={view === "instructor" ? roster : roster.filter(s => !isLurker(s.name) || s.name === seenAs)} />
   );
 
 }

@@ -23,6 +23,7 @@ import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { hasNight } from "./themes.js";
 import { setClassFavicon } from "./favicon.js";
 import TopNav, { NAV_STUDENT } from "./TopNav.jsx";
+import { isLurker } from "./sections.js";
 
 // The sheet is told day or night only when the page is holding one. Auto
 // leaves it to follow the machine, which is what the page does. A theme with
@@ -182,7 +183,8 @@ export default function WorksheetPage({ config, worksheetKey }) {
   } else {
     body = null;
   }
-  const classmates = roster.map(s => s.name).filter(n => n && !(me && n === me.name));
+  // The lurkers are nobody's co-workers on a student's sheet.
+  const classmates = roster.map(s => s.name).filter(n => n && !(me && n === me.name) && (instructor || !isLurker(n)));
 
   return (
     <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: TOKENS.SURFACE.page, color: TOKENS.TEXT.primary, fontFamily: TOKENS.FONT.body }}>

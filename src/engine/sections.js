@@ -49,9 +49,32 @@ export const studentsIn = (students, section) =>
 // there. They are nobody else's, so they stay out of the roster students read
 // and out of every count of how many people are in the class.
 export const testStudentOf = (config) => clean(config?.testStudent);
+
+// The house: three made-up students in every class, so Andrew can be a
+// student. Andrew, 2026-10-06: "let me switch between andrew ishak, jan itor,
+// and pepe lefritz. not to see it as them, but to be them." Jan and Pepe are
+// lurkers: "don't let students see them ... none of their work should be
+// visible to students." Marty McFly is the class mascot: "the students can
+// see him. treat him like a normal student."
+export const LURKERS = ["Jan Itor", "Pepe LeFritz"];
+export const MASCOT = "Marty McFly";
+export const HOUSE = [
+  { id: "jan-itor", name: "Jan Itor", email: "jan@example.test", from: "", goals: "" },
+  { id: "pepe-lefritz", name: "Pepe LeFritz", email: "pepe@example.test", from: "", goals: "" },
+  { id: "marty-mcfly", name: MASCOT, email: "marty@example.test", from: "", goals: "" },
+];
+export const isLurker = (name) => LURKERS.some(n => n.toLowerCase() === clean(name).toLowerCase());
+// What a student reads with the lurkers' posts and questions taken out,
+// unless the student reading is that lurker.
+export const hideLurkers = (items, viewer, key = "who") =>
+  (items || []).filter(x => !isLurker(x?.[key]) || clean(x?.[key]) === clean(viewer));
+export const isHouse = (name) => HOUSE.some(h => h.name.toLowerCase() === clean(name).toLowerCase());
+
+// A test student is the class's own, or a lurker. Out of what students see
+// and out of every count.
 export const isTestStudent = (config, name) => {
   const t = testStudentOf(config);
-  return !!t && clean(name) === t;
+  return (!!t && clean(name) === t) || isLurker(name);
 };
 export const realStudents = (config, students) =>
   (students || []).filter(s => !isTestStudent(config, s?.name));

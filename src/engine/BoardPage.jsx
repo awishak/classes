@@ -20,6 +20,8 @@ import { setClassFavicon } from "./favicon.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeBadge, TubeySays, Avatar } from "./ThemeChrome.jsx";
+import { hideLurkers, isLurker } from "./sections.js";
+import { useSession } from "./session.js";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
 // Fredoka on Crashing Out. One declaration, and every use below follows.
@@ -54,7 +56,9 @@ export default function BoardPage({ config }) {
     try { const v = localStorage.getItem(REMEMBER); if (v) setWho(v); } catch { /* private mode */ }
   }, [config.code, REMEMBER]);
 
-  const students = withIds(data?.students || config.students);
+  // Jan and Pepe are lurkers: on his page, and nowhere a student reads.
+  const { instructor: isInstructor } = useSession();
+  const students = withIds(data?.students || config.students).filter(s => isInstructor || !isLurker(s.name) || s.name === who);
   const myId = (students.find(s => s.name === who) || {}).id;
   const myPoints = myId ? (data?.log || []).filter(e => e.studentId === myId).reduce((n, e) => n + (e.amount || 0), 0) : null;
   const boards = B.boards || {};
@@ -72,7 +76,7 @@ export default function BoardPage({ config }) {
   // The prompt is up but nobody has posted yet, so the thread does not exist.
   // Show the prompt anyway and open the thread on the first post.
   const prompt = board?.prompt || castPrompt || "";
-  const posts = useMemo(() => postsOf(board), [board]);
+  const posts = useMemo(() => (isInstructor ? postsOf(board) : hideLurkers(postsOf(board), who)), [board, isInstructor, who]);
 
   const send = () => {
     const t = text.trim();
