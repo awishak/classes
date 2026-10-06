@@ -5561,6 +5561,33 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (pending([...log, { id: "c2", ts: 40, type: "comment", from: "student", text: "hello?" }])) {} else say("the student's own comment answered the request");
 }
 
+// The week 4 and week 8 check-ins. Andrew, 2026-10-06.
+{
+  const say = (m) => { console.error("  FAIL  check-ins: " + m); failedEarly++; };
+  const ci = await import("../src/engine/checkins.js");
+  const { assignmentsOf } = await import("../src/engine/profileTask.js");
+  const { dueSoon } = await import("../src/engine/DueCard.jsx");
+  const weeks = [["Sep 21", "Sep 23"], ["Sep 28"], ["Oct 5"], ["Oct 14", "Oct 16"], ["Oct 19"], ["Oct 26"], ["Nov 2"], ["Nov 9"]].map((dates, i) => ({ id: "w" + i, dates }));
+  const c = { storageKey: "smoke-ci", scheduleWeeks: weeks, assignments: [] };
+  const [w4, w8] = ci.checkinTasksOf(c, {});
+  if (!w4 || w4.opensAt !== "2026-10-12T00:00" || w4.due !== "Oct 18") say("week 4 does not run Monday Oct 12 to Sunday Oct 18: " + JSON.stringify(w4));
+  if (!w8 || w8.opensAt !== "2026-11-09T00:00" || w8.due !== "Nov 15") say("week 8 does not run Nov 9 to Nov 15");
+  if (ci.checkinTasksOf({ scheduleWeeks: weeks.slice(0, 3) }, {}).length) say("a term with three weeks has a check-in");
+  if (!assignmentsOf(c, {}).some(a => a.id === "checkin-4")) say("the check-in is not among the class's challenges");
+  const N = "Ada Lovelace";
+  const mid = Date.parse("2026-10-14T12:00");
+  if (ci.checkinDue(c, {}, N, Date.parse("2026-10-11T12:00"))) say("the check-in shows before its week");
+  if (ci.checkinDue(c, {}, N, mid)?.id !== "checkin-4") say("the check-in is not in front of the site during week 4");
+  if (dueSoon(c, {}, N, Date.parse("2026-10-17T12:00")).some(a => a.id === "checkin-4")) say("the check-in also gets a due-soon card");
+  const ans = { going: "ok", differently: "read", support: "examples", challenge: "time" };
+  const d1 = ci.saveCheckin({}, w4, N, ans, "Learn to write", mid);
+  if (ci.checkinDue(c, d1, N, mid)) say("the check-in comes back after it is in");
+  if (d1.profiles?.[N]?.goals !== "Learn to write") say("a goal written in the check-in is not on the profile");
+  if ((d1.assignmentLog["checkin-4"][N] || []).filter(e => e.type === "submission").length !== 1) say("the first submit is not a submission");
+  const d2 = ci.saveCheckin(d1, w4, N, { ...ans, going: "better" }, "", mid + 1000);
+  if ((d2.assignmentLog["checkin-4"][N] || []).length !== 1 || ci.answersOf(d2, "checkin-4", N).going !== "better") say("an edit adds a second submission or loses the change");
+}
+
 let failed = failedEarly;
 for (const [name, el, must] of cases) {
   try {

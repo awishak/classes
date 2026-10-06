@@ -18,6 +18,7 @@ import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
 import GradeView from "./engine/GradeView.jsx";
+import CheckinAnswers from "./engine/CheckinAnswers.jsx";
 import InstructorBar from "./engine/InstructorBar.jsx";
 import PlanPage from "./PlanPage.jsx";
 import ProgressPage from "./ProgressPage.jsx";
@@ -279,7 +280,7 @@ export default function App() {
     return <WorksheetPage key={ws[1] + "/" + ws[2]} config={ENGINE[ws[1]]} worksheetKey={ws[2]} />;
   }
 
-  const live = path.match(/^\/(comm\w+)\/(dashboard|today|board|game|rungame|games|grade)\/?$/)
+  const live = path.match(/^\/(comm\w+)\/(dashboard|today|board|game|rungame|games|grade|checkins)\/?$/)
     || path.match(/^\/(comm\w+)\/(dashboard)\/([a-z0-9-]+)\/?$/);
   if (live && ENGINE[live[1]]) {
     const cfg = ENGINE[live[1]];
@@ -287,6 +288,13 @@ export default function App() {
       return (
         <InstructorGate what={cfg.code + " Dashboard"}>
           <Dashboard key={cfg.id} config={cfg} daySlug={live[3] || ""} />
+        </InstructorGate>
+      );
+    }
+    if (live[2] === "checkins") {
+      return (
+        <InstructorGate what={cfg.code + " check-in answers"}>
+          <InstructorBar config={cfg} always><CheckinAnswers key={cfg.id} config={cfg} /></InstructorBar>
         </InstructorGate>
       );
     }

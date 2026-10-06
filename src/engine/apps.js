@@ -25,6 +25,7 @@ export function appsFor(config, role) {
       { id: "worksheets", label: "Worksheets", href: p + "/worksheets" },
       ...answers,
       { id: "grade", label: "Grade view", href: p + "/grade" },
+      { id: "checkins", label: "Check-in answers", href: p + "/checkins" },
       { id: "horn", label: "Around the Horn", opens: "horn" },
       { id: "today", label: "Room screen", href: p + "/today" },
     ];

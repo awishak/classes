@@ -12,6 +12,7 @@ import { useWithWorksheetSubmits } from "./worksheetSubmits.js";
 import { Avatar, profileOf } from "./Face.jsx";
 import { ThemeStyle } from "./ThemeShell.jsx";
 import { withIds } from "./roster.js";
+import { checkinTasksOf, isCheckin, answersOf, CHECKIN_QUESTIONS } from "./checkins.js";
 import { schedulingLinkOf } from "../instructors.js";
 import { isLate, unanswered, appreciatePatch, deletePatch } from "./AssignmentsCard.jsx";
 import { regradeOf, regradePending, alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText } from "./grades.js";
@@ -73,7 +74,12 @@ export default function GradeView({ config }) {
   // And a linked worksheet's submits on its assignment, read-only. See worksheetSubmits.js.
   const data = useWithWorksheetSubmits(useWithPhotos(stored, photos), config);
   const a = config.accent;
-  const assignments = data?.assignments || config.assignments || [];
+  // The class's own challenges and the two check-ins, which are sorted here
+  // like any other. See checkins.js.
+  const assignments = useMemo(() => {
+    const own = data?.assignments || config.assignments || [];
+    return [...own, ...checkinTasksOf(config, data).filter(c => !own.some(x => x.id === c.id))];
+  }, [data, config]);
   const roster = useMemo(() => withIds(data?.students?.length ? data.students : (config.students || [])), [data, config]);
 
   // The assignment in the URL, so a link can open the board on one of them.
@@ -133,6 +139,7 @@ export default function GradeView({ config }) {
   const cardOf = (s) => {
     const card = board.cards?.[s.name] || {};
     return <Card key={s.name} student={s} profile={profileOf(data, s.name)} due={asg?.due} card={card} work={workOf(data, aid, s.name)} accent={a}
+      checkin={isCheckin(asg) ? { answers: answersOf(data, aid, s.name), href: config.path + "/checkins?w=" + asg.week + "&s=" + encodeURIComponent(s.name) } : null}
       columns={columns}
       dragging={dragging === s.name} picked={picked === s.name} editing={editing === s.name}
       onDragStart={(e) => { e.dataTransfer.setData("text/plain", s.name); e.dataTransfer.effectAllowed = "move"; setDragging(s.name); }}
@@ -186,6 +193,7 @@ export default function GradeView({ config }) {
               {assignments.map(x => <option key={x.id} value={x.id}>{x.title}</option>)}
             </select>
           ) : <span style={{ color: TEXT_MUTED, fontSize: 15 }}>No challenges in this class yet.</span>}
+          {isCheckin(asg) ? <a className="gv-focus" href={config.path + "/checkins?w=" + asg.week} style={{ fontSize: 15, fontWeight: 600, color: a, textDecoration: "none" }}>Read every answer</a> : null}
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <span style={{ fontSize: 15, color: TEXT_SECONDARY }}>{sorted} of {roster.length} sorted</span>
             {released ? (
@@ -282,7 +290,7 @@ export default function GradeView({ config }) {
   );
 }
 
-function Card({ student, profile, due, card, work, accent, columns, dragging, picked, editing, onDragStart, onDragEnd, onPick, onEdit, onCancel, onSave, onAppreciate, onDelete }) {
+function Card({ student, profile, due, card, work, accent, checkin, columns, dragging, picked, editing, onDragStart, onDragEnd, onPick, onEdit, onCancel, onSave, onAppreciate, onDelete }) {
   const [comment, setComment] = useState(card.comment || "");
   // The grade, chosen in the same box as the comment. Starts on the column
   // the card is in; tapping the lit one again puts the card back on the pile.
@@ -319,6 +327,17 @@ function Card({ student, profile, due, card, work, accent, columns, dragging, pi
         {grade ? <span style={{ flex: "none", fontSize: 13, fontWeight: 700, color: accent }}>{grade.label}</span>
           : work.earlier ? <span style={{ flex: "none", fontSize: 13, color: TEXT_MUTED }}>earlier: {gradeText(work.earlier)}</span> : null}
       </div>
+      {/* A check-in has answers rather than a file: the first one, and the
+          way to the rest. */}
+      {checkin ? (
+        checkin.answers ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ fontSize: 13, color: TEXT_MUTED }}>{CHECKIN_QUESTIONS[0].text}</div>
+            <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap", maxHeight: 88, overflow: "hidden" }}>{checkin.answers.going}</div>
+            <a className="gv-focus" href={checkin.href} style={{ color: accent, fontWeight: 600, fontSize: 15, textDecoration: "none", minHeight: HIT, display: "inline-flex", alignItems: "center" }}>Read the answers</a>
+          </div>
+        ) : <span style={{ fontSize: 13, color: TEXT_MUTED }}>Nothing turned in</span>
+      ) : (
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 13, color: TEXT_MUTED }}>
         {link
           ? <a className="gv-focus" href={link} target="_blank" rel="noreferrer" style={{ color: accent, fontWeight: 600, fontSize: 15, textDecoration: "none" }}>Open their file ↗ <span style={{ fontWeight: 400, color: TEXT_MUTED, fontSize: 13 }}>{hostOf(link)}</span></a>
@@ -326,6 +345,7 @@ function Card({ student, profile, due, card, work, accent, columns, dragging, pi
           : <span>Nothing turned in</span>}
         {work.last ? <span>{fmtDay(work.last.ts)}{late ? " · late" : ""}</span> : null}
       </div>
+      )}
       {work.last?.text && !editing ? <div style={{ fontSize: 13, color: TEXT_SECONDARY, whiteSpace: "pre-wrap", maxHeight: 40, overflow: "hidden" }}>{work.last.text}</div> : null}
       {work.last?.why ? <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap" }}><span style={{ fontWeight: 700, color: LATE }}>Late: </span>{work.last.why}</div> : null}
       {work.regrade ? (

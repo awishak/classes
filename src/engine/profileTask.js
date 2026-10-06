@@ -10,6 +10,8 @@
 // on its config, carrying the due date; the challenge itself lives here, so
 // COMM 118's store, which carries its own assignments list, gets it too.
 
+import { checkinTasksOf } from "./checkins.js";
+
 export const PROFILE_TASK_ID = "card";
 
 // Every field on the student's form. All of them, at his call.
@@ -40,9 +42,12 @@ export const profileTaskOf = (config, data) => config?.profileTask && !data?.[PR
 
 // The class's challenges as a student sees them: the store's list over the
 // config's, with the card challenge in front when the class asks for it.
+// The week 4 and week 8 check-ins come last, built from the term. See
+// checkins.js.
 export const assignmentsOf = (config, data) => {
   const list = data?.assignments || config?.assignments || [];
   const task = profileTaskOf(config, data);
-  if (!task || list.some(a => a.id === task.id)) return list;
-  return [task, ...list];
+  const withTask = !task || list.some(a => a.id === task.id) ? list : [task, ...list];
+  const checkins = checkinTasksOf(config, data).filter(c => !withTask.some(a => a.id === c.id));
+  return checkins.length ? [...withTask, ...checkins] : withTask;
 };

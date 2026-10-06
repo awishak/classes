@@ -28,6 +28,7 @@ import { QuestionsPage } from "./Questions.jsx";
 import { SearchPanel } from "./Search.jsx";
 import { SchedulePage } from "./Schedule.jsx";
 import { visibleAssignments } from "./work.js";
+import { assignmentsOf } from "../profileTask.js";
 
 const STUDENT_TITLES = [["schedule", "Schedule"], ["assignments", "My work"], ["class", "Class"]];
 const HIS_TITLES = [["schedule", "Schedule"], ["assignments", "My work"], ["messages", "Inbox"], ["class", "Class"]];
@@ -36,7 +37,7 @@ const TAB_ICON = { schedule: I.cal, assignments: I.work, messages: I.mail, class
 const titleOf = (key, sub, config, data, instructor) => {
   if (key === "assignments" && sub) {
     if (sub === "new") return "New challenge";
-    const a = (data?.assignments || config.assignments || []).find(x => x.id === sub);
+    const a = assignmentsOf(config, data).find(x => x.id === sub);
     return a ? a.title : "My work";
   }
   if (key === "messages" && sub) return nameShown(data, decodeURIComponent(sub));

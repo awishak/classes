@@ -23,6 +23,8 @@
 
 // `blurb` is the short line under the column header, for Andrew. `means` is
 // the sentence a student reads under the letter on the deck card.
+import { assignmentsOf } from "./profileTask.js";
+
 export const BUCKETS = [
   { id: "exceptional", label: "Exceptional", letter: "A", score: 100, blurb: "above an A",
     means: "Work that stood out above the whole class. An A, and then some." },
@@ -247,7 +249,7 @@ export const sortedCount = (board) => Object.values(board?.cards || {}).filter(c
 // and what the student turned in, with its link, note and time.
 export const unseenGrades = (config, data, name) => {
   if (!name) return [];
-  const assignments = data?.assignments || config.assignments || [];
+  const assignments = assignmentsOf(config, data);
   return assignments.flatMap(asg => {
     const board = boardOf(data, asg.id);
     if (!board.released) return [];

@@ -38,6 +38,8 @@ import { gameClient } from "./gameClient.js";
 import GradeDeck from "./GradeDeck.jsx";
 import { unseenGrades, markSeen } from "./grades.js";
 import DueDeck, { dueSoon, dismissDue } from "./DueCard.jsx";
+import CheckinCard from "./CheckinCard.jsx";
+import { checkinDue } from "./checkins.js";
 import { NextClassHero, PinnedLinks, ClassSummary, YourCardSummary, GamesSummary, RequestForm, RequestInbox, InstructorProfile,
   openRequests, tileTitle, owedStyle } from "./HomeCards.jsx";
 import { nextOwed } from "./AssignmentsCard.jsx";
@@ -568,6 +570,10 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const [dueDone, setDueDone] = useState(false);
   // And for the card he writes for the class.
   const [noticeDone, setNoticeDone] = useState(false);
+  // And for the week 4 and week 8 check-in. Later lasts the visit, so it is
+  // back the next time they open the class. Andrew, 2026-10-06: "get it again
+  // on next visit."
+  const [checkinDone, setCheckinDone] = useState(false);
   // What the page draws as. The person is still the instructor; the page is
   // drawn the way the chosen student would get the page drawn.
   // Who this is, from the session and the roster. The remembered name is what
@@ -1141,6 +1147,18 @@ export default function ClassApp({ config: classConfig, initialCard }) {
         <style>{CSS + accentCSS(a, config.accentDark)}</style>
         <DueDeck config={config} items={dueCards} onDismiss={(asg) => write(prev => dismissDue(prev, asg, seenAs))} onDone={() => setDueDone(true)}
           onOpen={(asg) => go("assignments/" + asg.id)} />
+      </div>
+    );
+  }
+
+  // The check-in, all of its week, until it is in. See checkins.js.
+  const checkin = data !== null && view !== "instructor" && !checkinDone ? checkinDue(config, data, seenAs) : null;
+  if (checkin) {
+    return (
+      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">
+        <ThemeStyle theme={theme} />
+        <style>{CSS + accentCSS(a, config.accentDark)}</style>
+        <CheckinCard config={config} data={data} update={write} name={seenAs} asg={checkin} onDone={() => setCheckinDone(true)} />
       </div>
     );
   }

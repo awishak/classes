@@ -17,6 +17,8 @@ import { feedOf } from "../AssignmentCards.jsx";
 import { deletePatch } from "../AssignmentsCard.jsx";
 import { markSeen, regradeOf, alive } from "../grades.js";
 import { isProfileTask } from "../profileTask.js";
+import { isCheckin } from "../checkins.js";
+import { CheckinForm } from "../CheckinCard.jsx";
 import { schedulingLinkOf } from "../../instructors.js";
 import { useMarkThreadSeen } from "../YouCard.jsx";
 import { Sec, Row, Io, Btn, Chip, Lnk, Check, Gm, Face, DrFace, I, dcolOf, dueWords, whenWords, dayWords, firstLink, hostOf, drShort } from "./bits.jsx";
@@ -315,7 +317,7 @@ export function ChallengePage({ config, data, update, name, id, go }) {
     addEvent({ type: "regrade", text: regradeWhy.trim(), link: firstLink(regradeLink.trim()) || regradeLink.trim() });
     setRegradeWhy(""); setRegradeLink(""); setAsking(false);
   };
-  const lateBox = st.state === "missed" && update && !isProfileTask(asg) ? (
+  const lateBox = st.state === "missed" && update && !isProfileTask(asg) && !isCheckin(asg) ? (
     <div className="pt-stack">
       <Sec name="Turn in late" />
       <input className="pt-field pt-focus" value={lateLink} onChange={e => setLateLink(e.target.value)} aria-label="A link" placeholder="A link" />
@@ -326,7 +328,7 @@ export function ChallengePage({ config, data, update, name, id, go }) {
       </div>
     </div>
   ) : null;
-  const regradeBox = st.state === "graded" && update && !isProfileTask(asg) && !asked ? (
+  const regradeBox = st.state === "graded" && update && !isProfileTask(asg) && !isCheckin(asg) && !asked ? (
     asking ? (
       <div className="pt-stack">
         <textarea className="pt-field pt-focus" value={regradeWhy} onChange={e => setRegradeWhy(e.target.value)} aria-label="Why should this be regraded?" placeholder="Why should this be regraded?" autoFocus />
@@ -385,6 +387,19 @@ export function ChallengePage({ config, data, update, name, id, go }) {
       {st.state === "open" ? box : lateBox}
     </div>
   );
+
+  // A check-in is its form, editable until Sunday night, and nothing else.
+  if (isCheckin(asg)) {
+    return (
+      <div className="pt-body">
+        <div className={"pt-row " + tint} style={{ flexDirection: "column", alignItems: "stretch", gap: 12, padding: 20 }}>
+          <p className="pt-title">{asg.title}</p>
+          <p className={"pt-when " + tint}><span>{lineOf(asg, st)}</span></p>
+          <CheckinForm config={config} data={data} update={update} name={name} asg={asg} />
+        </div>
+      </div>
+    );
+  }
 
   const feed = feedOf(config, data, asg, name).filter(m => m.kind !== "due" || m.at);
   return (
