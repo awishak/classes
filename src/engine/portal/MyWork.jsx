@@ -15,7 +15,7 @@ import { useState, useEffect } from "react";
 import { genId } from "../../utils.jsx";
 import { feedOf } from "../AssignmentCards.jsx";
 import { deletePatch } from "../AssignmentsCard.jsx";
-import { markSeen } from "../grades.js";
+import { markSeen, regradeOf, alive } from "../grades.js";
 import { isProfileTask } from "../profileTask.js";
 import { schedulingLinkOf } from "../../instructors.js";
 import { useMarkThreadSeen } from "../YouCard.jsx";
@@ -260,6 +260,12 @@ export function ChallengePage({ config, data, update, name, id, go }) {
   const asg = visibleAssignments(config, data).find(a => a.id === id);
   const [draft, setDraft] = useState("");
   const [fold, setFold] = useState(false);
+  // Turning it in late, and asking for a regrade: each a link and a reason.
+  const [lateLink, setLateLink] = useState("");
+  const [lateWhy, setLateWhy] = useState("");
+  const [asking, setAsking] = useState(false);
+  const [regradeWhy, setRegradeWhy] = useState("");
+  const [regradeLink, setRegradeLink] = useState("");
   const unseen = unseenOf(config, data, name);
   const st = asg ? workOf(config, data, asg, name, unseen) : null;
   // Opening the page is reading the grade.
@@ -286,6 +292,52 @@ export function ChallengePage({ config, data, update, name, id, go }) {
     });
     setDraft("");
   };
+  const addEvent = (event) => update && update(prev => {
+    const al = { ...(prev.assignmentLog || {}) };
+    const byStudent = { ...(al[asg.id] || {}) };
+    byStudent[name] = [...(byStudent[name] || []), { id: genId(), ts: Date.now(), ...event }];
+    al[asg.id] = byStudent;
+    return { ...prev, assignmentLog: al };
+  });
+  // Andrew, 2026-10-06: "I also need the ability for students to turn in work
+  // late", and "it says turn in late, and they can explain why." Past the due
+  // date with nothing in, the challenge takes a link and a reason.
+  const turnInLate = () => {
+    const link = lateLink.trim();
+    if (!link || !lateWhy.trim()) return;
+    addEvent({ type: "submission", link, text: "", why: lateWhy.trim() });
+    setLateLink(""); setLateWhy("");
+  };
+  // One regrade per challenge, once a grade is out.
+  const asked = regradeOf(alive(data?.assignmentLog?.[asg.id]?.[name]));
+  const requestRegrade = () => {
+    if (!regradeWhy.trim() || asked) return;
+    addEvent({ type: "regrade", text: regradeWhy.trim(), link: firstLink(regradeLink.trim()) || regradeLink.trim() });
+    setRegradeWhy(""); setRegradeLink(""); setAsking(false);
+  };
+  const lateBox = st.state === "missed" && update && !isProfileTask(asg) ? (
+    <div className="pt-stack">
+      <Sec name="Turn in late" />
+      <input className="pt-field pt-focus" value={lateLink} onChange={e => setLateLink(e.target.value)} aria-label="A link" placeholder="A link" />
+      <textarea className="pt-field pt-focus" value={lateWhy} onChange={e => setLateWhy(e.target.value)} aria-label="Why is it late?" placeholder="Why is it late?" />
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <Btn onClick={turnInLate} disabled={!lateLink.trim() || !lateWhy.trim()}>Turn in late</Btn>
+        <span className="pt-quiet" style={{ padding: 0, fontSize: 15 }}>{config.instructor?.email || "Your instructor"} needs access to your link.</span>
+      </div>
+    </div>
+  ) : null;
+  const regradeBox = st.state === "graded" && update && !isProfileTask(asg) && !asked ? (
+    asking ? (
+      <div className="pt-stack">
+        <textarea className="pt-field pt-focus" value={regradeWhy} onChange={e => setRegradeWhy(e.target.value)} aria-label="Why should this be regraded?" placeholder="Why should this be regraded?" autoFocus />
+        <input className="pt-field pt-focus" value={regradeLink} onChange={e => setRegradeLink(e.target.value)} aria-label="A new link (optional)" placeholder="A new link (optional)" />
+        <div className="pt-acts">
+          <Btn onClick={requestRegrade} disabled={!regradeWhy.trim()}>Send request</Btn>
+          <Io onClick={() => setAsking(false)}>Cancel</Io>
+        </div>
+      </div>
+    ) : <div><Io onClick={() => setAsking(true)}>Request a regrade</Io></div>
+  ) : null;
 
   const tint = tintOf(st) || "";
   const words = String(asg.description || "").trim();
@@ -315,7 +367,9 @@ export function ChallengePage({ config, data, update, name, id, go }) {
       <p className="pt-title">{asg.title}</p>
       {st.state === "graded" ? (
         <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-          <span className="pt-tileN" style={{ fontSize: 40, color: "var(--pt-done-ink)" }}>{st.letter}</span>
+          {/* A word as long as Completed with Revisions comes down a size and
+              wraps, so it fits a phone. */}
+          <span className="pt-tileN" style={{ fontSize: String(st.letter || "").length > 12 ? 28 : 40, lineHeight: 1.1, color: "var(--pt-done-ink)" }}>{st.letter}</span>
           <span className="pt-meta" style={{ color: "var(--text-primary)" }}><span>Graded {whenWords(st.grade?.ts)}</span>{asg.weight ? <Gm>{asg.weight}%</Gm> : null}</span>
         </div>
       ) : (
@@ -327,7 +381,8 @@ export function ChallengePage({ config, data, update, name, id, go }) {
         : st.state === "turnedIn" ? <p className="pt-meta">Due {dueWords(asg.due, asg.dueTime)}</p>
         : st.state === "closed-until" ? <div className="pt-acts"><span className="pt-io off">{opensWords(asg)}</span></div> : null}
       {instructions}
-      {st.state === "open" ? box : null}
+      {regradeBox}
+      {st.state === "open" ? box : lateBox}
     </div>
   );
 
@@ -342,10 +397,11 @@ export function ChallengePage({ config, data, update, name, id, go }) {
           const mine = m.from === "student";
           const face = mine ? <Face config={config} data={data} name={name} /> : <DrFace config={config} />;
           const say = m.kind === "grade" ? ["Your ", asg.title, " submission has been graded"]
+            : m.kind === "regrade" ? ["You asked for a regrade on " + dayWords(m.at).date + "."]
             : m.kind === "sent" ? ["You turned in ", asg.title]
             : m.kind === "due" ? ["Your ", asg.title, " is due " + m.text.replace(/^Due /, "")]
             : mine ? ["You wrote"] : [drShort(config) + " wrote"];
-          const link = m.kind === "sent" ? firstLink(m.text) : "";
+          const link = m.kind === "sent" ? firstLink(m.text) : m.kind === "regrade" ? m.link : "";
           const text = m.kind === "sent" ? m.text.replace(link, "").trim() : m.kind === "due" ? "" : m.text;
           const tintM = m.kind === "grade" ? "done" : m.kind === "due" ? "due" : mine ? "me" : "dr";
           return (
@@ -355,11 +411,12 @@ export function ChallengePage({ config, data, update, name, id, go }) {
                 <Say say={say} />
                 {m.kind === "grade" ? <p className="pt-when done"><span>{m.letter}</span></p> : null}
                 {m.kind === "grade" && m.means ? <p className="pt-text">{m.means}</p> : null}
+                {m.why ? <p className="pt-text"><strong>Late: </strong>{m.why}</p> : null}
                 {text ? <p className="pt-text">{text}</p> : null}
                 {link ? <div><Lnk href={link}>{hostOf(link)}</Lnk></div> : null}
                 <p className="pt-meta">
                   <span>{m.at ? whenWords(m.at) : ""}</span>
-                  {mine && m.kind !== "grade" && update ? (
+                  {mine && m.kind !== "grade" && m.kind !== "regrade" && update ? (
                     <button type="button" className="pt-focus" onClick={() => update(prev => deletePatch(prev, asg.id, name, m.id, name))}
                       style={{ background: "none", border: 0, padding: 0, minHeight: 28, fontSize: 13, fontWeight: 600, color: "var(--state-late)", cursor: "pointer" }}>Delete</button>
                   ) : null}

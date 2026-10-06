@@ -14,7 +14,7 @@ import { ThemeStyle } from "./ThemeShell.jsx";
 import { withIds } from "./roster.js";
 import { schedulingLinkOf } from "../instructors.js";
 import { isLate, unanswered, appreciatePatch, deletePatch } from "./AssignmentsCard.jsx";
-import { alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText } from "./grades.js";
+import { regradeOf, regradePending, alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText } from "./grades.js";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -52,7 +52,9 @@ const workOf = (data, aid, name) => {
   const log = alive(data?.assignmentLog?.[aid]?.[name]);
   const subs = log.filter(e => e.type === "submission");
   const last = subs[subs.length - 1] || null;
-  const linked = [...subs].reverse().find(e => e.link) || null;
+  // A regrade can carry a new link, and when it does that is the file to open.
+  const regrade = regradeOf(log);
+  const linked = [...subs, ...(regrade ? [regrade] : [])].sort((x, y) => y.ts - x.ts).find(e => e.link) || null;
   const grades = log.filter(e => e.type === "grade" && !e.board);
   // Comments posted on the assignment itself, so the card holds the whole
   // conversation with the student rather than only the comment typed here.
@@ -60,7 +62,8 @@ const workOf = (data, aid, name) => {
   // where the grading happens rather than somewhere else.
   const comments = log.filter(e => e.type === "comment")
     .map(e => ({ id: e.id, text: htmlToText(e.html || e.text), at: e.ts, mine: e.from !== "student", liked: e.appreciatedBy })).filter(c => c.text);
-  return { last, link: linked?.link || "", earlier: grades[grades.length - 1] || null, count: subs.length, comments, waiting: unanswered(log) };
+  return { last, link: linked?.link || "", earlier: grades[grades.length - 1] || null, count: subs.length, comments, waiting: unanswered(log),
+    regrade: regradePending(log) ? regrade : null };
 };
 
 export default function GradeView({ config }) {
@@ -311,7 +314,8 @@ function Card({ student, profile, due, card, work, accent, columns, dragging, pi
             background: SUNK, borderRadius: 999, padding: "2px 9px" }}>{student.section}</span>
         ) : null}
         {/* The student wrote and nobody has answered: say so where the card is. */}
-        {work.waiting ? <span style={{ flex: "none", fontSize: 12, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "2px 8px" }}>New message</span> : null}
+        {work.regrade ? <span style={{ flex: "none", fontSize: 12, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "2px 8px" }}>Regrade requested</span>
+          : work.waiting ? <span style={{ flex: "none", fontSize: 12, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "2px 8px" }}>New message</span> : null}
         {grade ? <span style={{ flex: "none", fontSize: 13, fontWeight: 700, color: accent }}>{grade.label}</span>
           : work.earlier ? <span style={{ flex: "none", fontSize: 13, color: TEXT_MUTED }}>earlier: {gradeText(work.earlier)}</span> : null}
       </div>
@@ -323,6 +327,12 @@ function Card({ student, profile, due, card, work, accent, columns, dragging, pi
         {work.last ? <span>{fmtDay(work.last.ts)}{late ? " · late" : ""}</span> : null}
       </div>
       {work.last?.text && !editing ? <div style={{ fontSize: 13, color: TEXT_SECONDARY, whiteSpace: "pre-wrap", maxHeight: 40, overflow: "hidden" }}>{work.last.text}</div> : null}
+      {work.last?.why ? <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap" }}><span style={{ fontWeight: 700, color: LATE }}>Late: </span>{work.last.why}</div> : null}
+      {work.regrade ? (
+        <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap", borderLeft: "3px solid " + accent, paddingLeft: 8 }}>
+          <span style={{ fontSize: 13, color: TEXT_MUTED }}>{fmtDay(work.regrade.ts)} · regrade · </span>{work.regrade.text}
+        </div>
+      ) : null}
 
       {editing ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }} onDragStart={e => e.stopPropagation()}>

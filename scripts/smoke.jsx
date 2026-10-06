@@ -5535,6 +5535,32 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   cases.push(["Worktopia answers, nobody yet", <AnswersGroup title="Visitors on the public page" files={[]} who={() => ""} named roster={false} />, "Nobody has started."]);
 }
 
+// Late work and regrades. Andrew, 2026-10-06: turn in late with a reason, and
+// one regrade request per challenge, answered by his next grade or comment.
+{
+  const say = (m) => { console.error("  FAIL  late and regrade: " + m); failedEarly++; };
+  const { ChallengePage } = await import("../src/engine/portal/MyWork.jsx");
+  const { regradePending: pending, regradeOf: rOf } = await import("../src/engine/grades.js");
+  const N = "Ada Lovelace";
+  const lcfg = { ...cfg0, storageKey: "smoke-late", profileTask: null, students: [{ name: N }],
+    assignments: [{ id: "past", title: "Past due", due: "Jan 5" }, { id: "done", title: "Graded one", due: "Jan 5" }] };
+  const graded = { done: { [N]: [{ id: "s1", ts: 10, type: "submission", link: "https://x.test/a" }, { id: "g1", ts: 20, type: "grade", letter: "B", bucket: "b", board: true }] } };
+  const d0 = { assignments: lcfg.assignments, students: lcfg.students, assignmentLog: graded };
+  const page = (data, id) => renderToString(<ChallengePage config={lcfg} data={data} update={() => {}} name={N} id={id} go={() => {}} />);
+  if (!page(d0, "past").includes("Turn in late")) say("a missed challenge has no Turn in late");
+  if (page(d0, "done").includes("Turn in late")) say("a graded challenge offers Turn in late");
+  if (!page(d0, "done").includes("Request a regrade")) say("a graded challenge has no Request a regrade");
+  const asked = { ...d0, assignmentLog: { done: { [N]: [...graded.done[N], { id: "r1", ts: 30, type: "regrade", text: "I fixed the intro", link: "" }] } } };
+  const html = page(asked, "done");
+  if (html.includes("Request a regrade")) say("a second regrade can be asked for");
+  if (!html.includes("You asked for a regrade on")) say("the request is not in the student's log");
+  const log = asked.assignmentLog.done[N];
+  if (!pending(log) || rOf(log)?.text !== "I fixed the intro") say("a fresh request is not pending");
+  if (pending([...log, { id: "c1", ts: 40, type: "comment", from: "instructor", text: "Looked again" }])) say("his comment does not answer the request");
+  if (pending([...log, { id: "g2", ts: 40, type: "grade", letter: "A", bucket: "a", board: true }])) say("a new grade does not answer the request");
+  if (pending([...log, { id: "c2", ts: 40, type: "comment", from: "student", text: "hello?" }])) {} else say("the student's own comment answered the request");
+}
+
 let failed = failedEarly;
 for (const [name, el, must] of cases) {
   try {

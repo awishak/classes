@@ -70,7 +70,8 @@ const getAssignments = (data, config) => assignmentsOf(config, data);
 const logOf = (data, aid, name) => alive(data?.assignmentLog?.[aid]?.[name]);
 const lastOf = (log, type) => { for (let i = log.length - 1; i >= 0; i--) if (log[i].type === type) return log[i]; return null; };
 const currentGrade = (log) => lastOf(log, "grade");
-const needsGrade = (log) => { const s = lastOf(log, "submission"); const g = lastOf(log, "grade"); return !!s && (!g || s.ts > g.ts); };
+// A regrade request puts the work back in the queue.
+const needsGrade = (log) => { const s = [lastOf(log, "submission"), lastOf(log, "regrade")].filter(Boolean).sort((x, y) => y.ts - x.ts)[0]; const g = lastOf(log, "grade"); return !!s && (!g || s.ts > g.ts); };
 
 // Weighted current grade for a student: weighted average (0-100) over graded
 // assignments only. Returns { pct, rows }. pct is null if nothing graded yet.
@@ -158,7 +159,8 @@ export function nextOwed(assignments, data, name) {
 export function lastFrom(log, who) {
   for (let i = (log || []).length - 1; i >= 0; i--) {
     const e = log[i];
-    if (who === "student" && e.type === "comment" && e.from === "student") return e;
+    // A regrade request waits on him the way a message does.
+    if (who === "student" && ((e.type === "comment" && e.from === "student") || e.type === "regrade")) return e;
     if (who === "instructor" && ((e.type === "comment" && e.from !== "student") || e.type === "grade")) return e;
   }
   return null;
@@ -364,7 +366,22 @@ function AssignmentLog({ asg, log, accent, studentName, actor, onLike, onDelete 
                 </div>
                 {e.link && <div style={{ marginTop: 6 }}><a href={e.link} target="_blank" rel="noreferrer" style={{ fontSize: 15, fontWeight: 600, color: accent, wordBreak: "break-all" }}>{e.link}</a></div>}
                 {e.text && <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.5, marginTop: 6, whiteSpace: "pre-wrap" }}>{e.text}</div>}
+                {e.why && <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.5, marginTop: 6, whiteSpace: "pre-wrap" }}><strong>Late: </strong>{e.why}</div>}
                 {(onLike || e.appreciatedBy) && <div style={{ marginTop: 8 }}>{likeBtn(e)}</div>}
+              </div>
+            </Wrap>
+          );
+        }
+        if (e.type === "regrade") {
+          return (
+            <Wrap key={e.id} right={false}>
+              <div style={{ background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 12, padding: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                  <div style={{ ...label, color: TEXT_SECONDARY }}>Regrade requested</div>
+                  <div style={{ fontSize: 13, color: TEXT_MUTED }}>{fmtTime(e.ts)}</div>
+                </div>
+                {e.text && <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.5, marginTop: 6, whiteSpace: "pre-wrap" }}>{e.text}</div>}
+                {e.link && <div style={{ marginTop: 6 }}><a href={e.link} target="_blank" rel="noreferrer" style={{ fontSize: 15, fontWeight: 600, color: accent, wordBreak: "break-all" }}>{e.link}</a></div>}
               </div>
             </Wrap>
           );

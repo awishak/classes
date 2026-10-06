@@ -296,7 +296,8 @@ export function feedOf(config, data, asg, name) {
   const log = alive(data?.assignmentLog?.[asg.id]?.[name]);
   const out = [];
   log.forEach(e => {
-    if (e.type === "submission") out.push({ id: e.id, at: e.ts, from: "student", kind: "sent", liked: e.appreciatedBy, text: [e.text, e.link].filter(Boolean).join("\n") });
+    if (e.type === "submission") out.push({ id: e.id, at: e.ts, from: "student", kind: "sent", liked: e.appreciatedBy, text: [e.text, e.link].filter(Boolean).join("\n"), why: e.why || "" });
+    else if (e.type === "regrade") out.push({ id: e.id, at: e.ts, from: "student", kind: "regrade", text: String(e.text || ""), link: e.link || "" });
     else if (e.type === "comment") out.push({ id: e.id, at: e.ts, from: e.from === "student" ? "student" : "instructor", kind: "note", liked: e.appreciatedBy, text: htmlToText(e.html || e.text) });
     else if (e.type === "grade") {
       const b = e.bucket ? bucketOf(e.bucket) : null;

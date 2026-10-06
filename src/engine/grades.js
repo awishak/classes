@@ -107,6 +107,21 @@ export const htmlToText = (html) => String(html || "")
   .replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div)>\s*<(p|div)[^>]*>/gi, "\n\n").replace(/<[^>]+>/g, "")
   .replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&#39;/g, "'").replace(/&amp;/g, "&").trim();
 
+// ─── a regrade, asked for ───
+//
+// Andrew, 2026-10-06: "Another feature I need is for students to be able to
+// request a regrade." One per challenge, with a reason and a new link if
+// they have one. It sits in the student's own log as { type: "regrade",
+// text, link }. It is answered once anything of his lands after it: a new
+// grade from a release, or a comment. A release that leaves the grade as it
+// was keeps the old event, so that alone does not answer it.
+export const regradeOf = (log) => (log || []).find(e => e.type === "regrade" && !e.deleted) || null;
+export const regradePending = (log) => {
+  const r = regradeOf(log);
+  if (!r) return false;
+  return !(log || []).some(e => !e.deleted && e.ts > r.ts && (e.type === "grade" || (e.type === "comment" && e.from !== "student")));
+};
+
 // The board's own events are the ones marked `board`, so Hide and a second
 // Release can take out exactly what the board wrote and nothing a student
 // posted or an earlier grading flow left behind.

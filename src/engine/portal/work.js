@@ -92,7 +92,10 @@ export function flowOf(config, data, name, now = Date.now()) {
     log.forEach(e => {
       if (e.type === "submission") {
         push({ id: e.id, at: e.ts, who: "me", tint: "me", tags: ["work"], aid: asg.id,
-          say: ["You turned in ", asg.title], text: e.text || "", link: e.link || "" });
+          say: ["You turned in ", asg.title], text: [e.why ? "Late: " + e.why : "", e.text || ""].filter(Boolean).join("\n"), link: e.link || "" });
+      } else if (e.type === "regrade") {
+        push({ id: e.id, at: e.ts, who: "me", tint: "me", tags: ["work"], aid: asg.id,
+          say: ["You asked for a regrade on ", asg.title], text: e.text || "", link: e.link || "" });
       } else if (e.type === "comment") {
         const mine = e.from === "student";
         push({ id: e.id, at: e.ts, who: mine ? "me" : "dr", tint: mine ? "me" : "dr", tags: mine ? ["work"] : ["work", "feedback"], aid: asg.id,
