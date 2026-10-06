@@ -200,6 +200,24 @@ export const stampScheduled = (update, id, date, classId) => update(prev => {
   return { ...prev, blocks };
 });
 
+// The other direction: this class is not using it on that day after all.
+//
+// Taking a reading off the week used to leave its stamp behind, so the drawer
+// went on listing it under On the schedule today for a day it was no longer
+// on. The class's own day comes off `scheduledIn`; the shared history in
+// `scheduled` loses the date only once no class is using it that day.
+export const unstampScheduled = (update, id, date, classId) => update(prev => {
+  const blocks = { ...(prev.blocks || {}) };
+  const b = blocks[id];
+  if (!b) return prev;
+  const scheduledIn = { ...(b.scheduledIn || {}) };
+  if (classId && scheduledIn[classId]) scheduledIn[classId] = scheduledIn[classId].filter(d => d !== date);
+  const elsewhere = Object.entries(scheduledIn).some(([c, ds]) => c !== classId && (ds || []).includes(date));
+  const scheduled = elsewhere ? (b.scheduled || []) : (b.scheduled || []).filter(d => d !== date);
+  blocks[id] = { ...b, scheduled, scheduledIn };
+  return { ...prev, blocks };
+});
+
 // Is this block on that class day?
 //
 // A block the class owns answers with its own list, because a class's blocks

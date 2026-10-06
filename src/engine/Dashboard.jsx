@@ -28,7 +28,7 @@ import { ClassMenu, DropMenu, menuRow } from "./ClassMenu.jsx";
 // its own sittingsOf.
 import { studentsIn, realStudents, useRoomSection } from "./sections.js";
 import { normSlot, sequenceOptions, sequenceFor, sectionsOf, nameSections, blankDay, takeGroup, placeGroup, placeSection, splitSection, templateOf, applyTemplate, orderSlots } from "./dayplan.js";
-import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, onClassDay, isShared, makeBlock } from "./blocks.js";
+import { SHARED_KEY, typeOf, registerTypes, allBlocks, blockById, matches, sortBlocks, facets, stampScheduled, unstampScheduled, onClassDay, isShared, makeBlock } from "./blocks.js";
 import { MEDIA_ACCEPT, mediaLabel, sizeLabel, uploadMedia } from "./media.js";
 import { useUpload } from "./Attach.jsx";
 import { readAdded, readLabels } from "./types.js";
@@ -4539,7 +4539,13 @@ export default function Dashboard({ config, daySlug = "" }) {
   const placedDays = placedOn(data?.dayPlans, day);
   const comingRows = comingUp(assignments, day, 21);
   const addReading = (item) => addScheduleItem(update, config, day, item);
-  const dropReading = (id) => removeScheduleItem(update, config, id);
+  // Off the week, and off the block's day with it, so the drawer stops
+  // listing it under On the schedule today once it is gone from the week.
+  const dropReading = (id) => {
+    const it = scheduledFor(weeks, day).find(r => r.id === id);
+    removeScheduleItem(update, config, id);
+    if (it?.libId && blockOf(it.libId)) unstampScheduled(writeTo(it.libId), it.libId, day, config.id);
+  };
   const pickReading = (b) => {
     addScheduleItem(update, config, day, { type: "reading", title: b.title, url: b.url, blockId: b.id });
     stampScheduled(writeTo(b.id), b.id, day, config.id);
@@ -5024,7 +5030,9 @@ export default function Dashboard({ config, daySlug = "" }) {
     };
     schedToday.forEach(it => {
       const lib = it.libId ? blockOf(it.libId) : null;
-      if (lib) { add(lib); return; }
+      // The block, carrying the row of the week it stands for, so the menu
+      // on it can take that row off the week.
+      if (lib) { add({ ...lib, sched: it }); return; }
       const feature = it.type === "activity" && FEATURES[it.title] ? it.title : undefined;
       add({ id: "sched:" + it.id, title: it.title, type: it.type === "activity" ? "activity" : "link", url: it.url || "", pseudo: true, sched: it, feature,
         drag: feature ? { feature, title: it.title } : { title: it.title, url: it.url || "", schedItemId: it.id } });
@@ -5064,8 +5072,28 @@ export default function Dashboard({ config, daySlug = "" }) {
       !b.pseudo ? ["Edit details", () => editPicked({ blockId: b.id, item: null, where: "", id: b.id })] : null,
       "-",
       at ? ["Remove from day", () => removeItemB(at.slot, at.id), true] : ["Add to a day", () => setPlacingThing(b)],
+      // Off the week itself. Andrew, 2026-10-06: "i can't delete things from
+      // the side cards of the dashboard." The three readings Spring put on a
+      // Friday sat under On the schedule today with Add to a day as their only
+      // move, and his own reading, placed on the day, was not on the week.
+      offDayOf(b),
     ];
   };
+  // How a thing comes off this day from the drawer: its row on the week if it
+  // has one, else the stamp that put it in the day's list. Nothing for a row
+  // the day itself made, such as the slides.
+  const offDayOf = (b) => {
+    if (b.sched) return [MEDIA_SET.has(b.sched.type) ? "Remove from readings" : "Remove from the week", () => dropReading(b.sched.id), true];
+    if (!b.pseudo && onClassDay(b, day, config.id, isShared(data, b.id))) return ["Remove from this day", () => unstampScheduled(writeTo(b.id), b.id, day, config.id), true];
+    return null;
+  };
+  const pickedOffDay = (() => {
+    const id = picked?.blockId;
+    if (!id) return null;
+    const row = scheduledFor(weeks, day).find(r => r.libId === id);
+    const b = blockOf(id);
+    return b ? offDayOf(row ? { ...b, sched: row } : b) : null;
+  })();
   stepRef.current = (dir) => {
     const c = liveRef.current?.cast;
     if (!c || c.type !== "board") return;
@@ -5259,7 +5287,7 @@ export default function Dashboard({ config, daySlug = "" }) {
       onPlacePicked={() => setPlacing("add")}
       onMovePicked={() => setPlacing("move")}
       onSaveItemPicked={(patch) => { if (picked?.slot && picked?.id) saveItemPatch(picked.slot, picked.id, patch); }}
-      onClearPicked={() => setPicked(null)} />,
+      onClearPicked={() => setPicked(null)} offDayPicked={pickedOffDay} />,
     questions: () => <QuestionsPanel items={q.items} setState={q.setState} archiveOpen={q.archiveOpen}
       castNow={(pl) => { castNow(pl); markEngaged(); }} accent={config.accent} />,
     scratch: () => <ScratchPanel value={(data.scratch || {})[day]} onSave={saveScratch}

@@ -48,9 +48,9 @@ const IS_NOTE = (t) => t === "note" || t === "story";
 const GAMEY = /\b(game|trivia|ten on ten)\b/i;
 
 export const SHELVES = [
-  { id: "media", label: "Media", make: "link", holds: (t) => !IS_ACTIVITY(t) && !IS_NOTE(t) },
-  { id: "activities", label: "Activities", make: "activity", holds: IS_ACTIVITY },
-  { id: "notes", label: "Items", make: "note", holds: IS_NOTE },
+  { id: "media", label: "Media", one: "media", make: "link", holds: (t) => !IS_ACTIVITY(t) && !IS_NOTE(t) },
+  { id: "activities", label: "Activities", one: "activity", make: "activity", holds: IS_ACTIVITY },
+  { id: "notes", label: "Items", one: "item", make: "note", holds: IS_NOTE },
 ];
 
 export const shelfOf = (type) => (SHELVES.find(s => s.holds(type)) || SHELVES[0]).id;
@@ -131,7 +131,7 @@ function RowFields({ item, onSave }) {
 // from the search that found it. So fixing a typo in a headline meant leaving
 // the dashboard for the repository. The drawer is already the place a thing
 // comes FROM; it is the obvious place for the thing to go back to.
-function DrawerEdit({ block, item, where, hue, onSave, onSaveItem, onPlace, onMove, onClose, pickedId }) {
+function DrawerEdit({ block, item, where, hue, onSave, onSaveItem, onPlace, onMove, onClose, offDay, pickedId }) {
   const t = block ? typeOf(block.type) : null;
 
   // Bring the editor to where Andrew is looking.
@@ -175,6 +175,11 @@ function DrawerEdit({ block, item, where, hue, onSave, onSaveItem, onPlace, onMo
         <button className="dash-focus draw-editbtn" onClick={onPlace}>Add to a day</button>
         {onMove ? (
           <button className="dash-focus draw-editbtn" onClick={onMove}>Move to a day</button>
+        ) : null}
+        {/* Off this day, the same move the row's menu offers, because an
+            editor with no way out is where "I can't delete it" comes from. */}
+        {offDay ? (
+          <button className="dash-focus draw-editbtn danger" onClick={() => { offDay[1](); onClose(); }}>{offDay[0]}</button>
         ) : null}
       </div>
     </div>
@@ -234,7 +239,7 @@ function NewButton({ hue, onNew, onShelf }) {
             {SHELVES.map(sh => (
               <button key={sh.id} className="dash-focus" onClick={() => { setOpen(false); if (onShelf) onShelf(sh.id); onNew(sh.make); }}>
                 <span className="draw-swatch" style={{ background: hue(sh.make) }} />
-                New {sh.label.toLowerCase().replace(/s$/, "")}
+                New {sh.one}
               </button>
             ))}
           </div>
@@ -245,7 +250,7 @@ function NewButton({ hue, onNew, onShelf }) {
 }
 
 export default function Drawer({ blocks, accent, hue, onPick, onNew, features, onRunFeature, featureBlurb, placed,
-  picked, onSavePicked, onSaveItemPicked, onPlacePicked, onMovePicked, onClearPicked, days, today, sections, blockOf,
+  picked, onSavePicked, onSaveItemPicked, onPlacePicked, onMovePicked, onClearPicked, offDayPicked, days, today, sections, blockOf,
   startShelf = "media", games, onPlaceGame, gamesHref, dayRows, menuFor, liveLabel }) {
   const [q, setQ] = useState("");
   const [menu, setMenu] = useState(null);
@@ -316,7 +321,7 @@ export default function Drawer({ blocks, accent, hue, onPick, onNew, features, o
       <DrawerEdit key={picked.id || picked.blockId} block={picked.blockId ? blockOf(picked.blockId) : null} item={picked.item}
         where={picked.where} hue={hue} onSave={onSavePicked} onSaveItem={onSaveItemPicked}
         onPlace={onPlacePicked} onMove={picked.item ? onMovePicked : null}
-        onClose={onClearPicked} pickedId={picked.id} />
+        onClose={onClearPicked} offDay={offDayPicked} pickedId={picked.id} />
     );
   }
 
@@ -635,4 +640,5 @@ export const DRAWER_CSS = `
 .draw-editbtn{flex:1 1 auto;min-height:38px;padding:0 13px;border-radius:11px;border:1px solid ${BORDER_STRONG};
   background:#fff;color:${TEXT_PRIMARY};cursor:pointer;font-family:${F};font-size:14px;font-weight:600}
 .draw-editbtn:hover{background:${SURFACE_2}}
+.draw-editbtn.danger{color:var(--state-live)}
 `;
