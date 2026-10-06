@@ -22,7 +22,7 @@ const SUNK = TOKENS.SURFACE.sunk;
 const LINE = TOKENS.LINE.soft;
 
 // What a tile reads once graded. The words need short forms to fit a tile.
-const SHORT = { Incomplete: "Inc", Complete: "✓", "Not quite": "NQ", "Not submitted": "NS" };
+const SHORT = { Incomplete: "Inc", Complete: "✓", "Not quite": "NQ", "Not submitted": "NS", "Completed with Revisions": "Rev" };
 const short = (letter) => SHORT[letter] || letter;
 
 export default function GradeParade({ config, data, name, accent, compact }) {

@@ -21,7 +21,7 @@ The comment:
 - Plain text. No markdown, no bullets, no numbered lists, no headers, no bold.
 - Lead with what worked, then what to sharpen. Both halves are specific to what they actually turned in.
 - Name the concrete thing. "Your questions are well organized" beats "good structure."
-- When a rubric line lost points, say what would have earned them instead of restating the score.
+- When the grade is below what they wanted, say what would have earned more instead of restating the grade.
 
 Return the comment and nothing else. No preamble, no quotation marks, no explanation of what you wrote.
 
@@ -31,15 +31,8 @@ Good example of the register:
 One thing to work on: include more specific detail from the interview itself. I want to hear what they actually said, not just your general takeaways."`;
 
 // What the model gets about this one student.
-function buildPrompt({ asg, name, log, rubric, score, note }) {
+function buildPrompt({ asg, name, log, grade, note }) {
   const first = (name || "").split(" ")[0];
-  const criteria = (asg?.rubric || []).length
-    ? asg.rubric.map(c => {
-        const got = Number(rubric?.[c.id]) || 0;
-        const gap = c.points - got;
-        return "- " + c.name + ": " + got + " of " + c.points + (gap > 0 ? " (lost " + gap + ")" : " (full marks)");
-      }).join("\n")
-    : "(no rubric on this challenge)";
 
   const submissions = (log || []).filter(e => e.type === "submission");
   const theirWork = submissions.length
@@ -54,9 +47,7 @@ function buildPrompt({ asg, name, log, rubric, score, note }) {
     "Challenge: " + (asg?.title || "Untitled") + (asg?.weight ? " (" + asg.weight + "% of the grade)" : ""),
     asg?.description ? "What the challenge asked for: " + asg.description : "",
     "",
-    "Rubric, as I just scored it:",
-    criteria,
-    score != null ? "Total: " + score + " out of 100" : "",
+    grade ? "The grade I gave: " + grade : "",
     "",
     "What they turned in:",
     theirWork,

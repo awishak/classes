@@ -34,6 +34,7 @@ export const BUCKETS = [
     means: "You turned something in, but the challenge asked for more than you gave. Some of the requirements were missed." },
   { id: "d", label: "D", letter: "D", score: 65, blurb: "bad work",
     means: "This fell well short of the challenge. Read the challenge again, and come talk to me." },
+  { id: "revisions", label: "Completed with Revisions", letter: "Completed with Revisions", score: null, blurb: "done once it was revised", means: "" },
   { id: "incomplete", label: "Incomplete", letter: "Incomplete", score: 0, blurb: "counts as a zero",
     means: "Not finished, or not enough of the challenge to grade. An Incomplete counts as a zero until you finish." },
   { id: "f", label: "F", letter: "F", score: 0, blurb: "zero",
@@ -48,10 +49,15 @@ export const BUCKETS = [
 // card: the word is the whole message.
 export const COMPLETE_BUCKETS = [
   { id: "complete", label: "Complete", letter: "Complete", score: 100, blurb: "did what was asked", means: "" },
+  { id: "revisions-c", label: "Completed with Revisions", letter: "Completed with Revisions", score: null, blurb: "done once it was revised", means: "" },
   { id: "notquite", label: "Not quite", letter: "Not quite", score: 50, blurb: "tried, not what was asked", means: "" },
   { id: "incomplete-c", label: "Incomplete", letter: "Incomplete", score: 0, blurb: "counts as a zero", means: "" },
   { id: "notsubmitted", label: "Not submitted", letter: "Not submitted", score: 0, blurb: "counts as a zero", means: "" },
 ];
+
+// Completed with Revisions sits on both scales. Andrew, 2026-10-06: "i need a
+// new category when grading, it's called Completed with Revisions", with no
+// sentence under it and no score: "frankly i don't want scores at all."
 
 // How a challenge is graded: "letters", the default, or "complete".
 export const SCALES = { letters: "Letters", complete: "Complete" };
@@ -291,4 +297,6 @@ export const letterOf = (score) => {
 
 // What a grade event reads as on a card: the letter when the board wrote the
 // grade, the score when the grading flow did.
-export const gradeText = (g) => (g ? (g.letter || (g.score != null ? g.score + "/100" : "")) : "");
+// Andrew, 2026-10-06: "please remove scores from the classes. only need
+// grades at the moment." A number from the older flow reads as its letter.
+export const gradeText = (g) => (g ? (g.letter || letterOf(g.score) || "") : "");

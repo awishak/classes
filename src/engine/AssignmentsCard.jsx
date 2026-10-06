@@ -7,8 +7,8 @@
 // and submit a link + text (can add more). Instructor: manage assignments and
 // grade fast (global inbox or per-assignment), one student at a time.
 //
-// Scored out of 100; weight is the percent of the final grade. Rubric criteria
-// sum to 100, or leave the rubric empty for a free-form score.
+// A grade is a word, never a number on the screen: Andrew, 2026-10-06, "please
+// remove scores from the classes." Weight is the percent of the final grade.
 
 import { useState, useRef, useEffect } from "react";
 import { assignmentsOf, isProfileTask, profileComplete, PROFILE_TASK_OFF } from "./profileTask.js";
@@ -17,7 +17,7 @@ import { rosterOf } from "./roster.js";
 import { Avatar, profileOf } from "./Face.jsx";
 import { genId } from "../utils.jsx";
 import { draftFeedback, textToHtml } from "./feedback.js";
-import { gradeText, scaleOf, SCALES, alive } from "./grades.js";
+import { gradeText, scaleOf, SCALES, alive, bucketsFor, bucketOf } from "./grades.js";
 import * as TOKENS from "./tokens.js";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -380,11 +380,6 @@ function AssignmentLog({ asg, log, accent, studentName, actor, onLike, onDelete 
                   </div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: accent, flexShrink: 0 }}>{gradeText(e)}</div>
                 </div>
-                {asg.rubric?.length > 0 && e.rubric && (
-                  <div style={{ marginTop: 8 }}>
-                    {asg.rubric.map(c => <div key={c.id} style={{ fontSize: 15, color: TEXT_SECONDARY }}>{c.name}: {e.rubric[c.id] ?? 0}/{c.points}</div>)}
-                  </div>
-                )}
                 {e.html && <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + accent + "22" }}><RichText html={e.html} /></div>}
                 {onDelete && <div style={{ marginTop: 8, textAlign: "right" }}>{delBtn(e.id)}</div>}
               </div>
@@ -654,7 +649,7 @@ export function GradeFlow({ config, data, update, queue, onExit }) {
   });
 
   const submit = ({ grade, commentHtml, advance }) => {
-    if (grade) addEvent(update, aid, name, { type: "grade", score: grade.score, rubric: grade.rubric, html: commentHtml || null });
+    if (grade) addEvent(update, aid, name, { type: "grade", score: grade.score, letter: grade.letter, bucket: grade.id, html: commentHtml || null });
     else if (commentHtml) addEvent(update, aid, name, { type: "comment", from: "instructor", html: commentHtml });
     clearDraft();
     if (advance) setI(i + 1);
@@ -672,24 +667,22 @@ export function GradeFlow({ config, data, update, queue, onExit }) {
   );
 }
 
-const CANT_ACCESS_HTML = "<i>I cannot access your link. This challenge currently is scored as a 0. Please resubmit within 24 hours for credit.</i>";
+const CANT_ACCESS_HTML = "<i>I cannot access your link. This challenge currently counts as Incomplete. Please resubmit within 24 hours for credit.</i>";
 
 function GradeForm({ config, asg, name, profile, log, draftHtml, onDraft, onSubmit, onSkip, onLike, onDelete }) {
   const a = config.accent;
-  const hasRubric = (asg?.rubric || []).length > 0;
   const prev = currentGrade(log);
-  const [rubric, setRubric] = useState(() => { const r = {}; (asg?.rubric || []).forEach(c => { r[c.id] = prev?.rubric?.[c.id] ?? ""; }); return r; });
-  const [scoreDraft, setScoreDraft] = useState(prev && !hasRubric ? String(prev.score) : "");
+  // The same words as the columns in Grade view, and no number. Andrew,
+  // 2026-10-06: "please remove scores from the classes. only need grades at
+  // the moment." The rubric and the box out of 100 are gone from here.
+  const columns = bucketsFor(asg);
+  const [bucket, setBucket] = useState(() => (prev?.bucket && columns.some(b => b.id === prev.bucket) ? prev.bucket : null));
   const editorRef = useRef(null);
   const [drafting, setDrafting] = useState(false);
   const [draftErr, setDraftErr] = useState("");
   const [steer, setSteer] = useState("");
 
-  const rubricScore = (asg?.rubric || []).reduce((s, c) => s + (Number(rubric[c.id]) || 0), 0);
-
-  const buildGrade = () => (hasRubric || scoreDraft !== "")
-    ? { score: hasRubric ? rubricScore : (Number(scoreDraft) || 0), rubric: hasRubric ? Object.fromEntries(Object.entries(rubric).map(([k, v]) => [k, Number(v) || 0])) : null }
-    : null;
+  const buildGrade = () => bucketOf(bucket);
   const currentComment = () => { const html = editorRef.current?.innerHTML || ""; return html.replace(/<[^>]*>/g, "").trim() ? html : null; };
 
   const doSubmit = (advance) => {
@@ -699,8 +692,7 @@ function GradeForm({ config, asg, name, profile, log, draftHtml, onDraft, onSubm
   const draft = async () => {
     setDrafting(true); setDraftErr("");
     const r = await draftFeedback({
-      asg, name, log, rubric,
-      score: hasRubric ? rubricScore : (scoreDraft !== "" ? Number(scoreDraft) : null),
+      asg, name, log, grade: bucketOf(bucket)?.label || "",
       note: steer.trim(),
     });
     setDrafting(false);
@@ -713,43 +705,38 @@ function GradeForm({ config, asg, name, profile, log, draftHtml, onDraft, onSubm
   };
 
   const cantAccess = () => {
-    const grade = { score: 0, rubric: hasRubric ? Object.fromEntries(asg.rubric.map(c => [c.id, 0])) : null };
+    const grade = columns.find(b => b.label === "Incomplete");
     onSubmit({ grade, commentHtml: CANT_ACCESS_HTML, advance: true });
   };
 
   return (
     <div style={{ background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 16, padding: 18 }}>
-      <div style={label}>{asg?.title} · {asg?.weight}%</div>
+      <div style={label}>{asg?.title}</div>
       {/* Whose work this is, as a face. Andrew, 2026-09-23: "avatars anywhere
           their names appear." */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
         <Avatar profile={profile} name={name} accent={a} size={40} />
         <div style={{ fontSize: 22, fontWeight: 600 }}>{name}</div>
       </div>
-      {prev && <div style={{ fontSize: 15, fontWeight: 600, color: a, marginTop: 2 }}>Current grade: {prev.score}/100 — change it below and Submit</div>}
+      {prev && gradeText(prev) && <div style={{ fontSize: 15, fontWeight: 600, color: a, marginTop: 2 }}>Current grade: {gradeText(prev)}. Change it below and Submit.</div>}
 
       <div style={{ marginTop: 14 }}><AssignmentLog asg={asg} log={log} accent={a} studentName={name} actor="instructor" onLike={onLike} onDelete={onDelete} /></div>
 
-      {hasRubric ? (
-        <div style={{ marginTop: 16 }}>
-          <div style={label}>Rubric</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-            {asg.rubric.map(c => (
-              <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ flex: 1, fontSize: 15 }}>{c.name}</div>
-                <input type="number" min="0" max={c.points} value={rubric[c.id]} onChange={e => setRubric(r => ({ ...r, [c.id]: e.target.value }))} style={{ ...inputStyle, width: 80, minHeight: 40, textAlign: "right" }} />
-                <div style={{ width: 44, fontSize: 15, color: TEXT_MUTED }}>/ {c.points}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ marginTop: 10, fontSize: 17, fontWeight: 700, color: a }}>Score: {rubricScore}/100</div>
+      <div style={{ marginTop: 16 }}>
+        <div style={label}>Grade</div>
+        <div role="radiogroup" aria-label="Grade" style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+          {columns.map(b => {
+            const on = bucket === b.id;
+            return (
+              <button key={b.id} type="button" role="radio" aria-checked={on} onClick={() => setBucket(on ? null : b.id)}
+                style={{ minHeight: TAP, padding: "0 14px", borderRadius: 10, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer",
+                  background: on ? a : SURFACE_CARD, color: on ? "#fff" : TEXT_PRIMARY, border: "1px solid " + (on ? a : BORDER_STRONG) }}>
+                {b.label}
+              </button>
+            );
+          })}
         </div>
-      ) : (
-        <div style={{ marginTop: 16 }}>
-          <div style={label}>Score (out of 100)</div>
-          <input type="number" min="0" max="100" value={scoreDraft} onChange={e => setScoreDraft(e.target.value)} style={{ ...inputStyle, width: 120, marginTop: 6 }} />
-        </div>
-      )}
+      </div>
 
       <div style={{ marginTop: 16 }}>
         <div style={label}>Comment back</div>
@@ -770,7 +757,7 @@ function GradeForm({ config, asg, name, profile, log, draftHtml, onDraft, onSubm
         <Muted style={{ fontSize: 13, marginTop: 8 }}>
           {draftErr
             ? <span style={{ color: "#dc2626", fontWeight: 600 }}>{draftErr}</span>
-            : "Writes into the box above from the rubric you just scored and what they turned in. Read it and change it before you submit."}
+            : "Writes into the box above from the grade you picked and what they turned in. Read it and change it before you submit."}
         </Muted>
       </div>
 
@@ -864,7 +851,7 @@ function ManageAssignments({ config, data, update, assignments, writeAssignments
         {assignments.map(asg => (
           <button key={asg.id} onClick={() => setEditing(asg.id)}
             style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, width: "100%", textAlign: "left", background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 12, padding: 14, cursor: "pointer", fontFamily: F, minHeight: TAP }}>
-            <div><div style={{ fontWeight: 600, fontSize: 16 }}>{asg.title}</div><Muted>Due {asg.due}{asg.dueTime ? ", " + asg.dueTime : ""} · {asg.weight || 0}% · {asg.rubric?.length ? asg.rubric.length + " criteria" : "free-form"}</Muted></div>
+            <div><div style={{ fontWeight: 600, fontSize: 16 }}>{asg.title}</div><Muted>Due {asg.due}{asg.dueTime ? ", " + asg.dueTime : ""} · {asg.weight || 0}%</Muted></div>
             <span style={{ color: a, fontSize: 15, fontWeight: 600 }}>Edit</span>
           </button>
         ))}
@@ -883,7 +870,6 @@ export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
   const [description, setDescription] = useState(asg?.description || "");
   const [instructionsUrl, setInstructionsUrl] = useState(asg?.instructionsUrl || "");
   const [closeAt, setCloseAt] = useState(asg?.closeAt || "");
-  const [rubric, setRubric] = useState(asg?.rubric || []);
   const [scale, setScale] = useState(scaleOf(asg));
   // Two fields the portal added, 2026-09-30: "give me the ability to make
   // visible, open submissions, change due date, add instructions, including
@@ -893,8 +879,6 @@ export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
   const [opens, setOpens] = useState(asg?.opens === "date" || asg?.opens === "never" ? asg.opens : "now");
   const [opensAt, setOpensAt] = useState(asg?.opensAt || "");
 
-  const setCrit = (id, field, val) => setRubric(r => r.map(c => c.id === id ? { ...c, [field]: val } : c));
-  const rubricTotal = rubric.reduce((s, c) => s + (Number(c.points) || 0), 0);
 
   const save = () => {
     if (!title.trim()) return;
@@ -907,7 +891,6 @@ export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
       id: asg?.id || genId(), title: title.trim(), due: due.trim(), dueTime: dueTime.trim(), weight: Number(weight) || 0, scale,
       description: description.trim(), instructionsUrl: instructionsUrl.trim(), closeAt: closeAt || "",
       visible, opens, opensAt: opens === "date" ? opensAt : "",
-      rubric: rubric.filter(c => c.name.trim()).map(c => ({ id: c.id, name: c.name.trim(), points: Number(c.points) || 0 })),
     });
   };
 
@@ -935,7 +918,7 @@ export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
           </button>
         ))}
       </div>
-      <Muted style={{ marginTop: 6 }}>{scale === "complete" ? "Complete, Not quite, Incomplete or Not submitted." : "A, B, C, D, Incomplete or F."}</Muted>
+      <Muted style={{ marginTop: 6 }}>{scale === "complete" ? "Complete, Completed with Revisions, Not quite, Incomplete or Not submitted." : "A, B, C, D, Completed with Revisions, Incomplete or F."}</Muted>
       {/* Whether students can see this challenge at all. */}
       <label style={{ ...fieldL, display: "flex", alignItems: "center", gap: 12, minHeight: TAP, cursor: "pointer" }}>
         <input type="checkbox" checked={visible} onChange={e => setVisible(e.target.checked)} style={{ width: 20, height: 20, accentColor: a }} />
@@ -962,18 +945,6 @@ export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
       <input type="datetime-local" value={closeAt} onChange={e => setCloseAt(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} />
       <Muted style={{ marginTop: 6 }}>Comments stay open after the deadline.</Muted>
 
-      <div style={{ ...fieldL }}>Rubric {rubric.length > 0 && "(" + rubricTotal + "/100)"}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-        {rubric.map(c => (
-          <div key={c.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input value={c.name} onChange={e => setCrit(c.id, "name", e.target.value)} placeholder="Criterion" style={{ ...inputStyle, flex: 1, minHeight: 40 }} />
-            <input type="number" min="0" value={c.points} onChange={e => setCrit(c.id, "points", e.target.value)} style={{ ...inputStyle, width: 80, minHeight: 40, textAlign: "right" }} />
-            <button onClick={() => setRubric(r => r.filter(x => x.id !== c.id))} style={{ minHeight: 40, minWidth: 40, borderRadius: 8, border: "1px solid " + BORDER_STRONG, background: SURFACE_CARD, color: TEXT_MUTED, cursor: "pointer" }}>✕</button>
-          </div>
-        ))}
-      </div>
-      <button onClick={() => setRubric(r => [...r, { id: genId(), name: "", points: 0 }])} style={{ marginTop: 8, background: "none", border: "none", color: a, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer", padding: 0 }}>+ Add criterion</button>
-      <Muted style={{ marginTop: 6 }}>No rubric means a score out of 100.</Muted>
 
       <div style={{ display: "flex", gap: 8, marginTop: 18, alignItems: "center" }}>
         <Btn accent={a} onClick={save} disabled={!title.trim()}>Save</Btn>

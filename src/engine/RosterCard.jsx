@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { realStudents, hasSections, studentsIn, sectionFor, sectionsOf } from "./sections.js";
 import { nameShown, rosterOf } from "./roster.js";
 import { computeGrade } from "./AssignmentsCard.jsx";
+import { gradeText } from "./grades.js";
 import { Avatar, profileOf } from "./Face.jsx";
 import { StudentThread } from "./YouCard.jsx";
 import RosterSheet, { callLogins } from "./RosterSheet.jsx";
@@ -252,18 +253,19 @@ function StudentPage({ config, data, name, email, code, onBack, update }) {
           <Field title="Sign-in code" value={code} />
 
           {(() => {
-            const { pct, rows } = computeGrade(config, data, name);
+            // Words only. Andrew, 2026-10-06: "please remove scores from the
+            // classes. only need grades at the moment."
+            const { rows } = computeGrade(config, data, name);
             return (
               <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid " + BORDER }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
                   <div style={label}>Grades & challenges</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: a }}>{pct != null ? pct + "%" : "--"}</div>
                 </div>
                 <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
                   {rows.map(r => (
                     <div key={r.id} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 15 }}>
                       <span style={{ color: TEXT_PRIMARY, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title} <span style={{ color: TEXT_MUTED, fontSize: 13 }}>· {r.weight}%</span></span>
-                      <span style={{ flexShrink: 0, fontWeight: 600, color: r.score != null ? TEXT_PRIMARY : TEXT_MUTED }}>{r.score != null ? r.score + "/100" : "—"}</span>
+                      <span style={{ flexShrink: 0, fontWeight: 600, color: gradeText(r) ? TEXT_PRIMARY : TEXT_MUTED }}>{gradeText(r) || "—"}</span>
                     </div>
                   ))}
                 </div>

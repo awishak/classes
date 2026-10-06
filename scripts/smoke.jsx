@@ -3329,8 +3329,8 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       const nq = renderToString(<AssignmentCards config={byScale} data={scaled("notquite")} name={N} go={noop} />);
       if (!/<svg[^>]*aria-label="Not quite"/.test(nq) || !/Your grade: <strong[^>]*>Not quite</.test(nq)) say("Not quite has no yellow face, or no Your grade: Not quite");
       if (/<svg[^>]*aria-label="Incomplete"/.test(renderToString(<AssignmentCards config={byScale} data={scaled("incomplete-c")} name={N} go={noop} />))) say("Incomplete still wears the face that means Not quite");
-      if (bucketsFor(byScale.assignments.find(x => x.id === "graded")).map(b => b.label).join("|") !== "Complete|Not quite|Incomplete|Not submitted") say("a Complete challenge has the wrong columns");
-      if (bucketsFor({}).length !== 7) say("a challenge with no scale is not graded in letters");
+      if (bucketsFor(byScale.assignments.find(x => x.id === "graded")).map(b => b.label).join("|") !== "Complete|Completed with Revisions|Not quite|Incomplete|Not submitted") say("a Complete challenge has the wrong columns");
+      if (bucketsFor({}).length !== 8) say("a challenge with no scale is not graded in letters");
       const gcfg = { ...cfg, storageKey: "smoke-complete-scale", profileTask: null, assignments: [{ id: "cx", title: "Exercise", due: "Sep 27", weight: 3, scale: "complete" }] };
       warmClassData(gcfg.storageKey, { assignments: gcfg.assignments, students: cfg.students });
       const gv = renderToString(<GradeView config={gcfg} />);

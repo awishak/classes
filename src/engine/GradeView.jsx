@@ -1,5 +1,5 @@
 // Grade view. The whole class as cards on a white page, one assignment at a
-// time, and seven columns to drag them into. See grades.js for what a column
+// time, and a column for each grade to drag them into. See grades.js for what a column
 // means and what Release does.
 //
 // The page is meant to be as plain as a whiteboard: names, a link to the file,
@@ -295,9 +295,11 @@ function Card({ student, profile, due, card, work, accent, columns, dragging, pi
       onDragStart={onDragStart} onDragEnd={onDragEnd}
       style={{ border: "1px solid " + (picked ? accent : LINE_STRONG), boxShadow: picked ? "0 0 0 2px " + accent : "none",
         borderRadius: 12, padding: "10px 12px", background: WHITE, display: "flex", flexDirection: "column", gap: 6, fontSize: 15 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      {/* Wraps, so a long grade like Completed with Revisions drops under the
+          name rather than squeezing the name to nothing. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <button className="gv-focus" onClick={onPick} aria-pressed={picked}
-          style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", padding: 0, fontFamily: F, fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY, cursor: "pointer", minHeight: 28, display: "flex", alignItems: "center", gap: 8 }}>
+          style={{ flex: 1, minWidth: 140, textAlign: "left", background: "none", border: "none", padding: 0, fontFamily: F, fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY, cursor: "pointer", minHeight: 28, display: "flex", alignItems: "center", gap: 8 }}>
           <Avatar profile={profile} name={student.name} accent={accent} size={28} />
           <span style={{ minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{student.name}</span>
         </button>
