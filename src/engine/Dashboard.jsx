@@ -45,7 +45,7 @@ import TopNav, { NAV_TEACH } from "./TopNav.jsx";
 import { appsFor } from "./apps.js";
 import { listGames } from "@ishak/decks";
 import { gameClient } from "./gameClient.js";
-import Drawer, { DRAWER_CSS } from "./Drawer.jsx";
+import Drawer, { DRAWER_CSS, shelfOf } from "./Drawer.jsx";
 import TermOutline, { TERM_CSS } from "./TermOutline.jsx";
 import Slide, { slideOf, SLIDE_CSS, readSlidesOn, writeSlidesOn } from "./Slide.jsx";
 import DayDoc, { DOC_CSS, Menu as RowMenu } from "./DayDoc.jsx";
@@ -4279,7 +4279,7 @@ export default function Dashboard({ config, daySlug = "" }) {
   // document can put the cursor in it.
   const insertRow = (slot, afterId, depth, extra) => {
     const row = { id: genId(), text: "", depth: depth || 0, ...(extra || {}) };
-    if (row.blockId) stampScheduled(writeTo(row.blockId), row.blockId, day, config.id);
+    if (row.blockId) putOnDay(row.blockId, day);
     writeDay(d => {
       const slots = { ...(d.slots || {}) };
       const bucket = normSlot(slots[slot]);
@@ -4313,6 +4313,7 @@ export default function Dashboard({ config, daySlug = "" }) {
         items: bucket.items.map(x => (x.id === itemId ? { ...x, blockId: made.id, text: "", links: [] } : x)) } } };
       return { ...prev, dayPlans: plans, blocks: { ...(prev.blocks || {}), [made.id]: made } };
     });
+    if (made) putOnDay(made.id, day, made);
     return made?.id || null;
   };
 
@@ -4323,7 +4324,7 @@ export default function Dashboard({ config, daySlug = "" }) {
       return { ...d, slots: { ...(d.slots || {}), [slot]: { ...bucket,
         items: bucket.items.map(x => (x.id === itemId ? { ...x, blockId, text: "", links: [], feature: undefined } : x)) } } };
     }, "that line");
-    stampScheduled(writeTo(blockId), blockId, day, config.id);
+    putOnDay(blockId, day);
   };
 
   // A section's time, a range like 5-10.
@@ -4344,6 +4345,7 @@ export default function Dashboard({ config, daySlug = "" }) {
   // came from. Picked for this day, it is the ordinary move.
   const moveSectionToDay = (slot, toDate, beforeSlot) => {
     if (!toDate || toDate === day) { if (beforeSlot !== slot) placeSectionAt(slot, beforeSlot); return; }
+    const rows = normSlot((((data?.dayPlans || {})[day] || {}).slots || {})[slot]).items;
     update(prev => {
       const plans = { ...(prev.dayPlans || {}) };
       const from = orderSlots({ ...blankDay(config), ...(plans[day] || {}) });
@@ -4359,6 +4361,7 @@ export default function Dashboard({ config, daySlug = "" }) {
       plans[toDate] = { ...to, slots: toSlots, order: Object.keys(toSlots) };
       return { ...prev, dayPlans: plans };
     });
+    carryBlocks(rows, day, toDate);
   };
 
   // A line turned into a section: the rows after it go with it. Hands back the
@@ -4384,12 +4387,16 @@ export default function Dashboard({ config, daySlug = "" }) {
     editPicked({ blockId: "", item: row, where: "", slot, id: row.id });
   };
 
-  const removeFlowItem = (slot, itemId) => writeDay(d => {
-    const slots = { ...(d.slots || {}) };
-    const bucket = normSlot(slots[slot]);
-    slots[slot] = { ...bucket, items: bucket.items.filter(it => it.id !== itemId) };
-    return { ...d, slots };
-  }, "taking that out");
+  const removeFlowItem = (slot, itemId) => {
+    const row = normSlot((((data?.dayPlans || {})[day] || {}).slots || {})[slot]).items.find(it => it.id === itemId);
+    writeDay(d => {
+      const slots = { ...(d.slots || {}) };
+      const bucket = normSlot(slots[slot]);
+      slots[slot] = { ...bucket, items: bucket.items.filter(it => it.id !== itemId) };
+      return { ...d, slots };
+    }, "taking that out");
+    if (row?.blockId) takeOffDay(row.blockId, day, [itemId]);
+  };
   const moveFlowItem = (slot, itemId, dir) => writeDay(d => {
     const slots = { ...(d.slots || {}) };
     const bucket = normSlot(slots[slot]);
@@ -4442,6 +4449,7 @@ export default function Dashboard({ config, daySlug = "" }) {
         const to = normSlot(slots[toSlot]);
         return { ...d, slots: { ...slots, [toSlot]: { ...to, items: placeGroup(to.items, carried, null) } } };
       });
+      carryBlocks(carried, day, on);
     }
   };
 
@@ -4549,6 +4557,42 @@ export default function Dashboard({ config, daySlug = "" }) {
   const pickReading = (b) => {
     addScheduleItem(update, config, day, { type: "reading", title: b.title, url: b.url, blockId: b.id });
     stampScheduled(writeTo(b.id), b.id, day, config.id);
+  };
+
+  // A link on the day is a reading on the week.
+  //
+  // Andrew, 2026-10-06: "it should only have the dashboard readings right?"
+  // and yes to a link placed on a day going onto the week's readings on its
+  // own. Before this, placing a link made a row and a stamp and nothing on
+  // the week, so his Friday reading was on the day and the students' schedule
+  // still said Spring's three. Now every way a block lands on a day goes
+  // through putOnDay, and a media block is assigned as it lands; the last row
+  // holding it taken off the day takes the reading off the week with it. A
+  // reading set from On the week with no row on the day is left alone.
+  const isMedia = (b) => !!b && b.type !== "assignment" && shelfOf(b.type) === "media";
+  const assignOnDay = (b, date) => {
+    if (!isMedia(b)) return;
+    if (scheduledFor(weeks, date).some(r => r.libId === b.id || (b.url && r.url === b.url))) return;
+    const type = b.type === "video" || b.type === "podcast" ? b.type : "reading";
+    addScheduleItem(update, config, date, { type, title: b.title || hostOf(b.url) || "Untitled", url: b.url || "", blockId: b.id });
+  };
+  const putOnDay = (blockId, date, block) => {
+    stampScheduled(writeTo(blockId), blockId, date, config.id);
+    assignOnDay(block || blockOf(blockId), date);
+  };
+  // Whether a row other than these still holds the block on that day.
+  const stillOnDay = (blockId, date, exceptIds) => Object.values(((data?.dayPlans || {})[date] || {}).slots || {})
+    .some(s => normSlot(s).items.some(it => it.blockId === blockId && !exceptIds.includes(it.id)));
+  const takeOffDay = (blockId, date, exceptIds) => {
+    if (stillOnDay(blockId, date, exceptIds)) return;
+    if (isMedia(blockOf(blockId))) scheduledFor(weeks, date).filter(r => !r.loose && r.libId === blockId)
+      .forEach(r => removeScheduleItem(update, config, r.id));
+    unstampScheduled(writeTo(blockId), blockId, date, config.id);
+  };
+  // Rows carried from one day to another: off the first, onto the second.
+  const carryBlocks = (rows, from, to) => {
+    const ids = rows.map(r => r.id);
+    rows.forEach(r => { if (!r.blockId) return; takeOffDay(r.blockId, from, ids); putOnDay(r.blockId, to); });
   };
 
   // Something has been dragged onto Today's readings. It came either from the
@@ -4750,10 +4794,11 @@ export default function Dashboard({ config, daySlug = "" }) {
       slots[slot] = { ...bucket, items };
       return { ...d, slots };
     });
-    if (blockId) stampScheduled(writeTo(blockId), blockId, on, config.id);
+    if (blockId) putOnDay(blockId, on, b.id && b.type ? b : null);
     // Dragging a reading into the flow copies it by default, so it stays on
-    // today's readings as well. Turned off, the drag moves it instead.
-    if (b.schedItemId && !railRef.current.dragKeeps) removeScheduleItem(update, config, b.schedItemId);
+    // today's readings as well. Turned off, the drag moves it instead. Only a
+    // row with no block behind it: a link on the day is a reading on the week.
+    if (!blockId && b.schedItemId && !railRef.current.dragKeeps) removeScheduleItem(update, config, b.schedItemId);
   };
   const setBlockHeadline = (id, headline) => writeTo(id)(prev => ({
     ...prev,

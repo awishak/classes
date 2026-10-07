@@ -106,6 +106,9 @@ export function addScheduleItem(update, config, date, item) {
     const weeks = prev.schedule || config.scheduleWeeks || [];
     const week = weeks.find(w => (w.dates || []).includes(date));
     if (!week) return prev;
+    // Once per block per day. Two rows placed in one gesture, or a block put
+    // on a day it is already assigned to, used to make a second reading.
+    if (item.blockId && (week.items || []).some(i => i.libId === item.blockId && (!i.date || i.date === wd))) return prev;
     return {
       ...prev,
       schedule: weeks.map(w => w.id !== week.id ? w : {
