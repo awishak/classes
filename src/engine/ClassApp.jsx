@@ -30,8 +30,8 @@ import { setClassFavicon } from "./favicon.js";
 import { withIds, idOf, rosterOf, withHouse, pointsOf as studentPoints } from "./roster.js";
 import { setAway, mergeAway } from "./attendance.js";
 import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
-import { useSession, studentFor, myCode } from "./session.js";
-import { instructorOf, schedulingLinkOf } from "../instructors.js";
+import { useSession, studentFor, myCode, getSession } from "./session.js";
+import { instructorOf, schedulingLinkOf, isInstructorEmail } from "../instructors.js";
 import { assignmentsOf, profileTaskOf, profileComplete } from "./profileTask.js";
 import { useOpenGames, GameStart, GamePlay, GamesNow, GameReviewLive } from "@ishak/decks";
 import { gameClient } from "./gameClient.js";
@@ -554,7 +554,11 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const [theme, pickTheme] = useStudentTheme(config);
   // Auto by default, and an override for anybody who wants one.
   const [mode, pickMode] = useDayNight(config);
-  const [preview, setPreview] = useState("");
+  // A demo class (config.demo names a student) opens in the lens on that
+  // student for anyone who is not Andrew: a look that writes nothing and asks
+  // for no sign-in. Andrew, 2026-10-07: "a class called COMM 222 that people
+  // can look at whenever they want."
+  const [preview, setPreview] = useState(() => (config.demo && !isInstructorEmail(getSession()?.user?.email) ? config.demo : ""));
   // Whether a preview writes. Andrew, 2026-09-20: "i need to be able to test
   // the messaging with dr ishak. let me post a fake message as [a fake
   // student]." A look that writes nothing cannot test a conversation, and a
@@ -587,6 +591,10 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // and the rest of the site carries on as before. The instructor's email
   // makes the instructor; nobody has to press a role toggle to get in.
   const { session, email: sessionEmail, instructor: sessionInstructor, signOut: endSession } = useSession();
+  // Looking at the demo class as a visitor: no door, no writes, and the lens
+  // cannot be taken off, only pointed at another placeholder student.
+  const demo = !!config.demo && !sessionInstructor;
+  const lookAs = useCallback((name) => setPreview(demo && !name ? config.demo : name), [demo, config.demo]);
   // Only the instructor's own sign-in can draw the instructor side. The
   // Student and Instructor switch sat in every student's menu, and pressing
   // Instructor set a flag in that student's browser that the page believed.
@@ -651,7 +659,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // own way. It used to stop at this component, so the schedule drew a hairline
   // of its own while the page behind it was cut up.
   const ctx = { data: data || {}, update: write, asStudent: preview || asStudent,
-    setAsStudent: preview ? setPreview : null, live, mark, theme,
+    setAsStudent: preview ? lookAs : null, live, mark, theme,
     // A photograph is written to its own row, never into the class. A preview
     // writes nothing, the same as every other edit made while looking.
     setPhoto: preview && !saving ? () => {} : setPhoto,
@@ -823,7 +831,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
 
   const StudentPicker = (
     <select className="ca-focus" value={preview} aria-label="Which student"
-      onChange={e => { setPreview(e.target.value); setSwitched(false); setSaving(isTestStudent(config, e.target.value)); go(null); }}
+      onChange={e => { lookAs(e.target.value); setSwitched(false); setSaving(!demo && isTestStudent(config, e.target.value)); go(null); }}
       style={{ fontFamily: F, fontSize: 15, fontWeight: 600, minHeight: TAP, padding: "0 10px", maxWidth: 230,
         borderRadius: 999, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY, cursor: "pointer" }}>
       <option value="">View as a student</option>
@@ -841,19 +849,23 @@ export default function ClassApp({ config: classConfig, initialCard }) {
         <span style={{ fontSize: 15, opacity: .85 }}>
           {saving ? "Everything you press is saved as " + preview + "." : "This is a look, not a login. Nothing you press is saved."}
         </span>
-        <button className="ca-focus" onClick={() => setSaving(v => !v)} aria-pressed={saving}
-          style={{ minHeight: TAP, padding: "0 14px", borderRadius: 999, border: "1px solid rgba(255,255,255,.55)",
-            background: saving ? "#fff" : "transparent", color: saving ? a : "#fff",
-            fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
-          {saving ? "Stop saving" : "Save what I press"}
-        </button>
+        {demo ? null : (
+          <button className="ca-focus" onClick={() => setSaving(v => !v)} aria-pressed={saving}
+            style={{ minHeight: TAP, padding: "0 14px", borderRadius: 999, border: "1px solid rgba(255,255,255,.55)",
+              background: saving ? "#fff" : "transparent", color: saving ? a : "#fff",
+              fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
+            {saving ? "Stop saving" : "Save what I press"}
+          </button>
+        )}
         <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {StudentPicker}
-          <button className="ca-focus" onClick={() => { setPreview(""); setSwitched(false); go(null); }}
-            style={{ minHeight: TAP, padding: "0 16px", borderRadius: 999, border: "1px solid rgba(255,255,255,.55)",
-              background: "transparent", color: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
-            Go back to instructor view
-          </button>
+          {demo ? null : (
+            <button className="ca-focus" onClick={() => { setPreview(""); setSwitched(false); go(null); }}
+              style={{ minHeight: TAP, padding: "0 16px", borderRadius: 999, border: "1px solid rgba(255,255,255,.55)",
+                background: "transparent", color: "#fff", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
+              Go back to instructor view
+            </button>
+          )}
         </span>
       </div>
     </div>
@@ -1120,7 +1132,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // about something true rather than loud about nothing.
   const seenAs = preview || asStudent;
   if (deck.current.name !== seenAs) deck.current = { name: seenAs, on: false, done: false };
-  if (data !== null && view !== "instructor" && seenAs && !deck.current.done && needsWelcome(data, seenAs)) {
+  // The demo skips the welcome, which a visitor could never finish: nothing saves, so it would be back on every visit.
+  if (data !== null && view !== "instructor" && seenAs && !deck.current.done && !demo && needsWelcome(data, seenAs)) {
     deck.current.on = true;
   }
   const myPoints = (data?.log || []).filter(e => e.studentId === (roster.find(x => x.name === seenAs) || {}).id)
@@ -1164,8 +1177,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // The door, after every hook above has run, so a render that turns somebody
   // away calls the same hooks as a render that lets them in, and above both
   // layouts, because the desktop one returns on its own.
-  if (!session) return <GoSignIn config={config} />;
-  if (data !== null && !sessionInstructor && !me) return <NotInClass config={config} email={sessionEmail} onSignOut={signOut} />;
+  if (!session && !demo) return <GoSignIn config={config} />;
+  if (data !== null && !sessionInstructor && !me && !demo) return <NotInClass config={config} email={sessionEmail} onSignOut={signOut} />;
   if (data !== null && !sessionInstructor && me && signedIn !== me.name) return null;   // the effect is setting the name
 
   // The first time a student signs in, the questions come before the site.

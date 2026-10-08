@@ -11,12 +11,14 @@ import comm118 from "./comm118.js";
 import comm2 from "./comm2.js";
 import comm3 from "./comm3.js";
 import comm4 from "./comm4.js";
+import comm222 from "./comm222.js";
 
 // Keyed by the URL segment. /comm118/dashboard -> ENGINE.comm118.
-export const ENGINE = { comm999, comm118, comm2, comm3, comm4 };
+export const ENGINE = { comm999, comm118, comm2, comm3, comm4, comm222 };
 
-// The order the class pickers show them in.
-export const ENGINE_LIST = [comm118, comm3, comm2, comm4, comm999];
+// The order the class pickers show them in. The smoke test renders the first
+// two as its fixtures, so a new class goes on the end.
+export const ENGINE_LIST = [comm118, comm3, comm2, comm4, comm999, comm222];
 
 // What the front page does with each one. `status` lives on the config.
 export const currentClasses = () => ENGINE_LIST.filter(c => c.status === "current");

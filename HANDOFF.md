@@ -776,6 +776,39 @@ suite that reads the wall clock passes or fails by the hour. Everything renders
 at one fixed moment now, set in `scripts/smoke-globals.js`, and `npm run smoke`
 runs in UTC so this machine and the build machine cannot disagree again.
 
+## COMM 222, the class anyone can look at, and clarisa.app
+
+Since 2026-10-07. Andrew: "put like a fake class there so people can see
+what it looks like ... on the same templating as whatever we update so it
+updates along with everything else ... a class called COMM 222 that people
+can look at whenever they want." `src/config/comm222.js` is the template
+class (comm999, spread whole, so its sports-term content comes with it)
+under the code COMM 222, `status: "current"` so it sits on the front page
+with the running classes, storageKey `comm222-demo-v1`, and one new field:
+`demo: "Marty McFly"`, the student a visitor looks as. In ClassApp a
+`config.demo` on a page whose session is not an instructor's sets `demo`:
+the preview lens opens on that name from the first render, writes nothing
+(`saving` stays false, so `write`, `mark` and `setPhoto` are no-ops), the
+door at the bottom lets a visitor in without a session, the lens's Save and
+Go-back buttons are gone, the student picker points the lens at another
+placeholder but never off (`lookAs`), and the welcome deck is skipped.
+Andrew signed in gets his own view and edits the demo like any class; the
+seed writes the first time he opens it. The name, quarter and room are
+still the template's ("Template Class", "Room TBD") until he gives the demo
+its own. Known gap, the same as every class: the class row is anon-writable
+in the database, and a few surfaces (games, live, questions) write through
+`window.storage.set` rather than `update`, so a visitor who finds one could
+write to the demo's row; the demo's content is all seed, so a reseed restores it.
+
+**clarisa.app** is his new domain, bought 2026-10-07, where the real classes
+move in January. Until then `src/main.jsx` sends the root of that host to
+`/comm222`; every other path is the same path as here. The domain still has
+to be added to the Vercel project (classes, Domains) and pointed from the
+registrar; both are his steps, and until then the host check is dormant.
+`scripts/check-demo.mjs` opens the built site as a visitor and checks the
+demo stays open, a real class still asks for a sign-in, and the front page
+shows COMM 222.
+
 ## How it gets deployed
 
 `vercel --prod` is rate limited at 100 a day and that limit gets hit. **Pushing

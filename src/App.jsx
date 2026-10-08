@@ -171,6 +171,7 @@ export default function App() {
     else if (path === "/comm4" || path === "/comm4/") document.title = "COMM 4 Hub - Spring 2026";
     else if (path === "/comm2" || path === "/comm2/") document.title = "COMM 2 Hub - Spring 2026";
     else if (path === "/retreat" || path === "/retreat/") document.title = "Retreat";
+    else if (path.startsWith("/comm222")) document.title = "COMM 222";
     else document.title = "Ishak Classes";
   }, [path]);
 

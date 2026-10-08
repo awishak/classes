@@ -3144,9 +3144,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!/Archived classes/.test(menu)) say("there is no way to the archived ones at all");
   if (!/maxHeight: "calc\(100vh - 120px\)"/.test(menu)) say("a menu taller than the window still runs off it");
   if (/panels=\{LIVE_RAIL/.test(dash)) say("On the week and Questions are back in the menu");
-  // And the two classes he is teaching are the two that are current.
+  // And the two classes he is teaching are current, plus COMM 222, the demo
+  // anyone can look at (2026-10-07), which sits on the front page with them.
   const current = ENGINE_LIST.filter(c => c.status === "current").map(c => c.code).sort();
-  if (current.join(", ") !== "COMM 118, COMM 3") say("the current classes are " + current.join(", "));
+  if (current.join(", ") !== "COMM 118, COMM 222, COMM 3") say("the current classes are " + current.join(", "));
 }
 
 // His side of the questions. Andrew, 2026-09-20: "on my side, as the
