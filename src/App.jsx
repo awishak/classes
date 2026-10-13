@@ -17,6 +17,7 @@ import WorktopiaAnswersPage from "./engine/WorktopiaAnswersPage.jsx";
 import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
+import VisualEssayPlan from "./engine/VisualEssayPlan.jsx";
 import GradeView from "./engine/GradeView.jsx";
 import CheckinAnswers from "./engine/CheckinAnswers.jsx";
 import InstructorBar from "./engine/InstructorBar.jsx";
@@ -240,6 +241,15 @@ export default function App() {
     return (
       <InstructorGate what="Repository">
         <RepoPage />
+      </InstructorGate>
+    );
+  }
+
+  // The COMM 3 visual essay, planned before the portal is built.
+  if (path === "/comm3/visualessayplanning" || path === "/comm3/visualessayplanning/") {
+    return (
+      <InstructorGate what="COMM 3 visual essay planning">
+        <InstructorBar always><VisualEssayPlan /></InstructorBar>
       </InstructorGate>
     );
   }
