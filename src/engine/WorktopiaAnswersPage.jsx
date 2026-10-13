@@ -20,6 +20,7 @@ import { useSession, studentFor, authHeaders } from "./session.js";
 import { savedPin } from "../InstructorGate.jsx";
 import { INSTRUCTOR_EMAILS } from "../instructors.js";
 import { QUESTIONS, MEETINGS, WORKTOPIA_TITLE } from "./worktopia/terminal.js";
+import { SESSIONS, shortOf, sessionOf, sessionIndex } from "./worktopia/sitdown.js";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { setClassFavicon } from "./favicon.js";
@@ -82,11 +83,40 @@ function Quotes({ field, files, who }) {
   );
 }
 
+// Sit-Down 1, the six sessions, each with its people. For the instructor
+// only while the sort settles. Andrew, 2026-10-12: "can you sort them in
+// worktopia by group for now?" A name with no submitted file says so, since
+// the sort was made from the files.
+function Sessions({ files, who }) {
+  const have = new Set(files.filter(f => f.submitted_at).map(f => String(who(f) || "").trim().toLowerCase()));
+  const count = SESSIONS.reduce((n, s) => n + s.names.length, 0);
+  return (
+    <section className="sec" id="sessions">
+      <header className="sh"><h3>Sit-Down 1: the six sessions</h3><span className="meta">{plural(count, "student")}</span></header>
+      <div className="sessions">
+        {SESSIONS.map(s => (
+          <div key={s.key} className="pos">
+            <h4>{s.day + ", " + s.time}</h4>
+            <ul>
+              {s.names.map(n => (
+                <li key={n}>{n}{have.has(n.toLowerCase()) ? null : <span className="dim"> · no file yet</span>}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 // The three positions on every file, one row each, with the follow-ups under
-// the row when the row is opened.
+// the row when the row is opened. For the instructor the rows sit in session
+// order, so one table reads as the six meetings; a student's rows keep the
+// server's order, which is nobody's.
 function Positions({ files, who, named }) {
   const [open, setOpen] = useState(() => new Set());
-  const rows = files.filter(f => LETTERS.some(l => f.answers["title:" + l]));
+  const rows = files.filter(f => LETTERS.some(l => f.answers["title:" + l]))
+    .slice().sort((x, y) => named ? (sessionIndex(who(x)) - sessionIndex(who(y))) || String(who(x)).localeCompare(String(who(y))) : 0);
   const all = open.size === rows.length && rows.length > 0;
   const toggle = (i) => setOpen(prev => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n; });
   const toggleAll = () => setOpen(all ? new Set() : new Set(rows.map((_, i) => i)));
@@ -100,7 +130,7 @@ function Positions({ files, who, named }) {
       {rows.length ? (
         <div className="scroll">
           <table>
-            <thead><tr>{named ? <th>Who</th> : null}<th>A</th><th>B</th><th>C</th><th className="when">Submitted</th></tr></thead>
+            <thead><tr>{named ? <th>Who</th> : null}{named ? <th>Session</th> : null}<th>A</th><th>B</th><th>C</th><th className="when">Submitted</th></tr></thead>
             <tbody>
               {rows.map((f, i) => (
                 <PositionRow key={i} f={f} who={who(f)} named={named} open={open.has(i)} onToggle={() => toggle(i)} />
@@ -114,10 +144,12 @@ function Positions({ files, who, named }) {
 }
 
 function PositionRow({ f, who, named, open, onToggle }) {
-  const cols = (named ? 1 : 0) + 4;
+  const cols = (named ? 2 : 0) + 4;
+  const session = named ? sessionOf(who) : null;
   return (<>
     <tr className={"row" + (open ? " open" : "")} onClick={onToggle} aria-expanded={open}>
       {named ? <td className="who">{who}</td> : null}
+      {named ? <td className="when">{session ? shortOf(session) : <span className="dim">unplaced</span>}</td> : null}
       {LETTERS.map(l => <td key={l}>{f.answers["title:" + l] || <span className="dim">unnamed</span>}</td>)}
       <td className="when">{f.submitted_at ? fmtWhen(f.submitted_at) : <span className="dim">in progress</span>}</td>
     </tr>
@@ -157,6 +189,7 @@ export function Group({ title, files, who, named, roster }) {
     <div className="grp">
       <header className="gh"><h2>{title}</h2><span className="meta">{facts}</span></header>
       {!files.length ? <p className="none">Nobody has started.</p> : (<>
+        {named && roster ? <Sessions files={files} who={who} /> : null}
         <Positions files={files} who={who} named={named} />
         <section className="sec"><header className="sh"><h3>Worktopia's own offers</h3><span className="meta">{plural(offered.length, "file")}</span></header><Tally rows={offers} /></section>
         <Quotes field="industry" files={files} who={who} />
@@ -298,6 +331,8 @@ export const CSS = `
 .wa .dim{color:var(--text-muted)}
 .wa .more td{padding:0 10px 16px}
 .wa .three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.wa .sessions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.wa .sessions ul{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:15px;color:var(--text-primary)}
 .wa .pos{display:grid;gap:10px;align-content:start;padding:12px;border-radius:12px;background:var(--surface-sunk)}
 .wa .pos h4{margin:0;font-size:15px;font-weight:600;color:var(--text-primary)}
 .wa .qa{display:grid;gap:2px}
@@ -305,5 +340,5 @@ export const CSS = `
 .wa .a{font-size:15px;line-height:1.4;color:var(--text-primary);white-space:pre-wrap}
 .wa .foot{font-size:13px;color:var(--text-muted)}
 .wa .lnk:focus-visible,.wa .row:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-@media (max-width:860px){.wa .three{grid-template-columns:1fr}.wa .sec{padding:16px}.wa .tally li{grid-template-columns:28px 80px minmax(0,1fr)}}
+@media (max-width:860px){.wa .three{grid-template-columns:1fr}.wa .sessions{grid-template-columns:1fr}.wa .sec{padding:16px}.wa .tally li{grid-template-columns:28px 80px minmax(0,1fr)}}
 `;
