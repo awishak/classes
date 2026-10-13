@@ -44,6 +44,36 @@ textarea.gv-box{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:
 `;
 
 const hostOf = (url) => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return "link"; } };
+
+// The file a turn-in points at, as an address a page can hold in a frame.
+// A Google Doc, Slides, Sheet or Drive file has a /preview form that draws
+// without the editor around it, and a Canva design takes ?embed. Anything
+// else, a canva.link short address included, gets no frame and opens in a
+// tab of its own.
+const embedOf = (url) => {
+  if (!url) return "";
+  // A worksheet on this site, Worktopia included, is a page of our own and
+  // draws as itself.
+  if (/^\//.test(url)) return url;
+  let u;
+  try { u = new URL(url); } catch { return ""; }
+  const host = u.hostname.replace(/^www\./, "");
+  if (typeof window !== "undefined" && host === window.location.hostname) return url;
+  if (host === "docs.google.com") {
+    const m = u.pathname.match(/^\/(document|presentation|spreadsheets)\/d\/([^/]+)/);
+    return m ? "https://docs.google.com/" + m[1] + "/d/" + m[2] + "/preview" : "";
+  }
+  if (host === "drive.google.com") {
+    const m = u.pathname.match(/^\/file\/d\/([^/]+)/);
+    const id = m ? m[1] : u.searchParams.get("id");
+    return id ? "https://drive.google.com/file/d/" + id + "/preview" : "";
+  }
+  if (host === "canva.com") {
+    const m = u.pathname.match(/^\/design\/([^/]+)\/([^/]+)/);
+    return m ? "https://www.canva.com/design/" + m[1] + "/" + m[2] + "/view?embed" : "";
+  }
+  return "";
+};
 const first = (name) => String(name || "").split(" ")[0];
 const fmtDay = (ts) => ts ? new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
 
@@ -102,9 +132,12 @@ export default function GradeView({ config }) {
   const [picked, setPicked] = useState("");
   const [editing, setEditing] = useState("");
   const [confirm, setConfirm] = useState("");
+  // The walk: the names in the order they are walked, fixed when the walk
+  // opens, or null when the board is up. See Walk below.
+  const [walk, setWalk] = useState(null);
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") { setPicked(""); setEditing(""); setConfirm(""); } };
+    const onKey = (e) => { if (e.key === "Escape") { setPicked(""); setEditing(""); setConfirm(""); setWalk(null); } };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
@@ -194,6 +227,14 @@ export default function GradeView({ config }) {
             </select>
           ) : <span style={{ color: TEXT_MUTED, fontSize: 15 }}>No challenges in this class yet.</span>}
           {isCheckin(asg) ? <a className="gv-focus" href={config.path + "/checkins?w=" + asg.week} style={{ fontSize: 15, fontWeight: 600, color: a, textDecoration: "none" }}>Read every answer</a> : null}
+          {/* The walk starts on the pile, so the first card up is the first
+              file nobody has looked at. With the pile empty it walks the
+              sorted cards, for a second look. */}
+          {!isCheckin(asg) && roster.length ? (
+            <button className="gv-focus" style={btn(false)} onClick={() => setWalk([...pile, ...columns.flatMap(b => inBucket(b.id))].map(s => s.name))}>
+              {pile.length ? "Walk through the pile" : "Walk through the class"}
+            </button>
+          ) : null}
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <span style={{ fontSize: 15, color: TEXT_SECONDARY }}>{sorted} of {roster.length} sorted</span>
             {released ? (
@@ -286,6 +327,127 @@ export default function GradeView({ config }) {
           </div>
         </main>
       ) : null}
+
+      {walk && asg ? (
+        <Walk names={walk} roster={roster} data={data} aid={aid} asg={asg} board={board} columns={columns} accent={a}
+          onPlace={save} onClose={() => setWalk(null)} />
+      ) : null}
+    </div>
+  );
+}
+
+// The walk: one student at a time, their file drawn on the page, the grade a
+// press away. Andrew, 2026-10-12, on the visual language exercises: they are
+// photo and graphic based, "so I guess I have to look for each one
+// individually." So the looking is the page. Left and right move between
+// students, a digit is a column, and a grade placed moves on to the next
+// student. The order is the pile first, as the work came in, then the sorted
+// cards, and the order is fixed when the walk opens so a grade placed never
+// reshuffles who comes next.
+function Walk({ names, roster, data, aid, asg, board, columns, accent, onPlace, onClose }) {
+  const [i, setI] = useState(0);
+  const name = names[i];
+  const student = roster.find(s => s.name === name) || { name };
+  const card = board.cards?.[name] || {};
+  const work = workOf(data, aid, name);
+  const [comment, setComment] = useState(card.comment || "");
+  useEffect(() => { setComment((board.cards?.[name] || {}).comment || ""); }, [name]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const embed = embedOf(work.link);
+  const late = work.last ? isLate(work.last.ts, asg?.due) : false;
+  const grade = card.bucket ? bucketOf(card.bucket) : null;
+  const last = i >= names.length - 1;
+  const go = (d) => setI(n => Math.max(0, Math.min(names.length - 1, n + d)));
+  // A grade placed takes the comment with it and moves on. The last student
+  // stays up, so the walk ends on a card and not on nothing.
+  const place = (bucket) => { onPlace(name, { comment: comment.trim() }, bucket === (card.bucket || null) ? undefined : bucket); if (!last) go(1); };
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target && /^(TEXTAREA|INPUT|SELECT)$/.test(e.target.tagName)) return;
+      if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+      else if (/^[1-9]$/.test(e.key) && columns[Number(e.key) - 1]) { e.preventDefault(); place(columns[Number(e.key) - 1].id); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  const btn = (solid) => ({ minHeight: HIT, padding: "0 12px", borderRadius: 8, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer",
+    background: solid ? accent : WHITE, color: solid ? "#fff" : TEXT_PRIMARY, border: "1px solid " + (solid ? accent : LINE_STRONG) });
+  const quiet = { ...btn(false), opacity: .5, cursor: "default" };
+
+  return (
+    <div role="dialog" aria-label="Walk through the work" style={{ position: "fixed", inset: 0, zIndex: 20, background: WHITE, color: TEXT_PRIMARY, fontFamily: F, display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 16px", borderBottom: "1px solid " + LINE, flexWrap: "wrap" }}>
+        <button className="gv-focus" style={i === 0 ? quiet : btn(false)} disabled={i === 0} onClick={() => go(-1)}>← Back</button>
+        <span style={{ fontFamily: MONO, fontSize: 13, color: TEXT_MUTED, minWidth: 64, textAlign: "center" }}>{i + 1} of {names.length}</span>
+        <button className="gv-focus" style={last ? quiet : btn(false)} disabled={last} onClick={() => go(1)}>Next →</button>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, marginLeft: 8 }}>
+          <Avatar profile={profileOf(data, name)} name={name} accent={accent} size={28} />
+          <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.01em" }}>{name}</span>
+          {student.section ? (
+            <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY, background: SUNK, borderRadius: 999, padding: "2px 9px" }}>{student.section}</span>
+          ) : null}
+        </span>
+        <span style={{ fontSize: 15, color: late ? LATE : TEXT_MUTED, fontWeight: late ? 700 : 400 }}>
+          {work.last ? fmtDay(work.last.ts) + (late ? " · late" : "") : "Nothing turned in"}
+        </span>
+        {grade ? <span style={{ fontSize: 15, fontWeight: 700, color: accent }}>{grade.label}</span> : null}
+        {work.link ? (
+          <a className="gv-focus" href={work.link} target="_blank" rel="noreferrer" style={{ color: accent, fontWeight: 600, fontSize: 15, textDecoration: "none", minHeight: HIT, display: "inline-flex", alignItems: "center" }}>
+            Open their file ↗ <span style={{ fontWeight: 400, color: TEXT_MUTED, fontSize: 13, marginLeft: 6 }}>{hostOf(work.link)}</span>
+          </a>
+        ) : null}
+        <button className="gv-focus" style={{ ...btn(true), marginLeft: "auto" }} onClick={onClose}>Done</button>
+      </div>
+
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+        <aside style={{ width: 300, flex: "none", borderRight: "1px solid " + LINE, padding: 12, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
+          <div>
+            <div style={label}>Grade</div>
+            <div role="radiogroup" aria-label="Grade" style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
+              {columns.map((b, k) => {
+                const on = card.bucket === b.id;
+                return (
+                  <button key={b.id} type="button" role="radio" aria-checked={on} className="gv-focus" onClick={() => place(b.id)}
+                    style={{ ...btn(on), display: "flex", alignItems: "center", gap: 10, textAlign: "left", justifyContent: "flex-start" }}>
+                    <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: on ? "#fff" : TEXT_MUTED, minWidth: 12 }}>{k + 1}</span>
+                    <span style={{ flex: 1 }}>{b.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <div style={label}>Comment to {first(name)}</div>
+            <textarea className="gv-box" value={comment} onChange={e => setComment(e.target.value)} placeholder="Goes out with the grade" style={{ marginTop: 6, minHeight: 96 }} />
+            <button className="gv-focus" style={{ ...btn(false), marginTop: 6 }} onClick={() => onPlace(name, { comment: comment.trim() }, undefined)}>Save the comment</button>
+          </div>
+          {work.last?.text ? <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{work.last.text}</div> : null}
+          {work.last?.why ? <div style={{ fontSize: 15, lineHeight: 1.45, whiteSpace: "pre-wrap" }}><span style={{ fontWeight: 700, color: LATE }}>Late: </span>{work.last.why}</div> : null}
+          {work.regrade ? (
+            <div style={{ fontSize: 15, lineHeight: 1.45, whiteSpace: "pre-wrap", borderLeft: "3px solid " + accent, paddingLeft: 8 }}>
+              <span style={{ fontSize: 13, color: TEXT_MUTED }}>{fmtDay(work.regrade.ts)} · regrade · </span>{work.regrade.text}
+            </div>
+          ) : null}
+          {card.note ? <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.45, whiteSpace: "pre-wrap", background: SUNK, borderRadius: 8, padding: "6px 8px" }}><span style={{ fontWeight: 700 }}>Note: </span>{card.note}</div> : null}
+          <div style={{ fontSize: 13, color: TEXT_MUTED, lineHeight: 1.5, marginTop: "auto" }}>Left and right change the student. A digit grades and moves on. Escape closes the walk.</div>
+        </aside>
+
+        <div style={{ flex: 1, minWidth: 0, background: SUNK, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {embed ? (
+            <iframe key={embed} title={first(name) + "'s file"} src={embed} allow="fullscreen"
+              style={{ width: "100%", height: "100%", border: "none", display: "block", background: WHITE }} />
+          ) : work.link ? (
+            <div style={{ textAlign: "center", padding: 24 }}>
+              <a className="gv-focus" href={work.link} target="_blank" rel="noreferrer" style={{ ...btn(true), display: "inline-flex", alignItems: "center", fontSize: 17, textDecoration: "none" }}>Open their file ↗</a>
+              <div style={{ fontSize: 15, color: TEXT_MUTED, marginTop: 12 }}>A file on {hostOf(work.link)} opens in a tab of its own.</div>
+            </div>
+          ) : (
+            <div style={{ fontSize: 17, color: TEXT_MUTED }}>Nothing turned in.</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

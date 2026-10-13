@@ -155,7 +155,9 @@ function summary(key, config, role, ctx) {
     case "roster":
       return { title: "Roster", body: <RosterSummary config={config} data={ctx.data} role={role} name={ctx.asStudent} /> };
     case "syllabus":
-      return { title: "Syllabus", body: null };
+      // A blank tile at the bottom of Class was a tile nobody opened. Andrew,
+      // 2026-10-12: "the students couldn't find the syllabus."
+      return { title: "Syllabus", body: <Muted>The whole course on one PDF: deadlines, grading, policies.</Muted> };
     case "instructor":
       return { title: "Your instructor", body: <div style={{ fontWeight: 600 }}>{config.instructor?.name}</div> };
     default:
@@ -217,14 +219,16 @@ function detail(key, config, role, ctx) {
       </Panel>
     );
   }
-  // Class: your card, the roster and your instructor, each a card of its own.
-  // Andrew has no card of his own here; his inbox is on the home page.
+  // Class: your card, the syllabus, the roster and your instructor, each a
+  // card of its own. Andrew has no card of his own here; his inbox is on the
+  // home page. The syllabus sits right under You since 2026-10-12, when it
+  // was the last tile and "the students couldn't find the syllabus."
   if (key === "class") {
     return (
       <Panel title="Class">
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {(role === "instructor" ? ["roster", "instructor"] : ["you", "roster", "instructor"])
-            .concat(config.syllabus ? ["syllabus"] : []).map((k, i) => ctx.tile(k, i))}
+          {(role === "instructor" ? ["syllabus", "roster", "instructor"] : ["you", "syllabus", "roster", "instructor"])
+            .filter(k => k !== "syllabus" || config.syllabus).map((k, i) => ctx.tile(k, i))}
         </div>
       </Panel>
     );
