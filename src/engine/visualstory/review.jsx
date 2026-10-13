@@ -45,6 +45,9 @@ export default function PreReview({ config, worksheetKey, roster }) {
 
   const byEmail = new Map(sheets.map(s => [s.viewer_id, s]));
   const people = roster.filter(s => s.email && !isLurker(s.name) && (!section || sectionOf(s) === section));
+  // Sheets from anyone off the roster, like the instructor's own test sheet.
+  const onRoster = new Set(roster.filter(s => s.email).map(s => String(s.email).trim().toLowerCase()));
+  const others = sheets.filter(s => !onRoster.has(s.viewer_id));
   const save = async (student, status, note) => {
     const out = await call({ groupKey: config.id, key: worksheetKey, viewer: String(student.email).trim().toLowerCase(), review: { status, note } });
     setSheets(list => list.map(s => s.viewer_id === out.sheet.viewer_id ? { ...s, review: out.review } : s));
@@ -62,6 +65,8 @@ export default function PreReview({ config, worksheetKey, roster }) {
       ) : null}
       <p className="vpr-p">{count("waiting")} waiting for you, {count("approved")} approved, {count("needs")} needs work, {count("open")} not handed in.</p>
       {people.map(p => <Row key={p.email} student={p} sheet={byEmail.get(String(p.email).trim().toLowerCase())} onSave={save} disabled={noTable} />)}
+      {others.length ? <h2 className="vpr-h2">Not on the roster</h2> : null}
+      {others.map(s => <Row key={s.viewer_id} student={{ name: s.viewer_id, email: s.viewer_id }} sheet={s} onSave={save} disabled={noTable} />)}
     </Shell>
   );
 }
@@ -107,6 +112,7 @@ const CSS = `
 .vpr{padding:20px 16px 80px;color:${T.primary}}
 .vpr-in{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 .vpr-title{margin:0;font-size:28px;font-weight:700;letter-spacing:-.02em}
+.vpr-h2{margin:18px 0 0;font-size:19px;font-weight:700}
 .vpr-p{margin:0;font-size:16px;color:${T.secondary}}
 .vpr-warn{margin:0;font-size:16px;color:${ST.late}}
 .vpr-tabs{display:flex;gap:8px}
