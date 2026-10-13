@@ -84,6 +84,14 @@ export function StoryView({ story, urls, showPrivate = false, look }) {
 
 // ─── the student's sheet ───
 
+async function preHeadline({ classId, viewerId }) {
+  const s = await gameClient.from("worksheet_sheets").select("id").eq("worksheet_key", "visual-pre").eq("group_key", classId).eq("viewer_id", viewerId);
+  const id = s.data && s.data[0] && s.data[0].id;
+  if (!id) return "";
+  const r = await gameClient.from("worksheet_answers").select("value,position").eq("sheet_id", id).eq("field", "headline").order("position");
+  return (r.data || []).map(x => x.value).join("").trim();
+}
+
 async function lockOf({ classId, viewerId }) {
   const d = await gameClient.from("worksheet_deadlines").select("due_at").eq("worksheet_key", VISUAL_STORY_KEY).eq("group_key", classId);
   const due = d.data && d.data[0] ? d.data[0].due_at : null;
@@ -122,8 +130,20 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
     const s = createSaver({ store, draftKey, storage: readOnly ? null : (typeof localStorage !== "undefined" ? localStorage : null), onStatus: setStatus });
     saver.current = s;
     let alive = true;
-    s.load().then(got => { if (alive) { live.current = got.answers; setAnswers(got.answers); setSubmitted(got.submitted_at); } })
-      .catch(() => { if (alive) setStatus("failed-load"); });
+    s.load().then(got => {
+      if (!alive) return;
+      live.current = got.answers; setAnswers(got.answers); setSubmitted(got.submitted_at);
+      // A story with no headline starts from the one on the student's pre-production page.
+      if (!readOnly && !String(got.answers.headline || "").trim() && classId && viewer?.id) {
+        preHeadline({ classId, viewerId: viewer.id }).then(h => {
+          if (alive && h && !String(live.current.headline || "").trim()) {
+            live.current = { ...live.current, headline: h };
+            setAnswers(live.current);
+            s.change("headline", h);
+          }
+        }).catch(() => {});
+      }
+    }).catch(() => { if (alive) setStatus("failed-load"); });
     if (!readOnly && classId && viewer?.id) lockOf({ classId, viewerId: viewer.id }).then(l => { if (alive) setLock(l); }).catch(() => {});
     const tick = setInterval(() => setNow(Date.now()), 30000);
     if (readOnly) return () => { alive = false; clearInterval(tick); s.destroy(); };
@@ -251,6 +271,8 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
         </div>
         <Words k="sub" copy={copy} editing={editing} as="p" className="vss-hello-sub" />
         <div className="vss-row">
+          <a className="vss-link-btn" href={"/" + classId + "/visual-story"} target="_blank" rel="noreferrer">Read the full instructions</a>
+          <a className="vss-link-btn" href={"/" + classId + "/worksheets/visual-pre"} target="_blank" rel="noreferrer">Your pre-production page</a>
           <button type="button" className="vss-link-btn" onClick={toggleSteps} aria-expanded={stepsOpen}>{stepsOpen ? "Hide the steps" : "Show the steps"}</button>
           {editor ? <button type="button" className="vss-btn" aria-pressed={editing} onClick={() => { setEditing(e => !e); if (!stepsOpen) setStepsOpen(true); }}>{editing ? "Done editing the words" : "Edit the words"}</button> : null}
           {editor && copy.status ? <span className="vss-muted" aria-live="polite">{copy.status}</span> : null}
@@ -588,7 +610,7 @@ const CSS = `
 .vss-btn:disabled,.vss-go:disabled,.vss-pill:disabled,.vss-mini:disabled,.vss-look:disabled,.vss-star:disabled{opacity:.45;cursor:default}
 .vss-danger{border-color:${ST.late};color:${ST.late}}
 .vss-go{font:inherit;font-size:16px;font-weight:700;padding:11px 22px;border-radius:999px;border:0;background:${T.primary};color:${S.page};cursor:pointer}
-.vss-link-btn{font:inherit;font-size:14px;font-weight:600;padding:0;border:0;background:none;color:${T.secondary};text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.vss-link-btn{font:inherit;font-size:14px;font-weight:600;padding:0;border:0;background:none;color:${T.secondary};text-decoration:underline;text-underline-offset:3px;cursor:pointer;margin-right:10px}
 
 .vss-end{display:flex;flex-direction:column;align-items:flex-start;gap:12px;margin-top:28px;padding-top:22px;border-top:1px solid ${L.soft}}
 .vss-submit{font-size:18px;padding:14px 34px}
