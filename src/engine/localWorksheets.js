@@ -28,6 +28,7 @@ import { THREE_BY_FIVE_KEY, THREE_BY_FIVE_TITLE, mountThreeByFive } from "./thre
 import { VISUAL_PRE_KEY, VISUAL_PRE_TITLE, mountVisualPre } from "./visualstory/pre.jsx";
 import PreReview from "./visualstory/review.jsx";
 import { VISUAL_STORY_KEY, VISUAL_STORY_TITLE, mountVisualStory } from "./visualstory/story.jsx";
+import StoryReview from "./visualstory/storyreview.jsx";
 
 export const LOCAL_WORKSHEETS = [
   // Andrew, 2026-10-01: "let's open it now." Weekly Challenge 2, due Oct 7.
@@ -39,7 +40,7 @@ export const LOCAL_WORKSHEETS = [
   // instructor's page at ?review.
   { key: VISUAL_PRE_KEY, title: VISUAL_PRE_TITLE, mount: mountVisualPre, review: PreReview, open: ["comm999"], classes: ["comm3", "comm999"] },
   // The visual story portal itself, planned 2026-10-13. COMM 999 first.
-  { key: VISUAL_STORY_KEY, title: VISUAL_STORY_TITLE, mount: mountVisualStory, open: ["comm999"], classes: ["comm3", "comm999"] },
+  { key: VISUAL_STORY_KEY, title: VISUAL_STORY_TITLE, mount: mountVisualStory, review: StoryReview, open: ["comm999"], classes: ["comm3", "comm999"] },
 ];
 
 export const localWorksheet = (key) => LOCAL_WORKSHEETS.find(w => w.key === key) || null;

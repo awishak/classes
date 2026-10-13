@@ -42,6 +42,7 @@ import { genId } from "../utils.jsx";
 import * as TOKENS from "./tokens.js";
 import { setClassFavicon } from "./favicon.js";
 import TopNav, { NAV_TEACH } from "./TopNav.jsx";
+import { ReportsBanner } from "./visualstory/storyreview.jsx";
 import { appsFor } from "./apps.js";
 import { listGames } from "@ishak/decks";
 import { gameClient } from "./gameClient.js";
@@ -5518,6 +5519,7 @@ export default function Dashboard({ config, daySlug = "" }) {
             </>
           } />
       </div>
+      <ReportsBanner config={config} />
 
       <main ref={stageRef} className="dash-stage" data-rail="open" data-teach={teaching ? "on" : "off"}
         style={{ gridTemplateColumns: gridFor(cols),

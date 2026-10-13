@@ -48,10 +48,47 @@ export default async function handler(req, res) {
     const rv = await fetch(SUPABASE_URL + `/rest/v1/worksheet_reviews?select=sheet_id,status,note,reviewed_at&sheet_id=in.(${ids})`, { headers: serviceHeaders() });
     const reviews = rv.ok ? await rv.json() : [];
     const reviewOf = new Map(reviews.map(r => [r.sheet_id, r]));
+    const un = await fetch(SUPABASE_URL + `/rest/v1/worksheet_unlocks?select=sheet_id,until&sheet_id=in.(${ids})`, { headers: serviceHeaders() });
+    const unlockOf = new Map((un.ok ? await un.json() : []).map(u => [u.sheet_id, u.until]));
     return res.status(200).json({
       ok: true, noReviews: !rv.ok,
-      sheets: list.map(x => ({ viewer_id: x.viewer_id, submitted_at: x.submitted_at, answers: answers[x.id] || {}, review: reviewOf.get(x.id) || null })),
+      sheets: list.map(x => ({ viewer_id: x.viewer_id, submitted_at: x.submitted_at, answers: answers[x.id] || {}, review: reviewOf.get(x.id) || null, unlockedUntil: unlockOf.get(x.id) || null })),
     });
+  }
+
+  // Problem reports students filed from a worksheet, newest first.
+  // { groupKey, key, reports: true } -> { ok, reports: [{ viewer_id, message, details, created_at }] }
+  if (body.reports) {
+    const key = String(body.key || "");
+    if (!SLUG.test(groupKey) || !SLUG.test(key)) return res.status(400).json({ ok: false, error: "A class and a worksheet are needed." });
+    const r = await fetch(SUPABASE_URL + `/rest/v1/worksheet_reports?select=id,viewer_id,message,details,created_at&worksheet_key=eq.${key}&group_key=eq.${groupKey}&order=created_at.desc&limit=200`, { headers: serviceHeaders() });
+    if (!r.ok) return res.status(502).json({ ok: false, error: "Could not read the reports." });
+    return res.status(200).json({ ok: true, reports: await r.json() });
+  }
+
+  // Late work: open one student's sheet past the deadline until a time, or lock it again.
+  // { groupKey, key, viewer, unlock: { until: ISO } | { until: null } } -> { ok, until }
+  if (body.unlock && body.viewer) {
+    const key = String(body.key || ""), viewer = String(body.viewer).trim().toLowerCase();
+    if (!SLUG.test(groupKey) || !SLUG.test(key) || !/^[^\s@&=?#]+@[^\s@&=?#]+$/.test(viewer)) return res.status(400).json({ ok: false, error: "A class, a worksheet and a student are needed." });
+    const s = await fetch(SUPABASE_URL + `/rest/v1/worksheet_sheets?select=id&worksheet_key=eq.${key}&group_key=eq.${groupKey}&viewer_id=eq.${encodeURIComponent(viewer)}`, { headers: serviceHeaders() });
+    if (!s.ok) return res.status(502).json({ ok: false, error: "Could not read the worksheet." });
+    const [sheet] = await s.json();
+    if (!sheet) return res.status(404).json({ ok: false, error: "That student has not opened the worksheet." });
+    const until = body.unlock.until ? new Date(body.unlock.until) : null;
+    if (!until) {
+      const d = await fetch(SUPABASE_URL + `/rest/v1/worksheet_unlocks?sheet_id=eq.${sheet.id}`, { method: "DELETE", headers: serviceHeaders() });
+      return d.ok ? res.status(200).json({ ok: true, until: null }) : res.status(502).json({ ok: false, error: "The lock did not go back on." });
+    }
+    if (Number.isNaN(until.getTime())) return res.status(400).json({ ok: false, error: "That is not a time." });
+    const w = await fetch(SUPABASE_URL + "/rest/v1/worksheet_unlocks?on_conflict=sheet_id", {
+      method: "POST",
+      headers: { ...serviceHeaders(), Prefer: "return=representation,resolution=merge-duplicates" },
+      body: JSON.stringify({ sheet_id: sheet.id, until: until.toISOString() }),
+    });
+    const rows = w.ok ? await w.json() : null;
+    if (!rows || !rows[0]) return res.status(502).json({ ok: false, error: "The unlock did not save." });
+    return res.status(200).json({ ok: true, until: rows[0].until });
   }
 
   // Andrew's review of one student's sheet: approved or needs work, with a note.
