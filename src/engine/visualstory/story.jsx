@@ -416,7 +416,9 @@ function ImageFields({ b, canEdit, onChange }) {
   const reasons = b.reasons || [];
   return (
     <div className="vss-fields">
-      <textarea className="vss-input" rows={3} value={b.caption || ""} readOnly={!canEdit} maxLength={2000} placeholder="Caption: what should readers notice here?" onChange={e => onChange({ caption: e.target.value })} />
+      <textarea className="vss-input vss-grow-box" rows={2} value={b.caption || ""} readOnly={!canEdit} maxLength={2000} placeholder="Caption: what should readers notice here?"
+        ref={el => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + 2 + "px"; } }}
+        onChange={e => onChange({ caption: e.target.value })} />
       <div className="vss-row">
         {portrait ? LAYOUTS.map(([id, name]) => <button key={id} type="button" className="vss-pill" aria-pressed={layoutOf(b) === id} disabled={!canEdit} onClick={() => onChange({ layout: id })}>{name}</button>)
           : <span className="vss-muted">Full width. Text can sit beside portrait photos.</span>}
@@ -426,8 +428,8 @@ function ImageFields({ b, canEdit, onChange }) {
       </div>
       {b.graphic ? <input className="vss-input" value={b.source || ""} maxLength={300} readOnly={!canEdit} placeholder="Source: where the numbers come from" onChange={e => onChange({ source: e.target.value })} /> : null}
       <div className="vss-why" role="group" aria-label="Why did this picture make the cut?">
-        <span className="vss-why-h">Why this picture? <span className="vss-muted">Only Dr. Ishak sees this part.</span></span>
-        <div className="vss-row">
+        <span className={"vss-why-h" + (reasons.length ? "" : " vss-why-need")}>Why this picture? <span className="vss-muted">{reasons.length ? "Only Dr. Ishak sees this part." : "Tap at least one. Only Dr. Ishak sees this part."}</span></span>
+        <div className="vss-row vss-tight">
           {REASONS.map(([id, name]) => (
             <button key={id} type="button" className="vss-pill" aria-pressed={reasons.includes(id)} disabled={!canEdit}
               onClick={() => onChange({ reasons: reasons.includes(id) ? reasons.filter(r => r !== id) : [...reasons, id] })}>{name}</button>
@@ -569,6 +571,10 @@ const CSS = `
 .vss-fields{display:flex;flex-direction:column;gap:10px}
 .vss-why{display:flex;flex-direction:column;gap:6px;padding-top:8px;border-top:1px dashed ${L.soft}}
 .vss-why-h{font-size:14px;font-weight:700}
+.vss-why-need{color:${ST.warn}}
+.vss-tight{gap:5px}
+.vss-tight .vss-pill{font-size:12.5px;padding:3px 9px}
+.vss-grow-box{resize:none;overflow:hidden;min-height:64px}
 .vss-add{align-self:flex-start}
 
 .vss-btn{font:inherit;font-size:14px;font-weight:600;padding:7px 14px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
