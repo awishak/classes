@@ -18,7 +18,8 @@
 // in the bearer header, or the PIN or an instructor session for Andrew. In the
 // practice class (COMM 999) Andrew can act as a student with { as: email }.
 
-import { callerAllowed, callerEmail, readBody } from "./_auth.js";
+import { pinMatches, callerEmail, readBody } from "./_auth.js";
+import { isInstructorEmail } from "../src/instructors.js";
 import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
 import { answersOf } from "../src/engine/worktopia/store.js";
 import { storyOf } from "../src/engine/visualstory/model.js";
@@ -122,7 +123,9 @@ export default async function handler(req, res) {
   const groupKey = String(body.groupKey || "");
   if (!STORAGE[groupKey]) return res.status(400).json({ ok: false, error: "This class has no visual story." });
   const action = String(body.action || "");
-  const instructor = await callerAllowed(req, body);
+  // Who is asking, with one look at the sign-in: the PIN, or the session's email.
+  const sessionEmail = pinMatches(body.pin) ? "" : await callerEmail(req);
+  const instructor = pinMatches(body.pin) || isInstructorEmail(sessionEmail);
 
   // ─── Andrew's controls ───
   if (["admin", "stage", "pods", "practice-fill", "practice-clear"].includes(action)) {
@@ -199,33 +202,54 @@ export default async function handler(req, res) {
   }
 
   // ─── a student, or Andrew acting as one in the practice class ───
-  let email = instructor ? "" : await callerEmail(req);
+  // The queries that do not depend on each other go out together: a class of
+  // 35 opening the grid at once should wait on one round trip, not ten.
+  const roster = await rosterOf(groupKey);
+  let email = instructor ? "" : sessionEmail;
   if (instructor && body.as && PRACTICE.has(groupKey)) email = lower(body.as);
   if (!email) return res.status(instructor ? 400 : 401).json({ ok: false, error: instructor ? "Open the stories as a student in the practice class with ?as=<email>." : "Not signed in." });
-  const roster = await rosterOf(groupKey);
   const me = roster.find(s => s.email === email);
   if (!me) return res.status(403).json({ ok: false, error: "Not on the roster for this class." });
-  const stage = await stageOf(groupKey, me.section);
+  const [stage, sheets, podRows, myRows, due] = await Promise.all([
+    stageOf(groupKey, me.section),
+    rows(`/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}&submitted_at=not.is.null&limit=${PAGE}`),
+    rows(`/rest/v1/story_pods?select=section,pod,viewer_id&group_key=eq.${groupKey}`),
+    rows(`/rest/v1/story_comments?select=story_sheet,best,shone,encourage&author=eq.${encodeURIComponent(email)}&limit=${PAGE}`),
+    dueOf(groupKey),
+  ]);
   if (stage === "building") return res.status(200).json({ ok: true, stage, stories: [] });
+  if (!sheets) return res.status(502).json({ ok: false, error: "Could not read the stories." });
 
-  const list = await sectionStories(groupKey, roster, me.section);
-  if (!list) return res.status(502).json({ ok: false, error: "Could not read the stories." });
+  const inSection = new Map(roster.filter(s => s.section === me.section).map(s => [s.email, s]));
+  const list = sheets.filter(s => inSection.has(s.viewer_id)).map(s => ({ id: s.id, owner: inSection.get(s.viewer_id), submitted_at: s.submitted_at }));
   const byId = new Map(list.map(s => [s.id, s]));
-  const myPod = (await rows(`/rest/v1/story_pods?select=pod&group_key=eq.${groupKey}&viewer_id=eq.${encodeURIComponent(email)}`))?.[0]?.pod || null;
-  const podMates = myPod ? new Set(((await rows(`/rest/v1/story_pods?select=viewer_id&group_key=eq.${groupKey}&section=eq.${encodeURIComponent(me.section)}&pod=eq.${myPod}`)) || []).map(p => p.viewer_id)) : new Set();
-  const podded = new Set(((await rows(`/rest/v1/story_pods?select=viewer_id&group_key=eq.${groupKey}`)) || []).map(p => p.viewer_id));
-  const ids = list.map(s => s.id);
-  const mineComments = ids.length ? ((await rows(`/rest/v1/story_comments?select=story_sheet,best,shone,encourage&author=eq.${encodeURIComponent(email)}&story_sheet=in.(${ids.join(",")})`)) || []) : [];
+  const myPod = (podRows || []).find(p => p.viewer_id === email)?.pod || null;
+  const podMates = new Set((podRows || []).filter(p => myPod && p.pod === myPod && p.section === me.section).map(p => p.viewer_id));
+  const podded = new Set((podRows || []).map(p => p.viewer_id));
+  const mineComments = (myRows || []).filter(c => byId.has(c.story_sheet));
   const doneSet = new Set(mineComments.map(c => c.story_sheet));
   const ownId = list.find(s => s.owner.email === email)?.id || null;
   const doneOthers = [...doneSet].filter(id => id !== ownId).length;
-  const due = await dueOf(groupKey);
   const released = stage === "released";
 
   if (action === "list") {
-    const urls = await sign(list.map(s => featurePath(s.story)));
+    // Only what a tile needs: the headline, the look, and the star picture.
+    const ids = list.map(s => s.id);
+    const head = {};
+    if (ids.length) {
+      const top = (await rows(`/rest/v1/worksheet_answers?select=sheet_id,field,value,position&sheet_id=in.(${ids.join(",")})&field=in.(headline,look,feature,order)&order=position&limit=${PAGE * 4}`)) || [];
+      top.forEach(r => { const m = (head[r.sheet_id] = head[r.sheet_id] || {}); m[r.field] = (m[r.field] || "") + r.value; });
+      const want = ids.map(id => { const m = head[id] || {}; let first = ""; try { first = (JSON.parse(m.order || "[]") || [])[0] || ""; } catch { /* no order */ } return [id, m.feature || first]; }).filter(([, b]) => /^[a-z]+$/.test(b));
+      if (want.length) {
+        const blocks = (await rows(`/rest/v1/worksheet_answers?select=sheet_id,field,value,position&sheet_id=in.(${want.map(w => w[0]).join(",")})&field=in.(${want.map(w => '"block:' + w[1] + '"').join(",")})&order=position&limit=${PAGE}`)) || [];
+        const joined = {};
+        blocks.forEach(r => { const k = r.sheet_id + " " + r.field; joined[k] = (joined[k] || "") + r.value; });
+        want.forEach(([id, b]) => { try { head[id].path = JSON.parse(joined[id + " block:" + b] || "{}").path || ""; } catch { /* no picture */ } });
+      }
+    }
+    const urls = await sign(ids.map(id => head[id]?.path));
     const tiles = list.map(s => ({
-      id: s.id, headline: s.story.headline, look: s.story.look, image: urls[featurePath(s.story)] || "",
+      id: s.id, headline: head[s.id]?.headline || "", look: head[s.id]?.look === "dark" ? "dark" : "light", image: urls[head[s.id]?.path] || "",
       mine: s.owner.email === email, required: s.owner.email !== email && podMates.has(s.owner.email),
       done: doneSet.has(s.id), late: !!(due && Date.parse(s.submitted_at) > Date.parse(due)) || (podded.size > 0 && !podded.has(s.owner.email)),
       author: released ? s.owner.name : null,
@@ -241,6 +265,9 @@ export default async function handler(req, res) {
   const isMine = story.id === ownId;
 
   if (action === "story") {
+    const by = await answersFor([story.id]);
+    if (!by) return res.status(502).json({ ok: false, error: "Could not read the story." });
+    story.story = storyOf(answersOf(by[story.id] || []));
     const urls = await sign(story.story.blocks.filter(b => b.type === "image").map(b => b.path));
     let comments = null;
     if (released && isMine) {
