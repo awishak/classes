@@ -4702,6 +4702,26 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     }
     window.storage = real;
   }
+
+  // The same write on a class split into two rows. The roster is on the plan
+  // row, and saying you will not be there used to empty the plan row in this
+  // browser, which put the student off the class.
+  {
+    const real = window.storage;
+    const key = "smoke-away-split";
+    classKeys.add(key);
+    const plan = { students: [{ name: "Ada Lovelace" }], schedule: base.schedule || [] };
+    const rest = { away: {} };
+    warmClassData(key, { ...plan, ...rest });
+    window.storage = { get: async () => ({ value: JSON.stringify(rest) }), set: async (k) => ({ key: k }) };
+    const saved = await saveMerged(key, prev => setAway(prev, "Sep 23", "ada-lovelace", true), mergeAway);
+    if (!saved) say("the write on a split class did not land");
+    const view = mergedView(key);
+    if (!view || !(view.students || []).length) say("saying you will not be there took the roster off the class");
+    else if (!isAway(view, "Sep 23", "ada-lovelace")) say("the split class does not hold the mark");
+    window.storage = real;
+    classKeys.delete(key);
+  }
 }
 
 // Two hooks on one class, and the echo of a save landing between two lines.

@@ -741,7 +741,11 @@ export async function saveMerged(key, mutate, merge) {
     const out = Object.keys(server).length ? merge(next, base, server) : next;
     const ok = await saveClass(key, out);
     if (!ok) return null;
-    warmClassData(key, out);
+    // The class row alone. Warming it as a whole class split it, found no plan
+    // keys on a migrated row, and set the plan row in this browser to nothing:
+    // the roster went with it, and a student who said they would not be there
+    // was no longer on the class.
+    WARM.set(key, out);
     return out;
   } catch { return null; }
 }
