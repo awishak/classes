@@ -26,11 +26,11 @@ const DECIDED = [
   ["Shape", "The story scrolls. Students put blocks in order by drag and drop, the way 3x5 works."],
   ["Captions", "A caption sits under any photo. Text beside a photo, on the left or the right, is for portrait photos only. Square and landscape images are full width."],
   ["Cropping", "None. Every image shows in its own shape."],
-  ["Topic", "A new topic, different from the student's exercise. The rule is still open."],
-  ["Pre-production", "The topic page is Visual story pre-production, due Wednesday, October 14, at 11:59 PM. A headline, the one sentence, and the prompts: what are some image ideas that will help you tell this story? Which photo can your story not live without, and what will you do if you can't get the photo? Entman's frame: what problem does your story define, what causes the problem, and what should happen next? Is this story ongoing or over: is there a what-happens-next feel, or a complete beginning, middle and end?"],
+  ["Topic", "A new topic, different from the student's exercise. Students choose one of three prompts, then explain their topic. A scene with its own rules: a group with its own language and look, like a climbing gym, a car meet, a chess club or a run club. A tradition: a ritual that a team, club, family or culture keeps alive, and who does the keeping. Someone who creates their own values: a person living by rules they chose rather than the rules they were handed."],
+  ["Pre-production", "The topic page is Visual story pre-production, due Friday, October 16, at 11:59 PM. The prompt they chose and their topic, a headline, the one sentence, and the prompts: what are some image ideas that will help you tell this story? Which photo can your story not live without, and what will you do if you can't get the photo? Entman's frame: what problem does your story define, what causes the problem, and what should happen next? Is this story ongoing or over: is there a what-happens-next feel, or a complete beginning, middle and end?"],
   ["The one sentence", "In one well-worded sentence or question, what do you hope readers will learn after enjoying your story?"],
   ["Approving", "You mark each topic approved or needs work, with a note the student sees. A student edits a topic that needs work and the topic comes back to you."],
-  ["Why each image", "For every image, the student marks why the picture made the cut, one or more of: define the problem or situation, show the cause, show rooting interests, explain what could or should happen next, contains action, contains emotion, is beautiful, other. You see the marks, and classmates never do."],
+  ["Why each image", "For every image, the student marks why the picture made the cut, one or more of: define the problem or situation, show the cause, show rooting interests, explain what could or should happen next, contains action, contains emotion, is beautiful, other. Other asks for a few words. The marks sit on each image in the portal and are required before hand in. You see the marks, and classmates never do."],
   ["Sources", "Every graphic needs a source line."],
   ["Link", "An optional link to an interactive version, shown at the top of the story, with the instruction: if you want to include a link, the link will go at the top of your story as an alternate way to read your work."],
   ["AI", "Allowed, and the instructions say nothing about AI."],
@@ -49,7 +49,7 @@ const DECIDED = [
   ["Demo and sample", "You walk through the portal in class with Marty McFly as the test student. You make a sample with your own photos, and the sample sits as a Sample tile at the front of the grid in both sections. The sample's topic is open."],
   ["Testing", "Two or three students you pick try the photo part a day early."],
   ["Stages", "Everyone hands in. You set the pods. The stories open to classmates with no names. Comments are due. Comments close, and the names of every author and every commenter come out."],
-  ["Dates", "Story due Wednesday, October 21, at 11:59 PM. Pods out and stories open Friday, October 23, in class. No class Monday, October 26, so students read and comment. Comments due Tuesday, October 27, at 11:59 PM. Names out Wednesday, October 28, in class."],
+  ["Dates", "Pre-production due Friday, October 16, at 11:59 PM. Story due Friday, October 23. Stories open to classmates Monday, October 26, the no-class day, and students read and comment that day. When comments are due and when names come out is still open."],
   ["Grading", "A - Excellent, B - Very Good, C - Complete, D - Complete, with issues, Please revise, Not submitted, Unacceptable work. The scale is for the visual story, the audio story and the final project. Comments are done or not done, three comments on eight stories, toward class culture, and you see how many stories each student read."],
 ]
 
@@ -64,29 +64,29 @@ const BLOCKS = [
 // for anything the options miss. Answers go to an instructor-only row, so I
 // can read the answers back from the database rather than from a chat.
 const QUESTIONS = [
-  { id: "r4-prompts", multi: true, title: "Topic prompts", ask: "General prompts students choose from, your two first and eight more. Each one fits a phone camera and a short walk from campus. Pick as many as you want, and reword any prompt in the box.",
-    options: [
-      "Undervalued people: someone whose work the campus runs on and few people notice, like a night custodian, a dining hall cook or a shuttle driver",
-      "College student trends: something students are doing more of, or less of, than a few years ago",
-      "Someone who creates their own values: a person living by rules they chose rather than the rules they were handed",
-      "A place that is changing: a spot on or near campus that is getting busier, emptier, newer or about to close",
-      "A tradition: a ritual that a team, club, family or culture keeps alive, and who does the keeping",
-      "A scene with its own rules: a group with its own language and look, like a climbing gym, a car meet, a chess club or a run club",
-      "Money: what something costs a student now, like rent, food, textbooks, tickets or a night out",
-      "The campus off hours: who is around at 5 AM or 1 AM, and what they are doing",
-      "Behind the scenes: how something everyone uses actually works, like laundry, the dining hall, recycling or the library",
-      "Before and after: something that changed after one decision, rule or event, and who the change landed on",
-    ] },
-  { id: "r4-topicrule", title: "Choosing from the list", ask: "Do students have to choose from the list?",
-    mine: 1, options: ["Choose from the list", "Choose from the list or pitch a new topic for your approval"] },
-  { id: "r4-due", title: "When pre-production is due", ask: "Pre-production is due tomorrow at 11:59 PM, and the topic list is not settled yet. The topic page can be up before class either way.",
-    options: ["Keep Wednesday, October 14, at 11:59 PM", "Move to Friday, October 16, at 11:59 PM"] },
-  { id: "r4-plot", title: "Plot on Wednesday", ask: "The October 12 lesson, What are the parts of a story, and what order do they come in, never ran because there was no class. Wednesday is How does a deadline turn events into a story. How does plot get into Wednesday?",
-    mine: 1, options: ["Swap: the October 12 lesson runs Wednesday", "Open Wednesday with the parts of a story, then the deadline lesson", "Push the deadline lesson to Friday"] },
-  { id: "r4-whyimage", title: "When students mark why each image made the cut", ask: "Where do students mark the reasons?",
-    mine: 0, options: ["On each image in the portal, required before hand in", "In a list at hand in"] },
-  { id: "r4-other", title: "Other, as a reason", ask: "When a student marks other, do they write a few words?",
-    mine: 0, options: ["Other asks for a few words", "Other is just a mark"] },
+  { id: "r5-explain", title: "Explaining the topic", ask: "After choosing one of the three prompts, how much does a student write about their topic on the pre-production page?",
+    mine: 0, options: ["Two or three sentences", "A full paragraph"] },
+  { id: "r5-storytime", title: "The time on October 23", ask: "The story is due Friday, October 23. At what time?",
+    mine: 0, options: ["11:59 PM, so you set pods over the weekend", "Before class that day"] },
+  { id: "r5-comments", title: "When comments are due", ask: "Stories open Monday, October 26. When are the comments due?",
+    mine: 0, options: ["Tuesday, October 27, at 11:59 PM", "Wednesday, October 28, before class", "Friday, October 30, at 11:59 PM"] },
+  { id: "r5-names", title: "When names come out", ask: "When do comments close and names come out?",
+    mine: 0, options: ["In class the day after comments are due", "The moment comments are due"] },
+  { id: "r5-oct23", title: "October 23 and the characters exercise", ask: "October 23 is the workshop for the characters exercise, due Sunday, October 25. With the visual story now due October 23, students have two things due in three days.",
+    mine: 1, options: ["Keep both as they are", "Move the characters exercise to Sunday, November 1", "October 23 becomes a visual story workshop and the characters workshop moves"] },
+  { id: "r5-deadline", title: "The deadline lesson", ask: "Wednesday's lesson as written: the Boston Marathon manhunt as two arcs side by side, the police one with a deadline and the Reddit one with no deadline and no editors, then the college admissions scandal, where the class finds four different endings. The point is that where a story ends is a choice the storyteller makes. Where does the lesson go?",
+    mine: 1, options: ["Drop the lesson", "A short opener at Friday's workshop, the ending part only", "Move the lesson to next week"] },
+  { id: "r5-wednesday", title: "Wednesday, October 14", ask: "Wednesday becomes the parts of a story, the October 12 lesson with the Chilean miners and Apollo 13, plus graphics and Canva practice. In what order?",
+    mine: 0, options: ["Parts of a story first, then Canva", "Canva first, then parts of a story", "Parts of a story Wednesday, Canva Friday at the workshop"] },
+  { id: "r5-canva", title: "The Canva practice", ask: "What do students practice in Canva? Pick as many as you want.", multi: true,
+    mine: [0, 1, 2],
+    options: ["Fix a photo: light, color and straightening", "Build a chart from real numbers, with a source line", "Put text on an image without hiding the subject", "Remove a background", "Make a graphic with AI and compare the result with a hand-made one"] },
+  { id: "r5-canvaaccess", title: "Canva accounts", ask: "Do students have Canva?",
+    options: ["Free Canva accounts are enough", "The school has Canva for Education", "Not sure, and I'll check"] },
+  { id: "r5-canvacrop", title: "Cropping in Canva", ask: "The portal does no cropping. Can students crop and adjust a photo in Canva or on their phone before upload?",
+    mine: 0, options: ["Yes, any edit before upload is fine", "Light and color only, no cropping"] },
+  { id: "r5-sitedates", title: "Changing the dates on the site", ask: "The site still says pre-production October 14 and the story October 21, and the Wednesday lesson is still the deadline lesson. Changing them needs your sign-in.",
+    mine: 1, options: ["I change them on the dashboard", "You change them in Chrome while I am signed in"] },
 ];
 
 const ROW = "comm3-visualessay-plan";
@@ -246,7 +246,7 @@ export default function VisualEssayPlan() {
 
         <h2 className="vp-h2">Questions</h2>
         <p className="vp-p">
-          Your answers so far are in the list above. These are the fourth round. Pick an option on each
+          Your answers so far are in the list above. These are the fifth round. Pick an option on each
           question, or several where the question says so, and add anything the options miss in the box.
           Your answers save as you go, and I read them from here.
         </p>
