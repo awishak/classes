@@ -29,6 +29,9 @@ import { whereTo, studentFor } from "../src/engine/session.js";
 import { parseRoster, mergeRoster } from "../src/engine/roster.js";
 import { withWorksheetSubmits } from "../src/engine/worksheetSubmits.js";
 import { createSaver } from "../src/engine/visualstory/saver.js";
+import * as vsm from "../src/engine/visualstory/model.js";
+import * as vsp from "../src/engine/visualstory/photos.js";
+import { StoryView } from "../src/engine/visualstory/story.jsx";
 import { PreSheet, missingOf, standing, FIELDS } from "../src/engine/visualstory/pre.jsx";
 import { JOBS, CATEGORIES, HORRIBLE, findJob, horribleFor } from "../src/engine/worktopia/jobs.js";
 import { F as WF } from "../src/engine/worktopia/terminal.js";
@@ -5674,6 +5677,39 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (standing("2026-10-16T10:00:00Z", { status: "needs_work", reviewed_at: "2026-10-16T09:00:00Z" }).kind !== "waiting") say("a topic handed in again after a review is not waiting");
   if (standing("2026-10-16T10:00:00Z", { status: "approved", reviewed_at: "2026-10-16T11:00:00Z" }).kind !== "approved") say("an approval after the hand in does not show");
 }
+// The visual story's rules, from the planning page. Andrew, 2026-10-13.
+{
+  const say = (m) => { console.error("  FAIL  visual story rules: " + m); failedEarly++; };
+  const img = (id, extra = {}) => ["block:" + id, JSON.stringify({ type: "image", path: "c/e/" + id + ".jpg", w: 1200, h: 800, layout: "full", caption: "word ".repeat(30).trim(), graphic: false, source: "", reasons: ["action"], other: "", ...extra })];
+  const ids = ["aa", "bb", "cc", "dd", "ee", "ff"];
+  const base = { headline: "Run club", feature: "aa", order: JSON.stringify(ids), ...Object.fromEntries(ids.map(id => img(id))) };
+  const good = vsm.storyOf(base);
+  if (vsm.imageCount(good) !== 6 || vsm.wordCount(good) !== 180) say("the counts are off: " + vsm.imageCount(good) + " images, " + vsm.wordCount(good) + " words");
+  if (vsm.problemsOf(good).length) say("a finished story still has problems: " + vsm.problemsOf(good).join(" | "));
+  const five = vsm.storyOf({ ...base, order: JSON.stringify(ids.slice(0, 5)), "block:ff": "" });
+  if (!vsm.problemsOf(five).some(p => /Add 1 more image/.test(p))) say("five images does not ask for one more");
+  const long = vsm.storyOf({ ...base, "block:tx": JSON.stringify({ type: "text", text: "word ".repeat(130) }), order: JSON.stringify([...ids, "tx"]) });
+  if (!vsm.problemsOf(long).some(p => /^Cut 10 words/.test(p))) say("310 words does not ask for a cut of 10");
+  const graphic = vsm.storyOf({ ...base, ...Object.fromEntries([img("aa", { graphic: true, source: "" })]) });
+  if (!vsm.problemsOf(graphic).some(p => /source line/.test(p))) say("a graphic with no source line passes");
+  const noWhy = vsm.storyOf({ ...base, ...Object.fromEntries([img("bb", { reasons: [] })]) });
+  if (!vsm.problemsOf(noWhy).some(p => /Image 2: mark why/.test(p))) say("an image with no reason passes");
+  const other = vsm.storyOf({ ...base, ...Object.fromEntries([img("cc", { reasons: ["other"], other: "" })]) });
+  if (!vsm.problemsOf(other).some(p => /Other/.test(p))) say("Other with no words passes");
+  // A block saved before its place in the order is kept, at the end.
+  const orphan = vsm.storyOf({ ...base, "block:zz": JSON.stringify({ type: "text", text: "hi" }) });
+  if (orphan.blocks[orphan.blocks.length - 1].id !== "zz") say("a block missing from the order was dropped");
+  if (vsm.layoutOf({ w: 1000, h: 800, layout: "left" }) !== "full") say("a landscape photo can sit beside text");
+  if (vsm.layoutOf({ w: 800, h: 800, layout: "left" }) !== "full") say("a square photo can sit beside text");
+  if (vsm.layoutOf({ w: 800, h: 1200, layout: "right" }) !== "right") say("a portrait photo cannot sit beside text");
+  if (vsm.problemsOf(vsm.storyOf({ ...base, link: "www.example.com" })).every(p => !/link/.test(p))) say("a link without http passes");
+  const fit = vsp.fitWithin(4032, 3024);
+  if (fit.w !== 2000 || fit.h !== 1500) say("a phone photo is not brought to 2000 on the long side");
+  if (vsp.fitWithin(800, 600).w !== 800) say("a small picture is enlarged");
+  if (!vsp.isHeic({ name: "IMG_0001.HEIC", type: "" }) || vsp.isHeic({ name: "a.jpg", type: "image/jpeg" })) say("HEIC files are not told apart");
+  if (!/^[a-z]+$/.test(vsp.letterId())) say("a block id breaks the field rule");
+}
+cases.push(["Visual story, reading view", <StoryView story={vsm.storyOf({ headline: "Run club", order: JSON.stringify(["aa", "tx"]), "block:aa": JSON.stringify({ type: "image", path: "p", w: 800, h: 1200, layout: "left", caption: "Dawn", graphic: true, source: "Strava" }), "block:tx": JSON.stringify({ type: "text", text: "Words" }) })} urls={{ p: "x.jpg" }} />, "Strava"]);
 cases.push(["Visual story pre-production, loading", <PreSheet store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" />, "Loading"]);
 
 let failed = failedEarly;
