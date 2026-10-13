@@ -149,11 +149,11 @@ export default async function handler(req, res) {
       const srcRows = (await answersFor([src[0].id]))?.[src[0].id] || [];
       if (!srcRows.length) return res.status(404).json({ ok: false, error: "Your practice story is empty." });
       let made = 0;
-      for (const f of fakes) {
+      for (const [n, f] of fakes.entries()) {
         const sh = await write("/rest/v1/worksheet_sheets", "POST", { worksheet_key: KEY, group_key: groupKey, viewer_id: f.email, submitted_at: new Date().toISOString() });
         if (!sh || !sh[0]) continue;
         const copy = srcRows.filter(r => r.field !== "headline").map(r => ({ sheet_id: sh[0].id, field: r.field, value: r.value, position: r.position }));
-        copy.push({ sheet_id: sh[0].id, field: "headline", value: "Practice story by " + f.name, position: 0 });
+        copy.push({ sheet_id: sh[0].id, field: "headline", value: "Practice story " + (n + 1), position: 0 });
         if (await write("/rest/v1/worksheet_answers", "POST", copy)) made++;
       }
       return res.status(200).json({ ok: true, made });
