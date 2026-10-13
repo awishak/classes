@@ -60,11 +60,18 @@ export default async function handler(req, res) {
     const key = String(body.key || ""), viewer = String(body.viewer).trim().toLowerCase();
     const status = String(body.review.status || ""), note = String(body.review.note || "").slice(0, 2000);
     if (!SLUG.test(groupKey) || !SLUG.test(key) || !/^[^\s@&=?#]+@[^\s@&=?#]+$/.test(viewer)) return res.status(400).json({ ok: false, error: "A class, a worksheet and a student are needed." });
-    if (!["approved", "needs_work"].includes(status)) return res.status(400).json({ ok: false, error: "A review is approved or needs work." });
+    if (!["approved", "needs_work", "clear"].includes(status)) return res.status(400).json({ ok: false, error: "A review is approved or needs work." });
     const s = await fetch(SUPABASE_URL + `/rest/v1/worksheet_sheets?select=id,viewer_id&worksheet_key=eq.${key}&group_key=eq.${groupKey}&viewer_id=eq.${encodeURIComponent(viewer)}`, { headers: serviceHeaders() });
     if (!s.ok) return res.status(502).json({ ok: false, error: "Could not read the worksheet." });
     const [sheet] = await s.json();
     if (!sheet) return res.status(404).json({ ok: false, error: "That student has not opened the worksheet." });
+    // Take a review back, so a sheet reads as not reviewed: the demo sheet
+    // before class, or a mark given by mistake.
+    if (status === "clear") {
+      const d = await fetch(SUPABASE_URL + `/rest/v1/worksheet_reviews?sheet_id=eq.${sheet.id}`, { method: "DELETE", headers: serviceHeaders() });
+      if (!d.ok) return res.status(502).json({ ok: false, error: "The review did not clear." });
+      return res.status(200).json({ ok: true, sheet: { viewer_id: sheet.viewer_id }, review: null });
+    }
     const w = await fetch(SUPABASE_URL + "/rest/v1/worksheet_reviews?on_conflict=sheet_id", {
       method: "POST",
       headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=representation,resolution=merge-duplicates" },
