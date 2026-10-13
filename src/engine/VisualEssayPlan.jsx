@@ -19,25 +19,30 @@ const EDGE = TOKENS.LINE.strong;
 const CARD = TOKENS.SURFACE.card;
 
 const DECIDED = [
+  ["Name", "Visual story, the name already on the site."],
   ["Where", "Students build the story on a laptop, in a portal on the class site, instead of a Google Doc."],
   ["Images", "Six to eight images of any kind, photos they took and graphics they made. The feature image is one of the images."],
   ["Words", "150 to 300 words in captions and text blocks, with a word counter on the page. The headline and the one sentence do not count."],
   ["Shape", "The story scrolls. Students put blocks in order by drag and drop, the way 3x5 works."],
-  ["Captions", "A caption sits under any photo. Text beside a photo, on the left or the right, is for portrait photos only."],
+  ["Captions", "A caption sits under any photo. Text beside a photo, on the left or the right, is for portrait photos only. Square and landscape images are full width."],
   ["Cropping", "None. Every image shows in its own shape."],
-  ["Topic", "A headline, plus one sentence on what a reader will learn. Both go in on October 14. You mark each topic approved or needs work, with a note the student sees."],
+  ["Pre-production", "The topic page is Visual story pre-production, due Wednesday, October 14, at 11:59 PM. A headline, the one sentence, and a short plan of the photos and graphics, plus prompts that tie back to class."],
+  ["The one sentence", "In one well-worded sentence or question, what do you hope readers will learn after enjoying your story?"],
+  ["Approving", "You mark each topic approved or needs work, with a note the student sees. A student edits a topic that needs work and the topic comes back to you."],
   ["Link", "An optional link to an interactive version, shown at the top of the story, with the instruction: if you want to include a link, the link will go at the top of your story as an alternate way to read your work."],
   ["AI", "Allowed, and the instructions say nothing about AI."],
   ["Preview", "A preview button shows the whole story the way a classmate will see the story."],
   ["Hand in", "A hand-in button, with the story editable until the due date. At the due date the story locks."],
-  ["Late work", "A button in Grade view unlocks one student's story."],
+  ["Late work", "A button in Grade view unlocks one student's story. A late story goes into the grid outside any pod, with the note: because your work is submitted late, it's not a guarantee that students will be assigned to offer comments on your story."],
   ["Sections", "The 8:00 and 10:30 sections never see each other's stories. You get a showcase for each section."],
   ["Pods", "Pods of five inside a section. I suggest pods by topic, and you move people and approve."],
-  ["The grid", "Stories sit in a grid, about six across on a laptop and two across on a phone. The four pod stories wear a red box and a Required reading chip. A story read and commented on turns green with a checkmark. Students choose four more, and can read past eight, which you see later and which helps their grade."],
+  ["The grid", "Stories sit in a grid, about six across on a laptop and two across on a phone, each tile a headline and the feature image. The four pod stories wear a red box and a Required reading chip, and the student's own story wears a red box and a My story chip. A story read and commented on turns green with a checkmark. The page shows the count, like You have read 10. Students can read past eight, which helps their grade."],
   ["Phones", "Readers can read and comment on a phone."],
-  ["Comments", "Three comments on each story read, the first being the best image and why. Then one way the story shone, and one thing they would encourage the author to do."],
+  ["Comments", "Three comments on each story read, the first being the best image and why. Then one way the story shone, and one thing they would encourage the author to do. Students comment on their own story too. The prompt: please make sure your comments are substantial. A well-crafted sentence is acceptable, and longer than that is also okay."],
+  ["Who sees comments", "While comments are open, nobody sees anyone else's comments. Afterward a student sees only the comments on their own story, with names. You see every comment."],
   ["Stages", "Everyone hands in. You set the pods. The stories open to classmates with no names. Comments are due. Comments close, and the names of every author and every commenter come out."],
-  ["Grading", "A - Excellent, B - Very Good, C - Complete, D - Complete, with issues, Please revise, Not submitted, Unacceptable work. Comments are required, and may count toward the class culture grade."],
+  ["Dates", "Story due Wednesday, October 21, at 11:59 PM. Pods out and stories open Friday, October 23, in class. No class Monday, October 26, so students read and comment. Comments due Tuesday, October 27, at 11:59 PM. Names out Wednesday, October 28, in class."],
+  ["Grading", "A - Excellent, B - Very Good, C - Complete, D - Complete, with issues, Please revise, Not submitted, Unacceptable work. The scale is for the visual story, the audio story and the final project. Comments are done or not done, three comments on eight stories, toward class culture, and you see how many stories each student read."],
 ]
 
 const BLOCKS = [
@@ -51,38 +56,44 @@ const BLOCKS = [
 // for anything the options miss. Answers go to an instructor-only row, so I
 // can read the answers back from the database rather than from a chat.
 const QUESTIONS = [
-  { id: "r2-name", title: "What students call the assignment", ask: "The site calls the assignment Visual story. You have been saying visual essay. Which name goes on the portal?",
-    mine: 0, options: ["Visual story", "Visual essay", "Photo essay"] },
-  { id: "r2-pre", title: "Topic page and pre-production", ask: "Visual story pre-production is on the site, due tomorrow, Wednesday, October 14, at 11:59 PM. Is the topic page that assignment?",
-    mine: 0, options: ["Yes, the topic page is the pre-production", "No, the topic page is a separate step"] },
-  { id: "r2-sentence", title: "The prompt for the one sentence", ask: "What does the topic page say above the one-sentence box?",
-    mine: 0, options: ["In one sentence, what will somebody learn from your story?", "What will a reader learn from your story? Write a sentence or a question."] },
-  { id: "r2-more", title: "More on the topic page", ask: "Does the topic page ask for anything beyond the headline and the one sentence?",
-    mine: 0, options: ["Headline and sentence only", "A short plan of the photos and graphics too", "Whether the trend is going up or going down too"] },
-  { id: "r2-needswork", title: "A topic that needs work", ask: "When you mark a topic needs work, what happens next?",
-    mine: 0, options: ["The student edits the topic and the topic comes back to you", "You talk with the student in class"] },
-  { id: "r2-dates", title: "Dates", ask: "My suggestion. Topic due Wednesday, October 14. Story due Wednesday, October 21, at 11:59 PM, as on the site. Pods out and stories open Friday, October 23, in class. Comments due Tuesday, October 27, at 11:59 PM. Names out Wednesday, October 28, in class.",
-    mine: 0, options: ["These dates work", "Change the dates, in the box"] },
-  { id: "r2-stages", title: "Moving between stages", ask: "How does the assignment move from one stage to the next?",
-    mine: 0, options: ["I press a button for each stage", "Each stage opens on its date by itself"] },
-  { id: "r2-seecomments", title: "Other readers' comments", ask: "While comments are open, can a reader see what other readers wrote on a story?",
-    mine: 0, options: ["No, hidden until comments close", "Yes, visible as they come in"] },
-  { id: "r2-authorsees", title: "When the author sees comments", ask: "When does an author see the comments on their own story?",
-    mine: 0, options: ["When comments close, with names", "As they come in, with no names"] },
-  { id: "r2-length", title: "Comment length", ask: "Is there a minimum on each of the three comments?",
-    options: ["One full sentence each", "At least 25 words each", "No minimum"] },
-  { id: "r2-tile", title: "A tile in the grid", ask: "What sits on a story's tile in the grid?",
-    mine: 0, options: ["Headline and feature image", "Headline, feature image and the one sentence"] },
-  { id: "r2-square", title: "Square images", ask: "Text beside a photo is for portraits only. Does a square image count as a portrait?",
-    options: ["Square works beside text", "Square is full width only"] },
-  { id: "r2-latestory", title: "A story handed in after pods are set", ask: "Where does a late story go?",
-    mine: 0, options: ["Into the grid, outside any pod", "I add the student to a pod"] },
-  { id: "r2-readcount", title: "Reading past eight", ask: "Does a student see how many stories they have read?",
-    mine: 0, options: ["Show the count, like You have read 10", "No count on the page"] },
-  { id: "r2-scale", title: "The grade scale", ask: "Your scale differs from the words on the site now, Completed and Completed with Revisions. Where does your scale apply?",
-    options: ["The visual story only", "Every assignment from now on", "Every assignment from the visual story on"] },
-  { id: "r2-culture", title: "Comments and class culture", ask: "If comments count toward class culture, how?",
-    mine: 0, options: ["Done or not done: three comments on eight stories", "You read the comments and judge them"] },
+  { id: "r3-topic", title: "What the topic has to be", ask: "The exercise topics were about how Americans spend their time, something going up or going down. The visual story has to be a different topic from the student's exercise. What else is the rule? On September 28 your notes also say the visual story has to be about someone who creates their own values.",
+    options: ["A trend in how Americans spend their time", "Any social increase or decline", "Someone who creates their own values", "Open, as long as the topic is new"] },
+  { id: "r3-prime", multi: true, title: "Prompts on the pre-production page", ask: "Ideas to prime students, each tied to a day of class. Pick as many prompts as you want, and reword any prompt in the box.",
+    mine: [0, 3, 4, 5],
+    options: [
+      "Your shot list: six to eight images, and for each one, what it shows and why the image is in the story (the treatment, October 7)",
+      "Entman's frame: what problem does your story define, what causes the problem, and what should happen next? (September 23)",
+      "Fisher's narrative paradigm: why will a reader believe your story, and where will a reader see their own life in your story? (September 23)",
+      "Angle, distance and treatment: for your two most important photos, where will you stand and how close will you get? (September 28)",
+      "Your data: where will the numbers in your graphics come from, and how could a reader misread your graphic? (October 7)",
+      "The image you most need: which photo can your story not live without, and what will you do if you can't get the photo?",
+      "The arc: what does a reader see first, what in the middle, and what last? (October 12)",
+      "Your feature image: which picture would make a classmate click on your story?",
+    ] },
+  { id: "r3-selfwhen", title: "Commenting on their own story", ask: "When do students comment on their own story?",
+    mine: 0, options: ["Last, after the eight, with fresh eyes", "First, before reading anyone else", "Any order"] },
+  { id: "r3-selfsame", title: "Prompts for their own story", ask: "Do students answer the same three prompts on their own story?",
+    mine: 0, options: ["The same three prompts", "Different prompts, in the box"] },
+  { id: "r3-nudge", title: "Reminding you to move a stage", ask: "An email needs an email service set up on the site, which is a short job. A banner needs nothing new.",
+    mine: 2, options: ["A banner on your dashboard with the button on the right day", "An email on the right day", "Both"] },
+  { id: "r3-source", title: "Sources on graphics", ask: "Does every graphic need a source line under the graphic, the way October 7 asked what we owe the people reading a graphic?",
+    mine: 0, options: ["Every graphic needs a source line", "A source line is optional"] },
+  { id: "r3-instrwhere", title: "Where the instructions live", ask: "Where do students read the instructions?",
+    mine: 2, options: ["At the top of the portal", "A separate page linked from the assignment", "A short version in the portal and the full version on a page"] },
+  { id: "r3-instrdraft", title: "Writing the instructions", ask: "How do we write the instructions in your voice?",
+    mine: 0, options: ["I draft from your own words in this chat and your earlier assignment docs, and you edit on a page", "You dictate, and I fix only spelling and order", "You write the instructions, and I check for gaps"] },
+  { id: "r3-demo", title: "The demo", ask: "How do students see the portal before they use the portal?",
+    mine: 2, options: ["You demo live in class on the projector, in the practice class", "A short screen recording students can rewatch", "Both"] },
+  { id: "r3-sample", title: "A sample story", ask: "A sample shows students what done looks like.",
+    mine: 0, options: ["You make a sample in the portal with your own photos", "I build a sample from public domain photos and real data, and you write the words", "No sample"] },
+  { id: "r3-sampletopic", title: "The sample's topic", ask: "If there is a sample, what is the sample about? Your examples were dining out less and going to the gym more.",
+    options: ["People dining out less", "People going to the gym more", "Something else, in the box"] },
+  { id: "r3-sampleshow", title: "Where the sample shows", ask: "Where do students see the sample?",
+    mine: 0, options: ["A Sample tile at the front of the grid, in both sections", "Only in the demo and the instructions"] },
+  { id: "r3-help", title: "When a student is stuck", ask: "If an upload fails or something looks wrong, what does the student do?",
+    mine: 0, options: ["A Report a problem button that sends you what went wrong, with the details", "Message you on the class site, like any challenge"] },
+  { id: "r3-testers", title: "Testing with students", ask: "Before the whole class uses the photo part, who tries the photo part?",
+    mine: 0, options: ["Two or three students you pick, a day early", "You and me only"] },
 ];
 
 const ROW = "comm3-visualessay-plan";
@@ -150,14 +161,16 @@ function Question({ n, q, answer, onChange, ready }) {
     <li className="vp-q">
       <div className="vp-q-title"><strong>{n}. {q.title}.</strong> {q.ask}</div>
       {q.options.length ? (
-        <div className="vp-opts" role="radiogroup" aria-label={q.title}>
+        <div className={"vp-opts" + (q.multi ? " vp-opts-multi" : "")} role={q.multi ? "group" : "radiogroup"} aria-label={q.title}>
           {q.options.map((o, i) => {
-            const on = a.pick === o;
+            const picks = Array.isArray(a.pick) ? a.pick : [];
+            const on = q.multi ? picks.includes(o) : a.pick === o;
+            const mine = Array.isArray(q.mine) ? q.mine.includes(i) : q.mine === i;
             return (
-              <button key={o} type="button" role="radio" aria-checked={on} disabled={!ready}
+              <button key={o} type="button" role={q.multi ? "checkbox" : "radio"} aria-checked={on} disabled={!ready}
                 className={"vp-opt" + (on ? " vp-opt-on" : "")}
-                onClick={() => onChange({ pick: on ? null : o })}>
-                {o}{q.mine === i ? <span className="vp-mine">My pick</span> : null}
+                onClick={() => onChange({ pick: q.multi ? (on ? picks.filter(x => x !== o) : [...picks, o]) : (on ? null : o) })}>
+                {o}{mine ? <span className="vp-mine">My pick</span> : null}
               </button>
             );
           })}
@@ -177,9 +190,9 @@ export default function VisualEssayPlan() {
     <div style={{ fontFamily: F, background: BG, color: TEXT, minHeight: "100vh" }}>
       <style>{CSS}</style>
       <div className="vp-body">
-        <h1 className="vp-title">The COMM 3 visual essay</h1>
+        <h1 className="vp-title">The COMM 3 visual story</h1>
         <p className="vp-intro">
-          The visual essay moves out of the Google Doc and into a portal on the class site. Students
+          The visual story moves out of the Google Doc and into a portal on the class site. Students
           lay out photos, graphics and words as a story that scrolls, and classmates in their own
           section read and comment once you release the stories. What follows is what you have
           decided, how I would build the portal, and what is still open.
@@ -223,11 +236,26 @@ export default function VisualEssayPlan() {
           newer. Before you announce the assignment, you do one run on your laptop with a real iPhone photo.
         </p>
 
+        <h2 className="vp-h2">Instructions, a demo and a sample</h2>
+        <p className="vp-p">
+          The instructions should be your words, not mine. You have already said most of what students need
+          in this planning, from the one sentence to the comment prompt to the note on late work, so my
+          plan is to build the instructions out of those sentences and your earlier assignment docs, put the
+          draft on a page, and let you edit the draft in place. I fill gaps only where you have said nothing,
+          and I mark those lines so you can see which words are mine.
+        </p>
+        <p className="vp-p">
+          A demo and a sample do different jobs. The demo shows how the portal works: upload, drag, caption,
+          preview, hand in. The sample shows what a good story looks like. The demo can run in COMM 999, the
+          practice class, so nothing touches a real student's work, and your sample can be the story you
+          build during the demo.
+        </p>
+
         <h2 className="vp-h2">Questions</h2>
         <p className="vp-p">
-          Your first answers are in the list above. These are the next round. Pick an option on each
-          question and add anything the options miss in the box. Your answers save as you go, and I read
-          them from here.
+          Your answers so far are in the list above. These are the third round. Pick an option on each
+          question, or several where the question says so, and add anything the options miss in the box.
+          Your answers save as you go, and I read them from here.
         </p>
         <div className="vp-status" aria-live="polite">{status}</div>
         <ol className="vp-ol">
@@ -258,6 +286,8 @@ const CSS = `
 .vp-q{display:flex;flex-direction:column;gap:10px;padding-bottom:20px;border-bottom:1px solid ${BORDER}}
 .vp-q-title{font-size:16px;line-height:1.55;color:${TEXT}}
 .vp-opts{display:flex;flex-wrap:wrap;gap:8px}
+.vp-opts-multi{flex-direction:column;align-items:stretch}
+.vp-opts-multi .vp-opt{border-radius:12px;justify-content:space-between}
 .vp-opt{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:6px 14px;border-radius:999px;border:1px solid ${EDGE};
   background:${CARD};color:${SECOND};font-family:inherit;font-size:15px;cursor:pointer;text-align:left}
 .vp-opt:hover:not(:disabled){border-color:${TEXT};color:${TEXT}}
