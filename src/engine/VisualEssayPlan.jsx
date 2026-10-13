@@ -19,28 +19,31 @@ const EDGE = TOKENS.LINE.strong;
 const CARD = TOKENS.SURFACE.card;
 
 const DECIDED = [
-  ["Where", "Students build the essay on a laptop, in a portal on the class site, instead of a Google Doc."],
-  ["Images", "Seven images of any kind, photos they took and graphics they made."],
-  ["Words", "150 to 300 words, with a word counter on the page."],
+  ["Where", "Students build the story on a laptop, in a portal on the class site, instead of a Google Doc."],
+  ["Images", "Six to eight images of any kind, photos they took and graphics they made. The feature image is one of the images."],
+  ["Words", "150 to 300 words in captions and text blocks, with a word counter on the page. The headline and the one sentence do not count."],
   ["Shape", "The story scrolls. Students put blocks in order by drag and drop, the way 3x5 works."],
-  ["Captions", "A caption can sit under a photo or beside the photo, with the photo on the left or the right."],
+  ["Captions", "A caption sits under any photo. Text beside a photo, on the left or the right, is for portrait photos only."],
   ["Cropping", "None. Every image shows in its own shape."],
-  ["Topic", "A headline, plus one sentence on what a reader will learn. Both go in on October 14 so you can approve topics."],
-  ["Feature image", "Each student picks a feature image. Classmates choose stories by the headline and the feature image."],
+  ["Topic", "A headline, plus one sentence on what a reader will learn. Both go in on October 14. You mark each topic approved or needs work, with a note the student sees."],
   ["Link", "An optional link to an interactive version, shown at the top of the story, with the instruction: if you want to include a link, the link will go at the top of your story as an alternate way to read your work."],
   ["AI", "Allowed, and the instructions say nothing about AI."],
   ["Preview", "A preview button shows the whole story the way a classmate will see the story."],
+  ["Hand in", "A hand-in button, with the story editable until the due date. At the due date the story locks."],
+  ["Late work", "A button in Grade view unlocks one student's story."],
   ["Sections", "The 8:00 and 10:30 sections never see each other's stories. You get a showcase for each section."],
-  ["Names", "Stories are anonymous to students and named for you."],
-  ["Reading", "Pods of five. Each student reads the four other stories in their pod, then chooses four more."],
-  ["Comments", "Three comments on each story read: one way the story shone, one thing they would encourage the author to do, and a third still to decide."],
-  ["Due date", "Whatever the site says. At the due date the story locks and no more changes go in. Late work is yours to decide."],
-];
+  ["Pods", "Pods of five inside a section. I suggest pods by topic, and you move people and approve."],
+  ["The grid", "Stories sit in a grid, about six across on a laptop and two across on a phone. The four pod stories wear a red box and a Required reading chip. A story read and commented on turns green with a checkmark. Students choose four more, and can read past eight, which you see later and which helps their grade."],
+  ["Phones", "Readers can read and comment on a phone."],
+  ["Comments", "Three comments on each story read, the first being the best image and why. Then one way the story shone, and one thing they would encourage the author to do."],
+  ["Stages", "Everyone hands in. You set the pods. The stories open to classmates with no names. Comments are due. Comments close, and the names of every author and every commenter come out."],
+  ["Grading", "A - Excellent, B - Very Good, C - Complete, D - Complete, with issues, Please revise, Not submitted, Unacceptable work. Comments are required, and may count toward the class culture grade."],
+]
 
 const BLOCKS = [
   ["Photo, full width", "The image across the page, with an optional caption under the image."],
-  ["Photo with text on the right", "The image on the left, about 60 percent of the width, and the caption beside the image."],
-  ["Photo with text on the left", "The same block, mirrored."],
+  ["Portrait with text on the right", "A portrait image on the left, about half the width, and the caption beside the image."],
+  ["Portrait with text on the left", "The same block, mirrored."],
   ["Text", "A paragraph on its own, for the parts of the story no image carries."],
 ];
 
@@ -48,38 +51,38 @@ const BLOCKS = [
 // for anything the options miss. Answers go to an instructor-only row, so I
 // can read the answers back from the database rather than from a chat.
 const QUESTIONS = [
-  { id: "count", title: "Exactly seven", ask: "Is the rule exactly seven images, or at least seven? The sheet can refuse to hand in below the number either way.",
-    options: ["Exactly seven", "At least seven", "Seven to ten"] },
-  { id: "counter", title: "What the counter counts", ask: "What counts toward the 150 to 300 words?",
-    mine: 0, options: ["Captions and text blocks only", "Everything, headline and sentence too"] },
-  { id: "feature", title: "Feature image", ask: "Is the feature image one of the seven, or an eighth image on top?",
-    mine: 0, options: ["One of the seven", "An eighth image"] },
-  { id: "landscape", title: "Landscape photos", ask: "A landscape photo beside text gets small. Should a landscape photo start at full width, with a switch to put text beside the photo?",
-    mine: 0, options: ["Start at full width, student can switch", "Students choose every layout from the start"] },
-  { id: "phones", title: "Readers on phones", ask: "Writing happens on a laptop. Can readers read and comment on a phone? A photo with text beside the photo stacks on a phone, photo first.",
-    mine: 0, options: ["Phones can read and comment", "Laptop only, for reading too"] },
-  { id: "pods", title: "Making pods", ask: "Pods of five, inside one section. Who makes the pods?",
-    mine: 1, options: ["I make the pods by hand", "You propose pods from the one sentence, I move people", "Random inside each section"] },
-  { id: "third", title: "Third comment", ask: "One way the story shone, one thing to encourage, and what third comment?",
-    options: ["One question the story left you with", "The image that stayed with you and why", "Something else, in the box"] },
-  { id: "comments", title: "Who sees comments", ask: "Who sees the comments a reader leaves?",
-    mine: 0, options: ["The author, with no names on the comments", "The author, with names", "Only me"] },
-  { id: "dates", title: "Dates", ask: "When do the stories open to classmates, and when are the comments due? Type the dates in the box.",
-    options: [] },
-  { id: "approve", title: "Approving topics", ask: "On October 14, how do you approve topics?",
-    mine: 1, options: ["I read a list of headlines and sentences", "I mark each topic approved or needs work, with a note the student sees"] },
-  { id: "tomorrow", title: "Tomorrow", ask: "Classes start at 8:00 tomorrow. The photo part needs the upload tested end to end first.",
-    mine: 0, options: ["Topic page tomorrow, photos after", "Launch everything at once, later"] },
-  { id: "handin", title: "Hand in", ask: "How does a story count as handed in?",
-    mine: 0, options: ["A hand-in button, editable until the due date", "Whatever is on the page at the due date"] },
-  { id: "late", title: "Late work", ask: "For a late student, what do you want in Grade view?",
-    mine: 0, options: ["A button that unlocks one student's story", "Nothing for now, I decide later"] },
-  { id: "list", title: "Reading list", ask: "Should each student see the eight stories they owe, the four from their pod and the four they chose, with a mark on each story done?",
-    mine: 0, options: ["Show the list with marks", "No list"] },
-  { id: "grade", title: "Grading the story", ask: "How is the story graded?",
-    mine: 0, options: ["Completed or Completed with Revisions", "Something else, in the box"] },
-  { id: "gradecomments", title: "Grading the comments", ask: "Do the comments count toward the grade?",
-    options: ["Comments count toward the grade", "Comments are required, not graded", "Comments are optional"] },
+  { id: "r2-name", title: "What students call the assignment", ask: "The site calls the assignment Visual story. You have been saying visual essay. Which name goes on the portal?",
+    mine: 0, options: ["Visual story", "Visual essay", "Photo essay"] },
+  { id: "r2-pre", title: "Topic page and pre-production", ask: "Visual story pre-production is on the site, due tomorrow, Wednesday, October 14, at 11:59 PM. Is the topic page that assignment?",
+    mine: 0, options: ["Yes, the topic page is the pre-production", "No, the topic page is a separate step"] },
+  { id: "r2-sentence", title: "The prompt for the one sentence", ask: "What does the topic page say above the one-sentence box?",
+    mine: 0, options: ["In one sentence, what will somebody learn from your story?", "What will a reader learn from your story? Write a sentence or a question."] },
+  { id: "r2-more", title: "More on the topic page", ask: "Does the topic page ask for anything beyond the headline and the one sentence?",
+    mine: 0, options: ["Headline and sentence only", "A short plan of the photos and graphics too", "Whether the trend is going up or going down too"] },
+  { id: "r2-needswork", title: "A topic that needs work", ask: "When you mark a topic needs work, what happens next?",
+    mine: 0, options: ["The student edits the topic and the topic comes back to you", "You talk with the student in class"] },
+  { id: "r2-dates", title: "Dates", ask: "My suggestion. Topic due Wednesday, October 14. Story due Wednesday, October 21, at 11:59 PM, as on the site. Pods out and stories open Friday, October 23, in class. Comments due Tuesday, October 27, at 11:59 PM. Names out Wednesday, October 28, in class.",
+    mine: 0, options: ["These dates work", "Change the dates, in the box"] },
+  { id: "r2-stages", title: "Moving between stages", ask: "How does the assignment move from one stage to the next?",
+    mine: 0, options: ["I press a button for each stage", "Each stage opens on its date by itself"] },
+  { id: "r2-seecomments", title: "Other readers' comments", ask: "While comments are open, can a reader see what other readers wrote on a story?",
+    mine: 0, options: ["No, hidden until comments close", "Yes, visible as they come in"] },
+  { id: "r2-authorsees", title: "When the author sees comments", ask: "When does an author see the comments on their own story?",
+    mine: 0, options: ["When comments close, with names", "As they come in, with no names"] },
+  { id: "r2-length", title: "Comment length", ask: "Is there a minimum on each of the three comments?",
+    options: ["One full sentence each", "At least 25 words each", "No minimum"] },
+  { id: "r2-tile", title: "A tile in the grid", ask: "What sits on a story's tile in the grid?",
+    mine: 0, options: ["Headline and feature image", "Headline, feature image and the one sentence"] },
+  { id: "r2-square", title: "Square images", ask: "Text beside a photo is for portraits only. Does a square image count as a portrait?",
+    options: ["Square works beside text", "Square is full width only"] },
+  { id: "r2-latestory", title: "A story handed in after pods are set", ask: "Where does a late story go?",
+    mine: 0, options: ["Into the grid, outside any pod", "I add the student to a pod"] },
+  { id: "r2-readcount", title: "Reading past eight", ask: "Does a student see how many stories they have read?",
+    mine: 0, options: ["Show the count, like You have read 10", "No count on the page"] },
+  { id: "r2-scale", title: "The grade scale", ask: "Your scale differs from the words on the site now, Completed and Completed with Revisions. Where does your scale apply?",
+    options: ["The visual story only", "Every assignment from now on", "Every assignment from the visual story on"] },
+  { id: "r2-culture", title: "Comments and class culture", ask: "If comments count toward class culture, how?",
+    mine: 0, options: ["Done or not done: three comments on eight stories", "You read the comments and judge them"] },
 ];
 
 const ROW = "comm3-visualessay-plan";
@@ -191,10 +194,9 @@ export default function VisualEssayPlan() {
 
         <h2 className="vp-h2">The blocks</h2>
         <p className="vp-p">
-          A story is a list of blocks the student drags into order. A caption beside a photo works on a
-          laptop and reads like a magazine spread. Portrait photos suit the side-by-side block best. A
-          landscape photo beside text gets small, so the sheet would start a landscape photo at full
-          width and let the student switch.
+          A story is a list of blocks the student drags into order. The sheet reads each image's shape on
+          upload, so the side-by-side blocks are offered for portrait images and never for landscape ones.
+          On a phone a side-by-side block stacks, image first.
         </p>
         <dl className="vp-dl">
           {BLOCKS.map(([k, v]) => (
@@ -223,8 +225,9 @@ export default function VisualEssayPlan() {
 
         <h2 className="vp-h2">Questions</h2>
         <p className="vp-p">
-          Pick an option on each question and add anything the options miss in the box. Your answers
-          save as you go, and I read them from here.
+          Your first answers are in the list above. These are the next round. Pick an option on each
+          question and add anything the options miss in the box. Your answers save as you go, and I read
+          them from here.
         </p>
         <div className="vp-status" aria-live="polite">{status}</div>
         <ol className="vp-ol">
