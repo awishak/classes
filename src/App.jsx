@@ -19,6 +19,7 @@ import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
 import VisualEssayPlan from "./engine/VisualEssayPlan.jsx";
 import VisualStoryInstructions from "./engine/visualstory/instructions.jsx";
+import ClassmatesStories from "./engine/visualstory/reading.jsx";
 import GradeView from "./engine/GradeView.jsx";
 import CheckinAnswers from "./engine/CheckinAnswers.jsx";
 import InstructorBar from "./engine/InstructorBar.jsx";
@@ -249,6 +250,9 @@ export default function App() {
   // The visual story's full instructions, for students: /comm3/visual-story.
   const vsi = path.match(/^\/(comm3|comm999)\/visual-story\/?$/);
   if (vsi && ENGINE[vsi[1]]) return <VisualStoryInstructions config={ENGINE[vsi[1]]} />;
+  // Classmates' stories, for reading and comments: /comm3/stories.
+  const vsr = path.match(/^\/(comm3|comm999)\/stories\/?$/);
+  if (vsr && ENGINE[vsr[1]]) return <ClassmatesStories config={ENGINE[vsr[1]]} />;
 
   // The COMM 3 visual essay, planned before the portal is built.
   if (path === "/comm3/visualessayplanning" || path === "/comm3/visualessayplanning/") {

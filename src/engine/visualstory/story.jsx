@@ -668,3 +668,6 @@ const CSS = `
   .vss-bar{top:56px;gap:14px}
 }
 `;
+
+/** The page's whole stylesheet, for pages that show a StoryView without the sheet. */
+export const STORY_CSS = CSS;

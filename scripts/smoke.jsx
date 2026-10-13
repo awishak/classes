@@ -32,6 +32,7 @@ import { createSaver } from "../src/engine/visualstory/saver.js";
 import * as vsm from "../src/engine/visualstory/model.js";
 import * as vsp from "../src/engine/visualstory/photos.js";
 import { StoryView } from "../src/engine/visualstory/story.jsx";
+import * as vsr from "../src/engine/visualstory/storyreview.jsx";
 import { PreSheet, missingOf, standing, FIELDS } from "../src/engine/visualstory/pre.jsx";
 import { JOBS, CATEGORIES, HORRIBLE, findJob, horribleFor } from "../src/engine/worktopia/jobs.js";
 import { F as WF } from "../src/engine/worktopia/terminal.js";
@@ -1275,7 +1276,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const { readFileSync: readSrc } = await import("node:fs");
   const app = readSrc(new URL("../src/App.jsx", import.meta.url), "utf8");
   // Pages that draw TopNav themselves.
-  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", WorksheetsPage: "engine/WorksheetsPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx", WorktopiaAnswersPage: "engine/WorktopiaAnswersPage.jsx", VisualStoryInstructions: "engine/visualstory/instructions.jsx" };
+  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", WorksheetsPage: "engine/WorksheetsPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx", WorktopiaAnswersPage: "engine/WorktopiaAnswersPage.jsx", VisualStoryInstructions: "engine/visualstory/instructions.jsx", ClassmatesStories: "engine/visualstory/reading.jsx" };
   // What the projector shows, and the page you sign in on before you are anybody.
   const EXEMPT = new Set(["ClassroomView", "EnginePresenter", "TriviaPresenter4", "TriviaPresenter118", "LoginPage", "InstructorGate", "InstructorBar", "RetreatPage"]);
   const routed = [...app.matchAll(/return\s*\(?\s*<([A-Z]\w*)/g), ...app.matchAll(/<InstructorGate[^>]*>\s*<([A-Z]\w*)/g)].map(m => m[1]);
@@ -5708,6 +5709,15 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (vsp.fitWithin(800, 600).w !== 800) say("a small picture is enlarged");
   if (!vsp.isHeic({ name: "IMG_0001.HEIC", type: "" }) || vsp.isHeic({ name: "a.jpg", type: "image/jpeg" })) say("HEIC files are not told apart");
   if (!/^[a-z]+$/.test(vsp.letterId())) say("a block id breaks the field rule");
+}
+{
+  const say = (m) => { console.error("  FAIL  visual story pods: " + m); failedEarly++; };
+  const people = n => Array.from({ length: n }, (_, i) => ({ email: "s" + i + "@x.test" }));
+  const sizes = (list) => Object.values(list.reduce((m, p) => { m[p.pod] = (m[p.pod] || 0) + 1; return m; }, {})).sort();
+  if (JSON.stringify(sizes(vsr.suggestPods(people(25)))) !== JSON.stringify([5, 5, 5, 5, 5])) say("25 students are not five pods of five");
+  if (sizes(vsr.suggestPods(people(17))).some(n => n < 4 || n > 6)) say("17 students make a pod smaller than 4 or larger than 6: " + sizes(vsr.suggestPods(people(17))));
+  if (vsr.suggestPods(people(3)).length !== 3) say("a small section loses students");
+  if (vsr.suggestPods(people(26)).length !== 26) say("someone is left out of the pods");
 }
 cases.push(["Visual story, reading view", <StoryView story={vsm.storyOf({ headline: "Run club", order: JSON.stringify(["aa", "tx"]), "block:aa": JSON.stringify({ type: "image", path: "p", w: 800, h: 1200, layout: "left", caption: "Dawn", graphic: true, source: "Strava" }), "block:tx": JSON.stringify({ type: "text", text: "Words" }) })} urls={{ p: "x.jpg" }} />, "Strava"]);
 cases.push(["Visual story pre-production, loading", <PreSheet store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" />, "Loading"]);
