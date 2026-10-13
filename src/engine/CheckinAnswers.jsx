@@ -15,6 +15,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useClassData } from "./store.js";
 import { usePhotos, useWithPhotos } from "./photos.js";
+import { useWithWorksheetSubmits } from "./worksheetSubmits.js";
 import { Avatar, profileOf } from "./Face.jsx";
 import { ThemeStyle } from "./ThemeShell.jsx";
 import { withIds } from "./roster.js";
@@ -48,7 +49,10 @@ const fmtDay = (ts) => ts ? new Date(ts).toLocaleDateString("en-US", { month: "s
 export default function CheckinAnswers({ config }) {
   const [stored] = useClassData(config.storageKey);
   const [photos] = usePhotos(config.storageKey);
-  const data = useWithPhotos(stored, photos);
+  // And a linked worksheet's submits on its assignment, so Worktopia reads
+  // Submitted under Work so far here as it does for the student. Andrew,
+  // 2026-10-12: "for worktopia, don't put missed, put submitted."
+  const data = useWithWorksheetSubmits(useWithPhotos(stored, photos), config);
   const a = config.accent;
   const checkins = checkinTasksOf(config, data);
   const roster = useMemo(() => withIds(data?.students?.length ? data.students : (config.students || [])).slice()

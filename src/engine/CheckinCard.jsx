@@ -27,13 +27,20 @@ const label = { fontSize: 13, fontWeight: 700, color: TEXT_MUTED, textTransform:
 const box = { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 12, border: "1px solid " + LINE_STRONG,
   fontFamily: F, fontSize: 16, lineHeight: 1.5, color: TEXT_PRIMARY, background: WHITE, minHeight: 88, resize: "vertical" };
 
-// Every challenge with something to say: a grade, turned in, or missed. The
+// Every challenge with something to say: a grade, submitted, or missed. The
 // check-ins themselves are left out.
+//
+// Andrew, 2026-10-12: "if they submitted something, put submitted, not
+// missed." A worksheet submit (Worktopia) counts, laid over the log by
+// worksheetSubmits.js on every page that reads this; and a piece graded Not
+// submitted that has a late file in since reads Submitted, because the file
+// is there.
 export function workSoFar(config, data, name) {
   const unseen = unseenOf(config, data, name);
   return visibleAssignments(config, data).filter(a => !isCheckin(a)).map(asg => {
     const st = workOf(config, data, asg, name, unseen);
-    const word = st.state === "graded" ? st.letter : st.state === "turnedIn" ? "Turned in" : st.state === "missed" ? "Missed" : "";
+    const word = st.state === "graded" ? (st.letter === "Not submitted" && st.last ? "Submitted" : st.letter)
+      : st.state === "turnedIn" ? "Submitted" : st.state === "missed" ? "Missed" : "";
     return word ? { id: asg.id, title: asg.title, word, missed: st.state === "missed", comments: isProfileTask(asg) ? [] : (st.comments || []) } : null;
   }).filter(Boolean);
 }
