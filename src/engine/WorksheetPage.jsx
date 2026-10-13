@@ -96,7 +96,7 @@ function LocalSheet({ local, config, viewer, photo, classmates, theme }) {
     const store = supabaseStore({ supabase: gameClient, worksheetKey: local.key, groupKey: config.id, viewerId: viewer.id });
     // What week 1 says about them (onfile.js).
     const onFile = loadOnFile({ supabase: gameClient, storageKey: config.storageKey, viewerId: viewer.id });
-    const sheet = local.mount(ref.current, { store, viewer, photo, classmates: names ? names.split("\n") : [], onFile, theme });
+    const sheet = local.mount(ref.current, { store, viewer, photo, classmates: names ? names.split("\n") : [], onFile, theme, classId: config.id });
     return () => sheet.destroy();
   }, [local, config.id, config.storageKey, viewer.id, viewer.name, photo, names, theme]);
   return <div ref={ref} />;
@@ -156,9 +156,16 @@ export default function WorksheetPage({ config, worksheetKey }) {
   const want = search.get("s") || "";
   const them = want ? findStudent(roster, want) : null;
   const wantIndex = local && search.has("index");
+  // A sheet's own page for the instructor, like pre-production's topic review.
+  const wantReview = local && local.review && search.has("review");
 
   let body;
-  if (wantIndex) {
+  if (wantReview) {
+    body = !session || !instructor
+      ? <p style={{ fontSize: 17, margin: 0 }}>Only the instructor can open the review. <a className="ca-focus" href={"/login?next=" + encodeURIComponent(next + "?review")} style={{ color: config.accent, fontWeight: 600 }}>Sign in</a></p>
+      : data === null ? <p style={{ fontSize: 17, margin: 0 }}>Loading the roster.</p>
+      : "review";
+  } else if (wantIndex) {
     body = "index";
   } else if (sheet && want) {
     body = them && them.email ? "theirs"
@@ -192,7 +199,9 @@ export default function WorksheetPage({ config, worksheetKey }) {
       <div style={{ position: "sticky", top: 0, zIndex: 30 }}>
         <TopNav config={config} tabs={NAV_STUDENT} active="assignments" />
       </div>
-      {body === "index"
+      {body === "review"
+        ? <local.review config={config} worksheetKey={worksheetKey} roster={roster} />
+        : body === "index"
         ? <JobIndex />
         : body === "theirs"
         ? <TheirSheet config={config} worksheetKey={worksheetKey} student={them} theme={sheetThemeOf(theme, mode)} photo={photos[them.name] || ""} />

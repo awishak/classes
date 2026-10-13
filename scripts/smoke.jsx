@@ -28,6 +28,8 @@ import LoginPage from "../src/LoginPage.jsx";
 import { whereTo, studentFor } from "../src/engine/session.js";
 import { parseRoster, mergeRoster } from "../src/engine/roster.js";
 import { withWorksheetSubmits } from "../src/engine/worksheetSubmits.js";
+import { createSaver } from "../src/engine/visualstory/saver.js";
+import { PreSheet, missingOf, standing, FIELDS } from "../src/engine/visualstory/pre.jsx";
 import { JOBS, CATEGORIES, HORRIBLE, findJob, horribleFor } from "../src/engine/worktopia/jobs.js";
 import { F as WF } from "../src/engine/worktopia/terminal.js";
 import { Group as AnswersGroup } from "../src/engine/WorktopiaAnswersPage.jsx";
@@ -5594,6 +5596,65 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const d2 = ci.saveCheckin(d1, w4, N, { ...ans, going: "better" }, "", mid + 1000);
   if ((d2.assignmentLog["checkin-4"][N] || []).length !== 1 || ci.answersOf(d2, "checkin-4", N).going !== "better") say("an edit adds a second submission or loses the change");
 }
+
+// The visual story's saver: typing is never lost. Andrew, 2026-10-13: "If you
+// have a situation in which students type something that disappears, real
+// trouble." A store that fails keeps the words in the browser copy; a reload
+// on the same computer puts them back and sends them; a blank answer comes
+// off the server; words typed during a save are not marked saved.
+{
+  const say = (m) => { console.error("  FAIL  visual story saver: " + m); failedEarly++; };
+  const mem = () => { const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; }, m }; };
+  const server = { answers: { headline: "Old" } };
+  let down = false;
+  const store = {
+    async load() { return { answers: { ...server.answers }, submitted_at: null }; },
+    async save(f, v) { if (down) throw new Error("offline"); server.answers[f] = v; },
+    async remove(f) { if (down) throw new Error("offline"); delete server.answers[f]; },
+  };
+  const ls = mem();
+  const statuses = [];
+  const a = createSaver({ store, draftKey: "k", storage: ls, onStatus: s => statuses.push(s), delay: 1, retry: 100000 });
+  const first = await a.load();
+  if (first.answers.headline !== "Old") say("the server's answer did not load");
+  down = true;
+  a.change("topic", "Run clubs at dawn");
+  await a.flush();
+  if (server.answers.topic) say("a failed save reached the server");
+  if (!JSON.parse(ls.getItem("k") || "{}").topic) say("a failed save is not kept in the browser copy");
+  if (statuses[statuses.length - 1] !== "retrying") say("a failed save does not say Not saved, trying again");
+  a.destroy();
+  // The tab closed. A new load on the same computer, back online.
+  down = false;
+  const b = createSaver({ store, draftKey: "k", storage: ls, delay: 1, retry: 100000 });
+  const again = await b.load();
+  if (again.answers.topic !== "Run clubs at dawn") say("the unsaved words did not come back after a reload");
+  await b.flush();
+  if (server.answers.topic !== "Run clubs at dawn") say("the words that came back were not sent to the server");
+  if (ls.getItem("k")) say("the browser copy was not cleared once the server had the words");
+  b.change("headline", "  ");
+  await b.flush();
+  if ("headline" in server.answers) say("a blank answer stayed on the server");
+  // Typed while a save is out: the newer words stay pending and go next.
+  let release;
+  const slow = { ...store, async save(f, v) { await new Promise(r => { release = r; }); server.answers[f] = v; } };
+  const c = createSaver({ store: slow, draftKey: "s", storage: mem(), delay: 100000, retry: 100000 });
+  await c.load();
+  c.change("topic", "one");
+  const out = c.flush();
+  await new Promise(r => setTimeout(r, 0));
+  c.change("topic", "one two");
+  release();
+  await out;
+  await new Promise(r => setTimeout(r, 0));
+  if (c.pending().topic !== "one two" && server.answers.topic !== "one two") say("words typed during a save were dropped");
+  if (release) release();
+  c.destroy();
+  if (missingOf({ prompt: "scene" }).length !== FIELDS.length - 1) say("hand in does not count the empty boxes");
+  if (standing("2026-10-16T10:00:00Z", { status: "needs_work", reviewed_at: "2026-10-16T09:00:00Z" }).kind !== "waiting") say("a topic handed in again after a review is not waiting");
+  if (standing("2026-10-16T10:00:00Z", { status: "approved", reviewed_at: "2026-10-16T11:00:00Z" }).kind !== "approved") say("an approval after the hand in does not show");
+}
+cases.push(["Visual story pre-production, loading", <PreSheet store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" />, "Loading"]);
 
 let failed = failedEarly;
 for (const [name, el, must] of cases) {
