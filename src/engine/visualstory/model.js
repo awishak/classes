@@ -7,6 +7,7 @@
 //   link           an optional link to an interactive version
 //   order          JSON list of block ids, top to bottom
 //   feature        the block id of the feature image
+//   look           "light" or "dark": a white or a black page, the student's choice
 //   block:<id>     JSON for one block (ids are letters, the field rule)
 // An image block: { type: "image", path, w, h, layout, caption, graphic,
 // source, reasons: [...], other }. A text block: { type: "text", text }.
@@ -43,7 +44,7 @@ export function storyOf(answers) {
   // saves) is kept, at the end, rather than lost.
   Object.keys(a).forEach(k => { if (k.startsWith("block:") && !ids.includes(k.slice(6))) ids.push(k.slice(6)); });
   const blocks = ids.map(id => ({ id, ...parse(a["block:" + id], {}) })).filter(b => b.type === "image" || b.type === "text");
-  return { headline: a.headline || "", link: a.link || "", feature: a.feature || "", blocks };
+  return { headline: a.headline || "", link: a.link || "", feature: a.feature || "", look: a.look === "dark" ? "dark" : "light", blocks };
 }
 
 export const wordsIn = (s) => (String(s || "").trim().match(/[^\s]+/g) || []).length;

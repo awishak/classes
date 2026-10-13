@@ -1,9 +1,16 @@
 // The visual story portal: /comm3/worksheets/visual-story.
 //
 // Planned with Andrew on 2026-10-13 at /comm3/visualessayplanning. A student
-// uploads six to eight images, drags blocks into order, writes captions and
-// text, marks why each image made the cut, previews, and submits. Built for
-// a laptop; it still works on a phone.
+// uploads six to eight images, drags them into order, writes captions and
+// text, marks why each image made the cut, chooses a white or a black page,
+// and submits. Built for a laptop; it still works on a phone.
+//
+// Andrew, after the first version: "this is a bit ugly though. I want it to
+// be pretty. I want there to be clear instructions the way you would explain
+// it excitedly to a five year old ... white or black background, students'
+// choice, and let's show them how pretty it will look." So on a laptop the
+// page is two halves: building on the left, and on the right the finished
+// story, live, the way a classmate will read the story.
 //
 // Every block is its own worksheet answer (model.js), saved through saver.js,
 // so typing is never lost and a save touches one block. Photos go through
@@ -22,33 +29,52 @@ import * as TOKENS from "../tokens.js";
 export const VISUAL_STORY_KEY = "visual-story";
 export const VISUAL_STORY_TITLE = "Visual story";
 export const STORY_COPY_ROW = "worksheet-visual-story-plan";
+
+// The steps, said the way you'd say them to someone excited to start.
+export const STEPS = [
+  ["pick", "Add your pictures.", "Drag six to eight photos and graphics into the big box. Photos straight from your phone work too."],
+  ["order", "Put them in order.", "Grab a picture and drag the picture up or down until your story flows from start to finish."],
+  ["tell", "Tell the story.", "Write a caption for each picture, and add words between pictures if you want. Use 150 to 300 words in all."],
+  ["why", "Say why each picture made the cut.", "Tap at least one reason under each picture. Only Dr. Ishak sees your reasons."],
+  ["star", "Pick your star.", "Tap the star on your best picture. Your headline and your star picture are what classmates see first."],
+  ["look", "Choose your look.", "White page or black page? Tap one and watch your story change."],
+  ["submit", "Peek, then submit.", "Look over your story the way classmates will see your story. When you love your story, press Submit."],
+];
 export const STORY_COPY = {
-  intro: "Due Friday, October 23, at 11:59 PM. Upload six to eight images, put them in order, and tell your story in 150 to 300 words of captions and text. Everything saves as you go. Press Preview to see your story the way a classmate will, and press Submit when you're done. The full instructions are on the visual story page.",
+  hello: "Let's make your visual story!",
+  sub: "Due Friday, October 23, at 11:59 PM. Your work saves by itself as you go.",
+  ...Object.fromEntries(STEPS.flatMap(([k, name, say]) => [["step." + k + ".name", name], ["step." + k + ".say", say]])),
 };
 
 const STATUS = { loading: "Loading", saved: "Saved", saving: "Saving", retrying: "Not saved, trying again", "failed-load": "Could not load your story. Reload the page." };
 const when = (t) => new Date(t).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const remember = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { return null; } return null; };
 
-// ─── reading a story: the preview now, classmates later ───
+// ─── reading a story: the live preview now, classmates later ───
 
-export function StoryView({ story, urls, showPrivate = false }) {
+export function StoryView({ story, urls, showPrivate = false, look }) {
   const images = story.blocks.filter(b => b.type === "image");
+  const theme = (look || story.look) === "dark" ? "dark" : "light";
   return (
-    <article className="vss-read">
-      <h1 className="vss-read-h">{story.headline || "Your headline"}</h1>
-      {story.link ? <p className="vss-read-link">This story also has an interactive version: <a href={story.link} target="_blank" rel="noreferrer">{story.link}</a></p> : null}
+    <article className={"vsr vsr-" + theme}>
+      <p className="vsr-kicker">A visual story</p>
+      <h1 className="vsr-h">{story.headline || "Your headline goes here"}</h1>
+      {story.link ? <p className="vsr-link">Read the interactive version: <a href={story.link} target="_blank" rel="noreferrer">{story.link}</a></p> : null}
+      {!story.blocks.length ? <p className="vsr-empty">Your pictures show up here as you add pictures on the left.</p> : null}
       {story.blocks.map(b => {
-        if (b.type === "text") return <p key={b.id} className="vss-read-text">{b.text}</p>;
+        if (b.type === "text") return b.text ? <p key={b.id} className="vsr-text">{b.text}</p> : null;
         const lay = layoutOf(b);
         const n = images.indexOf(b) + 1;
         return (
-          <figure key={b.id} className={"vss-read-fig vss-lay-" + lay}>
-            {urls[b.path] ? <img className="vss-read-img" src={urls[b.path]} alt={b.caption || "Image " + n} /> : <div className="vss-read-img vss-read-wait">Loading image {n}</div>}
-            <figcaption className="vss-read-cap">
-              {b.caption ? <span>{b.caption}</span> : null}
-              {b.graphic && b.source ? <span className="vss-read-src">Source: {b.source}</span> : null}
-              {showPrivate && (b.reasons || []).length ? <span className="vss-read-why">Why: {(b.reasons || []).map(r => (REASONS.find(x => x[0] === r) || [r, r])[1]).join(", ")}{b.other ? " (" + b.other + ")" : ""}</span> : null}
-            </figcaption>
+          <figure key={b.id} className={"vsr-fig vsr-" + lay}>
+            {urls[b.path] ? <img className="vsr-img" src={urls[b.path]} alt={b.caption || "Image " + n} /> : <div className="vsr-img vsr-wait">Loading image {n}</div>}
+            {b.caption || (b.graphic && b.source) || showPrivate ? (
+              <figcaption className="vsr-cap">
+                {b.caption ? <span className="vsr-cap-text">{b.caption}</span> : null}
+                {b.graphic && b.source ? <span className="vsr-src">Source: {b.source}</span> : null}
+                {showPrivate && (b.reasons || []).length ? <span className="vsr-why">Why: {(b.reasons || []).map(r => (REASONS.find(x => x[0] === r) || [r, r])[1]).join(", ")}{b.other ? " (" + b.other + ")" : ""}</span> : null}
+              </figcaption>
+            ) : null}
           </figure>
         );
       })}
@@ -75,8 +101,8 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
   const [submitted, setSubmitted] = useState(null);
   const [status, setStatus] = useState("loading");
   const [urls, setUrls] = useState({});
-  const [uploads, setUploads] = useState([]);        // { key, name, progress, error, file }
-  const [preview, setPreview] = useState(readOnly);
+  const [uploads, setUploads] = useState([]);        // { key, name, progress, error, file, stage }
+  const [pane, setPane] = useState("build");          // on a narrow screen, one half at a time
   const [submitting, setSubmitting] = useState("");
   const [lock, setLock] = useState(null);
   const [now, setNow] = useState(Date.now());
@@ -84,6 +110,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
   const [dropAt, setDropAt] = useState(null);
   const [fileOver, setFileOver] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [stepsOpen, setStepsOpen] = useState(() => remember("visual-story-steps") !== "hidden");
   const copy = useCopy(editor, STORY_COPY_ROW, STORY_COPY);
   const saver = useRef(null);
   const live = useRef({});                             // the latest answers, for saves made from callbacks
@@ -166,7 +193,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
   // One upload, start to finish. A failure stays on the list with Retry.
   const runUpload = async (u) => {
     const patch = (p) => setUploads(list => list.map(x => (x.key === u.key ? { ...x, ...p } : x)));
-    patch({ progress: 0, error: "", stage: "Preparing" });
+    patch({ progress: 0, error: "", stage: "Getting the picture ready" });
     try {
       const { blob, w, h } = await prepImage(u.file);
       const path = classId + "/" + viewer.id + "/" + letterId(12) + ".jpg";
@@ -203,160 +230,210 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
   };
 
   if (!answers) return <div className="vss"><style>{CSS}</style><p className="vss-p">{STATUS[status] || "Loading"}</p></div>;
-  if (readOnly) return <div className="vss"><style>{CSS}</style><div className="vss-in"><StoryView story={story} urls={urls} showPrivate /></div></div>;
+  if (readOnly) return <div className="vss"><style>{CSS}</style><div className="vss-solo"><StoryView story={story} urls={urls} showPrivate /></div></div>;
 
   const words = wordCount(story), images = imageCount(story);
   const problems = problemsOf(story);
-  const onDropFiles = (e) => { if (e.dataTransfer?.files?.length) { e.preventDefault(); setFileOver(false); addFiles(e.dataTransfer.files); } };
+  const imagesOk = images >= MIN_IMAGES && images <= MAX_IMAGES, wordsOk = words >= MIN_WORDS && words <= MAX_WORDS;
+  const toggleSteps = () => { const next = !stepsOpen; setStepsOpen(next); remember("visual-story-steps", next ? "open" : "hidden"); };
+  const imageNo = (b) => story.blocks.filter(x => x.type === "image").indexOf(b) + 1;
 
   return (
     <div className="vss" onDragOver={e => { if (canEdit && [...(e.dataTransfer?.types || [])].includes("Files")) { e.preventDefault(); setFileOver(true); } }}
-      onDragLeave={e => { if (e.currentTarget === e.target) setFileOver(false); }} onDrop={onDropFiles}>
+      onDragLeave={e => { if (e.currentTarget === e.target) setFileOver(false); }}
+      onDrop={e => { if (e.dataTransfer?.files?.length) { e.preventDefault(); setFileOver(false); addFiles(e.dataTransfer.files); } }}>
       <style>{CSS}</style>
-      <div className="vss-in">
-        <div className="vss-top">
-          <h1 className="vss-title">{VISUAL_STORY_TITLE}</h1>
-          <span className={"vss-status" + (status === "retrying" ? " vss-warn" : "")} aria-live="polite">{STATUS[status]}</span>
+
+      <header className="vss-hello">
+        <div className="vss-hello-top">
+          <Words k="hello" copy={copy} editing={editing} as="h1" className="vss-hello-h" />
+          <span className={"vss-status" + (status === "retrying" ? " vss-status-bad" : status === "saved" ? " vss-status-ok" : "")} aria-live="polite">{STATUS[status]}</span>
         </div>
-        {editor ? (
-          <div className="vss-row">
-            <button type="button" className="vss-btn" aria-pressed={editing} onClick={() => setEditing(e => !e)}>{editing ? "Done editing the words" : "Edit the words"}</button>
-            <span className="vss-muted" aria-live="polite">{copy.status}</span>
-          </div>
+        <Words k="sub" copy={copy} editing={editing} as="p" className="vss-hello-sub" />
+        <div className="vss-row">
+          <button type="button" className="vss-link-btn" onClick={toggleSteps} aria-expanded={stepsOpen}>{stepsOpen ? "Hide the steps" : "Show the steps"}</button>
+          {editor ? <button type="button" className="vss-btn" aria-pressed={editing} onClick={() => { setEditing(e => !e); if (!stepsOpen) setStepsOpen(true); }}>{editing ? "Done editing the words" : "Edit the words"}</button> : null}
+          {editor && copy.status ? <span className="vss-muted" aria-live="polite">{copy.status}</span> : null}
+        </div>
+        {stepsOpen ? (
+          <ol className="vss-steps">
+            {STEPS.map(([k]) => (
+              <li key={k} className="vss-step">
+                <Words k={"step." + k + ".name"} copy={copy} editing={editing} as="b" className="vss-step-name" />
+                <Words k={"step." + k + ".say"} copy={copy} editing={editing} className="vss-step-say" />
+              </li>
+            ))}
+          </ol>
         ) : null}
-        <Words k="intro" copy={copy} editing={editing} as="p" className="vss-p" />
-        {locked ? <div className="vss-stand">The due date has passed, so your story is locked. If you need more time, talk to Dr. Ishak.</div> : null}
-        {lock && lock.until && Date.parse(lock.until) > now ? <div className="vss-stand">Dr. Ishak unlocked your story until {when(lock.until)}.</div> : null}
+        {locked ? <div className="vss-note">The due date has passed, so your story is locked. If you need more time, talk to Dr. Ishak.</div> : null}
+        {lock && lock.until && Date.parse(lock.until) > now ? <div className="vss-note">Dr. Ishak unlocked your story until {when(lock.until)}.</div> : null}
+      </header>
 
-        <div className="vss-bar">
-          <span className={"vss-count" + (images >= MIN_IMAGES && images <= MAX_IMAGES ? " vss-good" : "")}>{images} of {MIN_IMAGES} to {MAX_IMAGES} images</span>
-          <span className={"vss-count" + (words >= MIN_WORDS && words <= MAX_WORDS ? " vss-good" : "")}>{words} of {MIN_WORDS} to {MAX_WORDS} words</span>
-          <span className="vss-grow" />
-          <button type="button" className="vss-btn" aria-pressed={preview} onClick={() => setPreview(p => !p)}>{preview ? "Back to editing" : "Preview"}</button>
+      <div className="vss-bar">
+        <Meter label="pictures" n={images} min={MIN_IMAGES} max={MAX_IMAGES} ok={imagesOk} />
+        <Meter label="words" n={words} min={MIN_WORDS} max={MAX_WORDS} ok={wordsOk} />
+        <span className="vss-grow" />
+        <div className="vss-tabs" role="tablist" aria-label="Build or see your story">
+          <button type="button" role="tab" aria-selected={pane === "build"} className="vss-tab" onClick={() => setPane("build")}>Build</button>
+          <button type="button" role="tab" aria-selected={pane === "see"} className="vss-tab" onClick={() => setPane("see")}>See your story</button>
         </div>
+      </div>
 
-        {preview ? <StoryView story={story} urls={urls} /> : (
-          <>
-            <label className="vss-q">
-              <span className="vss-ask">Headline</span>
-              <input className="vss-box" value={answers.headline || ""} maxLength={200} readOnly={!canEdit} onChange={e => set("headline", e.target.value)} />
-            </label>
-            <label className="vss-q">
-              <span className="vss-ask">A link to an interactive version (optional)</span>
-              <span className="vss-muted">If you want to include a link, it will go at the top of your story as an alternate way to read your work.</span>
-              <input className="vss-box" value={answers.link || ""} maxLength={500} placeholder="https://" readOnly={!canEdit} onChange={e => set("link", e.target.value.trim())} />
-            </label>
+      <div className={"vss-work vss-on-" + pane}>
+        <section className="vss-build" aria-label="Build your story">
+          <label className="vss-field">
+            <span className="vss-label">Headline</span>
+            <input className="vss-input vss-headline" value={answers.headline || ""} maxLength={200} readOnly={!canEdit} placeholder="Your headline" onChange={e => set("headline", e.target.value)} />
+          </label>
 
-            <div className={"vss-drop" + (fileOver ? " vss-drop-on" : "")}>
-              <p className="vss-drop-p">Drag photos and graphics here, or</p>
-              <button type="button" className="vss-go" disabled={!canEdit} onClick={() => fileInput.current && fileInput.current.click()}>Choose images</button>
-              <input ref={fileInput} type="file" accept="image/*,.heic,.heif" multiple hidden onChange={e => { addFiles(e.target.files); e.target.value = ""; }} />
-              <p className="vss-muted">JPEG, PNG or iPhone photos. Edit or crop in Canva or on your phone first; the site shows every image in its own shape.</p>
+          <div className="vss-field">
+            <span className="vss-label">Your look</span>
+            <div className="vss-looks">
+              {[["light", "White page"], ["dark", "Black page"]].map(([id, name]) => (
+                <button key={id} type="button" className={"vss-look vss-look-" + id} aria-pressed={story.look === id} disabled={!canEdit} onClick={() => set("look", id)}>
+                  <span className="vss-look-swatch" aria-hidden="true"><span>Aa</span></span>{name}
+                </button>
+              ))}
             </div>
-            {uploads.length ? (
-              <ul className="vss-ups">
-                {uploads.map(u => (
-                  <li key={u.key} className="vss-up">
-                    <span className="vss-up-name">{u.name}</span>
-                    {u.error ? (
-                      <>
-                        <span className="vss-warn">{u.error}</span>
-                        {looksLikeImage(u.file) ? <button type="button" className="vss-btn" onClick={() => runUpload(u)}>Retry</button> : null}
-                        <button type="button" className="vss-btn" onClick={() => setUploads(l => l.filter(x => x.key !== u.key))}>Dismiss</button>
-                      </>
-                    ) : (
-                      <>
-                        <span className="vss-muted">{u.stage}{u.stage === "Uploading" ? " " + Math.round(u.progress * 100) + "%" : ""}</span>
-                        <span className="vss-meter"><span className="vss-meter-in" style={{ width: Math.round(u.progress * 100) + "%" }} /></span>
-                      </>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+          </div>
 
-            <ol className="vss-blocks">
-              {story.blocks.map((b, i) => (
-                <li key={b.id}
-                  className={"vss-block" + (dragId === b.id ? " vss-dragging" : "") + (dropAt === i && dragId && dragId !== b.id ? " vss-drop-here" : "")}
-                  onDragOver={e => { if (dragId) { e.preventDefault(); setDropAt(i); } }}
-                  onDrop={e => { if (dragId) { e.preventDefault(); e.stopPropagation(); move(dragId, i); setDragId(null); setDropAt(null); } }}>
-                  <div className="vss-block-top">
-                    <span className="vss-handle" draggable={canEdit} title="Drag to move" aria-hidden="true"
-                      onDragStart={e => { setDragId(b.id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", b.id); }}
-                      onDragEnd={() => { setDragId(null); setDropAt(null); }}>⠿</span>
-                    <b className="vss-block-name">{b.type === "image" ? "Image " + (story.blocks.filter(x => x.type === "image").indexOf(b) + 1) : "Text"}</b>
+          <div className={"vss-drop" + (fileOver ? " vss-drop-on" : "")}>
+            <p className="vss-drop-h">Drop your pictures here</p>
+            <p className="vss-drop-p">or</p>
+            <button type="button" className="vss-go" disabled={!canEdit} onClick={() => fileInput.current && fileInput.current.click()}>Choose pictures</button>
+            <input ref={fileInput} type="file" accept="image/*,.heic,.heif" multiple hidden onChange={e => { addFiles(e.target.files); e.target.value = ""; }} />
+            <p className="vss-drop-small">JPEG, PNG or iPhone photos. Want to crop or brighten a photo? Do that in Canva or on your phone first.</p>
+          </div>
+
+          {uploads.length ? (
+            <ul className="vss-ups">
+              {uploads.map(u => (
+                <li key={u.key} className="vss-up">
+                  <span className="vss-up-name">{u.name}</span>
+                  {u.error ? (
+                    <>
+                      <span className="vss-bad">{u.error}</span>
+                      <span className="vss-row">
+                        {looksLikeImage(u.file) ? <button type="button" className="vss-btn" onClick={() => runUpload(u)}>Try again</button> : null}
+                        <button type="button" className="vss-btn" onClick={() => setUploads(l => l.filter(x => x.key !== u.key))}>Dismiss</button>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="vss-muted">{u.stage}{u.stage === "Uploading" ? " " + Math.round(u.progress * 100) + "%" : ""}</span>
+                      <span className="vss-meter"><span className="vss-meter-in" style={{ width: Math.round(u.progress * 100) + "%" }} /></span>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <ol className="vss-cards">
+            {story.blocks.map((b, i) => (
+              <li key={b.id}
+                className={"vss-card" + (dragId === b.id ? " vss-dragging" : "") + (dropAt === i && dragId && dragId !== b.id ? " vss-drop-here" : "")}
+                onDragOver={e => { if (dragId) { e.preventDefault(); setDropAt(i); } }}
+                onDrop={e => { if (dragId) { e.preventDefault(); e.stopPropagation(); move(dragId, i); setDragId(null); setDropAt(null); } }}>
+                <div className="vss-card-grip" draggable={canEdit} title="Drag to move"
+                  onDragStart={e => { setDragId(b.id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", b.id); }}
+                  onDragEnd={() => { setDragId(null); setDropAt(null); }}>
+                  {b.type === "image"
+                    ? (urls[b.path] ? <img className="vss-card-img" src={urls[b.path]} alt="" draggable={false} /> : <span className="vss-card-img vss-card-wait">Loading</span>)
+                    : <span className="vss-card-img vss-card-words">Words</span>}
+                  <span className="vss-card-drag" aria-hidden="true">Drag</span>
+                </div>
+                <div className="vss-card-body">
+                  <div className="vss-card-top">
+                    <b className="vss-card-name">{b.type === "image" ? "Picture " + imageNo(b) : "Words between pictures"}</b>
+                    {b.type === "image" ? (
+                      <button type="button" className="vss-star" aria-pressed={story.feature === b.id} disabled={!canEdit} onClick={() => set("feature", b.id)}
+                        title="Your star picture is what classmates see first">{story.feature === b.id ? "★ Star picture" : "☆ Make star"}</button>
+                    ) : null}
                     <span className="vss-grow" />
-                    <button type="button" className="vss-btn" disabled={!canEdit || i === 0} onClick={() => move(b.id, i - 1)} aria-label="Move up">Up</button>
-                    <button type="button" className="vss-btn" disabled={!canEdit || i === story.blocks.length - 1} onClick={() => move(b.id, i + 1)} aria-label="Move down">Down</button>
+                    <button type="button" className="vss-mini" disabled={!canEdit || i === 0} onClick={() => move(b.id, i - 1)} aria-label="Move up">Up</button>
+                    <button type="button" className="vss-mini" disabled={!canEdit || i === story.blocks.length - 1} onClick={() => move(b.id, i + 1)} aria-label="Move down">Down</button>
                     <RemoveButton disabled={!canEdit} onRemove={() => removeBlock(b.id)} />
                   </div>
                   {b.type === "text"
-                    ? <textarea className="vss-box" rows={4} value={b.text || ""} readOnly={!canEdit} maxLength={3000} placeholder="Text that sits on its own between images" onChange={e => setBlock(b.id, { text: e.target.value })} />
-                    : <ImageFields b={b} url={urls[b.path]} feature={story.feature === b.id} canEdit={canEdit}
-                        onChange={(p) => setBlock(b.id, p)} onFeature={() => set("feature", b.id)} />}
-                </li>
-              ))}
-            </ol>
-            <button type="button" className="vss-btn vss-add" disabled={!canEdit} onClick={() => addBlock({ type: "text", text: "" })}>Add a text block</button>
-          </>
-        )}
+                    ? <textarea className="vss-input" rows={4} value={b.text || ""} readOnly={!canEdit} maxLength={3000} placeholder="Words that sit between pictures" onChange={e => setBlock(b.id, { text: e.target.value })} />
+                    : <ImageFields b={b} canEdit={canEdit} onChange={(p) => setBlock(b.id, p)} />}
+                </div>
+              </li>
+            ))}
+          </ol>
+          {story.blocks.length ? <button type="button" className="vss-btn vss-add" disabled={!canEdit} onClick={() => addBlock({ type: "text", text: "" })}>Add words between pictures</button> : null}
 
-        <div className="vss-hand">
-          <button type="button" className="vss-go" disabled={!canEdit || submitting === "sending"} onClick={submit}>
-            {submitting === "sending" ? "Submitting" : submitted ? "Submit again" : "Submit"}
-          </button>
-          {submitting === "problems" && problems.length ? (
-            <div className="vss-warn-box">
-              <b>Before you submit:</b>
-              <ul className="vss-list">{problems.map(p => <li key={p}>{p}</li>)}</ul>
-            </div>
-          ) : null}
-          {submitting === "unsaved" ? <span className="vss-warn">Your story is not saved yet, so the submission did not go through. Try again in a moment.</span> : null}
-          {submitting === "failed" ? <span className="vss-warn">The submission did not go through. Check your connection and try again.</span> : null}
-          {submitted && !submitting ? <span className="vss-muted">Submitted {when(submitted)}. You can keep editing until the due date.</span> : null}
-          <ReportProblem classId={classId} saver={saver} status={status} errors={errors} />
-        </div>
+          <label className="vss-field vss-field-quiet">
+            <span className="vss-label">A link to an interactive version (optional)</span>
+            <span className="vss-muted">If you want to include a link, it will go at the top of your story as an alternate way to read your work.</span>
+            <input className="vss-input" value={answers.link || ""} maxLength={500} placeholder="https://" readOnly={!canEdit} onChange={e => set("link", e.target.value.trim())} />
+          </label>
+        </section>
+
+        <section className="vss-see" aria-label="Your story, the way classmates will see your story">
+          <div className="vss-see-head">
+            <span className="vss-label">Your story, the way classmates will see your story</span>
+          </div>
+          <div className={"vss-see-frame vss-frame-" + story.look}>
+            <StoryView story={story} urls={urls} />
+          </div>
+        </section>
       </div>
+
+      <footer className="vss-end">
+        <button type="button" className="vss-go vss-submit" disabled={!canEdit || submitting === "sending"} onClick={submit}>
+          {submitting === "sending" ? "Submitting" : submitted ? "Submit again" : "Submit"}
+        </button>
+        {submitting === "problems" && problems.length ? (
+          <div className="vss-fix">
+            <b>Almost there! Before you submit:</b>
+            <ul className="vss-list">{problems.map(p => <li key={p}>{p}</li>)}</ul>
+          </div>
+        ) : null}
+        {submitting === "unsaved" ? <span className="vss-bad">Your story is not saved yet, so the submission did not go through. Try again in a moment.</span> : null}
+        {submitting === "failed" ? <span className="vss-bad">The submission did not go through. Check your connection and try again.</span> : null}
+        {submitted && !submitting ? <span className="vss-good-text">Submitted {when(submitted)}. You can keep editing until the due date.</span> : null}
+        <ReportProblem classId={classId} saver={saver} status={status} errors={errors} />
+      </footer>
     </div>
   );
 }
 
-function ImageFields({ b, url, feature, canEdit, onChange, onFeature }) {
+function Meter({ label, n, min, max, ok }) {
+  const pct = Math.min(100, Math.round((n / max) * 100));
+  return (
+    <span className={"vss-count" + (ok ? " vss-count-ok" : "")}>
+      <span className="vss-count-n">{n}</span>
+      <span className="vss-count-l">{label}, {min} to {max}</span>
+      <span className="vss-count-bar"><span className="vss-count-fill" style={{ width: pct + "%" }} /></span>
+    </span>
+  );
+}
+
+function ImageFields({ b, canEdit, onChange }) {
   const portrait = isPortrait(b);
   const reasons = b.reasons || [];
   return (
-    <div className={"vss-img vss-lay-" + layoutOf(b)}>
-      <div className="vss-thumb-wrap">{url ? <img className="vss-thumb" src={url} alt="" /> : <div className="vss-thumb vss-read-wait">Loading</div>}</div>
-      <div className="vss-fields">
-        <label className="vss-q">
-          <span className="vss-ask">Caption</span>
-          <textarea className="vss-box" rows={3} value={b.caption || ""} readOnly={!canEdit} maxLength={2000} onChange={e => onChange({ caption: e.target.value })} />
-        </label>
+    <div className="vss-fields">
+      <textarea className="vss-input" rows={3} value={b.caption || ""} readOnly={!canEdit} maxLength={2000} placeholder="Caption: what should readers notice here?" onChange={e => onChange({ caption: e.target.value })} />
+      <div className="vss-row">
+        {portrait ? LAYOUTS.map(([id, name]) => <button key={id} type="button" className="vss-pill" aria-pressed={layoutOf(b) === id} disabled={!canEdit} onClick={() => onChange({ layout: id })}>{name}</button>)
+          : <span className="vss-muted">Full width. Text can sit beside portrait photos.</span>}
+      </div>
+      <div className="vss-row">
+        <button type="button" className="vss-pill" aria-pressed={!!b.graphic} disabled={!canEdit} onClick={() => onChange({ graphic: !b.graphic })}>{b.graphic ? "Graphic, with a source" : "Is this a graphic?"}</button>
+      </div>
+      {b.graphic ? <input className="vss-input" value={b.source || ""} maxLength={300} readOnly={!canEdit} placeholder="Source: where the numbers come from" onChange={e => onChange({ source: e.target.value })} /> : null}
+      <div className="vss-why" role="group" aria-label="Why did this picture make the cut?">
+        <span className="vss-why-h">Why this picture? <span className="vss-muted">Only Dr. Ishak sees this part.</span></span>
         <div className="vss-row">
-          <span className="vss-ask">Layout</span>
-          {portrait
-            ? LAYOUTS.map(([id, name]) => <button key={id} type="button" className="vss-chip" aria-pressed={layoutOf(b) === id} disabled={!canEdit} onClick={() => onChange({ layout: id })}>{name}</button>)
-            : <span className="vss-muted">Full width. Text beside a photo is for portrait photos.</span>}
-        </div>
-        <label className="vss-check"><input type="radio" checked={feature} disabled={!canEdit} onChange={onFeature} /> Feature image</label>
-        <label className="vss-check"><input type="checkbox" checked={!!b.graphic} disabled={!canEdit} onChange={e => onChange({ graphic: e.target.checked })} /> This is a graphic</label>
-        {b.graphic ? (
-          <label className="vss-q">
-            <span className="vss-ask">Source line</span>
-            <input className="vss-box" value={b.source || ""} maxLength={300} readOnly={!canEdit} placeholder="Where the numbers come from" onChange={e => onChange({ source: e.target.value })} />
-          </label>
-        ) : null}
-        <fieldset className="vss-q vss-why">
-          <legend className="vss-ask">Why did this image make the cut? Only Dr. Ishak sees your answer.</legend>
           {REASONS.map(([id, name]) => (
-            <label key={id} className="vss-check">
-              <input type="checkbox" checked={reasons.includes(id)} disabled={!canEdit}
-                onChange={e => onChange({ reasons: e.target.checked ? [...reasons, id] : reasons.filter(r => r !== id) })} /> {name}
-            </label>
+            <button key={id} type="button" className="vss-pill" aria-pressed={reasons.includes(id)} disabled={!canEdit}
+              onClick={() => onChange({ reasons: reasons.includes(id) ? reasons.filter(r => r !== id) : [...reasons, id] })}>{name}</button>
           ))}
-          {reasons.includes("other") ? <input className="vss-box" value={b.other || ""} maxLength={300} readOnly={!canEdit} placeholder="A few words on why" onChange={e => onChange({ other: e.target.value })} /> : null}
-        </fieldset>
+        </div>
+        {reasons.includes("other") ? <input className="vss-input" value={b.other || ""} maxLength={300} readOnly={!canEdit} placeholder="A few words on why" onChange={e => onChange({ other: e.target.value })} /> : null}
       </div>
     </div>
   );
@@ -366,8 +443,8 @@ function RemoveButton({ disabled, onRemove }) {
   const [sure, setSure] = useState(false);
   useEffect(() => { if (!sure) return; const t = setTimeout(() => setSure(false), 4000); return () => clearTimeout(t); }, [sure]);
   return sure
-    ? <button type="button" className="vss-btn vss-danger" onClick={onRemove}>Yes, remove</button>
-    : <button type="button" className="vss-btn" disabled={disabled} onClick={() => setSure(true)}>Remove</button>;
+    ? <button type="button" className="vss-mini vss-danger" onClick={onRemove}>Yes, remove</button>
+    : <button type="button" className="vss-mini" disabled={disabled} onClick={() => setSure(true)}>Remove</button>;
 }
 
 function ReportProblem({ classId, saver, status, errors }) {
@@ -381,18 +458,18 @@ function ReportProblem({ classId, saver, status, errors }) {
     setSent(r.error ? "failed" : "sent");
     if (!r.error) setText("");
   };
-  if (!open) return <button type="button" className="vss-btn vss-report" onClick={() => { setOpen(true); setSent(""); }}>Report a problem</button>;
+  if (!open) return <button type="button" className="vss-link-btn vss-report" onClick={() => { setOpen(true); setSent(""); }}>Something not working? Report a problem</button>;
   return (
     <div className="vss-report-box">
-      <label className="vss-q">
-        <span className="vss-ask">What went wrong? Dr. Ishak gets your note and the details from this page.</span>
-        <textarea className="vss-box" rows={3} value={text} maxLength={4000} onChange={e => setText(e.target.value)} />
+      <label className="vss-field">
+        <span className="vss-label">What went wrong? Dr. Ishak gets your note and the details from this page.</span>
+        <textarea className="vss-input" rows={3} value={text} maxLength={4000} onChange={e => setText(e.target.value)} />
       </label>
       <div className="vss-row">
         <button type="button" className="vss-go" disabled={sent === "sending"} onClick={send}>Send</button>
         <button type="button" className="vss-btn" onClick={() => setOpen(false)}>Close</button>
-        {sent === "sent" ? <span className="vss-muted">Sent. Dr. Ishak will see your report.</span> : null}
-        {sent === "failed" ? <span className="vss-warn">The report did not send. Email Dr. Ishak instead.</span> : null}
+        {sent === "sent" ? <span className="vss-good-text">Sent. Dr. Ishak will see your report.</span> : null}
+        {sent === "failed" ? <span className="vss-bad">The report did not send. Email Dr. Ishak instead.</span> : null}
       </div>
     </div>
   );
@@ -404,79 +481,162 @@ export function mountVisualStory(root, { store, viewer, readOnly = false, classI
   return { destroy() { r.unmount(); } };
 }
 
+// The story's own page is pure white or pure black, the student's choice, so
+// these colors are the story's and not the site theme's.
 const T = TOKENS.TEXT, S = TOKENS.SURFACE, L = TOKENS.LINE, ST = TOKENS.STATE;
+const SERIF = "'Lora', 'Iowan Old Style', Charter, Georgia, serif";
 const CSS = `
-.vss{padding:20px 16px 80px;color:${T.primary}}
-.vss-in{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
-.vss-top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
-.vss-title{margin:0;font-size:28px;font-weight:700;letter-spacing:-.02em}
-.vss-status{margin-left:auto;font-size:13px;color:${T.muted};border:1px solid ${L.soft};border-radius:999px;padding:3px 11px}
-.vss-p{margin:0;font-size:16.5px;line-height:1.6;color:${T.secondary};white-space:pre-line}
-.vss-muted{font-size:14.5px;color:${T.muted}}
-.vss-warn{color:${ST.late};font-size:15px}
-.vss-stand{border:1px solid ${ST.warn};border-radius:12px;padding:12px 14px;font-size:16px;background:${S.sunk}}
+.vss{padding:22px 20px 90px;color:${T.primary};max-width:1360px;margin:0 auto}
+.vss-p{margin:0;font-size:16px;color:${T.secondary}}
+.vss-muted{font-size:14px;color:${T.muted}}
+.vss-bad{color:${ST.late};font-size:15px}
+.vss-good-text{color:${ST.ok};font-size:15px;font-weight:600}
 .vss-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .vss-grow{flex:1}
-.vss-bar{position:sticky;top:64px;z-index:5;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid ${L.soft};border-radius:12px;background:${S.card}}
-.vss-count{font-size:14.5px;font-weight:600;color:${ST.warn}}
-.vss-good{color:${ST.ok}}
-.vss-q{display:flex;flex-direction:column;gap:6px;border:0;margin:0;padding:0;min-width:0}
-.vss-ask{font-size:15.5px;font-weight:600;padding:0}
-.vss-box{width:100%;box-sizing:border-box;font:inherit;font-size:16px;line-height:1.5;padding:9px 12px;border:1px solid ${L.strong};border-radius:10px;background:${S.card};color:${T.primary};resize:vertical}
-.vss-box:focus-visible,.vss-btn:focus-visible,.vss-go:focus-visible,.vss-chip:focus-visible{outline:2.5px solid ${T.primary};outline-offset:2px}
-.vss-btn{font:inherit;font-size:14px;font-weight:600;padding:6px 13px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
-.vss-btn[aria-pressed="true"]{background:${T.primary};color:${S.page};border-color:${T.primary}}
-.vss-btn:disabled,.vss-go:disabled,.vss-chip:disabled{opacity:.45;cursor:default}
-.vss-danger{border-color:${ST.late};color:${ST.late}}
-.vss-go{font:inherit;font-size:16px;font-weight:600;padding:10px 20px;border-radius:999px;border:0;background:${T.primary};color:${S.page};cursor:pointer}
-.vss-chip{font:inherit;font-size:13.5px;padding:5px 12px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.secondary};cursor:pointer}
-.vss-chip[aria-pressed="true"]{background:${T.primary};color:${S.page};border-color:${T.primary}}
-.vss-drop{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:26px 16px;border:2px dashed ${L.strong};border-radius:14px;background:${S.sunk}}
-.vss-drop-on{border-color:${T.primary};background:${S.card}}
-.vss-drop-p{margin:0;font-size:16px}
+
+.vss-hello{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+.vss-hello-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.vss-hello-h{margin:0;font-family:${SERIF};font-size:40px;font-weight:600;letter-spacing:-.015em;line-height:1.1}
+.vss-hello-sub{margin:0;font-size:17px;color:${T.secondary}}
+.vss-status{margin-left:auto;font-size:13px;font-weight:600;color:${T.muted};border:1px solid ${L.soft};border-radius:999px;padding:4px 12px}
+.vss-status-ok{color:${ST.ok};border-color:${ST.ok}}
+.vss-status-bad{color:${ST.late};border-color:${ST.late}}
+.vss-steps{list-style:none;counter-reset:step;margin:6px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px 32px}
+.vss-step{counter-increment:step;position:relative;padding-left:44px;display:flex;flex-direction:column;gap:2px}
+.vss-step::before{content:counter(step);position:absolute;left:0;top:-2px;width:32px;height:32px;border-radius:50%;background:${T.primary};color:${S.page};font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center}
+.vss-step-name{font-size:17px;font-weight:700}
+.vss-step-say{font-size:15.5px;line-height:1.5;color:${T.secondary}}
+.vss-note{border-left:4px solid ${ST.warn};padding:10px 14px;font-size:16px;background:${S.sunk};border-radius:6px}
+
+.vss-bar{position:sticky;top:60px;z-index:6;display:flex;align-items:center;gap:22px;flex-wrap:wrap;padding:12px 16px;margin-bottom:18px;border-radius:14px;background:${S.card};box-shadow:0 1px 2px rgba(0,0,0,.06),0 0 0 1px ${L.soft}}
+.vss-count{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:8px;align-items:baseline;min-width:170px}
+.vss-count-n{grid-row:1/3;font-size:28px;font-weight:700;line-height:1;color:${ST.warn}}
+.vss-count-ok .vss-count-n{color:${ST.ok}}
+.vss-count-l{font-size:13px;color:${T.muted}}
+.vss-count-bar{height:5px;border-radius:999px;background:${S.sunk};overflow:hidden;align-self:center}
+.vss-count-fill{display:block;height:100%;background:${ST.warn};transition:width .25s}
+.vss-count-ok .vss-count-fill{background:${ST.ok}}
+.vss-tabs{display:none;gap:4px;padding:3px;border-radius:999px;background:${S.sunk}}
+.vss-tab{font:inherit;font-size:14px;font-weight:600;padding:7px 14px;border-radius:999px;border:0;background:transparent;color:${T.secondary};cursor:pointer}
+.vss-tab[aria-selected="true"]{background:${S.card};color:${T.primary};box-shadow:0 1px 2px rgba(0,0,0,.12)}
+
+.vss-work{display:grid;grid-template-columns:minmax(380px,520px) 1fr;gap:28px;align-items:start}
+.vss-build{display:flex;flex-direction:column;gap:18px;min-width:0}
+.vss-see{position:sticky;top:150px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.vss-see-head{display:flex;align-items:center;gap:10px}
+.vss-see-frame{border-radius:16px;overflow:auto;max-height:calc(100vh - 190px);box-shadow:0 10px 40px -12px rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.08)}
+
+.vss-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.vss-field-quiet{margin-top:8px;padding-top:16px;border-top:1px solid ${L.soft}}
+.vss-label{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${T.muted}}
+.vss-input{width:100%;box-sizing:border-box;font:inherit;font-size:16px;line-height:1.5;padding:10px 12px;border:1px solid ${L.strong};border-radius:10px;background:${S.card};color:${T.primary};resize:vertical}
+.vss-headline{font-family:${SERIF};font-size:24px;font-weight:600;padding:12px 14px}
+.vss-input:focus-visible,.vss-btn:focus-visible,.vss-go:focus-visible,.vss-pill:focus-visible,.vss-mini:focus-visible,.vss-look:focus-visible,.vss-star:focus-visible,.vss-tab:focus-visible,.vss-link-btn:focus-visible{outline:2.5px solid ${T.primary};outline-offset:2px}
+
+.vss-looks{display:flex;gap:10px}
+.vss-look{display:flex;align-items:center;gap:10px;font:inherit;font-size:15px;font-weight:600;padding:8px 14px 8px 8px;border-radius:12px;border:1.5px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
+.vss-look[aria-pressed="true"]{border-color:${T.primary};box-shadow:inset 0 0 0 1.5px ${T.primary}}
+.vss-look-swatch{width:44px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:${SERIF};font-size:16px;font-weight:600;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.vss-look-light .vss-look-swatch{background:#fff;color:#111}
+.vss-look-dark .vss-look-swatch{background:#0b0b0c;color:#f4f4f2}
+
+.vss-drop{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:30px 18px;border:2px dashed ${L.strong};border-radius:18px;background:${S.sunk};transition:background .15s,border-color .15s}
+.vss-drop-on{border-color:${T.primary};background:${S.card};transform:scale(1.01)}
+.vss-drop-h{margin:0;font-family:${SERIF};font-size:24px;font-weight:600}
+.vss-drop-p{margin:0;font-size:14px;color:${T.muted}}
+.vss-drop-small{margin:6px 0 0;font-size:13.5px;color:${T.muted};max-width:40ch}
+
 .vss-ups{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-.vss-up{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;border:1px solid ${L.soft};border-radius:10px;background:${S.card}}
-.vss-up-name{font-weight:600;font-size:14.5px;max-width:40ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vss-meter{flex:1;min-width:120px;height:6px;border-radius:999px;background:${S.sunk};overflow:hidden}
+.vss-up{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:12px;background:${S.card};box-shadow:0 0 0 1px ${L.soft}}
+.vss-up-name{font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vss-meter{height:6px;border-radius:999px;background:${S.sunk};overflow:hidden}
 .vss-meter-in{display:block;height:100%;background:${T.primary};transition:width .2s}
-.vss-blocks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
-.vss-block{border:1px solid ${L.strong};border-radius:14px;padding:12px 14px;background:${S.card};display:flex;flex-direction:column;gap:10px}
-.vss-dragging{opacity:.4}
-.vss-drop-here{box-shadow:0 -4px 0 0 ${T.primary}}
-.vss-block-top{display:flex;align-items:center;gap:8px}
-.vss-handle{cursor:grab;font-size:20px;line-height:1;color:${T.muted};padding:2px 6px;user-select:none}
-.vss-block-name{font-size:16px}
+
+.vss-cards{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.vss-card{display:grid;grid-template-columns:104px 1fr;gap:14px;padding:12px;border-radius:16px;background:${S.card};box-shadow:0 1px 2px rgba(0,0,0,.05),0 0 0 1px ${L.soft};transition:box-shadow .15s,opacity .15s}
+.vss-card:hover{box-shadow:0 4px 16px -6px rgba(0,0,0,.18),0 0 0 1px ${L.strong}}
+.vss-dragging{opacity:.35}
+.vss-drop-here{box-shadow:0 -5px 0 0 ${T.primary},0 0 0 1px ${L.strong}}
+.vss-card-grip{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:grab;user-select:none}
+.vss-card-grip:active{cursor:grabbing}
+.vss-card-img{display:block;width:104px;height:104px;object-fit:cover;border-radius:10px;background:${S.sunk}}
+.vss-card-wait,.vss-card-words{display:flex;align-items:center;justify-content:center;font-size:13px;color:${T.muted}}
+.vss-card-words{font-family:${SERIF};font-size:18px;color:${T.secondary}}
+.vss-card-drag{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:${T.muted}}
+.vss-card-body{display:flex;flex-direction:column;gap:10px;min-width:0}
+.vss-card-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.vss-card-name{font-size:15.5px;margin-right:4px}
+.vss-fields{display:flex;flex-direction:column;gap:10px}
+.vss-why{display:flex;flex-direction:column;gap:6px;padding-top:8px;border-top:1px dashed ${L.soft}}
+.vss-why-h{font-size:14px;font-weight:700}
 .vss-add{align-self:flex-start}
-.vss-img{display:grid;grid-template-columns:minmax(160px,280px) 1fr;gap:16px;align-items:start}
-.vss-thumb-wrap{width:100%}
-.vss-thumb{display:block;width:100%;height:auto;max-height:340px;object-fit:contain;border-radius:8px;background:${S.sunk}}
-.vss-fields{display:flex;flex-direction:column;gap:10px;min-width:0}
-.vss-check{display:flex;align-items:center;gap:8px;font-size:15px}
-.vss-why{display:flex;flex-direction:column;gap:4px}
-.vss-hand{display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin-top:6px}
-.vss-warn-box{border:1px solid ${ST.late};border-radius:12px;padding:10px 14px;font-size:15px}
-.vss-list{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:3px}
-.vss-report{margin-top:14px}
-.vss-report-box{display:flex;flex-direction:column;gap:8px;width:100%;margin-top:14px}
-.vss-read{display:flex;flex-direction:column;gap:22px;max-width:760px;margin:0 auto;width:100%}
-.vss-read-h{margin:0;font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
-.vss-read-link{margin:0;font-size:15.5px;color:${T.secondary}}
-.vss-read-text{margin:0;font-size:18px;line-height:1.65;white-space:pre-line}
-.vss-read-fig{margin:0;display:flex;flex-direction:column;gap:8px}
-.vss-read-img{display:block;width:100%;height:auto;border-radius:6px;background:${S.sunk}}
-.vss-read-wait{display:flex;align-items:center;justify-content:center;min-height:180px;color:${T.muted};font-size:14px}
-.vss-read-cap{display:flex;flex-direction:column;gap:4px;font-size:16.5px;line-height:1.55;white-space:pre-line}
-.vss-read-src{font-size:13.5px;color:${T.muted}}
-.vss-read-why{font-size:13.5px;color:${ST.warn}}
-.vss-read-fig.vss-lay-left,.vss-read-fig.vss-lay-right{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center}
-.vss-read-fig.vss-lay-right .vss-read-img{order:2}
-.vss-lay-full{grid-template-columns:minmax(160px,280px) 1fr}
-.vsp-edit{display:block;width:100%;box-sizing:border-box;font:inherit;color:inherit;line-height:1.5;padding:4px 8px;margin:0;border:1.5px dashed ${L.strong};border-radius:8px;background:${S.card};resize:none;overflow:hidden}
-.vsp-edit.vss-p{font-size:16.5px}
-@media (max-width:700px){
-  .vss-img{grid-template-columns:1fr}
-  .vss-read-fig.vss-lay-left,.vss-read-fig.vss-lay-right{display:flex}
-  .vss-read-fig.vss-lay-right .vss-read-img{order:0}
-  .vss-bar{top:56px}
+
+.vss-btn{font:inherit;font-size:14px;font-weight:600;padding:7px 14px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
+.vss-btn[aria-pressed="true"]{background:${T.primary};color:${S.page};border-color:${T.primary}}
+.vss-mini{font:inherit;font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid ${L.soft};background:transparent;color:${T.secondary};cursor:pointer}
+.vss-mini:hover:not(:disabled){border-color:${L.strong};color:${T.primary}}
+.vss-pill{font:inherit;font-size:13.5px;padding:5px 12px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.secondary};cursor:pointer}
+.vss-pill[aria-pressed="true"]{background:${T.primary};color:${S.page};border-color:${T.primary}}
+.vss-star{font:inherit;font-size:13px;font-weight:700;padding:4px 11px;border-radius:999px;border:1px solid ${L.strong};background:transparent;color:${T.secondary};cursor:pointer}
+.vss-star[aria-pressed="true"]{background:#f5b301;border-color:#f5b301;color:#1a1300}
+.vss-btn:disabled,.vss-go:disabled,.vss-pill:disabled,.vss-mini:disabled,.vss-look:disabled,.vss-star:disabled{opacity:.45;cursor:default}
+.vss-danger{border-color:${ST.late};color:${ST.late}}
+.vss-go{font:inherit;font-size:16px;font-weight:700;padding:11px 22px;border-radius:999px;border:0;background:${T.primary};color:${S.page};cursor:pointer}
+.vss-link-btn{font:inherit;font-size:14px;font-weight:600;padding:0;border:0;background:none;color:${T.secondary};text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+.vss-end{display:flex;flex-direction:column;align-items:flex-start;gap:12px;margin-top:28px;padding-top:22px;border-top:1px solid ${L.soft}}
+.vss-submit{font-size:18px;padding:14px 34px}
+.vss-fix{border-radius:14px;padding:12px 16px;font-size:15.5px;background:${S.sunk};box-shadow:inset 4px 0 0 ${ST.warn}}
+.vss-list{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.vss-report{margin-top:10px}
+.vss-report-box{display:flex;flex-direction:column;gap:8px;width:100%;max-width:560px;margin-top:10px}
+.vss-solo{max-width:820px;margin:0 auto;border-radius:16px;overflow:hidden}
+
+.vsp-edit{display:block;width:100%;box-sizing:border-box;font:inherit;color:inherit;line-height:1.45;padding:4px 8px;margin:0;border:1.5px dashed ${L.strong};border-radius:8px;background:${S.card};resize:none;overflow:hidden}
+.vsp-edit.vss-hello-h{font-family:${SERIF};font-size:40px;font-weight:600}
+.vsp-edit.vss-step-name{font-weight:700}
+
+/* The story itself. */
+.vsr{display:flex;flex-direction:column;gap:26px;padding:44px 40px 60px;min-height:100%;box-sizing:border-box}
+.vsr-light{background:#fff;color:#141414}
+.vsr-dark{background:#0b0b0c;color:#f2f1ee}
+.vsr-kicker{margin:0;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.6}
+.vsr-h{margin:-14px 0 0;font-family:${SERIF};font-size:40px;font-weight:600;line-height:1.12;letter-spacing:-.01em}
+.vsr-link{margin:0;font-size:14.5px;opacity:.75}
+.vsr-link a{color:inherit}
+.vsr-empty{margin:0;font-family:${SERIF};font-size:19px;font-style:italic;opacity:.55}
+.vsr-text{margin:0;font-family:${SERIF};font-size:19px;line-height:1.7;white-space:pre-line;max-width:62ch}
+.vsr-fig{margin:0;display:flex;flex-direction:column;gap:10px}
+.vsr-img{display:block;width:100%;height:auto;border-radius:3px}
+.vsr-wait{display:flex;align-items:center;justify-content:center;min-height:200px;font-size:14px;opacity:.5;background:rgba(127,127,127,.15)}
+.vsr-cap{display:flex;flex-direction:column;gap:5px}
+.vsr-cap-text{font-size:15.5px;line-height:1.55;white-space:pre-line;opacity:.85}
+.vsr-src{font-size:12px;letter-spacing:.04em;text-transform:uppercase;opacity:.55}
+.vsr-why{font-size:13px;color:#b45309}
+.vsr-left,.vsr-right{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center}
+.vsr-left .vsr-cap-text,.vsr-right .vsr-cap-text{font-family:${SERIF};font-size:18.5px;line-height:1.6;opacity:1}
+.vsr-right .vsr-img{order:2}
+.vsr-full{width:100%}
+.vss-frame-light{background:#fff}
+.vss-frame-dark{background:#0b0b0c}
+
+@media (max-width:1060px){
+  .vss-work{grid-template-columns:1fr}
+  .vss-tabs{display:flex}
+  .vss-on-build .vss-see{display:none}
+  .vss-on-see .vss-build{display:none}
+  .vss-see{position:static}
+  .vss-see-frame{max-height:none}
+}
+@media (max-width:620px){
+  .vss{padding:16px 14px 80px}
+  .vss-hello-h,.vsp-edit.vss-hello-h{font-size:30px}
+  .vss-card{grid-template-columns:72px 1fr;gap:10px}
+  .vss-card-img{width:72px;height:72px}
+  .vsr{padding:28px 18px 40px}
+  .vsr-h{font-size:30px}
+  .vsr-left,.vsr-right{display:flex;flex-direction:column}
+  .vsr-right .vsr-img{order:0}
+  .vss-bar{top:56px;gap:14px}
 }
 `;
