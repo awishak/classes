@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
-import { PROMPTS, BOXES, standing, missingOf } from "./pre.jsx";
+import { PROMPTS, BOXES, standing, missingOf, useCopy } from "./pre.jsx";
 import * as TOKENS from "../tokens.js";
 
 const call = async (body) => {
@@ -24,10 +24,11 @@ const call = async (body) => {
   return out;
 };
 
-const promptName = (id) => (PROMPTS.find(p => p.id === id) || {}).name || "No prompt chosen";
+
 const LABEL = { open: "Not handed in", waiting: "Waiting for you", approved: "Approved", needs: "Needs work" };
 
 export default function PreReview({ config, worksheetKey, roster }) {
+  const copy = useCopy(false);
   const [sheets, setSheets] = useState(null);
   const [error, setError] = useState("");
   const [noTable, setNoTable] = useState(false);
@@ -64,14 +65,15 @@ export default function PreReview({ config, worksheetKey, roster }) {
         </div>
       ) : null}
       <p className="vpr-p">{count("waiting")} waiting for you, {count("approved")} approved, {count("needs")} needs work, {count("open")} not handed in.</p>
-      {people.map(p => <Row key={p.email} student={p} sheet={byEmail.get(String(p.email).trim().toLowerCase())} onSave={save} disabled={noTable} />)}
+      {people.map(p => <Row key={p.email} student={p} sheet={byEmail.get(String(p.email).trim().toLowerCase())} onSave={save} disabled={noTable} copy={copy} />)}
       {others.length ? <h2 className="vpr-h2">Not on the roster</h2> : null}
-      {others.map(s => <Row key={s.viewer_id} student={{ name: s.viewer_id, email: s.viewer_id }} sheet={s} onSave={save} disabled={noTable} />)}
+      {others.map(s => <Row key={s.viewer_id} student={{ name: s.viewer_id, email: s.viewer_id }} sheet={s} onSave={save} disabled={noTable} copy={copy} />)}
     </Shell>
   );
 }
 
-function Row({ student, sheet, onSave, disabled }) {
+function Row({ student, sheet, onSave, disabled, copy }) {
+  const promptName = (id) => (PROMPTS.some(p => p.id === id) ? copy.say("prompt." + id + ".name") : "No prompt chosen");
   const a = sheet?.answers || {};
   const where = standing(sheet?.submitted_at, sheet?.review);
   const [note, setNote] = useState(sheet?.review?.note || "");
@@ -89,7 +91,7 @@ function Row({ student, sheet, onSave, disabled }) {
       {!sheet ? <p className="vpr-muted">Has not opened the sheet.</p> : (
         <>
           <p className="vpr-line"><span className="vpr-k">Prompt</span>{promptName(a.prompt)}</p>
-          {BOXES.map(b => a[b.field] ? <p key={b.field} className="vpr-line"><span className="vpr-k">{b.ask}</span>{a[b.field]}</p> : null)}
+          {BOXES.map(b => a[b.field] ? <p key={b.field} className="vpr-line"><span className="vpr-k">{copy.say("box." + b.field)}</span>{a[b.field]}</p> : null)}
           {missingOf(a).length ? <p className="vpr-muted">{missingOf(a).length} boxes empty.</p> : null}
           <textarea className="vpr-note" rows={2} value={note} placeholder="A note the student sees" onChange={e => setNote(e.target.value)} disabled={disabled} />
           <div className="vpr-act">

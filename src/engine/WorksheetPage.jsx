@@ -89,16 +89,16 @@ function TheirSheet({ config, worksheetKey, student, theme, photo }) {
 // as them, the way the package's sheet does. The photograph on their card
 // becomes their picture on the terminal, and the roster, less themselves, is
 // who they can name as a co-worker.
-function LocalSheet({ local, config, viewer, photo, classmates, theme }) {
+function LocalSheet({ local, config, viewer, photo, classmates, theme, editor }) {
   const ref = useRef(null);
   const names = classmates.join("\n");
   useEffect(() => {
     const store = supabaseStore({ supabase: gameClient, worksheetKey: local.key, groupKey: config.id, viewerId: viewer.id });
     // What week 1 says about them (onfile.js).
     const onFile = loadOnFile({ supabase: gameClient, storageKey: config.storageKey, viewerId: viewer.id });
-    const sheet = local.mount(ref.current, { store, viewer, photo, classmates: names ? names.split("\n") : [], onFile, theme, classId: config.id });
+    const sheet = local.mount(ref.current, { store, viewer, photo, classmates: names ? names.split("\n") : [], onFile, theme, classId: config.id, editor });
     return () => sheet.destroy();
-  }, [local, config.id, config.storageKey, viewer.id, viewer.name, photo, names, theme]);
+  }, [local, config.id, config.storageKey, viewer.id, viewer.name, photo, names, theme, editor]);
   return <div ref={ref} />;
 }
 
@@ -161,7 +161,7 @@ export default function WorksheetPage({ config, worksheetKey }) {
 
   let body;
   if (wantReview) {
-    body = !session || !instructor
+    body = !(session && instructor) && !savedPin()
       ? <p style={{ fontSize: 17, margin: 0 }}>Only the instructor can open the review. <a className="ca-focus" href={"/login?next=" + encodeURIComponent(next + "?review")} style={{ color: config.accent, fontWeight: 600 }}>Sign in</a></p>
       : data === null ? <p style={{ fontSize: 17, margin: 0 }}>Loading the roster.</p>
       : "review";
@@ -208,7 +208,7 @@ export default function WorksheetPage({ config, worksheetKey }) {
         : body !== null
         ? <div style={{ padding: 32 }}>{body}</div>
         : local
-        ? <LocalSheet key={viewer.id} local={local} config={config} viewer={viewer} photo={(me && photos[me.name]) || (!me && config.instructor?.photo) || ""} classmates={classmates} theme={sheetThemeOf(theme, mode)} />
+        ? <LocalSheet key={viewer.id} local={local} config={config} viewer={viewer} photo={(me && photos[me.name]) || (!me && config.instructor?.photo) || ""} classmates={classmates} theme={sheetThemeOf(theme, mode)} editor={!!instructor && !me} />
         : <Worksheet key={viewer.id} supabase={gameClient} worksheetKey={worksheetKey} groupKey={config.id} viewer={viewer}
             accent={config.accent} accentLight={config.accentLight} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />}
     </div>

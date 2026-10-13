@@ -59,9 +59,16 @@ export async function accessToken() {
     });
     const body = await r.json().catch(() => ({}));
     if (r.ok && body.access_token) return keep(body).access_token;
-  } catch { /* fall through */ }
-  clearSession();
-  return "";
+    // Only the server saying no ends the sign-in. A server error is a bad
+    // moment, not a bad session.
+    if (r.status >= 400 && r.status < 500) { clearSession(); return ""; }
+  } catch { /* offline: keep the sign-in and try again on the next call */ }
+  // Offline or a server error. 2026-10-13: a dropped connection at refresh
+  // time signed the person out, which on a student's bad wifi would end their
+  // sign-in in the middle of an assignment. The old token goes out instead;
+  // the call fails, the page says so and tries again, and the next refresh
+  // with a connection works.
+  return s.access_token;
 }
 
 // Headers for a call to our own API that should carry who is asking.

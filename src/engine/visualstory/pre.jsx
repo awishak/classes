@@ -40,6 +40,62 @@ export const BOXES = [
   { field: "arc", ask: "Is this story ongoing or over? Is there a what-happens-next feel, or do you have a complete beginning, middle and end?", rows: 3 },
 ];
 export const FIELDS = ["prompt", ...BOXES.map(b => b.field)];
+
+// The words students read, editable by Andrew in place. Andrew, 2026-10-13:
+// "give me ability to line edit your intro and prompts for students." The
+// defaults are here; his edits live in one instructor-only row (a -plan row,
+// so the database refuses anyone else's write) that every class reads, so the
+// COMM 999 demo and COMM 3 say the same thing.
+export const COPY_ROW = "worksheet-visual-pre-plan";
+export const DEFAULT_COPY = {
+  intro: "Due Friday, October 16, at 11:59 PM. Choose one of the three prompts, tell me your topic, and plan your story before you shoot. Your topic has to be new, different from your visual language exercise. Your answers save as you type. When you're done, press Hand in, and I'll mark your topic approved or needs work, with a note, right here.",
+  promptAsk: "Which prompt is your story?",
+  frameHead: "The frame",
+  ...Object.fromEntries(PROMPTS.flatMap(p => [["prompt." + p.id + ".name", p.name], ["prompt." + p.id + ".say", p.say]])),
+  ...Object.fromEntries(BOXES.map(b => ["box." + b.field, b.ask])),
+};
+
+/** The words, with Andrew's edits over the defaults. edit(key, value) saves a beat later. */
+export function useCopy(canEdit) {
+  const [edits, setEdits] = useState({});
+  const [status, setStatus] = useState("");
+  const timer = useRef(null);
+  const latest = useRef({});
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try { const got = await window.storage.get(COPY_ROW); if (alive && got) { latest.current = JSON.parse(got.value) || {}; setEdits(latest.current); } } catch { /* the defaults stand */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+  const push = async () => {
+    setStatus("Saving the words");
+    const res = await window.storage.set(COPY_ROW, JSON.stringify(latest.current));
+    if (res === false) setStatus("Not saved. Sign in as the instructor to change the words");
+    else if (!res) { setStatus("Words not saved, trying again"); timer.current = setTimeout(push, 4000); }
+    else setStatus("Words saved");
+  };
+  const edit = (key, value) => {
+    if (!canEdit) return;
+    latest.current = { ...latest.current, [key]: value };
+    setEdits(latest.current);
+    setStatus("Saving the words");
+    clearTimeout(timer.current);
+    timer.current = setTimeout(push, 800);
+  };
+  const say = (key) => (edits[key] != null && String(edits[key]).trim() ? edits[key] : DEFAULT_COPY[key]);
+  return { say, edit, status, raw: (key) => (edits[key] != null ? edits[key] : DEFAULT_COPY[key]) };
+}
+
+// One editable line: plain text for students, a box that grows for Andrew.
+function Words({ k, copy, editing, as: Tag = "span", className }) {
+  if (!editing) return <Tag className={className}>{copy.say(k)}</Tag>;
+  return (
+    <textarea className={"vsp-edit " + (className || "")} value={copy.raw(k)} rows={1} aria-label={"Edit: " + DEFAULT_COPY[k]}
+      ref={el => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } }}
+      onChange={e => copy.edit(k, e.target.value)} />
+  );
+}
 export const missingOf = (answers) => FIELDS.filter(f => !String(answers[f] || "").trim());
 
 const STATUS = { loading: "Loading", saved: "Saved", saving: "Saving", retrying: "Not saved, trying again", "failed-load": "Could not load your answers. Reload the page." };
@@ -60,7 +116,9 @@ async function reviewFor({ worksheetKey, classId, viewerId }) {
   return (r.data && r.data[0]) || null;
 }
 
-export function PreSheet({ store, viewer, classId, readOnly, review: givenReview, storage }) {
+export function PreSheet({ store, viewer, classId, readOnly, review: givenReview, storage, editor = false }) {
+  const copy = useCopy(editor);
+  const [editing, setEditing] = useState(false);
   const [answers, setAnswers] = useState(null);
   const [submitted, setSubmitted] = useState(null);
   const [status, setStatus] = useState("loading");
@@ -124,24 +182,31 @@ export function PreSheet({ store, viewer, classId, readOnly, review: givenReview
           <h1 className="vsp-title">{VISUAL_PRE_TITLE}</h1>
           {!readOnly ? <span className={"vsp-status" + (status === "retrying" ? " vsp-warn" : "")} aria-live="polite">{STATUS[status]}</span> : null}
         </div>
-        <p className="vsp-p">
-          Due Friday, October 16, at 11:59 PM. Choose one of the three prompts, tell me your topic, and plan your
-          story before you shoot. Your topic has to be new, different from your visual language exercise. Your
-          answers save as you type. When you're done, press Hand in, and I'll mark your topic approved or needs
-          work, with a note, right here.
-        </p>
+        {editor ? (
+          <div className="vsp-editbar">
+            <button type="button" className="vsp-editbtn" aria-pressed={editing} onClick={() => setEditing(e => !e)}>{editing ? "Done editing the words" : "Edit the words"}</button>
+            <span className="vsp-muted" aria-live="polite">{editing ? copy.status || "Change any line students read. Clear a line to put the original back." : copy.status}</span>
+          </div>
+        ) : null}
+        <Words k="intro" copy={copy} editing={editing} as="p" className="vsp-p" />
 
         <Standing where={where} />
 
         <fieldset className="vsp-q">
-          <legend className="vsp-ask">Which prompt is your story?</legend>
+          <legend className="vsp-ask"><Words k="promptAsk" copy={copy} editing={editing} /></legend>
           <div className="vsp-prompts">
             {PROMPTS.map(p => {
               const on = answers.prompt === p.id;
+              if (editing) return (
+                <div key={p.id} className="vsp-prompt">
+                  <Words k={"prompt." + p.id + ".name"} copy={copy} editing as="b" className="vsp-edit-b" />
+                  <Words k={"prompt." + p.id + ".say"} copy={copy} editing />
+                </div>
+              );
               return (
                 <button key={p.id} type="button" className={"vsp-prompt" + (on ? " vsp-on" : "")} aria-pressed={on} disabled={readOnly}
                   onClick={() => set("prompt", on ? "" : p.id)}>
-                  <b>{p.name}</b><span>{p.say}</span>
+                  <b>{copy.say("prompt." + p.id + ".name")}</b><span>{copy.say("prompt." + p.id + ".say")}</span>
                 </button>
               );
             })}
@@ -153,9 +218,9 @@ export function PreSheet({ store, viewer, classId, readOnly, review: givenReview
           group = b.group || null;
           return (
             <div key={b.field}>
-              {head ? <h2 className="vsp-h2">{head}</h2> : null}
+              {head ? <Words k="frameHead" copy={copy} editing={editing} as="h2" className="vsp-h2" /> : null}
               <label className="vsp-q">
-                <span className="vsp-ask">{b.ask}</span>
+                <Words k={"box." + b.field} copy={copy} editing={editing} className="vsp-ask" />
                 {b.rows === 1
                   ? <input className="vsp-box" value={answers[b.field] || ""} readOnly={readOnly} maxLength={200} onChange={e => set(b.field, e.target.value)} />
                   : <textarea className="vsp-box" rows={b.rows} value={answers[b.field] || ""} readOnly={readOnly} maxLength={4000} onChange={e => set(b.field, e.target.value)} />}
@@ -194,9 +259,9 @@ function Standing({ where }) {
 }
 
 /** The worksheet registry's mount: React inside the plain-DOM contract. */
-export function mountVisualPre(root, { store, viewer, readOnly = false, classId } = {}) {
+export function mountVisualPre(root, { store, viewer, readOnly = false, classId, editor = false } = {}) {
   const r = createRoot(root);
-  r.render(<PreSheet store={store} viewer={viewer} readOnly={readOnly} classId={classId} />);
+  r.render(<PreSheet store={store} viewer={viewer} readOnly={readOnly} classId={classId} editor={editor && !readOnly} />);
   return { destroy() { r.unmount(); } };
 }
 
@@ -229,4 +294,13 @@ const CSS = `
 .vsp-needs{border-color:${TOKENS.STATE.warn}}
 .vsp-needs b{color:${TOKENS.STATE.warn}}
 .vsp-note{margin:6px 0 0;white-space:pre-wrap}
+.vsp-editbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.vsp-editbtn{font:inherit;font-size:14px;font-weight:600;padding:6px 14px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
+.vsp-editbtn[aria-pressed="true"]{background:${T.primary};color:${S.page};border-color:${T.primary}}
+.vsp-edit{display:block;width:100%;box-sizing:border-box;font:inherit;color:inherit;line-height:1.5;padding:4px 8px;margin:0;border:1.5px dashed ${L.strong};border-radius:8px;background:${S.card};resize:none;overflow:hidden}
+.vsp-edit:focus-visible{outline:2.5px solid ${T.primary};outline-offset:2px}
+.vsp-edit.vsp-p{font-size:16.5px;color:${T.secondary}}
+.vsp-edit.vsp-ask{font-size:16px;font-weight:600}
+.vsp-edit.vsp-h2{font-size:19px;font-weight:700}
+.vsp-edit-b{font-weight:700}
 `;
