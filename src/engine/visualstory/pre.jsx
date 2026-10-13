@@ -48,7 +48,7 @@ export const FIELDS = ["prompt", ...BOXES.map(b => b.field)];
 // COMM 999 demo and COMM 3 say the same thing.
 export const COPY_ROW = "worksheet-visual-pre-plan";
 export const DEFAULT_COPY = {
-  intro: "Due Friday, October 16, at 11:59 PM. Choose one of the three prompts, tell me your topic, and plan your story before you shoot. Your topic has to be new, different from your visual language exercise. Your answers save as you type. When you're done, press Hand in, and I'll mark your topic approved or needs work, with a note, right here.",
+  intro: "Due Friday, October 16, at 11:59 PM. Choose one of the three prompts, tell me your topic, and plan your story before you shoot. Your topic has to be new, different from your visual language exercise. Your answers save as you type. When you're done, press Submit, and I'll mark your topic approved or needs work, with a note, right here.",
   promptAsk: "Which prompt is your story?",
   frameHead: "The frame",
   ...Object.fromEntries(PROMPTS.flatMap(p => [["prompt." + p.id + ".name", p.name], ["prompt." + p.id + ".say", p.say]])),
@@ -232,12 +232,12 @@ export function PreSheet({ store, viewer, classId, readOnly, review: givenReview
         {!readOnly ? (
           <div className="vsp-hand">
             <button type="button" className="vsp-go" disabled={handing === "sending"} onClick={handIn}>
-              {handing === "sending" ? "Handing in" : submitted ? "Hand in again" : "Hand in"}
+              {handing === "sending" ? "Submitting" : submitted ? "Submit again" : "Submit"}
             </button>
             {handing === "missing" && left.length ? <span className="vsp-warn">Every box needs an answer first. {left.length === 1 ? "One is" : left.length + " are"} still empty.</span> : null}
-            {handing === "unsaved" ? <span className="vsp-warn">Your answers are not saved yet, so the hand in did not go through. Try again in a moment.</span> : null}
-            {handing === "failed" ? <span className="vsp-warn">The hand in did not go through. Check your connection and try again.</span> : null}
-            {submitted && !handing ? <span className="vsp-muted">Handed in {when(submitted)}. You can keep editing until the due date.</span> : null}
+            {handing === "unsaved" ? <span className="vsp-warn">Your answers are not saved yet, so the submission did not go through. Try again in a moment.</span> : null}
+            {handing === "failed" ? <span className="vsp-warn">The submission did not go through. Check your connection and try again.</span> : null}
+            {submitted && !handing ? <span className="vsp-muted">Submitted {when(submitted)}. You can keep editing until the due date.</span> : null}
           </div>
         ) : null}
       </div>
@@ -247,13 +247,13 @@ export function PreSheet({ store, viewer, classId, readOnly, review: givenReview
 
 function Standing({ where }) {
   if (where.kind === "open") return null;
-  if (where.kind === "waiting") return <div className="vsp-stand">Handed in {when(where.at)}. Dr. Ishak has not reviewed your topic yet.</div>;
+  if (where.kind === "waiting") return <div className="vsp-stand">Submitted {when(where.at)}. Dr. Ishak has not reviewed your topic yet.</div>;
   const ok = where.kind === "approved";
   return (
     <div className={"vsp-stand " + (ok ? "vsp-ok" : "vsp-needs")}>
       <b>{ok ? "Approved" : "Needs work"}</b>
       {where.review.note ? <p className="vsp-note">{where.review.note}</p> : null}
-      {!ok ? <p className="vsp-note">Edit your answers below, then press Hand in again.</p> : null}
+      {!ok ? <p className="vsp-note">Edit your answers below, then press Submit again.</p> : null}
     </div>
   );
 }
@@ -272,7 +272,7 @@ const CSS = `
 .vsp-top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
 .vsp-title{margin:0;font-size:28px;font-weight:700;letter-spacing:-.02em}
 .vsp-status{margin-left:auto;font-size:13px;color:${T.muted};border:1px solid ${L.soft};border-radius:999px;padding:3px 11px}
-.vsp-p{margin:0;font-size:16.5px;line-height:1.6;color:${T.secondary}}
+.vsp-p{margin:0;font-size:16.5px;line-height:1.6;color:${T.secondary};white-space:pre-line}
 .vsp-h2{margin:10px 0 0;font-size:19px;font-weight:700}
 .vsp-q{display:flex;flex-direction:column;gap:8px;border:0;margin:0;padding:0;min-width:0}
 .vsp-ask{font-size:16px;font-weight:600;line-height:1.45;padding:0}

@@ -25,7 +25,7 @@ const call = async (body) => {
 };
 
 
-const LABEL = { open: "Not handed in", waiting: "Waiting for you", approved: "Approved", needs: "Needs work" };
+const LABEL = { open: "Not submitted", waiting: "Waiting for you", approved: "Approved", needs: "Needs work" };
 
 export default function PreReview({ config, worksheetKey, roster }) {
   const copy = useCopy(false);
@@ -64,7 +64,7 @@ export default function PreReview({ config, worksheetKey, roster }) {
           {sections.map(s => <button key={s} type="button" role="tab" aria-selected={s === section} className={"vpr-tab" + (s === section ? " vpr-on" : "")} onClick={() => setSection(s)}>{s}</button>)}
         </div>
       ) : null}
-      <p className="vpr-p">{count("waiting")} waiting for you, {count("approved")} approved, {count("needs")} needs work, {count("open")} not handed in.</p>
+      <p className="vpr-p">{count("waiting")} waiting for you, {count("approved")} approved, {count("needs")} needs work, {count("open")} not submitted.</p>
       {people.map(p => <Row key={p.email} student={p} sheet={byEmail.get(String(p.email).trim().toLowerCase())} onSave={save} disabled={noTable} copy={copy} />)}
       {others.length ? <h2 className="vpr-h2">Not on the roster</h2> : null}
       {others.map(s => <Row key={s.viewer_id} student={{ name: s.viewer_id, email: s.viewer_id }} sheet={s} onSave={save} disabled={noTable} copy={copy} />)}
