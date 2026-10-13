@@ -18,6 +18,7 @@ import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
 import VisualEssayPlan from "./engine/VisualEssayPlan.jsx";
+import VisualStoryInstructions from "./engine/visualstory/instructions.jsx";
 import GradeView from "./engine/GradeView.jsx";
 import CheckinAnswers from "./engine/CheckinAnswers.jsx";
 import InstructorBar from "./engine/InstructorBar.jsx";
@@ -244,6 +245,10 @@ export default function App() {
       </InstructorGate>
     );
   }
+
+  // The visual story's full instructions, for students: /comm3/visual-story.
+  const vsi = path.match(/^\/(comm3|comm999)\/visual-story\/?$/);
+  if (vsi && ENGINE[vsi[1]]) return <VisualStoryInstructions config={ENGINE[vsi[1]]} />;
 
   // The COMM 3 visual essay, planned before the portal is built.
   if (path === "/comm3/visualessayplanning" || path === "/comm3/visualessayplanning/") {

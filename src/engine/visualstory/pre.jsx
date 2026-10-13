@@ -56,7 +56,7 @@ export const DEFAULT_COPY = {
 };
 
 /** The words, with Andrew's edits over the defaults. edit(key, value) saves a beat later. */
-export function useCopy(canEdit) {
+export function useCopy(canEdit, row = COPY_ROW, defaults = DEFAULT_COPY) {
   const [edits, setEdits] = useState({});
   const [status, setStatus] = useState("");
   const timer = useRef(null);
@@ -64,13 +64,13 @@ export function useCopy(canEdit) {
   useEffect(() => {
     let alive = true;
     (async () => {
-      try { const got = await window.storage.get(COPY_ROW); if (alive && got) { latest.current = JSON.parse(got.value) || {}; setEdits(latest.current); } } catch { /* the defaults stand */ }
+      try { const got = await window.storage.get(row); if (alive && got) { latest.current = JSON.parse(got.value) || {}; setEdits(latest.current); } } catch { /* the defaults stand */ }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [row]);
   const push = async () => {
     setStatus("Saving the words");
-    const res = await window.storage.set(COPY_ROW, JSON.stringify(latest.current));
+    const res = await window.storage.set(row, JSON.stringify(latest.current));
     if (res === false) setStatus("Not saved. Sign in as the instructor to change the words");
     else if (!res) { setStatus("Words not saved, trying again"); timer.current = setTimeout(push, 4000); }
     else setStatus("Words saved");
@@ -83,15 +83,15 @@ export function useCopy(canEdit) {
     clearTimeout(timer.current);
     timer.current = setTimeout(push, 800);
   };
-  const say = (key) => (edits[key] != null && String(edits[key]).trim() ? edits[key] : DEFAULT_COPY[key]);
-  return { say, edit, status, raw: (key) => (edits[key] != null ? edits[key] : DEFAULT_COPY[key]) };
+  const say = (key) => (edits[key] != null && String(edits[key]).trim() ? edits[key] : defaults[key]);
+  return { say, edit, status, raw: (key) => (edits[key] != null ? edits[key] : defaults[key]), def: (key) => defaults[key] };
 }
 
 // One editable line: plain text for students, a box that grows for Andrew.
-function Words({ k, copy, editing, as: Tag = "span", className }) {
+export function Words({ k, copy, editing, as: Tag = "span", className }) {
   if (!editing) return <Tag className={className}>{copy.say(k)}</Tag>;
   return (
-    <textarea className={"vsp-edit " + (className || "")} value={copy.raw(k)} rows={1} aria-label={"Edit: " + DEFAULT_COPY[k]}
+    <textarea className={"vsp-edit " + (className || "")} value={copy.raw(k)} rows={1} aria-label={"Edit: " + String(copy.def(k) || "").slice(0, 80)}
       ref={el => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } }}
       onChange={e => copy.edit(k, e.target.value)} />
   );

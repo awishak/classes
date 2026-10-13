@@ -11,7 +11,7 @@ import { Worksheet, WORKSHEETS, mountSheet } from "@ishak/worksheets";
 import { useClassState } from "./store.js";
 import { rosterOf, findStudent } from "./roster.js";
 import { useSession, studentFor, authHeaders } from "./session.js";
-import { localWorksheet, openTo, listedFor } from "./localWorksheets.js";
+import { localWorksheet, openTo, listedFor, opensAt } from "./localWorksheets.js";
 import { supabaseStore, readStore } from "./worktopia/store.js";
 import { loadOnFile } from "./worktopia/onfile.js";
 import { CATEGORIES, HORRIBLE } from "./worktopia/jobs.js";
@@ -186,7 +186,8 @@ export default function WorksheetPage({ config, worksheetKey }) {
       : <p style={{ fontSize: 17, margin: 0 }}>{email} is not on the roster for {config.code} yet.</p>;
   } else if (local && !instructor && !openTo(local, config.id, data)) {
     // Built, not sent: the instructor tries it under their own email first.
-    body = <p style={{ fontSize: 17, margin: 0 }}>This worksheet is not open yet.</p>;
+    const at = opensAt(local, data);
+    body = <p style={{ fontSize: 17, margin: 0 }}>{at ? "This worksheet opens " + at.toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }) + "." : "This worksheet is not open yet."}</p>;
   } else {
     body = null;
   }

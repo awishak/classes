@@ -50,8 +50,17 @@ const PACKAGE_CLASSES = { "stakeholder-map": ["comm118", "comm999"] };
 export const listedFor = (sheet, classId) => { const list = sheet.classes || PACKAGE_CLASSES[sheet.key]; return !list || list.includes(classId); };
 
 /** Whether a local worksheet is open to the students of a class. data is the class, for the switch. */
-export const openTo = (local, classId, data) => {
+export const openTo = (local, classId, data, now = Date.now()) => {
   const set = data?.worksheetsOpen?.[local.key];
   if (typeof set === "boolean") return set;
+  // A time: the sheet opens on its own then. Andrew, 2026-10-13, on
+  // pre-production: "open the assignment starting tonight at 11:59 pm."
+  if (typeof set === "string" && !Number.isNaN(Date.parse(set))) return now >= Date.parse(set);
   return local.open === true || (Array.isArray(local.open) && local.open.includes(classId));
+};
+
+/** When a sheet set to open at a time opens, or null. */
+export const opensAt = (local, data) => {
+  const set = data?.worksheetsOpen?.[local.key];
+  return typeof set === "string" && !Number.isNaN(Date.parse(set)) ? new Date(set) : null;
 };
