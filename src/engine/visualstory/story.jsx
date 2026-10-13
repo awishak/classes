@@ -428,7 +428,7 @@ function ImageFields({ b, canEdit, onChange }) {
       </div>
       {b.graphic ? <input className="vss-input" value={b.source || ""} maxLength={300} readOnly={!canEdit} placeholder="Source: where the numbers come from" onChange={e => onChange({ source: e.target.value })} /> : null}
       <div className="vss-why" role="group" aria-label="Why did this picture make the cut?">
-        <span className={"vss-why-h" + (reasons.length ? "" : " vss-why-need")}>Why this picture? <span className="vss-muted">{reasons.length ? "Only Dr. Ishak sees this part." : "Tap at least one. Only Dr. Ishak sees this part."}</span></span>
+        <span className={"vss-why-h" + (reasons.length ? "" : " vss-why-need")}>Why this picture? <span className="vss-muted">{reasons.length ? "Only Dr. Ishak sees this part." : "Tap at least one reason. Only Dr. Ishak sees this part."}</span></span>
         <div className="vss-row vss-tight">
           {REASONS.map(([id, name]) => (
             <button key={id} type="button" className="vss-pill" aria-pressed={reasons.includes(id)} disabled={!canEdit}
