@@ -3367,8 +3367,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       // The conversation: newest first, the grade and the due date from
       // Andrew, the student's own message and link from them, and one box to
       // send with. Andrew, 2026-09-15: "it's like imessage."
-      const withDue = { ...ad, dueLog: { graded: [{ at: now - 8e8, due: "Sep 12", dueTime: "11:59 PM" }, { at: now - 2e8, due: "Sep 14", dueTime: "11:59 PM" }] } };
-      const chat = feedOf(acfg, withDue, acfg.assignments.find(x => x.id === "graded"), N);
+      // The move is real: the assignment holds the date the log moved it to.
+      const moved = (acfg.assignments || []).map(x => x.id === "graded" ? { ...x, due: "Sep 14" } : x);
+      const withDue = { ...ad, assignments: moved, dueLog: { graded: [{ at: now - 8e8, due: "Sep 12", dueTime: "11:59 PM" }, { at: now - 2e8, due: "Sep 14", dueTime: "11:59 PM" }] } };
+      const chat = feedOf(acfg, withDue, moved.find(x => x.id === "graded"), N);
+      // A date moved somewhere that skips the log still reads the date it holds now.
+      const skipped = feedOf(acfg, withDue, { ...moved.find(x => x.id === "graded"), due: "Sep 16" }, N).filter(m => m.kind === "due").map(m => m.text);
+      if (!skipped[0].startsWith("Due Wed Sep 16") || !skipped[1].startsWith("Due Sat Sep 12")) say("a due date moved outside the editor still reads the old date: " + skipped.join(" / "));
       const kinds = chat.map(m => m.kind + ":" + m.from).join(",");
       if (kinds !== "grade:instructor,due:instructor,due:instructor,sent:student") say("the conversation is not newest first, or is missing a message: " + kinds);
       if (!chat.find(m => m.kind === "due").text.startsWith("Due Mon Sep 14")) say("a moved due date does not read as its own message");

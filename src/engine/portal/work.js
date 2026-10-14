@@ -11,7 +11,7 @@
 //             Opens <day> on it and takes nothing in.
 
 import { assignmentsOf } from "../profileTask.js";
-import { statusOf, inDueOrder } from "../AssignmentCards.jsx";
+import { statusOf, inDueOrder, duesOf } from "../AssignmentCards.jsx";
 import { unseenGrades, alive, htmlToText, bucketOf, letterOf } from "../grades.js";
 import { deadlineOf } from "../DueCard.jsx";
 import { dueWords } from "./bits.jsx";
@@ -106,7 +106,7 @@ export function flowOf(config, data, name, now = Date.now()) {
           say: ["Your ", asg.title, " submission has been graded"], grade: e.letter || letterOf(e.score), means: b?.means || "", text: htmlToText(e.html), weight: asg.weight });
       }
     });
-    (data?.dueLog?.[asg.id] || []).forEach((d, i) => {
+    duesOf(data, asg).forEach((d, i) => {
       push({ id: "due-" + asg.id + "-" + i, at: d.at, who: "class", tint: "due", tags: ["work"], aid: asg.id,
         say: ["Your ", asg.title, " is due " + dueWords(d.due, d.dueTime)], weight: asg.weight,
         btn: deadlineOf(d.due, d.dueTime) > now ? "Open" : "" });

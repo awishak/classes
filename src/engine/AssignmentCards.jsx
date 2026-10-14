@@ -61,6 +61,19 @@ const dateOf = (s) => { const d = s ? new Date(s + ", 2026") : null; return d &&
 const when = (ts) => { try { return new Date(ts).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); } catch { return ""; } };
 const isOngoing = (asg) => !asg.due || asg.due === "Ongoing" || !dateOf(asg.due);
 
+// The due dates an assignment has announced, oldest first. A date changed
+// somewhere that skips the log left the newest entry saying the old date, so
+// the newest one always reads the date the assignment holds now. Andrew,
+// 2026-10-14: "the due dates for the next two assignments on the work flow"
+// were wrong, logged as Oct 14 and Oct 21 and moved to Oct 16 and Oct 23.
+export function duesOf(data, asg) {
+  const log = data?.dueLog?.[asg.id] || [];
+  if (!log.length || !asg.due) return log;
+  const last = log[log.length - 1];
+  return last.due === asg.due && (last.dueTime || "") === (asg.dueTime || "") ? log
+    : [...log.slice(0, -1), { ...last, due: asg.due, dueTime: asg.dueTime || "" }];
+}
+
 // Where one student stands on one assignment.
 export function statusOf(config, data, asg, name, unseen, now = Date.now()) {
   const log = alive(data?.assignmentLog?.[asg.id]?.[name]);
@@ -304,7 +317,7 @@ export function feedOf(config, data, asg, name) {
       out.push({ id: e.id, at: e.ts, from: "instructor", kind: "grade", letter: e.letter || letterOf(e.score), means: b?.means || "", text: htmlToText(e.html) });
     }
   });
-  const dues = data?.dueLog?.[asg.id] || [];
+  const dues = duesOf(data, asg);
   if (dues.length) dues.forEach((d, i) => out.push({ id: "due-" + i, at: d.at, from: "instructor", kind: "due", text: dueLine(d.due, d.dueTime) }));
   else if (asg.due) out.push({ id: "due-0", at: 0, from: "instructor", kind: "due", text: dueLine(asg.due, asg.dueTime) });
   return out.sort((x, y) => y.at - x.at);
