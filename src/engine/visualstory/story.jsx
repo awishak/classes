@@ -32,7 +32,7 @@ export const STORY_COPY_ROW = "worksheet-visual-story-plan";
 
 // The steps, said the way you'd say them to someone excited to start.
 export const STEPS = [
-  ["headline", "Write your headline.", "Your headline is the first thing classmates read. We brought over the one from your pre-production page, so make it even better if you can."],
+  ["headline", "Write your headline.", "Your headline is the first thing classmates read. The headline from your pre-production page is already here, so make it even better if you can."],
   ["pick", "Add your pictures.", "Drag six to eight photos and graphics into the big box. Photos straight from your phone work too."],
   ["order", "Put them in order.", "Grab a picture and drag the picture up or down until your story flows from start to finish."],
   ["tell", "Tell the story.", "Write a caption for each picture, and add words between pictures if you want. Use 150 to 300 words in all."],
