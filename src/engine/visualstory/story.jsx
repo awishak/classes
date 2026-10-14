@@ -32,11 +32,12 @@ export const STORY_COPY_ROW = "worksheet-visual-story-plan";
 
 // The steps, said the way you'd say them to someone excited to start.
 export const STEPS = [
+  ["headline", "Write your headline.", "Your headline is the first thing classmates read. We brought over the one from your pre-production page, so make it even better if you can."],
   ["pick", "Add your pictures.", "Drag six to eight photos and graphics into the big box. Photos straight from your phone work too."],
   ["order", "Put them in order.", "Grab a picture and drag the picture up or down until your story flows from start to finish."],
   ["tell", "Tell the story.", "Write a caption for each picture, and add words between pictures if you want. Use 150 to 300 words in all."],
   ["why", "Say why each picture made the cut.", "Tap at least one reason under each picture. Only Dr. Ishak sees your reasons."],
-  ["star", "Pick your star.", "Tap the star on your best picture. Your headline and your star picture are what classmates see first."],
+  ["star", "Pick your feature image.", "Tap Feature image on your best picture. Your headline and your feature image are what classmates see first."],
   ["look", "Choose your look.", "White page or black page? Tap one and watch your story change."],
   ["submit", "Peek, then submit.", "Look over your story the way classmates will see your story. When you love your story, press Submit."],
 ];
@@ -261,6 +262,12 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
   const toggleSteps = () => { const next = !stepsOpen; setStepsOpen(next); remember("visual-story-steps", next ? "open" : "hidden"); };
   const imageNo = (b) => story.blocks.filter(x => x.type === "image").indexOf(b) + 1;
 
+  const counts = (
+    <div className="vss-counts">
+      <Meter label="images" n={images} min={MIN_IMAGES} max={MAX_IMAGES} ok={imagesOk} />
+      <Meter label="words" n={words} min={MIN_WORDS} max={MAX_WORDS} ok={wordsOk} />
+    </div>
+  );
   return (
     <div className="vss" onDragOver={e => { if (canEdit && [...(e.dataTransfer?.types || [])].includes("Files")) { e.preventDefault(); setFileOver(true); } }}
       onDragLeave={e => { if (e.currentTarget === e.target) setFileOver(false); }}
@@ -295,8 +302,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
       </header>
 
       <div className="vss-bar">
-        <Meter label="pictures" n={images} min={MIN_IMAGES} max={MAX_IMAGES} ok={imagesOk} />
-        <Meter label="words" n={words} min={MIN_WORDS} max={MAX_WORDS} ok={wordsOk} />
+        {counts}
         <span className="vss-grow" />
         <div className="vss-tabs" role="tablist" aria-label="Build or see your story">
           <button type="button" role="tab" aria-selected={pane === "build"} className="vss-tab" onClick={() => setPane("build")}>Build</button>
@@ -373,7 +379,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
                     <b className="vss-card-name">{b.type === "image" ? "Picture " + imageNo(b) : "Words between pictures"}</b>
                     {b.type === "image" ? (
                       <button type="button" className="vss-star" aria-pressed={story.feature === b.id} disabled={!canEdit} onClick={() => set("feature", b.id)}
-                        title="Your star picture is what classmates see first">{story.feature === b.id ? "★ Star picture" : "☆ Make star"}</button>
+                        title="Your feature image is what classmates see first">{story.feature === b.id ? "Feature image" : "Set as feature image"}</button>
                     ) : null}
                     <span className="vss-grow" />
                     <button type="button" className="vss-mini" disabled={!canEdit || i === 0} onClick={() => move(b.id, i - 1)} aria-label="Move up">Up</button>
@@ -397,6 +403,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
         </section>
 
         <section className="vss-see" aria-label="Story preview">
+          {counts}
           <div className="vss-see-head">
             <span className="vss-label">Story preview</span>
           </div>
@@ -430,7 +437,7 @@ function Meter({ label, n, min, max, ok }) {
   return (
     <span className={"vss-count" + (ok ? " vss-count-ok" : "")}>
       <span className="vss-count-n">{n}</span>
-      <span className="vss-count-l">{label}, {min} to {max}</span>
+      <span className="vss-count-l">{min} to {max} {label}</span>
       <span className="vss-count-bar"><span className="vss-count-fill" style={{ width: pct + "%" }} /></span>
     </span>
   );
@@ -535,12 +542,15 @@ const CSS = `
 .vss-step-say{font-size:15.5px;line-height:1.5;color:${T.secondary}}
 .vss-note{border-left:4px solid ${ST.warn};padding:10px 14px;font-size:16px;background:${S.sunk};border-radius:6px}
 
-.vss-bar{position:sticky;top:60px;z-index:6;display:flex;align-items:center;gap:22px;flex-wrap:wrap;padding:12px 16px;margin-bottom:18px;border-radius:14px;background:${S.card};box-shadow:0 1px 2px rgba(0,0,0,.06),0 0 0 1px ${L.soft}}
-.vss-count{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:8px;align-items:baseline;min-width:170px}
-.vss-count-n{grid-row:1/3;font-size:28px;font-weight:700;line-height:1;color:${ST.warn}}
+.vss-bar{position:sticky;top:60px;z-index:6;display:none;align-items:center;gap:22px;flex-wrap:wrap;padding:12px 16px;margin-bottom:18px;border-radius:14px;background:${S.card};box-shadow:0 1px 2px rgba(0,0,0,.06),0 0 0 1px ${L.soft}}
+.vss-counts{display:flex;align-self:flex-start;border-radius:12px;background:${S.card};box-shadow:0 0 0 1px ${L.soft}}
+.vss-bar .vss-counts{box-shadow:none;background:transparent}
+.vss-count{display:flex;flex-direction:column;gap:3px;padding:8px 16px;min-width:116px}
+.vss-count+.vss-count{border-left:1px solid ${L.soft}}
+.vss-count-n{font-size:22px;font-weight:700;line-height:1.1;color:${ST.warn}}
 .vss-count-ok .vss-count-n{color:${ST.ok}}
 .vss-count-l{font-size:13px;color:${T.muted}}
-.vss-count-bar{height:5px;border-radius:999px;background:${S.sunk};overflow:hidden;align-self:center}
+.vss-count-bar{height:4px;margin-top:2px;border-radius:999px;background:${S.sunk};overflow:hidden}
 .vss-count-fill{display:block;height:100%;background:${ST.warn};transition:width .25s}
 .vss-count-ok .vss-count-fill{background:${ST.ok}}
 .vss-tabs{display:none;gap:4px;padding:3px;border-radius:999px;background:${S.sunk}}
@@ -549,7 +559,7 @@ const CSS = `
 
 .vss-work{display:grid;grid-template-columns:minmax(380px,520px) 1fr;gap:28px;align-items:start}
 .vss-build{display:flex;flex-direction:column;gap:18px;min-width:0}
-.vss-see{position:sticky;top:150px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.vss-see{position:sticky;top:80px;display:flex;flex-direction:column;gap:8px;min-width:0}
 .vss-see-head{display:flex;align-items:center;gap:10px}
 .vss-see-frame{border-radius:16px;overflow:auto;max-height:calc(100vh - 190px);box-shadow:0 10px 40px -12px rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.08)}
 
@@ -653,6 +663,8 @@ const CSS = `
 @media (max-width:1060px){
   .vss-work{grid-template-columns:1fr}
   .vss-tabs{display:flex}
+  .vss-bar{display:flex}
+  .vss-see .vss-counts{display:none}
   .vss-on-build .vss-see{display:none}
   .vss-on-see .vss-build{display:none}
   .vss-see{position:static}
