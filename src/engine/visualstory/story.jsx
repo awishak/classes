@@ -61,7 +61,6 @@ export function StoryView({ story, urls, showPrivate = false, look, credit }) {
   const theme = (look || story.look) === "dark" ? "dark" : "light";
   return (
     <article className={"vsr vsr-" + theme}>
-      <p className="vsr-kicker">A visual story</p>
       <h1 className="vsr-h">{story.headline || "Your headline goes here"}</h1>
       {story.link ? <p className="vsr-link">Read the interactive version: <a href={story.link} target="_blank" rel="noreferrer">{story.link}</a></p> : null}
       {!story.blocks.length ? <p className="vsr-empty">Your pictures show up here as you add pictures on the left.</p> : null}
@@ -397,9 +396,9 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
           </label>
         </section>
 
-        <section className="vss-see" aria-label="Your story, the way classmates will see your story">
+        <section className="vss-see" aria-label="Story preview">
           <div className="vss-see-head">
-            <span className="vss-label">Your story, the way classmates will see your story</span>
+            <span className="vss-label">Story preview</span>
           </div>
           <div className={"vss-see-frame vss-frame-" + story.look}>
             <StoryView story={story} urls={urls} credit={viewer?.name || ""} />
@@ -632,7 +631,6 @@ const CSS = `
 .vsr{display:flex;flex-direction:column;gap:26px;padding:44px 40px 60px;min-height:100%;box-sizing:border-box}
 .vsr-light{background:#fff;color:#141414}
 .vsr-dark{background:#0b0b0c;color:#f2f1ee}
-.vsr-kicker{margin:0;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.6}
 .vsr-h{margin:-14px 0 0;font-family:${SERIF};font-size:40px;font-weight:600;line-height:1.12;letter-spacing:-.01em}
 .vsr-link{margin:0;font-size:14.5px;opacity:.75}
 .vsr-link a{color:inherit}
