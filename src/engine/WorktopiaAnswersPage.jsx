@@ -21,6 +21,7 @@ import { savedPin } from "../InstructorGate.jsx";
 import { INSTRUCTOR_EMAILS } from "../instructors.js";
 import { QUESTIONS, MEETINGS, WORKTOPIA_TITLE } from "./worktopia/terminal.js";
 import { SESSIONS, shortOf, sessionOf, sessionIndex, rosterName } from "./worktopia/sitdown.js";
+import { pickOf, roleAt } from "./worktopia/roles.js";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { setClassFavicon } from "./favicon.js";
@@ -86,8 +87,9 @@ function Quotes({ field, files, who }) {
 // Sit-Down 1, the six sessions, each with its people. For the instructor
 // only while the sort settles. Andrew, 2026-10-12: "can you sort them in
 // worktopia by group for now?" A name with no submitted file says so, since
-// the sort was made from the files.
-function Sessions({ files, who }) {
+// the sort was made from the files. Each name carries its role, the one
+// saved on the roles page, or the suggestion until one is saved.
+function Sessions({ files, who, roles = {} }) {
   const have = new Set(files.filter(f => f.submitted_at).map(f => String(who(f) || "").trim().toLowerCase()));
   const count = SESSIONS.reduce((n, s) => n + s.names.length, 0);
   return (
@@ -99,7 +101,7 @@ function Sessions({ files, who }) {
             <h4>{s.day + ", " + s.time}</h4>
             <ul>
               {s.names.map(n => (
-                <li key={n}>{n}{have.has(n.toLowerCase()) || have.has(rosterName(n).toLowerCase()) ? null : <span className="dim"> · no file yet</span>}</li>
+                <li key={n}>{n}{(() => { const r = roleAt(n, roles[n] || pickOf(n)?.pick); return r ? ", " + r.role : null; })()}{have.has(n.toLowerCase()) || have.has(rosterName(n).toLowerCase()) ? null : <span className="dim"> · no file yet</span>}</li>
               ))}
             </ul>
           </div>
@@ -172,7 +174,7 @@ function PositionRow({ f, who, named, open, onToggle }) {
 
 // One group of files: the class, or the visitors. Exported for the smoke
 // run, which hands in files of its own.
-export function Group({ title, files, who, named, roster }) {
+export function Group({ title, files, who, named, roster, roles }) {
   const submitted = files.filter(f => f.submitted_at).length;
   const facts = named
     ? [plural(submitted, "file") + " submitted", files.length - submitted ? (files.length - submitted) + " in progress" : ""].filter(Boolean).join(" · ")
@@ -189,7 +191,7 @@ export function Group({ title, files, who, named, roster }) {
     <div className="grp">
       <header className="gh"><h2>{title}</h2><span className="meta">{facts}</span></header>
       {!files.length ? <p className="none">Nobody has started.</p> : (<>
-        {named && roster ? <Sessions files={files} who={who} /> : null}
+        {named && roster ? <Sessions files={files} who={who} roles={roles} /> : null}
         <Positions files={files} who={who} named={named} />
         <section className="sec"><header className="sh"><h3>Worktopia's own offers</h3><span className="meta">{plural(offered.length, "file")}</span></header><Tally rows={offers} /></section>
         <Quotes field="industry" files={files} who={who} />
@@ -286,7 +288,7 @@ export default function WorktopiaAnswersPage({ config }) {
             <h1>{WORKTOPIA_TITLE + ", every file"}</h1>
             <div className="facts">{named ? "Names are showing. A student who opens this address sees the same answers with no names." : "Answers are shown without names, in no particular order."}</div>
           </header>
-          <Group title="The class" files={sheets} who={whoClass} named={named} roster />
+          <Group title="The class" files={sheets} who={whoClass} named={named} roster roles={data?.sitdownRoles} />
           <Group title="Visitors on the public page" files={visitors} who={whoVisitor} named={named} roster={false} />
           <p className="foot">Answers are exactly as written. The page reads again each time you come back to the tab.</p>
         </div>
