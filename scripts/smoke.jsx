@@ -5699,6 +5699,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!vsm.problemsOf(other).some(p => /Other/.test(p))) say("Other with no words passes");
   const byNobody = vsm.storyOf({ ...base, ...Object.fromEntries([img("dd", { by: "other", byName: " " })]) });
   if (!vsm.problemsOf(byNobody).some(p => /Image 4: you marked Someone else/.test(p))) say("Someone else with no name passes");
+  // No credit line while the stories are anonymous, Andrew, 2026-10-13.
+  {
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const one = vsm.storyOf({ headline: "Run club", order: JSON.stringify(["aa"]), "block:aa": JSON.stringify({ type: "image", path: "p", w: 800, h: 600, caption: "Dawn", by: "other", byName: "Maria Lopez" }) });
+    const html = renderToStaticMarkup(<StoryView story={one} urls={{ p: "x.jpg" }} credit="" />);
+    if (/Photo|Maria/.test(html)) say("an anonymous story shows a photo credit");
+  }
   // A block saved before its place in the order is kept, at the end.
   const orphan = vsm.storyOf({ ...base, "block:zz": JSON.stringify({ type: "text", text: "hi" }) });
   if (orphan.blocks[orphan.blocks.length - 1].id !== "zz") say("a block missing from the order was dropped");
@@ -5723,8 +5730,8 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
 }
 cases.push(["Visual story, reading view", <StoryView story={vsm.storyOf({ headline: "Run club", order: JSON.stringify(["aa", "tx"]), "block:aa": JSON.stringify({ type: "image", path: "p", w: 800, h: 1200, layout: "left", caption: "Dawn", graphic: true, source: "Strava" }), "block:tx": JSON.stringify({ type: "text", text: "Words" }) })} urls={{ p: "x.jpg" }} credit="Pat Lee" />, "Graphic: Pat Lee. Source: Strava"]);
 cases.push(["Visual story, someone else's photo, named", <StoryView story={vsm.storyOf({ headline: "Run club", order: JSON.stringify(["aa"]), "block:aa": JSON.stringify({ type: "image", path: "p", w: 800, h: 600, caption: "Dawn", by: "other", byName: "Maria Lopez" }) })} urls={{ p: "x.jpg" }} credit="Pat Lee" />, "Photo: Maria Lopez"]);
-cases.push(["Visual story, someone else's photo, anonymous", <StoryView story={vsm.storyOf({ headline: "Run club", order: JSON.stringify(["aa"]), "block:aa": JSON.stringify({ type: "image", path: "p", w: 800, h: 600, caption: "Dawn", by: "other", byName: "Maria Lopez" }) })} urls={{ p: "x.jpg" }} credit="" />, "Photo courtesy of the author"]);
-cases.push(["Visual story, anonymous credit", <StoryView story={vsm.storyOf({ headline: "Run club", order: JSON.stringify(["aa"]), "block:aa": JSON.stringify({ type: "image", path: "p", w: 800, h: 600, caption: "Dawn" }) })} urls={{ p: "x.jpg" }} credit="" />, "Photo by the author"]);
+cases.push(["Visual story, someone else's photo, anonymous", <StoryView story={vsm.storyOf({ headline: "Run club", order: JSON.stringify(["aa"]), "block:aa": JSON.stringify({ type: "image", path: "p", w: 800, h: 600, caption: "Dawn", by: "other", byName: "Maria Lopez" }) })} urls={{ p: "x.jpg" }} credit="" />, "Dawn"]);
+cases.push(["Visual story, anonymous credit", <StoryView story={vsm.storyOf({ headline: "Run club", order: JSON.stringify(["aa"]), "block:aa": JSON.stringify({ type: "image", path: "p", w: 800, h: 600, caption: "Dawn" }) })} urls={{ p: "x.jpg" }} credit="" />, "Dawn"]);
 cases.push(["Visual story pre-production, loading", <PreSheet store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" />, "Loading"]);
 
 let failed = failedEarly;
