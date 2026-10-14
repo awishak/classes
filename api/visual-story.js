@@ -110,11 +110,12 @@ const featurePath = (story) => {
 };
 
 // What a classmate may see of a story: no reasons, and links instead of paths.
-const forReader = (story, urls) => ({
+// Someone else's name on a photo waits for release, like the author's.
+const forReader = (story, urls, released) => ({
   headline: story.headline, link: story.link, look: story.look,
   blocks: story.blocks.map(b => b.type === "text"
     ? { id: b.id, type: "text", text: b.text || "" }
-    : { id: b.id, type: "image", url: urls[b.path] || "", w: b.w, h: b.h, layout: b.layout, caption: b.caption || "", graphic: !!b.graphic, source: b.source || "" }),
+    : { id: b.id, type: "image", url: urls[b.path] || "", w: b.w, h: b.h, layout: b.layout, caption: b.caption || "", graphic: !!b.graphic, source: b.source || "", by: b.by === "other" ? "other" : "", byName: released && b.by === "other" ? b.byName || "" : "" }),
 });
 
 export default async function handler(req, res) {
@@ -279,7 +280,7 @@ export default async function handler(req, res) {
         .map(c => ({ author: c.author === email ? "You" : (nameOf.get(c.author) || "A classmate"), bestImage: c.best_image || "", best: c.best, shone: c.shone, encourage: c.encourage }));
     }
     return res.status(200).json({
-      ok: true, stage, story: forReader(story.story, urls), mine: isMine, author: released ? story.owner.name : null,
+      ok: true, stage, story: forReader(story.story, urls, released), mine: isMine, author: released ? story.owner.name : null,
       myComment: mineComments.find(c => c.story_sheet === story.id) || null,
       canComment: stage === "reading" && (!isMine || doneOthers >= OTHERS_BEFORE_OWN),
       doneOthers, needed: OTHERS_BEFORE_OWN, comments,

@@ -10,7 +10,7 @@
 //   look           "light" or "dark": a white or a black page, the student's choice
 //   block:<id>     JSON for one block (ids are letters, the field rule)
 // An image block: { type: "image", path, w, h, layout, caption, graphic,
-// source, reasons: [...], other }. A text block: { type: "text", text }.
+// source, by ("" for the student, "other"), byName, reasons: [...], other }. A text block: { type: "text", text }.
 // The rules are Andrew's, from the planning page, 2026-10-13.
 
 export const MIN_IMAGES = 6, MAX_IMAGES = 8;
@@ -68,6 +68,7 @@ export function problemsOf(story) {
     if (!(b.reasons || []).length) out.push(label + ": mark why the image made the cut.");
     else if ((b.reasons || []).includes("other") && !String(b.other || "").trim()) out.push(label + ": you marked Other, so write a few words about why.");
     if (b.graphic && !String(b.source || "").trim()) out.push(label + ": a graphic needs a source line.");
+    if (b.by === "other" && !String(b.byName || "").trim()) out.push(label + ": you marked Someone else, so write the name of who " + (b.graphic ? "made the graphic." : "took the photo."));
   });
   if (story.link.trim() && !/^https?:\/\/\S+\.\S+/.test(story.link.trim())) out.push("Your link has to start with http:// or https://.");
   return out;

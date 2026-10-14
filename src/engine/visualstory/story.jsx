@@ -53,9 +53,15 @@ const remember = (k, v) => { try { if (v === undefined) return localStorage.getI
 
 // ─── reading a story: the live preview now, classmates later ───
 
-// Every picture is the student's own, so every picture carries their credit.
-// While the stories are anonymous the credit reads "by the author"; the name goes on at release.
-const creditOf = (b, credit) => (credit == null ? "" : (b.graphic ? "Graphic" : "Photo") + (credit ? ": " + credit : " by the author"));
+// Every picture carries a credit: the student's, or the person who took it
+// (a parent, a friend). While the stories are anonymous no name shows, since
+// a parent's last name gives the author away; the names go on at release.
+const creditOf = (b, credit) => {
+  if (credit == null) return "";
+  const kind = b.graphic ? "Graphic" : "Photo";
+  if (b.by === "other") return credit ? kind + ": " + (b.byName || "").trim() : kind + " courtesy of the author";
+  return credit ? kind + ": " + credit : kind + " by the author";
+};
 
 export function StoryView({ story, urls, showPrivate = false, look, credit }) {
   const images = story.blocks.filter(b => b.type === "image");
@@ -455,6 +461,12 @@ function ImageFields({ b, canEdit, onChange }) {
         {portrait ? LAYOUTS.map(([id, name]) => <button key={id} type="button" className="vss-pill" aria-pressed={layoutOf(b) === id} disabled={!canEdit} onClick={() => onChange({ layout: id })}>{name}</button>)
           : <span className="vss-muted">Full width. Text can sit beside portrait photos.</span>}
       </div>
+      <div className="vss-row" role="group" aria-label={b.graphic ? "Who made this graphic?" : "Who took this photo?"}>
+        <span className="vss-muted">{b.graphic ? "Who made this graphic?" : "Who took this photo?"}</span>
+        <button type="button" className="vss-pill" aria-pressed={b.by !== "other"} disabled={!canEdit} onClick={() => onChange({ by: "" })}>I did</button>
+        <button type="button" className="vss-pill" aria-pressed={b.by === "other"} disabled={!canEdit} onClick={() => onChange({ by: "other" })}>Someone else</button>
+      </div>
+      {b.by === "other" ? <input className="vss-input" value={b.byName || ""} maxLength={120} readOnly={!canEdit} placeholder="Their name, like Maria Lopez" onChange={e => onChange({ byName: e.target.value })} /> : null}
       <div className="vss-row">
         <button type="button" className="vss-pill" aria-pressed={!!b.graphic} disabled={!canEdit} onClick={() => onChange({ graphic: !b.graphic })}>{b.graphic ? "Graphic, with a source" : "Is this a graphic?"}</button>
       </div>
