@@ -14,6 +14,7 @@ import WorksheetPage from "./engine/WorksheetPage.jsx";
 import WorksheetsPage from "./engine/WorksheetsPage.jsx";
 import ReadoutPage from "./engine/ReadoutPage.jsx";
 import WorktopiaAnswersPage from "./engine/WorktopiaAnswersPage.jsx";
+import SitdownRolesPage from "./engine/SitdownRolesPage.jsx";
 import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
@@ -289,6 +290,16 @@ export default function App() {
   const wsAns = path.match(/^\/(comm\w+)\/worksheets\/worktopia\/answers\/?$/);
   if (wsAns && ENGINE[wsAns[1]]) {
     return <WorktopiaAnswersPage key={wsAns[1]} config={ENGINE[wsAns[1]]} />;
+  }
+  // Sit-Down 1, the role each student plays at their table, for the
+  // instructor: /<class>/worksheets/worktopia/roles.
+  const wsRoles = path.match(/^\/(comm\w+)\/worksheets\/worktopia\/roles\/?$/);
+  if (wsRoles && ENGINE[wsRoles[1]]) {
+    return (
+      <InstructorGate what={ENGINE[wsRoles[1]].code + " Sit-Down roles"}>
+        <SitdownRolesPage key={wsRoles[1]} config={ENGINE[wsRoles[1]]} />
+      </InstructorGate>
+    );
   }
   // What the class wrote on it, for the class: /<class>/worksheets/<key>/readout.
   const wsRead = path.match(/^\/(comm\w+)\/worksheets\/([a-z0-9-]+)\/readout\/?$/);

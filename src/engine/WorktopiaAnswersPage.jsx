@@ -20,7 +20,7 @@ import { useSession, studentFor, authHeaders } from "./session.js";
 import { savedPin } from "../InstructorGate.jsx";
 import { INSTRUCTOR_EMAILS } from "../instructors.js";
 import { QUESTIONS, MEETINGS, WORKTOPIA_TITLE } from "./worktopia/terminal.js";
-import { SESSIONS, shortOf, sessionOf, sessionIndex } from "./worktopia/sitdown.js";
+import { SESSIONS, shortOf, sessionOf, sessionIndex, rosterName } from "./worktopia/sitdown.js";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { setClassFavicon } from "./favicon.js";
@@ -99,7 +99,7 @@ function Sessions({ files, who }) {
             <h4>{s.day + ", " + s.time}</h4>
             <ul>
               {s.names.map(n => (
-                <li key={n}>{n}{have.has(n.toLowerCase()) ? null : <span className="dim"> · no file yet</span>}</li>
+                <li key={n}>{n}{have.has(n.toLowerCase()) || have.has(rosterName(n).toLowerCase()) ? null : <span className="dim"> · no file yet</span>}</li>
               ))}
             </ul>
           </div>

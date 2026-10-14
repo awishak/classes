@@ -29,7 +29,8 @@ import TopNav, { NAV_STUDENT } from "./TopNav.jsx";
 // One file per class and worksheet, loaded only on this page.
 const READOUTS = {
   "comm118/stakeholder-map": () => import("../readouts/comm118-stakeholder-map.json"),
-  // Scaffolded 2026-10-02, written once the class submits (due October 7).
+  // Scaffolded 2026-10-02 and written 2026-10-13 from 25 files, in the
+  // shape of the stakeholder map's.
   // A readout with `sections` and no boxes, cards or connections draws no
   // map, and its `written` is null until the analysis is in.
   "comm118/worktopia": () => import("../readouts/comm118-worktopia.json"),

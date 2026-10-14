@@ -1,110 +1,717 @@
 {
  "worksheet": "worktopia",
  "classId": "comm118",
- "students": 0,
- "answers": 0,
- "written": null,
- "overview": [],
+ "students": 25,
+ "answers": 531,
+ "written": "2026-10-13",
+ "overview": [
+  "A third of the positions are in media and content, and marketing is next. Out of 74 positions there is one data analyst and one agent, even though data analysis and NIL are both on the class's own list of jobs that will grow.",
+  "The case for a human over AI is nearly the same everywhere: AI can't feel and it can't connect. 21 of 74 answers name emotion, empathy or feelings, and 26 name connection, relationships or trust. None of the 73 skills answers lists using AI as a skill.",
+  "Some of the \"AI can't\" claims are already out of date. \"AI cannot cook\" and \"AI cannot physically manage a field\" sit next to a world where robots paint the lines on athletic fields and work restaurant fryers. The stronger answers give the numbers to AI and argue for judgment, like the scout who watches how a player responds after a mistake.",
+  "The predictions agree on what fades: stat tracking (13 of 24) and ticketing (8). What rises is content (11) and the people who build the tech (10). Many named their own field as fading, and only one of 23 answers about the industry mentions streaming, the week the NFL is on Netflix.",
+  "Worktopia offered everyone a horrible job first. 13 turned it down on the spot, 12 took at least one, and one person accepted 23 before saying no. The game scored an average of 4.6 stars."
+ ],
  "sections": [
   {
    "field": "title",
    "label": "The three positions",
-   "students": null,
-   "answers": null,
-   "summary": "",
-   "themes": [],
-   "standouts": [],
-   "gaps": ""
+   "students": 25,
+   "answers": 74,
+   "summary": "A third of the positions are in media and content: broadcasters, social media managers, reporters and PR. Marketing and brand work came next, then the jobs that run the building on game day. Coaching, health and the front office each drew five or six.",
+   "themes": [
+    {
+     "theme": "Media and content",
+     "count": 24,
+     "note": "Broadcasting, social media, reporting, history and PR. Seven students put a media job in more than one slot.",
+     "examples": [
+      "Sports Broadcaster",
+      "Social Media Manager",
+      "Sports Historian",
+      "Public Relations Specialist"
+     ]
+    },
+    {
+     "theme": "Marketing and brand",
+     "count": 11,
+     "note": "Team marketing, apparel, graphics, partnerships.",
+     "examples": [
+      "marketing for apparel",
+      "Sports Marketing",
+      "Marketing/Graphics Coordinator"
+     ]
+    },
+    {
+     "theme": "Fan experience and the venue",
+     "count": 9,
+     "note": "Concessions, the field, the facilities, events, and keeping the stadium clean.",
+     "examples": [
+      "Concession stand designer",
+      "Fan experience coordinator",
+      "A groundskeeper for a field",
+      "I would like to sell facilities and stadiums to teams and be the head of real estate"
+     ]
+    },
+    {
+     "theme": "Front office",
+     "count": 6,
+     "note": "Athletic director, general manager, scout, college administration, HR.",
+     "examples": [
+      "Athletic Director",
+      "General Manager",
+      "College Athletic department admin"
+     ]
+    },
+    {
+     "theme": "Health and performance",
+     "count": 6,
+     "note": "Nutrition, psychology, training, a team chef, and women's athlete health.",
+     "examples": [
+      "Sports Nutritionist",
+      "Sports Psychologist",
+      "I would like to be a personal chef and travel with the team."
+     ]
+    },
+    {
+     "theme": "Coaching",
+     "count": 5,
+     "note": "College and pro, softball to soccer to track.",
+     "examples": [
+      "Softball coach",
+      "Professional Soccer Coach",
+      "College Track and Cross Country Coach"
+     ]
+    },
+    {
+     "theme": "Joke jobs",
+     "count": 5,
+     "note": "Four are from Worktopia's own list of horrible jobs. Professional Napper is new.",
+     "examples": [
+      "Live Tackling Dummy",
+      "Pine Tar Remover",
+      "Professional Napper"
+     ]
+    },
+    {
+     "theme": "Sales and client relations",
+     "count": 3,
+     "note": "Tickets, clients, and fan relations.",
+     "examples": [
+      "Ticket Sales",
+      "Client relationships"
+     ]
+    },
+    {
+     "theme": "One each",
+     "count": 5,
+     "note": "A data analyst, an agent, a sports bar owner, a professional player, and an athlete's shopper.",
+     "examples": [
+      "Sports Data Analyst",
+      "sport agent",
+      "A sports bar owner",
+      "Professional Soccer Player",
+      "Personal Athlete Shopper"
+     ]
+    }
+   ],
+   "standouts": [
+    "A female athlete reproductive health specialist (I recently interned for a womens health tech start up that makes fitness/nutrtion plans around the female menstrual cycle and it focused a lot on training with female atheletes)",
+    "I would like to sell facilities and stadiums to teams and be the head of real estate",
+    "A sports bar owner"
+   ],
+   "gaps": "Out of 74 positions there is one data analyst and one agent. That is thin next to the class's own predictions, where five people named data analytics as a job that will grow and four named NIL, agents or athlete branding. Several titles name a field rather than a job (\"Media,\" \"Marketing,\" \"content,\" \"designing or media\"), and one called \"Management\" turned out to be emptying the bins at the stadium."
   },
   {
    "field": "skills",
    "label": "What skills will you need to do this well?",
-   "students": null,
-   "answers": null,
-   "summary": "",
-   "themes": [],
-   "standouts": [],
-   "gaps": ""
+   "students": 25,
+   "answers": 73,
+   "summary": "Most answers list soft skills: communication, organization, leadership. The answers that read like real job know-how name a tool, a credential or a body of knowledge: a dietitian's license, commercial real estate, how the NCAA works, video editing, databases.",
+   "themes": [
+    {
+     "theme": "Communication",
+     "count": 31,
+     "note": "Usually first on the list, often with public speaking or interviewing.",
+     "examples": [
+      "Clear communication, public speaking, media relations, crisis communication, coaching and feedback",
+      "Strong communication skills, confidence, knowledge of sports, and the ability to think quickly and keep the audience interested.",
+      "Intercultural communicative skills, organized, excel"
+     ]
+    },
+    {
+     "theme": "Organization and time management",
+     "count": 18,
+     "note": "",
+     "examples": [
+      "Be able to plan large-scale events, and multiple of them at a time. Great communication and logistical skills, communicate with vendors and large group sizes, brand partnerships, etc.",
+      "time management, strong collaboration skills, constant research to see what the market looks like and how our brand and differ from them so we all dont look the same"
+     ]
+    },
+    {
+     "theme": "Knowing the sport",
+     "count": 12,
+     "note": "Film, scouting, history, the field itself, the rules of the NCAA.",
+     "examples": [
+      "I would need to have skills in talent evaluation, a deep knowledge of the sport I am scouting for, skills in film analysis, attention to detail, character evaluation, and communication.",
+      "Have an understanding of how a field runs.",
+      "Knowledge of sports history, good writing and researching skills, attention to detail, storytelling skills"
+     ]
+    },
+    {
+     "theme": "Leadership",
+     "count": 10,
+     "note": "",
+     "examples": [
+      "leadership, confidence, competitiveness, trust, patience",
+      "I need to be a good leader, organized, and be good at explaining things."
+     ]
+    },
+    {
+     "theme": "Tools and technical skills",
+     "count": 10,
+     "note": "Editing, graphics, Canva, cameras, programming.",
+     "examples": [
+      "Instagram/social media, marketing websites, Canva, networking, computers, technology, access to other companies, etc",
+      "Programming & Database Management, Contextual Judgment, Data Storytelling, Verbal communication",
+      "camera operating, photo editing"
+     ]
+    },
+    {
+     "theme": "Training and credentials",
+     "count": 6,
+     "note": "A degree, a license, or years in the business.",
+     "examples": [
+      "An education in nutrition and dietetics (Registered Diatition)",
+      "Extensive commercial real estate background and a thorough team"
+     ]
+    }
+   ],
+   "standouts": [
+    "You need to have energy and know the game well. You also need to have a pathway between the fans and the game, as well as knowing the players better than they know themselves. I also need to know the fan community to play to their likings and dislikings.This would help me create narratives for them like heroes and villains, and tying in past events to today's game. For example the ability to tie someone like Bryce Harper back to the Nats and create an engagement for the fan making them question his role then and his role now on the Phillies",
+    "Depends on specific job title, but generally need to know the ins and outs of how the NCAA functions as an organization and how to best navigate the ever-changing NIL era. I think expierience in an athletic department either as an athlete, grad assistant, student helper, etc. is also important because thats the only real way to become comfortable in the environment.",
+    "- Organization, creativity, adaptability. Especially in this day and age with AI taking over many aspects of graphic design/writing/storytelling its important to have a human brain competing with that that can generate authentic ideas whereas at some points AI has to start repeating itself. By continuing to have a human in this job, it saves the small portion of real human authenticity that is left in literature"
+   ],
+   "gaps": "None of the 73 answers lists using AI as a skill, on a sheet about working next to it. About a third (26) name something you would have to learn for this particular job; the rest would fit almost any job."
   },
   {
    "field": "human",
    "label": "What will you bring to this job that would be better than if we simply let AI do it?",
-   "students": null,
-   "answers": null,
-   "summary": "",
-   "themes": [],
-   "standouts": [],
-   "gaps": ""
+   "students": 25,
+   "answers": 74,
+   "summary": "Nearly every answer makes the same case: AI can't feel and it can't connect. A smaller group points to the body, since AI can't be on the field or behind the bar, and another points to their own history in the sport. The strongest answers give the numbers to AI and argue for judgment.",
+   "themes": [
+    {
+     "theme": "Connection and trust",
+     "count": 26,
+     "note": "Relationships with athletes, fans, clients and coworkers.",
+     "examples": [
+      "Personal connection. I would be a shoulder to cry on for athletes and someone they can count on. You can't connect with AI on a personal level.",
+      "For media like this to feel authentic or build a relationship with athletes and teams you need a human touch who actually understands connection. someone who has lived it",
+      "I am able to connect to these people better than an AI would. I am able to read this persons facial expressiopns and tone better than a AI syatem would. You need human connection in order to get things flowing. I have the ability to connect with this person better than an automated system."
+     ]
+    },
+    {
+     "theme": "Emotion and empathy",
+     "count": 21,
+     "note": "AI has no feelings, so it can't read them or share them.",
+     "examples": [
+      "The one thing AI can't do is truly have human emotion. In something like PR, you have to be able to read the emotions of others and quickly decide how to proceed with care and precaution.",
+      "I would bring real experience as an athlete, personal stories, and emotions that AI cannot fully understand. I can also connect with fans and athletes on a more personal level.",
+      "I will bring a human aspect to this role, so that there will be a human connection to the fans instead of essentially a robot talking to them. I will also bring raw emotion live on air instead of a AI that might not have the same raw emotion."
+     ]
+    },
+    {
+     "theme": "Being there in person",
+     "count": 10,
+     "note": "The job needs hands, a body, or a face in the room.",
+     "examples": [
+      "AI cannot cook. I can make sure players and staff eat what they want and keep them healthy even on the road.",
+      "AI cannot physically be there to put together events and host them infront of a group of people plus most humans would prefer a real person",
+      "AI can't be tackled by people so a person is needed to be a tackle dummy"
+     ]
+    },
+    {
+     "theme": "Judgment in the moment",
+     "count": 10,
+     "note": "Reading a room, a player, or a mistake, and adjusting.",
+     "examples": [
+      "AI is not able to replicate human judgement and context. While an AI is very good at analyzing stats and box scores, those metrics don't always tell the whole story. As a human, I am able to analyze things such as how competitive a player is, or how they respond after making a mistake. There are certain nuances that only a human can pick up on. A human will know their interests and motivations and emotions that will not come through in an AI video analysis and comparison.",
+      "A human voice. That's what people want to hear on air. In terms of production, there are a lot of mishaps that occur that require a level-headed human to make the call. Maybe AI stays level-headed, but it is not able to make the same level of decisions or plans a human could.",
+      "Well there might be some jobs that AI would be better at like some sort of financing/managing of budget or scheduling but I think just the human ability to adapt to new situations is the most important because there are so many moving pieces in a college athletic department."
+     ]
+    },
+    {
+     "theme": "Lived experience",
+     "count": 9,
+     "note": "They played, they grew up near the ballpark, they are the fan.",
+     "examples": [
+      "Real personal connection. I also played softball in college, so I know what to expect.",
+      "For media like this to feel authentic or build a relationship with athletes and teams you need a human touch who actually understands connection. someone who has lived it",
+      "AI would be able to interpret the game, and understand the stats probably perfect but the lack of human emotion and connection it would have, I could only imagine it would be boring for the fans and everybody watching/listening.I would be able to make a bond with the Nationals fan base, be the voice behind the calls, I mean I grew up around there I would be able to empathize with the fans. Lastly I can only imagine how hype I would get and how emotional my tone would be if something good or bad happened, but with AI it would be very unemotional and cannot feel the excitement or sadness in the stadium."
+     ]
+    },
+    {
+     "theme": "Original ideas",
+     "count": 8,
+     "note": "AI work looks generic or fake, and people can tell.",
+     "examples": [
+      "I can recognize trends, cultural moments, emotions, and preferences and take note of which ones would be most impactful to tie into a marketing campaign. I can also come up with new innovative ideas, whereas AI typically relies on existing content/data to inspire their designs. I also can build strong relationships with athletes, sponsors, and teams, which will help for us to make quality partnerships.",
+      "Althoguh AI can create marketing ads and graphics, people can usually tell because they are poorly made. When people see an AI ad they are less likely to trust the company",
+      "Personality, connection to real people. AI gets overlooked as it all looks the same."
+     ]
+    }
+   ],
+   "standouts": [
+    "Writing is unfortunately somewhat of a dying art due to the increasing presence of AI. A lot of people are barely using their writing skills or section of their intellect anymore which makes it difficult for the passion behind literature and art to stay alive. I think this was an interesting position to select because in this day and age being a sports journalist I would bring a sense of activism for something that is being pushed by technology. Additionally, simply letting AI tell these stories is already happening but the difference is the ability to actual talk to these real athletes or hear a teams' story first hand and communicate it with care and feelings, not just a recap summary.",
+    "AI might be able to calculate grass height or lay down the white chalk with a robot, but it would lack the field craftsmanship and heart needed to make a ballpark feel like home. Inspired by the local groundskeeper who kept our fields awesome at Fenway little league park back home, I would bring a knowledge to what the field needs no matter the weather paired with the authentic human connection to families and teams that would turn the field into the center of a community.",
+    "AI is not able to replicate human judgement and context. While an AI is very good at analyzing stats and box scores, those metrics don't always tell the whole story. As a human, I am able to analyze things such as how competitive a player is, or how they respond after making a mistake. There are certain nuances that only a human can pick up on. A human will know their interests and motivations and emotions that will not come through in an AI video analysis and comparison."
+   ],
+   "gaps": "Most answers say what AI can't do and stop there. Only a handful say what it does well, and some of the \"AI can't\" claims are already behind: robots paint the lines on athletic fields, and robot fry cooks work in restaurant kitchens. An answer that says what AI is good at, and then what a person adds on top, will hold up better in 2034 than one that says AI can't cook."
   },
   {
    "field": "why",
    "label": "Why will you personally be good at this position?",
-   "students": null,
-   "answers": null,
-   "summary": "",
-   "themes": [],
-   "standouts": [],
-   "gaps": ""
+   "students": 25,
+   "answers": 73,
+   "summary": "Most people pointed to their people skills, and about one answer in five backed it up with something they have actually done: a job, a team, a class, a page they run.",
+   "themes": [
+    {
+     "theme": "People skills",
+     "count": 39,
+     "note": "Listening, connecting, making people comfortable.",
+     "examples": [
+      "I will personally be good at this position because I take on the leadership role well and I have the ability to connect with people on any level",
+      "I am good at communicating, listening to peoples concerns, and understanding how to sympathize with them. As well strong with building trust and making fans feel seen and heard.",
+      "I would be good at this position because I enjoy connecting with people and making them feel included. I listen to others ideas and work well with a team, which would help me plan activities that fans enjoy. Also I am organized and open to feedback, so I could keep events running smoothly and improve future experiences."
+     ]
+    },
+    {
+     "theme": "Love of the work",
+     "count": 24,
+     "note": "",
+     "examples": [
+      "Yes, I would be great at this job. I am extremely passionate about softball and I want to help people (whatever career I choose, I want to work with and help people).",
+      "Running is my biggest passion in life so I have a lot of knowledge and opinions on how a program should be run",
+      "I love to cannonball and would take the safety and training required for the role seriously. I would bring confidence and energy to the role, making the Human Cannonball performance exciting and entertaining for the audience."
+     ]
+    },
+    {
+     "theme": "Something they have done",
+     "count": 16,
+     "note": "A real job, a real team, a real page.",
+     "examples": [
+      "I studied Communications, which gave me exposure to storytelling, media, digital communication, and digital filmmaking. I'd be able to come up with my own scripts/talking points and worse case scenario I could also help out with the film crew as needed. I also have worked as a sports reporter for The Santa Clara, so I am very comfortable coming up with interview questions, researching, and combining that information into a story. Additionally, my experiences playing competitive sports gives me an understanding of sports beyond just simply being a fan.",
+      "I will be personally good at this position because I believe I have very good interpersonal communicative skills, I can generally find some sort of connection with someone and I make people feel comftorable when talking with me. I also have orevioius expereicne in this feild as a account manager at a pharmaceutical marketing company.",
+      "I love to create digital content, and I think this aspect works a lot with fan engagement which would be so fun to work in. As someone who managed the orientation Instagram for SCU, I know what it takes to manage team branding online, and would love to do that for a sports team.",
+      "I have a lot of experience in the sport and I have been almost in every role on a team. I have been a starter, non starter, injured player, scholarship athlete, walk on, captain. I know how to motivate all different types of roles of people on a team and I think if you can get a whole team on the same page and full buy in, you can win anything."
+     ]
+    },
+    {
+     "theme": "A list of traits",
+     "count": 11,
+     "note": "Adjectives with nothing behind them.",
+     "examples": [
+      "I am hard working, creative, focused, determined, understanding",
+      "because I feel that I am extremely open minded and eager to work and learn"
+     ]
+    }
+   ],
+   "standouts": [
+    "I think right now I would be okay at this position only because I don't have much journalism under my belt. I'm currently taking a journalism class and will take at least one more in my future, so my writing and reporting skills will need to improve.",
+    "I think I would be pretty good at this position because I am a good listener. I think giving advice would be harder for me because I don't want to give people the wrong advice.",
+    "I have a lot of experience in the sport and I have been almost in every role on a team. I have been a starter, non starter, injured player, scholarship athlete, walk on, captain. I know how to motivate all different types of roles of people on a team and I think if you can get a whole team on the same page and full buy in, you can win anything."
+   ],
+   "gaps": "The question asked why you, personally. The best answers named a job, a team or a class, and two were honest about a weakness, which reads as more convincing than a list of five adjectives."
   },
   {
    "field": "duties",
    "label": "What does this position accomplish? What are the main duties?",
-   "students": null,
-   "answers": null,
-   "summary": "",
-   "themes": [],
-   "standouts": [],
-   "gaps": ""
+   "students": 25,
+   "answers": 75,
+   "summary": "Most describe the job from the fan's side, what it gives the people watching. The ones that read like a real job description name the tasks: drafting under a salary cap, eligibility and compliance, meal plans built from body composition results, emptying the bins between the bleachers.",
+   "themes": [
+    {
+     "theme": "What it does for fans",
+     "count": 18,
+     "note": "",
+     "examples": [
+      "This position helps fans feel welcome, engaged, and connected to the team so they want to return. I would need to plan game day activities and different themes, coordinating promotions and entertainment, assisting fans, and working with stadium staff to keep events running smoothly. It also involves gathering fan feedback to improve future experiences.",
+      "The big one is revenue, tickets are one of the biggest incomes for any team at any level wether its professional, college, or even high school. Season ticket packages have now became a thing making sure certain fans are getting the best expereince they can. I also will be able to develop great relationships with my fans, I can understand what they want to see ansd what they will buy."
+     ]
+    },
+    {
+     "theme": "Bringing in money",
+     "count": 13,
+     "note": "Tickets, apparel, sponsors, budgets.",
+     "examples": [
+      "The big one is revenue, tickets are one of the biggest incomes for any team at any level wether its professional, college, or even high school. Season ticket packages have now became a thing making sure certain fans are getting the best expereince they can. I also will be able to develop great relationships with my fans, I can understand what they want to see ansd what they will buy.",
+      "This position has to accomplish putting together a team that can compete for championship.The GM has to accomplish wins by putting the best team on the field and that's by scouting for the best players and giving yourself the financial flexibility to have star players. The main duties are drafting and signing players. Evaluating/scouting for talent, as well as looking to trade for player. Building a team that fits within a salary cap if the sport has one.",
+      "This position builds and strengthens sports brands by creating & maintaining a consistent identity and message. It also promotes teams, athletes, leagues, and sports related companies/products. Sports marketers also help to increase ticket/merchandise sales, viewership, and overall revenue."
+     ]
+    },
+    {
+     "theme": "Developing and caring for athletes",
+     "count": 11,
+     "note": "",
+     "examples": [
+      "It allows for the players performance to be fueled by the nutrition and energy that they consume. After seeing the players body composition results I can make detailed meal plans for each player based on their lifestyle, cultural, or dietary restrictions. I will also need to be on the field with them to make sure that they have quick carbs during practice and games to make sure that they are staying fueled.",
+      "It allows for female atheletes to train with their menstrual cycle, rather than against it and I will have an app for them to track and then fitness and nutrtion plans for them to follow as well as a team of  certificied professionals."
+     ]
+    },
+    {
+     "theme": "Telling stories",
+     "count": 11,
+     "note": "",
+     "examples": [
+      "This position accomplishes stories for the media to touch on, backgrounds on big time and smaller players. This position is to give the audience someone to root for even if the player is not on the team you root for. The main duties are getting injury news, trade or signing news, behind the scenes stories and stories about players in general.",
+      "Showing stories, families and outside hobbies. Accomplishes getting to know the players a little more so they are more recognizable"
+     ]
+    },
+    {
+     "theme": "Keeping the place running",
+     "count": 10,
+     "note": "Facilities, fields, staff, compliance.",
+     "examples": [
+      "This position helps ensure that the stadiums and venues are clean and great spaces for fans to come & enjoy the games. The main duties of this position are emptying out trash/recycling bins as they fill up during the game and replacing them, cleaning up in between the bleachers after games/events, sweeping/mopping the floors, taking out all the trash/recycling at the end of the game and putting them into big dumpsters outside, and coordinating with local waste management companies to dispose of the waste/recycling in the dumpsters.",
+      "For me being a groundskeeper wouldn't just be about cutting grass and lining the base paths, it would about building the physical setting where sports culture, safety, and community actually happen. The main duties are taking care of the grass, grooming the dirt, prepping dugouts, and handling weather prep. More than that it would create a safe, nice environment where players can perform and local families can connect.",
+      "Overall just helping the various teams function correctly and avoiding hiccups with things like eligibility or whatever it may be. Off the top of my head I can list compliance, academic advising, finance/budget, athletic directors of various levels, marketing, social media etc. as the main duties or jobs in an athletic department."
+     ]
+    }
+   ],
+   "standouts": [
+    "The main duties is giving the people who watch these sports a 3rd space. A place to cause eustress, and allow people from all over the community come together and focus on something that does not involve work, the world, or negative vibes. What I am doing is allowing a group of people to come together, get to know them, and them have fun eating good food, drinking good drinks, and watching some good sports. It allows people to live and be in an environment where the world of AI is not right in their face but rather they are living in the moment.",
+    "This position has to accomplish putting together a team that can compete for championship.The GM has to accomplish wins by putting the best team on the field and that's by scouting for the best players and giving yourself the financial flexibility to have star players. The main duties are drafting and signing players. Evaluating/scouting for talent, as well as looking to trade for player. Building a team that fits within a salary cap if the sport has one.",
+    "Overall just helping the various teams function correctly and avoiding hiccups with things like eligibility or whatever it may be. Off the top of my head I can list compliance, academic advising, finance/budget, athletic directors of various levels, marketing, social media etc. as the main duties or jobs in an athletic department."
+   ],
+   "gaps": "A few answers describe a trait instead of a job (\"taking responsibility for mistakes, being able to stay calm under pressure\"). Two read like a generic job posting and could sit under any title, and one under Marketing describes helping golfers on the course."
   },
   {
    "field": "value",
    "label": "What value will this position provide to the sports ecosystem in 2034?",
-   "students": null,
-   "answers": null,
-   "summary": "",
-   "themes": [],
-   "standouts": [],
-   "gaps": ""
+   "students": 25,
+   "answers": 73,
+   "summary": "Fans are the most common answer, and keeping sports human is the most common argument. Eleven answers name the money: revenue, sponsors, sales.",
+   "themes": [
+    {
+     "theme": "Fans",
+     "count": 34,
+     "note": "Bringing fans in, keeping them, connecting them to athletes.",
+     "examples": [
+      "The position will help make live sporting events welcoming and memorable. Giving fans a reason to keep attending as digital entertainment grows. By creating engaging activities and listening to fans, I could strengthen team loyalty and bring people together. This could support ticket sales, sponsorships, and local businesses while helping more people feel included in the sports community.",
+      "It keeps the human connection between teams and fans alive in a sports world that is becoming increasingly controlled by AI."
+     ]
+    },
+    {
+     "theme": "Keeping sports human",
+     "count": 17,
+     "note": "",
+     "examples": [
+      "Only a human can create authentic human connection. In 2034, connection and authenticity will be so forgotten that humans will crave them. And that craving can only be satisfied by humans.",
+      "In 2034 I expect the fewest amount of real humans to be apart of the sports ecosystem so if a PR manager can still hold some sort of human emotion it will be extremely valuable. Additionally, we can hope that at least coaches, athletes, and teams will still be human and I doubt they want to be negotiating with a robot",
+      "In 2034, this would give fans a connection to what sports used to mean beyond just data and entertainment."
+     ]
+    },
+    {
+     "theme": "Athletes' health and growth",
+     "count": 13,
+     "note": "",
+     "examples": [
+      "Women's health is something that is still not researched enough and so I will be advocating for their health and serving as a helpful resourse for them",
+      "Keeping the cycle of collegiate track and cross country programs going. This gives high school athletes an opportunity to do what they love at the next level and earn a degree while doing it.",
+      "Teams will likely have access to much more advanced data about player performance, health, strategy, and opponents, but they will still need someone who can turn that information into decisions and communicate those decisions to players. Head coaches will also continue to build team culture, motivate athletes, develop relationships, and manage different personalities. As AI becomes more intelligent, it is up to the head coach to make sure that the AI is supporting players, not taking away from the human competition."
+     ]
+    },
+    {
+     "theme": "Money",
+     "count": 11,
+     "note": "",
+     "examples": [
+      "This position will make more people interested in watching sports at home and that would mean media services will get more sponsorships which leads to more money.",
+      "This position will create new revenue opportunities through sponsorships, merchandise, partnerships, digital content, ticket sales, and fan experiences. Sports marketers will continue to keep fans connected to sports as the number of entertainment options and other competing forms of media grow. This position can also help sports organizations adapt to new platforms and create campaigns that work across a variety of different platforms.",
+      "This position will make attending games more enjoyable by designing concession stands that are welcoming, accessible, and easy to use. My designs could help reduce wait times, support local food vendors, and reflect the teams identity. This would give fans more time to enjoy the game while helping teams and  increase sales."
+     ]
+    },
+    {
+     "theme": "A place to gather",
+     "count": 5,
+     "note": "A bar, a field, an event, somewhere to be with other fans.",
+     "examples": [
+      "This will not provide much to the sports aspect of it. It will provide for the fans and the people that give the media and the teams the attention they need. My main goal and value of my position is to allow another space for fans to watch their games and hang out with their community.",
+      "As sports are so popular, this would help provide things like spaces to watch sports as a community, celebrate sports, be around other fans, and more"
+     ]
+    }
+   ],
+   "standouts": [
+    "Only a human can create authentic human connection. In 2034, connection and authenticity will be so forgotten that humans will crave them. And that craving can only be satisfied by humans.",
+    "Teams will likely have access to much more advanced data about player performance, health, strategy, and opponents, but they will still need someone who can turn that information into decisions and communicate those decisions to players. Head coaches will also continue to build team culture, motivate athletes, develop relationships, and manage different personalities. As AI becomes more intelligent, it is up to the head coach to make sure that the AI is supporting players, not taking away from the human competition.",
+    "It's kind of the same as the first two, just helping a well oiled machine keep running. Not the most exciting answer but that's kind of what a lot of jobs are in general I feel like.",
+    "The general manager holds lots of value in the sports ecosystem. In most teams, they have the most power behind the owner, they talk with coaches, player and to the press. They are not necessarily associated with fans, but fans talk a lot about GM's. If a GM brings in a star player, more fans will want to go to games and bring in more sponsors. Occasionally, the head coach might have the same power as the GM, but more often than not, the GM has more power."
+   ],
+   "gaps": "Very few answers say who else the job depends on. The broadcaster's value runs through sponsors, the GM's through stars who sell tickets, the nutritionist's through the coach who decides who plays. Almost nobody traces those lines to another job, and that is the work of the Sit-Down."
   },
   {
    "field": "industry",
    "label": "What do you actually see as changes to the sports ecosystem over the next 8 years?",
-   "students": null,
-   "answers": null,
-   "summary": "",
-   "themes": [],
-   "standouts": [],
-   "gaps": ""
+   "students": 23,
+   "answers": 23,
+   "summary": "Most expect AI to grow as a tool while people keep the jobs that need judgment and connection. The answers that named a specific change pointed to athletes as their own brands, women's sports, and college money.",
+   "themes": [
+    {
+     "theme": "AI grows, people stay",
+     "count": 7,
+     "note": "AI handles data, highlights and scouting; humans keep leadership and storytelling.",
+     "examples": [
+      "I think AI is going increase in the sports world(ex: sports data and analysis), but not as much compared to other things. For example, I don't think there will be AI coaches, AI nutritionists, AI physical therapists, etc. A lot of sports jobs are hands on and need human employees.",
+      "I see AI making statistics and data analysis quicker but not replaced. It is critical to keep humans in the sports world to preserve character and depth to sports."
+     ]
+    },
+    {
+     "theme": "AI takes the jobs",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "Unfortunately I fear I see a lot of completely non-human involving aspects of the sports world in the future. I feel as though there could be robot refs and all computerized advertising or announcing so I hope that at least the idea that crowds still cherish the real life athletes themselves that the love of the game could still partially survive.",
+      "I could see more jobs involving statistics and media jobs getting taken over by AI."
+     ]
+    },
+    {
+     "theme": "Athletes as their own brands",
+     "count": 3,
+     "note": "Podcasts, social media, merchandise, sponsorships.",
+     "examples": [
+      "I think sports will continue to grow and technology will become more involved. I also think athletes will have more opportunities to make money and build their own brands through social media."
+     ]
+    },
+    {
+     "theme": "Women's sports keep growing",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "I see more and more athletes building their personal brands through podcasts, social media, merchandise, and sponsorships. I see women's sports continue to grow, with professional leagues such as volleyball and basketball expanding in particular. I see short-form content (ex: instagram/X posts) competing more and more for the fans attention with live games, but I still see live games holding the bulk of the fans attention & viewership."
+     ]
+    },
+    {
+     "theme": "Back to the live game",
+     "count": 3,
+     "note": "Live games hold on, or win fans back, as people tire of screens.",
+     "examples": [
+      "I think we might see a loop back to what we used to see. People will get nostalgic and take a few steps back in a good way, focusing more on going to games, watching with friends, and sports traditions. Technology will still grow, but fans may want more connection and less digital overload."
+     ]
+    },
+    {
+     "theme": "College money",
+     "count": 2,
+     "note": "NIL money pulls the big schools away; college football splits off.",
+     "examples": [
+      "I think for college sports, all the big schools with the most NIL money will just completely take over and unfortunately smaller schools like Santa Clara will not be able to keep up. I see women's sports continuing to grow and more jobs opening up through just marketing and social media.",
+      "I think college football could be its own entity in 8 years. Like a separate pro league of some sort."
+     ]
+    },
+    {
+     "theme": "Betting",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "Using AI when making sports bets for sure, which scares me, because I think the laws on that are iffy."
+     ]
+    }
+   ],
+   "standouts": [
+    "I think that players will be wearing more than one sponsored logo on uniforms. I also have a feeling that some companies will buy their own sports franchises. Like the Cincinnati Coca-Colas or something along those lines.",
+    "I think that the main thing that we will see is AI being used as a big tool to all jobs in sports. With the analytical skills of AI getting exponentially better, scouts and head coaches will be given access to advanced and unheard of metrics that they can use to give their team an advantage. AI will be able to point out nuances and help coaches develop new and more advanced strategy for playing against teams, and the same AI can help the players implement this strategy into their game. I don't think AI will ever fully take over sports, but it will absolutely plau a huge role in helping people in the sports world do better. There could also be different viewing angles of the game. We have the Meta Glasses now, but 8 years in the future there could be more easy to use equipment that athletes can use in game in order to give us their point of view while playing. There could be different sensors and equipment added to already existing equipment in order to give us more metrics.",
+    "More funding, more recognitions for the dancers and cheerleaders, more positions open within sports, more affordable tickets (hopefully)"
+   ],
+   "gaps": "One answer mentions streaming and none mention media rights, the week the NFL is on Netflix. Nobody named who is paying for the change: the leagues, the networks, the streamers or the betting companies."
   },
   {
    "field": "fading",
    "label": "Which jobs do you think will not be as prevalent in 2034?",
-   "students": null,
-   "answers": null,
-   "summary": "",
-   "themes": [],
-   "standouts": [],
-   "gaps": ""
+   "students": 24,
+   "answers": 24,
+   "summary": "The class agrees on what fades: the people who collect the numbers and the people who sell the tickets. Editing highlights and running cameras come next.",
+   "themes": [
+    {
+     "theme": "Stat tracking and data entry",
+     "count": 13,
+     "note": "Cameras and sensors already capture everything.",
+     "examples": [
+      "I dont think manual stat tracking will be a thing anymore. there are so many cameras now adasy that can capture everything.",
+      "I think that the two jobs that will not be as prevalent in 2034 are ticketing/customer service employees and scorekeepers/stat trackers. AI will be able to handle the routine and frequently asked questions and give answers, and AI will easily be able to track player's and team's stats and the score of the game."
+     ]
+    },
+    {
+     "theme": "Ticketing and the box office",
+     "count": 8,
+     "note": "",
+     "examples": [
+      "Box office/ticket sales representatives could turn automated or AI/online"
+     ]
+    },
+    {
+     "theme": "Editing, highlights and cameras",
+     "count": 7,
+     "note": "",
+     "examples": [
+      "Editing highlights, camera operators, local sports radio hosts, may become less common because AI and automation can handle some of their work.",
+      "Stats people - Cameras, sensors, and AI can automatically track scores, player statistics, and game events. AI also will likely be able to automatically create highlights, clips, social media posts, and game recaps."
+     ]
+    },
+    {
+     "theme": "Writing and design",
+     "count": 4,
+     "note": "Game recaps, ads, artists, writers.",
+     "examples": [
+      "Sadly probably a lot of journalism, creative design, or marketing jobs because so much of it is seen as being able to be done with AI",
+      "I think that stats/research assistants won't be as popular in 2034 because I think that AI will have enough data and will be advanced enough to gather statistics and records itself. I think that basic sports writers (who write simple game recaps) won't be as prevelant because I think that AI will be capable of writing a story with the information that people need."
+     ]
+    },
+    {
+     "theme": "Broadcasting",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "maybe a commentator because they will have AI generated feedback about the games rather than people in real life"
+     ]
+    },
+    {
+     "theme": "Food and concessions",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "The people taking orders at fast food places, AI has taken over Taco Bells'. It's hard to say because we know what AI is capable of, but we don't know how far company owners and bosses are willing to with replacing workers with AI"
+     ]
+    }
+   ],
+   "standouts": [
+    "Ushers!!! Nobdoy will go to the games, everyone will watch at home",
+    "College coaching jobs of non revenue sports",
+    "I think referees, especially because we are unfortunately headed to a world filled with AI meaning that they would be able to detect incorrect actions more quickly and correctly. I also know that some refs are also issues right now, I remember in high school that some referees were unable to make games, causing the game to get canceled."
+   ],
+   "gaps": "Many of them named their own field. Media and content are a third of the positions, and here seven name editing, highlights or cameras as fading and three name broadcasting. One student said it outright and picked sports journalist anyway, as a kind of activism. That is the question worth putting to every media pick: what part of the job is still yours in 2034?"
   },
   {
    "field": "rising",
    "label": "Which jobs will be much more popular?",
-   "students": null,
-   "answers": null,
-   "summary": "",
-   "themes": [],
-   "standouts": [],
-   "gaps": ""
+   "students": 24,
+   "answers": 24,
+   "summary": "Content creation leads, then the people who build and run the technology. A smaller group bets the other way, on work that needs hands or a face: trades, coaches, groundskeepers, hairstylists.",
+   "themes": [
+    {
+     "theme": "Content and social media",
+     "count": 11,
+     "note": "",
+     "examples": [
+      "I think that sports content creators will be more popular with social media continuing to grow as a platform where many fans get their sports information and \"connect\" with athletes/teams. I think that sports betting specialists will become more popular as more states legalize sports betting. I also think that PR and communication specialists will become more popular as athletes/teams/coaches presence online becomes more and more heavily followed & scrutinized.",
+      "Social media jobs for college football teams"
+     ]
+    },
+    {
+     "theme": "Building the tech",
+     "count": 10,
+     "note": "Coding, AI, ticketing sites, wearables, sports technology.",
+     "examples": [
+      "I think that jobs that help to implement AI into already existing and working systems that teams and coaches use will be the most popular jobs (sports AI implimentation). Alongside those jobs, AI assisted scouts will also become much more popular. Commentator jobs will also become more popular because they will be armed with much more information and metrics that they can use to analyze the game and tactics.",
+      "I would hope live broadcasting/talk show culture would still survive but I was also considering that perhaps with AI increasing, it will more so be the jobs behind the AI scene that are all integrated in the sports world becoming popular such as coding and software development."
+     ]
+    },
+    {
+     "theme": "Data analysis",
+     "count": 5,
+     "note": "",
+     "examples": [
+      "digital content creators and data analysts"
+     ]
+    },
+    {
+     "theme": "Hands and faces",
+     "count": 5,
+     "note": "Jobs AI can't do from a server.",
+     "examples": [
+      "Trade jobs, AI can't replace our plumbers or electricians",
+      "More personal jobs such as hairstylists, nail techs, doctors"
+     ]
+    },
+    {
+     "theme": "NIL, agents and athlete brands",
+     "count": 4,
+     "note": "",
+     "examples": [
+      "I think anything NIL related will be more popular(agents, managers, etc.) because of how much this has grown. Also, I think anything in terms of high-tech performance (ex: aura rings for sleep tracking, heart sensors that athletes wear during practice, etc.) will become more popular.",
+      "sport agent; this job is kinda like individual investor"
+     ]
+    },
+    {
+     "theme": "Health and injury prevention",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "Injury Prevention Specialists, AI Prompt Engineers"
+     ]
+    },
+    {
+     "theme": "Betting",
+     "count": 2,
+     "note": "",
+     "examples": [
+      "Something related to sports betting/gambling since that seems to be remaining popular"
+     ]
+    }
+   ],
+   "standouts": [
+    "partnerships and accoutn managers. you still need that person to person interaction to get deals done. no one wants to just talk to a computer",
+    "sport agent; this job is kinda like individual investor",
+    "Injury Prevention Specialists, AI Prompt Engineers"
+   ],
+   "gaps": "Data is on both lists, and read closely the answers agree: the stat tracker fades and the analyst rises. Four named NIL, agents or athlete branding as growing, and one student out of 25 picked agent as a position."
   },
   {
    "field": "review",
    "label": "Please review Worktopia.",
-   "students": null,
-   "answers": null,
-   "summary": "",
-   "themes": [],
-   "standouts": [],
-   "gaps": ""
+   "students": 18,
+   "answers": 18,
+   "summary": "25 people gave stars, an average of 4.6: 16 fives, 7 fours and 2 threes. Most of the written reviews say it felt like a game instead of an assignment.",
+   "themes": [
+    {
+     "theme": "Fun, and not like an assignment",
+     "count": 10,
+     "note": "",
+     "examples": [
+      "This was SO cool!!! Genuinely felt like a real interactive game while completing an assignment. Such a cool idea!",
+      "Worktopia was really cool to do. It was a fun and unique way to get an assignment done compared to most assignments that are plain and boring. Since this is like the first attempt at using something like this, I can't wait to see what future assignments like this will look like."
+     ]
+    },
+    {
+     "theme": "Made them think",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "I think it was s very smooth operation. I like how you had to really dif deep into your answers and think of how it could really make an impact."
+     ]
+    },
+    {
+     "theme": "The side facts",
+     "count": 2,
+     "note": "The off-the-record notes that popped up along the way.",
+     "examples": [
+      "I thought Worktopia was so fun! I liked the off the record facts that popped up, they were so interesting!",
+      "Worktopia is very thorough and I like the fun facts that come along with it."
+     ]
+    },
+    {
+     "theme": "Something to fix",
+     "count": 3,
+     "note": "",
+     "examples": [
+      "It was a very enjoyable and interactive experience, I just wish that their was a spelling corrector within the system",
+      "I really like this super fun and engaging. I do not like the green scan thing that happens every 5 seconds or so"
+     ]
+    }
+   ],
+   "standouts": [
+    "Loved Worktopia, very fun, but I'm glad it's not real!!!!",
+    "A bit depressing as thinking about the posabilities of jobs changing and being replaced in the up coming years",
+    "This was a fun exercise. It was interesting to see how AI has the capability of making these jobs a lot more interesting and giving the people who work these jobs a plethora of more tools and information to wrok with, but the common denominator was that a human aspect is 100% needed. The human to human connection is greatly needed in sports because sports are built around connection and emotion, both things that AI cannot replicate."
+   ],
+   "gaps": "Two fixes were asked for: a spell checker, and less of the green scan line. One review found the whole thing a bit depressing, which is a fair read of the premise."
   }
  ]
 }

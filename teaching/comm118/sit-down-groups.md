@@ -1,5 +1,7 @@
 # Sit-Down 1: the six sessions
 
+Emma Alvarez is Vianna Alvarez on the roster; she goes by Emma.
+
 Sorted 2026-10-12 from the Worktopia files, 24 of 25 submitted. Jacqueline
 Cingel filled in every screen through the confirm step and never pressed
 submit, so her answers count here: she picked Wednesday, said yes to
@@ -31,7 +33,7 @@ Sessions: Wednesday October 21, Thursday October 22 and Friday October 23, at
 | Thu 9:15 | Jameson Baldwin, Will Tortorella, Neel Namburar, Katie Coggins | Jameson and Will named each other. Neel named Jameson. |
 | Thu 9:45 | Ruby McAlister, Mailin Orozco, Chloe Shim, Gianna Alcaraz, Jacqueline Cingel | Ruby and Mailin named each other. Chloe and Jacqueline named each other. |
 | Fri 9:15 | Lucy Kate Murray, Audrey Graham, Emme Munn, Lila Waechter | Lucy Kate and Emme named each other. Audrey and Lila named Lucy Kate. |
-| Fri 9:45 | Sophia Taylor, Vianna Alvarez, Julia Benavides, Haixing Yang | Sophia T and Vianna named each other. Vianna named Julia. Haixing named nobody. |
+| Fri 9:45 | Sophia Taylor, Emma Alvarez, Julia Benavides, Haixing Yang | Sophia T and Emma named each other. Emma named Julia. Haixing named nobody. |
 
 Twenty-five people, so one group of five. Thursday 9:45 takes the fifth
 because Jacqueline said yes to Thursday and Chloe, who is there, named her.
@@ -52,7 +54,7 @@ because Jacqueline said yes to Thursday and Chloe, who is there, named her.
 - **Katie Coggins and Gianna Alcaraz** are available Thursday, and none of the
   people they named are. Thursday won.
 - **Julia Benavides** named four people, and all four are available Thursday,
-  so all four are on Thursday. She is with Vianna, who named her.
+  so all four are on Thursday. She is with Emma, who named her.
 - **Addison Marshak** named Ruby and Katie, both on Thursday. Nobody left on
   Wednesday or Friday named Addison.
 
