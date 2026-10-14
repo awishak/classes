@@ -24,6 +24,9 @@ import { useMarkThreadSeen } from "../YouCard.jsx";
 import { Sec, Row, Io, Btn, Chip, Lnk, Check, Gm, Face, DrFace, I, dcolOf, dueWords, whenWords, dayWords, firstLink, hostOf, drShort } from "./bits.jsx";
 import { visibleAssignments, workOf, unseenOf, nextOwedOf, counts, flowOf, FLOW_FILTERS, opensWords } from "./work.js";
 
+// A link to the visual story's instructions page or its builder.
+const STORY_LINK = /^(?:https?:\/\/[^/]+)?\/(comm\w+)\/(?:worksheets\/)?visual-story\/?(?:[?#].*)?$/;
+
 // ─── a challenge as a row ───
 const tintOf = (st) => st.state === "graded" || st.state === "turnedIn" ? "done"
   : st.state === "closed-until" ? "off" : st.state === "missed" ? "late" : st.state === "open" ? "due" : "";
@@ -345,7 +348,12 @@ export function ChallengePage({ config, data, update, name, id, go }) {
 
   const tint = tintOf(st) || "";
   const words = String(asg.description || "").trim();
-  const more = asg.instructionsUrl ? <div><Lnk href={asg.instructionsUrl}>More instructions</Lnk></div> : null;
+  // The visual story's link opens the builder, which links to the full
+  // instructions itself. Andrew, 2026-10-14: "change 'more instructions' to
+  // Go to story builder".
+  const story = String(asg.instructionsUrl || "").trim().match(STORY_LINK);
+  const more = story ? <div><Lnk href={"/" + story[1] + "/worksheets/visual-story"}>Go to story builder</Lnk></div>
+    : asg.instructionsUrl ? <div><Lnk href={asg.instructionsUrl}>More instructions</Lnk></div> : null;
   const instructions = (words || asg.instructionsUrl) ? (
     st.state === "open" || st.state === "missed"
       ? <div className="pt-stack">{words ? <p className="pt-text" style={{ fontSize: 17 }}>{words}</p> : null}{more}</div>
