@@ -52,7 +52,11 @@ const remember = (k, v) => { try { if (v === undefined) return localStorage.getI
 
 // ─── reading a story: the live preview now, classmates later ───
 
-export function StoryView({ story, urls, showPrivate = false, look }) {
+// Every picture is the student's own, so every picture carries their credit.
+// While the stories are anonymous the credit reads "by the author"; the name goes on at release.
+const creditOf = (b, credit) => (credit == null ? "" : (b.graphic ? "Graphic" : "Photo") + (credit ? ": " + credit : " by the author"));
+
+export function StoryView({ story, urls, showPrivate = false, look, credit }) {
   const images = story.blocks.filter(b => b.type === "image");
   const theme = (look || story.look) === "dark" ? "dark" : "light";
   return (
@@ -68,10 +72,10 @@ export function StoryView({ story, urls, showPrivate = false, look }) {
         return (
           <figure key={b.id} className={"vsr-fig vsr-" + lay}>
             {urls[b.path] ? <img className="vsr-img" src={urls[b.path]} alt={b.caption || "Image " + n} /> : <div className="vsr-img vsr-wait">Loading image {n}</div>}
-            {b.caption || (b.graphic && b.source) || showPrivate ? (
+            {b.caption || (b.graphic && b.source) || showPrivate || credit != null ? (
               <figcaption className="vsr-cap">
                 {b.caption ? <span className="vsr-cap-text">{b.caption}</span> : null}
-                {b.graphic && b.source ? <span className="vsr-src">Source: {b.source}</span> : null}
+                {credit != null || (b.graphic && b.source) ? <span className="vsr-src">{[creditOf(b, credit), b.graphic && b.source ? "Source: " + b.source : ""].filter(Boolean).join(". ")}</span> : null}
                 {showPrivate && (b.reasons || []).length ? <span className="vsr-why">Why: {(b.reasons || []).map(r => (REASONS.find(x => x[0] === r) || [r, r])[1]).join(", ")}{b.other ? " (" + b.other + ")" : ""}</span> : null}
               </figcaption>
             ) : null}
@@ -250,7 +254,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
   };
 
   if (!answers) return <div className="vss"><style>{CSS}</style><p className="vss-p">{STATUS[status] || "Loading"}</p></div>;
-  if (readOnly) return <div className="vss"><style>{CSS}</style><div className="vss-solo"><StoryView story={story} urls={urls} showPrivate /></div></div>;
+  if (readOnly) return <div className="vss"><style>{CSS}</style><div className="vss-solo"><StoryView story={story} urls={urls} showPrivate credit={viewer?.name || ""} /></div></div>;
 
   const words = wordCount(story), images = imageCount(story);
   const problems = problemsOf(story);
@@ -398,7 +402,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
             <span className="vss-label">Your story, the way classmates will see your story</span>
           </div>
           <div className={"vss-see-frame vss-frame-" + story.look}>
-            <StoryView story={story} urls={urls} />
+            <StoryView story={story} urls={urls} credit={viewer?.name || ""} />
           </div>
         </section>
       </div>

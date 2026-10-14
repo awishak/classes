@@ -242,7 +242,7 @@ export function ReadingPanel({ config, section }) {
           return (
             <div key={s.id} className="vsv-cgroup">
               <b>{s.name}: {s.headline || "Untitled"}</b>
-              {list.map((c, i) => <p key={i} className="vsv-msg"><i>{c.author}</i> Best image: {c.best} Shone: {c.shone} Encourage: {c.encourage}</p>)}
+              {list.map((c, i) => <p key={i} className="vsv-msg"><i>{c.author}</i> Best image{c.bestPicture ? ", picture " + c.bestPicture : ""}: {c.best} Shone: {c.shone} Encourage: {c.encourage}</p>)}
             </div>
           );
         })}

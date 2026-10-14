@@ -34,6 +34,8 @@ export const READING_COPY = {
   "ask.encourage": "One thing you would encourage the author to do",
 };
 const FIELDS = ["best", "shone", "encourage"];
+const MIN_CHARS = 50;                                 // the server checks the same number
+const EMPTY = { bestImage: "", best: "", shone: "", encourage: "" };
 
 const api = async (config, body) => {
   const r = await fetch("/api/visual-story", {
@@ -162,7 +164,7 @@ function Grid({ config, as, copy, editing, onOpen }) {
 function OneStory({ config, as, id, copy, editing, onBack }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ best: "", shone: "", encourage: "" });
+  const [form, setForm] = useState(EMPTY);
   const [state, setState] = useState("");
   const [short, setShort] = useState([]);
   const key = draftKey(config, as, id);
@@ -170,7 +172,7 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
     api(config, { action: "story", id, as }).then(out => {
       setData(out);
       const draft = readDraft(key);
-      setForm(draft || out.myComment || { best: "", shone: "", encourage: "" });
+      setForm({ ...EMPTY, ...(draft || out.myComment || {}) });
       if (draft) setState("draft");
     }).catch(e => setError(e.message));
   }, [config, id, as, key]);
@@ -188,12 +190,13 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
   if (!data) return <p className="vrd-p">Loading the story.</p>;
   // StoryView takes paths and a map of links; the server sends links, so each block's id stands in for its path.
   const story = { ...data.story, feature: "", blocks: data.story.blocks.map(b => (b.type === "image" ? { ...b, path: b.id } : b)) };
-  const urls = Object.fromEntries(data.story.blocks.filter(b => b.type === "image").map(b => [b.id, b.url]));
+  const images = data.story.blocks.filter(b => b.type === "image");
+  const urls = Object.fromEntries(images.map(b => [b.id, b.url]));
   return (
     <div className="vrd-stack">
       <button type="button" className="vrd-back" onClick={onBack}>Back to all stories</button>
       <div className={"vrd-story vrd-look-" + (data.story.look || "light")}>
-        <StoryView story={story} urls={urls} />
+        <StoryView story={story} urls={urls} credit={data.author || ""} />
         {data.author ? <p className={"vrd-byline vrd-look-" + (data.story.look || "light")}>By {data.author}</p> : null}
       </div>
 
@@ -203,7 +206,7 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
           {!data.comments.length ? <p className="vrd-muted">Nobody commented on your story.</p> : data.comments.map((c, i) => (
             <article key={i} className="vrd-comment">
               <b>{c.author}</b>
-              {FIELDS.map(f => <p key={f} className="vrd-said"><span className="vrd-said-k">{copy.say("ask." + f)}</span>{c[f]}</p>)}
+              <Said c={c} copy={copy} images={images} urls={urls} />
             </article>
           ))}
         </section>
@@ -217,10 +220,21 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
             <h2 className="vrd-h2">{data.mine ? "Your comments on your own story" : "Your comments"}</h2>
             <Words k="prompt" copy={copy} editing={editing} as="p" className="vrd-muted" />
             {FIELDS.map(f => (
-              <label key={f} className="vrd-field">
+              <div key={f} className="vrd-field">
                 <Words k={"ask." + f} copy={copy} editing={editing} className="vrd-ask" />
-                <textarea className={"vrd-box" + (short.includes(f) ? " vrd-box-bad" : "")} rows={3} maxLength={3000} value={form[f] || ""} onChange={e => change(f, e.target.value)} />
-              </label>
+                {f === "best" ? (
+                  <div className={"vrd-picks" + (short.includes("bestImage") ? " vrd-picks-bad" : "")} role="radiogroup" aria-label="Tap the best image">
+                    {images.map((b, i) => (
+                      <button key={b.id} type="button" role="radio" aria-checked={form.bestImage === b.id} aria-label={"Picture " + (i + 1)} className="vrd-pick" onClick={() => change("bestImage", b.id)}>
+                        {urls[b.id] ? <img src={urls[b.id]} alt="" /> : null}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <textarea className={"vrd-box" + (short.includes(f) ? " vrd-box-bad" : "")} rows={3} maxLength={3000} aria-label={copy.say("ask." + f)}
+                  placeholder={f === "best" ? "Why is this picture the best?" : ""} value={form[f] || ""} onChange={e => change(f, e.target.value)} />
+                <span className={"vrd-chars" + (String(form[f] || "").trim().length >= MIN_CHARS ? " vrd-chars-ok" : "")}>{String(form[f] || "").trim().length} of {MIN_CHARS} characters</span>
+              </div>
             ))}
             <div className="vrd-row">
               <button type="button" className="vrd-go" disabled={state === "saving"} onClick={save}>{data.myComment ? "Save my changes" : "Save my comments"}</button>
@@ -234,11 +248,23 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
       ) : data.myComment && !data.comments ? (
         <section className="vrd-form">
           <h2 className="vrd-h2">Your comments</h2>
-          {FIELDS.map(f => <p key={f} className="vrd-said"><span className="vrd-said-k">{copy.say("ask." + f)}</span>{data.myComment[f]}</p>)}
+          <Said c={data.myComment} copy={copy} images={images} urls={urls} />
         </section>
       ) : null}
     </div>
   );
+}
+
+// One reader's three comments, with the picture they chose as best.
+function Said({ c, copy, images, urls }) {
+  const n = images.findIndex(b => b.id === c.bestImage);
+  return FIELDS.map(f => (
+    <div key={f} className="vrd-said">
+      <span className="vrd-said-k">{copy.say("ask." + f)}</span>
+      {f === "best" && n >= 0 ? <span className="vrd-said-pick">{urls[c.bestImage] ? <img src={urls[c.bestImage]} alt={"Picture " + (n + 1)} /> : null}<span>Picture {n + 1}</span></span> : null}
+      {c[f]}
+    </div>
+  ));
 }
 
 const T = TOKENS.TEXT, S = TOKENS.SURFACE, L = TOKENS.LINE, ST = TOKENS.STATE;
@@ -292,6 +318,17 @@ const CSS = `
 .vrd-comment{display:flex;flex-direction:column;gap:6px;padding:12px 16px;border-radius:12px;background:${S.card};box-shadow:0 0 0 1px ${L.soft}}
 .vrd-said{margin:0;font-size:15.5px;line-height:1.5;white-space:pre-wrap}
 .vrd-said-k{display:block;font-size:12.5px;font-weight:700;color:${T.muted}}
+.vrd-said-pick{display:flex;align-items:center;gap:8px;margin:4px 0 6px;font-size:13px;font-weight:600;color:${T.secondary}}
+.vrd-said-pick img{width:56px;height:56px;object-fit:cover;border-radius:6px;display:block}
+.vrd-picks{display:flex;flex-wrap:wrap;gap:10px;padding:4px 0}
+.vrd-picks-bad{padding:6px;border-radius:12px;box-shadow:0 0 0 2px ${ST.late}}
+.vrd-pick{width:92px;height:92px;padding:0;border:0;border-radius:10px;overflow:hidden;background:${S.card};cursor:pointer;box-shadow:0 0 0 1px ${L.soft};opacity:.72;transition:opacity .12s,box-shadow .12s,transform .12s}
+.vrd-pick img{width:100%;height:100%;object-fit:cover;display:block}
+.vrd-pick:hover{opacity:1;transform:translateY(-1px)}
+.vrd-pick[aria-checked="true"]{opacity:1;box-shadow:0 0 0 4px ${GREEN}}
+.vrd-pick:focus-visible{outline:2.5px solid ${T.primary};outline-offset:3px}
+.vrd-chars{font-size:13px;color:${T.muted}}
+.vrd-chars-ok{color:${GREEN};font-weight:600}
 .vsp-edit{display:block;width:100%;box-sizing:border-box;font:inherit;color:inherit;line-height:1.45;padding:4px 8px;margin:0;border:1.5px dashed ${L.strong};border-radius:8px;background:${S.card};resize:none;overflow:hidden}
 @media (max-width:1100px){ .vrd-grid{grid-template-columns:repeat(4,1fr)} }
 @media (max-width:760px){ .vrd-grid{grid-template-columns:repeat(2,1fr);gap:12px} .vrd-title{font-size:30px} }

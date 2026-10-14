@@ -30,12 +30,11 @@ const STORAGE = { comm3: "comm3-f26-v1", comm999: "comm999-v1" };
 const PRACTICE = new Set(["comm999"]);
 const STAGES = ["building", "reading", "closed", "released"];
 const OTHERS_BEFORE_OWN = 8;
-const MIN_WORDS = 5;
+const MIN_CHARS = 50;
 const PAGE = 1000;
 
 const lower = (s) => String(s || "").trim().toLowerCase();
 const clean = (s) => String(s || "").trim();
-const words = (s) => (String(s || "").trim().match(/\S+/g) || []).length;
 
 const rows = async (path) => {
   const r = await fetch(SUPABASE_URL + path, { headers: serviceHeaders() });
@@ -101,6 +100,9 @@ async function sectionStories(groupKey, roster, section) {
   if (!by) return null;
   return mine.map(s => ({ id: s.id, owner: inSection.get(s.viewer_id), submitted_at: s.submitted_at, story: storyOf(answersOf(by[s.id] || [])) }));
 }
+
+/** The picture's place in the story, 1 for the first picture, or null. */
+const pictureNo = (story, id) => { const i = story && id ? story.blocks.filter(b => b.type === "image").findIndex(b => b.id === id) : -1; return i < 0 ? null : i + 1; };
 
 const featurePath = (story) => {
   const images = story.blocks.filter(b => b.type === "image");
@@ -187,8 +189,9 @@ export default async function handler(req, res) {
     const all = [];
     for (const s of sections) { const list = await sectionStories(groupKey, roster, s); if (list) all.push(...list); }
     const ids = all.map(s => s.id);
-    const comments = ids.length ? ((await rows(`/rest/v1/story_comments?select=story_sheet,author,best,shone,encourage,updated_at&story_sheet=in.(${ids.join(",")})&limit=5000`)) || []) : [];
+    const comments = ids.length ? ((await rows(`/rest/v1/story_comments?select=*&story_sheet=in.(${ids.join(",")})&limit=5000`)) || []) : [];
     const ownerOf = new Map(all.map(s => [s.id, s.owner.email]));
+    const storyById = new Map(all.map(s => [s.id, s.story]));
     const counts = {};
     comments.forEach(c => { if (ownerOf.get(c.story_sheet) !== c.author) counts[c.author] = (counts[c.author] || 0) + 1; });
     return res.status(200).json({
@@ -197,7 +200,7 @@ export default async function handler(req, res) {
       pods: pods.map(p => ({ section: p.section, pod: p.pod, email: p.viewer_id, name: nameOf.get(p.viewer_id) || p.viewer_id })),
       stories: all.map(s => ({ id: s.id, email: s.owner.email, name: s.owner.name, section: s.owner.section, submitted_at: s.submitted_at, headline: s.story.headline })),
       counts,
-      comments: comments.map(c => ({ story: c.story_sheet, owner: nameOf.get(ownerOf.get(c.story_sheet)) || "", author: nameOf.get(c.author) || c.author, best: c.best, shone: c.shone, encourage: c.encourage, updated_at: c.updated_at })),
+      comments: comments.map(c => ({ story: c.story_sheet, owner: nameOf.get(ownerOf.get(c.story_sheet)) || "", author: nameOf.get(c.author) || c.author, bestPicture: pictureNo(storyById.get(c.story_sheet), c.best_image), best: c.best, shone: c.shone, encourage: c.encourage, updated_at: c.updated_at })),
     });
   }
 
@@ -214,7 +217,7 @@ export default async function handler(req, res) {
     stageOf(groupKey, me.section),
     rows(`/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}&submitted_at=not.is.null&limit=${PAGE}`),
     rows(`/rest/v1/story_pods?select=section,pod,viewer_id&group_key=eq.${groupKey}`),
-    rows(`/rest/v1/story_comments?select=story_sheet,best,shone,encourage&author=eq.${encodeURIComponent(email)}&limit=${PAGE}`),
+    rows(`/rest/v1/story_comments?select=*&author=eq.${encodeURIComponent(email)}&limit=${PAGE}`),
     dueOf(groupKey),
   ]);
   if (stage === "building") return res.status(200).json({ ok: true, stage, stories: [] });
@@ -226,7 +229,7 @@ export default async function handler(req, res) {
   const myPod = (podRows || []).find(p => p.viewer_id === email)?.pod || null;
   const podMates = new Set((podRows || []).filter(p => myPod && p.pod === myPod && p.section === me.section).map(p => p.viewer_id));
   const podded = new Set((podRows || []).map(p => p.viewer_id));
-  const mineComments = (myRows || []).filter(c => byId.has(c.story_sheet));
+  const mineComments = (myRows || []).filter(c => byId.has(c.story_sheet)).map(c => ({ story_sheet: c.story_sheet, bestImage: c.best_image || "", best: c.best, shone: c.shone, encourage: c.encourage }));
   const doneSet = new Set(mineComments.map(c => c.story_sheet));
   const ownId = list.find(s => s.owner.email === email)?.id || null;
   const doneOthers = [...doneSet].filter(id => id !== ownId).length;
@@ -272,8 +275,8 @@ export default async function handler(req, res) {
     let comments = null;
     if (released && isMine) {
       const nameOf = new Map(roster.map(s => [s.email, s.name]));
-      comments = ((await rows(`/rest/v1/story_comments?select=author,best,shone,encourage,updated_at&story_sheet=eq.${story.id}&order=updated_at`)) || [])
-        .map(c => ({ author: c.author === email ? "You" : (nameOf.get(c.author) || "A classmate"), best: c.best, shone: c.shone, encourage: c.encourage }));
+      comments = ((await rows(`/rest/v1/story_comments?select=*&story_sheet=eq.${story.id}&order=updated_at`)) || [])
+        .map(c => ({ author: c.author === email ? "You" : (nameOf.get(c.author) || "A classmate"), bestImage: c.best_image || "", best: c.best, shone: c.shone, encourage: c.encourage }));
     }
     return res.status(200).json({
       ok: true, stage, story: forReader(story.story, urls), mine: isMine, author: released ? story.owner.name : null,
@@ -287,10 +290,14 @@ export default async function handler(req, res) {
     if (stage !== "reading") return res.status(409).json({ ok: false, error: "Comments are closed." });
     if (isMine && doneOthers < OTHERS_BEFORE_OWN) return res.status(409).json({ ok: false, error: `Comment on ${OTHERS_BEFORE_OWN} classmates' stories first, then on your own.` });
     const c = { best: clean(body.best).slice(0, 3000), shone: clean(body.shone).slice(0, 3000), encourage: clean(body.encourage).slice(0, 3000) };
-    const short = Object.entries(c).filter(([, v]) => words(v) < MIN_WORDS).map(([k]) => k);
-    if (short.length) return res.status(400).json({ ok: false, error: "Each comment needs at least a full sentence.", short });
+    const short = Object.entries(c).filter(([, v]) => v.length < MIN_CHARS).map(([k]) => k);
+    // The best image is picked from the story's own pictures, so the pick has to be one of them.
+    const bestImage = String(body.bestImage || "");
+    const picked = /^[a-z]+$/.test(bestImage) && ((await rows(`/rest/v1/worksheet_answers?select=value&sheet_id=eq.${story.id}&field=eq.${encodeURIComponent("block:" + bestImage)}&limit=1`)) || []).length > 0;
+    if (!picked) short.unshift("bestImage");
+    if (short.length) return res.status(400).json({ ok: false, error: !picked && short.length === 1 ? "Tap the best image." : `Each comment needs at least ${MIN_CHARS} characters${picked ? "" : ", and tap the best image"}.`, short });
     const w = await write("/rest/v1/story_comments?on_conflict=story_sheet,author", "POST",
-      { story_sheet: story.id, author: email, ...c, updated_at: new Date().toISOString() }, "return=representation,resolution=merge-duplicates");
+      { story_sheet: story.id, author: email, best_image: bestImage, ...c, updated_at: new Date().toISOString() }, "return=representation,resolution=merge-duplicates");
     if (!w || !w[0]) return res.status(502).json({ ok: false, error: "The comment did not save." });
     return res.status(200).json({ ok: true, doneOthers: doneOthers + (isMine || doneSet.has(story.id) ? 0 : 1) });
   }

@@ -5719,7 +5719,8 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (vsr.suggestPods(people(3)).length !== 3) say("a small section loses students");
   if (vsr.suggestPods(people(26)).length !== 26) say("someone is left out of the pods");
 }
-cases.push(["Visual story, reading view", <StoryView story={vsm.storyOf({ headline: "Run club", order: JSON.stringify(["aa", "tx"]), "block:aa": JSON.stringify({ type: "image", path: "p", w: 800, h: 1200, layout: "left", caption: "Dawn", graphic: true, source: "Strava" }), "block:tx": JSON.stringify({ type: "text", text: "Words" }) })} urls={{ p: "x.jpg" }} />, "Strava"]);
+cases.push(["Visual story, reading view", <StoryView story={vsm.storyOf({ headline: "Run club", order: JSON.stringify(["aa", "tx"]), "block:aa": JSON.stringify({ type: "image", path: "p", w: 800, h: 1200, layout: "left", caption: "Dawn", graphic: true, source: "Strava" }), "block:tx": JSON.stringify({ type: "text", text: "Words" }) })} urls={{ p: "x.jpg" }} credit="Pat Lee" />, "Graphic: Pat Lee. Source: Strava"]);
+cases.push(["Visual story, anonymous credit", <StoryView story={vsm.storyOf({ headline: "Run club", order: JSON.stringify(["aa"]), "block:aa": JSON.stringify({ type: "image", path: "p", w: 800, h: 600, caption: "Dawn" }) })} urls={{ p: "x.jpg" }} credit="" />, "Photo by the author"]);
 cases.push(["Visual story pre-production, loading", <PreSheet store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" />, "Loading"]);
 
 let failed = failedEarly;
