@@ -36,6 +36,7 @@ export const READING_COPY = {
 const FIELDS = ["best", "shone", "encourage"];
 const MIN_CHARS = 50;                                 // the server checks the same number
 const EMPTY = { bestImage: "", best: "", shone: "", encourage: "" };
+const charsSay = (n) => (n >= MIN_CHARS ? n + " characters. Long enough!" : n + " characters. Write at least " + MIN_CHARS + ".");
 
 const api = async (config, body) => {
   const r = await fetch("/api/visual-story", {
@@ -233,7 +234,7 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
                 ) : null}
                 <textarea className={"vrd-box" + (short.includes(f) ? " vrd-box-bad" : "")} rows={3} maxLength={3000} aria-label={copy.say("ask." + f)}
                   placeholder={f === "best" ? "Why is this picture the best?" : ""} value={form[f] || ""} onChange={e => change(f, e.target.value)} />
-                <span className={"vrd-chars" + (String(form[f] || "").trim().length >= MIN_CHARS ? " vrd-chars-ok" : "")}>{String(form[f] || "").trim().length} of {MIN_CHARS} characters</span>
+                <span className={"vrd-chars" + (String(form[f] || "").trim().length >= MIN_CHARS ? " vrd-chars-ok" : "")}>{charsSay(String(form[f] || "").trim().length)}</span>
               </div>
             ))}
             <div className="vrd-row">
