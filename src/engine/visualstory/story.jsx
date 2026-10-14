@@ -436,8 +436,8 @@ function Meter({ label, n, min, max, ok }) {
   const pct = Math.min(100, Math.round((n / max) * 100));
   return (
     <span className={"vss-count" + (ok ? " vss-count-ok" : "")}>
-      <span className="vss-count-n">{n}</span>
-      <span className="vss-count-l">{min} to {max} {label}</span>
+      <span className="vss-count-n">{n} {n === 1 ? label.replace(/s$/, "") : label}</span>
+      <span className="vss-count-l">Range: {min}-{max}</span>
       <span className="vss-count-bar"><span className="vss-count-fill" style={{ width: pct + "%" }} /></span>
     </span>
   );
@@ -547,7 +547,7 @@ const CSS = `
 .vss-bar .vss-counts{box-shadow:none;background:transparent}
 .vss-count{display:flex;flex-direction:column;gap:3px;padding:8px 16px;min-width:116px}
 .vss-count+.vss-count{border-left:1px solid ${L.soft}}
-.vss-count-n{font-size:22px;font-weight:700;line-height:1.1;color:${ST.warn}}
+.vss-count-n{font-size:22px;font-weight:700;line-height:1.1;white-space:nowrap;color:${ST.warn}}
 .vss-count-ok .vss-count-n{color:${ST.ok}}
 .vss-count-l{font-size:13px;color:${T.muted}}
 .vss-count-bar{height:4px;margin-top:2px;border-radius:999px;background:${S.sunk};overflow:hidden}
