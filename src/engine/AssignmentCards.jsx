@@ -27,6 +27,7 @@ import { useState, useEffect, useRef } from "react";
 import * as TOKENS from "./tokens.js";
 import { dueText, dueState, isLate, deletePatch, DetailsLink } from "./AssignmentsCard.jsx";
 import { unseenGrades, markSeen, bucketOf, htmlToText, letterOf, alive } from "./grades.js";
+import { RichComment } from "./RichComment.jsx";
 import { deadlineOf } from "./DueCard.jsx";
 import { assignmentsOf, isProfileTask, profileComplete } from "./profileTask.js";
 import { genId } from "../utils.jsx";
@@ -311,10 +312,12 @@ export function feedOf(config, data, asg, name) {
   log.forEach(e => {
     if (e.type === "submission") out.push({ id: e.id, at: e.ts, from: "student", kind: "sent", liked: e.appreciatedBy, text: [e.text, e.link].filter(Boolean).join("\n"), why: e.why || "" });
     else if (e.type === "regrade") out.push({ id: e.id, at: e.ts, from: "student", kind: "regrade", text: String(e.text || ""), link: e.link || "" });
-    else if (e.type === "comment") out.push({ id: e.id, at: e.ts, from: e.from === "student" ? "student" : "instructor", kind: "note", liked: e.appreciatedBy, text: htmlToText(e.html || e.text) });
+    // Andrew's words keep their formatting; the plain text stays for the
+    // preview line and for a message written before comments had any.
+    else if (e.type === "comment") out.push({ id: e.id, at: e.ts, from: e.from === "student" ? "student" : "instructor", kind: "note", liked: e.appreciatedBy, text: htmlToText(e.html || e.text), html: e.from === "student" ? null : e.html || null });
     else if (e.type === "grade") {
       const b = e.bucket ? bucketOf(e.bucket) : null;
-      out.push({ id: e.id, at: e.ts, from: "instructor", kind: "grade", letter: e.letter || letterOf(e.score), means: b?.means || "", text: htmlToText(e.html) });
+      out.push({ id: e.id, at: e.ts, from: "instructor", kind: "grade", letter: e.letter || letterOf(e.score), means: b?.means || "", text: htmlToText(e.html), html: e.html || null });
     }
   });
   const dues = duesOf(data, asg);
@@ -446,9 +449,10 @@ function Message({ m, deadline, who, onDelete }) {
             <span style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <YourGrade letter={m.letter} />
               {m.means ? <span style={{ color: TEXT_SECONDARY }}>{m.means}</span> : null}
-              {m.text ? <span>{m.text}</span> : null}
+              {m.html ? <RichComment html={m.html} size={16} style={{ whiteSpace: "normal" }} /> : m.text ? <span>{m.text}</span> : null}
             </span>
-          ) : withLinks(m.text, mine ? "var(--ca-accent-ink)" : TEXT_PRIMARY)}
+          ) : m.html ? <RichComment html={m.html} size={16} style={{ whiteSpace: "normal" }} />
+          : withLinks(m.text, mine ? "var(--ca-accent-ink)" : TEXT_PRIMARY)}
         </div>
         {m.liked === "instructor" && mine ? <span style={{ fontSize: 13, fontWeight: 700, color: OK }}>{who.split(" ")[0]} appreciated this</span> : null}
         <span style={{ fontSize: 13, color: TEXT_MUTED, display: "flex", alignItems: "center", gap: 8 }}>

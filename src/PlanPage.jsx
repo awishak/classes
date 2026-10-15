@@ -47,6 +47,22 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "oct15-verbal-grading", date: "Thursday, October 15", title: "Verbal grading, and comments with their formatting",
+    blurb: "Andrew: \"we're testing out the verbal grading. This is where I'm gonna walk through the pile, so to speak.\" He talked through twelve submissions of the Visual Language Exercise - Version 2 and pasted the transcript. The transcript became twelve cards on the COMM 3 grade board, unreleased, and then: \"i want you to give the students well formatted comments from me ... here's the top line assessment, here are the things he liked, here are the things to work on. and i want it to look good.\"",
+    groups: [
+      { name: "What changed", items: [
+        ["The transcript to the board", "Each student named on the recording is matched to the roster, with the drift in the transcription (Gore for Gorr, Dude for Jude, Tia Sainer for Thea Sahner) checked with him before anything is written. His rules from the recording: a student is Complete unless he says not quite or incomplete, and a file he cannot open, a zip or a doc he has no access to, is Not submitted. The cards went on the plan row by script, so the board on /comm3/grade holds them for him to adjust and Release."],
+        ["The shape of a comment", "A top line, then What worked with its points under, then What to work on with its points under, then his sign-off where he gave one. A Not submitted card gets the top line and What to do. Every line is his, from the recording; nothing was added."],
+        ["Markup in the comment box", "A card's comment is still plain text, with a little markup the release turns into HTML: a blank line starts a paragraph, a line that starts with - or – is a bullet, two stars around words make them bold, and a bare link is a link. One line under the comment box says so."],
+        ["Read the same everywhere", "A new RichComment draws the HTML wherever a comment is read: the challenge page the student opens, the card on the grade board, and the assignment log. Paragraphs get a little air, bullets indent, bold is bold. The board card used to show the raw text, so what he saw and what the student got were two different things."],
+        ["Checked", "The smoke now turns a comment with a bold label, two bullets and a link into HTML and back to text. The build passed on every check."],
+      ] },
+      { name: "Still to do", items: [
+        ["Deploy, then Release", "The twelve cards are on the board with their stars and dashes. Until the new build is live, Release would write the stars into the students' grades as typed. Deploy first."],
+      ] },
+    ],
+  },
+  {
     id: "oct1-worktopia-back", date: "Thursday, October 1, later", title: "Worktopia: Back, the review, and the week 1 lines",
     blurb: "Andrew: \"students should be able to save their work and come back to it from another device\", \"at the end, they should be able to see all their answers and change them ... so we should have a back button\", and \"i want to include some tidbits from their work on the week 1 worksheet.\" The first was already so; the other two are built and walked end to end on the harness at a laptop width and a phone width.",
     groups: [

@@ -16,7 +16,8 @@ import { sectionOf } from "./sections.js";
 import { checkinTasksOf, isCheckin, answersOf, CHECKIN_QUESTIONS } from "./checkins.js";
 import { schedulingLinkOf } from "../instructors.js";
 import { isLate, unanswered, appreciatePatch, deletePatch } from "./AssignmentsCard.jsx";
-import { regradeOf, regradePending, alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText } from "./grades.js";
+import { regradeOf, regradePending, alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText, toHtml } from "./grades.js";
+import { RichComment } from "./RichComment.jsx";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -33,6 +34,14 @@ const LATE = TOKENS.STATE.late;
 const HIT = TOKENS.HIT;
 
 const label = { fontSize: 13, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
+
+// What the comment box understands, in one line under the box. The markup is
+// toHtml's, in grades.js, and the card below the box shows the result.
+const MarkupHint = () => (
+  <div style={{ fontSize: 13, color: TEXT_MUTED, lineHeight: 1.4, marginTop: 4 }}>
+    A blank line starts a paragraph. A line that starts with - is a bullet. Two stars around words make them **bold**.
+  </div>
+);
 
 const CSS = `
 .gv-focus:focus-visible{outline:2px solid var(--gv-accent);outline-offset:2px;border-radius:8px}
@@ -448,6 +457,7 @@ function Walk({ names, roster, data, aid, asg, board, columns, accent, onPlace, 
           <div>
             <div style={label}>Comment to {first(name)}</div>
             <textarea className="gv-box" value={comment} onChange={e => setComment(e.target.value)} placeholder="Goes out with the grade" style={{ marginTop: 6, minHeight: 96 }} />
+            <MarkupHint />
             <button className="gv-focus" style={{ ...btn(false), marginTop: 6 }} onClick={() => onPlace(name, { comment: comment.trim() }, undefined)}>Save the comment</button>
           </div>
           {work.last?.text ? <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{work.last.text}</div> : null}
@@ -549,6 +559,7 @@ function Card({ student, profile, due, card, work, accent, checkin, columns, dra
           <div>
             <div style={label}>Comment to {first(student.name)}</div>
             <textarea className="gv-box" value={comment} onChange={e => setComment(e.target.value)} placeholder="Goes out with the grade" autoFocus />
+            <MarkupHint />
           </div>
           {/* The grade options, where the note to myself used to be. Andrew,
               2026-09-30: "replace the note to myself area with the grade
@@ -595,7 +606,7 @@ function Card({ student, profile, due, card, work, accent, checkin, columns, dra
           </summary>
           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
           {work.last?.text ? <div style={{ fontSize: 13, color: TEXT_SECONDARY, whiteSpace: "pre-wrap" }}><span style={{ fontWeight: 700 }}>With the file: </span>{work.last.text}</div> : null}
-          {card.comment ? <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{card.comment}</div> : null}
+          {card.comment ? <RichComment html={toHtml(card.comment)} style={{ color: TEXT_PRIMARY }} /> : null}
           {(work.comments || []).map(c => (
             <div key={c.id} style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap",
               borderLeft: c.mine ? "none" : "3px solid " + accent, paddingLeft: c.mine ? 0 : 8 }}>
