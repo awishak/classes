@@ -229,7 +229,7 @@ export const PICKS = {
     roles: { a: { role: "Social media manager", field: "social" }, b: { role: "Events and partnerships manager", field: "marketing" }, c: { role: "Social media coordinator", field: "social" } } },
   "Julia Benavides": { pick: "b", why: "Her A, media and content, is the same field as Emma's. Marketing gives the table a spread.",
     roles: { a: { role: "Media and content coordinator", field: "social" }, b: { role: "Sports marketing coordinator", field: "marketing" }, c: { role: "Event coordinator", field: "venue" } } },
-  "Haixing Yang": { pick: "a", why: "His first pick. His duties are an athlete's image, what they say to the media and what they post, which is PR work.",
+  "Yoyo Yang": { pick: "a", why: "His first pick. His duties are an athlete's image, what they say to the media and what they post, which is PR work.",
     roles: { a: { role: "Athlete image consultant", field: "pr" }, b: { role: "Sports agent", field: "agent" }, c: { role: "Sports photographer", field: "social" } } },
 };
 

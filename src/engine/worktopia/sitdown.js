@@ -20,7 +20,7 @@ export const SESSIONS = [
   { key: "fri-915", day: "Friday, October 23", time: "9:15",
     names: ["Lucy Kate Murray", "Audrey Graham", "Emme Munn", "Lila Waechter"] },
   { key: "fri-945", day: "Friday, October 23", time: "9:45",
-    names: ["Sophia Taylor", "Emma Alvarez", "Julia Benavides", "Haixing Yang"] },
+    names: ["Sophia Taylor", "Emma Alvarez", "Julia Benavides", "Yoyo Yang"] },
 ];
 
 // "Wed 9:15", for a table cell.
@@ -29,8 +29,8 @@ export const shortOf = (s) => s.day.slice(0, 3) + " " + s.time;
 const same = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
 // The name someone goes by, where the roster has another. Andrew, 2026-10-13:
 // "call Vianna Emma." The lists say Emma; the roster and her email still say
-// Vianna, so a match tries both.
-const ROSTER_NAME = { "Emma Alvarez": "Vianna Alvarez" };
+// Vianna, so a match tries both. Andrew, 2026-10-14: "Haixing is Yoyo."
+const ROSTER_NAME = { "Emma Alvarez": "Vianna Alvarez", "Yoyo Yang": "Haixing Yang" };
 export const rosterName = (name) => ROSTER_NAME[name] || name;
 const matches = (n, name) => same(n, name) || same(rosterName(n), name);
 

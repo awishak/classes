@@ -1,6 +1,7 @@
 # Sit-Down 1: the six sessions
 
-Emma Alvarez is Vianna Alvarez on the roster; she goes by Emma.
+Emma Alvarez is Vianna Alvarez on the roster; she goes by Emma. Yoyo Yang is
+Haixing Yang on the roster; he goes by Yoyo.
 
 Sorted 2026-10-12 from the Worktopia files, 24 of 25 submitted. Jacqueline
 Cingel filled in every screen through the confirm step and never pressed
@@ -33,7 +34,7 @@ Sessions: Wednesday October 21, Thursday October 22 and Friday October 23, at
 | Thu 9:15 | Jameson Baldwin, Will Tortorella, Neel Namburar, Katie Coggins | Jameson and Will named each other. Neel named Jameson. |
 | Thu 9:45 | Ruby McAlister, Mailin Orozco, Chloe Shim, Gianna Alcaraz, Jacqueline Cingel | Ruby and Mailin named each other. Chloe and Jacqueline named each other. |
 | Fri 9:15 | Lucy Kate Murray, Audrey Graham, Emme Munn, Lila Waechter | Lucy Kate and Emme named each other. Audrey and Lila named Lucy Kate. |
-| Fri 9:45 | Sophia Taylor, Emma Alvarez, Julia Benavides, Haixing Yang | Sophia T and Emma named each other. Emma named Julia. Haixing named nobody. |
+| Fri 9:45 | Sophia Taylor, Emma Alvarez, Julia Benavides, Yoyo Yang | Sophia T and Emma named each other. Emma named Julia. Yoyo named nobody. |
 
 Twenty-five people, so one group of five. Thursday 9:45 takes the fifth
 because Jacqueline said yes to Thursday and Chloe, who is there, named her.
