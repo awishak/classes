@@ -177,8 +177,11 @@ export const PICKS = {
     roles: { a: { role: "Head of stadium real estate", field: "venue" }, b: { role: "Field operations manager", field: "venue" }, c: { role: "Team chef", field: "health" } } },
   "Catherine Shanahan": { pick: "a", why: "Her first pick. The athletic director hires the coaches and runs the budget, so everyone at this table answers to the role.",
     roles: { a: { role: "Athletic director", field: "frontoffice" }, b: { role: "Head volleyball coach", field: "coach" }, c: { role: "Marketing director", field: "marketing" } } },
-  "Sophia Alvarenga": { pick: "a", why: "Her first pick, and a different angle from the table: the person who keeps a program's history while everyone else chases next season.",
-    roles: { a: { role: "Sports historian", field: "journalism" }, b: { role: "Sports reporter", field: "journalism" }, c: { role: "Fan relations manager", field: "sales" } } },
+  // Andrew, 2026-10-14: "change Sophia's job to Social Media Content
+  // Producer." It takes her first slot; the historian and reporter answers
+  // are still in her file.
+  "Sophia Alvarenga": { pick: "a", why: "Andrew's call, October 14: Social Media Content Producer, in place of sports historian.",
+    roles: { a: { role: "Social Media Content Producer", field: "social" }, b: { role: "Sports reporter", field: "journalism" }, c: { role: "Fan relations manager", field: "sales" } } },
   // Wed 9:45
   "Drew Barreto": { pick: "a", why: "His first pick, and the strongest of his three answers.",
     roles: { a: { role: "Sports broadcaster", field: "broadcast" }, b: { role: "Sports reporter", field: "journalism" }, c: { role: "General manager", field: "frontoffice" } } },
@@ -226,7 +229,7 @@ export const PICKS = {
     roles: { a: { role: "Social media manager", field: "social" }, b: { role: "Events and partnerships manager", field: "marketing" }, c: { role: "Social media coordinator", field: "social" } } },
   "Julia Benavides": { pick: "b", why: "Her A, media and content, is the same field as Emma's. Marketing gives the table a spread.",
     roles: { a: { role: "Media and content coordinator", field: "social" }, b: { role: "Sports marketing coordinator", field: "marketing" }, c: { role: "Event coordinator", field: "venue" } } },
-  "Haixing Yang": { pick: "a", why: "His first pick. His duties are an athlete's image, what they say to the media and what they post, which is PR work.",
+  "Yoyo Yang": { pick: "a", why: "His first pick. His duties are an athlete's image, what they say to the media and what they post, which is PR work.",
     roles: { a: { role: "Athlete image consultant", field: "pr" }, b: { role: "Sports agent", field: "agent" }, c: { role: "Sports photographer", field: "social" } } },
 };
 

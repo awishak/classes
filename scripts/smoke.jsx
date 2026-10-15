@@ -114,7 +114,7 @@ import { AssignmentCards, AssignmentPage, statusOf, inDueOrder, feedOf } from ".
 import { appsFor } from "../src/engine/apps.js";
 import InstructorBar from "../src/engine/InstructorBar.jsx";
 import comm3Cfg from "../src/config/comm3.js";
-import { bucketsFor, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, unseenGrades, markSeen, letterOf, BUCKETS } from "../src/engine/grades.js";
+import { bucketsFor, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, unseenGrades, markSeen, letterOf, BUCKETS, toHtml, htmlToText } from "../src/engine/grades.js";
 import GradeParade from "../src/engine/GradeParade.jsx";
 import { computeGrade, dueText, AssignmentsSummary, waitingOn, waitingCount, appreciatePatch, deletePatch } from "../src/engine/AssignmentsCard.jsx";
 import { sectionsOf, takeGroup, placeGroup, parseRange, sumRanges, rangeLabel, placeSection, splitSection, templateOf, applyTemplate, slotOrder, orderSlots } from "../src/engine/dayplan.js";
@@ -2367,6 +2367,17 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (g.type !== "grade" || g.letter !== "A" || g.score !== 100 || g.bucket !== "exceptional") say("exceptional did not release as an A worth 100: " + JSON.stringify(g));
   if (!g.html || !g.html.includes("<p>Sharp work.</p>")) say("the comment did not ride on the grade: " + g.html);
   if (g.html.includes("mine")) say("the private note reached the student");
+  // A comment's markup: a blank line is a paragraph, a line that starts with
+  // - or – is a bullet, **words** are bold, a bare link is a link, and <
+  // stays harmless. The plain-text preview reads the bullets back.
+  {
+    const rich = toHtml("Nice work.\n\n**What worked**\n- The first image\n– The map <3\n\nKeep going https://x.y/z.");
+    const want = "<p>Nice work.</p><p><strong>What worked</strong></p><ul><li>The first image</li><li>The map &lt;3</li></ul>"
+      + "<p>Keep going <a href=\"https://x.y/z\" target=\"_blank\" rel=\"noreferrer\">https://x.y/z</a>.</p>";
+    if (rich !== want) say("comment markup: " + rich);
+    if (htmlToText(rich) !== "Nice work.\n\nWhat worked\n\n– The first image\n– The map <3\n\nKeep going https://x.y/z.") say("comment back to text: " + JSON.stringify(htmlToText(rich)));
+    if (toHtml("One line\nTwo line") !== "<p>One line<br>Two line</p>") say("a single newline is no longer a line break");
+  }
   if (computeGrade(cfg, d, "Ada Lovelace").pct !== 100) say("the average did not take the released grade");
   const bob = computeGrade(cfg, d, "Bob Ross");
   if (bob.pct !== 0 || bob.rows[0].letter !== "Incomplete") say("an Incomplete did not count as a zero: " + JSON.stringify(bob));

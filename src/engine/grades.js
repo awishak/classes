@@ -98,15 +98,43 @@ export const writeCard = (data, aid, name, fields, now = Date.now()) =>
     return { ...board, cards };
   });
 
-// Plain text to the same HTML the grading flow writes, so the student's log
-// draws both the same way.
-export const toHtml = (text) => String(text || "").trim().split(/\n{2,}/).filter(Boolean)
-  .map(p => "<p>" + p.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>") + "</p>").join("");
+// ─── the comment, as the student reads it ───
+//
+// A card's comment is plain text with a little markup, and the student reads
+// the HTML this makes of the text. Andrew, 2026-10-15, on the comments a
+// grading transcript becomes: "I want them to look and go: okay here's the top
+// line assessment, here are the things he liked, here are the things to work
+// on. And I want it to look good." So: a blank line starts a paragraph, a line
+// that starts with -, – or * is a bullet, **words** are bold, _words_ are
+// italic, and a bare link is a link. The same text typed on the board reads
+// the same way, and RichComment.jsx draws the result wherever a comment
+// is read.
+const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const BULLET = /^\s*[-–*•]\s+/;
+const inline = (line) => esc(line)
+  .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+  .replace(/(^|[\s(])_([^_\n]+?)_(?=$|[\s.,;:!?)])/g, "$1<em>$2</em>")
+  .replace(/(https?:\/\/[^\s<]*[^\s<.,;:!?)])/g, "<a href=\"$1\" target=\"_blank\" rel=\"noreferrer\">$1</a>");
+export const toHtml = (text) => String(text || "").trim().split(/\n{2,}/).filter(Boolean).map(block => {
+  const out = [];
+  let para = [], list = [];
+  const endPara = () => { if (para.length) { out.push("<p>" + para.map(inline).join("<br>") + "</p>"); para = []; } };
+  const endList = () => { if (list.length) { out.push("<ul>" + list.map(l => "<li>" + inline(l) + "</li>").join("") + "</ul>"); list = []; } };
+  block.split("\n").forEach(line => {
+    if (BULLET.test(line)) { endPara(); list.push(line.replace(BULLET, "")); }
+    else { endList(); para.push(line); }
+  });
+  endPara(); endList();
+  return out.join("");
+}).join("");
 
-// The other way: a comment written in the rich editor, as the plain text a
-// deck card or a grade card draws.
+// The other way: a comment as HTML, whether from the markup above or the rich
+// editor, as the plain text a preview line draws. A bullet comes back as a
+// line that starts with –, so a preview reads like the comment was typed.
 export const htmlToText = (html) => String(html || "")
-  .replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div)>\s*<(p|div)[^>]*>/gi, "\n\n").replace(/<[^>]+>/g, "")
+  .replace(/<br\s*\/?>/gi, "\n")
+  .replace(/<\/li>\s*<li[^>]*>/gi, "\n– ").replace(/<li[^>]*>/gi, "– ")
+  .replace(/<\/(p|div|ul|ol|li)>\s*<(p|div|ul|ol)[^>]*>/gi, "\n\n").replace(/<[^>]+>/g, "")
   .replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&#39;/g, "'").replace(/&amp;/g, "&").trim();
 
 // ─── a regrade, asked for ───

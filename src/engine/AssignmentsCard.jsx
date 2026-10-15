@@ -18,6 +18,7 @@ import { Avatar, profileOf } from "./Face.jsx";
 import { genId } from "../utils.jsx";
 import { draftFeedback, textToHtml } from "./feedback.js";
 import { gradeText, scaleOf, SCALES, alive, bucketsFor, bucketOf } from "./grades.js";
+import { RichComment } from "./RichComment.jsx";
 import * as TOKENS from "./tokens.js";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -318,7 +319,7 @@ function Btn({ accent, onClick, children, disabled, ghost }) {
   );
 }
 
-const RichText = ({ html }) => <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: html || "" }} />;
+const RichText = ({ html }) => <RichComment html={html} style={{ color: TEXT_PRIMARY }} />;
 
 // Appreciation animation: pulse. (An unhinged version is planned for the "Crashing Out" theme.)
 const APPR_CSS = `@keyframes apprPulse{0%{transform:scale(.8);opacity:0;filter:brightness(1.7)}50%{transform:scale(1.12);filter:brightness(1.4)}100%{transform:scale(1);opacity:1;filter:brightness(1)}} .appr-badge{display:inline-block;animation:apprPulse .5s ease-out}`;

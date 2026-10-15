@@ -12,10 +12,12 @@ import { useWithWorksheetSubmits } from "./worksheetSubmits.js";
 import { Avatar, profileOf } from "./Face.jsx";
 import { ThemeStyle } from "./ThemeShell.jsx";
 import { withIds } from "./roster.js";
+import { sectionOf } from "./sections.js";
 import { checkinTasksOf, isCheckin, answersOf, CHECKIN_QUESTIONS } from "./checkins.js";
 import { schedulingLinkOf } from "../instructors.js";
 import { isLate, unanswered, appreciatePatch, deletePatch } from "./AssignmentsCard.jsx";
-import { regradeOf, regradePending, alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText } from "./grades.js";
+import { regradeOf, regradePending, alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText, toHtml } from "./grades.js";
+import { RichComment } from "./RichComment.jsx";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -33,11 +35,23 @@ const HIT = TOKENS.HIT;
 
 const label = { fontSize: 13, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.08em" };
 
+// What the comment box understands, in one line under the box. The markup is
+// toHtml's, in grades.js, and the card below the box shows the result.
+const MarkupHint = () => (
+  <div style={{ fontSize: 13, color: TEXT_MUTED, lineHeight: 1.4, marginTop: 4 }}>
+    A blank line starts a paragraph. A line that starts with - is a bullet. Two stars around words make them **bold**.
+  </div>
+);
+
 const CSS = `
 .gv-focus:focus-visible{outline:2px solid var(--gv-accent);outline-offset:2px;border-radius:8px}
 .gv-card{cursor:grab}
 .gv-card:active{cursor:grabbing}
 .gv-card[data-dragging="1"]{opacity:.4}
+.gv-fold>summary{list-style:none}
+.gv-fold>summary::-webkit-details-marker{display:none}
+.gv-fold>summary::before{content:"▸";font-size:11px;color:var(--text-muted)}
+.gv-fold[open]>summary::before{content:"▾"}
 .gv-zone[data-over="1"]{background:var(--surface-sunk);outline:2px dashed var(--gv-accent);outline-offset:-2px}
 textarea.gv-box{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid var(--line-strong);font-family:var(--font-body);font-size:16px;line-height:1.45;color:var(--text-primary);background:var(--surface-card);resize:vertical;min-height:64px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
@@ -110,16 +124,24 @@ export default function GradeView({ config }) {
     const own = data?.assignments || config.assignments || [];
     return [...own, ...checkinTasksOf(config, data).filter(c => !own.some(x => x.id === c.id))];
   }, [data, config]);
-  const roster = useMemo(() => withIds(data?.students?.length ? data.students : (config.students || [])), [data, config]);
+  const everyone = useMemo(() => withIds(data?.students?.length ? data.students : (config.students || [])), [data, config]);
+  // The sittings on the roster, for a class that meets twice. Andrew,
+  // 2026-10-14, on the visual language exercises: "I definitely want to be
+  // able to sort by the 8 AM class or the 10:30 class." The pick is in the
+  // URL beside the assignment, so a link can open one room's board.
+  const sections = useMemo(() => [...new Set(everyone.map(sectionOf).filter(Boolean))].sort(), [everyone]);
 
   // The assignment in the URL, so a link can open the board on one of them.
-  const fromUrl = () => { try { return new URLSearchParams(window.location.search).get("a") || ""; } catch { return ""; } };
-  const [aid, setAid] = useState(() => fromUrl() || assignments[0]?.id || "");
+  const fromUrl = (k) => { try { return new URLSearchParams(window.location.search).get(k) || ""; } catch { return ""; } };
+  const [aid, setAid] = useState(() => fromUrl("a") || assignments[0]?.id || "");
+  const [section, setSection] = useState(() => fromUrl("s"));
   useEffect(() => { if (!aid && assignments[0]) setAid(assignments[0].id); }, [assignments, aid]);
-  const pick = (id) => {
-    setAid(id);
-    try { window.history.replaceState({}, "", window.location.pathname + "?a=" + encodeURIComponent(id)); } catch { /* a render with no window */ }
+  const toUrl = (id, sec) => {
+    try { window.history.replaceState({}, "", window.location.pathname + "?a=" + encodeURIComponent(id) + (sec ? "&s=" + encodeURIComponent(sec) : "")); } catch { /* a render with no window */ }
   };
+  const pick = (id) => { setAid(id); toUrl(id, section); };
+  const pickSection = (sec) => { setSection(sec); toUrl(aid, sec); };
+  const roster = useMemo(() => section && sections.includes(section) ? everyone.filter(s => sectionOf(s) === section) : everyone, [everyone, section, sections]);
 
   const asg = assignments.find(x => x.id === aid) || null;
   // Andrew, 2026-10-01: "put that as a hint to myself in grade view, hey this
@@ -226,6 +248,20 @@ export default function GradeView({ config }) {
               {assignments.map(x => <option key={x.id} value={x.id}>{x.title}</option>)}
             </select>
           ) : <span style={{ color: TEXT_MUTED, fontSize: 15 }}>No challenges in this class yet.</span>}
+          {sections.length > 1 ? (
+            <div role="radiogroup" aria-label="Section" style={{ display: "inline-flex", gap: 4, padding: 3, borderRadius: 10, background: SUNK }}>
+              {["", ...sections].map(sec => {
+                const on = (section && sections.includes(section) ? section : "") === sec;
+                return (
+                  <button key={sec || "all"} type="button" role="radio" aria-checked={on} className="gv-focus" onClick={() => pickSection(sec)}
+                    style={{ minHeight: HIT - 6, padding: "0 12px", borderRadius: 8, border: "none", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer",
+                      background: on ? WHITE : "transparent", color: on ? TEXT_PRIMARY : TEXT_SECONDARY, boxShadow: on ? "0 1px 2px rgba(0,0,0,.12)" : "none" }}>
+                    {sec || "Everyone"}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
           {isCheckin(asg) ? <a className="gv-focus" href={config.path + "/checkins?w=" + asg.week} style={{ fontSize: 15, fontWeight: 600, color: a, textDecoration: "none" }}>Read every answer</a> : null}
           {/* The walk starts on the pile, so the first card up is the first
               file nobody has looked at. With the pile empty it walks the
@@ -421,6 +457,7 @@ function Walk({ names, roster, data, aid, asg, board, columns, accent, onPlace, 
           <div>
             <div style={label}>Comment to {first(name)}</div>
             <textarea className="gv-box" value={comment} onChange={e => setComment(e.target.value)} placeholder="Goes out with the grade" style={{ marginTop: 6, minHeight: 96 }} />
+            <MarkupHint />
             <button className="gv-focus" style={{ ...btn(false), marginTop: 6 }} onClick={() => onPlace(name, { comment: comment.trim() }, undefined)}>Save the comment</button>
           </div>
           {work.last?.text ? <div style={{ fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{work.last.text}</div> : null}
@@ -473,7 +510,9 @@ function Card({ student, profile, due, card, work, accent, checkin, columns, dra
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <button className="gv-focus" onClick={onPick} aria-pressed={picked}
           style={{ flex: 1, minWidth: 140, textAlign: "left", background: "none", border: "none", padding: 0, fontFamily: F, fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY, cursor: "pointer", minHeight: 28, display: "flex", alignItems: "center", gap: 8 }}>
-          <Avatar profile={profile} name={student.name} accent={accent} size={28} />
+          {/* The face is the biggest thing on the card. Andrew, 2026-10-14:
+              "I need to see their pictures." */}
+          <Avatar profile={profile} name={student.name} accent={accent} size={52} />
           <span style={{ minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{student.name}</span>
         </button>
         {/* Which sitting they are in, because two rooms of COMM 3 grade
@@ -508,7 +547,6 @@ function Card({ student, profile, due, card, work, accent, checkin, columns, dra
         {work.last ? <span>{fmtDay(work.last.ts)}{late ? " · late" : ""}</span> : null}
       </div>
       )}
-      {work.last?.text && !editing ? <div style={{ fontSize: 13, color: TEXT_SECONDARY, whiteSpace: "pre-wrap", maxHeight: 40, overflow: "hidden" }}>{work.last.text}</div> : null}
       {work.last?.why ? <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap" }}><span style={{ fontWeight: 700, color: LATE }}>Late: </span>{work.last.why}</div> : null}
       {work.regrade ? (
         <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap", borderLeft: "3px solid " + accent, paddingLeft: 8 }}>
@@ -521,6 +559,7 @@ function Card({ student, profile, due, card, work, accent, checkin, columns, dra
           <div>
             <div style={label}>Comment to {first(student.name)}</div>
             <textarea className="gv-box" value={comment} onChange={e => setComment(e.target.value)} placeholder="Goes out with the grade" autoFocus />
+            <MarkupHint />
           </div>
           {/* The grade options, where the note to myself used to be. Andrew,
               2026-09-30: "replace the note to myself area with the grade
@@ -552,7 +591,22 @@ function Card({ student, profile, due, card, work, accent, checkin, columns, dra
         </div>
       ) : (
         <>
-          {card.comment ? <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{card.comment}</div> : null}
+          {/* The words fold away until asked for. Andrew, 2026-10-14: "a
+              little too much information going on on each of the squares ...
+              maybe we make the comments expandable." The card reads face,
+              name, room, grade, file. Everything written sits under one
+              line that says how much is there. */}
+          {(() => {
+            const n = (card.comment ? 1 : 0) + (work.comments || []).length + (card.note ? 1 : 0) + (work.last?.text ? 1 : 0);
+            return n ? (
+          <details className="gv-fold" style={{ fontSize: 15 }}>
+          <summary className="gv-focus" style={{ cursor: "pointer", fontSize: 13, fontWeight: 700, color: TEXT_SECONDARY, minHeight: 28, display: "flex", alignItems: "center", gap: 6 }}>
+            {(card.comment ? "Comment" : "Comments") + (n > 1 ? " · " + n : "")}
+            {work.waiting ? <span style={{ fontWeight: 700, color: accent }}>· unanswered</span> : null}
+          </summary>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+          {work.last?.text ? <div style={{ fontSize: 13, color: TEXT_SECONDARY, whiteSpace: "pre-wrap" }}><span style={{ fontWeight: 700 }}>With the file: </span>{work.last.text}</div> : null}
+          {card.comment ? <RichComment html={toHtml(card.comment)} style={{ color: TEXT_PRIMARY }} /> : null}
           {(work.comments || []).map(c => (
             <div key={c.id} style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap",
               borderLeft: c.mine ? "none" : "3px solid " + accent, paddingLeft: c.mine ? 0 : 8 }}>
@@ -575,6 +629,10 @@ function Card({ student, profile, due, card, work, accent, checkin, columns, dra
             </div>
           ))}
           {card.note ? <div style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.45, whiteSpace: "pre-wrap", background: SUNK, borderRadius: 8, padding: "6px 8px" }}><span style={{ fontWeight: 700 }}>Note: </span>{card.note}</div> : null}
+          </div>
+          </details>
+            ) : null;
+          })()}
           <button className="gv-focus" onClick={onEdit}
             style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, fontFamily: F, fontSize: 15, fontWeight: 600, color: accent, cursor: "pointer", minHeight: HIT }}>
             {card.comment || card.note ? "Edit the comment" : "Add a comment"}
