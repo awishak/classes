@@ -423,7 +423,9 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
                     <RemoveButton disabled={!canEdit} onRemove={() => removeBlock(b.id)} />
                   </div>
                   {b.type === "text"
-                    ? <textarea className="vss-input" rows={4} value={b.text || ""} readOnly={!canEdit} maxLength={3000} placeholder="Words that sit between pictures. A link: [words](https://...)" onChange={e => setBlock(b.id, { text: e.target.value })} />
+                    ? <LinkBox value={b.text || ""} canEdit={canEdit} onChange={(v) => setBlock(b.id, { text: v })}>
+                        {(ref) => <textarea ref={ref} className="vss-input" rows={4} value={b.text || ""} readOnly={!canEdit} maxLength={3000} placeholder="Words that sit between pictures" onChange={e => setBlock(b.id, { text: e.target.value })} />}
+                      </LinkBox>
                     : <ImageFields b={b} canEdit={canEdit} onChange={(p) => setBlock(b.id, p)} />}
                 </div>
               </li>
@@ -479,14 +481,71 @@ function Meter({ label, n, min, max, ok }) {
   );
 }
 
+// A caption or text box with Add a link under it. Andrew, 2026-10-15: links
+// in story text, with a button so nobody has to type the brackets. Select
+// words first and they become the link's words; the address gets https://
+// when it has none. The box keeps [words](https://...), which StoryView draws
+// as a link.
+const asAddress = (s) => { const t = String(s || "").trim().replace(/\s+/g, ""); return !t ? "" : /^https?:\/\//i.test(t) ? t : "https://" + t; };
+export function LinkBox({ value, canEdit, onChange, children }) {
+  const ref = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [words, setWords] = useState("");
+  const [addr, setAddr] = useState("");
+  const [span, setSpan] = useState([0, 0]);
+  const links = linkParts(value).filter(r => r.href).length;
+  const start = () => {
+    const el = ref.current;
+    const a = el ? el.selectionStart : value.length, z = el ? el.selectionEnd : value.length;
+    setSpan([a, z]); setWords(value.slice(a, z).trim()); setAddr(""); setOpen(true);
+  };
+  const href = asAddress(addr);
+  const ok = words.trim() && /^https?:\/\/[^\s.]+\.[^\s]+$/i.test(href);
+  const add = () => {
+    if (!ok) return;
+    const md = "[" + words.trim().replace(/[[\]]/g, "") + "](" + href.replace(/\)/g, "%29") + ")";
+    const [a, z] = span;
+    const before = value.slice(0, a), after = value.slice(z);
+    onChange(before + (before && !/\s$/.test(before) ? " " : "") + md + (after && !/^[\s.,;:!?)]/.test(after) ? " " : "") + after);
+    setOpen(false);
+  };
+  return (
+    <div className="vss-linkbox">
+      {children(ref)}
+      {canEdit ? (
+        <div className="vss-row vss-tight">
+          {!open ? <button type="button" className="vss-pill" onMouseDown={e => e.preventDefault()} onClick={start}>Add a link</button> : null}
+          {!open ? <span className="vss-muted">{links ? links + (links === 1 ? " link" : " links") + " in here, underlined in your story." : "Select some words first, and they become the link."}</span> : null}
+        </div>
+      ) : null}
+      {open ? (
+        <div className="vss-linkform">
+          <label className="vss-field"><span className="vss-label">Words to show</span>
+            <input className="vss-input" value={words} maxLength={200} autoFocus={!words} placeholder="like free to ride" onChange={e => setWords(e.target.value)} /></label>
+          <label className="vss-field"><span className="vss-label">Web address</span>
+            <input className="vss-input" value={addr} maxLength={500} autoFocus={!!words} placeholder="https://" onChange={e => setAddr(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }} /></label>
+          <div className="vss-row">
+            <button type="button" className="vss-go" disabled={!ok} onClick={add}>Add link</button>
+            <button type="button" className="vss-mini" onClick={() => setOpen(false)}>Cancel</button>
+            {addr && !ok && words.trim() ? <span className="vss-muted">That address doesn't look complete yet.</span> : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ImageFields({ b, canEdit, onChange }) {
   const portrait = isPortrait(b);
   const reasons = b.reasons || [];
   return (
     <div className="vss-fields">
-      <textarea className="vss-input vss-grow-box" rows={2} value={b.caption || ""} readOnly={!canEdit} maxLength={2000} placeholder="Caption: what should readers notice here? A link: [words](https://...)"
-        ref={el => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + 2 + "px"; } }}
-        onChange={e => onChange({ caption: e.target.value })} />
+      <LinkBox value={b.caption || ""} canEdit={canEdit} onChange={(v) => onChange({ caption: v })}>
+        {(ref) => <textarea className="vss-input vss-grow-box" rows={2} value={b.caption || ""} readOnly={!canEdit} maxLength={2000} placeholder="Caption: what should readers notice here?"
+          ref={el => { ref.current = el; if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + 2 + "px"; } }}
+          onChange={e => onChange({ caption: e.target.value })} />}
+      </LinkBox>
       <div className="vss-row">
         {portrait ? LAYOUTS.map(([id, name]) => <button key={id} type="button" className="vss-pill" aria-pressed={layoutOf(b) === id} disabled={!canEdit} onClick={() => onChange({ layout: id })}>{name}</button>)
           : <span className="vss-muted">Full width. Text can sit beside portrait photos.</span>}
@@ -656,6 +715,8 @@ const CSS = `
 
 .vss-btn{font:inherit;font-size:14px;font-weight:600;padding:7px 14px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
 .vss-btn[aria-pressed="true"]{background:${T.primary};color:${S.page};border-color:${T.primary}}
+.vss-linkbox{display:flex;flex-direction:column;gap:6px}
+.vss-linkform{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:12px;background:${S.page};box-shadow:0 0 0 1px ${L.soft}}
 .vss-mini{font:inherit;font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid ${L.soft};background:transparent;color:${T.secondary};cursor:pointer}
 .vss-mini:hover:not(:disabled){border-color:${L.strong};color:${T.primary}}
 .vss-pill{font:inherit;font-size:13.5px;padding:5px 12px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.secondary};cursor:pointer}
