@@ -122,13 +122,16 @@ export function classFlowOf(config, data, now = Date.now()) {
     if (rel?.at) push({ id: "rel-" + asg.id, at: rel.at, who: "", tint: "done", tags: ["work"], aid: asg.id,
       say: ["You released grades on ", asg.title], text: "", btn: "grade" });
   });
-  roster.forEach(s => (data?.threads?.[s.name] || []).forEach(m => {
+  // Andrew, 2026-10-15: once he has written back, that exchange leaves the
+  // flow, his message and theirs. What a student wrote after his last reply
+  // stays until he answers it.
+  roster.forEach(s => { const t = data?.threads?.[s.name] || []; const answered = Math.max(0, ...t.filter(m => m.from === "instructor").map(m => m.ts || 0)); t.filter(m => (m.ts || 0) > answered).forEach(m => {
     const text = String(m.text || "").trim();
     if (!text && m.kind === "got_it") return;
     const his = m.from === "instructor";
     push({ id: m.id, at: m.ts, who: his ? "" : s.name, tint: his ? "dr" : "me", tags: ["messages"], to: s.name,
       say: his ? ["You wrote to ", nameShown(data, s.name)] : [nameShown(data, s.name) + " wrote"], text, btn: "reply" });
-  }));
+  }); });
   Object.entries(data?.dayPlans || {}).forEach(([date, plan]) => {
     const note = String(plan?.studentNote || "").trim();
     const d = new Date(date + ", 2026");
