@@ -127,7 +127,10 @@ const ThumbsUp = () => (
   </svg>
 );
 
-function Bubble({ m, accent, config, data, name }) {
+// `instructor` is who is reading. Andrew, 2026-10-15: reading a student's
+// thread he saw the student's words marked You. Whoever reads is You, on the
+// right; the other side carries a name.
+function Bubble({ m, accent, config, data, name, instructor }) {
   // status messages render centered
   if (m.kind === "got_it" || m.kind === "confused" || m.kind === "meeting") {
     const text = m.kind === "got_it" ? "Thumbs up" : m.kind === "confused" ? "Said: I'm confused" : "Requested a meeting";
@@ -138,22 +141,24 @@ function Bubble({ m, accent, config, data, name }) {
       </div>
     );
   }
-  const mine = m.from === "instructor";
+  const his = m.from === "instructor";
+  const mine = instructor ? !his : his;
   const isQuestion = m.kind === "question";
   // The face of whoever said it, on the side the bubble sits.
-  const face = <Face config={config} data={data} name={name} instructor={mine} size={32} />;
+  const face = <Face config={config} data={data} name={name} instructor={his} size={32} />;
+  const who = instructor ? (his ? "You" : String(nameShown(data, name)).split(" ")[0]) : (his ? "Instructor" : "You");
   return (
     <div style={{ display: "flex", justifyContent: mine ? "flex-start" : "flex-end", gap: 8, alignItems: "flex-end" }}>
       {mine ? face : null}
       <div style={{ maxWidth: "82%" }}>
         {isQuestion && <div style={{ ...label, color: "#d97706", marginBottom: 4 }}>Question</div>}
         <div style={{ padding: "10px 14px", borderRadius: 16, fontSize: 15, lineHeight: 1.45,
-          background: mine ? accent + "12" : "#f3f4f6",
+          background: his ? accent + "12" : "#f3f4f6",
           color: TEXT_PRIMARY, border: isQuestion ? "1px solid #f59e0b55" : "none" }}>
           {m.text}
         </div>
         <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 3, textAlign: mine ? "left" : "right" }}>
-          {mine ? "Instructor" : "You"} · {fmtTime(m.ts)}
+          {who} · {fmtTime(m.ts)}
         </div>
       </div>
       {mine ? null : face}
@@ -161,12 +166,12 @@ function Bubble({ m, accent, config, data, name }) {
   );
 }
 
-function Thread({ config, data, name, accent }) {
+function Thread({ config, data, name, accent, instructor }) {
   const msgs = threadOf(data, name);
   if (!msgs.length) return <Muted>No messages yet.</Muted>;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {msgs.map(m => <Bubble key={m.id} m={m} accent={accent} config={config} data={data} name={name} />)}
+      {msgs.map(m => <Bubble key={m.id} m={m} accent={accent} config={config} data={data} name={name} instructor={instructor} />)}
     </div>
   );
 }
@@ -512,7 +517,7 @@ export function StudentThread({ config, data, update, name }) {
   const send = () => { if (!note.trim()) return; addMessage(update, name, { from: "instructor", kind: "note", text: note.trim() }); setNote(""); };
   return (
     <div>
-      <Thread config={config} data={data} name={name} accent={a} />
+      <Thread config={config} data={data} name={name} accent={a} instructor />
       <div style={{ marginTop: 18, display: "flex", gap: 8, alignItems: "flex-start" }}>
         <div style={{ flex: 1 }}><Field value={note} onChange={setNote} placeholder={"Post a note to " + String(name).split(" ")[0] + "..."} /></div>
         <SendBtn accent={a} onClick={send} disabled={!note.trim()}>Post</SendBtn>
