@@ -20,6 +20,7 @@ import { Sec, Row, Io, Btn, Chip, Face, DrFace, Gm, dcolOf, dueWords, whenWords 
 import { alive, htmlToText, boardOf } from "../grades.js";
 import { Days } from "./MyWork.jsx";
 import { opensState, opensWords } from "./work.js";
+import { deadlineOf } from "../DueCard.jsx";
 import { waitingOnInstructor } from "../YouCard.jsx";
 import { Hero } from "./StudentHome.jsx";
 import { QuestionsSection } from "./Questions.jsx";
@@ -90,23 +91,33 @@ export function Inbox({ config, data, go, limit }) {
 //   tags  work      submissions, regrades, comments, releases
 //         messages  the threads
 //         notes     his notes to the class
-export function classFlowOf(config, data) {
+//
+// Andrew, 2026-10-15: submissions stay out of the flow until the deadline.
+// Then the ones that came in on time are one row at the deadline, "24 turned
+// in" the challenge. Anything after the deadline is its own row, marked late.
+// A challenge with no date shows each submission as it comes.
+export function classFlowOf(config, data, now = Date.now()) {
   const out = [];
   const push = (e) => { if (e.at) out.push(e); };
   const assignments = assignmentsOf(config, data);
   const first = (n) => nameShown(data, n).split(" ")[0];
   const roster = rosterOf(config, data);
   assignments.forEach(asg => {
+    const due = asg.due && asg.due !== "Ongoing" ? deadlineOf(asg.due, asg.dueTime) : null;
+    const onTime = new Set();
     roster.forEach(s => {
       alive(data?.assignmentLog?.[asg.id]?.[s.name]).forEach(e => {
-        if (e.type === "submission") push({ id: e.id, at: e.ts, who: s.name, tint: "me", tags: ["work"], aid: asg.id,
-          say: [first(s.name) + " turned in ", asg.title], text: [e.why ? "Late: " + e.why : "", e.text || ""].filter(Boolean).join("\n"), link: e.link || "", btn: "grade" });
+        if (e.type === "submission" && due && e.ts <= due) { onTime.add(s.name); return; }
+        if (e.type === "submission") push({ id: e.id, at: e.ts, who: s.name, tint: due ? "due" : "me", tags: ["work"], aid: asg.id,
+          say: [first(s.name) + " turned in ", asg.title, due ? " late" : ""], text: [e.why ? "Late: " + e.why : "", e.text || ""].filter(Boolean).join("\n"), link: e.link || "", btn: "grade" });
         else if (e.type === "regrade") push({ id: e.id, at: e.ts, who: s.name, tint: "due", tags: ["work"], aid: asg.id,
           say: [first(s.name) + " asked for a regrade on ", asg.title], text: e.text || "", link: e.link || "", btn: "grade" });
         else if (e.type === "comment" && e.from === "student") push({ id: e.id, at: e.ts, who: s.name, tint: "me", tags: ["work"], aid: asg.id,
           say: [first(s.name) + " wrote on ", asg.title], text: htmlToText(e.html || e.text), btn: "reply" });
       });
     });
+    if (due && due <= now && onTime.size) push({ id: "in-" + asg.id, at: due, who: "", tint: "me", tags: ["work"], aid: asg.id,
+      say: [onTime.size + " turned in ", asg.title], text: "", btn: "grade" });
     const rel = boardOf(data, asg.id).released;
     if (rel?.at) push({ id: "rel-" + asg.id, at: rel.at, who: "", tint: "done", tags: ["work"], aid: asg.id,
       say: ["You released grades on ", asg.title], text: "", btn: "grade" });
@@ -144,7 +155,7 @@ export function ClassFlow({ config, data, go }) {
           <div key={e.id} className={"pt-row " + e.tint}>
             <div className="pt-dcol">{e.who ? <Face config={config} data={data} name={e.who} /> : <DrFace config={config} />}</div>
             <div className="pt-main">
-              <p className="pt-title say">{e.say[0]}{e.say[1] ? <b>{e.say[1]}</b> : null}</p>
+              <p className="pt-title say">{e.say[0]}{e.say[1] ? <b>{e.say[1]}</b> : null}{e.say[2] || null}</p>
               {e.text ? <p className="pt-text" style={{ display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{e.text}</p> : null}
               <p className="pt-meta"><span>{whenWords(e.at)}</span></p>
             </div>
