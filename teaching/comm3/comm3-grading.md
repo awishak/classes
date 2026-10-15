@@ -25,3 +25,30 @@ Part 2: six headlines for their actual people, a sentence on why for each, at le
 The lines. Missing labels alone is Complete with a note. Confusing the two frame types, or answering the transcript question as "what I'd cut," is Not quite. A whole part missing, the doc not shared, or the wrong assignment is Incomplete.
 
 The common misses, from the first run on Oct 1, 2026: no equivalency or emphasis labels was the most frequent slip. A few students read "a moment that wouldn't show up in a transcript" as a detail to leave out of the write-up, when it means a laugh, a pause, a tone, someone getting defensive. One student had the two frame types flipped. About a fifth of the class shared the doc with the wrong account.
+
+## Visual language exercise (ex2) and Version 2 (ex3)
+
+The brief, both weeks: a mini visual essay in a Google Doc, 3 photos (two
+taken by the student; in week 2, one taken Wednesday or later), 3 graphics
+(two made by the student), 150 words max. Version 2 is the same essay revised
+with what we did in class; anything can be kept, replaced or reshot.
+
+These are pictures, so Andrew looks at every one himself, in the walk on
+Grade view, and says how he feels about it. Claude's job before that is the
+sweep: open every file in Chrome, say which ones open, count the images and
+the words, and flag the odd ones. Then Claude writes the comments from what
+Andrew said, in his voice: positive, encouraging, forward-looking, "I'd
+encourage you to" and "next time I want you to."
+
+What the first sweep found, Oct 14, 2026:
+
+- 32 of 55 students revised in the same doc they turned in for Version 1, so
+  the Version 1 link now shows Version 2. Version 1 is only visible for the
+  other 23, or in the doc's version history.
+- Canva pages cannot be read or screenshotted by the browser tool. Six
+  Version 2 files are canva.link addresses; they open in their own tab from
+  the card.
+- The mobilebasic image count runs about one high (the page's own icon),
+  so "6 images" reads as three photos and three graphics.
+- Shared-with-the-wrong-account was rarer than in week 1: two Version 2
+  docs and one Version 1 doc came back Access Denied.
