@@ -65,7 +65,7 @@ function DayRow({ config, data, blockOf, day, title, ring, note, instructor, myI
     : null;
   const tint = !day.classDay ? "off" : "";
   return (
-    <div id={dayAnchor(day.date)} className={"pt-row " + tint + (ring ? " ring" : "")} style={{ alignItems: "flex-start", scrollMarginTop: 130 }}>
+    <div id={dayAnchor(day.date)} className={"pt-row pt-anchor " + tint + (ring ? " ring" : "")} style={{ alignItems: "flex-start" }}>
       <div className="pt-dcol"><span className="pt-dw">{dcolOf(day.date)[0]}</span><span className="pt-dn">{dcolOf(day.date)[1]}</span></div>
       <div className="pt-main">
         {/* The date column says the day, so the words never say it again.
@@ -125,7 +125,7 @@ export function SchedulePage({ config, data, blockOf, focusDay, instructor, me, 
       {weeks.map((w, wi) => {
         const { days, loose } = daysOfWeek(w, studentItems(w, data?.dayPlans, blockOf));
         return (
-          <div key={w.id || wi} id={"wk-" + (w.id || wi)} className="pt-day" style={{ scrollMarginTop: 130 }}>
+          <div key={w.id || wi} id={"wk-" + (w.id || wi)} className="pt-day pt-anchor">
             <Sec name={w.topic || weekTag(w, wi)} sub={weekTag(w, wi) + (rangeOf(w) ? " · " + rangeOf(w) : "")} />
             {w.text ? <p className="pt-quiet" style={{ fontSize: 15, whiteSpace: "pre-wrap" }}>{w.text}</p> : null}
             <div className="pt-stack">

@@ -1,9 +1,11 @@
 // Andrew's home, in the same bones: the pinned links, the next class with
 // the note box and the two doors, Needs you (what is waiting on him, each
-// with its button), his challenges with how much of each section is in,
-// questions waiting, and the inbox as mail. My work, for him, is where the
-// challenges are built.
+// with its button), and questions waiting. Andrew, 2026-10-15: My work and
+// the inbox came off the home, since each is a tab in the right pane, which
+// opens to the class flow. My work, for him, is where the challenges are
+// built.
 
+import { useState } from "react";
 import { PinnedLinks, NoteEditor, nextClassFacts } from "../HomeCards.jsx";
 import { AwayList } from "../Attendance.jsx";
 import { assignmentsOf } from "../profileTask.js";
@@ -14,7 +16,9 @@ import { rosterOf, nameShown } from "../roster.js";
 import { useQuestions } from "../questions.js";
 import { onThePage, isAnswered } from "../QuestionsCard.jsx";
 import { isProfileTask, PROFILE_TASK_OFF } from "../profileTask.js";
-import { Sec, Row, Io, Btn, Chip, Face, Gm, dcolOf, dueWords, whenWords } from "./bits.jsx";
+import { Sec, Row, Io, Btn, Chip, Face, DrFace, Gm, dcolOf, dueWords, whenWords } from "./bits.jsx";
+import { alive, htmlToText, boardOf } from "../grades.js";
+import { Days } from "./MyWork.jsx";
 import { opensState, opensWords } from "./work.js";
 import { waitingOnInstructor } from "../YouCard.jsx";
 import { Hero } from "./StudentHome.jsx";
@@ -76,6 +80,83 @@ export function Inbox({ config, data, go, limit }) {
   );
 }
 
+// ─── the class flow ───
+//
+// Andrew, 2026-10-15: the right pane opens to the class flow, "the work flow
+// but with maybe messages and more." The student's Flow, for the whole room:
+// every submission, regrade ask and comment on a challenge, every message
+// either way, each grade release and each note to the class, newest first.
+//
+//   tags  work      submissions, regrades, comments, releases
+//         messages  the threads
+//         notes     his notes to the class
+export function classFlowOf(config, data) {
+  const out = [];
+  const push = (e) => { if (e.at) out.push(e); };
+  const assignments = assignmentsOf(config, data);
+  const first = (n) => nameShown(data, n).split(" ")[0];
+  const roster = rosterOf(config, data);
+  assignments.forEach(asg => {
+    roster.forEach(s => {
+      alive(data?.assignmentLog?.[asg.id]?.[s.name]).forEach(e => {
+        if (e.type === "submission") push({ id: e.id, at: e.ts, who: s.name, tint: "me", tags: ["work"], aid: asg.id,
+          say: [first(s.name) + " turned in ", asg.title], text: [e.why ? "Late: " + e.why : "", e.text || ""].filter(Boolean).join("\n"), link: e.link || "", btn: "grade" });
+        else if (e.type === "regrade") push({ id: e.id, at: e.ts, who: s.name, tint: "due", tags: ["work"], aid: asg.id,
+          say: [first(s.name) + " asked for a regrade on ", asg.title], text: e.text || "", link: e.link || "", btn: "grade" });
+        else if (e.type === "comment" && e.from === "student") push({ id: e.id, at: e.ts, who: s.name, tint: "me", tags: ["work"], aid: asg.id,
+          say: [first(s.name) + " wrote on ", asg.title], text: htmlToText(e.html || e.text), btn: "reply" });
+      });
+    });
+    const rel = boardOf(data, asg.id).released;
+    if (rel?.at) push({ id: "rel-" + asg.id, at: rel.at, who: "", tint: "done", tags: ["work"], aid: asg.id,
+      say: ["You released grades on ", asg.title], text: "", btn: "grade" });
+  });
+  roster.forEach(s => (data?.threads?.[s.name] || []).forEach(m => {
+    const text = String(m.text || "").trim();
+    if (!text && m.kind === "got_it") return;
+    const his = m.from === "instructor";
+    push({ id: m.id, at: m.ts, who: his ? "" : s.name, tint: his ? "dr" : "me", tags: ["messages"], to: s.name,
+      say: his ? ["You wrote to ", nameShown(data, s.name)] : [nameShown(data, s.name) + " wrote"], text, btn: "reply" });
+  }));
+  Object.entries(data?.dayPlans || {}).forEach(([date, plan]) => {
+    const note = String(plan?.studentNote || "").trim();
+    const d = new Date(date + ", 2026");
+    if (note && !isNaN(d)) push({ id: "note-" + date, at: d.getTime(), who: "", tint: "dr", tags: ["notes"], say: ["Note to the class"], text: note });
+  });
+  return out.sort((x, y) => y.at - x.at);
+}
+const CLASS_FLOW_FILTERS = [["all", "All"], ["work", "Work"], ["messages", "Messages"], ["notes", "Notes"]];
+
+export function ClassFlow({ config, data, go }) {
+  const [filter, setFilter] = useState("all");
+  const [more, setMore] = useState(false);
+  const all = classFlowOf(config, data).filter(e => filter === "all" || e.tags.includes(filter));
+  const rows = more ? all : all.slice(0, 60);
+  const sideOf = (e) => e.btn === "grade" ? <Io kind="go" href={config.path + "/grade?a=" + encodeURIComponent(e.aid)}>Grade</Io>
+    : e.btn === "reply" && (e.to || e.who) ? <Io onClick={() => go("messages/" + encodeURIComponent(e.to || e.who))}>Reply</Io> : null;
+  return (
+    <div className="pt-body" style={{ gap: 16 }}>
+      <div className="pt-chips">
+        {CLASS_FLOW_FILTERS.map(([id, say]) => <Chip key={id} on={filter === id} onClick={() => { setFilter(id); setMore(false); }}>{say}</Chip>)}
+      </div>
+      {rows.length ? (
+        <Days rows={rows} render={e => (
+          <div key={e.id} className={"pt-row " + e.tint}>
+            <div className="pt-dcol">{e.who ? <Face config={config} data={data} name={e.who} /> : <DrFace config={config} />}</div>
+            <div className="pt-main">
+              <p className="pt-title say">{e.say[0]}{e.say[1] ? <b>{e.say[1]}</b> : null}</p>
+              {e.text ? <p className="pt-text" style={{ display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{e.text}</p> : null}
+              <p className="pt-meta"><span>{whenWords(e.at)}</span></p>
+            </div>
+            {sideOf(e) ? <div className="pt-side">{sideOf(e)}</div> : null}
+          </div>
+        )} />
+      ) : <p className="pt-quiet" style={{ textAlign: "center", padding: "16px 0" }}>Nothing here yet.</p>}
+      {!more && all.length > rows.length ? <div><Chip onClick={() => setMore(true)}>Show all {all.length}</Chip></div> : null}
+    </div>
+  );
+}
+
 export function InstructorHome({ config, data, update, blockOf, go, saving, online }) {
   const assignments = inDueOrder(assignmentsOf(config, data));
   const waiting = waitingOn(data, assignments);
@@ -85,7 +166,6 @@ export function InstructorHome({ config, data, update, blockOf, go, saving, onli
   const q = useQuestions(config.storageKey);
   const askWaiting = q.items === null ? 0 : onThePage(q.items).filter(x => !isAnswered(x)).length;
   const facts = nextClassFacts(config, data, blockOf, "");
-  const coming = assignments.filter(a => a.due && a.due !== "Ongoing" && !past(a)).slice(0, 2);
   return (
     <div className="pt-body">
       <PinnedLinks data={data} update={update} instructor seat={{ background: "var(--surface-sunk)", borderRadius: 16 }} />
@@ -118,19 +198,7 @@ export function InstructorHome({ config, data, update, blockOf, go, saving, onli
           </div>
         </div>
       ) : null}
-      <div className="pt-day">
-        <Sec name={<button type="button" className="pt-focus" onClick={() => go("assignments")} style={{ background: "none", border: 0, padding: 0, font: "inherit", cursor: "pointer" }}>My work</button>} sub="Coming up" />
-        <div className="pt-stack">
-          {coming.map(asg => <HisWorkRow key={asg.id} config={config} data={data} asg={asg} toGrade={toGradeOf(asg)} side={<Io onClick={() => go("assignments/" + asg.id)}>Edit</Io>} />)}
-          {!coming.length ? <p className="pt-quiet">Nothing coming up.</p> : null}
-        </div>
-        <div><Chip onClick={() => go("assignments/new")}>New challenge</Chip></div>
-      </div>
       <QuestionsSection config={config} name={config.instructor?.name || "Instructor"} profiles={data?.profiles} go={go} instructor />
-      <div className="pt-day">
-        <Sec name={<button type="button" className="pt-focus" onClick={() => go("messages")} style={{ background: "none", border: 0, padding: 0, font: "inherit", cursor: "pointer" }}>Inbox</button>} sub={inbox.length ? inbox.length + " waiting" : ""} />
-        <Inbox config={config} data={data} go={go} limit={7} />
-      </div>
     </div>
   );
 }

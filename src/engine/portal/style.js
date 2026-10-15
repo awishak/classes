@@ -149,9 +149,12 @@ textarea.pt-field{resize:vertical;min-height:64px;line-height:1.5}
 .pt-titles{display:flex;gap:20px;align-items:baseline;flex-wrap:wrap}
 .pt-titles button{font-family:var(--pt-serif);font-size:26px;font-weight:500;background:none;border:0;padding:0;min-height:44px;color:var(--text-muted);border-bottom:3px solid transparent}
 .pt-titles button.on{color:var(--text-primary);border-bottom-color:var(--ca-accent)}
-.pt-pane{background:var(--surface-card);border-radius:16px;box-shadow:0 0 0 1px var(--line-soft);display:flex;flex-direction:column;min-width:0}
+.pt-pane{background:var(--surface-card);border-radius:16px;box-shadow:0 0 0 1px var(--line-soft);display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.pt-anchor{scroll-margin-top:130px}
+.pt-pane .pt-anchor{scroll-margin-top:12px}
+.pt-col{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:8px}
 .pt-pane-head{display:flex;flex-direction:column;gap:12px;padding:20px 20px 12px}
-.pt-pane-body{display:flex;flex-direction:column;gap:16px;padding:4px 20px 20px}
+.pt-pane-body{display:flex;flex-direction:column;gap:16px;padding:4px 20px 20px;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .pt-compose{position:sticky;bottom:0;background:var(--surface-page);padding:12px 8px;box-shadow:0 -1px 0 var(--line-soft);display:flex;flex-direction:column;gap:8px}
 .pt-pane .pt-compose{position:static;background:var(--surface-card);padding:12px 20px 20px;border-radius:0 0 16px 16px}
 .pt-sw{width:44px;height:26px;border-radius:999px;background:var(--line-strong);position:relative;border:0;cursor:pointer;flex:none;padding:0}

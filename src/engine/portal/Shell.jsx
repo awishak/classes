@@ -21,7 +21,7 @@ import { noticeFor } from "../notice.js";
 import { PORTAL_CSS } from "./style.js";
 import { I, Io } from "./bits.jsx";
 import { StudentHome, weekWords } from "./StudentHome.jsx";
-import { InstructorHome, InstructorWork, Inbox } from "./InstructorHome.jsx";
+import { InstructorHome, InstructorWork, Inbox, ClassFlow } from "./InstructorHome.jsx";
 import { MyWorkPage, ChallengePage, PerformanceSheet } from "./MyWork.jsx";
 import { ClassPage } from "./ClassPage.jsx";
 import { QuestionsPage } from "./Questions.jsx";
@@ -31,8 +31,9 @@ import { visibleAssignments } from "./work.js";
 import { assignmentsOf } from "../profileTask.js";
 
 const STUDENT_TITLES = [["schedule", "Schedule"], ["assignments", "My work"], ["class", "Class"]];
-const HIS_TITLES = [["schedule", "Schedule"], ["assignments", "My work"], ["messages", "Inbox"], ["class", "Class"]];
-const TAB_ICON = { schedule: I.cal, assignments: I.work, messages: I.mail, class: I.people };
+// Andrew, 2026-10-15: his right pane opens to the class flow.
+const HIS_TITLES = [["flow", "Class flow"], ["schedule", "Schedule"], ["assignments", "My work"], ["messages", "Inbox"], ["class", "Class"]];
+const TAB_ICON = { flow: I.work, schedule: I.cal, assignments: I.work, messages: I.mail, class: I.people };
 
 const titleOf = (key, sub, config, data, instructor) => {
   if (key === "assignments" && sub) {
@@ -65,6 +66,7 @@ export default function PortalShell(p) {
     if (key === "more" || key === "games") return detailFor(key);
     if (key === "schedule") return <SchedulePage config={config} data={d} blockOf={ctx.blockOf} focusDay={sub} instructor={instructor} me={instructor ? "" : name} mark={mark} go={go} />;
     if (instructor) {
+      if (key === "flow") return <ClassFlow config={config} data={d} go={go} />;
       if (key === "assignments") return <InstructorWork config={config} data={d} update={write} go={go} editing={sub || ""} />;
       if (key === "messages") return sub
         ? <div className="pt-body"><div><Io onClick={() => go("messages")}>‹ Inbox</Io></div><StudentThread config={config} data={d} update={write} name={decodeURIComponent(sub)} /></div>
@@ -117,7 +119,7 @@ export default function PortalShell(p) {
       ))}
     </nav>
   );
-  const root = { minHeight: "100vh", background: "var(--surface-page)", color: "var(--text-primary)", "--ca-accent": config.accent, "--ca-accent-ink": config.accent, display: "flex", flexDirection: "column" };
+  const root = { minHeight: "100vh", ...(isDesktop ? { height: "100vh", overflow: "hidden" } : {}), background: "var(--surface-page)", color: "var(--text-primary)", "--ca-accent": config.accent, "--ca-accent-ink": config.accent, display: "flex", flexDirection: "column" };
   const styles = <style>{baseCSS + accentCSS + PORTAL_CSS}</style>;
   const top = (
     <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
@@ -128,14 +130,18 @@ export default function PortalShell(p) {
 
   // ─── a laptop ───
   if (isDesktop) {
-    const lit = pageKey || "assignments";
+    const first = instructor ? "flow" : "assignments";
+    const lit = pageKey || first;
     return (
       <div data-theme={theme} data-mode={mode} className="ca-root pt-root" style={root}>
         <ThemeStyle theme={theme} /><ThemeChrome theme={theme} />{styles}{GameLayer}<ThemeStickers theme={theme} />
         <ThemeTopper theme={theme} lines={tickerLines} seed={(seenAs || "").length + (config.code || "").length} />
         {top}
-        <div style={{ maxWidth: 1240, margin: "0 auto", padding: "24px 20px 32px", display: "grid", gridTemplateColumns: "minmax(0, 480px) minmax(0, 1fr)", gap: 32, alignItems: "start", width: "100%" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 20, minWidth: 0 }}>
+        {/* Andrew, 2026-10-15: on Schedule both panes scrolled down together.
+            Each column scrolls on its own now, inside the height left under
+            the bar, so the home stays put while the page on the right moves. */}
+        <div style={{ maxWidth: 1240, margin: "0 auto", padding: "24px 20px 24px", display: "grid", gridTemplateColumns: "minmax(0, 480px) minmax(0, 1fr)", gap: 32, width: "100%", flex: 1, minHeight: 0 }}>
+          <div className="pt-col" style={{ display: "flex", flexDirection: "column", gap: 20, minWidth: 0 }}>
             {seat(2) ? <div style={seat(2)}>{titleRow(homeTitle, homeSub, false)}</div> : titleRow(homeTitle, homeSub, false)}
             {home}
           </div>
@@ -146,7 +152,7 @@ export default function PortalShell(p) {
               </div>
             </div>
             <div className="pt-pane-body">
-              {searchOpen ? searchPanel : page(pageKey || "assignments", openSub)}
+              {searchOpen ? searchPanel : page(pageKey || first, openSub)}
             </div>
           </div>
         </div>

@@ -18,6 +18,31 @@ import { nextOwedOf } from "./work.js";
 import { WorkRow } from "./MyWork.jsx";
 import { QuestionsSection } from "./Questions.jsx";
 import { DrCard, DrSheet } from "./ClassPage.jsx";
+import { localWorksheet, listedFor, openTo } from "../localWorksheets.js";
+import { VISUAL_STORY_KEY } from "../visualstory/story.jsx";
+import { assignmentsOf } from "../profileTask.js";
+import { deadlineOf } from "../DueCard.jsx";
+
+// The visual story's door on the home. Andrew, 2026-10-15: students should
+// not have to go into the assignment to reach the builder, so a green box
+// opens it straight away, from when the builder opens to the class until the
+// story's due date, read from the assignment so a moved date follows.
+export function StoryDoor({ config, data, now = Date.now() }) {
+  const sheet = localWorksheet(VISUAL_STORY_KEY);
+  if (!sheet || !listedFor(sheet, config.id) || !openTo(sheet, config.id, data, now)) return null;
+  const asg = assignmentsOf(config, data).find(a => a.id === "visual");
+  const end = asg ? deadlineOf(asg.due, asg.dueTime) : null;
+  if (!end || now > end) return null;
+  return (
+    <a className="pt-door pt-focus" href={"/" + config.id + "/worksheets/" + VISUAL_STORY_KEY}>
+      <span className="pt-door-main">
+        <span className="pt-door-name">Work on your visual story</span>
+        <span className="pt-door-say">Due {dueWords(asg.due, asg.dueTime)}. Your work saves as you go.</span>
+      </span>
+      <span className="pt-door-go" aria-hidden="true">Open</span>
+    </a>
+  );
+}
 
 // The week the class is in: its number and its first and last class day.
 export function weekWords(config, data) {
@@ -138,6 +163,8 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
   return (
     <div className="pt-body">
       <PinBar data={data} go={go} />
+      <StoryDoor config={config} data={data} />
+      <style>{DOOR_CSS}</style>
       <Hero config={config} data={data} blockOf={blockOf} section={section} me={name} mark={mark} go={go} />
       {fresh.length ? <div className="pt-day"><Sec name="New" sub="Today" /><div className="pt-stack">{fresh}</div></div> : null}
       <div className="pt-day">
@@ -158,5 +185,14 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
     </div>
   );
 }
+
+const DOOR_CSS = `
+.pt-door{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:16px;background:var(--pt-done);color:var(--pt-done-ink);text-decoration:none;box-shadow:0 0 0 1.5px var(--pt-done-ink)}
+.pt-door:hover{filter:brightness(.97)}
+.pt-door-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.pt-door-name{font-size:19px;font-weight:700;line-height:1.25}
+.pt-door-say{font-size:14.5px;line-height:1.4;opacity:.9}
+.pt-door-go{flex:none;font-size:14px;font-weight:700;padding:8px 16px;border-radius:999px;background:var(--pt-done-ink);color:var(--pt-done)}
+`;
 
 export { Row, dueWords };

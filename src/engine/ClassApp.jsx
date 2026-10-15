@@ -891,7 +891,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const [openBase, openSub = ""] = String(open || "").split("/");
   // The portal's own pages, beside the cards: My performance, and the
   // profile behind the face in the bar.
-  const PORTAL_PAGES = new Set(["performance", "profile"]);
+  const PORTAL_PAGES = new Set(["performance", "profile", "flow"]);
   const openKey = openBase && (openBase === "more" || PORTAL_PAGES.has(openBase) || enabledCards.includes(openBase)) ? openBase : null;
   ctx.sub = openKey ? openSub : "";
   ctx.go = go;

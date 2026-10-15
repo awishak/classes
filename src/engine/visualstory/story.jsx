@@ -22,7 +22,7 @@ import { createRoot } from "react-dom/client";
 import { createSaver } from "./saver.js";
 import { storyOf, problemsOf, wordCount, imageCount, REASONS, LAYOUTS, isPortrait, layoutOf, MIN_IMAGES, MAX_IMAGES, MIN_WORDS, MAX_WORDS } from "./model.js";
 import { prepImage, uploadImage, signUrls, letterId, looksLikeImage } from "./photos.js";
-import { useCopy, Words } from "./pre.jsx";
+import { useCopy, Words, standing } from "./pre.jsx";
 import { gameClient } from "../gameClient.js";
 import * as TOKENS from "../tokens.js";
 
@@ -102,6 +102,17 @@ async function preHeadline({ classId, viewerId }) {
   return (r.data || []).map(x => x.value).join("").trim();
 }
 
+// Where the student's pre-production page stands, for its door in the header:
+// open, waiting (submitted), approved or needs (needs work).
+async function preStanding({ classId, viewerId }) {
+  const s = await gameClient.from("worksheet_sheets").select("id,submitted_at").eq("worksheet_key", "visual-pre").eq("group_key", classId).eq("viewer_id", viewerId);
+  const sheet = s.data && s.data[0];
+  if (!sheet) return { kind: "open" };
+  const r = await gameClient.from("worksheet_reviews").select("status,note,reviewed_at").eq("sheet_id", sheet.id);
+  return standing(sheet.submitted_at, (r.data && r.data[0]) || null);
+}
+const PRE_BADGE = { waiting: ["Submitted", "vss-door-sent"], approved: ["\u2713 Approved", "vss-door-ok"], needs: ["Needs work", "vss-door-needs"] };
+
 async function lockOf({ classId, viewerId }) {
   const d = await gameClient.from("worksheet_deadlines").select("due_at").eq("worksheet_key", VISUAL_STORY_KEY).eq("group_key", classId);
   const due = d.data && d.data[0] ? d.data[0].due_at : null;
@@ -123,6 +134,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
   const [pane, setPane] = useState("build");          // on a narrow screen, one half at a time
   const [submitting, setSubmitting] = useState("");
   const [lock, setLock] = useState(null);
+  const [pre, setPre] = useState(null);
   const [now, setNow] = useState(Date.now());
   const [dragId, setDragId] = useState(null);
   const [dropAt, setDropAt] = useState(null);
@@ -154,6 +166,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
         }).catch(() => {});
       }
     }).catch(() => { if (alive) setStatus("failed-load"); });
+    if (!readOnly && classId && viewer?.id) preStanding({ classId, viewerId: viewer.id }).then(p => { if (alive) setPre(p); }).catch(() => {});
     if (!readOnly && classId && viewer?.id) lockOf({ classId, viewerId: viewer.id }).then(l => { if (alive) setLock(l); }).catch(() => {});
     const tick = setInterval(() => setNow(Date.now()), 30000);
     if (readOnly) return () => { alive = false; clearInterval(tick); s.destroy(); };
@@ -286,9 +299,21 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
           <span className={"vss-status" + (status === "retrying" ? " vss-status-bad" : status === "saved" ? " vss-status-ok" : "")} aria-live="polite">{STATUS[status]}</span>
         </div>
         <Words k="sub" copy={copy} editing={editing} as="p" className="vss-hello-sub" />
+        <nav className="vss-doors" aria-label="More for your story">
+          <a className="vss-door" href={"/" + classId + "/visual-story"} target="_blank" rel="noreferrer">
+            <span className="vss-door-name">More instructions</span>
+            <span className="vss-door-say">Everything the story needs, in full.</span>
+          </a>
+          <a className={"vss-door" + (pre && PRE_BADGE[pre.kind] ? " " + PRE_BADGE[pre.kind][1] : "")} href={"/" + classId + "/worksheets/visual-pre"} target="_blank" rel="noreferrer">
+            <span className="vss-door-name">Pre-production{pre && PRE_BADGE[pre.kind] ? <span className="vss-door-badge">{PRE_BADGE[pre.kind][0]}</span> : null}</span>
+            <span className="vss-door-say">Your topic, your headline and your plan.</span>
+          </a>
+          <a className="vss-door" href={"/" + classId + "/visual-story/sample"} target="_blank" rel="noreferrer">
+            <span className="vss-door-name">See a sample story</span>
+            <span className="vss-door-say">How a finished story could look.</span>
+          </a>
+        </nav>
         <div className="vss-row">
-          <a className="vss-link-btn" href={"/" + classId + "/visual-story"} target="_blank" rel="noreferrer">Read the full instructions</a>
-          <a className="vss-link-btn" href={"/" + classId + "/worksheets/visual-pre"} target="_blank" rel="noreferrer">Your pre-production page</a>
           <button type="button" className="vss-link-btn" onClick={toggleSteps} aria-expanded={stepsOpen}>{stepsOpen ? "Hide the steps" : "Show the steps"}</button>
           {editor ? <button type="button" className="vss-btn" aria-pressed={editing} onClick={() => { setEditing(e => !e); if (!stepsOpen) setStepsOpen(true); }}>{editing ? "Done editing the words" : "Edit the words"}</button> : null}
           {editor && copy.status ? <span className="vss-muted" aria-live="polite">{copy.status}</span> : null}
@@ -635,6 +660,17 @@ const CSS = `
 .vss-btn:disabled,.vss-go:disabled,.vss-pill:disabled,.vss-mini:disabled,.vss-look:disabled,.vss-star:disabled{opacity:.45;cursor:default}
 .vss-danger{border-color:${ST.late};color:${ST.late}}
 .vss-go{font:inherit;font-size:16px;font-weight:700;padding:11px 22px;border-radius:999px;border:0;background:${T.primary};color:${S.page};cursor:pointer}
+.vss-doors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:4px 0 2px}
+.vss-door{display:flex;flex-direction:column;gap:4px;padding:14px 18px;border-radius:14px;background:${S.card};color:${T.primary};text-decoration:none;box-shadow:0 1px 2px rgba(0,0,0,.05),0 0 0 1px ${L.strong};transition:box-shadow .15s,transform .15s}
+.vss-door:hover{box-shadow:0 6px 18px -8px rgba(0,0,0,.25),0 0 0 1.5px ${T.primary};transform:translateY(-1px)}
+.vss-door:focus-visible{outline:2.5px solid ${T.primary};outline-offset:2px}
+.vss-door-name{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:${SERIF};font-size:20px;font-weight:600;line-height:1.2}
+.vss-door-name::after{content:"\u2192";margin-left:auto;font-family:system-ui,sans-serif;font-size:18px;color:${T.muted}}
+.vss-door-say{font-size:14px;line-height:1.4;color:${T.secondary}}
+.vss-door-badge{font-family:system-ui,sans-serif;font-size:12px;font-weight:700;letter-spacing:.02em;padding:3px 9px;border-radius:999px;border:1px solid ${L.strong};color:${T.secondary}}
+.vss-door-ok{box-shadow:0 0 0 1.5px ${ST.ok}}
+.vss-door-ok .vss-door-badge{background:${ST.ok};border-color:${ST.ok};color:${S.page}}
+.vss-door-needs .vss-door-badge{border-color:${ST.warn};color:${ST.warn}}
 .vss-link-btn{font:inherit;font-size:14px;font-weight:600;padding:0;border:0;background:none;color:${T.secondary};text-decoration:underline;text-underline-offset:3px;cursor:pointer;margin-right:10px}
 
 .vss-end{display:flex;flex-direction:column;align-items:flex-start;gap:12px;margin-top:28px;padding-top:22px;border-top:1px solid ${L.soft}}
@@ -681,6 +717,9 @@ const CSS = `
   .vss-on-see .vss-build{display:none}
   .vss-see{position:static}
   .vss-see-frame{max-height:none}
+}
+@media (max-width:760px){
+  .vss-doors{grid-template-columns:1fr}
 }
 @media (max-width:620px){
   .vss{padding:16px 14px 80px}
