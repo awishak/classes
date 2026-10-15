@@ -20,7 +20,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { createSaver } from "./saver.js";
-import { storyOf, problemsOf, wordCount, imageCount, REASONS, LAYOUTS, isPortrait, layoutOf, MIN_IMAGES, MAX_IMAGES, MIN_WORDS, MAX_WORDS } from "./model.js";
+import { storyOf, problemsOf, wordCount, imageCount, linkParts, REASONS, LAYOUTS, isPortrait, layoutOf, MIN_IMAGES, MAX_IMAGES, MIN_WORDS, MAX_WORDS } from "./model.js";
 import { prepImage, uploadImage, signUrls, letterId, looksLikeImage } from "./photos.js";
 import { useCopy, Words, standing } from "./pre.jsx";
 import { gameClient } from "../gameClient.js";
@@ -63,6 +63,11 @@ const creditOf = (b, credit) => {
   return kind + ": " + (b.by === "other" ? (b.byName || "").trim() : credit);
 };
 
+// Words with their links live: [words](https://...) becomes a link.
+const Linked = ({ text }) => linkParts(text).map((r, i) => r.href
+  ? <a key={i} href={r.href} target="_blank" rel="noreferrer">{r.text}</a>
+  : <span key={i}>{r.text}</span>);
+
 export function StoryView({ story, urls, showPrivate = false, look, credit }) {
   const images = story.blocks.filter(b => b.type === "image");
   const theme = (look || story.look) === "dark" ? "dark" : "light";
@@ -72,7 +77,7 @@ export function StoryView({ story, urls, showPrivate = false, look, credit }) {
       {story.link ? <p className="vsr-link">Read the interactive version: <a href={story.link} target="_blank" rel="noreferrer">{story.link}</a></p> : null}
       {!story.blocks.length ? <p className="vsr-empty">Your pictures show up here as you add pictures on the left.</p> : null}
       {story.blocks.map(b => {
-        if (b.type === "text") return b.text ? <p key={b.id} className="vsr-text">{b.text}</p> : null;
+        if (b.type === "text") return b.text ? <p key={b.id} className="vsr-text"><Linked text={b.text} /></p> : null;
         const lay = layoutOf(b);
         const n = images.indexOf(b) + 1;
         return (
@@ -80,8 +85,8 @@ export function StoryView({ story, urls, showPrivate = false, look, credit }) {
             {urls[b.path] ? <img className="vsr-img" src={urls[b.path]} alt={b.caption || "Image " + n} /> : <div className="vsr-img vsr-wait">Loading image {n}</div>}
             {b.caption || (b.graphic && b.source) || showPrivate || credit ? (
               <figcaption className="vsr-cap">
-                {b.caption ? <span className="vsr-cap-text">{b.caption}</span> : null}
-                {credit || (b.graphic && b.source) ? <span className="vsr-src">{[creditOf(b, credit), b.graphic && b.source ? "Source: " + b.source : ""].filter(Boolean).join(". ")}</span> : null}
+                {b.caption ? <span className="vsr-cap-text"><Linked text={b.caption} /></span> : null}
+                {credit || (b.graphic && b.source) ? <span className="vsr-src"><Linked text={[creditOf(b, credit), b.graphic && b.source ? "Source: " + b.source : ""].filter(Boolean).join(". ")} /></span> : null}
                 {showPrivate && (b.reasons || []).length ? <span className="vsr-why">Why: {(b.reasons || []).map(r => (REASONS.find(x => x[0] === r) || [r, r])[1]).join(", ")}{b.other ? " (" + b.other + ")" : ""}</span> : null}
               </figcaption>
             ) : null}
@@ -418,7 +423,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
                     <RemoveButton disabled={!canEdit} onRemove={() => removeBlock(b.id)} />
                   </div>
                   {b.type === "text"
-                    ? <textarea className="vss-input" rows={4} value={b.text || ""} readOnly={!canEdit} maxLength={3000} placeholder="Words that sit between pictures" onChange={e => setBlock(b.id, { text: e.target.value })} />
+                    ? <textarea className="vss-input" rows={4} value={b.text || ""} readOnly={!canEdit} maxLength={3000} placeholder="Words that sit between pictures. A link: [words](https://...)" onChange={e => setBlock(b.id, { text: e.target.value })} />
                     : <ImageFields b={b} canEdit={canEdit} onChange={(p) => setBlock(b.id, p)} />}
                 </div>
               </li>
@@ -479,7 +484,7 @@ function ImageFields({ b, canEdit, onChange }) {
   const reasons = b.reasons || [];
   return (
     <div className="vss-fields">
-      <textarea className="vss-input vss-grow-box" rows={2} value={b.caption || ""} readOnly={!canEdit} maxLength={2000} placeholder="Caption: what should readers notice here?"
+      <textarea className="vss-input vss-grow-box" rows={2} value={b.caption || ""} readOnly={!canEdit} maxLength={2000} placeholder="Caption: what should readers notice here? A link: [words](https://...)"
         ref={el => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + 2 + "px"; } }}
         onChange={e => onChange({ caption: e.target.value })} />
       <div className="vss-row">
@@ -694,6 +699,8 @@ const CSS = `
 .vsr-link a{color:inherit}
 .vsr-empty{margin:0;font-family:${SERIF};font-size:19px;font-style:italic;opacity:.55}
 .vsr-text{margin:0;font-family:${SERIF};font-size:19px;line-height:1.7;white-space:pre-line;max-width:62ch}
+.vsr a{color:inherit;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+.vsr a:hover{text-decoration-thickness:2px}
 .vsr-fig{margin:0;display:flex;flex-direction:column;gap:10px}
 .vsr-img{display:block;width:100%;height:auto;border-radius:3px}
 .vsr-wait{display:flex;align-items:center;justify-content:center;min-height:200px;font-size:14px;opacity:.5;background:rgba(127,127,127,.15)}

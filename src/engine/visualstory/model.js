@@ -47,7 +47,22 @@ export function storyOf(answers) {
   return { headline: a.headline || "", link: a.link || "", feature: a.feature || "", look: a.look === "dark" ? "dark" : "light", blocks };
 }
 
-export const wordsIn = (s) => (String(s || "").trim().match(/[^\s]+/g) || []).length;
+// A link in a caption or text block is written [words](https://...).
+// Andrew, 2026-10-15: "include links in text." Only the words count.
+export const LINK = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g;
+/** Text split into plain runs and links: [{ text }, { text, href }]. */
+export const linkParts = (s) => {
+  const str = String(s || ""), out = [];
+  let at = 0;
+  for (const m of str.matchAll(LINK)) {
+    if (m.index > at) out.push({ text: str.slice(at, m.index) });
+    out.push({ text: m[1], href: m[2] });
+    at = m.index + m[0].length;
+  }
+  if (at < str.length) out.push({ text: str.slice(at) });
+  return out;
+};
+export const wordsIn = (s) => (String(s || "").replace(LINK, "$1").trim().match(/[^\s]+/g) || []).length;
 /** Words in captions and text blocks. The headline does not count. */
 export const wordCount = (story) => story.blocks.reduce((n, b) => n + wordsIn(b.type === "text" ? b.text : b.caption), 0);
 export const imageCount = (story) => story.blocks.filter(b => b.type === "image").length;
