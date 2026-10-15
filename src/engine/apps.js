@@ -10,8 +10,13 @@
 import { localWorksheet, openTo } from "./localWorksheets.js";
 import { WORKTOPIA_KEY } from "./worktopia/terminal.js";
 
+// Sit-Down 1 lives in COMM 118, and COMM 999 is the rig for trying the
+// student path. The tables themselves are in worktopia/sitdown.js.
+const SITDOWN_CLASSES = ["comm118", "comm999"];
+
 export function appsFor(config, role) {
   const p = config.path;
+  const sitdown = SITDOWN_CLASSES.includes(config.id) ? [{ id: "sitdown", label: "Sit-Down 1", href: p + "/sitdown" }] : [];
   if (role === "instructor") {
     // Everyone's Worktopia file by question, in the classes Worktopia is
     // open to. Andrew, 2026-10-02: "make it easy for me to access."
@@ -24,6 +29,7 @@ export function appsFor(config, role) {
       { id: "games", label: "Games", href: p + "/games" },
       { id: "worksheets", label: "Worksheets", href: p + "/worksheets" },
       ...answers,
+      ...sitdown,
       { id: "grade", label: "Grade view", href: p + "/grade" },
       { id: "checkins", label: "Check-in answers", href: p + "/checkins" },
       { id: "horn", label: "Around the Horn", opens: "horn" },
@@ -31,6 +37,7 @@ export function appsFor(config, role) {
     ];
   }
   return [
+    ...sitdown,
     { id: "games", label: "Games", card: "games" },
     // Asking is not in here. Andrew, 2026-09-20: "there's a way to ask
     // questions from the menu, and i have no idea where that goes", and then

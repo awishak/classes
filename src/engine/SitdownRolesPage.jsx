@@ -99,6 +99,7 @@ export default function SitdownRolesPage({ config }) {
           <div className="bar">
             <span className="meta">{setCount + " of " + all.length + " set"}</span>
             {setCount < all.length ? <button type="button" className="btn" onClick={keepAll}>Keep every suggestion</button> : null}
+            <a className="lnk" href={config.path + "/sitdown"}>Open the Sit-Down page students see</a>
           </div>
           {failed ? <p className="warn">{failed + " The suggestions still show; the positions as written need the files."}</p> : !out ? <p className="meta">Reading the files.</p> : null}
         </header>

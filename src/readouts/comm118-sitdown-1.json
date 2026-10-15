@@ -1,0 +1,12 @@
+{
+  "_about": "The instructor's sheet for each Sit-Down 1 table, read on /comm118/sitdown when he is signed in. Written after the prep is due (Monday, October 19, 11:59 PM) from the Google Docs the students turned in. `written` is the date the sheet was written, null until then. `tables` is keyed by the session key in src/engine/worktopia/sitdown.js. Each person: name (the session's spelling), role, summary (two or three sentences on page one of their prep: where they put the job and where they see the job going), relations (one line per other person at the table: how this student sees the relationship), questions (every question they wrote, `ask: true` on the ones worth asking in the room). `ask` on the table is for questions that cross the whole table. Nothing about a student goes in here before they turn their prep in.",
+  "written": null,
+  "tables": {
+    "wed-915": { "people": [], "ask": [] },
+    "wed-945": { "people": [], "ask": [] },
+    "thu-915": { "people": [], "ask": [] },
+    "thu-945": { "people": [], "ask": [] },
+    "fri-915": { "people": [], "ask": [] },
+    "fri-945": { "people": [], "ask": [] }
+  }
+}

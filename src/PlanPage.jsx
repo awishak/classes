@@ -47,6 +47,25 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "oct15-sitdown", date: "Thursday, October 15, afternoon", title: "Sit-Down 1 has a page: the table, the time, the prep, the link",
+    blurb: "Andrew: \"I need something by tomorrow morning, where students will be able to see who is in their group, when are they meeting? What are the roles of other people in their group? What are the assignment details in terms of what they have to prep?\" And: \"I want to unleash you this afternoon and I want you to build all this stuff so that tomorrow morning in class, I can show them exactly how the sit down is gonna work.\"",
+    groups: [
+      { name: "What changed", items: [
+        ["The student's page", "/comm118/sitdown, signed in by email. Their day and time, Vari Hall 206, the people at their table with the role each plays, the rules of the room in his words, the three steps, and the prep: page one on their own job, half a page per table-mate, five questions, a source or two. Under the table-mates section, a prompt for each person at the table: the pull between the two fields, the same lines the roles page draws for him."],
+        ["Turning the link in", "A box for the Google Doc link, due Monday, October 19, at 11:59 PM. The link goes on the class row, and when an assignment on My Work has its Details link set to the page, onto that assignment's log as a submission too, so Grade view queues the work and a link turned in on My Work shows on the page. A student can replace the link; after the deadline the time shows in red on his view."],
+        ["The table's documents", "Before the deadline the page says who at the table has turned theirs in. At 12:01 AM Tuesday, October 20, the links appear, one per table-mate: \"immediately, they get links, like at 12:01 a.m.\""],
+        ["His view of the same address", "Every table, every link with its time, the count, a See the page as picker to show the class one student's page, Edit the words to change any line in place (saved to the store, the way the visual story's instructions are), and a link to the roles page. Sit-Down 1 is in the top bar for him and in the class menu for a student, in COMM 118 and COMM 999."],
+        ["The pod cheat sheet, scaffolded", "\"Read these pods and give me like a pod summary, like a pod cheat sheet.\" src/readouts/comm118-sitdown-1.json holds a sheet per table, empty until the prep is in; his view draws each table's sheet under its links once written. teaching/comm118/sit-down-1.md is the handoff: the three steps, his words, where everything lives, what the Tuesday session does, and the read of each recording after."],
+        ["Checked", "The smoke renders Luke's page before and after the release, Charles with no link, Emma signing in as Vianna, a student off the tables, and his view with and without the assignment; and reads every line a student sees for a clause that ends on a word that names nothing. Screenshots at laptop and phone widths off the built bundle. scripts/sitdown-links.mjs prints every table's links from production, read-only."],
+      ] },
+      { name: "Still to do", items: [
+        ["The date", "He said Monday, October 18. October 18 is a Sunday; the page says Monday, October 19. One constant and two lines to change if he meant Sunday night."],
+        ["The assignment", "Add Sit-Down 1 prep on the dashboard with its Details link set to the page, so hand-ins land on My Work and the grade view. The page keeps links either way."],
+        ["Tuesday", "Read the documents and fill the sheet. Then the recordings, one read per student, grades his."],
+      ] },
+    ],
+  },
+  {
     id: "oct15-verbal-grading", date: "Thursday, October 15", title: "Verbal grading, and comments with their formatting",
     blurb: "Andrew: \"we're testing out the verbal grading. This is where I'm gonna walk through the pile, so to speak.\" He talked through twelve submissions of the Visual Language Exercise - Version 2 and pasted the transcript. The transcript became twelve cards on the COMM 3 grade board, unreleased, and then: \"i want you to give the students well formatted comments from me ... here's the top line assessment, here are the things he liked, here are the things to work on. and i want it to look good.\"",
     groups: [

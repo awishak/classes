@@ -66,5 +66,6 @@ two named each other. Andrew, 2026-10-12: leave Thursday as sorted.
 
 `src/engine/worktopia/sitdown.js` holds the same six lists, and the Worktopia
 answers page at `/comm118/worksheets/worktopia/answers` shows them to the
-instructor and sorts the positions table by session. Students do not see the
-sessions there yet.
+instructor and sorts the positions table by session. Since 2026-10-15 a
+student sees their own table, time and roles at `/comm118/sitdown`; the
+whole process is in [sit-down-1.md](sit-down-1.md).

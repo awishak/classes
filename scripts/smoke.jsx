@@ -1276,7 +1276,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const { readFileSync: readSrc } = await import("node:fs");
   const app = readSrc(new URL("../src/App.jsx", import.meta.url), "utf8");
   // Pages that draw TopNav themselves.
-  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", WorksheetsPage: "engine/WorksheetsPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx", WorktopiaAnswersPage: "engine/WorktopiaAnswersPage.jsx", SitdownRolesPage: "engine/SitdownRolesPage.jsx", VisualStoryInstructions: "engine/visualstory/instructions.jsx", ClassmatesStories: "engine/visualstory/reading.jsx", SampleStory: "engine/visualstory/sample.jsx" };
+  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", WorksheetsPage: "engine/WorksheetsPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx", WorktopiaAnswersPage: "engine/WorktopiaAnswersPage.jsx", SitdownRolesPage: "engine/SitdownRolesPage.jsx", SitdownPage: "engine/SitdownPage.jsx", VisualStoryInstructions: "engine/visualstory/instructions.jsx", ClassmatesStories: "engine/visualstory/reading.jsx", SampleStory: "engine/visualstory/sample.jsx" };
   // What the projector shows, and the page you sign in on before you are anybody.
   const EXEMPT = new Set(["ClassroomView", "EnginePresenter", "TriviaPresenter4", "TriviaPresenter118", "LoginPage", "InstructorGate", "InstructorBar", "RetreatPage"]);
   const routed = [...app.matchAll(/return\s*\(?\s*<([A-Z]\w*)/g), ...app.matchAll(/<InstructorGate[^>]*>\s*<([A-Z]\w*)/g)].map(m => m[1]);
@@ -5582,6 +5582,75 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   cases.push(["Worktopia answers, named, co-workers tallied", <AnswersGroup title="The class" files={files} who={who} named roster />, "Ben B"]);
   cases.push(["Worktopia answers, anonymous", <AnswersGroup title="The class" files={files.slice(0, 2).map(f => ({ ...f, viewer: undefined }))} who={() => ""} named={false} roster />, "Streaming eats everything."]);
   cases.push(["Worktopia answers, nobody yet", <AnswersGroup title="Visitors on the public page" files={[]} who={() => ""} named roster={false} />, "Nobody has started."]);
+}
+
+// Sit-Down 1: the student's page, before and after the prep is due, and the
+// instructor's view of every table. The names are the real six tables, since
+// the page is written around them; the links are made up.
+{
+  const say = (m) => { console.error("  FAIL  sit-down: " + m); failedEarly++; };
+  const { SitdownBody } = await import("../src/engine/SitdownPage.jsx");
+  const { SITDOWN, released, sessionOf, tableOf, roleFor, promptFor, sitdownAssignment, linkOf, withLink, looksLikeLink, sessionName } = await import("../src/engine/worktopia/sitdown.js");
+  const { plainWords, WORDS } = await import("../src/engine/worktopia/sitdownWords.js");
+  const copy = plainWords();
+  const scfg = { ...cfg0, id: "comm118", path: "/comm118", code: "COMM 118", storageKey: "smoke-sitdown", assignments: [] };
+  const before = SITDOWN.prepDue - 3600000, after = SITDOWN.release + 3600000;
+  if (released(before) || !released(after)) say("the release does not sit at the deadline");
+  // Who is where. Emma goes by Emma and is Vianna on the roster.
+  if (sessionOf("Vianna Alvarez")?.key !== "fri-945" || sessionName("Vianna Alvarez") !== "Emma Alvarez") say("Vianna is not Emma at the Friday 9:45 table");
+  const wed = tableOf(sessionOf("Luke Baird"), {});
+  if (wed.length !== 4 || wed[0].role?.role !== "Sports bar owner") say("the Wednesday 9:15 table does not open on the bar owner");
+  if (roleFor("Luke Baird", { "Luke Baird": "b" })?.role !== "Baseball announcer") say("a saved letter does not change the role");
+  if (!promptFor(wed[0], wed[1]).line) say("no prompt between the bar owner and stadium real estate");
+  if (!promptFor({ role: { field: "coach" } }, { role: { field: "coach" } }).same) say("two coaches are not read as the same field");
+  // The link, kept on the class row and on the assignment when one points here.
+  const asgs = [{ id: "sd1", title: "Sit-Down 1 prep", instructionsUrl: "https://classes.andrewishak.com/comm118/sitdown" }];
+  if (sitdownAssignment(asgs)?.id !== "sd1" || sitdownAssignment([{ id: "x", instructionsUrl: "/comm118/worksheets/worktopia" }])) say("the assignment that points here is not found, or another one is");
+  if (!looksLikeLink("https://docs.google.com/document/d/abc/edit") || looksLikeLink("my doc")) say("a link is not told from words");
+  let d = { assignments: asgs, students: [{ name: "Luke Baird", email: "luke@x.edu" }], sitdownRoles: {} };
+  d = withLink(d, "Luke Baird", "https://docs.google.com/document/d/luke", asgs[0], before - 1000, "e1");
+  if (d.sitdownLinks?.["Luke Baird"]?.link !== "https://docs.google.com/document/d/luke") say("the link is not on the class row");
+  if (d.assignmentLog?.sd1?.["Luke Baird"]?.[0]?.type !== "submission") say("the link is not a submission on the assignment");
+  if (linkOf(d, "Luke Baird", asgs[0])?.link !== "https://docs.google.com/document/d/luke") say("the link does not read back");
+  const fromWork = { ...d, sitdownLinks: {}, assignmentLog: { sd1: { "Charles Kosinski": [{ id: "w1", ts: 5, type: "submission", link: "https://x.test/charles" }] } } };
+  if (linkOf(fromWork, "Charles Kosinski", asgs[0])?.link !== "https://x.test/charles") say("a link turned in on My Work does not show here");
+  if (linkOf({ ...d, sitdownLinks: {} }, "Luke Baird", null)) say("with no assignment and no row, a link appears from nowhere");
+  const html = (el) => renderToString(el);
+  // A student, before the deadline: the table, the prompts, the box, no links.
+  const page = (name, now, data = d) => html(<SitdownBody config={scfg} data={data} update={() => {}} viewer={{ name }} copy={copy} now={now} />);
+  const luke = page("Luke Baird", before);
+  for (const want of ["Wednesday, October 21, 9:15 AM", SITDOWN.room, "Charles Kosinski", "Head of stadium real estate", "You and Charles", "Turn in your prep", "show up here at 12:01 AM on Tuesday, October 20", "Open your document", "Change the link"]) {
+    if (!luke.includes(want)) say("Luke's page before the deadline lacks " + JSON.stringify(want));
+  }
+  if (luke.includes("Not turned in yet") && !luke.includes("Charles")) say("Luke's page says nothing of Charles");
+  // Charles has not turned in; Luke sees that, and no link.
+  if (!page("Luke Baird", before).includes("Not turned in yet")) say("a table-mate with no link is not marked");
+  // After the release, Charles's link is on Luke's page.
+  const d2 = withLink(d, "Charles Kosinski", "https://x.test/charles-prep", asgs[0], after - 1000, "e2");
+  const lukeAfter = page("Luke Baird", after, d2);
+  if (!lukeAfter.includes("https://x.test/charles-prep") || !lukeAfter.includes("Open Charles")) say("Charles's link is not on Luke's page after the release");
+  if (page("Luke Baird", before, d2).includes("https://x.test/charles-prep")) say("Charles's link is on Luke's page before the release");
+  // A student with no link sees the box, and a student not at a table sees the words.
+  const charles = page("Charles Kosinski", before);
+  if (!charles.includes("Turn in the link") || charles.includes("Change the link")) say("Charles, with no link, does not get the box");
+  const nobody = page("Pepe LeFritz", before);
+  if (!nobody.includes("not at a table yet") || !nobody.includes(WORDS["head.prep"])) say("a student off the tables does not get the words");
+  // Emma signs in as Vianna and lands at the Friday table with her own link.
+  const d3 = withLink(d, "Vianna Alvarez", "https://x.test/emma", null, before - 500, "e3");
+  const emma = page("Vianna Alvarez", before, d3);
+  if (!emma.includes("Friday, October 23, 9:45 AM") || !emma.includes("https://x.test/emma")) say("Vianna's page is not Emma's table with her link");
+  // The instructor: every table, every link, the count.
+  const all = html(<SitdownBody config={scfg} data={d2} update={() => {}} viewer={{ instructor: true }} copy={copy} instructor now={after} />);
+  for (const want of ["2 of 25 turned in", "Friday, October 23, 9:45 AM", "https://x.test/charles-prep", "Hand-ins also land on Sit-Down 1 prep", "Each student sees a prompt here"]) {
+    if (!all.includes(want)) say("the instructor's view lacks " + JSON.stringify(want));
+  }
+  const none = html(<SitdownBody config={scfg} data={{ ...d2, assignments: [] }} update={() => {}} viewer={{ instructor: true }} copy={copy} instructor now={before} />);
+  if (!none.includes("No assignment on My Work points at this page yet")) say("the instructor is not told there is no assignment");
+  // Every word a student reads is a clause that ends on something named.
+  Object.entries(WORDS).forEach(([k, v]) => {
+    for (const clause of String(v).split(/[.;,]/)) if (/\b(it|this|that|one|them)\s*$/i.test(clause.trim())) say("the words at " + k + " end a clause on a word that names nothing: " + JSON.stringify(clause.trim()));
+    if (String(v).includes("—")) say("the words at " + k + " carry an em dash");
+  });
 }
 
 // Late work and regrades. Andrew, 2026-10-06: turn in late with a reason, and

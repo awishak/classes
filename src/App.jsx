@@ -15,6 +15,7 @@ import WorksheetsPage from "./engine/WorksheetsPage.jsx";
 import ReadoutPage from "./engine/ReadoutPage.jsx";
 import WorktopiaAnswersPage from "./engine/WorktopiaAnswersPage.jsx";
 import SitdownRolesPage from "./engine/SitdownRolesPage.jsx";
+import SitdownPage from "./engine/SitdownPage.jsx";
 import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
@@ -294,6 +295,13 @@ export default function App() {
   const wsAns = path.match(/^\/(comm\w+)\/worksheets\/worktopia\/answers\/?$/);
   if (wsAns && ENGINE[wsAns[1]]) {
     return <WorktopiaAnswersPage key={wsAns[1]} config={ENGINE[wsAns[1]]} />;
+  }
+  // Sit-Down 1, for the student: /<class>/sitdown. Their table, their time,
+  // the prep, where the link goes, and the table's documents once the prep is
+  // due. The instructor sees every table on the same address.
+  const sd = path.match(/^\/(comm118|comm999)\/sitdown\/?$/);
+  if (sd && ENGINE[sd[1]]) {
+    return <SitdownPage key={sd[1]} config={ENGINE[sd[1]]} />;
   }
   // Sit-Down 1, the role each student plays at their table, for the
   // instructor: /<class>/worksheets/worktopia/roles.
