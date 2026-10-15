@@ -510,6 +510,10 @@ function OfficeHours({ config }) {
  * Andrew, 2026-09-23: "please also let me access the same messaging app from
  * the class roster" — the same one, not a copy of it.
  */
+// Andrew, 2026-10-15: canned answers. A tap puts one in the box, where he
+// can add to it before he posts.
+const CANNED = ["Hope you're feeling better!", "Thanks for letting me know.", "Okay, take care."];
+
 export function StudentThread({ config, data, update, name }) {
   const a = config.accent;
   const [note, setNote] = useState("");
@@ -518,7 +522,13 @@ export function StudentThread({ config, data, update, name }) {
   return (
     <div>
       <Thread config={config} data={data} name={name} accent={a} instructor />
-      <div style={{ marginTop: 18, display: "flex", gap: 8, alignItems: "flex-start" }}>
+      <div style={{ marginTop: 18, display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {CANNED.map(c => (
+          <button key={c} type="button" onClick={() => setNote(n => (n.trim() ? n.trim() + " " : "") + c)}
+            style={{ font: "inherit", fontSize: 14, padding: "8px 14px", minHeight: 40, borderRadius: 999, cursor: "pointer", border: "1px solid " + a + "55", background: a + "0f", color: TEXT_PRIMARY }}>{c}</button>
+        ))}
+      </div>
+      <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "flex-start" }}>
         <div style={{ flex: 1 }}><Field value={note} onChange={setNote} placeholder={"Post a note to " + String(name).split(" ")[0] + "..."} /></div>
         <SendBtn accent={a} onClick={send} disabled={!note.trim()}>Post</SendBtn>
       </div>
