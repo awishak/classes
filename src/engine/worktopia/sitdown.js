@@ -8,7 +8,7 @@
 // Friday; everyone who named a co-worker has one at the table where the day
 // allowed; the jobs at each table are mixed.
 
-import { pickOf, roleAt, pullOf } from "./roles.js";
+import { pickOf, roleAt, pullOf, pullLinkOf } from "./roles.js";
 
 export const SESSIONS = [
   { key: "wed-915", day: "Wednesday, October 21", time: "9:15",
@@ -54,6 +54,9 @@ export const sessionName = (name) => { const s = sessionOf(name); return s ? s.n
 // 18, 2026 is a Sunday, and the Monday before the first sit-down is the 19th.
 // The table's documents open to the table the minute the prep is due:
 // "immediately, they get links, like at 12:01 a.m."
+// The classes that hold a sit-down: COMM 118, and COMM 999, the rig for
+// trying the student path with Pepe and Jan.
+export const SITDOWN_CLASSES = ["comm118", "comm999"];
 export const SITDOWN = {
   title: "Sit-Down 1",
   room: "Vari Hall 206",
@@ -83,8 +86,8 @@ export const tableOf = (session, saved) =>
 // question; two with no field get nothing.
 export const promptFor = (a, b) => {
   const fa = a?.role?.field, fb = b?.role?.field;
-  if (!fa || !fb) return { same: false, line: "" };
-  return { same: fa === fb, line: fa === fb ? "" : pullOf(fa, fb) };
+  if (!fa || !fb) return { same: false, line: "", link: null };
+  return { same: fa === fb, line: fa === fb ? "" : pullOf(fa, fb), link: fa === fb ? null : pullLinkOf(fa, fb) };
 };
 
 // ─── where a turned-in link lives ───

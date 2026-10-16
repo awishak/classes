@@ -57,13 +57,47 @@ honest ... if you're not seriously ill, you know, be ethical and come to
 class. You know, even if you're not prepared." And: "Their conversations will
 be recorded. I'm going to let them know. It will be a video."
 
+## The second pass, the same afternoon
+
+He read the first draft and sent notes: faces at the table and his own
+("meeting director, something like that"), the steps higher with a link to
+the prep, the prep on its own page, the words "official and also delivered
+the way a 12 year old would understand it ... not infantilizing people",
+complete sentences only, page one as a list of short-answer questions, the
+pull lines as "a hint from your instructor" with hedges, the line about
+disagreeing on its own line in bold, and three questions at the end: how
+many questions, do I need links, can I use AI. The recording is audio, not
+video, and a student may come listen afterward. On AI: "my preference is
+that you use something called the INQUIRE method" with a link to his page,
+https://drewi.sh/teaching/human-centered-education#drive, and "you own
+everything that you write. If AI writes something you don't like, I'm going
+to attribute it to you."
+
+Settled later that evening: the prep document is the **Scouting Report** ("let's go with scouting report"); `PULL_LINKS` in `roles.js` holds one checked article per pair of fields at the six tables, 33 in all, drawn under the hint; his face comes from `instructorCard.photo` on the plan row; and the student home carries a door to the Sit-Down page (`SitdownDoor` in `portal/StudentHome.jsx`) until the last sit-down is over.
+
+Open from that pass, as first written: a name for the prep document other than Sit-Down prep (he picked Scouting Report on 2026-10-15, later that evening)
+("give me some other ideas"), and links under the hints ("if you have linked
+information, put that in here"): `PULL_LINKS` in `roles.js` is the place,
+empty so far.
+
 ## Where things live
 
 - **The student page**: `/comm118/sitdown`, `src/engine/SitdownPage.jsx`.
-  Signed in by email. Their time and room, their table with roles, the three
-  steps, the prep with a prompt per table-mate, the box for the Google Doc
-  link, and the table's documents once the prep is due. A student off the
-  tables sees the words and "You're not at a table yet."
+  Signed in by email. Their day, time and room with the faces at the table
+  and his as meeting director, the three steps with the prep page linked
+  from step one, the guidelines, the box for the Google Doc link (step one),
+  and the table's documents once the prep is due (step two). A student off
+  the tables sees the words and "You're not at a table yet."
+- **The prep page**: `/comm118/sitdown/prep`, the same component with
+  `page="prep"`. Page one as six short-answer questions and two open ones,
+  pages two and three with a hint per table-mate (two faces, the pull line
+  under "You might want to consider this:", a hedge, and a link when
+  `PULL_LINKS` has one), the bold disagree line above the hints, Your
+  questions, and the three questions at the end with the INQUIRE link.
+- **His photo**: `config.instructor.photo` is empty in every class config,
+  so his circle shows initials everywhere on the site, the meeting director
+  circle included. A data URL there, or a row the engine reads, fixes every
+  surface at once.
 - **His view of the same address**: every table, every link with its time,
   late marked, the count, a "See the page as" picker to show the class one
   student's page, and "Edit the words" to change any line in place. The words

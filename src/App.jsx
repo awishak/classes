@@ -299,9 +299,10 @@ export default function App() {
   // Sit-Down 1, for the student: /<class>/sitdown. Their table, their time,
   // the prep, where the link goes, and the table's documents once the prep is
   // due. The instructor sees every table on the same address.
-  const sd = path.match(/^\/(comm118|comm999)\/sitdown\/?$/);
+  // The prep, what goes in the document, is its own page: /<class>/sitdown/prep.
+  const sd = path.match(/^\/(comm118|comm999)\/sitdown(?:\/(prep))?\/?$/);
   if (sd && ENGINE[sd[1]]) {
-    return <SitdownPage key={sd[1]} config={ENGINE[sd[1]]} />;
+    return <SitdownPage key={sd[1] + (sd[2] || "")} config={ENGINE[sd[1]]} page={sd[2] || "home"} />;
   }
   // Sit-Down 1, the role each student plays at their table, for the
   // instructor: /<class>/worksheets/worktopia/roles.

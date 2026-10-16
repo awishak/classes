@@ -20,7 +20,9 @@ const initialsOf = (name) => String(name || "")
 
 /** The circle: their photograph, or their initials in the class's colour. */
 export function Avatar({ profile, name, accent, size = 44, ring = true }) {
-  const photo = profile?.avatar && String(profile.avatar).startsWith("data:") ? profile.avatar : null;
+  // A student's picture is a data URL in the photos row; Andrew's is an
+  // address in the class-photos bucket. Either draws.
+  const photo = profile?.avatar && /^(data:|https?:\/\/)/.test(String(profile.avatar)) ? profile.avatar : null;
   const a = accent || TOKENS.TEXT.primary;
   return (
     <div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", flexShrink: 0,
@@ -38,7 +40,10 @@ export function Avatar({ profile, name, accent, size = 44, ring = true }) {
  * card in the shared store rather than on a class roster.
  */
 export function Face({ config, data, name, size = 36, instructor = false }) {
-  const profile = instructor ? { avatar: config?.instructor?.photo || "" } : profileOf(data, name);
+  // His picture: the config's, or the one on his card in the plan row
+  // (`instructorCard.photo`), which is where the class page's editor put it.
+  // Andrew, 2026-10-15: "I have an avatar in the class page. use it."
+  const profile = instructor ? { avatar: config?.instructor?.photo || data?.instructorCard?.photo || "" } : profileOf(data, name);
   const shown = instructor ? (config?.instructor?.name || "Dr. Ishak") : nameShown(data, name);
   return <Avatar profile={profile} name={shown} accent={config?.accent} size={size} />;
 }

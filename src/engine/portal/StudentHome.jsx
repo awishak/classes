@@ -22,6 +22,33 @@ import { localWorksheet, listedFor, openTo } from "../localWorksheets.js";
 import { VISUAL_STORY_KEY } from "../visualstory/story.jsx";
 import { assignmentsOf } from "../profileTask.js";
 import { deadlineOf } from "../DueCard.jsx";
+import { SITDOWN_CLASSES, SITDOWN, released, sessionOf, tableOf, sitdownAssignment, linkOf } from "../worktopia/sitdown.js";
+
+// The door to Sit-Down 1, in the classes that hold one, from now until the
+// last sit-down is over. Andrew, 2026-10-15: "how do students reach the
+// sitdown page why is that not on the front page already?" The door says the
+// student's day and time, whether their Scouting Report is in, and opens
+// /<class>/sitdown. A student off the tables still gets the door.
+const LAST_SITDOWN = new Date(2026, 9, 23, 23, 59, 59).getTime();
+export function SitdownDoor({ config, data, name, now = Date.now() }) {
+  if (!SITDOWN_CLASSES.includes(config.id) || now > LAST_SITDOWN) return null;
+  const session = sessionOf(name);
+  const me = session ? tableOf(session, data?.sitdownRoles || {}).find(p => p.roster === name || p.name === name) : null;
+  const mine = me ? linkOf(data, me.roster, sitdownAssignment(data?.assignments || config.assignments)) : null;
+  const when = session ? session.day + ", " + session.time + " AM, " + SITDOWN.room : "Your table and time are on the page.";
+  const say = mine ? "Your Scouting Report is in." + (released(now) ? " Your table's reports are open." : "")
+    : now > SITDOWN.prepDue ? "Your Scouting Report was due " + SITDOWN.prepDueText + "."
+    : "Scouting Report due " + SITDOWN.prepDueText + ".";
+  return (
+    <a className="pt-door pt-focus" href={"/" + config.id + "/sitdown"}>
+      <span className="pt-door-main">
+        <span className="pt-door-name">{SITDOWN.title + ": " + when}</span>
+        <span className="pt-door-say">{say}</span>
+      </span>
+      <span className="pt-door-go" aria-hidden="true">Open</span>
+    </a>
+  );
+}
 
 // The visual story's door on the home. Andrew, 2026-10-15: students should
 // not have to go into the assignment to reach the builder, so a green box
@@ -163,6 +190,7 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
   return (
     <div className="pt-body">
       <PinBar data={data} go={go} />
+      <SitdownDoor config={config} data={data} name={name} />
       <StoryDoor config={config} data={data} />
       <style>{DOOR_CSS}</style>
       <Hero config={config} data={data} blockOf={blockOf} section={section} me={name} mark={mark} go={go} />

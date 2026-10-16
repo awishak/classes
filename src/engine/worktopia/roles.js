@@ -146,6 +146,50 @@ const PULL_LIST = [
 const PULLS = Object.fromEntries(PULL_LIST.map(([a, b, line]) => [a + "|" + b, line]));
 export const pullOf = (a, b) => (a && b ? PULLS[[a, b].sort().join("|")] || "" : "");
 
+// Something to read on a pull, shown under the hint on a student's Scouting
+// Report page. Andrew, 2026-10-15: "If you have linked information, put that
+// in here," and "why don't you find some links." One article per pair of
+// fields at the six tables, found and checked on 2026-10-15; keyed the same
+// way as the pulls, two field keys in alphabetical order. A pair with no
+// entry draws no link. Every one is a news or feature piece, 2023 to 2026,
+// with its headline as published.
+export const PULL_LINKS = {
+  "apparel|broadcast": { title: "College Jersey Patch Market Finds Its Benchmark", url: "https://frontofficesports.com/college-jersey-patch-value-market-benchmark-ohio-state-notre-dame/", outlet: "Front Office Sports" },
+  "apparel|coach": { title: "Colorado's Deion Sanders Must Wear Nike Gear While Coaching", url: "https://www.si.com/college/2023/01/04/colorado-deion-sanders-nike-under-armour-sponsors", outlet: "Sports Illustrated" },
+  "apparel|marketing": { title: "Nike CEO Elliott Hill outlines new strategy after retailer blames promotions for declining revenue and profit", url: "https://www.cnbc.com/2024/12/19/nike-nke-earnings-q2-2025.html", outlet: "CNBC" },
+  "apparel|venue": { title: "Here's why the Delta Center team store is closing next week", url: "https://www.deseret.com/sports/2025/05/30/utah-jazz-mammoth-delta-center-team-store-fanatics/", outlet: "Deseret News" },
+  "broadcast|coach": { title: "NFL Now Requiring Both Coaches to Do In-Game Interviews", url: "https://www.si.com/nfl/nfl-now-requiring-both-coaches-to-do-in-game-interviews", outlet: "Sports Illustrated" },
+  "broadcast|health": { title: "NBA load management: Board approves rules that fine teams if 'star players' sit certain games", url: "https://www.cbssports.com/nba/news/nba-load-management-board-approves-rules-that-fine-teams-if-star-players-sit-certain-games", outlet: "CBS Sports" },
+  "broadcast|marketing": { title: "Super Bowl ads beckon up to $8 million apiece for Fox", url: "https://www.cnbc.com/2025/01/29/fox-super-bowl-ad-price.html", outlet: "CNBC" },
+  "broadcast|pr": { title: "Inside the battle over reporters' access to NFL locker rooms", url: "https://sports.yahoo.com/inside-battle-over-reporters-access-170354988.html", outlet: "The Washington Post, on Yahoo Sports" },
+  "broadcast|social": { title: "The NBA wants to embrace content creators without degrading its golden goose of live sports rights", url: "https://www.cnbc.com/2026/02/19/nba-embraces-content-creators-tries-to-protect-live-sports-rights.html", outlet: "CNBC" },
+  "broadcast|venue": { title: "Live From NBA All-Star 2026: For NBA Broadcast Operations, There's a 'Lot of New'", url: "https://www.sportsvideo.org/2026/02/15/live-from-nba-all-star-2026-for-nba-broadcast-operations-theres-a-lot-of-new/", outlet: "Sports Video Group" },
+  "coach|health": { title: "Ex-PSU doc awarded $5.25M in suit alleging James Franklin interference", url: "https://www.espn.com/college-football/story/_/id/40242103/penn-state-scott-lynch-doctor-james-franklin-verdict", outlet: "ESPN" },
+  "coach|marketing": { title: "Prime Effect: Colorado Athletics Sponsorship Revenue Up 42%", url: "https://frontofficesports.com/article/prime-effect-colorado-athletics-sponsorship-revenue-up-42-this-season/", outlet: "Front Office Sports" },
+  "coach|pr": { title: "LSU's Mulkey: I'll sue Washington Post if 'false story' published", url: "https://www.espn.com/womens-college-basketball/story/_/id/39795254/lsu-mulkey-sue-washington-post-false-story-published", outlet: "ESPN" },
+  "coach|social": { title: "Social media is key to college football recruiting, and BYU is trying to do it better than anyone else", url: "https://www.sltrib.com/sports/byu-cougars/2023/09/19/social-media-is-key-college/", outlet: "The Salt Lake Tribune" },
+  "coach|venue": { title: "Seoul World Cup Stadium faces criticism for poor quality of pitch", url: "https://www.koreatimes.co.kr/sports/20240926/seoul-world-cup-stadium-faces-criticism-for-poor-quality-of-pitch", outlet: "The Korea Times" },
+  "data|frontoffice": { title: "For over a century, baseball's scouts have been the backbone of America's pastime. Do they have a future?", url: "https://theconversation.com/for-over-a-century-baseballs-scouts-have-been-the-backbone-of-americas-pastime-do-they-have-a-future-226379", outlet: "The Conversation" },
+  "data|sales": { title: "Sports ticket prices are getting more expensive, and pricing out many fans", url: "https://www.npr.org/2025/10/23/nx-s1-5561909/ticket-prices-sports", outlet: "NPR" },
+  "data|social": { title: "Social Media's Most Popular U.S. Teams Share One Similarity", url: "https://www.sportico.com/business/media/2025/most-popular-sports-teams-social-media-1234855886/", outlet: "Sportico" },
+  "frontoffice|hospitality": { title: "Ohio bar owners support bill to ban exclusive streaming of Ohio State football games", url: "https://www.yahoo.com/news/articles/ohio-bar-owners-support-bill-120000487.html", outlet: "NBC4 Columbus, on Yahoo News" },
+  "frontoffice|marketing": { title: "NBA team sponsorship revenue up 8% to $1.6 billion, boosted by jersey patches", url: "https://www.nbcnews.com/sports/nba/nba-team-sponsorship-revenue-8-16-billion-boosted-jersey-patches-rcna211145", outlet: "NBC News" },
+  "frontoffice|pr": { title: "Mavericks fire GM Nico Harrison amid continued fan angst", url: "https://www.espn.com/nba/story/_/id/46928742/sources-mavericks-expected-fire-general-manager-nico-harrison", outlet: "ESPN" },
+  "frontoffice|sales": { title: "Mavericks offering refunds after Luka Doncic trade, fans say", url: "https://www.nbcdfw.com/news/sports/dallas-mavericks/mavericks-refunds-luka-doncic-trade-fans/3759678/", outlet: "NBC 5 Dallas-Fort Worth" },
+  "frontoffice|social": { title: "The New Way Colleges Are Wooing Athletes", url: "https://frontofficesports.com/article/college-athletic-department-social-media-content-studios/", outlet: "Front Office Sports" },
+  "frontoffice|venue": { title: "Indiana agrees on $50M naming rights deal for Memorial Stadium", url: "https://www.espn.com/college-football/story/_/id/46042497/indiana-agrees-50m-naming-rights-deal-memorial-stadium", outlet: "ESPN" },
+  "health|pr": { title: "Ravens fined $100K for Lamar Jackson injury report violation", url: "https://www.espn.com/nfl/story/_/id/46794185/ravens-fined-100k-injury-report-violation-lamar-jackson", outlet: "ESPN" },
+  "hospitality|social": { title: "Women's sports bars are about to have their moment to cheer in Philadelphia", url: "https://www.inquirer.com/food/restaurants/womens-sports-bars-philadelphia-wnba-20250627.html", outlet: "The Philadelphia Inquirer" },
+  "hospitality|venue": { title: "Xfinity Live! is on track for a $15 million makeover, with five new bars and a beer garden", url: "https://www.inquirer.com/real-estate/commercial/xfinity-live-expansion-comcast-sports-stadium-district-20241113.html", outlet: "The Philadelphia Inquirer" },
+  "marketing|pr": { title: "Nike App, Website Remove Ja Morant Sneaker Listings", url: "https://frontofficesports.com/nike-app-website-remove-ja-morant-sneaker-listings/", outlet: "Front Office Sports" },
+  "marketing|social": { title: "Sport marketing's 'full-circle' moment: creator and licensing deals changing the game", url: "https://www.thedrum.com/news/2025/09/30/sport-marketing-s-full-circle-moment-creator-and-licensing-deals-changing-the-game", outlet: "The Drum" },
+  "marketing|venue": { title: "Tampa Bay Lightning home has a new name, Benchmark International Arena", url: "https://www.tampabay.com/sports/2025/08/13/tampa-bay-lightning-arena-naming-rights-deal-benchmark-international/", outlet: "Tampa Bay Times" },
+  "pr|social": { title: "WNBA deletes video of Paige Bueckers and Angel Reese betting $400 on game", url: "https://www.nbcnews.com/sports/wnba/wnba-deletes-social-media-post-paige-bueckers-angel-reese-betting-400-rcna590119", outlet: "NBC News" },
+  "sales|social": { title: "Viral Dances, Makeup Tutorials and Now ... Sports Tickets", url: "https://www.sportico.com/business/sales/2024/sports-social-media-marketing-strategies-tickets-1234804629/", outlet: "Sportico" },
+  "social|venue": { title: "One Extraordinary Photo: A stadium lit up by smartphones", url: "https://www.foxsports.com/articles/other/one-extraordinary-photo-a-stadium-lit-up-by-smartphones", outlet: "Associated Press, on Fox Sports" },
+};
+export const pullLinkOf = (a, b) => (a && b ? PULL_LINKS[[a, b].sort().join("|")] || null : null);
+
 // Ideas for how each field changes going forward. The student works this out;
 // these are for Andrew to prompt with.
 export const CHANGES = {

@@ -9,10 +9,10 @@
 
 import { localWorksheet, openTo } from "./localWorksheets.js";
 import { WORKTOPIA_KEY } from "./worktopia/terminal.js";
+import { SITDOWN_CLASSES } from "./worktopia/sitdown.js";
 
 // Sit-Down 1 lives in COMM 118, and COMM 999 is the rig for trying the
 // student path. The tables themselves are in worktopia/sitdown.js.
-const SITDOWN_CLASSES = ["comm118", "comm999"];
 
 export function appsFor(config, role) {
   const p = config.path;
