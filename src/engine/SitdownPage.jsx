@@ -335,7 +335,6 @@ function Prep({ config, data, copy, editing, table, me, suffix = "" }) {
                   {sameField ? <p className="pl">{copy.say("hint.same")}</p>
                     : line ? (<>
                       <p className="pl">{copy.say("hint.lead") + " " + line}</p>
-                      <p className="pq">{copy.say("hint.hedge")}</p>
                       {link ? <a className="dl" href={link.url} target="_blank" rel="noopener noreferrer">{link.title}<span className="dh">{hostOf(link.url)}</span></a> : null}
                     </>)
                     : <p className="pl">{copy.say("hint.none")}</p>}
@@ -346,7 +345,7 @@ function Prep({ config, data, copy, editing, table, me, suffix = "" }) {
         </ul>
       ) : table === null ? (<>
         <p className="meta">Each student sees a hint here for each person at their table: the pull between the two fields, from the roles page, with the two faces.</p>
-        {editing ? ["hint.label", "hint.lead", "hint.hedge", "hint.same", "hint.none"].map(k => <Words key={k} k={k} copy={copy} editing={editing} as="p" className="p" />) : null}
+        {editing ? ["hint.label", "hint.lead", "hint.same", "hint.none"].map(k => <Words key={k} k={k} copy={copy} editing={editing} as="p" className="p" />) : null}
       </>) : <p className="meta">You're not in a group yet, so there are no hints to show. Message Dr. Ishak and we'll place you.</p>}
     </section>
 

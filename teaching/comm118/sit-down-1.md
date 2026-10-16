@@ -91,7 +91,8 @@ most of them will be provided by you, the students"; and under How the
 sit-down works there are three matching buttons, one per step, that jump to
 the turn-in box, the group's reports, and the time and room at the top.
 Then "Your questions" came off the Scouting Report page ("remove"); the
-FAQ at the end still says how many questions to write.
+FAQ at the end still says how many questions to write. The hedge under each
+hint, "That's one way I could see the relationship going," came off too.
 
 ## Where things live
 
@@ -104,7 +105,7 @@ FAQ at the end still says how many questions to write.
 - **The prep page**: `/comm118/sitdown/prep`, the same component with
   `page="prep"`. Page one as six short-answer questions and two open ones,
   pages two and three with a hint per table-mate (two faces, the pull line
-  under "You might want to consider this:", a hedge, and a link when
+  under "You might want to consider this:", and a link when
   `PULL_LINKS` has one), the bold disagree line above the hints, and the
   three questions at the end with the INQUIRE link.
 - **His photo**: `config.instructor.photo` is empty in every class config,

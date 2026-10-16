@@ -5640,6 +5640,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   }
   if (/\btable\b/i.test(lukePrep.replace(/&#x27;/g, "'"))) say("a student still reads the word table on the prep page");
   if (lukePrep.includes("Your questions")) say("the Your questions section is still on the prep page");
+  if (lukePrep.includes("one way I could see")) say("the hedge line is still under the hints");
   if (!prepOf(null, d, { instructor: true }).includes("Each student sees a hint here")) say("the instructor's prep page does not say where the hints go");
   // The door on the student's home: the way in. Luke with his report in,
   // Charles without, Pepe off the tables, a class with no sit-down, and the

@@ -66,7 +66,6 @@ export const WORDS = {
   "others.disagree": "The hints below are a start. If you see the relationship differently, say so. I want to know.",
   "hint.label": "A hint from your instructor",
   "hint.lead": "You might want to consider this:",
-  "hint.hedge": "That's one way I could see the relationship going.",
   "hint.same": "You two are in the same field. You might want to consider where the two jobs differ, and which parts of each job AI takes first.",
   "hint.none": "I don't have a hint written for these two jobs yet. Start with where the two jobs meet and who needs whom.",
 
