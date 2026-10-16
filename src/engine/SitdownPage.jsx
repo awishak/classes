@@ -454,11 +454,11 @@ const CSS = `
 .sd .when .big{font-size:26px;font-weight:700;letter-spacing:-.01em;color:var(--text-primary)}
 .sd .when .where{font-size:17px;color:var(--text-primary)}
 .sd .faces{list-style:none;margin:4px 0 0;padding:0;display:flex;gap:16px;flex-wrap:wrap;width:100%}
-.sd .face{display:grid;gap:4px;justify-items:center;text-align:center;width:112px}
+.sd .face{display:grid;gap:4px;justify-items:center;text-align:center;width:128px}
 .sd .face.me .fn{color:var(--accent)}
 .sd .face.host{padding-left:16px;border-left:1px solid var(--line-soft)}
-.sd .fn{font-size:15px;font-weight:600;color:var(--text-primary)}
-.sd .fr{font-size:13px;line-height:1.3;color:var(--text-secondary)}
+.sd .fn{font-size:15px;font-weight:500;color:var(--text-secondary)}
+.sd .fr{font-size:16px;line-height:1.25;font-weight:600;color:var(--text-primary)}
 .sd .list{margin:0;padding-left:20px;display:grid;gap:6px;font-size:17px;line-height:1.5;color:var(--text-secondary)}
 .sd .list b{color:var(--text-primary);font-weight:600}
 .sd .qlist{margin:0;padding-left:24px;display:grid;gap:6px;font-size:17px;line-height:1.5;color:var(--text-primary)}
