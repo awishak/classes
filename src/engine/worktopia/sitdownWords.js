@@ -20,31 +20,33 @@ export const WORDS_ROW = "sitdown-1-words-plan";
 export const WORDS = {
   // ─── the sit-down page ───
   title: "Sit-Down 1",
-  intro: "A sit-down is a meeting in my office with the people at your table. Everyone at the table has a job in sports, and we talk about how those jobs connect to each other and how each job is changing. I ask the questions. I can ask anyone at the table about any of the jobs, so come ready to talk about every job at the table.",
+  intro: "A sit-down is a meeting in my office with everyone in your group. Everyone in your group has a job in sports, and we talk about how those jobs connect to each other and how each job is changing. I will ask many questions, and most of them will be provided by you, the students. I can ask anyone in your group about any of the jobs, so come ready to talk about every job in your group.",
   director: "Meeting director",
 
   "head.steps": "How the sit-down works",
   "step.1": "Write your Scouting Report in a Google Doc and turn the link in on this page by Monday, October 19, at 11:59 PM. The Scouting Report page explains exactly what goes in the document.",
   "step.1.link": "Read the Scouting Report page",
-  "step.2": "Read the Scouting Reports from everyone at your table. They open on this page on Tuesday, October 20. Make sure you're familiar with every report at your table, and know your own well.",
+  "step.2": "Read the Scouting Reports from everyone in your group. They open on this page on Tuesday, October 20. Make sure you're familiar with every report in your group, and know your own well.",
   "step.3": "The meeting.",
+  "step.1.go": "Step 1: Turn in your Scouting Report",
+  "step.2.go": "Step 2: Your group's Scouting Reports",
+  "step.3.go": "Step 3: Your sit-down",
 
   "head.guidelines": "Guidelines",
   "guide.1": "Please be five or ten minutes early. We will start on time.",
-  "guide.2": "If you're seriously ill, don't come. We will find another way to do your sit-down later. Please only miss the meeting if you're ill.",
   "guide.3": "The sit-down is recorded on audio. You're welcome to come listen to the recording afterward if you'd like.",
 
   "head.turnin": "Turn in your Scouting Report",
-  "prep.turnin": "Your Scouting Report is a Google Doc. Set sharing so that anyone with the link can view, then paste the link here. Everyone at your table reads your report from this page, so the sharing setting matters.",
+  "prep.turnin": "Your Scouting Report is a Google Doc. Set sharing so that anyone with the link can view, then paste the link here. Everyone in your group reads your report from this page, so the sharing setting matters.",
 
-  "head.docs": "Your table's Scouting Reports",
-  "docs.before": "The Scouting Reports from your table show up here on Tuesday, October 20, at 12:01 AM, as soon as the reports are due.",
+  "head.docs": "Your group's Scouting Reports",
+  "docs.before": "The Scouting Reports from everyone in your group show up here on Tuesday, October 20, at 12:01 AM, as soon as the reports are due.",
   "docs.after": "Read every report before your sit-down.",
 
   // ─── the prep page ───
   "prep.title": "Scouting Report",
-  "prep.intro": "Before we meet, you will complete a document that has information about the following things: your position in sports, where that position is going, and how your position connects to each person at your table. You will also include five questions that might be asked of you or of any other person at your meeting. Here is how to put the document together.",
-  "prep.shape": "Your Scouting Report is a Google Doc, two to three pages long. Page one is about your job. Pages two and three are about the people at your table. When you're done, turn the link in on the Sit-Down page.",
+  "prep.intro": "Before we meet, you will complete a document that has information about the following things: your position in sports, where that position is going, and how your position connects to each person in your group. You will also include five questions that might be asked of you or of any other person in your group. Here is how to put the document together.",
+  "prep.shape": "Your Scouting Report is a Google Doc, two to three pages long. Page one is about your job. Pages two and three are about everyone else in your group. When you're done, turn the link in on the Sit-Down page.",
 
   "head.page1": "Page one: your job",
   "page1.intro": "Answer each of these in a short paragraph.",
@@ -56,8 +58,8 @@ export const WORDS = {
   "page1.q6": "What's going to be important for you to know how to do in this position?",
   "page1.open": "Finish page one with two open questions about your job or your field. An open question is one you don't have an answer to yet.",
 
-  "head.others": "Pages two and three: the people at your table",
-  "others.intro": "Write about half a page on each person at your table, and use the same structure for every person.",
+  "head.others": "Pages two and three: everyone else in your group",
+  "others.intro": "Write about half a page on each person in your group, and use the same structure for every person.",
   "others.q1": "How does your job connect to theirs right now?",
   "others.q2": "How does that connection change as AI takes over parts of one job or the other?",
   "others.q3": "End with one open question about where this connection is going.",
@@ -68,11 +70,8 @@ export const WORDS = {
   "hint.same": "You two are in the same field. You might want to consider where the two jobs differ, and which parts of each job AI takes first.",
   "hint.none": "I don't have a hint written for these two jobs yet. Start with where the two jobs meet and who needs whom.",
 
-  "head.questions": "Your questions",
-  "questions.body": "These are questions I may ask you in the room, or ask somebody else at the table about you. Write at least two questions on page one and at least one question for each connection on pages two and three.",
-
   "faq.q1": "How many questions do I need to write?",
-  "faq.a1": "Five at a table of four, and six at a table of five: two questions on the first page, and one question for each person at your table.",
+  "faq.a1": "Five in a group of four, and six in a group of five: two questions on the first page, and one question for each other person in your group.",
   "faq.q2": "Do I need to use links?",
   "faq.a2": "Yes. Base what you say on something you've read. Include one or two links where they fit, so I can see where a claim comes from.",
   "faq.q3": "Can I use AI?",

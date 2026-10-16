@@ -16,10 +16,11 @@ we have the sit down meeting. Those are the 3 steps they have to accomplish."
 | 3. The sit-down, recorded on video | Wed Oct 21, Thu Oct 22, Fri Oct 23, at 9:15 and 9:45 | Vari Hall 206 |
 
 **The date.** He said "Monday, October 18th." October 18, 2026 is a Sunday.
-The Monday before the first sit-down is October 19, and the page says the
-19th. If he meant Sunday night, change `SITDOWN.prepDue` and `release` in
-`src/engine/worktopia/sitdown.js` and the two dates in
-`src/engine/worktopia/sitdownWords.js`.
+Asked, and he said "monday" (2026-10-15, late): the Scouting Report is due
+Monday, October 19, 11:59 PM. The page, `SITDOWN` in
+`src/engine/worktopia/sitdown.js`, the words, and the My Work assignment
+`s1-memo` on the plan row all say October 19. Backup of the row before the
+assignment moved: `comm118-f26-v1-plan-bak-due-2026-10-15`.
 
 ## What the prep is
 
@@ -80,6 +81,18 @@ Open from that pass, as first written: a name for the prep document other than S
 information, put that in here"): `PULL_LINKS` in `roles.js` is the place,
 empty so far.
 
+## Late on October 15: group, not table
+
+Four more notes from him: the illness line is gone from the guidelines
+("rwmove this line"); in front of a student the word is "group", never
+"table" ("everyone in your group"), on both pages and the door, while his
+own view still says table; the intro says "I will ask many questions, and
+most of them will be provided by you, the students"; and under How the
+sit-down works there are three matching buttons, one per step, that jump to
+the turn-in box, the group's reports, and the time and room at the top.
+Then "Your questions" came off the Scouting Report page ("remove"); the
+FAQ at the end still says how many questions to write.
+
 ## Where things live
 
 - **The student page**: `/comm118/sitdown`, `src/engine/SitdownPage.jsx`.
@@ -92,8 +105,8 @@ empty so far.
   `page="prep"`. Page one as six short-answer questions and two open ones,
   pages two and three with a hint per table-mate (two faces, the pull line
   under "You might want to consider this:", a hedge, and a link when
-  `PULL_LINKS` has one), the bold disagree line above the hints, Your
-  questions, and the three questions at the end with the INQUIRE link.
+  `PULL_LINKS` has one), the bold disagree line above the hints, and the
+  three questions at the end with the INQUIRE link.
 - **His photo**: `config.instructor.photo` is empty in every class config,
   so his circle shows initials everywhere on the site, the meeting director
   circle included. A data URL there, or a row the engine reads, fixes every
@@ -127,11 +140,10 @@ empty so far.
 ## What he still has to do before class on October 16
 
 1. Deploy, then open `/comm118/sitdown` signed in.
-2. Add the assignment on the dashboard: "Sit-Down 1 prep" (or his title), due
-   Oct 19, 11:59 PM, with its Details link set to
-   `https://classes.andrewishak.com/comm118/sitdown`. Without the assignment
-   the page still takes links and keeps them; with the assignment they land
-   on My Work and Grade view too.
+2. Done 2026-10-15 by `scripts/sitdown-assignments.mjs`: the My Work
+   assignment is "Scouting Report" (`s1-memo`), due Oct 19, 11:59 PM, open,
+   with its Details link set to `https://classes.andrewishak.com/comm118/sitdown`,
+   so a link turned in on either page lands on My Work and Grade view too.
 3. Read the words on the page and change any line he wants. His edits save
    to the store and survive deploys.
 4. Pick "See the page as" to show the class one student's page.
@@ -184,7 +196,6 @@ transcript, summary and feedback.
 
 ## Open
 
-- The date, above.
 - Whether a student can replace a link after the deadline. The page lets
   them, marked with the time, and his view shows "after the deadline" in
   red.

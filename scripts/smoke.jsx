@@ -5623,13 +5623,23 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     if (!luke.includes(want)) say("Luke's page before the deadline lacks " + JSON.stringify(want));
   }
   if (luke.includes("You and Charles")) say("the hints are on the sit-down page rather than the prep page");
+  // Oct 15, late: three matching buttons under the steps, one per part of
+  // the page; "group", never "table", in front of a student; the illness
+  // line is gone; his sentence about the questions is in.
+  for (const want of ['href="#turnin"', 'href="#docs"', 'href="#when"', 'id="turnin"', 'id="docs"', 'id="when"', "Step 1: Turn in your Scouting Report", "Step 2: Your group", "Step 3: Your sit-down", "most of them will be provided by you, the students"]) {
+    if (!luke.replace(/&#x27;/g, "'").includes(want)) say("Luke's page lacks " + JSON.stringify(want));
+  }
+  if (luke.includes("seriously ill")) say("the illness line is still on the page");
+  if (/\b(at|your|the) table\b/i.test(luke.replace(/&#x27;/g, "'"))) say("a student still reads the word table");
   // The prep page: the questions, a hint per table-mate with the two faces,
   // the bold line that says disagree, and the INQUIRE link.
   const prepOf = (name, data = d, extra = {}) => html(<SitdownBody config={scfg} data={data} update={() => {}} viewer={name ? { name } : { instructor: true }} copy={copy} page="prep" now={before} {...extra} />);
   const lukePrep = prepOf("Luke Baird");
-  for (const want of ["Page one: your job", "What's your job?", "You and Charles", "You and Catherine", "You and Sophia", "A hint from your instructor", "You might want to consider this:", "If you see the relationship differently", "Your questions", "Can I use AI?", "INQUIRE", "drewi.sh/teaching/human-centered-education", "Back to the Sit-Down page"]) {
+  for (const want of ["Page one: your job", "What's your job?", "You and Charles", "You and Catherine", "You and Sophia", "A hint from your instructor", "You might want to consider this:", "If you see the relationship differently", "Can I use AI?", "INQUIRE", "drewi.sh/teaching/human-centered-education", "Back to the Sit-Down page"]) {
     if (!lukePrep.replace(/&#x27;/g, "'").includes(want)) say("Luke's prep page lacks " + JSON.stringify(want));
   }
+  if (/\btable\b/i.test(lukePrep.replace(/&#x27;/g, "'"))) say("a student still reads the word table on the prep page");
+  if (lukePrep.includes("Your questions")) say("the Your questions section is still on the prep page");
   if (!prepOf(null, d, { instructor: true }).includes("Each student sees a hint here")) say("the instructor's prep page does not say where the hints go");
   // The door on the student's home: the way in. Luke with his report in,
   // Charles without, Pepe off the tables, a class with no sit-down, and the
@@ -5638,7 +5648,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const door = (name, data = d, extra = {}) => html(<SitdownDoor config={scfg} data={data} name={name} now={before} {...extra} />);
   if (!door("Luke Baird").includes("Your Scouting Report is in") || !door("Luke Baird").includes("/comm118/sitdown") || !door("Luke Baird").includes("Wednesday, October 21, 9:15 AM")) say("Luke's door does not say his report is in, or where he sits");
   if (!door("Charles Kosinski").includes("Scouting Report due")) say("Charles's door does not carry the deadline");
-  if (!door("Pepe LeFritz").includes("Your table and time are on the page")) say("a student off the tables has no door");
+  if (!door("Pepe LeFritz").includes("Your group and time are on the page")) say("a student off the tables has no door");
   if (door("Luke Baird", d, { config: { ...scfg, id: "comm3" } }) !== "") say("a class with no sit-down draws the door");
   if (door("Luke Baird", d, { now: new Date(2026, 9, 24, 12).getTime() }) !== "") say("the door is still up after the last sit-down");
   if (!readFileSync(new URL("../src/engine/portal/StudentHome.jsx", import.meta.url), "utf8").includes("<SitdownDoor config")) say("the student home does not draw the door");
@@ -5654,7 +5664,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const charles = page("Charles Kosinski", before);
   if (!charles.includes("Turn in the link") || charles.includes("Change the link")) say("Charles, with no link, does not get the box");
   const nobody = page("Pepe LeFritz", before);
-  if (!nobody.includes("not at a table yet") || !nobody.includes(WORDS["head.guidelines"])) say("a student off the tables does not get the words");
+  if (!nobody.includes("not in a group yet") || !nobody.includes(WORDS["head.guidelines"])) say("a student off the tables does not get the words");
   // Emma signs in as Vianna and lands at the Friday table with her own link.
   const d3 = withLink(d, "Vianna Alvarez", "https://x.test/emma", null, before - 500, "e3");
   const emma = page("Vianna Alvarez", before, d3);

@@ -173,7 +173,7 @@ function Mine({ config, data, update, name, saved, asg, copy, editing, now, suff
   const others = table.filter(p => p !== me);
   const open = released(now);
   return (<>
-    <section className="sec when">
+    <section className="sec when" id="when">
       <div className="eyebrow">Your sit-down</div>
       {session ? (<>
         <div className="big">{whenOf(session)}</div>
@@ -192,7 +192,7 @@ function Mine({ config, data, update, name, saved, asg, copy, editing, now, suff
             <div className="fr"><Words k="director" copy={copy} editing={editing} as="span" /></div>
           </li>
         </ul>
-      </>) : <p className="p">You're not at a table yet. Message Dr. Ishak and we'll place you.</p>}
+      </>) : <p className="p">You're not in a group yet. Message Dr. Ishak and we'll place you.</p>}
     </section>
 
     <section className="sec">
@@ -208,12 +208,17 @@ function Mine({ config, data, update, name, saved, asg, copy, editing, now, suff
           <span>{session ? " " + whenOf(session) + ", in " + SITDOWN.room + "." : " In " + SITDOWN.room + "."}</span>
         </div></li>
       </ol>
+      <div className="goes">
+        <a className="btn" href={"#turnin"}>{copy.say("step.1.go")}</a>
+        {session ? <a className="btn" href={"#docs"}>{copy.say("step.2.go")}</a> : null}
+        {session ? <a className="btn" href={"#when"}>{copy.say("step.3.go")}</a> : null}
+      </div>
     </section>
 
     <section className="sec">
       <Words k="head.guidelines" copy={copy} editing={editing} as="h2" className="h2" />
       <ul className="list">
-        {["guide.1", "guide.2", "guide.3"].map(k => <li key={k}><Words k={k} copy={copy} editing={editing} as="span" /></li>)}
+        {["guide.1", "guide.3"].map(k => <li key={k}><Words k={k} copy={copy} editing={editing} as="span" /></li>)}
       </ul>
     </section>
 
@@ -252,7 +257,7 @@ function TurnIn({ config, data, update, name, asg, copy, editing, now, suffix })
     if (!ok || !name || !update) return;
     const at = Date.now();
     update(d => withLink(d, name, link.trim(), asg, at, genId()));
-    setLink(""); setChanging(false); setSaid("Turned in. Your table sees the link once the prep is due.");
+    setLink(""); setChanging(false); setSaid("Turned in. Your group sees the link once the prep is due.");
   };
   const late = now > SITDOWN.prepDue;
   return (
@@ -342,12 +347,7 @@ function Prep({ config, data, copy, editing, table, me, suffix = "" }) {
       ) : table === null ? (<>
         <p className="meta">Each student sees a hint here for each person at their table: the pull between the two fields, from the roles page, with the two faces.</p>
         {editing ? ["hint.label", "hint.lead", "hint.hedge", "hint.same", "hint.none"].map(k => <Words key={k} k={k} copy={copy} editing={editing} as="p" className="p" />) : null}
-      </>) : <p className="meta">You're not at a table yet, so there are no hints to show. Message Dr. Ishak and we'll place you.</p>}
-    </section>
-
-    <section className="sec">
-      {W("head.questions", "h2", "h2")}
-      {W("questions.body")}
+      </>) : <p className="meta">You're not in a group yet, so there are no hints to show. Message Dr. Ishak and we'll place you.</p>}
     </section>
 
     <section className="sec">
@@ -441,6 +441,9 @@ const CSS = `
 .sd .facts{display:grid;gap:6px;justify-items:start}
 .sd .btn{font:inherit;font-size:14px;font-weight:600;color:var(--accent);background:transparent;border:1px solid var(--accent);border-radius:999px;padding:6px 14px;min-height:44px;cursor:pointer}
 .sd .btn[aria-pressed="true"]{background:var(--accent);color:#fff}
+.sd a.btn{display:inline-flex;align-items:center;text-decoration:none;padding:6px 16px}
+.sd .goes{display:flex;flex-wrap:wrap;gap:10px;width:100%}
+.sd .sec{scroll-margin-top:16px}
 .sd .lnk{font:inherit;font-size:15px;font-weight:600;color:var(--accent);background:transparent;border:0;padding:0;cursor:pointer;min-height:44px;display:inline-flex;align-items:center;text-align:left;text-decoration:none}
 .sd .as{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--text-secondary)}
 .sd .as select{font:inherit;font-size:16px;min-height:44px;padding:0 10px;border-radius:12px;border:1px solid var(--line-strong);background:var(--surface-card);color:var(--text-primary)}

@@ -35,8 +35,8 @@ export function SitdownDoor({ config, data, name, now = Date.now() }) {
   const session = sessionOf(name);
   const me = session ? tableOf(session, data?.sitdownRoles || {}).find(p => p.roster === name || p.name === name) : null;
   const mine = me ? linkOf(data, me.roster, sitdownAssignment(data?.assignments || config.assignments)) : null;
-  const when = session ? session.day + ", " + session.time + " AM, " + SITDOWN.room : "Your table and time are on the page.";
-  const say = mine ? "Your Scouting Report is in." + (released(now) ? " Your table's reports are open." : "")
+  const when = session ? session.day + ", " + session.time + " AM, " + SITDOWN.room : "Your group and time are on the page.";
+  const say = mine ? "Your Scouting Report is in." + (released(now) ? " Your group's reports are open." : "")
     : now > SITDOWN.prepDue ? "Your Scouting Report was due " + SITDOWN.prepDueText + "."
     : "Scouting Report due " + SITDOWN.prepDueText + ".";
   return (
