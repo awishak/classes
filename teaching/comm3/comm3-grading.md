@@ -52,3 +52,15 @@ What the first sweep found, Oct 14, 2026:
   so "6 images" reads as three photos and three graphics.
 - Shared-with-the-wrong-account was rarer than in week 1: two Version 2
   docs and one Version 1 doc came back Access Denied.
+
+How Version 1 was graded, Oct 16, 2026: on completion, not on quality.
+Version 2 was the same essay revised, Andrew had looked at every one and
+said how he felt, and for 32 students Version 1 survives only in version
+history. So every Version 1 link that opens for him is Complete with no
+comment, a doc he cannot open is Not submitted with the access note, and
+nothing turned in stays Not submitted. His words: "we do it, but with no
+comments, except to those who i couldn't access." The access check ran
+from his signed-in Chrome, every mobilebasic link fetched in two parallel
+batches from a docs.google.com tab; a loop of 57 one after another runs
+past the tool's 45 second limit. Two were shut: Grayson Dangleis's doc and
+Riley Gorr's.
