@@ -141,6 +141,15 @@ bolder; and an **Every group** card at the foot of the student page
 day, time, names and roles, so a student can see the whole class. Deployed
 that morning on his "make all these changes and deploy."
 
+After that deploy, two more: the task leads each step again, with the date
+large under the task ("if you have a list, the tasks should be in the list,
+not the date"), and every pill button is outlined in seaglass ("the green
+links do not stand out"). Then the sheen: a band of light crosses every pill
+every 5.5 seconds (`sd-sheen`, staggered by step) and a seaglass glint
+passes through every underlined link every 6 (`sd-glint`, a gradient clipped
+to the text). Both sit still under reduced motion. The harness in the session
+scratchpad grabs frames of one cycle (`frames.mjs`) to see the sweep move.
+
 ## Where things live
 
 - **The student page**: `/comm118/sitdown`, `src/engine/SitdownPage.jsx`.

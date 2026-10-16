@@ -258,27 +258,27 @@ function Mine({ config, data, update, name, saved, asg, copy, editing, now, suff
         <li className={rowClass(0)}>
           <span className="num" aria-hidden="true">{done[0] ? "✓" : "1"}</span>
           <div className="sw">
-            <div className={"sdt" + (done[0] ? " ok" : late ? " late" : "")}>{done[0] ? "Turned in " + fmtWhen(mine.at) : (late ? "Was due " : "Due ") + SITDOWN.prepDueText}</div>
             <div className="sws">
               <Words k="step.1" copy={copy} editing={editing} as="span" />
               {" "}<a className="dl" href={prepPath(config) + suffix}>{copy.say("step.1.link")}</a>
             </div>
+            <div className={"sdt" + (done[0] ? " ok" : late ? " late" : "")}>{done[0] ? "Turned in " + fmtWhen(mine.at) : (late ? "Was due " : "Due ") + SITDOWN.prepDueText}</div>
             <a className="btn" href={"#turnin"}>{copy.say("step.1.go")}</a>
           </div>
         </li>
         <li className={rowClass(1, open ? " ready" : "")}>
           <span className="num" aria-hidden="true">2</span>
           <div className="sw">
-            <div className={"sdt" + (open ? " ok" : "")}>{open ? "Open now" : "Opens " + SITDOWN.releaseText}</div>
             <div className="sws"><Words k="step.2" copy={copy} editing={editing} as="span" /></div>
+            <div className={"sdt" + (open ? " ok" : "")}>{open ? "Open now" : "Opens " + SITDOWN.releaseText}</div>
             {session ? <a className="btn" href={"#docs"}>{copy.say("step.2.go")}</a> : null}
           </div>
         </li>
         <li className={rowClass(2)}>
           <span className="num" aria-hidden="true">{done[2] ? "✓" : "3"}</span>
           <div className="sw">
-            <div className="sdt">{(session ? whenOf(session) + ", " : "") + SITDOWN.room}</div>
             <div className="sws"><Words k="step.3" copy={copy} editing={editing} as="span" /></div>
+            <div className="sdt">{(session ? whenOf(session) + ", " : "") + SITDOWN.room}</div>
             {session ? <a className="btn" href={"#when"}>{copy.say("step.3.go")}</a> : null}
           </div>
         </li>
@@ -584,7 +584,7 @@ export const CSS = `
 .sd .bar{display:flex;gap:12px 20px;align-items:center;flex-wrap:wrap;padding-top:6px}
 .sd .meta{font-size:15px;line-height:1.45;color:var(--ink2);font-variant-numeric:tabular-nums;max-width:72ch}
 .sd .facts{display:grid;gap:8px;justify-items:start;padding:20px 24px 24px}
-.sd .btn{font-family:var(--sans);font-size:16px;font-weight:500;line-height:1.2;color:var(--accent);background:var(--accent-tint);border:0;border-radius:999px;padding:10px 18px;min-height:44px;cursor:pointer}
+.sd .btn{font-family:var(--sans);font-size:16px;font-weight:600;line-height:1.2;color:var(--accent);background:var(--card);border:2px solid var(--accent);border-radius:999px;padding:8px 18px;min-height:44px;cursor:pointer}
 .sd .btn:hover{background:var(--accent);color:var(--on-accent)}
 .sd .btn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
 .sd a.btn{display:inline-flex;align-items:center;text-decoration:none}
@@ -635,7 +635,8 @@ export const CSS = `
 .sd .step.ready .num{background:var(--accent)}
 .sd .step .num{margin-top:1px}
 .sd .sw{display:grid;gap:8px;max-width:64ch;justify-items:start}
-.sd .sdt{font-family:var(--serif);font-size:22px;font-weight:500;line-height:1.2;color:var(--ink);text-wrap:balance}
+.sd .sws{font-size:18px;font-weight:500;line-height:1.45;color:var(--ink)}
+.sd .sdt{font-family:var(--serif);font-size:22px;font-weight:600;line-height:1.2;color:var(--ink);text-wrap:balance;margin-top:2px}
 .sd .sdt.ok{color:var(--ok)}
 .sd .sdt.late{color:var(--late)}
 .sd .step .btn{margin-top:4px}
@@ -732,4 +733,16 @@ export const CSS = `
 @media (max-width:720px){.sd .faq{grid-template-columns:1fr}.sd .pages{grid-template-columns:1fr}.sd .groups{grid-template-columns:1fr}}
 @media (max-width:640px){.sd{padding-top:20px;gap:12px}.sd .sec{padding:18px;border-radius:16px}.sd .band{padding:14px 16px 16px}.sd .faces{padding:14px;gap:8px}.sd .face{width:calc(50% - 4px);box-sizing:border-box}.sd .step{padding:14px}.sd .sdt{font-size:20px}.sd .doc{grid-template-columns:1fr}.sd .dright{justify-items:start}.sd .open{white-space:normal;line-height:1.3;padding:10px 16px}}
 @media (prefers-reduced-motion:reduce){.sd *{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+/* The sheen. Andrew asked on 2026-10-16 for the links to move a little, with a sheen on every one. A band of light crosses every pill every few seconds, and a glint passes through the underlined links. Still for anyone who asked for reduced motion. */
+.sd .btn,.sd .go,.sd .open,.sd .count{position:relative;overflow:hidden;isolation:isolate}
+.sd .btn::after,.sd .go::after,.sd .open::after,.sd .count::after{content:"";position:absolute;top:-60%;bottom:-60%;left:0;width:34%;background:linear-gradient(100deg,transparent 0%,rgba(255,255,255,.55) 50%,transparent 100%);transform:translateX(-220%) skewX(-18deg);animation:sd-sheen 5.5s ease-in-out infinite;pointer-events:none;z-index:1}
+.sd .btn::after{background:linear-gradient(100deg,transparent 0%,color-mix(in srgb,var(--accent) 28%,transparent) 50%,transparent 100%)}
+.sd .step:nth-child(2) .btn::after{animation-delay:.6s}
+.sd .step:nth-child(3) .btn::after{animation-delay:1.2s}
+.sd .btn:hover::after,.sd .go:hover::after,.sd .open:hover::after{animation:sd-sheen 1s ease-out infinite}
+@keyframes sd-sheen{0%,72%{transform:translateX(-220%) skewX(-18deg)}100%{transform:translateX(440%) skewX(-18deg)}}
+.sd .dl,.sd .lnk,.sd .crumb{background-image:linear-gradient(100deg,currentColor 0%,currentColor 42%,var(--accent) 50%,currentColor 58%,currentColor 100%);background-size:300% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:sd-glint 6s ease-in-out infinite}
+.sd .dl .dh{-webkit-text-fill-color:var(--ink2)}
+.sd .open .dh{-webkit-text-fill-color:currentColor}
+@keyframes sd-glint{0%,70%{background-position:100% 0}100%{background-position:0% 0}}
 `;
