@@ -23,6 +23,15 @@ import { schedulingLinkOf } from "../../instructors.js";
 import { useMarkThreadSeen } from "../YouCard.jsx";
 import { Sec, Row, Io, Btn, Chip, Lnk, Check, Gm, Face, DrFace, I, dcolOf, dueWords, whenWords, dayWords, firstLink, hostOf, drShort } from "./bits.jsx";
 import { visibleAssignments, workOf, unseenOf, nextOwedOf, counts, flowOf, FLOW_FILTERS, opensWords } from "./work.js";
+import { worksheetOf } from "../worksheetSubmits.js";
+import { VISUAL_PRE_KEY } from "../visualstory/pre.jsx";
+
+// A challenge that is a worksheet on this site keeps a plain way back to the
+// sheet after it is turned in. Andrew, 2026-10-16: "students need to be
+// allowed to reopen their preproduction pages after they submit ... make the
+// button clear." The sheet itself stays editable until its due date; what hid
+// it was the card folding the link under Instructions once it was turned in.
+const sheetWords = (key) => key === VISUAL_PRE_KEY ? "pre-production page" : "worksheet";
 
 // A link to the visual story's instructions page or its builder.
 const STORY_LINK = /^(?:https?:\/\/[^/]+)?\/(comm\w+)\/(?:worksheets\/)?visual-story\/?(?:[?#].*)?$/;
@@ -40,6 +49,7 @@ const lineOf = (asg, st) => st.state === "graded" ? "Graded " + st.letter
 export function WorkRow({ asg, st, ring, onOpen }) {
   const tint = tintOf(st);
   const side = st.state === "open" ? <Io kind="go" onClick={onOpen}>Submit</Io>
+    : st.state === "turnedIn" && worksheetOf(asg) ? <Io kind="go" onClick={onOpen}>Reopen</Io>
     : st.state === "graded" || st.state === "turnedIn" ? <Check />
     : st.state === "closed-until" ? null
     : <Io kind="go" onClick={onOpen}>Open</Io>;
@@ -352,12 +362,21 @@ export function ChallengePage({ config, data, update, name, id, go }) {
   // instructions itself. Andrew, 2026-10-14: "change 'more instructions' to
   // Go to story builder".
   const story = String(asg.instructionsUrl || "").trim().match(STORY_LINK);
+  const sheet = story ? null : worksheetOf(asg);
   const more = story ? <div><Lnk href={"/" + story[1] + "/worksheets/visual-story"}>Go to story builder</Lnk></div>
-    : asg.instructionsUrl ? <div><Lnk href={asg.instructionsUrl}>More instructions</Lnk></div> : null;
+    : asg.instructionsUrl && !sheet ? <div><Lnk href={asg.instructionsUrl}>More instructions</Lnk></div> : null;
+  // The sheet's button sits above the fold, so it is there turned in or not.
+  const sheetBtn = sheet ? (
+    <div className="pt-acts">
+      <Btn href={"/" + sheet.classId + "/worksheets/" + sheet.key}>{st.state === "open" || st.state === "missed" ? "Open your " + sheetWords(sheet.key) : "Reopen your " + sheetWords(sheet.key)}</Btn>
+      {st.state === "turnedIn" || st.state === "graded" ? <span className="pt-quiet" style={{ padding: 0 }}>You can keep editing until the due date. Press Submit again when you change something.</span> : null}
+    </div>
+  ) : null;
   const instructions = (words || asg.instructionsUrl) ? (
     st.state === "open" || st.state === "missed"
-      ? <div className="pt-stack">{words ? <p className="pt-text" style={{ fontSize: 17 }}>{words}</p> : null}{more}</div>
+      ? <div className="pt-stack">{words ? <p className="pt-text" style={{ fontSize: 17 }}>{words}</p> : null}{sheetBtn}{more}</div>
       : <div className="pt-stack">
+          {sheetBtn}
           <div className="pt-acts"><Io onClick={() => setFold(v => !v)}>Instructions</Io>{st.state === "turnedIn" && canSend ? <span className="pt-quiet" style={{ padding: 0 }}>Send another link below.</span> : null}</div>
           {fold ? <>{words ? <p className="pt-text" style={{ fontSize: 17 }}>{words}</p> : null}{more}</> : null}
         </div>

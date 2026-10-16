@@ -247,7 +247,7 @@ export function PreSheet({ store, viewer, classId, readOnly, review: givenReview
 
 function Standing({ where }) {
   if (where.kind === "open") return null;
-  if (where.kind === "waiting") return <div className="vsp-stand">Submitted {when(where.at)}. Dr. Ishak has not reviewed your topic yet.</div>;
+  if (where.kind === "waiting") return <div className="vsp-stand">Submitted {when(where.at)}. Dr. Ishak has not reviewed your topic yet. You can still change your answers below, then press Submit again.</div>;
   const ok = where.kind === "approved";
   return (
     <div className={"vsp-stand " + (ok ? "vsp-ok" : "vsp-needs")}>

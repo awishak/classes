@@ -1150,3 +1150,13 @@ also took three colours past 4.5:1 for the first time: the muted grey was
 `clean` is the engine's card and every other theme draws as it did.
 
 The forked files are untouched and stay frozen.
+
+## Pre-production, reopening after submit
+
+**Reopening after submit.** Andrew, 2026-10-16: "students need to be allowed
+to reopen their preproduction pages after they submit ... make the button
+clear." The sheet was never locked; the My Work card folded the link under
+Instructions once it was turned in. Now a challenge whose details link is a
+worksheet on this site (`worksheetOf` in worksheetSubmits.js) shows an Open
+your pre-production page, or Reopen, button above the fold on the card, and
+Reopen on the row; the sheet's Submitted line says the answers can change.
